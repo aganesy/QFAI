@@ -55,3 +55,19 @@
 - Given the consolidated rule BR-0015-0007
 - When layer coverage is evaluated
 - Then at least one example exists for BR-0015-0007
+
+## EX-0015-0009: Reviewer-Gate emits `R-CERTIFY-VERIFY-CIRCULAR` on regressed certify path
+
+- BR-Ref: BR-0015-0008
+- Given a PR that adds, in the certify code path, a read of `.qfai/report/verify.json` whose profile requires `/qfai-implement` artifacts (reintroducing the prototyping-phase cycle)
+- When the Reviewer Gate runs against the PR
+- Then it emits `R-CERTIFY-VERIFY-CIRCULAR` at severity error; `justification:` names the certify code path, the offending `verify.json` profile, and the option-B contract clause violated
+- A control PR that adds only a prototyping-phase scoped validate read (no `/qfai-atdd` / `/qfai-implement` artifact requirement) passes without `R-CERTIFY-VERIFY-CIRCULAR`
+
+## EX-0015-0010: Reviewer-Gate emits `R-PROMPT-SCANNER-DRIFT` with 3-part justification
+
+- BR-Ref: BR-0015-0009
+- Given the upstream SSOT-sync-pair CI lane signals drift on a PR that edits only `packages/qfai/src/core/validators/findDesignMdViolations.ts` (and not `packages/qfai/assets/init/.claude/skills/qfai-prototyping/references/generator-prompt.md`)
+- When the Reviewer Gate processes the signal
+- Then it emits `R-PROMPT-SCANNER-DRIFT` (severity error) with `justification:` containing (a) the modified file path, (b) the un-paired counterpart path, (c) the Tailwind contract clause whose match could not be confirmed
+- The validate ingestion (owned by the `qfai validate` CLI spec) accepts the finding because `justification:` is non-empty and 3-part complete; if any of the 3 parts is missing, validate rejects (advisory-failing) per that ingestion rule

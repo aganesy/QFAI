@@ -114,6 +114,84 @@ As a legal/compliance reviewer, I want the stock-photo license catalog (allowed 
 
 As a CI operator, I want the run hard-capped at 10 cycles (cycle 0 plus cycles 1..9, terminator `index === 9`) so that runaway loops are deterministic and validators reject any evidence pack with cycle index > 9. (REQ-0002, CHG-002)
 
+## v1.9.1 Defect Remediation User Stories (CHG-005)
+
+### US-0012-0119
+
+As a `/qfai-prototyping` operator, I want the shipped `generator-prompt.md` and `findDesignMdViolations` to be Tailwind-aware (preflight literal allowlist plus body-scope narrowing) so that a faithfully generated iter does not surface `designMdViolations[]` for CDN preflight literals, internal `--tw-*` properties, alpha-modifier `rgba()`, or standard utility shorthand. (REQ-0012-0055)
+
+### US-0012-0120
+
+As a designer, I want `scanFonts` / `scanRadius` / `scanShadow` to resolve `var(--token)` references against `:root` before judging safety, so that token-driven CSS does not produce false-positive `designMdViolations[]`. (REQ-0012-0056)
+
+### US-0012-0121
+
+As an iter author, I want `inherit` / `initial` / `unset` / `revert` / `currentColor` to be treated as safe across every scanner, so that idiomatic CSS-wide keywords do not block convergence. (REQ-0012-0057)
+
+### US-0012-0122
+
+As a designer, I want `--*-shadow*:` custom-property declarations carrying `rgba()` literals to be stripped before color scanning, so that shadow-token CSS does not produce false `designMdViolations[]`. (REQ-0012-0058)
+
+### US-0012-0123
+
+As a Japanese-language reviewer, I want `countWords` to accept a Japanese-only `proseCritique` of 800–1500 characters and a parallel English critique of 200–500 words within the same QFAI-PROT-002 band, so that bilingual review payloads converge without artificial length errors. (REQ-0012-0059)
+
+### US-0012-0124
+
+As a downstream project, I want `prototyping.execution.browserTool` to accept both `"playwright"` (primary) and `"playwright-cli"` (deprecation window) so that pre-existing CI scripts continue to work during the one-minor-release migration. (REQ-0012-0060)
+
+### US-0012-0125
+
+As an `/qfai-prototyping` operator, I want an opt-in `qfai prototyping iterate --capture` flag (default OFF) so that I can opt into PNG / HTML capture per the Capture contract without breaking the default no-capture posture. (REQ-0012-0061)
+
+### US-0012-0126
+
+As an `/qfai-prototyping` operator, I want an opt-in `qfai prototyping iterate --auto-serve` flag (default OFF) so that iterate can spawn / teardown a local HTTP server with safe foreign-process detection. (REQ-0012-0062)
+
+### US-0012-0127
+
+As a CI gatekeeper, I want `iterate` to emit a `prototyping.json` that passes `qfai validate --profile prototyping --fail-on error` without orchestrator post-processing, so that downstream automation can rely on the iterate output directly. (REQ-0012-0063)
+
+### US-0012-0128
+
+As a prototyping-only operator, I want `qfai prototyping certify --check` to recognise a `verify.json#scope: "prototyping"` artifact as satisfying the prototyping-phase gate, so that DONE for the prototyping slice does not block on ATDD / implement artifacts that cannot exist at this phase. (REQ-0012-0064)
+
+### US-0012-0129
+
+As a downstream consumer, I want the public `/qfai-prototyping` skill surface aligned to single-spec language with `resolveSurfaceUnion()` removed from the public surface, so that the doc-vs-impl drift identified across SKILL.md and the contracts collapses. (REQ-0012-0065)
+
+### US-0012-0130
+
+As a maintainer, I want accepted-iter content mirrored to `.qfai/evidence/prototyping/screenshots/<screen-id>.png` and `.qfai/evidence/prototyping/html/<screen-id>.html` on convergence with screen-ids normalised to underscore casing end-to-end, so that the aggregate-dir and per-spec dir use the same form. (REQ-0012-0066)
+
+### US-0012-0131
+
+As an operator, I want `qfai prototyping iterate --cycle 0` to refuse a destructive re-run unless `--force` is passed AND to move existing `iter-00/` to `iter-00.backup-<ISO>/` before clearing, so that mistaken re-seeds remain recoverable. (REQ-0012-0067)
+
+### US-0012-0132
+
+As an operator on a non-converged cycle, I want a one-screen `[BLOCKED]` summary naming the top-3 exit-64 blockers with concrete offenders, so that I can act on the next iter without scrolling through evidence diffs. (REQ-0012-0068)
+
+### US-0012-0133
+
+As an operator, I want `primarySpecId` to surface a single deterministic error message naming the canonical 4-digit shape AND (SHOULD) to accept `1` / `"1"` / `"01"` / `"0001"` with internal normalisation, so that the input-validation surface is unambiguous. (REQ-0012-0069)
+
+### US-0012-0134
+
+As a reviewer, I want md5-based duplicate capture detection (`lap-009`) and missing-route detection (`lap-010`) surfaced as advisory-failing layout anti-patterns with mandatory justification, so that silent screen collisions and unreachable routes block convergence by default. (REQ-0012-0070)
+
+### US-0012-0135
+
+As a license-compliance operator, I want `qfai prototyping iterate --license-patch <file>` to accept an add-only diff to the frozen license catalog and persist an audit row, so that I can broaden the catalog mid-program without a cycle-0 restart. (REQ-0012-0071, SHOULD)
+
+### US-0012-0136
+
+As a subagent author, I want `iter-NN/iterate-context.json` summarising the prior cycle so that the next subagent invocation has structured context without re-reading `prototyping.json`. (REQ-0012-0072, SHOULD)
+
+### US-0012-0137
+
+As an operator, I want `iterate --cycle N` with N outside `0..9` to surface a deterministic error naming the supported range AND recommending the peek-mode equivalent, so that off-by-one CLI mistakes are self-diagnosable. (REQ-0012-0073, SHOULD)
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline user-story identifier space is retained as historical traceability for existing tests and historical slices.

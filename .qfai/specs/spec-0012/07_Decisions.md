@@ -141,3 +141,24 @@
   - B) Keep quantitative AC-pass threshold per spec (rejected — user direction).
   - C) Hybrid (qualitative gating + numeric tie-breaker; rejected — false precision を持ち込む).
 - References: REQ-0005, AC-0012-0042, BR-0012-0032, Constraints TC-6, discussion-pack OQ-0005 / OQ-0006 resolutions.
+
+## DR-0012-0031: Opt-in `--capture` / `--auto-serve` flags (amends DR-0012-0029)
+
+- Date: 2026-05-24
+- Status: amends DR-0012-0029. DR-0012-0029 (`No PNG / HTML / interaction.json capture (review.json only)`) is **partially** superseded only insofar as opt-in capture and opt-in local-serve are now re-introduced as explicit `iterate` flags. The DR-0012-0029 default posture — "per-iter evidence is `<screen>.review.json` only; no PNG / HTML / interaction.json written unless requested" — is preserved as the **default**.
+- Decision: `qfai prototyping iterate` re-introduces two opt-in flags:
+  - `--capture` — when passed, iterate drives Playwright per the Capture contract in `iterate-plan.json` (per-screen `viewport: { width, height }`, `deviceScaleFactor`, `waitUntil`, `htmlSourceCopy: boolean`) and writes `iter-NN/<screen-id>.png` (and `<screen-id>.html` when `htmlSourceCopy: true`) for every entry in `screens[]`. When `htmlSourceCopy: true`, the source HTML is copied from `.qfai/prototypes/iter-NN/<screen-id>.html` rather than `page.content()` to avoid runtime style-block injection.
+  - `--auto-serve` — when passed, iterate spawns a local HTTP server on the configured port (or `targetUrl`-derived port), manages child processes via `tree-kill` (Linux/macOS) or `taskkill /F /T` (Windows) on exit, tears down on SIGINT, and force-kills a stale port-bound prior-iterate owner. Foreign processes (per NFR-0106) MUST NOT be killed; iterate reports the PID + owning command to the operator instead.
+    Absence of both flags preserves DR-0012-0029 behavior bit-for-bit (review.json only). Both flags are opt-in during the deprecation window per REQ-0126; downstream may adopt incrementally.
+- Recontextualization (why this amends DR-0012-0029):
+  - DR-0012-0029 was authored under the **inner-loop reviewer-driven Playwright posture** (DR-0012-0027), where the Reviewer sub-agent operates Playwright live and writes qualitative impressions directly into `review.json`. In that posture, still capture is redundant — the reviewer already saw the page.
+  - The **new problem** (not present at DR-0012-0029 authoring time) is the **orchestrator script burden**: SRC-0001 §A, SRC-0002 §1, SRC-0003 §4, SRC-0004 §2 each independently report that downstream reporter projects were forced to hand-author 3–5 capture / serve scripts per consumer to obtain post-hoc screenshots and HTML snapshots for hand-off, audit, and reproducibility purposes outside the reviewer loop. Four independent reports converging on the same friction is the cost trigger.
+  - The inner-loop posture (DR-0012-0027 reviewer-driven session) is **preserved**: the reviewer still operates Playwright live; review.json is still the only mandatory per-cycle artifact. The opt-in flags address the **outer-loop** orchestrator burden by making the per-screen capture contract and local-serve lifecycle first-class iterate capabilities — not by making them mandatory.
+  - The opt-in flag preserves DR-0012-0029 as the **default**. Operators / CI that don't pass `--capture` or `--auto-serve` see no behavioral change. This is the canonical "amend, do not supersede" pattern: DR-0012-0029's posture remains the bit-default; the flags add capability without changing default cost.
+- Source REQ: REQ-0109 (--capture), REQ-0110 (--auto-serve), NFR-0106 (foreign-process safety), REQ-0126 (deprecation window).
+- Source evidence: discussion-20260523221141355 SRC-0001 §A, SRC-0002 §1, SRC-0003 §4, SRC-0004 §2.
+- Options considered:
+  - A) Re-introduce as opt-in flags, default preserves DR-0012-0029 (selected).
+  - B) Re-introduce as default-on (rejected — flips DR-0012-0029 bit-default; breaks every downstream consumer that relies on review-only output; violates Drift Protocol "amend, do not silently flip" rule).
+  - C) Keep DR-0012-0029 as-is and require downstream to keep hand-authoring scripts (rejected — four independent reports document the cost; defending the existing posture against unanimous downstream evidence would be Rejected-Option-Readoption against the four feedback packs).
+- References: REQ-0109, REQ-0110, NFR-0106, REQ-0126, discussion-pack discussion-20260523221141355 SRC-0001/0002/0003/0004, DR-0012-0027 (preserved), DR-0012-0029 (amended).

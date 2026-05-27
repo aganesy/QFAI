@@ -37,3 +37,15 @@
 - Parent: CAP-0006
 - Goal: `--format json` で machine-readable な診断結果を出力する。`--out` でファイル出力も可能
 - Non-goals: カスタム出力スキーマ
+
+## US-0006-0006: playwright primary probe
+
+- Parent: CAP-0006
+- Goal: `qfai doctor --profile prototyping` が `node_modules/.bin/playwright` を primary launcher 候補として probe し、`npx --no-install playwright --version` を fallback として扱う。`playwright-cli` は deprecation window 中 accepted だが `D-DEPRECATED-PROBE` (warning during window, error at sunset `1.10.0`) を surface する。fresh `qfai init` + `npm i -D playwright` の状態で `[error]` line を 1 つも出さないことが acceptance signal (NFR-0112)。
+- Non-goals: playwright 自体の auto-install、prototyping iterate の実行
+
+## US-0006-0007: doctor 出力 group 分け + skills.integrity downgrade
+
+- Parent: CAP-0006
+- Goal: `qfai doctor` の summary を "errors blocking the active profile" / "warnings advisory of drift" の 2 group に明示的に分割表示する。`skills.integrity` は既定で `warning` severity として後者の group に表示される (message 文言にかかわらず active profile を block しない)。
+- Non-goals: skill 整合性 check 自体のロジック変更

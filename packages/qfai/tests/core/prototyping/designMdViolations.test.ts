@@ -54,12 +54,20 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
     expect(out).toEqual([{ kind: "color", found: "#abcdef" }]);
   });
 
-  // TC-3.2.3
-  it("3-letter hex #FFF → violation (allowedColors only contains 6/8-digit)", () => {
-    const html = '<span style="color:#FFF"></span>';
-    const out = findDesignMdViolations(html, sampleDesignMd());
-    expect(out.length).toBeGreaterThanOrEqual(1);
-    expect(out[0]).toEqual({ kind: "color", found: "#fff" });
+  // TC-3.2.3 (revised under CHG-005 / REQ-0012-0055): `#fff` is on the
+  // Tailwind preflight sentinel allowlist (`TAILWIND_PREFLIGHT_LITERALS`)
+  // and is silently allowed regardless of DESIGN.md content, so a
+  // bare `color:#FFF` no longer produces a violation. A 3-letter hex
+  // that is NOT on the preflight allowlist still surfaces — exercised
+  // via `#abc` below.
+  it("3-letter hex on preflight allowlist (#FFF) → no violation; off-allowlist 3-letter hex → violation", () => {
+    const safeHtml = '<body><span style="color:#FFF"></span></body>';
+    expect(findDesignMdViolations(safeHtml, sampleDesignMd())).toEqual([]);
+
+    const driftHtml = '<body><span style="color:#abc"></span></body>';
+    const drift = findDesignMdViolations(driftHtml, sampleDesignMd());
+    expect(drift.length).toBeGreaterThanOrEqual(1);
+    expect(drift[0]).toEqual({ kind: "color", found: "#abc" });
   });
 
   // TC-3.2.4

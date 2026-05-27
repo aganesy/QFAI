@@ -44,3 +44,67 @@ component:
       $type: dimension
       $value: "{primitive.spacing.base}"
       $description: "Button internal padding"
+
+# --- Scanner Contract (REQ-0101 / REQ-0104 / OQ-0103=β+γ / OQ-0104=B) ---
+# This section is the SSOT-sync invariant between
+# `findDesignMdViolations.ts` (scanColors / scanFonts / scanRadius /
+# scanShadow) and `generator-prompt.md`. Changes here MUST be matched
+# by changes in both files within the same PR or the Reviewer Gate
+# emits `R-PROMPT-SCANNER-DRIFT` (severity: error, advisory-failing).
+scannerContract:
+  # Tailwind preflight allowlist (OQ-0103=β; per DR-0001-0001).
+  # These literals appear in the runtime <style> block injected by the
+  # Tailwind CDN v3.4.17 JIT preflight and MUST NOT be flagged as
+  # designMdViolations by any of the four scanners.
+  tailwindPreflightAllowlist:
+    - "#fff"
+    - "#9ca3af"
+    - "#e5e7eb"
+    - "rgb(59 130 246 / 0.5)"
+    - "--tw-ring-*" # pattern; matches --tw-ring-color, --tw-ring-offset-*, etc.
+
+  # Gate scope (OQ-0103=γ; per DR-0001-0001).
+  # All four scanners restrict input to <body>-scoped declarations.
+  # The preflight <style> block in <head> is excluded from scanner
+  # input before scanning runs.
+  scanScope:
+    include: ["body"]
+    exclude: ["head", "head > style"]
+    rationale: |
+      The Tailwind CDN preflight emits its reset literals into a
+      <style> block in <head>. Scanning <head> would force the
+      allowlist to enumerate every reset literal across every
+      Tailwind minor. Scoping the scanner input to <body>
+      excludes the preflight noise at the source.
+
+  # Shadow-decl strip (OQ-0104=B; per DR-0001-0002).
+  # SHADOW_DECL_STRIP_RE matches ANY custom-property declaration whose
+  # name contains "shadow" (not just --shadow-*). Catches Tailwind v4
+  # emissions like --ring-shadow, --default-shadow, --inset-shadow-*.
+  shadowDeclStripPattern:
+    regex: "--[A-Za-z0-9-]*shadow[A-Za-z0-9-]*:"
+    rationale: |
+      The narrow `--shadow-*:` form misses Tailwind v4 custom
+      properties (--ring-shadow, --default-shadow). The broader
+      semantic strip (parse-as-composite) was rejected for false
+      negatives in scanColors. The regex above is the agreed
+      middle ground.
+
+  # CSS-wide keywords (REQ-0104; preserved invariant).
+  # SAFE_LITERALS is consumed by ALL FOUR scanners (scanColors,
+  # scanFonts, scanRadius, scanShadow). Each scanner MUST accept
+  # every keyword in this list as a non-violation.
+  cssWideKeywords:
+    keywords:
+      - inherit
+      - initial
+      - unset
+      - revert
+      - currentColor
+    scanners: [scanColors, scanFonts, scanRadius, scanShadow]
+    rationale: |
+      CSS-wide keywords are semantically inert with respect to
+      token discipline: they reference parent / initial / unset
+      values, not literal color / font / radius / shadow values.
+      Flagging them produces false-positive designMdViolations
+      that confuse downstream Reviewer judgement.

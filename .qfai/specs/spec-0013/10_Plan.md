@@ -32,3 +32,11 @@
 - Discussion readiness gate: `packages/qfai/src/core/preflight/sddPreflight.ts` — blockers are derived from required markdown readiness and blocking OQ state
 - Optional side artifacts: `packages/qfai/src/core/discussionPack.ts` retains `missingSideArtifacts` only as a compatibility-shaped empty array
 - Current sync reflects the removal of required prototyping side artifacts from preflight.
+
+## CHG-005 (2026-05-24) — qfai-prototyping defect remediation
+
+- Implement REQ-0013-0018 per AC-0013-0018..0019:
+  1. UI spec template `templates/contracts/ui-contract.sample.yaml` gets a `primary_tasks: []` slot per `screens[]` entry.
+  2. `requirements-analyst` agent guide instructs authoring ≥ 1 `primary_task` per screen during SDD Phase 2 Slice.
+  3. New validate lane (QFAI-AUD-001 aligned) blocks `/qfai-prototyping` from proceeding when any contracted screen has empty `primary_tasks`.
+- Cross-spec coupling: validator implementation lives in spec-0004 territory; the template + author guide are spec-0013 territory.

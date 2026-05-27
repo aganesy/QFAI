@@ -133,7 +133,13 @@ describe("spec-0012 prototyping.execution config", () => {
         issue.message.includes("prototyping.execution.browserProvider"),
       );
       expect(legacy, "expected legacy browserProvider rejection").toBeDefined();
-      expect(legacy?.message).toContain("playwright-cli");
+      // Canonical default = "playwright" primary (REQ-0012-0060 / spec-0006
+      // D-DEPRECATED-PROBE). "playwright-cli" is the deprecation window.
+      // Match the replacement guidance literally — the regex ensures
+      // "playwright" is NOT followed by "-cli", which catches both the
+      // original drift AND any future regression back to "playwright-cli"
+      // as the canonical replacement target.
+      expect(legacy?.message).toMatch(/browserTool:\s*playwright(?!-cli)/);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -198,7 +204,7 @@ describe("spec-0012 prototyping.execution config", () => {
     }
   });
 
-  it("defaults browserTool to playwright-cli when execution section is empty", async () => {
+  it("defaults browserTool to playwright when execution section is empty", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-default-"));
     try {
       await writeFile(
@@ -209,7 +215,12 @@ describe("spec-0012 prototyping.execution config", () => {
 
       const { config, issues } = await loadConfig(root);
       expect(issues).toEqual([]);
-      expect(config.prototyping?.execution?.browserTool).toBe("playwright-cli");
+      // Canonical default = "playwright" primary (REQ-0012-0060). Use an
+      // exact equality check (not a substring match) to catch both the
+      // original drift AND any future regression to "playwright-cli" —
+      // the latter would still substring-match "playwright" but is not
+      // the canonical default.
+      expect(config.prototyping?.execution?.browserTool).toBe("playwright");
       expect(config.prototyping?.execution?.targetUrl).toBe("http://localhost:5173");
     } finally {
       await rm(root, { recursive: true, force: true });

@@ -85,6 +85,9 @@
 - REQ-0042: `R-HANDOFF-INCOMPLETE` finding (v1.9.0) - `kind: handoff` work-log entry の本文に 5 必須セクション (`## State of the task` / `## Next single action` / `## Constraints to preserve` / `## Open questions` / `## References to consult first`) のいずれかが欠落していれば error (advisory-failing per qfai-validate.md contract)
 - REQ-0043: `W-SKILL-DOC-BROKEN-REF` (v1.9.0) - SKILL.md 内の reference が新 layout で解決しない場合の warning
 - REQ-0044: `W-USER-EDIT-PRESERVED` informational pass-through (v1.9.0) - `qfai init --upgrade-assistant-tree` がユーザー編集を preserve した際の informational note を validate 側でも認識可能にする
+- REQ-0120: `validate.json` profile disambiguation - `qfai validate` は profile 別の出力を上書きせず、profile-suffixed path `.qfai/report/validate-<profile>.json` を必ず emit する。並行して、profile を明示した `validate.json` (常に直近 run を反映、`profile` field を持つ) も emit する。旧 `.qfai/output/validate.json` への書き込みは deprecation window 中は継続するが `D-DEPRECATED-PATH` (severity warning) を fire させ、sunset (`1.10.0`) で error にエスカレートする
+- REQ-0102: SSOT-sync invariant — generator-prompt ↔ scanner pair-changed enforcement - `pnpm ci:lint` レーンが `findDesignMdViolations.ts` の変更と `generator-prompt.md` の変更を pair-changed として強制する。片方のみの変更時は Reviewer-Gate finding `R-PROMPT-SCANNER-DRIFT` (severity error) を emit する
+- REQ-0125: Reviewer-Gate finding `R-PROMPT-SCANNER-DRIFT` enforcement - REQ-0102 を裏付ける CI lane が emit する `R-PROMPT-SCANNER-DRIFT` finding は mandatory `justification:` text を保持する。`justification:` は (a) 修正されたファイル、(b) 対応する修正が欠落しているカウンターパート、(c) match を確認できない契約条項 — の 3 要素を含む。`qfai validate` は空 `justification:` を持つ R-PROMPT-SCANNER-DRIFT finding を reject する (advisory-failing per BR-0004-0017 パターン)
 - REQ-0023: `validateBreakthroughEvidence` checks `.qfai/evidence/breakthrough.json` and branch execution evidence when trigger=true
 - REQ-0024: downstream skill prompt checks use read order `spec -> exploration-brief -> reference-pool -> evaluation-rubric -> evaluator-calibration -> selected-direction -> design-system -> ui contracts`
 - REQ-0025: `qfai validate --fail-on error` の DCON-030 が root `DESIGN.md` の存在 / 構造 (color / typography / radius / shadow token tables) を検証する
@@ -94,13 +97,14 @@
 - REQ-0029: `layoutAntiPatternsDetected` 配列が `lap-001-orphan-page` から `lap-008-no-back-affordance` の whitelist 外トークンを含む場合、validator は `QFAI-PROT-002` を error 重大度で報告する
 - REQ-0030: `designMdViolations` 配列が `{category: "color"|"font"|"radius"|"shadow", expected: string, found: string, location: string}` 形状のみを許容する
 - REQ-0031: `findDesignMdViolations(html, designMd)` は I/O / clock 依存を持たず、同一入力に対し同一出力を返す pure function である
+- REQ-0150: lint-shipping ID-class guard expansion — `packages/qfai/scripts/lint-shipping.ts` の `src-comment` ルールセットを拡張し、`REQ-NNNN` / `REQ-NNNN-NNNN` / `AC-NNNN-NNNN` / `TC-NNNN-NNNN` / `US-NNNN-NNNN` / `BR-NNNN-NNNN` の composite ID class を `src/**/*.ts` のコメント行で catch する (現状は確立済みの forbidden class のみ scan)。CHG-005 cycle で spec-0006 doctor.ts にこれら ID が leak し、manual implementation-reviewer audit のみで検出された defect を automation 化する。layer-2 post-build guard (`packages/qfai/scripts/check-no-internal-version-leakage.sh`) と SSOT-sync invariant に従い同一の regex 集合をミラーする。Acceptance signal: `pnpm ci:lint` 実行時に `REQ-0001-0001` などの composite ID class を含む新規コメント行を含む変更が exit 1 で fail する。
 
 ## Entry points
 
-- US range in this spec: US-0004-0001..US-0004-0033
-- AC range: AC-0004-0001..AC-0004-0025
-- BR range: BR-0004-0001..BR-0004-0024
-- EX range: EX-0004-0001..EX-0004-0023
-- TC range: TC-0004-0001..TC-0004-0025
+- US range in this spec: US-0004-0001..US-0004-0036
+- AC range: AC-0004-0001..AC-0004-0035
+- BR range: BR-0004-0001..BR-0004-0029
+- EX range: EX-0004-0001..EX-0004-0036
+- TC range: TC-0004-0001..TC-0004-0064
 - Primary actors: QA engineer, AI agent, CI pipeline
 - Notes: validate is the machine gate for current skill-first, contract-first downstream

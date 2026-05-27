@@ -133,7 +133,11 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         }
 
         // iterate: single-thread evolution loop driver.
-        if (options.prototypingCycle === undefined) {
+        //
+        // --check-convergence bypasses the cycle-required guard because
+        // the read-only peek path defaults to cycle 9 (the final cycle
+        // per the peek-mode hint convention) when --cycle is omitted.
+        if (options.prototypingCycle === undefined && !options.prototypingCheckConvergence) {
           error("qfai prototyping iterate: --cycle <number> is required.");
           info(usage());
           process.exitCode = options.invalidExitCode;
@@ -142,8 +146,21 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         const resolvedRoot = await resolveRoot(options);
         process.exitCode = await runPrototypingIterate({
           root: resolvedRoot,
-          cycle: options.prototypingCycle,
+          // When --check-convergence is set without --cycle, default to
+          // cycle 9 (the final cycle of the loop, matching the peek-mode
+          // hint string in `CYCLE_OUT_OF_RANGE_PEEK_HINT`).
+          cycle: options.prototypingCycle ?? 9,
           ...(options.prototypingTargetUrl ? { targetUrl: options.prototypingTargetUrl } : {}),
+          ...(options.force ? { force: true } : {}),
+          ...(options.prototypingLicensePatch
+            ? { licensePatch: options.prototypingLicensePatch }
+            : {}),
+          ...(options.prototypingPrimarySpecId
+            ? { primarySpecId: options.prototypingPrimarySpecId }
+            : {}),
+          ...(options.prototypingCheckConvergence ? { checkConvergence: true } : {}),
+          ...(options.prototypingCapture ? { capture: true } : {}),
+          ...(options.prototypingAutoServe ? { autoServe: true } : {}),
         });
       }
       return;
@@ -195,6 +212,11 @@ Options:
   --keyword <text>              guardrails list/extract: キーワードフィルタ
   --target-url <url>            prototyping preflight/iterate: 評価対象の URL
   --cycle <number>              prototyping iterate: cycle index (0..9)
+  --check-convergence           prototyping iterate: 収束済みループ状態を再実行なしで覗く (read-only peek; defaults to cycle 9; exit 0 = converged, exit 2 = not converged / missing state)
+  --capture                     prototyping iterate: opt-in な PNG/HTML キャプチャ (default OFF; Playwright を dynamic import)
+  --auto-serve                  prototyping iterate: opt-in なローカル HTTP サーバを in-process で起動 (default OFF; default port 4321; node:http; SIGINT teardown <= 2s; EADDRINUSE は refusal)
+  --license-patch <file>        prototyping iterate: cycle 0 ライセンス allowlist パッチを適用 (audit ledger に追記; replay 対応)
+  --primary-spec-id <value>     prototyping iterate: 複数 UI-bearing spec から primary を明示指定
   -h, --help      ヘルプ表示
 `;
 }

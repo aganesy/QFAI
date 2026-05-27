@@ -82,3 +82,41 @@
 - Obligation: `/qfai-sdd` SKILL.md MUST gain a `project_memory:` block. Stage 0 preflight MAY read open work-log entries (`status` ∈ `{active, handoff}`); REQ-0005 Notes explicitly relaxes SDD's read contract from MUST to MAY. Stage 0 MUST however surface `W-PENDING-PROMOTION` findings from `qfai validate` in the preflight summary so the triage step can promote `kind: decision` entries to per-spec `07_Decisions.md` rows.
 - Cascade: SKILL.md `project_memory:` validated by spec-0004.
 - Source: REQ-0005, REQ-0007, REQ-0010
+
+## 2026-05-24 — CHG-005 — qfai-prototyping defect remediation pack
+
+- Discussion pack: `.qfai/discussion/discussion-20260523221141355/`
+- Operation: UPDATE:APPEND
+- Posture: additive append; preserves existing AC/BR/EX/TC numbering. NFR-0110 (testability of scanner + countWords as pure functions) naturally pairs with spec-0012 for the function-purity side; spec-0013's piece is the UI contract template `primary_tasks:` slot + the new validate lane gating `/qfai-prototyping`.
+- Approved By: yusuke_senaga
+
+### Triage (rows owned by this spec)
+
+| Source                                                         | Subject                                                                                                                                                                                        | Existing Spec | Operation | Sub-op | Approved By   | Rationale                                                                                                                                                   |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| REQ-0115 (discussion-20260523221141355)                        | UI spec template `primary_tasks: []` slot per screen + requirements-analyst guide instruction + new validate lane (QFAI-AUD-001 aligned) blocking `/qfai-prototyping` on empty `primary_tasks` | spec-0013     | UPDATE    | APPEND | yusuke_senaga | SDD UI contract template is spec-0013 (CAP-0013) territory; new validate lane's enforcement-side implementation routes through spec-0004's validator family |
+| NFR-0110 (testability — pure functions, paired with spec-0012) | spec-0013 piece: UI contract template + validate lane (structural). The pure-function side lives in spec-0012.                                                                                 | spec-0013     | UPDATE    | APPEND | yusuke_senaga | NFR has two pair-points — only the template / lane half lands in spec-0013                                                                                  |
+
+### CHG-005 Operations (this PR)
+
+| Op ID  | Op Type       | Target                                                                     | Summary                                                                                           |
+| ------ | ------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| OP-001 | UPDATE:APPEND | 01_Spec.md (Relevant Requirements: REQ-0115; Entry-points US range → 0011) | UI contract template `primary_tasks:` slot + new validate lane registered as Relevant Requirement |
+| OP-002 | UPDATE:APPEND | 02_User-stories.md (US-0013-0011)                                          | requirements-analyst authoring story for `primary_tasks` slot                                     |
+| OP-003 | UPDATE:APPEND | 03_Acceptance-Criteria.md (AC-0013-0018..0019)                             | template-carries-slot + validate-lane-blocks-empty ACs                                            |
+| OP-004 | UPDATE:APPEND | 04_Business-Rules.md (BR-0013-0015..0016)                                  | mirror BR layer (template slot mandatory + lane gating contract)                                  |
+| OP-005 | UPDATE:APPEND | 05_Examples.md (EX-0013-0015..0016)                                        | worked examples per AC                                                                            |
+| OP-006 | UPDATE:APPEND | 06_Test-Cases.md (TC-0013-0025..0027)                                      | test coverage per AC; integration level for template-load and validate-lane behavior              |
+
+- Notes:
+  - The validate lane finding code `QFAI-AUD-001` aligns with the existing audit-finding family; if the canonical token differs at implementation time, the spec text says "QFAI-AUD-001 aligned" to preserve flexibility while keeping intent intact.
+  - Parallel pack pieces: spec-0004 (validate.json profile path + SSOT-sync pair lane + R-PROMPT-SCANNER-DRIFT justification); spec-0006 (qfai doctor playwright probe rebuild + skills.integrity downgrade); spec-0012 (iterate-side scanner / prompt + countWords pure-function half of NFR-0110); spec-0015 (Reviewer-Gate cycle + drift findings).
+  - 9 deferred-OQ decisions made upstream by the orchestrator are reflected verbatim where relevant; REQ-0115 itself does not depend on a deferred decision (its option set was already definite in the pack).
+- Source: REQ-0115 (discussion-20260523221141355); NFR-0110 (template / lane half)
+
+## CHG-005 Phase 1 follow-ups (2026-05-26)
+
+| Op            | Target spec | REQ / NFR | Rationale                                                                                                                                                                                                                                                                        | Approver |
+| ------------- | ----------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| UPDATE:APPEND | spec-0013   | REQ-0116  | CHG-005 cycle で `.claude → .qfai/assistant` migration 後の canonical UI 契約テンプレート path への prose 同期が 7 ファイル分 deferred。pure-documentation drift fix として登録。                                                                                                | auto     |
+| UPDATE:APPEND | spec-0013   | REQ-0117  | CHG-005 cycle で QFAI-AUD-001 が key-absent / key-empty を同一 severity で扱う defect を 2-stage emission (info / error) として降格する follow-up が `sddPrimaryTasksLane.test.ts` 内 inline TODO で deferred。本 follow-up で OC-60 sunset window 配下の semantic を pin する。 | auto     |

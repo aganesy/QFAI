@@ -230,3 +230,134 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 - AC-Refs: AC-0012-0051
 - Cycle 0 MUST freeze and persist (a) the resolved UI-bearing spec set AND (b) the stock-photo license-class catalog (allowed sources + license tiers + attribution format) in cycle-0 evidence.
 - Both serve as the SSOT for every subsequent cycle's resolver, aggregator, and license-verify pass.
+
+## v1.9.1 Defect Remediation Business Rules (CHG-005)
+
+## BR-0012-0041: Tailwind allowlist + body-scope (SSOT-sync invariant)
+
+- AC-Refs: AC-0012-0053
+- `findDesignMdViolations` MUST apply the OQ-0103 compound remedy = β (preflight literal allowlist) + γ (gate scope narrowed to `<body>` only).
+- The shipped `generator-prompt.md` Tailwind contract clause and the scanner's allowlist constants form a single SSOT pair; every change to one MUST ship with a matching change to the other (Reviewer-Gate finding `R-PROMPT-SCANNER-DRIFT` severity: error on violation).
+- NFR-0102 (3-cycle convergence p95 on canonical fixture pack) is enforced by the integration test in `tests/integration/prototyping/tailwindContractConvergence.test.ts`.
+
+## BR-0012-0042: `var()` unwrap parity across scanners
+
+- AC-Refs: AC-0012-0054
+- `scanFonts`, `scanRadius`, `scanShadow` MUST call `unwrapVarReference(declarationValue, rootDeclarations)` with the identical signature `scanColors` uses.
+- Unit tests MUST exercise the canonical `:root` fixture in `tests/unit/core/prototyping/scanners/unwrapVar.test.ts` for all three scanners.
+- NFR-0110 floor: scanner unit-testability ≥ 30 unit tests; ≥ 90% statement coverage on the scanner module.
+
+## BR-0012-0043: SAFE_LITERALS includes CSS-wide keywords
+
+- AC-Refs: AC-0012-0055
+- `SAFE_LITERALS` (consumed by all four scanners) MUST include `inherit`, `initial`, `unset`, `revert`, `currentColor`.
+- The 5×4 keyword × scanner pass matrix MUST be exercised in unit tests; failures MUST emit explicit assertion text naming the cell.
+
+## BR-0012-0044: `--*-shadow*:` declaration strip (OQ-0104 Option B)
+
+- AC-Refs: AC-0012-0056
+- `SHADOW_DECL_STRIP_RE` MUST match the broader `--*-shadow*:` pattern (any custom property whose name contains `shadow`) when the value contains `rgba()` / `rgb()` literals.
+- The strip MUST execute BEFORE `scanColors` evaluates the input.
+
+## BR-0012-0045: CJK proseCritique (Intl.Segmenter primary + OR-fallback)
+
+- AC-Refs: AC-0012-0057
+- `countWords` MUST use `Intl.Segmenter('ja', { granularity: 'word' })` for primary word counting on CJK-detected text AND MUST apply the OR-condition `200..500 words OR 600..2500 characters` band for QFAI-PROT-002.
+- Error text on out-of-band input MUST name (a) measured count form (words vs characters), (b) band used, (c) actual count.
+- No regression on English fixtures (200–500 words band) is required.
+
+## BR-0012-0046: `browserTool` config compatibility window
+
+- AC-Refs: AC-0012-0058
+- `prototyping.execution.browserTool` MUST accept `"playwright"` (primary) AND `"playwright-cli"` (deprecation window).
+- Documented default in shipped `assets/init/qfai.config.example.yaml` MUST be `"playwright"`.
+- `"playwright-cli"` MUST emit `D-DEPRECATED-PROBE` (severity: warning during window, error at sunset; sunset version named in the migration memo per REQ-0127).
+
+## BR-0012-0047: `iterate --capture` opt-in (default OFF, DR-0012-0029 preserved)
+
+- AC-Refs: AC-0012-0059
+- `qfai prototyping iterate` MUST accept `--capture` as opt-in; default OFF preserves the existing `DR-0012-0029` no-PNG / no-HTML / no-interaction.json posture.
+- When `--capture` is passed, iterate drives Playwright per the Capture contract; when `htmlSourceCopy: true`, iterate MUST copy from `.qfai/prototypes/iter-NN/<screen-id>.html` (not `page.content()`).
+- The `DR-0012-0029` amendment is pinned by `DR-0012-0031` (parallel agent assignment; orchestrator reconciles after merge).
+- NFR-0107 floor: per-screen capture budget 30s; overrun emits soft warning, not hard-fail.
+- Async capture errors MUST be caught and reported with per-screen context (no silent skip).
+
+## BR-0012-0048: `iterate --auto-serve` opt-in with foreign-process protection
+
+- AC-Refs: AC-0012-0060
+- `qfai prototyping iterate` MUST accept `--auto-serve` as opt-in; default OFF preserves the existing posture.
+- When passed, the spawned HTTP server MUST be torn down via `tree-kill` (Linux/macOS) or `taskkill /F /T` (Windows) on exit and SIGINT.
+- Stale port-bound prior-iterate processes MAY be force-killed; foreign (non-iterate) processes MUST NOT be killed — iterate MUST report PID + owning command and exit with input-error status.
+- NFR-0106 protection: the foreign-process refusal path is integration-tested.
+- The `DR-0012-0029` amendment is pinned by `DR-0012-0031`.
+
+## BR-0012-0049: `prototyping.json` validate-conformant emit
+
+- AC-Refs: AC-0012-0061
+- Every `iterations[i]` written by `iterate` MUST be `qfai validate --profile prototyping --fail-on error` conformant out of the box: non-null `commitSha` (sentinel `"uncommitted"` accepted), non-empty `proseCritique`, `scores`, `layoutAntiPatternsDetected`, `designMdViolations`, `pivotDirective`, `reviewerId`, and `evidenceRefs[]` (one entry per `screens[].id`).
+- On convergence, `acceptedIterationIndex` AND `stopReason ∈ {"axes-exceptional", "max-iterations", "license-verify-fail", "input-error"}` MUST be written at the top level.
+
+## BR-0012-0050: Self-completable certify via `verify.json#scope` (OQ-0107 Option B)
+
+- AC-Refs: AC-0012-0062
+- `verify.json` MUST carry a `scope: "prototyping" | "atdd" | "full"` field.
+- `qfai prototyping certify --check` MUST accept `scope: "prototyping"` as satisfying the prototyping-phase gate WITHOUT requiring `/qfai-atdd` or `/qfai-implement` artifacts.
+- `completion-certificate.json` MUST explicitly record `scope: "prototyping"` and MUST NOT claim full DONE.
+- Reviewer-Gate `R-CERTIFY-VERIFY-CIRCULAR` (severity: error) fires when a future PR reintroduces the cycle "certify requires full verify PASS AND full verify requires ATDD/implement artifacts".
+
+## BR-0012-0051: Single-spec public skill surface (OQ-0108 Option A)
+
+- AC-Refs: AC-0012-0063
+- `resolveSurfaceUnion()` MUST NOT appear on the public skill surface; it remains internal-only for the cycle ≥ 1 drift gate.
+- `SKILL.md` MUST use single-spec language.
+- Documentation lint MUST verify zero remaining multi-spec public-surface mentions at HEAD.
+
+## BR-0012-0052: Aggregate-dir mirror + underscore casing (OQ-0110 Option A)
+
+- AC-Refs: AC-0012-0064
+- On convergence (exit 64), iterate MUST mirror the accepted-iter content into `.qfai/evidence/prototyping/screenshots/<screen-id>.png` AND `.qfai/evidence/prototyping/html/<screen-id>.html` for every `screens[]` entry.
+- Screen-id casing MUST be underscore form end-to-end; the validator rejects hyphen-form.
+
+## BR-0012-0053: `--cycle 0 --force` backup safety (NFR-0114)
+
+- AC-Refs: AC-0012-0065
+- `qfai prototyping iterate --cycle 0` MUST refuse when `iter-00/` is non-empty unless `--force` is passed.
+- When `--force` is passed, iterate MUST move `iter-00/` → `iter-00.backup-<ISO>/` BEFORE invoking `clearEvidenceIterDirs`.
+- Backup integrity is byte-equivalence-verified by integration test (NFR-0114 enforcement).
+
+## BR-0012-0054: Exit-64 blocking-cause summary (NFR-0103)
+
+- AC-Refs: AC-0012-0066
+- On every non-converged cycle, `iterate` MUST emit a one-screen `[BLOCKED]` summary naming the top-3 categories with concrete offenders.
+- Category identifiers are stable names — additive only across versions (NFR-0103).
+
+## BR-0012-0055: `primarySpecId` error + (SHOULD) normalisation (OQ-0112)
+
+- AC-Refs: AC-0012-0067
+- On rejection, the error text MUST read literally `primarySpecId must be a 4-digit zero-padded string (e.g. "0001"); received <input>`.
+- SHOULD: accept `1` / `"1"` / `"01"` / `"0001"` and normalise to `spec-0001`. When normalisation is shipped, the error fires only for inputs wholly unparseable as a positive integer ≤ 9999.
+
+## BR-0012-0056: md5 duplicate-capture + missing-route detection (NFR-0113, OQ-0109)
+
+- AC-Refs: AC-0012-0068
+- `iterate` MUST compute md5 of each PNG; ≥ 2 identical md5s among distinct declared `screens[].id` entries surface `lap-009: duplicate-capture`.
+- For every `screens[].id`, iterate MUST verify a reachable hashchange or path-based route; missing routes surface `lap-010: missing-route`.
+- Both findings are advisory-failing (severity error; mandatory Reviewer `justification:` for override).
+- NFR-0113 determinism: same screen set → same `lap-009` finding set across re-runs.
+
+## BR-0012-0057: `--license-patch` add-only (SHOULD)
+
+- AC-Refs: AC-0012-0069
+- `--license-patch <file>` SHOULD accept add-only diffs; writes new catalog + appends `licensePatchAudit[]` row `{appliedAt, patchSha256, addedSources[]}`.
+- Deletions and modifications MUST be rejected with cycle-0-restart hint.
+
+## BR-0012-0058: Subagent iter-context hint (SHOULD)
+
+- AC-Refs: AC-0012-0070
+- `iter-NN/iterate-context.json` SHOULD be written with `{ priorCycle, priorScores, openBlockers, priorTailwindContract }`.
+- Absence MUST NOT fail certify; the file is purely advisory and orthogonal to `prototyping.json` (REQ-0012-0063).
+
+## BR-0012-0059: `--cycle N` out-of-range error clarity (SHOULD)
+
+- AC-Refs: AC-0012-0071
+- Error text MUST read literally `--cycle accepts 0..9 (=10 cycles total). --cycle 10 would be the 11th cycle and is not supported.` and SHOULD recommend the peek-mode equivalent.

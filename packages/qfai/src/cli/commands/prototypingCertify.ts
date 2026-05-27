@@ -139,6 +139,23 @@ export async function runPrototypingCertify(
     );
     return 2;
   }
+  // Profile-mismatch gate: when the latest validate.json was produced by
+  // a profile OTHER than `prototyping`, certify refuses and prints both
+  // the observed and expected profile names plus the recovery command.
+  // The check runs before the counts.error check so the operator-facing
+  // diagnostic surfaces the real problem (wrong profile) instead of a
+  // downstream counts-could-not-be-asserted error.
+  const observedProfile = extractString(validateJson, "profile");
+  const EXPECTED_PROFILE = "prototyping" as const;
+  if (typeof observedProfile === "string" && observedProfile !== EXPECTED_PROFILE) {
+    error(
+      `qfai prototyping certify: ${validateJsonRel} was produced by profile="${observedProfile}" ` +
+        `but certify requires profile="${EXPECTED_PROFILE}". ` +
+        `Recovery: run \`qfai validate --profile ${EXPECTED_PROFILE} --fail-on error\` ` +
+        "and rerun certify.",
+    );
+    return 2;
+  }
   const errorCount = extractNumber(extractRecord(validateJson, "counts"), "error") ?? -1;
   if (errorCount !== 0) {
     error(
@@ -155,6 +172,27 @@ export async function runPrototypingCertify(
     error(
       "qfai prototyping certify: verify.json status must be PASS " +
         "(run `/qfai-verify` and ensure it reports PASS).",
+    );
+    return 2;
+  }
+  // Scope discriminator: when `verify.json#scope` is present, certify
+  // recognises the `"prototyping"` value as satisfying the prototyping
+  // DONE condition without requiring ATDD / implement artefacts.
+  // Non-prototyping scopes (`atdd` / `implement` / `full`) are refused
+  // at the certify gate so the operator hits a single clear error
+  // before any downstream artifact is touched. The same circular-read
+  // class is enforced as a validator finding by
+  // `core/validators/reviewerGate.ts::detectCertifyVerifyCircular`
+  // (R-CERTIFY-VERIFY-CIRCULAR); this CLI-side gate keeps the certify
+  // command self-contained instead of relying on a downstream validate
+  // pass to surface the same condition.
+  const verifyScope = extractString(verifyJson, "scope");
+  if (verifyScope !== undefined && verifyScope !== "prototyping") {
+    error(
+      `qfai prototyping certify: verify.json scope is "${verifyScope}" but the ` +
+        'prototyping certify gate accepts only scope="prototyping". ' +
+        "Re-run `/qfai-verify` with the prototyping scope before certification " +
+        "(ATDD / implement / full scopes are forbidden by the option-B phase-isolation contract).",
     );
     return 2;
   }

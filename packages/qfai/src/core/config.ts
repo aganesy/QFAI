@@ -86,10 +86,16 @@ export type QfaiPrototypingCalibrationConfig = {
 export type QfaiPrototypingExecutionConfig = {
   targetUrl?: string | null;
   /**
-   * Browser tool handed to the AI evaluator sub-agent. The only accepted
-   * value is `"playwright-cli"`.
+   * Browser tool handed to the AI evaluator sub-agent.
+   *
+   * Accepted values during the deprecation window:
+   *   - `"playwright"` (primary, post-1.9.x default).
+   *   - `"playwright-cli"` (deprecated; sunset 1.10.0). When chosen,
+   *     the doctor probe emits `D-DEPRECATED-PROBE` (severity warning).
+   *
+   * At sunset only `"playwright"` is accepted.
    */
-  browserTool: "playwright-cli";
+  browserTool: "playwright" | "playwright-cli";
 };
 
 export type QfaiPrototypingConfig = {
@@ -169,7 +175,7 @@ export const defaultConfig: QfaiConfig = {
     },
     execution: {
       targetUrl: null,
-      browserTool: "playwright-cli",
+      browserTool: "playwright",
     },
   },
 };
@@ -574,20 +580,20 @@ function normalizePrototypingExecution(
         configIssue(
           configPath,
           `prototyping.execution.${legacyKey} は廃止されました。` +
-            ` prototyping.execution.browserTool: playwright-cli に置き換えてください。`,
+            ` prototyping.execution.browserTool: playwright に置き換えてください。`,
         ),
       );
     }
   }
 
   const browserToolRaw = raw.browserTool;
-  let browserTool = "playwright-cli" as const;
+  let browserTool: "playwright" | "playwright-cli" = "playwright";
   if (browserToolRaw !== undefined) {
-    if (browserToolRaw !== "playwright-cli") {
+    if (browserToolRaw !== "playwright" && browserToolRaw !== "playwright-cli") {
       issues.push(
         configIssue(
           configPath,
-          `prototyping.execution.browserTool は "playwright-cli" のみ有効です。` +
+          `prototyping.execution.browserTool は "playwright" または "playwright-cli" のみ有効です。` +
             ` 受け取った値: ${JSON.stringify(browserToolRaw)}`,
         ),
       );

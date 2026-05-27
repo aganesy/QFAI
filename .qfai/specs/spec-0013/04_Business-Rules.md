@@ -102,3 +102,18 @@
 
 - The active design-contract entries are exactly `{design-system.yaml, prototype-handoff.yaml, DESIGN.md, DESIGN.md.lock.yaml, design-system mirror validator}`.
 - New design contracts MUST be added through an explicit slice change (CHG entry) and updated in `_policies/05_Contracts.md` simultaneously.
+
+## BR-0013-0015: UI contract `primary_tasks: []` slot mandatory in template
+
+- AC-Refs: AC-0013-0018
+
+- The shipped UI contract template `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/contracts/ui-contract.sample.yaml` MUST carry a `primary_tasks: []` slot on every entry in `screens[]`. The slot ships as an empty array (placeholder for authoring); the requirements-analyst agent guide MUST instruct authoring ≥ 1 primary_task per screen as part of `/qfai-sdd` UI contract authoring.
+- Removing the slot or renaming it without an equivalent migration is a breaking change of the contract template and MUST go through an explicit slice change (CHG entry) in this spec.
+
+## BR-0013-0016: validate lane gates `/qfai-prototyping` on non-empty `primary_tasks`
+
+- AC-Refs: AC-0013-0019
+
+- A new `qfai validate` lane (QFAI-AUD-001 aligned) MUST verify that every `screens[].primary_tasks` in newly authored `.qfai/contracts/ui/*.yaml` is non-empty before `/qfai-prototyping` proceeds past its preflight gate.
+- Empty (`[]`) `primary_tasks` on any entry MUST FAIL the lane at severity error naming (a) the offending file path, (b) the offending screen `id`, (c) the rule `QFAI-AUD-001` (or canonical-aligned token).
+- The lane is independent of legacy UI-contract validators; it complements rather than replaces existing screen-presence checks. Pre-existing UI contracts that lack the slot are treated under deprecation-window semantics (informational rather than blocking) until they are re-authored or until the next minor escalates the warning.

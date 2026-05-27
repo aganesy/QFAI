@@ -31,6 +31,7 @@ import {
   MAX_ITERATION_INDEX,
   isOrdinalScore,
   isPivotDirective,
+  isStopReason,
 } from "../prototyping/iteration.js";
 
 import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
@@ -359,21 +360,17 @@ export async function validatePrototypingEvidence(
     issues.push(
       issue(
         "QFAI-PROT-005",
-        'stopReason field is required: set null while running, "axes-exceptional" or "max-iterations" once stopped.',
+        'stopReason field is required: set null while running, "axes-exceptional" | "max-iterations" | "license-verify-fail" | "input-error" once stopped.',
         "error",
         PROTO_JSON_REL,
         "prototypingEvidence.stopReasonRequired",
       ),
     );
-  } else if (
-    stopReason !== null &&
-    stopReason !== "axes-exceptional" &&
-    stopReason !== "max-iterations"
-  ) {
+  } else if (stopReason !== null && !isStopReason(stopReason)) {
     issues.push(
       issue(
         "QFAI-PROT-005",
-        `stopReason must be null | "axes-exceptional" | "max-iterations" (got ${JSON.stringify(stopReason)}).`,
+        `stopReason must be null | "axes-exceptional" | "max-iterations" | "license-verify-fail" | "input-error" (got ${JSON.stringify(stopReason)}).`,
         "error",
         PROTO_JSON_REL,
         "prototypingEvidence.stopReason",
@@ -414,4 +411,70 @@ export async function validatePrototypingEvidence(
 function countWords(value: string): number {
   const trimmed = value.trim();
   return trimmed.length === 0 ? 0 : trimmed.split(/\s+/u).length;
+}
+
+/**
+ * Screen-id casing validator.
+ *
+ * Scans every `<contractsDir>/ui/*.yaml` declared in the consumer
+ * project and emits `QFAI-PROT-008` for any `screens[].id` value that
+ * contains a hyphen. The accepted convention is underscore casing
+ * (snake_case), which lets the iterate path mirror the screen id into
+ * `.qfai/evidence/prototyping/screenshots/<id>.png` and
+ * `html/<id>.html` without re-casing — keeping the evidence aggregate
+ * dirs consistent end-to-end with the UI contract surface.
+ *
+ * Validation is per-file but emits one issue per offending screen id
+ * so the operator gets a fan-out list of the exact entries that need
+ * to be renamed. Empty / non-string ids are ignored here (they are
+ * caught by `validateScreenContractSchema` instead).
+ */
+export async function validateScreenIdCasing(root: string, contractsDir: string): Promise<Issue[]> {
+  const fg = (await import("fast-glob")).default;
+  const yaml = await import("yaml");
+  // Use `path.resolve` (not `path.join`) so an absolute `paths.contractsDir`
+  // (e.g. `/tmp/abs/contracts`) is honored as-is. Node's `path.join`
+  // concatenates segments without recognizing absolute-path semantics on
+  // the second arg, which would produce `${root}/tmp/abs/contracts/ui` and
+  // silently scan the wrong directory, dropping every QFAI-PROT-008 hit.
+  const uiDir = path.resolve(root, contractsDir, "ui");
+  const matches = await fg("**/*.{yaml,yml}", { cwd: uiDir, absolute: true, onlyFiles: true });
+  const issues: Issue[] = [];
+  for (const filePath of matches.sort()) {
+    let raw: string;
+    try {
+      raw = await readFile(filePath, "utf-8");
+    } catch {
+      continue;
+    }
+    let parsed: unknown;
+    try {
+      parsed = yaml.parse(raw);
+    } catch {
+      continue;
+    }
+    if (!isRecord(parsed)) continue;
+    const screens = parsed.screens;
+    if (!Array.isArray(screens)) continue;
+    for (const screen of screens) {
+      if (!isRecord(screen)) continue;
+      const idRaw = screen.id;
+      if (typeof idRaw !== "string") continue;
+      const id = idRaw.trim();
+      if (id.length === 0) continue;
+      if (id.includes("-")) {
+        const rel = path.relative(root, filePath).replace(/\\/g, "/");
+        issues.push(
+          issue(
+            "QFAI-PROT-008",
+            `screens[].id "${id}" uses hyphen casing; underscore casing is required (e.g. "${id.replace(/-/g, "_")}"). Underscore casing keeps iter-NN/<id>.png and the evidence aggregate dirs consistent.`,
+            "error",
+            rel,
+            "prototypingEvidence.screenIdCasing",
+          ),
+        );
+      }
+    }
+  }
+  return issues;
 }

@@ -295,6 +295,182 @@
 - And operator tooling that grepped the pre-Wave-15 top-level keys (`.specId` / `.specMdPath` / `.source`) MUST migrate to the `primary` block (or to `liveUiBearing[]` for the bare ID list); the BREAKING migration is documented in the v1.8.10 CHANGELOG.
 - And **(40th-wave addition per codex r3271093350 MINOR; 42nd-wave wording correction per codex r3271136886 MINOR)** a present-but-malformed `prototyping.json#frozenSpecsCovered` field (the SSOT classifier `classifyFrozenSpecsCoveredMultiSpec()` returns `{kind: "malformed", reason}` — non-array, empty array, non-string entry, empty-string entry, OR explicit `null` / `undefined` on a present key) → `show-spec` exits `2` with a "present but malformed" diagnostic naming the rejection reason. show-spec MUST NOT silently fall back to legacy `specsCovered`: certify already treats the same input as a hard error per AC-0012-0045 class (h), and reporting a downgraded scope from show-spec would mislead recovery decisions. (iterate-side handles present-but-malformed `frozenSpecsCovered` via a different mechanism — the legacy `specsCovered` reader for the cycle ≥ 1 shallow-equal check, plus the `frozenSurfaceUnion` drift baseline — so the cross-surface symmetry required here is certify ↔ show-spec, not all three commands.) Absent key (no `frozenSpecsCovered` on the record) still falls back to legacy `specsCovered` for pre-Wave-3 evidence compatibility.
 
+## v1.9.1 Defect Remediation ACs (CHG-005)
+
+## AC-0012-0053: Tailwind ↔ gate alignment (preflight allowlist + body-scope)
+
+- US-Refs: US-0012-0119
+- REQ-Refs: REQ-0012-0055
+- Given an iter authored faithfully to the shipped `generator-prompt.md`,
+- When `findDesignMdViolations(html, designMd)` runs with OQ-0103 = β (preflight literal allowlist) + γ (gate scope narrowed to `<body>`),
+- Then `designMdViolations[]` MUST be empty for every preflight literal enumerated in the source pack §B-4 / §3 (Tailwind CDN preflight literals, internal `--tw-*` custom properties, alpha-modifier `rgba()`, standard utility shorthand names).
+- And async fixture loading paths in the scanner unit tests MUST propagate read errors explicitly (no silent swallow).
+
+## AC-0012-0054: `var()` unwrap across scanFonts / scanRadius / scanShadow
+
+- US-Refs: US-0012-0120
+- REQ-Refs: REQ-0012-0056
+- Given a fixture with `:root { --font-sans: system-ui; }` and a declaration `font-family: var(--font-sans)` (analogous fixtures for `--radius-*` / `--shadow-*`),
+- When `scanFonts` / `scanRadius` / `scanShadow` evaluate the declaration,
+- Then the scanner MUST resolve via `unwrapVarReference(declarationValue, rootDeclarations)` before safety judgment and MUST emit zero `designMdViolations[]` entries for the unwrapped safe value.
+
+## AC-0012-0055: SAFE_LITERALS covers CSS-wide keywords
+
+- US-Refs: US-0012-0121
+- REQ-Refs: REQ-0012-0057
+- Given a declaration whose value is any of `inherit`, `initial`, `unset`, `revert`, `currentColor`,
+- When any of the four scanners (`scanColors` / `scanFonts` / `scanRadius` / `scanShadow`) inspects the declaration,
+- Then `designMdViolations[]` MUST NOT contain an entry naming that keyword.
+- And the unit test matrix MUST assert `5 keywords × 4 scanners = 20` pass cells.
+
+## AC-0012-0056: `--*-shadow*:` declaration strip (OQ-0104 Option B)
+
+- US-Refs: US-0012-0122
+- REQ-Refs: REQ-0012-0058
+- Given a fixture with `--shadow-sm: 0 1px 2px rgba(15,23,42,0.05);` AND a parallel `--card-shadow: 0 4px 8px rgba(0,0,0,0.1);`,
+- When the input filter into `scanColors` runs,
+- Then the broader `--*-shadow*:` pattern MUST strip both declarations before color scanning and `designMdViolations[]` MUST NOT contain entries naming those rgba values.
+
+## AC-0012-0057: CJK-aware proseCritique (Intl.Segmenter + OR-fallback)
+
+- US-Refs: US-0012-0123
+- REQ-Refs: REQ-0012-0059
+- Given a Japanese-only `proseCritique` of 800–1500 characters AND an English critique of 200–500 words,
+- When `countWords` (or its replacement) evaluates the prose against QFAI-PROT-002 using `Intl.Segmenter('ja', { granularity: 'word' })` AND the OR-condition `200..500 words OR 600..2500 characters`,
+- Then both fixtures MUST pass with no regression.
+- And on out-of-band input the error text MUST name (a) the count form measured (words vs characters), (b) the band used, (c) the actual count.
+
+## AC-0012-0058: `browserTool` accepts `"playwright"` and `"playwright-cli"`
+
+- US-Refs: US-0012-0124
+- REQ-Refs: REQ-0012-0060
+- Given `prototyping.execution.browserTool` set to `"playwright"` OR `"playwright-cli"` during the deprecation window,
+- When `qfai prototyping iterate` reads the config,
+- Then both values MUST be accepted; `"playwright-cli"` MUST emit `D-DEPRECATED-PROBE` (severity: warning during window, error at sunset).
+- And the documented default in `assets/init/qfai.config.example.yaml` MUST be `"playwright"`.
+
+## AC-0012-0059: `iterate --capture` opt-in flag (default OFF; preserves DR-0012-0029)
+
+- US-Refs: US-0012-0125
+- REQ-Refs: REQ-0012-0061
+- Given `qfai prototyping iterate` invoked WITHOUT `--capture`,
+- When the loop runs,
+- Then no PNG / HTML artifacts MUST be written (the existing DR-0012-0029 no-capture posture is preserved; amendment pinned by `DR-0012-0031`).
+- And when invoked WITH `--capture`, iterate MUST drive Playwright per the Capture contract in `iterate-plan.json` and write `iter-NN/<screen-id>.{png,html}` for every `screens[]` entry, copying source HTML from `.qfai/prototypes/iter-NN/<screen-id>.html` when `htmlSourceCopy: true`.
+- And async capture errors MUST be surfaced with explicit per-screen error context (no silent skip).
+
+## AC-0012-0060: `iterate --auto-serve` opt-in flag with foreign-process protection
+
+- US-Refs: US-0012-0126
+- REQ-Refs: REQ-0012-0062
+- Given `qfai prototyping iterate` invoked WITHOUT `--auto-serve`,
+- When the loop runs,
+- Then no HTTP server MUST be spawned (DR-0012-0029 default posture preserved; amendment pinned by `DR-0012-0031`).
+- And when invoked WITH `--auto-serve`, iterate MUST spawn a local server, tear down via `tree-kill` (Linux/macOS) or `taskkill /F /T` (Windows), recover from a stale prior-iterate port owner by force-kill, and MUST refuse to kill foreign processes (reports PID + owning command instead).
+- And SIGINT MUST trigger graceful teardown with explicit async error handling on the kill path.
+
+## AC-0012-0061: `prototyping.json` validate-conformant emit
+
+- US-Refs: US-0012-0127
+- REQ-Refs: REQ-0012-0063
+- Given a converged `iterate` invocation,
+- When `iterate` writes `prototyping.json`,
+- Then `iterations[i]` MUST carry non-null `commitSha` (sentinel `"uncommitted"` permitted), non-empty `proseCritique`, `scores`, `layoutAntiPatternsDetected`, `designMdViolations`, `pivotDirective`, `reviewerId`, AND `evidenceRefs[]` with one entry per `screens[].id`.
+- And on convergence the top-level MUST carry `acceptedIterationIndex` AND `stopReason ∈ {"axes-exceptional", "max-iterations", "license-verify-fail", "input-error"}`.
+- And `qfai validate --profile prototyping --fail-on error` MUST PASS without orchestrator post-processing.
+
+## AC-0012-0062: Self-completable certify via verify.json#scope (OQ-0107 Option B)
+
+- US-Refs: US-0012-0128
+- REQ-Refs: REQ-0012-0064
+- Given a `verify.json` carrying `scope: "prototyping"`,
+- When `qfai prototyping certify --check` runs,
+- Then certify MUST return exit 0 WITHOUT requiring `/qfai-atdd` or `/qfai-implement` artifacts.
+- And the resulting `completion-certificate.json` MUST explicitly record `scope: "prototyping"` and MUST NOT claim full DONE.
+- And Reviewer-Gate finding `R-CERTIFY-VERIFY-CIRCULAR` (severity: error) MUST fire when a future PR reintroduces the cycle "certify requires full verify PASS AND full verify requires ATDD/implement artifacts".
+
+## AC-0012-0063: Single-spec public skill surface (OQ-0108 Option A)
+
+- US-Refs: US-0012-0129
+- REQ-Refs: REQ-0012-0065
+- Given the v1.9.1 ship,
+- When the public skill surface is read (SKILL.md + the public references list),
+- Then `resolveSurfaceUnion()` MUST NOT appear on the public skill surface (kept internal-only for the cycle ≥ 1 drift gate) AND SKILL.md language MUST be single-spec.
+- And the doc-vs-impl drift identified across SKILL.md / certify / iterate MUST resolve to zero remaining multi-spec public surface mentions at HEAD.
+
+## AC-0012-0064: Aggregate-dir mirror with underscore casing (OQ-0110 Option A)
+
+- US-Refs: US-0012-0130
+- REQ-Refs: REQ-0012-0066
+- Given a converged iter with N declared screens,
+- When `iterate` mirrors accepted-iter content,
+- Then `.qfai/evidence/prototyping/screenshots/<screen-id>.png` AND `.qfai/evidence/prototyping/html/<screen-id>.html` MUST exist for every `screens[]` entry.
+- And screen-id casing MUST be normalised to underscore form end-to-end (iterate emit → validator expectation → contract `screens[].id` → aggregate-dir filename); hyphen-form is rejected at validate time.
+
+## AC-0012-0065: `--cycle 0 --force` backup safety
+
+- US-Refs: US-0012-0131
+- REQ-Refs: REQ-0012-0067
+- Given `.qfai/evidence/prototyping/iter-00/` is non-empty AND `qfai prototyping iterate --cycle 0` is invoked WITHOUT `--force`,
+- When the command runs,
+- Then iterate MUST refuse and the error MUST name the existing evidence path AND the recovery snippet `cp -r iter-00 iter-00.backup-<ISO> && qfai prototyping iterate --cycle 0 --force`.
+- And when `--force` is passed, iterate MUST move existing `iter-00/` to `iter-00.backup-<ISO>/` BEFORE invoking `clearEvidenceIterDirs`; the backup MUST be byte-equivalent to the pre-move `iter-00/`.
+
+## AC-0012-0066: Exit-64 blocking-cause summary
+
+- US-Refs: US-0012-0132
+- REQ-Refs: REQ-0012-0068
+- Given a non-converged cycle,
+- When `iterate` emits its cycle-end summary,
+- Then stdout MUST contain a one-screen `[BLOCKED]` line naming the top-3 categories (`designMdViolations` / `layoutAntiPatternsDetected` / `axes-below-exceptional`) with concrete counts AND first-offender details (e.g. `color=#fff at iter-NN/scr_001.html:97`, `lap-002`, `aesthetics: passing`).
+- And category names MUST be stable identifiers — additive only across versions.
+
+## AC-0012-0067: `primarySpecId` error text + (SHOULD) input normalisation
+
+- US-Refs: US-0012-0133
+- REQ-Refs: REQ-0012-0069
+- Given any non-conforming input for `primarySpecId`,
+- When iterate validates the input,
+- Then the error text MUST read literally `primarySpecId must be a 4-digit zero-padded string (e.g. "0001"); received <input>` (the literal-quote example matches the source pack §REQ-0119 wording).
+- And (SHOULD per OQ-0112) `1` / `"1"` / `"01"` / `"0001"` MUST be normalised internally to `spec-0001`; when normalisation is shipped, the error appears only for inputs wholly unparseable as a positive integer ≤ 9999.
+
+## AC-0012-0068: md5 duplicate-capture + missing-route advisory-failing detection (OQ-0109)
+
+- US-Refs: US-0012-0134
+- REQ-Refs: REQ-0012-0070
+- Given a post-capture iter with ≥ 2 distinct declared `screens[].id` entries whose PNG md5 hashes match,
+- When `iterate` runs duplicate detection,
+- Then `lap-009: duplicate-capture` MUST be surfaced in `layoutAntiPatternsDetected[]` with severity `error` and mandatory Reviewer `justification:` for any override.
+- And for every `screens[].id`, iterate MUST verify the generated HTML SPA contains a reachable hashchange or path-based route (`targetUrl#/<route>` or `targetUrl/<route>`); missing routes surface `lap-010: missing-route` with the same advisory-failing posture.
+- And the md5 detection MUST be deterministic across re-runs on the same screen set.
+
+## AC-0012-0069: `--license-patch` add-only path (SHOULD)
+
+- US-Refs: US-0012-0135
+- REQ-Refs: REQ-0012-0071
+- Given `qfai prototyping iterate --license-patch <file>` invoked with an add-only diff,
+- When the patch is applied,
+- Then the new frozen catalog MUST be written AND an audit row MUST be appended to `prototyping.json#licensePatchAudit[]` carrying `{appliedAt, patchSha256, addedSources[]}`.
+- And deletions or modifications MUST be rejected with the hint to use the cycle-0-restart path.
+- And async patch I/O errors MUST be surfaced with explicit operator-facing diagnostic.
+
+## AC-0012-0070: Subagent iter-context hint (SHOULD)
+
+- US-Refs: US-0012-0136
+- REQ-Refs: REQ-0012-0072
+- Given a cycle ≥ 1 invocation,
+- When `iterate` finalises the cycle,
+- Then `iter-NN/iterate-context.json` SHOULD be written with shape `{ priorCycle: N, priorScores: {...}, openBlockers: [...], priorTailwindContract: "..." }`.
+- And the file is advisory and orthogonal to `prototyping.json` (REQ-0012-0063); absence MUST NOT fail certify.
+
+## AC-0012-0071: `--cycle N` out-of-range error clarity (SHOULD)
+
+- US-Refs: US-0012-0137
+- REQ-Refs: REQ-0012-0073
+- Given `iterate --cycle N` invoked with N outside `0..9`,
+- When iterate validates the argument,
+- Then the error MUST read literally `--cycle accepts 0..9 (=10 cycles total). --cycle 10 would be the 11th cycle and is not supported.` and SHOULD recommend `--cycle 9 --check-convergence` or the equivalent peek mode.
+
 ## Completion Gate
 
 - `/qfai-prototyping` completion requires `qfai validate --fail-on error` pass.

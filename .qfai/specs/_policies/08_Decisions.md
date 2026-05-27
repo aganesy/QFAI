@@ -1588,3 +1588,114 @@ Source: discussion-20260522081618995 OQ-0001..0012 (10 resolved, 2 deferred)。
 - Decision: AGENTS.md / `CLAUDE.md` symlink 議論は別 `/qfai-discussion` invocation に切り出す (target 2026-09-30)。`.qfai/steering/` 自動アーカイブは post-v1 dogfooding review (target 2026-12-31) まで `qfai validate` の `W-WORKLOG-STALE` surface で代用。
 - Rationale: 両者は独立した discovery scope を持つ。本 pack に bundle すると atomicity を超える。
 - Source: requirements-analyst, deferred row in `13_Deferred.md`。
+
+### DR-0001-0001..0009: Prototyping defect-remediation pack — deferred OQ resolutions (2026-05-24)
+
+Source: discussion-20260523221141355 OQ-0103/0104/0105/0107/0108/0109/0110/0111/0112 (9 deferred → resolved at `/qfai-sdd` Phase 0).
+These rows resolve the 9 OQ rows the requirements-analyst left `deferred` for the architect to pick. The acceptance signals for the underlying REQs (REQ-0101..0125) are invariant across each option set; the choices below pin the specific implementation contract for spec-0012 (and any co-shipped spec slices) so downstream implementation, validation, and reviewer-gate code can be written against a single resolution.
+
+#### DR-0001-0001: Tailwind ↔ gate hybrid — β whitelist preflight + γ `<body>`-scope (OQ-0103 resolved)
+
+- Date: 2026-05-24
+- Statement: Resolve the Tailwind CDN ↔ `findDesignMdViolations` conflict by combining option β (whitelist Tailwind preflight literals in scanner) AND option γ (scope the gate to `<body>` only, skipping the preflight `<style>` block) in a single hybrid remedy. The whitelist enumerates the 5 sentinel literals named in SRC-0001 §B-4 / SRC-0004 §3: `#fff`, `#9ca3af`, `#e5e7eb`, `rgb(59 130 246 / 0.5)`, `--tw-ring-*`. The `<body>`-scope rule excludes `<head>` / preflight `<style>` blocks from scanner input.
+- Chosen option: β + γ hybrid.
+- Rejected option α — drop Tailwind CDN: breaks the rapid-prototyping reach the skill depends on; downstream LLMs would lose JIT utility coverage.
+  - DO NOT: drop CDN-based Tailwind from `generator-prompt.md`. Temptation: gate becomes trivial if we ship no CDN.
+- Rejected option δ — read `tailwind.config.theme.extend` to compute per-iter allowlist: pushes compile-cost into the scanner and creates a new SSOT-sync surface (`tailwind.config` ↔ scanner) without removing the preflight problem.
+  - DO NOT: parse tailwind.config inside the scanner. Temptation: feels like the "correct" semantic remedy.
+- Rejected option ε — mandate arbitrary-value form everywhere (`rounded-[0.5rem]`): forces authors to abandon utility shorthands for no scanner-side benefit (the preflight literals still leak).
+  - DO NOT: ban utility shorthands. Temptation: feels safer because every value is explicit.
+- Source REQ: REQ-0101, REQ-0102, REQ-0125.
+- Trace: discussion-20260523221141355 OQ-0103 (deferred → resolved here).
+
+#### DR-0001-0002: `--*-shadow*:` strip — option B (OQ-0104 resolved)
+
+- Date: 2026-05-24
+- Statement: `SHADOW_DECL_STRIP_RE` extends to **any custom-property declaration whose name contains `shadow`** (regex `--[A-Za-z0-9-]*shadow[A-Za-z0-9-]*:`), not the narrow `--shadow-*:` form. This catches Tailwind v4 emissions such as `--ring-shadow`, `--default-shadow`, `--inset-shadow-*` that the narrow form would miss.
+- Chosen option: B (`--*-shadow*:`).
+- Rejected option A — narrow `--shadow-*:` only: misses Tailwind v4 `--ring-shadow`, `--default-shadow` and any future `--<feature>-shadow-*` emissions; would require touching the regex every Tailwind minor.
+  - DO NOT: hard-code `--shadow-` prefix. Temptation: narrowest pattern minimizes false-strip risk.
+- Rejected option C — parse-as-composite (semantic strip of any `--*` whose value parses as a box-shadow composite): too permissive; will silently strip legitimate color tokens whose computed value happens to look shadow-shaped (e.g. tokens used in both shadow and border contexts), producing false negatives in `scanColors`.
+  - DO NOT: introduce semantic parsing in a regex-stage filter. Temptation: feels future-proof.
+- Source REQ: REQ-0105.
+- Trace: discussion-20260523221141355 OQ-0104 (deferred → resolved here).
+
+#### DR-0001-0003: CJK-aware `countWords` — Intl.Segmenter primary + OR-condition fallback (OQ-0105 resolved)
+
+- Date: 2026-05-24
+- Statement: `countWords` (consumed by QFAI-PROT-002) MUST use `Intl.Segmenter(undefined, { granularity: "word" })` with the `isWordLike` filter as primary; when `Intl.Segmenter` is unavailable (Node < 18 or stripped runtime) the fallback is the OR-condition `200..500 words OR 600..2500 characters`. Error text on out-of-band MUST name (a) the count form actually measured, (b) the band used. Acceptance signal: Japanese 800–1500-char fixture passes, English 200–500-word fixture continues to pass.
+- Chosen option: Intl.Segmenter primary + OR-condition fallback.
+- Rejected option — heuristic-only (CJK character-ratio fallback to `len/2`): brittle on mixed-script bilingual prose; misclassifies headers / inline code / latin loanwords.
+  - DO NOT: ship CJK-ratio heuristic as primary. Temptation: cheaper than ICU dependency.
+- Rejected option — OR-condition only (no semantic word resolution): loses the "200..500 words" semantic for English; tests cannot distinguish word-shaped prose from filler character counts.
+  - DO NOT: drop semantic word measurement. Temptation: one rule covers both locales.
+- Rejected option — per-rule configurable bounds in `.qfai/contracts/prototyping/*.yaml`: per-project config sprawl; each consumer must hand-tune; defeats the canonical-band invariant.
+  - DO NOT: push the band into per-project config. Temptation: maximum flexibility.
+- Source REQ: REQ-0106.
+- Trace: discussion-20260523221141355 OQ-0105 (deferred → resolved here).
+
+#### DR-0001-0004: `certify` ↔ `verify` resolution — option B (`verify.json#scope` field) (OQ-0107 resolved)
+
+- Date: 2026-05-24
+- Statement: Introduce a `scope: "prototyping" | "atdd" | "full"` field on `verify.json`. `qfai prototyping certify --check` accepts `scope: "prototyping"` as satisfying the prototyping-phase gate. `completion-certificate.json` MUST explicitly record `scope: "prototyping"` and MUST NOT claim full DONE. Full DONE retains the original full `/qfai-verify` PASS gate. Co-shipped helper `certify --upgrade-scope full` (per OQ-0121=A, separate row in resolution log) allows in-place re-seal once full verify PASSes.
+- Chosen option: B (scope-field on verify.json).
+- Rejected option A — split certify into `--prototype-only` / `--full`: fragments the command surface; doubles the documentation matrix; each new scope requires a new flag.
+  - DO NOT: add `--prototype-only` flag. Temptation: feels like the lightest implementation.
+- Rejected option C — new `qfai prototyping verify` subcommand: duplicates the verify command surface; each new scope adds a new subcommand. Discoverability is offset by per-scope command proliferation.
+  - DO NOT: introduce a parallel verify command. Temptation: most-discoverable from skill body.
+- Source REQ: REQ-0112, REQ-0113.
+- Trace: discussion-20260523221141355 OQ-0107 (deferred → resolved here).
+
+#### DR-0001-0005: Multi-spec doc/impl drift — option A (realign SKILL.md to single-spec) (OQ-0108 resolved)
+
+- Date: 2026-05-24
+- Statement: Realign `qfai-prototyping/SKILL.md` to single-spec language. Remove `resolveSurfaceUnion()` from the public skill surface (the function remains internal, callable from validators and `show-spec`, but is no longer documented as a skill capability). The per-spec layout migration (`iter-NN/spec-NNNN/<screen-id>.{png,html,review.json}`) is deferred to a future pack; surface MUST be self-consistent at HEAD (no claim of multi-spec iterate/certify until the migration lands).
+- Chosen option: A (realign SKILL.md to single-spec).
+- Rejected option B — complete per-spec layout migration: requires iterate emit + certify consume + path helpers + validator rewrites in the same pack; not justified by current downstream demand and would inflate this remediation pack beyond an atomic slice.
+  - DO NOT: bundle the per-spec migration into this defect-remediation pack. Temptation: "fix it once and for all" is appealing but breaks atomicity.
+- Source REQ: REQ-0114, REQ-0124.
+- Trace: discussion-20260523221141355 OQ-0108 (deferred → resolved here). Cross-link: TDD-0384 / OQ-0012-0006 remains the future-pack tracker for option B.
+
+#### DR-0001-0006: `lap-009` / `lap-010` severity — advisory-failing (severity error + mandatory justification) (OQ-0109 resolved)
+
+- Date: 2026-05-24
+- Statement: The new layout anti-patterns `lap-009: duplicate-capture` and `lap-010: missing-route` (introduced by REQ-0121) are severity **error** with mandatory Reviewer justification text. They interrupt convergence; the Reviewer MUST emit a non-empty `justification:` naming the duplicate md5 pair (for lap-009) or the missing route (for lap-010) to clear the gate. This mirrors the `R-*` advisory-failing pattern (DR-0258).
+- Chosen option: advisory-failing (error + mandatory justification).
+- Rejected option — advisory-warning: does not interrupt drift; identical capture pairs and missing routes would silently accumulate; defeats the md5/route detection's purpose.
+  - DO NOT: ship lap-009/010 as warning. Temptation: mirrors lap-001..008 historical posture.
+- Source REQ: REQ-0121.
+- Trace: discussion-20260523221141355 OQ-0109 (deferred → resolved here).
+
+#### DR-0001-0007: Screen-id casing — option A (underscore end-to-end) (OQ-0110 resolved)
+
+- Date: 2026-05-24
+- Statement: `screens[].id` MUST be snake_case (underscore-separated) end-to-end. The same form MUST be used in: UI contract authoring (`primary_tasks` slot per REQ-0115), iterate emit (`iter-NN/<screen-id>.{png,html,review.json}`), validator expectation, aggregate-dir filename (`.qfai/evidence/prototyping/screenshots/<screen-id>.png`, `.qfai/evidence/prototyping/html/<screen-id>.html`), and the `evidenceRefs[].path` field in `iterations[i]` (REQ-0111). Existing hyphen-form iter outputs are accepted during the deprecation window with `D-DEPRECATED-PATH` warning.
+- Chosen option: A (underscore).
+- Rejected option B — hyphen everywhere: requires validator + filename rewrites; conflicts with Python/YAML convention used in surrounding artifacts; the URL-friendliness argument is weaker than the file-stem ergonomics one.
+  - DO NOT: normalize to hyphen. Temptation: URL routes use hyphen.
+- Rejected option C — accept both (validator change): silently masks drift; two equivalent IDs can refer to the same screen with no enforcement; defeats the SSOT premise of `screens[].id`.
+  - DO NOT: accept both casings. Temptation: minimum-breakage path.
+- Source REQ: REQ-0116, REQ-0111.
+- Trace: discussion-20260523221141355 OQ-0110 (deferred → resolved here).
+
+#### DR-0001-0008: `validate.json` profile disambiguation — option A (profile-suffixed + always-latest pointer) (OQ-0111 resolved)
+
+- Date: 2026-05-24
+- Statement: `qfai validate --profile <p>` writes `.qfai/report/validate-<profile>.json` per profile AND `.qfai/report/validate.json` always reflects the most recent run with an explicit top-level `profile` field. `certify` (and all downstream skills) MUST read the profile-suffixed file when scoping by profile, and MAY read the non-suffixed file when the `profile` field check is sufficient. The doc-vs-impl drift `.qfai/output/validate.json` (old) vs `.qfai/report/validate.json` (current) resolves to `.qfai/report/validate.json`; the old path emits `D-DEPRECATED-PATH` warning during the window and is removed at the sunset version (qfai 1.10.0 per `package.json#version`).
+- Chosen option: A (profile-suffixed + always-latest pointer with explicit `profile` field).
+- Rejected option B — `certify` auto-reruns `qfai validate --profile prototyping` before reading: hides upstream drift (operator-driven validate-run state is silently overwritten by certify-driven re-run); adds latency; obscures which command actually produced the validated result.
+  - DO NOT: have certify silently re-run validate. Temptation: "always fresh" feels safe.
+- Rejected option C — error out on profile mismatch and tell operator which command to re-run: worse UX than A (forces operator round-trip); does not prevent the silent overwrite if two profiles are run in sequence.
+  - DO NOT: error on profile mismatch instead of disambiguating. Temptation: minimum-implementation path.
+- Source REQ: REQ-0120, REQ-0124.
+- Trace: discussion-20260523221141355 OQ-0111 (deferred → resolved here).
+
+#### DR-0001-0009: `primarySpecId` normalization — SHOULD remains SHOULD per REQ-0119 (OQ-0112 resolved)
+
+- Date: 2026-05-24
+- Statement: REQ-0119 SHOULD (input normalization of `primarySpecId` accepting `1` / `"1"` / `"01"` / `"0001"`) remains SHOULD. Implementations MAY accept any positive-integer-shaped input and MUST normalize internally to `spec-NNNN`; implementations that choose strict-rejection-only MUST produce the explicit error text from REQ-0119: `primarySpecId must be a 4-digit zero-padded string (e.g. "0001"); received <input>`. The error text contract is MUST regardless of which path the implementation chooses. No schema migration is forced.
+- Chosen option: SHOULD remains SHOULD (per REQ-0119 wording).
+- Rejected option — MUST-normalize: forces every implementation site (config loader, CLI flag parser, validator) to apply the normalization; schema migration for downstream consumers that already use `"0001"` form gains nothing; consumers that use `1` would need to be told they must change anyway because the spec-side artifacts still use 4-digit form.
+  - DO NOT: promote the SHOULD to MUST in this pack. Temptation: "be lenient on input" feels user-friendly.
+- Source REQ: REQ-0119.
+- Trace: discussion-20260523221141355 OQ-0112 (deferred → resolved here).

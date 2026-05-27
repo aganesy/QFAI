@@ -12,6 +12,10 @@ screens:
   - id: order_create
     title: Create Order
     route: /orders/new
+    # primary_tasks: at least one entry required per screen (QFAI-AUD-001).
+    # Replace the example below with the actual primary user action(s).
+    primary_tasks:
+      - submit a new order
     elements:
       - id: customer_id_input
         label: Customer ID

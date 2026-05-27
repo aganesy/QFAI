@@ -95,3 +95,27 @@
 - EX-Ref: EX-0015-0001
 - AC-Refs: AC-0015-0009
 - Verify that `review-profiles.yml` no longer defines the `full-harness` profile and that only the `default` profile is active; references to `full-harness` in routing surfaces must surface a routing-config validator finding.
+
+## TC-0015-0017: Reviewer-Gate Emits R-CERTIFY-VERIFY-CIRCULAR on Regressed Certify Path
+
+- EX-Ref: EX-0015-0009
+- AC-Refs: AC-0015-0013
+- Type: error
+- Level: integration
+- Verify that when a fixture certify code path reads a `verify.json` whose profile requires `/qfai-atdd` or `/qfai-implement` artifacts (regressed cycle), the Reviewer Gate emits `R-CERTIFY-VERIFY-CIRCULAR` at severity error with a `justification:` naming the certify path, the offending validator-output profile, and the option-B contract clause violated. Implemented under `packages/qfai/tests/integration/reviewerGateCertifyVerifyCycle.test.ts`.
+
+## TC-0015-0018: Option-B Compliant Certify Passes Without R-CERTIFY-VERIFY-CIRCULAR
+
+- EX-Ref: EX-0015-0009
+- AC-Refs: AC-0015-0013
+- Type: normal
+- Level: integration
+- Verify that a certify code path that reads only prototyping-phase scoped validator output (no `/qfai-atdd` / `/qfai-implement` artifact requirements) passes the Reviewer Gate without emitting `R-CERTIFY-VERIFY-CIRCULAR`. Control case for TC-0015-0017.
+
+## TC-0015-0019: Reviewer-Gate Emits R-PROMPT-SCANNER-DRIFT with 3-part justification
+
+- EX-Ref: EX-0015-0010
+- AC-Refs: AC-0015-0014
+- Type: error
+- Level: integration
+- Verify that when the upstream SSOT-sync-pair CI lane (spec-0004 BR-0004-0027) signals drift on a fixture PR (scanner edited but prompt not, or vice versa), the Reviewer Gate emits `R-PROMPT-SCANNER-DRIFT` at severity error with a non-empty 3-part `justification:` naming the modified file, the un-paired counterpart, and the Tailwind contract clause whose match cannot be confirmed. Downstream `qfai validate` ingestion accepts the 3-part justification and rejects an empty-`justification:` variant (cross-spec assertion against BR-0004-0028). Implemented under `packages/qfai/tests/integration/reviewerGatePromptScannerDrift.test.ts`.

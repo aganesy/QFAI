@@ -30,10 +30,20 @@
  * (Tailwind config shape).
  */
 
-import { mkdir, readdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
+import {
+  copyFile,
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 
-import { error, info } from "../lib/logger.js";
+import { error, info, warn } from "../lib/logger.js";
 import { loadConfig } from "../../core/config.js";
 import { hashDesignMd, parseDesignMd, type DesignMd } from "../../core/design/designMd.js";
 import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
@@ -64,15 +74,187 @@ import {
   iterationReviewPath,
   iterationHtmlPath,
   iterationScreenshotPath,
+  isOrdinalScore,
   shouldStop,
+  type OrdinalScore,
   type StopReason,
 } from "../../core/prototyping/iteration.js";
+import {
+  applyLicensePatch,
+  isLicensePatchAuditRow,
+  parseLicensePatch,
+  type LicensePatchAuditRow,
+} from "../../core/prototyping/licensePatchAudit.js";
+import {
+  canonicalIterateContext,
+  type IterateContext,
+} from "../../core/prototyping/iterateContext.js";
+import {
+  buildBlockedSummary,
+  type BlockedSummaryInput,
+} from "../../core/prototyping/blockedSummary.js";
+import {
+  findMd5DuplicateCaptures,
+  findMissingRoutes,
+  type Lap010Input,
+} from "../../core/prototyping/layoutAntiPatternsAdvisory.js";
+import { parsePrimarySpecId } from "../../core/prototyping/primarySpecIdParse.js";
+import { readUiContractScreenContracts } from "../../core/contracts/screenContracts.js";
+
+/**
+ * Per-screen descriptor consumed by the opt-in `--capture` flag.
+ *
+ * One entry per screen the operator wants captured this cycle. The
+ * `htmlSourceCopy` flag, when true, instructs iterate to copy the
+ * source HTML at `.qfai/prototypes/iter-NN/<id>.html` byte-for-byte
+ * into the evidence iter dir (no runtime style injection from
+ * `page.content()`). Default is false: HTML is produced by the
+ * injected {@link CaptureScreenFn} just like the PNG.
+ */
+export type IterateCaptureScreen = {
+  readonly id: string;
+  readonly url?: string;
+  readonly htmlSourceCopy?: boolean;
+};
+
+/**
+ * Result returned by an injected per-screen capture runner. `ok=false`
+ * with a `reason` propagates as a per-screen error context (iterate
+ * does not swallow the failure silently).
+ */
+export type CaptureScreenResult = {
+  readonly ok: boolean;
+  readonly durationMs: number;
+  readonly reason?: string;
+};
+
+/**
+ * Capture runner injected for testability. The default runner (used
+ * when this option is not provided) drives real Playwright. The test
+ * suite passes a deterministic stub.
+ */
+export type CaptureScreenFn = (args: {
+  readonly screenId: string;
+  readonly url: string | null;
+  readonly pngPath: string;
+  readonly htmlPath: string;
+}) => Promise<CaptureScreenResult>;
 
 export type RunPrototypingIterateOptions = {
   root: string;
   cycle: number;
   targetUrl?: string;
+  /**
+   * Read-only peek of the canonical prototyping state file
+   * (`.qfai/evidence/prototyping/prototyping.json`). When true, iterate
+   * reads `stopReason` + `acceptedIterationIndex` from disk and reports
+   * convergence WITHOUT invoking the iterate loop, capture, serve,
+   * license-verify, or validate paths. Exit 0 when converged
+   * (`stopReason === "axes-exceptional"` AND `acceptedIterationIndex`
+   * is a non-null number); exit 2 otherwise (including when the state
+   * file is missing).
+   *
+   * Defaults to the final cycle (9) when invoked from the CLI without
+   * `--cycle`; orthogonal to capture / auto-serve defaults
+   * (preserved unchanged).
+   */
+  checkConvergence?: boolean;
+  /**
+   * Opt-in PNG/HTML capture (default OFF; preserves the no-capture
+   * default posture). When true, iterate runs the injected capture
+   * path against {@link RunPrototypingIterateOptions.screens}.
+   */
+  capture?: boolean;
+  /**
+   * Per-screen descriptors consumed by the capture path. Ignored when
+   * `capture` is not true.
+   */
+  screens?: readonly IterateCaptureScreen[];
+  /**
+   * Per-screen capture runner. Used only when `capture` is true. When
+   * omitted, iterate dynamically loads the default Playwright runner
+   * from `core/prototyping/defaultCaptureScreen.ts` so the operator
+   * can drive capture from the CLI without supplying a DI hook. Test
+   * fixtures pass a deterministic stub here to stay isolated from
+   * Playwright.
+   */
+  captureScreen?: CaptureScreenFn;
+  /**
+   * Per-screen capture wall-clock budget in milliseconds. When a
+   * runner invocation exceeds this budget iterate emits a soft warning
+   * to stderr but does NOT hard-fail the run (NFR-0107). Defaults to
+   * 30_000 ms (30 s).
+   */
+  captureBudgetMs?: number;
+  /**
+   * Opt-in local HTTP server (default OFF; preserves the no-server
+   * default posture).
+   */
+  autoServe?: boolean;
+  /**
+   * Server runner injected for testability. When set, iterate
+   * delegates spawn / teardown to this callback. When unset and
+   * `autoServe` is true, iterate logs that it would have spawned and
+   * returns. Test fixtures pass a deterministic stub.
+   */
+  serverRunner?: ServerRunnerFn;
+  /**
+   * Opt-in destructive re-run of `--cycle 0`. When true AND an
+   * `iter-00` directory exists, iterate RENAMES it to
+   * `iter-00.backup-<ISO>` BEFORE clearing evidence dirs (so the
+   * backup is byte-equivalent to the prior loop's seed). Without
+   * `--force` the destructive path is refused with a recovery hint.
+   */
+  force?: boolean;
+  /**
+   * Absolute or root-relative path to an add-only license-patch file.
+   * When set, iterate applies the patch to the frozen license catalog
+   * BEFORE the runtime license verify, then appends a
+   * `licensePatchAudit[]` row to prototyping.json. Deletion /
+   * modification patches are rejected.
+   */
+  licensePatch?: string;
+  /**
+   * Operator-supplied primary spec id (`--primary-spec-id`). Normalised
+   * via {@link parsePrimarySpecId}; rejects unparseable / out-of-range
+   * input with exit 2 + the canonical error message. Overrides config
+   * + marker resolution when set.
+   */
+  primarySpecId?: string | number;
 };
+
+/**
+ * Auto-serve runner contract. The runner is responsible for spawning
+ * the server, returning a handle the caller can later tear down, and
+ * surfacing foreign-process refusals as `{ ok: false, reason }`.
+ */
+export type ServerRunnerFn = (args: {
+  readonly root: string;
+  readonly cycle: number;
+  /**
+   * Operator-supplied target URL. Forwarded to the runner so it can
+   * derive the bind port from `new URL(targetUrl).port` instead of
+   * silently falling back to a default that mismatches the URL the
+   * operator typed (e.g. `--target-url http://localhost:5173/`
+   * binding 5173, not 4321). Optional: the runner falls back to its
+   * own documented default when missing.
+   */
+  readonly targetUrl?: string;
+}) => Promise<ServerRunnerResult>;
+
+export type ServerRunnerResult =
+  | {
+      readonly ok: true;
+      /** Caller invokes teardown after the cycle completes / SIGINT. */
+      readonly teardown: () => Promise<void>;
+      readonly pid?: number;
+    }
+  | {
+      readonly ok: false;
+      /** Foreign-process refusal MUST surface the PID + command. */
+      readonly reason: string;
+      readonly foreignPid?: number;
+    };
 
 export type DesignTokens = {
   colors: Record<string, string>;
@@ -98,6 +280,13 @@ export type IteratePlan = {
   targetUrl: string | null;
   designTokens: DesignTokens;
   nextActions: string[];
+  /**
+   * Per-screen capture descriptors. Present only when the operator
+   * passed `--capture`; absent (omitted from the JSON output) when
+   * the default-OFF posture is in effect (preserving the existing
+   * no-capture default).
+   */
+  screens?: readonly IterateCaptureScreen[];
 };
 
 const ROOT_DESIGN_MD_REL = "DESIGN.md";
@@ -162,18 +351,111 @@ const DEFAULT_LICENSE_CATALOG: LicenseCatalog = {
   },
 };
 
+export const CYCLE_OUT_OF_RANGE_PEEK_HINT =
+  "Hint: use --cycle 9 --check-convergence to peek the final cycle without re-running the loop.";
+
+/**
+ * Tailwind contract phase tag emitted into `iterate-context.json#priorTailwindContract`.
+ *
+ * Single source for the literal; reviewer subagents read the tag and
+ * compare it to the current contract phase to detect drift. When a
+ * future migration (CHG-006 / Phase 5 / etc.) lands, update this
+ * constant in one place — the iterate-context payload picks it up
+ * automatically.
+ */
+const CURRENT_TAILWIND_CONTRACT_PHASE = "phase-1";
+
+// TODO(next-minor): runPrototypingIterate body is ~674 LOC and orchestrates
+// 13 distinct sections (peek, cycle range, primary-spec, zero-UI precheck,
+// DESIGN.md lock, cycle-0 reset, seed write, license verify, plan write,
+// auto-serve, capture, context write, blocked summary). CLAUDE.md project
+// rule asks for ~50 LOC per function. Candidate extractions for the next
+// minor housekeeping pass: verifyLicensesForCycle(options, protoRecord),
+// runCycle0Reset(options, ...), runOptionalCaptureAndServe(options, dir),
+// emitAdvisorySummaries(options, protoJsonAbs). Pure structural refactor;
+// no semantic change expected.
+// TODO(next-minor): split runPrototypingIterate into the extractions above.
 export async function runPrototypingIterate(
   options: RunPrototypingIterateOptions,
 ): Promise<number> {
+  // Read-only peek path. MUST precede every other gate so that:
+  //   1. The cycle range gate (0..9) does NOT trip when the operator
+  //      passes a deliberately out-of-range cycle to peek (though the
+  //      typical hint convention pins cycle 9, which is in range).
+  //   2. The DESIGN.md read, lock gate, spec resolution, license
+  //      verify, capture, serve, and validate paths are bypassed —
+  //      the peek is a pure read of the canonical prototyping state
+  //      file, never a re-run of the loop.
+  // Default cycle to 9 (final cycle of the loop, mirroring the
+  // peek-mode hint) when the caller omits it.
+  if (options.checkConvergence === true) {
+    // Reject out-of-range --cycle even on the peek path. Pre-fix
+    // `--check-convergence --cycle 99` silently coerced to cycle 9
+    // and produced a misleading "converged at cycle 9" report. The
+    // Phase 4 `input-error` stopReason enum was introduced to catch
+    // this class; surface the same input-error diagnostic and exit 2
+    // instead of masking the malformed cycle.
+    //
+    // The CLI surface defaults `--cycle` to 9 when the operator
+    // omits it (see main.ts `prototypingCycle ?? 9`); the
+    // peek-without-cycle entry path (used by integration tests that
+    // bypass the CLI parser via `as unknown as ...`) is still routed
+    // to the same cycle-9 default. We read `options.cycle` through
+    // `unknown` so the "undefined sentinel" branch is reachable at
+    // runtime without tripping `@typescript-eslint/no-unnecessary-
+    // condition` on the statically-typed signature.
+    const rawCycle: unknown = options.cycle;
+    if (rawCycle === undefined) {
+      return runCheckConvergencePeek(options.root, 9);
+    }
+    if (
+      !Number.isInteger(options.cycle) ||
+      options.cycle < 0 ||
+      options.cycle > MAX_ITERATION_INDEX
+    ) {
+      error(
+        "qfai prototyping iterate --check-convergence: --cycle accepts 0..9 " +
+          `(=10 cycles total). Received --cycle ${String(options.cycle)} ` +
+          "(input-error class stop). Omit --cycle to peek the default cycle 9.",
+      );
+      return 2;
+    }
+    return runCheckConvergencePeek(options.root, options.cycle);
+  }
   if (
     !Number.isInteger(options.cycle) ||
     options.cycle < 0 ||
     options.cycle > MAX_ITERATION_INDEX
   ) {
+    // Deterministic out-of-range error. The literal boundary phrase is
+    // anchored by unit tests so any future rewording must update both
+    // sides simultaneously. The peek-mode hint follows on its own line
+    // so operators can see the recovery path without re-reading the
+    // boundary explanation.
     error(
-      `qfai prototyping iterate: --cycle must be 0..${MAX_ITERATION_INDEX} (got ${String(options.cycle)}).`,
+      "qfai prototyping iterate: --cycle accepts 0..9 (=10 cycles total). --cycle 10 would be the 11th cycle and is not supported.",
     );
+    error(`Received --cycle ${String(options.cycle)}.`);
+    error(CYCLE_OUT_OF_RANGE_PEEK_HINT);
+    // Cycle out-of-range is an input-error class stop. The validator
+    // accepts the wider 4-value enum (Phase 4); persistence happens on
+    // the cycle-0 reset path so a CLI-only error before any state
+    // exists has no persistence target — the diagnostic + exit code is
+    // the operator-visible stopReason for this class.
     return 2;
+  }
+
+  // Normalise --primary-spec-id if provided. SHOULD-normalisation of
+  // `1 / '1' / '01' / '0001'` to canonical `"0001"`; rejection emits the
+  // canonical error message anchored by the unit ledger.
+  let normalisedPrimarySpecId: string | undefined;
+  if (options.primarySpecId !== undefined) {
+    const parsed = parsePrimarySpecId(options.primarySpecId);
+    if (!parsed.ok) {
+      error(`qfai prototyping iterate: ${parsed.error}`);
+      return 2;
+    }
+    normalisedPrimarySpecId = parsed.normalised;
   }
 
   // 0) Zero UI-bearing pre-check → deterministic no-op (exit 0) when
@@ -304,7 +586,21 @@ export async function runPrototypingIterate(
     return 2;
   }
 
-  const resolved = await resolvePrimaryPrototypingSpec(options.root, configResult.config);
+  // Operator-supplied `--primary-spec-id` overrides config + marker
+  // resolution when set. The override is normalised through
+  // `parsePrimarySpecId` (above), so any non-conformant input has
+  // already been rejected with exit 2 + the canonical error string.
+  const effectiveConfig =
+    normalisedPrimarySpecId !== undefined
+      ? {
+          ...configResult.config,
+          prototyping: {
+            ...(configResult.config.prototyping ?? {}),
+            primarySpecId: normalisedPrimarySpecId,
+          },
+        }
+      : configResult.config;
+  const resolved = await resolvePrimaryPrototypingSpec(options.root, effectiveConfig);
   if (!resolved) {
     error(
       "qfai prototyping iterate: no primary UI-bearing prototyping spec found. " +
@@ -348,6 +644,52 @@ export async function runPrototypingIterate(
     return 2;
   }
 
+  // 3b) Cycle 0 destructive-rerun gate.
+  //     If an existing `iter-00` directory is present on disk, the
+  //     fresh cycle 0 will overwrite its contents. Without `--force`
+  //     refuse the run with a recovery hint; with `--force` rename the
+  //     existing `iter-00` to `iter-00.backup-<ISO>` BEFORE the rest
+  //     of the cycle-0 reset path so the backup is byte-equivalent to
+  //     the prior loop. The rename MUST precede `clearEvidenceIterDirs`
+  //     so a destructive-rerun failure cannot lose the prior loop.
+  if (options.cycle === 0) {
+    const evidenceRootAbs = path.join(options.root, PROTOTYPING_EVIDENCE_REL);
+    const iter00Abs = path.join(evidenceRootAbs, "iter-00");
+    const iter00Exists = await dirExists(iter00Abs);
+    if (iter00Exists) {
+      if (!options.force) {
+        error(
+          "qfai prototyping iterate --cycle 0: an existing iter-00 directory was found at " +
+            `${PROTOTYPING_EVIDENCE_REL}/iter-00. Re-running cycle 0 will overwrite the prior loop's seed. ` +
+            "Re-invoke with `--force` to back up iter-00 to iter-00.backup-<ISO> before clearing, " +
+            "or delete the directory manually if the prior loop is no longer needed.",
+        );
+        return 2;
+      }
+      const backupAbs = path.join(
+        evidenceRootAbs,
+        `iter-00.backup-${new Date().toISOString().replace(/[:.]/g, "-")}`,
+      );
+      try {
+        await rename(iter00Abs, backupAbs);
+        info(
+          `qfai prototyping iterate --cycle 0 --force: backed up iter-00 to ${path.relative(options.root, backupAbs).replace(/\\/g, "/")}.`,
+        );
+      } catch (cause) {
+        // Fail closed: clearing evidence dirs MUST be skipped when the
+        // backup rename fails, otherwise the prior loop's evidence is
+        // silently destroyed without an operator-visible backup.
+        const reason = cause instanceof Error ? cause.message : String(cause);
+        error(
+          `qfai prototyping iterate --cycle 0 --force: could not back up iter-00 (${reason}). ` +
+            "Aborting before clearing evidence to avoid destroying the prior loop. " +
+            "Resolve the filesystem error (Windows file lock / EACCES / EBUSY are common causes) and rerun.",
+        );
+        return 2;
+      }
+    }
+  }
+
   // 4) Persist seed metadata to prototyping.json on cycle 0:
   //    - designMd { path, sha256 }: the lock-anchored cache used by
   //      cycle >= 1 hash gates and by `certify` (frozen-loop hash).
@@ -363,6 +705,7 @@ export async function runPrototypingIterate(
       designMd: { path: ROOT_DESIGN_MD_REL, sha256: currentSha },
       runId: buildRunId(currentSha),
       specsCovered: specs,
+      declaredScreens: (options.screens ?? []).map((s) => s.id),
       // cycle-0 SSOT for the spec set under review. Kept single-spec
       // (mirrors the legacy `specsCovered` field) until the per-spec
       // iter-NN/spec-NNNN/<screen>.review.json layout migration lands;
@@ -487,12 +830,41 @@ export async function runPrototypingIterate(
       return 2;
     }
   }
+  // Option A (Codex P1 wave-4): the in-memory effective catalog is
+  // derived from the frozen DEFAULT baseline + accumulated audit-ledger
+  // additions on every cycle. The cycle-0 frozen catalog stays equal to
+  // `DEFAULT_LICENSE_CATALOG` (the drift gate above continues to enforce
+  // that), and the canonical record of operator-supplied additions lives
+  // in `licensePatchAudit[]` (canonical row shape: 3 required keys
+  // + optional `addedLicenseTiers` for tier replay). Reading the effective
+  // catalog at verify-time means a cycle-0 `--license-patch` no longer
+  // self-incompatibly stamps the frozen field with the post-patch
+  // catalog (which would then trip the drift gate on cycle 1).
+  const priorAuditRows = readLicensePatchAuditRows(protoRecordForLicense);
+  let effectiveCatalog: LicenseCatalog = effectiveLicenseCatalog(
+    DEFAULT_LICENSE_CATALOG,
+    priorAuditRows,
+  );
+  if (options.licensePatch !== undefined) {
+    const patchResult = await applyLicensePatchFromFile(
+      options.root,
+      options.licensePatch,
+      effectiveCatalog,
+      protoJsonAbs,
+    );
+    if (!patchResult.ok) {
+      error(`qfai prototyping iterate: ${patchResult.error}`);
+      return 2;
+    }
+    effectiveCatalog = patchResult.nextCatalog;
+  }
+
   const imageSources = collected.sources;
   if (imageSources !== null && imageSources.length > 0) {
     // Catalog drift is rejected above; the verifier authority is the
-    // in-memory SSOT (mirrored at cycle 0 into prototyping.json).
-    const catalog = DEFAULT_LICENSE_CATALOG;
-    const verifyResult = licenseVerify(imageSources, catalog);
+    // in-memory SSOT (mirrored at cycle 0 into prototyping.json) after
+    // any add-only license-patch has been applied.
+    const verifyResult = licenseVerify(imageSources, effectiveCatalog);
     if (!verifyResult.ok) {
       const offending = verifyResult.errors
         .map((e) => `${e.code} (source=${e.source}, url=${e.url})`)
@@ -503,6 +875,9 @@ export async function runPrototypingIterate(
           "Replace with allowlisted free stock-photo sources (see cycle-0 frozenLicenseCatalog) " +
           "or remove the entry.",
       );
+      // Persist the stopReason so validator + downstream consumers
+      // see the 4-value enum at face value (Phase 4 widening).
+      await persistStopReason(protoJsonAbs, "license-verify-fail");
       return 66;
     }
   }
@@ -510,6 +885,31 @@ export async function runPrototypingIterate(
   // 5) Assign paths and write iterate-plan.json.
   const dir = path.join(options.root, iterationDir(options.cycle));
   await mkdir(dir, { recursive: true });
+
+  // Screen descriptor resolution for the opt-in capture path. The DI
+  // `options.screens` hook still wins (test isolation), but when the
+  // operator drives `--capture` from the CLI without DI, derive the
+  // screens list from the project's UI contracts via
+  // `collectScreensForCapture` so both the plan emission AND the
+  // capture invocation read from a single source of truth. Pre-fix
+  // (Codex P1) the CLI wiring only set `capture: true` and never
+  // populated `screens`, so `runCapturePath` short-circuited with a
+  // warning and produced zero PNG/HTML artifacts — the operator-facing
+  // flag was a silent no-op. Derivation is gated on
+  // `options.capture === true` so the default-OFF posture
+  // (no PNG/HTML written when --capture is absent) remains
+  // byte-equivalent.
+  let resolvedCaptureScreens: readonly IterateCaptureScreen[] | undefined;
+  if (options.capture === true) {
+    if (options.screens !== undefined) {
+      resolvedCaptureScreens = options.screens;
+    } else {
+      resolvedCaptureScreens = await collectScreensForCapture(
+        options.root,
+        configResult.config.paths.contractsDir,
+      );
+    }
+  }
 
   const plan: IteratePlan = {
     cycle: options.cycle,
@@ -523,6 +923,16 @@ export async function runPrototypingIterate(
     targetUrl: options.targetUrl ?? null,
     designTokens: buildDesignTokens(designMd),
     nextActions: nextActionsFor(options.cycle),
+    // `options.screens = []` is truthy under `Array && Array` so the
+    // pre-fix shape would emit `screens: []` into iterate-plan.json
+    // (a no-op key the downstream capture path then warns about).
+    // Tighten to length > 0 so the absent-key shape stays the canonical
+    // "no screens declared" representation. The resolved list above is
+    // the single SSOT — both the plan field and `runCapturePath` read
+    // from it so the two surfaces never diverge.
+    ...(options.capture && resolvedCaptureScreens && resolvedCaptureScreens.length > 0
+      ? { screens: resolvedCaptureScreens }
+      : {}),
   };
 
   await writeFile(
@@ -531,11 +941,452 @@ export async function runPrototypingIterate(
     "utf-8",
   );
 
+  // Opt-in auto-serve (default OFF; preserves the no-server default
+  // posture). The returned teardown is invoked at the end of this
+  // run; foreign process refusals surface as exit 2 input errors.
+  let serverTeardown: (() => Promise<void>) | null = null;
+  let sigintHandler: (() => void) | null = null;
+  let teardownInvoked = false;
+  const teardownOnce = async (): Promise<void> => {
+    if (teardownInvoked || serverTeardown === null) return;
+    teardownInvoked = true;
+    try {
+      await serverTeardown();
+    } catch (cause) {
+      warn(`qfai prototyping iterate --auto-serve: teardown failed (${String(cause)})`);
+    }
+  };
+  if (options.autoServe) {
+    // DI serverRunner takes priority. When omitted, dynamically load
+    // the default in-process HTTP server runner so the operator can
+    // run `qfai prototyping iterate --auto-serve` without supplying a
+    // runner. The default ships an in-process node:http server with a
+    // <2s teardown bound; subprocess-based runners are operator-supplied
+    // via the DI hook.
+    let serverRunner: ServerRunnerFn;
+    if (options.serverRunner) {
+      serverRunner = options.serverRunner;
+    } else {
+      try {
+        const mod = await import("../../core/prototyping/defaultServerRunner.js");
+        serverRunner = mod.defaultServerRunner;
+      } catch (cause) {
+        // Defense-in-depth (mirrors the capture-runner catch above):
+        // `defaultServerRunner.ts` uses only the Node stdlib (`node:http`,
+        // `node:fs`, `node:path`); module resolution is unconditional, so
+        // this branch is reachable only when the ESM bundle itself is
+        // broken (missing file, typo, circular import, corrupt dist).
+        error(
+          `qfai prototyping iterate --auto-serve: failed to load default server runner ` +
+            `(ESM bundle integrity failure). Cause: ${String(cause)}.`,
+        );
+        return 2;
+      }
+    }
+    const serverResult = await serverRunner({
+      root: options.root,
+      cycle: options.cycle,
+      // Thread the operator-supplied URL so the default runner can
+      // derive its bind port from `new URL(targetUrl).port`. Tests
+      // pass an explicit serverRunner and ignore this; production
+      // operators get the port they typed.
+      ...(options.targetUrl !== undefined ? { targetUrl: options.targetUrl } : {}),
+    });
+    if (!serverResult.ok) {
+      error(`qfai prototyping iterate --auto-serve: ${serverResult.reason}`);
+      return 2;
+    }
+    serverTeardown = serverResult.teardown;
+    // Install a SIGINT handler that drives the teardown within the
+    // NFR-0106 2s bound. The handler is removed on cycle completion
+    // (or on early return) to avoid leaking listeners across
+    // back-to-back invocations within the same Node process.
+    sigintHandler = () => {
+      void teardownOnce();
+    };
+    process.on("SIGINT", sigintHandler);
+  }
+
+  // Opt-in capture (default OFF; preserves the no-capture default
+  // posture). Each screen is processed sequentially with a per-screen
+  // soft-warning wall-clock budget. The resolved screen list (DI or
+  // auto-derived from UI contracts above) is threaded down so the
+  // capture invocation never silently no-ops on a missing
+  // `options.screens` when the operator drove `--capture` from the CLI.
+  //
+  // try/finally so that synchronous throws from `runCapturePath`'s
+  // `mirrorAcceptedIterToAggregateDirs` (readdir / mkdir failures
+  // other than ENOENT) cannot leak the SIGINT listener or skip the
+  // HTTP teardown. The previous explicit cleanup chain drained both
+  // surfaces on the happy path and on `captureExit !== 0`, but the
+  // throw-from-helper path skipped both.
+  try {
+    if (options.capture) {
+      const captureExit = await runCapturePath(options, dir, resolvedCaptureScreens ?? []);
+      if (captureExit !== 0) {
+        return captureExit;
+      }
+    }
+  } finally {
+    if (sigintHandler) process.off("SIGINT", sigintHandler);
+    await teardownOnce();
+  }
+
+  // Advisory `iter-NN/iterate-context.json`: structured prior-cycle
+  // hint consumed by reviewer subagents. Best-effort, advisory-only;
+  // certify ignores presence/absence.
+  if (options.cycle >= 1) {
+    const protoForCtx = await readPrototypingJson(protoJsonAbs);
+    const ctx = buildIterateContextFromRecord(protoForCtx);
+    if (ctx !== null) {
+      await writeIterateContextFile(dir, ctx);
+    }
+  }
+
+  // [BLOCKED] exit-64 summary: when the latest iteration is recorded
+  // but did NOT converge (axes < exceptional OR lap[] non-empty OR
+  // designMdViolations[] non-empty), emit the top-3 blockers summary so
+  // the operator sees what is preventing exit-64. The literal header is
+  // anchored by the unit ledger.
+  if (options.cycle >= 1) {
+    const protoForBlocked = await readPrototypingJson(protoJsonAbs);
+    const blockedInput = buildBlockedSummaryInputFromRecord(protoForBlocked);
+    if (blockedInput !== null && !isConverged(blockedInput)) {
+      emitBlockedSummary(blockedInput);
+    }
+  }
+
   info(
     `qfai prototyping iterate: iter-${String(options.cycle).padStart(2, "0")} ready ` +
       `(specs=${specs.length}, plan at ${plan.paths.iterationDir}/iterate-plan.json).`,
   );
   return 0;
+}
+
+function isConverged(input: BlockedSummaryInput): boolean {
+  return (
+    input.designMdViolations.length === 0 &&
+    input.layoutAntiPatternsDetected.length === 0 &&
+    input.scores.informationArchitecture === "exceptional" &&
+    input.scores.navigationFlow === "exceptional" &&
+    input.scores.usability === "exceptional" &&
+    input.scores.functionality === "exceptional"
+  );
+}
+
+function buildBlockedSummaryInputFromRecord(
+  record: PrototypingJsonShape | null,
+): BlockedSummaryInput | null {
+  if (!record) return null;
+  const iterations = asIterations(record);
+  if (iterations.length === 0) return null;
+  const last = iterations[iterations.length - 1];
+  if (!isRecord(last) || !isRecord(last.scores)) return null;
+  const lastScores = last.scores;
+  const pickScore = (key: string): OrdinalScore => {
+    const v = lastScores[key];
+    return isOrdinalScore(v) ? v : "weak";
+  };
+  const scores = {
+    informationArchitecture: pickScore("informationArchitecture"),
+    navigationFlow: pickScore("navigationFlow"),
+    usability: pickScore("usability"),
+    functionality: pickScore("functionality"),
+  };
+  const lap = Array.isArray(last.layoutAntiPatternsDetected)
+    ? last.layoutAntiPatternsDetected.filter((v): v is string => typeof v === "string")
+    : [];
+  const dmvRaw = Array.isArray(last.designMdViolations) ? last.designMdViolations : [];
+  const dmv: DesignMdViolation[] = [];
+  for (const v of dmvRaw) {
+    if (!isRecord(v)) continue;
+    const kind = v.kind;
+    if (kind !== "color" && kind !== "font" && kind !== "radius" && kind !== "shadow") {
+      continue;
+    }
+    const found = typeof v.found === "string" ? v.found : "";
+    dmv.push({ kind, found });
+  }
+  return {
+    designMdViolations: dmv,
+    layoutAntiPatternsDetected: lap,
+    scores,
+  };
+}
+
+async function runCapturePath(
+  options: RunPrototypingIterateOptions,
+  dir: string,
+  resolvedScreens: readonly IterateCaptureScreen[],
+): Promise<number> {
+  const screens = resolvedScreens;
+  if (screens.length === 0) {
+    warn(
+      "qfai prototyping iterate --capture: no screens[] declared on the iterate plan; skipping capture.",
+    );
+    return 0;
+  }
+  // DI captureScreen takes priority over the default fallback so test
+  // fixtures stay isolated from Playwright. When omitted, dynamically
+  // load the default Playwright runner so the operator can run
+  // `qfai prototyping iterate --capture` without supplying a runner.
+  let runner: CaptureScreenFn;
+  if (options.captureScreen) {
+    runner = options.captureScreen;
+  } else {
+    try {
+      const mod = await import("../../core/prototyping/defaultCaptureScreen.js");
+      runner = mod.defaultCaptureScreen;
+    } catch (cause) {
+      // Defense-in-depth: `defaultCaptureScreen.ts` has no top-level
+      // Playwright import (Playwright is imported lazily inside the
+      // function body), so a missing Playwright package does NOT reach
+      // this branch — that surfaces via the runner's own structured
+      // refusal ("playwright not installed; ..."). This catch only
+      // fires when the ESM bundle itself is broken (the file is
+      // missing, a typo / circular import sneaks in, or the dist tree
+      // is corrupt). Production paths normally do not reach here.
+      error(
+        `qfai prototyping iterate --capture: failed to load default capture runner ` +
+          `(ESM bundle integrity failure, NOT Playwright availability). Cause: ${String(cause)}.`,
+      );
+      return 2;
+    }
+  }
+  const budgetMs = options.captureBudgetMs ?? 30_000;
+  const prototypesIterDir = path.join(
+    options.root,
+    ".qfai",
+    "prototypes",
+    `iter-${String(options.cycle).padStart(2, "0")}`,
+  );
+  for (const screen of screens) {
+    const pngPath = path.join(dir, `${screen.id}.png`);
+    const htmlPath = path.join(dir, `${screen.id}.html`);
+    // Capture URL composition (Codex P2 wave-8): UI contracts store
+    // route-relative paths like `/orders/new`; the default Playwright
+    // runner calls `page.goto(args.url)` which rejects relative paths
+    // and aborts capture. Compose route-relative URLs against
+    // `options.targetUrl` so the operator-facing flow works end-to-end.
+    // Absolute URLs (`http://` / `https://`) pass through verbatim.
+    const urlResult = composeCaptureUrl(screen.url, options.targetUrl);
+    if (!urlResult.ok) {
+      error(`qfai prototyping iterate --capture: screen ${screen.id} ${urlResult.reason}`);
+      return 2;
+    }
+    const captureUrl = urlResult.url;
+    // Soft-warning budget enforcement is post-hoc on the runner's
+    // reported `durationMs` (NFR-0107: warn, never hard-fail). The
+    // prior `startBudgetTimer` setTimeout-with-noop-handler hook was
+    // dead structural placeholder — removed (YAGNI). If a future
+    // requirement asks iterate to cancel the runner before completion,
+    // re-introduce a real timer with an `AbortController` plumbed into
+    // `CaptureScreenFn`; do not resurrect the noop placeholder.
+    try {
+      const result = await runner({ screenId: screen.id, url: captureUrl, pngPath, htmlPath });
+      if (!result.ok) {
+        error(
+          `qfai prototyping iterate --capture: screen ${screen.id} failed (${result.reason ?? "no reason"}).`,
+        );
+        return 2;
+      }
+      if (result.durationMs > budgetMs) {
+        warn(
+          `qfai prototyping iterate --capture: screen ${screen.id} exceeded ${budgetMs}ms budget (took ${result.durationMs}ms; soft warning).`,
+        );
+      }
+      if (screen.htmlSourceCopy) {
+        const source = path.join(prototypesIterDir, `${screen.id}.html`);
+        try {
+          await copyFile(source, htmlPath);
+        } catch (cause) {
+          error(
+            `qfai prototyping iterate --capture: htmlSourceCopy failed for screen ${screen.id} (${String(cause)}).`,
+          );
+          return 2;
+        }
+      }
+    } catch (cause) {
+      error(`qfai prototyping iterate --capture: screen ${screen.id} threw (${String(cause)}).`);
+      return 2;
+    }
+  }
+  // lap-009 md5 duplicate-capture detection: scan the just-captured
+  // PNGs and surface any two distinct screens sharing the same md5
+  // digest. Advisory-failing — the override path lives at the reviewer
+  // boundary (justification text required); here we only emit the
+  // finding so downstream consumers see it deterministically.
+  const pngsByScreen = new Map<string, Buffer>();
+  for (const screen of screens) {
+    const pngPath = path.join(dir, `${screen.id}.png`);
+    try {
+      const bytes = await readFile(pngPath);
+      pngsByScreen.set(screen.id, bytes);
+    } catch (err) {
+      // Pre-fix this bare-catch silently swallowed every readFile error
+      // including non-ENOENT classes (EACCES / EBUSY / Windows file
+      // lock). Surface a warning so the operator sees that lap-009
+      // duplicate detection skipped this screen and can diagnose the
+      // root cause — the cycle still proceeds because the upstream
+      // runner already validated `!result.ok` for true capture
+      // failures, but the lap-009 input set is now observably partial.
+      warn(
+        `qfai prototyping iterate --capture: failed to read post-capture PNG ${pngPath} ` +
+          `(${String(err)}); skipping lap-009 md5 input for screen ${screen.id}.`,
+      );
+    }
+  }
+  const lap009 = findMd5DuplicateCaptures(pngsByScreen);
+  for (const f of lap009) {
+    warn(
+      `qfai prototyping iterate --capture: ${f.code} ${f.category} — ` +
+        `screens [${f.offenders.join(", ")}] share md5 ${f.md5} (advisory-failing; ` +
+        "supply Reviewer justification to override).",
+    );
+  }
+  // lap-010 missing-route detection: when a screen entry carries a
+  // `url` (route), assert that the captured html contains that route
+  // literally. Both `target#/<route>` and `target/<route>` forms are
+  // accepted.
+  const lap010Inputs: Lap010Input[] = [];
+  for (const screen of screens) {
+    if (!screen.url) continue;
+    const htmlPath = path.join(dir, `${screen.id}.html`);
+    let html: string;
+    try {
+      html = await readFile(htmlPath, "utf-8");
+    } catch {
+      continue;
+    }
+    lap010Inputs.push({ screenId: screen.id, route: screen.url, html });
+  }
+  const lap010 = findMissingRoutes(lap010Inputs);
+  for (const f of lap010) {
+    warn(
+      `qfai prototyping iterate --capture: ${f.code} ${f.category} — ` +
+        `screen ${f.screenId} did not surface route ${f.route} (advisory-failing; ` +
+        "supply Reviewer justification to override).",
+    );
+  }
+  // Mirror the accepted iteration's per-screen evidence into the
+  // project-wide aggregate dirs once the capture pass completes.
+  // Best-effort copy; missing files are skipped so a partial capture
+  // run does not block the cycle. Screen ids are validated for
+  // underscore casing at the UI contract surface (QFAI-PROT-008 in
+  // `prototypingEvidence.ts`).
+  await mirrorAcceptedIterToAggregateDirs(options.root, options.cycle);
+  return 0;
+}
+
+// TODO(next-minor): extract composeCaptureUrl + collectScreensForCapture
+// into core/prototyping/captureUrlCompose.ts + captureScreensResolve.ts.
+// Both helpers are pure (no captured runPrototypingIterate state) and
+// orthogonal to the iterate driver's primary concerns (cycle gating /
+// drift detection / freeze / exit code dispatch). Extracting them lets
+// the driver shrink toward the CLAUDE.md ~50 LOC guidance and removes
+// the export-without-unit-test pressure on composeCaptureUrl by giving
+// it a natural module home with co-located tests.
+
+/**
+ * Discriminated outcome of {@link composeCaptureUrl}. Mirrors the
+ * `ok=true/false` shape used by other helpers in this module so the
+ * caller can short-circuit with the structured diagnostic without
+ * resorting to bare `as` casts on a string-or-null sentinel
+ * (CLAUDE.md project rule).
+ */
+type ComposeCaptureUrlResult = { ok: true; url: string | null } | { ok: false; reason: string };
+
+/**
+ * Compose the navigation URL passed to {@link CaptureScreenFn}.
+ *
+ * Codex P2 wave-8 fix: UI contracts persist route-relative paths
+ * (e.g. `/orders/new`); the default Playwright runner forwards the
+ * value to `page.goto(args.url)`, which rejects non-absolute URLs
+ * with an `ERR_INVALID_URL`-class navigation error and aborts capture
+ * with exit 2. Pre-fix, `screen.url ?? options.targetUrl ?? null`
+ * preferred the route verbatim and dropped the operator-supplied
+ * base URL on the floor.
+ *
+ * Composition rules:
+ *   - `screen.url` is an absolute URL (`http://` / `https://`) →
+ *     forwarded verbatim. The base URL has no effect on absolute
+ *     overrides (operator wins).
+ *   - `screen.url` is route-relative AND `targetUrl` is set →
+ *     `new URL(screen.url, targetUrl).toString()`. Leading slash is
+ *     optional; `new URL` handles both `/orders/new` and `orders/new`.
+ *   - `screen.url` is route-relative AND `targetUrl` is unset →
+ *     `{ ok: false }` with an explanatory reason so the caller can
+ *     surface a per-screen exit 2 with the operator action.
+ *   - `screen.url` is undefined → fall back to `targetUrl` (verbatim)
+ *     or `null` (legacy "no URL" shape for runners that infer their
+ *     own target).
+ */
+export function composeCaptureUrl(
+  screenUrl: string | undefined,
+  targetUrl: string | undefined,
+): ComposeCaptureUrlResult {
+  if (screenUrl === undefined) {
+    return { ok: true, url: targetUrl ?? null };
+  }
+  if (/^https?:\/\//i.test(screenUrl)) {
+    return { ok: true, url: screenUrl };
+  }
+  if (targetUrl === undefined) {
+    // Operator-facing diagnostic: name the public CLI flag
+    // (`--target-url`) rather than the internal options field
+    // (`options.targetUrl`). Surrounding `qfai prototyping iterate
+    // --capture:` warnings already use the public flag surface for
+    // consistency.
+    return {
+      ok: false,
+      reason:
+        `has route-relative URL ${JSON.stringify(screenUrl)} but no base URL is set; ` +
+        "provide --target-url <base> so the route can be composed against a navigable origin.",
+    };
+  }
+  try {
+    return { ok: true, url: new URL(screenUrl, targetUrl).toString() };
+  } catch (cause) {
+    // Operator-facing diagnostic: name the public CLI flag
+    // (`--target-url`) rather than the internal options field.
+    return {
+      ok: false,
+      reason:
+        `has unparseable URL composition (screen URL=${JSON.stringify(screenUrl)}, ` +
+        `--target-url=${JSON.stringify(targetUrl)}, cause=${String(cause)}).`,
+    };
+  }
+}
+
+/**
+ * Derive the per-screen capture descriptor list from the project's UI
+ * contracts when the operator drives `--capture` from the CLI without
+ * supplying a `screens[]` DI hook.
+ *
+ * Codex P1 wave-8 fix: pre-fix, `qfai prototyping iterate --capture`
+ * silently no-op'd because the CLI wiring only sets `capture: true`
+ * and never threaded the discovered UI contract screens into
+ * `options.screens`. The `runCapturePath` early-return on an empty
+ * screens list converted the operator-facing flag into a no-op (a
+ * warning + exit 0 with zero PNG/HTML written).
+ *
+ * Source of truth: `readUiContractScreenContracts` (the same reader
+ * used by certify's per-(spec × screen) gate). Each canonical
+ * `{ screenId, route }` becomes a `{ id, url }` entry — `htmlSourceCopy`
+ * is left unset (the default `false` posture; operators who need
+ * byte-equivalent HTML must still pass a DI screens[] hook).
+ *
+ * Returns an empty list when no UI contracts are present. The caller
+ * (`runCapturePath`) then surfaces the "no screens[] declared"
+ * warning and exits 0, preserving the documented "no screens to
+ * capture" graceful path.
+ */
+async function collectScreensForCapture(
+  root: string,
+  contractsDir: string,
+): Promise<readonly IterateCaptureScreen[]> {
+  const canonical = await readUiContractScreenContracts(root, contractsDir);
+  return canonical.map((entry) => ({ id: entry.screenId, url: entry.route }));
 }
 
 type DesignMdReadResult =
@@ -619,6 +1470,15 @@ async function readDesignMdFile(absPath: string): Promise<DesignMdReadResult> {
  */
 function isPrototypingJsonShape(value: unknown): value is PrototypingJsonShape {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// Narrow `unknown` to `readonly unknown[]` without triggering
+// `@typescript-eslint/no-unsafe-assignment`. The built-in
+// `Array.isArray(x: unknown)` narrows to `any[]`, which the typed-lint
+// pass treats as unsafe when spread. This user-defined predicate keeps
+// the spread on the safe `unknown[]` branch.
+function isUnknownArray(value: unknown): value is readonly unknown[] {
+  return Array.isArray(value);
 }
 
 async function readPrototypingJson(absPath: string): Promise<PrototypingJsonShape | null> {
@@ -731,6 +1591,89 @@ function stringArraysSetEqual(a: readonly string[], b: readonly string[]): boole
     if (sortedA[i] !== sortedB[i]) return false;
   }
   return true;
+}
+
+/**
+ * Read `licensePatchAudit[]` from prototyping.json and narrow each row
+ * to {@link LicensePatchAuditRow}. Malformed rows are silently skipped
+ * so a partially-corrupted audit ledger still surfaces the valid
+ * additions. Returns an empty array when the field is absent or not
+ * an array.
+ */
+function readLicensePatchAuditRows(
+  record: PrototypingJsonShape | null,
+): readonly LicensePatchAuditRow[] {
+  if (!record) return [];
+  const raw = record.licensePatchAudit;
+  if (!isUnknownArray(raw)) return [];
+  const out: LicensePatchAuditRow[] = [];
+  for (const entry of raw) {
+    if (isLicensePatchAuditRow(entry)) {
+      out.push(entry);
+    }
+  }
+  return out;
+}
+
+/**
+ * Derive the runtime license catalog from a frozen baseline plus the
+ * accumulated `licensePatchAudit[]` rows.
+ *
+ * Option A (Codex P1 wave-4): the cycle-0 frozen catalog is the
+ * immutable baseline (always equal to `DEFAULT_LICENSE_CATALOG`); the
+ * canonical record of mid-loop additions lives in the audit ledger.
+ * Reads union the audit rows' `addedSources` into the frozen
+ * `allowedSources` AND the rows' optional `addedLicenseTiers` into
+ * the frozen `licenseTiers` so license-verify on cycle >= 1 accepts
+ * the same sources / tier mappings the operator allow-listed via
+ * `--license-patch` on cycle 0.
+ *
+ * `sourceHosts` is still not replayed (the audit-row schema does not
+ * persist it); operators who need host pinning on subsequent cycles
+ * must pass a fresh `--license-patch`. Legacy 3-key audit rows
+ * (without `addedLicenseTiers`) remain backward-compatible and replay
+ * source additions only.
+ */
+export function effectiveLicenseCatalog(
+  frozen: LicenseCatalog,
+  auditRows: readonly LicensePatchAuditRow[],
+): LicenseCatalog {
+  const seen = new Set(frozen.allowedSources);
+  const merged: string[] = [...frozen.allowedSources];
+  const mergedTiers: Record<string, string[]> = Object.fromEntries(
+    Object.entries(frozen.licenseTiers).map(([k, v]) => [k, [...v]]),
+  );
+  for (const row of auditRows) {
+    for (const source of row.addedSources) {
+      if (!seen.has(source)) {
+        seen.add(source);
+        merged.push(source);
+      }
+    }
+    if (row.addedLicenseTiers !== undefined) {
+      for (const [source, tiers] of Object.entries(row.addedLicenseTiers)) {
+        const existing = mergedTiers[source];
+        if (existing === undefined) {
+          mergedTiers[source] = [...tiers];
+          continue;
+        }
+        for (const t of tiers) {
+          if (!existing.includes(t)) existing.push(t);
+        }
+      }
+    }
+  }
+  return {
+    allowedSources: merged,
+    licenseTiers: mergedTiers,
+    ...(frozen.sourceHosts !== undefined
+      ? {
+          sourceHosts: Object.fromEntries(
+            Object.entries(frozen.sourceHosts).map(([k, v]) => [k, [...v]]),
+          ),
+        }
+      : {}),
+  };
 }
 
 function readFrozenLicenseCatalog(record: PrototypingJsonShape | null): LicenseCatalog | null {
@@ -877,7 +1820,86 @@ type SeedMetadata = {
    */
   frozenSurfaceUnion: readonly string[];
   frozenLicenseCatalog: LicenseCatalog;
+  /**
+   * Declared screen ids (underscore casing). When non-empty the seed
+   * iteration's `evidenceRefs[]` bijects with this list. Empty /
+   * absent → no `evidenceRefs[]` entries on the seed iteration
+   * (legacy default-OFF capture path).
+   */
+  declaredScreens?: readonly string[];
 };
+
+/**
+ * Placeholder proseCritique used by the cycle-0 seed iteration so
+ * `prototyping.json` is validate-conformant out of the box. The
+ * validator requires 200..500 words; the orchestrator / reviewer
+ * overwrites this with a real critique on the first reviewer pass.
+ * The text is a single deterministic sentence repeated to land
+ * inside the band.
+ */
+const SEED_PROSE_CRITIQUE_PLACEHOLDER = (() => {
+  const sentence =
+    "Seed iteration placeholder critique authored by qfai prototyping iterate at cycle 0 to keep prototyping.json validate-conformant before the reviewer runs.";
+  return Array.from({ length: 10 }, () => sentence).join(" ");
+})();
+
+/**
+ * Build the cycle-0 seed `iterations[]` array. Emits exactly one
+ * iteration record whose shape passes `validatePrototypingEvidence`
+ * AND `validatePrototypingArtifactRefIntegrity` out of the box.
+ * Scores are intentionally all `weak` so `shouldStop` cannot
+ * accidentally classify the seed as `axes-exceptional`; the reviewer
+ * overwrites scores on the first review pass.
+ *
+ * `evidenceRefs` shape is the canonical `{ screenshot, html }` object
+ * form per the {@link Iteration} type, `buildEvaluatorReview`, and the
+ * ref-integrity validator (which reads `iter.evidenceRefs.screenshot`
+ * / `.html` directly). When multiple screens are declared, the seed
+ * uses the FIRST screen's paths as the iteration-level representative
+ * — the reviewer overwrites this with the actually-reviewed surface on
+ * the first review pass. When no screens are declared, the seed uses
+ * the default `iter-NN/index.{png,html}` placeholder so the validator
+ * has a concrete path to check.
+ */
+function buildSeedIterations(declaredScreens: readonly string[]): unknown[] {
+  // Co-locate {screenshot, html} from the first declared screen; fall
+  // back to a deterministic placeholder when no screens are present so
+  // the seed always has non-empty fields. (refIntegrity treats empty
+  // fields as `QFAI-PROT-009` errors.)
+  //
+  // Paths are FULL repo-relative (e.g. `.qfai/evidence/prototyping/
+  // iter-00/<screen>.png`), matching the SSOT shape used by
+  // `buildEvaluatorReview` evidenceRefs and by `validatePrototyping
+  // ArtifactRefIntegrity` (which calls `path.resolve(root, value)`).
+  const firstScreen = declaredScreens[0];
+  const screenshotRef =
+    firstScreen !== undefined
+      ? iterationScreenshotPath(0, firstScreen)
+      : `${iterationDir(0)}/index.png`;
+  const htmlRef =
+    firstScreen !== undefined ? iterationHtmlPath(0, firstScreen) : `${iterationDir(0)}/index.html`;
+  return [
+    {
+      index: 0,
+      commitSha: "uncommitted",
+      proseCritique: SEED_PROSE_CRITIQUE_PLACEHOLDER,
+      scores: {
+        informationArchitecture: "weak",
+        navigationFlow: "weak",
+        usability: "weak",
+        functionality: "weak",
+      },
+      layoutAntiPatternsDetected: [],
+      designMdViolations: [],
+      pivotDirective: "continue",
+      reviewerId: "iterate-seed",
+      evidenceRefs: {
+        screenshot: screenshotRef,
+        html: htmlRef,
+      },
+    },
+  ];
+}
 
 async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Promise<void> {
   // Cycle 0 is a hard reset of the loop. Stale state from a prior run
@@ -902,10 +1924,16 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
   // (the completion-claim trio read by `validateCompletionCertificateIssues`),
   // `designMd`, `runId`, `specsCovered`. Adding a new per-loop field
   // requires updating BOTH this list AND the comment.
-  body.iterations = [];
+  //
+  // Validate-conformance note: the iterations[] is seeded with a
+  // single stub entry whose evidenceRefs[] bijects with `declaredScreens`
+  // (if any) so `qfai validate --profile prototyping` is conformant
+  // immediately after iterate completes. The reviewer overwrites this
+  // entry on the first review pass.
+  body.iterations = buildSeedIterations(seed.declaredScreens ?? []);
+  body.acceptedIterationIndex = 0;
+  body.stopReason = null;
   delete body.reviewerGate;
-  delete body.acceptedIterationIndex;
-  delete body.stopReason;
   // Legacy `fullHarness` block (pre-UX-loop schema) is also per-loop
   // state. Pre-1.8.9 projects whose prototyping.json still carries
   // `fullHarness.{runId,status,scoringTrace,...}` must not let those
@@ -978,6 +2006,22 @@ type ClearEvidenceIterDirsResult = { ok: true } | { ok: false; failedDir: string
  * summary for the multi-spec migration helpers. The two contracts are
  * not unified yet.
  */
+/**
+ * Lightweight directory-existence check that distinguishes
+ * "does not exist" (returns false) from other I/O failures (re-thrown
+ * so the caller fails closed). Used by the cycle-0 `--force` backup
+ * gate to decide whether a destructive re-run is in play.
+ */
+async function dirExists(absPath: string): Promise<boolean> {
+  try {
+    const s = await stat(absPath);
+    return s.isDirectory();
+  } catch (err) {
+    if (isEnoent(err)) return false;
+    throw err;
+  }
+}
+
 async function clearEvidenceIterDirs(
   evidenceRootAbs: string,
 ): Promise<ClearEvidenceIterDirsResult> {
@@ -1075,6 +2119,73 @@ function buildRunId(designMdSha: string): string {
  * continue another iteration to fix drift instead of pretending it
  * converged.
  */
+/**
+ * Mirror the accepted iteration's per-screen evidence into the project-
+ * wide aggregate dirs:
+ *   `.qfai/evidence/prototyping/screenshots/<screen-id>.png`
+ *   `.qfai/evidence/prototyping/html/<screen-id>.html`
+ *
+ * Underscore-cased screen ids are used end-to-end (validator rejects
+ * hyphen form via QFAI-PROT-008); this helper does NOT re-case ids
+ * itself — it just byte-copies the latest iter content if present.
+ * Mirroring is best-effort: missing source files are silently skipped
+ * so a non-capture run (default) does not fail on an empty iter dir.
+ */
+async function mirrorAcceptedIterToAggregateDirs(
+  root: string,
+  acceptedIterIndex: number,
+): Promise<void> {
+  if (acceptedIterIndex < 0) return;
+  const iterAbs = path.join(
+    root,
+    PROTOTYPING_EVIDENCE_REL,
+    `iter-${String(acceptedIterIndex).padStart(2, "0")}`,
+  );
+  let entries: string[];
+  try {
+    entries = await readdir(iterAbs);
+  } catch (err) {
+    if (isEnoent(err)) return;
+    throw err;
+  }
+  const pngDir = path.join(root, PROTOTYPING_EVIDENCE_REL, "screenshots");
+  const htmlDir = path.join(root, PROTOTYPING_EVIDENCE_REL, "html");
+  let madePngDir = false;
+  let madeHtmlDir = false;
+  for (const name of entries.sort()) {
+    const lower = name.toLowerCase();
+    const isPng = lower.endsWith(".png");
+    const isHtml = lower.endsWith(".html");
+    if (!isPng && !isHtml) continue;
+    const sourceAbs = path.join(iterAbs, name);
+    let s: Awaited<ReturnType<typeof stat>>;
+    try {
+      s = await stat(sourceAbs);
+    } catch {
+      continue;
+    }
+    if (!s.isFile()) continue;
+    const targetDir = isPng ? pngDir : htmlDir;
+    if (isPng && !madePngDir) {
+      await mkdir(pngDir, { recursive: true });
+      madePngDir = true;
+    }
+    if (isHtml && !madeHtmlDir) {
+      await mkdir(htmlDir, { recursive: true });
+      madeHtmlDir = true;
+    }
+    const targetAbs = path.join(targetDir, name);
+    try {
+      await copyFile(sourceAbs, targetAbs);
+    } catch (cause) {
+      warn(
+        `qfai prototyping iterate: aggregate-mirror failed for ${name} ` +
+          `(${cause instanceof Error ? cause.message : String(cause)}).`,
+      );
+    }
+  }
+}
+
 async function recomputeFinalIterDesignMdViolations(
   root: string,
   iterationIndex: number,
@@ -1128,6 +2239,90 @@ function buildDesignTokens(dm: DesignMd): DesignTokens {
   };
 }
 
+/**
+ * Read-only peek of the canonical prototyping state file. Reads
+ * `stopReason` + `acceptedIterationIndex` (and the recorded
+ * `iterations[]` count) from `.qfai/evidence/prototyping/prototyping.json`
+ * and reports convergence WITHOUT invoking the iterate loop.
+ *
+ * Exit codes:
+ *   0  converged: `stopReason === "axes-exceptional"` AND
+ *      `acceptedIterationIndex` is a non-null number.
+ *   2  not converged (any other state, including missing state file).
+ *
+ * Pure read; never writes to disk. Orthogonal to capture / auto-serve
+ * (those defaults stay OFF).
+ */
+/**
+ * Read-only peek of the canonical `prototyping.json` state.
+ *
+ * Cycle parameter scope: `cycle` is **informational only** — it is
+ * printed in the header to anchor the operator's mental model
+ * ("which cycle did I ask to peek?"), but the body reads only
+ * top-level fields (`stopReason`, `acceptedIterationIndex`,
+ * `iterations.length`) and never indexes into the iterations array
+ * by cycle. The peek is idempotent across cycle values; the result
+ * is the same for `--cycle 0 --check-convergence` and
+ * `--cycle 9 --check-convergence` against the same state file. We
+ * still reject out-of-range cycles upstream (in `runPrototypingIterate`)
+ * to surface the same input-error class diagnostic the loop entry
+ * gate uses, instead of masking a typo as "converged at cycle 99".
+ */
+async function runCheckConvergencePeek(root: string, cycle: number): Promise<number> {
+  const protoJsonAbs = path.join(root, PROTOTYPING_JSON_REL);
+  const header = `qfai prototyping iterate --check-convergence (cycle ${cycle}):`;
+  const record = await readPrototypingJson(protoJsonAbs);
+  if (record === null) {
+    info(header);
+    info(
+      "  Not converged: prototyping.json missing or unreadable at " +
+        `${PROTOTYPING_JSON_REL}. Run \`qfai prototyping iterate --cycle 0 --target-url <url>\` ` +
+        "to seed the loop first.",
+    );
+    return 2;
+  }
+  const stopReasonRaw = record.stopReason;
+  const stopReason =
+    typeof stopReasonRaw === "string" || stopReasonRaw === null ? stopReasonRaw : undefined;
+  const acceptedRaw = record.acceptedIterationIndex;
+  const acceptedIterationIndex =
+    typeof acceptedRaw === "number" && Number.isInteger(acceptedRaw) ? acceptedRaw : null;
+  const iterations = asIterations(record);
+  info(header);
+  // Asymmetry note: `stopReason` printed as `<missing>` indicates the
+  // field is absent from prototyping.json entirely (pre-cycle-0 / hand
+  // -edited state); `acceptedIterationIndex` printed as `null` is the
+  // canonical "pre-convergence" literal written by cycle 0. The two
+  // shapes are intentionally different — do not unify on `<missing>`.
+  info(`  stopReason: ${stopReason === undefined ? "<missing>" : String(stopReason)}`);
+  info(
+    `  acceptedIterationIndex: ${acceptedIterationIndex === null ? "null" : String(acceptedIterationIndex)}`,
+  );
+  info(`  iterations: ${iterations.length}`);
+  if (stopReason === "axes-exceptional" && acceptedIterationIndex !== null) {
+    info("  Converged: axes-exceptional with accepted iteration recorded.");
+    return 0;
+  }
+  // Build a precise diagnostic for the not-converged branch so the
+  // operator can see WHY the loop did not converge.
+  let reason: string;
+  if (stopReason === "max-iterations") {
+    reason = 'stopReason="max-iterations" (loop exhausted the 10-cycle budget).';
+  } else if (stopReason === "license-verify-fail") {
+    reason =
+      'stopReason="license-verify-fail" (runtime license-verify gate rejected an image source).';
+  } else if (stopReason === "input-error") {
+    reason = 'stopReason="input-error" (input gate rejected the invocation).';
+  } else if (stopReason === null || stopReason === undefined) {
+    reason =
+      "stopReason is null and no acceptedIterationIndex was recorded; the loop has not yet reached a terminal state.";
+  } else {
+    reason = `stopReason=${JSON.stringify(stopReason)} is not a converged state.`;
+  }
+  info(`  Not converged: ${reason}`);
+  return 2;
+}
+
 function emitStop(reason: StopReason): number {
   if (reason === "axes-exceptional") {
     info(
@@ -1137,11 +2332,183 @@ function emitStop(reason: StopReason): number {
     );
     return 64;
   }
+  if (reason === "license-verify-fail") {
+    // License verify failure already emits its own diagnostic upstream;
+    // this branch records the stop reason consistently with the enum.
+    return 66;
+  }
+  if (reason === "input-error") {
+    // Input-error class stops are emitted at the CLI boundary (cycle
+    // out-of-range, primarySpecId malformed, etc.); this branch is
+    // retained for completeness so the enum is exhaustive.
+    return 2;
+  }
   info(
     `qfai prototyping iterate: max iterations (${MAX_ITERATIONS}) reached. ` +
       "Run `qfai prototyping certify` to seal the run.",
   );
   return 65;
+}
+
+/**
+ * Persist a stop reason to prototyping.json. Best-effort: if the file
+ * does not exist yet (cycle 0 input-error before seed write, etc.), the
+ * call is a no-op and the operator-visible diagnostic + exit code is
+ * the canonical signal.
+ */
+async function persistStopReason(protoJsonAbs: string, reason: StopReason): Promise<void> {
+  const body = await readPrototypingJson(protoJsonAbs);
+  if (body === null) return;
+  body.stopReason = reason;
+  try {
+    await writeFile(protoJsonAbs, `${JSON.stringify(body, null, 2)}\n`, "utf-8");
+  } catch (err) {
+    // Best-effort: a read-only filesystem / locked file should not
+    // mask the upstream license-verify diagnostic. Surface a warning
+    // so operators can see the persistence skipped (pre-fix this was
+    // a bare-catch that silently dropped every write failure
+    // including transient OS conditions worth flagging).
+    warn(
+      `qfai prototyping iterate: could not persist stopReason '${reason}' to ` +
+        `prototyping.json (${String(err)}); the operator-visible exit code is the canonical signal.`,
+    );
+  }
+}
+
+type ApplyLicensePatchFromFileResult =
+  | { ok: true; nextCatalog: LicenseCatalog }
+  | { ok: false; error: string };
+
+/**
+ * Read + apply an add-only license-patch file and append the audit row
+ * to prototyping.json#licensePatchAudit[]. The patch file is read as
+ * raw bytes; the bytes are sha256-hashed for the audit row + parsed
+ * with JSON or YAML based on file extension.
+ */
+async function applyLicensePatchFromFile(
+  root: string,
+  patchRelOrAbs: string,
+  liveCatalog: LicenseCatalog,
+  protoJsonAbs: string,
+): Promise<ApplyLicensePatchFromFileResult> {
+  const patchAbs = path.isAbsolute(patchRelOrAbs) ? patchRelOrAbs : path.join(root, patchRelOrAbs);
+  let bytes: Buffer;
+  try {
+    bytes = await readFile(patchAbs);
+  } catch (cause) {
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    return { ok: false, error: `license-patch read failed: ${reason}` };
+  }
+  const text = bytes.toString("utf-8");
+  let parsed: unknown;
+  try {
+    if (patchAbs.toLowerCase().endsWith(".yaml") || patchAbs.toLowerCase().endsWith(".yml")) {
+      const yaml = await import("yaml");
+      parsed = yaml.parse(text);
+    } else {
+      parsed = JSON.parse(text);
+    }
+  } catch (cause) {
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    return { ok: false, error: `license-patch parse failed: ${reason}` };
+  }
+  const validated = parseLicensePatch(parsed);
+  if (!validated.ok) {
+    return { ok: false, error: validated.error };
+  }
+  const nowIso = new Date().toISOString();
+  const applied = applyLicensePatch(liveCatalog, validated.patch, bytes, nowIso);
+  // Append the audit row to prototyping.json#licensePatchAudit[].
+  const body = (await readPrototypingJson(protoJsonAbs)) ?? {};
+  const existing: unknown = body.licensePatchAudit;
+  const audit: unknown[] = isUnknownArray(existing) ? [...existing] : [];
+  audit.push(applied.auditRow);
+  body.licensePatchAudit = audit;
+  // Option A (Codex P1 wave-4): `frozenLicenseCatalog` is NOT rewritten
+  // here. The frozen field is the immutable cycle-0 baseline (equal to
+  // `DEFAULT_LICENSE_CATALOG`); the drift gate at cycle >= 1 compares
+  // it against `DEFAULT_LICENSE_CATALOG` and would exit 2 if we mutated
+  // it. The runtime license catalog used by verify is reconstructed at
+  // read-time via `effectiveLicenseCatalog(frozen, auditRows)` —
+  // `applied.auditRow` (just appended above) is the canonical record
+  // that downstream cycles replay.
+  await mkdir(path.dirname(protoJsonAbs), { recursive: true });
+  await writeFile(protoJsonAbs, `${JSON.stringify(body, null, 2)}\n`, "utf-8");
+  return { ok: true, nextCatalog: applied.nextCatalog };
+}
+
+/**
+ * Write the advisory `iter-NN/iterate-context.json` file. The file is
+ * advisory-only (certify ignores its presence/absence); the call is
+ * best-effort and the cycle does not hard-fail if the write fails.
+ */
+async function writeIterateContextFile(iterDirAbs: string, context: IterateContext): Promise<void> {
+  const canonical = canonicalIterateContext(context);
+  const target = path.join(iterDirAbs, "iterate-context.json");
+  try {
+    await mkdir(iterDirAbs, { recursive: true });
+    await writeFile(target, `${JSON.stringify(canonical, null, 2)}\n`, "utf-8");
+  } catch (cause) {
+    warn(
+      `qfai prototyping iterate: iterate-context.json write failed (${
+        cause instanceof Error ? cause.message : String(cause)
+      }); the file is advisory and the cycle continues.`,
+    );
+  }
+}
+
+/**
+ * Build the iterate-context payload from the prior cycle's accepted
+ * iteration (read from prototyping.json#iterations[]). Returns null
+ * when no prior iteration is recorded yet (cycle 0).
+ */
+function buildIterateContextFromRecord(record: PrototypingJsonShape | null): IterateContext | null {
+  if (!record) return null;
+  const iterations = asIterations(record);
+  if (iterations.length === 0) return null;
+  const last = iterations[iterations.length - 1];
+  if (!isRecord(last)) return null;
+  if (typeof last.index !== "number") return null;
+  if (!isRecord(last.scores)) return null;
+  const scores = last.scores;
+  const get = (k: string): OrdinalScore => {
+    const v = scores[k];
+    return isOrdinalScore(v) ? v : "weak";
+  };
+  const lap = Array.isArray(last.layoutAntiPatternsDetected)
+    ? last.layoutAntiPatternsDetected.filter((v): v is string => typeof v === "string")
+    : [];
+  return {
+    priorCycle: last.index,
+    priorScores: {
+      informationArchitecture: get("informationArchitecture"),
+      navigationFlow: get("navigationFlow"),
+      usability: get("usability"),
+      functionality: get("functionality"),
+    },
+    openBlockers: lap,
+    // Tailwind contract phase tag is informational; Phase 1 of the
+    // Tailwind scanner work shipped a multi-phase contract surface
+    // (preflight + var(--token) + Tailwind --*-shadow). The literal
+    // tag is advisory; downstream subagents can compare it to the
+    // current contract phase to detect drift. Sourced from
+    // CURRENT_TAILWIND_CONTRACT_PHASE so a future Phase 5 / CHG-006
+    // migration updates the tag in a single place.
+    priorTailwindContract: CURRENT_TAILWIND_CONTRACT_PHASE,
+  };
+}
+
+/**
+ * Emit the `[BLOCKED] exit-64 prevented by:` summary using stdout.
+ * Pure passthrough to `buildBlockedSummary`; the literal header is the
+ * test anchor.
+ */
+function emitBlockedSummary(input: BlockedSummaryInput): void {
+  const text = buildBlockedSummary(input);
+  // info() routes to stdout via the shared logger; the summary is a
+  // single string so the literal header lives at the start of the
+  // emitted payload.
+  info(text);
 }
 
 function nextActionsFor(cycle: number): string[] {

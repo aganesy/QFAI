@@ -1112,7 +1112,7 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
     return JSON.parse(raw) as Record<string, unknown>;
   }
 
-  it("zeroes pre-existing iterations[] on cycle 0", async () => {
+  it("re-seeds iterations[] with the cycle-0 stub entry on cycle 0 (spec-0012 Phase 3 REQ-0012-0063)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedRawPrototypingJson(root, {
@@ -1128,11 +1128,16 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
       await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:5173" }),
     ).toBe(0);
 
+    // Under spec-0012 Phase 3, iterate seeds iterations[] with a stub
+    // entry so prototyping.json is validate-conformant immediately.
+    // The stale iters above are wiped; only the fresh seed survives.
     const body = await readProtoJson(root);
-    expect(body.iterations).toEqual([]);
+    expect(body.iterations).toHaveLength(1);
+    expect(body.iterations[0].index).toBe(0);
+    expect(body.iterations[0].scores.informationArchitecture).toBe("weak");
   });
 
-  it("deletes reviewerGate / acceptedIterationIndex / stopReason / fullHarness on cycle 0", async () => {
+  it("re-seeds acceptedIterationIndex / stopReason and deletes reviewerGate / fullHarness on cycle 0", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     await seedRawPrototypingJson(root, {
@@ -1152,10 +1157,14 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
     ).toBe(0);
 
     const body = await readProtoJson(root);
+    // reviewerGate and fullHarness remain deleted (per-loop state).
     expect("reviewerGate" in body).toBe(false);
-    expect("acceptedIterationIndex" in body).toBe(false);
-    expect("stopReason" in body).toBe(false);
     expect("fullHarness" in body).toBe(false);
+    // Phase 3: acceptedIterationIndex=0 (the seed) and stopReason=null
+    // (loop running) replace the prior stale values rather than being
+    // removed.
+    expect(body.acceptedIterationIndex).toBe(0);
+    expect(body.stopReason).toBe(null);
   });
 
   it("regenerates runId even when a prior runId exists", async () => {

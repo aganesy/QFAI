@@ -30,13 +30,29 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
         with:
-          version: 9.12.3
+          # pair-changed CI lane (check-prompt-scanner-pair.mjs) needs
+          # `origin/main` reachable for `git diff --name-only
+          # origin/main...HEAD`. Default shallow checkout doesn't fetch
+          # base ref refs, so fetch full history here.
+          fetch-depth: 0
+      - name: Ensure base ref is fetched (for pair-changed CI lane)
+        run: |
+          # PR runs already have origin/main as a remote-tracking ref
+          # after fetch-depth: 0, but be defensive in case the workflow
+          # is invoked from a fork or a non-PR event.
+          git fetch --no-tags --depth=1 origin main || true
+        shell: bash
+      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
+        run: corepack enable
+        shell: bash
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_LTS }}
           cache: pnpm
+      - name: Re-shim pnpm against toolcache Node
+        run: corepack prepare pnpm@9.12.3 --activate
+        shell: bash
       - run: pnpm install --frozen-lockfile
       - name: Run lint gate
         run: pnpm ci:lint
@@ -52,13 +68,16 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.12.3
+      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
+        run: corepack enable
+        shell: bash
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_LTS }}
           cache: pnpm
+      - name: Re-shim pnpm against toolcache Node
+        run: corepack prepare pnpm@9.12.3 --activate
+        shell: bash
       - run: pnpm install --frozen-lockfile
       - name: Run type check
         run: pnpm check-types
@@ -69,13 +88,16 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.12.3
+      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
+        run: corepack enable
+        shell: bash
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_LTS }}
           cache: pnpm
+      - name: Re-shim pnpm against toolcache Node
+        run: corepack prepare pnpm@9.12.3 --activate
+        shell: bash
       - run: pnpm install --frozen-lockfile
       - name: Run future TypeScript compatibility check
         run: pnpm check-types:future
@@ -87,19 +109,47 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        slice: [core, validators, integration, e2e, cli]
+        slice: [core, validators, integration, e2e, cli, unit, scripts]
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.12.3
+      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
+        run: corepack enable
+        shell: bash
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_LTS }}
           cache: pnpm
+      - name: Re-shim pnpm against toolcache Node
+        run: corepack prepare pnpm@9.12.3 --activate
+        shell: bash
       - run: pnpm install --frozen-lockfile
       - name: Run tests (${{ matrix.slice }})
         run: pnpm -C packages/qfai test -- --project ${{ matrix.slice }}
+
+  # ── 4b. Scanner module statement-coverage gate ───────────────────
+  # Asserts that `packages/qfai/src/core/prototyping/designMdViolations.ts`
+  # (the DESIGN.md compliance scanner) retains >= 90% statement coverage.
+  # Paired with the in-process test-count floor (>= 30 unit tests on
+  # the scanner suite); together they pin both breadth and depth of
+  # the scanner test surface.
+  scanner-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
+        run: corepack enable
+        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_LTS }}
+          cache: pnpm
+      - name: Re-shim pnpm against toolcache Node
+        run: corepack prepare pnpm@9.12.3 --activate
+        shell: bash
+      - run: pnpm install --frozen-lockfile
+      - name: Run scanner coverage gate
+        run: pnpm ci:coverage
 
   # ── 5. Build, pack verification & qfai validate ─────────────────
   build:
@@ -107,13 +157,16 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.12.3
+      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
+        run: corepack enable
+        shell: bash
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_LTS }}
           cache: pnpm
+      - name: Re-shim pnpm against toolcache Node
+        run: corepack prepare pnpm@9.12.3 --activate
+        shell: bash
       - run: pnpm install --frozen-lockfile
 
       - name: Run build & pack verification
@@ -185,7 +238,7 @@ jobs:
   # ── 6. Aggregate gate (for branch protection) ────────────────────
   ci-pass:
     if: always()
-    needs: [lint, check-types, check-types-future, test, build]
+    needs: [lint, check-types, check-types-future, test, scanner-coverage, build]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -195,11 +248,13 @@ jobs:
           echo "check-types:         ${{ needs['check-types'].result }}"
           echo "check-types-future:  ${{ needs['check-types-future'].result }}"
           echo "test:                ${{ needs.test.result }}"
+          echo "scanner-coverage:    ${{ needs['scanner-coverage'].result }}"
           echo "build:               ${{ needs.build.result }}"
           if [[ "${{ needs.lint.result }}" != "success" ||
                 "${{ needs['check-types'].result }}" != "success" ||
                 "${{ needs['check-types-future'].result }}" != "success" ||
                 "${{ needs.test.result }}" != "success" ||
+                "${{ needs['scanner-coverage'].result }}" != "success" ||
                 "${{ needs.build.result }}" != "success" ]]; then
             echo "::error::One or more CI jobs failed."
             exit 1

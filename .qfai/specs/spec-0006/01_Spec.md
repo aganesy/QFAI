@@ -37,10 +37,13 @@
 - REQ-0032: --fail-on 制御 - `--fail-on warning|error` で終了コードを制御する
 - REQ-0033: --out ファイル出力 - `--out <path>` で診断結果をファイルに出力する
 - REQ-0034: root 自動探索 - --root 未指定時は startDir から qfai.config.yaml を自動探索する
+- REQ-0107: playwright probe primary - `qfai doctor --profile prototyping` は `node_modules/.bin/playwright` (Windows では `.cmd`/`.bat`/`.ps1` variants) を primary 候補として probe する。`npx --no-install playwright --version` は fallback。`playwright-cli` (`.cmd`/`.bat` variants 含む) は deprecation window 中 accepted で `D-DEPRECATED-PROBE` (severity: warning during window, error at sunset `1.10.0`) を surface する。失敗時 error text は install hint `npm i -D playwright` を含むこと。
+- REQ-0122: `skills.integrity` severity downgrade - `qfai doctor` は `skills.integrity` 既定 severity を `warning` にする (`error` ではない)。doctor summary は findings を "errors blocking the active profile" と "warnings advisory of drift" の 2 group に分けて表示し、`skills.integrity` は message 文言にかかわらず後者に属する。
+- REQ-0123: doctor probe function-size refactor — `packages/qfai/src/core/prototyping/playwrightLauncher.ts` の `collectCandidates` (~92 LOC) / `probeCandidate` (~100 LOC) と `packages/qfai/src/core/doctor.ts` の `buildPlaywrightLauncherChecks` (~89 LOC) が CLAUDE.md の ~50 行 function-size guidance を超えている。per-stage candidate collectors (`collectPrimaryCandidates` / `collectNpxCandidate` / `collectDeprecatedCandidates`)、spawn / timeout state machine、per-branch check builders を抽出し各関数を ~50 LOC 以下に保つ。behavior-preserving refactor (既存 test がそのまま pass する)。Acceptance signal: refactor 後 `playwrightLauncher.ts` / `doctor.ts` 内のいずれの関数も 50 LOC を超えず、既存 doctor 統合 / 単体テストが green。
 
 ## Entry points
 
-- US range in this spec: US-0006-0001..US-0006-0005
+- US range in this spec: US-0006-0001..US-0006-0007
 - Primary actors: 開発者
 - Notes: `qfai doctor` で設定・構造の診断を実行し、バリデーション前に問題を特定・修正する
 

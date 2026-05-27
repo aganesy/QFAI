@@ -31,6 +31,32 @@ export type ParsedArgs = {
     prototypingCycle?: number;
     /** --check flag for `qfai prototyping certify --check`. */
     prototypingCheckOnly?: boolean;
+    /** --license-patch <file> for `qfai prototyping iterate`. */
+    prototypingLicensePatch?: string;
+    /** --primary-spec-id <value> for `qfai prototyping iterate`. */
+    prototypingPrimarySpecId?: string;
+    /**
+     * --check-convergence for `qfai prototyping iterate`. Read-only peek
+     * of the canonical prototyping state file; reports stopReason +
+     * acceptedIterationIndex without re-running the iterate loop.
+     */
+    prototypingCheckConvergence?: boolean;
+    /**
+     * --capture for `qfai prototyping iterate`. Opt-in PNG/HTML capture
+     * (default OFF; preserves the no-capture default posture). When
+     * present, iterate threads `capture: true` into runPrototypingIterate
+     * and the default Playwright runner is loaded dynamically when no
+     * DI captureScreen is supplied.
+     */
+    prototypingCapture?: boolean;
+    /**
+     * --auto-serve for `qfai prototyping iterate`. Opt-in local HTTP
+     * server spawn (default OFF; preserves the no-server default
+     * posture). When present, iterate threads `autoServe: true` into
+     * runPrototypingIterate and the default in-process HTTP server
+     * runner is loaded dynamically when no DI serverRunner is supplied.
+     */
+    prototypingAutoServe?: boolean;
     help: boolean;
     invalidExitCode: number;
   };
@@ -323,6 +349,56 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         // only used by `qfai prototyping certify --check`.
         // The flag takes no value; presence flips the boolean.
         options.prototypingCheckOnly = true;
+        break;
+      }
+      case "--license-patch": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.prototypingLicensePatch = next;
+        i += 1;
+        break;
+      }
+      case "--primary-spec-id": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.prototypingPrimarySpecId = next;
+        i += 1;
+        break;
+      }
+      case "--check-convergence": {
+        // Read-only peek of the canonical prototyping state file. No
+        // value; presence flips the boolean. Only meaningful for
+        // `qfai prototyping iterate`; main.ts wires it through only on
+        // the iterate path. Currently silently ignored for
+        // `preflight` / `certify` / `show-spec` (consistent with
+        // `--check` / `--license-patch` / `--primary-spec-id`); see
+        // .qfai/contracts/cli/qfai-prototyping-iterate.md.
+        // TODO(next-minor): cross-subcommand `markInvalid()` follow-up.
+        options.prototypingCheckConvergence = true;
+        break;
+      }
+      case "--capture": {
+        // Opt-in PNG/HTML capture. No value; presence flips the
+        // boolean. Only meaningful for `qfai prototyping iterate`;
+        // silently ignored on other prototyping subcommands today.
+        // TODO(next-minor): cross-subcommand markInvalid() follow-up
+        // (see `--check-convergence` note above).
+        options.prototypingCapture = true;
+        break;
+      }
+      case "--auto-serve": {
+        // Opt-in local HTTP server spawn. No value; presence flips the
+        // boolean. Only meaningful for `qfai prototyping iterate`;
+        // silently ignored on other prototyping subcommands today.
+        // TODO(next-minor): cross-subcommand markInvalid() follow-up
+        // (see `--check-convergence` note above).
+        options.prototypingAutoServe = true;
         break;
       }
       case "--help":

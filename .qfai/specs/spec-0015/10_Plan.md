@@ -26,3 +26,10 @@
 
 - Routing drift between SKILL.md and steering SSOT can break delegation
 - Mitigation: central routing files become the only dispatch SSOT; tests validate Codex/init parity
+
+## CHG-005 (2026-05-24) — qfai-prototyping defect remediation
+
+- Implement REQ-0015-0013..0014 per AC-0015-0013..0014:
+  1. Reviewer-Gate adds `R-CERTIFY-VERIFY-CIRCULAR` (severity error) structural check: if a future PR wires `certify` to read a validator output whose profile requires `/qfai-atdd` or `/qfai-implement` artifacts, the gate fires with a 3-part justification (offending certify code path, offending validator-output file/profile, option-B contract clause violated).
+  2. Reviewer-Gate emits `R-PROMPT-SCANNER-DRIFT` with the 3-part justification SSOT shared with spec-0004's validate ingestion (one contract, two enforcers).
+- Pair with spec-0004 wave: the validate-ingestion gate in spec-0004 is the rejector; this spec defines the emitter shape.

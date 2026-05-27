@@ -35,6 +35,7 @@ import {
   validateMermaidEnforcement,
   validateOrphanProhibition,
   validatePrototypingEvidence,
+  validateScreenIdCasing,
   validateStateGate,
   validateCompletionCertificateIssues,
   validateConfigReferenceIntegrity,
@@ -61,6 +62,7 @@ import {
   validateAssistantTreeMigration,
   validateSkillDocReferences,
   validateReviewerJustification,
+  validateReviewerGate,
 } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
@@ -173,6 +175,7 @@ async function runSddValidators(
     ...(await validateAssistantTreeMigration(root, config)),
     ...(await validateSkillDocReferences(root, config)),
     ...(await validateReviewerJustification(root, config)),
+    ...(await validateReviewerGate(root, config)),
   ];
 }
 
@@ -184,6 +187,7 @@ async function runPrototypingValidators(
   return [
     ...(await runUiuxValidators(root, config, platformOption)),
     ...(await validatePrototypingEvidence(root, config)),
+    ...(await validateScreenIdCasing(root, config.paths.contractsDir)),
     ...(await validateUiEvidenceArtifacts(root, config)),
     ...(await validateRenderCritique(root, config)),
     ...(await validateDesignFidelity(root, config)),

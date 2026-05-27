@@ -4,6 +4,154 @@
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-05-24
+
+### Added (qfai-prototyping defect remediation — CHG-005)
+
+- Capture / serve as opt-in iterate flags: `qfai prototyping iterate --capture`
+  and `qfai prototyping iterate --auto-serve` re-introduce capture infrastructure
+  as **opt-in only** (default OFF). Formally amends `DR-0012-0029` ("no PNG /
+  HTML / interaction.json capture") via `DR-0012-0031`; default behavior
+  unchanged. `--capture` ships with the default Playwright runner
+  (`defaultCaptureScreen.ts`, dynamic `await import("playwright")` so Playwright
+  stays in `optionalDependencies`; per-screen
+  `viewport`/`deviceScaleFactor`/`waitUntil`/`htmlSourceCopy` contract).
+  `--auto-serve` ships with the default in-process `node:http` server
+  (`defaultServerRunner.ts`) — no subprocess, `server.close()` with a 2s
+  SIGINT teardown bound, and EADDRINUSE on a foreign owner is refused
+  (exit 2 with the offending PID + command-line surfaced) rather than
+  killed. Operators that need subprocess-spawn semantics (tree-kill /
+  `taskkill /F /T`) supply their own `options.serverRunner` via the DI
+  escape hatch. A read-only `--check-convergence` peek path is also
+  shipped (TDD-0497): reads `.qfai/evidence/prototyping/prototyping.json`,
+  exits 0 when `stopReason === "axes-exceptional"` with
+  `acceptedIterationIndex` set, exits 2 otherwise. (REQ-0109 / REQ-0110,
+  AC-0012-0059..0060.)
+- `prototyping.json` validate-conformant schema: `iterations[i]` MUST carry
+  non-null `commitSha` (accepts `"uncommitted"` sentinel), non-empty
+  `proseCritique`, `scores`, `layoutAntiPatternsDetected`, `designMdViolations`,
+  `pivotDirective`, `reviewerId`, and `evidenceRefs[]` with
+  `{kind:"screenshot"|"html", path:"iter-NN/<screen-id>.<ext>"}` for every
+  declared `screens[].id`. On convergence: top-level `acceptedIterationIndex`
+  (number|null) and `stopReason ∈ {"axes-exceptional","max-iterations","license-verify-fail","input-error"}`.
+  (REQ-0111, AC-0012-0061.)
+- Profile-suffixed validate output: `.qfai/report/validate-<profile>.json` per
+  profile + always-latest `.qfai/report/validate.json` with explicit `profile`
+  field. Legacy `.qfai/output/validate.json` accepted during the deprecation
+  window with `D-DEPRECATED-PATH` warning; sunset at qfai 1.10.0.
+  Post-sunset, the legacy file is no longer written and `D-DEPRECATED-PATH`
+  escalates to error severity, but only when on-disk evidence of a legacy
+  consumer is present (the stale legacy file exists) — clean projects that
+  never used the legacy surface see no finding. `qfai prototyping certify`
+  now reads `validate.json#profile` and refuses with the recovery command
+  `qfai validate --profile prototyping --fail-on error` on mismatch.
+  (REQ-0120, BR-0004-0025..0026.)
+  **Upgrade impact**: consumers (CI scripts, agent prompts, dashboards)
+  reading `.qfai/output/validate.json` must migrate to
+  `.qfai/report/validate.json` (always-latest, carries `profile` field) or
+  `.qfai/report/validate-<profile>.json` (per-profile, independent files)
+  before upgrading past qfai 1.10.0. The legacy path is still written
+  during the v1.9.x window; at 1.10.0 it stops being written and the
+  finding escalates to error. Delete any stale `.qfai/output/validate.json`
+  after migrating to silence the post-sunset finding.
+- SSOT-sync pair-changed CI lane: new `scripts/check-prompt-scanner-pair.mjs`
+  wired into `pnpm ci:lint`. Rejects PRs that edit only one half of the
+  `findDesignMdViolations.ts` (scanner) ↔ `generator-prompt.md` (LLM contract)
+  pair with `R-PROMPT-SCANNER-DRIFT` (3-part justification: modified file,
+  un-paired counterpart, unmatched clause). Both-changed and neither-changed
+  PRs pass silently. (REQ-0102, BR-0004-0027..0028.)
+- `qfai doctor` probe rebuild: `node_modules/.bin/playwright` (with Windows
+  `.cmd`/`.bat`/`.ps1` variants) is the primary launcher candidate;
+  `npx --no-install playwright --version` fallback; `playwright-cli`
+  accepted-with-warning during the deprecation window (sunset 1.10.0).
+  Failure-mode error text includes the install hint `npm i -D playwright`.
+  `skills.integrity` default severity downgraded to `warning`; doctor summary
+  groups findings into "errors blocking the active profile" vs
+  "advisory findings (drift, non-blocking by default)". (REQ-0107 / REQ-0122,
+  AC-0006-0010..0014.)
+  **Upgrade impact**: pipelines using `qfai doctor --fail-on error` will no
+  longer fail on `skills.integrity` drift (the severity now defaults to
+  `warning`). Use `--fail-on warning` to preserve the old gate, or accept the
+  new advisory semantics. The skills-integrity check itself is unchanged —
+  only its severity classification.
+- Reviewer-Gate `R-CERTIFY-VERIFY-CIRCULAR` (severity error) emitted when a
+  future PR wires `certify` to read validator output requiring `/qfai-atdd`
+  or `/qfai-implement` artifacts at the prototyping phase. Resolution path:
+  `verify.json#scope: "prototyping" | "full" | "atdd"` discriminator;
+  `certify --check` accepts `scope: "prototyping"` as the phase-gate condition.
+  (REQ-0112 / REQ-0113, DR-0001-0004, BR-0015-0008.)
+- Reviewer-Gate `R-PROMPT-SCANNER-DRIFT` (severity error) emitted on
+  asymmetric modification of the
+  `findDesignMdViolations.ts` ↔ `generator-prompt.md` SSOT-sync pair.
+  Backed by a new `pnpm ci:lint` lane. Justification: 3-part required
+  text naming (a) modified file path, (b) un-paired counterpart path,
+  (c) unmatched contract clause. `qfai validate` rejects empty / whitespace-only
+  justifications as advisory-failing errors. (REQ-0102 / REQ-0125,
+  BR-0004-0027..0028, BR-0015-0009.)
+- Tailwind ↔ DESIGN.md scanner contract: hybrid β (preflight literal allowlist
+  for the 5 sentinels `#fff`, `#9ca3af`, `#e5e7eb`, `rgb(59 130 246 / 0.5)`,
+  `--tw-ring-*`) + γ (scanner gate scope narrowed to `<body>`-only) per
+  `DR-0001-0001`. `--*-shadow*:` custom-property declarations stripped per
+  `DR-0001-0002`. CSS-wide keywords (`inherit`, `initial`, `unset`, `revert`,
+  `currentColor`) accepted by all 4 scanners. `scanFonts` / `scanRadius` /
+  `scanShadow` import `unwrapVarReference` consistently with `scanColors`.
+  (REQ-0101 / REQ-0103..0105, AC-0012-0053..0056.)
+- CJK-aware `proseCritique` length validation: Intl.Segmenter (`word`
+  granularity) primary with OR-fallback (`200..500 words OR 600..2500 chars`)
+  per `DR-0001-0003`. Japanese-only 800–1500-char fixtures pass without
+  regression to English 200–500-word fixture acceptance. (REQ-0106,
+  AC-0012-0057.)
+- Iterate ergonomics: `--cycle 0 --force` moves prior `iter-00/` to a
+  timestamped backup (`iter-00.backup-<ISO>/`) before
+  `clearEvidenceIterDirs` runs; non-converged cycle prints a top-3
+  blocking-cause summary; md5-based duplicate-capture detection
+  (`lap-009`, advisory-failing) + missing-route detection
+  (`lap-010`, advisory-failing). (REQ-0117 / REQ-0118 / REQ-0121.)
+- SDD UI contract template carries a `primary_tasks` slot per `screens[]`
+  entry (shipped pre-populated with one example entry so the sample passes
+  its own validate); `requirements-analyst` agent guide instructs ≥ 1
+  primary_task per screen. QFAI-AUD-001 aligned validate lane uses a
+  2-stage emission to distinguish slot-absent (legacy) contracts from
+  slot-empty (intentional violation) contracts: key-absent → severity=info
+  (non-blocking) under a one-minor-release deprecation window
+  (sunset: qfai 1.10.0); key-empty (`primary_tasks: []`) → severity=error
+  (blocking, intentional violation). All QFAI-AUD-001 findings name the
+  offending file path, the screen id, and the rule token in a single
+  user-facing message. (REQ-0115 / REQ-0117, AC-0013-0018.)
+  **Upgrade impact**: consuming projects whose UI contracts predate v1.9.1
+  do not carry the `primary_tasks` slot. On upgrade, `qfai validate` will
+  surface QFAI-AUD-001 at severity=info (non-blocking) for each affected
+  screen during the deprecation window, with a remediation message naming
+  the sunset version. Recovery before sunset: add a `primary_tasks` slot
+  (with at least one task) to each screen contract; at qfai 1.10.0 the
+  slot becomes required and missing slots will block.
+- Multi-spec posture: `/qfai-prototyping` SKILL.md realigned to single-spec
+  per `DR-0001-0005` (option A); `resolveSurfaceUnion()` retained as an
+  internal helper for validators / `show-spec` only. Full per-spec layout
+  migration deferred. (REQ-0114.)
+- Screen-id casing normalized to underscore end-to-end (iterate emit ↔
+  validator expectation ↔ aggregate-dir filename ↔ `screens[].id`) per
+  `DR-0001-0007`. Aggregate-dir mirror on convergence:
+  `.qfai/evidence/prototyping/screenshots/<screen-id>.png` +
+  `html/<screen-id>.html`. (REQ-0116.)
+- One-minor-release deprecation window (`OC-60`) for all path / probe /
+  schema changes; sunset = qfai 1.10.0. Migration memo
+  `.qfai/assistant/process/migrations/v1.9.1-prototyping-defect-remediation.md`
+  (immutable per `OC-61`). (REQ-0126 / REQ-0127.)
+
+### Changed (CHG-005)
+
+- spec-0012 `DR-0012-0031` formally amends `DR-0012-0029` ("no capture")
+  by introducing opt-in `--capture` / `--auto-serve` flags. Inner-loop
+  reviewer-driven Playwright posture from `DR-0012-0027` / `DR-0012-0029`
+  preserved as the default.
+- `_policies/05_Contracts.md` Contract Index gains `CLI-DOC` (new) and
+  `CLI-PITER` (new); `CLI-PROT` / `CLI-VAL` / `DCON-005` updated.
+- `_policies/06_Glossary.md` gains 9 finding-code / contract terms.
+- `_policies/07_Constraints.md` gains `OC-60` / `OC-61` / `OC-62`.
+- `_policies/08_Decisions.md` gains `DR-0001-0001..0009` resolving
+  9 deferred OQs (OQ-0103/0104/0105/0107/0108/0109/0110/0111/0112).
+
 ## [1.9.0] - 2026-05-23
 
 ### Added (assistant-layer recut + steering work-log surface — CHG-003)

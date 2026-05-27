@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { FailOn, OutputFormat } from "../../core/config.js";
@@ -9,6 +9,7 @@ import { toRelativePath } from "../../core/paths.js";
 import type { Issue, ValidationProfile, ValidationResult } from "../../core/types.js";
 import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
+import { resolveToolVersion } from "../../core/version.js";
 import { shouldFail } from "../lib/failOn.js";
 import { warnIfTruncated } from "../lib/warnings.js";
 
@@ -19,7 +20,61 @@ export type ValidateOptions = {
   format?: OutputFormat;
   profile?: ValidationProfile;
   platform?: string;
+  /**
+   * Override the tool version observed by the legacy-path deprecation
+   * gate. Tests use this to simulate the post-sunset world (>= 1.10.0)
+   * without mocking the resolver. Operational callers leave this
+   * undefined; production reads `packages/qfai/package.json#version`.
+   */
+  toolVersionOverride?: string;
 };
+
+/**
+ * Sunset version for the legacy `.qfai/output/validate.json` write
+ * path. Until the running tool reaches this version the legacy path
+ * keeps being written and a `D-DEPRECATED-PATH` warning fires; at and
+ * past the sunset, the legacy path is no longer written and the
+ * finding escalates to severity `error`.
+ *
+ * The literal sunset version is the only npm-version marker permitted
+ * by `.agents/rules/distributed-surface.md` exception (npm version is
+ * canonical), because it tracks the next minor of the pinned branch.
+ */
+const LEGACY_VALIDATE_JSON_SUNSET = "1.10.0";
+const LEGACY_VALIDATE_JSON_REL = ".qfai/output/validate.json";
+
+async function pathExists(p: string): Promise<boolean> {
+  try {
+    await stat(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Normalize a configured path for comparison against the legacy
+ * literal. Lowercased, posix-slashed, leading `./` stripped, repeated
+ * slashes collapsed. Comparison is case-insensitive only on the textual
+ * normalization step (no filesystem casing inspection) so the rule
+ * fires identically on Windows + macOS + Linux configs.
+ */
+function normalizeForLegacyMatch(p: string): string {
+  return p.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\.\//, "").toLowerCase();
+}
+
+/**
+ * True when the configured validate JSON path is the legacy
+ * `.qfai/output/validate.json` SSOT (post-PR-#207 the canonical path
+ * moved to `.qfai/report/validate.json`). Absolute paths are never
+ * treated as legacy — the legacy SSOT is the relative repo-rooted
+ * literal only; operators who deliberately point at an absolute path
+ * have explicitly opted out of the canonical SSOT.
+ */
+function configTargetsLegacyValidateJsonPath(configuredPath: string): boolean {
+  if (path.isAbsolute(configuredPath)) return false;
+  return normalizeForLegacyMatch(configuredPath) === LEGACY_VALIDATE_JSON_REL;
+}
 
 export async function runValidate(options: ValidateOptions): Promise<number> {
   const startedAt = new Date();
@@ -27,12 +82,54 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const configResult = await loadConfig(root);
   const blockedIssue = buildCiProfileIssue(options.profile);
   const blockedByProfileGuard = blockedIssue !== null;
-  const result = blockedIssue
+  const rawResult = blockedIssue
     ? await createProfileGuardResult(options.profile ?? "full", blockedIssue)
     : await validateProject(root, configResult, {
         ...(options.profile ? { profile: options.profile } : {}),
         ...(options.platform ? { platform: options.platform } : {}),
       });
+  // Resolve effective tool version for the legacy-path sunset gate.
+  // Test callers override; production reads the same package.json#version
+  // the rest of the toolchain uses (so the source-of-truth is single).
+  const effectiveToolVersion = options.toolVersionOverride ?? (await resolveToolVersion());
+  const legacySeverity = legacyValidateJsonSeverity(effectiveToolVersion);
+  const legacyWriteEnabled = legacySeverity === "warning";
+  // Detect whether the operator's project config still aims the writer
+  // at the legacy SSOT. This is a stronger signal than "the legacy file
+  // exists on disk" — even a clean filesystem will trigger the gate if
+  // the config points there, because the writer is about to recreate
+  // the stale path on this very run.
+  const configuredValidateJsonPath = configResult.config.output.validateJsonPath;
+  const configTargetsLegacyPath = configTargetsLegacyValidateJsonPath(configuredValidateJsonPath);
+  // Post-sunset, only emit the deprecation finding when there is
+  // observable evidence (config or on-disk file) that a consumer still
+  // depends on the legacy path. Otherwise every clean validate run on
+  // tool >= sunset would carry an unactionable error finding for a path
+  // the user never used. Pre-sunset the finding is always emitted as a
+  // warning because the tool itself is still writing the path.
+  const legacyOnDisk = !legacyWriteEnabled
+    ? await pathExists(path.join(root, LEGACY_VALIDATE_JSON_REL))
+    : false;
+  const emitDeprecationIssue = legacyWriteEnabled || legacyOnDisk || configTargetsLegacyPath;
+  // Post-sunset, refuse to write to the configured legacy path. This is
+  // the migration gate: the legacy SSOT is dead, the config must be
+  // updated. Pre-sunset writes proceed normally (writer-side warning).
+  const refuseConfiguredLegacyWrite = configTargetsLegacyPath && !legacyWriteEnabled;
+  const deprecationIssue: Issue | null = emitDeprecationIssue
+    ? buildDeprecationIssue({
+        severity: legacySeverity,
+        legacyWriteEnabled,
+        configTargetsLegacyPath,
+        refuseConfiguredLegacyWrite,
+      })
+    : null;
+  const result: ValidationResult = deprecationIssue
+    ? {
+        ...rawResult,
+        issues: [...rawResult.issues, deprecationIssue],
+        counts: recountIssues(rawResult.counts, deprecationIssue),
+      }
+    : rawResult;
   const normalized = normalizeValidationResult(root, result);
   warnIfTruncated(normalized.traceability.testFiles, "validate");
 
@@ -62,9 +159,196 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       runLogPath,
     });
   }
-  await emitJson(normalized, root, configResult.config.output.validateJsonPath);
+  // Always-latest report + profile-suffixed report.
+  // Post-sunset, refuse to write to the configured legacy path: the
+  // migration gate must direct the operator to update their config
+  // instead of silently producing a stale-named file. The accompanying
+  // deprecation issue (severity=error) already carries the actionable
+  // text; here we just skip the physical write.
+  if (!refuseConfiguredLegacyWrite) {
+    await emitJson(normalized, root, configuredValidateJsonPath);
+    const profileLabel = normalized.profile ?? options.profile ?? "full";
+    const profileSuffixedRel = profileSuffixedReportPath(configuredValidateJsonPath, profileLabel);
+    await emitJson(normalized, root, profileSuffixedRel);
+  }
+  // Legacy path — written only during the deprecation window AND only
+  // if the configured path is NOT already the legacy path (avoid
+  // double-write to the same file when the operator's config still
+  // points there pre-sunset).
+  if (legacyWriteEnabled && !configTargetsLegacyPath) {
+    await emitJson(normalized, root, LEGACY_VALIDATE_JSON_REL);
+  }
 
   return willFail ? 1 : 0;
+}
+
+/**
+ * Compute the `.qfai/report/validate-<profile>.json` path that mirrors
+ * the configured always-latest path. Splits at the basename so a custom
+ * `validateJsonPath` of `.qfai/output/foo.json` still produces
+ * `.qfai/output/foo-<profile>.json` — keeps backward compatibility with
+ * non-default configurations.
+ */
+function profileSuffixedReportPath(configured: string, profile: string): string {
+  const dir = path.posix.dirname(configured.replace(/\\/g, "/"));
+  const base = path.posix.basename(configured.replace(/\\/g, "/"));
+  const ext = path.posix.extname(base);
+  const stem = ext.length > 0 ? base.slice(0, -ext.length) : base;
+  return path.posix.join(dir, `${stem}-${profile}${ext}`);
+}
+
+/**
+ * Severity of the `D-DEPRECATED-PATH` finding for the legacy validate
+ * output path. Warning while the deprecation window is open; error
+ * once the running tool reaches the announced sunset.
+ *
+ * Exported for unit testing of the prerelease-aware comparison rule.
+ * Production callers go through `runValidate`.
+ */
+export function legacyValidateJsonSeverity(currentVersion: string): "warning" | "error" {
+  return isAtOrPastSunset(currentVersion, LEGACY_VALIDATE_JSON_SUNSET) ? "error" : "warning";
+}
+
+type FullSemver = {
+  major: number;
+  minor: number;
+  patch: number;
+  /**
+   * Raw prerelease tag (everything after the first `-`, before any
+   * `+build` metadata). `undefined` denotes a clean GA release.
+   * Per the semver spec, a clean release sorts AFTER any prerelease
+   * sharing the same `major.minor.patch`.
+   */
+  prerelease: string | undefined;
+};
+
+/**
+ * Strict full-semver parser: `MAJOR.MINOR.PATCH[-PRERELEASE][+BUILD]`.
+ * Returns `null` for inputs that do not match — callers treat that as
+ * "be conservative" (i.e. pre-sunset / warning mode).
+ *
+ * Scope note: this is a **presence-only check**, not a full §9 / §11
+ * validator. The prerelease group `([0-9A-Za-z.-]+)` does NOT enforce
+ * SemVer §9 ("numeric identifiers MUST NOT include leading zeros"),
+ * so inputs like `1.10.0-01` parse with `prerelease="01"`. That is
+ * intentional: the legacy-path sunset gate only reads `prerelease ===
+ * undefined` to distinguish GA vs prerelease, never the prerelease
+ * contents themselves. If this helper grows into a general SemVer
+ * comparator (e.g. via the prerelease ordering follow-up below), the
+ * regex must be tightened to reject leading-zero numeric identifiers.
+ *
+ * Build metadata (`+...`) is dropped per semver §10 (ignored for
+ * precedence). Prerelease tag is retained but only its presence is
+ * needed for the at-or-past-sunset decision below.
+ */
+function parseFullSemver(value: string): FullSemver | null {
+  const m = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/.exec(value);
+  if (!m) return null;
+  const majorRaw = m[1];
+  const minorRaw = m[2];
+  const patchRaw = m[3];
+  if (majorRaw === undefined || minorRaw === undefined || patchRaw === undefined) return null;
+  return {
+    major: Number(majorRaw),
+    minor: Number(minorRaw),
+    patch: Number(patchRaw),
+    prerelease: m[4],
+  };
+}
+
+/**
+ * Returns `true` iff `currentVersion` is at or past the sunset.
+ *
+ * GA-only sunset assumption: this comparator presumes the sunset
+ * literal is a clean GA release (no prerelease tag). When the sunset
+ * is `1.10.0`, a current prerelease at the same triple
+ * (`1.10.0-beta.1`) sorts BEFORE the GA (semver §11) and is therefore
+ * pre-sunset. We deliberately do NOT call `comparePrerelease(cur, sun)`
+ * here because `sun.prerelease` is always `undefined` in production
+ * (the SSOT is the clean `LEGACY_VALIDATE_JSON_SUNSET` literal). If a
+ * future migration ever pins sunset to a prerelease tag itself, this
+ * helper needs an additional prerelease-vs-prerelease comparator step.
+ *
+ * Conservative default: if either version fails to parse, we treat
+ * the current version as pre-sunset (warning mode) — the legacy file
+ * keeps being written and operators are not surprised by an
+ * unparseable-version-induced escalation.
+ */
+function isAtOrPastSunset(currentVersion: string, sunsetVersion: string): boolean {
+  const cur = parseFullSemver(currentVersion);
+  const sun = parseFullSemver(sunsetVersion);
+  if (cur === null || sun === null) return false;
+  if (cur.major !== sun.major) return cur.major > sun.major;
+  if (cur.minor !== sun.minor) return cur.minor > sun.minor;
+  if (cur.patch !== sun.patch) return cur.patch > sun.patch;
+  // major.minor.patch tied: a clean GA (no prerelease) is at-sunset;
+  // any prerelease at the same triple is still pre-sunset.
+  return cur.prerelease === undefined;
+}
+
+/**
+ * Build the `D-DEPRECATED-PATH` finding for the legacy validate output
+ * SSOT. The message depends on three orthogonal signals:
+ *
+ *   - `legacyWriteEnabled` — the tool is still in the deprecation
+ *     window (pre-sunset). Severity is `warning`.
+ *   - `configTargetsLegacyPath` — the operator's project config still
+ *     names the legacy literal as its `output.validateJsonPath`.
+ *   - `refuseConfiguredLegacyWrite` — post-sunset AND the config points
+ *     at the legacy path: the writer skips and the message must direct
+ *     the operator to update their config.
+ *
+ * Pre-sunset the writer keeps depositing the legacy file (either via
+ * the configured path or the side-write below) and the finding warns.
+ * Post-sunset the file may exist on disk as a stale artifact: the
+ * finding reports that and asks the operator to delete it.
+ */
+function buildDeprecationIssue(args: {
+  severity: "warning" | "error";
+  legacyWriteEnabled: boolean;
+  configTargetsLegacyPath: boolean;
+  refuseConfiguredLegacyWrite: boolean;
+}): Issue {
+  const message = args.refuseConfiguredLegacyWrite
+    ? `qfai.config.yaml#output.validateJsonPath points at the legacy SSOT ` +
+      `${LEGACY_VALIDATE_JSON_REL}, which is past the announced sunset ` +
+      `(${LEGACY_VALIDATE_JSON_SUNSET}). The validate writer REFUSED this ` +
+      `write to enforce the migration gate. Update output.validateJsonPath ` +
+      `to .qfai/report/validate.json (canonical) and rerun validate.`
+    : args.legacyWriteEnabled
+      ? args.configTargetsLegacyPath
+        ? `qfai.config.yaml#output.validateJsonPath still points at the legacy ` +
+          `SSOT ${LEGACY_VALIDATE_JSON_REL}; the file is being written for ` +
+          `backward compatibility but the sunset (${LEGACY_VALIDATE_JSON_SUNSET}) ` +
+          `is approaching. Update output.validateJsonPath to ` +
+          `.qfai/report/validate.json before the next minor.`
+        : `Legacy validate output path ${LEGACY_VALIDATE_JSON_REL} is still being written ` +
+          `for backward compatibility; sunset: ${LEGACY_VALIDATE_JSON_SUNSET}. Read ` +
+          `.qfai/report/validate.json (always-latest) or .qfai/report/validate-<profile>.json instead.`
+      : `Legacy validate output path ${LEGACY_VALIDATE_JSON_REL} is past the announced ` +
+        `sunset (${LEGACY_VALIDATE_JSON_SUNSET}); the legacy file is no longer written but ` +
+        `still exists on disk. Update consumers to read .qfai/report/validate.json or ` +
+        `.qfai/report/validate-<profile>.json and delete the stale legacy file.`;
+  return {
+    code: "D-DEPRECATED-PATH",
+    severity: args.severity,
+    category: "canonical",
+    message,
+    file: LEGACY_VALIDATE_JSON_REL,
+    rule: "validate.legacyOutputDeprecated",
+  };
+}
+
+function recountIssues(
+  counts: ValidationResult["counts"],
+  added: Issue,
+): ValidationResult["counts"] {
+  if (added.suppressed) return counts;
+  return {
+    info: counts.info + (added.severity === "info" ? 1 : 0),
+    warning: counts.warning + (added.severity === "warning" ? 1 : 0),
+    error: counts.error + (added.severity === "error" ? 1 : 0),
+  };
 }
 
 function resolveFailOn(options: ValidateOptions, fallback: FailOn): FailOn {
