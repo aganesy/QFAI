@@ -111,3 +111,31 @@
 - Given a newly authored `.qfai/contracts/ui/orders-dashboard.yaml` with `screens: [{ id: orders-dashboard, primary_tasks: [] }]`
 - When `qfai validate --fail-on error` runs (with the new QFAI-AUD-001 aligned lane active)
 - Then the lane FAILS at severity error naming `orders-dashboard` and the empty-`primary_tasks` violation; `/qfai-prototyping` preflight refuses to proceed; populating `primary_tasks: ["Review pending orders", "Mark order shipped"]` passes the lane and unblocks `/qfai-prototyping`
+
+## EX-0013-0017: Active pack resolved from `state.json#discussion.currentId`
+
+- BR-Ref: BR-0013-0017
+- Given `.qfai/state.json` carries `discussion.currentId: "discussion-20260527075558258"` and that dir exists
+- When a `/qfai-sdd` downstream skill resolves the active pack via the helper
+- Then it returns `discussion-20260527075558258` without scanning mtimes; if `currentId` were absent with 3 candidate dirs, the helper would raise an error naming the 3 dirs and `qfai discussion use <id>`
+
+## EX-0013-0018: `surface_type: ui-bearing` auto-set; missing-frontmatter warns
+
+- BR-Ref: BR-0013-0018
+- Given a target spec `<spec-id>` has a `.qfai/contracts/ui/<spec-id>-dashboard.yaml` companion
+- When `/qfai-sdd` runs then `qfai sdd lint` runs
+- Then `/qfai-sdd` writes `surface_type: ui-bearing` to that spec's `01_Spec.md` frontmatter; had the frontmatter been absent, `sdd lint` would emit `D-SURFACE-TYPE-MISSING` (warning); a spec with no UI companion emits no finding
+
+## EX-0013-0019: `primary_tasks` band documented and named in warning
+
+- BR-Ref: BR-0013-0019
+- Given a screen declaring 9 `primary_tasks`
+- When `QFAI-AUD-020` runs
+- Then the warning fires naming the recommended band `3..7`; the `ui-spec.yaml` template comments and `references/ui-contract-guide.md` both document the band
+
+## EX-0013-0020: Structured `primary_tasks` shape accepted / rejected
+
+- BR-Ref: BR-0013-0020
+- Given one item `"Review orders"` (string-only) and one `{id: t1, label: "Mark shipped", acceptance: "order status flips to shipped"}` (structured) and one `{id: t2, label: "x"}` (missing `acceptance`)
+- When `auditProfile.ts` evaluates them during the deprecation window
+- Then the string-only and the complete structured item are accepted; the item missing `acceptance` is rejected (all-required, closed schema)

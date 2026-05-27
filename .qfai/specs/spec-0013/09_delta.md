@@ -120,3 +120,29 @@
 | ------------- | ----------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | UPDATE:APPEND | spec-0013   | REQ-0116  | CHG-005 cycle で `.claude → .qfai/assistant` migration 後の canonical UI 契約テンプレート path への prose 同期が 7 ファイル分 deferred。pure-documentation drift fix として登録。                                                                                                | auto     |
 | UPDATE:APPEND | spec-0013   | REQ-0117  | CHG-005 cycle で QFAI-AUD-001 が key-absent / key-empty を同一 severity で扱う defect を 2-stage emission (info / error) として降格する follow-up が `sddPrimaryTasksLane.test.ts` 内 inline TODO で deferred。本 follow-up で OC-60 sunset window 配下の semantic を pin する。 | auto     |
+
+## 2026-05-27 — v1.9.2 Second-Wave (spec-0013)
+
+- Discussion pack: `.qfai/discussion/discussion-20260527075558258/`
+- Operation: UPDATE:APPEND
+- Posture: additive append; preserves existing US/AC/BR/EX/TC numbering. New local IDs: US-0013-0012..0014, AC-0013-0020..0025, BR-0013-0017..0020, EX-0013-0017..0020, TC-0013-0028..0035, TDD-0023..0030, DR-0013-0002..0004.
+- Approved By: pin-implied (feature/v1.9.2)
+
+| Operation | Sub-op | Target                                                       | Source (REQ)         | Rationale          | DR-Ref           | Status |
+| --------- | ------ | ------------------------------------------------------------ | -------------------- | ------------------ | ---------------- | ------ |
+| UPDATE    | APPEND | 01_Spec.md (Relevant Reqs, Consumer View, US range → 0014)   | REQ-0155, REQ-0163, REQ-0164 | cascade verified | DR-0266, DR-0267, DR-0268 | PASS |
+| UPDATE    | APPEND | 02_User-stories.md (US-0013-0012..0014)                      | REQ-0155, REQ-0163, REQ-0164 | cascade verified | DR-0266, DR-0267, DR-0268 | PASS |
+| UPDATE    | APPEND | 03_Acceptance-Criteria.md (AC-0013-0020..0025)               | REQ-0155, REQ-0163, REQ-0164 | cascade verified | DR-0266, DR-0267, DR-0268 | PASS |
+| UPDATE    | APPEND | 04_Business-Rules.md (BR-0013-0017..0020)                    | REQ-0155, REQ-0163, REQ-0164 | cascade verified | DR-0266, DR-0267, DR-0268 | PASS |
+| UPDATE    | APPEND | 05_Examples.md (EX-0013-0017..0020)                          | REQ-0155, REQ-0163, REQ-0164 | cascade verified | DR-0266, DR-0267, DR-0268 | PASS |
+| UPDATE    | APPEND | 06_Test-Cases.md (TC-0013-0028..0035, Type-classified)       | REQ-0155, REQ-0163, REQ-0164 | cascade verified | DR-0266, DR-0267, DR-0268 | PASS |
+| UPDATE    | APPEND | 07_Decisions.md (DR-0013-0002..0004)                         | REQ-0155, REQ-0163, REQ-0164 | cascade verified | DR-0266, DR-0267, DR-0268 | PASS |
+| UPDATE    | APPEND | 08_Open-questions.md (OQ-0157/0158/0159 resolved)            | REQ-0155, REQ-0164   | cascade verified | DR-0266, DR-0267, DR-0268 | PASS |
+| UPDATE    | APPEND | 10_Plan.md (Second-Wave How)                                 | REQ-0155, REQ-0163, REQ-0164 | cascade verified | DR-0266, DR-0267, DR-0268 | PASS |
+| UPDATE    | APPEND | tdd/test-list.md (TDD-0023..0030)                            | REQ-0155, REQ-0163, REQ-0164 | cascade verified | DR-0266, DR-0267, DR-0268 | PASS |
+
+- Notes:
+  - REQ-0155 spans spec-0010 (writer) and spec-0013 (reader) — same Source REQ, file-local IDs per spec. Writer side declared in spec-0010.
+  - REQ-0164 validator-implementation side is shared with spec-0004 (`auditProfile.ts` / `QFAI-AUD-020` enforcement). This slice owns the SDD authoring + doc + template surface (`ui-spec.yaml` comments, `references/ui-contract-guide.md`).
+  - REQ-0163: `D-SURFACE-TYPE-MISSING` warns during the deprecation window and sunsets to error; `resolveAllUiBearingSpecs()` keeps the frontmatter as the strict downstream signal (no behavioral change downstream).
+- Source: REQ-0155, REQ-0163, REQ-0164 (discussion-20260527075558258)

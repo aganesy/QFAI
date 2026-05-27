@@ -117,3 +117,33 @@
 - A new `qfai validate` lane (QFAI-AUD-001 aligned) MUST verify that every `screens[].primary_tasks` in newly authored `.qfai/contracts/ui/*.yaml` is non-empty before `/qfai-prototyping` proceeds past its preflight gate.
 - Empty (`[]`) `primary_tasks` on any entry MUST FAIL the lane at severity error naming (a) the offending file path, (b) the offending screen `id`, (c) the rule `QFAI-AUD-001` (or canonical-aligned token).
 - The lane is independent of legacy UI-contract validators; it complements rather than replaces existing screen-presence checks. Pre-existing UI contracts that lack the slot are treated under deprecation-window semantics (informational rather than blocking) until they are re-authored or until the next minor escalates the warning.
+
+## BR-0013-0017: Active discussion pack resolved through one helper over `state.json` SSOT
+
+- AC-Refs: AC-0013-0020, AC-0013-0021
+
+- Downstream `/qfai-sdd` skills MUST resolve the active discussion pack through a single helper that reads `.qfai/state.json#discussion.currentId` (the SSOT written by `/qfai-discussion`, spec-0010). The helper MUST NOT infer the active pointer from filesystem mtime.
+- When `currentId` is absent or resolves to a missing/duplicate pack, the helper MUST raise an error naming the candidate `discussion-*` dirs and the recovery command (`qfai discussion use <id>`) (DR-0266).
+
+## BR-0013-0018: `surface_type: ui-bearing` auto-populated; `D-SURFACE-TYPE-MISSING` enforces
+
+- AC-Refs: AC-0013-0022, AC-0013-0023
+
+- `/qfai-sdd` MUST set `surface_type: ui-bearing` frontmatter on every spec that has a `.qfai/contracts/ui/<spec>-*.yaml` companion.
+- `qfai sdd lint` (or equivalent) MUST emit `D-SURFACE-TYPE-MISSING` at severity warning during the deprecation window (sunsets to error at window close) when a UI companion exists but the frontmatter is absent; specs without a UI companion emit no finding.
+- `resolveAllUiBearingSpecs()` MUST continue to require `surface_type: ui-bearing` as the strict downstream signal; auto-population is a convenience, not a relaxation of the strict resolver.
+
+## BR-0013-0019: `primary_tasks` count band documented; warning names the band
+
+- AC-Refs: AC-0013-0024
+
+- The recommended `primary_tasks` count band is **3..7** (DR-0267) and MUST be documented in `templates/contracts/ui-spec.yaml` comments and `references/ui-contract-guide.md`.
+- The `QFAI-AUD-020` warning text MUST name the band. Below 3 risks under-specified screens; above 7 risks unfocused screens.
+
+## BR-0013-0020: `primary_tasks` accepted shapes — string-only AND structured (closed schema)
+
+- AC-Refs: AC-0013-0025
+
+- During the deprecation window `auditProfile.ts` MUST accept both string-only (legacy) `primary_tasks` items and structured items shaped `{id, label, acceptance}`.
+- The structured shape is **all-required, closed** (DR-0268): all three of `id`, `label`, `acceptance` MUST be present and no additional properties are allowed. A structured item missing any field, or carrying extra keys (e.g. speculative `priority` / `owner`), MUST be rejected.
+- String-only items MUST continue to PASS during the window; the structured form makes a task testable (the `acceptance` field anchors downstream atdd scaffolding).
