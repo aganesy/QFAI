@@ -1,6 +1,7 @@
-import { readdir } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import type { QfaiConfig } from "../config.js";
 import {
   isCanonicalPrototypingSurface,
   requiresVisualBrowserEvidenceSurface,
@@ -320,6 +321,109 @@ export async function readValidatedClassification(
     return null;
   }
   return readValidatedClassificationBlock(content);
+}
+
+// ---------------------------------------------------------------------------
+// surface_type frontmatter auto-population (DR-NOTE-4)
+// ---------------------------------------------------------------------------
+
+const SURFACE_TYPE_FRONTMATTER_RE = /^\s*surface_type\s*:\s*ui-bearing\s*$/im;
+const FRONTMATTER_BLOCK_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
+
+/**
+ * Returns true when the given spec directory has at least one matching
+ * UI companion under `<contractsDir>/ui/` whose basename ties back to
+ * the spec id via one of the documented shapes:
+ *
+ *   - `<specId>.yaml` / `<specId>.yml`
+ *   - `spec-<specId>.yaml` / `spec-<specId>.yml`
+ *   - `ui-<specId>.yaml` / `ui-<specId>.yml`
+ *   - `ui-<specId>-<slug>.yaml` / `ui-<specId>-<slug>.yml`
+ *
+ * Mirrors the anchored regex shape used by
+ * `prototyping/specResolution.ts#hasMatchingUiContract`, but kept local
+ * to this detection layer so the auto-populate / drift validator do
+ * not take a sideways dependency on a prototyping-layer helper.
+ */
+export async function hasUiCompanionForSpec(
+  root: string,
+  specId: string,
+  config: QfaiConfig,
+): Promise<boolean> {
+  const uiDir = path.resolve(root, config.paths.contractsDir, "ui");
+  let entries: Array<{ name: string; isFile: boolean }>;
+  try {
+    const dirents = await readdir(uiDir, { withFileTypes: true });
+    entries = dirents.map((entry) => ({ name: entry.name, isFile: entry.isFile() }));
+  } catch {
+    return false;
+  }
+  const anchored = new RegExp(
+    `^(?:${specId}|spec-${specId}|ui-${specId}(?:-[^.]+)?)\\.ya?ml$`,
+  );
+  return entries.some((entry) => entry.isFile && anchored.test(entry.name));
+}
+
+export type PopulateSurfaceTypeResult = {
+  changed: boolean;
+  reason: "no-companion" | "already-present" | "no-spec-file" | "populated";
+};
+
+/**
+ * Ensure `surface_type: ui-bearing` is declared in the frontmatter of
+ * `<specsDir>/spec-<specId>/01_Spec.md` when a matching UI companion is
+ * present. Idempotent: when the key is already there, the file is left
+ * untouched and `changed=false` is returned. When no companion exists,
+ * the file is also left untouched (the spec is not UI-bearing yet).
+ *
+ * Used by `/qfai-sdd` to keep `resolveAllUiBearingSpecs()` honest
+ * without forcing users to author the frontmatter by hand.
+ */
+export async function populateSurfaceTypeIfUiCompanion(
+  root: string,
+  specId: string,
+  config: QfaiConfig,
+): Promise<PopulateSurfaceTypeResult> {
+  const hasCompanion = await hasUiCompanionForSpec(root, specId, config);
+  if (!hasCompanion) {
+    return { changed: false, reason: "no-companion" };
+  }
+  const specMdPath = path.resolve(root, config.paths.specsDir, `spec-${specId}`, "01_Spec.md");
+  let body: string;
+  try {
+    body = await readFile(specMdPath, "utf-8");
+  } catch {
+    return { changed: false, reason: "no-spec-file" };
+  }
+  if (SURFACE_TYPE_FRONTMATTER_RE.test(body)) {
+    return { changed: false, reason: "already-present" };
+  }
+  const next = insertSurfaceTypeFrontmatter(body);
+  if (next === body) {
+    return { changed: false, reason: "already-present" };
+  }
+  await writeFile(specMdPath, next, "utf-8");
+  return { changed: true, reason: "populated" };
+}
+
+function insertSurfaceTypeFrontmatter(body: string): string {
+  const match = FRONTMATTER_BLOCK_RE.exec(body);
+  if (match) {
+    const inner = match[1] ?? "";
+    if (/^\s*surface_type\s*:/im.test(inner)) {
+      // Key already exists with some other value — replace it.
+      const replaced = inner.replace(
+        /^\s*surface_type\s*:.*$/im,
+        "surface_type: ui-bearing",
+      );
+      return `---\n${replaced}\n---\n${body.slice(match[0].length)}`;
+    }
+    const trimmed = inner.replace(/\s+$/, "");
+    const nextInner = `${trimmed}\nsurface_type: ui-bearing`;
+    return `---\n${nextInner}\n---\n${body.slice(match[0].length)}`;
+  }
+  // No existing frontmatter — prepend a new block.
+  return `---\nsurface_type: ui-bearing\n---\n${body}`;
 }
 
 function collectDuplicateValues(values: string[]): string[] {

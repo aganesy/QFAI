@@ -63,3 +63,4 @@ export { validateAssistantTreeMigration } from "./assistantTreeMigration.js";
 export { validateSkillDocReferences } from "./skillDocReferences.js";
 export { validateReviewerJustification } from "./reviewerJustification.js";
 export { validateReviewerGate, detectMockHrefDrift } from "./reviewerGate.js";
+export { validateSurfaceTypeDrift } from "./surfaceTypeDrift.js";

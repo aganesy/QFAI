@@ -64,6 +64,7 @@ import {
   validateReviewerJustification,
   validateReviewerGate,
   detectMockHrefDrift,
+  validateSurfaceTypeDrift,
 } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
@@ -177,6 +178,7 @@ async function runSddValidators(
     ...(await validateSkillDocReferences(root, config)),
     ...(await validateReviewerJustification(root, config)),
     ...(await validateReviewerGate(root, config)),
+    ...(await validateSurfaceTypeDrift(root, config)),
   ];
 }
 
