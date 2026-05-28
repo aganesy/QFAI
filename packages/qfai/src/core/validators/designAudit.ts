@@ -5,6 +5,7 @@ import type { QfaiConfig } from "../config.js";
 import {
   readUiContractScreenContracts,
   type CanonicalScreenContract,
+  type PrimaryTaskShapeFinding,
 } from "../contracts/screenContracts.js";
 import { isDiscussionUiBearingPack } from "../detection/surfaceType.js";
 import { findLatestDiscussionPackDir } from "../discussionPack.js";
@@ -47,6 +48,17 @@ export type DesignFinding = {
 // ---------------------------------------------------------------------------
 
 const COSMETIC_CATEGORIES = ["generic-shell", "stock-imagery", "placeholder-copy"];
+
+/**
+ * Recommended count band for `screens[].primary_tasks`: 3..7 inclusive.
+ * Counts outside the band raise `QFAI-AUD-020` at severity=warning.
+ * The band wording is surfaced both in the shipped UI contract template
+ * comments and in the accompanying authoring guide so authors learn
+ * the band from the same string that the validator finally cites.
+ */
+export const PRIMARY_TASKS_BAND_MIN = 3;
+export const PRIMARY_TASKS_BAND_MAX = 7;
+export const PRIMARY_TASKS_BAND_LABEL = `${PRIMARY_TASKS_BAND_MIN}..${PRIMARY_TASKS_BAND_MAX}`;
 
 // ---------------------------------------------------------------------------
 // Config Resolution
@@ -211,26 +223,45 @@ function checkContractsHierarchy(
       }
       continue;
     }
-    if (screen.primaryTasks.length > auditConfig.maxPrimaryCtas) {
-      findings.push({
-        ruleId: "QFAI-AUD-020",
-        dimension: "visualHierarchy",
-        severityTier: 2,
-        message: `Screen '${screen.screenId}' defines multiple primary tasks (${screen.primaryTasks.length} > ${auditConfig.maxPrimaryCtas})`,
-        why: "Multiple primary tasks weaken the selected direction and blur the intended primary action",
-        evidence: screen.primaryTasks,
-        guidance: "Reduce primary_tasks to the single most important user action for this screen.",
-        file,
-      });
+    const bandFinding = bandFindingFor(
+      screen.screenId,
+      screen.primaryTasks,
+      file,
+      file,
+    );
+    if (bandFinding) {
+      findings.push(bandFinding);
     }
   }
 
   return findings;
 }
 
+function bandFindingFor(
+  screenId: string,
+  primaryTasks: string[],
+  file: string,
+  fileForFinding: string,
+): DesignFinding | null {
+  const count = primaryTasks.length;
+  if (count >= PRIMARY_TASKS_BAND_MIN && count <= PRIMARY_TASKS_BAND_MAX) {
+    return null;
+  }
+  return {
+    ruleId: "QFAI-AUD-020",
+    dimension: "visualHierarchy",
+    severityTier: 2,
+    message: `[QFAI-AUD-020] ${file}: screen '${screenId}' primary_tasks count ${count} is outside the recommended band ${PRIMARY_TASKS_BAND_LABEL}`,
+    why: `primary_tasks count outside the recommended band ${PRIMARY_TASKS_BAND_LABEL} weakens screen focus`,
+    evidence: primaryTasks,
+    guidance: `Adjust the screen primary_tasks list so the count falls within the recommended band ${PRIMARY_TASKS_BAND_LABEL}.`,
+    file: fileForFinding,
+  };
+}
+
 function checkContractHierarchyFromScreens(
   screens: CanonicalScreenContract[],
-  auditConfig: DesignAuditConfig,
+  _auditConfig: DesignAuditConfig,
 ): DesignFinding[] {
   const findings: DesignFinding[] = [];
   for (const screen of screens) {
@@ -270,21 +301,47 @@ function checkContractHierarchyFromScreens(
       }
       continue;
     }
-    if (screen.primaryTasks.length > auditConfig.maxPrimaryCtas) {
-      findings.push({
-        ruleId: "QFAI-AUD-020",
-        dimension: "visualHierarchy",
-        severityTier: 2,
-        message: `Screen '${screen.screenId}' defines multiple primary tasks (${screen.primaryTasks.length} > ${auditConfig.maxPrimaryCtas})`,
-        why: "Multiple primary tasks weaken the selected direction and blur the intended primary action",
-        evidence: screen.primaryTasks,
-        guidance: "Reduce primary_tasks to the single most important user action for this screen.",
-        file: screen.sourceRef,
-      });
+    const [filePath = "<unknown-file>"] = screen.sourceRef.split("#");
+    const bandFinding = bandFindingFor(
+      screen.screenId,
+      screen.primaryTasks,
+      filePath,
+      screen.sourceRef,
+    );
+    if (bandFinding) {
+      findings.push(bandFinding);
+    }
+    for (const shape of screen.primaryTaskShapeFindings) {
+      findings.push(shapeFindingFor(screen.screenId, shape, filePath, screen.sourceRef));
     }
   }
 
   return findings;
+}
+
+function shapeFindingFor(
+  screenId: string,
+  shape: PrimaryTaskShapeFinding,
+  filePath: string,
+  fileForFinding: string,
+): DesignFinding {
+  const detail =
+    shape.reason === "missing-required-key"
+      ? `missing required key(s): ${shape.missingKeys.join(", ")}`
+      : shape.reason === "extra-key"
+        ? `carries extra key(s) not permitted by the closed schema: ${shape.extraKeys.join(", ")}`
+        : "must be either a string (legacy) or a {id, label, acceptance} object (closed schema)";
+  return {
+    ruleId: "QFAI-AUD-021",
+    dimension: "visualHierarchy",
+    severityTier: 1,
+    message: `[QFAI-AUD-021] ${filePath}: screen '${screenId}' primary_task ${shape.taskRef} ${detail}`,
+    why: "Structured primary_tasks entries must conform to the closed {id, label, acceptance} schema so downstream ATDD scaffolding can anchor on a stable, complete shape",
+    evidence: [filePath, screenId, shape.taskRef, ...shape.missingKeys, ...shape.extraKeys],
+    guidance:
+      "Author each structured primary_task entry as exactly {id, label, acceptance} (all-required). Remove any extra keys; populate any missing ones.",
+    file: fileForFinding,
+  };
 }
 
 // ---------------------------------------------------------------------------
