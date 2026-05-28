@@ -75,12 +75,15 @@ Screen-level contract details are finalized in `uiux/40_screen_contracts.md`. Pr
 <!-- Optional fallback only — do not use as the primary UI definition artifact.
      Include only when it materially clarifies the selected anchor.
      Behavior Obligations and sidecar artifacts (uiux/) are the primary UI definitions.
-     The required state SSOT is uiux/40_screen_contracts.md (`default/loading/empty/error`). -->
+     The required state SSOT is uiux/40_screen_contracts.md (`default/loading/empty/error`).
+     Links MUST be anchor-form (`<a href="#name">`) — never same-origin absolute
+     paths (`/orders/`), which a static mock cannot serve and which the validator rejects. -->
 
 ```html
 <section class="screen-mock">
   <h1>Screen Title</h1>
   <p>Primary information shown to the user.</p>
+  <a href="#orders">View Orders</a>
   <button type="button">Primary Action</button>
 </section>
 ```

@@ -36,6 +36,7 @@ Produce a unified 15-file discussion pack plus exploration-first UI sidecars so 
 - UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.
 - Completion requires `Disposition: open` count to be zero in `11_OQ-Register.md`.
 - If UI requirements exist, behavior obligations are primary and HTML+CSS mock is optional fallback only.
+- When an HTML+CSS mock includes links, author them in anchor-form (`<a href="#name">`); external `http(s)://` links are also allowed. Do NOT use same-origin absolute paths (`/orders/`) — a static mock cannot serve them and the validator rejects them (QFAI-MOCK-010).
 - Discussion is planner-first: do not select a single visual winner and do not finalize the design system here.
 - Use artifact files, not conversational summaries, as the downstream handoff.
 
