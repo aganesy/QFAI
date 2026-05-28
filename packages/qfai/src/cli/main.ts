@@ -1,3 +1,4 @@
+import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runGuardrails } from "./commands/guardrails.js";
 import { runInit } from "./commands/init.js";
@@ -94,6 +95,24 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         process.exitCode = exitCode;
       }
       return;
+    case "discussion":
+      {
+        if (!options.discussionAction) {
+          error("qfai discussion: unknown or missing subcommand. Expected: list|use");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        const resolvedRoot = await resolveRoot(options);
+        process.exitCode = await runDiscussion({
+          root: resolvedRoot,
+          action: options.discussionAction,
+          ...(options.discussionActive ? { active: true } : {}),
+          ...(options.discussionFormat ? { format: options.discussionFormat } : {}),
+          ...(options.discussionId !== undefined ? { id: options.discussionId } : {}),
+        });
+      }
+      return;
     case "prototyping":
       {
         if (!options.prototypingAction) {
@@ -181,6 +200,8 @@ Commands:
   report                       検証結果と集計を出力
   doctor                       設定/パス/出力前提の診断
   guardrails                   Decision Guardrails の抽出/検査（list|extract|check）
+  discussion list --active     active discussion session pointer を表示（state.json#discussion.currentId）
+  discussion use <id>          active discussion session pointer を設定
   prototyping preflight        prototyping 実行前提（spec/ui/design contracts/roles/browser/targetUrl）を診断
   prototyping iterate          single-thread evolution loop の cycle 確定
   prototyping certify [--check]         completion-certificate.json を生成 / 検証
@@ -196,7 +217,8 @@ Options:
   --dry-run       変更を行わず表示のみ
   --format <text|github>       validate の出力形式
   --format <md|json>           report の出力形式
-  --format <text|json>         doctor / prototyping preflight の出力形式
+  --format <text|json>         doctor / prototyping preflight / discussion list --active の出力形式
+  --active                     discussion list: active session pointer を表示
   --strict                     validate: warning 以上で exit 1
   --profile <discussion|sdd|prototyping|atdd|tdd|verify|full>  validate/report: 検証profileを指定
   --profile <prototyping>      doctor: prototyping 固有の preflight 診断を追加

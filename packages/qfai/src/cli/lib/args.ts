@@ -27,6 +27,14 @@ export type ParsedArgs = {
     platform?: string;
     prototypingAction?: "preflight" | "iterate" | "certify" | "show-spec";
     prototypingTargetUrl?: string;
+    /** Subcommand for `qfai discussion <list|use>`. */
+    discussionAction?: "list" | "use";
+    /** --active for `qfai discussion list`. */
+    discussionActive?: boolean;
+    /** --format <text|json> for `qfai discussion list --active`. */
+    discussionFormat?: "text" | "json";
+    /** Positional `<id>` for `qfai discussion use <id>`. */
+    discussionId?: string;
     /** --cycle <n> for `qfai prototyping iterate --cycle <n>`. */
     prototypingCycle?: number;
     /** --check flag for `qfai prototyping certify --check`. */
@@ -130,6 +138,27 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     }
   }
 
+  // `qfai discussion <subcommand> [<id>]` pulls the subcommand token (and the
+  // positional <id> for `use`) before the flag loop.
+  if (command === "discussion") {
+    const candidate = args[0];
+    if (candidate && !candidate.startsWith("--")) {
+      if (candidate === "list" || candidate === "use") {
+        options.discussionAction = candidate;
+      } else {
+        markInvalid();
+      }
+      args.shift();
+      if (options.discussionAction === "use") {
+        const idCandidate = args[0];
+        if (idCandidate && !idCandidate.startsWith("--")) {
+          options.discussionId = idCandidate;
+          args.shift();
+        }
+      }
+    }
+  }
+
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
     switch (arg) {
@@ -180,12 +209,26 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           i += 1;
           break;
         }
+        if (command === "discussion") {
+          if (next === "text" || next === "json") {
+            options.discussionFormat = next;
+          } else {
+            markInvalid();
+          }
+          i += 1;
+          break;
+        }
         if (!applyFormatOption(command, next, options)) {
           markInvalid();
         }
         i += 1;
         break;
       }
+      case "--active":
+        if (command === "discussion") {
+          options.discussionActive = true;
+        }
+        break;
       case "--strict":
         options.strict = true;
         break;
@@ -414,6 +457,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     markInvalid();
   }
   if (command === "prototyping" && !options.help && !options.prototypingAction) {
+    markInvalid();
+  }
+  if (command === "discussion" && !options.help && !options.discussionAction) {
     markInvalid();
   }
   return { command, invalid, options };
