@@ -63,6 +63,7 @@ import {
   validateSkillDocReferences,
   validateReviewerJustification,
   validateReviewerGate,
+  detectMockHrefDrift,
 } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
@@ -186,6 +187,7 @@ async function runPrototypingValidators(
 ): Promise<Issue[]> {
   return [
     ...(await runUiuxValidators(root, config, platformOption)),
+    ...(await detectMockHrefDrift(root)),
     ...(await validatePrototypingEvidence(root, config)),
     ...(await validateScreenIdCasing(root, config.paths.contractsDir)),
     ...(await validateUiEvidenceArtifacts(root, config)),

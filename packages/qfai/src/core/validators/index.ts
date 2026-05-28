@@ -62,4 +62,4 @@ export { validateWorklogSurface } from "./worklogSurface.js";
 export { validateAssistantTreeMigration } from "./assistantTreeMigration.js";
 export { validateSkillDocReferences } from "./skillDocReferences.js";
 export { validateReviewerJustification } from "./reviewerJustification.js";
-export { validateReviewerGate } from "./reviewerGate.js";
+export { validateReviewerGate, detectMockHrefDrift } from "./reviewerGate.js";
