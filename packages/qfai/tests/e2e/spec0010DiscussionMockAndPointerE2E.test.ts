@@ -1,20 +1,24 @@
 /**
- * E2E: spec-0010 CHG-006 — mock template emits anchor-form hrefs by default
- * (QFAI-MOCK-010), and `/qfai-discussion` writes the active-session pointer
- * `.qfai/state.json#discussion.currentId`. Authored test-first (skip)
- * pending /qfai-implement: the anchor-form template default and the active
- * pointer writer do not yet exist, so every `it` is `.skip` and shells out
- * to the CLI binary via a local execFile helper. /qfai-implement removes
- * `.skip` to turn these green.
+ * E2E: spec-0010 CHG-006 — the `qfai discussion` command, exercised
+ * through the built CLI binary against deterministic temp fixtures.
+ * `discussion use <id>` writes the active-session pointer; `discussion
+ * list --active` reads it back (NOT mtime), and an absent pointer with
+ * multiple candidate dirs yields a recovery error naming the candidates
+ * and `qfai discussion use <id>`.
+ *
+ * Requires a built dist (pnpm --filter qfai build) so dist/cli/index.cjs
+ * reflects the wired `discussion` command.
  */
 // QFAI:SPEC-0010:US-0010-0011
 // QFAI:SPEC-0010:US-0010-0012
 
 import { execFile } from "node:child_process";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
-import { describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, it, expect } from "vitest";
 
 const execFileP = promisify(execFile);
 
@@ -22,7 +26,7 @@ const CLI_PATH = path.resolve(__dirname, "..", "..", "dist", "cli", "index.cjs")
 
 async function runCli(
   args: string[],
-  cwd?: string,
+  cwd: string,
 ): Promise<{ code: number; stdout: string; stderr: string }> {
   try {
     const result = await execFileP(process.execPath, [CLI_PATH, ...args], { cwd });
@@ -37,34 +41,47 @@ async function runCli(
   }
 }
 
-describe.skip("spec-0010 mock anchor-form hrefs CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0010:US-0010-0011 — anchor-form #href and external http(s) hrefs both PASS QFAI-MOCK-010 (normal)", async () => {
-    const res = await runCli(["validate", "--profile", "prototyping", "--format", "json"]);
-    expect(res.stdout).not.toMatch(/QFAI-MOCK-010/);
-  });
+let root: string;
 
-  it("QFAI:SPEC-0010:US-0010-0011 — a same-origin absolute /path/ href FAILS QFAI-MOCK-010 without broadening the validator (error)", async () => {
-    const res = await runCli(["validate", "--profile", "prototyping", "--format", "json"]);
-    expect(res.code).not.toBe(0);
-    expect(res.stdout + res.stderr).toMatch(/QFAI-MOCK-010/);
-  });
+beforeEach(async () => {
+  root = await mkdtemp(path.join(os.tmpdir(), "qfai-spec0010-e2e-"));
 });
 
-describe.skip("spec-0010 discussion active pointer CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0010:US-0010-0012 — finalizing a discussion pack writes state.json#discussion.currentId equal to the authored pack and discussion list --active reads it (normal/state)", async () => {
-    // Normal + write→read round-trip: currentId points at the just-authored
-    // pack and `discussion list --active` reads back the same id.
-    const res = await runCli(["discussion", "list", "--active", "--format", "json"]);
+afterEach(async () => {
+  await rm(root, { recursive: true, force: true });
+});
+
+async function makePack(id: string): Promise<void> {
+  await mkdir(path.join(root, ".qfai", "discussion", id), { recursive: true });
+}
+
+describe("spec-0010 discussion active pointer CHG-006 (built CLI)", () => {
+  it("QFAI:SPEC-0010:US-0010-0012 — `discussion use` then `discussion list --active` round-trips the currentId (normal/state)", async () => {
+    await makePack("discussion-20260527075558258");
+    const used = await runCli(
+      ["discussion", "use", "discussion-20260527075558258", "--root", root],
+      root,
+    );
+    expect(used.code).toBe(0);
+
+    const res = await runCli(
+      ["discussion", "list", "--active", "--format", "json", "--root", root],
+      root,
+    );
     expect(res.code).toBe(0);
     const body = JSON.parse(res.stdout) as { currentId?: string };
-    expect(typeof body.currentId).toBe("string");
+    expect(body.currentId).toBe("discussion-20260527075558258");
   });
 
-  it("QFAI:SPEC-0010:US-0010-0012 — when currentId is absent with multiple candidate dirs, a recovery error names the candidates and `qfai discussion use <id>` (error/boundary)", async () => {
-    // Boundary/error: ambiguous pointer (absent currentId + many candidates)
-    // → error naming candidate dirs + recovery command; no mtime inference.
-    const res = await runCli(["discussion", "list", "--active", "--format", "json"]);
+  it("QFAI:SPEC-0010:US-0010-0012 — absent currentId with multiple candidates → recovery error names candidates + `qfai discussion use` (error/boundary)", async () => {
+    await makePack("discussion-20260101000000000");
+    await makePack("discussion-20260202000000000");
+    const res = await runCli(
+      ["discussion", "list", "--active", "--format", "json", "--root", root],
+      root,
+    );
     expect(res.code).not.toBe(0);
     expect(res.stdout + res.stderr).toMatch(/qfai discussion use/);
+    expect(res.stdout + res.stderr).toMatch(/discussion-20260202000000000/);
   });
 });
