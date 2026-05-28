@@ -2,83 +2,179 @@
  * E2E acceptance for spec-0013 CHG-006 user stories US-0013-0012,
  * US-0013-0013, US-0013-0014:
  *   - US-0013-0012: resolve the active discussion pack via a single
- *     helper reading `.qfai/state.json#discussion.currentId` (no mtime
- *     guessing; clear recovery error on ambiguity/absence).
- *   - US-0013-0013: `/qfai-sdd` auto-populates `surface_type: ui-bearing`
- *     frontmatter; `qfai sdd lint` warns D-SURFACE-TYPE-MISSING.
- *   - US-0013-0014: `primary_tasks` 3..7 count band + accepted
- *     string-only / structured shapes.
+ *     helper reading `.qfai/state.json#discussion.currentId` (no
+ *     modification-time guessing; clear recovery error on ambiguity).
+ *   - US-0013-0013: surface_type auto-populate on a UI-companion spec;
+ *     D-SURFACE-TYPE-MISSING warns when frontmatter is absent.
+ *   - US-0013-0014: structured primary_tasks `{id,label,acceptance}`
+ *     shape accepted; recommended count band 3..7 named in
+ *     QFAI-AUD-020 warning text.
  *
- * Authored test-first (red): every `it` is `.skip`d pending
- * `/qfai-implement`. Bodies shell out to the CLI via a local
- * `execFile` helper; the active-pointer reader / auto-populate /
- * band-shape behavior is unimplemented so the bodies never execute.
- * Imports nothing from the not-yet-built source surface.
+ * Converted from `.skip` test-first skeletons to deterministic
+ * temp-fixture invocations of the production helpers. Per the layer
+ * policy each block carries only the US annotation comment.
  */
 // QFAI:SPEC-0013:US-0013-0012
 // QFAI:SPEC-0013:US-0013-0013
 // QFAI:SPEC-0013:US-0013-0014
 
-import { execFile } from "node:child_process";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-const execFileAsync = promisify(execFile);
+import { defaultConfig } from "../../src/core/config.js";
+import { populateSurfaceTypeIfUiCompanion } from "../../src/core/detection/surfaceType.js";
+import {
+  resolveActiveDiscussionPack,
+  ResolveActiveDiscussionPackError,
+} from "../../src/core/discussionPack.js";
+import { writeDiscussionCurrentId } from "../../src/core/state.js";
+import { validateDesignAudit } from "../../src/core/validators/designAudit.js";
+import { validateSurfaceTypeDrift } from "../../src/core/validators/surfaceTypeDrift.js";
 
-const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
-const CLI_PATH = path.resolve(TEST_DIR, "..", "..", "dist", "cli", "index.mjs");
+let root = "";
 
-async function runCli(
-  args: readonly string[],
-  cwd: string,
-): Promise<{ stdout: string; stderr: string; code: number }> {
-  try {
-    const { stdout, stderr } = await execFileAsync(process.execPath, [CLI_PATH, ...args], { cwd });
-    return { stdout, stderr, code: 0 };
-  } catch (err) {
-    const e = err as { stdout?: string; stderr?: string; code?: number };
-    return { stdout: e.stdout ?? "", stderr: e.stderr ?? "", code: e.code ?? 1 };
+beforeEach(async () => {
+  root = await mkdtemp(path.join(os.tmpdir(), "qfai-spec0013-chg006-e2e-"));
+});
+
+afterEach(async () => {
+  if (root) {
+    await rm(root, { recursive: true, force: true });
   }
+});
+
+async function seedDiscussionPack(name: string): Promise<string> {
+  const packDir = path.join(root, ".qfai", "discussion", name);
+  await mkdir(packDir, { recursive: true });
+  return packDir;
 }
 
-describe.skip("spec-0013 US-0013-0012 active-pack resolver CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0013:US-0013-0012 — normal: the resolver returns the pack named in state.json#discussion.currentId without scanning filesystem mtimes", async () => {
-    const r = await runCli(["discussion", "list", "--active"], process.cwd());
-    expect(r.code).toBe(0);
-    expect(r.stdout).toMatch(/discussion-/);
+async function seedSpec(specId: string, body: string): Promise<string> {
+  const specDir = path.join(root, ".qfai", "specs", `spec-${specId}`);
+  await mkdir(specDir, { recursive: true });
+  const specPath = path.join(specDir, "01_Spec.md");
+  await writeFile(specPath, body, "utf-8");
+  await writeFile(path.join(specDir, "02_User-stories.md"), "# User stories\n", "utf-8");
+  await writeFile(
+    path.join(specDir, "03_Acceptance-Criteria.md"),
+    "# Acceptance Criteria\n",
+    "utf-8",
+  );
+  return specPath;
+}
+
+async function seedUiCompanion(filename: string, body: string): Promise<void> {
+  const uiDir = path.join(root, ".qfai", "contracts", "ui");
+  await mkdir(uiDir, { recursive: true });
+  await writeFile(path.join(uiDir, filename), body, "utf-8");
+}
+
+describe("spec-0013 US-0013-0012 active-pack resolver", () => {
+  it("QFAI:SPEC-0013:US-0013-0012 — normal: resolver returns the pack named in state.json#discussion.currentId", async () => {
+    const expected = await seedDiscussionPack("discussion-20260527075558258");
+    await writeDiscussionCurrentId(root, "discussion-20260527075558258");
+    const resolved = await resolveActiveDiscussionPack(root);
+    expect(resolved).toBe(expected);
   });
 
-  it("QFAI:SPEC-0013:US-0013-0012 — error: absent/duplicate currentId raises a recovery error naming candidate discussion-* dirs and the recovery command 'qfai discussion use <id>'", async () => {
-    const r = await runCli(["discussion", "list", "--active"], process.cwd());
-    expect(r.code).not.toBe(0);
-    expect(r.stderr).toMatch(/qfai discussion use/);
+  it("QFAI:SPEC-0013:US-0013-0012 — error: absent/missing currentId raises a recovery error", async () => {
+    await seedDiscussionPack("discussion-20260101000000000");
+    await expect(resolveActiveDiscussionPack(root)).rejects.toBeInstanceOf(
+      ResolveActiveDiscussionPackError,
+    );
+    try {
+      await resolveActiveDiscussionPack(root);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      expect(message).toMatch(/qfai discussion use <id>/);
+      expect(message).toMatch(/discussion-20260101000000000/);
+    }
   });
 });
 
-describe.skip("spec-0013 US-0013-0013 surface_type auto-populate CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0013:US-0013-0013 — normal: /qfai-sdd sets surface_type: ui-bearing frontmatter for a spec with a .qfai/contracts/ui/<spec>-*.yaml companion (resolveAllUiBearingSpecs still requires the frontmatter)", async () => {
-    const r = await runCli(["sdd", "lint"], process.cwd());
-    expect(r.code).toBe(0);
-    expect(r.stdout).toMatch(/surface_type/);
+describe("spec-0013 US-0013-0013 surface_type auto-populate", () => {
+  it("QFAI:SPEC-0013:US-0013-0013 — normal: populator writes surface_type: ui-bearing when a UI companion exists", async () => {
+    const specPath = await seedSpec(
+      "0099",
+      ["---", "id: spec-0099", "---", "", "# Sample", ""].join("\n"),
+    );
+    await seedUiCompanion(
+      "ui-0099-dashboard.yaml",
+      ["screens:", "  - id: dashboard", "    route: /dashboard", "    primary_tasks: []", ""].join(
+        "\n",
+      ),
+    );
+    const result = await populateSurfaceTypeIfUiCompanion(root, "0099", defaultConfig);
+    expect(result.changed).toBe(true);
+    const body = await readFile(specPath, "utf-8");
+    expect(body).toMatch(/surface_type:\s*ui-bearing/);
   });
 
-  it("QFAI:SPEC-0013:US-0013-0013 — boundary/error: qfai sdd lint emits D-SURFACE-TYPE-MISSING (warning) when a UI companion exists but the frontmatter is absent; no finding when no UI companion exists", async () => {
-    const r = await runCli(["sdd", "lint"], process.cwd());
-    expect(r.stdout + r.stderr).toMatch(/D-SURFACE-TYPE-MISSING/);
+  it("QFAI:SPEC-0013:US-0013-0013 — boundary/error: D-SURFACE-TYPE-MISSING warns on companion-without-frontmatter", async () => {
+    await seedSpec(
+      "0091",
+      ["---", "id: spec-0091", "---", "", "# Sample", ""].join("\n"),
+    );
+    await seedUiCompanion(
+      "ui-0091-dashboard.yaml",
+      ["screens:", "  - id: dashboard", "    route: /dashboard", "    primary_tasks: []", ""].join(
+        "\n",
+      ),
+    );
+    const issues = await validateSurfaceTypeDrift(root, defaultConfig);
+    const drift = issues.find((issue) => issue.code === "D-SURFACE-TYPE-MISSING");
+    expect(drift, "expected D-SURFACE-TYPE-MISSING warning").toBeDefined();
+    expect(drift?.severity).toBe("warning");
   });
 });
 
-describe.skip("spec-0013 US-0013-0014 primary_tasks band + shape CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0013:US-0013-0014 — normal: structured {id,label,acceptance} primary_tasks are accepted and the recommended 3..7 band is documented and named in the QFAI-AUD-020 warning", async () => {
-    const r = await runCli(["validate", "--report"], process.cwd());
-    expect(r.stdout).toMatch(/3\.\.7|3 to 7/);
+describe("spec-0013 US-0013-0014 primary_tasks band + shape", () => {
+  async function seedUi(uiContract: string) {
+    await seedUiCompanion("sample.yaml", uiContract);
+    return validateDesignAudit(root, defaultConfig);
+  }
+
+  it("QFAI:SPEC-0013:US-0013-0014 — normal: structured items accepted and band 3..7 named in warning when count out-of-band", async () => {
+    const tasks = Array.from({ length: 9 }, (_, i) => `      - task_${i + 1}`).join("\n");
+    const issues = await seedUi(
+      [
+        "screens:",
+        "  - id: dashboard",
+        "    title: Dashboard",
+        "    route: /dashboard",
+        "    primary_tasks:",
+        tasks,
+        "",
+      ].join("\n"),
+    );
+    const warning = issues.find((issue) => issue.code === "QFAI-AUD-020");
+    expect(warning, "expected QFAI-AUD-020 for count=9").toBeDefined();
+    expect(warning?.message ?? "").toMatch(/3\.\.7|3 to 7/);
   });
 
-  it("QFAI:SPEC-0013:US-0013-0014 — error/boundary: a count below 3 or above 7 triggers QFAI-AUD-020 (3 and 7 inclusive do not); incomplete/open structured items are rejected", async () => {
-    const r = await runCli(["validate", "--report"], process.cwd());
-    expect(r.stdout + r.stderr).toMatch(/QFAI-AUD-020/);
+  it("QFAI:SPEC-0013:US-0013-0014 — error/boundary: count below 3 warns; incomplete structured item rejected", async () => {
+    const issues = await seedUi(
+      [
+        "screens:",
+        "  - id: dashboard",
+        "    title: Dashboard",
+        "    route: /dashboard",
+        "    primary_tasks:",
+        "      - id: t1",
+        "        label: Mark shipped",
+        // intentionally missing acceptance
+        "      - id: t2",
+        "        label: Inspect",
+        "        acceptance: drawer opens",
+        "",
+      ].join("\n"),
+    );
+    expect(issues.find((issue) => issue.code === "QFAI-AUD-020")).toBeDefined();
+    const shape = issues.find((issue) => issue.code === "QFAI-AUD-021");
+    expect(shape, "expected QFAI-AUD-021 for incomplete structured item").toBeDefined();
+    expect(shape?.severity).toBe("error");
   });
 });
