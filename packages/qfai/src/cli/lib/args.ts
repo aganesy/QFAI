@@ -95,6 +95,20 @@ export type ParsedArgs = {
      * are rejected via markInvalid().
      */
     prototypingMode?: "convergence" | "exploration";
+    /** Subcommand for `qfai audit <log>`. */
+    auditAction?: "log";
+    /** --scope filter for `qfai audit log`. */
+    auditScope?: string;
+    /** --operator filter for `qfai audit log`. */
+    auditOperator?: string;
+    /** --clause filter for `qfai audit log`. */
+    auditClause?: string;
+    /** --format <table|json> for `qfai audit log`. */
+    auditFormat?: "table" | "json";
+    /** Subcommand for `qfai handoff <upgrade>`. */
+    handoffAction?: "upgrade";
+    /** Positional `<legacy-file>` for `qfai handoff upgrade`. */
+    handoffLegacyFile?: string;
     help: boolean;
     invalidExitCode: number;
   };
@@ -165,6 +179,39 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         markInvalid();
       }
       args.shift();
+    }
+  }
+
+  // `qfai audit <subcommand>` — currently only `log` is supported.
+  if (command === "audit") {
+    const candidate = args[0];
+    if (candidate && !candidate.startsWith("--")) {
+      if (candidate === "log") {
+        options.auditAction = candidate;
+      } else {
+        markInvalid();
+      }
+      args.shift();
+    }
+  }
+
+  // `qfai handoff <subcommand> [<legacy-file>]` — currently only `upgrade`.
+  if (command === "handoff") {
+    const candidate = args[0];
+    if (candidate && !candidate.startsWith("--")) {
+      if (candidate === "upgrade") {
+        options.handoffAction = candidate;
+      } else {
+        markInvalid();
+      }
+      args.shift();
+      if (options.handoffAction === "upgrade") {
+        const fileCandidate = args[0];
+        if (fileCandidate && !fileCandidate.startsWith("--")) {
+          options.handoffLegacyFile = fileCandidate;
+          args.shift();
+        }
+      }
     }
   }
 
@@ -242,6 +289,15 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (command === "discussion") {
           if (next === "text" || next === "json") {
             options.discussionFormat = next;
+          } else {
+            markInvalid();
+          }
+          i += 1;
+          break;
+        }
+        if (command === "audit") {
+          if (next === "table" || next === "json") {
+            options.auditFormat = next;
           } else {
             markInvalid();
           }
@@ -510,6 +566,45 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         i += 1;
         break;
       }
+      case "--scope": {
+        if (command !== "audit") {
+          break;
+        }
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.auditScope = next;
+        i += 1;
+        break;
+      }
+      case "--operator": {
+        if (command !== "audit") {
+          break;
+        }
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.auditOperator = next;
+        i += 1;
+        break;
+      }
+      case "--clause": {
+        if (command !== "audit") {
+          break;
+        }
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.auditClause = next;
+        i += 1;
+        break;
+      }
       case "--help":
       case "-h":
         options.help = true;
@@ -526,6 +621,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     markInvalid();
   }
   if (command === "discussion" && !options.help && !options.discussionAction) {
+    markInvalid();
+  }
+  if (command === "audit" && !options.help && !options.auditAction) {
+    markInvalid();
+  }
+  if (command === "handoff" && !options.help && !options.handoffAction) {
     markInvalid();
   }
   return { command, invalid, options };

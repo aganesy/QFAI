@@ -1,6 +1,8 @@
+import { runAuditLog } from "./commands/auditLog.js";
 import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runGuardrails } from "./commands/guardrails.js";
+import { runHandoffUpgrade } from "./commands/handoffUpgrade.js";
 import { runInit } from "./commands/init.js";
 import { runPrototypingIterate } from "./commands/prototypingIterate.js";
 import { runPrototypingCertify, runPrototypingShowSpec } from "./commands/prototypingCertify.js";
@@ -93,6 +95,48 @@ export async function run(argv: string[], cwd: string): Promise<void> {
             : {}),
         });
         process.exitCode = exitCode;
+      }
+      return;
+    case "audit":
+      {
+        if (!options.auditAction) {
+          error("qfai audit: unknown or missing subcommand. Expected: log");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        const resolvedRoot = await resolveRoot(options);
+        process.exitCode = await runAuditLog({
+          root: resolvedRoot,
+          ...(options.auditFormat ? { format: options.auditFormat } : {}),
+          ...(options.auditScope !== undefined ? { scope: options.auditScope } : {}),
+          ...(options.auditOperator !== undefined ? { operator: options.auditOperator } : {}),
+          ...(options.auditClause !== undefined ? { clause: options.auditClause } : {}),
+        });
+      }
+      return;
+    case "handoff":
+      {
+        if (!options.handoffAction) {
+          error("qfai handoff: unknown or missing subcommand. Expected: upgrade");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        // Only `upgrade` is supported today; the action gate above
+        // already markInvalid()s unrecognized values, so we land here
+        // with `upgrade` selected.
+        if (!options.handoffLegacyFile) {
+          error("qfai handoff upgrade: <legacy-file> is required.");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        const resolvedRoot = await resolveRoot(options);
+        process.exitCode = await runHandoffUpgrade({
+          root: resolvedRoot,
+          legacyFile: options.handoffLegacyFile,
+        });
       }
       return;
     case "discussion":
@@ -207,6 +251,8 @@ Commands:
   guardrails                   Decision Guardrails の抽出/検査（list|extract|check）
   discussion list --active     active discussion session pointer を表示（state.json#discussion.currentId）
   discussion use <id>          active discussion session pointer を設定
+  audit log [filters]          .qfai/evidence/decisions/ の決定ログを一覧 (--scope/--operator/--clause + --format table|json)
+  handoff upgrade <legacy>     legacy handoff ファイルを canonical handoff.yaml に変換 (CLI-HANDOFF)
   prototyping preflight        prototyping 実行前提（spec/ui/design contracts/roles/browser/targetUrl）を診断
   prototyping iterate          single-thread evolution loop の cycle 確定
   prototyping certify [--check]         completion-certificate.json を生成 / 検証
@@ -247,6 +293,9 @@ Options:
   --emit-skeletons              prototyping iterate --cycle 0: frozenSurfaceUnion の screen ごとに placeholder HTML を出力 (default OFF; opt-in)
   --skeleton-mode <placeholder|full|stub>  prototyping iterate --cycle 0 --emit-skeletons: 出力モード (default placeholder)
   --mode <convergence|exploration>  prototyping iterate: loop posture (default convergence; exploration は soft-rubric gates のみ warning へ medium relaxation)
+  --scope <value>               audit log: scope フィールドで filter
+  --operator <value>            audit log: operatorIdentity フィールドで filter
+  --clause <substring>          audit log: envelopeContractClause で substring filter
   -h, --help      ヘルプ表示
 `;
 }
