@@ -444,6 +444,27 @@ When this skill is complete, provide a final user-facing completion message and 
 - Configuration needs refinement: rerun `/qfai-configure`.
   Action: provide additional include/exclude evidence and update `qfai.config.yaml`.
 
+## Default Autopilot Policy
+
+The skill collapses avoidable per-session prompts to 0-1 by classifying every decision into one of three named buckets:
+
+- auto-decide:
+  - output formatting
+  - ID / sequence numbering
+  - append-vs-create on subject overlap
+  - equivalent-option pick
+- ask-user:
+  - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage operations (each with a prompt template that names the target and rationale)
+  - destructive operations (rm / overwrite / force-push)
+  - version-pin changes (`package.json#version`, branch pin)
+  - scope expansions outside the active envelope
+- hard-required:
+  - `companyName`
+  - brand intent
+  - `primarySpecId` (when absent from inputs)
+
+A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. Widening triggers a Reviewer-Gate finding.
+
 project_memory:
 
 - qfai-configure is the user-facing entrypoint for editing `qfai.config.yaml` and the `.qfai/assistant/manifest/` declarative manifests; edits to those files MUST go through this skill so the agent-catalog / agent-routing / review-profiles SSOTs stay consistent.

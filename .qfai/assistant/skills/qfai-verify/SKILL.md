@@ -508,6 +508,27 @@ When this skill is complete, provide a final user-facing completion message and 
 - Need a report artifact:
   Action: run `qfai report` after validation outputs are up to date.
 
+## Default Autopilot Policy
+
+The skill collapses avoidable per-session prompts to 0-1 by classifying every decision into one of three named buckets:
+
+- auto-decide:
+  - output formatting
+  - ID / sequence numbering
+  - append-vs-create on subject overlap
+  - equivalent-option pick
+- ask-user:
+  - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage operations (each with a prompt template that names the target and rationale)
+  - destructive operations (rm / overwrite / force-push)
+  - version-pin changes (`package.json#version`, branch pin)
+  - scope expansions outside the active envelope
+- hard-required:
+  - `companyName`
+  - brand intent
+  - `primarySpecId` (when absent from inputs)
+
+A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. Widening triggers a Reviewer-Gate finding.
+
 project_memory:
 
 - Verify is the full-scan approval gate; per-skill validate runs (sdd/atdd/tdd) are signals, the verify gate is the binding pass.

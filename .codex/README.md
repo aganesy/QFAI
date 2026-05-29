@@ -15,16 +15,3 @@ Tool integrations must reference `.qfai/assistant/skills/`.
 
 In Codex CLI, select a skill by name (e.g., `qfai-configure`) and provide your request.
 All outputs must match the user's language.
-
-## Cross-AI rules (master)
-
-The authoritative rule set shared across all AI coding agents (Claude
-Code / Codex / Copilot) lives under `.agents/rules/`. These files are
-SSOT; tool-specific mirrors reference them.
-
-Key rules:
-
-- `.agents/rules/temporary-files.md` — temporary files MUST go under `tmp/`.
-- `.agents/rules/root-additions-policy.md` — never add root-level files/dirs without explicit user approval.
-- `.agents/rules/distributed-surface.md` — no internal QFAI IDs or version markers in shipped files.
-- `.agents/rules/version-discipline.md` — branch name pins `packages/qfai/package.json#version`; never select version numbers independently.

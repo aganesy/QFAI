@@ -272,6 +272,27 @@ When this skill completes, provide a final user-facing message enumerating next 
 - Spec pack needs correction: rerun `/qfai-sdd` and regenerate evidence.
 - Confirm contracts referenced by `_policies/05_Contracts.md` exist under `.qfai/contracts/**`.
 
+## Default Autopilot Policy
+
+The skill collapses avoidable per-session prompts to 0-1 by classifying every decision into one of three named buckets:
+
+- auto-decide:
+  - output formatting
+  - ID / sequence numbering
+  - append-vs-create on subject overlap
+  - equivalent-option pick
+- ask-user:
+  - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage operations (each with a prompt template that names the target and rationale)
+  - destructive operations (rm / overwrite / force-push)
+  - version-pin changes (`package.json#version`, branch pin)
+  - scope expansions outside the active envelope
+- hard-required:
+  - `companyName`
+  - brand intent
+  - `primarySpecId` (when absent from inputs)
+
+A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. Widening triggers a Reviewer-Gate finding.
+
 project_memory:
 
 - Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
