@@ -5,11 +5,11 @@
  * `qfai audit log` CLI, `qfai handoff upgrade` legacy adapter, doc
  * realignment / stale-reference report).
  *
- * Authored test-first (red): every `it` is `.skip`d pending
- * `/qfai-implement`. Bodies shell out to the CLI via a local
- * `execFile` helper against the existing CLI binary; the CHG-006
- * behavior is unimplemented so the bodies never execute. Imports
- * nothing from the not-yet-built source surface.
+ * Deterministic temp-fixture form: each `it` seeds a `mkdtemp` root
+ * with the minimum on-disk shape required and invokes the production
+ * API surface directly (validators / CLI command runners). Replaces
+ * the earlier `execFile`-against-dist-binary approach with an
+ * isolation-safe variant.
  */
 // QFAI:SPEC-0015:TC-0015-0020
 // QFAI:SPEC-0015:TC-0015-0021
@@ -26,121 +26,326 @@
 // QFAI:SPEC-0015:TC-0015-0032
 // QFAI:SPEC-0015:TC-0015-0033
 
-import { execFile } from "node:child_process";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-const execFileAsync = promisify(execFile);
+import { runAuditLog } from "../../src/cli/commands/auditLog.js";
+import { runHandoffUpgrade } from "../../src/cli/commands/handoffUpgrade.js";
+import { writeDecisionRecord } from "../../src/core/decisionRecord.js";
+import { validateAutopilotPolicy } from "../../src/core/validators/autopilotPolicy.js";
+import { detectHandoffSchemaDrift } from "../../src/core/validators/handoffSchemaDrift.js";
+import {
+  HANDOFF_SCHEMA_REL,
+  HANDOFF_WRITER_PAIRS,
+} from "../../src/core/validators/handoffSchemaPairs.js";
+import {
+  JUSTIFICATION_CATALOG,
+} from "../../src/core/validators/justificationCatalog.js";
+import { validateReviewerJustification } from "../../src/core/validators/reviewerJustification.js";
+import {
+  STALE_REFERENCE_SUNSET,
+  validateStaleReferences,
+} from "../../src/core/validators/staleReferences.js";
+import { validateHandoff } from "../../src/core/schemas/handoff.js";
+import { loadConfig } from "../../src/core/config.js";
 
-const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
-const CLI_PATH = path.resolve(TEST_DIR, "..", "..", "dist", "cli", "index.mjs");
+let root: string;
 
-async function runCli(
-  args: readonly string[],
-  cwd: string,
-): Promise<{ stdout: string; stderr: string; code: number }> {
-  try {
-    const { stdout, stderr } = await execFileAsync(process.execPath, [CLI_PATH, ...args], { cwd });
-    return { stdout, stderr, code: 0 };
-  } catch (err) {
-    const e = err as { stdout?: string; stderr?: string; code?: number };
-    return { stdout: e.stdout ?? "", stderr: e.stderr ?? "", code: e.code ?? 1 };
-  }
+beforeEach(async () => {
+  root = await mkdtemp(path.join(os.tmpdir(), "qfai-spec0015-int-"));
+});
+
+afterEach(async () => {
+  await rm(root, { recursive: true, force: true });
+});
+
+async function writeSkillMd(skillId: string, body: string): Promise<void> {
+  const dir = path.join(root, ".qfai", "assistant", "skills", skillId);
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, "SKILL.md"), body, "utf-8");
 }
 
-describe.skip("spec-0015 autopilot policy CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0015:TC-0015-0020 — error: a SKILL.md lacking ## Default Autopilot Policy makes the Reviewer Gate emit R-AUTOPILOT-POLICY-MISSING (error) with a non-empty justification naming the SKILL.md path and the absent section", async () => {
-    const r = await runCli(["validate", "--report"], process.cwd());
-    expect(r.stdout + r.stderr).toMatch(/R-AUTOPILOT-POLICY-MISSING/);
+const POLICY_3_BUCKET = `# qfai-fixture
+
+## Default Autopilot Policy
+
+- auto-decide:
+  - output formatting
+  - ID / sequence numbering
+  - append-vs-create on subject overlap
+  - equivalent-option pick
+- ask-user:
+  - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage ops
+  - destructive operations
+  - version-pin changes
+  - scope expansions
+- hard-required:
+  - companyName
+  - brand intent
+  - primarySpecId
+`;
+
+describe("spec-0015 autopilot policy CHG-006", () => {
+  it("QFAI:SPEC-0015:TC-0015-0020 — error: SKILL.md without ## Default Autopilot Policy emits R-AUTOPILOT-POLICY-MISSING", async () => {
+    await writeSkillMd("qfai-x", "# qfai-x\nNo policy.\n");
+    const issues = await validateAutopilotPolicy(root);
+    const f = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING");
+    expect(f?.severity).toBe("error");
+    expect(f?.message).toMatch(/justification/i);
   });
 
-  it("QFAI:SPEC-0015:TC-0015-0021 — normal: a SKILL.md whose ## Default Autopilot Policy lists all three buckets passes without R-AUTOPILOT-POLICY-MISSING; widening the auto-decide bucket beyond the DR-0269 set is flagged", async () => {
-    const r = await runCli(["validate", "--report"], process.cwd());
-    expect(r.stdout).not.toMatch(/R-AUTOPILOT-POLICY-MISSING/);
-    expect(r.code).toBe(0);
-  });
-});
+  it("QFAI:SPEC-0015:TC-0015-0021 — normal: 3-bucket SKILL.md passes; widened auto-decide flagged as warning", async () => {
+    await writeSkillMd("qfai-x", POLICY_3_BUCKET);
+    const issues = await validateAutopilotPolicy(root);
+    expect(issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING")).toBeUndefined();
 
-describe.skip("spec-0015 envelope audit-log CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0015:TC-0015-0022 — normal: an AskUserQuestion naming one of the four envelope-deviation contexts writes .qfai/evidence/decisions/<ISO>.json shaped {question,answer,scope,operatorIdentity,timestamp,envelopeContractClause}", async () => {
-    const r = await runCli(["audit", "log", "--format", "json"], process.cwd());
-    expect(r.code).toBe(0);
-    expect(r.stdout).toMatch(/envelopeContractClause/);
-  });
-
-  it("QFAI:SPEC-0015:TC-0015-0023 — boundary: an AskUserQuestion naming none of the four contexts writes no decision record, and .qfai/evidence/decisions/ is git-ignored by default", async () => {
-    const r = await runCli(["audit", "log", "--format", "json"], process.cwd());
-    expect(r.code).toBe(0);
-    expect(r.stdout).toMatch(/\[\]|no records/i);
-  });
-});
-
-describe.skip("spec-0015 handoff schema CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0015:TC-0015-0024 — error: a non-conforming handoff write (or asymmetric SSOT-sync Pair IV edit) makes the Reviewer Gate emit R-HANDOFF-SCHEMA-DRIFT (error) with a non-empty justification", async () => {
-    const r = await runCli(["validate", "--report"], process.cwd());
-    expect(r.stdout + r.stderr).toMatch(/R-HANDOFF-SCHEMA-DRIFT/);
-  });
-
-  it("QFAI:SPEC-0015:TC-0015-0025 — normal/boundary: a handoff.yaml matching the minimum field set plus extra per-skill keys passes (additionalProperties: true); a legacy session-handoff.yaml read in-window surfaces D-HANDOFF-LEGACY-FORMAT (warning) not R-HANDOFF-SCHEMA-DRIFT", async () => {
-    const r = await runCli(["validate", "--report"], process.cwd());
-    expect(r.stdout + r.stderr).toMatch(/D-HANDOFF-LEGACY-FORMAT/);
-  });
-});
-
-describe.skip("spec-0015 finding-code catalog CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0015:TC-0015-0026 — normal: the eight catalog codes are registered at severity error (R-DESIGN-MD-PATCH-OUT-OF-ZONE documented warning) and each requires a mandatory non-empty justification", async () => {
-    const r = await runCli(["validate", "--report"], process.cwd());
-    const out = r.stdout + r.stderr;
-    expect(out).toMatch(/R-AUTOPILOT-POLICY-MISSING/);
-    expect(out).toMatch(/R-EVIDENCE-MUTATION-UNLOGGED/);
-    expect(out).toMatch(/R-MOCK-HREF-DRIFT/);
-  });
-
-  it("QFAI:SPEC-0015:TC-0015-0027 — error: a Reviewer report emitting a catalog code with empty/whitespace-only justification is rejected by qfai validate ingestion; the same code with a non-empty justification is accepted", async () => {
-    const r = await runCli(["validate", "--report"], process.cwd());
-    expect(r.code).not.toBe(0);
-    expect(r.stdout + r.stderr).toMatch(/justification/);
+    // Widening: add an extra non-canonical entry to auto-decide.
+    const widened = POLICY_3_BUCKET.replace(
+      "  - equivalent-option pick",
+      "  - equivalent-option pick\n  - destructive operations",
+    );
+    await writeSkillMd("qfai-y", widened);
+    const issues2 = await validateAutopilotPolicy(root);
+    expect(issues2.some((i) => i.code === "R-AUTOPILOT-POLICY-WIDENED")).toBe(true);
   });
 });
 
-describe.skip("spec-0015 audit log CLI CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0015:TC-0015-0028 — normal: qfai audit log lists decision records newest-first; --scope/--operator/--clause filter the set and --format json emits JSON", async () => {
-    const r = await runCli(["audit", "log", "--scope", "skill-envelope", "--format", "json"], process.cwd());
-    expect(r.code).toBe(0);
+describe("spec-0015 envelope audit-log CHG-006", () => {
+  it("QFAI:SPEC-0015:TC-0015-0022 — normal: an envelope AskUserQuestion writes a shaped JSON record", async () => {
+    const r = await writeDecisionRecord({
+      root,
+      question: "Adopt option X?",
+      answer: "yes",
+      scope: "architectural-decision",
+      operatorIdentity: "tester",
+      envelopeContractClause: "architectural-decision: option-X envelope",
+    });
+    expect(r.written).toBe(true);
+    if (r.path) {
+      const body = JSON.parse(await readFile(r.path, "utf-8")) as Record<string, unknown>;
+      expect(body.question).toBe("Adopt option X?");
+      expect(body.scope).toBe("architectural-decision");
+      expect(body.envelopeContractClause).toMatch(/option-X/);
+      expect(typeof body.timestamp).toBe("string");
+    }
   });
 
-  it("QFAI:SPEC-0015:TC-0015-0029 — boundary: qfai audit log with no --format defaults to table, and an empty/absent .qfai/evidence/decisions/ directory yields an empty result without error", async () => {
-    const r = await runCli(["audit", "log"], process.cwd());
-    expect(r.code).toBe(0);
+  it("QFAI:SPEC-0015:TC-0015-0023 — boundary: non-envelope question writes no record", async () => {
+    const r = await writeDecisionRecord({
+      root,
+      question: "format pick?",
+      answer: "yes",
+      scope: "routine",
+      operatorIdentity: "tester",
+      envelopeContractClause: "routine-format-choice",
+    });
+    expect(r.written).toBe(false);
   });
 });
 
-describe.skip("spec-0015 handoff upgrade CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0015:TC-0015-0030 — normal: qfai handoff upgrade <legacy-file> emits a conforming handoff.yaml at the canonical path with recognized fields mapped and all original fields preserved under a legacy: key", async () => {
-    const r = await runCli(["handoff", "upgrade", "session-handoff.yaml"], process.cwd());
-    expect(r.code).toBe(0);
-    expect(r.stdout).toMatch(/handoff\.yaml|legacy/);
+describe("spec-0015 handoff schema CHG-006", () => {
+  it("QFAI:SPEC-0015:TC-0015-0024 — error: asymmetric Pair IV emits R-HANDOFF-SCHEMA-DRIFT", async () => {
+    await mkdir(path.dirname(path.join(root, HANDOFF_SCHEMA_REL)), { recursive: true });
+    await writeFile(
+      path.join(root, HANDOFF_SCHEMA_REL),
+      `export const HANDOFF_MINIMUM_FIELDS = ["companyName"] as const;\n`,
+      "utf-8",
+    );
+    for (const pair of HANDOFF_WRITER_PAIRS) {
+      const abs = path.join(root, pair.writerRel);
+      await mkdir(path.dirname(abs), { recursive: true });
+      await writeFile(abs, `// drift: writer omits the canonical schema token\nexport const X = 1;\n`, "utf-8");
+    }
+    const issues = await detectHandoffSchemaDrift(root);
+    const f = issues.find((i) => i.code === "R-HANDOFF-SCHEMA-DRIFT");
+    expect(f?.severity).toBe("error");
+    expect(f?.message).toMatch(/justification/i);
   });
 
-  it("QFAI:SPEC-0015:TC-0015-0031 — error: qfai handoff upgrade on a malformed/unreadable legacy file fails with a clear error and does not overwrite or partially emit a canonical handoff.yaml", async () => {
-    const r = await runCli(["handoff", "upgrade", "malformed-legacy.yaml"], process.cwd());
-    expect(r.code).not.toBe(0);
-    expect(r.stderr).toMatch(/malformed|unreadable|invalid/i);
+  it("QFAI:SPEC-0015:TC-0015-0025 — normal: a handoff with extra keys passes validateHandoff (additionalProperties: true)", () => {
+    const issues = validateHandoff({
+      companyName: "Acme",
+      primarySpecId: "spec-0012",
+      extraKey: { foo: 1 },
+    });
+    expect(issues).toEqual([]);
   });
 });
 
-describe.skip("spec-0015 stale-ref report CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0015:TC-0015-0032 — normal: when references/*.md + SKILL.md are rewritten in the same atomic PR as the implementation, validate --report reports zero stale references at HEAD", async () => {
-    const r = await runCli(["validate", "--report"], process.cwd());
-    expect(r.code).toBe(0);
-    expect(r.stdout).toMatch(/0 stale|zero stale/i);
+describe("spec-0015 finding-code catalog CHG-006", () => {
+  it("QFAI:SPEC-0015:TC-0015-0026 — normal: 8 catalog codes registered (severity error; one documented warning)", () => {
+    const codes = JUSTIFICATION_CATALOG.map((e) => e.code);
+    expect(codes.length).toBe(8);
+    const entry = JUSTIFICATION_CATALOG.find((e) => e.code === "R-DESIGN-MD-PATCH-OUT-OF-ZONE");
+    expect(entry?.severity).toBe("warning");
+    const errorEntries = JUSTIFICATION_CATALOG.filter((e) => e.severity === "error");
+    expect(errorEntries.length).toBe(7);
   });
 
-  it("QFAI:SPEC-0015:TC-0015-0033 — error: a references/*.md still describing pre-implementation behavior surfaces as a warning during the window and fails (error) at HEAD after sunset", async () => {
-    const r = await runCli(["validate", "--report"], process.cwd());
-    expect(r.stdout + r.stderr).toMatch(/stale reference/i);
+  it("QFAI:SPEC-0015:TC-0015-0027 — error: empty justification on a catalog code is rejected; non-empty accepted", async () => {
+    const dir = path.join(root, ".qfai", "review");
+    await mkdir(dir, { recursive: true });
+    // Empty justification → rejected for every catalog code.
+    await writeFile(
+      path.join(dir, "empty.json"),
+      JSON.stringify({
+        findings: JUSTIFICATION_CATALOG.map((e) => ({ code: e.code, justification: "" })),
+      }),
+      "utf-8",
+    );
+    const { config } = await loadConfig(root);
+    const issuesEmpty = await validateReviewerJustification(root, config);
+    const flagged = new Set(issuesEmpty.map((i) => i.code));
+    for (const entry of JUSTIFICATION_CATALOG) {
+      expect(flagged.has(entry.code)).toBe(true);
+    }
+    // Replace with non-empty justifications → none flagged.
+    await writeFile(
+      path.join(dir, "empty.json"),
+      JSON.stringify({
+        findings: JUSTIFICATION_CATALOG.map((e) => ({
+          code: e.code,
+          justification: `non-empty for ${e.code}`,
+        })),
+      }),
+      "utf-8",
+    );
+    const issuesFilled = await validateReviewerJustification(root, config);
+    for (const entry of JUSTIFICATION_CATALOG) {
+      expect(issuesFilled.find((i) => i.code === entry.code)).toBeUndefined();
+    }
+  });
+});
+
+describe("spec-0015 audit log CLI CHG-006", () => {
+  it("QFAI:SPEC-0015:TC-0015-0028 — normal: audit log lists newest-first + --scope/--operator/--clause filter; --format json works", async () => {
+    await writeDecisionRecord({
+      root,
+      question: "Q1",
+      answer: "a",
+      scope: "scope-expansion",
+      operatorIdentity: "alice",
+      envelopeContractClause: "scope-expansion: 1",
+      now: () => new Date("2026-05-28T10:00:00Z"),
+    });
+    await writeDecisionRecord({
+      root,
+      question: "Q2",
+      answer: "a",
+      scope: "skill-envelope",
+      operatorIdentity: "bob",
+      envelopeContractClause: "skill-envelope: 2",
+      now: () => new Date("2026-05-29T10:00:00Z"),
+    });
+    const written: string[] = [];
+    const exit = await runAuditLog({
+      root,
+      format: "json",
+      scope: "scope-expansion",
+      write: (m) => written.push(m),
+      writeErr: () => undefined,
+    });
+    expect(exit).toBe(0);
+    const parsed = JSON.parse(written[0] ?? "[]") as Array<Record<string, string>>;
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0]?.scope).toBe("scope-expansion");
+  });
+
+  it("QFAI:SPEC-0015:TC-0015-0029 — boundary: default --format is table; empty store → empty result, exit 0", async () => {
+    const written: string[] = [];
+    const exit = await runAuditLog({
+      root,
+      write: (m) => written.push(m),
+      writeErr: () => undefined,
+    });
+    expect(exit).toBe(0);
+    expect(written.join("\n")).toMatch(/no decision records/i);
+  });
+});
+
+describe("spec-0015 handoff upgrade CHG-006", () => {
+  it("QFAI:SPEC-0015:TC-0015-0030 — normal: emits conforming handoff.yaml with legacy: preserved", async () => {
+    await writeFile(
+      path.join(root, "session-handoff.yaml"),
+      "companyName: Acme\nprimarySpecId: spec-0012\ncustomField: legacy-data\n",
+      "utf-8",
+    );
+    const exit = await runHandoffUpgrade({
+      root,
+      legacyFile: "session-handoff.yaml",
+      write: () => undefined,
+      writeErr: () => undefined,
+    });
+    expect(exit).toBe(0);
+    const body = await readFile(path.join(root, "handoff.yaml"), "utf-8");
+    expect(body).toMatch(/companyName: "Acme"/);
+    expect(body).toMatch(/legacy:/);
+    expect(body).toMatch(/customField/);
+  });
+
+  it("QFAI:SPEC-0015:TC-0015-0031 — error: malformed input fails without partial overwrite", async () => {
+    await writeFile(path.join(root, "handoff.yaml"), "companyName: original\n", "utf-8");
+    await writeFile(path.join(root, "malformed.yaml"), "   \n", "utf-8");
+    const errs: string[] = [];
+    const exit = await runHandoffUpgrade({
+      root,
+      legacyFile: "malformed.yaml",
+      write: () => undefined,
+      writeErr: (m) => errs.push(m),
+    });
+    expect(exit).not.toBe(0);
+    expect(errs.join("\n")).toMatch(/malformed|no recognizable/i);
+    const after = await readFile(path.join(root, "handoff.yaml"), "utf-8");
+    expect(after).toBe("companyName: original\n");
+  });
+});
+
+describe("spec-0015 stale-ref report CHG-006", () => {
+  it("QFAI:SPEC-0015:TC-0015-0032 — normal: rewritten in-PR refs report zero stale references at HEAD", async () => {
+    const dir = path.join(
+      root,
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-prototyping",
+      "references",
+    );
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "handoff.md"), "# Handoff\nUses handoff.yaml.\n", "utf-8");
+    const issues = await validateStaleReferences(root, {
+      now: () => new Date("2026-06-01T00:00:00Z"),
+    });
+    expect(issues.filter((i) => i.code === "W-STALE-REFERENCE")).toEqual([]);
+  });
+
+  it("QFAI:SPEC-0015:TC-0015-0033 — error: stale ref → warning in window, error at sunset", async () => {
+    const dir = path.join(
+      root,
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-prototyping",
+      "references",
+    );
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      path.join(dir, "handoff.md"),
+      "# Handoff\nUses session-handoff.yaml.\n",
+      "utf-8",
+    );
+    const inWindow = await validateStaleReferences(root, {
+      now: () => new Date("2026-06-01T00:00:00Z"),
+    });
+    const inFindings = inWindow.filter((i) => i.code === "W-STALE-REFERENCE");
+    expect(inFindings[0]?.severity).toBe("warning");
+
+    const atSunset = await validateStaleReferences(root, {
+      now: () => new Date(`${STALE_REFERENCE_SUNSET}T00:00:00Z`),
+    });
+    const atFindings = atSunset.filter((i) => i.code === "W-STALE-REFERENCE");
+    expect(atFindings[0]?.severity).toBe("error");
   });
 });
