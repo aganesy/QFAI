@@ -108,6 +108,20 @@ export type QfaiPrototypingConfig = {
    * e.g. `"0001"`.
    */
   primarySpecId?: string;
+  /**
+   * CHG-006 second-wave loop posture discriminator.
+   *
+   *   - `convergence` (default): every prototyping gate applies at the
+   *     declared severity (today's behavior).
+   *   - `exploration`: medium gate relaxation — soft-rubric gates
+   *     (axes-exceptional, design-compliance drift) downgrade error →
+   *     warning. Schema / path / license (exit 66) gates stay hard
+   *     error.
+   *
+   * Overridden per-run by `qfai prototyping iterate --mode <value>`.
+   * Optional; absence defaults to `convergence`.
+   */
+  mode?: "convergence" | "exploration";
 };
 
 export type QfaiConfig = {
@@ -490,14 +504,36 @@ function normalizePrototyping(
   const calibration = normalizePrototypingCalibration(raw.calibration, configPath, issues);
   const execution = normalizePrototypingExecution(raw.execution, configPath, issues);
   const primarySpecId = normalizePrimarySpecId(raw.primarySpecId, configPath, issues);
-  if (!calibration && !execution && primarySpecId === undefined) {
+  const mode = normalizePrototypingMode(raw.mode, configPath, issues);
+  if (!calibration && !execution && primarySpecId === undefined && mode === undefined) {
     return undefined;
   }
   return {
     ...(calibration ? { calibration } : {}),
     ...(execution ? { execution } : {}),
     ...(primarySpecId !== undefined ? { primarySpecId } : {}),
+    ...(mode !== undefined ? { mode } : {}),
   };
+}
+
+function normalizePrototypingMode(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): "convergence" | "exploration" | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  if (raw === "convergence" || raw === "exploration") {
+    return raw;
+  }
+  issues.push(
+    configIssue(
+      configPath,
+      `prototyping.mode は "convergence" または "exploration" のみ有効です。受け取った値: ${JSON.stringify(raw)}`,
+    ),
+  );
+  return undefined;
 }
 
 function normalizePrimarySpecId(

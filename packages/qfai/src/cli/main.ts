@@ -180,6 +180,11 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.prototypingCheckConvergence ? { checkConvergence: true } : {}),
           ...(options.prototypingCapture ? { capture: true } : {}),
           ...(options.prototypingAutoServe ? { autoServe: true } : {}),
+          ...(options.prototypingEmitSkeletons ? { emitSkeletons: true } : {}),
+          ...(options.prototypingSkeletonMode !== undefined
+            ? { skeletonMode: options.prototypingSkeletonMode }
+            : {}),
+          ...(options.prototypingMode !== undefined ? { mode: options.prototypingMode } : {}),
         });
       }
       return;
@@ -239,6 +244,9 @@ Options:
   --auto-serve                  prototyping iterate: opt-in なローカル HTTP サーバを in-process で起動 (default OFF; default port 4321; node:http; SIGINT teardown <= 2s; EADDRINUSE は refusal)
   --license-patch <file>        prototyping iterate: cycle 0 ライセンス allowlist パッチを適用 (audit ledger に追記; replay 対応)
   --primary-spec-id <value>     prototyping iterate: 複数 UI-bearing spec から primary を明示指定
+  --emit-skeletons              prototyping iterate --cycle 0: frozenSurfaceUnion の screen ごとに placeholder HTML を出力 (default OFF; opt-in)
+  --skeleton-mode <placeholder|full|stub>  prototyping iterate --cycle 0 --emit-skeletons: 出力モード (default placeholder)
+  --mode <convergence|exploration>  prototyping iterate: loop posture (default convergence; exploration は soft-rubric gates のみ warning へ medium relaxation)
   -h, --help      ヘルプ表示
 `;
 }

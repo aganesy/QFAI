@@ -189,7 +189,7 @@ async function runPrototypingValidators(
   config: ConfigLoadResult["config"],
   platformOption?: string,
 ): Promise<Issue[]> {
-  return [
+  const raw: Issue[] = [
     ...(await runUiuxValidators(root, config, platformOption)),
     ...(await detectMockHrefDrift(root)),
     // CHG-006 second-wave reviewer-gate findings (prototyping
@@ -211,6 +211,23 @@ async function runPrototypingValidators(
     ...(await validatePrototypingArtifactRefIntegrity(root, config)),
     ...(await validateSpecIdLinkage(root, config)),
   ];
+  // CHG-006 prototyping-mode relaxation: under `mode: exploration` the
+  // soft-rubric gates (QFAI-CRIT-008, QFAI-DCON-030..032) downgrade
+  // error → warning. Schema / path / license gates stay hard error.
+  // The mode is read from `prototyping.json#mode` written by iterate
+  // at cycle 0 (absent → legacy "convergence" interpretation).
+  return await relaxPrototypingIssuesIfExploration(root, raw);
+}
+
+async function relaxPrototypingIssuesIfExploration(
+  root: string,
+  issues: Issue[],
+): Promise<Issue[]> {
+  const { readPrototypingModeForRelax } = await import("./prototyping/modeRead.js");
+  const mode = await readPrototypingModeForRelax(root);
+  if (mode !== "exploration") return issues;
+  const { relaxIssuesForMode } = await import("./prototyping/mode.js");
+  return [...relaxIssuesForMode(issues, mode)];
 }
 
 async function runAtddValidators(

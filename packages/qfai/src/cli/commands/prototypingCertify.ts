@@ -49,6 +49,11 @@ import {
   resolvePrimaryPrototypingSpec,
   resolveSurfaceUnion,
 } from "../../core/prototyping/specResolution.js";
+import {
+  detectExplorationCertifyAttempt,
+  resolveCertifyAcceptedIterationIndex,
+  type CertifyIterationView,
+} from "../../core/validators/prototyping/explorationCertify.js";
 // 15th-wave Fix (codex r3269453293, P2): show-spec's `liveUiBearing`
 // uses the same resolver as iterate's drift gate (`resolveSurfaceUnion`)
 // so the live scope reported here is apples-to-apples with what iterate
@@ -126,6 +131,22 @@ export async function runPrototypingCertify(
       "qfai prototyping certify: prototyping.json#runId is required " +
         "before a completion certificate can be issued (set by `qfai prototyping iterate --cycle 0`).",
     );
+    return 2;
+  }
+
+  // CHG-006 prototyping-mode discriminator: certify cannot seal a loop that
+  // produced any exploration-mode iteration. The check runs before
+  // the validate.json / verify.json gates so the operator sees the
+  // structural "exploration cannot certify" diagnostic without having
+  // to re-run validate first.
+  const earlyIterationViews = extractIterationViewsForCertify(protoJson);
+  const earlyExplorationIssues = detectExplorationCertifyAttempt({
+    iterations: earlyIterationViews,
+  });
+  if (earlyExplorationIssues.length > 0) {
+    for (const issue of earlyExplorationIssues) {
+      error(issue.message);
+    }
     return 2;
   }
 
@@ -237,7 +258,29 @@ export async function runPrototypingCertify(
     );
     return 2;
   }
-  const acceptedIterationIndex = iterationCount - 1;
+
+  // CHG-006 prototyping-mode discriminator: certify cannot seal a loop that
+  // produced any exploration-mode iteration. Emit
+  // R-EXPLORATION-CERTIFY-ATTEMPT and refuse with exit 2; the operator
+  // re-runs iterate with --mode convergence (or omits the flag) and
+  // re-converges before certifying. The view is structurally extracted
+  // (no bare `as` casts on the unknown iteration payload).
+  const iterationViews = extractIterationViewsForCertify(protoJson);
+  const explorationIssues = detectExplorationCertifyAttempt({ iterations: iterationViews });
+  if (explorationIssues.length > 0) {
+    for (const issue of explorationIssues) {
+      error(issue.message);
+    }
+    return 2;
+  }
+  // Resolve the certify-accepted iteration index from the convergence-
+  // mode-only iterations. Today every iteration is convergence (we
+  // hard-refuse the mixed case above), so this resolves to the highest
+  // iteration index — but the helper is the SSOT shape so the future
+  // mixed-mode reuse stays honest.
+  const resolvedAcceptedIndex = resolveCertifyAcceptedIterationIndex(iterationViews);
+  const acceptedIterationIndex =
+    resolvedAcceptedIndex !== null ? resolvedAcceptedIndex : iterationCount - 1;
   const acceptedIterDir = `iter-${String(acceptedIterationIndex).padStart(2, "0")}`;
   const finalHtmlPaths = await findIterationHtmlFiles(evidenceRoot, acceptedIterationIndex);
   if (finalHtmlPaths.length === 0) {
@@ -1311,6 +1354,38 @@ function countIterations(protoJson: unknown): number {
   if (!isRecord(protoJson)) return 0;
   const iterations = protoJson.iterations;
   return Array.isArray(iterations) ? iterations.length : 0;
+}
+
+/**
+ * Extract a structural view of every iteration suitable for the
+ * exploration-mode reviewer-gate detector. Per-iteration shape is
+ * `{index, mode?}`; missing / non-string `mode` slots are
+ * interpreted as `convergence` per the helper contract (legacy
+ * iterations written before the mode slot existed). No bare `as`
+ * casts on the unknown payload.
+ */
+function extractIterationViewsForCertify(protoJson: unknown): readonly CertifyIterationView[] {
+  if (!isRecord(protoJson)) return [];
+  const iterations: unknown = protoJson.iterations;
+  if (!Array.isArray(iterations)) return [];
+  const views: CertifyIterationView[] = [];
+  for (let i = 0; i < iterations.length; i += 1) {
+    const entry: unknown = iterations[i];
+    let index = i;
+    let mode: "convergence" | "exploration" | undefined;
+    if (isRecord(entry)) {
+      const rawIndex = entry.index;
+      if (typeof rawIndex === "number" && Number.isInteger(rawIndex) && rawIndex >= 0) {
+        index = rawIndex;
+      }
+      const rawMode = entry.mode;
+      if (rawMode === "convergence" || rawMode === "exploration") {
+        mode = rawMode;
+      }
+    }
+    views.push(mode !== undefined ? { index, mode } : { index });
+  }
+  return views;
 }
 
 // `DesignMdViolation` is only used as part of typing through the

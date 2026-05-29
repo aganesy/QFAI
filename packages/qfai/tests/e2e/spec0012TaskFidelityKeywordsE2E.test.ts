@@ -4,56 +4,114 @@
  * every required keyword, evidence-requirements.md enumerates them,
  * and `iterate --capture` emits a keyword-placeholder template).
  *
- * Authored test-first (red): every `it` is `.skip`d pending
- * `/qfai-implement`. Bodies shell out to the CLI via a local
- * `execFile` helper; the keyword-naming behavior is unimplemented so
- * the bodies never execute. Imports nothing from the unbuilt surface.
+ * Converted from `.skip` test-first skeleton to deterministic helper
+ * exercises of the SSOT keyword list + the shipped reference doc.
  */
 // QFAI:SPEC-0012:US-0012-0141
 
-import { execFile } from "node:child_process";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-const execFileAsync = promisify(execFile);
+import { defaultConfig } from "../../src/core/config.js";
+import { buildTaskFidelityTemplate } from "../../src/core/prototyping/captureTemplate.js";
+import { validateRenderCritique } from "../../src/core/validators/renderCritique.js";
+import {
+  TASK_FIDELITY_REQUIRED_KEYWORDS,
+  TASK_FIDELITY_SECTION_NAME,
+} from "../../src/core/validators/taskFidelityKeywords.js";
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
-const CLI_PATH = path.resolve(TEST_DIR, "..", "..", "dist", "cli", "index.mjs");
+const ASSET_REF_PATH = path.resolve(
+  TEST_DIR,
+  "..",
+  "..",
+  "assets",
+  "init",
+  ".qfai",
+  "assistant",
+  "skills",
+  "qfai-prototyping",
+  "references",
+  "evidence-requirements.md",
+);
 
-async function runCli(
-  args: readonly string[],
-  cwd: string,
-): Promise<{ stdout: string; stderr: string; code: number }> {
-  try {
-    const { stdout, stderr } = await execFileAsync(process.execPath, [CLI_PATH, ...args], { cwd });
-    return { stdout, stderr, code: 0 };
-  } catch (err) {
-    const e = err as { stdout?: string; stderr?: string; code?: number };
-    return { stdout: e.stdout ?? "", stderr: e.stderr ?? "", code: e.code ?? 1 };
-  }
+const tempDirs: string[] = [];
+
+async function newTempDir(): Promise<string> {
+  const d = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-spec0012-taskfidelity-"));
+  tempDirs.push(d);
+  return d;
 }
 
-describe.skip("spec-0012 US-0012-0141 taskFidelity keywords CHG-006 (test-first, pending /qfai-implement)", () => {
-  it("QFAI:SPEC-0012:US-0012-0141 — normal/error: QFAI-CRIT-009 error text names every required keyword (cta_visibility, four_state_check, ...) when taskFidelity evidence omits them", async () => {
-    const root = process.cwd();
-    const r = await runCli(["validate", "--report"], root);
-    const out = r.stdout + r.stderr;
-    expect(out).toMatch(/QFAI-CRIT-009/);
-    expect(out).toMatch(/cta_visibility/);
-    expect(out).toMatch(/four_state_check/);
+afterEach(async () => {
+  while (tempDirs.length > 0) {
+    const d = tempDirs.pop();
+    if (d) await rm(d, { recursive: true, force: true });
+  }
+});
+
+describe("US-0012-0141 — QFAI-CRIT-009 error text names every required taskFidelity keyword", () => {
+  it("the SSOT keyword list contains the canonical required keywords", () => {
+    expect(TASK_FIDELITY_REQUIRED_KEYWORDS).toContain("cta_visibility");
+    expect(TASK_FIDELITY_REQUIRED_KEYWORDS).toContain("four_state_check");
+    expect(TASK_FIDELITY_SECTION_NAME).toBe("## taskFidelity");
   });
 
-  it("QFAI:SPEC-0012:US-0012-0141 — boundary: iterate --capture emits an evidence template skeleton whose placeholders include every required taskFidelity keyword", async () => {
-    const root = process.cwd();
-    const r = await runCli(
-      ["prototyping", "iterate", "--cycle", "0", "--capture", "--target-url", "http://localhost:5173"],
-      root,
+  it("validateRenderCritique fires QFAI-CRIT-009 naming every required keyword when taskFidelity evidence is absent", async () => {
+    const root = await newTempDir();
+    // Seed an evidence file matching the validator's glob
+    // ({prototyping*,critique-*}.md) under .qfai/evidence/ — the
+    // body intentionally lacks any `## taskFidelity` section so the
+    // QFAI-CRIT-009 absent-keywords branch engages.
+    const evidenceDir = path.join(root, ".qfai/evidence");
+    await mkdir(evidenceDir, { recursive: true });
+    await writeFile(
+      path.join(evidenceDir, "prototyping-iter-00.md"),
+      [
+        "# Iter 00",
+        "",
+        "## Desktop",
+        "verdict: PASS",
+        "",
+        "## Mobile",
+        "verdict: PASS",
+        "",
+        "## Rubric",
+        "Standard four-axis rubric applied.",
+        "",
+      ].join("\n"),
+      "utf-8",
     );
-    expect(r.code).toBe(0);
-    expect(r.stdout).toMatch(/cta_visibility/);
-    expect(r.stdout).toMatch(/four_state_check/);
+    const issues = await validateRenderCritique(root, defaultConfig);
+    const crit009 = issues.filter((i) => i.code === "QFAI-CRIT-009");
+    expect(crit009.length).toBeGreaterThan(0);
+    const messageBlob = crit009.map((i) => i.message).join(" ");
+    for (const kw of TASK_FIDELITY_REQUIRED_KEYWORDS) {
+      expect(messageBlob).toContain(kw);
+    }
+    expect(messageBlob).toContain(TASK_FIDELITY_SECTION_NAME);
+  });
+});
+
+describe("US-0012-0141 — references/evidence-requirements.md enumerates the keywords", () => {
+  it("the shipped reference doc lists every required keyword by name", async () => {
+    const body = await readFile(ASSET_REF_PATH, "utf-8");
+    for (const kw of TASK_FIDELITY_REQUIRED_KEYWORDS) {
+      expect(body).toContain(kw);
+    }
+  });
+});
+
+describe("US-0012-0141 — iterate --capture emits a taskFidelity template skeleton with each keyword", () => {
+  it("the buildTaskFidelityTemplate text contains every required keyword as a TODO placeholder", () => {
+    const text = buildTaskFidelityTemplate();
+    expect(text).toContain(TASK_FIDELITY_SECTION_NAME);
+    for (const kw of TASK_FIDELITY_REQUIRED_KEYWORDS) {
+      expect(text).toMatch(new RegExp(`- ${kw}: TODO`));
+    }
   });
 });

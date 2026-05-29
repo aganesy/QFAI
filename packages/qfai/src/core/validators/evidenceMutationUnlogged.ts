@@ -56,6 +56,16 @@ export const EVIDENCE_MUTATION_PAIRS: readonly EvidenceMutationPair[] = [
     mutationTokens: ["await rename(iter00Abs"],
     logTokens: ["logEvidenceMove"],
   },
+  {
+    // CHG-006 mutation-log wiring-depth extension: every
+    // iter-NN/ directory rm-loop (clearEvidenceIterDirs) MUST funnel
+    // through `logEvidenceDelete` before the destructive rm. The pair
+    // scan keys on the cycle-0 reset call-site tokens.
+    clause: "iterate-cycle-0-clear-evidence-iter-dirs",
+    sourceRel: "packages/qfai/src/cli/commands/prototypingIterate.ts",
+    mutationTokens: ["await rm(abs, { recursive: true, force: true })"],
+    logTokens: ["logEvidenceDelete"],
+  },
 ];
 
 const FINDING_CODE = "R-EVIDENCE-MUTATION-UNLOGGED";

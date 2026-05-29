@@ -46,7 +46,7 @@ export function detectExplorationCertifyAttempt(
   const message =
     `${FINDING_CODE}: certify cannot seal a loop containing exploration-mode ` +
     `iterations (offending iter index: ${offending.join(", ")}). Exploration ` +
-    `relaxes the soft-gate set per DR-0263; only convergence-mode iterations ` +
+    `relaxes the soft-gate set; only convergence-mode iterations ` +
     `may advance to the seal. Re-run iterate with --mode convergence (or omit ` +
     `the flag) and re-converge before certifying.`;
   return [

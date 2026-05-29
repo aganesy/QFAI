@@ -149,4 +149,73 @@ describe("parseArgs", () => {
     expect(parsed.options.help).toBe(true);
     expect(parsed.options.invalidExitCode).toBe(2);
   });
+
+  // CHG-006 second-wave flag parsing (spec-0012):
+  //   --emit-skeletons / --skeleton-mode / --mode under `prototyping iterate`.
+
+  it("parses --emit-skeletons on prototyping iterate (default-OFF without the flag)", () => {
+    const cwd = process.cwd();
+    const without = parseArgs(["prototyping", "iterate", "--cycle", "0"], cwd);
+    expect(without.invalid).toBe(false);
+    expect(without.options.prototypingEmitSkeletons).toBeUndefined();
+    const withFlag = parseArgs(
+      ["prototyping", "iterate", "--cycle", "0", "--emit-skeletons"],
+      cwd,
+    );
+    expect(withFlag.invalid).toBe(false);
+    expect(withFlag.options.prototypingEmitSkeletons).toBe(true);
+  });
+
+  it("parses --skeleton-mode {placeholder|full|stub} and rejects other values", () => {
+    const cwd = process.cwd();
+    for (const value of ["placeholder", "full", "stub"] as const) {
+      const parsed = parseArgs(
+        ["prototyping", "iterate", "--cycle", "0", "--skeleton-mode", value],
+        cwd,
+      );
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.prototypingSkeletonMode).toBe(value);
+    }
+    const bogus = parseArgs(
+      ["prototyping", "iterate", "--cycle", "0", "--skeleton-mode", "bogus"],
+      cwd,
+    );
+    expect(bogus.invalid).toBe(true);
+    expect(bogus.options.help).toBe(true);
+  });
+
+  it("requires a value for --skeleton-mode", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(
+      ["prototyping", "iterate", "--cycle", "0", "--skeleton-mode"],
+      cwd,
+    );
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.help).toBe(true);
+  });
+
+  it("parses --mode {convergence|exploration} and rejects other values", () => {
+    const cwd = process.cwd();
+    for (const value of ["convergence", "exploration"] as const) {
+      const parsed = parseArgs(
+        ["prototyping", "iterate", "--cycle", "0", "--mode", value],
+        cwd,
+      );
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.prototypingMode).toBe(value);
+    }
+    const bogus = parseArgs(
+      ["prototyping", "iterate", "--cycle", "0", "--mode", "feral"],
+      cwd,
+    );
+    expect(bogus.invalid).toBe(true);
+    expect(bogus.options.help).toBe(true);
+  });
+
+  it("requires a value for --mode", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0", "--mode"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.help).toBe(true);
+  });
 });

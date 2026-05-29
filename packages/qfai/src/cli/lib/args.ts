@@ -65,6 +65,36 @@ export type ParsedArgs = {
      * runner is loaded dynamically when no DI serverRunner is supplied.
      */
     prototypingAutoServe?: boolean;
+    /**
+     * --emit-skeletons for `qfai prototyping iterate --cycle 0`. Opt-in
+     * cycle-0 token-driven placeholder HTML emission (default OFF;
+     * preserves prior-release bit-for-bit behavior). Only meaningful at cycle 0;
+     * silently ignored on other cycles today.
+     */
+    prototypingEmitSkeletons?: boolean;
+    /**
+     * --skeleton-mode for `qfai prototyping iterate --cycle 0
+     * --emit-skeletons`. Selects the renderer behavior:
+     *   - `placeholder` (default): DESIGN.md-token-styled static HTML,
+     *     no per-screen LLM call
+     *   - `full`: callers may replace the body via generation (the
+     *     renderer itself never calls a model)
+     *   - `stub`: minimal `<!doctype html>` marker
+     * Unknown values are rejected via markInvalid().
+     */
+    prototypingSkeletonMode?: "placeholder" | "full" | "stub";
+    /**
+     * --mode for `qfai prototyping iterate`. Selects the prototyping
+     * loop posture:
+     *   - `convergence` (default): all gates apply at error severity.
+     *   - `exploration`: medium gate relaxation — soft-rubric gates
+     *     (QFAI-CRIT-008 axes-exceptional, QFAI-DCON-030..032 design
+     *     compliance) downgrade error → warning. Schema / path /
+     *     license (exit 66) gates stay hard error.
+     * Overrides `qfai.config.yaml#prototyping.mode`. Unknown values
+     * are rejected via markInvalid().
+     */
+    prototypingMode?: "convergence" | "exploration";
     help: boolean;
     invalidExitCode: number;
   };
@@ -442,6 +472,42 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         // TODO(next-minor): cross-subcommand markInvalid() follow-up
         // (see `--check-convergence` note above).
         options.prototypingAutoServe = true;
+        break;
+      }
+      case "--emit-skeletons": {
+        // Opt-in cycle-0 placeholder HTML emission. No value; presence
+        // flips the boolean. Only meaningful for
+        // `qfai prototyping iterate --cycle 0`; iterate itself ignores
+        // it on cycle >= 1.
+        options.prototypingEmitSkeletons = true;
+        break;
+      }
+      case "--skeleton-mode": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        if (next === "placeholder" || next === "full" || next === "stub") {
+          options.prototypingSkeletonMode = next;
+        } else {
+          markInvalid();
+        }
+        i += 1;
+        break;
+      }
+      case "--mode": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        if (next === "convergence" || next === "exploration") {
+          options.prototypingMode = next;
+        } else {
+          markInvalid();
+        }
+        i += 1;
         break;
       }
       case "--help":

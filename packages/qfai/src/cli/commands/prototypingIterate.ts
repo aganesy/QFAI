@@ -222,6 +222,25 @@ export type RunPrototypingIterateOptions = {
    * + marker resolution when set.
    */
   primarySpecId?: string | number;
+  /**
+   * Cycle-0 placeholder HTML emission. When true and `cycle === 0`,
+   * iterate renders one HTML per `screens[].id` resolved from the
+   * `frozenSurfaceUnion` using DESIGN.md tokens (no per-screen LLM
+   * call). Default OFF preserves prior-release bit-for-bit behavior.
+   */
+  emitSkeletons?: boolean;
+  /**
+   * Skeleton renderer mode (only meaningful with `emitSkeletons: true`).
+   * Defaults to `placeholder`.
+   */
+  skeletonMode?: "placeholder" | "full" | "stub";
+  /**
+   * Resolved prototyping loop posture: `convergence` (default) or
+   * `exploration` (medium gate relaxation — see
+   * `core/prototyping/mode.ts`). Overrides
+   * `qfai.config.yaml#prototyping.mode` when set.
+   */
+  mode?: "convergence" | "exploration";
 };
 
 /**
@@ -614,6 +633,17 @@ export async function runPrototypingIterate(
 
   const protoJsonAbs = path.join(options.root, PROTOTYPING_JSON_REL);
 
+  // CHG-006 prototyping-mode discriminator: resolve the per-loop prototyping mode
+  // (cli flag overrides config; absence of both defaults to
+  // `convergence`). Lazily imported so the helper module is not
+  // required to load until iterate is actually invoked.
+  const { resolvePrototypingMode } = await import("../../core/prototyping/mode.js");
+  const resolvedMode = resolvePrototypingMode({
+    cli: options.mode,
+    config: configResult.config.prototyping?.mode,
+  });
+  info(`qfai prototyping iterate: prototyping mode resolved to ${resolvedMode}.`);
+
   // 2) Cycle >=1: enforce hash gate against the lock-anchored cache in
   //    prototyping.json + convergence/budget stop + monotonicity +
   //    spec-set drift. See `evaluateCycleGteOneGate` for the full
@@ -757,6 +787,7 @@ export async function runPrototypingIterate(
       // (immutable through the loop), not a mutable in-memory default
       // that could re-baseline mid-run.
       frozenLicenseCatalog: DEFAULT_LICENSE_CATALOG,
+      mode: resolvedMode,
     });
     // Defense-in-depth: stale `iter-NN/` directories from a prior loop
     // could otherwise survive on disk and bind certify to evidence the
@@ -771,7 +802,10 @@ export async function runPrototypingIterate(
     // sealed into the next certificate's evidenceDigests. Surfacing
     // the failed dir + cause lets the operator clear the lock before
     // iterate writes the new plan.
-    const rmResult = await clearEvidenceIterDirs(path.join(options.root, PROTOTYPING_EVIDENCE_REL));
+    const rmResult = await clearEvidenceIterDirs(
+      path.join(options.root, PROTOTYPING_EVIDENCE_REL),
+      options.root,
+    );
     if (!rmResult.ok) {
       const reason =
         rmResult.cause instanceof Error ? rmResult.cause.message : String(rmResult.cause);
@@ -910,6 +944,38 @@ export async function runPrototypingIterate(
   // 5) Assign paths and write iterate-plan.json.
   const dir = path.join(options.root, iterationDir(options.cycle));
   await mkdir(dir, { recursive: true });
+
+  // CHG-006 emit-skeletons: cycle-0 `--emit-skeletons` placeholder
+  // HTML emission. Token-driven (no per-screen LLM call). Default OFF
+  // preserves bit-for-bit prior-release behavior; only fires when both
+  // `cycle === 0` AND `options.emitSkeletons === true`. Screens are
+  // resolved from the project-wide UI contracts under
+  // `.qfai/contracts/ui/*.yaml`; each declared `screens[].id` in the
+  // union (which today is project-wide because UI contracts are
+  // project-wide) gets one placeholder. Best-effort write failures
+  // surface as a hard error naming the offending screen.
+  if (options.cycle === 0 && options.emitSkeletons === true) {
+    const skeletonMode = options.skeletonMode ?? "placeholder";
+    const screenContracts = await readUiContractScreenContracts(
+      options.root,
+      configResult.config.paths.contractsDir,
+    );
+    const screenIds = screenContracts.map((s) => s.screenId);
+    const skeletonExit = await emitCycleZeroSkeletons({
+      root: options.root,
+      iterDir: dir,
+      screens: screenIds,
+      designMd,
+      mode: skeletonMode,
+    });
+    if (skeletonExit !== 0) {
+      return skeletonExit;
+    }
+    info(
+      `qfai prototyping iterate --emit-skeletons: emitted ${screenIds.length} skeleton ` +
+        `HTML file(s) for the frozenSurfaceUnion (mode=${skeletonMode}).`,
+    );
+  }
 
   // Screen descriptor resolution for the opt-in capture path. The DI
   // `options.screens` hook still wins (test isolation), but when the
@@ -1316,6 +1382,66 @@ async function runCapturePath(
   // underscore casing at the UI contract surface (QFAI-PROT-008 in
   // `prototypingEvidence.ts`).
   await mirrorAcceptedIterToAggregateDirs(options.root, options.cycle);
+  return 0;
+}
+
+/**
+ * CHG-006 emit-skeletons helper: emit one placeholder HTML per
+ * `screens[].id` from the cycle-0 `frozenSurfaceUnion`. Token-driven
+ * (consumes DESIGN.md color / font / radius / shadow tokens). Returns
+ * `0` on success, `2` when any per-screen write fails (the offending
+ * screen is named on stderr so the operator can act).
+ */
+async function emitCycleZeroSkeletons(input: {
+  readonly root: string;
+  readonly iterDir: string;
+  readonly screens: readonly string[];
+  readonly designMd: DesignMd;
+  readonly mode: "placeholder" | "full" | "stub";
+}): Promise<number> {
+  if (input.screens.length === 0) {
+    // Empty union — nothing to emit. Surface a soft warning so the
+    // operator sees that the opt-in flag had no effect, without
+    // failing the cycle.
+    warn(
+      "qfai prototyping iterate --emit-skeletons: frozenSurfaceUnion is empty; no skeletons written.",
+    );
+    return 0;
+  }
+  const { buildSkeletonsForUnion, writeSkeletons } = await import(
+    "../../core/prototyping/emitSkeletons.js"
+  );
+  // Translate DesignMd → flat token table consumed by the renderer.
+  // `visual.typography` is a structured object, not a flat
+  // Record<string,string>; flatten the string-valued primary slots
+  // (family_sans / family_display / family_mono) into the token map.
+  const typo = input.designMd.visual.typography;
+  const fonts: Record<string, string> = {
+    family_sans: typo.family_sans,
+    family_display: typo.family_display,
+    family_mono: typo.family_mono,
+  };
+  const tokens = {
+    colors: input.designMd.visual.colors,
+    fonts,
+    radius: input.designMd.visual.radius,
+    shadow: input.designMd.visual.shadow,
+  };
+  const skeletons = buildSkeletonsForUnion({
+    screens: input.screens.map((id) => ({ id })),
+    tokens,
+    mode: input.mode,
+  });
+  try {
+    await writeSkeletons(input.iterDir, skeletons);
+  } catch (cause) {
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    error(
+      `qfai prototyping iterate --emit-skeletons: failed to write placeholder HTML ` +
+        `(cause=${reason}). Offending screen(s): ${input.screens.join(", ")}.`,
+    );
+    return 2;
+  }
   return 0;
 }
 
@@ -1868,6 +1994,14 @@ type SeedMetadata = {
    * (legacy default-OFF capture path).
    */
   declaredScreens?: readonly string[];
+  /**
+   * Resolved per-loop prototyping mode (CHG-006: convergence default,
+   * exploration enables medium gate relaxation). Persisted as
+   * `prototyping.json#mode` AND copied onto the seed iteration record
+   * so certify can refuse to seal a loop that produced any
+   * exploration-mode iteration.
+   */
+  mode?: "convergence" | "exploration";
 };
 
 /**
@@ -1902,7 +2036,10 @@ const SEED_PROSE_CRITIQUE_PLACEHOLDER = (() => {
  * the default `iter-NN/index.{png,html}` placeholder so the validator
  * has a concrete path to check.
  */
-function buildSeedIterations(declaredScreens: readonly string[]): unknown[] {
+function buildSeedIterations(
+  declaredScreens: readonly string[],
+  mode?: "convergence" | "exploration",
+): unknown[] {
   // Co-locate {screenshot, html} from the first declared screen; fall
   // back to a deterministic placeholder when no screens are present so
   // the seed always has non-empty fields. (refIntegrity treats empty
@@ -1938,6 +2075,13 @@ function buildSeedIterations(declaredScreens: readonly string[]): unknown[] {
         screenshot: screenshotRef,
         html: htmlRef,
       },
+      // CHG-006 prototyping-mode discriminator: per-iteration mode slot.
+      // Certify reads `prototyping.json#iterations[i].mode` to refuse
+      // sealing a loop that produced any exploration-mode iteration.
+      // Default `convergence` keeps legacy iterations
+      // (pre-mode-slot writes) interpreted as convergence; the seed
+      // here always carries the resolved mode explicitly.
+      ...(mode !== undefined ? { mode } : {}),
     },
   ];
 }
@@ -1971,9 +2115,15 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
   // (if any) so `qfai validate --profile prototyping` is conformant
   // immediately after iterate completes. The reviewer overwrites this
   // entry on the first review pass.
-  body.iterations = buildSeedIterations(seed.declaredScreens ?? []);
+  body.iterations = buildSeedIterations(seed.declaredScreens ?? [], seed.mode);
   body.acceptedIterationIndex = 0;
   body.stopReason = null;
+  // CHG-006 prototyping-mode discriminator: the resolved per-loop mode is
+  // persisted ONLY as `iterations[i].mode` (per-iteration slot).
+  // The top-level `mode` slot in prototyping.json is an
+  // operator-defined object schema preserved verbatim across the
+  // cycle-0 reset (see the operator-defined-keys comment above) — we
+  // MUST NOT overwrite it with a string discriminator.
   delete body.reviewerGate;
   // Legacy `fullHarness` block (pre-UX-loop schema) is also per-loop
   // state. Pre-1.8.9 projects whose prototyping.json still carries
@@ -2093,6 +2243,7 @@ async function collectFilesRecursively(absDir: string): Promise<string[]> {
 
 async function clearEvidenceIterDirs(
   evidenceRootAbs: string,
+  root?: string,
 ): Promise<ClearEvidenceIterDirsResult> {
   let entries: string[];
   try {
@@ -2100,6 +2251,23 @@ async function clearEvidenceIterDirs(
   } catch (err) {
     if (isEnoent(err)) return { ok: true };
     return { ok: false, failedDir: evidenceRootAbs, cause: err };
+  }
+  // CHG-006 mutation-log wiring: every destructive iter-NN mutation
+  // funnels through the mutation-log writer. Lazy import keeps the
+  // helper out of the hot path when no iter-NN dirs exist.
+  let logEvidenceDelete:
+    | ((root: string, caller: string, relPath: string, priorSize: number) => Promise<void>)
+    | null = null;
+  if (root !== undefined) {
+    try {
+      const mod = await import("../../core/prototyping/mutationLog.js");
+      logEvidenceDelete = mod.logEvidenceDelete;
+    } catch {
+      // Best-effort: a failed import still surfaces the SSOT-sync
+      // reviewer-gate finding R-EVIDENCE-MUTATION-UNLOGGED at the
+      // next validate pass; the cleanup itself proceeds.
+      logEvidenceDelete = null;
+    }
   }
   for (const name of entries) {
     if (!/^iter-\d{2,}$/.test(name)) continue;
@@ -2118,6 +2286,29 @@ async function clearEvidenceIterDirs(
       return { ok: false, failedDir: abs, cause: err };
     }
     if (!isDir) continue;
+    // Walk the iter-NN/ tree BEFORE the destructive rm so each removed
+    // file is recorded with its prior size. The walk is best-effort:
+    // a failure here logs zero entries but still proceeds with the
+    // structural mutation (the SSOT-sync pair scan is the backstop).
+    if (root !== undefined && logEvidenceDelete !== null) {
+      try {
+        const removedFiles = await collectFilesRecursively(abs);
+        for (const fileAbs of removedFiles) {
+          const rel = path.relative(root, fileAbs).replace(/\\/g, "/");
+          let priorSize = 0;
+          try {
+            priorSize = (await stat(fileAbs)).size;
+          } catch {
+            // best-effort size capture
+          }
+          await logEvidenceDelete(root, "iterate-clearEvidence", rel, priorSize);
+        }
+      } catch (logCause) {
+        warn(
+          `qfai prototyping iterate --cycle 0: mutation-log walk failed for ${name} (${String(logCause)}); proceeding with rm.`,
+        );
+      }
+    }
     try {
       await rm(abs, { recursive: true, force: true });
     } catch (err) {
