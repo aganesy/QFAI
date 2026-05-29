@@ -67,6 +67,9 @@ import {
   validateSurfaceTypeDrift,
   validateDesignMdPatchZone,
   detectEvidenceMutationUnlogged,
+  validateAutopilotPolicy,
+  detectHandoffSchemaDrift,
+  validateStaleReferences,
 } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
@@ -181,6 +184,18 @@ async function runSddValidators(
     ...(await validateReviewerJustification(root, config)),
     ...(await validateReviewerGate(root, config)),
     ...(await validateSurfaceTypeDrift(root, config)),
+    // Skill governance: `R-AUTOPILOT-POLICY-MISSING` on a qfai-*
+    // SKILL.md that lacks the `## Default Autopilot Policy` section.
+    // SKILL.md governance lives in the sdd profile.
+    ...(await validateAutopilotPolicy(root)),
+    // CLI-HANDOFF Pair IV — fire `R-HANDOFF-SCHEMA-DRIFT` on
+    // asymmetric schema ↔ writer edits. Handoff is a skill-governance
+    // surface so it lives in sdd.
+    ...(await detectHandoffSchemaDrift(root)),
+    // Doc governance — surface pre-implementation tokens in
+    // `references/*.md` + SKILL.md as warning during the deprecation
+    // window and error at sunset.
+    ...(await validateStaleReferences(root)),
   ];
 }
 

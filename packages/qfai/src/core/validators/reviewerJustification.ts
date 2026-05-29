@@ -5,11 +5,18 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
 import type { Issue } from "../types.js";
+import { CATALOG_ADVISORY_FAILING_CODES } from "./justificationCatalog.js";
 import { exists, issue } from "./utils.js";
 
 // Reviewer-gate finding codes that MUST carry a non-empty justification.
 // Empty justification is treated as advisory-failing (error severity).
-const ADVISORY_FAILING_CODES = new Set([
+//
+// The set is composed from three sources:
+//   1. The historical R-WORKLOG-DRIFT family (REQ-0006 contract).
+//   2. CHG-005 extensions (R-CERTIFY-VERIFY-CIRCULAR / R-PROMPT-SCANNER-DRIFT).
+//   3. The 8-code spec governance catalog (CHG-006 / AC-0015-0018) sourced
+//      from `justificationCatalog.ts`.
+const ADVISORY_FAILING_CODES = new Set<string>([
   "R-WORKLOG-DRIFT",
   "R-REJECTED-READOPT",
   "R-HANDOFF-INCOMPLETE",
@@ -18,6 +25,10 @@ const ADVISORY_FAILING_CODES = new Set([
   // as advisory-failing to enforce BR-0004-0028 across spec families.
   "R-CERTIFY-VERIFY-CIRCULAR",
   "R-PROMPT-SCANNER-DRIFT",
+  // CHG-006: the 8-code spec governance catalog (AC-0015-0018) is
+  // merged in via the catalog SSOT so this set stays in lockstep with
+  // the catalog by construction.
+  ...CATALOG_ADVISORY_FAILING_CODES,
 ]);
 
 type ReviewerFinding = {
