@@ -155,7 +155,22 @@ describe("prototyping skill asset — multi-spec wiring (spec-0012 CHG-002)", ()
     // These were the exact prompts the v2.0 / UX-loop SKILL.md used to
     // ask the operator to pick one spec per invocation; under the
     // multi-spec rewrite there must be no such prompt anywhere in the
-    // asset.
+    // asset. The `## Default Autopilot Policy` block is excluded from
+    // this scan because it MAY (and does) list `primarySpecId` as a
+    // hard-required field name; that listing is a contract reference,
+    // not a per-invocation selection prompt.
+    const policyHeadingRe = /^##\s+Default Autopilot Policy\s*$/m;
+    const nextHeadingRe = /^##\s+/m;
+    let scannableContent = skillContent;
+    const headingMatch = policyHeadingRe.exec(skillContent);
+    if (headingMatch) {
+      const start = headingMatch.index;
+      const afterStart = start + headingMatch[0].length;
+      const next = nextHeadingRe.exec(skillContent.slice(afterStart));
+      const end = next ? afterStart + next.index : skillContent.length;
+      scannableContent = skillContent.slice(0, start) + skillContent.slice(end);
+    }
+
     const forbiddenPhrases = [
       "selected spec is UI-bearing",
       "select a primary spec",
@@ -167,7 +182,7 @@ describe("prototyping skill asset — multi-spec wiring (spec-0012 CHG-002)", ()
       "プライマリ spec",
       "プライマリスペック",
     ];
-    const lower = skillContent.toLowerCase();
+    const lower = scannableContent.toLowerCase();
     for (const phrase of forbiddenPhrases) {
       expect(lower.includes(phrase.toLowerCase()), `SKILL.md should not contain '${phrase}'`).toBe(
         false,

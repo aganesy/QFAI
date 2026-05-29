@@ -376,10 +376,10 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
     const content = await readFile(skillPath, "utf-8");
 
-    // The cap is 210 (not 200) to allow room for the trailing
-    // project_memory: block that every core skill body MUST declare
-    // (W-WORKLOG-SCHEMA enforcement in skillDocReferences.ts).
-    expect(content.split(/\r?\n/).length).toBeLessThanOrEqual(210);
+    // The cap allows room for the trailing project_memory: block AND
+    // the `## Default Autopilot Policy` 3-bucket section required by
+    // the SKILL.md governance contract (R-AUTOPILOT-POLICY-MISSING).
+    expect(content.split(/\r?\n/).length).toBeLessThanOrEqual(240);
   });
 
   it("ensures ui contract guidance defines mockable prototype and copy-ready example", async () => {
@@ -1325,11 +1325,14 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   });
 
   it("keeps canonical SKILL.md files compact enough for progressive disclosure", async () => {
+    // Each budget includes headroom for the mandatory
+    // `## Default Autopilot Policy` section (~25 lines) required by
+    // the SKILL.md governance contract.
     const targets = [
       ["qfai-sdd", 360],
       ["qfai-discussion", 400],
-      ["qfai-prototyping", 320],
-      ["qfai-implement", 370],
+      ["qfai-prototyping", 350],
+      ["qfai-implement", 400],
     ] as const;
 
     for (const [skillId, maxLines] of targets) {

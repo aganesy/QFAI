@@ -85,7 +85,11 @@ describe("qfai-sdd SKILL.md surface", () => {
   it("stays under the SKILL.md size budget", async () => {
     const skill = await readFile(SKILL_PATH, "utf-8");
     const lines = skill.split(/\r?\n/);
-    expect(lines.length).toBeLessThanOrEqual(280);
+    // Budget bumped from 280 to 310 to absorb the mandatory
+    // `## Default Autopilot Policy` section (3 named buckets +
+    // narrow-vs-widen guidance) required by the SKILL.md governance
+    // contract (R-AUTOPILOT-POLICY-MISSING).
+    expect(lines.length).toBeLessThanOrEqual(310);
   });
 });
 
