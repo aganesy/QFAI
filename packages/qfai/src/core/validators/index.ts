@@ -64,3 +64,12 @@ export { validateSkillDocReferences } from "./skillDocReferences.js";
 export { validateReviewerJustification } from "./reviewerJustification.js";
 export { validateReviewerGate, detectMockHrefDrift } from "./reviewerGate.js";
 export { validateSurfaceTypeDrift } from "./surfaceTypeDrift.js";
+export {
+  detectDesignMdPatchOutOfZone,
+  validateDesignMdPatchZone,
+} from "./designMdPatchZone.js";
+export { detectEvidenceMutationUnlogged } from "./evidenceMutationUnlogged.js";
+export {
+  detectExplorationCertifyAttempt,
+  resolveCertifyAcceptedIterationIndex,
+} from "./prototyping/explorationCertify.js";

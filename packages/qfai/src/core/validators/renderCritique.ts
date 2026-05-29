@@ -6,6 +6,10 @@ import fg from "fast-glob";
 import type { QfaiConfig } from "../config.js";
 import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
 import type { Issue } from "../types.js";
+import {
+  TASK_FIDELITY_REQUIRED_KEYWORDS,
+  TASK_FIDELITY_SECTION_NAME,
+} from "./taskFidelityKeywords.js";
 import { issue, readSafe } from "./utils.js";
 
 /**
@@ -237,16 +241,23 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
 
   // --- TDD-0006: taskFidelity not recorded (QFAI-CRIT-009) ---
   if (evidenceFiles.length > 0 && !TASK_FIDELITY_SECTION_RE.test(allEvidenceContent)) {
+    // Use TASK_FIDELITY_REQUIRED_KEYWORDS (SSOT) so the error text
+    // surfaces every required keyword and the operator-facing doc
+    // (references/evidence-requirements.md) cannot drift from the
+    // validator. Naming the section explicitly removes the need for
+    // the operator to grep for the expected document anchor.
+    const keywordList = TASK_FIDELITY_REQUIRED_KEYWORDS.join(", ");
     issues.push(
       issue(
         "QFAI-CRIT-009",
-        "taskFidelity evaluation not recorded in evidence files.",
+        `taskFidelity evaluation not recorded in evidence files. ` +
+          `Required keywords: ${keywordList}. Expected section: ${TASK_FIDELITY_SECTION_NAME}.`,
         "error",
         evidenceDir,
         "renderCritique.taskFidelityMissing",
         undefined,
         "change",
-        "Add taskFidelity section with step_count, cta_visibility, and four_state_check.",
+        `Add ${TASK_FIDELITY_SECTION_NAME} section with: ${keywordList}.`,
       ),
     );
   }
@@ -259,16 +270,22 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     const hasFourState = FOUR_STATE_CHECK_RE.test(allEvidenceContent);
 
     if (!hasCta || !hasFourState) {
+      // Reuse TASK_FIDELITY_REQUIRED_KEYWORDS so any new required
+      // keyword (added by spec ledger updates) shows up in the error
+      // text automatically — the validator never naming-drifts from
+      // the SSOT keyword list.
+      const allKeywords = TASK_FIDELITY_REQUIRED_KEYWORDS.join(", ");
       issues.push(
         issue(
           "QFAI-CRIT-009",
-          `taskFidelity section incomplete (missing: ${[!hasCta ? "cta_visibility" : "", !hasFourState ? "four_state_check" : ""].filter(Boolean).join(", ")}).`,
+          `taskFidelity section incomplete (missing: ${[!hasCta ? "cta_visibility" : "", !hasFourState ? "four_state_check" : ""].filter(Boolean).join(", ")}). ` +
+            `Required keywords: ${allKeywords}. Expected section: ${TASK_FIDELITY_SECTION_NAME}.`,
           "error",
           evidenceDir,
           "renderCritique.taskFidelityMissing",
           undefined,
           "change",
-          "Add missing taskFidelity fields: step_count, cta_visibility, four_state_check.",
+          `Add missing taskFidelity fields: ${allKeywords}.`,
         ),
       );
     }

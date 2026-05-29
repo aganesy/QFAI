@@ -65,6 +65,8 @@ import {
   validateReviewerGate,
   detectMockHrefDrift,
   validateSurfaceTypeDrift,
+  validateDesignMdPatchZone,
+  detectEvidenceMutationUnlogged,
 } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
@@ -190,6 +192,13 @@ async function runPrototypingValidators(
   return [
     ...(await runUiuxValidators(root, config, platformOption)),
     ...(await detectMockHrefDrift(root)),
+    // CHG-006 second-wave reviewer-gate findings (prototyping
+    // surface). Both detectors no-op when their gating files are
+    // absent (consumer repo without the validator source / without a
+    // DESIGN.md.backup snapshot), so the prototyping profile stays
+    // safe to run on freshly-bootstrapped projects.
+    ...(await validateDesignMdPatchZone(root, config)),
+    ...(await detectEvidenceMutationUnlogged(root)),
     ...(await validatePrototypingEvidence(root, config)),
     ...(await validateScreenIdCasing(root, config.paths.contractsDir)),
     ...(await validateUiEvidenceArtifacts(root, config)),

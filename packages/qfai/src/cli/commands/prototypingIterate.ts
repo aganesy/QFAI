@@ -30,6 +30,7 @@
  * (Tailwind config shape).
  */
 
+import type { Dirent } from "node:fs";
 import {
   copyFile,
   mkdir,
@@ -670,6 +671,30 @@ export async function runPrototypingIterate(
         evidenceRootAbs,
         `iter-00.backup-${new Date().toISOString().replace(/[:.]/g, "-")}`,
       );
+      // Every destructive iter-NN mutation MUST funnel through the
+      // mutation-log writer. Walk the iter-00 tree once BEFORE the
+      // rename so each moved file gets one JSONL line.
+      try {
+        const { logEvidenceMove } = await import("../../core/prototyping/mutationLog.js");
+        const movedFiles = await collectFilesRecursively(iter00Abs);
+        for (const fileAbs of movedFiles) {
+          const rel = path.relative(options.root, fileAbs).replace(/\\/g, "/");
+          let priorSize = 0;
+          try {
+            priorSize = (await stat(fileAbs)).size;
+          } catch {
+            // best-effort: log size 0 when stat fails
+          }
+          await logEvidenceMove(options.root, "iterate", rel, priorSize);
+        }
+      } catch (logCause) {
+        // Mutation-log write failure is advisory; do not abort the
+        // backup itself. The reviewer-gate finding
+        // R-EVIDENCE-MUTATION-UNLOGGED is the structural backstop.
+        warn(
+          `qfai prototyping iterate --cycle 0 --force: mutation-log write failed (${String(logCause)}); proceeding with rename.`,
+        );
+      }
       try {
         await rename(iter00Abs, backupAbs);
         info(
@@ -1025,6 +1050,22 @@ export async function runPrototypingIterate(
       const captureExit = await runCapturePath(options, dir, resolvedCaptureScreens ?? []);
       if (captureExit !== 0) {
         return captureExit;
+      }
+      // Emit the `taskFidelity` template skeleton so the operator
+      // sees every required keyword as a TODO placeholder in the
+      // iteration dir. Best-effort: a template write failure does
+      // not block the capture path; the validator (`QFAI-CRIT-009`)
+      // is the user-visible gate.
+      try {
+        const { writeTaskFidelityTemplate } = await import(
+          "../../core/prototyping/captureTemplate.js"
+        );
+        await writeTaskFidelityTemplate(dir);
+      } catch (cause) {
+        warn(
+          `qfai prototyping iterate --capture: failed to emit taskFidelity template (${String(cause)}). ` +
+            "Skeleton is advisory; QFAI-CRIT-009 remains the gate.",
+        );
       }
     }
   } finally {
@@ -2020,6 +2061,34 @@ async function dirExists(absPath: string): Promise<boolean> {
     if (isEnoent(err)) return false;
     throw err;
   }
+}
+
+/**
+ * Recursively list every file under `absDir` (post-order). Returns
+ * absolute paths. Used by the mutation-log writer to emit one JSONL
+ * entry per moved file under `--cycle 0 --force`.
+ */
+async function collectFilesRecursively(absDir: string): Promise<string[]> {
+  const out: string[] = [];
+  const visit = async (current: string): Promise<void> => {
+    let entries: Dirent[] = [];
+    try {
+      entries = await readdir(current, { withFileTypes: true });
+    } catch (cause) {
+      if (isEnoent(cause)) return;
+      throw cause;
+    }
+    for (const entry of entries) {
+      const child = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        await visit(child);
+      } else if (entry.isFile()) {
+        out.push(child);
+      }
+    }
+  };
+  await visit(absDir);
+  return out;
 }
 
 async function clearEvidenceIterDirs(
