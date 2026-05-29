@@ -193,7 +193,7 @@ export async function validateAutopilotPolicy(root: string): Promise<Issue[]> {
     if (result.widenedTokens.length > 0) {
       const message =
         `R-AUTOPILOT-POLICY-WIDENED: ${relPath} auto-decide bucket lists ` +
-        `entries outside the canonical DR-0269 allowed set ` +
+        `entries outside the canonical allowed set ` +
         `([${result.widenedTokens.join(" | ")}]). Narrowing is permitted; ` +
         `widening MUST go through ask-user. ` +
         `Justification: file=${relPath}, widened=[${result.widenedTokens.join(", ")}].`;
