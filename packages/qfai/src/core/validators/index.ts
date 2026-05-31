@@ -69,6 +69,13 @@ export {
   validateDesignMdPatchZone,
 } from "./designMdPatchZone.js";
 export { detectEvidenceMutationUnlogged } from "./evidenceMutationUnlogged.js";
+export { detectSkillManifestDrift } from "./skillManifestDrift.js";
+export type { SkillManifestPair } from "./skillManifestPairs.js";
+export {
+  SKILL_MANIFEST_PAIRS,
+  SKILL_MANIFEST_PROBE_IMPL_REL,
+  SKILL_MANIFEST_SCHEMA_REL,
+} from "./skillManifestPairs.js";
 export {
   AUTO_DECIDE_ALLOWED_TOKENS,
   parseAutopilotPolicy,

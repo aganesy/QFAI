@@ -124,12 +124,33 @@ export type QfaiPrototypingConfig = {
   mode?: "convergence" | "exploration";
 };
 
+export type QfaiReviewConfig = {
+  /**
+   * Stale review-pack TTL (calendar days) used by `qfai doctor --clean`
+   * to decide whether to move `.qfai/review/<ts>/` packs into
+   * `.qfai/review/_archive/<ts>/`. Default (when unset) is applied at
+   * the call-site by `REVIEW_STALE_TTL_DAYS_DEFAULT`.
+   */
+  staleTtlDays?: number;
+};
+
+export type QfaiAtddConfig = {
+  /**
+   * Number of consecutive un-skip + re-skip cycles tolerated before the
+   * scaffold-cycle escalation fires. Default (when unset) is applied at
+   * the call-site. Pre-positioned for the spec-0008 ATDD scaffold slice.
+   */
+  scaffoldEscalateCycles?: number;
+};
+
 export type QfaiConfig = {
   paths: QfaiPaths;
   validation: QfaiValidationConfig;
   output: QfaiOutputConfig;
   uiux?: QfaiUiuxConfig;
   prototyping?: QfaiPrototypingConfig;
+  review?: QfaiReviewConfig;
+  atdd?: QfaiAtddConfig;
   baseBranch?: string;
 };
 
@@ -253,6 +274,8 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
 
   const uiux = normalizeUiux(raw.uiux, configPath, issues);
   const prototyping = normalizePrototyping(raw.prototyping, configPath, issues);
+  const review = normalizeReview(raw.review, configPath, issues);
+  const atdd = normalizeAtdd(raw.atdd, configPath, issues);
   const base: QfaiConfig = {
     paths: normalizePaths(raw.paths, configPath, issues),
     validation: normalizeValidation(raw.validation, configPath, issues),
@@ -263,6 +286,12 @@ function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): Qfa
   }
   if (prototyping) {
     base.prototyping = prototyping;
+  }
+  if (review) {
+    base.review = review;
+  }
+  if (atdd) {
+    base.atdd = atdd;
   }
   const baseBranch = readOptionalString(raw.baseBranch, "baseBranch", configPath, issues);
   if (baseBranch !== undefined) {
@@ -650,6 +679,66 @@ function normalizePrototypingExecution(
           ) ?? null),
     browserTool,
   };
+}
+
+function normalizeReview(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): QfaiReviewConfig | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  if (!isRecord(raw)) {
+    issues.push(configIssue(configPath, "review はオブジェクトである必要があります。"));
+    return undefined;
+  }
+  const result: QfaiReviewConfig = {};
+  if (raw.staleTtlDays !== undefined) {
+    if (
+      typeof raw.staleTtlDays === "number" &&
+      Number.isFinite(raw.staleTtlDays) &&
+      Number.isInteger(raw.staleTtlDays) &&
+      raw.staleTtlDays >= 0
+    ) {
+      result.staleTtlDays = raw.staleTtlDays;
+    } else {
+      issues.push(
+        configIssue(configPath, "review.staleTtlDays は 0 以上の整数である必要があります。"),
+      );
+    }
+  }
+  return Object.keys(result).length === 0 ? undefined : result;
+}
+
+function normalizeAtdd(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+): QfaiAtddConfig | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  if (!isRecord(raw)) {
+    issues.push(configIssue(configPath, "atdd はオブジェクトである必要があります。"));
+    return undefined;
+  }
+  const result: QfaiAtddConfig = {};
+  if (raw.scaffoldEscalateCycles !== undefined) {
+    if (
+      typeof raw.scaffoldEscalateCycles === "number" &&
+      Number.isFinite(raw.scaffoldEscalateCycles) &&
+      Number.isInteger(raw.scaffoldEscalateCycles) &&
+      raw.scaffoldEscalateCycles >= 0
+    ) {
+      result.scaffoldEscalateCycles = raw.scaffoldEscalateCycles;
+    } else {
+      issues.push(
+        configIssue(configPath, "atdd.scaffoldEscalateCycles は 0 以上の整数である必要があります。"),
+      );
+    }
+  }
+  return Object.keys(result).length === 0 ? undefined : result;
 }
 
 function validateObsoleteCalibrationFields(

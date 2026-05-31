@@ -32,6 +32,7 @@ import { diffProjectSkillsAgainstInitAssets } from "./skillsIntegrity.js";
 import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
 import { resolveToolVersion } from "./version.js";
 import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
+import { probeSkillManifestRuntimeDeps } from "./doctor/skillManifestProbe.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
 export type DoctorProfile = "prototyping";
@@ -63,6 +64,14 @@ type CreateDoctorDataOptions = {
   startDir: string;
   rootExplicit: boolean;
   profile?: DoctorProfile;
+  /**
+   * Per-skill profile name (e.g. "qfai-prototyping"). Distinct from
+   * the legacy `profile: "prototyping"` enum which gates the bundled
+   * prototyping preflight checks. When a skill profile is supplied,
+   * the manifest probe runs and contributes `skill.runtimeDependencies`
+   * findings.
+   */
+  skillProfile?: string;
   targetUrl?: string;
 };
 
@@ -249,6 +258,10 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
 
   if (options.profile === "prototyping") {
     checks.push(...(await buildPrototypingDoctorChecks(root, config, options.targetUrl)));
+  }
+
+  if (options.skillProfile) {
+    checks.push(...(await buildSkillManifestProbeChecks(root, options.skillProfile)));
   }
 
   const specsRoot = resolvePath(root, config, "specsDir");
@@ -543,6 +556,58 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
       path: toRelativePath(root, agentsDir),
     },
   };
+}
+
+async function buildSkillManifestProbeChecks(
+  root: string,
+  skill: string,
+): Promise<DoctorCheck[]> {
+  const findings = await probeSkillManifestRuntimeDeps(root, skill);
+  if (findings.length === 0) {
+    return [
+      {
+        id: "skill.runtimeDependencies",
+        severity: "ok",
+        title: "Skill runtimeDependencies",
+        message: `no runtimeDependencies declared in manifest for skill '${skill}' (or manifest absent)`,
+        details: { skill },
+      },
+    ];
+  }
+  const missing = findings.filter((finding) => finding.status === "missing");
+  if (missing.length === 0) {
+    return [
+      {
+        id: "skill.runtimeDependencies",
+        severity: "ok",
+        title: "Skill runtimeDependencies",
+        message: `all runtimeDependencies for skill '${skill}' are installed (count=${findings.length})`,
+        details: {
+          skill,
+          deps: findings.map((finding) => ({ name: finding.name, status: finding.status })),
+        },
+      },
+    ];
+  }
+  return [
+    {
+      id: "skill.runtimeDependencies",
+      severity: "error",
+      title: "Skill runtimeDependencies",
+      message: `missing runtimeDependencies for skill '${skill}': ${missing
+        .map((finding) => `${finding.name} (${finding.installCommand})`)
+        .join(", ")}`,
+      details: {
+        skill,
+        missing: missing.map((finding) => ({
+          name: finding.name,
+          installCommand: finding.installCommand,
+          probedPaths: finding.probedPaths,
+        })),
+        deps: findings.map((finding) => ({ name: finding.name, status: finding.status })),
+      },
+    },
+  ];
 }
 
 async function buildPrototypingDoctorChecks(

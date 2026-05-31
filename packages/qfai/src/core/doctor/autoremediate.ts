@@ -1,0 +1,191 @@
+/**
+ * `qfai doctor --autoremediate` orchestrator.
+ *
+ * Coordinates three remediations on demand:
+ *   1. install unmet runtimeDependencies (via `npm install <name>`).
+ *   2. archive stale review packs (delegates to `cleanStaleReviewPacks`).
+ *   3. write missing default-keyed config fields (does NOT overwrite
+ *      user-authored values).
+ *
+ * Disabled in CI by default (`process.env.CI === "true"` → emit
+ * `"autoremediate disabled in CI"` and return without remediating).
+ * Honors `--dry-run` by surfacing the plan without side effects.
+ * Honors `--yes` by skipping interactive confirmation; this CLI is
+ * non-interactive today, so `--yes` mostly serves as a documented
+ * forward-compatible flag.
+ *
+ * The `npm install` call is routed through a pluggable runner so tests
+ * can substitute a no-op stub. The default runner is loaded lazily and
+ * skipped entirely under `dryRun`.
+ */
+
+import { readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+
+import { exists } from "../validators/utils.js";
+import { loadConfig } from "../config.js";
+import { cleanStaleReviewPacks } from "./cleanReviewPacks.js";
+import { probeSkillManifestRuntimeDeps } from "./skillManifestProbe.js";
+
+export type InstallRunner = (name: string, cwd: string) => Promise<void>;
+
+export type AutoremediateOptions = {
+  readonly root: string;
+  readonly dryRun: boolean;
+  readonly yes: boolean;
+  readonly isCi: boolean;
+  /** Test seam: skip the npm install side effect. Defaults to false. */
+  readonly skipInstall?: boolean;
+  /** Test seam: replace the install runner. Defaults to `npmInstall`. */
+  readonly installRunner?: InstallRunner;
+  /** Test seam: skill to probe for runtimeDependencies. Defaults to none. */
+  readonly skill?: string;
+};
+
+export type AutoremediateSummary = {
+  readonly disabledInCi: boolean;
+  readonly lines: string[];
+  readonly installed: readonly string[];
+  readonly archived: readonly string[];
+  readonly configFieldsWritten: readonly string[];
+};
+
+const DEFAULT_KEYED_CONFIG_FIELDS: ReadonlyArray<{
+  yamlKey: string;
+  defaultLine: string;
+}> = [
+  { yamlKey: "review:", defaultLine: "review:\n  staleTtlDays: 14\n" },
+];
+
+async function defaultInstallRunner(name: string, cwd: string): Promise<void> {
+  const { spawn } = await import("node:child_process");
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn("npm", ["install", name], {
+      cwd,
+      stdio: "ignore",
+      shell: process.platform === "win32",
+    });
+    child.once("error", reject);
+    child.once("close", (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`npm install ${name} exited with code ${code ?? "unknown"}`));
+      }
+    });
+  });
+}
+
+async function tryFillConfigDefaults(
+  root: string,
+): Promise<{ written: string[]; lines: string[] }> {
+  const written: string[] = [];
+  const lines: string[] = [];
+  const configPath = path.join(root, "qfai.config.yaml");
+  let existing = "";
+  if (await exists(configPath)) {
+    try {
+      existing = await readFile(configPath, "utf-8");
+    } catch {
+      lines.push(`autoremediate: skipped config-fill (failed to read ${configPath})`);
+      return { written, lines };
+    }
+  }
+  let appended = existing;
+  for (const field of DEFAULT_KEYED_CONFIG_FIELDS) {
+    if (!appended.includes(field.yamlKey)) {
+      appended = `${appended.replace(/\s*$/u, "")}\n${field.defaultLine}`;
+      written.push(field.yamlKey.replace(/:$/u, ""));
+    }
+  }
+  if (written.length > 0) {
+    try {
+      await writeFile(configPath, appended, "utf-8");
+      lines.push(`autoremediate: wrote default-keyed fields: ${written.join(", ")}`);
+    } catch (error) {
+      lines.push(
+        `autoremediate: failed to write config defaults: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  return { written, lines };
+}
+
+export async function runAutoremediate(
+  options: AutoremediateOptions,
+): Promise<AutoremediateSummary> {
+  const lines: string[] = [];
+
+  if (options.isCi) {
+    lines.push("autoremediate disabled in CI");
+    return {
+      disabledInCi: true,
+      lines,
+      installed: [],
+      archived: [],
+      configFieldsWritten: [],
+    };
+  }
+
+  if (options.dryRun) {
+    lines.push("autoremediate: dry-run (no install / archive / config write)");
+  }
+
+  // (1) Probe runtimeDependencies and (optionally) install missing ones.
+  const installed: string[] = [];
+  if (options.skill) {
+    const findings = await probeSkillManifestRuntimeDeps(options.root, options.skill);
+    const missing = findings.filter((finding) => finding.status === "missing");
+    if (missing.length === 0) {
+      lines.push("autoremediate: runtimeDependencies — all installed");
+    } else {
+      for (const finding of missing) {
+        if (options.dryRun || options.skipInstall) {
+          lines.push(`autoremediate: would run ${finding.installCommand}`);
+        } else {
+          const runner = options.installRunner ?? defaultInstallRunner;
+          try {
+            await runner(finding.name, options.root);
+            installed.push(finding.name);
+            lines.push(`autoremediate: ran ${finding.installCommand}`);
+          } catch (error) {
+            lines.push(
+              `autoremediate: install failed for ${finding.name}: ${error instanceof Error ? error.message : String(error)}`,
+            );
+          }
+        }
+      }
+    }
+  }
+
+  // (2) Archive stale review packs (--clean behavior).
+  const { config } = await loadConfig(options.root);
+  const ttlDays = config.review?.staleTtlDays;
+  const cleanResult = await cleanStaleReviewPacks(options.root, {
+    ...(typeof ttlDays === "number" ? { ttlDays } : {}),
+    ...(options.dryRun ? { dryRun: true } : {}),
+  });
+  const archivedNames = cleanResult.archived.map((entry) => entry.packName);
+  lines.push(
+    `autoremediate: review packs archived=${archivedNames.length}, in-ttl=${cleanResult.skippedInTtl.length}`,
+  );
+
+  // (3) Write missing default-keyed config fields (user-authored values
+  // are NOT touched because we only append the key when absent).
+  let configFieldsWritten: string[] = [];
+  if (!options.dryRun) {
+    const filled = await tryFillConfigDefaults(options.root);
+    configFieldsWritten = filled.written;
+    lines.push(...filled.lines);
+  } else {
+    lines.push("autoremediate: would fill default-keyed config fields (dry-run)");
+  }
+
+  return {
+    disabledInCi: false,
+    lines,
+    installed,
+    archived: archivedNames,
+    configFieldsWritten,
+  };
+}

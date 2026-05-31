@@ -2,6 +2,9 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { createDoctorData, type DoctorProfile } from "../../core/doctor.js";
+import { cleanStaleReviewPacks } from "../../core/doctor/cleanReviewPacks.js";
+import { runAutoremediate } from "../../core/doctor/autoremediate.js";
+import { loadConfig } from "../../core/config.js";
 import { info } from "../lib/logger.js";
 
 export type DoctorCommandOptions = {
@@ -11,7 +14,17 @@ export type DoctorCommandOptions = {
   outPath?: string;
   failOn?: "warning" | "error";
   profile?: DoctorProfile;
+  /** Skill name when `--profile <skill>` is passed (vs the legacy `prototyping`). */
+  skillProfile?: string;
   targetUrl?: string;
+  /** `--clean`: archive TTL-expired review packs into `.qfai/review/_archive/`. */
+  clean?: boolean;
+  /** `--autoremediate`: orchestrate install + clean + config-fill. */
+  autoremediate?: boolean;
+  /** `--dry-run`: preview only; no side effects. */
+  dryRun?: boolean;
+  /** `--yes`: skip interactive confirmation (autoremediate). */
+  yes?: boolean;
 };
 
 function formatDoctorText(data: Awaited<ReturnType<typeof createDoctorData>>): string {
@@ -74,14 +87,49 @@ function formatDoctorJson(data: unknown): string {
 }
 
 export async function runDoctor(options: DoctorCommandOptions): Promise<number> {
+  // Side-effecting pre-steps run before the diagnostic build so the
+  // post-cleanup tree is what `createDoctorData` reports on.
+  const sideEffectLines: string[] = [];
+  if (options.autoremediate) {
+    const isCi = process.env["CI"] === "true";
+    const summary = await runAutoremediate({
+      root: options.root,
+      dryRun: Boolean(options.dryRun),
+      yes: Boolean(options.yes),
+      isCi,
+    });
+    sideEffectLines.push(...summary.lines);
+    if (summary.disabledInCi) {
+      // Honor AC-0006-0018: autoremediate disabled in CI; no diagnostic
+      // build needed for the CI off path.
+      info(sideEffectLines.join("\n"));
+      return 0;
+    }
+  } else if (options.clean) {
+    const { config } = await loadConfig(options.root);
+    const ttlDays = config.review?.staleTtlDays;
+    const result = await cleanStaleReviewPacks(options.root, {
+      ...(typeof ttlDays === "number" ? { ttlDays } : {}),
+      ...(options.dryRun ? { dryRun: true } : {}),
+    });
+    sideEffectLines.push(
+      `doctor --clean: archived=${result.archived.length}, in-ttl=${result.skippedInTtl.length} (ttlDays=${result.ttlDays})`,
+    );
+    for (const entry of result.archived) {
+      sideEffectLines.push(`  -> _archive/${entry.packName}`);
+    }
+  }
+
   const data = await createDoctorData({
     startDir: options.root,
     rootExplicit: options.rootExplicit,
     ...(options.profile ? { profile: options.profile } : {}),
+    ...(options.skillProfile ? { skillProfile: options.skillProfile } : {}),
     ...(options.targetUrl ? { targetUrl: options.targetUrl } : {}),
   });
 
   const output = options.format === "json" ? formatDoctorJson(data) : formatDoctorText(data);
+  const sideEffectPrefix = sideEffectLines.length > 0 ? `${sideEffectLines.join("\n")}\n` : "";
   const exitCode = shouldFailDoctor(data.summary, options.failOn) ? 1 : 0;
 
   if (options.outPath) {
@@ -89,12 +137,12 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
       ? options.outPath
       : path.resolve(process.cwd(), options.outPath);
     await mkdir(path.dirname(outAbs), { recursive: true });
-    await writeFile(outAbs, `${output}\n`, "utf-8");
+    await writeFile(outAbs, `${sideEffectPrefix}${output}\n`, "utf-8");
     info(`doctor: wrote ${outAbs}`);
     return exitCode;
   }
 
-  info(output);
+  info(`${sideEffectPrefix}${output}`);
   return exitCode;
 }
 

@@ -68,6 +68,7 @@ import {
   validateSurfaceTypeDrift,
   validateDesignMdPatchZone,
   detectEvidenceMutationUnlogged,
+  detectSkillManifestDrift,
   validateAutopilotPolicy,
   detectHandoffSchemaDrift,
   validateStaleReferences,
@@ -204,6 +205,10 @@ async function runSddValidators(
     // asymmetric schema ↔ writer edits. Handoff is a skill-governance
     // surface so it lives in sdd.
     ...(await detectHandoffSchemaDrift(root)),
+    // Pair III — fire `R-SKILL-MANIFEST-DRIFT` on asymmetric
+    // probe-impl ↔ manifest-schema edits. Skill-manifest governance
+    // lives in the sdd profile (skill-governance domain).
+    ...(await detectSkillManifestDrift(root)),
     // Doc governance — surface pre-implementation tokens in
     // `references/*.md` + SKILL.md as warning during the deprecation
     // window and error at sunset.

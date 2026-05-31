@@ -26,6 +26,17 @@ export type ParsedArgs = {
       | "verify"
       | "full"
       | "saas-package";
+    /**
+     * `qfai doctor --profile <skill>` per-skill profile. Distinct from
+     * the validate-side `profile` enum above: when `doctor --profile`
+     * receives a value outside the validate enum, the parser routes it
+     * here so the doctor command can probe the named skill manifest.
+     */
+    doctorSkillProfile?: string;
+    /** `qfai doctor --clean`: archive TTL-expired review packs. */
+    doctorClean?: boolean;
+    /** `qfai doctor --autoremediate`: orchestrate install + clean + config. */
+    doctorAutoremediate?: boolean;
     strict: boolean;
     failOn?: "never" | "warning" | "error";
     guardrailsAction?: "list" | "extract" | "check";
@@ -340,10 +351,27 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         if (isValidationProfile(next)) {
           options.profile = next;
+        } else if (command === "doctor" && isSkillProfileName(next)) {
+          // `qfai doctor --profile <skill>` accepts arbitrary skill
+          // names that fall outside the validate-side enum. The
+          // doctor command threads the value into the manifest probe.
+          options.doctorSkillProfile = next;
         } else {
           markInvalid();
         }
         i += 1;
+        break;
+      }
+      case "--clean": {
+        if (command === "doctor") {
+          options.doctorClean = true;
+        }
+        break;
+      }
+      case "--autoremediate": {
+        if (command === "doctor") {
+          options.doctorAutoremediate = true;
+        }
         break;
       }
       case "--fail-on": {
@@ -697,6 +725,12 @@ function normalizeGuardrailsAction(value: string): "list" | "extract" | "check" 
     default:
       return null;
   }
+}
+
+function isSkillProfileName(value: string): boolean {
+  // Skill names are non-empty, lower-kebab-case-ish identifiers. Keep
+  // the gate permissive so future skills don't need a parser update.
+  return /^[a-z][a-z0-9-]*$/u.test(value);
 }
 
 function isValidationProfile(

@@ -63,7 +63,9 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     case "doctor":
       {
         if (options.profile && options.profile !== "prototyping") {
-          error("qfai doctor: only --profile prototyping is supported.");
+          error(
+            "qfai doctor: --profile accepts 'prototyping' or a skill name (e.g. 'qfai-prototyping').",
+          );
           info(usage());
           process.exitCode = options.invalidExitCode;
           return;
@@ -75,9 +77,16 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.doctorOut !== undefined ? { outPath: options.doctorOut } : {}),
           ...(options.failOn && options.failOn !== "never" ? { failOn: options.failOn } : {}),
           ...(options.profile === "prototyping" ? { profile: "prototyping" as const } : {}),
+          ...(options.doctorSkillProfile !== undefined
+            ? { skillProfile: options.doctorSkillProfile }
+            : {}),
           ...(options.profile === "prototyping" && options.prototypingTargetUrl
             ? { targetUrl: options.prototypingTargetUrl }
             : {}),
+          ...(options.doctorClean ? { clean: true } : {}),
+          ...(options.doctorAutoremediate ? { autoremediate: true } : {}),
+          ...(options.dryRun ? { dryRun: true } : {}),
+          ...(options.yes ? { yes: true } : {}),
         });
         process.exitCode = exitCode;
       }
