@@ -19,8 +19,8 @@
 
 | TDD-ID   | TC-Refs      | Layer       | Test file                                                                        | Selector                                                                                | Status | DR-ID                              | Evidence                                                                |
 | -------- | ------------ | ----------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------ | ---------------------------------- | ----------------------------------------------------------------------- |
-| TDD-0013 | TC-0008-0013 | integration | packages/qfai/tests/integration/atddScaffoldSkeleton.test.ts                     | TC-0008-0013: scaffold emits per-TC skeleton with TODO + Refs (US/AC/TC)                | todo   | DR-0008-0002 (→ DR-0272)           | pending — new TC introduced 2026-05-27 (v1.9.2 second-wave); REQ-0157   |
-| TDD-0014 | TC-0008-0014 | integration | packages/qfai/tests/integration/atddScaffoldEscalation.test.ts                   | TC-0008-0014: scaffold idempotency + 3-cycle escalation (atdd.scaffoldEscalateCycles)   | todo   | DR-0008-0002 (→ DR-0272)           | pending — new TC introduced 2026-05-27 (v1.9.2 second-wave); REQ-0157   |
+| TDD-0013 | TC-0008-0013 | integration | packages/qfai/tests/integration/atddScaffoldSkeleton.test.ts                     | TC-0008-0013: scaffold emits per-TC skeleton with TODO + Refs (US/AC/TC)                | done   | DR-0008-0002 (→ DR-0272)           | RED→GREEN 2026-06-01 (W4 c1acb533); reviewers PASS×3; REQ-0157   |
+| TDD-0014 | TC-0008-0014 | integration | packages/qfai/tests/integration/atddScaffoldEscalation.test.ts                   | TC-0008-0014: scaffold idempotency + 3-cycle escalation (atdd.scaffoldEscalateCycles)   | done   | DR-0008-0002 (→ DR-0272)           | RED→GREEN 2026-06-01 (W4 c1acb533); reviewers PASS×3; REQ-0157   |
 
 CHG-006 notes:
 
