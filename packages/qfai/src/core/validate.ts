@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
+import { runSaasPackageProfile } from "./saasPackage/profile.js";
 import { collectScenarioFiles } from "./discovery.js";
 import {
   buildScCoverage,
@@ -139,7 +140,18 @@ async function runProfileValidators(
     case "verify":
     case "full":
       return runFullValidators(root, config, platformOption);
+    case "saas-package":
+      return runSaasPackage(root, config, platformOption);
   }
+}
+
+async function runSaasPackage(
+  root: string,
+  config: ConfigLoadResult["config"],
+  platformOption?: string,
+): Promise<Issue[]> {
+  const prototypingIssues = await runPrototypingValidators(root, config, platformOption);
+  return runSaasPackageProfile(root, config, prototypingIssues);
 }
 
 async function runDiscussionValidators(

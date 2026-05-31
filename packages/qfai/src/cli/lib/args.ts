@@ -17,7 +17,15 @@ export type ParsedArgs = {
     doctorFormat: "text" | "json";
     doctorOut?: string;
     validateFormat: "text" | "github";
-    profile?: "discussion" | "sdd" | "prototyping" | "atdd" | "tdd" | "verify" | "full";
+    profile?:
+      | "discussion"
+      | "sdd"
+      | "prototyping"
+      | "atdd"
+      | "tdd"
+      | "verify"
+      | "full"
+      | "saas-package";
     strict: boolean;
     failOn?: "never" | "warning" | "error";
     guardrailsAction?: "list" | "extract" | "check";
@@ -693,7 +701,15 @@ function normalizeGuardrailsAction(value: string): "list" | "extract" | "check" 
 
 function isValidationProfile(
   value: string,
-): value is "discussion" | "sdd" | "prototyping" | "atdd" | "tdd" | "verify" | "full" {
+): value is
+  | "discussion"
+  | "sdd"
+  | "prototyping"
+  | "atdd"
+  | "tdd"
+  | "verify"
+  | "full"
+  | "saas-package" {
   return (
     value === "discussion" ||
     value === "sdd" ||
@@ -701,6 +717,7 @@ function isValidationProfile(
     value === "atdd" ||
     value === "tdd" ||
     value === "verify" ||
-    value === "full"
+    value === "full" ||
+    value === "saas-package"
   );
 }
