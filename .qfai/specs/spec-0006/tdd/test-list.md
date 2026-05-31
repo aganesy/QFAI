@@ -26,3 +26,21 @@
 ## Notes
 
 - CHG-005 (2026-05-25): TDD-0012..0020 cover REQ-0107 / REQ-0122 (NFR-0112). Implementation surface: (a) `playwrightCliLauncher.ts` → `playwrightLauncher.ts` rename + probe order flip (playwright primary / npx fallback / playwright-cli deprecation-window); (b) `doctor.ts` skills.integrity severity downgrade to warning + 2-group summary split.
+
+## CHG-006 v1.9.2 second-wave — doctor --clean TTL + --autoremediate + per-skill manifest probe (2026-05-31)
+
+| TDD-ID   | TC-Refs      | Layer       | Test file                                                              | Selector                                                                                | Status | DR-ID                       | Evidence                                                                |
+| -------- | ------------ | ----------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------ | --------------------------- | ----------------------------------------------------------------------- |
+| TDD-0021 | TC-0006-0019 | integration | packages/qfai/tests/integration/cli/commands/doctorClean.archive.test.ts | TC-0006-0019: --clean archives TTL-expired review pack into _archive/                  | todo   | DR-0006-0003 (→ DR-0264)    | pending — new TC introduced 2026-05-27 (v1.9.2 second-wave); REQ-0153   |
+| TDD-0022 | TC-0006-0020 | integration | packages/qfai/tests/integration/cli/commands/doctorClean.noDelete.test.ts | TC-0006-0020: --clean never deletes; validate --profile review excludes _archive       | todo   | DR-0006-0003 (→ DR-0264)    | pending — new TC introduced 2026-05-27 (v1.9.2 second-wave); REQ-0153   |
+| TDD-0023 | TC-0006-0021 | integration | packages/qfai/tests/integration/cli/commands/doctorAutoremediate.fixes.test.ts | TC-0006-0021: --autoremediate --yes fixes install + clean + config                     | todo   | (REQ-0156)                  | pending — new TC introduced 2026-05-27 (v1.9.2 second-wave); REQ-0156   |
+| TDD-0024 | TC-0006-0022 | integration | packages/qfai/tests/integration/cli/commands/doctorAutoremediate.ciOff.test.ts | TC-0006-0022: CI=true autoremediate off; --dry-run no side effects                     | todo   | (REQ-0156)                  | pending — new TC introduced 2026-05-27 (v1.9.2 second-wave); REQ-0156   |
+| TDD-0025 | TC-0006-0023 | unit        | packages/qfai/tests/unit/core/doctor/staleTtl.test.ts                  | TC-0006-0023: review.staleTtlDays override changes TTL boundary (boundary)              | todo   | DR-0006-0003 (→ DR-0264)    | pending — new TC introduced 2026-05-27 (v1.9.2 second-wave); REQ-0153   |
+| TDD-0026 | TC-0006-0024 | integration | packages/qfai/tests/integration/cli/commands/doctorSkillProfile.probe.test.ts | TC-0006-0024: --profile <skill> probes manifest runtimeDependencies                    | todo   | (Pair III; REQ-0159)        | pending — new TC introduced 2026-05-27 (v1.9.2 second-wave); REQ-0159   |
+| TDD-0027 | TC-0006-0025 | unit        | packages/qfai/tests/unit/core/doctor/skillManifestProbe.empty.test.ts  | TC-0006-0025: empty runtimeDependencies → no probe finding (no false positive)          | todo   | (REQ-0159)                  | pending — new TC introduced 2026-05-27 (v1.9.2 second-wave); REQ-0159   |
+| TDD-0028 | TC-0006-0026 | integration | packages/qfai/tests/integration/validators/skillManifestDrift.test.ts  | TC-0006-0026: manifest↔probe drift → R-SKILL-MANIFEST-DRIFT (SSOT-sync Pair III)        | todo   | (Pair III; REQ-0159)        | pending — new TC introduced 2026-05-27 (v1.9.2 second-wave); REQ-0159   |
+
+CHG-006 notes:
+
+- TDD-0021..0028 cover REQ-0153 (doctor --clean review-pack TTL archival), REQ-0156 (doctor --autoremediate mode), REQ-0159 (per-skill manifest probe / Pair III). Cross-spec decisions cited from `_policies/08_Decisions.md`: DR-0264 (review.staleTtlDays default 14d). REQ-0159 manifest-schema authoring + distributed-surface lint side is owned by spec-0015; this slice covers the doctor probe behavior only.
+- Ledger sync follow-up: the spec-0006 CHG-006 SDD wave omitted `UPDATE:APPEND tdd/test-list.md` from its triage table. This section reconciles the ledger before `/qfai-implement` proceeds.

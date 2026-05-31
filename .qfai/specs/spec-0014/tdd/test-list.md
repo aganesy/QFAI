@@ -12,3 +12,15 @@
 | TDD-0032 | TC-0014-0032 | unit        | packages/qfai/tests/validators/uix/designSystemPresence.test.ts | read-only handling          | done      | DR-0014-0002 | current design-system validator pass     |
 | TDD-0033 | TC-0014-0033 | unit        | packages/qfai/tests/cli/commands/prototypingIterate.test.ts     | iter-NN path layout         | done      | DR-0014-0001 | current iterate path-layout suite pass   |
 | TDD-0034 | TC-0014-0034 | unit        | packages/qfai/tests/cli/commands/prototypingIterate.test.ts     | cycle 0 deletes fullHarness | done      | DR-0014-0001 | current iterate cycle-0 reset suite pass |
+
+## CHG-006 v1.9.2 second-wave — certify --scope saas-package + --upgrade-scope (2026-05-31)
+
+| TDD-ID   | TC-Refs      | Layer       | Test file                                                                            | Selector                                                                                | Status | DR-ID                              | Evidence                                                                |
+| -------- | ------------ | ----------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ------ | ---------------------------------- | ----------------------------------------------------------------------- |
+| TDD-0035 | TC-0014-0035 | integration | packages/qfai/tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts  | TC-0014-0035: certify --scope saas-package seals certificate w/ scope + notes:          | todo   | DR-0014-0004 (cites DR-0274)       | pending — new TC introduced 2026-05-27 (v1.9.2 second-wave); REQ-0166   |
+| TDD-0036 | TC-0014-0036 | integration | packages/qfai/tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts | TC-0014-0036: --upgrade-scope full rejected while gates missing; accepted once they PASS | todo   | DR-0014-0004 (cites DR-0274)       | pending — new TC introduced 2026-05-27 (v1.9.2 second-wave); REQ-0166   |
+
+CHG-006 notes:
+
+- TDD-0035..0036 cover REQ-0166 (certify side; validate-profile side `qfai validate --profile saas-package` owned by spec-0004). Certificate carries `scope: "saas-package"` + non-empty `notes:` naming each skipped ATDD / implement-class gate; never claims full DONE. `--upgrade-scope full` gated on missing gates landing. Cross-spec decisions cited from `_policies/08_Decisions.md` DR-0274; one-minor deprecation window per OC-63.
+- Ledger sync follow-up: the spec-0014 CHG-006 SDD wave omitted `UPDATE:APPEND tdd/test-list.md` from its triage table. This section reconciles the ledger before `/qfai-implement` proceeds.
