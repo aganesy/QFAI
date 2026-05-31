@@ -1,3 +1,4 @@
+import { runAtddScaffold } from "./commands/atddScaffold.js";
 import { runAuditLog } from "./commands/auditLog.js";
 import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
@@ -121,6 +122,27 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.auditScope !== undefined ? { scope: options.auditScope } : {}),
           ...(options.auditOperator !== undefined ? { operator: options.auditOperator } : {}),
           ...(options.auditClause !== undefined ? { clause: options.auditClause } : {}),
+        });
+      }
+      return;
+    case "atdd":
+      {
+        if (!options.atddAction) {
+          error("qfai atdd: unknown or missing subcommand. Expected: scaffold");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        if (!options.atddSpecId) {
+          error("qfai atdd scaffold: --spec <id> is required.");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        const resolvedRoot = await resolveRoot(options);
+        process.exitCode = await runAtddScaffold({
+          root: resolvedRoot,
+          specId: options.atddSpecId,
         });
       }
       return;
@@ -262,6 +284,7 @@ Commands:
   discussion use <id>          active discussion session pointer を設定
   audit log [filters]          .qfai/evidence/decisions/ の決定ログを一覧 (--scope/--operator/--clause + --format table|json)
   handoff upgrade <legacy>     legacy handoff ファイルを canonical handoff.yaml に変換 (CLI-HANDOFF)
+  atdd scaffold --spec <id>    spec の Test-Cases から per-TC test skeleton を生成（idempotent + N-cycle escalation）
   prototyping preflight        prototyping 実行前提（spec/ui/design contracts/roles/browser/targetUrl）を診断
   prototyping iterate          single-thread evolution loop の cycle 確定
   prototyping certify [--check]         completion-certificate.json を生成 / 検証

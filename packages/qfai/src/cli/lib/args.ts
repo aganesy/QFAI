@@ -128,6 +128,10 @@ export type ParsedArgs = {
     handoffAction?: "upgrade";
     /** Positional `<legacy-file>` for `qfai handoff upgrade`. */
     handoffLegacyFile?: string;
+    /** Subcommand for `qfai atdd <scaffold>`. */
+    atddAction?: "scaffold";
+    /** `--spec <id>` value for `qfai atdd scaffold`. */
+    atddSpecId?: string;
     help: boolean;
     invalidExitCode: number;
   };
@@ -231,6 +235,19 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           args.shift();
         }
       }
+    }
+  }
+
+  // `qfai atdd <subcommand>` — currently only `scaffold` is supported.
+  if (command === "atdd") {
+    const candidate = args[0];
+    if (candidate && !candidate.startsWith("--")) {
+      if (candidate === "scaffold") {
+        options.atddAction = candidate;
+      } else {
+        markInvalid();
+      }
+      args.shift();
     }
   }
 
@@ -602,6 +619,19 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         i += 1;
         break;
       }
+      case "--spec": {
+        if (command !== "atdd") {
+          break;
+        }
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        options.atddSpecId = next;
+        i += 1;
+        break;
+      }
       case "--scope": {
         if (command !== "audit") {
           break;
@@ -663,6 +693,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     markInvalid();
   }
   if (command === "handoff" && !options.help && !options.handoffAction) {
+    markInvalid();
+  }
+  if (command === "atdd" && !options.help && !options.atddAction) {
     markInvalid();
   }
   return { command, invalid, options };
