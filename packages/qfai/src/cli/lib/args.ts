@@ -58,6 +58,21 @@ export type ParsedArgs = {
     prototypingCycle?: number;
     /** --check flag for `qfai prototyping certify --check`. */
     prototypingCheckOnly?: boolean;
+    /**
+     * --scope <saas-package|full> for `qfai prototyping certify`. When
+     * set to `saas-package`, the sealed certificate carries
+     * `scope: "saas-package"` + `notes[]` enumerating the gates the
+     * saas-package profile deliberately skips. Default (omitted) seals
+     * a full-scope certificate.
+     */
+    prototypingScope?: "saas-package" | "full";
+    /**
+     * --upgrade-scope full for `qfai prototyping certify`. Re-gates the
+     * gates skipped by the existing scope-limited certificate against
+     * the current project state; rewrites the certificate without the
+     * scope-limited markers on success.
+     */
+    prototypingUpgradeScopeFull?: boolean;
     /** --license-patch <file> for `qfai prototyping iterate`. */
     prototypingLicensePatch?: string;
     /** --primary-spec-id <value> for `qfai prototyping iterate`. */
@@ -633,7 +648,25 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       }
       case "--scope": {
-        if (command !== "audit") {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        if (command === "audit") {
+          options.auditScope = next;
+        } else if (command === "prototyping" && options.prototypingAction === "certify") {
+          if (next === "saas-package" || next === "full") {
+            options.prototypingScope = next;
+          } else {
+            markInvalid();
+          }
+        }
+        i += 1;
+        break;
+      }
+      case "--upgrade-scope": {
+        if (command !== "prototyping" || options.prototypingAction !== "certify") {
           break;
         }
         const next = readOptionValue(args, i);
@@ -641,7 +674,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid();
           break;
         }
-        options.auditScope = next;
+        if (next === "full") {
+          options.prototypingUpgradeScopeFull = true;
+        } else {
+          markInvalid();
+        }
         i += 1;
         break;
       }

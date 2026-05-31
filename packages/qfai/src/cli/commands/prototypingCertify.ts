@@ -38,7 +38,9 @@ import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/proto
 import {
   buildCompletionCertificate,
   checkCompletionCertificate,
+  loadCompletionCertificate,
   writeCompletionCertificate,
+  type CompletionCertificate,
   type CompletionCertificateDesignMd,
 } from "../../core/prototyping/certificate.js";
 import {
@@ -65,6 +67,7 @@ import {
   classifyFrozenSpecsCoveredMultiSpec,
   readFrozenSpecsCovered,
 } from "../../core/prototyping/specsCovered.js";
+import { SAAS_PACKAGE_SKIPPED_GATES } from "../../core/saasPackage/skippedGates.js";
 import { resolveToolVersion } from "../../core/version.js";
 import { error, info, warn } from "../lib/logger.js";
 
@@ -72,7 +75,39 @@ export type RunPrototypingCertifyOptions = {
   root: string;
   /** When true, do not write; only verify the existing certificate. */
   check: boolean;
+  /**
+   * Optional scope-limited posture. When set to `"saas-package"`, the
+   * sealed certificate carries `scope: "saas-package"` + `notes[]`
+   * naming the gates intentionally skipped under that scope. Default
+   * (omitted) seals a full-scope certificate.
+   */
+  scope?: "saas-package" | "full";
+  /**
+   * Upgrade an existing scope-limited certificate to full DONE. The
+   * impl re-gates the previously-skipped gates against the current
+   * project state; if any still fail, exits non-zero and names them.
+   * On success, rewrites the certificate WITHOUT the scope-limited
+   * markers (no `scope`, no `notes`) — the canonical full-DONE shape.
+   */
+  upgradeScopeFull?: boolean;
 };
+
+/**
+ * Per-gate skip note shape attached to a scope-limited certificate's
+ * `notes[]`. Kept in sync with the `SAAS_PACKAGE_SKIPPED_GATES` SSOT.
+ */
+function formatSaasPackageSkipNote(gate: string): string {
+  return `${gate}: skipped under saas-package scope`;
+}
+
+/**
+ * Path (relative to the project root, POSIX) of the optional
+ * "saas-package gates passing" signal used by `--upgrade-scope full`.
+ * The file is a validate-style record carrying per-gate status entries
+ * for every name in `SAAS_PACKAGE_SKIPPED_GATES`. Absent → upgrade
+ * refuses (the gates have not been re-run yet).
+ */
+const SAAS_PACKAGE_GATES_SIGNAL_REL = ".qfai/output/validate-saas-package.json";
 
 const ROOT_DESIGN_MD_REL = "DESIGN.md";
 
@@ -105,6 +140,16 @@ export async function runPrototypingCertify(
       error(`  - ${reason}`);
     }
     return 2;
+  }
+
+  // ─── Upgrade-scope path ────────────────────────────────────────────────────
+  // `upgradeScopeFull` rewrites an existing scope-limited certificate in
+  // place — promoting it to the canonical full-DONE shape — once the
+  // previously-skipped gates pass against the current project state.
+  // Branch BEFORE the regular write path so the upgrade is purely a
+  // re-gate + cert-rewrite (no second full prototyping pipeline).
+  if (options.upgradeScopeFull === true) {
+    return runUpgradeScopeFull(options.root);
   }
 
   // ─── Generate mode ─────────────────────────────────────────────────────────
@@ -716,6 +761,16 @@ export async function runPrototypingCertify(
     sha256: frozenSha,
   };
 
+  // Scope-limited posture: when `--scope saas-package` is set, attach
+  // the `scope` marker plus a `notes[]` array enumerating the gates the
+  // saas-package profile deliberately skips. `--scope full` (or omitted)
+  // seals the canonical full-DONE certificate with no scope/notes
+  // fields.
+  const isSaasPackageScope = options.scope === "saas-package";
+  const saasPackageNotes = isSaasPackageScope
+    ? SAAS_PACKAGE_SKIPPED_GATES.map(formatSaasPackageSkipNote)
+    : undefined;
+
   const cert = await buildCompletionCertificate({
     runId,
     toolVersion,
@@ -730,6 +785,8 @@ export async function runPrototypingCertify(
     iterationCount,
     specsCovered,
     designMd: designMdRecord,
+    ...(isSaasPackageScope ? { scope: "saas-package" as const } : {}),
+    ...(saasPackageNotes ? { notes: saasPackageNotes } : {}),
   });
 
   const certPath = await writeCompletionCertificate(options.root, cert);
@@ -922,6 +979,125 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
   }
   info(JSON.stringify(payload, null, 2));
   return 0;
+}
+
+/**
+ * Implementation of `--upgrade-scope full`. Reads the existing
+ * scope-limited certificate, re-gates the previously-skipped saas-
+ * package gates against the current project state, and — when all
+ * pass — rewrites the certificate WITHOUT the scope-limited markers
+ * (no `scope`, no `notes`). If any named gate is still missing /
+ * failing, exits non-zero and names the still-missing gates on
+ * stderr.
+ *
+ * The gate-pass signal lives at `.qfai/output/validate-saas-package.json`
+ * — a validate-style record produced by re-running
+ * `qfai validate --profile saas-package` against the now-complete
+ * surface. Pragmatic shortcut: the upgrade path checks for that
+ * single signal (presence, `counts.error === 0`, and per-gate
+ * `status === "PASS"` for each name in `SAAS_PACKAGE_SKIPPED_GATES`)
+ * rather than re-invoking every validator inline. Operators run
+ * `qfai validate --profile saas-package` to produce the signal,
+ * then `qfai prototyping certify --upgrade-scope full` consumes it.
+ */
+async function runUpgradeScopeFull(root: string): Promise<number> {
+  const cert = await loadCompletionCertificate(root);
+  if (!cert) {
+    error(
+      "qfai prototyping certify: cannot upgrade scope — completion-certificate.json " +
+        "is missing or unparseable. Seal a scope-limited certificate first " +
+        "(e.g. `qfai prototyping certify --scope saas-package`).",
+    );
+    return 2;
+  }
+  if (typeof cert.scope !== "string" || cert.scope.length === 0) {
+    error(
+      "qfai prototyping certify: cannot upgrade scope — the existing certificate " +
+        "carries no `scope` marker (already full-scope). Re-run without " +
+        "--upgrade-scope.",
+    );
+    return 2;
+  }
+
+  // Re-gate against the saas-package gates signal. Read it once; treat
+  // missing / malformed / non-PASS entries as "still skipped" and name
+  // them in stderr. This keeps the upgrade path purely a re-gate
+  // operation grounded in evidence files already produced by the
+  // validate-side surface.
+  const signalAbs = path.join(root, SAAS_PACKAGE_GATES_SIGNAL_REL);
+  const signal = await loadJson(signalAbs);
+  const stillMissing = resolveStillMissingSaasPackageGates(signal);
+  if (stillMissing.length > 0) {
+    error(
+      "qfai prototyping certify: cannot upgrade to full scope — the following " +
+        "gate(s) named in the certificate's notes are still missing or not PASS:",
+    );
+    for (const gate of stillMissing) {
+      error(`  - ${gate}`);
+    }
+    error(
+      `Re-run \`qfai validate --profile saas-package\` so that ${SAAS_PACKAGE_GATES_SIGNAL_REL} ` +
+        "reports counts.error=0 and every gate as PASS, then re-run certify --upgrade-scope full.",
+    );
+    return 2;
+  }
+
+  // All previously-skipped gates now pass: rewrite the certificate
+  // WITHOUT the scope-limited markers. Preserve every other field.
+  const upgraded = stripScopeMarkers(cert);
+  const out = await writeCompletionCertificate(root, upgraded);
+  info(`qfai prototyping certify: upgraded ${out} to full scope (dropped scope, notes)`);
+  return 0;
+}
+
+/**
+ * Inspect a `.qfai/output/validate-saas-package.json` payload and return
+ * the saas-package gates that are still NOT confirmed passing. A gate is
+ * considered passing only when the payload carries `gates.<gate>.status
+ * === "PASS"` AND the top-level `counts.error === 0`. Anything else
+ * keeps the gate in the still-missing set — including a fully absent
+ * signal file (`null` payload).
+ */
+function resolveStillMissingSaasPackageGates(signal: unknown): string[] {
+  if (!isRecord(signal)) {
+    return [...SAAS_PACKAGE_SKIPPED_GATES];
+  }
+  const errorCount = extractNumber(extractRecord(signal, "counts"), "error");
+  if (errorCount !== 0) {
+    return [...SAAS_PACKAGE_SKIPPED_GATES];
+  }
+  const gates = extractRecord(signal, "gates");
+  if (!gates) {
+    return [...SAAS_PACKAGE_SKIPPED_GATES];
+  }
+  const missing: string[] = [];
+  for (const gate of SAAS_PACKAGE_SKIPPED_GATES) {
+    const entry = extractRecord(gates, gate);
+    if (!entry || extractString(entry, "status") !== "PASS") {
+      missing.push(gate);
+    }
+  }
+  return missing;
+}
+
+/**
+ * Return a copy of `cert` with the scope-limited markers (`scope`,
+ * `notes`) dropped. Preserves every other field bit-stable.
+ */
+function stripScopeMarkers(cert: CompletionCertificate): CompletionCertificate {
+  const next: CompletionCertificate = {
+    runId: cert.runId,
+    generatedAt: cert.generatedAt,
+    generator: cert.generator,
+    evidenceDigests: cert.evidenceDigests,
+    validateRun: cert.validateRun,
+    verifyRun: cert.verifyRun,
+    reviewerSignoff: cert.reviewerSignoff,
+    iterationCount: cert.iterationCount,
+    specsCovered: cert.specsCovered,
+    ...(cert.designMd ? { designMd: cert.designMd } : {}),
+  };
+  return next;
 }
 
 /**

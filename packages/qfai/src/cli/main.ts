@@ -204,6 +204,10 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           process.exitCode = await runPrototypingCertify({
             root: resolvedRoot,
             check: Boolean(options.prototypingCheckOnly),
+            ...(options.prototypingScope !== undefined
+              ? { scope: options.prototypingScope }
+              : {}),
+            ...(options.prototypingUpgradeScopeFull ? { upgradeScopeFull: true } : {}),
           });
           return;
         }
@@ -288,6 +292,8 @@ Commands:
   prototyping preflight        prototyping 実行前提（spec/ui/design contracts/roles/browser/targetUrl）を診断
   prototyping iterate          single-thread evolution loop の cycle 確定
   prototyping certify [--check]         completion-certificate.json を生成 / 検証
+                                        [--scope <saas-package|full>] scope 限定 certificate を発行
+                                        [--upgrade-scope full] scope 限定 certificate を full DONE に昇格
   prototyping show-spec                 解決された primary prototyping spec を出力
 
 Options:
@@ -326,6 +332,8 @@ Options:
   --skeleton-mode <placeholder|full|stub>  prototyping iterate --cycle 0 --emit-skeletons: 出力モード (default placeholder)
   --mode <convergence|exploration>  prototyping iterate: loop posture (default convergence; exploration は soft-rubric gates のみ warning へ medium relaxation)
   --scope <value>               audit log: scope フィールドで filter
+  --scope <saas-package|full>   prototyping certify: scope 限定 certificate を発行 (saas-package は notes[] に skip 対象 gate を列挙)
+  --upgrade-scope full          prototyping certify: scope 限定 certificate を full DONE に昇格 (validate --profile saas-package の signal を再評価)
   --operator <value>            audit log: operatorIdentity フィールドで filter
   --clause <substring>          audit log: envelopeContractClause で substring filter
   -h, --help      ヘルプ表示
