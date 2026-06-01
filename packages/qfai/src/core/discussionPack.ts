@@ -1,10 +1,28 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
+import { loadConfig } from "./config.js";
 import type { UiBearingClassification } from "./detection/surfaceType.js";
 import { readValidatedClassification } from "./detection/surfaceType.js";
 import { findPacks, latestPack as selectLatestPack } from "./packLocator.js";
 import { readDiscussionCurrentId } from "./state.js";
+
+/**
+ * Resolve the discussion root for `<root>` honoring
+ * `config.paths.discussionDir` (which may be relative OR absolute).
+ * Used by both `inspectLatestDiscussionPack` callers and
+ * `resolveActiveDiscussionPack` so they always agree with the
+ * CLI-side `qfai discussion list --active` resolver.
+ *
+ * `path.resolve` (not `path.join`) preserves an absolute config
+ * value verbatim — projects that relocate their discussion packs
+ * outside `<root>` (e.g. shared review machines, custom CI layouts)
+ * still find the same packs the CLI resolver does.
+ */
+async function resolveDiscussionRootFromConfig(root: string): Promise<string> {
+  const { config } = await loadConfig(root);
+  return path.resolve(root, config.paths.discussionDir);
+}
 
 export const DISCUSSION_PACK_DIR_RE = /^discussion-(\d{17})$/;
 
@@ -177,7 +195,14 @@ export class ResolveActiveDiscussionPackError extends Error {
  * `qfai discussion use <id>`.
  */
 export async function resolveActiveDiscussionPack(root: string): Promise<string> {
-  const discussionRoot = path.join(root, ".qfai", "discussion");
+  // Honor `paths.discussionDir` from qfai.config.yaml. The previous
+  // hardcoded `<root>/.qfai/discussion` did not match what the CLI
+  // `qfai discussion list --active` resolver (discussion.ts) reads,
+  // so a project that relocates discussionDir (relative OR absolute)
+  // could `qfai discussion use <id>` successfully, then have callers
+  // of this active-pack resolver report the pack as missing because
+  // it was scanning the wrong directory.
+  const discussionRoot = await resolveDiscussionRootFromConfig(root);
   const currentId = await readDiscussionCurrentId(root);
   const candidates = await findPacks(discussionRoot, "discussion");
   const candidateNames = candidates

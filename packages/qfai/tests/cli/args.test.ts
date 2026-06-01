@@ -218,4 +218,73 @@ describe("parseArgs", () => {
     expect(parsed.invalid).toBe(true);
     expect(parsed.options.help).toBe(true);
   });
+
+  // Pin the unified value-taking-flag contract (see args.ts contract
+  // block): when --spec / --scope / --upgrade-scope / --operator /
+  // --clause are used on a subcommand that does NOT accept the flag,
+  // the parser MUST (1) consume the value token so it cannot leak
+  // into the positional stream, AND (2) call markInvalid() so the
+  // misuse surfaces as a parse error. Pre-fix, --spec / --operator /
+  // --clause silently dropped on misuse, and --upgrade-scope did
+  // not consume its value. Per-flag assertions follow.
+  describe("misplaced-subcommand value-taking flags: markInvalid + consume value token", () => {
+    it("--spec on a non-atdd subcommand marks invalid AND consumes the value token", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["audit", "log", "--spec", "spec-0006", "--format", "json"], cwd);
+      expect(parsed.invalid).toBe(true);
+      // The "spec-0006" value must NOT have shifted into a positional;
+      // --format following it should still be honored.
+      expect(parsed.options.auditAction).toBe("log");
+      // No atdd spec id should have been recorded.
+      expect(parsed.options.atddSpecId).toBeUndefined();
+    });
+
+    it("--operator on a non-audit subcommand marks invalid AND consumes the value token", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(
+        ["validate", "--operator", "alice", "--format", "github"],
+        cwd,
+      );
+      expect(parsed.invalid).toBe(true);
+      // "alice" must NOT have shifted into a positional, so --format
+      // remains parseable downstream.
+      expect(parsed.options.validateFormat).toBe("github");
+      expect(parsed.options.auditOperator).toBeUndefined();
+    });
+
+    it("--clause on a non-audit subcommand marks invalid AND consumes the value token", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(
+        ["report", "--clause", "skill-envelope", "--format", "json"],
+        cwd,
+      );
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.reportFormat).toBe("json");
+      expect(parsed.options.auditClause).toBeUndefined();
+    });
+
+    it("--scope on a non-audit/non-certify subcommand marks invalid AND consumes the value token", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(
+        ["validate", "--scope", "saas-package", "--format", "github"],
+        cwd,
+      );
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.validateFormat).toBe("github");
+      // Neither audit-scope nor prototyping-scope should be populated.
+      expect(parsed.options.auditScope).toBeUndefined();
+      expect(parsed.options.prototypingScope).toBeUndefined();
+    });
+
+    it("--upgrade-scope on a non-certify subcommand marks invalid AND consumes the value token", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(
+        ["validate", "--upgrade-scope", "full", "--format", "github"],
+        cwd,
+      );
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.validateFormat).toBe("github");
+      expect(parsed.options.prototypingUpgradeScopeFull).toBeUndefined();
+    });
+  });
 });
