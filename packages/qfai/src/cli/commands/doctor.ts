@@ -129,11 +129,27 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
       ...(typeof ttlDays === "number" ? { ttlDays } : {}),
       ...(options.dryRun ? { dryRun: true } : {}),
     });
-    sideEffectLines.push(
-      `doctor --clean: archived=${result.archived.length}, in-ttl=${result.skippedInTtl.length} (ttlDays=${result.ttlDays})`,
-    );
-    for (const entry of result.archived) {
-      sideEffectLines.push(`  -> _archive/${entry.packName}`);
+    // Phrase the side-effect summary in the future tense when `--dry-run`
+    // is in effect. `cleanStaleReviewPacks` still populates
+    // `result.archived` under dry-run (it lists the packs the live
+    // command WOULD move), so reusing the past-tense
+    // `archived=N` wording from the live path would falsely read as
+    // "rename happened". Mirror the `autoremediate` dry-run vocabulary
+    // (`would run ...` / `would fill ...`).
+    if (options.dryRun) {
+      sideEffectLines.push(
+        `doctor --clean (dry-run): would archive=${result.archived.length}, in-ttl=${result.skippedInTtl.length} (ttlDays=${result.ttlDays})`,
+      );
+      for (const entry of result.archived) {
+        sideEffectLines.push(`  would move -> _archive/${entry.packName}`);
+      }
+    } else {
+      sideEffectLines.push(
+        `doctor --clean: archived=${result.archived.length}, in-ttl=${result.skippedInTtl.length} (ttlDays=${result.ttlDays})`,
+      );
+      for (const entry of result.archived) {
+        sideEffectLines.push(`  -> _archive/${entry.packName}`);
+      }
     }
   }
 
@@ -146,8 +162,20 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   });
 
   const output = options.format === "json" ? formatDoctorJson(data) : formatDoctorText(data);
-  const sideEffectPrefix = sideEffectLines.length > 0 ? `${sideEffectLines.join("\n")}\n` : "";
+  const isJson = options.format === "json";
+  // Keep `--format json` output machine-parseable: side-effect summary
+  // lines (clean / autoremediate) are routed to stderr instead of being
+  // prepended to stdout (and to the `--out` file), which would corrupt
+  // the JSON document for any consumer that pipes stdout to `jq` or
+  // reads the file with `JSON.parse`. Under `--format text` the prefix
+  // remains on stdout (legacy human-readable behavior).
+  const sideEffectPrefix =
+    !isJson && sideEffectLines.length > 0 ? `${sideEffectLines.join("\n")}\n` : "";
   const exitCode = shouldFailDoctor(data.summary, options.failOn) ? 1 : 0;
+
+  if (isJson && sideEffectLines.length > 0) {
+    process.stderr.write(`${sideEffectLines.join("\n")}\n`);
+  }
 
   if (options.outPath) {
     const outAbs = path.isAbsolute(options.outPath)

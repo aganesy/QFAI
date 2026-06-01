@@ -115,4 +115,77 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
     expect(seenOptions.length).toBe(1);
     expect(seenOptions[0]?.skill).toBeUndefined();
   });
+
+  // Pin the "install phase skipped" operator note so the `--profile <skill>`
+  // ↔ install-emission contract cannot silently drift. Pre-pin, the note
+  // emission (`!options.skillProfile` in runDoctor) and the install branch
+  // gate (`if (options.skill)` in runAutoremediate) could fall out of
+  // lockstep without any test failing. Two assertions: (1) the note appears
+  // on stdout when skillProfile is absent; (2) the note does NOT appear when
+  // a valid skillProfile is passed. The `info()` logger writes to
+  // process.stdout.write, so the capture target is stdout (not console.log).
+  it("emits 'install phase skipped' on stdout when no skillProfile is set, and suppresses it when one is", async () => {
+    vi.spyOn(autoremediateModule, "runAutoremediate").mockImplementation(async () => ({
+      lines: [],
+      disabledInCi: false,
+    }));
+
+    function captureStdout(): { restore: () => void; read: () => string } {
+      const chunks: string[] = [];
+      const original = process.stdout.write.bind(process.stdout);
+      const spy = vi
+        .spyOn(process.stdout, "write")
+        .mockImplementation(((chunk: string | Uint8Array) => {
+          chunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
+          return true;
+        }) as typeof process.stdout.write);
+      return {
+        restore: () => {
+          spy.mockRestore();
+          void original;
+        },
+        read: () => chunks.join(""),
+      };
+    }
+
+    // Case A: no skillProfile → note expected on stdout.
+    const rootA = await newTempDir("note-absent-profile");
+    const capA = captureStdout();
+    const exitA = await runDoctor({
+      root: rootA,
+      rootExplicit: true,
+      format: "text",
+      autoremediate: true,
+      yes: true,
+    });
+    const stdoutA = capA.read();
+    capA.restore();
+    expect(exitA).toBe(0);
+    expect(stdoutA).toMatch(
+      /doctor --autoremediate: install phase skipped \(provide --profile <skill> to probe a skill manifest's runtimeDependencies\)\./,
+    );
+
+    // Case B: with skillProfile → note must NOT appear.
+    const rootB = await newTempDir("note-present-profile");
+    const manifestDir = path.join(rootB, ".qfai", "assistant", "skills", "qfai-prototyping");
+    await mkdir(manifestDir, { recursive: true });
+    await writeFile(
+      path.join(manifestDir, "manifest.json"),
+      JSON.stringify({ runtimeDependencies: [] }, null, 2),
+      "utf-8",
+    );
+    const capB = captureStdout();
+    const exitB = await runDoctor({
+      root: rootB,
+      rootExplicit: true,
+      format: "text",
+      autoremediate: true,
+      skillProfile: "qfai-prototyping",
+      yes: true,
+    });
+    const stdoutB = capB.read();
+    capB.restore();
+    expect(exitB).toBe(0);
+    expect(stdoutB).not.toMatch(/doctor --autoremediate: install phase skipped/);
+  });
 });

@@ -124,6 +124,7 @@ function formatSaasPackageSkipNote(gate: string): string {
  */
 const SAAS_PACKAGE_GATES_SIGNAL_DEFAULT_REL = ".qfai/report/validate-saas-package.json";
 const SAAS_PACKAGE_GATES_SIGNAL_LEGACY_REL = ".qfai/output/validate-saas-package.json";
+const FULL_PROFILE_GATES_SIGNAL_DEFAULT_REL = ".qfai/report/validate-full.json";
 
 /**
  * Resolve the saas-package gates signal canonical path from a loaded
@@ -142,6 +143,25 @@ function resolveSaasPackageGatesSignalRel(config: ConfigLoadResult["config"]): s
     return SAAS_PACKAGE_GATES_SIGNAL_DEFAULT_REL;
   }
   return profileSuffixedReportPath(configured, "saas-package");
+}
+
+/**
+ * Resolve the `--profile full` gates signal canonical path from a
+ * loaded config. The recovery message emitted by the upgrade-scope
+ * refusal path (when the saas-package signal is inadmissible)
+ * instructs operators to re-run `qfai validate --profile full`, which
+ * writes `.qfai/report/validate-full.json` via the same
+ * {@link profileSuffixedReportPath} derivation. The reader probes this
+ * fuller-profile path so that the recovery loop actually closes
+ * (otherwise the upgrade would refuse forever even after the operator
+ * follows the printed instruction).
+ */
+function resolveFullProfileGatesSignalRel(config: ConfigLoadResult["config"]): string {
+  const configured = config.output.validateJsonPath;
+  if (typeof configured !== "string" || configured.length === 0) {
+    return FULL_PROFILE_GATES_SIGNAL_DEFAULT_REL;
+  }
+  return profileSuffixedReportPath(configured, "full");
 }
 
 const ROOT_DESIGN_MD_REL = "DESIGN.md";
@@ -340,26 +360,15 @@ export async function runPrototypingCertify(
     return 2;
   }
 
-  // CHG-006 prototyping-mode discriminator: certify cannot seal a loop that
-  // produced any exploration-mode iteration. Emit
-  // R-EXPLORATION-CERTIFY-ATTEMPT and refuse with exit 2; the operator
-  // re-runs iterate with --mode convergence (or omits the flag) and
-  // re-converges before certifying. The view is structurally extracted
-  // (no bare `as` casts on the unknown iteration payload).
-  const iterationViews = extractIterationViewsForCertify(protoJson);
-  const explorationIssues = detectExplorationCertifyAttempt({ iterations: iterationViews });
-  if (explorationIssues.length > 0) {
-    for (const issue of explorationIssues) {
-      error(issue.message);
-    }
-    return 2;
-  }
   // Resolve the certify-accepted iteration index from the convergence-
-  // mode-only iterations. Today every iteration is convergence (we
-  // hard-refuse the mixed case above), so this resolves to the highest
-  // iteration index — but the helper is the SSOT shape so the future
-  // mixed-mode reuse stays honest.
-  const resolvedAcceptedIndex = resolveCertifyAcceptedIterationIndex(iterationViews);
+  // mode-only iterations. The earlier `earlyExplorationIssues` block
+  // (above) already hard-refuses any exploration-mode iteration with
+  // exit 2; `protoJson` is not reassigned between that block and here,
+  // so reuse the same view rather than rescanning the payload. Today
+  // every reachable iteration is convergence (mixed-mode is rejected
+  // above), so this resolves to the highest iteration index — but the
+  // helper is the SSOT shape so the future mixed-mode reuse stays honest.
+  const resolvedAcceptedIndex = resolveCertifyAcceptedIterationIndex(earlyIterationViews);
   const acceptedIterationIndex =
     resolvedAcceptedIndex !== null ? resolvedAcceptedIndex : iterationCount - 1;
   const acceptedIterDir = `iter-${String(acceptedIterationIndex).padStart(2, "0")}`;
@@ -1046,6 +1055,7 @@ async function runUpgradeScopeFull(
   config: ConfigLoadResult["config"],
 ): Promise<number> {
   const canonicalSignalRel = resolveSaasPackageGatesSignalRel(config);
+  const fullProfileSignalRel = resolveFullProfileGatesSignalRel(config);
   const cert = await loadCompletionCertificate(root);
   if (!cert) {
     error(
@@ -1076,9 +1086,20 @@ async function runUpgradeScopeFull(
   // one-line stderr note surfaces the fallback so operators can
   // migrate to the canonical location at their convenience.
   const canonicalAbs = path.join(root, canonicalSignalRel);
+  const fullProfileAbs = path.join(root, fullProfileSignalRel);
   const legacyAbs = path.join(root, SAAS_PACKAGE_GATES_SIGNAL_LEGACY_REL);
-  const signalRead = await loadSaasPackageGatesSignal(canonicalAbs, legacyAbs);
-  if (signalRead.source === "legacy") {
+  const signalRead = await loadSaasPackageGatesSignal(canonicalAbs, fullProfileAbs, legacyAbs);
+  if (signalRead.source === "full-profile") {
+    // Hint (not deprecation): the operator followed the recovery path
+    // and re-ran under `--profile full`, so its profile-suffixed report
+    // is the admissible signal. Surface the path on stderr so log
+    // readers can see which file actually drove the decision without
+    // affecting the success exit code.
+    process.stderr.write(
+      `qfai prototyping certify: Reading fuller-profile gates signal ` +
+        `(${fullProfileSignalRel}); saas-package profile is INADMISSIBLE for upgrade.\n`,
+    );
+  } else if (signalRead.source === "legacy") {
     // Write the deprecation note directly to stderr — the `warn`
     // logger emits to stdout, which the upgrade-scope contract
     // reserves for operator-facing positive output. A stderr-only
@@ -1168,11 +1189,12 @@ async function runUpgradeScopeFull(
  */
 type SaasPackageGatesSignalRead = {
   payload: unknown;
-  source: "canonical" | "legacy" | "none";
+  source: "canonical" | "full-profile" | "legacy" | "none";
 };
 
 async function loadSaasPackageGatesSignal(
   canonicalAbs: string,
+  fullProfileAbs: string,
   legacyAbs: string,
 ): Promise<SaasPackageGatesSignalRead> {
   // probe canonical first — does the file exist on disk? We need to
@@ -1196,7 +1218,28 @@ async function loadSaasPackageGatesSignal(
     const payload = await loadJson(canonicalAbs);
     return { payload, source: "canonical" };
   }
-  // Canonical absent: try legacy. Legacy missing → no signal at all.
+  // Canonical absent: try the `--profile full` report next. The
+  // saas-package profile is INADMISSIBLE for upgrade-scope full (it
+  // unconditionally emits one skip finding per gate, so the skip-set
+  // can never be emptied within that profile). The upgrade refusal
+  // message instructs operators to re-run `qfai validate --profile full`,
+  // which writes a profile-suffixed `validate-full.json`. Reading that
+  // path here closes the recovery loop.
+  let fullProfileExists = false;
+  try {
+    const s = await stat(fullProfileAbs);
+    fullProfileExists = s.isFile();
+  } catch (err) {
+    if (!isEnoent(err)) {
+      fullProfileExists = true;
+    }
+  }
+  if (fullProfileExists) {
+    const payload = await loadJson(fullProfileAbs);
+    return { payload, source: "full-profile" };
+  }
+  // Both canonical and full-profile absent: try legacy. Legacy missing
+  // → no signal at all.
   let legacyExists = false;
   try {
     const s = await stat(legacyAbs);
@@ -1256,18 +1299,33 @@ async function loadSaasPackageGatesSignal(
  * branch for callers that want deterministic behaviour (e.g. unit tests
  * that seed both shapes).
  *
- * Anything not matching either shape returns the full
- * `SAAS_PACKAGE_SKIPPED_GATES` list — the upgrade refuses fail-closed
- * with all gates named in stderr. Refusal applies to: (a) `null` /
- * non-record payloads, (b) records lacking `counts.error` as a number,
- * (c) records with `counts.error > 0` (any validate failure),
- * (d) records lacking a `profile` field (malformed `{}` or hand-edited
- * signal with no recognizable ValidationResult shape), and
- * (e) records with `profile === "saas-package"` (INADMISSIBLE: the
- * saas-package profile unconditionally emits one skip finding per
- * gate; its skip-set can never be emptied — operators must re-run a
- * fuller profile such as `qfai validate --profile full`). Truncated /
- * malformed signals must NEVER default-to-success.
+ * The fail-closed refusal classes returned as the full
+ * `SAAS_PACKAGE_SKIPPED_GATES` list fall into two groups:
+ *
+ *   Shape-mismatch classes (apply to both branches, gates-map and
+ *   issues):
+ *     (a) `null` / non-record payloads;
+ *     (b) records lacking `counts.error` as a number — no recognizable
+ *         ValidationResult / synthetic-gates shape.
+ *
+ *   Validate-failure class (well-formed signal whose own counts say
+ *   "failure"; applies to both branches):
+ *     (c) records with `counts.error > 0` — the signal IS a recognizable
+ *         shape, but it reports the validate run failed, so the
+ *         upgrade refuses fail-closed (treats failed-but-formatted
+ *         results identically to malformed input).
+ *
+ *   Profile-only classes (apply to the issues branch ONLY; the
+ *   synthetic gates-map branch does not consult `profile`):
+ *     (d) records lacking a `profile` field (malformed `{}` or
+ *         hand-edited signal with no recognizable ValidationResult
+ *         shape);
+ *     (e) records with `profile === "saas-package"` (INADMISSIBLE: the
+ *         saas-package profile unconditionally emits one skip finding
+ *         per gate; its skip-set can never be emptied — operators must
+ *         re-run a fuller profile such as `qfai validate --profile full`).
+ *
+ * Truncated / malformed signals must NEVER default-to-success.
  */
 type StillMissingMode = "auto" | "gates" | "issues";
 
