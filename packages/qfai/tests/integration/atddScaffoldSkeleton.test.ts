@@ -238,6 +238,50 @@ describe("atdd scaffold — per-TC skeleton emission", () => {
     expect(body101).toContain("Type: validators");
   });
 
+  // Symmetry regression: the table-form layer cell is stored as-is
+  // (lowercased + trimmed) without a closed allow-list. Pre-fix, the
+  // parser restricted the layer cell to `unit|integration|validators|
+  // e2e|ssot-guard` and silently dropped any cell outside that set —
+  // while the heading-form `- Type: <value>` branch stored the raw
+  // value with no allow-list. The asymmetry made `entry.type`
+  // unreliable as a classification key. After the fix, BOTH paths
+  // store the value as-is so downstream code sees consistent
+  // behavior; the value is opaque to the parser.
+  it("preserves arbitrary table-form layer cells (no closed allow-list)", async () => {
+    const specId = "spec-0001";
+    const specDir = path.join(root, ".qfai", "specs", specId);
+    await mkdir(specDir, { recursive: true });
+    const tcCatalogue = [
+      "# 06 Test Cases",
+      "",
+      "| TC-ID        | Level              | AC-Refs      | EX-Ref       |",
+      "| ------------ | ------------------ | ------------ | ------------ |",
+      "| TC-0001-0300 | contract           | AC-0001-0300 | EX-0001-0300 |",
+      "| TC-0001-0301 | property-based     | AC-0001-0301 | EX-0001-0301 |",
+      "",
+    ].join("\n");
+    await writeFile(path.join(specDir, "06_Test-Cases.md"), tcCatalogue, "utf-8");
+
+    const errors: string[] = [];
+    const code = await runAtddScaffold({
+      root,
+      specId,
+      write: () => {},
+      writeErr: (m) => errors.push(m),
+    });
+    expect(code).toBe(0);
+    expect(errors).toEqual([]);
+
+    const outDir = path.join(root, "tests", "atdd", specId);
+    const body300 = await readFile(path.join(outDir, "TC-0001-0300.test.ts"), "utf-8");
+    const body301 = await readFile(path.join(outDir, "TC-0001-0301.test.ts"), "utf-8");
+
+    // Non-allow-list table-form layer cells now flow through as
+    // `entry.type` and surface in the skeleton annotation.
+    expect(body300).toContain("Type: contract");
+    expect(body301).toContain("Type: property-based");
+  });
+
   // Mixed-form spec: heading-form entry takes precedence over a
   // duplicate table row for the same TC id. Ensures the dedup rule
   // does not double-emit OR overwrite heading-derived meta.

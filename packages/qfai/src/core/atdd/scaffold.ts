@@ -30,7 +30,23 @@ export type TCEntry = {
   exRefs: string[];
   /** Optional `AC-Refs:` referenced acceptance criterion IDs. */
   acRefs: string[];
-  /** Optional `Type:` field (e.g. `normal`, `error`, `boundary`). */
+  /**
+   * Optional `Type:` field (heading form) OR table-form layer cell.
+   *
+   * Stored as-is from the spec source — heading-form values are
+   * passed through with whitespace trimmed; table-form layer cells
+   * are lowercased + trimmed. Consumers MUST treat this as an
+   * opaque string. The two parse paths use the same normalization
+   * conventions on purpose so downstream code keying off `entry.type`
+   * sees consistent behavior regardless of which catalogue shape the
+   * spec used.
+   *
+   * Heading-form values seen in current specs include `normal`,
+   * `error`, `error/boundary`, `boundary`; table-form layer cells
+   * include `unit`, `integration`, `validators`, `e2e`, `ssot-guard`.
+   * The two vocabularies are intentionally distinct — neither side
+   * applies a closed allow-list to the other's vocabulary.
+   */
   type?: string;
 };
 
@@ -55,15 +71,13 @@ const ID_TOKEN_RE = /\b(?:AC|TC|EX|US|REQ|BR|SC|CON-API)-\d{4}(?:-\d{4})?\b/g;
 // AC-NNNN-NNNN / EX-NNNN-NNNN tokens — the column ORDER differs across
 // specs, so a positional read would be brittle.
 const TC_TABLE_ROW_RE = /^\s*\|\s*(TC-\d{4}-\d{4})\s*\|/;
-// Recognised TC layer/type tokens used in the table-form 2nd column. A
-// closed allow-list avoids mis-tagging stray words as `entry.type`.
-const TABLE_LAYER_TOKENS = new Set([
-  "unit",
-  "integration",
-  "validators",
-  "e2e",
-  "ssot-guard",
-]);
+// Markdown header-divider rows (`| --- | --- |`, optionally with
+// alignment colons like `:---:` / `---:`). Used to skip the divider
+// row before it lands in a TCEntry.type via the layer-cell read. The
+// row already fails TC_TABLE_ROW_RE (first cell is `---`, not a
+// TC-NNNN-NNNN id) so this is defence-in-depth — preserved for
+// readability and to make the rejection explicit.
+const TC_TABLE_DIVIDER_CELL_RE = /^:?-{3,}:?$/;
 
 function extractIds(value: string): string[] {
   const matches = value.match(ID_TOKEN_RE);
@@ -91,10 +105,20 @@ function parseTableRow(line: string): TCEntry | null {
   const cells = splitTableCells(line);
   const tcId = match[1];
   const entry: TCEntry = { tcId, title: "", exRefs: [], acRefs: [] };
-  // 2nd cell — layer/type when it matches the closed allow-list.
+  // 2nd cell — layer/type. Stored as the lowercased trimmed cell value
+  // with no closed allow-list. Symmetric with the heading-form
+  // `META_LINE_RE` `type:` branch (which stores `value.trim()` raw) so
+  // downstream consumers see consistent `entry.type` behavior across
+  // both catalogue shapes. The previous closed-allow-list constraint
+  // (`unit|integration|validators|e2e|ssot-guard`) introduced an
+  // asymmetry where the heading form passed any raw value through but
+  // the table form silently dropped layer cells outside the small set
+  // — making `entry.type` unreliable as a classification key. Empty
+  // and divider-only cells (`---`, `:---:`) are still rejected so the
+  // markdown table separator row never lands as a type value.
   if (cells.length >= 2) {
     const layer = (cells[1] ?? "").trim().toLowerCase();
-    if (layer.length > 0 && TABLE_LAYER_TOKENS.has(layer)) {
+    if (layer.length > 0 && !TC_TABLE_DIVIDER_CELL_RE.test(layer)) {
       entry.type = layer;
     }
   }
