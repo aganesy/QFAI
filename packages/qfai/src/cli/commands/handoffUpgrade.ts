@@ -178,10 +178,18 @@ function toYaml(canonical: Record<string, string>, legacy: Record<string, unknow
 }
 
 /**
- * Run the upgrade. Atomic write: stage to a `.tmp` sibling, fsync /
- * close, then `rename` over the canonical destination. If parsing
- * fails (or the legacy file is unreadable), no write to the canonical
- * file is performed.
+ * Run the upgrade. Two-stage write: stage to a `.tmp` sibling via
+ * `writeFile`, then `rename` over the canonical destination — POSIX
+ * rename within the same directory is atomic at the directory-entry
+ * level, so readers either see the old file or the new file (never a
+ * partial write). Note this does NOT include an explicit `fsync` —
+ * `writeFile` closes its file descriptor but does not flush the page
+ * cache, so a power-loss between the `writeFile` return and the
+ * `rename` could lose the staged content. The current contract is
+ * "no torn writes visible to readers", not "durable across power
+ * loss"; upgrade callers retry from the legacy source if the
+ * canonical write is lost. If parsing fails (or the legacy file is
+ * unreadable), no write to the canonical file is performed.
  */
 export async function runHandoffUpgrade(options: HandoffUpgradeOptions): Promise<number> {
   const write = options.write ?? logInfo;
@@ -243,9 +251,20 @@ export async function runHandoffUpgrade(options: HandoffUpgradeOptions): Promise
     }
     return 1;
   }
+  // Count only OPERATOR-visible legacy keys. The `__legacy_raw__`
+  // sentinel is an internal raw-bytes preservation key for the
+  // regex-fallback path; including it in the field count would make
+  // a non-flat YAML input (which produces a sentinel-only payload)
+  // misreport as "preserved 1 legacy field(s)" when the operator
+  // authored zero structurally-keyed fields. When the sentinel is
+  // present, surface the raw-bytes preservation separately so the
+  // count and the raw-text note are both accurate.
+  const visibleKeys = Object.keys(parsed).filter((k) => k !== LEGACY_RAW_SENTINEL);
+  const hasRawSentinel = Object.prototype.hasOwnProperty.call(parsed, LEGACY_RAW_SENTINEL);
+  const rawNote = hasRawSentinel ? " (raw legacy text preserved verbatim)" : "";
   write(
     `qfai handoff upgrade: wrote ${path.relative(options.root, destAbs).replace(/\\/g, "/")} ` +
-      `(preserved ${Object.keys(parsed).length} legacy field(s) under legacy:).`,
+      `(preserved ${visibleKeys.length} legacy field(s) under legacy:${rawNote}).`,
   );
   return 0;
 }

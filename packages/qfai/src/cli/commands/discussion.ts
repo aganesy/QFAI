@@ -84,10 +84,14 @@ function emitAmbiguityError(
 /**
  * `qfai discussion list --active` — print the active-session pointer
  * read from `.qfai/state.json#discussion.currentId`. Never infers the
- * active session from filesystem timestamps. When the pointer is absent
- * (or resolves to a missing/duplicate dir) and multiple candidate
- * `discussion-*` dirs exist, exits non-zero naming the candidates and
- * the recovery command.
+ * active session from filesystem timestamps. The single-candidate
+ * fallback (pointer absent + exactly one `discussion-*` dir) is the
+ * one exception: it returns the lone candidate as the de-facto active
+ * session and surfaces a stderr note so the operator can tell a
+ * pointer-set output apart from an inference output. When the pointer
+ * is absent (or resolves to a missing/duplicate dir) and multiple
+ * candidate `discussion-*` dirs exist, exits non-zero naming the
+ * candidates and the recovery command.
  */
 async function runListActive(
   options: DiscussionOptions,
@@ -102,6 +106,15 @@ async function runListActive(
   if (currentId === null) {
     if (candidates.length === 1 && candidates[0]) {
       // Unambiguous: a single candidate is the de-facto active session.
+      // Emit a stderr note so the operator can distinguish this
+      // inference from a true pointer-set output (the stdout payload
+      // is identical in both cases). Once a second candidate appears
+      // the next invocation switches to the ambiguity-error path, so
+      // the note also primes operators for the future failure mode.
+      writeErr(
+        "qfai discussion list --active: (no pointer set; single candidate assumed — " +
+          "run 'qfai discussion use <id>' to pin)",
+      );
       return emitActive(candidates[0], format, write);
     }
     if (candidates.length === 0) {

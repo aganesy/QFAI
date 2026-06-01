@@ -661,12 +661,27 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           } else {
             markInvalid();
           }
+        } else {
+          // `--scope` is meaningful only for `audit` and
+          // `prototyping certify`. On any other (sub)command, surface
+          // the misuse via markInvalid() instead of silently consuming
+          // `next` — which would shift subsequent positionals and
+          // produce confusing downstream errors. The branch still
+          // consumes `next` (`i += 1` below) so we do not double-count
+          // it as a separate token.
+          markInvalid();
         }
         i += 1;
         break;
       }
       case "--upgrade-scope": {
         if (command !== "prototyping" || options.prototypingAction !== "certify") {
+          // Same rationale as `--scope` above: emit a clear invalid
+          // signal rather than silently dropping the flag. We do NOT
+          // consume `next` here — preserving the pre-fix behaviour
+          // (no `i += 1`) keeps the bare `--upgrade-scope` case from
+          // shifting positionals when used on a wrong subcommand.
+          markInvalid();
           break;
         }
         const next = readOptionValue(args, i);

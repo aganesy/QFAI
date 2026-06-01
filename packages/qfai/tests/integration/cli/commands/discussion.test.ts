@@ -154,3 +154,57 @@ describe("TC-0010-0013: ambiguous/absent pointer recovery error", () => {
     expect(combined).toMatch(/qfai discussion use <id>/);
   });
 });
+
+// Pin the path.resolve(...) (vs path.join) behaviour of
+// resolveDiscussionRoot: an absolute `paths.discussionDir` in
+// qfai.config.yaml must be honored verbatim instead of being
+// concatenated under `<root>`. Pre-fix, an absolute config value was
+// silently ignored (path.join treated `<root>` as the base); the
+// discussionDir resolved to `<root>/<configured-abs-path>` which on
+// Windows produced UNC-style nonsense and on POSIX simply re-anchored
+// to the wrong tree. The fix migrated to path.resolve, which preserves
+// absolute paths and only joins relative ones — this test pins that
+// contract so a future regression to path.join is caught immediately.
+describe("resolveDiscussionRoot honors absolute discussionDir verbatim", () => {
+  it("`discussion list --active` reads packs from an absolute paths.discussionDir", async () => {
+    const { writeFile } = await import("node:fs/promises");
+    // Create a totally separate dir tree (NOT under `root`) and place
+    // a single discussion-* candidate there. If resolveDiscussionRoot
+    // regressed to path.join, the lookup would land under
+    // `<root>/<absoluteDir>` and find no candidates → the test would
+    // see the "no candidates" error path instead of the success path.
+    const absoluteDir = await mkdtemp(path.join(os.tmpdir(), "qfai-disc-abs-"));
+    try {
+      await mkdir(path.join(absoluteDir, "discussion-20260530120000000"), {
+        recursive: true,
+      });
+      // Write a qfai.config.yaml under `root` whose paths.discussionDir
+      // is the ABSOLUTE path we just created — not a relative subpath.
+      // The config loader normalizes via `loadConfig(root)` which is
+      // what resolveDiscussionRoot consults.
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        `paths:\n  discussionDir: "${absoluteDir.replace(/\\/g, "\\\\")}"\n`,
+        "utf-8",
+      );
+      const cap = capture();
+      const code = await runDiscussion({
+        root,
+        action: "list",
+        active: true,
+        format: "text",
+        write: cap.write,
+        writeErr: cap.writeErr,
+      });
+      // The lone candidate at the absolute dir must be returned as the
+      // de-facto active session via the stdout payload. The stderr
+      // "(no pointer set; single candidate assumed ...)" hint is
+      // emitted alongside but is not asserted here — the contract
+      // under test is the verbatim absolute-path resolution.
+      expect(code).toBe(0);
+      expect(cap.out.join("\n")).toMatch(/discussion-20260530120000000/);
+    } finally {
+      await rm(absoluteDir, { recursive: true, force: true });
+    }
+  });
+});

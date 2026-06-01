@@ -84,12 +84,17 @@ const DECISIONS_REL = path.join(".qfai", "evidence", "decisions");
 
 /**
  * File-safe ISO-8601 stamp. Colons are illegal in Windows filenames,
- * so they are replaced with `-` (mirrors common convention in other
- * QFAI evidence stamp paths, e.g. timestamped discussion dirs).
+ * so they are replaced with `-`. The millisecond component is
+ * RETAINED so two writes within the same second do not collide on
+ * disk and overwrite each other — envelope-deviation records are
+ * audit evidence and a silent overwrite would lose decision history.
+ * Dots are also `-`-replaced so the stamp ends up as a single
+ * filename-safe token without a stray `.` separator (e.g.
+ * `2026-05-28T15-42-31-123Z`).
  */
 function fileSafeIsoStamp(date: Date): string {
   const iso = date.toISOString();
-  return iso.replace(/:/g, "-").replace(/\.\d{3}Z$/, "Z");
+  return iso.replace(/[:.]/g, "-");
 }
 
 /**

@@ -309,8 +309,8 @@ Options:
   --format <text|json>         doctor / prototyping preflight / discussion list --active の出力形式
   --active                     discussion list: active session pointer を表示
   --strict                     validate: warning 以上で exit 1
-  --profile <discussion|sdd|prototyping|atdd|tdd|verify|full>  validate/report: 検証profileを指定
-  --profile <prototyping>      doctor: prototyping 固有の preflight 診断を追加
+  --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full>  validate/report: 検証profileを指定
+  --profile <prototyping|<skill>>  doctor: prototyping 固有の preflight 診断、または skill manifest の runtimeDependencies 探索
   --fail-on <error|warning|never>  validate: 失敗条件
   --fail-on <error|warning>        doctor / prototyping preflight: 失敗条件
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UXプラットフォーム指定
@@ -336,6 +336,9 @@ Options:
   --upgrade-scope full          prototyping certify: scope 限定 certificate を full DONE に昇格 (validate --profile saas-package の signal を再評価)
   --operator <value>            audit log: operatorIdentity フィールドで filter
   --clause <substring>          audit log: envelopeContractClause で substring filter
+  --clean                       doctor: TTL 超過 review pack を _archive/ へ退避 (--dry-run 併用可)
+  --autoremediate               doctor: install + clean + config-fill をまとめて実行
+  --spec <id>                   atdd scaffold: 対象 spec (例: spec-0006)
   -h, --help      ヘルプ表示
 `;
 }

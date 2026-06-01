@@ -12,6 +12,15 @@
 import { readDecisionRecords } from "../../core/decisionRecord.js";
 import { error as logError, info as logInfo } from "../lib/logger.js";
 
+/**
+ * `--format table` emits a tab-separated (TSV) layout — header row
+ * `timestamp\tscope\toperator\tclause` followed by one TSV record per
+ * row — NOT a column-padded ASCII table. The name is retained for
+ * backward compatibility with the `qfai audit log --format table`
+ * CLI surface; downstream consumers piping through `cut -f` or
+ * `awk -F"\t"` should depend on the TSV layout, not on aligned
+ * columns. Pass `--format json` for a structured payload.
+ */
 export type AuditLogFormat = "table" | "json";
 
 export type AuditLogOptions = {
@@ -34,10 +43,6 @@ export type AuditLogRecordView = {
   question: string;
   answer: string;
 };
-
-function toView(r: AuditLogRecordView): AuditLogRecordView {
-  return r;
-}
 
 function applyFilters(
   records: AuditLogRecordView[],
@@ -85,16 +90,14 @@ export async function runAuditLog(options: AuditLogOptions): Promise<number> {
   let records: AuditLogRecordView[];
   try {
     const raw = await readDecisionRecords(options.root);
-    records = raw.map((r) =>
-      toView({
-        timestamp: r.timestamp,
-        scope: r.scope,
-        operatorIdentity: r.operatorIdentity,
-        envelopeContractClause: r.envelopeContractClause,
-        question: r.question,
-        answer: r.answer,
-      }),
-    );
+    records = raw.map((r) => ({
+      timestamp: r.timestamp,
+      scope: r.scope,
+      operatorIdentity: r.operatorIdentity,
+      envelopeContractClause: r.envelopeContractClause,
+      question: r.question,
+      answer: r.answer,
+    }));
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     writeErr(`qfai audit log: failed to read decisions/: ${message}`);
