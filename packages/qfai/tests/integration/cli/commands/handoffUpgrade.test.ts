@@ -60,6 +60,112 @@ describe("TC-0015-0030: handoff upgrade emits conforming yaml + preserves origin
     expect(out.join("\n")).toMatch(/handoff\.yaml/);
   });
 
+  // Regression: nested YAML in the legacy body MUST be preserved under
+  // `legacy:` — pre-fix the regex scanner silently dropped indented
+  // values, violating AC-0015-0020.
+  it("preserves nested YAML mappings (signature.by / signature.on) under legacy:", async () => {
+    const nestedBody = [
+      "# legacy with nested YAML",
+      "companyName: Acme",
+      "primarySpecId: spec-0012",
+      "signature:",
+      "  by: user-alpha",
+      "  on: 2026-05-31T12:00:00Z",
+      "metadata:",
+      "  tags:",
+      "    - migration",
+      "    - second-wave",
+      "  reviewer: reviewer-bravo",
+      "",
+    ].join("\n");
+    await writeFile(path.join(root, "session-handoff.yaml"), nestedBody, "utf-8");
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "session-handoff.yaml",
+      write: () => undefined,
+      writeErr: () => undefined,
+    });
+    expect(code).toBe(0);
+    const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
+    // Canonical slots mapped.
+    expect(body).toMatch(/companyName: "Acme"/);
+    expect(body).toMatch(/primarySpecId: "spec-0012"/);
+    // Nested signature.by / signature.on preserved under legacy:.
+    expect(body).toMatch(/signature:/);
+    expect(body).toMatch(/by: user-alpha/);
+    expect(body).toMatch(/on: 2026-05-31T12:00:00Z/);
+    // Nested list under metadata.tags preserved.
+    expect(body).toMatch(/metadata:/);
+    expect(body).toMatch(/tags:/);
+    expect(body).toMatch(/- migration/);
+    expect(body).toMatch(/- second-wave/);
+    expect(body).toMatch(/reviewer: reviewer-bravo/);
+  });
+
+  // Regression: mixed scalar + nested keys must BOTH be preserved.
+  it("preserves a mix of scalar and nested values under legacy:", async () => {
+    const mixedBody = [
+      "companyName: MixedCo",
+      "customScalar: hello",
+      "nestedBlock:",
+      "  inner: value",
+      "  innerNumber: 42",
+      "",
+    ].join("\n");
+    await writeFile(path.join(root, "legacy.yaml"), mixedBody, "utf-8");
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "legacy.yaml",
+      write: () => undefined,
+      writeErr: () => undefined,
+    });
+    expect(code).toBe(0);
+    const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
+    expect(body).toMatch(/companyName: "MixedCo"/);
+    expect(body).toMatch(/customScalar: hello/);
+    expect(body).toMatch(/nestedBlock:/);
+    expect(body).toMatch(/inner: value/);
+    expect(body).toMatch(/innerNumber: 42/);
+  });
+
+  // Regression: malformed-but-non-empty legacy bodies (YAML parses to
+  // a non-object: list, scalar, null) MUST still produce a parseable
+  // canonical handoff.yaml with the raw legacy text preserved under
+  // the `__legacy_raw__` sentinel so AC-0015-0020's "no data is lost"
+  // contract holds even on shape mismatches.
+  it("preserves raw legacy text under __legacy_raw__ when YAML yields a non-object payload", async () => {
+    // A YAML sequence (top-level list) parses to an array — the
+    // structured-object branch refuses it, so the stage-3 fallback
+    // engages.
+    const listBody = [
+      "- item-one",
+      "- item-two",
+      "- item-three",
+      "",
+    ].join("\n");
+    await writeFile(path.join(root, "list-legacy.yaml"), listBody, "utf-8");
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "list-legacy.yaml",
+      write: () => undefined,
+      writeErr: () => undefined,
+    });
+    expect(code).toBe(0);
+    const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
+    // The raw sentinel and the original bytes are both present.
+    expect(body).toMatch(/legacy:/);
+    expect(body).toMatch(/__legacy_raw__/);
+    expect(body).toMatch(/item-one/);
+    expect(body).toMatch(/item-two/);
+    expect(body).toMatch(/item-three/);
+    // The canonical handoff.yaml must itself be re-parseable as YAML
+    // (the sentinel-bearing legacy block does not break the document).
+    const { parse: parseYaml } = await import("yaml");
+    const reparsed = parseYaml(body) as Record<string, unknown>;
+    expect(reparsed).toBeTruthy();
+    expect(reparsed.legacy).toBeTruthy();
+  });
+
   it("upgrades a JSON-formatted legacy file equally", async () => {
     const jsonBody = JSON.stringify(
       {

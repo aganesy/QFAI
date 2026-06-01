@@ -19,9 +19,22 @@
 import { mkdir, readFile, writeFile, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+
 import { isEnoent } from "../../core/fs/errno.js";
 import { HANDOFF_MINIMUM_FIELDS } from "../../core/schemas/handoff.js";
 import { error as logError, info as logInfo } from "../lib/logger.js";
+
+/**
+ * Sentinel key under which the raw legacy text is captured when the
+ * legacy payload cannot be parsed into a plain object (regex fallback
+ * case OR YAML returned a non-object like a list / scalar). Preserves
+ * the AC-0015-0020 contract — "ALL original fields preserved under
+ * `legacy:` so no data is lost" — by ensuring callers can always
+ * recover the original bytes even when structural keys were not
+ * extractable.
+ */
+const LEGACY_RAW_SENTINEL = "__legacy_raw__";
 
 const CANONICAL_HANDOFF_REL = ".qfai/handoff.yaml";
 
@@ -39,32 +52,24 @@ export type HandoffUpgradeOptions = {
 };
 
 /**
- * Crude YAML-or-JSON parser for the legacy handoff body. The legacy
- * format is intentionally heterogeneous (skills wrote ad-hoc YAML +
- * JSON variations); we accept either by tolerating JSON parse failure
- * and falling back to a simple `key: value` line scan that captures
- * scalar fields. Nested structures fall through into `legacy:` as-is
- * via the raw text — preservation, not parsing, is the contract.
+ * Test whether a parsed value is a plain object suitable for use as the
+ * legacy payload structure (i.e. `Record<string, unknown>` — not null,
+ * not an array, not a primitive). Used to gate JSON / YAML parse results
+ * before treating them as a structured legacy body.
  */
-function parseLegacyBody(text: string): Record<string, unknown> | null {
-  const trimmed = text.trim();
-  if (trimmed === "") return null;
-  // Try JSON first (deterministic; lossless).
-  try {
-    const parsed: unknown = JSON.parse(trimmed);
-    if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
-      return parsed as Record<string, unknown>;
-    }
-  } catch {
-    // fall through to YAML line scan
-  }
-  // Minimal YAML scalar key scan: `key: value` at column 0. Quoted
-  // strings are unwrapped. Nested / multi-line YAML is captured raw
-  // under a sentinel key so the legacy payload is preserved verbatim
-  // in the emitted file.
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+/**
+ * Minimal column-0 `key: value` regex fallback. Used when neither JSON
+ * nor YAML parsing yields a plain object. Captures scalar fields only;
+ * nested / multi-line YAML is silently dropped by this branch (preserved
+ * via the `__legacy_raw__` sentinel by the caller).
+ */
+function scanLegacyKeyValueLines(text: string): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   const lines = text.split(/\r?\n/);
-  let sawAnyKey = false;
   for (const line of lines) {
     if (/^\s*#/.test(line)) continue;
     const m = /^([A-Za-z_][\w-]*)\s*:\s*(.*)$/.exec(line);
@@ -72,32 +77,101 @@ function parseLegacyBody(text: string): Record<string, unknown> | null {
     const key = m[1];
     const rawValue = (m[2] ?? "").trim();
     if (rawValue === "") continue;
-    // Strip quotes if present.
     const unquoted = /^(["'])(.*)\1$/.exec(rawValue);
     result[key] = unquoted ? (unquoted[2] ?? "") : rawValue;
-    sawAnyKey = true;
   }
-  if (!sawAnyKey) return null;
   return result;
 }
 
 /**
- * Emit YAML for a flat object of scalar string values. Used for the
- * canonical handoff slots (all schema fields are strings) and for the
- * `legacy:` block. Non-scalar legacy values are JSON-quoted so the
- * round-trip is lossless.
+ * YAML-or-JSON parser for the legacy handoff body. The legacy format is
+ * intentionally heterogeneous (skills wrote ad-hoc YAML + JSON
+ * variations); we honor AC-0015-0020 ("ALL original fields preserved
+ * under `legacy:` so no data is lost") with a three-stage strategy:
+ *
+ *   1. Try JSON first — deterministic; lossless when input happens to
+ *      be a JSON object.
+ *   2. Otherwise parse as YAML via the `yaml` package. If parsing
+ *      succeeds and produces a plain object, return it as-is — this
+ *      preserves nested structures (e.g. `signature: { by, on }`) that
+ *      the legacy regex scanner silently dropped.
+ *   3. If YAML parsing fails OR produces a non-object (list, scalar,
+ *      null), fall back to the column-0 `key: value` regex scan AND
+ *      attach the raw text under the `__legacy_raw__` sentinel so the
+ *      original bytes are recoverable.
+ *
+ * Returns `null` only when the legacy file is empty / whitespace-only;
+ * any other input produces a non-empty record so the caller can write
+ * a canonical handoff.yaml.
  */
-function toYaml(obj: Record<string, unknown>, indent = ""): string {
+function parseLegacyBody(text: string): Record<string, unknown> | null {
+  const trimmed = text.trim();
+  if (trimmed === "") return null;
+  // Stage 1: JSON (lossless when applicable).
+  try {
+    const parsed: unknown = JSON.parse(trimmed);
+    if (isPlainObject(parsed)) {
+      return parsed;
+    }
+  } catch {
+    // fall through to YAML
+  }
+  // Stage 2: YAML via the `yaml` package. Nested structures
+  // (mappings under a key) are preserved verbatim by the parser.
+  let yamlParsed: unknown;
+  let yamlOk = false;
+  try {
+    yamlParsed = parseYaml(text);
+    yamlOk = true;
+  } catch {
+    yamlOk = false;
+  }
+  if (yamlOk && isPlainObject(yamlParsed)) {
+    return yamlParsed;
+  }
+  // Stage 3: regex fallback + raw-text preservation. Either YAML
+  // parsing failed entirely, or it yielded a non-object (list /
+  // scalar / null) that does not fit the legacy-keyed schema. Run the
+  // legacy scalar scan and ALWAYS attach the raw text under the
+  // sentinel key so callers can recover the original bytes.
+  //
+  // AC-0015-0020 demands "ALL original fields preserved under
+  // `legacy:` so no data is lost"; when neither JSON nor YAML
+  // produces a structured object AND no regex keys are extractable
+  // we still emit `{__legacy_raw__: <text>}` so the operator's
+  // bytes survive the upgrade rather than being silently rejected.
+  // The whitespace-only / empty case is rejected ABOVE (the
+  // `trimmed === ""` early return) — there is nothing to preserve.
+  const scanned = scanLegacyKeyValueLines(text);
+  scanned[LEGACY_RAW_SENTINEL] = text;
+  return scanned;
+}
+
+/**
+ * Emit YAML for the canonical handoff output. Canonical schema slots
+ * (all strings) are emitted with explicit JSON-quoted values so the
+ * shape stays predictable for downstream readers. The `legacy:` block
+ * is serialized via the `yaml` package's `stringify` so nested
+ * structures (e.g. `signature: { by, on }`) round-trip as proper
+ * indented YAML — guaranteeing AC-0015-0020's "no data is lost"
+ * contract even when the legacy body carried nested fields that the
+ * pre-fix regex scanner would have silently dropped.
+ */
+function toYaml(canonical: Record<string, string>, legacy: Record<string, unknown>): string {
   const lines: string[] = [];
-  for (const [key, value] of Object.entries(obj)) {
-    if (value === undefined || value === null) continue;
-    if (typeof value === "string") {
-      lines.push(`${indent}${key}: ${JSON.stringify(value)}`);
-    } else if (typeof value === "number" || typeof value === "boolean") {
-      lines.push(`${indent}${key}: ${String(value)}`);
-    } else {
-      // Object / array — emit as inline JSON for lossless preservation.
-      lines.push(`${indent}${key}: ${JSON.stringify(value)}`);
+  for (const [key, value] of Object.entries(canonical)) {
+    lines.push(`${key}: ${JSON.stringify(value)}`);
+  }
+  // Render the legacy block via the YAML library so nested mappings,
+  // sequences, and scalar types round-trip faithfully. Indent each
+  // produced line by two spaces under the `legacy:` key.
+  const legacyYaml = stringifyYaml(legacy).trimEnd();
+  if (legacyYaml.length === 0) {
+    lines.push("legacy: {}");
+  } else {
+    lines.push("legacy:");
+    for (const line of legacyYaml.split(/\r?\n/)) {
+      lines.push(line.length > 0 ? `  ${line}` : "");
     }
   }
   return lines.join("\n");
@@ -148,8 +222,7 @@ export async function runHandoffUpgrade(options: HandoffUpgradeOptions): Promise
       canonical[field] = v;
     }
   }
-  const output: Record<string, unknown> = { ...canonical, legacy: parsed };
-  const yaml = toYaml(output);
+  const yaml = toYaml(canonical, parsed);
   // Atomic write: stage to a sibling temp file, then rename. On any
   // mid-write failure we attempt to remove the temp file so the
   // canonical destination is left untouched. The parent directory
