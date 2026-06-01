@@ -190,4 +190,54 @@ describe("TC-0015-0030: handoff upgrade emits conforming yaml + preserves origin
     // Nested original payload preserved under legacy:
     expect(body).toMatch(/customExtra/);
   });
+
+  // Pin AC-0015-0020's "no data loss" contract for the YAML
+  // nested-keys path. The previous YAML test only covered flat
+  // scalar key=value pairs; the regex fallback at L70-83 would
+  // silently drop nested values from a non-flat YAML legacy file.
+  // M4 (commit 992f6a13) rewired parseLegacyBody to call
+  // `yaml.parse(...)` BEFORE the regex fallback, so nested mapping
+  // structures (`signature:\n  by: alice`, block scalars, etc.) now
+  // round-trip via `yaml.stringify` in toYaml. This test seeds a
+  // nested YAML legacy body and asserts the nested values land in
+  // the emitted `legacy:` block — pin the contract against future
+  // regression to a flat-only parser.
+  it("preserves nested YAML legacy fields under legacy: (no data loss)", async () => {
+    const nestedYaml = `# legacy session handoff with nested keys
+companyName: Acme
+primarySpecId: spec-0012
+signature:
+  by: alice
+  on: 2026-05-27
+metadata:
+  reviewer: bob
+  notes: |
+    multi-line
+    block scalar
+    survives
+`;
+    await writeFile(path.join(root, "session-handoff.yaml"), nestedYaml, "utf-8");
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "session-handoff.yaml",
+      write: () => undefined,
+      writeErr: () => undefined,
+    });
+    expect(code).toBe(0);
+    const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
+    // Canonical slots from the recognized fields.
+    expect(body).toMatch(/companyName: "Acme"/);
+    expect(body).toMatch(/primarySpecId: "spec-0012"/);
+    // Nested mapping values must appear in the emitted legacy: block.
+    // Pre-fix the column-0 regex scanner would drop these silently.
+    expect(body).toMatch(/signature:/);
+    expect(body).toMatch(/by: alice/);
+    expect(body).toMatch(/on: 2026-05-27/);
+    expect(body).toMatch(/metadata:/);
+    expect(body).toMatch(/reviewer: bob/);
+    // Block scalar content must round-trip — at least one
+    // representative line from the multi-line body survives.
+    expect(body).toMatch(/multi-line/);
+    expect(body).toMatch(/block scalar/);
+  });
 });

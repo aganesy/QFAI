@@ -93,7 +93,15 @@ async function tryFillConfigDefaults(
   }
   let appended = existing;
   for (const field of DEFAULT_KEYED_CONFIG_FIELDS) {
-    if (!appended.includes(field.yamlKey)) {
+    // Anchor key existence at column 0 of any line (multiline-mode
+    // regex) so we do NOT false-match nested keys (`  review:`),
+    // YAML comments (`# review:`), or substring occurrences in
+    // values (`description: "code_review: ..."`). The yamlKey
+    // SSOT carries the trailing colon, so escape the literal `:`
+    // when building the regex.
+    const literal = field.yamlKey.replace(/[\\^$.*+?()[\]{}|]/gu, "\\$&");
+    const keyRe = new RegExp(`^${literal}`, "mu");
+    if (!keyRe.test(appended)) {
       appended = `${appended.replace(/\s*$/u, "")}\n${field.defaultLine}`;
       written.push(field.yamlKey.replace(/:$/u, ""));
     }

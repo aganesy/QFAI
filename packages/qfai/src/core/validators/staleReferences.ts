@@ -126,7 +126,7 @@ export async function validateStaleReferences(
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     const skillDir = path.join(skillsDir, entry.name);
-    await scanSkillDir(root, skillDir, entry.name, severity, issues);
+    await scanSkillDir(root, skillDir, severity, issues);
   }
   return issues;
 }
@@ -134,7 +134,6 @@ export async function validateStaleReferences(
 async function scanSkillDir(
   root: string,
   skillDir: string,
-  skillId: string,
   severity: "warning" | "error",
   issues: Issue[],
 ): Promise<void> {
@@ -148,9 +147,6 @@ async function scanSkillDir(
     const full = path.join(refsDir, name);
     await scanFileForStaleRefs(root, full, severity, issues);
   }
-  // Mark `skillId` as used (placate noUnusedParameters; the skillId
-  // also surfaces in the relative path passed to issue()).
-  void skillId;
 }
 
 async function scanFileForStaleRefs(

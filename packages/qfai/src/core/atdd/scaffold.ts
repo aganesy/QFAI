@@ -99,10 +99,16 @@ function splitTableCells(line: string): string[] {
  * cells are scanned for AC- and EX- id tokens.
  */
 function parseTableRow(line: string): TCEntry | null {
+  // `TC_TABLE_ROW_RE` capture group 1 (`(TC-\d{4}-\d{4})`) is
+  // mandatory at the regex level, but TypeScript's
+  // `noUncheckedIndexedAccess` widens `match[1]` to `string |
+  // undefined`. Narrow via a single explicit binding so downstream
+  // uses (`{ tcId, ... }`) are statically typed as `string` without
+  // a bare `as` assertion.
   const match = TC_TABLE_ROW_RE.exec(line);
-  if (!match || match[1] === undefined) return null;
+  const tcId = match?.[1];
+  if (tcId === undefined) return null;
   const cells = splitTableCells(line);
-  const tcId = match[1];
   const entry: TCEntry = { tcId, title: "", exRefs: [], acRefs: [] };
   // 2nd cell — layer/type. Stored as the lowercased trimmed cell value
   // with no closed allow-list. Symmetric with the heading-form

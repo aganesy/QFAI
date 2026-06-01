@@ -58,13 +58,8 @@ async function listEntries(reviewRoot: string): Promise<{
     if (!REVIEW_PACK_DIR_RE.test(name)) continue;
     const abs = path.join(reviewRoot, name);
     try {
-      const dirStats = await stat(abs);
-      if (!dirStats.isDirectory()) continue;
-    } catch {
-      continue;
-    }
-    try {
       const stats = await stat(abs);
+      if (!stats.isDirectory()) continue;
       results.push({ name, abs, mtimeMs: stats.mtimeMs });
     } catch {
       continue;

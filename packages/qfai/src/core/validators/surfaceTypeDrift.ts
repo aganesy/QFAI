@@ -55,7 +55,7 @@ export async function validateSurfaceTypeDrift(
         "sdd.surfaceTypeDrift",
         [`spec-${specId}`, "D-SURFACE-TYPE-MISSING"],
         "canonical",
-        "Add 'surface_type: ui-bearing' to the spec frontmatter (or rerun /qfai-sdd which auto-populates it). Warning sunsets to error at the deprecation window close.",
+        "Add 'surface_type: ui-bearing' to the spec frontmatter (or rerun /qfai-sdd which auto-populates it). This warning is scheduled to escalate to error in a future minor release; treat it as priority-2 cleanup rather than blocking.",
       ),
     );
   }

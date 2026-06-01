@@ -1119,11 +1119,13 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 - Context: sidecar-first モデルで HTML mock は primary truth ではなく optional fallback
 - Rationale: sidecar artifacts が primary UI definition となり、HTML mock の不在は品質問題ではなくなった
 
-### DR-0106-A: QFAI-AUD-021 Selected Direction Audit Rule
+### DR-0106-A: QFAI-AUD-021 Selected Direction Audit Rule (SUPERSEDED)
 
+- **Status**: SUPERSEDED by the exploration-first rebuild (no live validator emits this code's original definition).
 - Decision: legacy single-winner sidecar に required selected-direction section が存在しない場合に migration error を追加
 - Context: 当時の sidecar-first モデルでは winner selection が discussion artifact に埋め込まれていたが、この posture は exploration-first rebuild で superseded となった
 - Rationale: design audit で selected direction の存在を強制し、設計意思決定の欠落を防止
+- **ID reuse note (CHG-006 / v1.9.2)**: the `QFAI-AUD-021` finding code has been re-bound to the new closed-schema structured `primary_tasks` rejection (DR-0013-0004, REQ-0164). The legacy "Selected Direction Audit Rule" semantics are dead code — no validator surface emits the original meaning. Future cross-references to `QFAI-AUD-021` MUST mean the v1.9.2 closed-schema rule; the legacy DR-0106-A entry is retained only as historical record. Live wiring lives at `core/validators/designAudit.ts` and the per-spec test files under `tests/unit/core/validators/auditProfile*.test.ts` + `tests/integration/primaryTasksStructured.test.ts`.
 
 ### DR-0107-A: Canonical Barrel Isolation
 
@@ -1700,7 +1702,7 @@ These rows resolve the 9 OQ rows the requirements-analyst left `deferred` for th
 - Source REQ: REQ-0119.
 - Trace: discussion-20260523221141355 OQ-0112 (deferred → resolved here).
 
-### DR-0261..0273: Second-Wave Defect-Remediation pack — deferred OQ resolutions (2026-05-27)
+### DR-0261..0274: Second-Wave Defect-Remediation pack — deferred OQ resolutions (2026-05-27)
 
 Source: discussion-20260527075558258 OQ-0152/0153/0154/0155/0156/0157/0158/0159/0160/0162/0163 + the REQ-0157 scaffold-escalate residual + OQ-0167 (`/qfai-sdd` slice-time resolutions).
 These rows pin the specific implementation contract the per-spec slices (Spec A–K) cite. The acceptance signals for the underlying REQs (REQ-0150..0173) are invariant across each option set; the choices below select one option so downstream implementation, validation, and reviewer-gate code can be written against a single resolution. ID note: the next free plain `DR-NNNN` at authoring time was `DR-0261` (DR-0258/0259/0260 were consumed by CHG-003), so this family begins at DR-0261. OQ-0161 (memory schema), OQ-0164 (per-rule `proseCritique` configurability) and OQ-0165 (`/proposal` family) remain `deferred` (ops-owned) and are NOT decided here.

@@ -47,9 +47,9 @@ function validateSpecId(specId: string): boolean {
   return /^spec-\d{3,4}$/.test(specId);
 }
 
-async function resolveEscalateThreshold(root: string): Promise<number> {
-  const { config } = await loadConfig(root);
-  const configured = config.atdd?.scaffoldEscalateCycles;
+function resolveEscalateThreshold(
+  configured: number | undefined,
+): number {
   if (
     typeof configured === "number" &&
     Number.isFinite(configured) &&
@@ -135,7 +135,15 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
     return 1;
   }
 
-  const specDir = path.join(options.root, ".qfai", "specs", specId);
+  // Honor `paths.specsDir` from qfai.config.yaml so projects with
+  // relocated spec packs work end-to-end. Pre-fix the spec dir was
+  // hardcoded to `.qfai/specs/` which broke parity with the rest of
+  // the validators (they resolve specs through `config.paths.specsDir`).
+  // The config load also yields the escalation-threshold value used
+  // below, so both reads come from the same config snapshot.
+  const { config } = await loadConfig(options.root);
+  const specsDirRel = config.paths.specsDir;
+  const specDir = path.resolve(options.root, specsDirRel, specId);
   let entries: TCEntry[];
   try {
     entries = await parseTestCases(specDir);
@@ -153,7 +161,7 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
     return 1;
   }
 
-  const threshold = await resolveEscalateThreshold(options.root);
+  const threshold = resolveEscalateThreshold(config.atdd?.scaffoldEscalateCycles);
 
   const outcomes: PerTcOutcome[] = [];
   for (const entry of entries) {

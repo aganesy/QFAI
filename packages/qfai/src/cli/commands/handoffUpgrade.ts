@@ -251,17 +251,22 @@ export async function runHandoffUpgrade(options: HandoffUpgradeOptions): Promise
     }
     return 1;
   }
-  // Count only OPERATOR-visible legacy keys. The `__legacy_raw__`
-  // sentinel is an internal raw-bytes preservation key for the
-  // regex-fallback path; including it in the field count would make
-  // a non-flat YAML input (which produces a sentinel-only payload)
-  // misreport as "preserved 1 legacy field(s)" when the operator
-  // authored zero structurally-keyed fields. When the sentinel is
-  // present, surface the raw-bytes preservation separately so the
-  // count and the raw-text note are both accurate.
+  // Count only OPERATOR-visible legacy keys and name the raw-bytes
+  // preservation key explicitly. The `__legacy_raw__` sentinel is an
+  // internal name; the emitted YAML carries it as a literal key under
+  // `legacy:`, so the operator sees an unfamiliar key in their
+  // `handoff.yaml` after a fallback parse. The success message now:
+  //   - excludes the sentinel from the structural-field count so a
+  //     fallback-only payload reads "preserved 0 legacy field(s)";
+  //   - names the sentinel key (`legacy.__legacy_raw__`) so an
+  //     operator who opens `handoff.yaml` and sees a key they did
+  //     not author can correlate it back to the upgrade output
+  //     instead of treating it as junk to be hand-deleted.
   const visibleKeys = Object.keys(parsed).filter((k) => k !== LEGACY_RAW_SENTINEL);
   const hasRawSentinel = Object.prototype.hasOwnProperty.call(parsed, LEGACY_RAW_SENTINEL);
-  const rawNote = hasRawSentinel ? " (raw legacy text preserved verbatim)" : "";
+  const rawNote = hasRawSentinel
+    ? ` (raw legacy text preserved verbatim under legacy.${LEGACY_RAW_SENTINEL}; do not hand-edit)`
+    : "";
   write(
     `qfai handoff upgrade: wrote ${path.relative(options.root, destAbs).replace(/\\/g, "/")} ` +
       `(preserved ${visibleKeys.length} legacy field(s) under legacy:${rawNote}).`,

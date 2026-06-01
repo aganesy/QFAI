@@ -202,6 +202,36 @@ export async function validateAutopilotPolicy(root: string): Promise<Issue[]> {
       );
       continue;
     }
+    // Section present BUT one or more required buckets are missing.
+    // `parseAutopilotPolicy` already detects the three canonical
+    // headings; gating on `hasSection` alone would PASS a section
+    // that contains the heading but no buckets — defeating the
+    // governance contract. Reuse the MISSING code (same intent: the
+    // section is not satisfying the contract) and enumerate the
+    // missing buckets in the message so the operator can locate the
+    // gap quickly.
+    const missingBuckets: string[] = [];
+    if (!result.buckets.autoDecide) missingBuckets.push("auto-decide");
+    if (!result.buckets.askUser) missingBuckets.push("ask-user");
+    if (!result.buckets.hardRequired) missingBuckets.push("hard-required");
+    if (missingBuckets.length > 0) {
+      const message =
+        `R-AUTOPILOT-POLICY-MISSING: ${relPath} "## Default Autopilot Policy" ` +
+        `section is present but missing required bucket(s): ` +
+        `[${missingBuckets.join(", ")}]. The governance contract requires all ` +
+        `three named buckets (auto-decide / ask-user / hard-required). ` +
+        `Justification: file=${relPath}, missingBuckets=[${missingBuckets.join(", ")}].`;
+      issues.push(
+        issue(
+          "R-AUTOPILOT-POLICY-MISSING",
+          message,
+          "error",
+          relPath,
+          "reviewerGate.autopilotPolicyMissing",
+        ),
+      );
+      continue;
+    }
     if (result.widenedTokens.length > 0) {
       const message =
         `R-AUTOPILOT-POLICY-WIDENED: ${relPath} auto-decide bucket lists ` +

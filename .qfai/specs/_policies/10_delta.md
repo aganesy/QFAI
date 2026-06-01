@@ -778,12 +778,12 @@
 ### ID Stability
 
 - No CAP / spec / REQ / AC / BR / EX / TC / TDD ID is renumbered.
-- New plain `DR-NNNN` IDs begin at DR-0261 (DR-0258/0259/0260 were consumed by CHG-003); see `_policies/08_Decisions.md` § DR-0261..0273.
+- New plain `DR-NNNN` IDs begin at DR-0261 (DR-0258/0259/0260 were consumed by CHG-003); see `_policies/08_Decisions.md` § DR-0261..0274.
 - New spec-level append IDs follow each per-spec `09_delta.md` append rules.
 
 ### Distributed-Surface Impact
 
 - The operational migration memo `.qfai/assistant/process/migrations/1.9.2-second-wave-defect-remediation.md` lives under the distributed asset tree shape; its prose MUST NOT contain internal IDs (`spec-NNNN` cross-links and the filename version slot are the structurally-required exceptions) or `vN.M[.P]` markers beyond the npm version per `.agents/rules/distributed-surface.md`.
-- New shipped surfaces (`assets/init/.qfai/assistant/skills/<skill>/manifest.json`, SKILL.md `## Default Autopilot Policy` sections, `references/*.md` realignments, `handoff.ts` schema doc) MUST pass the layer 1/2/3 leakage guard.
+- New / updated shipped surfaces (SKILL.md `## Default Autopilot Policy` sections, `references/*.md` realignments, `handoff.ts` schema doc) MUST pass the layer 1/2/3 leakage guard. Per-skill `manifest.json` is consumer-authored (under the consuming project's `.qfai/assistant/skills/<skill>/manifest.json`); `skillManifestProbe.ts` reads it from the consumer tree, so it is NOT bundled under `assets/init/...`.
 - New authoring-zone contract files under `.qfai/contracts/cli/` are NOT in `package.json#files`.
 - `.qfai/evidence/decisions/` and `.qfai/evidence/prototyping/mutation-log.jsonl` are git-ignored by default (mirror `.qfai/evidence/prototyping/`); not distributed.

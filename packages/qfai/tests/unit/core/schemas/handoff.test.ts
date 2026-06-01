@@ -134,4 +134,44 @@ describe("parseHandoff accepts YAML and JSON handoff payloads", () => {
     // alias and primary share identity (same function reference).
     expect(parseHandoffJson).toBe(parseHandoff);
   });
+
+  // Pin no-data-loss for nested YAML payloads. parseHandoffJson was
+  // pre-fix `JSON.parse`-only; downstream readers that consumed a
+  // YAML handoff with nested mappings (`signature:\n  by: alice`)
+  // would see `null` and downstream `--profile saas-package` would
+  // treat the handoff as unparseable. The M4 fix (parseHandoff =
+  // `yaml.parse`) round-trips nested object graphs, so this
+  // regression test asserts nested values survive parse and reach
+  // the returned record.
+  it("preserves nested YAML object graphs (no data loss for non-flat payloads)", () => {
+    const yaml = [
+      'companyName: "Acme"',
+      'primarySpecId: "0001"',
+      "signature:",
+      '  by: "alice"',
+      '  on: "2026-05-27"',
+      "metadata:",
+      '  reviewer: "bob"',
+      "  notes: |",
+      "    multi-line",
+      "    block scalar",
+      "    survives",
+      "",
+    ].join("\n");
+    const parsed = parseHandoff(yaml);
+    expect(parsed).not.toBeNull();
+    expect(parsed?.companyName).toBe("Acme");
+    // Nested mapping is preserved verbatim by the YAML parser.
+    const signature = parsed?.signature as Record<string, unknown> | undefined;
+    expect(signature).toBeDefined();
+    expect(signature?.by).toBe("alice");
+    expect(signature?.on).toBe("2026-05-27");
+    const metadata = parsed?.metadata as Record<string, unknown> | undefined;
+    expect(metadata?.reviewer).toBe("bob");
+    // Block scalar content round-trips faithfully.
+    const notes = metadata?.notes;
+    expect(typeof notes).toBe("string");
+    expect(String(notes)).toContain("multi-line");
+    expect(String(notes)).toContain("block scalar");
+  });
 });
