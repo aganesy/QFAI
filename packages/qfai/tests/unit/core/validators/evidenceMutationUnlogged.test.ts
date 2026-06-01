@@ -47,9 +47,7 @@ describe("TC-0012-0480: detectEvidenceMutationUnlogged fires (error) for unlogge
     // funnels through the mutation-log writer.
     for (const pair of EVIDENCE_MUTATION_PAIRS) {
       // Embed every mutation token so the pair scan engages.
-      const mutationLines = pair.mutationTokens
-        .map((token) => `${token}backupAbs);`)
-        .join("\n");
+      const mutationLines = pair.mutationTokens.map((token) => `${token}backupAbs);`).join("\n");
       await writeSource(
         pair.sourceRel,
         `import { rename } from "node:fs/promises";\n${mutationLines}\n// iter-NN backup move (UNLOGGED)\n`,
@@ -66,9 +64,7 @@ describe("TC-0012-0480: detectEvidenceMutationUnlogged fires (error) for unlogge
 
   it("does NOT fire when the mutation call-site is paired with a logEvidence* call", async () => {
     for (const pair of EVIDENCE_MUTATION_PAIRS) {
-      const mutationLines = pair.mutationTokens
-        .map((token) => `${token}backupAbs);`)
-        .join("\n");
+      const mutationLines = pair.mutationTokens.map((token) => `${token}backupAbs);`).join("\n");
       const logToken = pair.logTokens[0] ?? "logEvidenceMove";
       await writeSource(
         pair.sourceRel,

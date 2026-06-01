@@ -95,11 +95,7 @@ export function resolvePrototypingMode(input: {
   // Surface a non-empty-but-unknown config value as a warning. The CLI
   // path already markInvalid()s typoed values, so this is the only
   // remaining layer where a typo can silently fall through.
-  if (
-    input.config !== undefined &&
-    input.config.length > 0 &&
-    !isPrototypingMode(input.config)
-  ) {
+  if (input.config !== undefined && input.config.length > 0 && !isPrototypingMode(input.config)) {
     input.warn?.(
       `qfai prototyping: ignoring unknown prototyping.mode=${JSON.stringify(
         input.config,

@@ -68,7 +68,10 @@ describe("TC-0015-0024: detectHandoffSchemaDrift fires on asymmetric Pair IV edi
     await writeAt(HANDOFF_SCHEMA_REL, SCHEMA_WITH_FIELDS);
     for (const pair of HANDOFF_WRITER_PAIRS) {
       // Write a writer file that does NOT contain the expected token.
-      await writeAt(pair.writerRel, `// drift: writer ignores canonical schema fields\nexport const X = 1;\n`);
+      await writeAt(
+        pair.writerRel,
+        `// drift: writer ignores canonical schema fields\nexport const X = 1;\n`,
+      );
     }
     const issues = await detectHandoffSchemaDrift(root);
     const findings = issues.filter((i) => i.code === "R-HANDOFF-SCHEMA-DRIFT");

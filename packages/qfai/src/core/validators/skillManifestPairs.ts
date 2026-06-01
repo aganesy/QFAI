@@ -20,11 +20,9 @@
  * `EVIDENCE_MUTATION_PAIRS`.
  */
 
-export const SKILL_MANIFEST_PROBE_IMPL_REL =
-  "packages/qfai/src/core/doctor/skillManifestProbe.ts";
+export const SKILL_MANIFEST_PROBE_IMPL_REL = "packages/qfai/src/core/doctor/skillManifestProbe.ts";
 
-export const SKILL_MANIFEST_SCHEMA_REL =
-  "packages/qfai/src/core/schemas/skillManifest.ts";
+export const SKILL_MANIFEST_SCHEMA_REL = "packages/qfai/src/core/schemas/skillManifest.ts";
 
 export type SkillManifestPair = {
   /** Stable human-readable clause name (used in justification text). */

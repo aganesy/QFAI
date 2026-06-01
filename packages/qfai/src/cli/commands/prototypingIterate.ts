@@ -1124,9 +1124,8 @@ export async function runPrototypingIterate(
       // not block the capture path; the validator (`QFAI-CRIT-009`)
       // is the user-visible gate.
       try {
-        const { writeTaskFidelityTemplate } = await import(
-          "../../core/prototyping/captureTemplate.js"
-        );
+        const { writeTaskFidelityTemplate } =
+          await import("../../core/prototyping/captureTemplate.js");
         await writeTaskFidelityTemplate(dir);
       } catch (cause) {
         warn(
@@ -1409,9 +1408,8 @@ async function emitCycleZeroSkeletons(input: {
     );
     return 0;
   }
-  const { buildSkeletonsForUnion, writeSkeletons } = await import(
-    "../../core/prototyping/emitSkeletons.js"
-  );
+  const { buildSkeletonsForUnion, writeSkeletons } =
+    await import("../../core/prototyping/emitSkeletons.js");
   // Translate DesignMd → flat token table consumed by the renderer.
   // `visual.typography` is a structured object, not a flat
   // Record<string,string>; flatten the string-valued primary slots

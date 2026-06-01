@@ -24,10 +24,7 @@ import { issue, readSafe } from "./utils.js";
 
 const SURFACE_TYPE_FRONTMATTER_RE = /^\s*surface_type\s*:\s*ui-bearing\s*$/im;
 
-export async function validateSurfaceTypeDrift(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
+export async function validateSurfaceTypeDrift(root: string, config: QfaiConfig): Promise<Issue[]> {
   const specsRoot = path.resolve(root, config.paths.specsDir);
   let entries: Awaited<ReturnType<typeof collectSpecEntries>>;
   try {

@@ -137,12 +137,7 @@ describe("TC-0015-0030: handoff upgrade emits conforming yaml + preserves origin
     // A YAML sequence (top-level list) parses to an array — the
     // structured-object branch refuses it, so the stage-3 fallback
     // engages.
-    const listBody = [
-      "- item-one",
-      "- item-two",
-      "- item-three",
-      "",
-    ].join("\n");
+    const listBody = ["- item-one", "- item-two", "- item-three", ""].join("\n");
     await writeFile(path.join(root, "list-legacy.yaml"), listBody, "utf-8");
     const code = await runHandoffUpgrade({
       root,

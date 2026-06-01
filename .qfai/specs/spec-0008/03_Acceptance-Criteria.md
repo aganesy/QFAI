@@ -38,7 +38,7 @@ Given test cases produced by ATDD, when the test-design-analyst reviews them, th
 
 ## AC-0008-0010: ATDD Scaffold Emits Per-TC Skeletons
 
-Given a spec `spec-NNNN` with declared test_cases, when `qfai atdd scaffold --spec spec-NNNN` runs against a directory with no pre-existing skeletons, then for every TC a file `tests/atdd/spec-NNNN/<TC-ID>.test.*` is emitted that imports test-framework primitives, contains `// TODO: implement assertion for <TC-ID>`, and includes comment references to the related US-* / CON-API-*; and `qfai validate` emits `D-SCAFFOLD-PLACEHOLDER` (severity warning) for each file whose TODO marker is still present.
+Given a spec `spec-NNNN` with declared test*cases, when `qfai atdd scaffold --spec spec-NNNN` runs against a directory with no pre-existing skeletons, then for every TC a file `tests/atdd/spec-NNNN/<TC-ID>.test.*`is emitted that imports test-framework primitives, contains`// TODO: implement assertion for <TC-ID>`, and includes comment references to the related US-* / CON-API-\_; and `qfai validate`emits`D-SCAFFOLD-PLACEHOLDER` (severity warning) for each file whose TODO marker is still present.
 
 ## AC-0008-0011: ATDD Scaffold Idempotency and Escalation
 

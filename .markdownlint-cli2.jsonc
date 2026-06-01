@@ -38,6 +38,7 @@
     ".qfai/archive/**",
     ".qfai/discussion_archive/**",
     ".qfai/review_archive/**",
+    ".qfai/review/_archive/**",
     ".qfai/assistant/agents/**",
     ".qfai/assistant/skills/*/references/**",
     ".qfai/assistant/skills/*/templates/**",

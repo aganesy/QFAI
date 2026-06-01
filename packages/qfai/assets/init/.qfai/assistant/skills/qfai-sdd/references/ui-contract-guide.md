@@ -42,12 +42,12 @@ entries per screen** (inclusive bounds). Outside the band, validate
 emits `QFAI-AUD-020` at severity=warning, naming the band 3..7
 explicitly:
 
-| count | validate behavior |
-| ----- | ----------------- |
-| 0     | `QFAI-AUD-001` error (empty primary_tasks)   |
-| 1..2  | `QFAI-AUD-020` warning (below 3..7 band)     |
-| 3..7  | passes silently                              |
-| 8+    | `QFAI-AUD-020` warning (above 3..7 band)     |
+| count | validate behavior                          |
+| ----- | ------------------------------------------ |
+| 0     | `QFAI-AUD-001` error (empty primary_tasks) |
+| 1..2  | `QFAI-AUD-020` warning (below 3..7 band)   |
+| 3..7  | passes silently                            |
+| 8+    | `QFAI-AUD-020` warning (above 3..7 band)   |
 
 The 3..7 band reflects multi-screen SaaS / dashboard workloads where
 5–6 primary tasks per surface is common; tighter ceilings (e.g. 1..3

@@ -107,7 +107,7 @@
 - When the operator runs `qfai audit log --scope scope-expansion --format json`
 - Then only the scope-expansion record is emitted as JSON; running `qfai audit log` with no filter lists both newest-first in a table (default `--format table`)
 
-## EX-0015-0016: `qfai handoff upgrade` preserves originals under legacy:
+## EX-0015-0016: `qfai handoff upgrade` preserves originals under legacy
 
 - BR-Ref: BR-0015-0015
 - Given a legacy `session-handoff.yaml` with fields not in the canonical schema

@@ -170,13 +170,7 @@ async function scanFileForStaleRefs(
       `"${entry.beforeToken}". Rewrite to match the chosen implementation: ` +
       `${entry.replacement}.`;
     issues.push(
-      issue(
-        "W-STALE-REFERENCE",
-        message,
-        severity,
-        relPath,
-        "staleReferences.preImplementation",
-      ),
+      issue("W-STALE-REFERENCE", message, severity, relPath, "staleReferences.preImplementation"),
     );
   }
 }

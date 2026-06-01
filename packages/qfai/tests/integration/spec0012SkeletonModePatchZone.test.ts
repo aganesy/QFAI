@@ -31,10 +31,7 @@ import {
   computeDesignMdHashes,
   parseDesignMdPatchZone,
 } from "../../src/core/design/designMdPatchZone.js";
-import {
-  buildSkeletonsForUnion,
-  writeSkeletons,
-} from "../../src/core/prototyping/emitSkeletons.js";
+import { buildSkeletonsForUnion } from "../../src/core/prototyping/emitSkeletons.js";
 import { detectEvidenceMutationUnlogged } from "../../src/core/validators/evidenceMutationUnlogged.js";
 import {
   TASK_FIDELITY_REQUIRED_KEYWORDS,
@@ -243,13 +240,7 @@ describe("TC-0012-0474: out-of-zone edit invalidates evidence and surfaces R-DES
   });
 
   it("a DESIGN.md without a patch_zone block leaves parseDesignMdPatchZone with ok=false", () => {
-    const DESIGN_NO_ZONE = [
-      "---",
-      "brand:",
-      '  name: "Acme"',
-      "---",
-      "# body",
-    ].join("\n");
+    const DESIGN_NO_ZONE = ["---", "brand:", '  name: "Acme"', "---", "# body"].join("\n");
     const parsed = parseDesignMdPatchZone(DESIGN_NO_ZONE);
     expect(parsed.ok).toBe(false);
   });
@@ -269,10 +260,7 @@ describe("TC-0012-0475: --mode exploration overrides config + per-iteration mode
     });
     expect(exit).toBe(0);
     const proto = JSON.parse(
-      await readFile(
-        path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
-        "utf-8",
-      ),
+      await readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
     ) as { iterations?: Array<Record<string, unknown>> };
     const iter = proto.iterations?.[0];
     expect(iter?.mode).toBe("exploration");
@@ -288,10 +276,7 @@ describe("TC-0012-0475: --mode exploration overrides config + per-iteration mode
     });
     expect(exit).toBe(0);
     const proto = JSON.parse(
-      await readFile(
-        path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
-        "utf-8",
-      ),
+      await readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
     ) as { iterations?: Array<Record<string, unknown>> };
     const iter = proto.iterations?.[0];
     expect(iter?.mode).toBe("convergence");
@@ -318,7 +303,11 @@ describe("TC-0012-0476: certify refuses to seal a loop with any exploration-mode
     await mkdir(outDir, { recursive: true });
     await writeFile(
       path.join(outDir, "validate.json"),
-      JSON.stringify({ profile: "prototyping", counts: { error: 0, warning: 0, info: 0 } }, null, 2),
+      JSON.stringify(
+        { profile: "prototyping", counts: { error: 0, warning: 0, info: 0 } },
+        null,
+        2,
+      ),
       "utf-8",
     );
     await mkdir(path.join(root, ".qfai/output"), { recursive: true });
@@ -336,7 +325,6 @@ describe("TC-0012-0476: certify refuses to seal a loop with any exploration-mode
 
     const stderrChunks: string[] = [];
     const origWrite = process.stderr.write.bind(process.stderr);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- override signature is variadic
     process.stderr.write = ((chunk: unknown) => {
       stderrChunks.push(String(chunk));
       return true;

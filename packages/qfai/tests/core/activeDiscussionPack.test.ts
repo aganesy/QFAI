@@ -12,7 +12,7 @@
 // QFAI:SPEC-0013:TC-0013-0028
 // QFAI:SPEC-0013:TC-0013-0029
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 

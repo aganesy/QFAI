@@ -204,9 +204,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           process.exitCode = await runPrototypingCertify({
             root: resolvedRoot,
             check: Boolean(options.prototypingCheckOnly),
-            ...(options.prototypingScope !== undefined
-              ? { scope: options.prototypingScope }
-              : {}),
+            ...(options.prototypingScope !== undefined ? { scope: options.prototypingScope } : {}),
             ...(options.prototypingUpgradeScopeFull ? { upgradeScopeFull: true } : {}),
           });
           return;

@@ -134,16 +134,16 @@
 
 ## 2026-05-27 — v1.9.2 Second-Wave (spec-0004)
 
-| Operation | Sub-op | Target                                                  | Source (REQ) | Rationale        | DR-Ref            | Status |
-| --------- | ------ | ------------------------------------------------------- | ------------ | ---------------- | ----------------- | ------ |
-| UPDATE    | APPEND | 01_Spec.md (Scope.In + Relevant Requirements + Entry-points ranges → US-0039 / AC-0039 / BR-0033 / EX-0041 / TC-0073) | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS |
-| UPDATE    | APPEND | 02_User-stories.md (US-0004-0037..0039)                 | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS |
-| UPDATE    | APPEND | 03_Acceptance-Criteria.md (AC-0004-0036..0039)          | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS |
-| UPDATE    | APPEND | 04_Business-Rules.md (BR-0004-0030..0033)               | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS |
-| UPDATE    | APPEND | 05_Examples.md (EX-0004-0038..0041)                     | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS |
-| UPDATE    | APPEND | 06_Test-Cases.md (TC-0004-0067..0073)                   | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS |
-| UPDATE    | APPEND | 07_Decisions.md (DR-0004-0014)                          | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS |
-| UPDATE    | APPEND | 08_Open-questions.md (OQ-0158/0159/0167 resolved notes) | REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS |
+| Operation | Sub-op | Target                                                                                                                | Source (REQ)                 | Rationale        | DR-Ref                    | Status |
+| --------- | ------ | --------------------------------------------------------------------------------------------------------------------- | ---------------------------- | ---------------- | ------------------------- | ------ |
+| UPDATE    | APPEND | 01_Spec.md (Scope.In + Relevant Requirements + Entry-points ranges → US-0039 / AC-0039 / BR-0033 / EX-0041 / TC-0073) | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS   |
+| UPDATE    | APPEND | 02_User-stories.md (US-0004-0037..0039)                                                                               | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS   |
+| UPDATE    | APPEND | 03_Acceptance-Criteria.md (AC-0004-0036..0039)                                                                        | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS   |
+| UPDATE    | APPEND | 04_Business-Rules.md (BR-0004-0030..0033)                                                                             | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS   |
+| UPDATE    | APPEND | 05_Examples.md (EX-0004-0038..0041)                                                                                   | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS   |
+| UPDATE    | APPEND | 06_Test-Cases.md (TC-0004-0067..0073)                                                                                 | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS   |
+| UPDATE    | APPEND | 07_Decisions.md (DR-0004-0014)                                                                                        | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS   |
+| UPDATE    | APPEND | 08_Open-questions.md (OQ-0158/0159/0167 resolved notes)                                                               | REQ-0164, REQ-0167           | cascade verified | DR-0267, DR-0268, DR-0274 | PASS   |
 
 - Notes:
   - REQ-0166 spans BOTH specs: this is the VALIDATE-PROFILE side (`qfai validate --profile saas-package`); the CERTIFY side (`certify --scope saas-package`) is owned by spec-0014 (same Source REQ, file-local IDs). The skip set named by `D-SAAS-PACKAGE-VERIFY-SKIPPED` (info) must match the certify-side `notes:`.

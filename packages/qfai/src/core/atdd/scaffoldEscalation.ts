@@ -138,11 +138,7 @@ export async function resetScaffoldAttempt(
   }
   const atddRecord = { ...(atddField as Record<string, unknown>) };
   const attemptsField = atddRecord.scaffoldAttempts;
-  if (
-    attemptsField === null ||
-    typeof attemptsField !== "object" ||
-    Array.isArray(attemptsField)
-  ) {
+  if (attemptsField === null || typeof attemptsField !== "object" || Array.isArray(attemptsField)) {
     return;
   }
   const sourceAttempts = attemptsField as Record<string, unknown>;

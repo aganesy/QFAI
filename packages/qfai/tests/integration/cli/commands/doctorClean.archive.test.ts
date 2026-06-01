@@ -31,11 +31,7 @@ afterEach(async () => {
   }
 });
 
-async function seedReviewPack(
-  root: string,
-  ts: string,
-  mtime: Date,
-): Promise<string> {
+async function seedReviewPack(root: string, ts: string, mtime: Date): Promise<string> {
   const dir = path.join(root, ".qfai", "review", `review-${ts}`);
   await mkdir(dir, { recursive: true });
   await utimes(dir, mtime, mtime);
@@ -57,7 +53,11 @@ describe("doctor --clean archives TTL-expired review packs", () => {
     // 17-digit timestamp matches REVIEW_PACK_DIR_RE format.
     const oldTs = "20260401120000123";
     const newTs = "20260527120000456";
-    const oldDir = await seedReviewPack(root, oldTs, new Date(Date.now() - 26 * 24 * 60 * 60 * 1000));
+    const oldDir = await seedReviewPack(
+      root,
+      oldTs,
+      new Date(Date.now() - 26 * 24 * 60 * 60 * 1000),
+    );
     const newDir = await seedReviewPack(root, newTs, new Date());
 
     const exit = await runDoctor({
@@ -70,7 +70,9 @@ describe("doctor --clean archives TTL-expired review packs", () => {
     expect(exit).toBe(0);
     expect(await exists(oldDir)).toBe(false);
     expect(await exists(newDir)).toBe(true);
-    expect(await exists(path.join(root, ".qfai", "review", "_archive", `review-${oldTs}`))).toBe(true);
+    expect(await exists(path.join(root, ".qfai", "review", "_archive", `review-${oldTs}`))).toBe(
+      true,
+    );
 
     const topLevel = await readdir(path.join(root, ".qfai", "review"));
     expect(topLevel).toContain(`review-${newTs}`);
@@ -81,11 +83,7 @@ describe("doctor --clean archives TTL-expired review packs", () => {
   it("honors config override review.staleTtlDays: 7 (10-day pack archived)", async () => {
     const root = await newTempDir("config-override");
     const { writeFile } = await import("node:fs/promises");
-    await writeFile(
-      path.join(root, "qfai.config.yaml"),
-      "review:\n  staleTtlDays: 7\n",
-      "utf-8",
-    );
+    await writeFile(path.join(root, "qfai.config.yaml"), "review:\n  staleTtlDays: 7\n", "utf-8");
     const ts = "20260518120000789";
     const dir = await seedReviewPack(root, ts, new Date(Date.now() - 10 * 24 * 60 * 60 * 1000));
 

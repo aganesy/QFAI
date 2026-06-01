@@ -13,10 +13,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
-import {
-  findOutOfZoneTokenEdits,
-  parseDesignMdPatchZone,
-} from "../design/designMdPatchZone.js";
+import { findOutOfZoneTokenEdits, parseDesignMdPatchZone } from "../design/designMdPatchZone.js";
 import { exists, issue } from "./utils.js";
 
 export type DesignMdPatchOutOfZoneInput = {
@@ -44,9 +41,7 @@ const DESIGN_MD_BACKUP_REL = ".qfai/contracts/design/DESIGN.md.backup";
  * file, the declared zone, and the offending token paths when the diff
  * leaves the zone.
  */
-export function detectDesignMdPatchOutOfZone(
-  input: DesignMdPatchOutOfZoneInput,
-): readonly Issue[] {
+export function detectDesignMdPatchOutOfZone(input: DesignMdPatchOutOfZoneInput): readonly Issue[] {
   if (input.before === input.after) return [];
   const zoneResult = parseDesignMdPatchZone(input.before);
   // Removal of the patch_zone block itself: the AFTER text has no

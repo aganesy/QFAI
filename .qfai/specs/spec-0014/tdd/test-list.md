@@ -15,10 +15,10 @@
 
 ## CHG-006 v1.9.2 second-wave — certify --scope saas-package + --upgrade-scope (2026-05-31)
 
-| TDD-ID   | TC-Refs      | Layer       | Test file                                                                            | Selector                                                                                | Status | DR-ID                              | Evidence                                                                |
-| -------- | ------------ | ----------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | ------ | ---------------------------------- | ----------------------------------------------------------------------- |
-| TDD-0035 | TC-0014-0035 | integration | packages/qfai/tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts  | TC-0014-0035: certify --scope saas-package seals certificate w/ scope + notes:          | done   | DR-0014-0004 (cites DR-0274)       | RED→GREEN 2026-06-01 (W5 c5f61e12); reviewers PASS×3; REQ-0166   |
-| TDD-0036 | TC-0014-0036 | integration | packages/qfai/tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts | TC-0014-0036: --upgrade-scope full rejected while gates missing; accepted once they PASS | done   | DR-0014-0004 (cites DR-0274)       | RED→GREEN 2026-06-01 (W5 c5f61e12); reviewers PASS×3; REQ-0166   |
+| TDD-ID   | TC-Refs      | Layer       | Test file                                                                            | Selector                                                                                 | Status | DR-ID                        | Evidence                                                       |
+| -------- | ------------ | ----------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ------ | ---------------------------- | -------------------------------------------------------------- |
+| TDD-0035 | TC-0014-0035 | integration | packages/qfai/tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts  | TC-0014-0035: certify --scope saas-package seals certificate w/ scope + notes:           | done   | DR-0014-0004 (cites DR-0274) | RED→GREEN 2026-06-01 (W5 c5f61e12); reviewers PASS×3; REQ-0166 |
+| TDD-0036 | TC-0014-0036 | integration | packages/qfai/tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts | TC-0014-0036: --upgrade-scope full rejected while gates missing; accepted once they PASS | done   | DR-0014-0004 (cites DR-0274) | RED→GREEN 2026-06-01 (W5 c5f61e12); reviewers PASS×3; REQ-0166 |
 
 CHG-006 notes:
 

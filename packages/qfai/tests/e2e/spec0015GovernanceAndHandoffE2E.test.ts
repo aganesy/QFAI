@@ -144,7 +144,11 @@ describe("spec-0015 US-0015-0011 handoff schema (E2E, deterministic temp-fixture
     for (const pair of HANDOFF_WRITER_PAIRS) {
       const abs = path.join(root, pair.writerRel);
       await mkdir(path.dirname(abs), { recursive: true });
-      await writeFile(abs, `// drift: writer omits canonical token\nexport const X = 1;\n`, "utf-8");
+      await writeFile(
+        abs,
+        `// drift: writer omits canonical token\nexport const X = 1;\n`,
+        "utf-8",
+      );
     }
     const issues = await detectHandoffSchemaDrift(root);
     expect(issues.some((i) => i.code === "R-HANDOFF-SCHEMA-DRIFT")).toBe(true);
@@ -285,14 +289,7 @@ describe("spec-0015 US-0015-0014 handoff upgrade (E2E, deterministic temp-fixtur
 
 describe("spec-0015 US-0015-0015 doc realignment (E2E, deterministic temp-fixture)", () => {
   it("QFAI:SPEC-0015:US-0015-0015 — normal: rewritten refs report zero stale references", async () => {
-    const dir = path.join(
-      root,
-      ".qfai",
-      "assistant",
-      "skills",
-      "qfai-prototyping",
-      "references",
-    );
+    const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping", "references");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "handoff.md"), "# Handoff\nUses handoff.yaml.\n", "utf-8");
     const issues = await validateStaleReferences(root, {
@@ -302,14 +299,7 @@ describe("spec-0015 US-0015-0015 doc realignment (E2E, deterministic temp-fixtur
   });
 
   it("QFAI:SPEC-0015:US-0015-0015 — error: a stale reference at HEAD escalates to error at sunset", async () => {
-    const dir = path.join(
-      root,
-      ".qfai",
-      "assistant",
-      "skills",
-      "qfai-prototyping",
-      "references",
-    );
+    const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping", "references");
     await mkdir(dir, { recursive: true });
     await writeFile(
       path.join(dir, "handoff.md"),

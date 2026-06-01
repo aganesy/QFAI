@@ -223,12 +223,7 @@ function checkContractsHierarchy(
       }
       continue;
     }
-    const bandFinding = bandFindingFor(
-      screen.screenId,
-      screen.primaryTasks,
-      file,
-      file,
-    );
+    const bandFinding = bandFindingFor(screen.screenId, screen.primaryTasks, file, file);
     if (bandFinding) {
       findings.push(bandFinding);
     }

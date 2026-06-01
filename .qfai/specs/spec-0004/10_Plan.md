@@ -48,8 +48,8 @@
 
 ### File Touchpoints (additions)
 
-| File                                                       | Role                                                            |
-| ---------------------------------------------------------- | --------------------------------------------------------------- |
-| `packages/qfai/src/core/validate.ts`                       | Adds the `saas-package` profile + skip-gate finding emission    |
-| `packages/qfai/src/core/validators/auditProfile.ts` (NEW)  | Accepts string-only + structured `primary_tasks`; `QFAI-AUD-020` band |
-| `packages/qfai/scripts/check-pack-locations.mjs` (NEW)     | Pack-location lint lane wired into `pnpm ci:lint`               |
+| File                                                      | Role                                                                  |
+| --------------------------------------------------------- | --------------------------------------------------------------------- |
+| `packages/qfai/src/core/validate.ts`                      | Adds the `saas-package` profile + skip-gate finding emission          |
+| `packages/qfai/src/core/validators/auditProfile.ts` (NEW) | Accepts string-only + structured `primary_tasks`; `QFAI-AUD-020` band |
+| `packages/qfai/scripts/check-pack-locations.mjs` (NEW)    | Pack-location lint lane wired into `pnpm ci:lint`                     |

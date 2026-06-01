@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "run_id": "run-20260602052312116",
+  "started_at": "2026-06-01T20:23:12.116Z",
+  "command": "/qfai-validate",
+  "repo_root": ".",
+  "inputs": {
+    "discussion_pack": null,
+    "specs_root": ".qfai/specs"
+  },
+  "outputs": {
+    "report_dir": ".qfai/report/run-20260602052312116"
+  },
+  "result": {
+    "status": "fail",
+    "errors": 4,
+    "warnings": 13
+  }
+}

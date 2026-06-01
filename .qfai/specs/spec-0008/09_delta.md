@@ -54,12 +54,12 @@
 
 ### Triage (rows owned by this spec)
 
-| Operation     | Sub-op | Target                                                                                    | Source (REQ) | Rationale                                                | DR-Ref  | Status |
-| ------------- | ------ | ----------------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------- | ------- | ------ |
-| UPDATE:APPEND | APPEND | 01_Spec.md (Relevant Requirements + US range→0007 + Consumer-View copy-down)              | REQ-0157     | atdd scaffold bulk skeleton gen; cascade verified        | DR-0272 | PASS   |
-| UPDATE:APPEND | APPEND | 02_User-stories.md (US-0008-0007)                                                         | REQ-0157     | scaffold user story; cascade verified                    | DR-0272 | PASS   |
-| UPDATE:APPEND | APPEND | 03..06 (AC-0008-0010,0011 / BR-0008-0008,0009 / EX-0008-0009,0010 / TC-0008-0013,0014)    | REQ-0157     | skeleton shape + idempotency + escalation; cascade verified | DR-0272 | PASS   |
-| UPDATE:APPEND | APPEND | 07_Decisions.md (DR-0008-0003 cites DR-0272) + 08_Open-questions (OQ-0166)                | REQ-0157     | escalate-count resolved by DR-0272; cascade verified     | DR-0272 | PASS   |
+| Operation     | Sub-op | Target                                                                                 | Source (REQ) | Rationale                                                   | DR-Ref  | Status |
+| ------------- | ------ | -------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------------------- | ------- | ------ |
+| UPDATE:APPEND | APPEND | 01_Spec.md (Relevant Requirements + US range→0007 + Consumer-View copy-down)           | REQ-0157     | atdd scaffold bulk skeleton gen; cascade verified           | DR-0272 | PASS   |
+| UPDATE:APPEND | APPEND | 02_User-stories.md (US-0008-0007)                                                      | REQ-0157     | scaffold user story; cascade verified                       | DR-0272 | PASS   |
+| UPDATE:APPEND | APPEND | 03..06 (AC-0008-0010,0011 / BR-0008-0008,0009 / EX-0008-0009,0010 / TC-0008-0013,0014) | REQ-0157     | skeleton shape + idempotency + escalation; cascade verified | DR-0272 | PASS   |
+| UPDATE:APPEND | APPEND | 07_Decisions.md (DR-0008-0003 cites DR-0272) + 08_Open-questions (OQ-0166)             | REQ-0157     | escalate-count resolved by DR-0272; cascade verified        | DR-0272 | PASS   |
 
 - Notes:
   - REQ-0157 が "default deferred to /qfai-sdd" としていた escalate-cycle count は DR-0272 (既定 3, `atdd.scaffoldEscalateCycles` 可変) で確定。

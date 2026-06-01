@@ -47,9 +47,7 @@ function validateSpecId(specId: string): boolean {
   return /^spec-\d{3,4}$/.test(specId);
 }
 
-function resolveEscalateThreshold(
-  configured: number | undefined,
-): number {
+function resolveEscalateThreshold(configured: number | undefined): number {
   if (
     typeof configured === "number" &&
     Number.isFinite(configured) &&
@@ -69,11 +67,7 @@ type PerTcOutcome = {
   alreadyProgressed: boolean;
 };
 
-async function processOneTc(
-  root: string,
-  specId: string,
-  entry: TCEntry,
-): Promise<PerTcOutcome> {
+async function processOneTc(root: string, specId: string, entry: TCEntry): Promise<PerTcOutcome> {
   const destPath = scaffoldDestPath(root, specId, entry.tcId);
   const body = buildSkeleton(entry, specId);
   const result = await emitSkeleton(entry, destPath, body);

@@ -68,11 +68,7 @@ describe("detectSkillManifestDrift — SSOT-sync Pair III", () => {
       pair.probeImplRel,
       `// uses ${pair.probeToken}\nexport const x = 1;\n`,
     );
-    await writePackageFile(
-      root,
-      pair.schemaRel,
-      `// no token here\nexport const y = 1;\n`,
-    );
+    await writePackageFile(root, pair.schemaRel, `// no token here\nexport const y = 1;\n`);
     const issues = await detectSkillManifestDrift(root);
     expect(issues.length).toBeGreaterThan(0);
     const finding = issues.find((iss) => iss.code === "R-SKILL-MANIFEST-DRIFT");

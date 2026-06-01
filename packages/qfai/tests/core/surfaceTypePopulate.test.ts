@@ -109,10 +109,7 @@ describe("TC-0013-0030: populateSurfaceTypeIfUiCompanion auto-populates frontmat
 
 describe("TC-0013-0031: D-SURFACE-TYPE-MISSING warns on companion-without-frontmatter", () => {
   it("emits D-SURFACE-TYPE-MISSING (warning) when a UI companion exists but frontmatter lacks the key", async () => {
-    await makeSpec(
-      "0090",
-      ["---", "id: spec-0090", "---", "", "# Sample spec", ""].join("\n"),
-    );
+    await makeSpec("0090", ["---", "id: spec-0090", "---", "", "# Sample spec", ""].join("\n"));
     await makeUiCompanion("0090", "home");
 
     const issues = await validateSurfaceTypeDrift(root, defaultConfig);
@@ -124,10 +121,7 @@ describe("TC-0013-0031: D-SURFACE-TYPE-MISSING warns on companion-without-frontm
   });
 
   it("emits no D-SURFACE-TYPE-MISSING finding when the spec has no UI companion", async () => {
-    await makeSpec(
-      "0089",
-      ["---", "id: spec-0089", "---", "", "# Sample spec", ""].join("\n"),
-    );
+    await makeSpec("0089", ["---", "id: spec-0089", "---", "", "# Sample spec", ""].join("\n"));
     const issues = await validateSurfaceTypeDrift(root, defaultConfig);
     const drift = issues.find((issue) => issue.code === "D-SURFACE-TYPE-MISSING");
     expect(drift).toBeUndefined();
@@ -136,15 +130,9 @@ describe("TC-0013-0031: D-SURFACE-TYPE-MISSING warns on companion-without-frontm
   it("emits no D-SURFACE-TYPE-MISSING finding when frontmatter already declares surface_type: ui-bearing", async () => {
     await makeSpec(
       "0088",
-      [
-        "---",
-        "id: spec-0088",
-        "surface_type: ui-bearing",
-        "---",
-        "",
-        "# Sample spec",
-        "",
-      ].join("\n"),
+      ["---", "id: spec-0088", "surface_type: ui-bearing", "---", "", "# Sample spec", ""].join(
+        "\n",
+      ),
     );
     await makeUiCompanion("0088", "settings");
     const issues = await validateSurfaceTypeDrift(root, defaultConfig);

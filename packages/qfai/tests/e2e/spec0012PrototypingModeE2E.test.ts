@@ -119,10 +119,7 @@ describe("US-0012-0140 — --mode exploration overrides config; per-iteration mo
     });
     expect(exit).toBe(0);
     const proto = JSON.parse(
-      await readFile(
-        path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
-        "utf-8",
-      ),
+      await readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
     ) as { iterations?: Array<Record<string, unknown>> };
     expect(proto.iterations?.[0]?.mode).toBe("exploration");
   });
@@ -139,10 +136,7 @@ describe("US-0012-0140 — boundary: absent flag + absent config defaults to con
     });
     expect(exit).toBe(0);
     const proto = JSON.parse(
-      await readFile(
-        path.join(root, ".qfai/evidence/prototyping/prototyping.json"),
-        "utf-8",
-      ),
+      await readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
     ) as { iterations?: Array<Record<string, unknown>> };
     expect(proto.iterations?.[0]?.mode).toBe("convergence");
   });

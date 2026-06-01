@@ -62,11 +62,7 @@ describe("doctor --autoremediate fixes install + clean + config", () => {
 
     // Seed minimal qfai.config.yaml WITHOUT a `review:` section (default-keyed gap).
     const configPath = path.join(root, "qfai.config.yaml");
-    await writeFile(
-      configPath,
-      "# user-authored\npaths:\n  specsDir: .qfai/specs\n",
-      "utf-8",
-    );
+    await writeFile(configPath, "# user-authored\npaths:\n  specsDir: .qfai/specs\n", "utf-8");
 
     const installCalls: string[] = [];
     const summary = await runAutoremediate({
@@ -103,11 +99,7 @@ describe("doctor --autoremediate fixes install + clean + config", () => {
   it("does NOT overwrite a user-authored review.staleTtlDays value", async () => {
     const root = await newTempDir("no-overwrite");
     const configPath = path.join(root, "qfai.config.yaml");
-    await writeFile(
-      configPath,
-      "review:\n  staleTtlDays: 30\n",
-      "utf-8",
-    );
+    await writeFile(configPath, "review:\n  staleTtlDays: 30\n", "utf-8");
 
     const summary = await runAutoremediate({
       root,

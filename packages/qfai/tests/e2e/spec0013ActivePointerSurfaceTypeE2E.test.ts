@@ -114,10 +114,7 @@ describe("spec-0013 US-0013-0013 surface_type auto-populate", () => {
   });
 
   it("QFAI:SPEC-0013:US-0013-0013 — boundary/error: D-SURFACE-TYPE-MISSING warns on companion-without-frontmatter", async () => {
-    await seedSpec(
-      "0091",
-      ["---", "id: spec-0091", "---", "", "# Sample", ""].join("\n"),
-    );
+    await seedSpec("0091", ["---", "id: spec-0091", "---", "", "# Sample", ""].join("\n"));
     await seedUiCompanion(
       "ui-0091-dashboard.yaml",
       ["screens:", "  - id: dashboard", "    route: /dashboard", "    primary_tasks: []", ""].join(

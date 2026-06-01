@@ -332,7 +332,8 @@ function extractPrimaryTasks(value: unknown): {
         return typeof v !== "string" || v.trim().length === 0;
       });
       const extraKeys = presentKeys.filter(
-        (key) => !REQUIRED_PRIMARY_TASK_KEYS.includes(key as (typeof REQUIRED_PRIMARY_TASK_KEYS)[number]),
+        (key) =>
+          !REQUIRED_PRIMARY_TASK_KEYS.includes(key as (typeof REQUIRED_PRIMARY_TASK_KEYS)[number]),
       );
       const idValue = typeof record.id === "string" ? record.id.trim() : "";
       const taskRef = idValue.length > 0 ? idValue : `#${taskNumber}`;

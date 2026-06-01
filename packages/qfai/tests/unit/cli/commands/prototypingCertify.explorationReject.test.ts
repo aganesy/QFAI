@@ -72,7 +72,10 @@ describe("TC-0012-0476: acceptedIterationIndex resolves to convergence-mode iter
   });
 
   it("treats missing mode as convergence (legacy compatibility)", () => {
-    const idx = resolveCertifyAcceptedIterationIndex([{ index: 0 }, { index: 1, mode: "exploration" }]);
+    const idx = resolveCertifyAcceptedIterationIndex([
+      { index: 0 },
+      { index: 1, mode: "exploration" },
+    ]);
     expect(idx).toBe(0);
   });
 });

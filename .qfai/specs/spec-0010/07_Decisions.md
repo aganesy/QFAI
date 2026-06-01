@@ -56,12 +56,12 @@ Decision: discussion は `34_evaluator_calibration.md` を必須出力とし、g
 
 Rationale: 現行 prototyping は generator と evaluator を分離し、calibration artifact を current-active input として読むため。
 
-## DR-0010-0005: `QFAI-MOCK-010` direction — anchor-form template default (cites _policies DR-0265)
+## DR-0010-0005: `QFAI-MOCK-010` direction — anchor-form template default (cites \_policies DR-0265)
 
 - Date: 2026-05-27
 - Status: Adopted
 
-Decision: REQ-0154 の direction は _policies **DR-0265** に従い、option b（template が anchor-form `<a href="#name">` を default emit + SKILL.md が指示、validator は strict 維持）を採用する。anchor (`#name`) と external (`http(s)://`) は引き続き PASS。template ↔ validator は新 SSOT-sync pair で `R-MOCK-HREF-DRIFT` が drift を検出する。
+Decision: REQ-0154 の direction は \_policies **DR-0265** に従い、option b（template が anchor-form `<a href="#name">` を default emit + SKILL.md が指示、validator は strict 維持）を採用する。anchor (`#name`) と external (`http(s)://`) は引き続き PASS。template ↔ validator は新 SSOT-sync pair で `R-MOCK-HREF-DRIFT` が drift を検出する。
 
 Rejected:
 
@@ -69,12 +69,12 @@ Rejected:
   - Temptation: web-URL に慣れた author には最も自然。
   - Reason: deterministic gate を緩め、prototype が serve できない route を mock が encode する drift を再導入する（DR-0265）。
 
-## DR-0010-0006: Active discussion session pointer — `state.json#discussion.currentId` SSOT (cites _policies DR-0266)
+## DR-0010-0006: Active discussion session pointer — `state.json#discussion.currentId` SSOT (cites \_policies DR-0266)
 
 - Date: 2026-05-27
 - Status: Adopted
 
-Decision: REQ-0155 の surface は _policies **DR-0266** に従い option B（`.qfai/state.json#discussion.currentId` を単一 SSOT）を採用。`/qfai-discussion` が writer。`qfai discussion list --active` は read view。multiple-active ambiguity は candidate dirs と recovery command を名指しした error で reject する。
+Decision: REQ-0155 の surface は \_policies **DR-0266** に従い option B（`.qfai/state.json#discussion.currentId` を単一 SSOT）を採用。`/qfai-discussion` が writer。`qfai discussion list --active` は read view。multiple-active ambiguity は candidate dirs と recovery command を名指しした error で reject する。
 
 Rejected:
 

@@ -71,9 +71,7 @@ function formatTable(records: AuditLogRecordView[]): string {
   const lines: string[] = [];
   lines.push("timestamp\tscope\toperator\tclause");
   for (const r of records) {
-    lines.push(
-      `${r.timestamp}\t${r.scope}\t${r.operatorIdentity}\t${r.envelopeContractClause}`,
-    );
+    lines.push(`${r.timestamp}\t${r.scope}\t${r.operatorIdentity}\t${r.envelopeContractClause}`);
   }
   return lines.join("\n");
 }

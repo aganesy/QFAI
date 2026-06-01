@@ -10,5 +10,5 @@
 
 ## Resolved (v1.9.2 Second-Wave)
 
-- OQ-0156 (`QFAI-MOCK-010` direction): RESOLVED by _policies DR-0265 → option b (anchor-form template default + strict validator). See DR-0010-0005 / REQ-0154.
-- OQ-0157 (active discussion session pointer surface): RESOLVED by _policies DR-0266 → option B (`state.json#discussion.currentId` SSOT, `discussion list --active` read view). See DR-0010-0006 / REQ-0155.
+- OQ-0156 (`QFAI-MOCK-010` direction): RESOLVED by \_policies DR-0265 → option b (anchor-form template default + strict validator). See DR-0010-0005 / REQ-0154.
+- OQ-0157 (active discussion session pointer surface): RESOLVED by \_policies DR-0266 → option B (`state.json#discussion.currentId` SSOT, `discussion list --active` read view). See DR-0010-0006 / REQ-0155.

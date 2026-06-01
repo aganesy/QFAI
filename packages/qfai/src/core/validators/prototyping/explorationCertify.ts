@@ -36,9 +36,7 @@ const FINDING_CODE = "R-EXPLORATION-CERTIFY-ATTEMPT";
  * Returns one finding listing every exploration-mode iteration index
  * when at least one is present; zero issues otherwise.
  */
-export function detectExplorationCertifyAttempt(
-  input: CertifyExplorationInput,
-): readonly Issue[] {
+export function detectExplorationCertifyAttempt(input: CertifyExplorationInput): readonly Issue[] {
   const offending = input.iterations
     .filter((it) => it.mode === "exploration")
     .map((it) => it.index);

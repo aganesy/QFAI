@@ -21,7 +21,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runDoctor } from "../../../../src/cli/commands/doctor.js";
 import * as autoremediateModule from "../../../../src/core/doctor/autoremediate.js";
@@ -34,7 +34,28 @@ async function newTempDir(label: string): Promise<string> {
   return dir;
 }
 
+// Capture and restore process.env.CI around each test. The doctor CLI
+// computes `isCi = process.env["CI"] === "true"` and forwards it to
+// `runAutoremediate`, which short-circuits with `disabledInCi` when
+// true. On GitHub Actions `process.env.CI === "true"`, so the install
+// branch this test exercises would never fire — installCalls would
+// be empty, and the assertion (`installCalls === ["playwright"]`)
+// would fail even though the CLI dispatch is correct. Forcing CI to
+// be unset during the test scope keeps the test about CLI wiring
+// (not about the CI early-return behavior, which has its own tests).
+let savedCi: string | undefined;
+
+beforeEach(() => {
+  savedCi = process.env["CI"];
+  delete process.env["CI"];
+});
+
 afterEach(async () => {
+  if (savedCi === undefined) {
+    delete process.env["CI"];
+  } else {
+    process.env["CI"] = savedCi;
+  }
   vi.restoreAllMocks();
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();

@@ -148,7 +148,7 @@ async function seedSaasPackageHappyPath(root: string): Promise<void> {
 }
 
 describe("certify --scope saas-package seals a scope-limited certificate", () => {
-  it("writes scope=\"saas-package\" and notes enumerating each skipped gate", async () => {
+  it('writes scope="saas-package" and notes enumerating each skipped gate', async () => {
     const root = await newTempDir();
     await seedSaasPackageHappyPath(root);
 

@@ -53,9 +53,7 @@ export type AutoremediateSummary = {
 const DEFAULT_KEYED_CONFIG_FIELDS: ReadonlyArray<{
   yamlKey: string;
   defaultLine: string;
-}> = [
-  { yamlKey: "review:", defaultLine: "review:\n  staleTtlDays: 14\n" },
-];
+}> = [{ yamlKey: "review:", defaultLine: "review:\n  staleTtlDays: 14\n" }];
 
 async function defaultInstallRunner(name: string, cwd: string): Promise<void> {
   const { spawn } = await import("node:child_process");

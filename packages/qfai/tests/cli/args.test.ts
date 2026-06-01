@@ -158,10 +158,7 @@ describe("parseArgs", () => {
     const without = parseArgs(["prototyping", "iterate", "--cycle", "0"], cwd);
     expect(without.invalid).toBe(false);
     expect(without.options.prototypingEmitSkeletons).toBeUndefined();
-    const withFlag = parseArgs(
-      ["prototyping", "iterate", "--cycle", "0", "--emit-skeletons"],
-      cwd,
-    );
+    const withFlag = parseArgs(["prototyping", "iterate", "--cycle", "0", "--emit-skeletons"], cwd);
     expect(withFlag.invalid).toBe(false);
     expect(withFlag.options.prototypingEmitSkeletons).toBe(true);
   });
@@ -186,10 +183,7 @@ describe("parseArgs", () => {
 
   it("requires a value for --skeleton-mode", () => {
     const cwd = process.cwd();
-    const parsed = parseArgs(
-      ["prototyping", "iterate", "--cycle", "0", "--skeleton-mode"],
-      cwd,
-    );
+    const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0", "--skeleton-mode"], cwd);
     expect(parsed.invalid).toBe(true);
     expect(parsed.options.help).toBe(true);
   });
@@ -197,17 +191,11 @@ describe("parseArgs", () => {
   it("parses --mode {convergence|exploration} and rejects other values", () => {
     const cwd = process.cwd();
     for (const value of ["convergence", "exploration"] as const) {
-      const parsed = parseArgs(
-        ["prototyping", "iterate", "--cycle", "0", "--mode", value],
-        cwd,
-      );
+      const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0", "--mode", value], cwd);
       expect(parsed.invalid).toBe(false);
       expect(parsed.options.prototypingMode).toBe(value);
     }
-    const bogus = parseArgs(
-      ["prototyping", "iterate", "--cycle", "0", "--mode", "feral"],
-      cwd,
-    );
+    const bogus = parseArgs(["prototyping", "iterate", "--cycle", "0", "--mode", "feral"], cwd);
     expect(bogus.invalid).toBe(true);
     expect(bogus.options.help).toBe(true);
   });
@@ -241,10 +229,7 @@ describe("parseArgs", () => {
 
     it("--operator on a non-audit subcommand marks invalid AND consumes the value token", () => {
       const cwd = process.cwd();
-      const parsed = parseArgs(
-        ["validate", "--operator", "alice", "--format", "github"],
-        cwd,
-      );
+      const parsed = parseArgs(["validate", "--operator", "alice", "--format", "github"], cwd);
       expect(parsed.invalid).toBe(true);
       // "alice" must NOT have shifted into a positional, so --format
       // remains parseable downstream.
@@ -254,10 +239,7 @@ describe("parseArgs", () => {
 
     it("--clause on a non-audit subcommand marks invalid AND consumes the value token", () => {
       const cwd = process.cwd();
-      const parsed = parseArgs(
-        ["report", "--clause", "skill-envelope", "--format", "json"],
-        cwd,
-      );
+      const parsed = parseArgs(["report", "--clause", "skill-envelope", "--format", "json"], cwd);
       expect(parsed.invalid).toBe(true);
       expect(parsed.options.reportFormat).toBe("json");
       expect(parsed.options.auditClause).toBeUndefined();
@@ -265,10 +247,7 @@ describe("parseArgs", () => {
 
     it("--scope on a non-audit/non-certify subcommand marks invalid AND consumes the value token", () => {
       const cwd = process.cwd();
-      const parsed = parseArgs(
-        ["validate", "--scope", "saas-package", "--format", "github"],
-        cwd,
-      );
+      const parsed = parseArgs(["validate", "--scope", "saas-package", "--format", "github"], cwd);
       expect(parsed.invalid).toBe(true);
       expect(parsed.options.validateFormat).toBe("github");
       // Neither audit-scope nor prototyping-scope should be populated.
@@ -278,10 +257,7 @@ describe("parseArgs", () => {
 
     it("--upgrade-scope on a non-certify subcommand marks invalid AND consumes the value token", () => {
       const cwd = process.cwd();
-      const parsed = parseArgs(
-        ["validate", "--upgrade-scope", "full", "--format", "github"],
-        cwd,
-      );
+      const parsed = parseArgs(["validate", "--upgrade-scope", "full", "--format", "github"], cwd);
       expect(parsed.invalid).toBe(true);
       expect(parsed.options.validateFormat).toBe("github");
       expect(parsed.options.prototypingUpgradeScopeFull).toBeUndefined();

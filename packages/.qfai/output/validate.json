@@ -1,0 +1,250 @@
+{
+  "toolVersion": "1.9.2",
+  "profile": "full",
+  "issues": [
+    {
+      "code": "QFAI-ASSETS-001",
+      "severity": "error",
+      "category": "canonical",
+      "message": "必須ファイル .qfai/assistant/constitution/drift-protocol.md (legacy fallback: .qfai/assistant/instructions/drift-protocol.md) が見つかりません。",
+      "file": ".qfai/assistant/constitution/drift-protocol.md",
+      "rule": "assistantAssets.driftProtocol"
+    },
+    {
+      "code": "QFAI-ASSETS-002",
+      "severity": "error",
+      "category": "canonical",
+      "message": "必須ファイル .qfai/assistant/catalog/test-layers.md (legacy fallback: .qfai/assistant/steering/test-layers.md) が見つかりません。",
+      "file": ".qfai/assistant/catalog/test-layers.md",
+      "rule": "assistantAssets.testLayers"
+    },
+    {
+      "code": "QFAI-DPACK-001",
+      "severity": "error",
+      "category": "change",
+      "message": "discussion-pack が見つかりません。`.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/` を作成してください。",
+      "suggested_action": "次の手順を実施してください:\n- `/qfai-discussion` を実行して最新の discussion-pack を生成する\n- 生成後に `qfai validate` を再実行する",
+      "file": ".qfai/discussion",
+      "rule": "discussionPack.presence"
+    },
+    {
+      "code": "QFAI-SPACK-000",
+      "severity": "info",
+      "category": "canonical",
+      "message": "Spec Pack が見つかりません。配置場所: .qfai/specs / 期待: spec-0001/01_Spec.md ... 18_delta.md または Layered spec (01_Spec.md ... *_delta.md)",
+      "file": ".qfai/specs",
+      "rule": "specPack.files"
+    },
+    {
+      "code": "QFAI-CONTRACT-000",
+      "severity": "info",
+      "category": "canonical",
+      "message": "UI 契約ファイルが見つかりません。",
+      "file": ".qfai/contracts/ui",
+      "rule": "contracts.ui.files"
+    },
+    {
+      "code": "QFAI-CONTRACT-000",
+      "severity": "info",
+      "category": "canonical",
+      "message": "API 契約ファイルが見つかりません。",
+      "file": ".qfai/contracts/api",
+      "rule": "contracts.api.files"
+    },
+    {
+      "code": "QFAI-CONTRACT-000",
+      "severity": "info",
+      "category": "canonical",
+      "message": "DB 契約ファイルが見つかりません。",
+      "file": ".qfai/contracts/db",
+      "rule": "contracts.db.files"
+    },
+    {
+      "code": "I-ASSISTANT-LAYER-UNSEEDED",
+      "severity": "info",
+      "category": "canonical",
+      "message": ".qfai/assistant/constitution/ is not seeded yet. Run `qfai init` to seed the 4-layer tree.",
+      "file": ".qfai/assistant/constitution/",
+      "rule": "assistantTreeMigration.layerSeed"
+    },
+    {
+      "code": "I-ASSISTANT-LAYER-UNSEEDED",
+      "severity": "info",
+      "category": "canonical",
+      "message": ".qfai/assistant/manifest/ is not seeded yet. Run `qfai init` to seed the 4-layer tree.",
+      "file": ".qfai/assistant/manifest/",
+      "rule": "assistantTreeMigration.layerSeed"
+    },
+    {
+      "code": "I-ASSISTANT-LAYER-UNSEEDED",
+      "severity": "info",
+      "category": "canonical",
+      "message": ".qfai/assistant/catalog/ is not seeded yet. Run `qfai init` to seed the 4-layer tree.",
+      "file": ".qfai/assistant/catalog/",
+      "rule": "assistantTreeMigration.layerSeed"
+    },
+    {
+      "code": "I-ASSISTANT-LAYER-UNSEEDED",
+      "severity": "info",
+      "category": "canonical",
+      "message": ".qfai/assistant/process/ is not seeded yet. Run `qfai init` to seed the 4-layer tree.",
+      "file": ".qfai/assistant/process/",
+      "rule": "assistantTreeMigration.layerSeed"
+    },
+    {
+      "code": "QFAI-REVIEW-001",
+      "severity": "error",
+      "category": "change",
+      "message": "ルート `.gitignore` に QFAI 管理ブロック（`qfai init` が自動生成）用のエントリがありません。",
+      "suggested_action": "`qfai init` を再実行して、ルート `.gitignore` に QFAI 管理ブロック（例: `.qfai/review/*` 等）を追記してください。",
+      "file": ".gitignore",
+      "rule": "reviewArtifacts.gitignore"
+    },
+    {
+      "code": "QFAI-REVIEW-002",
+      "severity": "warning",
+      "category": "change",
+      "message": "review 成果物が見つかりません。`review-YYYYMMDDhhmmssSSS/` が未生成のため、このチェックは warning 扱いです。",
+      "suggested_action": "review 実行後に `review_request.md` / `Rxx_*.md` / `summary.json` を含む `review-*` ディレクトリがあることを確認してください。",
+      "file": ".qfai/review",
+      "rule": "reviewArtifacts.presence"
+    },
+    {
+      "code": "QFAI-CFG-LINK-002",
+      "severity": "warning",
+      "category": "canonical",
+      "message": "qfai.config.yaml: paths.skillsDir=\".qfai/assistant/skills\" but the directory does not exist.",
+      "suggested_action": "paths.skillsDir を実在するディレクトリに合わせるか、対応するディレクトリを作成してください。",
+      "file": "qfai.config.yaml",
+      "rule": "config.paths.skillsDir.reality"
+    },
+    {
+      "code": "QFAI-CFG-LINK-002",
+      "severity": "warning",
+      "category": "canonical",
+      "message": "qfai.config.yaml: paths.srcDir=\"src\" but the directory does not exist.",
+      "suggested_action": "paths.srcDir を実在するディレクトリに合わせるか、対応するディレクトリを作成してください。",
+      "file": "qfai.config.yaml",
+      "rule": "config.paths.srcDir.reality"
+    },
+    {
+      "code": "QFAI-CFG-LINK-002",
+      "severity": "warning",
+      "category": "canonical",
+      "message": "qfai.config.yaml: paths.testsDir=\"tests\" but the directory does not exist.",
+      "suggested_action": "paths.testsDir を実在するディレクトリに合わせるか、対応するディレクトリを作成してください。",
+      "file": "qfai.config.yaml",
+      "rule": "config.paths.testsDir.reality"
+    },
+    {
+      "code": "QFAI-TRACE-002",
+      "severity": "warning",
+      "category": "canonical",
+      "message": "Traceability ledger not found for spec-0004. Skipping integrity check.",
+      "file": ".qfai/specs/spec-0004/16_Traceability-ledger.md",
+      "rule": "traceability.integrity.ledgerMissing"
+    },
+    {
+      "code": "QFAI-TRACE-002",
+      "severity": "warning",
+      "category": "canonical",
+      "message": "Traceability ledger not found for spec-0006. Skipping integrity check.",
+      "file": ".qfai/specs/spec-0006/16_Traceability-ledger.md",
+      "rule": "traceability.integrity.ledgerMissing"
+    },
+    {
+      "code": "QFAI-TRACE-002",
+      "severity": "warning",
+      "category": "canonical",
+      "message": "Traceability ledger not found for spec-0008. Skipping integrity check.",
+      "file": ".qfai/specs/spec-0008/16_Traceability-ledger.md",
+      "rule": "traceability.integrity.ledgerMissing"
+    },
+    {
+      "code": "QFAI-TRACE-002",
+      "severity": "warning",
+      "category": "canonical",
+      "message": "Traceability ledger not found for spec-0010. Skipping integrity check.",
+      "file": ".qfai/specs/spec-0010/16_Traceability-ledger.md",
+      "rule": "traceability.integrity.ledgerMissing"
+    },
+    {
+      "code": "QFAI-TRACE-002",
+      "severity": "warning",
+      "category": "canonical",
+      "message": "Traceability ledger not found for spec-0012. Skipping integrity check.",
+      "file": ".qfai/specs/spec-0012/16_Traceability-ledger.md",
+      "rule": "traceability.integrity.ledgerMissing"
+    },
+    {
+      "code": "QFAI-TRACE-002",
+      "severity": "warning",
+      "category": "canonical",
+      "message": "Traceability ledger not found for spec-0013. Skipping integrity check.",
+      "file": ".qfai/specs/spec-0013/16_Traceability-ledger.md",
+      "rule": "traceability.integrity.ledgerMissing"
+    },
+    {
+      "code": "QFAI-TRACE-002",
+      "severity": "warning",
+      "category": "canonical",
+      "message": "Traceability ledger not found for spec-0014. Skipping integrity check.",
+      "file": ".qfai/specs/spec-0014/16_Traceability-ledger.md",
+      "rule": "traceability.integrity.ledgerMissing"
+    },
+    {
+      "code": "QFAI-TRACE-002",
+      "severity": "warning",
+      "category": "canonical",
+      "message": "Traceability ledger not found for spec-0015. Skipping integrity check.",
+      "file": ".qfai/specs/spec-0015/16_Traceability-ledger.md",
+      "rule": "traceability.integrity.ledgerMissing"
+    },
+    {
+      "code": "D-DEPRECATED-PATH",
+      "severity": "warning",
+      "category": "canonical",
+      "message": "Legacy validate output path .qfai/output/validate.json is still being written for backward compatibility; sunset: 1.10.0. Read .qfai/report/validate.json (always-latest) or .qfai/report/validate-<profile>.json instead.",
+      "file": ".qfai/output/validate.json",
+      "rule": "validate.legacyOutputDeprecated"
+    }
+  ],
+  "counts": {
+    "info": 8,
+    "warning": 13,
+    "error": 4
+  },
+  "traceability": {
+    "sc": {
+      "total": 0,
+      "covered": 0,
+      "missing": 0,
+      "missingIds": [],
+      "refs": {}
+    },
+    "testFiles": {
+      "globs": [],
+      "excludeGlobs": [
+        "**/node_modules/**",
+        "**/.git/**",
+        "**/.qfai/**",
+        "**/dist/**",
+        "**/build/**",
+        "**/coverage/**",
+        "**/.next/**",
+        "**/out/**"
+      ],
+      "matchedFileCount": 0,
+      "truncated": false,
+      "limit": 20000
+    }
+  },
+  "waivers": {
+    "active": [],
+    "suppressed": {
+      "total": 0,
+      "byWaiver": {},
+      "byRule": {}
+    }
+  }
+}

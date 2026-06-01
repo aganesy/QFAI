@@ -188,10 +188,7 @@ function replaceTokenValueWithPlaceholder(text: string, dottedKey: string): stri
   // of only `patchHash`. Group 1 captures the optional `\n` so we
   // preserve it verbatim; group 2 captures the indent+key+colon
   // prefix that survives the placeholder substitution.
-  const leafRe = new RegExp(
-    `(^|\\n)(${leafIndent}${escapeRe(leaf)}:[ \\t]*)([^\\n]*)`,
-    "u",
-  );
+  const leafRe = new RegExp(`(^|\\n)(${leafIndent}${escapeRe(leaf)}:[ \\t]*)([^\\n]*)`, "u");
   const after = text.slice(cursor);
   const leafMatch = leafRe.exec(after);
   if (!leafMatch) return text;
@@ -276,7 +273,7 @@ function collectScalarValues(text: string): Map<string, string> {
     if (rawLine.trim().length === 0) continue;
     if (rawLine.trim().startsWith("#")) continue;
     const indentMatch = /^( *)/.exec(rawLine);
-    const indent = indentMatch ? indentMatch[1]?.length ?? 0 : 0;
+    const indent = indentMatch ? (indentMatch[1]?.length ?? 0) : 0;
     while (stack.length > 0) {
       const top = stack[stack.length - 1];
       if (top !== undefined && top.indent >= indent) {

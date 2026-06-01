@@ -53,16 +53,12 @@ describe("TC-0004-0068: saas-package profile rejects missing DCON-005 attestatio
     const issues = await runSaasPackageProfile(root, defaultConfig, []);
     const errors = issues.filter((i) => i.severity === "error");
     expect(errors.length).toBeGreaterThan(0);
-    const attestationError = errors.find((i) =>
-      (i.message ?? "").includes("design-system.yaml"),
-    );
+    const attestationError = errors.find((i) => (i.message ?? "").includes("design-system.yaml"));
     expect(
       attestationError,
       "expected an error finding that names the absent design-system.yaml attestation",
     ).toBeDefined();
-    expect(attestationError?.message ?? "").toContain(
-      ".qfai/contracts/design/design-system.yaml",
-    );
+    expect(attestationError?.message ?? "").toContain(".qfai/contracts/design/design-system.yaml");
   });
 
   it("does NOT emit the attestation-missing finding when the file is present", async () => {

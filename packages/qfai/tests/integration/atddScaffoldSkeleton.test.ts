@@ -113,11 +113,11 @@ describe("atdd scaffold — per-TC skeleton emission", () => {
 
     const filledPath = path.join(root, "tests", "atdd", specId, "TC-0001-0001.test.ts");
     const filledBody = [
-      "import { describe, it, expect } from \"vitest\";",
+      'import { describe, it, expect } from "vitest";',
       "",
       "// QFAI:SPEC-0001:TC-0001-0001",
-      "describe(\"TC-0001-0001\", () => {",
-      "  it(\"asserts real behavior\", () => {",
+      'describe("TC-0001-0001", () => {',
+      '  it("asserts real behavior", () => {',
       "    expect(1 + 1).toBe(2);",
       "  });",
       "});",

@@ -31,14 +31,7 @@ afterEach(async () => {
 });
 
 async function seedStaleRef(): Promise<void> {
-  const dir = path.join(
-    root,
-    ".qfai",
-    "assistant",
-    "skills",
-    "qfai-prototyping",
-    "references",
-  );
+  const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping", "references");
   await mkdir(dir, { recursive: true });
   await writeFile(
     path.join(dir, "handoff.md"),

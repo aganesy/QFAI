@@ -67,7 +67,10 @@ describe.skip("spec-0006 doctor --autoremediate CHG-006 (test-first, pending /qf
   it("QFAI:SPEC-0006:US-0006-0009 — in CI autoremediate defaults off and prints the disabled line; --dry-run has no side effects (error/boundary)", async () => {
     // Boundary/error: CI default = --autoremediate=off with an explicit
     // "autoremediate disabled in CI" line; --dry-run previews with no writes.
-    const res = await runCli(["doctor", "--autoremediate", "--dry-run", "--format", "text"], undefined);
+    const res = await runCli(
+      ["doctor", "--autoremediate", "--dry-run", "--format", "text"],
+      undefined,
+    );
     expect(res.stdout + res.stderr).toMatch(/autoremediate disabled in CI|dry-run/i);
   });
 });

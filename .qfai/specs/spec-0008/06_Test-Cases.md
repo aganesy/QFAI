@@ -79,7 +79,7 @@
 - EX-Ref: EX-0008-0009
 - AC-Refs: AC-0008-0010
 - Type: normal
-- Verify that `qfai atdd scaffold --spec spec-NNNN` against an empty target dir emits `tests/atdd/spec-NNNN/<TC-ID>.test.*` per TC, each importing the test framework, containing `// TODO: implement assertion for <TC-ID>`, and referencing related US-* / CON-API-* in comments; and that `qfai validate` emits `D-SCAFFOLD-PLACEHOLDER` (warning) for each unfilled file.
+- Verify that `qfai atdd scaffold --spec spec-NNNN` against an empty target dir emits `tests/atdd/spec-NNNN/<TC-ID>.test.*` per TC, each importing the test framework, containing `// TODO: implement assertion for <TC-ID>`, and referencing related `US-*` / `CON-API-*` in comments; and that `qfai validate` emits `D-SCAFFOLD-PLACEHOLDER` (warning) for each unfilled file.
 
 ## TC-0008-0014: Scaffold Idempotency and 3-Cycle Escalation
 

@@ -558,10 +558,7 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
   };
 }
 
-async function buildSkillManifestProbeChecks(
-  root: string,
-  skill: string,
-): Promise<DoctorCheck[]> {
+async function buildSkillManifestProbeChecks(root: string, skill: string): Promise<DoctorCheck[]> {
   const findings = await probeSkillManifestRuntimeDeps(root, skill);
   if (findings.length === 0) {
     return [

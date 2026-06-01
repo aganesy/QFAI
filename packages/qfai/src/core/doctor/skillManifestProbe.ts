@@ -49,7 +49,10 @@ async function exists(target: string): Promise<boolean> {
 
 const WIN_BIN_EXTS = [".cmd", ".bat", ".ps1", ".exe"] as const;
 
-async function probeNodeModulesFor(root: string, name: string): Promise<{
+async function probeNodeModulesFor(
+  root: string,
+  name: string,
+): Promise<{
   found: boolean;
   probedPaths: string[];
 }> {

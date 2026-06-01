@@ -15,10 +15,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import {
-  readDiscussionCurrentId,
-  writeDiscussionCurrentId,
-} from "../../../src/core/state.js";
+import { readDiscussionCurrentId, writeDiscussionCurrentId } from "../../../src/core/state.js";
 
 let root: string;
 
@@ -60,9 +57,10 @@ describe("TC-0010-0012: state.json discussion.currentId reader/writer", () => {
       "utf-8",
     );
     await writeDiscussionCurrentId(root, "discussion-20260101000000000");
-    const raw = JSON.parse(
-      await readFile(path.join(root, ".qfai", "state.json"), "utf-8"),
-    ) as { unrelated?: { keep?: boolean }; discussion?: { currentId?: string } };
+    const raw = JSON.parse(await readFile(path.join(root, ".qfai", "state.json"), "utf-8")) as {
+      unrelated?: { keep?: boolean };
+      discussion?: { currentId?: string };
+    };
     expect(raw.unrelated?.keep).toBe(true);
     expect(raw.discussion?.currentId).toBe("discussion-20260101000000000");
   });

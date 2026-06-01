@@ -85,9 +85,7 @@ describe("TC-0004-0070: QFAI-AUD-020 band 3..7 warn + missing acceptance reject 
     expect(band?.message ?? "").toMatch(/3\.\.7|3 to 7/);
     // The shipped band label constant is sourced from the production
     // module so any band drift surfaces here as a failing assertion.
-    expect(PRIMARY_TASKS_BAND_LABEL).toBe(
-      `${PRIMARY_TASKS_BAND_MIN}..${PRIMARY_TASKS_BAND_MAX}`,
-    );
+    expect(PRIMARY_TASKS_BAND_LABEL).toBe(`${PRIMARY_TASKS_BAND_MIN}..${PRIMARY_TASKS_BAND_MAX}`);
     expect(band?.message ?? "").toContain(PRIMARY_TASKS_BAND_LABEL);
   });
 

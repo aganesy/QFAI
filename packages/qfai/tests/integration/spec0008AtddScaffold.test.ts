@@ -42,7 +42,9 @@ describe.skip("spec-0008 atdd scaffold CHG-006 (test-first, pending /qfai-implem
     expect(res.code).toBe(0);
     expect(res.stdout + res.stderr).toMatch(/TODO: implement assertion for TC-0008/);
     const validate = await runCli(["validate", "--profile", "atdd", "--format", "json"]);
-    const body = JSON.parse(validate.stdout) as { issues: Array<{ code: string; severity: string }> };
+    const body = JSON.parse(validate.stdout) as {
+      issues: Array<{ code: string; severity: string }>;
+    };
     const ph = body.issues.find((i) => i.code === "D-SCAFFOLD-PLACEHOLDER");
     expect(ph?.severity).toBe("warning");
   });

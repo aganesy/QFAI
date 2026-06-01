@@ -210,16 +210,16 @@ The v1.7.16 slice recorded a historical validator contract that made the legacy 
 
 ## 2026-05-27 — v1.9.2 Second-Wave (spec-0014)
 
-| Operation | Sub-op | Target                                       | Source (REQ) | Rationale          | DR-Ref            | Status |
-| --------- | ------ | -------------------------------------------- | ------------ | ------------------ | ----------------- | ------ |
-| UPDATE    | APPEND | 01_Spec.md (Scope.In + Relevant Requirements + US range → 0020) | REQ-0166     | cascade verified   | DR-0014-0004      | PASS   |
-| UPDATE    | APPEND | 02_User-stories.md (US-0014-0020)            | REQ-0166     | cascade verified   | DR-0014-0004      | PASS   |
-| UPDATE    | APPEND | 03_Acceptance-Criteria.md (AC-0014-0022)     | REQ-0166     | cascade verified   | DR-0014-0004      | PASS   |
-| UPDATE    | APPEND | 04_Business-Rules.md (BR-0014-0025)          | REQ-0166     | cascade verified   | DR-0014-0004      | PASS   |
-| UPDATE    | APPEND | 05_Examples.md (EX-0014-0029)                | REQ-0166     | cascade verified   | DR-0014-0004      | PASS   |
-| UPDATE    | APPEND | 06_Test-Cases.md (TC-0014-0035..0036)        | REQ-0166     | cascade verified   | DR-0014-0004      | PASS   |
-| UPDATE    | APPEND | 07_Decisions.md (DR-0014-0004)               | REQ-0166     | cascade verified   | DR-0014-0004      | PASS   |
-| UPDATE    | APPEND | 08_Open-questions.md (Resolved note)         | REQ-0167     | cascade verified   | DR-0274           | PASS   |
+| Operation | Sub-op | Target                                                          | Source (REQ) | Rationale        | DR-Ref       | Status |
+| --------- | ------ | --------------------------------------------------------------- | ------------ | ---------------- | ------------ | ------ |
+| UPDATE    | APPEND | 01_Spec.md (Scope.In + Relevant Requirements + US range → 0020) | REQ-0166     | cascade verified | DR-0014-0004 | PASS   |
+| UPDATE    | APPEND | 02_User-stories.md (US-0014-0020)                               | REQ-0166     | cascade verified | DR-0014-0004 | PASS   |
+| UPDATE    | APPEND | 03_Acceptance-Criteria.md (AC-0014-0022)                        | REQ-0166     | cascade verified | DR-0014-0004 | PASS   |
+| UPDATE    | APPEND | 04_Business-Rules.md (BR-0014-0025)                             | REQ-0166     | cascade verified | DR-0014-0004 | PASS   |
+| UPDATE    | APPEND | 05_Examples.md (EX-0014-0029)                                   | REQ-0166     | cascade verified | DR-0014-0004 | PASS   |
+| UPDATE    | APPEND | 06_Test-Cases.md (TC-0014-0035..0036)                           | REQ-0166     | cascade verified | DR-0014-0004 | PASS   |
+| UPDATE    | APPEND | 07_Decisions.md (DR-0014-0004)                                  | REQ-0166     | cascade verified | DR-0014-0004 | PASS   |
+| UPDATE    | APPEND | 08_Open-questions.md (Resolved note)                            | REQ-0167     | cascade verified | DR-0274      | PASS   |
 
 - Notes: REQ-0166 is the certify side (SaaS-package scope seal). The validate-profile side (`qfai validate --profile saas-package`) is owned by spec-0004 (same Source REQ, file-local IDs). Certificate carries `scope: "saas-package"` + `notes:`; never claims full DONE; `--upgrade-scope full` gated on missing gates landing. Contract reference: `_policies/05_Contracts.md` §CHG-006 DCON-005 / CLI-VAL; glossary `saas-package profile`. One-minor deprecation window per OC-63.
 - Source: REQ-0166 (discussion-20260527075558258)

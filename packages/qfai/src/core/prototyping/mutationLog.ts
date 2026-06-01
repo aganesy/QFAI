@@ -39,10 +39,7 @@ export type MutationLogEntry = {
  * tree when absent. The entry timestamp (`ts`) is added at write time
  * (ISO-8601 UTC).
  */
-export async function appendMutationLogEntry(
-  root: string,
-  entry: MutationLogEntry,
-): Promise<void> {
+export async function appendMutationLogEntry(root: string, entry: MutationLogEntry): Promise<void> {
   const logAbs = path.join(root, MUTATION_LOG_REL);
   await mkdir(path.dirname(logAbs), { recursive: true });
   const ts = new Date().toISOString();

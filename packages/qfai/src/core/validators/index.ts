@@ -64,10 +64,7 @@ export { validateSkillDocReferences } from "./skillDocReferences.js";
 export { validateReviewerJustification } from "./reviewerJustification.js";
 export { validateReviewerGate, detectMockHrefDrift } from "./reviewerGate.js";
 export { validateSurfaceTypeDrift } from "./surfaceTypeDrift.js";
-export {
-  detectDesignMdPatchOutOfZone,
-  validateDesignMdPatchZone,
-} from "./designMdPatchZone.js";
+export { detectDesignMdPatchOutOfZone, validateDesignMdPatchZone } from "./designMdPatchZone.js";
 export { detectEvidenceMutationUnlogged } from "./evidenceMutationUnlogged.js";
 export { detectSkillManifestDrift } from "./skillManifestDrift.js";
 export type { SkillManifestPair } from "./skillManifestPairs.js";
@@ -96,10 +93,7 @@ export {
   validateStaleReferences,
 } from "./staleReferences.js";
 export type { StaleReferenceEntry } from "./staleReferences.js";
-export {
-  HANDOFF_SCHEMA_REL,
-  HANDOFF_WRITER_PAIRS,
-} from "./handoffSchemaPairs.js";
+export { HANDOFF_SCHEMA_REL, HANDOFF_WRITER_PAIRS } from "./handoffSchemaPairs.js";
 export type { HandoffWriterPair } from "./handoffSchemaPairs.js";
 export {
   detectExplorationCertifyAttempt,

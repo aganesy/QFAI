@@ -97,9 +97,9 @@ Scenario: --out ファイル出力
 | AC-0006-0015 | --clean archives stale review packs at TTL              | REQ-0153           | P1       |
 | AC-0006-0016 | --clean never deletes; validate review out-of-scope     | REQ-0153           | P1       |
 | AC-0006-0017 | --autoremediate fixes install/clean/config with --yes   | REQ-0156           | P1       |
-| AC-0006-0018 | --autoremediate off in CI; --dry-run no side effects     | REQ-0156           | P1       |
+| AC-0006-0018 | --autoremediate off in CI; --dry-run no side effects    | REQ-0156           | P1       |
 | AC-0006-0019 | --profile <skill> probes manifest runtimeDependencies   | REQ-0159           | P1       |
-| AC-0006-0020 | empty manifest no probe; manifest↔probe drift error      | REQ-0159           | P1       |
+| AC-0006-0020 | empty manifest no probe; manifest↔probe drift error     | REQ-0159           | P1       |
 
 ```gherkin
 # AC-0006-0010

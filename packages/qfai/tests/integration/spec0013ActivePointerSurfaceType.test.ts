@@ -24,9 +24,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import {
-  populateSurfaceTypeIfUiCompanion,
-} from "../../src/core/detection/surfaceType.js";
+import { populateSurfaceTypeIfUiCompanion } from "../../src/core/detection/surfaceType.js";
 import {
   resolveActiveDiscussionPack,
   ResolveActiveDiscussionPackError,
@@ -106,13 +104,9 @@ describe("spec-0013 surface_type frontmatter CHG-006", () => {
     );
     await makeUiContract(
       "ui-0099-dashboard.yaml",
-      [
-        "screens:",
-        "  - id: dashboard",
-        "    route: /dashboard",
-        "    primary_tasks: []",
-        "",
-      ].join("\n"),
+      ["screens:", "  - id: dashboard", "    route: /dashboard", "    primary_tasks: []", ""].join(
+        "\n",
+      ),
     );
     const result = await populateSurfaceTypeIfUiCompanion(root, "0099", defaultConfig);
     expect(result.changed).toBe(true);
@@ -121,23 +115,13 @@ describe("spec-0013 surface_type frontmatter CHG-006", () => {
   });
 
   it("QFAI:SPEC-0013:TC-0013-0031 — boundary: D-SURFACE-TYPE-MISSING (warning) when companion exists but frontmatter is absent; no finding without companion", async () => {
-    await makeSpec(
-      "0091",
-      ["---", "id: spec-0091", "---", "", "# Sample", ""].join("\n"),
-    );
-    await makeSpec(
-      "0092",
-      ["---", "id: spec-0092", "---", "", "# Sample", ""].join("\n"),
-    );
+    await makeSpec("0091", ["---", "id: spec-0091", "---", "", "# Sample", ""].join("\n"));
+    await makeSpec("0092", ["---", "id: spec-0092", "---", "", "# Sample", ""].join("\n"));
     await makeUiContract(
       "ui-0091-dashboard.yaml",
-      [
-        "screens:",
-        "  - id: dashboard",
-        "    route: /dashboard",
-        "    primary_tasks: []",
-        "",
-      ].join("\n"),
+      ["screens:", "  - id: dashboard", "    route: /dashboard", "    primary_tasks: []", ""].join(
+        "\n",
+      ),
     );
     const issues = await validateSurfaceTypeDrift(root, defaultConfig);
     const drift91 = issues.find(

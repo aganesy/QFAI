@@ -23,13 +23,13 @@
 | TC-0006-0017 | unit        | AC-0006-0013 | EX-0006-0013 | skills.integrity defaults to severity warning; `--fail-on error` exit 0 holds                               |
 | TC-0006-0018 | integration | AC-0006-0014 | EX-0006-0014 | doctor summary splits into 2 groups; skills.integrity lands in advisory group regardless of message wording |
 | TC-0006-0019 | integration | AC-0006-0015 | EX-0006-0015 | --clean archives a TTL-expired review pack (Type: normal)                                                   |
-| TC-0006-0020 | integration | AC-0006-0016 | EX-0006-0016 | --clean never deletes; validate review excludes _archive (Type: boundary)                                   |
+| TC-0006-0020 | integration | AC-0006-0016 | EX-0006-0016 | --clean never deletes; validate review excludes \_archive (Type: boundary)                                  |
 | TC-0006-0021 | integration | AC-0006-0017 | EX-0006-0017 | --autoremediate --yes fixes install + clean + config (Type: normal)                                         |
 | TC-0006-0022 | integration | AC-0006-0018 | EX-0006-0018 | autoremediate off in CI; --dry-run yields no side effects (Type: error)                                     |
 | TC-0006-0023 | unit        | AC-0006-0015 | EX-0006-0015 | review.staleTtlDays config override changes TTL boundary (Type: boundary)                                   |
 | TC-0006-0024 | integration | AC-0006-0019 | EX-0006-0019 | --profile <skill> probes manifest runtimeDependencies; missing reported (Type: normal)                      |
 | TC-0006-0025 | unit        | AC-0006-0020 | EX-0006-0020 | empty runtimeDependencies emits no probe finding (Type: boundary)                                           |
-| TC-0006-0026 | integration | AC-0006-0020 | EX-0006-0020 | manifest↔probe drift emits R-SKILL-MANIFEST-DRIFT (Type: error)                                              |
+| TC-0006-0026 | integration | AC-0006-0020 | EX-0006-0020 | manifest↔probe drift emits R-SKILL-MANIFEST-DRIFT (Type: error)                                             |
 
 ## TC-0006-0012: playwright primary probe detects node_modules/.bin/playwright
 
@@ -128,7 +128,7 @@ Verify:
 - old pack が `.qfai/review/_archive/<old-ts>/` へ move される
 - TTL 内 pack は `.qfai/review/<ts>/` に残置される
 
-## TC-0006-0020: --clean never deletes; validate review excludes _archive
+## TC-0006-0020: --clean never deletes; validate review excludes \_archive
 
 **Level:** integration
 **Type:** boundary

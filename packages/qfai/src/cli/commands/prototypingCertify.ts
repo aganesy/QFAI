@@ -1144,9 +1144,7 @@ async function runUpgradeScopeFull(
     // profile name (full / verify / tdd / atdd / ...) the existing
     // "re-run after gates PASS" hint is correct — surface the actual
     // profile name from the signal.
-    const signalProfile = isRecord(signal)
-      ? extractString(signal, "profile")
-      : undefined;
+    const signalProfile = isRecord(signal) ? extractString(signal, "profile") : undefined;
     if (signalProfile === "saas-package") {
       // The recovery target is the fuller-profile report
       // (`validate-full.json`), NOT the canonical saas-package report.

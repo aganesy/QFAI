@@ -119,9 +119,7 @@ export async function buildCompletionCertificate(
     iterationCount: inputs.iterationCount,
     specsCovered: [...inputs.specsCovered],
     ...(inputs.designMd ? { designMd: { ...inputs.designMd } } : {}),
-    ...(typeof inputs.scope === "string" && inputs.scope.length > 0
-      ? { scope: inputs.scope }
-      : {}),
+    ...(typeof inputs.scope === "string" && inputs.scope.length > 0 ? { scope: inputs.scope } : {}),
     ...(inputs.notes && inputs.notes.length > 0 ? { notes: [...inputs.notes] } : {}),
   };
   return cert;
@@ -270,9 +268,7 @@ function normalizeCompletionCertificate(value: unknown): CompletionCertificate |
     ...(record.designMd
       ? { designMd: { path: record.designMd.path, sha256: record.designMd.sha256 } }
       : {}),
-    ...(typeof record.scope === "string" && record.scope.length > 0
-      ? { scope: record.scope }
-      : {}),
+    ...(typeof record.scope === "string" && record.scope.length > 0 ? { scope: record.scope } : {}),
     ...(record.notes && record.notes.length > 0 ? { notes: [...record.notes] } : {}),
   };
   return out;

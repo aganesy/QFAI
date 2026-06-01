@@ -67,7 +67,7 @@ describe("TC-0010-0009/0010: QFAI-MOCK-010 href classification (anchor-form stri
 });
 
 describe("TC-0010-0009: shipped discussion mock template + SKILL.md default to anchor-form", () => {
-  it("the Story-Workshop mock template emits an anchor-form <a href=\"#...\"> link", async () => {
+  it('the Story-Workshop mock template emits an anchor-form <a href="#..."> link', async () => {
     const text = await readFile(TEMPLATE_REL, "utf-8");
     expect(text).toMatch(/<a\s+href="#[a-z0-9-]+"/i);
     // The drift form (same-origin absolute) must NOT be the template default.

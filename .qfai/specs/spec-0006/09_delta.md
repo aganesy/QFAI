@@ -75,13 +75,13 @@
 
 ### Triage (rows owned by this spec)
 
-| Operation     | Sub-op | Target                                                                       | Source (REQ) | Rationale                                              | DR-Ref  | Status |
-| ------------- | ------ | ---------------------------------------------------------------------------- | ------------ | ------------------------------------------------------ | ------- | ------ |
-| UPDATE:APPEND | APPEND | 01_Spec.md (Relevant Requirements + US range→0010 + Consumer-View copy-down) | REQ-0153     | stale review-pack TTL archival; cascade verified       | DR-0264 | PASS   |
-| UPDATE:APPEND | APPEND | 02..06 (US-0006-0008 / AC-0006-0015,0016 / BR-0006-0012,0013 / EX/TC edges)   | REQ-0153     | `doctor --clean` archival edges; cascade verified      | DR-0264 | PASS   |
-| UPDATE:APPEND | APPEND | 02..06 (US-0006-0009 / AC-0006-0017,0018 / BR-0006-0014,0015 / EX/TC edges)   | REQ-0156     | `doctor --autoremediate` mode; cascade verified        | DR-0264 | PASS   |
-| UPDATE:APPEND | APPEND | 02..06 (US-0006-0010 / AC-0006-0019,0020 / BR-0006-0016,0017 / EX/TC edges)   | REQ-0159     | per-skill manifest probe (Pair III); cascade verified    | DR-0264 | PASS   |
-| UPDATE:APPEND | APPEND | 07_Decisions.md (DR-0006-0003 cites DR-0264) + 08_Open-questions (OQ-0155)    | REQ-0153     | TTL default resolved by DR-0264; cascade verified      | DR-0264 | PASS   |
+| Operation     | Sub-op | Target                                                                       | Source (REQ) | Rationale                                             | DR-Ref  | Status |
+| ------------- | ------ | ---------------------------------------------------------------------------- | ------------ | ----------------------------------------------------- | ------- | ------ |
+| UPDATE:APPEND | APPEND | 01_Spec.md (Relevant Requirements + US range→0010 + Consumer-View copy-down) | REQ-0153     | stale review-pack TTL archival; cascade verified      | DR-0264 | PASS   |
+| UPDATE:APPEND | APPEND | 02..06 (US-0006-0008 / AC-0006-0015,0016 / BR-0006-0012,0013 / EX/TC edges)  | REQ-0153     | `doctor --clean` archival edges; cascade verified     | DR-0264 | PASS   |
+| UPDATE:APPEND | APPEND | 02..06 (US-0006-0009 / AC-0006-0017,0018 / BR-0006-0014,0015 / EX/TC edges)  | REQ-0156     | `doctor --autoremediate` mode; cascade verified       | DR-0264 | PASS   |
+| UPDATE:APPEND | APPEND | 02..06 (US-0006-0010 / AC-0006-0019,0020 / BR-0006-0016,0017 / EX/TC edges)  | REQ-0159     | per-skill manifest probe (Pair III); cascade verified | DR-0264 | PASS   |
+| UPDATE:APPEND | APPEND | 07_Decisions.md (DR-0006-0003 cites DR-0264) + 08_Open-questions (OQ-0155)   | REQ-0153     | TTL default resolved by DR-0264; cascade verified     | DR-0264 | PASS   |
 
 - Notes:
   - REQ-0159 manifest-schema authoring / 配布 lint side は spec-0015 owned; 本 slice は doctor probe 挙動のみ (REQ-0159 を shared Source として参照)。

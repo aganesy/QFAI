@@ -41,9 +41,7 @@ import {
   HANDOFF_SCHEMA_REL,
   HANDOFF_WRITER_PAIRS,
 } from "../../src/core/validators/handoffSchemaPairs.js";
-import {
-  JUSTIFICATION_CATALOG,
-} from "../../src/core/validators/justificationCatalog.js";
+import { JUSTIFICATION_CATALOG } from "../../src/core/validators/justificationCatalog.js";
 import { validateReviewerJustification } from "../../src/core/validators/reviewerJustification.js";
 import {
   STALE_REFERENCE_SUNSET,
@@ -157,7 +155,11 @@ describe("spec-0015 handoff schema CHG-006", () => {
     for (const pair of HANDOFF_WRITER_PAIRS) {
       const abs = path.join(root, pair.writerRel);
       await mkdir(path.dirname(abs), { recursive: true });
-      await writeFile(abs, `// drift: writer omits the canonical schema token\nexport const X = 1;\n`, "utf-8");
+      await writeFile(
+        abs,
+        `// drift: writer omits the canonical schema token\nexport const X = 1;\n`,
+        "utf-8",
+      );
     }
     const issues = await detectHandoffSchemaDrift(root);
     const f = issues.find((i) => i.code === "R-HANDOFF-SCHEMA-DRIFT");
@@ -306,14 +308,7 @@ describe("spec-0015 handoff upgrade CHG-006", () => {
 
 describe("spec-0015 stale-ref report CHG-006", () => {
   it("QFAI:SPEC-0015:TC-0015-0032 — normal: rewritten in-PR refs report zero stale references at HEAD", async () => {
-    const dir = path.join(
-      root,
-      ".qfai",
-      "assistant",
-      "skills",
-      "qfai-prototyping",
-      "references",
-    );
+    const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping", "references");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "handoff.md"), "# Handoff\nUses handoff.yaml.\n", "utf-8");
     const issues = await validateStaleReferences(root, {
@@ -323,14 +318,7 @@ describe("spec-0015 stale-ref report CHG-006", () => {
   });
 
   it("QFAI:SPEC-0015:TC-0015-0033 — error: stale ref → warning in window, error at sunset", async () => {
-    const dir = path.join(
-      root,
-      ".qfai",
-      "assistant",
-      "skills",
-      "qfai-prototyping",
-      "references",
-    );
+    const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping", "references");
     await mkdir(dir, { recursive: true });
     await writeFile(
       path.join(dir, "handoff.md"),

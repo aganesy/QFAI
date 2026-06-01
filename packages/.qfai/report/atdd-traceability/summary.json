@@ -1,0 +1,22 @@
+{
+  "missing": {
+    "us": [],
+    "tc": [],
+    "conApi": []
+  },
+  "unknown": [],
+  "forbidden": {
+    "tcInApi": [],
+    "tcInE2e": []
+  },
+  "scan": {
+    "matchedFileCount": 0,
+    "truncated": false,
+    "limit": 20000,
+    "globs": [
+      "tests/e2e/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}",
+      "tests/api/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}",
+      "tests/integration/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}"
+    ]
+  }
+}

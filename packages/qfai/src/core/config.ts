@@ -734,7 +734,10 @@ function normalizeAtdd(
       result.scaffoldEscalateCycles = raw.scaffoldEscalateCycles;
     } else {
       issues.push(
-        configIssue(configPath, "atdd.scaffoldEscalateCycles は 0 以上の整数である必要があります。"),
+        configIssue(
+          configPath,
+          "atdd.scaffoldEscalateCycles は 0 以上の整数である必要があります。",
+        ),
       );
     }
   }

@@ -41,13 +41,7 @@ describe("TC-0012-0477: QFAI-CRIT-009 required-keyword set is named in validator
     // keyword appears in the error-text constant (the SSOT). This is
     // structural: the validator imports TASK_FIDELITY_REQUIRED_KEYWORDS
     // so an updated SSOT propagates automatically.
-    const validatorAbs = path.join(
-      PACKAGE_ROOT,
-      "src",
-      "core",
-      "validators",
-      "renderCritique.ts",
-    );
+    const validatorAbs = path.join(PACKAGE_ROOT, "src", "core", "validators", "renderCritique.ts");
     const text = await readFile(validatorAbs, "utf-8");
     expect(text).toContain("TASK_FIDELITY_REQUIRED_KEYWORDS");
     // The validator emits the message; the SSOT keywords list is

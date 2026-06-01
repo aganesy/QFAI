@@ -6,7 +6,7 @@
 // directories matching `review-<17-digit>` so `_archive/` is naturally
 // out-of-scope.
 
-import { access, mkdir, mkdtemp, readdir, rm, utimes, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -32,7 +32,7 @@ afterEach(async () => {
   }
 });
 
-async function seedReviewPack(root: string, ts: string, mtime: Date): Promise<string> {
+async function seedReviewPack(root: string, ts: string, _mtime: Date): Promise<string> {
   const dir = path.join(root, ".qfai", "review", `review-${ts}`);
   await mkdir(dir, { recursive: true });
   return dir;

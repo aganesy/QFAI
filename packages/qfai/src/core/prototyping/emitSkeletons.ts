@@ -62,8 +62,10 @@ export function buildSkeletonHtml(
     // The CLI orchestration layer is the one that escalates to a
     // generation call; the renderer here returns the placeholder as
     // a fallback (callers may discard and replace).
-    return buildPlaceholderHtml(screen, tokens) +
-      "\n<!-- skeleton-mode=full: caller should replace this body via generation -->\n";
+    return (
+      buildPlaceholderHtml(screen, tokens) +
+      "\n<!-- skeleton-mode=full: caller should replace this body via generation -->\n"
+    );
   }
   return buildPlaceholderHtml(screen, tokens);
 }

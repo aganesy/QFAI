@@ -200,9 +200,7 @@ export async function detectMockHrefDrift(root: string): Promise<Issue[]> {
 
   const issues: Issue[] = [];
   for (const pair of MOCK_HREF_PAIRS) {
-    const templateDrifted = pair.templateDriftTokens.every((token) =>
-      templateText.includes(token),
-    );
+    const templateDrifted = pair.templateDriftTokens.every((token) => templateText.includes(token));
     const validatorAccepts = pair.validatorAcceptTokens.every((token) =>
       validatorText.includes(token),
     );
@@ -211,9 +209,7 @@ export async function detectMockHrefDrift(root: string): Promise<Issue[]> {
 
     const modifiedFile = templateDrifted ? MOCK_HREF_TEMPLATE_REL : MOCK_HREF_VALIDATOR_REL;
     const unpaired = templateDrifted ? MOCK_HREF_VALIDATOR_REL : MOCK_HREF_TEMPLATE_REL;
-    const missingTokens = templateDrifted
-      ? pair.validatorAcceptTokens
-      : pair.templateDriftTokens;
+    const missingTokens = templateDrifted ? pair.validatorAcceptTokens : pair.templateDriftTokens;
 
     const message =
       `R-MOCK-HREF-DRIFT: SSOT-sync pair for clause "${pair.clause}" is asymmetric ` +

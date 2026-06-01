@@ -358,9 +358,7 @@ export async function hasUiCompanionForSpec(
   } catch {
     return false;
   }
-  const anchored = new RegExp(
-    `^(?:${specId}|spec-${specId}|ui-${specId}(?:-[^.]+)?)\\.ya?ml$`,
-  );
+  const anchored = new RegExp(`^(?:${specId}|spec-${specId}|ui-${specId}(?:-[^.]+)?)\\.ya?ml$`);
   return entries.some((entry) => entry.isFile && anchored.test(entry.name));
 }
 
@@ -412,10 +410,7 @@ function insertSurfaceTypeFrontmatter(body: string): string {
     const inner = match[1] ?? "";
     if (/^\s*surface_type\s*:/im.test(inner)) {
       // Key already exists with some other value — replace it.
-      const replaced = inner.replace(
-        /^\s*surface_type\s*:.*$/im,
-        "surface_type: ui-bearing",
-      );
+      const replaced = inner.replace(/^\s*surface_type\s*:.*$/im, "surface_type: ui-bearing");
       return `---\n${replaced}\n---\n${body.slice(match[0].length)}`;
     }
     const trimmed = inner.replace(/\s+$/, "");

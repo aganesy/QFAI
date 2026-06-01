@@ -99,7 +99,13 @@ export async function detectEvidenceMutationUnlogged(root: string): Promise<read
       `core/prototyping/mutationLog.ts so the audit log records the change. ` +
       `Justification: file=${pair.sourceRel}, missing=mutationLog call.`;
     issues.push(
-      issue(FINDING_CODE, message, "error", pair.sourceRel, "reviewerGate.evidenceMutationUnlogged"),
+      issue(
+        FINDING_CODE,
+        message,
+        "error",
+        pair.sourceRel,
+        "reviewerGate.evidenceMutationUnlogged",
+      ),
     );
   }
   return issues;

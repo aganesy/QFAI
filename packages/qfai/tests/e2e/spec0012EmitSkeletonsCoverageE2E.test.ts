@@ -104,13 +104,9 @@ async function seedProjectWithUiContracts(root: string): Promise<void> {
   await mkdir(uiDir, { recursive: true });
   await writeFile(
     path.join(uiDir, "home.yaml"),
-    [
-      "screens:",
-      "  - id: home",
-      "    route: /",
-      "  - id: settings",
-      "    route: /settings",
-    ].join("\n"),
+    ["screens:", "  - id: home", "    route: /", "  - id: settings", "    route: /settings"].join(
+      "\n",
+    ),
     "utf-8",
   );
 }

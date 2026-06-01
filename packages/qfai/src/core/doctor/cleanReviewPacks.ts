@@ -41,11 +41,13 @@ export type CleanReviewPacksResult = {
   readonly ttlDays: number;
 };
 
-async function listEntries(reviewRoot: string): Promise<{
-  name: string;
-  abs: string;
-  mtimeMs: number;
-}[]> {
+async function listEntries(reviewRoot: string): Promise<
+  {
+    name: string;
+    abs: string;
+    mtimeMs: number;
+  }[]
+> {
   let names: string[];
   try {
     names = await readdir(reviewRoot);
