@@ -33,13 +33,12 @@ export type TCEntry = {
   /**
    * Optional `Type:` field (heading form) OR table-form layer cell.
    *
-   * Stored as-is from the spec source — heading-form values are
-   * passed through with whitespace trimmed; table-form layer cells
-   * are lowercased + trimmed. Consumers MUST treat this as an
-   * opaque string. The two parse paths use the same normalization
-   * conventions on purpose so downstream code keying off `entry.type`
-   * sees consistent behavior regardless of which catalogue shape the
-   * spec used.
+   * Stored as-is from the spec source — both heading-form and table-
+   * form values are lowercased + trimmed. Consumers MUST treat this
+   * as an opaque string. The two parse paths use the same
+   * normalization conventions on purpose so downstream code keying off
+   * `entry.type` sees consistent behavior regardless of which
+   * catalogue shape the spec used.
    *
    * Heading-form values seen in current specs include `normal`,
    * `error`, `error/boundary`, `boundary`; table-form layer cells
@@ -107,7 +106,7 @@ function parseTableRow(line: string): TCEntry | null {
   const entry: TCEntry = { tcId, title: "", exRefs: [], acRefs: [] };
   // 2nd cell — layer/type. Stored as the lowercased trimmed cell value
   // with no closed allow-list. Symmetric with the heading-form
-  // `META_LINE_RE` `type:` branch (which stores `value.trim()` raw) so
+  // `META_LINE_RE` `type:` branch (which stores `value.trim().toLowerCase()`) so
   // downstream consumers see consistent `entry.type` behavior across
   // both catalogue shapes. The previous closed-allow-list constraint
   // (`unit|integration|validators|e2e|ssot-guard`) introduced an
