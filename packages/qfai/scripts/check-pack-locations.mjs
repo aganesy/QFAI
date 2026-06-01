@@ -12,17 +12,34 @@
  *   - discussion-*  .qfai/discussion/<pack-name>/  (or tmp/<pack-name>/)
  *
  * Scope (per the pack-location lint scope decision):
- *   The lane inspects ONLY the staged / changed paths reported by
- *   `git diff --name-only --cached HEAD` and `git status --porcelain`
- *   (or the explicit list passed via `--changed`). It is NOT a full
- *   working-tree walk — untouched legacy packs that pre-date the rule
- *   are deliberately not re-flagged.
+ *   The lane inspects ONLY the changed paths in scope of the current
+ *   work (PR diff against base in CI, or staged + working-tree changes
+ *   locally; or the explicit list passed via `--changed`). It is NOT a
+ *   full working-tree walk — untouched legacy packs that pre-date the
+ *   rule are deliberately not re-flagged.
  *
  * Invocation modes:
- *   - default          read staged + working-tree changes from `git`.
+ *   - default          local: read staged + working-tree changes from
+ *                      `git`. CI: when neither yields any paths AND
+ *                      `--base-ref` is available (or `origin/main` is
+ *                      reachable), additionally consult
+ *                      `git diff --name-only <base>...HEAD` so a
+ *                      committed-but-misplaced pack on the PR branch
+ *                      is still caught after the CI checkout brings
+ *                      the working tree to a clean HEAD.
+ *   - `--base-ref <ref>` force the PR-diff base for CI invocations.
+ *                      Defaults to `origin/main` when omitted in CI.
  *   - `--changed <csv>` accept a comma-separated path list directly.
  *                      Used by integration tests so they need not spin
  *                      up a real git repo.
+ *
+ * Directory-only matching:
+ *   `review-*` / `discussion-*` is a DIRECTORY pattern. Path segments
+ *   are matched against `PACK_SEGMENT_RE` ONLY when the segment is NOT
+ *   the final filename (i.e. the path has more segments after it).
+ *   This prevents false fires on harmless files like
+ *   `docs/review-notes.md` whose final filename happens to start with
+ *   `review-`.
  *
  * Exit codes:
  *   0 — no misplaced pack directories in the changed scope.
@@ -50,11 +67,14 @@ const ALLOWED_ROOTS = {
 };
 
 function parseArgs(args) {
-  const out = { changed: undefined, help: false };
+  const out = { changed: undefined, baseRef: undefined, help: false };
   for (let i = 2; i < args.length; i += 1) {
     const a = args[i];
     if (a === "--changed") {
       out.changed = args[i + 1] ?? "";
+      i += 1;
+    } else if (a === "--base-ref") {
+      out.baseRef = args[i + 1] ?? "";
       i += 1;
     } else if (a === "--help" || a === "-h") {
       out.help = true;
@@ -84,11 +104,16 @@ function printHelp() {
   );
 }
 
-function readChangedFromGit() {
-  // Combine staged + working-tree changes. We want every path that the
-  // current PR would land — both `--cached` (staged) and unstaged edits
-  // matter, because a contributor may have written a misplaced pack
-  // but not staged it yet at the moment `pnpm ci:lint` runs locally.
+function readChangedFromGit(baseRef) {
+  // Combine staged + working-tree changes AND PR-diff changes. We
+  // want every path that the current PR would land —
+  //   - `--cached` (staged) and unstaged edits matter locally, because
+  //     a contributor may have written a misplaced pack but not
+  //     staged it yet when `pnpm ci:lint` runs.
+  //   - `<base>...HEAD` matters in CI: after `actions/checkout` the
+  //     working tree is clean (everything committed) so the
+  //     staged/unstaged sets are empty; a committed-but-misplaced
+  //     pack on the PR branch would otherwise slip through.
   const set = new Set();
   try {
     const staged = execFileSync("git", ["diff", "--name-only", "--cached", "HEAD"], {
@@ -125,6 +150,26 @@ function readChangedFromGit() {
     );
     return null;
   }
+  // PR-diff scan against the base ref. The explicit `--base-ref`
+  // argument wins; otherwise default to `origin/main` (matches the
+  // pair-changed CI lane and our ci.yml `fetch-depth: 0`). If the
+  // base ref is unreachable (local invocation without origin/main),
+  // the inner try/catch soft-fails and we keep going — the local
+  // case is already covered by the staged/status reads above.
+  const effectiveBase = baseRef && baseRef.length > 0 ? baseRef : "origin/main";
+  try {
+    const diff = execFileSync("git", ["diff", "--name-only", `${effectiveBase}...HEAD`], {
+      encoding: "utf-8",
+    });
+    for (const line of diff.split("\n")) {
+      const t = line.trim();
+      if (t.length > 0) set.add(t);
+    }
+  } catch {
+    // Soft-pass: base ref not reachable (e.g. local invocation, or
+    // PR runs from a fork without origin/main fetched). Local cases
+    // remain covered by the staged + status reads above.
+  }
   return Array.from(set);
 }
 
@@ -149,7 +194,15 @@ function findViolationInPath(rawPath) {
   const posix = toPosix(rawPath).replace(/^\.\//, "").replace(/^\/+/, "");
   if (posix.length === 0) return null;
   const segments = posix.split("/").filter((s) => s.length > 0);
-  for (let i = 0; i < segments.length; i += 1) {
+  // Pack patterns are DIRECTORY patterns: a `review-*` / `discussion-*`
+  // segment counts only when it has at least one path segment after it
+  // (i.e. the segment is a directory, not the final filename). This
+  // skips the last segment so a harmless file like
+  // `docs/review-notes.md` whose filename happens to start with
+  // `review-` is not falsely flagged as a misplaced pack directory.
+  // Pack DIRECTORIES emitted by `git diff --name-only` are always
+  // followed by their child files, so they remain detectable.
+  for (let i = 0; i < segments.length - 1; i += 1) {
     const seg = segments[i];
     const m = PACK_SEGMENT_RE.exec(seg);
     if (!m) continue;
@@ -194,7 +247,7 @@ function main() {
   if (typeof args.changed === "string") {
     changed = normalizeCsvSet(args.changed);
   } else {
-    const computed = readChangedFromGit();
+    const computed = readChangedFromGit(args.baseRef);
     if (computed === null) {
       // Soft-pass when git is unavailable / errored — see comment in
       // readChangedFromGit. Mirrors the prompt-scanner pair lane.

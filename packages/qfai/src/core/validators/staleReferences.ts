@@ -20,6 +20,7 @@ import type { Dirent } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
+import type { QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
@@ -106,14 +107,25 @@ export function staleReferenceSeverity(
  */
 export async function validateStaleReferences(
   root: string,
-  options: { now?: () => Date } = {},
+  options: { now?: () => Date; config?: QfaiConfig } = {},
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const now = options.now ?? (() => new Date());
   const todayIso = todayIsoDate(now);
   const severity = staleReferenceSeverity(todayIso);
 
-  const skillsDir = path.join(root, SKILLS_REL);
+  // Honor `config.paths.skillsDir` so projects that relocate their
+  // skills tree (relative or absolute) are still scanned. The default
+  // `.qfai/assistant/skills` is preserved when no config is passed —
+  // existing callers (older tests / single-arg invocations) keep
+  // working without modification. Pre-fix the scan was hardcoded to
+  // the default path, so a relocated skillsDir gave a silent PASS on
+  // stale `session-handoff.yaml` references under the actual location.
+  const configuredSkillsDir = options.config?.paths.skillsDir;
+  const skillsDir =
+    typeof configuredSkillsDir === "string" && configuredSkillsDir.length > 0
+      ? path.resolve(root, configuredSkillsDir)
+      : path.join(root, SKILLS_REL);
   if (!(await exists(skillsDir))) return issues;
 
   let entries: Dirent[];

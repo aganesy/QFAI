@@ -212,7 +212,7 @@ async function runSddValidators(
     // Doc governance — surface pre-implementation tokens in
     // `references/*.md` + SKILL.md as warning during the deprecation
     // window and error at sunset.
-    ...(await validateStaleReferences(root)),
+    ...(await validateStaleReferences(root, { config })),
   ];
 }
 
