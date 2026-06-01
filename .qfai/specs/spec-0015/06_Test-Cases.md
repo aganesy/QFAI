@@ -136,7 +136,7 @@
 - Level: unit
 - Verify that a SKILL.md whose `## Default Autopilot Policy` lists all three buckets (auto-decide / ask-user / hard-required) per DR-0269 passes without `R-AUTOPILOT-POLICY-MISSING`; a section that widens the auto-decide bucket beyond the DR-0269 set is flagged.
 
-## TC-0015-0021A: SKILL.md with section present but missing buckets emits R-AUTOPILOT-POLICY-MISSING
+## TC-0015-0034: SKILL.md with section present but missing buckets emits R-AUTOPILOT-POLICY-MISSING
 
 - EX-Ref: EX-0015-0011
 - AC-Refs: AC-0015-0015

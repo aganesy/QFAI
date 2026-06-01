@@ -12,6 +12,7 @@
  * isolation-safe variant.
  */
 // QFAI:SPEC-0015:TC-0015-0020
+// QFAI:SPEC-0015:TC-0015-0034
 // QFAI:SPEC-0015:TC-0015-0021
 // QFAI:SPEC-0015:TC-0015-0022
 // QFAI:SPEC-0015:TC-0015-0023
@@ -93,6 +94,23 @@ describe("spec-0015 autopilot policy CHG-006", () => {
     const f = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING");
     expect(f?.severity).toBe("error");
     expect(f?.message).toMatch(/justification/i);
+  });
+
+  it("QFAI:SPEC-0015:TC-0015-0034 — error: SKILL.md with section present but missing buckets emits R-AUTOPILOT-POLICY-MISSING naming the missing bucket(s)", async () => {
+    // Section heading present but body lacks all required buckets.
+    // The validator must fire R-AUTOPILOT-POLICY-MISSING (error) and
+    // name the missing buckets in the justification per the
+    // BR-0015-0010 / AC-0015-0015 two-condition trigger added by
+    // PR #211 (present-but-incomplete case).
+    const headingOnly =
+      "# qfai-x\n\n## Default Autopilot Policy\n\nbody without buckets.\n";
+    await writeSkillMd("qfai-x", headingOnly);
+    const issues = await validateAutopilotPolicy(root);
+    const f = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING");
+    expect(f?.severity).toBe("error");
+    expect(f?.message).toMatch(/auto-decide/);
+    expect(f?.message).toMatch(/ask-user/);
+    expect(f?.message).toMatch(/hard-required/);
   });
 
   it("QFAI:SPEC-0015:TC-0015-0021 — normal: 3-bucket SKILL.md passes; widened auto-decide flagged as warning", async () => {
