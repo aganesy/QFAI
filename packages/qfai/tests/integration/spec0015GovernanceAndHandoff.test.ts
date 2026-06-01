@@ -102,8 +102,7 @@ describe("spec-0015 autopilot policy CHG-006", () => {
     // name the missing buckets in the justification per the
     // BR-0015-0010 / AC-0015-0015 two-condition trigger added by
     // PR #211 (present-but-incomplete case).
-    const headingOnly =
-      "# qfai-x\n\n## Default Autopilot Policy\n\nbody without buckets.\n";
+    const headingOnly = "# qfai-x\n\n## Default Autopilot Policy\n\nbody without buckets.\n";
     await writeSkillMd("qfai-x", headingOnly);
     const issues = await validateAutopilotPolicy(root);
     const f = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING");
