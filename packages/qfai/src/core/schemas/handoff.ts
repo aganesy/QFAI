@@ -16,6 +16,9 @@
  * accepted during the deprecation window with a
  * `D-HANDOFF-LEGACY-FORMAT` warning emitted by the reader.
  */
+
+import { parse as parseYaml } from "yaml";
+
 export const HANDOFF_MINIMUM_FIELDS = [
   "companyName",
   "primarySpecId",
@@ -96,21 +99,43 @@ export function validateHandoff(input: unknown): HandoffValidationIssue[] {
 }
 
 /**
- * Parse a YAML or JSON handoff payload into a `CanonicalHandoff` view
- * plus the full raw object (for legacy / extra-key passthrough).
+ * Parse a YAML OR JSON handoff payload into a `Record<string, unknown>`
+ * view. The canonical handoff format is YAML (per `references/handoff.md`
+ * and the shape written by `qfai handoff upgrade`); JSON is accepted
+ * because JSON is a strict subset of YAML and some legacy tooling
+ * emitted JSON-formatted handoffs during the deprecation window.
  *
- * The parser is intentionally permissive on input shape (YAML AND JSON
- * both reduce to a plain object). It does NOT enforce the schema —
- * that is `validateHandoff`'s job; this returns `null` only on JSON
- * parse failure or non-object input.
+ * The parser is intentionally permissive on input shape (both formats
+ * reduce to a plain object). It does NOT enforce the schema — that is
+ * `validateHandoff`'s job; this returns `null` only when:
+ *   - YAML parsing throws (the YAML library accepts JSON, so this
+ *     covers both formats),
+ *   - the parsed value is `null` (empty document),
+ *   - the parsed value is not a plain object (array, scalar).
+ *
+ * Function-narrow imports (`parse as parseYaml`) keep the tree-shake
+ * surface tight; the `yaml` package is already a project dep.
  */
-export function parseHandoffJson(text: string): Record<string, unknown> | null {
+export function parseHandoff(text: string): Record<string, unknown> | null {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(text);
+    parsed = parseYaml(text);
   } catch {
     return null;
   }
   if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  // Narrow via structural check above (non-null, object, non-array);
+  // the YAML library returns `unknown` so this cast is the standard
+  // safe-after-guard pattern, not a bare assertion on user data.
   return parsed as Record<string, unknown>;
 }
+
+/**
+ * Back-compat alias for the pre-YAML-support function name. Existing
+ * call sites (`core/saasPackage/profile.ts`) keep working without
+ * surface-wide rename.
+ *
+ * @deprecated Prefer {@link parseHandoff}; this alias is kept for
+ *   internal consumers and may be removed in a future minor.
+ */
+export const parseHandoffJson = parseHandoff;

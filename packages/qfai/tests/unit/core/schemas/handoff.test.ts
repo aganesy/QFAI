@@ -20,6 +20,8 @@ import { describe, expect, it } from "vitest";
 import {
   HANDOFF_LEGACY_FORMAT_CODE,
   HANDOFF_MINIMUM_FIELDS,
+  parseHandoff,
+  parseHandoffJson,
   validateHandoff,
 } from "../../../../src/core/schemas/handoff.js";
 
@@ -72,5 +74,64 @@ describe("TC-0015-0025: validateHandoff accepts canonical + extra keys", () => {
       "productScope",
     ]);
     expect(HANDOFF_LEGACY_FORMAT_CODE).toBe("D-HANDOFF-LEGACY-FORMAT");
+  });
+});
+
+// Regression for the YAML-parse fix: `qfai handoff upgrade` writes YAML
+// (the canonical format per `references/handoff.md`), and the pre-fix
+// `parseHandoffJson` called `JSON.parse` only — so a normal YAML
+// handoff returned `null` and downstream `validate --profile
+// saas-package` treated the handoff as unparseable.
+describe("parseHandoff accepts YAML and JSON handoff payloads", () => {
+  it("parses a canonical YAML handoff into a record", () => {
+    const yaml = [
+      'companyName: "Acme"',
+      'primarySpecId: "0001"',
+      'startDate: "2026-05-27"',
+      'signature: "abc123"',
+      'entryPattern: "qfai-sdd"',
+      'productScope: "saas"',
+      "",
+    ].join("\n");
+    const parsed = parseHandoff(yaml);
+    expect(parsed).not.toBeNull();
+    expect(parsed?.companyName).toBe("Acme");
+    expect(parsed?.primarySpecId).toBe("0001");
+    expect(parsed?.productScope).toBe("saas");
+  });
+
+  it("parses a JSON handoff into a record (YAML is a strict superset)", () => {
+    const json = JSON.stringify({
+      companyName: "Acme",
+      primarySpecId: "0001",
+    });
+    const parsed = parseHandoff(json);
+    expect(parsed).not.toBeNull();
+    expect(parsed?.companyName).toBe("Acme");
+    expect(parsed?.primarySpecId).toBe("0001");
+  });
+
+  it("returns null for empty input (YAML `null` document)", () => {
+    expect(parseHandoff("")).toBeNull();
+    expect(parseHandoff("null")).toBeNull();
+  });
+
+  it("returns null for truthy but non-object input (top-level scalar)", () => {
+    // YAML: a bare scalar parses to a string, not a record.
+    expect(parseHandoff("just-a-scalar")).toBeNull();
+    // YAML: a top-level sequence parses to an array, not a record.
+    expect(parseHandoff("- one\n- two\n")).toBeNull();
+  });
+
+  it("returns null on YAML parse failure", () => {
+    // Indentation drift / mismatched flow brackets.
+    expect(parseHandoff("{ unbalanced: [")).toBeNull();
+  });
+
+  it("exposes a back-compat `parseHandoffJson` alias", () => {
+    const yaml = 'companyName: "Acme"\n';
+    expect(parseHandoffJson(yaml)).toEqual({ companyName: "Acme" });
+    // alias and primary share identity (same function reference).
+    expect(parseHandoffJson).toBe(parseHandoff);
   });
 });

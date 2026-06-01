@@ -20,7 +20,7 @@ import path from "node:path";
 
 import type { ConfigLoadResult } from "../config.js";
 import type { Issue } from "../types.js";
-import { parseHandoffJson, validateHandoff } from "../schemas/handoff.js";
+import { parseHandoff, validateHandoff } from "../schemas/handoff.js";
 import { issue } from "../validators/utils.js";
 
 import { SAAS_PACKAGE_SKIPPED_GATES } from "./skippedGates.js";
@@ -92,7 +92,7 @@ async function checkHandoffSchema(root: string): Promise<Issue[]> {
     // with the AC: "CLI-HANDOFF handoff conforms").
     return [];
   }
-  const parsed = parseHandoffJson(text);
+  const parsed = parseHandoff(text);
   if (parsed === null) {
     return [
       issue(
