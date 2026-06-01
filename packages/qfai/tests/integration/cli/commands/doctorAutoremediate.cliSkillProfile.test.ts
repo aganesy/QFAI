@@ -132,18 +132,23 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
 
     function captureStdout(): { restore: () => void; read: () => string } {
       const chunks: string[] = [];
-      const original = process.stdout.write.bind(process.stdout);
-      const spy = vi
-        .spyOn(process.stdout, "write")
-        .mockImplementation(((chunk: string | Uint8Array) => {
-          chunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
-          return true;
-        }) as typeof process.stdout.write);
+      // vi.spyOn carries the overloaded signature of
+      // `process.stdout.write`, so the implementation callback is
+      // typed without needing a bare-`as` cast on the function shape
+      // (CLAUDE.md "avoid bare `as`"). We accept `unknown` for the
+      // first argument so all three overloads — `(chunk)`,
+      // `(chunk, cb)`, `(chunk, encoding, cb)` — match; only the
+      // chunk is observed.
+      const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
+        if (typeof chunk === "string") {
+          chunks.push(chunk);
+        } else if (chunk instanceof Uint8Array) {
+          chunks.push(Buffer.from(chunk).toString("utf-8"));
+        }
+        return true;
+      });
       return {
-        restore: () => {
-          spy.mockRestore();
-          void original;
-        },
+        restore: () => spy.mockRestore(),
         read: () => chunks.join(""),
       };
     }

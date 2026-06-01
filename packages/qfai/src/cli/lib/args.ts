@@ -634,16 +634,35 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         i += 1;
         break;
       }
+      // Value-taking flag-handling contract (uniform across `--spec`,
+      // `--scope`, `--upgrade-scope`, `--operator`, `--clause`):
+      //   1. Always read and consume the value token via
+      //      `readOptionValue(args, i)` + `i += 1`. A missing value
+      //      (`null`) is a parse error → `markInvalid()`.
+      //   2. When the flag is used on a subcommand that does NOT
+      //      accept it, also call `markInvalid()` so the misuse is
+      //      surfaced rather than silently dropped. The value token
+      //      is STILL consumed so it cannot leak into the positional
+      //      stream — keeping consumption symmetric across all
+      //      value-taking flags.
+      //   3. The accepting-subcommand branch performs any per-flag
+      //      enum / domain validation and routes the value to the
+      //      right option slot.
+      // Pre-fix `--scope` (consumed-on-misuse) and `--upgrade-scope`
+      // (not-consumed-on-misuse) used opposite conventions for the
+      // same goal; this contract block plus the unified shape below
+      // resolves the asymmetry.
       case "--spec": {
-        if (command !== "atdd") {
-          break;
-        }
         const next = readOptionValue(args, i);
         if (next === null) {
           markInvalid();
           break;
         }
-        options.atddSpecId = next;
+        if (command === "atdd") {
+          options.atddSpecId = next;
+        } else {
+          markInvalid();
+        }
         i += 1;
         break;
       }
@@ -662,35 +681,23 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
             markInvalid();
           }
         } else {
-          // `--scope` is meaningful only for `audit` and
-          // `prototyping certify`. On any other (sub)command, surface
-          // the misuse via markInvalid() instead of silently consuming
-          // `next` — which would shift subsequent positionals and
-          // produce confusing downstream errors. The branch still
-          // consumes `next` (`i += 1` below) so we do not double-count
-          // it as a separate token.
           markInvalid();
         }
         i += 1;
         break;
       }
       case "--upgrade-scope": {
-        if (command !== "prototyping" || options.prototypingAction !== "certify") {
-          // Same rationale as `--scope` above: emit a clear invalid
-          // signal rather than silently dropping the flag. We do NOT
-          // consume `next` here — preserving the pre-fix behaviour
-          // (no `i += 1`) keeps the bare `--upgrade-scope` case from
-          // shifting positionals when used on a wrong subcommand.
-          markInvalid();
-          break;
-        }
         const next = readOptionValue(args, i);
         if (next === null) {
           markInvalid();
           break;
         }
-        if (next === "full") {
-          options.prototypingUpgradeScopeFull = true;
+        if (command === "prototyping" && options.prototypingAction === "certify") {
+          if (next === "full") {
+            options.prototypingUpgradeScopeFull = true;
+          } else {
+            markInvalid();
+          }
         } else {
           markInvalid();
         }
@@ -698,28 +705,30 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       }
       case "--operator": {
-        if (command !== "audit") {
-          break;
-        }
         const next = readOptionValue(args, i);
         if (next === null) {
           markInvalid();
           break;
         }
-        options.auditOperator = next;
+        if (command === "audit") {
+          options.auditOperator = next;
+        } else {
+          markInvalid();
+        }
         i += 1;
         break;
       }
       case "--clause": {
-        if (command !== "audit") {
-          break;
-        }
         const next = readOptionValue(args, i);
         if (next === null) {
           markInvalid();
           break;
         }
-        options.auditClause = next;
+        if (command === "audit") {
+          options.auditClause = next;
+        } else {
+          markInvalid();
+        }
         i += 1;
         break;
       }

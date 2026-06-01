@@ -118,8 +118,21 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
     }
     if (summary.disabledInCi) {
       // Honor AC-0006-0018: autoremediate disabled in CI; no diagnostic
-      // build needed for the CI off path.
-      info(sideEffectLines.join("\n"));
+      // build needed for the CI off path. Output-channel routing
+      // mirrors the main return path below: under `--format json`,
+      // side-effect lines go to stderr so the stdout channel remains
+      // valid JSON for downstream consumers (`jq` / `JSON.parse`). The
+      // CI-off path emits an empty `{}` JSON payload on stdout in that
+      // case so consumers see a parseable document rather than a bare
+      // newline.
+      if (options.format === "json") {
+        if (sideEffectLines.length > 0) {
+          process.stderr.write(`${sideEffectLines.join("\n")}\n`);
+        }
+        info("{}");
+      } else {
+        info(sideEffectLines.join("\n"));
+      }
       return 0;
     }
   } else if (options.clean) {

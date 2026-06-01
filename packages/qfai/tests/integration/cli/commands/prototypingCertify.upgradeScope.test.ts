@@ -24,11 +24,38 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runPrototypingCertify } from "../../../../src/cli/commands/prototypingCertify.js";
 import { hashDesignMd } from "../../../../src/core/design/designMd.js";
 import { SAAS_PACKAGE_SKIPPED_GATES } from "../../../../src/core/saasPackage/skippedGates.js";
+
+/**
+ * Capture process.stderr.write via `vi.spyOn` so the spy carries the
+ * full overloaded signature of `process.stderr.write` — no bare-`as`
+ * cast required (CLAUDE.md "avoid bare `as`"). The implementation
+ * callback accepts `unknown` for the chunk so all three overloads
+ * (`(chunk)`, `(chunk, cb)`, `(chunk, encoding, cb)`) match; the
+ * encoding / callback arguments are ignored. `afterEach`-style
+ * restoration is handled by `vi.restoreAllMocks()`, but the returned
+ * `.restore()` is provided so callers can scope the spy tightly when
+ * a single test wants the real stderr for the rest of the body.
+ */
+function captureStderr(): { restore: () => void; read: () => string } {
+  const chunks: string[] = [];
+  const spy = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+    if (typeof chunk === "string") {
+      chunks.push(chunk);
+    } else if (chunk instanceof Uint8Array) {
+      chunks.push(Buffer.from(chunk).toString("utf-8"));
+    }
+    return true;
+  });
+  return {
+    restore: () => spy.mockRestore(),
+    read: () => chunks.join(""),
+  };
+}
 
 const CERT_DESIGN_MD = [
   "---",
@@ -219,12 +246,7 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
     // Capture stderr while attempting upgrade-scope without seeding the
     // gates-passing signal. The impl must refuse and name the still-
     // missing gates.
-    const stderrChunks: string[] = [];
-    const originalStderrWrite = process.stderr.write.bind(process.stderr);
-    process.stderr.write = ((chunk: string | Uint8Array): boolean => {
-      stderrChunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
-      return true;
-    }) as typeof process.stderr.write;
+    const stderrCap = captureStderr();
     let upgradeExit: number;
     try {
       upgradeExit = await runPrototypingCertify({
@@ -234,8 +256,9 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
         upgradeScopeFull: true,
       });
     } finally {
-      process.stderr.write = originalStderrWrite;
+      stderrCap.restore();
     }
+    const stderrChunks = [stderrCap.read()];
 
     expect(upgradeExit).not.toBe(0);
     const stderrText = stderrChunks.join("");
@@ -331,12 +354,7 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
     // Seed ONLY the legacy path.
     await seedSaasPackageGatesPassingLegacy(root);
 
-    const stderrChunks: string[] = [];
-    const originalStderrWrite = process.stderr.write.bind(process.stderr);
-    process.stderr.write = ((chunk: string | Uint8Array): boolean => {
-      stderrChunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
-      return true;
-    }) as typeof process.stderr.write;
+    const stderrCap = captureStderr();
     let upgradeExit: number;
     try {
       upgradeExit = await runPrototypingCertify({
@@ -346,8 +364,9 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
         upgradeScopeFull: true,
       });
     } finally {
-      process.stderr.write = originalStderrWrite;
+      stderrCap.restore();
     }
+    const stderrChunks = [stderrCap.read()];
     expect(upgradeExit).toBe(0);
     const stderrText = stderrChunks.join("");
     expect(stderrText).toMatch(/legacy/i);
@@ -404,12 +423,7 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
     // assertion the test would still pass if the impl read the
     // canonical body but spuriously printed the legacy-path note,
     // masking a source-discrimination regression.
-    const stderrChunks: string[] = [];
-    const originalStderrWrite = process.stderr.write.bind(process.stderr);
-    process.stderr.write = ((chunk: string | Uint8Array): boolean => {
-      stderrChunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
-      return true;
-    }) as typeof process.stderr.write;
+    const stderrCap = captureStderr();
     let upgradeExit: number;
     try {
       upgradeExit = await runPrototypingCertify({
@@ -419,8 +433,9 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
         upgradeScopeFull: true,
       });
     } finally {
-      process.stderr.write = originalStderrWrite;
+      stderrCap.restore();
     }
+    const stderrChunks = [stderrCap.read()];
     expect(upgradeExit).toBe(0);
     const stderrText = stderrChunks.join("");
     expect(stderrText).not.toMatch(/legacy/i);
@@ -549,12 +564,7 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
       "utf-8",
     );
 
-    const stderrChunks: string[] = [];
-    const originalStderrWrite = process.stderr.write.bind(process.stderr);
-    process.stderr.write = ((chunk: string | Uint8Array): boolean => {
-      stderrChunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
-      return true;
-    }) as typeof process.stderr.write;
+    const stderrCap = captureStderr();
     let upgradeExit: number;
     try {
       upgradeExit = await runPrototypingCertify({
@@ -564,8 +574,9 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
         upgradeScopeFull: true,
       });
     } finally {
-      process.stderr.write = originalStderrWrite;
+      stderrCap.restore();
     }
+    const stderrChunks = [stderrCap.read()];
     expect(upgradeExit).not.toBe(0);
     const stderrText = stderrChunks.join("");
     for (const gate of SAAS_PACKAGE_SKIPPED_GATES) {
@@ -608,12 +619,7 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
     // operator to a FULLER profile rather than looping them back to
     // `--profile saas-package` (which would still emit skip findings
     // and refuse upgrade ad infinitum).
-    const stderrChunks: string[] = [];
-    const originalStderrWrite = process.stderr.write.bind(process.stderr);
-    process.stderr.write = ((chunk: string | Uint8Array): boolean => {
-      stderrChunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
-      return true;
-    }) as typeof process.stderr.write;
+    const stderrCap = captureStderr();
     let upgradeExit: number;
     try {
       upgradeExit = await runPrototypingCertify({
@@ -623,8 +629,9 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
         upgradeScopeFull: true,
       });
     } finally {
-      process.stderr.write = originalStderrWrite;
+      stderrCap.restore();
     }
+    const stderrChunks = [stderrCap.read()];
     expect(upgradeExit).not.toBe(0);
     const stderrText = stderrChunks.join("");
     // Recovery message MUST direct the operator to a fuller profile.
@@ -750,6 +757,57 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
     const certPath = path.join(root, ".qfai/evidence/prototyping/completion-certificate.json");
     const cert = JSON.parse(await readFile(certPath, "utf-8")) as Record<string, unknown>;
     expect(cert.scope).toBe("saas-package");
+  });
+
+  // Pin gate-name listing on the saas-package INADMISSIBLE refusal
+  // path. The previous batch added two refusal-case assertions but
+  // only checked `upgradeExit).not.toBe(0)` — that lets the
+  // operator-facing list of still-missing gates regress silently.
+  // The earlier "fail-closed" test (around L246-271) already pins
+  // gate-name listing on the missing-canonical path; this new test
+  // does the same for the saas-package-profile-INADMISSIBLE branch
+  // so both fail-closed paths surface still-missing gate names in
+  // stderr.
+  it("names every still-missing gate in stderr on saas-package profile refusal", async () => {
+    const root = await newTempDir();
+    await seedSaasPackageHappyPath(root);
+
+    const sealExit = await runPrototypingCertify({
+      root,
+      check: false,
+      scope: "saas-package",
+    });
+    expect(sealExit).toBe(0);
+
+    await mkdir(path.join(root, ".qfai/report"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/report/validate-saas-package.json"),
+      JSON.stringify({
+        profile: "saas-package",
+        counts: { error: 0, warning: 0, info: 0 },
+        issues: [],
+      }),
+      "utf-8",
+    );
+
+    const stderrCap = captureStderr();
+    let upgradeExit: number;
+    try {
+      upgradeExit = await runPrototypingCertify({
+        root,
+        check: false,
+        scope: "saas-package",
+        upgradeScopeFull: true,
+      });
+    } finally {
+      stderrCap.restore();
+    }
+    expect(upgradeExit).not.toBe(0);
+    const stderrText = stderrCap.read();
+    for (const gate of SAAS_PACKAGE_SKIPPED_GATES) {
+      expect(stderrText).toContain(gate);
+    }
+    expect(stderrText).toMatch(/--profile full/);
   });
 
   // Pin the INADMISSIBLE recovery loop: an operator who follows the
