@@ -604,13 +604,38 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
       "utf-8",
     );
 
-    const upgradeExit = await runPrototypingCertify({
-      root,
-      check: false,
-      scope: "saas-package",
-      upgradeScopeFull: true,
-    });
+    // Capture stderr so we can prove the recovery message steers the
+    // operator to a FULLER profile rather than looping them back to
+    // `--profile saas-package` (which would still emit skip findings
+    // and refuse upgrade ad infinitum).
+    const stderrChunks: string[] = [];
+    const originalStderrWrite = process.stderr.write.bind(process.stderr);
+    process.stderr.write = ((chunk: string | Uint8Array): boolean => {
+      stderrChunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
+      return true;
+    }) as typeof process.stderr.write;
+    let upgradeExit: number;
+    try {
+      upgradeExit = await runPrototypingCertify({
+        root,
+        check: false,
+        scope: "saas-package",
+        upgradeScopeFull: true,
+      });
+    } finally {
+      process.stderr.write = originalStderrWrite;
+    }
     expect(upgradeExit).not.toBe(0);
+    const stderrText = stderrChunks.join("");
+    // Recovery message MUST direct the operator to a fuller profile.
+    // The pre-fix message instructed `qfai validate --profile saas-
+    // package` which causes an infinite recovery loop because the
+    // saas-package profile unconditionally emits skip findings.
+    expect(stderrText).toMatch(/--profile full/);
+    expect(stderrText).toMatch(/INADMISSIBLE|inadmissible/);
+    // And it must NOT instruct re-running `--profile saas-package`
+    // as the recovery step.
+    expect(stderrText).not.toMatch(/Re-run `qfai validate --profile saas-package`/);
   });
 
   it("refuses upgrade on a malformed signal (empty / shape-incomplete object)", async () => {

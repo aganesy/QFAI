@@ -1107,10 +1107,39 @@ async function runUpgradeScopeFull(
     for (const gate of stillMissing) {
       error(`  - ${gate}`);
     }
-    error(
-      `Re-run \`qfai validate --profile saas-package\` so that ${canonicalSignalRel} ` +
-        "reports counts.error=0 and every gate as PASS, then re-run certify --upgrade-scope full.",
-    );
+    // Recovery message: tailor to the loaded signal's `profile` so the
+    // operator is steered toward a profile that can actually empty the
+    // skip-set. The saas-package profile is INADMISSIBLE because
+    // `runSaasPackageProfile` unconditionally emits one skip-finding
+    // per gate; re-running it on a fixed surface will still flag every
+    // gate as skipped and the operator would loop. For any other
+    // profile name (full / verify / tdd / atdd / ...) the existing
+    // "re-run after gates PASS" hint is correct — surface the actual
+    // profile name from the signal.
+    const signalProfile = isRecord(signal)
+      ? extractString(signal, "profile")
+      : undefined;
+    if (signalProfile === "saas-package") {
+      error(
+        "The saas-package profile is INADMISSIBLE for --upgrade-scope full: it always " +
+          "emits one skip finding per gate, so its skip-set can never be emptied. " +
+          "Re-run `qfai validate --profile full --fail-on error` so that " +
+          `${canonicalSignalRel} reports counts.error=0 under a fuller profile, then ` +
+          "re-run certify --upgrade-scope full.",
+      );
+    } else if (typeof signalProfile === "string" && signalProfile.length > 0) {
+      error(
+        `Re-run \`qfai validate --profile ${signalProfile} --fail-on error\` so that ` +
+          `${canonicalSignalRel} reports counts.error=0 and every gate as PASS, then ` +
+          "re-run certify --upgrade-scope full.",
+      );
+    } else {
+      error(
+        "Re-run `qfai validate --profile full --fail-on error` so that " +
+          `${canonicalSignalRel} reports counts.error=0 and every gate as PASS, then ` +
+          "re-run certify --upgrade-scope full.",
+      );
+    }
     return 2;
   }
 
@@ -1231,9 +1260,13 @@ async function loadSaasPackageGatesSignal(
  * `SAAS_PACKAGE_SKIPPED_GATES` list — the upgrade refuses fail-closed
  * with all gates named in stderr. Refusal applies to: (a) `null` /
  * non-record payloads, (b) records lacking `counts.error` as a number,
- * (c) records with `counts.error > 0` (any validate failure), and
+ * (c) records with `counts.error > 0` (any validate failure),
  * (d) records lacking a `profile` field (malformed `{}` or hand-edited
- * signal with no recognizable ValidationResult shape). Truncated /
+ * signal with no recognizable ValidationResult shape), and
+ * (e) records with `profile === "saas-package"` (INADMISSIBLE: the
+ * saas-package profile unconditionally emits one skip finding per
+ * gate; its skip-set can never be emptied — operators must re-run a
+ * fuller profile such as `qfai validate --profile full`). Truncated /
  * malformed signals must NEVER default-to-success.
  */
 type StillMissingMode = "auto" | "gates" | "issues";
