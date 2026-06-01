@@ -287,7 +287,7 @@ Commands:
   discussion list --active     active discussion session pointer を表示（state.json#discussion.currentId）
   discussion use <id>          active discussion session pointer を設定
   audit log [filters]          .qfai/evidence/decisions/ の決定ログを一覧 (--scope/--operator/--clause + --format table|json)
-  handoff upgrade <legacy>     legacy handoff ファイルを canonical handoff.yaml に変換 (CLI-HANDOFF)
+  handoff upgrade <legacy>     legacy handoff ファイルを canonical .qfai/handoff.yaml に変換 (CLI-HANDOFF)
   atdd scaffold --spec <id>    spec の Test-Cases から per-TC test skeleton を生成（idempotent + N-cycle escalation）
   prototyping preflight        prototyping 実行前提（spec/ui/design contracts/roles/browser/targetUrl）を診断
   prototyping iterate          single-thread evolution loop の cycle 確定

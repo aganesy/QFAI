@@ -7,7 +7,7 @@
  */
 // QFAI:SPEC-0015:TC-0015-0031
 
-import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -36,10 +36,10 @@ describe("TC-0015-0031: handoff upgrade rejects malformed input without partial 
     });
     expect(code).not.toBe(0);
     expect(errs.join("\n")).toMatch(/not found|missing|legacy/i);
-    // Canonical handoff.yaml must NOT exist.
+    // Canonical .qfai/handoff.yaml must NOT exist.
     let exists = true;
     try {
-      await access(path.join(root, "handoff.yaml"));
+      await access(path.join(root, ".qfai", "handoff.yaml"));
     } catch {
       exists = false;
     }
@@ -48,7 +48,8 @@ describe("TC-0015-0031: handoff upgrade rejects malformed input without partial 
 
   it("preserves a pre-existing canonical handoff.yaml when malformed legacy input is rejected", async () => {
     const preExistingBody = "companyName: pre-existing\n";
-    await writeFile(path.join(root, "handoff.yaml"), preExistingBody, "utf-8");
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await writeFile(path.join(root, ".qfai", "handoff.yaml"), preExistingBody, "utf-8");
     // Legacy file body is empty / pure whitespace — no parseable keys.
     await writeFile(path.join(root, "legacy.yaml"), "   \n\n  \n", "utf-8");
     const errs: string[] = [];
@@ -61,7 +62,7 @@ describe("TC-0015-0031: handoff upgrade rejects malformed input without partial 
     expect(code).not.toBe(0);
     expect(errs.join("\n")).toMatch(/malformed|no recognizable/i);
     // handoff.yaml must NOT be overwritten / partially emitted.
-    const after = await readFile(path.join(root, "handoff.yaml"), "utf-8");
+    const after = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
     expect(after).toBe(preExistingBody);
   });
 });

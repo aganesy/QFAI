@@ -267,7 +267,7 @@ describe("spec-0015 audit log CLI CHG-006", () => {
 });
 
 describe("spec-0015 handoff upgrade CHG-006", () => {
-  it("QFAI:SPEC-0015:TC-0015-0030 — normal: emits conforming handoff.yaml with legacy: preserved", async () => {
+  it("QFAI:SPEC-0015:TC-0015-0030 — normal: emits conforming .qfai/handoff.yaml with legacy: preserved", async () => {
     await writeFile(
       path.join(root, "session-handoff.yaml"),
       "companyName: Acme\nprimarySpecId: spec-0012\ncustomField: legacy-data\n",
@@ -280,14 +280,15 @@ describe("spec-0015 handoff upgrade CHG-006", () => {
       writeErr: () => undefined,
     });
     expect(exit).toBe(0);
-    const body = await readFile(path.join(root, "handoff.yaml"), "utf-8");
+    const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
     expect(body).toMatch(/companyName: "Acme"/);
     expect(body).toMatch(/legacy:/);
     expect(body).toMatch(/customField/);
   });
 
   it("QFAI:SPEC-0015:TC-0015-0031 — error: malformed input fails without partial overwrite", async () => {
-    await writeFile(path.join(root, "handoff.yaml"), "companyName: original\n", "utf-8");
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await writeFile(path.join(root, ".qfai", "handoff.yaml"), "companyName: original\n", "utf-8");
     await writeFile(path.join(root, "malformed.yaml"), "   \n", "utf-8");
     const errs: string[] = [];
     const exit = await runHandoffUpgrade({
@@ -298,7 +299,7 @@ describe("spec-0015 handoff upgrade CHG-006", () => {
     });
     expect(exit).not.toBe(0);
     expect(errs.join("\n")).toMatch(/malformed|no recognizable/i);
-    const after = await readFile(path.join(root, "handoff.yaml"), "utf-8");
+    const after = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
     expect(after).toBe("companyName: original\n");
   });
 });

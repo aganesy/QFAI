@@ -2,7 +2,7 @@
  * Integration: `qfai handoff upgrade <legacy-file>` happy-path
  * (TC-0015-0030, AC-0015-0020).
  *
- * - emits a conforming `handoff.yaml` at the canonical path
+ * - emits a conforming `.qfai/handoff.yaml` at the canonical path
  * - recognized fields are mapped to schema-defined slots
  * - ALL original fields preserved under a `legacy:` key (no data loss)
  */
@@ -47,7 +47,7 @@ describe("TC-0015-0030: handoff upgrade emits conforming yaml + preserves origin
     });
     expect(code).toBe(0);
     expect(errs).toEqual([]);
-    const body = await readFile(path.join(root, "handoff.yaml"), "utf-8");
+    const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
     // Canonical slots mapped.
     expect(body).toMatch(/companyName: "Acme"/);
     expect(body).toMatch(/primarySpecId: "spec-0012"/);
@@ -78,7 +78,7 @@ describe("TC-0015-0030: handoff upgrade emits conforming yaml + preserves origin
       writeErr: () => undefined,
     });
     expect(code).toBe(0);
-    const body = await readFile(path.join(root, "handoff.yaml"), "utf-8");
+    const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
     expect(body).toMatch(/companyName: "JsonCo"/);
     expect(body).toMatch(/primarySpecId: "spec-0099"/);
     // Nested original payload preserved under legacy:

@@ -248,7 +248,7 @@ describe("spec-0015 US-0015-0013 audit log CLI (E2E, deterministic temp-fixture)
 });
 
 describe("spec-0015 US-0015-0014 handoff upgrade (E2E, deterministic temp-fixture)", () => {
-  it("QFAI:SPEC-0015:US-0015-0014 — normal: qfai handoff upgrade emits handoff.yaml with legacy: preserved", async () => {
+  it("QFAI:SPEC-0015:US-0015-0014 — normal: qfai handoff upgrade emits .qfai/handoff.yaml with legacy: preserved", async () => {
     await writeFile(
       path.join(root, "session-handoff.yaml"),
       "companyName: Acme\nprimarySpecId: spec-0012\nextra: keepme\n",
@@ -261,14 +261,15 @@ describe("spec-0015 US-0015-0014 handoff upgrade (E2E, deterministic temp-fixtur
       writeErr: () => undefined,
     });
     expect(exit).toBe(0);
-    const body = await readFile(path.join(root, "handoff.yaml"), "utf-8");
+    const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
     expect(body).toMatch(/companyName: "Acme"/);
     expect(body).toMatch(/legacy:/);
     expect(body).toMatch(/extra/);
   });
 
   it("QFAI:SPEC-0015:US-0015-0014 — error: malformed legacy input fails without partial overwrite", async () => {
-    await writeFile(path.join(root, "handoff.yaml"), "companyName: pre\n", "utf-8");
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await writeFile(path.join(root, ".qfai", "handoff.yaml"), "companyName: pre\n", "utf-8");
     await writeFile(path.join(root, "malformed.yaml"), "  \n  \n", "utf-8");
     const exit = await runHandoffUpgrade({
       root,
@@ -277,7 +278,7 @@ describe("spec-0015 US-0015-0014 handoff upgrade (E2E, deterministic temp-fixtur
       writeErr: () => undefined,
     });
     expect(exit).not.toBe(0);
-    const body = await readFile(path.join(root, "handoff.yaml"), "utf-8");
+    const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
     expect(body).toBe("companyName: pre\n");
   });
 });

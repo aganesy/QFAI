@@ -1,21 +1,29 @@
 /**
  * `qfai handoff upgrade <legacy-file>` — convert a legacy ad-hoc
  * handoff file (e.g. `session-handoff.yaml`) into a conforming
- * canonical `handoff.yaml` (CLI-HANDOFF schema).
+ * canonical `.qfai/handoff.yaml` (CLI-HANDOFF schema).
  *
  * AC-0015-0020: recognized fields map to schema-defined slots; ALL
  * original fields are preserved under a `legacy:` key so no data is
  * lost. Malformed / unreadable input fails with a clear error AND
  * does NOT overwrite or partially emit the canonical destination.
+ *
+ * The canonical destination lives at `.qfai/handoff.yaml` — consistent
+ * with the `.qfai/` SSOT pattern used by sibling artifacts
+ * (`.qfai/state.json`, `.qfai/evidence/...`, `.qfai/contracts/...`)
+ * AND with the saas-package profile reader at
+ * `core/saasPackage/profile.ts#HANDOFF_REL`. The directory is created
+ * if absent so a clean project can run `qfai handoff upgrade` without
+ * a preparatory `mkdir`.
  */
-import { readFile, writeFile, rename, unlink } from "node:fs/promises";
+import { mkdir, readFile, writeFile, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "../../core/fs/errno.js";
 import { HANDOFF_MINIMUM_FIELDS } from "../../core/schemas/handoff.js";
 import { error as logError, info as logInfo } from "../lib/logger.js";
 
-const CANONICAL_HANDOFF_REL = "handoff.yaml";
+const CANONICAL_HANDOFF_REL = ".qfai/handoff.yaml";
 
 export type HandoffUpgradeOptions = {
   /** Working directory (canonical destination resolved relative to this). */
@@ -144,9 +152,12 @@ export async function runHandoffUpgrade(options: HandoffUpgradeOptions): Promise
   const yaml = toYaml(output);
   // Atomic write: stage to a sibling temp file, then rename. On any
   // mid-write failure we attempt to remove the temp file so the
-  // canonical destination is left untouched.
+  // canonical destination is left untouched. The parent directory
+  // (`.qfai/` on default-canonical resolution) is created up-front so
+  // a clean project can run upgrade without a preparatory `mkdir`.
   const stagedPath = `${destAbs}.tmp`;
   try {
+    await mkdir(path.dirname(destAbs), { recursive: true });
     await writeFile(stagedPath, `${yaml}\n`, "utf-8");
     await rename(stagedPath, destAbs);
   } catch (err: unknown) {
