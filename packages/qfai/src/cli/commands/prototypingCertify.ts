@@ -25,7 +25,7 @@ import path from "node:path";
 import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 
-import { loadConfig } from "../../core/config.js";
+import { loadConfig, type ConfigLoadResult } from "../../core/config.js";
 import {
   extractUiScreens,
   readUiContractScreenContracts,
@@ -70,6 +70,7 @@ import {
 import { SAAS_PACKAGE_SKIPPED_GATES } from "../../core/saasPackage/skippedGates.js";
 import { resolveToolVersion } from "../../core/version.js";
 import { error, info, warn } from "../lib/logger.js";
+import { profileSuffixedReportPath } from "./validate.js";
 
 export type RunPrototypingCertifyOptions = {
   root: string;
@@ -101,21 +102,47 @@ function formatSaasPackageSkipNote(gate: string): string {
 }
 
 /**
- * Path (relative to the project root, POSIX) of the optional
- * "saas-package gates passing" signal used by `--upgrade-scope full`.
- * The file is a validate-style record carrying per-gate status entries
- * for every name in `SAAS_PACKAGE_SKIPPED_GATES`. Absent → upgrade
- * refuses (the gates have not been re-run yet).
+ * Default canonical path (POSIX, relative to the project root) of the
+ * optional "saas-package gates passing" signal used by
+ * `--upgrade-scope full`. The file is a validate-style record carrying
+ * per-gate status entries for every name in `SAAS_PACKAGE_SKIPPED_GATES`.
+ * Absent → upgrade refuses (the gates have not been re-run yet).
  *
- * Canonical post-CHG-005 path is `.qfai/report/validate-<profile>.json`
- * (the validate-side profile-suffixed output landed alongside the
- * `paths.outDir = ".qfai/report"` default). The legacy
- * `.qfai/output/validate-saas-package.json` path remains readable as a
- * back-compat fallback during the `D-DEPRECATED-PATH` deprecation
- * window so pre-CHG-005 consumer state does not regress.
+ * This literal is the DEFAULT — the effective canonical path is derived
+ * at runtime from `config.output.validateJsonPath` via
+ * {@link profileSuffixedReportPath} so an operator override of
+ * `output.validateJsonPath` in `qfai.config.yaml` (e.g.
+ * `custom/report.json` → writer emits `custom/report-saas-package.json`)
+ * is honored by the reader too. Falling back to a hardcoded literal
+ * would let writer and reader disagree under custom configs and refuse
+ * upgrades that should succeed.
+ *
+ * The legacy `.qfai/output/validate-saas-package.json` path remains a
+ * hardcoded literal — it is the pre-CHG-005 convention read only during
+ * the `D-DEPRECATED-PATH` deprecation window and is intentionally not
+ * config-derived.
  */
-const SAAS_PACKAGE_GATES_SIGNAL_REL = ".qfai/report/validate-saas-package.json";
+const SAAS_PACKAGE_GATES_SIGNAL_DEFAULT_REL = ".qfai/report/validate-saas-package.json";
 const SAAS_PACKAGE_GATES_SIGNAL_LEGACY_REL = ".qfai/output/validate-saas-package.json";
+
+/**
+ * Resolve the saas-package gates signal canonical path from a loaded
+ * config. Mirrors the writer-side derivation in
+ * `runValidate` (`validate.ts`) so writer + reader stay in lockstep on
+ * a single SSOT (`config.output.validateJsonPath`).
+ *
+ * `config.output.validateJsonPath` is populated with the canonical
+ * default by `loadConfig` when the operator omits the key, so the
+ * conditional fallback to the hardcoded default is defence-in-depth
+ * against an unexpectedly empty value rather than the common path.
+ */
+function resolveSaasPackageGatesSignalRel(config: ConfigLoadResult["config"]): string {
+  const configured = config.output.validateJsonPath;
+  if (typeof configured !== "string" || configured.length === 0) {
+    return SAAS_PACKAGE_GATES_SIGNAL_DEFAULT_REL;
+  }
+  return profileSuffixedReportPath(configured, "saas-package");
+}
 
 const ROOT_DESIGN_MD_REL = "DESIGN.md";
 
@@ -157,7 +184,8 @@ export async function runPrototypingCertify(
   // Branch BEFORE the regular write path so the upgrade is purely a
   // re-gate + cert-rewrite (no second full prototyping pipeline).
   if (options.upgradeScopeFull === true) {
-    return runUpgradeScopeFull(options.root);
+    const { config: upgradeConfig } = await loadConfig(options.root);
+    return runUpgradeScopeFull(options.root, upgradeConfig);
   }
 
   // ─── Generate mode ─────────────────────────────────────────────────────────
@@ -998,9 +1026,12 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
  * failing, exits non-zero and names the still-missing gates on
  * stderr.
  *
- * The gate-pass signal lives at `.qfai/report/validate-saas-package.json`
- * (canonical; `.qfai/output/validate-saas-package.json` is read as a
- * legacy fallback during the `D-DEPRECATED-PATH` deprecation window).
+ * The gate-pass signal lives at the validate-side profile-suffixed
+ * report path — derived at runtime from the loaded
+ * `config.output.validateJsonPath` (default
+ * `.qfai/report/validate-saas-package.json`). The legacy
+ * `.qfai/output/validate-saas-package.json` is read as a fallback
+ * during the `D-DEPRECATED-PATH` deprecation window.
  * The file is a validate-style record produced by re-running
  * `qfai validate --profile saas-package` against the now-complete
  * surface. Pragmatic shortcut: the upgrade path checks for that
@@ -1010,7 +1041,11 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
  * `qfai validate --profile saas-package` to produce the signal,
  * then `qfai prototyping certify --upgrade-scope full` consumes it.
  */
-async function runUpgradeScopeFull(root: string): Promise<number> {
+async function runUpgradeScopeFull(
+  root: string,
+  config: ConfigLoadResult["config"],
+): Promise<number> {
+  const canonicalSignalRel = resolveSaasPackageGatesSignalRel(config);
   const cert = await loadCompletionCertificate(root);
   if (!cert) {
     error(
@@ -1040,7 +1075,7 @@ async function runUpgradeScopeFull(root: string): Promise<number> {
   // for pre-CHG-005 consumer state). When the legacy path is used a
   // one-line stderr note surfaces the fallback so operators can
   // migrate to the canonical location at their convenience.
-  const canonicalAbs = path.join(root, SAAS_PACKAGE_GATES_SIGNAL_REL);
+  const canonicalAbs = path.join(root, canonicalSignalRel);
   const legacyAbs = path.join(root, SAAS_PACKAGE_GATES_SIGNAL_LEGACY_REL);
   const signalRead = await loadSaasPackageGatesSignal(canonicalAbs, legacyAbs);
   if (signalRead.source === "legacy") {
@@ -1053,7 +1088,7 @@ async function runUpgradeScopeFull(root: string): Promise<number> {
     process.stderr.write(
       `qfai prototyping certify: Reading legacy validate-saas-package.json path ` +
         `(${SAAS_PACKAGE_GATES_SIGNAL_LEGACY_REL}); the canonical path is ` +
-        `${SAAS_PACKAGE_GATES_SIGNAL_REL}.\n`,
+        `${canonicalSignalRel}.\n`,
     );
   }
   const signal = signalRead.payload;
@@ -1067,7 +1102,7 @@ async function runUpgradeScopeFull(root: string): Promise<number> {
       error(`  - ${gate}`);
     }
     error(
-      `Re-run \`qfai validate --profile saas-package\` so that ${SAAS_PACKAGE_GATES_SIGNAL_REL} ` +
+      `Re-run \`qfai validate --profile saas-package\` so that ${canonicalSignalRel} ` +
         "reports counts.error=0 and every gate as PASS, then re-run certify --upgrade-scope full.",
     );
     return 2;

@@ -391,6 +391,98 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
       "utf-8",
     );
 
+    // Capture stderr so we can assert the legacy deprecation note is
+    // ABSENT — when canonical wins on both-present, the impl must NOT
+    // emit the "Reading legacy validate-saas-package.json path" note
+    // that the legacy-fallback branch produces. Without this negative
+    // assertion the test would still pass if the impl read the
+    // canonical body but spuriously printed the legacy-path note,
+    // masking a source-discrimination regression.
+    const stderrChunks: string[] = [];
+    const originalStderrWrite = process.stderr.write.bind(process.stderr);
+    process.stderr.write = ((chunk: string | Uint8Array): boolean => {
+      stderrChunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
+      return true;
+    }) as typeof process.stderr.write;
+    let upgradeExit: number;
+    try {
+      upgradeExit = await runPrototypingCertify({
+        root,
+        check: false,
+        scope: "saas-package",
+        upgradeScopeFull: true,
+      });
+    } finally {
+      process.stderr.write = originalStderrWrite;
+    }
+    expect(upgradeExit).toBe(0);
+    const stderrText = stderrChunks.join("");
+    expect(stderrText).not.toMatch(/legacy/i);
+  });
+
+  // Regression for the config-aware-reader gap: when an operator
+  // overrides `output.validateJsonPath` in `qfai.config.yaml`, the
+  // validate-side writer emits the saas-package signal under the
+  // operator-customized location. The upgrade-scope reader MUST
+  // derive the signal path from the same config field — pre-fix the
+  // reader was hardcoded to `.qfai/report/validate-saas-package.json`
+  // and refused to upgrade under custom configs even when the gates
+  // were actually passing.
+  it("derives the signal path from a non-default config.output.validateJsonPath", async () => {
+    const root = await newTempDir();
+    await seedSaasPackageHappyPath(root);
+
+    // Overwrite the seed config with a non-default
+    // `output.validateJsonPath`. The writer-side derivation in
+    // validate.ts splits at the basename, so a configured path of
+    // `custom/report.json` produces `custom/report-saas-package.json`
+    // for the saas-package profile output.
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      [
+        "paths:",
+        "  contractsDir: .qfai/contracts",
+        "  specsDir: .qfai/specs",
+        "  discussionDir: .qfai/discussion",
+        "  outDir: .qfai/output",
+        "  skillsDir: .qfai/assistant/skills",
+        "  promptsDir: .qfai/assistant/skills",
+        "  srcDir: src",
+        "  testsDir: tests",
+        "output:",
+        "  validateJsonPath: custom/report.json",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    // Mirror the validate.json the certify pre-seal gate reads against
+    // the custom path, so the prerequisite "validate.json#counts.error=0"
+    // gate keeps passing under the override.
+    const customValidatePath = path.join(root, "custom/report.json");
+    await mkdir(path.dirname(customValidatePath), { recursive: true });
+    await writeFile(
+      customValidatePath,
+      JSON.stringify({
+        profile: "prototyping",
+        counts: { error: 0, warning: 0, info: 0 },
+      }),
+      "utf-8",
+    );
+
+    const sealExit = await runPrototypingCertify({
+      root,
+      check: false,
+      scope: "saas-package",
+    });
+    expect(sealExit).toBe(0);
+
+    // Seed the saas-package gates-passing signal at the
+    // config-derived location ONLY (not at the hardcoded default).
+    // Pre-fix the upgrade refused because the reader stayed at
+    // `.qfai/report/validate-saas-package.json`.
+    const customSignalPath = path.join(root, "custom/report-saas-package.json");
+    await writeFile(customSignalPath, buildSaasPackageGatesPassingBody(), "utf-8");
+
     const upgradeExit = await runPrototypingCertify({
       root,
       check: false,
@@ -398,5 +490,10 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
       upgradeScopeFull: true,
     });
     expect(upgradeExit).toBe(0);
+
+    const certPath = path.join(root, ".qfai/evidence/prototyping/completion-certificate.json");
+    const cert = JSON.parse(await readFile(certPath, "utf-8")) as Record<string, unknown>;
+    expect(cert.scope).toBeUndefined();
+    expect(cert.notes).toBeUndefined();
   });
 });
