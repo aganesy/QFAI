@@ -1085,10 +1085,16 @@ async function runUpgradeScopeFull(
     // notice keeps the upgrade succeeding (exit 0) while surfacing
     // the canonical-path migration to anyone watching the error
     // stream (CI logs, terminal stderr, etc.).
+    // Append a concrete migration command so the deprecation note
+    // mirrors the in-repo `D-DEPRECATED-PATH` convention (e.g. init's
+    // legacy-steering note instructs `qfai init --upgrade-assistant-tree
+    // to migrate`). Operators reading the stderr line should not have
+    // to consult docs to learn how to clear the warning.
     process.stderr.write(
       `qfai prototyping certify: Reading legacy validate-saas-package.json path ` +
         `(${SAAS_PACKAGE_GATES_SIGNAL_LEGACY_REL}); the canonical path is ` +
-        `${canonicalSignalRel}.\n`,
+        `${canonicalSignalRel}. ` +
+        `Re-run \`qfai validate --profile saas-package\` to write the canonical path.\n`,
     );
   }
   const signal = signalRead.payload;
@@ -1181,21 +1187,81 @@ async function loadSaasPackageGatesSignal(
 /**
  * Inspect a `.qfai/report/validate-saas-package.json` payload (canonical;
  * `.qfai/output/...` read as legacy fallback) and return the
- * saas-package gates that are still NOT confirmed passing. A gate is
- * considered passing only when the payload carries `gates.<gate>.status
- * === "PASS"` AND the top-level `counts.error === 0`. Anything else
- * keeps the gate in the still-missing set — including a fully absent
- * signal file (`null` payload).
+ * saas-package gates that are still NOT confirmed passing.
+ *
+ * Two interpretation modes are supported because the file can be
+ * produced by two writers:
+ *
+ *   1. **Synthetic gates map** (`gates: {<gate>: {status: "PASS"}}`) —
+ *      written by test fixtures and ad-hoc operator overrides. A gate
+ *      is passing when its entry's `status === "PASS"` AND the
+ *      top-level `counts.error === 0`.
+ *
+ *   2. **Real validate output** (no `gates` map; carries the
+ *      `ValidationResult` shape with `profile`, `counts`, `issues`,
+ *      etc.) — written by `qfai validate --profile saas-package`. The
+ *      saas-package profile represents the skip-set as
+ *      `D-SAAS-PACKAGE-VERIFY-SKIPPED` info findings inside `issues[]`
+ *      rather than a `gates` object. Interpretation:
+ *      - `profile === "saas-package"` AND any
+ *        `D-SAAS-PACKAGE-VERIFY-SKIPPED` info findings → those gates
+ *        are still skipped (still missing).
+ *      - `profile === "saas-package"` AND zero
+ *        `D-SAAS-PACKAGE-VERIFY-SKIPPED` info findings AND
+ *        `counts.error === 0` → all gates pass (the skip-set was
+ *        emptied — every gate was satisfied inline).
+ *      - `profile` is `"full"` / `"verify"` / `"tdd"` / `"atdd"` (or
+ *        any non-`saas-package` profile) AND `counts.error === 0`
+ *        AND no error-severity issues match the gate names →
+ *        all gates pass (the operator re-ran under a fuller profile
+ *        that exercises every gate, none failed).
+ *      - Any of those AND `counts.error > 0` → still missing (the
+ *        validate run had failures; the upgrade refuses and the
+ *        operator-facing log enumerates the still-missing set).
+ *
+ * `mode` defaults to `"auto"`: when `signal.gates` is present and is a
+ * non-empty record, the synthetic-map branch is used; otherwise the
+ * issues-based branch runs. Explicit `"gates"` / `"issues"` forces one
+ * branch for callers that want deterministic behaviour (e.g. unit tests
+ * that seed both shapes).
+ *
+ * Anything not matching either shape (null payload, non-record, etc.)
+ * returns the full `SAAS_PACKAGE_SKIPPED_GATES` list — the upgrade
+ * refuses with all gates named in stderr.
  */
-function resolveStillMissingSaasPackageGates(signal: unknown): string[] {
+type StillMissingMode = "auto" | "gates" | "issues";
+
+function resolveStillMissingSaasPackageGates(
+  signal: unknown,
+  mode: StillMissingMode = "auto",
+): string[] {
   if (!isRecord(signal)) {
     return [...SAAS_PACKAGE_SKIPPED_GATES];
   }
+  const gatesRecord = extractRecord(signal, "gates");
+  const gatesNonEmpty = gatesRecord !== undefined && Object.keys(gatesRecord).length > 0;
+  const resolvedMode: "gates" | "issues" =
+    mode === "auto" ? (gatesNonEmpty ? "gates" : "issues") : mode;
+
+  if (resolvedMode === "gates") {
+    return resolveStillMissingFromGatesMap(signal, gatesRecord);
+  }
+  return resolveStillMissingFromIssues(signal);
+}
+
+/**
+ * Synthetic `gates: {<gate>: {status: "PASS"}}` map branch. Keeps the
+ * existing test-fixture contract: a gate is passing only when both its
+ * entry's `status === "PASS"` AND the top-level `counts.error === 0`.
+ */
+function resolveStillMissingFromGatesMap(
+  signal: Record<string, unknown>,
+  gates: Record<string, unknown> | undefined,
+): string[] {
   const errorCount = extractNumber(extractRecord(signal, "counts"), "error");
   if (errorCount !== 0) {
     return [...SAAS_PACKAGE_SKIPPED_GATES];
   }
-  const gates = extractRecord(signal, "gates");
   if (!gates) {
     return [...SAAS_PACKAGE_SKIPPED_GATES];
   }
@@ -1207,6 +1273,94 @@ function resolveStillMissingSaasPackageGates(signal: unknown): string[] {
     }
   }
   return missing;
+}
+
+/**
+ * Real-`ValidationResult` branch. Mirrors the operator's actual
+ * workflow: run `qfai validate --profile saas-package` (or a fuller
+ * profile that exercises the skip-set inline) and let the resulting
+ * record drive the upgrade decision.
+ */
+function resolveStillMissingFromIssues(signal: Record<string, unknown>): string[] {
+  const errorCount = extractNumber(extractRecord(signal, "counts"), "error");
+  if (typeof errorCount === "number" && errorCount > 0) {
+    return [...SAAS_PACKAGE_SKIPPED_GATES];
+  }
+  const profile = extractString(signal, "profile");
+  const issuesRaw = signal["issues"];
+  const issues = Array.isArray(issuesRaw) ? issuesRaw : [];
+
+  if (profile === "saas-package") {
+    // saas-package profile: gates the skip-set surfaces as
+    // `D-SAAS-PACKAGE-VERIFY-SKIPPED` info findings. Any present →
+    // still skipped; none present → all gates pass (the operator
+    // satisfied every gate inline, emptying the skip-set).
+    const stillSkipped: string[] = [];
+    for (const gate of SAAS_PACKAGE_SKIPPED_GATES) {
+      if (hasSkipFindingForGate(issues, gate)) {
+        stillSkipped.push(gate);
+      }
+    }
+    return stillSkipped;
+  }
+  // Fuller profile (or `profile` absent — treat as fuller too):
+  // counts.error === 0 + no error-severity issue mentioning a gate
+  // name → all gates pass.
+  const errorByGate: string[] = [];
+  for (const gate of SAAS_PACKAGE_SKIPPED_GATES) {
+    if (hasErrorFindingForGate(issues, gate)) {
+      errorByGate.push(gate);
+    }
+  }
+  return errorByGate;
+}
+
+const SAAS_PACKAGE_SKIP_CODE = "D-SAAS-PACKAGE-VERIFY-SKIPPED";
+
+/**
+ * Match a `D-SAAS-PACKAGE-VERIFY-SKIPPED` info finding for a specific
+ * gate name. The validate-side writer keys the gate name into
+ * `refs[]`; we also accept a substring match on `message` for any
+ * forward-compatible variant.
+ */
+function hasSkipFindingForGate(issues: unknown[], gate: string): boolean {
+  for (const entry of issues) {
+    if (!isRecord(entry)) continue;
+    if (extractString(entry, "code") !== SAAS_PACKAGE_SKIP_CODE) continue;
+    if (extractString(entry, "severity") !== "info") continue;
+    if (issueMentionsGate(entry, gate)) return true;
+  }
+  return false;
+}
+
+/**
+ * Match an error-severity finding that names the gate. Used by the
+ * fuller-profile branch: when an operator runs `qfai validate
+ * --profile full`, any gate that fails surfaces as an error issue
+ * naming the validator. Conservative substring match on the `rule` /
+ * `refs` / `message` keeps us source-of-truth-tolerant.
+ */
+function hasErrorFindingForGate(issues: unknown[], gate: string): boolean {
+  for (const entry of issues) {
+    if (!isRecord(entry)) continue;
+    if (extractString(entry, "severity") !== "error") continue;
+    if (issueMentionsGate(entry, gate)) return true;
+  }
+  return false;
+}
+
+function issueMentionsGate(entry: Record<string, unknown>, gate: string): boolean {
+  const refs = entry["refs"];
+  if (Array.isArray(refs)) {
+    for (const ref of refs) {
+      if (typeof ref === "string" && ref === gate) return true;
+    }
+  }
+  const rule = extractString(entry, "rule");
+  if (typeof rule === "string" && rule.includes(gate)) return true;
+  const message = extractString(entry, "message");
+  if (typeof message === "string" && message.includes(gate)) return true;
+  return false;
 }
 
 /**

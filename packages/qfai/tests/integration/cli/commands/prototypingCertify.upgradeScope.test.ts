@@ -351,6 +351,12 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
     expect(upgradeExit).toBe(0);
     const stderrText = stderrChunks.join("");
     expect(stderrText).toMatch(/legacy/i);
+    // The legacy-fallback note must include a concrete migration
+    // command (matches the `D-DEPRECATED-PATH` convention used by
+    // other deprecated-path warnings in this repo) so operators do
+    // not have to look up the docs to clear the warning.
+    expect(stderrText).toMatch(/qfai validate --profile saas-package/);
+    expect(stderrText).toMatch(/to write the canonical path/);
 
     const certPath = path.join(root, ".qfai/evidence/prototyping/completion-certificate.json");
     const cert = JSON.parse(await readFile(certPath, "utf-8")) as Record<string, unknown>;
@@ -495,5 +501,198 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
     const cert = JSON.parse(await readFile(certPath, "utf-8")) as Record<string, unknown>;
     expect(cert.scope).toBeUndefined();
     expect(cert.notes).toBeUndefined();
+  });
+
+  // Regression for the signal-shape-mismatch P2: `runValidate` writes
+  // the saas-package profile result as a normal `ValidationResult`
+  // (`profile`, `counts`, `issues`, ...) — the skip-set is represented
+  // as `D-SAAS-PACKAGE-VERIFY-SKIPPED` info findings inside `issues[]`,
+  // NOT as a synthetic `gates` map. The upgrade-scope reader must
+  // interpret the real validate output so operators can produce the
+  // signal via the actual `qfai validate --profile saas-package`
+  // command instead of hand-authoring a synthetic gates JSON.
+  //
+  // Build a validate-style issues-only body matching the real writer.
+  function buildSaasPackageIssuesBody(skippedGates: readonly string[]): string {
+    const issues = skippedGates.map((gate) => ({
+      code: "D-SAAS-PACKAGE-VERIFY-SKIPPED",
+      severity: "info" as const,
+      category: "canonical" as const,
+      message: `SaaS-package profile skipped ${gate}; full DONE not claimed for this profile.`,
+      rule: "validate.saasPackage.verifySkipped",
+      refs: [gate],
+    }));
+    return JSON.stringify({
+      profile: "saas-package",
+      counts: { error: 0, warning: 0, info: skippedGates.length },
+      issues,
+    });
+  }
+
+  it("refuses upgrade on real saas-package validate output with all gates still skipped", async () => {
+    const root = await newTempDir();
+    await seedSaasPackageHappyPath(root);
+
+    const sealExit = await runPrototypingCertify({
+      root,
+      check: false,
+      scope: "saas-package",
+    });
+    expect(sealExit).toBe(0);
+
+    // Seed the canonical signal with the REAL validate output shape:
+    // all four skipped gates surface as info-severity findings.
+    await mkdir(path.join(root, ".qfai/report"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/report/validate-saas-package.json"),
+      buildSaasPackageIssuesBody(SAAS_PACKAGE_SKIPPED_GATES),
+      "utf-8",
+    );
+
+    const stderrChunks: string[] = [];
+    const originalStderrWrite = process.stderr.write.bind(process.stderr);
+    process.stderr.write = ((chunk: string | Uint8Array): boolean => {
+      stderrChunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
+      return true;
+    }) as typeof process.stderr.write;
+    let upgradeExit: number;
+    try {
+      upgradeExit = await runPrototypingCertify({
+        root,
+        check: false,
+        scope: "saas-package",
+        upgradeScopeFull: true,
+      });
+    } finally {
+      process.stderr.write = originalStderrWrite;
+    }
+    expect(upgradeExit).not.toBe(0);
+    const stderrText = stderrChunks.join("");
+    for (const gate of SAAS_PACKAGE_SKIPPED_GATES) {
+      expect(stderrText).toContain(gate);
+    }
+  });
+
+  it("allows upgrade on real saas-package validate output when the skip-set was emptied", async () => {
+    const root = await newTempDir();
+    await seedSaasPackageHappyPath(root);
+
+    const sealExit = await runPrototypingCertify({
+      root,
+      check: false,
+      scope: "saas-package",
+    });
+    expect(sealExit).toBe(0);
+
+    // Real validate output where the operator satisfied every gate
+    // inline (zero `D-SAAS-PACKAGE-VERIFY-SKIPPED` findings,
+    // counts.error === 0).
+    await mkdir(path.join(root, ".qfai/report"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/report/validate-saas-package.json"),
+      JSON.stringify({
+        profile: "saas-package",
+        counts: { error: 0, warning: 0, info: 0 },
+        issues: [],
+      }),
+      "utf-8",
+    );
+
+    const upgradeExit = await runPrototypingCertify({
+      root,
+      check: false,
+      scope: "saas-package",
+      upgradeScopeFull: true,
+    });
+    expect(upgradeExit).toBe(0);
+
+    const certPath = path.join(root, ".qfai/evidence/prototyping/completion-certificate.json");
+    const cert = JSON.parse(await readFile(certPath, "utf-8")) as Record<string, unknown>;
+    expect(cert.scope).toBeUndefined();
+    expect(cert.notes).toBeUndefined();
+  });
+
+  it("allows upgrade when a fuller-profile validate run reports zero errors", async () => {
+    const root = await newTempDir();
+    await seedSaasPackageHappyPath(root);
+
+    const sealExit = await runPrototypingCertify({
+      root,
+      check: false,
+      scope: "saas-package",
+    });
+    expect(sealExit).toBe(0);
+
+    // Operator re-ran `qfai validate --profile full` — every gate
+    // including the previously-skipped ones executed cleanly.
+    await mkdir(path.join(root, ".qfai/report"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/report/validate-saas-package.json"),
+      JSON.stringify({
+        profile: "full",
+        counts: { error: 0, warning: 0, info: 0 },
+        issues: [],
+      }),
+      "utf-8",
+    );
+
+    const upgradeExit = await runPrototypingCertify({
+      root,
+      check: false,
+      scope: "saas-package",
+      upgradeScopeFull: true,
+    });
+    expect(upgradeExit).toBe(0);
+
+    const certPath = path.join(root, ".qfai/evidence/prototyping/completion-certificate.json");
+    const cert = JSON.parse(await readFile(certPath, "utf-8")) as Record<string, unknown>;
+    expect(cert.scope).toBeUndefined();
+    expect(cert.notes).toBeUndefined();
+  });
+
+  it("refuses upgrade when a fuller-profile validate run carries any error finding", async () => {
+    const root = await newTempDir();
+    await seedSaasPackageHappyPath(root);
+
+    const sealExit = await runPrototypingCertify({
+      root,
+      check: false,
+      scope: "saas-package",
+    });
+    expect(sealExit).toBe(0);
+
+    // Operator re-ran a fuller profile and at least one gate failed.
+    await mkdir(path.join(root, ".qfai/report"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/report/validate-saas-package.json"),
+      JSON.stringify({
+        profile: "full",
+        counts: { error: 1, warning: 0, info: 0 },
+        issues: [
+          {
+            code: "T-TDD-LIST",
+            severity: "error",
+            category: "canonical",
+            message: "validateTddList reported a failure on some surface.",
+            rule: "validate.tdd.list",
+            refs: ["validateTddList"],
+          },
+        ],
+      }),
+      "utf-8",
+    );
+
+    const upgradeExit = await runPrototypingCertify({
+      root,
+      check: false,
+      scope: "saas-package",
+      upgradeScopeFull: true,
+    });
+    expect(upgradeExit).not.toBe(0);
+
+    // Certificate must remain scope-limited after the refused upgrade.
+    const certPath = path.join(root, ".qfai/evidence/prototyping/completion-certificate.json");
+    const cert = JSON.parse(await readFile(certPath, "utf-8")) as Record<string, unknown>;
+    expect(cert.scope).toBe("saas-package");
   });
 });
