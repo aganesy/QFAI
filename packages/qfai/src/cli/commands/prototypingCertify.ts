@@ -106,8 +106,16 @@ function formatSaasPackageSkipNote(gate: string): string {
  * The file is a validate-style record carrying per-gate status entries
  * for every name in `SAAS_PACKAGE_SKIPPED_GATES`. Absent → upgrade
  * refuses (the gates have not been re-run yet).
+ *
+ * Canonical post-CHG-005 path is `.qfai/report/validate-<profile>.json`
+ * (the validate-side profile-suffixed output landed alongside the
+ * `paths.outDir = ".qfai/report"` default). The legacy
+ * `.qfai/output/validate-saas-package.json` path remains readable as a
+ * back-compat fallback during the `D-DEPRECATED-PATH` deprecation
+ * window so pre-CHG-005 consumer state does not regress.
  */
-const SAAS_PACKAGE_GATES_SIGNAL_REL = ".qfai/output/validate-saas-package.json";
+const SAAS_PACKAGE_GATES_SIGNAL_REL = ".qfai/report/validate-saas-package.json";
+const SAAS_PACKAGE_GATES_SIGNAL_LEGACY_REL = ".qfai/output/validate-saas-package.json";
 
 const ROOT_DESIGN_MD_REL = "DESIGN.md";
 
@@ -990,8 +998,10 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
  * failing, exits non-zero and names the still-missing gates on
  * stderr.
  *
- * The gate-pass signal lives at `.qfai/output/validate-saas-package.json`
- * — a validate-style record produced by re-running
+ * The gate-pass signal lives at `.qfai/report/validate-saas-package.json`
+ * (canonical; `.qfai/output/validate-saas-package.json` is read as a
+ * legacy fallback during the `D-DEPRECATED-PATH` deprecation window).
+ * The file is a validate-style record produced by re-running
  * `qfai validate --profile saas-package` against the now-complete
  * surface. Pragmatic shortcut: the upgrade path checks for that
  * single signal (presence, `counts.error === 0`, and per-gate
@@ -1024,8 +1034,29 @@ async function runUpgradeScopeFull(root: string): Promise<number> {
   // them in stderr. This keeps the upgrade path purely a re-gate
   // operation grounded in evidence files already produced by the
   // validate-side surface.
-  const signalAbs = path.join(root, SAAS_PACKAGE_GATES_SIGNAL_REL);
-  const signal = await loadJson(signalAbs);
+  //
+  // Canonical path is checked first; the legacy `.qfai/output/...`
+  // path is read only when the canonical signal is absent (back-compat
+  // for pre-CHG-005 consumer state). When the legacy path is used a
+  // one-line stderr note surfaces the fallback so operators can
+  // migrate to the canonical location at their convenience.
+  const canonicalAbs = path.join(root, SAAS_PACKAGE_GATES_SIGNAL_REL);
+  const legacyAbs = path.join(root, SAAS_PACKAGE_GATES_SIGNAL_LEGACY_REL);
+  const signalRead = await loadSaasPackageGatesSignal(canonicalAbs, legacyAbs);
+  if (signalRead.source === "legacy") {
+    // Write the deprecation note directly to stderr — the `warn`
+    // logger emits to stdout, which the upgrade-scope contract
+    // reserves for operator-facing positive output. A stderr-only
+    // notice keeps the upgrade succeeding (exit 0) while surfacing
+    // the canonical-path migration to anyone watching the error
+    // stream (CI logs, terminal stderr, etc.).
+    process.stderr.write(
+      `qfai prototyping certify: Reading legacy validate-saas-package.json path ` +
+        `(${SAAS_PACKAGE_GATES_SIGNAL_LEGACY_REL}); the canonical path is ` +
+        `${SAAS_PACKAGE_GATES_SIGNAL_REL}.\n`,
+    );
+  }
+  const signal = signalRead.payload;
   const stillMissing = resolveStillMissingSaasPackageGates(signal);
   if (stillMissing.length > 0) {
     error(
@@ -1051,8 +1082,71 @@ async function runUpgradeScopeFull(root: string): Promise<number> {
 }
 
 /**
- * Inspect a `.qfai/output/validate-saas-package.json` payload and return
- * the saas-package gates that are still NOT confirmed passing. A gate is
+ * Result of resolving the saas-package gates signal. `source` records
+ * which path the payload was actually read from (`canonical` /
+ * `legacy`) or `none` when neither file exists. The signal payload is
+ * `null` when no file was found OR the file existed but failed to parse
+ * — both cases are surfaced as "still missing" by
+ * {@link resolveStillMissingSaasPackageGates}.
+ *
+ * The canonical path is preferred. When the canonical path is absent
+ * AND the legacy path is present, the legacy payload is returned along
+ * with `source: "legacy"` so the caller can emit a one-line stderr
+ * deprecation note. Both-present case: canonical WINS (deterministic;
+ * matches how `qfai validate --profile saas-package` writes the
+ * canonical path by default under CHG-005).
+ */
+type SaasPackageGatesSignalRead = {
+  payload: unknown;
+  source: "canonical" | "legacy" | "none";
+};
+
+async function loadSaasPackageGatesSignal(
+  canonicalAbs: string,
+  legacyAbs: string,
+): Promise<SaasPackageGatesSignalRead> {
+  // probe canonical first — does the file exist on disk? We need to
+  // distinguish "canonical absent" (consider legacy) from "canonical
+  // present but parse failed" (do NOT silently fall through to legacy,
+  // because that would mask a real corruption).
+  let canonicalExists = false;
+  try {
+    const s = await stat(canonicalAbs);
+    canonicalExists = s.isFile();
+  } catch (err) {
+    if (!isEnoent(err)) {
+      // permission flips / EIO surface to the caller via the existing
+      // loadJson fallback (parse-fail = null) on the canonical read;
+      // we treat the canonical path as the authoritative target in
+      // that case rather than silently bypassing to legacy.
+      canonicalExists = true;
+    }
+  }
+  if (canonicalExists) {
+    const payload = await loadJson(canonicalAbs);
+    return { payload, source: "canonical" };
+  }
+  // Canonical absent: try legacy. Legacy missing → no signal at all.
+  let legacyExists = false;
+  try {
+    const s = await stat(legacyAbs);
+    legacyExists = s.isFile();
+  } catch (err) {
+    if (!isEnoent(err)) {
+      legacyExists = true;
+    }
+  }
+  if (legacyExists) {
+    const payload = await loadJson(legacyAbs);
+    return { payload, source: "legacy" };
+  }
+  return { payload: null, source: "none" };
+}
+
+/**
+ * Inspect a `.qfai/report/validate-saas-package.json` payload (canonical;
+ * `.qfai/output/...` read as legacy fallback) and return the
+ * saas-package gates that are still NOT confirmed passing. A gate is
  * considered passing only when the payload carries `gates.<gate>.status
  * === "PASS"` AND the top-level `counts.error === 0`. Anything else
  * keeps the gate in the still-missing set — including a fully absent
