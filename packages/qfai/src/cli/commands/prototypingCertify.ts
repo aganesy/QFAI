@@ -1227,9 +1227,14 @@ async function loadSaasPackageGatesSignal(
  * branch for callers that want deterministic behaviour (e.g. unit tests
  * that seed both shapes).
  *
- * Anything not matching either shape (null payload, non-record, etc.)
- * returns the full `SAAS_PACKAGE_SKIPPED_GATES` list — the upgrade
- * refuses with all gates named in stderr.
+ * Anything not matching either shape returns the full
+ * `SAAS_PACKAGE_SKIPPED_GATES` list — the upgrade refuses fail-closed
+ * with all gates named in stderr. Refusal applies to: (a) `null` /
+ * non-record payloads, (b) records lacking `counts.error` as a number,
+ * (c) records with `counts.error > 0` (any validate failure), and
+ * (d) records lacking a `profile` field (malformed `{}` or hand-edited
+ * signal with no recognizable ValidationResult shape). Truncated /
+ * malformed signals must NEVER default-to-success.
  */
 type StillMissingMode = "auto" | "gates" | "issues";
 
