@@ -751,4 +751,111 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
     const cert = JSON.parse(await readFile(certPath, "utf-8")) as Record<string, unknown>;
     expect(cert.scope).toBe("saas-package");
   });
+
+  // Pin the INADMISSIBLE recovery loop: an operator who follows the
+  // refusal message ("re-run `qfai validate --profile full`") must
+  // actually close the loop, even when a stale
+  // `validate-saas-package.json` (profile === "saas-package") remains
+  // on disk. The validate writer does NOT delete or overwrite the
+  // saas-package signal when invoked under `--profile full` — it
+  // writes the profile-suffixed `validate-full.json` as a separate
+  // file — so the reader must prefer the full-profile signal over a
+  // stale INADMISSIBLE canonical. Pre-fix, the reader returned
+  // `source: "canonical"` on the first probe and the recovery loop
+  // never closed.
+  it("prefers full-profile signal over stale saas-package canonical (INADMISSIBLE recovery)", async () => {
+    const root = await newTempDir();
+    await seedSaasPackageHappyPath(root);
+
+    const sealExit = await runPrototypingCertify({
+      root,
+      check: false,
+      scope: "saas-package",
+    });
+    expect(sealExit).toBe(0);
+
+    // Step 1: operator's first `qfai validate --profile saas-package`
+    // run wrote an INADMISSIBLE signal at the canonical path. The
+    // saas-package profile unconditionally emits one skip finding per
+    // gate, so its skip-set can never be emptied within that profile.
+    await mkdir(path.join(root, ".qfai/report"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/report/validate-saas-package.json"),
+      JSON.stringify({
+        profile: "saas-package",
+        counts: { error: 0, warning: 0, info: SAAS_PACKAGE_SKIPPED_GATES.length },
+        issues: [],
+      }),
+      "utf-8",
+    );
+
+    // Step 2: operator followed the refusal message and re-ran
+    // `qfai validate --profile full --fail-on error`, which writes the
+    // profile-suffixed `validate-full.json` as a separate file. The
+    // stale canonical at step 1 is NOT removed by the writer.
+    await writeFile(
+      path.join(root, ".qfai/report/validate-full.json"),
+      JSON.stringify({
+        profile: "full",
+        counts: { error: 0, warning: 0, info: 0 },
+        issues: [],
+      }),
+      "utf-8",
+    );
+
+    // Step 3: re-run `certify --upgrade-scope full`. The reader must
+    // prefer the full-profile signal so the upgrade succeeds; the
+    // stale canonical must NOT block the loop.
+    const upgradeExit = await runPrototypingCertify({
+      root,
+      check: false,
+      scope: "saas-package",
+      upgradeScopeFull: true,
+    });
+    expect(upgradeExit).toBe(0);
+
+    // Certificate is now full-scope.
+    const certPath = path.join(root, ".qfai/evidence/prototyping/completion-certificate.json");
+    const cert = JSON.parse(await readFile(certPath, "utf-8")) as Record<string, unknown>;
+    expect(cert.scope).toBeUndefined();
+    expect(cert.notes).toBeUndefined();
+  });
+
+  it("reads full-profile signal as source=full-profile when canonical is absent", async () => {
+    const root = await newTempDir();
+    await seedSaasPackageHappyPath(root);
+
+    const sealExit = await runPrototypingCertify({
+      root,
+      check: false,
+      scope: "saas-package",
+    });
+    expect(sealExit).toBe(0);
+
+    // Canonical absent on disk; full-profile present (operator ran
+    // `--profile full` without ever running `--profile saas-package`
+    // beforehand).
+    await mkdir(path.join(root, ".qfai/report"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/report/validate-full.json"),
+      JSON.stringify({
+        profile: "full",
+        counts: { error: 0, warning: 0, info: 0 },
+        issues: [],
+      }),
+      "utf-8",
+    );
+
+    const upgradeExit = await runPrototypingCertify({
+      root,
+      check: false,
+      scope: "saas-package",
+      upgradeScopeFull: true,
+    });
+    expect(upgradeExit).toBe(0);
+
+    const certPath = path.join(root, ".qfai/evidence/prototyping/completion-certificate.json");
+    const cert = JSON.parse(await readFile(certPath, "utf-8")) as Record<string, unknown>;
+    expect(cert.scope).toBeUndefined();
+  });
 });

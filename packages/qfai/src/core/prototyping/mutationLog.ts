@@ -10,7 +10,9 @@
  * The log itself is git-ignored (see the shipped `.gitignore` template).
  * A code path that mutates iter-NN evidence without funneling through
  * this writer surfaces `R-EVIDENCE-MUTATION-UNLOGGED` (error) via the
- * SSOT-sync pair scan (see `evidenceMutationLogPairs.ts`).
+ * SSOT-sync pair scan (see
+ * `core/validators/evidenceMutationUnlogged.ts`, which carries the
+ * `EVIDENCE_MUTATION_PAIRS` SSOT).
  *
  * The functions here are the ONLY supported entry point — call them
  * BEFORE the destructive fs call so the prior size is captured from

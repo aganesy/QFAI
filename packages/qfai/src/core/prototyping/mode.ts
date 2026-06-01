@@ -53,7 +53,15 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-PROT-PATH", // path / iter layout
 ] as const;
 
-const VALID_MODES: ReadonlySet<string> = new Set(["convergence", "exploration"]);
+/**
+ * Type guard for `PrototypingMode`. Avoids the bare-`as` assertion on
+ * `Set.has()` and tightens the narrowing to the discriminated union
+ * (CLAUDE.md "TypeScript: avoid bare `as` type assertions; prefer
+ * type narrowing").
+ */
+function isPrototypingMode(value: string): value is PrototypingMode {
+  return value === "convergence" || value === "exploration";
+}
 
 /**
  * Resolve the effective mode from the (optional) CLI flag value and
@@ -63,18 +71,40 @@ const VALID_MODES: ReadonlySet<string> = new Set(["convergence", "exploration"])
  *   2. Config value (when valid)
  *   3. Default: `convergence`
  *
- * Invalid values silently fall back to the next layer (defensive: a
- * typoed value must not silently relax gates).
+ * Invalid CLI values silently fall back to the next layer (defensive:
+ * a typoed value must not silently relax gates). Invalid CONFIG
+ * values fall back to convergence AND emit a one-line warning via
+ * the injected `warn` sink so the operator can spot a typoed
+ * `prototyping.mode` instead of seeing the default convergence
+ * behaviour quietly applied. CLI validity (`markInvalid()`) is
+ * already enforced upstream in `args.ts`; config typos are not, so
+ * the warning closes the asymmetry.
  */
 export function resolvePrototypingMode(input: {
   readonly cli: string | undefined;
   readonly config: string | undefined;
+  /** Optional warn sink; defaults to a no-op so unit tests stay quiet. */
+  readonly warn?: (message: string) => void;
 }): PrototypingMode {
-  if (input.cli !== undefined && VALID_MODES.has(input.cli)) {
-    return input.cli as PrototypingMode;
+  if (input.cli !== undefined && isPrototypingMode(input.cli)) {
+    return input.cli;
   }
-  if (input.config !== undefined && VALID_MODES.has(input.config)) {
-    return input.config as PrototypingMode;
+  if (input.config !== undefined && isPrototypingMode(input.config)) {
+    return input.config;
+  }
+  // Surface a non-empty-but-unknown config value as a warning. The CLI
+  // path already markInvalid()s typoed values, so this is the only
+  // remaining layer where a typo can silently fall through.
+  if (
+    input.config !== undefined &&
+    input.config.length > 0 &&
+    !isPrototypingMode(input.config)
+  ) {
+    input.warn?.(
+      `qfai prototyping: ignoring unknown prototyping.mode=${JSON.stringify(
+        input.config,
+      )} (falling back to default convergence; valid values: convergence, exploration).`,
+    );
   }
   return "convergence";
 }

@@ -1085,9 +1085,16 @@ async function runUpgradeScopeFull(
   // for pre-CHG-005 consumer state). When the legacy path is used a
   // one-line stderr note surfaces the fallback so operators can
   // migrate to the canonical location at their convenience.
-  const canonicalAbs = path.join(root, canonicalSignalRel);
-  const fullProfileAbs = path.join(root, fullProfileSignalRel);
-  const legacyAbs = path.join(root, SAAS_PACKAGE_GATES_SIGNAL_LEGACY_REL);
+  // `path.resolve` (not `path.join`) so that an absolute
+  // `output.validateJsonPath` in qfai.config.yaml is honored verbatim
+  // — `profileSuffixedReportPath` preserves the absolute form, and
+  // the validate writer uses `resolveJsonPath` which is `path.resolve`
+  // too. Using `path.join` would re-anchor the absolute target under
+  // `<root>` (e.g. `<repo>/tmp/validate-full.json`) so the reader
+  // could never find the file that the writer actually produced.
+  const canonicalAbs = path.resolve(root, canonicalSignalRel);
+  const fullProfileAbs = path.resolve(root, fullProfileSignalRel);
+  const legacyAbs = path.resolve(root, SAAS_PACKAGE_GATES_SIGNAL_LEGACY_REL);
   const signalRead = await loadSaasPackageGatesSignal(canonicalAbs, fullProfileAbs, legacyAbs);
   if (signalRead.source === "full-profile") {
     // Hint (not deprecation): the operator followed the recovery path
@@ -1141,11 +1148,20 @@ async function runUpgradeScopeFull(
       ? extractString(signal, "profile")
       : undefined;
     if (signalProfile === "saas-package") {
+      // The recovery target is the fuller-profile report
+      // (`validate-full.json`), NOT the canonical saas-package report.
+      // The validate writer for `--profile full` writes the
+      // profile-suffixed `validate-full.json` and leaves the existing
+      // `validate-saas-package.json` untouched, so an operator who
+      // follows this instruction will populate `${fullProfileSignalRel}`
+      // — which the reader now prefers over a stale canonical
+      // saas-package signal (see precedence logic in
+      // `loadSaasPackageGatesSignal`).
       error(
         "The saas-package profile is INADMISSIBLE for --upgrade-scope full: it always " +
           "emits one skip finding per gate, so its skip-set can never be emptied. " +
           "Re-run `qfai validate --profile full --fail-on error` so that " +
-          `${canonicalSignalRel} reports counts.error=0 under a fuller profile, then ` +
+          `${fullProfileSignalRel} reports counts.error=0 under a fuller profile, then ` +
           "re-run certify --upgrade-scope full.",
       );
     } else if (typeof signalProfile === "string" && signalProfile.length > 0) {
@@ -1192,63 +1208,80 @@ type SaasPackageGatesSignalRead = {
   source: "canonical" | "full-profile" | "legacy" | "none";
 };
 
+async function probeFile(absPath: string): Promise<boolean> {
+  try {
+    const s = await stat(absPath);
+    return s.isFile();
+  } catch (err) {
+    if (!isEnoent(err)) {
+      // Permission flips / EIO are reported as "exists" so the caller
+      // surfaces the real read error via loadJson rather than silently
+      // bypassing to the next probe layer.
+      return true;
+    }
+    return false;
+  }
+}
+
 async function loadSaasPackageGatesSignal(
   canonicalAbs: string,
   fullProfileAbs: string,
   legacyAbs: string,
 ): Promise<SaasPackageGatesSignalRead> {
-  // probe canonical first — does the file exist on disk? We need to
-  // distinguish "canonical absent" (consider legacy) from "canonical
-  // present but parse failed" (do NOT silently fall through to legacy,
-  // because that would mask a real corruption).
-  let canonicalExists = false;
-  try {
-    const s = await stat(canonicalAbs);
-    canonicalExists = s.isFile();
-  } catch (err) {
-    if (!isEnoent(err)) {
-      // permission flips / EIO surface to the caller via the existing
-      // loadJson fallback (parse-fail = null) on the canonical read;
-      // we treat the canonical path as the authoritative target in
-      // that case rather than silently bypassing to legacy.
-      canonicalExists = true;
-    }
-  }
+  // Probe layout:
+  //   (1) canonical (`validate-saas-package.json`) is the
+  //       writer-default produced by `qfai validate --profile saas-package`.
+  //   (2) full-profile (`validate-full.json`) is the writer-default
+  //       produced by `qfai validate --profile full`.
+  //   (3) legacy (`.qfai/output/validate-saas-package.json`) is the
+  //       pre-CHG-005 path; kept for back-compat with the
+  //       `D-DEPRECATED-PATH` deprecation window.
+  //
+  // Precedence requirement (closes the INADMISSIBLE recovery loop):
+  // when a stale `validate-saas-package.json` (profile === "saas-package")
+  // is present on disk AND the operator has since run
+  // `qfai validate --profile full`, the full-profile signal MUST win.
+  // The validate writer does not delete or overwrite the
+  // saas-package-shaped canonical file when invoked under a different
+  // profile (validate.ts always-latest writes `validate.json` plus the
+  // profile-suffixed sibling), so a naive canonical-first precedence
+  // would re-read the stale INADMISSIBLE payload forever even after
+  // the operator followed the refusal message. We therefore:
+  //   - read canonical first if present;
+  //   - if its payload is admissible (any non-saas-package profile, or
+  //     a synthetic gates map), return it;
+  //   - if its payload is INADMISSIBLE (profile === "saas-package"),
+  //     try full-profile next. If full-profile exists, prefer it;
+  //     otherwise return the canonical INADMISSIBLE payload so the
+  //     refusal path can emit the recovery message.
+  const canonicalExists = await probeFile(canonicalAbs);
   if (canonicalExists) {
-    const payload = await loadJson(canonicalAbs);
-    return { payload, source: "canonical" };
-  }
-  // Canonical absent: try the `--profile full` report next. The
-  // saas-package profile is INADMISSIBLE for upgrade-scope full (it
-  // unconditionally emits one skip finding per gate, so the skip-set
-  // can never be emptied within that profile). The upgrade refusal
-  // message instructs operators to re-run `qfai validate --profile full`,
-  // which writes a profile-suffixed `validate-full.json`. Reading that
-  // path here closes the recovery loop.
-  let fullProfileExists = false;
-  try {
-    const s = await stat(fullProfileAbs);
-    fullProfileExists = s.isFile();
-  } catch (err) {
-    if (!isEnoent(err)) {
-      fullProfileExists = true;
+    const canonicalPayload = await loadJson(canonicalAbs);
+    if (
+      isRecord(canonicalPayload) &&
+      extractString(canonicalPayload, "profile") === "saas-package"
+    ) {
+      // Stale-canonical case: try full-profile before giving up.
+      const fullProfileExists = await probeFile(fullProfileAbs);
+      if (fullProfileExists) {
+        const fullPayload = await loadJson(fullProfileAbs);
+        return { payload: fullPayload, source: "full-profile" };
+      }
+      // No full-profile available — return the canonical payload so
+      // the refusal message names the actual recovery step.
+      return { payload: canonicalPayload, source: "canonical" };
     }
+    return { payload: canonicalPayload, source: "canonical" };
   }
+  // Canonical absent: try the `--profile full` report next, then
+  // legacy. The canonical-absent case can happen on a clean project
+  // OR after the operator manually removed the stale canonical.
+  const fullProfileExists = await probeFile(fullProfileAbs);
   if (fullProfileExists) {
     const payload = await loadJson(fullProfileAbs);
     return { payload, source: "full-profile" };
   }
-  // Both canonical and full-profile absent: try legacy. Legacy missing
-  // → no signal at all.
-  let legacyExists = false;
-  try {
-    const s = await stat(legacyAbs);
-    legacyExists = s.isFile();
-  } catch (err) {
-    if (!isEnoent(err)) {
-      legacyExists = true;
-    }
-  }
+  const legacyExists = await probeFile(legacyAbs);
   if (legacyExists) {
     const payload = await loadJson(legacyAbs);
     return { payload, source: "legacy" };

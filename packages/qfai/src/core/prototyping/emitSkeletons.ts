@@ -114,9 +114,33 @@ export function buildSkeletonsForUnion(input: EmitSkeletonsInput): readonly Emit
 }
 
 /**
+ * Allowed screenId character set for the skeleton write path. The UI
+ * contract reader accepts arbitrary strings for `screens[].id`, but
+ * the writer joins the id directly into a filesystem path — so a
+ * malicious or accidentally-formed contract value like
+ * `../../outside` could escape `outDir`. Pin the set to a narrow
+ * ASCII-safe regex; anything else is rejected before the file is
+ * written. Validation is done at the write boundary (not via the
+ * existing casing validator) so this guard remains in force even when
+ * an operator opts out of the casing rule.
+ */
+const SAFE_SCREEN_ID_RE = /^[A-Za-z0-9_-]+$/u;
+
+function isSafeScreenId(id: string): boolean {
+  return SAFE_SCREEN_ID_RE.test(id);
+}
+
+/**
  * Convenience writer used by the iterate command. Writes each
  * skeleton under `outDir/<id>.html`, creating the directory tree as
  * needed. Returns the absolute paths so the caller can record them.
+ *
+ * Throws when `screenId` contains anything other than
+ * `[A-Za-z0-9_-]` — path-traversal characters (`/`, `\`, `..`, `:`)
+ * and any other non-ASCII-safe input must be rejected before the
+ * filesystem write so the join cannot escape `outDir`. Callers that
+ * want a softer failure mode (warn + skip) can pre-filter the
+ * skeleton array.
  */
 export async function writeSkeletons(
   outDir: string,
@@ -125,6 +149,13 @@ export async function writeSkeletons(
   await mkdir(outDir, { recursive: true });
   const written: string[] = [];
   for (const sk of skeletons) {
+    if (!isSafeScreenId(sk.screenId)) {
+      throw new Error(
+        `emitSkeletons: unsafe screenId ${JSON.stringify(sk.screenId)} — ` +
+          "must match /^[A-Za-z0-9_-]+$/. Reject the UI contract entry " +
+          "before --emit-skeletons writes any HTML.",
+      );
+    }
     const target = path.join(outDir, `${sk.screenId}.html`);
     await writeFile(target, sk.html, "utf-8");
     written.push(target);

@@ -641,6 +641,7 @@ export async function runPrototypingIterate(
   const resolvedMode = resolvePrototypingMode({
     cli: options.mode,
     config: configResult.config.prototyping?.mode,
+    warn,
   });
   info(`qfai prototyping iterate: prototyping mode resolved to ${resolvedMode}.`);
 
