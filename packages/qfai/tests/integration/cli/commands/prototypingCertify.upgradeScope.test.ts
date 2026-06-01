@@ -573,7 +573,13 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
     }
   });
 
-  it("allows upgrade on real saas-package validate output when the skip-set was emptied", async () => {
+  it("refuses upgrade on a saas-package profile signal (operator must run a fuller profile)", async () => {
+    // runSaasPackageProfile UNCONDITIONALLY emits one
+    // `D-SAAS-PACKAGE-VERIFY-SKIPPED` info finding per skipped gate, so
+    // the skip-set can never be "emptied" within this profile. The
+    // reader must therefore treat a saas-package signal as
+    // INADMISSIBLE for upgrade — the operator has to run `qfai validate
+    // --profile full` (or another fuller profile) instead.
     const root = await newTempDir();
     await seedSaasPackageHappyPath(root);
 
@@ -584,9 +590,9 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
     });
     expect(sealExit).toBe(0);
 
-    // Real validate output where the operator satisfied every gate
-    // inline (zero `D-SAAS-PACKAGE-VERIFY-SKIPPED` findings,
-    // counts.error === 0).
+    // Even an artificially zero-skip-finding saas-package signal must
+    // be refused — admissibility is decided by profile name, not by
+    // counts.
     await mkdir(path.join(root, ".qfai/report"), { recursive: true });
     await writeFile(
       path.join(root, ".qfai/report/validate-saas-package.json"),
@@ -604,12 +610,37 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
       scope: "saas-package",
       upgradeScopeFull: true,
     });
-    expect(upgradeExit).toBe(0);
+    expect(upgradeExit).not.toBe(0);
+  });
 
-    const certPath = path.join(root, ".qfai/evidence/prototyping/completion-certificate.json");
-    const cert = JSON.parse(await readFile(certPath, "utf-8")) as Record<string, unknown>;
-    expect(cert.scope).toBeUndefined();
-    expect(cert.notes).toBeUndefined();
+  it("refuses upgrade on a malformed signal (empty / shape-incomplete object)", async () => {
+    const root = await newTempDir();
+    await seedSaasPackageHappyPath(root);
+
+    const sealExit = await runPrototypingCertify({
+      root,
+      check: false,
+      scope: "saas-package",
+    });
+    expect(sealExit).toBe(0);
+
+    // A parseable-but-malformed canonical signal: empty object. The
+    // reader must NOT default-to-success when counts.error is absent;
+    // it must require a recognizable ValidationResult shape.
+    await mkdir(path.join(root, ".qfai/report"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/report/validate-saas-package.json"),
+      JSON.stringify({}),
+      "utf-8",
+    );
+
+    const upgradeExit = await runPrototypingCertify({
+      root,
+      check: false,
+      scope: "saas-package",
+      upgradeScopeFull: true,
+    });
+    expect(upgradeExit).not.toBe(0);
   });
 
   it("allows upgrade when a fuller-profile validate run reports zero errors", async () => {

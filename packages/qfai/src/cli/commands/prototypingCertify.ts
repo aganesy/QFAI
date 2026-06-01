@@ -1282,28 +1282,37 @@ function resolveStillMissingFromGatesMap(
  * record drive the upgrade decision.
  */
 function resolveStillMissingFromIssues(signal: Record<string, unknown>): string[] {
+  // Require a recognizable ValidationResult shape AND counts.error === 0
+  // as positive admissibility conditions. Malformed inputs (e.g. `{}`)
+  // MUST be treated as "all gates still missing" — never as "all pass" by
+  // omission. This guards against accidental upgrades on truncated /
+  // hand-edited signal files.
   const errorCount = extractNumber(extractRecord(signal, "counts"), "error");
-  if (typeof errorCount === "number" && errorCount > 0) {
+  if (typeof errorCount !== "number") {
+    return [...SAAS_PACKAGE_SKIPPED_GATES];
+  }
+  if (errorCount > 0) {
     return [...SAAS_PACKAGE_SKIPPED_GATES];
   }
   const profile = extractString(signal, "profile");
+  if (profile === undefined) {
+    // No `profile` field — not a recognizable ValidationResult; refuse.
+    return [...SAAS_PACKAGE_SKIPPED_GATES];
+  }
   const issuesRaw = signal["issues"];
   const issues = Array.isArray(issuesRaw) ? issuesRaw : [];
 
   if (profile === "saas-package") {
-    // saas-package profile: gates the skip-set surfaces as
-    // `D-SAAS-PACKAGE-VERIFY-SKIPPED` info findings. Any present →
-    // still skipped; none present → all gates pass (the operator
-    // satisfied every gate inline, emptying the skip-set).
-    const stillSkipped: string[] = [];
-    for (const gate of SAAS_PACKAGE_SKIPPED_GATES) {
-      if (hasSkipFindingForGate(issues, gate)) {
-        stillSkipped.push(gate);
-      }
-    }
-    return stillSkipped;
+    // saas-package profile UNCONDITIONALLY emits one
+    // `D-SAAS-PACKAGE-VERIFY-SKIPPED` info finding per skipped gate
+    // (see `runSaasPackageProfile` → `buildSkipFindings`). The skip-set
+    // can never be "emptied" within this profile — so a saas-package
+    // signal is INADMISSIBLE for upgrade. Operators must run a fuller
+    // profile (e.g. `qfai validate --profile full`) to drive
+    // `--upgrade-scope full`.
+    return [...SAAS_PACKAGE_SKIPPED_GATES];
   }
-  // Fuller profile (or `profile` absent — treat as fuller too):
+  // Fuller profile (full / tdd / atdd / default):
   // counts.error === 0 + no error-severity issue mentioning a gate
   // name → all gates pass.
   const errorByGate: string[] = [];
@@ -1313,24 +1322,6 @@ function resolveStillMissingFromIssues(signal: Record<string, unknown>): string[
     }
   }
   return errorByGate;
-}
-
-const SAAS_PACKAGE_SKIP_CODE = "D-SAAS-PACKAGE-VERIFY-SKIPPED";
-
-/**
- * Match a `D-SAAS-PACKAGE-VERIFY-SKIPPED` info finding for a specific
- * gate name. The validate-side writer keys the gate name into
- * `refs[]`; we also accept a substring match on `message` for any
- * forward-compatible variant.
- */
-function hasSkipFindingForGate(issues: unknown[], gate: string): boolean {
-  for (const entry of issues) {
-    if (!isRecord(entry)) continue;
-    if (extractString(entry, "code") !== SAAS_PACKAGE_SKIP_CODE) continue;
-    if (extractString(entry, "severity") !== "info") continue;
-    if (issueMentionsGate(entry, gate)) return true;
-  }
-  return false;
 }
 
 /**
