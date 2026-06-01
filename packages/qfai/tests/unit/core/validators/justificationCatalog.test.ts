@@ -75,4 +75,46 @@ describe("TC-0015-0026: justification catalog SSOT", () => {
       expect(CATALOG_ADVISORY_FAILING_CODES.has(entry.code)).toBe(true);
     }
   });
+
+  // Regression for description-vs-implementation drift on R-PACK-LOCATION-DRIFT
+  // and R-SKILL-MANIFEST-DRIFT. The catalog text MUST describe what the
+  // implementation actually detects so reviewer-facing surfaces stay
+  // accurate.
+  it("R-PACK-LOCATION-DRIFT description matches the check-pack-locations.mjs implementation contract", () => {
+    const entry = JUSTIFICATION_CATALOG.find((e) => e.code === "R-PACK-LOCATION-DRIFT");
+    expect(entry).toBeDefined();
+    const desc = entry?.description ?? "";
+    // The implementation flags `review-*` / `discussion-*` pack
+    // directories outside their allowed roots. Description MUST name
+    // these two pack kinds.
+    expect(desc).toMatch(/review-\*/);
+    expect(desc).toMatch(/discussion-\*/);
+    // It must NOT (falsely) claim it covers `.qfai/specs/` pack drift —
+    // the implementation does not check that surface.
+    expect(desc).not.toMatch(/\.qfai\/specs\//);
+  });
+
+  it("R-SKILL-MANIFEST-DRIFT description matches the per-skill manifest probe SSOT-sync pair", () => {
+    const entry = JUSTIFICATION_CATALOG.find((e) => e.code === "R-SKILL-MANIFEST-DRIFT");
+    expect(entry).toBeDefined();
+    const desc = entry?.description ?? "";
+    // The implementation (`skillManifestDrift.ts` + `skillManifestPairs.ts`)
+    // checks per-skill `manifest.json#runtimeDependencies` ↔ doctor
+    // probe — NOT agent-catalog / agent-routing / review-profiles.
+    expect(desc).toMatch(/manifest\.json/);
+    expect(desc).toMatch(/runtimeDependencies/i);
+    expect(desc).toMatch(/doctor/i);
+    expect(desc).not.toMatch(/agent-catalog/);
+    expect(desc).not.toMatch(/agent-routing/);
+    expect(desc).not.toMatch(/review-profiles/);
+  });
+
+  // Regression for the WIDENED auxiliary code: it is NOT part of the
+  // closed 8-code catalog (warning-class auxiliary; outside the
+  // advisory-failing contract).
+  it("R-AUTOPILOT-POLICY-WIDENED is NOT a catalog code (auxiliary warning-class)", () => {
+    expect(isAdvisoryFailingCatalogCode("R-AUTOPILOT-POLICY-WIDENED")).toBe(false);
+    const codes = JUSTIFICATION_CATALOG.map((e) => e.code);
+    expect(codes).not.toContain("R-AUTOPILOT-POLICY-WIDENED");
+  });
 });

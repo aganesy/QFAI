@@ -9,6 +9,15 @@
  * mirrors the R-WORKLOG-DRIFT family pattern enforced by
  * `reviewerJustification.ts`).
  *
+ * IMPORTANT — catalog scope: this is the CLOSED 8-code mandatory-
+ * justification set. Warning-class auxiliary codes that share a name
+ * prefix (e.g. `R-AUTOPILOT-POLICY-WIDENED` emitted by
+ * `autopilotPolicy.ts`) are NOT part of this catalog: they are
+ * advisory-only signals and do not participate in the empty-
+ * justification advisory-failing contract. Adding a 9th code here is a
+ * spec-governance change (extends the closed REQ contract) and MUST
+ * be done in lockstep with the owning spec and reviewer SSOTs.
+ *
  * Notes:
  *   - `R-DESIGN-MD-PATCH-OUT-OF-ZONE` is documented warning per the
  *     active spec governance; it stays in the catalog so the
@@ -56,13 +65,13 @@ export const JUSTIFICATION_CATALOG: readonly JustificationCatalogEntry[] = [
     code: "R-PACK-LOCATION-DRIFT",
     severity: "error",
     description:
-      "A discussion/spec pack landed outside its canonical location (e.g. `.qfai/discussion/`, `.qfai/specs/`). Asymmetric placement between catalog and on-disk location.",
+      "A `review-*/` or `discussion-*/` pack directory was introduced outside its allowed roots (`.qfai/review/<ts>/`, `.qfai/discussion/<ts>/`, or `tmp/`). The lint lane inspects only changed paths; legacy packs that pre-date the rule are not re-flagged.",
   },
   {
     code: "R-SKILL-MANIFEST-DRIFT",
     severity: "error",
     description:
-      "A skill manifest (agent-catalog / agent-routing / review-profiles) is out of sync with the canonical skill SSOT. Asymmetric edit across the manifest pair.",
+      "A skill's per-skill `manifest.json#runtimeDependencies` declaration is out of sync with the canonical `qfai doctor` runtime-dependency probe SSOT. Asymmetric edit across the probe-implementation ↔ manifest-schema pair (one side references the canonical token, the other does not).",
   },
   {
     code: "R-EXPLORATION-CERTIFY-ATTEMPT",

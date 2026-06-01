@@ -80,4 +80,23 @@ describe("reviewerJustification validator", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  // Regression: R-AUTOPILOT-POLICY-WIDENED is an auxiliary warning-class
+  // code OUTSIDE the mandatory-justification catalog. An empty
+  // `justification:` on WIDENED must NOT trigger the advisory-failing
+  // rejection — only the closed 8-code catalog (plus the historical
+  // R-WORKLOG-DRIFT family + CHG-005 codes) participates in that
+  // contract.
+  it("does not fire on R-AUTOPILOT-POLICY-WIDENED with empty justification (auxiliary warning-class)", async () => {
+    const root = await newRoot("revjust-widened");
+    try {
+      await seedReviewerReport(root, {
+        findings: [{ code: "R-AUTOPILOT-POLICY-WIDENED", justification: "" }],
+      });
+      const issues = await validateReviewerJustification(root, await getConfig(root));
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

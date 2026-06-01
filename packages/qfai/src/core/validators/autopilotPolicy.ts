@@ -144,6 +144,18 @@ function findWidenedAutoDecideTokens(block: string): string[] {
  * `R-AUTOPILOT-POLICY-MISSING` (error) when the section is absent, or
  * `R-AUTOPILOT-POLICY-WIDENED` (warning) when the auto-decide bucket
  * contains entries outside the canonical allowed set.
+ *
+ * Code-registry note: `R-AUTOPILOT-POLICY-MISSING` is part of the
+ * closed mandatory-justification catalog
+ * (`justificationCatalog.ts`) — empty `justification:` on a finding
+ * with that code is advisory-failing.
+ * `R-AUTOPILOT-POLICY-WIDENED` is an AUXILIARY warning-class code that
+ * lives OUTSIDE the mandatory-justification catalog: it is semantically
+ * distinct from MISSING (different remediation: narrow the auto-decide
+ * bucket back to the canonical set vs add the section), still useful
+ * as a signal, but its severity (`warning`) and advisory contract are
+ * not the same as the 8-code error-class catalog. It is intentionally
+ * NOT added to `ADVISORY_FAILING_CODES` in `reviewerJustification.ts`.
  */
 export async function validateAutopilotPolicy(root: string): Promise<Issue[]> {
   const issues: Issue[] = [];
