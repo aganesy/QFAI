@@ -107,6 +107,15 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
       ...(options.skillProfile !== undefined ? { skill: options.skillProfile } : {}),
     });
     sideEffectLines.push(...summary.lines);
+    // When the operator did not pass `--profile <skill>`, the install
+    // phase of runAutoremediate is structurally skipped (there is no
+    // manifest to probe). Surface that explicitly so operators do not
+    // misread the absent install lines as "all dependencies satisfied".
+    if (options.skillProfile === undefined && !summary.disabledInCi) {
+      sideEffectLines.push(
+        "doctor --autoremediate: install phase skipped (provide --profile <skill> to probe a skill manifest's runtimeDependencies).",
+      );
+    }
     if (summary.disabledInCi) {
       // Honor AC-0006-0018: autoremediate disabled in CI; no diagnostic
       // build needed for the CI off path.

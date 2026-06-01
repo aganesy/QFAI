@@ -25,7 +25,11 @@ export type DiscussionOptions = {
 
 async function resolveDiscussionRoot(root: string): Promise<string> {
   const { config } = await loadConfig(root);
-  return path.join(root, config.paths.discussionDir);
+  // `path.resolve` (not `path.join`) so an absolute `paths.discussionDir`
+  // is honored verbatim. With `path.join`, an absolute config value would
+  // be naively concatenated under `<root>` (e.g. `<root>/tmp/discussion`),
+  // hiding the configured location from `discussion list --active`.
+  return path.resolve(root, config.paths.discussionDir);
 }
 
 async function listCandidateDirs(discussionRoot: string): Promise<string[]> {
