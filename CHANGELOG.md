@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.9.2] - 2026-06-01
+
 ### Added (second-wave defect remediation)
 
 - Cycle-0 screen-coverage skeletons: `qfai prototyping iterate --cycle 0 --emit-skeletons`
