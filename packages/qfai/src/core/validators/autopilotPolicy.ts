@@ -220,6 +220,9 @@ export async function validateAutopilotPolicy(root: string): Promise<Issue[]> {
         `section is present but missing required bucket(s): ` +
         `[${missingBuckets.join(", ")}]. The governance contract requires all ` +
         `three named buckets (auto-decide / ask-user / hard-required). ` +
+        `Add the missing bucket(s) under the section as bullet lines ` +
+        `(e.g. "- auto-decide:" / "- ask-user:" / "- hard-required:") ` +
+        `with their entries listed beneath. ` +
         `Justification: file=${relPath}, missingBuckets=[${missingBuckets.join(", ")}].`;
       issues.push(
         issue(
