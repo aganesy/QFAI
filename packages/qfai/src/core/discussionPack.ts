@@ -10,14 +10,24 @@ import { readDiscussionCurrentId } from "./state.js";
 /**
  * Resolve the discussion root for `<root>` honoring
  * `config.paths.discussionDir` (which may be relative OR absolute).
- * Used by both `inspectLatestDiscussionPack` callers and
- * `resolveActiveDiscussionPack` so they always agree with the
- * CLI-side `qfai discussion list --active` resolver.
+ * Currently only `resolveActiveDiscussionPack` consumes this helper;
+ * `inspectLatestDiscussionPack` receives the resolved
+ * `discussionRoot` from its caller (which already runs
+ * `resolvePath(root, config, "discussionDir")`).
  *
  * `path.resolve` (not `path.join`) preserves an absolute config
  * value verbatim — projects that relocate their discussion packs
  * outside `<root>` (e.g. shared review machines, custom CI layouts)
- * still find the same packs the CLI resolver does.
+ * still find the same packs the CLI-side
+ * `qfai discussion list --active` resolver does.
+ *
+ * Acknowledged DRY tech debt: this helper, the CLI-side
+ * `discussion.ts#resolveDiscussionRoot`, and the public
+ * `core/config.ts#resolvePath(root, config, "discussionDir")` are
+ * three copies of the same single-line resolution rule. Folding all
+ * three into one shared exported helper is a follow-up — for now the
+ * three callsites have been verified to use identical semantics so a
+ * change to ONE without the other two will introduce drift.
  */
 async function resolveDiscussionRootFromConfig(root: string): Promise<string> {
   const { config } = await loadConfig(root);

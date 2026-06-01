@@ -136,6 +136,14 @@
 - Level: unit
 - Verify that a SKILL.md whose `## Default Autopilot Policy` lists all three buckets (auto-decide / ask-user / hard-required) per DR-0269 passes without `R-AUTOPILOT-POLICY-MISSING`; a section that widens the auto-decide bucket beyond the DR-0269 set is flagged.
 
+## TC-0015-0021A: SKILL.md with section present but missing buckets emits R-AUTOPILOT-POLICY-MISSING
+
+- EX-Ref: EX-0015-0011
+- AC-Refs: AC-0015-0015
+- Type: error
+- Level: integration
+- Verify the present-but-incomplete branch of AC-0015-0015 / BR-0015-0010. A fixture SKILL.md whose `## Default Autopilot Policy` heading exists but the body lacks one or more required buckets (e.g. only `auto-decide`, or empty body) MUST emit `R-AUTOPILOT-POLICY-MISSING` (severity error) with a non-empty `justification:` that names each missing bucket by name (`ask-user`, `hard-required`, etc). Distinct from TC-0015-0020 (section absent) and TC-0015-0021 (fully populated PASS), this pins the partial-population trigger and the per-bucket justification enumeration introduced by the validator extension.
+
 ## TC-0015-0022: Envelope-deviation AskUserQuestion writes a decision record
 
 - EX-Ref: EX-0015-0012

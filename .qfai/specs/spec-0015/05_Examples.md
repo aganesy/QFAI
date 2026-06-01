@@ -75,9 +75,9 @@
 ## EX-0015-0011: SKILL.md missing Default Autopilot Policy fires R-AUTOPILOT-POLICY-MISSING
 
 - BR-Ref: BR-0015-0010
-- Given a SKILL.md with no `## Default Autopilot Policy` section
+- Given a SKILL.md with no `## Default Autopilot Policy` section OR a SKILL.md whose section is present but missing one or more required buckets (heading-only / partial population)
 - When the Reviewer Gate checks it
-- Then it emits `R-AUTOPILOT-POLICY-MISSING` (severity error) with `justification:` naming the SKILL.md path and the absent section; a SKILL.md that lists all three buckets (auto-decide / ask-user / hard-required) passes without the finding
+- Then it emits `R-AUTOPILOT-POLICY-MISSING` (severity error) with `justification:` naming the SKILL.md path and either the absent section or the missing bucket(s) by name; a SKILL.md that lists all three buckets (auto-decide / ask-user / hard-required) passes without the finding
 
 ## EX-0015-0012: Architectural-decision AskUserQuestion writes a decision record
 

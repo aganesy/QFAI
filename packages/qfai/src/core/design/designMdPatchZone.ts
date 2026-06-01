@@ -176,16 +176,35 @@ function replaceTokenValueWithPlaceholder(text: string, dottedKey: string): stri
     cursor += m.index + m[0].length;
   }
   const leafIndent = "  ".repeat(parents.length);
+  // Accept either a newline OR a start-of-segment anchor before the
+  // leaf line. The parent-walk loop advances `cursor` past the
+  // parent's `\n`, so when `leaf` is the FIRST scalar under its
+  // parent (e.g. `visual.colors.primary` — first child of
+  // `visual.colors:`), the segment beginning at `cursor` starts
+  // directly with the leaf line WITHOUT a preceding newline. The
+  // previous `(\\n${leafIndent}...)` form required a `\n` and
+  // silently skipped the replacement for the first child, so an
+  // explicitly in-zone token edit still bumped `majorHash` instead
+  // of only `patchHash`. Group 1 captures the optional `\n` so we
+  // preserve it verbatim; group 2 captures the indent+key+colon
+  // prefix that survives the placeholder substitution.
   const leafRe = new RegExp(
-    `(\\n${leafIndent}${escapeRe(leaf)}:[ \\t]*)([^\\n]*)`,
+    `(^|\\n)(${leafIndent}${escapeRe(leaf)}:[ \\t]*)([^\\n]*)`,
     "u",
   );
   const after = text.slice(cursor);
   const leafMatch = leafRe.exec(after);
   if (!leafMatch) return text;
   const start = cursor + leafMatch.index;
-  const prefix = leafMatch[1] ?? "";
-  return text.slice(0, start) + prefix + "<PATCH_ZONE>" + text.slice(start + leafMatch[0].length);
+  const leadingNewline = leafMatch[1] ?? "";
+  const linePrefix = leafMatch[2] ?? "";
+  return (
+    text.slice(0, start) +
+    leadingNewline +
+    linePrefix +
+    "<PATCH_ZONE>" +
+    text.slice(start + leafMatch[0].length)
+  );
 }
 
 function escapeRe(literal: string): string {

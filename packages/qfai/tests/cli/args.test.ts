@@ -286,5 +286,28 @@ describe("parseArgs", () => {
       expect(parsed.options.validateFormat).toBe("github");
       expect(parsed.options.prototypingUpgradeScopeFull).toBeUndefined();
     });
+
+    // Adjacent-flag regression probe. If a misplaced value-taking flag
+    // skips its `i += 1` (the pre-PR `--upgrade-scope` bug), the next
+    // iteration sees the flag's intended value as a token, which can
+    // shift downstream flag parsing in subtle ways. With the unified
+    // contract, `--upgrade-scope` on a non-certify subcommand always
+    // consumes the next token, so a following `--scope full` on an
+    // `audit` subcommand still parses to `auditScope === "full"`. A
+    // regression that strips the consume would re-process the dangling
+    // `full` as a positional and break the chain.
+    it("misplaced --upgrade-scope consumes its value before --scope on a chained audit invocation", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(
+        ["audit", "log", "--upgrade-scope", "full", "--scope", "deviation"],
+        cwd,
+      );
+      // The misplaced flag is invalid, but the downstream `--scope
+      // deviation` (which IS valid for audit) must still populate
+      // `auditScope`. With the consume contract this works because
+      // the dangling `full` does not interfere with the next iter.
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.auditScope).toBe("deviation");
+    });
   });
 });

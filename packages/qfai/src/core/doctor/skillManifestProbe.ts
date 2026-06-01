@@ -19,6 +19,8 @@
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { loadConfig } from "../config.js";
+
 export const SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD = "runtimeDependencies";
 
 export type SkillManifestProbeFinding = {
@@ -74,11 +76,26 @@ async function probeNodeModulesFor(root: string, name: string): Promise<{
   return { found: false, probedPaths };
 }
 
-function resolveManifestPath(root: string, skill: string, options?: SkillManifestProbeOptions): string {
+async function resolveManifestPath(
+  root: string,
+  skill: string,
+  options?: SkillManifestProbeOptions,
+): Promise<string> {
   if (options?.manifestPath) {
     return options.manifestPath;
   }
-  return path.join(root, ".qfai", "assistant", "skills", skill, "manifest.json");
+  // Honor `config.paths.skillsDir` so a project that relocates its
+  // skills tree still has its per-skill `manifest.json` resolved
+  // correctly. Pre-fix the path was hardcoded to
+  // `.qfai/assistant/skills/<skill>/manifest.json`; with a relocated
+  // skillsDir this caused `qfai doctor --profile <skill>` to see
+  // an absent manifest, report no runtimeDependencies, and let
+  // autoremediate silently skip the install phase for relocated
+  // skills. The default `config.paths.skillsDir` keeps the legacy
+  // path intact for projects that did not override it.
+  const { config } = await loadConfig(root);
+  const skillsDirRel = config.paths.skillsDir;
+  return path.resolve(root, skillsDirRel, skill, "manifest.json");
 }
 
 async function readManifestRuntimeDeps(manifestPath: string): Promise<string[] | null> {
@@ -115,7 +132,7 @@ export async function probeSkillManifestRuntimeDeps(
   skill: string,
   options?: SkillManifestProbeOptions,
 ): Promise<readonly SkillManifestProbeFinding[]> {
-  const manifestPath = resolveManifestPath(root, skill, options);
+  const manifestPath = await resolveManifestPath(root, skill, options);
   const deps = await readManifestRuntimeDeps(manifestPath);
   if (!deps || deps.length === 0) {
     return [];

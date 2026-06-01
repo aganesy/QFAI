@@ -4,12 +4,15 @@
  * frontmatter does not declare `surface_type: ui-bearing`.
  *
  * Severity is `warning` during the deprecation window; it escalates
- * to `error` at the qfai 1.10.0 sunset (one-minor window from the
- * v1.9.x family). The sunset is pinned by the v1.9.2 second-wave
- * migration memo (§12). Specs without a UI companion emit no
- * finding. The `qfai 1.10.0` handle uses no leading `v` so the
- * distributed-surface version-marker guard (which anchors on
- * `\bv[0-9]+\.[0-9]+...`) does not trip.
+ * to `error` in a future minor release once ecosystem
+ * `surface_type` population is broadly complete. The precise sunset
+ * version is intentionally NOT recorded here — the canonical
+ * version source for QFAI is `package.json#version`, and pinning a
+ * specific future minor in the distributed surface would be a
+ * second internal version source that could drift if the sunset
+ * slips. CHANGELOG and the migration memo carry the operational
+ * schedule; runtime / JSDoc surfaces stay version-agnostic.
+ * Specs without a UI companion emit no finding.
  */
 import path from "node:path";
 
@@ -59,7 +62,7 @@ export async function validateSurfaceTypeDrift(
         "sdd.surfaceTypeDrift",
         [`spec-${specId}`, "D-SURFACE-TYPE-MISSING"],
         "canonical",
-        "Add 'surface_type: ui-bearing' to the spec frontmatter (or rerun /qfai-sdd which auto-populates it). This warning escalates to error at the qfai 1.10.0 sunset (one-minor window pinned by the v1.9.2 second-wave migration memo §12); treat it as priority-2 cleanup before then rather than blocking.",
+        "Add 'surface_type: ui-bearing' to the spec frontmatter (or rerun /qfai-sdd which auto-populates it). This warning is scheduled to escalate to error in a future minor release once ecosystem surface_type population is broadly complete; treat it as priority-2 cleanup rather than blocking. See CHANGELOG / migration memo for the operational schedule.",
       ),
     );
   }
