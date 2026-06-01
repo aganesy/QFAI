@@ -26,7 +26,33 @@ import { issue } from "../validators/utils.js";
 import { SAAS_PACKAGE_SKIPPED_GATES } from "./skippedGates.js";
 
 const DESIGN_ATTESTATION_REL = ".qfai/contracts/design/design-system.yaml";
+const DESIGN_ATTESTATION_SUBPATH = "design/design-system.yaml";
 const HANDOFF_REL = ".qfai/handoff.yaml";
+
+/**
+ * Resolve the design-system attestation path honoring
+ * `config.paths.contractsDir`. The fallback `.qfai/contracts/design/
+ * design-system.yaml` is preserved for projects that do not override
+ * `contractsDir`, matching the legacy hardcoded surface.
+ */
+function resolveDesignAttestationPath(
+  root: string,
+  config: ConfigLoadResult["config"],
+): { abs: string; rel: string } {
+  const contractsDir = config.paths.contractsDir;
+  if (typeof contractsDir === "string" && contractsDir.length > 0) {
+    const abs = path.resolve(root, contractsDir, DESIGN_ATTESTATION_SUBPATH);
+    const rel = path
+      .relative(root, abs)
+      .replace(/\\/g, "/")
+      // Avoid emitting `../...` when the absolute path escapes root —
+      // that case is impossible with normal config values but keeps the
+      // displayed rel string sane.
+      .replace(/^(\.\.\/)+/, "");
+    return { abs, rel: rel.length > 0 ? rel : DESIGN_ATTESTATION_REL };
+  }
+  return { abs: path.join(root, DESIGN_ATTESTATION_REL), rel: DESIGN_ATTESTATION_REL };
+}
 
 const VERIFY_SKIPPED_CODE = "D-SAAS-PACKAGE-VERIFY-SKIPPED";
 const ATTESTATION_MISSING_CODE = "D-SAAS-PACKAGE-ATTESTATION-MISSING";
@@ -64,21 +90,24 @@ function buildSkipFindings(): Issue[] {
   );
 }
 
-async function checkDesignAttestation(root: string): Promise<Issue[]> {
-  const attestationPath = path.join(root, DESIGN_ATTESTATION_REL);
-  if (await pathExists(attestationPath)) {
+async function checkDesignAttestation(
+  root: string,
+  config: ConfigLoadResult["config"],
+): Promise<Issue[]> {
+  const { abs, rel } = resolveDesignAttestationPath(root, config);
+  if (await pathExists(abs)) {
     return [];
   }
   return [
     issue(
       ATTESTATION_MISSING_CODE,
-      `Design-system attestation is absent: ${DESIGN_ATTESTATION_REL}. The saas-package profile requires this attestation to PASS.`,
+      `Design-system attestation is absent: ${rel}. The saas-package profile requires this attestation to PASS.`,
       "error",
-      DESIGN_ATTESTATION_REL,
+      rel,
       "validate.saasPackage.attestationMissing",
-      [DESIGN_ATTESTATION_REL],
+      [rel],
       "canonical",
-      `Author the design-system attestation at ${DESIGN_ATTESTATION_REL} (one screen-system mapping per shipped surface), then rerun validate.`,
+      `Author the design-system attestation at ${rel} (one screen-system mapping per shipped surface), then rerun validate.`,
     ),
   ];
 }
@@ -140,10 +169,10 @@ async function checkHandoffSchema(root: string): Promise<Issue[]> {
  */
 export async function runSaasPackageProfile(
   root: string,
-  _config: ConfigLoadResult["config"],
+  config: ConfigLoadResult["config"],
   prototypingIssues: Issue[],
 ): Promise<Issue[]> {
-  const attestation = await checkDesignAttestation(root);
+  const attestation = await checkDesignAttestation(root, config);
   const handoff = await checkHandoffSchema(root);
   return [...prototypingIssues, ...attestation, ...handoff, ...buildSkipFindings()];
 }

@@ -4,7 +4,7 @@ import path from "node:path";
 import { createDoctorData, type DoctorProfile } from "../../core/doctor.js";
 import { cleanStaleReviewPacks } from "../../core/doctor/cleanReviewPacks.js";
 import { runAutoremediate } from "../../core/doctor/autoremediate.js";
-import { loadConfig } from "../../core/config.js";
+import { findConfigRoot, loadConfig } from "../../core/config.js";
 import { info } from "../lib/logger.js";
 
 export type DoctorCommandOptions = {
@@ -87,6 +87,18 @@ function formatDoctorJson(data: unknown): string {
 }
 
 export async function runDoctor(options: DoctorCommandOptions): Promise<number> {
+  // Resolve the project root BEFORE running any side-effecting
+  // pre-step. Pre-fix `runAutoremediate` and `cleanStaleReviewPacks`
+  // received the raw `options.root` (effectively the cwd when
+  // `--root` was omitted), which meant remediation invoked from a
+  // subdirectory would probe / install / archive under that
+  // subdirectory and create `<subdir>/qfai.config.yaml` instead of
+  // touching the project root. The diagnostic pass below already
+  // walks up via `createDoctorData`; mirror that resolution here so
+  // the two paths agree on the operating root.
+  const resolvedRoot = options.rootExplicit
+    ? options.root
+    : (await findConfigRoot(options.root)).root;
   // Side-effecting pre-steps run before the diagnostic build so the
   // post-cleanup tree is what `createDoctorData` reports on.
   const sideEffectLines: string[] = [];
@@ -100,7 +112,7 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
     // install they were expecting. The diagnostic pass below also receives
     // `skillProfile`, so the two stay in lockstep on the same option.
     const summary = await runAutoremediate({
-      root: options.root,
+      root: resolvedRoot,
       dryRun: Boolean(options.dryRun),
       yes: Boolean(options.yes),
       isCi,
@@ -136,9 +148,9 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
       return 0;
     }
   } else if (options.clean) {
-    const { config } = await loadConfig(options.root);
+    const { config } = await loadConfig(resolvedRoot);
     const ttlDays = config.review?.staleTtlDays;
-    const result = await cleanStaleReviewPacks(options.root, {
+    const result = await cleanStaleReviewPacks(resolvedRoot, {
       ...(typeof ttlDays === "number" ? { ttlDays } : {}),
       ...(options.dryRun ? { dryRun: true } : {}),
     });

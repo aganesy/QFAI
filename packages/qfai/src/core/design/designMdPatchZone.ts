@@ -18,6 +18,18 @@
  * The placeholder strategy keeps majorHash insensitive to in-zone value
  * changes while still detecting structural edits (renamed keys, removed
  * blocks, etc.).
+ *
+ * DEFERRED follow-up (a future minor): the iterate / certify freeze gates in
+ * `cli/commands/prototypingIterate.ts` and
+ * `cli/commands/prototypingCertify.ts` still compare the full-byte
+ * `hashDesignMd(text)` value against the lock's `designMdSha256` field.
+ * To realize the "in-zone edits update only patchHash" UX end-to-end
+ * the lock schema needs a second field (e.g. `designMdMajorSha256`)
+ * written by `/qfai-sdd` at Phase 0 freeze, and iterate/certify need
+ * to compare the live `majorHash` against that stored value (with the
+ * existing full-hash comparison kept as a legacy fallback). The
+ * helper + validator wiring landed in this PR; the lock contract
+ * extension is the missing piece. Tracking under a future-minor milestone.
  */
 
 import { createHash } from "node:crypto";
