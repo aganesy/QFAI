@@ -141,4 +141,142 @@ describe("atdd scaffold — per-TC skeleton emission", () => {
     const otherBody = await readFile(otherPath, "utf-8");
     expect(otherBody).toContain("QFAI-SCAFFOLD-PLACEHOLDER");
   });
+
+  // Regression: many in-tree specs use `## TC-NNNN-NNNN` heading shape
+  // WITHOUT a `:title` suffix. The pre-fix parser required the colon
+  // and dropped every such entry, leaving `qfai atdd scaffold` to emit
+  // zero skeletons.
+  it("emits skeletons for `## TC-NNNN-NNNN` headings WITHOUT a trailing :title", async () => {
+    const specId = "spec-0001";
+    const specDir = path.join(root, ".qfai", "specs", specId);
+    await mkdir(specDir, { recursive: true });
+    const tcCatalogue = [
+      "# 06 Test Cases",
+      "",
+      "## TC-0001-0050",
+      "",
+      "- AC-Refs: AC-0001-0050",
+      "- EX-Ref: EX-0001-0050",
+      "- Verify the title-less heading parses.",
+      "",
+      "## TC-0001-0051",
+      "",
+      "- Type: error",
+      "- AC-Refs: AC-0001-0051",
+      "",
+    ].join("\n");
+    await writeFile(path.join(specDir, "06_Test-Cases.md"), tcCatalogue, "utf-8");
+
+    const messages: string[] = [];
+    const errors: string[] = [];
+    const code = await runAtddScaffold({
+      root,
+      specId,
+      write: (m) => messages.push(m),
+      writeErr: (m) => errors.push(m),
+    });
+    expect(code).toBe(0);
+    expect(errors).toEqual([]);
+
+    const outDir = path.join(root, "tests", "atdd", specId);
+    const body50 = await readFile(path.join(outDir, "TC-0001-0050.test.ts"), "utf-8");
+    const body51 = await readFile(path.join(outDir, "TC-0001-0051.test.ts"), "utf-8");
+
+    expect(body50).toContain("QFAI:SPEC-0001:TC-0001-0050");
+    expect(body50).toContain("AC-0001-0050");
+    expect(body50).toContain("EX-0001-0050");
+    expect(body50).toContain("QFAI-SCAFFOLD-PLACEHOLDER");
+
+    expect(body51).toContain("QFAI:SPEC-0001:TC-0001-0051");
+    expect(body51).toContain("AC-0001-0051");
+    expect(body51).toContain("Type: error");
+  });
+
+  // Regression: spec-0004 / spec-0014 use a markdown TABLE form for
+  // their Test-Cases catalogue (`| TC-NNNN-NNNN | layer | AC-Refs |
+  // EX-Ref | ...`). The pre-fix parser ignored the table form
+  // entirely, so scaffold emitted zero skeletons for those specs.
+  it("emits skeletons for table-form Test-Cases catalogues", async () => {
+    const specId = "spec-0001";
+    const specDir = path.join(root, ".qfai", "specs", specId);
+    await mkdir(specDir, { recursive: true });
+    const tcCatalogue = [
+      "# 06 Test Cases",
+      "",
+      "| TC-ID        | Level       | AC-Refs      | EX-Ref       | Notes      |",
+      "| ------------ | ----------- | ------------ | ------------ | ---------- |",
+      "| TC-0001-0100 | integration | AC-0001-0100 | EX-0001-0100 | first row  |",
+      "| TC-0001-0101 | validators  | AC-0001-0101 | EX-0001-0101 | second row |",
+      "",
+    ].join("\n");
+    await writeFile(path.join(specDir, "06_Test-Cases.md"), tcCatalogue, "utf-8");
+
+    const errors: string[] = [];
+    const code = await runAtddScaffold({
+      root,
+      specId,
+      write: () => {},
+      writeErr: (m) => errors.push(m),
+    });
+    expect(code).toBe(0);
+    expect(errors).toEqual([]);
+
+    const outDir = path.join(root, "tests", "atdd", specId);
+    const body100 = await readFile(path.join(outDir, "TC-0001-0100.test.ts"), "utf-8");
+    const body101 = await readFile(path.join(outDir, "TC-0001-0101.test.ts"), "utf-8");
+
+    expect(body100).toContain("QFAI:SPEC-0001:TC-0001-0100");
+    expect(body100).toContain("AC-0001-0100");
+    expect(body100).toContain("EX-0001-0100");
+    // The layer column lands in `entry.type` and surfaces as the
+    // `// Type: integration` annotation in the skeleton body.
+    expect(body100).toContain("Type: integration");
+
+    expect(body101).toContain("QFAI:SPEC-0001:TC-0001-0101");
+    expect(body101).toContain("AC-0001-0101");
+    expect(body101).toContain("EX-0001-0101");
+    expect(body101).toContain("Type: validators");
+  });
+
+  // Mixed-form spec: heading-form entry takes precedence over a
+  // duplicate table row for the same TC id. Ensures the dedup rule
+  // does not double-emit OR overwrite heading-derived meta.
+  it("prefers heading-form parse when a TC id appears in BOTH forms", async () => {
+    const specId = "spec-0001";
+    const specDir = path.join(root, ".qfai", "specs", specId);
+    await mkdir(specDir, { recursive: true });
+    const tcCatalogue = [
+      "# 06 Test Cases",
+      "",
+      "## TC-0001-0200: Heading-form first",
+      "",
+      "- Type: error",
+      "- AC-Refs: AC-0001-0200",
+      "",
+      "| TC-ID        | Level       | AC-Refs      | EX-Ref       |",
+      "| ------------ | ----------- | ------------ | ------------ |",
+      "| TC-0001-0200 | integration | AC-0001-9999 | EX-0001-9999 |",
+      "",
+    ].join("\n");
+    await writeFile(path.join(specDir, "06_Test-Cases.md"), tcCatalogue, "utf-8");
+
+    const code = await runAtddScaffold({
+      root,
+      specId,
+      write: () => {},
+      writeErr: () => {},
+    });
+    expect(code).toBe(0);
+
+    const outDir = path.join(root, "tests", "atdd", specId);
+    const body = await readFile(path.join(outDir, "TC-0001-0200.test.ts"), "utf-8");
+
+    // Heading-form values WIN — table-form AC-/EX- refs and the
+    // table-form `integration` layer are dropped on the duplicate.
+    expect(body).toContain("AC-0001-0200");
+    expect(body).toContain("Type: error");
+    expect(body).not.toContain("AC-0001-9999");
+    expect(body).not.toContain("EX-0001-9999");
+    expect(body).not.toContain("Type: integration");
+  });
 });

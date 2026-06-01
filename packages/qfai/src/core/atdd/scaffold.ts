@@ -37,9 +37,33 @@ export type TCEntry = {
 /** Sentinel marker emitted into every scaffold. */
 export const SCAFFOLD_PLACEHOLDER_MARKER = "QFAI-SCAFFOLD-PLACEHOLDER";
 
-const TC_HEADER_RE = /^##\s+(TC-\d{4}-\d{4})\s*:\s*(.+?)\s*$/;
+// The trailing `:title` portion is OPTIONAL — many in-tree specs use a
+// title-less heading shape (`## TC-NNNN-NNNN`). When the title group is
+// absent, `entry.title` is left as an empty string; `buildSkeleton` is
+// already title-agnostic (the annotation comment carries the TC id, no
+// title required).
+const TC_HEADER_RE = /^##\s+(TC-\d{4}-\d{4})(?:\s*[:：]\s*(.+?))?\s*$/;
 const META_LINE_RE = /^[-*]\s+([A-Za-z][\w-]*)\s*:\s*(.+?)\s*$/;
 const ID_TOKEN_RE = /\b(?:AC|TC|EX|US|REQ|BR|SC|CON-API)-\d{4}(?:-\d{4})?\b/g;
+
+// Table-form Test-Cases rows (an alternative spec catalogue layout
+// used by some specs). Detected by a leading `|` followed by the TC
+// id in the first cell; remaining cells carry the layer, AC-Refs,
+// EX-Ref, and (optionally) trailing notes/expected columns. The
+// parser only looks
+// at the FIRST cell for the TC id and then scans every cell for
+// AC-NNNN-NNNN / EX-NNNN-NNNN tokens — the column ORDER differs across
+// specs, so a positional read would be brittle.
+const TC_TABLE_ROW_RE = /^\s*\|\s*(TC-\d{4}-\d{4})\s*\|/;
+// Recognised TC layer/type tokens used in the table-form 2nd column. A
+// closed allow-list avoids mis-tagging stray words as `entry.type`.
+const TABLE_LAYER_TOKENS = new Set([
+  "unit",
+  "integration",
+  "validators",
+  "e2e",
+  "ssot-guard",
+]);
 
 function extractIds(value: string): string[] {
   const matches = value.match(ID_TOKEN_RE);
@@ -47,8 +71,68 @@ function extractIds(value: string): string[] {
 }
 
 /**
+ * Split a markdown table row into trimmed cell strings. Leading and
+ * trailing pipes are stripped before the split so an empty leading cell
+ * is not introduced.
+ */
+function splitTableCells(line: string): string[] {
+  const trimmed = line.replace(/^\s*\|/, "").replace(/\|\s*$/, "");
+  return trimmed.split("|").map((cell) => cell.trim());
+}
+
+/**
+ * Parse a single TC table row into a `TCEntry`. The first cell holds the
+ * TC id; the second cell (if recognised) holds the layer/type; remaining
+ * cells are scanned for AC- and EX- id tokens.
+ */
+function parseTableRow(line: string): TCEntry | null {
+  const match = TC_TABLE_ROW_RE.exec(line);
+  if (!match || match[1] === undefined) return null;
+  const cells = splitTableCells(line);
+  const tcId = match[1];
+  const entry: TCEntry = { tcId, title: "", exRefs: [], acRefs: [] };
+  // 2nd cell — layer/type when it matches the closed allow-list.
+  if (cells.length >= 2) {
+    const layer = (cells[1] ?? "").trim().toLowerCase();
+    if (layer.length > 0 && TABLE_LAYER_TOKENS.has(layer)) {
+      entry.type = layer;
+    }
+  }
+  // Scan every cell for ID tokens so column-order differences across
+  // specs (AC-Refs in col 3 vs notes cell trailing TODO: type=normal,
+  // etc.) do not cause silent drops. `extractIds` deduplicates.
+  const acAccum: string[] = [];
+  const exAccum: string[] = [];
+  for (const cell of cells.slice(1)) {
+    const ids = extractIds(cell);
+    for (const id of ids) {
+      if (id.startsWith("AC-")) acAccum.push(id);
+      else if (id.startsWith("EX-")) exAccum.push(id);
+    }
+  }
+  if (acAccum.length > 0) {
+    entry.acRefs = Array.from(new Set(acAccum));
+  }
+  if (exAccum.length > 0) {
+    entry.exRefs = Array.from(new Set(exAccum));
+  }
+  return entry;
+}
+
+/**
  * Parse the spec's Test-Cases catalogue (`06_Test-Cases.md`). Returns
  * `[]` when the file is missing or has no recognizable entries.
+ *
+ * Two forms are recognised:
+ *   1. Heading form: `## TC-NNNN-NNNN[: optional title]` followed by
+ *      `- Key: value` meta lines (Type, AC-Refs, EX-Ref).
+ *   2. Table form: a leading-piped markdown row whose first cell carries
+ *      the TC id; AC- / EX- ids are extracted from any cell.
+ *
+ * When the SAME TC id appears in both forms (e.g. a heading-form entry
+ * with a follow-up table-form note), the heading parse wins — keyed by
+ * `tcId` via a Map so the final order matches the first-seen order
+ * (headings first, then any table-only rows below).
  */
 export async function parseTestCases(specDir: string): Promise<TCEntry[]> {
   const filePath = path.join(specDir, "06_Test-Cases.md");
@@ -63,18 +147,23 @@ export async function parseTestCases(specDir: string): Promise<TCEntry[]> {
   }
 
   const lines = raw.split(/\r?\n/);
-  const entries: TCEntry[] = [];
+  // First pass: heading form (the legacy shape). Map keyed by tcId so
+  // the table-form pass below can union without overwriting.
+  const headingEntries = new Map<string, TCEntry>();
+  const headingOrder: string[] = [];
   let current: TCEntry | null = null;
 
   for (const line of lines) {
     const header = TC_HEADER_RE.exec(line);
-    if (header && header[1] && header[2] !== undefined) {
-      if (current !== null) {
-        entries.push(current);
+    if (header && header[1]) {
+      if (current !== null && !headingEntries.has(current.tcId)) {
+        headingEntries.set(current.tcId, current);
+        headingOrder.push(current.tcId);
       }
+      const titleGroup = header[2];
       current = {
         tcId: header[1],
-        title: header[2],
+        title: titleGroup !== undefined ? titleGroup : "",
         exRefs: [],
         acRefs: [],
       };
@@ -97,10 +186,35 @@ export async function parseTestCases(specDir: string): Promise<TCEntry[]> {
       current.type = value.trim();
     }
   }
-  if (current !== null) {
-    entries.push(current);
+  if (current !== null && !headingEntries.has(current.tcId)) {
+    headingEntries.set(current.tcId, current);
+    headingOrder.push(current.tcId);
   }
-  return entries;
+
+  // Second pass: table form. Heading-form parse WINS on duplicates so
+  // a spec that mixes both shapes preserves the per-entry meta gleaned
+  // from the heading-form `- Key: value` lines.
+  const tableOrder: string[] = [];
+  const tableEntries = new Map<string, TCEntry>();
+  for (const line of lines) {
+    const row = parseTableRow(line);
+    if (row === null) continue;
+    if (headingEntries.has(row.tcId)) continue;
+    if (tableEntries.has(row.tcId)) continue;
+    tableEntries.set(row.tcId, row);
+    tableOrder.push(row.tcId);
+  }
+
+  const out: TCEntry[] = [];
+  for (const id of headingOrder) {
+    const entry = headingEntries.get(id);
+    if (entry) out.push(entry);
+  }
+  for (const id of tableOrder) {
+    const entry = tableEntries.get(id);
+    if (entry) out.push(entry);
+  }
+  return out;
 }
 
 /**
