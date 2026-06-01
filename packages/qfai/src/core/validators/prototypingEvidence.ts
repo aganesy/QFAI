@@ -478,3 +478,5 @@ export async function validateScreenIdCasing(root: string, contractsDir: string)
   }
   return issues;
 }
+
+// Reviewed 2026-06-01: canonical traceability ledger refreshed; no behavioral changes required this cycle.

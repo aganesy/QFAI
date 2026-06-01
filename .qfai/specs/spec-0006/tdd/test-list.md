@@ -22,15 +22,6 @@
 | TDD-0018 | TC-0006-0018 | integration | packages/qfai/tests/integration/spec0006DoctorProbeOrder.test.ts | TC-0006-0018: doctor summary 2-group split routes skills.integrity to advisory                    | done      | —            | RED→GREEN 2026-05-25 (formatDoctorText 2-group renderer)                 |
 | TDD-0019 | US-0006-0006 | e2e         | packages/qfai/tests/e2e/spec0006DoctorProbeOrderE2E.test.ts      | US-0006-0006: doctor playwright primary probe + npx fallback + cli deprecation                    | done      | —            | RED→GREEN 2026-05-25 (e2e launcher-line zero [error] assertion)          |
 | TDD-0020 | US-0006-0007 | e2e         | packages/qfai/tests/e2e/spec0006DoctorProbeOrderE2E.test.ts      | US-0006-0007: doctor summary 2-group split + skills.integrity downgrade                           | done      | —            | RED→GREEN 2026-05-25 (e2e advisory-group placement assertion)            |
-
-## Notes
-
-- CHG-005 (2026-05-25): TDD-0012..0020 cover REQ-0107 / REQ-0122 (NFR-0112). Implementation surface: (a) `playwrightCliLauncher.ts` → `playwrightLauncher.ts` rename + probe order flip (playwright primary / npx fallback / playwright-cli deprecation-window); (b) `doctor.ts` skills.integrity severity downgrade to warning + 2-group summary split.
-
-## CHG-006 v1.9.2 second-wave — doctor --clean TTL + --autoremediate + per-skill manifest probe (2026-05-31)
-
-| TDD-ID   | TC-Refs      | Layer       | Test file                                                              | Selector                                                                                | Status | DR-ID                       | Evidence                                                                |
-| -------- | ------------ | ----------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------ | --------------------------- | ----------------------------------------------------------------------- |
 | TDD-0021 | TC-0006-0019 | integration | packages/qfai/tests/integration/cli/commands/doctorClean.archive.test.ts | TC-0006-0019: --clean archives TTL-expired review pack into _archive/                  | done   | DR-0006-0003 (→ DR-0264)    | RED→GREEN 2026-06-01 (W3 d74a546f); reviewers PASS×3; REQ-0153   |
 | TDD-0022 | TC-0006-0020 | integration | packages/qfai/tests/integration/cli/commands/doctorClean.noDelete.test.ts | TC-0006-0020: --clean never deletes; validate --profile review excludes _archive       | done   | DR-0006-0003 (→ DR-0264)    | RED→GREEN 2026-06-01 (W3 d74a546f); reviewers PASS×3; REQ-0153   |
 | TDD-0023 | TC-0006-0021 | integration | packages/qfai/tests/integration/cli/commands/doctorAutoremediate.fixes.test.ts | TC-0006-0021: --autoremediate --yes fixes install + clean + config                     | done   | (REQ-0156)                  | RED→GREEN 2026-06-01 (W3 d74a546f); reviewers PASS×3; REQ-0156   |
@@ -40,7 +31,11 @@
 | TDD-0027 | TC-0006-0025 | unit        | packages/qfai/tests/unit/core/doctor/skillManifestProbe.empty.test.ts  | TC-0006-0025: empty runtimeDependencies → no probe finding (no false positive)          | done   | (REQ-0159)                  | RED→GREEN 2026-06-01 (W3 d74a546f); reviewers PASS×3; REQ-0159   |
 | TDD-0028 | TC-0006-0026 | integration | packages/qfai/tests/integration/validators/skillManifestDrift.test.ts  | TC-0006-0026: manifest↔probe drift → R-SKILL-MANIFEST-DRIFT (SSOT-sync Pair III)        | done   | (Pair III; REQ-0159)        | RED→GREEN 2026-06-01 (W3 d74a546f); reviewers PASS×3; REQ-0159   |
 
-CHG-006 notes:
+## Notes
+
+- CHG-005 (2026-05-25): TDD-0012..0020 cover REQ-0107 / REQ-0122 (NFR-0112). Implementation surface: (a) `playwrightCliLauncher.ts` → `playwrightLauncher.ts` rename + probe order flip (playwright primary / npx fallback / playwright-cli deprecation-window); (b) `doctor.ts` skills.integrity severity downgrade to warning + 2-group summary split.
+
+### CHG-006 v1.9.2 second-wave — doctor --clean TTL + --autoremediate + per-skill manifest probe (2026-05-31)
 
 - TDD-0021..0028 cover REQ-0153 (doctor --clean review-pack TTL archival), REQ-0156 (doctor --autoremediate mode), REQ-0159 (per-skill manifest probe / Pair III). Cross-spec decisions cited from `_policies/08_Decisions.md`: DR-0264 (review.staleTtlDays default 14d). REQ-0159 manifest-schema authoring + distributed-surface lint side is owned by spec-0015; this slice covers the doctor probe behavior only.
 - Ledger sync follow-up: the spec-0006 CHG-006 SDD wave omitted `UPDATE:APPEND tdd/test-list.md` from its triage table. This section reconciles the ledger before `/qfai-implement` proceeds.

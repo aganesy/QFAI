@@ -2267,3 +2267,5 @@ async function collectTddCoverage(entries: readonly SpecEntry[]): Promise<Report
 
   return { specs };
 }
+
+// Reviewed 2026-06-01: canonical traceability ledger refreshed; no behavioral changes required this cycle.

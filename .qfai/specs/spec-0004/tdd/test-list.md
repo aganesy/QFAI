@@ -48,15 +48,6 @@
 | TDD-0044 | US-0004-0034 | e2e         | packages/qfai/tests/e2e/spec0004ProfileSuffixedValidateE2E.test.ts      | US-0004-0034: profile-suffixed validate output + always-latest validate.json        | done      | (none)       | v1.9.1 RED→GREEN 2026-05-25 (CHG-005 profile-suffixed + pair-changed + ingestion)  |
 | TDD-0045 | US-0004-0035 | e2e         | packages/qfai/tests/e2e/spec0004ProfileSuffixedValidateE2E.test.ts      | US-0004-0035: SSOT-sync pair-changed CI lane rejects single-half edits              | done      | (none)       | v1.9.1 RED→GREEN 2026-05-25 (CHG-005 profile-suffixed + pair-changed + ingestion)  |
 | TDD-0046 | US-0004-0036 | e2e         | packages/qfai/tests/e2e/spec0004ProfileSuffixedValidateE2E.test.ts      | US-0004-0036: qfai validate rejects R-PROMPT-SCANNER-DRIFT with empty justification | done      | (none)       | v1.9.1 RED→GREEN 2026-05-25 (CHG-005 profile-suffixed + pair-changed + ingestion)  |
-
-## Notes
-
-- CHG-005 (2026-05-25): TDD-0032..0046 cover REQ-0120 / REQ-0102 / REQ-0125. Implementation surface: (a) validate.ts report-writer (profile-suffixed + always-latest + legacy path D-DEPRECATED-PATH with sunset 1.10.0 escalation); (b) certify profile-mismatch recovery message; (c) git-diff-aware SSOT-sync pair-changed CI lane (extends spec-0015 R-PROMPT-SCANNER-DRIFT static check); (d) validate ingestion gate for empty-justification rejection (largely covered by spec-0015 ADVISORY_FAILING_CODES extension; explicit tests added here).
-
-## CHG-006 v1.9.2 second-wave — saas-package profile + auditProfile dual-shape + check-pack-locations (2026-05-31)
-
-| TDD-ID   | TC-Refs      | Layer       | Test file                                                                        | Selector                                                                                | Status | DR-ID                              | Evidence                                                                |
-| -------- | ------------ | ----------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------ | ---------------------------------- | ----------------------------------------------------------------------- |
 | TDD-0047 | TC-0004-0067 | integration | packages/qfai/tests/integration/cli/commands/validateSaasPackage.passes.test.ts  | TC-0004-0067: validate --profile saas-package PASSes + D-SAAS-PACKAGE-VERIFY-SKIPPED info | done   | (cites DR-0267/0268/0274)          | RED→GREEN 2026-06-01 (W1 a11f2db4 + W2 451d4853); reviewers PASS×3; REQ-0166   |
 | TDD-0048 | TC-0004-0068 | unit        | packages/qfai/tests/unit/core/validators/saasPackageAttestation.test.ts          | TC-0004-0068: missing DCON-005 design-system attestation → FAIL                          | done   | (cites DR-0267/0268/0274)          | RED→GREEN 2026-06-01 (W1 a11f2db4 + W2 451d4853); reviewers PASS×3; REQ-0166   |
 | TDD-0049 | TC-0004-0069 | unit        | packages/qfai/tests/unit/core/validators/auditProfileDualShape.test.ts           | TC-0004-0069: auditProfile.ts accepts string-only AND structured {id,label,acceptance}   | done   | (cites DR-0268)                    | RED→GREEN 2026-06-01 (W1 a11f2db4 + W2 451d4853); reviewers PASS×3; REQ-0164   |
@@ -65,7 +56,11 @@
 | TDD-0052 | TC-0004-0072 | integration | packages/qfai/tests/integration/scripts/checkPackLocations.allowedRoot.test.ts   | TC-0004-0072: allowed-root .qfai/discussion/* pack passes silently                       | done   | (cites DR-0274)                    | RED→GREEN 2026-06-01 (W1 a11f2db4 + W2 451d4853); reviewers PASS×3; REQ-0167   |
 | TDD-0053 | TC-0004-0073 | integration | packages/qfai/tests/integration/scripts/checkPackLocations.scope.test.ts         | TC-0004-0073: untouched legacy pack not re-flagged (staged-dir scope)                    | done   | (cites DR-0274)                    | RED→GREEN 2026-06-01 (W1 a11f2db4 + W2 451d4853); reviewers PASS×3; REQ-0167   |
 
-CHG-006 notes:
+## Notes
+
+- CHG-005 (2026-05-25): TDD-0032..0046 cover REQ-0120 / REQ-0102 / REQ-0125. Implementation surface: (a) validate.ts report-writer (profile-suffixed + always-latest + legacy path D-DEPRECATED-PATH with sunset 1.10.0 escalation); (b) certify profile-mismatch recovery message; (c) git-diff-aware SSOT-sync pair-changed CI lane (extends spec-0015 R-PROMPT-SCANNER-DRIFT static check); (d) validate ingestion gate for empty-justification rejection (largely covered by spec-0015 ADVISORY_FAILING_CODES extension; explicit tests added here).
+
+### CHG-006 v1.9.2 second-wave — saas-package profile + auditProfile dual-shape + check-pack-locations (2026-05-31)
 
 - TDD-0047..0053 cover REQ-0166 (validate --profile saas-package side; certify side owned by spec-0014), REQ-0164 (auditProfile.ts dual-shape — coordinates with spec-0013 designAudit.ts band/closed-schema extension), REQ-0167 (check-pack-locations.mjs new lint script). Cross-spec decisions cited from `_policies/08_Decisions.md`: DR-0267 (primary_tasks band 3..7), DR-0268 (structured {id,label,acceptance} closed schema), DR-0274 (pack-location lint scope = staged/changed dirs).
 - Ledger sync follow-up: the spec-0004 CHG-006 SDD wave omitted `UPDATE:APPEND tdd/test-list.md` from its triage table. This section reconciles the ledger before `/qfai-implement` proceeds.
