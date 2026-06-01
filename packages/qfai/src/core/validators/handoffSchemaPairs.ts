@@ -3,7 +3,7 @@
  *
  * The schema source-of-truth lives at
  * `packages/qfai/src/core/schemas/handoff.ts`. Every skill writer that
- * persists a `handoff.yaml` MUST reference the canonical fields from
+ * persists a `.qfai/handoff.yaml` MUST reference the canonical fields from
  * that schema (via import or a literal write of the same fields).
  *
  * The pair check is structural: when the schema source declares field X

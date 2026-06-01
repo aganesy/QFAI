@@ -207,7 +207,7 @@ export async function parseTestCases(specDir: string): Promise<TCEntry[]> {
     } else if (key === "ac-refs" || key === "ac-ref") {
       current.acRefs = extractIds(value);
     } else if (key === "type") {
-      current.type = value.trim();
+      current.type = value.trim().toLowerCase();
     }
   }
   if (current !== null && !headingEntries.has(current.tcId)) {

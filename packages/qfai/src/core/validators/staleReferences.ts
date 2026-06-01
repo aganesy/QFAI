@@ -65,7 +65,7 @@ export const STALE_REFERENCES: readonly StaleReferenceEntry[] = [
     clause: "session-handoff-legacy-name",
     beforeToken: "session-handoff.yaml",
     replacement:
-      "use the canonical `handoff.yaml`; legacy `session-handoff.yaml` accepted only via `qfai handoff upgrade` during the deprecation window",
+      "use the canonical `.qfai/handoff.yaml`; legacy `session-handoff.yaml` accepted only via `qfai handoff upgrade` during the deprecation window",
   },
 ];
 
