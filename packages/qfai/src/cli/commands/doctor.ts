@@ -92,11 +92,19 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   const sideEffectLines: string[] = [];
   if (options.autoremediate) {
     const isCi = process.env["CI"] === "true";
+    // Thread the resolved skill profile into the autoremediate orchestrator
+    // so the install phase actually reaches the runtimeDependencies probe.
+    // Without `skill`, runAutoremediate's (1) install branch is skipped
+    // entirely — an operator running `qfai doctor --profile <skill>
+    // --autoremediate` would see clean + config-fill run but never the
+    // install they were expecting. The diagnostic pass below also receives
+    // `skillProfile`, so the two stay in lockstep on the same option.
     const summary = await runAutoremediate({
       root: options.root,
       dryRun: Boolean(options.dryRun),
       yes: Boolean(options.yes),
       isCi,
+      ...(options.skillProfile !== undefined ? { skill: options.skillProfile } : {}),
     });
     sideEffectLines.push(...summary.lines);
     if (summary.disabledInCi) {
