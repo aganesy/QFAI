@@ -1199,25 +1199,27 @@ async function loadSaasPackageGatesSignal(
  *
  *   2. **Real validate output** (no `gates` map; carries the
  *      `ValidationResult` shape with `profile`, `counts`, `issues`,
- *      etc.) — written by `qfai validate --profile saas-package`. The
- *      saas-package profile represents the skip-set as
- *      `D-SAAS-PACKAGE-VERIFY-SKIPPED` info findings inside `issues[]`
- *      rather than a `gates` object. Interpretation:
- *      - `profile === "saas-package"` AND any
- *        `D-SAAS-PACKAGE-VERIFY-SKIPPED` info findings → those gates
- *        are still skipped (still missing).
- *      - `profile === "saas-package"` AND zero
- *        `D-SAAS-PACKAGE-VERIFY-SKIPPED` info findings AND
- *        `counts.error === 0` → all gates pass (the skip-set was
- *        emptied — every gate was satisfied inline).
- *      - `profile` is `"full"` / `"verify"` / `"tdd"` / `"atdd"` (or
- *        any non-`saas-package` profile) AND `counts.error === 0`
- *        AND no error-severity issues match the gate names →
- *        all gates pass (the operator re-ran under a fuller profile
- *        that exercises every gate, none failed).
- *      - Any of those AND `counts.error > 0` → still missing (the
+ *      etc.). Interpretation honors the producer contract:
+ *      - `profile === "saas-package"` → **INADMISSIBLE for upgrade**.
+ *        `runSaasPackageProfile` UNCONDITIONALLY emits one
+ *        `D-SAAS-PACKAGE-VERIFY-SKIPPED` info finding per skipped
+ *        gate, so the skip-set can never be "emptied" within this
+ *        profile. Operators MUST re-run a fuller profile (e.g.
+ *        `qfai validate --profile full`) to drive `--upgrade-scope
+ *        full`. The reader returns the full skip-set as still
+ *        missing whenever the signal carries
+ *        `profile === "saas-package"`.
+ *      - `profile` is `"full"` / `"verify"` / `"tdd"` / `"atdd"` (any
+ *        non-`saas-package` profile) AND `counts.error === 0` AND no
+ *        error-severity issues match the gate names → all gates pass
+ *        (the operator re-ran under a fuller profile that exercises
+ *        every gate, none failed).
+ *      - Any profile AND `counts.error > 0` → still missing (the
  *        validate run had failures; the upgrade refuses and the
  *        operator-facing log enumerates the still-missing set).
+ *      - `profile` field absent (malformed / hand-edited signal) →
+ *        still missing (refuse to default-to-success on
+ *        unrecognized shapes).
  *
  * `mode` defaults to `"auto"`: when `signal.gates` is present and is a
  * non-empty record, the synthetic-map branch is used; otherwise the
