@@ -310,7 +310,8 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
       //     silently break the extraction. Today's keywords are
       //     `[a-z_]` only, but the SSOT is open-ended; reusing the
       //     repo-wide canonical helper keeps the escape semantics
-      //     in lockstep with the other 8 consumer sites.
+      //     in lockstep with the other consumer sites that already
+      //     import from `core/regex.ts`.
       const valueRe = new RegExp(`\\b${escapeRegExp(keyword)}[ \\t]*:[ \\t]*([^\\r\\n]*)`, "i");
       const m = valueRe.exec(allEvidenceContent);
       const valueText = m?.[1] ?? "";
@@ -323,11 +324,11 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
       issues.push(
         issue(
           "QFAI-CRIT-009",
-          `taskFidelity placeholders not filled: ${placeholderKeywords.join(", ")} ` +
-            `have placeholder markers (TODO / FIXME / XXX / TBD / ` +
-            `<placeholder>) or empty values. The --capture skeleton ` +
-            `seeds these markers; replace each with the recorded ` +
-            `evaluation before sealing the iteration. ` +
+          `taskFidelity placeholders not filled — placeholder markers (TODO / ` +
+            `FIXME / XXX / TBD / <placeholder>) or empty values detected for: ` +
+            `${placeholderKeywords.join(", ")}. The --capture skeleton seeds ` +
+            `these markers; replace each with the recorded evaluation before ` +
+            `sealing the iteration. ` +
             `Required keywords: ${keywordList}. Expected section: ${TASK_FIDELITY_SECTION_NAME}.`,
           "error",
           evidenceDir,
