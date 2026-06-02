@@ -265,6 +265,16 @@ function checkContractHierarchyFromScreens(
       // the file path explicitly. Falls back gracefully when sourceRef is
       // empty (e.g. directly-constructed screens with no source location).
       const [filePath = "<unknown-file>"] = screen.sourceRef.split("#");
+      // Emit QFAI-AUD-021 shape findings BEFORE the empty-primary-tasks
+      // branch's `continue` — otherwise a screen whose every
+      // primary_task is a malformed structured object (extractPrimaryTasks
+      // recorded shape findings but the parsed list ended up empty) would
+      // surface only the generic "empty primary_tasks" QFAI-AUD-001
+      // diagnostic and the closed-schema detail would be hidden. Codex
+      // r3338487529.
+      for (const shape of screen.primaryTaskShapeFindings) {
+        findings.push(shapeFindingFor(screen.screenId, shape, filePath, screen.sourceRef));
+      }
       if (screen.primaryTasksKeyPresent) {
         // key-empty: slot authored but left as `primary_tasks: []`. Treat as
         // intentional violation, emit severity=error (blocking).

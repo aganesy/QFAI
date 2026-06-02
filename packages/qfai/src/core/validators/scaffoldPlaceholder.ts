@@ -55,6 +55,7 @@ import {
   resolveEscalateThreshold,
   shouldEscalate,
 } from "../atdd/scaffoldEscalation.js";
+import { hasErrnoCode } from "../fs/errno.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -194,9 +195,15 @@ export async function validateScaffoldPlaceholder(
     // threshold boundary. Pre-fix the error note said "after N
     // cycles" alongside a `(5/3 ...)` progress note which read as
     // "did this happen at 3 or at 5?" — codex r3338411701.
+    // Pluralization: `scaffoldEscalateCycles: 1` is a supported
+    // operator setting (`shouldEscalate` fires at `threshold >= 1`),
+    // so use singular "cycle" when threshold === 1 — codex
+    // r3338479241.
+    const cycleWord = threshold === 1 ? "cycle" : "cycles";
+    const verbAreReached = threshold === 1 ? "is reached" : "are reached";
     const escalationNote = escalated
-      ? `escalated to error (threshold ${threshold} \`qfai validate\` cycles reached)`
-      : `current severity warning; escalates to error when ${threshold} \`qfai validate\` cycles are reached with the placeholder unremoved (configurable via qfai.config.yaml#atdd.scaffoldEscalateCycles; 0 disables)`;
+      ? `escalated to error (threshold ${threshold} \`qfai validate\` ${cycleWord} reached)`
+      : `current severity warning; escalates to error when ${threshold} \`qfai validate\` ${cycleWord} ${verbAreReached} with the placeholder unremoved (configurable via qfai.config.yaml#atdd.scaffoldEscalateCycles; 0 disables)`;
     issues.push(
       issue(
         "D-SCAFFOLD-PLACEHOLDER",
@@ -251,11 +258,10 @@ function logFailSoft(
   tcId: string | null,
   err: unknown,
 ): void {
-  const code = (err as NodeJS.ErrnoException | undefined)?.code;
   const message = err instanceof Error ? err.message : String(err);
   const cls = err instanceof Error ? err.constructor.name : typeof err;
   const target = specId !== null && tcId !== null ? ` for ${specId}:${tcId}` : "";
-  const codeStr = typeof code === "string" && code.length > 0 ? ` (${code})` : "";
+  const codeStr = hasErrnoCode(err) ? ` (${err.code})` : "";
   process.stderr.write(
     `qfai validate [D-SCAFFOLD-PLACEHOLDER]: ${operation} fail-soft${target} — ${cls}${codeStr}: ${message}\n`,
   );

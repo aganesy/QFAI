@@ -1189,8 +1189,7 @@ async function runUpgradeScopeFull(
           return 2;
         }
       } catch (err) {
-        const code = (err as NodeJS.ErrnoException | undefined)?.code;
-        if (code !== "ENOENT") {
+        if (!isEnoent(err)) {
           throw err;
         }
         // Canonical signal absent — nothing to compare against.

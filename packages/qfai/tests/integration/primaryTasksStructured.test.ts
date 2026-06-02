@@ -160,6 +160,44 @@ describe("TC-0013-0035: incomplete / open structured primary_tasks rejected", ()
     });
   });
 
+  // Pin codex r3338487529: when EVERY structured primary_tasks entry
+  // is malformed (extractPrimaryTasks records shape findings but the
+  // parsed list ends up empty), QFAI-AUD-021 closed-schema diagnostics
+  // MUST still surface alongside the QFAI-AUD-001 empty-list signal.
+  // Pre-fix the early `continue` on `primaryTasks.length === 0`
+  // returned before the shape-findings loop, hiding the AUD-021
+  // detail and leaving the user with only a generic "empty
+  // primary_tasks" error.
+  it("surfaces QFAI-AUD-021 shape findings even when every entry is malformed (parsed list empty)", async () => {
+    const ui = [
+      "screens:",
+      "  - id: dashboard",
+      "    title: Dashboard",
+      "    route: /dashboard",
+      "    primary_tasks:",
+      "      - label: missing-id-1",
+      "        acceptance: detail visible",
+      "      - label: missing-id-2",
+      "        acceptance: detail visible",
+      "",
+    ].join("\n");
+    await withWorkspace(ui, async (root) => {
+      const issues = await validateDesignAudit(root, defaultConfig);
+      // QFAI-AUD-021 closed-schema diagnostic surfaces for at least
+      // one malformed entry — pre-fix this was hidden by the
+      // empty-list early-continue.
+      const shape = issues.find((issue) => issue.code === "QFAI-AUD-021");
+      expect(
+        shape,
+        "expected QFAI-AUD-021 (missing id) to surface on all-malformed list",
+      ).toBeDefined();
+      expect(shape?.message ?? "").toMatch(/\bid\b/);
+      // QFAI-AUD-001 empty-list signal is also emitted (post-shape).
+      const empty = issues.find((issue) => issue.code === "QFAI-AUD-001");
+      expect(empty).toBeDefined();
+    });
+  });
+
   it("rejects a structured item carrying an extra key (closed schema)", async () => {
     const ui = [
       "screens:",
