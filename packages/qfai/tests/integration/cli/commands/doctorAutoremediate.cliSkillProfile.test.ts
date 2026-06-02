@@ -113,6 +113,57 @@ describe("doctor CLI threads skillProfile into autoremediate", () => {
     expect(installCalls).toEqual(["playwright"]);
   });
 
+  // Pin the subdirectory-launch root resolution. When `doctor
+  // --autoremediate` is invoked without `--root` (rootExplicit=false),
+  // `runDoctor` must walk up via `findConfigRoot` to find the project
+  // root before invoking the side-effect handlers. Pre-fix
+  // `runAutoremediate` and `cleanStaleReviewPacks` received the raw
+  // `options.root` (= cwd when --root was omitted), so a subdirectory
+  // launch would archive `<subdir>/.qfai/review/...` and create
+  // `<subdir>/qfai.config.yaml`. This test pins the resolution: a
+  // subdirectory cwd with a parent-rooted qfai.config.yaml must
+  // surface as the parent root in the captured `runAutoremediate`
+  // options.
+  it("resolves project root from a subdirectory when --root is omitted (rootExplicit=false)", async () => {
+    const projectRoot = await newTempDir("subdir-resolve-parent");
+    // Seed a qfai.config.yaml in the parent so findConfigRoot recognizes
+    // it as the project root.
+    await writeFile(
+      path.join(projectRoot, "qfai.config.yaml"),
+      "paths:\n  specsDir: .qfai/specs\n",
+      "utf-8",
+    );
+    const subdir = path.join(projectRoot, "nested", "deep");
+    await mkdir(subdir, { recursive: true });
+
+    const seenOptions: autoremediateModule.AutoremediateOptions[] = [];
+    vi.spyOn(autoremediateModule, "runAutoremediate").mockImplementation(async (opts) => {
+      seenOptions.push(opts);
+      return { lines: [], disabledInCi: false };
+    });
+
+    const exit = await runDoctor({
+      // `rootExplicit: false` and `root: <subdir>` simulates an
+      // operator launching `qfai doctor --autoremediate` from the
+      // subdirectory without passing `--root`.
+      root: subdir,
+      rootExplicit: false,
+      format: "text",
+      autoremediate: true,
+      yes: true,
+    });
+
+    expect(exit).toBe(0);
+    expect(seenOptions.length).toBe(1);
+    // The captured root passed to runAutoremediate must be the parent
+    // project root (where qfai.config.yaml lives), NOT the subdir
+    // cwd. `findConfigRoot` returns the directory containing the
+    // config; that's what `resolvedRoot` should be.
+    const resolved = seenOptions[0]?.root;
+    expect(resolved).toBe(projectRoot);
+    expect(resolved).not.toBe(subdir);
+  });
+
   it("omits skill when no skillProfile is set (legacy doctor flow unchanged)", async () => {
     const root = await newTempDir("legacy");
 

@@ -114,6 +114,36 @@ describe("TC-0012-0473: in-zone edit updates patchHash only (majorHash stable)",
     expect(after.majorHash).toBe(before.majorHash);
     expect(after.patchHash).not.toBe(before.patchHash);
   });
+
+  // Pin the first-child placeholder-replacement fix. The
+  // `replaceTokenValueWithPlaceholder` regex required a preceding `\n`
+  // before the leaf line, which silently skipped the FIRST scalar
+  // under its parent (e.g. `visual.colors.primary`, the first child
+  // of `visual.colors:`). The fix (regex `(^|\n)(<indent><key>:...)`)
+  // accepts the start-of-segment anchor that the parent-walk cursor
+  // lands at when the leaf is the first child. Pre-fix this test
+  // would have observed `majorHash` changing for an in-zone first-
+  // child edit; post-fix `majorHash` is byte-stable.
+  it("in-zone edit on the FIRST scalar under its parent (visual.colors.primary) keeps majorHash byte-stable", () => {
+    const withPrimaryInZone = BASE_FRONT_MATTER.replace(
+      "    - visual.radius.md",
+      "    - visual.radius.md\n    - visual.colors.primary",
+    );
+    const before = computeDesignMdHashes(withPrimaryInZone);
+    const editedPrimary = withPrimaryInZone.replace(
+      /(primary:\s*)"#[0-9a-fA-F]{6}"/u,
+      `$1"#abcdef"`,
+    );
+    const after = computeDesignMdHashes(editedPrimary);
+    // Pre-fix: regex required preceding `\n`, primary was the first
+    // child under `colors:` so the parent-walk cursor pointed
+    // directly at the primary line with no preceding `\n` in the
+    // sliced segment. The placeholder was not substituted, so the
+    // primary value bytes remained in the canonicalized text →
+    // majorHash changed. Post-fix the `(^|\n)` alternation matches.
+    expect(after.majorHash).toBe(before.majorHash);
+    expect(after.patchHash).not.toBe(before.patchHash);
+  });
 });
 
 describe("TC-0012-0474: out-of-zone edit invalidates evidence and surfaces R-DESIGN-MD-PATCH-OUT-OF-ZONE", () => {
