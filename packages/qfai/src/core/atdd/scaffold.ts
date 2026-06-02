@@ -426,6 +426,16 @@ export async function emitSkeleton(
  * default ever changes, update this default in the same commit —
  * otherwise scaffold and validators silently diverge again (codex
  * r3338417334).
+ *
+ * Uses `path.resolve` (not `path.join`) so that an absolute
+ * `paths.testsDir` is honored verbatim — `path.resolve(root,
+ * "/abs/testsDir", ...)` ignores `root` and rebases on the absolute
+ * segment, matching how the placeholder validator (via
+ * `resolvePath`) resolves the same config key. Pre-fix `path.join`
+ * silently rebased `/abs/testsDir` under `root` as
+ * `<root>/abs/testsDir`, so scaffolded tests landed outside the
+ * configured tree and `qfai validate --profile atdd|full` never saw
+ * them (codex r3338447140).
  */
 export function scaffoldDestPath(
   root: string,
@@ -433,7 +443,7 @@ export function scaffoldDestPath(
   tcId: string,
   testsDir: string = "tests",
 ): string {
-  return path.join(root, testsDir, "atdd", specId, `${tcId}.test.ts`);
+  return path.resolve(root, testsDir, "atdd", specId, `${tcId}.test.ts`);
 }
 
 /**

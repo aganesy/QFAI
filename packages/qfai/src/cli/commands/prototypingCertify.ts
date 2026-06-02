@@ -34,6 +34,7 @@ import {
 import { hashDesignMd, parseDesignMd } from "../../core/design/designMd.js";
 import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
 import { isEnoent } from "../../core/fs/errno.js";
+import { resolvePrototypingIterationViews } from "../../core/prototyping/modeRead.js";
 import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
 import {
   buildCompletionCertificate,
@@ -2052,55 +2053,33 @@ function countIterations(protoJson: unknown): number {
 
 /**
  * Extract a structural view of every iteration suitable for the
- * exploration-mode reviewer-gate detector. Per-iteration shape is
- * `{index, mode?}`; missing / non-string `mode` slots inherit the
- * most-recent prior explicit mode (sticky-mode semantics) — matching
- * `core/prototyping/modeRead.ts#readPrototypingModeForRelax`. Both
- * surfaces (validate-relax + certify) MUST agree on the effective
- * mode of any given iteration, otherwise an exploration loop whose
- * later iteration writers happened to omit `mode` could pass certify
- * (read as convergence here) while still benefiting from the
- * warning-only soft-gate relaxation (read as exploration there) —
- * the "soft-relaxed exploration loop sealed by certify" window the
- * reviewer flagged in codex r3338416753. Legacy iterations written
- * before the mode slot existed pre-date any exploration writer, so
- * sticky-inherited mode stays `undefined` for them and certify falls
- * through to the convergence default.
+ * exploration-mode reviewer-gate detector. Delegates to the cross-
+ * surface SSOT in `core/prototyping/modeRead.ts#
+ * resolvePrototypingIterationViews` so certify and `qfai validate`
+ * (via `readPrototypingModeForRelax`) consume the SAME per-iteration
+ * view set with sticky-mode inheritance applied.
  *
- * No bare `as` casts on the unknown payload.
+ * Guarantee that the shared helper enforces:
+ *   - relax mode "exploration" (last view's mode = exploration)
+ *     IMPLIES at least one explicit exploration iteration exists in
+ *     the loop (sticky inheritance can only carry FORWARD an
+ *     already-explicit posture);
+ *   - therefore certify ALWAYS fires when relax has relaxed — relax
+ *     relaxes ⇒ certify rejects. Per-iteration certify is the
+ *     stricter superset (it can also fire on
+ *     `[exploration, convergence]` shapes that relax does NOT relax,
+ *     which is the safe direction — codex r3338446583).
+ *
+ * The matching `CertifyIterationView` type from explorationCertify.ts
+ * is structurally compatible with `PrototypingIterationView` from
+ * modeRead.ts (same `{index, mode?}` shape), so this thin shim is
+ * essentially a re-export with the certify-side name retained for
+ * the existing reviewer-gate input contract.
  */
 export function extractIterationViewsForCertify(
   protoJson: unknown,
 ): readonly CertifyIterationView[] {
-  if (!isRecord(protoJson)) return [];
-  const iterations: unknown = protoJson.iterations;
-  if (!Array.isArray(iterations)) return [];
-  const views: CertifyIterationView[] = [];
-  let lastExplicitMode: "convergence" | "exploration" | undefined;
-  for (let i = 0; i < iterations.length; i += 1) {
-    const entry: unknown = iterations[i];
-    let index = i;
-    let mode: "convergence" | "exploration" | undefined;
-    if (isRecord(entry)) {
-      const rawIndex = entry.index;
-      if (typeof rawIndex === "number" && Number.isInteger(rawIndex) && rawIndex >= 0) {
-        index = rawIndex;
-      }
-      const rawMode = entry.mode;
-      if (rawMode === "convergence" || rawMode === "exploration") {
-        mode = rawMode;
-        lastExplicitMode = rawMode;
-      } else if (lastExplicitMode !== undefined) {
-        // Sticky inheritance: iteration omitted `mode` but a prior
-        // iteration set it explicitly — carry that posture forward.
-        mode = lastExplicitMode;
-      }
-    } else if (lastExplicitMode !== undefined) {
-      mode = lastExplicitMode;
-    }
-    views.push(mode !== undefined ? { index, mode } : { index });
-  }
-  return views;
+  return resolvePrototypingIterationViews(protoJson);
 }
 
 // `DesignMdViolation` is only used as part of typing through the

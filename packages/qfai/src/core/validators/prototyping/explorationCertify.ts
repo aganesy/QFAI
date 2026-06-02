@@ -18,10 +18,14 @@ import { issue } from "../utils.js";
 export type CertifyIterationView = {
   readonly index: number;
   /**
-   * Per-iteration mode recorded by iterate at
-   * `prototyping.json#iterations[i].mode`. Absent fields are
-   * interpreted as convergence (legacy iterations from before the
-   * mode slot was introduced).
+   * Per-iteration mode. Callers typically obtain this via
+   * `core/prototyping/modeRead.ts#resolvePrototypingIterationViews`,
+   * which forward-walks `prototyping.json#iterations[]` and applies
+   * sticky-mode inheritance (an omitted `mode` slot inherits the
+   * most-recent prior explicit mode). Absent fields here only occur
+   * in fully legacy loops where NO iteration ever set `mode` — those
+   * remain `undefined` and certify falls through to the convergence
+   * default for that subset.
    */
   readonly mode?: "convergence" | "exploration";
 };
