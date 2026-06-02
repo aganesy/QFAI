@@ -47,6 +47,23 @@ const TASK_FIDELITY_SECTION_RE = /\btaskFidelity\b/i;
 const STEP_COUNT_RE = /\bstep_count\s*:\s*(\d+)/i;
 const CTA_VISIBILITY_RE = /\bcta_visibility\s*:/i;
 const FOUR_STATE_CHECK_RE = /\bfour_state_check\s*:/i;
+/**
+ * Unfilled-placeholder markers that the `--capture` skeleton template
+ * (`core/prototyping/captureTemplate.ts`) emits next to each required
+ * keyword. The skeleton lives under `iter-NN/task-fidelity-template.md`
+ * which is OUTSIDE the renderCritique evidence-pattern scan (direct
+ * children of `.qfai/evidence/` only), so the template alone cannot
+ * trip CRIT-009 today. But if an operator copies the template's
+ * placeholder values into a scanned evidence file
+ * (`.qfai/evidence/prototyping*.md` or `critique-*.md`), the bare-
+ * keyword regex above would still PASS the section. This SSOT regex
+ * detects the unfilled markers so a placeholder-only section
+ * surfaces as CRIT-009 even after the file is reachable.
+ *
+ * Treat `TODO`, `FIXME`, `XXX`, `TBD`, `<placeholder>`, and empty
+ * (whitespace-only) values as unfilled.
+ */
+const TODO_PLACEHOLDER_RE = /^(?:\s*(?:TODO|FIXME|XXX|TBD|<placeholder>)\s*|\s*)$/i;
 const MAX_PRIMARY_STEPS_RE = /\bmax_primary_steps\s*:\s*(\d+)/i;
 
 export async function validateRenderCritique(root: string, config: QfaiConfig): Promise<Issue[]> {
@@ -268,6 +285,46 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     const maxStepsMatch = MAX_PRIMARY_STEPS_RE.exec(allEvidenceContent);
     const hasCta = CTA_VISIBILITY_RE.test(allEvidenceContent);
     const hasFourState = FOUR_STATE_CHECK_RE.test(allEvidenceContent);
+
+    // Defense-in-depth: detect unfilled placeholder values for the
+    // required keywords. Even when the section heading + keyword
+    // tokens are present, a value like `TODO` / `FIXME` / `<placeholder>`
+    // (or empty) means the operator has not actually recorded the
+    // task-fidelity evaluation — emit CRIT-009 so the placeholder
+    // evidence cannot advance through validation. Mirrors the
+    // captureTemplate.ts skeleton emission so the skeleton + this
+    // check stay aligned at the SSOT level.
+    const placeholderKeywords: string[] = [];
+    for (const keyword of TASK_FIDELITY_REQUIRED_KEYWORDS) {
+      const valueRe = new RegExp(
+        `\\b${keyword.replace(/[.*+?^${}()|[\\\\]]/g, "\\\\$&")}\\s*:\\s*([^\\n]*)`,
+        "i",
+      );
+      const m = valueRe.exec(allEvidenceContent);
+      const valueText = m?.[1] ?? "";
+      if (m && TODO_PLACEHOLDER_RE.test(valueText)) {
+        placeholderKeywords.push(keyword);
+      }
+    }
+    if (placeholderKeywords.length > 0) {
+      const keywordList = TASK_FIDELITY_REQUIRED_KEYWORDS.join(", ");
+      issues.push(
+        issue(
+          "QFAI-CRIT-009",
+          `taskFidelity placeholders not filled: ${placeholderKeywords.join(", ")} ` +
+            `still carry TODO / FIXME / placeholder / empty values. The ` +
+            `--capture skeleton seeds these markers; replace each with the ` +
+            `recorded evaluation before sealing the iteration. ` +
+            `Required keywords: ${keywordList}. Expected section: ${TASK_FIDELITY_SECTION_NAME}.`,
+          "error",
+          evidenceDir,
+          "renderCritique.taskFidelityPlaceholder",
+          undefined,
+          "change",
+          `Replace TODO / FIXME / placeholder values for ${placeholderKeywords.join(", ")} with the actual recorded evaluation.`,
+        ),
+      );
+    }
 
     if (!hasCta || !hasFourState) {
       // Reuse TASK_FIDELITY_REQUIRED_KEYWORDS so any new required

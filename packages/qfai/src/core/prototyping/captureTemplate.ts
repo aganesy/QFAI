@@ -9,6 +9,25 @@
  * (`QFAI-CRIT-009`), the shipped doc
  * (`references/evidence-requirements.md`), and the template emitted
  * here never silently diverge.
+ *
+ * SAFE PLACEMENT INVARIANT (defense-in-depth):
+ *
+ * The template lands at `.qfai/evidence/prototyping/iter-NN/
+ * task-fidelity-template.md` — under the iteration subdirectory.
+ * `validateRenderCritique` scans only the DIRECT children of
+ * `.qfai/evidence/` (pattern `.qfai/evidence/{prototyping*,
+ * critique-*}.md`), so the skeleton does NOT trip CRIT-009 on its
+ * own (verified empirically against fast-glob behavior).
+ *
+ * Even so, the validator has been hardened to reject `TODO` /
+ * `FIXME` / `<placeholder>` / empty values for required
+ * `taskFidelity` keywords (see `renderCritique.ts#TODO_PLACEHOLDER_RE`),
+ * so if an operator copies the placeholder values into a scanned
+ * evidence file (`prototyping*.md` or `critique-*.md` at the
+ * evidence root), validation rejects the unfilled placeholders with
+ * a renderCritique.taskFidelityPlaceholder issue. This keeps the
+ * skeleton genuinely advisory: it can only seed the file shape; it
+ * cannot satisfy the gate.
  */
 
 import { mkdir, writeFile } from "node:fs/promises";

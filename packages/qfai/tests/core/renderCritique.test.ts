@@ -174,4 +174,53 @@ describe("Render Critique Loop validation", { timeout: 15000 }, () => {
     expect(issues.some((i) => i.code === "QFAI-CRIT-003")).toBe(false);
     expect(issues.some((i) => i.code === "QFAI-CRIT-004")).toBe(false);
   });
+
+  // Defense-in-depth for the `--capture` skeleton emitter: even
+  // when an evidence file lands at the root scan target with a
+  // syntactically-complete `## taskFidelity` section + all required
+  // keyword tokens, unfilled `TODO` / `FIXME` / `<placeholder>` /
+  // empty values MUST be rejected as `QFAI-CRIT-009` so the
+  // operator cannot accidentally satisfy the gate with the
+  // skeleton's own values copied verbatim. Mirrors the
+  // captureTemplate.ts skeleton emission.
+  it("rejects taskFidelity sections whose required-keyword values are TODO / FIXME / <placeholder> / empty", async () => {
+    await seedSkillPrompt(
+      "qfai-prototyping",
+      [
+        "# Prototyping Skill",
+        "",
+        "Render screenshots and review HTML; honor spec / DESIGN.md / .qfai/contracts/ui.",
+      ].join("\n"),
+    );
+    // Seed an evidence file at the SCAN ROOT (matches the pattern
+    // `.qfai/evidence/prototyping*.md`). The body has `## taskFidelity`
+    // + all required keywords AND verdict markers — pre-fix this
+    // would silently pass; post-fix the TODO / FIXME / <placeholder> /
+    // empty-value detector surfaces CRIT-009.
+    await seedEvidence(
+      "prototyping_unfilled.md",
+      [
+        "# Prototyping Iter (desktop 1024 / mobile 480 verdict: PASS)",
+        "",
+        "## taskFidelity",
+        "",
+        "- cta_visibility: TODO",
+        "- four_state_check: FIXME",
+        "- step_count: <placeholder>",
+        "- max_primary_steps: ",
+        "",
+      ].join("\n"),
+    );
+    const issues = await validateRenderCritique(root, makeConfig());
+    const placeholderFinding = issues.find(
+      (i) =>
+        i.code === "QFAI-CRIT-009" &&
+        typeof i.message === "string" &&
+        i.message.includes("placeholders not filled"),
+    );
+    expect(placeholderFinding).toBeDefined();
+    expect(placeholderFinding?.severity).toBe("error");
+    expect(placeholderFinding?.message ?? "").toMatch(/cta_visibility/);
+    expect(placeholderFinding?.message ?? "").toMatch(/four_state_check/);
+  });
 });
