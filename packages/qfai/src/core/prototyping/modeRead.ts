@@ -61,7 +61,7 @@ export async function readPrototypingModeForRelax(root: string): Promise<Prototy
   // that omit `mode` inherit the prior posture instead of being
   // treated as a convergence reset.
   for (let i = iterations.length - 1; i >= 0; i -= 1) {
-    const entry = iterations[i];
+    const entry: unknown = iterations[i];
     if (entry === null || typeof entry !== "object" || Array.isArray(entry)) continue;
     const candidate = (entry as Record<string, unknown>).mode;
     if (candidate === "convergence" || candidate === "exploration") {
