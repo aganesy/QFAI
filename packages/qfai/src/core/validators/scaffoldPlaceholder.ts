@@ -261,7 +261,11 @@ function logFailSoft(
   const message = err instanceof Error ? err.message : String(err);
   const cls = err instanceof Error ? err.constructor.name : typeof err;
   const target = specId !== null && tcId !== null ? ` for ${specId}:${tcId}` : "";
-  const codeStr = hasErrnoCode(err) ? ` (${err.code})` : "";
+  // Preserve the pre-refactor "no empty-paren tail" behavior: empty-
+  // string `code` is suppressed (Node fs errors never produce one,
+  // but keeping this explicit means the bare-as refactor is exactly
+  // behavior-equivalent — codex r3338522010 / r3338522975).
+  const codeStr = hasErrnoCode(err) && err.code.length > 0 ? ` (${err.code})` : "";
   process.stderr.write(
     `qfai validate [D-SCAFFOLD-PLACEHOLDER]: ${operation} fail-soft${target} — ${cls}${codeStr}: ${message}\n`,
   );
