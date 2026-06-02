@@ -156,13 +156,18 @@ export async function validateScaffoldPlaceholder(
           if (next > maxAttempts) {
             maxAttempts = next;
           }
-        } catch {
+        } catch (err) {
           // Fail-soft: a state-write failure for this TC leaves the
           // counter unread. We don't set counterAvailable=true so the
           // progress note degrades to "counter unavailable" rather
           // than silently displaying "0/N" (which would mislead the
           // operator into thinking they have a full grace window
           // when the placeholder may have persisted for many cycles).
+          // Observability: log the failure class to stderr so a
+          // programming bug (TypeError / RangeError) is not silently
+          // swallowed alongside the expected ENOENT/EACCES/ENOSPC
+          // class. Codex r3338412192.
+          logFailSoft("recordValidateCycle", specId, tcId, err);
         }
       }
     }
@@ -183,9 +188,15 @@ export async function validateScaffoldPlaceholder(
         ? ` (${maxAttempts}/${threshold} validate cycles observed)`
         : ` (counter unavailable — state write failed; escalation may be inaccurate)`;
     }
+    // Message split: `progressNote` carries the live counter (may
+    // exceed threshold once escalation has fired and the placeholder
+    // remains across further passes), `escalationNote` describes the
+    // threshold boundary. Pre-fix the error note said "after N
+    // cycles" alongside a `(5/3 ...)` progress note which read as
+    // "did this happen at 3 or at 5?" — codex r3338411701.
     const escalationNote = escalated
-      ? `escalated to error after ${threshold} \`qfai validate\` cycles`
-      : `current severity warning; escalates to error after ${threshold} \`qfai validate\` cycles with the placeholder unremoved (configurable via qfai.config.yaml#atdd.scaffoldEscalateCycles; 0 disables)`;
+      ? `escalated to error (threshold ${threshold} \`qfai validate\` cycles reached)`
+      : `current severity warning; escalates to error when ${threshold} \`qfai validate\` cycles are reached with the placeholder unremoved (configurable via qfai.config.yaml#atdd.scaffoldEscalateCycles; 0 disables)`;
     issues.push(
       issue(
         "D-SCAFFOLD-PLACEHOLDER",
@@ -206,21 +217,46 @@ export async function validateScaffoldPlaceholder(
   // this pass has either been filled or removed. Resetting preserves
   // the spec's "consecutive cycles" semantics — a future regression
   // starts counting from zero again, not from the leftover N.
-  // Fail-soft on read errors (no list = nothing to reset).
+  // Fail-soft on read errors (no list = nothing to reset). Errors
+  // are logged via `logFailSoft` so programming bugs aren't silently
+  // swallowed (codex r3338412192).
   try {
     const tracked = await listValidateCycleKeys(root);
     for (const { specId, tcId } of tracked) {
       if (!observedKeys.has(`${specId}:${tcId}`)) {
         try {
           await resetValidateCycle(root, specId, tcId);
-        } catch {
-          // Ignore individual reset failures — keeps consecutive
-          // semantics best-effort without crashing validate.
+        } catch (err) {
+          logFailSoft("resetValidateCycle", specId, tcId, err);
         }
       }
     }
-  } catch {
-    // Ignore: stale-reset is best-effort.
+  } catch (err) {
+    logFailSoft("listValidateCycleKeys", null, null, err);
   }
   return issues;
+}
+
+/**
+ * Log a fail-soft failure to stderr with the error class so an
+ * operator (or CI scrubber) can correlate counter drift with the
+ * underlying cause. Keeps the validator's "never crash on auxiliary
+ * bookkeeping" contract while restoring observability — the prior
+ * bare `catch {}` form would swallow a TypeError just as silently as
+ * an expected ENOSPC.
+ */
+function logFailSoft(
+  operation: string,
+  specId: string | null,
+  tcId: string | null,
+  err: unknown,
+): void {
+  const code = (err as NodeJS.ErrnoException | undefined)?.code;
+  const message = err instanceof Error ? err.message : String(err);
+  const cls = err instanceof Error ? err.constructor.name : typeof err;
+  const target = specId !== null && tcId !== null ? ` for ${specId}:${tcId}` : "";
+  const codeStr = typeof code === "string" && code.length > 0 ? ` (${code})` : "";
+  process.stderr.write(
+    `qfai validate [D-SCAFFOLD-PLACEHOLDER]: ${operation} fail-soft${target} — ${cls}${codeStr}: ${message}\n`,
+  );
 }
