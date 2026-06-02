@@ -2053,16 +2053,30 @@ function countIterations(protoJson: unknown): number {
 /**
  * Extract a structural view of every iteration suitable for the
  * exploration-mode reviewer-gate detector. Per-iteration shape is
- * `{index, mode?}`; missing / non-string `mode` slots are
- * interpreted as `convergence` per the helper contract (legacy
- * iterations written before the mode slot existed). No bare `as`
- * casts on the unknown payload.
+ * `{index, mode?}`; missing / non-string `mode` slots inherit the
+ * most-recent prior explicit mode (sticky-mode semantics) — matching
+ * `core/prototyping/modeRead.ts#readPrototypingModeForRelax`. Both
+ * surfaces (validate-relax + certify) MUST agree on the effective
+ * mode of any given iteration, otherwise an exploration loop whose
+ * later iteration writers happened to omit `mode` could pass certify
+ * (read as convergence here) while still benefiting from the
+ * warning-only soft-gate relaxation (read as exploration there) —
+ * the "soft-relaxed exploration loop sealed by certify" window the
+ * reviewer flagged in codex r3338416753. Legacy iterations written
+ * before the mode slot existed pre-date any exploration writer, so
+ * sticky-inherited mode stays `undefined` for them and certify falls
+ * through to the convergence default.
+ *
+ * No bare `as` casts on the unknown payload.
  */
-function extractIterationViewsForCertify(protoJson: unknown): readonly CertifyIterationView[] {
+export function extractIterationViewsForCertify(
+  protoJson: unknown,
+): readonly CertifyIterationView[] {
   if (!isRecord(protoJson)) return [];
   const iterations: unknown = protoJson.iterations;
   if (!Array.isArray(iterations)) return [];
   const views: CertifyIterationView[] = [];
+  let lastExplicitMode: "convergence" | "exploration" | undefined;
   for (let i = 0; i < iterations.length; i += 1) {
     const entry: unknown = iterations[i];
     let index = i;
@@ -2075,7 +2089,14 @@ function extractIterationViewsForCertify(protoJson: unknown): readonly CertifyIt
       const rawMode = entry.mode;
       if (rawMode === "convergence" || rawMode === "exploration") {
         mode = rawMode;
+        lastExplicitMode = rawMode;
+      } else if (lastExplicitMode !== undefined) {
+        // Sticky inheritance: iteration omitted `mode` but a prior
+        // iteration set it explicitly — carry that posture forward.
+        mode = lastExplicitMode;
       }
+    } else if (lastExplicitMode !== undefined) {
+      mode = lastExplicitMode;
     }
     views.push(mode !== undefined ? { index, mode } : { index });
   }

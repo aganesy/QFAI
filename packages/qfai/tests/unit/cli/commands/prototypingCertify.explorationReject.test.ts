@@ -17,6 +17,7 @@ import {
   detectExplorationCertifyAttempt,
   resolveCertifyAcceptedIterationIndex,
 } from "../../../../src/core/validators/prototyping/explorationCertify.js";
+import { extractIterationViewsForCertify } from "../../../../src/cli/commands/prototypingCertify.js";
 
 describe("TC-0012-0476: certify against exploration-mode iterations emits R-EXPLORATION-CERTIFY-ATTEMPT", () => {
   it("fires (error) when any iteration was produced under exploration mode", () => {
@@ -77,5 +78,58 @@ describe("TC-0012-0476: acceptedIterationIndex resolves to convergence-mode iter
       { index: 1, mode: "exploration" },
     ]);
     expect(idx).toBe(0);
+  });
+});
+
+// Pin cross-surface mode consistency (codex r3338416753):
+// `extractIterationViewsForCertify` (certify) MUST inherit the most-
+// recent explicit mode for iterations that omit `mode`, matching
+// `readPrototypingModeForRelax` (validate-relax). Without this, an
+// `iterate --cycle 0 --mode exploration` loop whose later iteration
+// writer omits `mode` would get warning-only soft-gate relaxation
+// (validate sees exploration) AND pass certify (certify saw
+// convergence) — opening the "soft-relaxed exploration loop sealed by
+// certify" window.
+describe("extractIterationViewsForCertify (sticky-mode inheritance)", () => {
+  it("inherits the most-recent explicit mode for iterations that omit `mode`", () => {
+    const views = extractIterationViewsForCertify({
+      iterations: [{ index: 0, mode: "exploration" }, { index: 1 }],
+    });
+    expect(views).toEqual([
+      { index: 0, mode: "exploration" },
+      { index: 1, mode: "exploration" },
+    ]);
+  });
+
+  it("an explicit later mode overrides the inherited posture", () => {
+    const views = extractIterationViewsForCertify({
+      iterations: [
+        { index: 0, mode: "exploration" },
+        { index: 1 },
+        { index: 2, mode: "convergence" },
+      ],
+    });
+    expect(views).toEqual([
+      { index: 0, mode: "exploration" },
+      { index: 1, mode: "exploration" },
+      { index: 2, mode: "convergence" },
+    ]);
+  });
+
+  it("leaves mode undefined when no prior iteration has set it (legacy)", () => {
+    const views = extractIterationViewsForCertify({
+      iterations: [{ index: 0 }, { index: 1 }],
+    });
+    expect(views).toEqual([{ index: 0 }, { index: 1 }]);
+  });
+
+  it("the sticky views drive R-EXPLORATION-CERTIFY-ATTEMPT — a no-mode iteration after exploration is rejected", () => {
+    const views = extractIterationViewsForCertify({
+      iterations: [{ index: 0, mode: "exploration" }, { index: 1 }],
+    });
+    const issues = detectExplorationCertifyAttempt({ iterations: views });
+    const finding = issues.find((i) => i.code === "R-EXPLORATION-CERTIFY-ATTEMPT");
+    expect(finding).toBeDefined();
+    expect(finding?.severity).toBe("error");
   });
 });
