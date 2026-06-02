@@ -64,6 +64,17 @@ const FOUR_STATE_CHECK_RE = /\bfour_state_check\s*:/i;
  * (whitespace-only) values as unfilled.
  */
 const TODO_PLACEHOLDER_RE = /^(?:\s*(?:TODO|FIXME|XXX|TBD|<placeholder>)\s*|\s*)$/i;
+
+/**
+ * Escape a literal string for inclusion in a dynamic `RegExp` source.
+ * Covers the full ECMAScript regex special-char set including `]`,
+ * `-`, and `\` so a future `TASK_FIDELITY_REQUIRED_KEYWORDS` entry
+ * with metacharacters (none today; the SSOT is open-ended) cannot
+ * silently break the value-extraction regex.
+ */
+function escapeKeywordForRegex(literal: string): string {
+  return literal.replace(/[.*+?^${}()|[\]\-\\]/g, "\\$&");
+}
 const MAX_PRIMARY_STEPS_RE = /\bmax_primary_steps\s*:\s*(\d+)/i;
 
 export async function validateRenderCritique(root: string, config: QfaiConfig): Promise<Issue[]> {
@@ -296,8 +307,21 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
     // check stay aligned at the SSOT level.
     const placeholderKeywords: string[] = [];
     for (const keyword of TASK_FIDELITY_REQUIRED_KEYWORDS) {
+      // Capture the value bytes after `<keyword>:` for SSOT keywords.
+      //   - `[ \t]*` (NOT `\s*`) after the colon so an EMPTY value
+      //     (`cta_visibility:` followed by a newline) captures the
+      //     empty string here, not the next line's content. `\s`
+      //     would include `\n` and let the capture greedily walk
+      //     past the line, producing a false-negative for the empty
+      //     placeholder class.
+      //   - `[^\r\n]*` for the capture so we never cross a line.
+      //   - `escapeKeywordForRegex` uses a complete special-char set
+      //     including `]` and `-` so a future keyword containing
+      //     regex metacharacters does not silently break the
+      //     extraction (today's keywords are `[a-z_]` only, but the
+      //     SSOT is open-ended).
       const valueRe = new RegExp(
-        `\\b${keyword.replace(/[.*+?^${}()|[\\\\]]/g, "\\\\$&")}\\s*:\\s*([^\\n]*)`,
+        `\\b${escapeKeywordForRegex(keyword)}[ \\t]*:[ \\t]*([^\\r\\n]*)`,
         "i",
       );
       const m = valueRe.exec(allEvidenceContent);
