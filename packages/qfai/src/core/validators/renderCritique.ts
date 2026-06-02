@@ -312,16 +312,17 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
         issue(
           "QFAI-CRIT-009",
           `taskFidelity placeholders not filled: ${placeholderKeywords.join(", ")} ` +
-            `still carry TODO / FIXME / placeholder / empty values. The ` +
-            `--capture skeleton seeds these markers; replace each with the ` +
-            `recorded evaluation before sealing the iteration. ` +
+            `still carry placeholder markers (TODO / FIXME / XXX / TBD / ` +
+            `<placeholder>) or empty values. The --capture skeleton seeds ` +
+            `these markers; replace each with the recorded evaluation ` +
+            `before sealing the iteration. ` +
             `Required keywords: ${keywordList}. Expected section: ${TASK_FIDELITY_SECTION_NAME}.`,
           "error",
           evidenceDir,
           "renderCritique.taskFidelityPlaceholder",
           undefined,
           "change",
-          `Replace TODO / FIXME / placeholder values for ${placeholderKeywords.join(", ")} with the actual recorded evaluation.`,
+          `Replace placeholder markers (TODO / FIXME / XXX / TBD / <placeholder>) or empty values for ${placeholderKeywords.join(", ")} with the actual recorded evaluation.`,
         ),
       );
     }

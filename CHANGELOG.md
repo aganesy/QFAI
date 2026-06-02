@@ -16,9 +16,11 @@
   re-run `qfai init` (idempotent: `ensureRootGitignoreEntries` strips
   the existing QFAI managed block via `removeManagedBlock` and then
   appends the current `QFAI_GITIGNORE_BLOCK` verbatim, so the new
-  `.qfai/state.json` entry lands alongside the legacy entries in a
-  single block rewrite). The init branch also writes the new entry
-  on fresh repos.
+  `.qfai/state.json` entry lands alongside the current managed
+  entries (legacy lines listed in `QFAI_GITIGNORE_LEGACY_LINES` are
+  stripped in the same pass — see the migration contract in
+  `core/gitignore.ts`) in a single block rewrite. The init branch
+  also writes the new entry on fresh repos.
 
 ## [1.9.2] - 2026-06-01
 
