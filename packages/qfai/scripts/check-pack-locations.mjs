@@ -19,16 +19,25 @@
  *   rule are deliberately not re-flagged.
  *
  * Invocation modes:
- *   - default          local: read staged + working-tree changes from
- *                      `git`. CI: when neither yields any paths AND
- *                      `--base-ref` is available (or `origin/main` is
- *                      reachable), additionally consult
- *                      `git diff --name-only <base>...HEAD` so a
- *                      committed-but-misplaced pack on the PR branch
- *                      is still caught after the CI checkout brings
- *                      the working tree to a clean HEAD.
- *   - `--base-ref <ref>` force the PR-diff base for CI invocations.
- *                      Defaults to `origin/main` when omitted in CI.
+ *   - default          read three change-sources and union them:
+ *                      `git diff --name-only --cached HEAD` (staged),
+ *                      `git status --porcelain` (working-tree), and
+ *                      `git diff --name-only <base>...HEAD` (PR diff
+ *                      against the base ref). The three reads are
+ *                      ALWAYS unioned regardless of which subset
+ *                      yields paths — that keeps the contract a
+ *                      superset (no misses) and matches both local
+ *                      and CI invocations: locally the staged + status
+ *                      sets carry uncommitted edits; in CI those two
+ *                      are empty after `actions/checkout`, and the
+ *                      base-diff catches the committed-but-misplaced
+ *                      pack on the PR branch. The base-ref read
+ *                      soft-fails (try/catch) when the base ref is
+ *                      unreachable (e.g. a fork or a local repo
+ *                      without `origin/main` fetched), so a missing
+ *                      base never hard-fails the lane.
+ *   - `--base-ref <ref>` force the PR-diff base. Defaults to
+ *                      `origin/main`.
  *   - `--changed <csv>` accept a comma-separated path list directly.
  *                      Used by integration tests so they need not spin
  *                      up a real git repo.

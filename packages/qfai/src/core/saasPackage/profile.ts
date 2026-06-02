@@ -34,6 +34,20 @@ const HANDOFF_REL = ".qfai/handoff.yaml";
  * `config.paths.contractsDir`. The fallback `.qfai/contracts/design/
  * design-system.yaml` is preserved for projects that do not override
  * `contractsDir`, matching the legacy hardcoded surface.
+ *
+ * The reported `rel` is forward-slash normalized when the resolved
+ * absolute path is INSIDE `root` (the common case for relative or
+ * inside-root absolute `contractsDir` values). When the resolved
+ * absolute path is OUTSIDE `root` (operator pointed `contractsDir` at
+ * an absolute location elsewhere on disk — an uncommon but valid
+ * configuration), `rel` falls back to the absolute path itself so the
+ * `D-SAAS-PACKAGE-ATTESTATION-MISSING` message always names a
+ * locatable filesystem path. A naive `path.relative` would have
+ * produced a `../...` string and the prior `replace(/^(\.\.\/)+/, "")`
+ * cleanup would have stripped the parent-traversal prefix into a
+ * dangling middle-of-tree string that no longer maps to the real file
+ * — least-astonishment violation. The new fallback always names a
+ * path the operator can navigate to.
  */
 function resolveDesignAttestationPath(
   root: string,
@@ -42,13 +56,12 @@ function resolveDesignAttestationPath(
   const contractsDir = config.paths.contractsDir;
   if (typeof contractsDir === "string" && contractsDir.length > 0) {
     const abs = path.resolve(root, contractsDir, DESIGN_ATTESTATION_SUBPATH);
-    const rel = path
-      .relative(root, abs)
-      .replace(/\\/g, "/")
-      // Avoid emitting `../...` when the absolute path escapes root —
-      // that case is impossible with normal config values but keeps the
-      // displayed rel string sane.
-      .replace(/^(\.\.\/)+/, "");
+    const rawRelative = path.relative(root, abs);
+    const isOutsideRoot = rawRelative.startsWith("..") || path.isAbsolute(rawRelative);
+    if (isOutsideRoot) {
+      return { abs, rel: abs.replace(/\\/g, "/") };
+    }
+    const rel = rawRelative.replace(/\\/g, "/");
     return { abs, rel: rel.length > 0 ? rel : DESIGN_ATTESTATION_REL };
   }
   return { abs: path.join(root, DESIGN_ATTESTATION_REL), rel: DESIGN_ATTESTATION_REL };
