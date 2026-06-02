@@ -98,4 +98,47 @@ describe("TC-0004-0068: saas-package profile rejects missing DCON-005 attestatio
     expect(carried).toBeDefined();
     expect(carried?.severity).toBe("warning");
   });
+
+  // Pin the outside-root absolute-path fallback for the rel display.
+  // When `config.paths.contractsDir` is an absolute path that resolves
+  // OUTSIDE `root`, the `D-SAAS-PACKAGE-ATTESTATION-MISSING` message
+  // must name the resolved absolute path (forward-slash normalized)
+  // rather than the prior `..`-stripped dangling string that pointed
+  // at a non-existent middle-of-tree location. This guards against a
+  // regression that re-introduces the `replace(/^(\.\.\/)+/, "")`
+  // cleanup that mangled the rel when `path.relative(root, abs)` had
+  // to traverse upward.
+  it("names the absolute resolved path when contractsDir is configured outside root", async () => {
+    // Outside-root contractsDir: place it as a sibling of `root`.
+    const outsideContracts = await mkdtemp(path.join(os.tmpdir(), "qfai-saas-outside-"));
+    try {
+      // Do NOT seed the attestation under outsideContracts — we want
+      // the missing-attestation branch to fire so we can assert the
+      // message text.
+      const customConfig = {
+        ...defaultConfig,
+        paths: { ...defaultConfig.paths, contractsDir: outsideContracts },
+      };
+      const issues = await runSaasPackageProfile(root, customConfig, []);
+      const attestationError = issues.find(
+        (i) => i.severity === "error" && i.code === "D-SAAS-PACKAGE-ATTESTATION-MISSING",
+      );
+      expect(attestationError).toBeDefined();
+      const expectedAbs = path
+        .join(outsideContracts, "design", "design-system.yaml")
+        .replace(/\\/g, "/");
+      // The message MUST name the navigable absolute path, not a
+      // dangling `..`-stripped relative string.
+      expect(attestationError?.message ?? "").toContain(expectedAbs);
+      // Regression guard: the message must NOT start with `.qfai/` —
+      // the prior bug stripped the parent-traversal and emitted
+      // `design/design-system.yaml` (no project anchor) which a casual
+      // reader would misread as the legacy in-root path.
+      expect(attestationError?.message ?? "").not.toMatch(
+        /Design-system attestation is absent: design\/design-system\.yaml/,
+      );
+    } finally {
+      await rm(outsideContracts, { recursive: true, force: true });
+    }
+  });
 });

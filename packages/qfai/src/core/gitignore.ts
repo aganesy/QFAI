@@ -11,6 +11,14 @@ export const QFAI_GITIGNORE_REQUIRED_ENTRIES: readonly string[] = [
   ".qfai/evidence/*",
   ".qfai/discussion/*",
   ".qfai/review/*",
+  // Per-runtime state. Written by `qfai discussion use`,
+  // `qfai atdd scaffold` (escalation counters), and any future
+  // single-file state holder. The file header explicitly states
+  // "NOT committed configuration"; without this entry every normal
+  // CLI run leaves an untracked `.qfai/state.json` in the consumer
+  // repo and makes it trivial to accidentally `git add .` and
+  // commit local session pointers / counters.
+  ".qfai/state.json",
 ] as const;
 
 /** Lines removed from the managed block in previous versions; stripped during migration. */
@@ -30,5 +38,6 @@ export const QFAI_GITIGNORE_BLOCK = [
   ".qfai/evidence/*",
   ".qfai/discussion/*",
   ".qfai/review/*",
+  ".qfai/state.json",
   "",
 ].join("\n");

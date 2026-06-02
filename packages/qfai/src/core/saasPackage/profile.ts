@@ -57,7 +57,21 @@ function resolveDesignAttestationPath(
   if (typeof contractsDir === "string" && contractsDir.length > 0) {
     const abs = path.resolve(root, contractsDir, DESIGN_ATTESTATION_SUBPATH);
     const rawRelative = path.relative(root, abs);
-    const isOutsideRoot = rawRelative.startsWith("..") || path.isAbsolute(rawRelative);
+    // Test the FIRST segment of `rawRelative` rather than a prefix
+    // `startsWith("..")`. The prefix-only check false-positives on
+    // legitimate inside-root names that begin with two dots
+    // (e.g. `contractsDir = "..foo/bar"` → `rawRelative = "..foo/bar/
+    // design/design-system.yaml"`, which would have been flagged as
+    // outside-root and switched to the absolute fallback even though
+    // the path is squarely inside root). The exact-`..` + `../` + `..\`
+    // forms are the actual parent-traversal markers; treat anything
+    // else (and any absolute `rawRelative`) as outside-root. Drive-
+    // crossing on Windows (`D:\...`) lands in `path.isAbsolute`.
+    const isOutsideRoot =
+      rawRelative === ".." ||
+      rawRelative.startsWith(".." + path.sep) ||
+      rawRelative.startsWith("../") ||
+      path.isAbsolute(rawRelative);
     if (isOutsideRoot) {
       return { abs, rel: abs.replace(/\\/g, "/") };
     }
