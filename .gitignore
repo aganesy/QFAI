@@ -59,3 +59,4 @@ coverage/
 .qfai/evidence/*
 .qfai/discussion/*
 .qfai/review/*
+.qfai/state.json
