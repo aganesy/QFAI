@@ -22,10 +22,14 @@ export type CertifyIterationView = {
    * `core/prototyping/modeRead.ts#resolvePrototypingIterationViews`,
    * which forward-walks `prototyping.json#iterations[]` and applies
    * sticky-mode inheritance (an omitted `mode` slot inherits the
-   * most-recent prior explicit mode). Absent fields here only occur
-   * in fully legacy loops where NO iteration ever set `mode` — those
-   * remain `undefined` and certify falls through to the convergence
-   * default for that subset.
+   * most-recent PRIOR explicit mode — inheritance never flows
+   * backward, so leading iterations that omit `mode` remain
+   * `undefined` even when a later iteration sets one, e.g.
+   * `[{}, {mode:"exploration"}]` produces view[0].mode === undefined,
+   * view[1].mode === "exploration"). Absent fields here are treated
+   * as convergence by the detector — that is gate-safe: certify still
+   * fires on the explicit exploration view downstream, so the
+   * "relax-relaxed ⇒ certify-rejects" superset invariant holds.
    */
   readonly mode?: "convergence" | "exploration";
 };
