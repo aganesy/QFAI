@@ -28,7 +28,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { defaultConfig } from "../../../../src/core/config.js";
 import { validateScaffoldPlaceholder } from "../../../../src/core/validators/scaffoldPlaceholder.js";
@@ -192,6 +192,36 @@ describe("validateScaffoldPlaceholder", () => {
     const finding = issues.find((i) => i.code === "D-SCAFFOLD-PLACEHOLDER");
     expect(finding?.severity).toBe("warning");
     expect(finding?.message ?? "").toMatch(/1\/3 validate cycles/);
+  });
+
+  // Pin: when the state-write fails (read-only FS / disk full /
+  // permission denied / etc.), the finding still surfaces (fail-soft
+  // to warning) AND the progress note clearly indicates the counter
+  // is unavailable — so the operator is NOT misled into thinking
+  // they have a fresh "0/N" grace window when the placeholder may
+  // have persisted across many cycles already.
+  it("surfaces 'counter unavailable' in the message when state write fails (fail-soft)", async () => {
+    const escalationMod = await import("../../../../src/core/atdd/scaffoldEscalation.js");
+    const original = escalationMod.recordValidateCycle;
+    const spy = vi
+      .spyOn(escalationMod, "recordValidateCycle")
+      .mockRejectedValue(new Error("EACCES: read-only state.json"));
+    try {
+      await seedScaffold("spec-0008", "TC-0008-0001", placeholderBodyFor("TC-0008-0001"));
+      const issues = await validateScaffoldPlaceholder(root, defaultConfig);
+      const finding = issues.find((i) => i.code === "D-SCAFFOLD-PLACEHOLDER");
+      // Still surfaces (fail-soft).
+      expect(finding).toBeDefined();
+      // Stays warning when the counter is unavailable.
+      expect(finding?.severity).toBe("warning");
+      // Message must NOT show a misleading "0/3" zero-progress display.
+      expect(finding?.message ?? "").not.toMatch(/0\/3 validate cycles observed/);
+      // Instead it should explicitly signal counter unavailability.
+      expect(finding?.message ?? "").toMatch(/counter unavailable/);
+    } finally {
+      spy.mockRestore();
+      void original;
+    }
   });
 
   // Pin: stale counters from a previous run are reset when the

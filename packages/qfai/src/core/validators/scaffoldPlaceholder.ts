@@ -146,26 +146,43 @@ export async function validateScaffoldPlaceholder(
     // (fail-soft) so validate never crashes on an auxiliary
     // bookkeeping failure (read-only FS / disk full / etc.).
     let maxAttempts = 0;
+    let counterAvailable = false;
     if (specId !== null) {
       for (const tcId of tcIds) {
         observedKeys.add(`${specId}:${tcId}`);
         try {
           const next = await recordValidateCycle(root, specId, tcId);
+          counterAvailable = true;
           if (next > maxAttempts) {
             maxAttempts = next;
           }
         } catch {
-          // Fail-soft: leave maxAttempts at 0 for this TC so it
-          // surfaces as warning rather than crashing the validator.
+          // Fail-soft: a state-write failure for this TC leaves the
+          // counter unread. We don't set counterAvailable=true so the
+          // progress note degrades to "counter unavailable" rather
+          // than silently displaying "0/N" (which would mislead the
+          // operator into thinking they have a full grace window
+          // when the placeholder may have persisted for many cycles).
         }
       }
     }
     const escalated = shouldEscalate(maxAttempts, threshold);
     const severity = escalated ? "error" : "warning";
-    const progressNote =
-      specId !== null && threshold > 0
+    // Progress note discipline:
+    //   - no specId / threshold disabled → omit entirely (escalation
+    //     not applicable to this finding);
+    //   - counter recorded → show "N/threshold validate cycles observed"
+    //     so the operator can predict the next escalation;
+    //   - counter write failed → show "counter unavailable" so the
+    //     operator is NOT misled into thinking they have a fresh
+    //     grace window when the placeholder may have been there for
+    //     many cycles. Codex r3338411383.
+    let progressNote = "";
+    if (specId !== null && threshold > 0) {
+      progressNote = counterAvailable
         ? ` (${maxAttempts}/${threshold} validate cycles observed)`
-        : "";
+        : ` (counter unavailable — state write failed; escalation may be inaccurate)`;
+    }
     const escalationNote = escalated
       ? `escalated to error after ${threshold} \`qfai validate\` cycles`
       : `current severity warning; escalates to error after ${threshold} \`qfai validate\` cycles with the placeholder unremoved (configurable via qfai.config.yaml#atdd.scaffoldEscalateCycles; 0 disables)`;
