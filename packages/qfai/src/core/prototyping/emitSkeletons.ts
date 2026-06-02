@@ -20,6 +20,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { SAFE_SCREEN_ID_PATTERN } from "../validators/uiEvidenceArtifacts.js";
+
 export type SkeletonMode = "placeholder" | "full" | "stub";
 
 export type SkeletonScreen = {
@@ -120,26 +122,21 @@ export function buildSkeletonsForUnion(input: EmitSkeletonsInput): readonly Emit
  * contract reader accepts arbitrary strings for `screens[].id`, but
  * the writer joins the id directly into a filesystem path — so a
  * malicious or accidentally-formed contract value like
- * `../../outside` could escape `outDir`. Pin the set to a narrow
- * ASCII-safe regex; anything else is rejected before the file is
- * written. Validation is done at the write boundary (not via the
- * existing casing validator) so this guard remains in force even when
- * an operator opts out of the casing rule.
+ * `../../outside` could escape `outDir`. Re-use the validator's
+ * `SAFE_SCREEN_ID_PATTERN` (single source of truth) so the writer
+ * and validator can never drift: a screen id the validator accepts
+ * also writes successfully via `--emit-skeletons`, and vice versa.
  *
- * The regex MUST stay in lockstep with the evidence validator's
- * `SAFE_SCREEN_ID_PATTERN` (`core/validators/uiEvidenceArtifacts.ts`)
- * so a screen id that the validator accepts also writes successfully
- * via `--emit-skeletons`. The canonical pattern allows dots in
- * non-leading positions (e.g. `account.settings`) while rejecting
- * path separators (`/`, `\`), leading dots (`.` / `..` / `../`),
- * colons, and any other non-ASCII-safe input. Anchor `^[A-Za-z0-9]`
- * for the first char to forbid leading dots so the
- * dot-prefix-traversal class (`..foo`) cannot slip past the guard.
+ * The canonical pattern is `/^[A-Za-z0-9][A-Za-z0-9._-]*$/u`:
+ *   - First char: letter or digit (rejects leading `.`, `_`, `-`)
+ *   - Subsequent chars: letters, digits, `.`, `_`, `-` only
+ *   - Rejects path separators (`/`, `\`, `:`), leading dots
+ *     (`.outside`, `..foo`, `../escape`), and any other non-ASCII-
+ *     safe input
  */
-const SAFE_SCREEN_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
 
 function isSafeScreenId(id: string): boolean {
-  return SAFE_SCREEN_ID_RE.test(id);
+  return SAFE_SCREEN_ID_PATTERN.test(id);
 }
 
 /**
@@ -164,9 +161,10 @@ export async function writeSkeletons(
     if (!isSafeScreenId(sk.screenId)) {
       throw new Error(
         `emitSkeletons: unsafe screenId ${JSON.stringify(sk.screenId)} — ` +
-          "must match /^[A-Za-z0-9][A-Za-z0-9._-]*$/ (no path separators " +
-          "and no leading dot). Reject the UI contract entry before " +
-          "--emit-skeletons writes any HTML.",
+          "must match /^[A-Za-z0-9][A-Za-z0-9._-]*$/ (first char must be a " +
+          "letter or digit; subsequent chars must be letters, digits, `.`, " +
+          "`_`, or `-`; no path separators). Reject the UI contract entry " +
+          "before --emit-skeletons writes any HTML.",
       );
     }
     const target = path.join(outDir, `${sk.screenId}.html`);

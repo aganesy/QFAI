@@ -127,15 +127,32 @@ describe("TC-0004-0068: saas-package profile rejects missing DCON-005 attestatio
       const expectedAbs = path
         .join(outsideContracts, "design", "design-system.yaml")
         .replace(/\\/g, "/");
-      // The message MUST name the navigable absolute path, not a
-      // dangling `..`-stripped relative string.
+      // Primary assertion: the message MUST name the navigable
+      // resolved absolute path (forward-slash normalized). This alone
+      // catches a regression to the `..`-stripped form, because
+      // re-introducing the `replace(/^(\.\.\/)+/, "")` cleanup would
+      // emit `<outsideName>/design/design-system.yaml` (the absolute
+      // path's last directory + leaf, missing the project anchor)
+      // rather than the resolved absolute path, so the
+      // `toContain(expectedAbs)` check fails.
       expect(attestationError?.message ?? "").toContain(expectedAbs);
-      // Regression guard: the message must NOT start with `.qfai/` —
-      // the prior bug stripped the parent-traversal and emitted
-      // `design/design-system.yaml` (no project anchor) which a casual
-      // reader would misread as the legacy in-root path.
+      // Secondary regression guard: directly assert the resolved
+      // absolute path is NOT relativized into a middle-of-tree
+      // string. The buggy `..`-stripped form would emit
+      // `<outsideName>/design/design-system.yaml` (no project anchor,
+      // no `os.tmpdir()` prefix); the fixed form keeps the full
+      // absolute path. Check the message does NOT contain the
+      // expectation-without-tmpdir-prefix shape that the old cleanup
+      // produced.
+      const outsideName = path.basename(outsideContracts);
+      const buggyRel = `${outsideName}/design/design-system.yaml`;
+      // The bare relative shape (without the os.tmpdir() prefix)
+      // would surface only under the old cleanup; the absolute form
+      // contains it as a suffix but also has the full path prefix,
+      // so we check for "absent: <bareRel>" (the operator-facing
+      // anchor where the old form would emerge).
       expect(attestationError?.message ?? "").not.toMatch(
-        /Design-system attestation is absent: design\/design-system\.yaml/,
+        new RegExp(`absent:\\s+${buggyRel.replace(/[.]/g, "\\.")}\\.`),
       );
     } finally {
       await rm(outsideContracts, { recursive: true, force: true });
