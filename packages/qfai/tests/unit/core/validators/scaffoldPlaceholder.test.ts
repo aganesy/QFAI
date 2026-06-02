@@ -1,18 +1,25 @@
 /**
- * Unit: `D-SCAFFOLD-PLACEHOLDER` validator (BR-0008-0008 /
- * BR-0008-0009).
+ * Unit: `D-SCAFFOLD-PLACEHOLDER` validator.
  *
  * Pins the bridge between `qfai atdd scaffold` (which emits
  * skeleton files containing `QFAI-SCAFFOLD-PLACEHOLDER` +
  * `// TODO: implement assertion for <TC-ID>`) and
  * `qfai validate --profile atdd|full`, so unfilled scaffolds are
- * visible to the validate surface AND the per-(spec, TC)
- * escalation counter advances every validate cycle.
+ * visible to the validate surface AND the validate-only per-(spec,
+ * TC) cycle counter (`atdd.scaffoldValidateCycles`) advances every
+ * validate cycle.
  *
- * Severity contract per AC-0008-0011 / TC-0008-0014:
+ * Severity contract:
  *   - Cycles 1, 2: severity `warning`
  *   - Cycle 3 onward: severity `error` (default
- *     `atdd.scaffoldEscalateCycles = 3` per DR-0272)
+ *     `atdd.scaffoldEscalateCycles = 3`)
+ *
+ * Counter separation: the validate counter
+ * (`atdd.scaffoldValidateCycles`) is decoupled from the scaffold
+ * counter (`atdd.scaffoldAttempts`) so the spec's "consecutive
+ * `qfai validate` cycles" semantics survives interleaved scaffold
+ * runs (one `qfai atdd scaffold` invocation does NOT count toward
+ * the validate cycle).
  */
 // QFAI:SPEC-0008:TC-0008-0013
 // QFAI:SPEC-0008:TC-0008-0014
@@ -104,14 +111,13 @@ describe("validateScaffoldPlaceholder", () => {
     expect(findings.map((f) => f.message ?? "").join("\n")).toMatch(/TC-0008-0002/);
   });
 
-  // Pin the BR-0008-0009 / AC-0008-0011 / TC-0008-0014 escalation
-  // contract: after `atdd.scaffoldEscalateCycles` (default 3)
-  // consecutive validate cycles with the SAME placeholder
+  // Pin the escalation contract: after `atdd.scaffoldEscalateCycles`
+  // (default 3) consecutive validate cycles with the SAME placeholder
   // unremoved, the finding escalates from warning to error. The
   // validator increments a per-(spec, TC) counter in
-  // `.qfai/state.json#atdd.scaffoldAttempts` on every call, so
+  // `.qfai/state.json#atdd.scaffoldValidateCycles` on every call, so
   // running validate three times in a row trips the gate.
-  it("escalates from warning to error after 3 consecutive validate cycles (BR-0008-0009 default)", async () => {
+  it("escalates from warning to error after 3 consecutive validate cycles (default threshold)", async () => {
     await seedScaffold("spec-0008", "TC-0008-0001", placeholderBodyFor("TC-0008-0001"));
 
     // Cycle 1: counter advances 0 → 1; warning.
@@ -142,5 +148,84 @@ describe("validateScaffoldPlaceholder", () => {
     const issues = await validateScaffoldPlaceholder(root, customConfig);
     const finding = issues.find((i) => i.code === "D-SCAFFOLD-PLACEHOLDER");
     expect(finding?.severity).toBe("error");
+  });
+
+  // Pin: scaffoldEscalateCycles = 0 means "escalation disabled" and
+  // is honored identically by both `qfai validate` (this validator)
+  // and `qfai atdd scaffold` (DRY threshold resolver). The previous
+  // implementation defaulted 0 back to 3 in validate but honored 0
+  // in scaffold, so the same config key meant opposite things.
+  it("honors scaffoldEscalateCycles=0 (escalation disabled) and never advances to error", async () => {
+    await seedScaffold("spec-0008", "TC-0008-0001", placeholderBodyFor("TC-0008-0001"));
+    const customConfig = {
+      ...defaultConfig,
+      atdd: { ...defaultConfig.atdd, scaffoldEscalateCycles: 0 },
+    };
+    // Run 5 cycles — counter advances, but threshold=0 means
+    // `shouldEscalate` always returns false → stays warning.
+    for (let i = 0; i < 5; i += 1) {
+      const issues = await validateScaffoldPlaceholder(root, customConfig);
+      const finding = issues.find((i2) => i2.code === "D-SCAFFOLD-PLACEHOLDER");
+      expect(finding?.severity).toBe("warning");
+    }
+  });
+
+  // Pin: validate's cycle counter is DECOUPLED from scaffold's
+  // `recordScaffoldAttempt`. The scaffold command may advance
+  // `atdd.scaffoldAttempts` arbitrarily, but it MUST NOT spill into
+  // `atdd.scaffoldValidateCycles` — so the spec contract "consecutive
+  // `qfai validate` cycles" stays single-writer on the validate side.
+  // Pre-fix: a single shared counter meant `scaffold ×2 + validate ×1`
+  // tripped the threshold-3 gate on the first validate call.
+  it("scaffold-side counter advances do NOT spill into the validate-side counter", async () => {
+    const { recordScaffoldAttempt } =
+      await import("../../../../src/core/atdd/scaffoldEscalation.js");
+    await seedScaffold("spec-0008", "TC-0008-0001", placeholderBodyFor("TC-0008-0001"));
+    // Simulate two `qfai atdd scaffold` invocations leaving the
+    // placeholder unprogressed (counter advances on both).
+    await recordScaffoldAttempt(root, "spec-0008", "TC-0008-0001");
+    await recordScaffoldAttempt(root, "spec-0008", "TC-0008-0001");
+    // Now run validate ONCE — pre-fix this would have escalated
+    // (shared counter 2 + 1 = 3). Post-fix the validate counter is
+    // separate (0 + 1 = 1) so severity remains warning.
+    const issues = await validateScaffoldPlaceholder(root, defaultConfig);
+    const finding = issues.find((i) => i.code === "D-SCAFFOLD-PLACEHOLDER");
+    expect(finding?.severity).toBe("warning");
+    expect(finding?.message ?? "").toMatch(/1\/3 validate cycles/);
+  });
+
+  // Pin: stale counters from a previous run are reset when the
+  // placeholder is no longer observed this pass. This preserves the
+  // "consecutive" semantics — an operator who fills the placeholder
+  // and only re-runs `qfai validate` (not `qfai atdd scaffold`)
+  // should not leave a leftover counter that turns a later
+  // regression into a 1-cycle escalation.
+  it("resets the validate-cycle counter when a previously-tracked placeholder is filled", async () => {
+    const { readValidateCycles } = await import("../../../../src/core/atdd/scaffoldEscalation.js");
+    await seedScaffold("spec-0008", "TC-0008-0001", placeholderBodyFor("TC-0008-0001"));
+    // Two cycles → counter at 2.
+    await validateScaffoldPlaceholder(root, defaultConfig);
+    await validateScaffoldPlaceholder(root, defaultConfig);
+    expect(await readValidateCycles(root, "spec-0008", "TC-0008-0001")).toBe(2);
+
+    // Operator fills the placeholder. Run validate again — the
+    // file is no longer "still placeholder" so the validator
+    // observes nothing for this (spec, TC), and the stale counter
+    // gets cleared.
+    await writeFile(
+      path.join(root, "tests", "atdd", "spec-0008", "TC-0008-0001.test.ts"),
+      `// QFAI:SPEC-0008:TC-0008-0001
+import { describe, it, expect } from "vitest";
+describe("TC-0008-0001", () => {
+  it("passes", () => {
+    expect(1 + 1).toBe(2);
+  });
+});
+`,
+      "utf-8",
+    );
+    const issues = await validateScaffoldPlaceholder(root, defaultConfig);
+    expect(issues.filter((i) => i.code === "D-SCAFFOLD-PLACEHOLDER")).toEqual([]);
+    expect(await readValidateCycles(root, "spec-0008", "TC-0008-0001")).toBe(0);
   });
 });

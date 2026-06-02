@@ -24,11 +24,10 @@ import {
   readScaffoldAttempts,
   recordScaffoldAttempt,
   resetScaffoldAttempt,
+  resolveEscalateThreshold,
   shouldEscalate,
 } from "../../core/atdd/scaffoldEscalation.js";
 import { error as logError, info as logInfo } from "../lib/logger.js";
-
-const DEFAULT_ESCALATE_CYCLES = 3;
 
 export type AtddScaffoldOptions = {
   /** Project root (resolves `.qfai/specs/<specId>` underneath). */
@@ -45,18 +44,6 @@ function validateSpecId(specId: string): boolean {
   // Permissive: accept `spec-NNNN` shapes; future renaming is at the
   // discretion of the spec authority.
   return /^spec-\d{3,4}$/.test(specId);
-}
-
-function resolveEscalateThreshold(configured: number | undefined): number {
-  if (
-    typeof configured === "number" &&
-    Number.isFinite(configured) &&
-    Number.isInteger(configured) &&
-    configured >= 0
-  ) {
-    return configured;
-  }
-  return DEFAULT_ESCALATE_CYCLES;
 }
 
 type PerTcOutcome = {
