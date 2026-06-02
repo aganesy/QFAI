@@ -5,6 +5,7 @@ import fg from "fast-glob";
 
 import type { QfaiConfig } from "../config.js";
 import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
+import { escapeRegExp } from "../regex.js";
 import type { Issue } from "../types.js";
 import {
   TASK_FIDELITY_REQUIRED_KEYWORDS,
@@ -64,17 +65,6 @@ const FOUR_STATE_CHECK_RE = /\bfour_state_check\s*:/i;
  * (whitespace-only) values as unfilled.
  */
 const TODO_PLACEHOLDER_RE = /^(?:\s*(?:TODO|FIXME|XXX|TBD|<placeholder>)\s*|\s*)$/i;
-
-/**
- * Escape a literal string for inclusion in a dynamic `RegExp` source.
- * Covers the full ECMAScript regex special-char set including `]`,
- * `-`, and `\` so a future `TASK_FIDELITY_REQUIRED_KEYWORDS` entry
- * with metacharacters (none today; the SSOT is open-ended) cannot
- * silently break the value-extraction regex.
- */
-function escapeKeywordForRegex(literal: string): string {
-  return literal.replace(/[.*+?^${}()|[\]\-\\]/g, "\\$&");
-}
 const MAX_PRIMARY_STEPS_RE = /\bmax_primary_steps\s*:\s*(\d+)/i;
 
 export async function validateRenderCritique(root: string, config: QfaiConfig): Promise<Issue[]> {
@@ -315,15 +305,13 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
       //     past the line, producing a false-negative for the empty
       //     placeholder class.
       //   - `[^\r\n]*` for the capture so we never cross a line.
-      //   - `escapeKeywordForRegex` uses a complete special-char set
-      //     including `]` and `-` so a future keyword containing
-      //     regex metacharacters does not silently break the
-      //     extraction (today's keywords are `[a-z_]` only, but the
-      //     SSOT is open-ended).
-      const valueRe = new RegExp(
-        `\\b${escapeKeywordForRegex(keyword)}[ \\t]*:[ \\t]*([^\\r\\n]*)`,
-        "i",
-      );
+      //   - `escapeRegExp` (canonical SSOT in `core/regex.ts`) so a
+      //     future keyword containing regex metacharacters does not
+      //     silently break the extraction. Today's keywords are
+      //     `[a-z_]` only, but the SSOT is open-ended; reusing the
+      //     repo-wide canonical helper keeps the escape semantics
+      //     in lockstep with the other 8 consumer sites.
+      const valueRe = new RegExp(`\\b${escapeRegExp(keyword)}[ \\t]*:[ \\t]*([^\\r\\n]*)`, "i");
       const m = valueRe.exec(allEvidenceContent);
       const valueText = m?.[1] ?? "";
       if (m && TODO_PLACEHOLDER_RE.test(valueText)) {
@@ -336,10 +324,10 @@ export async function validateRenderCritique(root: string, config: QfaiConfig): 
         issue(
           "QFAI-CRIT-009",
           `taskFidelity placeholders not filled: ${placeholderKeywords.join(", ")} ` +
-            `still carry placeholder markers (TODO / FIXME / XXX / TBD / ` +
-            `<placeholder>) or empty values. The --capture skeleton seeds ` +
-            `these markers; replace each with the recorded evaluation ` +
-            `before sealing the iteration. ` +
+            `have placeholder markers (TODO / FIXME / XXX / TBD / ` +
+            `<placeholder>) or empty values. The --capture skeleton ` +
+            `seeds these markers; replace each with the recorded ` +
+            `evaluation before sealing the iteration. ` +
             `Required keywords: ${keywordList}. Expected section: ${TASK_FIDELITY_SECTION_NAME}.`,
           "error",
           evidenceDir,
