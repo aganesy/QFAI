@@ -200,7 +200,7 @@ async function runSddValidators(
     // Skill governance: `R-AUTOPILOT-POLICY-MISSING` on a qfai-*
     // SKILL.md that lacks the `## Default Autopilot Policy` section.
     // SKILL.md governance lives in the sdd profile.
-    ...(await validateAutopilotPolicy(root)),
+    ...(await validateAutopilotPolicy(root, { config })),
     // CLI-HANDOFF Pair IV — fire `R-HANDOFF-SCHEMA-DRIFT` on
     // asymmetric schema ↔ writer edits. Handoff is a skill-governance
     // surface so it lives in sdd.
