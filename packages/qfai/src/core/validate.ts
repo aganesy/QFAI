@@ -20,6 +20,7 @@ import { validateReviewArtifacts } from "./validators/reviewArtifacts.js";
 import { validateSpecPacks } from "./validators/specPack.js";
 import { validateTraceability } from "./validators/traceability.js";
 import { validateAtddCodeTraceability } from "./validators/atddCodeTraceability.js";
+import { validateScaffoldPlaceholder } from "./validators/scaffoldPlaceholder.js";
 import {
   detectPlatform,
   validateAgentDefinition,
@@ -266,7 +267,15 @@ async function runAtddValidators(
   root: string,
   config: ConfigLoadResult["config"],
 ): Promise<Issue[]> {
-  return [...(await validateAtddCodeTraceability(root, config))];
+  return [
+    ...(await validateAtddCodeTraceability(root, config)),
+    // D-SCAFFOLD-PLACEHOLDER (BR-0008-0008): surface unfilled
+    // `qfai atdd scaffold` skeletons at severity warning until the
+    // operator implements a real assertion. Wired into atdd + full
+    // profiles so the documented escalation path is reachable from
+    // the validate command surface.
+    ...(await validateScaffoldPlaceholder(root, config)),
+  ];
 }
 
 async function runTddValidators(

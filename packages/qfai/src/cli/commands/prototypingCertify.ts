@@ -1099,18 +1099,43 @@ async function runUpgradeScopeFull(
   const signalRead = await loadSaasPackageGatesSignal(canonicalAbs, fullProfileAbs, legacyAbs);
   if (signalRead.source === "full-profile") {
     // Freshness gate: the full-profile signal must have been written
-    // AFTER the scope-limited certificate was sealed (otherwise we
-    // would promote on stale evidence from a prior successful run
-    // that pre-dated the saas-package observation, even if a later
-    // saas-package run revealed the skipped gates regressed). The
-    // certificate's seal time is the operator-visible anchor for
-    // "current scope-limited state"; requiring the full-profile
-    // signal to post-date it closes the stale-signal upgrade class
-    // raised by codex r3338201990. We use mtime as a pragmatic
-    // proxy (sub-second precision on modern filesystems) — if the
-    // operator manually rewinds the clock the gate can be bypassed,
-    // but that case is out of scope (and would require explicit
-    // tampering with the certificate as well).
+    // AFTER the scope-limited certificate was sealed. Otherwise the
+    // upgrade promotes on stale evidence — a previously-successful
+    // `--profile full` validate run whose counts.error=0 predates
+    // the regression that prompted the operator to look again. The
+    // gate is scoped to the full-profile source (NOT the canonical
+    // source) because the standard recovery flow pins canonical at
+    // saas-package=INADMISSIBLE; the canonical-admissible path
+    // (operator wrote a non-saas-package profile to the canonical
+    // location, or a synthetic gates map) is not reachable from the
+    // recovery message and lives outside the codex r3338253318
+    // threat model. Should the canonical-admissible path become a
+    // recovery target in a future release, mirror this gate onto
+    // canonical with the same mtime invariant. The `legacy` source
+    // is also exempt — `.qfai/output/...` is the pre-CHG-005 layout
+    // in a deprecation window; gating it would surface migration
+    // noise without closing a real threat.
+    //
+    // Freshness signal: file mtime, with KNOWN LIMITATIONS:
+    //   - Sub-second precision on modern filesystems; coarse on
+    //     legacy / cross-FS layouts (FAT ≈ 2 s; some ext3 / HFS+
+    //     truncate to whole seconds). Connected operator flows
+    //     that execute `certify --scope saas-package && validate
+    //     --profile full && certify --upgrade-scope full` in the
+    //     same second on a coarse FS can produce equal mtimes and
+    //     trip the `<=` rejection. The mitigation is
+    //     non-destructive: the operator re-runs `validate
+    //     --profile full` after any measurable delay and the gate
+    //     clears. We accept the rare false-positive over admitting
+    //     any false-negative.
+    //   - mtime is NOT a tamper-resistant freshness signal — any
+    //     of `cp`, `rsync`, `git checkout`, `touch`, or clock skew
+    //     can reset or advance it. Future hardening (case A: embed
+    //     `generatedAt` in `ValidationResult` and compare to
+    //     `cert.generatedAt`; case B: link cert → validate-run via
+    //     a content sha256) would replace mtime with a content-
+    //     bound signal. Tracked as a future-minor follow-up. The
+    //     gate today is defense-in-depth, not a security boundary.
     const certAbs = path.resolve(root, COMPLETION_CERTIFICATE_REL_PATH);
     try {
       const [fullProfileStat, certStat] = await Promise.all([stat(fullProfileAbs), stat(certAbs)]);
@@ -1119,7 +1144,8 @@ async function runUpgradeScopeFull(
           "qfai prototyping certify: cannot upgrade scope — the full-profile " +
             `gates signal (${fullProfileSignalRel}, mtime ` +
             `${new Date(fullProfileStat.mtimeMs).toISOString()}) is NOT ` +
-            `newer than the scope-limited certificate (mtime ` +
+            `newer than the scope-limited certificate ` +
+            `(${COMPLETION_CERTIFICATE_REL_PATH}, mtime ` +
             `${new Date(certStat.mtimeMs).toISOString()}). Re-run ` +
             "`qfai validate --profile full --fail-on error` to write a fresh " +
             "full-profile signal, then re-run certify --upgrade-scope full.",
@@ -1127,12 +1153,15 @@ async function runUpgradeScopeFull(
         return 2;
       }
     } catch (err) {
-      // Fail-closed on any stat error other than EEXIST-style
-      // race (cert known to exist because we loaded it above; if
-      // the full-profile stat fails the loadSaasPackageGatesSignal
-      // probe also failed, which shouldn't happen since source is
-      // "full-profile"). Surface the underlying error and refuse
-      // the upgrade.
+      // Fail-closed on any stat error. Both files are expected to
+      // exist at this point (the cert was loaded above; the
+      // full-profile file was just read via
+      // loadSaasPackageGatesSignal). A failure here is unusual —
+      // permission flip, deleted-since-read race, etc. We refuse
+      // the upgrade and surface the underlying error rather than
+      // risk a silent pass. (Note: `EEXIST` is a write-side errno,
+      // not a stat-side one; the failure class here is ENOENT /
+      // EACCES / EIO etc.)
       const message = err instanceof Error ? err.message : String(err);
       error(
         "qfai prototyping certify: cannot upgrade scope — freshness " +

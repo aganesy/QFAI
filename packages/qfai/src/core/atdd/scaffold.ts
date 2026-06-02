@@ -31,6 +31,20 @@ export type TCEntry = {
   /** Optional `AC-Refs:` referenced acceptance criterion IDs. */
   acRefs: string[];
   /**
+   * Optional `US-Refs:` user-story references. Captured from any
+   * cell in table-form Test-Cases; surfaced as `// US-Refs:` comments
+   * in the emitted scaffold so traceability survives the skeleton
+   * round-trip (BR-0008-0008: scaffold output references related
+   * `US-*` / `CON-API-*` via comments).
+   */
+  usRefs?: string[];
+  /**
+   * Optional `CON-API-Refs:` API contract references. Captured from
+   * any cell in table-form Test-Cases; surfaced as
+   * `// CON-API-Refs:` comments in the emitted scaffold.
+   */
+  conApiRefs?: string[];
+  /**
    * Optional `Type:` field (heading form) OR table-form layer cell.
    *
    * Stored as-is from the spec source — both heading-form and table-
@@ -130,13 +144,22 @@ function parseTableRow(line: string): TCEntry | null {
   // Scan every cell for ID tokens so column-order differences across
   // specs (AC-Refs in col 3 vs notes cell trailing TODO: type=normal,
   // etc.) do not cause silent drops. `extractIds` deduplicates.
+  // Capture AC- / EX- / US- / CON-API- so the upstream traceability
+  // surfaces in the emitted scaffold via `// US-Refs:` / `// CON-API-
+  // Refs:` comments (BR-0008-0008). Pre-fix the US-/CON-API-Refs
+  // were extracted but silently dropped here, leaving the scaffold
+  // without the upstream requirement / API links.
   const acAccum: string[] = [];
   const exAccum: string[] = [];
+  const usAccum: string[] = [];
+  const conApiAccum: string[] = [];
   for (const cell of cells.slice(1)) {
     const ids = extractIds(cell);
     for (const id of ids) {
       if (id.startsWith("AC-")) acAccum.push(id);
       else if (id.startsWith("EX-")) exAccum.push(id);
+      else if (id.startsWith("US-")) usAccum.push(id);
+      else if (id.startsWith("CON-API-")) conApiAccum.push(id);
     }
   }
   if (acAccum.length > 0) {
@@ -144,6 +167,12 @@ function parseTableRow(line: string): TCEntry | null {
   }
   if (exAccum.length > 0) {
     entry.exRefs = Array.from(new Set(exAccum));
+  }
+  if (usAccum.length > 0) {
+    entry.usRefs = Array.from(new Set(usAccum));
+  }
+  if (conApiAccum.length > 0) {
+    entry.conApiRefs = Array.from(new Set(conApiAccum));
   }
   return entry;
 }
@@ -211,6 +240,17 @@ export async function parseTestCases(specDir: string): Promise<TCEntry[]> {
       current.exRefs = extractIds(value);
     } else if (key === "ac-refs" || key === "ac-ref") {
       current.acRefs = extractIds(value);
+    } else if (key === "us-ref" || key === "us-refs") {
+      // Heading-form `US-Refs:` capture so the emitted scaffold
+      // surfaces upstream user-story traceability via `// US refs:`
+      // comments. Mirrors the table-form capture in `parseTableRow`.
+      const ids = extractIds(value).filter((id) => id.startsWith("US-"));
+      if (ids.length > 0) current.usRefs = ids;
+    } else if (key === "con-api-ref" || key === "con-api-refs") {
+      // Heading-form `CON-API-Refs:` capture; surfaced as
+      // `// CON-API refs:` comments in the scaffold.
+      const ids = extractIds(value).filter((id) => id.startsWith("CON-API-"));
+      if (ids.length > 0) current.conApiRefs = ids;
     } else if (key === "type") {
       current.type = value.trim().toLowerCase();
     }
@@ -264,6 +304,12 @@ export function buildSkeleton(entry: TCEntry, specId: string): string {
   }
   if (entry.exRefs.length > 0) {
     referenceLines.push(`// EX refs: ${entry.exRefs.join(", ")}`);
+  }
+  if (entry.usRefs !== undefined && entry.usRefs.length > 0) {
+    referenceLines.push(`// US refs: ${entry.usRefs.join(", ")}`);
+  }
+  if (entry.conApiRefs !== undefined && entry.conApiRefs.length > 0) {
+    referenceLines.push(`// CON-API refs: ${entry.conApiRefs.join(", ")}`);
   }
   if (entry.type !== undefined && entry.type.length > 0) {
     referenceLines.push(`// Type: ${entry.type}`);
