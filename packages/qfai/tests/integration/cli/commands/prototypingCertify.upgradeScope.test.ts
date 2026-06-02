@@ -851,8 +851,9 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
     // `qfai validate --profile full --fail-on error`, which writes the
     // profile-suffixed `validate-full.json` as a separate file. The
     // stale canonical at step 1 is NOT removed by the writer.
+    const fullProfilePath = path.join(root, ".qfai/report/validate-full.json");
     await writeFile(
-      path.join(root, ".qfai/report/validate-full.json"),
+      fullProfilePath,
       JSON.stringify({
         profile: "full",
         counts: { error: 0, warning: 0, info: 0 },
@@ -860,6 +861,15 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
       }),
       "utf-8",
     );
+    // Bump the full-profile mtime to "now + 1s" so the freshness
+    // gate (full-profile must post-date the scope-limited cert)
+    // is satisfied. In real operator flow the validate run is
+    // separated from cert seal by manual investigation time, so
+    // the mtime gap is naturally seconds-to-minutes; the test
+    // simulates that with an explicit utimes bump.
+    const { utimes } = await import("node:fs/promises");
+    const futureMs = Date.now() + 1000;
+    await utimes(fullProfilePath, futureMs / 1000, futureMs / 1000);
 
     // Step 3: re-run `certify --upgrade-scope full`. The reader must
     // prefer the full-profile signal so the upgrade succeeds; the
@@ -892,10 +902,13 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
 
     // Canonical absent on disk; full-profile present (operator ran
     // `--profile full` without ever running `--profile saas-package`
-    // beforehand).
+    // beforehand). The freshness gate requires the full-profile
+    // signal to post-date the scope-limited cert, so bump its
+    // mtime to "now + 1s" after the cert seal.
     await mkdir(path.join(root, ".qfai/report"), { recursive: true });
+    const fullProfilePath = path.join(root, ".qfai/report/validate-full.json");
     await writeFile(
-      path.join(root, ".qfai/report/validate-full.json"),
+      fullProfilePath,
       JSON.stringify({
         profile: "full",
         counts: { error: 0, warning: 0, info: 0 },
@@ -903,6 +916,9 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
       }),
       "utf-8",
     );
+    const { utimes } = await import("node:fs/promises");
+    const futureMs = Date.now() + 1000;
+    await utimes(fullProfilePath, futureMs / 1000, futureMs / 1000);
 
     const upgradeExit = await runPrototypingCertify({
       root,
@@ -915,5 +931,75 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
     const certPath = path.join(root, ".qfai/evidence/prototyping/completion-certificate.json");
     const cert = JSON.parse(await readFile(certPath, "utf-8")) as Record<string, unknown>;
     expect(cert.scope).toBeUndefined();
+  });
+
+  // Pin the freshness gate: a `validate-full.json` left over from
+  // an earlier successful run must NOT promote the certificate when
+  // it pre-dates the scope-limited certificate's seal. Without this
+  // check the operator could seal a saas-package certificate after
+  // the skipped gates regressed, then promote via an OLDER
+  // validate-full.json (counts.error=0) that was written before the
+  // regression — silently re-asserting a passing full scope on stale
+  // evidence. Codex r3338201990.
+  it("refuses upgrade when validate-full.json mtime is older than the scope-limited certificate", async () => {
+    const { utimes } = await import("node:fs/promises");
+    const root = await newTempDir();
+    await seedSaasPackageHappyPath(root);
+
+    // Pre-seed a STALE validate-full.json BEFORE sealing the
+    // scope-limited certificate; its mtime will pre-date the cert.
+    await mkdir(path.join(root, ".qfai/report"), { recursive: true });
+    const fullProfilePath = path.join(root, ".qfai/report/validate-full.json");
+    await writeFile(
+      fullProfilePath,
+      JSON.stringify({
+        profile: "full",
+        counts: { error: 0, warning: 0, info: 0 },
+        issues: [],
+      }),
+      "utf-8",
+    );
+    // Force the stale signal to be clearly older than the cert (10
+    // minutes back). mtimeMs comparison uses sub-second precision,
+    // but utimes() resolution is filesystem-dependent, so use a
+    // generous gap so the test is robust across CI runners.
+    const tenMinutesAgoMs = Date.now() - 10 * 60 * 1000;
+    await utimes(fullProfilePath, tenMinutesAgoMs / 1000, tenMinutesAgoMs / 1000);
+
+    // Seal the scope-limited certificate AFTER the stale signal —
+    // its mtime now sits between the stale signal and "now".
+    const sealExit = await runPrototypingCertify({
+      root,
+      check: false,
+      scope: "saas-package",
+    });
+    expect(sealExit).toBe(0);
+
+    // Force the saas-package canonical signal into the INADMISSIBLE
+    // shape so the upgrade reader prefers full-profile (forcing the
+    // freshness check to evaluate against the stale signal).
+    await writeFile(
+      path.join(root, ".qfai/report/validate-saas-package.json"),
+      JSON.stringify({
+        profile: "saas-package",
+        counts: { error: 0, warning: 0, info: SAAS_PACKAGE_SKIPPED_GATES.length },
+        issues: [],
+      }),
+      "utf-8",
+    );
+
+    const upgradeExit = await runPrototypingCertify({
+      root,
+      check: false,
+      scope: "saas-package",
+      upgradeScopeFull: true,
+    });
+    expect(upgradeExit).not.toBe(0);
+
+    // Certificate must remain scope-limited after the refused
+    // upgrade — the stale full-profile signal MUST NOT promote it.
+    const certPath = path.join(root, ".qfai/evidence/prototyping/completion-certificate.json");
+    const cert = JSON.parse(await readFile(certPath, "utf-8")) as Record<string, unknown>;
+    expect(cert.scope).toBe("saas-package");
   });
 });

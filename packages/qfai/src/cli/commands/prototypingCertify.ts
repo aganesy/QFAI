@@ -38,6 +38,7 @@ import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/proto
 import {
   buildCompletionCertificate,
   checkCompletionCertificate,
+  COMPLETION_CERTIFICATE_REL_PATH,
   loadCompletionCertificate,
   writeCompletionCertificate,
   type CompletionCertificate,
@@ -1097,6 +1098,49 @@ async function runUpgradeScopeFull(
   const legacyAbs = path.resolve(root, SAAS_PACKAGE_GATES_SIGNAL_LEGACY_REL);
   const signalRead = await loadSaasPackageGatesSignal(canonicalAbs, fullProfileAbs, legacyAbs);
   if (signalRead.source === "full-profile") {
+    // Freshness gate: the full-profile signal must have been written
+    // AFTER the scope-limited certificate was sealed (otherwise we
+    // would promote on stale evidence from a prior successful run
+    // that pre-dated the saas-package observation, even if a later
+    // saas-package run revealed the skipped gates regressed). The
+    // certificate's seal time is the operator-visible anchor for
+    // "current scope-limited state"; requiring the full-profile
+    // signal to post-date it closes the stale-signal upgrade class
+    // raised by codex r3338201990. We use mtime as a pragmatic
+    // proxy (sub-second precision on modern filesystems) — if the
+    // operator manually rewinds the clock the gate can be bypassed,
+    // but that case is out of scope (and would require explicit
+    // tampering with the certificate as well).
+    const certAbs = path.resolve(root, COMPLETION_CERTIFICATE_REL_PATH);
+    try {
+      const [fullProfileStat, certStat] = await Promise.all([stat(fullProfileAbs), stat(certAbs)]);
+      if (fullProfileStat.mtimeMs <= certStat.mtimeMs) {
+        error(
+          "qfai prototyping certify: cannot upgrade scope — the full-profile " +
+            `gates signal (${fullProfileSignalRel}, mtime ` +
+            `${new Date(fullProfileStat.mtimeMs).toISOString()}) is NOT ` +
+            `newer than the scope-limited certificate (mtime ` +
+            `${new Date(certStat.mtimeMs).toISOString()}). Re-run ` +
+            "`qfai validate --profile full --fail-on error` to write a fresh " +
+            "full-profile signal, then re-run certify --upgrade-scope full.",
+        );
+        return 2;
+      }
+    } catch (err) {
+      // Fail-closed on any stat error other than EEXIST-style
+      // race (cert known to exist because we loaded it above; if
+      // the full-profile stat fails the loadSaasPackageGatesSignal
+      // probe also failed, which shouldn't happen since source is
+      // "full-profile"). Surface the underlying error and refuse
+      // the upgrade.
+      const message = err instanceof Error ? err.message : String(err);
+      error(
+        "qfai prototyping certify: cannot upgrade scope — freshness " +
+          `check failed (${message}). Re-run \`qfai validate --profile full ` +
+          "--fail-on error` and try again.",
+      );
+      return 2;
+    }
     // Hint (not deprecation): the operator followed the recovery path
     // and re-ran under `--profile full`, so its profile-suffixed report
     // is the admissible signal. Surface the path on stderr so log
