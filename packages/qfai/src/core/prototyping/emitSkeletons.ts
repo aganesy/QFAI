@@ -118,23 +118,24 @@ export function buildSkeletonsForUnion(input: EmitSkeletonsInput): readonly Emit
 }
 
 /**
- * Allowed screenId character set for the skeleton write path. The UI
- * contract reader accepts arbitrary strings for `screens[].id`, but
- * the writer joins the id directly into a filesystem path — so a
- * malicious or accidentally-formed contract value like
- * `../../outside` could escape `outDir`. Re-use the validator's
- * `SAFE_SCREEN_ID_PATTERN` (single source of truth) so the writer
- * and validator can never drift: a screen id the validator accepts
- * also writes successfully via `--emit-skeletons`, and vice versa.
+ * Test a `screens[].id` against the canonical SSOT pattern
+ * (`SAFE_SCREEN_ID_PATTERN`, imported from
+ * `core/validators/uiEvidenceArtifacts.ts`). The UI contract reader
+ * accepts arbitrary strings for `screens[].id`, but the writer
+ * joins the id directly into a filesystem path — so a malicious or
+ * accidentally-formed contract value like `../../outside` could
+ * escape `outDir`. Sharing the same regex literal with the
+ * validator structurally prevents drift: a screen id the validator
+ * accepts also writes successfully via `--emit-skeletons`, and
+ * vice versa.
  *
- * The canonical pattern is `/^[A-Za-z0-9][A-Za-z0-9._-]*$/u`:
+ * Canonical shape `/^[A-Za-z0-9][A-Za-z0-9._-]*$/u`:
  *   - First char: letter or digit (rejects leading `.`, `_`, `-`)
  *   - Subsequent chars: letters, digits, `.`, `_`, `-` only
- *   - Rejects path separators (`/`, `\`, `:`), leading dots
- *     (`.outside`, `..foo`, `../escape`), and any other non-ASCII-
- *     safe input
+ *   - Rejects path separators (`/`, `\`, `:`) and leading dots
+ *     (`.outside`, `..foo`, `../escape`) so the dot-prefix
+ *     traversal class cannot reach `path.join`.
  */
-
 function isSafeScreenId(id: string): boolean {
   return SAFE_SCREEN_ID_PATTERN.test(id);
 }
@@ -163,8 +164,10 @@ export async function writeSkeletons(
         `emitSkeletons: unsafe screenId ${JSON.stringify(sk.screenId)} — ` +
           "must match /^[A-Za-z0-9][A-Za-z0-9._-]*$/ (first char must be a " +
           "letter or digit; subsequent chars must be letters, digits, `.`, " +
-          "`_`, or `-`; no path separators). Reject the UI contract entry " +
-          "before --emit-skeletons writes any HTML.",
+          "`_`, or `-`; no path separators). Rejected examples: " +
+          "`../outside`, `..foo`, `.hidden`, `_login`, `-home`, " +
+          "`screens/home`. Reject the UI contract entry before " +
+          "--emit-skeletons writes any HTML.",
       );
     }
     const target = path.join(outDir, `${sk.screenId}.html`);
