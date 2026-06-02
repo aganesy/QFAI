@@ -22,7 +22,7 @@ import type { Dirent } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { QfaiConfig } from "../config.js";
+import { resolvePath, type QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
@@ -163,29 +163,18 @@ export async function validateAutopilotPolicy(
   options: { config?: QfaiConfig } = {},
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
-  // Honor `config.paths.skillsDir` so projects that relocate their
-  // skills tree (relative or absolute) are still scanned. The default
-  // `.qfai/assistant/skills` is preserved when no config is passed —
-  // existing callers (older tests / single-arg invocations) keep
-  // working without modification. Pre-fix the scan was hardcoded to
-  // the default path, so a relocated skillsDir would silently SKIP
-  // every qfai-* SKILL.md and let missing / widened Default Autopilot
-  // Policy sections go unreported on the sdd / full profiles. The
-  // displayed `relPath` in the finding message is also derived from
-  // the configured directory so operators can navigate from the
-  // emitted message back to the actual file.
-  const configuredSkillsDir = options.config?.paths.skillsDir;
-  const useConfig = typeof configuredSkillsDir === "string" && configuredSkillsDir.length > 0;
-  const skillsDir = useConfig
-    ? path.resolve(root, configuredSkillsDir)
+  // Honor `config.paths.skillsDir` via the canonical `resolvePath`
+  // helper (SSOT) so a project that relocates its skills tree
+  // (relative OR absolute) is still scanned. When no config is
+  // supplied, fall back to the legacy hardcoded
+  // `.qfai/assistant/skills` so single-arg test callers keep
+  // working. Pre-fix the scan was hardcoded to the default path,
+  // so a relocated skillsDir would silently SKIP every qfai-*
+  // SKILL.md and let missing / widened Default Autopilot Policy
+  // sections go unreported on the sdd / full profiles.
+  const skillsDir = options.config
+    ? resolvePath(root, options.config, "skillsDir")
     : path.join(root, SKILL_DIR_REL);
-  // For the operator-facing `relPath` in finding messages, prefer the
-  // configured (forward-slash normalized) value when supplied so the
-  // displayed path matches the project's qfai.config.yaml. Fallback to
-  // the legacy `SKILL_DIR_REL` when no config was passed.
-  const displaySkillsDirRel = useConfig
-    ? configuredSkillsDir.replace(/\\/g, "/")
-    : SKILL_DIR_REL.replace(/\\/g, "/");
   if (!(await exists(skillsDir))) return issues;
 
   let entries: Dirent[];
@@ -209,7 +198,10 @@ export async function validateAutopilotPolicy(
       throw err;
     }
     const result = parseAutopilotPolicy(body);
-    const relPath = `${displaySkillsDirRel}/${skillId}/SKILL.md`;
+    // Operator-facing relPath derived from the actual scan path so a
+    // relocated skillsDir surfaces under its real root-relative
+    // location (mirrors `staleReferences.ts` and `skillDocReferences.ts`).
+    const relPath = path.relative(root, skillDoc).replace(/\\/g, "/");
     if (!result.hasSection) {
       const message =
         `R-AUTOPILOT-POLICY-MISSING: ${relPath} is missing the ` +

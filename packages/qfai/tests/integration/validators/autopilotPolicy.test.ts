@@ -93,4 +93,50 @@ describe("TC-0015-0020: validateAutopilotPolicy emits R-AUTOPILOT-POLICY-MISSING
     const issues = await validateAutopilotPolicy(root);
     expect(issues.filter((i) => i.code === "R-AUTOPILOT-POLICY-MISSING")).toEqual([]);
   });
+
+  // Pin the relocated-skillsDir contract. A project that points
+  // `config.paths.skillsDir` at a non-default location must still
+  // have its qfai-* SKILL.md files scanned by the autopilot policy
+  // validator. Pre-fix the validator hardcoded
+  // `.qfai/assistant/skills` and silently SKIPped every qfai-*
+  // SKILL.md under the configured directory.
+  it("scans the configured skillsDir when options.config.paths.skillsDir is set", async () => {
+    const { defaultConfig } = await import("../../../src/core/config.js");
+    // Seed a qfai-* SKILL.md WITHOUT a policy section under a
+    // non-default skillsDir; the validator must find it via the
+    // configured path.
+    const customSkillsDir = path.join("custom", "skills");
+    const customSkillDir = path.join(root, customSkillsDir, "qfai-relocated");
+    await mkdir(customSkillDir, { recursive: true });
+    await writeFile(path.join(customSkillDir, "SKILL.md"), NO_POLICY, "utf-8");
+
+    const customConfig = {
+      ...defaultConfig,
+      paths: { ...defaultConfig.paths, skillsDir: customSkillsDir },
+    };
+    const issues = await validateAutopilotPolicy(root, { config: customConfig });
+    const finding = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING");
+    expect(finding).toBeDefined();
+    expect(finding?.severity).toBe("error");
+    // The relPath in the message must point at the actual scan path
+    // (forward-slash normalized, root-relative) — NOT the legacy
+    // `.qfai/assistant/skills/...` hardcode. Mirrors the
+    // staleReferences.ts pattern.
+    expect(finding?.message ?? "").toMatch(/custom\/skills\/qfai-relocated\/SKILL\.md/);
+    expect(finding?.message ?? "").not.toMatch(
+      /\.qfai\/assistant\/skills\/qfai-relocated\/SKILL\.md/,
+    );
+  });
+
+  it("default-path scanning still works when no config is supplied (legacy single-arg call)", async () => {
+    // Sanity check: a single-arg `validateAutopilotPolicy(root)`
+    // invocation continues to scan the legacy
+    // `.qfai/assistant/skills` location so older tests / callers
+    // stay green. This pins the fallback branch.
+    await writeSkill(root, "qfai-legacy", NO_POLICY);
+    const issues = await validateAutopilotPolicy(root);
+    const finding = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-MISSING");
+    expect(finding).toBeDefined();
+    expect(finding?.message ?? "").toMatch(/\.qfai\/assistant\/skills\/qfai-legacy\/SKILL\.md/);
+  });
 });

@@ -102,9 +102,16 @@ function fileSafeIsoStamp(date: Date): string {
  * canonical envelope-deviation context. Otherwise return
  * `{written: false}` without touching the filesystem.
  *
- * The write is atomic: the file is created with `writeFile` after
- * `mkdir -p` succeeds; partial writes are not possible because the
- * payload is a single JSON serialization.
+ * The write is atomic and collision-safe: the file is created with
+ * `writeFile({ flag: "wx" })` (exclusive-create) after `mkdir -p`
+ * succeeds. If two callers produce the same millisecond-precision
+ * stamp (the previously surfaced race, e.g. rapid consecutive
+ * `AskUserQuestion` callbacks or a test seam returning the same
+ * `Date`), the second attempt fails with `EEXIST` and the writer
+ * retries with a counter-suffixed filename (`<stamp>-1.json`,
+ * `<stamp>-2.json`, ...) until exclusive create succeeds. Partial
+ * writes are not possible because the payload is a single JSON
+ * serialization.
  */
 export async function writeDecisionRecord(
   input: WriteDecisionRecordInput,
@@ -124,9 +131,39 @@ export async function writeDecisionRecord(
   };
   const dir = path.join(input.root, DECISIONS_REL);
   await mkdir(dir, { recursive: true });
-  const filePath = path.join(dir, `${stamp}.json`);
-  await writeFile(filePath, `${JSON.stringify(record, null, 2)}\n`, "utf-8");
-  return { written: true, path: filePath };
+  const payload = `${JSON.stringify(record, null, 2)}\n`;
+  // Exclusive-create retry loop. Caps the retry count to a safety
+  // bound (1024) so a pathological collision storm cannot spin
+  // forever — in practice the first or second attempt always wins
+  // because the millisecond stamp is unique under any non-fixed
+  // `Date` provider, and the deterministic-`Date` test seam case
+  // resolves within a handful of attempts.
+  for (let attempt = 0; attempt < 1024; attempt += 1) {
+    const suffix = attempt === 0 ? "" : `-${attempt}`;
+    const filePath = path.join(dir, `${stamp}${suffix}.json`);
+    try {
+      await writeFile(filePath, payload, { encoding: "utf-8", flag: "wx" });
+      return { written: true, path: filePath };
+    } catch (err: unknown) {
+      // EEXIST = filename taken by a previous millisecond-collision
+      // record; bump the suffix and retry. Any other error
+      // propagates immediately — partial writes do not happen with
+      // exclusive-create + single-call writeFile.
+      const code =
+        err && typeof err === "object" && "code" in err
+          ? (err as { code?: string }).code
+          : undefined;
+      if (code !== "EEXIST") {
+        throw err;
+      }
+    }
+  }
+  // Pathological case: 1024 attempts exhausted in the same
+  // millisecond. Surface explicitly rather than overwriting silently.
+  throw new Error(
+    `writeDecisionRecord: exhausted 1024 suffixed attempts for stamp ${stamp}; ` +
+      "millisecond collision storm or directory permission issue.",
+  );
 }
 
 /**

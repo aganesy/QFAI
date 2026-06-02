@@ -20,7 +20,7 @@ import type { Dirent } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { QfaiConfig } from "../config.js";
+import { resolvePath, type QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
@@ -114,18 +114,15 @@ export async function validateStaleReferences(
   const todayIso = todayIsoDate(now);
   const severity = staleReferenceSeverity(todayIso);
 
-  // Honor `config.paths.skillsDir` so projects that relocate their
-  // skills tree (relative or absolute) are still scanned. The default
-  // `.qfai/assistant/skills` is preserved when no config is passed —
-  // existing callers (older tests / single-arg invocations) keep
-  // working without modification. Pre-fix the scan was hardcoded to
-  // the default path, so a relocated skillsDir gave a silent PASS on
-  // stale `session-handoff.yaml` references under the actual location.
-  const configuredSkillsDir = options.config?.paths.skillsDir;
-  const skillsDir =
-    typeof configuredSkillsDir === "string" && configuredSkillsDir.length > 0
-      ? path.resolve(root, configuredSkillsDir)
-      : path.join(root, SKILLS_REL);
+  // Honor `config.paths.skillsDir` via the canonical `resolvePath`
+  // helper (SSOT). When no config is supplied, fall back to the
+  // legacy hardcoded `.qfai/assistant/skills` so older callers /
+  // tests stay green. Pre-fix the scan was hardcoded to the default
+  // path, so a relocated skillsDir gave a silent PASS on stale
+  // `session-handoff.yaml` references under the actual location.
+  const skillsDir = options.config
+    ? resolvePath(root, options.config, "skillsDir")
+    : path.join(root, SKILLS_REL);
   if (!(await exists(skillsDir))) return issues;
 
   let entries: Dirent[];
