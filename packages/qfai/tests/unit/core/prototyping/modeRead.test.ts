@@ -90,4 +90,46 @@ describe("readPrototypingModeForRelax", () => {
     await writeFile(abs, "[]", "utf-8");
     expect(await readPrototypingModeForRelax(root)).toBeNull();
   });
+
+  // Pin the sticky-mode behavior: a later iteration that does NOT
+  // carry a `mode` slot must inherit the most-recent explicit mode
+  // (walk backward). Without this, an `iterate --cycle 0 --mode
+  // exploration` loop would silently revert to convergence as soon
+  // as a reviewer iteration is appended without copying `mode`, and
+  // validate would flip the intended warning-only soft gates back
+  // to error.
+  it("returns 'exploration' when the seed sets it and a later iteration omits mode (sticky)", async () => {
+    await writeProtoJson({
+      iterations: [{ index: 0, mode: "exploration" }, { index: 1 }],
+    });
+    expect(await readPrototypingModeForRelax(root)).toBe("exploration");
+  });
+
+  it("returns 'exploration' when an intermediate iteration omits mode but the seed set it", async () => {
+    await writeProtoJson({
+      iterations: [{ index: 0, mode: "exploration" }, { index: 1 }, { index: 2 }],
+    });
+    expect(await readPrototypingModeForRelax(root)).toBe("exploration");
+  });
+
+  it("returns the explicit later mode when it OVERRIDES the seed", async () => {
+    await writeProtoJson({
+      iterations: [
+        { index: 0, mode: "exploration" },
+        { index: 1 },
+        { index: 2, mode: "convergence" },
+      ],
+    });
+    expect(await readPrototypingModeForRelax(root)).toBe("convergence");
+  });
+
+  it("skips an unknown-value mode entry and inherits the prior explicit mode", async () => {
+    await writeProtoJson({
+      iterations: [
+        { index: 0, mode: "exploration" },
+        { index: 1, mode: "feral" },
+      ],
+    });
+    expect(await readPrototypingModeForRelax(root)).toBe("exploration");
+  });
 });

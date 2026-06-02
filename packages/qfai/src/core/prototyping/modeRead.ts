@@ -20,17 +20,23 @@ export type PrototypingMode = "convergence" | "exploration";
 
 /**
  * Returns the recorded mode from prototyping.json, or `null` when the
- * file is missing / unparseable / lacks the per-iteration `mode` slot
- * / carries an unknown value. Callers MUST interpret `null` as
- * "no override → use the convergence default".
+ * file is missing / unparseable / no iteration carries a valid `mode`
+ * value. Callers MUST interpret `null` as "no override → use the
+ * convergence default".
  *
- * The canonical read path is the highest-indexed iteration's `mode`
- * field (`iterations[iterations.length - 1].mode`) — every iteration
- * carries its own mode and validate post-filters against the most
- * recent. The top-level `mode` slot is intentionally NOT consulted
- * here because it is an operator-defined object schema preserved
- * verbatim across cycle-0 resets (see iterate's writeSeedMetadata
- * preservation contract).
+ * Read strategy: walk iterations from highest-indexed to lowest, and
+ * return the first iteration whose `mode` is a known value
+ * (`"convergence"` | `"exploration"`). This makes the most-recently-
+ * recorded mode "sticky" so that a later iteration writer that omits
+ * the `mode` slot does NOT silently revert an exploration loop to
+ * convergence (which would flip the intended warning-only soft gates
+ * back to error). Iterators that intentionally change posture must
+ * still set `mode` explicitly on the iteration they write.
+ *
+ * The top-level `mode` slot is intentionally NOT consulted here
+ * because it is an operator-defined object schema preserved verbatim
+ * across cycle-0 resets (see iterate's writeSeedMetadata preservation
+ * contract).
  */
 export async function readPrototypingModeForRelax(root: string): Promise<PrototypingMode | null> {
   const abs = path.join(root, PROTOTYPING_JSON_REL);
@@ -51,11 +57,16 @@ export async function readPrototypingModeForRelax(root: string): Promise<Prototy
   }
   const iterations: unknown = (parsed as Record<string, unknown>).iterations;
   if (!Array.isArray(iterations) || iterations.length === 0) return null;
-  const last: unknown = iterations[iterations.length - 1];
-  if (last === null || typeof last !== "object" || Array.isArray(last)) return null;
-  const candidate = (last as Record<string, unknown>).mode;
-  if (candidate === "convergence" || candidate === "exploration") {
-    return candidate;
+  // Walk backward so the most-recent explicit mode wins; iterations
+  // that omit `mode` inherit the prior posture instead of being
+  // treated as a convergence reset.
+  for (let i = iterations.length - 1; i >= 0; i -= 1) {
+    const entry = iterations[i];
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const candidate = (entry as Record<string, unknown>).mode;
+    if (candidate === "convergence" || candidate === "exploration") {
+      return candidate;
+    }
   }
   return null;
 }
