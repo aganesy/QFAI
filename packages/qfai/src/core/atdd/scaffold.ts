@@ -32,16 +32,20 @@ export type TCEntry = {
   acRefs: string[];
   /**
    * Optional `US-Refs:` user-story references. Captured from any
-   * cell in table-form Test-Cases; surfaced as `// US-Refs:` comments
-   * in the emitted scaffold so traceability survives the skeleton
-   * round-trip (BR-0008-0008: scaffold output references related
-   * `US-*` / `CON-API-*` via comments).
+   * cell in table-form Test-Cases; surfaced as `// US refs: ...`
+   * comments in the emitted scaffold so traceability survives the
+   * skeleton round-trip (BR-0008-0008: scaffold output references
+   * related `US-*` / `CON-API-*` via comments). Comment format is
+   * lowercase + space-separated for parity with the existing
+   * `// AC refs:` / `// EX refs:` style.
    */
   usRefs?: string[];
   /**
    * Optional `CON-API-Refs:` API contract references. Captured from
    * any cell in table-form Test-Cases; surfaced as
-   * `// CON-API-Refs:` comments in the emitted scaffold.
+   * `// CON-API refs: ...` comments in the emitted scaffold
+   * (lowercase + space-separated, matching the existing
+   * `// AC refs:` / `// EX refs:` style).
    */
   conApiRefs?: string[];
   /**
@@ -145,8 +149,8 @@ function parseTableRow(line: string): TCEntry | null {
   // specs (AC-Refs in col 3 vs notes cell trailing TODO: type=normal,
   // etc.) do not cause silent drops. `extractIds` deduplicates.
   // Capture AC- / EX- / US- / CON-API- so the upstream traceability
-  // surfaces in the emitted scaffold via `// US-Refs:` / `// CON-API-
-  // Refs:` comments (BR-0008-0008). Pre-fix the US-/CON-API-Refs
+  // surfaces in the emitted scaffold via `// US refs:` / `// CON-API
+  // refs:` comments (BR-0008-0008). Pre-fix the US-/CON-API-Refs
   // were extracted but silently dropped here, leaving the scaffold
   // without the upstream requirement / API links.
   const acAccum: string[] = [];
