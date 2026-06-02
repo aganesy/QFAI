@@ -1002,4 +1002,87 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
     const cert = JSON.parse(await readFile(certPath, "utf-8")) as Record<string, unknown>;
     expect(cert.scope).toBe("saas-package");
   });
+
+  // Pin the canonical-freshness invariant (codex r3338309038):
+  // even when validate-full.json is NEWER than the scope-limited
+  // certificate (so the cert-vs-full freshness gate above passes), it
+  // MUST also be newer than any present canonical saas-package signal.
+  // Otherwise an operator who seals → runs `validate --profile full`
+  // → introduces a regression → re-runs `validate --profile
+  // saas-package` (writing a newer INADMISSIBLE canonical) can still
+  // promote because the loader prefers full-profile and the gate only
+  // looked at cert mtime.
+  it("refuses upgrade when validate-full.json is older than a present canonical saas-package signal", async () => {
+    const { utimes } = await import("node:fs/promises");
+    const root = await newTempDir();
+    await seedSaasPackageHappyPath(root);
+
+    // Seal the scope-limited certificate first so the cert mtime is
+    // the OLDEST among (cert, full, canonical) — i.e. the cert-vs-full
+    // gate will pass.
+    const sealExit = await runPrototypingCertify({
+      root,
+      check: false,
+      scope: "saas-package",
+    });
+    expect(sealExit).toBe(0);
+
+    // Write validate-full.json with an mtime AFTER the cert (so the
+    // cert-vs-full gate passes) but BEFORE the canonical retry (so
+    // the canonical-vs-full gate trips). Use utimes to set explicit
+    // future mtimes — robust across CI runners with coarse FS clocks.
+    await mkdir(path.join(root, ".qfai/report"), { recursive: true });
+    const fullProfilePath = path.join(root, ".qfai/report/validate-full.json");
+    await writeFile(
+      fullProfilePath,
+      JSON.stringify({
+        profile: "full",
+        counts: { error: 0, warning: 0, info: 0 },
+        issues: [],
+      }),
+      "utf-8",
+    );
+    const nowMs = Date.now();
+    // Full = now + 60s (newer than the cert just sealed at ~now).
+    const fullMtimeMs = nowMs + 60 * 1000;
+    await utimes(fullProfilePath, fullMtimeMs / 1000, fullMtimeMs / 1000);
+
+    // Canonical = now + 120s (newer than full). INADMISSIBLE shape
+    // so the loader prefers full and the canonical-freshness gate is
+    // the binding check.
+    const canonicalPath = path.join(root, ".qfai/report/validate-saas-package.json");
+    await writeFile(
+      canonicalPath,
+      JSON.stringify({
+        profile: "saas-package",
+        counts: { error: 0, warning: 0, info: SAAS_PACKAGE_SKIPPED_GATES.length },
+        issues: [],
+      }),
+      "utf-8",
+    );
+    const canonicalMtimeMs = nowMs + 120 * 1000;
+    await utimes(canonicalPath, canonicalMtimeMs / 1000, canonicalMtimeMs / 1000);
+
+    const capture = captureStderr();
+    let upgradeExit: number;
+    try {
+      upgradeExit = await runPrototypingCertify({
+        root,
+        check: false,
+        scope: "saas-package",
+        upgradeScopeFull: true,
+      });
+    } finally {
+      capture.restore();
+    }
+    expect(upgradeExit).not.toBe(0);
+    // The binding refusal must be the canonical-freshness gate (not
+    // the cert-freshness gate), otherwise the new invariant isn't
+    // exercised.
+    expect(capture.read()).toMatch(/NOT newer than the canonical saas-package signal/);
+
+    const certPath = path.join(root, ".qfai/evidence/prototyping/completion-certificate.json");
+    const cert = JSON.parse(await readFile(certPath, "utf-8")) as Record<string, unknown>;
+    expect(cert.scope).toBe("saas-package");
+  });
 });

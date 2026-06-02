@@ -1152,6 +1152,48 @@ async function runUpgradeScopeFull(
         );
         return 2;
       }
+      // Additional freshness invariant: when a canonical saas-package
+      // signal is also present, the full-profile signal must be newer
+      // than it too. Otherwise this sequence promotes stale evidence:
+      //   1. validate --profile full (writes full-profile signal at F)
+      //   2. cert sealed (C, with F > C — passes the gate above)
+      //   3. regression in source
+      //   4. validate --profile saas-package (writes canonical at S,
+      //      S > F, INADMISSIBLE because saas-package always emits one
+      //      skip finding per gate)
+      //   5. certify --upgrade-scope full: the loader prefers
+      //      full-profile over canonical (per the precedence in
+      //      `loadSaasPackageGatesSignal`), so without this guard a
+      //      full-profile signal older than the canonical retry would
+      //      still drive the upgrade decision.
+      // The check is skipped when canonical is absent (ENOENT) —
+      // pre-CHG-005 layouts and any flow that never wrote canonical
+      // remain unaffected. Same mtime caveats apply as documented above.
+      try {
+        const canonicalStat = await stat(canonicalAbs);
+        if (fullProfileStat.mtimeMs <= canonicalStat.mtimeMs) {
+          error(
+            "qfai prototyping certify: cannot upgrade scope — the full-profile " +
+              `gates signal (${fullProfileSignalRel}, mtime ` +
+              `${new Date(fullProfileStat.mtimeMs).toISOString()}) is NOT ` +
+              `newer than the canonical saas-package signal ` +
+              `(${canonicalSignalRel}, mtime ` +
+              `${new Date(canonicalStat.mtimeMs).toISOString()}). The canonical ` +
+              "signal was written after the last full-profile run, so the " +
+              "full-profile evidence may pre-date a regression that prompted " +
+              "the saas-package re-run. Re-run `qfai validate --profile full " +
+              "--fail-on error` to write a fresh full-profile signal, then " +
+              "re-run certify --upgrade-scope full.",
+          );
+          return 2;
+        }
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException | undefined)?.code;
+        if (code !== "ENOENT") {
+          throw err;
+        }
+        // Canonical signal absent — nothing to compare against.
+      }
     } catch (err) {
       // Fail-closed on any stat error. Both files are expected to
       // exist at this point (the cert was loaded above; the
