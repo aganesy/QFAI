@@ -54,8 +54,13 @@ type PerTcOutcome = {
   alreadyProgressed: boolean;
 };
 
-async function processOneTc(root: string, specId: string, entry: TCEntry): Promise<PerTcOutcome> {
-  const destPath = scaffoldDestPath(root, specId, entry.tcId);
+async function processOneTc(
+  root: string,
+  specId: string,
+  entry: TCEntry,
+  testsDir: string,
+): Promise<PerTcOutcome> {
+  const destPath = scaffoldDestPath(root, specId, entry.tcId, testsDir);
   const body = buildSkeleton(entry, specId);
   const result = await emitSkeleton(entry, destPath, body);
   const destRel = path.relative(root, destPath).replace(/\\/g, "/");
@@ -124,6 +129,12 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
   // below, so both reads come from the same config snapshot.
   const { config } = await loadConfig(options.root);
   const specsDirRel = config.paths.specsDir;
+  // Honor `paths.testsDir` for scaffold emit too — pre-fix the scaffold
+  // wrote under hard-coded `tests/atdd/...` while the validators and
+  // traceability code resolved through `config.paths.testsDir`, so a
+  // project that relocated testsDir (e.g. to `spec-tests`) emitted
+  // scaffolds outside the tree where the rest of QFAI looked for them.
+  const testsDirRel = config.paths.testsDir;
   const specDir = path.resolve(options.root, specsDirRel, specId);
   let entries: TCEntry[];
   try {
@@ -146,7 +157,7 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
 
   const outcomes: PerTcOutcome[] = [];
   for (const entry of entries) {
-    const outcome = await processOneTc(options.root, specId, entry);
+    const outcome = await processOneTc(options.root, specId, entry, testsDirRel);
     outcomes.push(outcome);
   }
 

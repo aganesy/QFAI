@@ -416,10 +416,22 @@ export async function emitSkeleton(
 
 /**
  * Resolve the canonical scaffold output path for a (spec, TC) pair:
- * `<root>/tests/atdd/<specId>/<TC-ID>.test.ts`.
+ * `<root>/<testsDir>/atdd/<specId>/<TC-ID>.test.ts`.
+ *
+ * `testsDir` defaults to `"tests"` (back-compat for callers that
+ * haven't yet threaded the config-loaded value), but projects that
+ * relocate `paths.testsDir` in `qfai.config.yaml` (e.g. to
+ * `"spec-tests"`) MUST pass the resolved value so the scaffold output
+ * lands inside the configured tree where the rest of QFAI
+ * (validators, traceability, placeholder detector) reads from.
  */
-export function scaffoldDestPath(root: string, specId: string, tcId: string): string {
-  return path.join(root, "tests", "atdd", specId, `${tcId}.test.ts`);
+export function scaffoldDestPath(
+  root: string,
+  specId: string,
+  tcId: string,
+  testsDir: string = "tests",
+): string {
+  return path.join(root, testsDir, "atdd", specId, `${tcId}.test.ts`);
 }
 
 /**

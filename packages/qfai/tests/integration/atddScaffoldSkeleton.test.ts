@@ -323,4 +323,37 @@ describe("atdd scaffold — per-TC skeleton emission", () => {
     expect(body).not.toContain("EX-0001-9999");
     expect(body).not.toContain("Type: integration");
   });
+
+  // Pin: when `qfai.config.yaml#paths.testsDir` is relocated, scaffold
+  // emits under the configured directory (not the hard-coded `tests/`),
+  // matching where validators / placeholder detector / traceability
+  // code read from.
+  it("honors qfai.config.yaml#paths.testsDir when emitting scaffold output", async () => {
+    const specId = "spec-0042";
+    const specDir = path.join(root, ".qfai", "specs", specId);
+    await writeSeedSpec(specDir);
+
+    // Relocate testsDir to `spec-tests` (matches the path the
+    // validators will resolve through config.paths.testsDir).
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      ["paths:", "  testsDir: spec-tests", ""].join("\n"),
+      "utf-8",
+    );
+
+    const code = await runAtddScaffold({
+      root,
+      specId,
+      write: () => {},
+      writeErr: () => {},
+    });
+    expect(code).toBe(0);
+
+    // The scaffolded file MUST land under `spec-tests/atdd/...`,
+    // not under the hard-coded default `tests/atdd/...`.
+    const reroutedPath = path.join(root, "spec-tests", "atdd", specId, "TC-0001-0001.test.ts");
+    const defaultPath = path.join(root, "tests", "atdd", specId, "TC-0001-0001.test.ts");
+    await expect(stat(reroutedPath)).resolves.toBeDefined();
+    await expect(stat(defaultPath)).rejects.toThrow();
+  });
 });
