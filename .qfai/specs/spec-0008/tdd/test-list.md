@@ -14,3 +14,15 @@
 | TDD-0010 | TC-0008-0010 | integration | —                                                         | TC-0008-0010: Coverage Placeholder for EX-0008-0007       | exception | DR-0008-0100 | exception:DR-0008-0100 deferred — no impl yet, v1.7.15 rev3                       |
 | TDD-0011 | TC-0008-0011 | integration | packages/qfai/tests/integration/specAutoDiscovery.test.ts | TC-0008-0011: Coverage Depth Matrix Produced and Verified | exception | DR-0008-0002 | exception:DR-0008-0002 backfill — impl-first v1.7.15 rev3, vitest PASS 2026-04-14 |
 | TDD-0012 | TC-0008-0012 | integration | packages/qfai/tests/integration/specAutoDiscovery.test.ts | TC-0008-0012: Normal-Path-Only Flagged as Incomplete      | exception | DR-0008-0002 | exception:DR-0008-0002 backfill — impl-first v1.7.15 rev3, vitest PASS 2026-04-14 |
+
+## CHG-006 v1.9.2 second-wave — atdd scaffold + 3-cycle escalation (2026-05-31)
+
+| TDD-ID   | TC-Refs      | Layer       | Test file                                                      | Selector                                                                              | Status | DR-ID                    | Evidence                                                       |
+| -------- | ------------ | ----------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------ | ------------------------ | -------------------------------------------------------------- |
+| TDD-0013 | TC-0008-0013 | integration | packages/qfai/tests/integration/atddScaffoldSkeleton.test.ts   | TC-0008-0013: scaffold emits per-TC skeleton with TODO + Refs (US/AC/TC)              | done   | DR-0008-0003 (→ DR-0272) | RED→GREEN 2026-06-01 (W4 c1acb533); reviewers PASS×3; REQ-0157 |
+| TDD-0014 | TC-0008-0014 | integration | packages/qfai/tests/integration/atddScaffoldEscalation.test.ts | TC-0008-0014: scaffold idempotency + 3-cycle escalation (atdd.scaffoldEscalateCycles) | done   | DR-0008-0003 (→ DR-0272) | RED→GREEN 2026-06-01 (W4 c1acb533); reviewers PASS×3; REQ-0157 |
+
+CHG-006 notes:
+
+- TDD-0013..0014 cover REQ-0157 (atdd scaffold bulk skeleton generation + 3-cycle escalation). Cross-spec decision cited from `_policies/08_Decisions.md`: DR-0272 (escalate-after-3 default with `atdd.scaffoldEscalateCycles` config override).
+- Ledger sync follow-up: the spec-0008 CHG-006 SDD wave omitted `UPDATE:APPEND tdd/test-list.md` from its triage table. This section reconciles the ledger before `/qfai-implement` proceeds.

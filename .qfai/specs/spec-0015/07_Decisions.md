@@ -1,6 +1,6 @@
 # 07 Decisions
 
-2 items.
+5 items.
 
 ### DR-0015-0001: TDD Ledger Backfill from Migrated Coverage (v1.7.15)
 
@@ -13,3 +13,18 @@
 - Decision: TDD-0011 / TDD-0012 は Exception / placeholder 扱いから外し、shared delegation baseline と `qfai-implement` skill の canonical delegation contract を読む integration coverage に更新したうえで、fresh reviewer PASS と checkpoint pass が揃うまで `refactor` に据え置く
 - Context: completion/review 差し戻しで、TC-0015-0011 の human-readable trace 不一致、TC-0015-0012 の stale evidence、completed items に必要な fresh reviewer PASS / checkpoint pass 欠落が指摘された
 - Rationale: spec が要求するのは failed first delegation の hard-stop reporting と first real delegation capability probe contract であり、canonical files に対する直接検証へ差し替えることで、stage stop / no simulation-self-execution / remediation details / attempted role-task / retry condition / probe ordering を観測できる。一方、completion contract 上は独立 reviewer rerun と checkpoint が未取得のため `done` 主張はしない
+
+### DR-0015-0003 → DR-0269 (reference): Default Autopilot Policy 3-bucket template (2026-05-27)
+
+- Reference: `_policies/08_Decisions.md` DR-0269 (OQ-0160 resolved). The `## Default Autopilot Policy` SKILL.md section uses three named buckets (auto-decide / ask-user / hard-required); `R-AUTOPILOT-POLICY-MISSING` (error) enforces presence. Realized here as AC-0015-0015 / BR-0015-0010.
+- Source REQ: REQ-0160.
+
+### DR-0015-0004 → DR-0270 (reference): Envelope-deviation audit trigger taxonomy (2026-05-27)
+
+- Reference: `_policies/08_Decisions.md` DR-0270 (OQ-0162 resolved). Fixed four-context declared taxonomy (skill-envelope / architectural-decision / rejected-option re-adoption / scope-expansion); writes `.qfai/evidence/decisions/<ISO8601-ts>.json` `{question, answer, scope, operatorIdentity, timestamp, envelopeContractClause}`; git-ignored. Realized here as AC-0015-0016 / BR-0015-0011.
+- Source REQ: REQ-0158.
+
+### DR-0015-0005 → DR-0271 (reference): `qfai audit log` CLI shape (2026-05-27)
+
+- Reference: `_policies/08_Decisions.md` DR-0271 (OQ-0163 resolved). Filtered query (`--scope` / `--operator` / `--clause`) + `--format table|json` defaulting to `table` (CLI-AUDIT, SHOULD). Realized here as AC-0015-0019 / BR-0015-0014.
+- Source REQ: REQ-0171.

@@ -56,6 +56,18 @@ export type CompletionCertificate = {
    * certificates written before the field existed.
    */
   readonly designMd?: CompletionCertificateDesignMd;
+  /**
+   * Scope-limited certificate marker. Present iff the certificate was
+   * sealed with a non-default `--scope` (e.g. `saas-package`). Absent
+   * (alongside `notes`) on the canonical full-DONE certificate.
+   */
+  readonly scope?: string;
+  /**
+   * Human-readable notes attached to a scope-limited certificate —
+   * typically the names of gates intentionally skipped under the chosen
+   * scope. Absent on the canonical full-DONE certificate.
+   */
+  readonly notes?: ReadonlyArray<string>;
 };
 
 /** Path (POSIX) under repo root. */
@@ -80,6 +92,16 @@ export type BuildCertificateInputs = {
    * brand SSOT.
    */
   designMd?: CompletionCertificateDesignMd;
+  /**
+   * Scope-limited marker. When set (e.g. `"saas-package"`), seals a
+   * scope-limited certificate. Absent on a full-DONE certificate.
+   */
+  scope?: string;
+  /**
+   * Notes attached to a scope-limited certificate (typically the names
+   * of intentionally-skipped gates). Absent on a full-DONE certificate.
+   */
+  notes?: readonly string[];
 };
 
 export async function buildCompletionCertificate(
@@ -97,6 +119,8 @@ export async function buildCompletionCertificate(
     iterationCount: inputs.iterationCount,
     specsCovered: [...inputs.specsCovered],
     ...(inputs.designMd ? { designMd: { ...inputs.designMd } } : {}),
+    ...(typeof inputs.scope === "string" && inputs.scope.length > 0 ? { scope: inputs.scope } : {}),
+    ...(inputs.notes && inputs.notes.length > 0 ? { notes: [...inputs.notes] } : {}),
   };
   return cert;
 }
@@ -140,6 +164,8 @@ type CompletionCertificateRecord = {
   iterationCount: number;
   specsCovered: string[];
   designMd?: { path: string; sha256: string };
+  scope?: string;
+  notes?: string[];
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -196,6 +222,8 @@ function isMinimallyValidCertificate(value: unknown): value is CompletionCertifi
       return false;
     }
   }
+  if (v.scope !== undefined && typeof v.scope !== "string") return false;
+  if (v.notes !== undefined && !isStringArray(v.notes)) return false;
   return true;
 }
 
@@ -240,6 +268,8 @@ function normalizeCompletionCertificate(value: unknown): CompletionCertificate |
     ...(record.designMd
       ? { designMd: { path: record.designMd.path, sha256: record.designMd.sha256 } }
       : {}),
+    ...(typeof record.scope === "string" && record.scope.length > 0 ? { scope: record.scope } : {}),
+    ...(record.notes && record.notes.length > 0 ? { notes: [...record.notes] } : {}),
   };
   return out;
 }

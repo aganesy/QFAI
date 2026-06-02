@@ -245,3 +245,32 @@
 - When `certify` performs the read,
 - Then certify aborts the read, surfaces the mismatch with both the observed and expected profile names, and emits the recovery command `qfai validate --profile prototyping --fail-on error` so the operator can re-emit the correct profile-suffixed artifact
 - And in `qfai@1.10.0+`, a downstream consumer still reading the legacy `.qfai/output/validate.json` path receives an `error`-severity `D-DEPRECATED-PATH` finding instead of the deprecation-window warning
+
+## EX-0004-0038
+
+- BR-Ref: BR-0004-0030
+- Given a SaaS-tenant repo whose prototyping-profile validate PASSes, with `.qfai/contracts/design/design-system.yaml` present (DCON-005) and a conforming CLI-HANDOFF handoff
+- When `qfai validate --profile saas-package` runs
+- Then validate PASSes and emits two `D-SAAS-PACKAGE-VERIFY-SKIPPED` (info) findings: one naming the skipped ATDD-class gate and one naming the skipped implement-class gate
+- And given the same repo with `.qfai/contracts/design/design-system.yaml` removed, `qfai validate --profile saas-package` does NOT PASS
+
+## EX-0004-0039
+
+- BR-Ref: BR-0004-0031
+- Given a UI contract with `primary_tasks: ["View orders", "Refund an order"]` (string-only) and a sibling contract with `primary_tasks: [{ id: "view-orders", label: "View orders", acceptance: "orders table renders within budget" }]` (structured)
+- When `auditProfile.ts` evaluates both
+- Then both PASS (string-only during the deprecation window; structured `{id,label,acceptance}` closed shape per DR-0268), and a `QFAI-AUD-020` warning naming the `3..7` recommended count band (DR-0267) fires on a screen declaring 9 tasks
+
+## EX-0004-0040
+
+- BR-Ref: BR-0004-0032
+- Given a PR that adds `review-2026-05-27/` at the repository root (outside the allowed roots)
+- When `check-pack-locations.mjs` runs in `pnpm ci:lint`
+- Then the lane FAILS emitting `R-PACK-LOCATION-DRIFT` that references `.agents/rules/root-additions-policy.md` and proposes `.qfai/review/2026-05-27/` as the correct path
+
+## EX-0004-0041
+
+- BR-Ref: BR-0004-0033
+- Given a PR that adds `.qfai/discussion/discussion-20260527075558258/` (under an allowed root) and edits an unrelated README
+- When `check-pack-locations.mjs` runs
+- Then the lane passes silently with no `R-PACK-LOCATION-DRIFT`, and a pre-existing legacy `review-old/` directory untouched by the PR is not re-flagged

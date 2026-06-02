@@ -94,6 +94,12 @@ Scenario: --out ファイル出力
 | AC-0006-0012 | fresh init + playwright install yields zero error lines | REQ-0107, NFR-0112 | P1       |
 | AC-0006-0013 | skills.integrity defaults to warning severity           | REQ-0122           | P1       |
 | AC-0006-0014 | doctor summary groups errors vs warnings                | REQ-0122           | P1       |
+| AC-0006-0015 | --clean archives stale review packs at TTL              | REQ-0153           | P1       |
+| AC-0006-0016 | --clean never deletes; validate review out-of-scope     | REQ-0153           | P1       |
+| AC-0006-0017 | --autoremediate fixes install/clean/config with --yes   | REQ-0156           | P1       |
+| AC-0006-0018 | --autoremediate off in CI; --dry-run no side effects    | REQ-0156           | P1       |
+| AC-0006-0019 | --profile <skill> probes manifest runtimeDependencies   | REQ-0159           | P1       |
+| AC-0006-0020 | empty manifest no probe; manifest↔probe drift error     | REQ-0159           | P1       |
 
 ```gherkin
 # AC-0006-0010
@@ -139,4 +145,61 @@ Scenario: doctor summary は 2 group に分割表示
   When `qfai doctor --format text` を実行する
   Then summary に "errors blocking the active profile" group と "warnings advisory of drift" group が個別に出力される
   And skills.integrity finding は wording にかかわらず "warnings advisory of drift" group に表示される
+```
+
+```gherkin
+# AC-0006-0015
+Scenario: --clean が TTL 超過 review pack を archive する
+  Given `.qfai/review/<old-ts>/` の mtime が TTL (既定 14 日 / DR-0264) より古い
+  And `review.staleTtlDays` は未設定 (既定 14 を採用)
+  When `qfai doctor --clean` を実行する
+  Then 当該 pack が `.qfai/review/_archive/<old-ts>/` へ move される
+  And TTL 内の pack は `.qfai/review/<ts>/` に残置される
+```
+
+```gherkin
+# AC-0006-0016
+Scenario: --clean は削除せず、validate review は _archive を除外する (boundary)
+  Given stale pack を archive 済みの状態
+  When `qfai doctor --clean` を再実行し、続けて `qfai validate --profile review` を実行する
+  Then archival 操作で pack が delete されることは一度もない (move のみ)
+  And `qfai validate --profile review` の scan 対象は top-level `.qfai/review/<ts>/` のみで `_archive/` 配下は out-of-scope
+  And in-scope pack の `QFAI-REVIEW-003/004/005` 挙動は不変
+```
+
+```gherkin
+# AC-0006-0017
+Scenario: --autoremediate が install / clean / config を --yes 確認付きで修復する
+  Given active skill manifest が未 install の runtimeDependencies を宣言し、stale review pack が存在し、qfai.config.yaml に default-keyed フィールドが欠落している
+  When `qfai doctor --autoremediate --yes` を実行する
+  Then 宣言 dep に対し `npm install` が実行される
+  And stale review pack が `_archive/` へ TTL-archive される (`--clean` 相当)
+  And 欠落 default-keyed フィールドが qfai.config.yaml に書き込まれる (user-authored 値は上書きしない)
+```
+
+```gherkin
+# AC-0006-0018
+Scenario: CI では autoremediate off、--dry-run は副作用なし (error/boundary)
+  Given 標準 CI env var (例: CI=true) が設定された環境
+  When `qfai doctor --autoremediate` を実行する
+  Then autoremediate は実行されず "autoremediate disabled in CI" line が出力される (既定 off)
+  And 別途 `qfai doctor --autoremediate --dry-run` は予定された修復を preview するが、npm install / archive / config write のいずれの副作用も発生させない
+```
+
+```gherkin
+# AC-0006-0019
+Scenario: --profile <skill> が manifest の runtimeDependencies を probe する
+  Given `assets/init/.qfai/assistant/skills/<skill>/manifest.json` が runtimeDependencies を宣言し、一部 dep が node_modules に未存在
+  When `qfai doctor --profile <skill>` を実行する
+  Then 各 entry について `node_modules/.bin/...` / `node_modules/<name>/` が probe される
+  And missing dep は install command 付きで report される
+```
+
+```gherkin
+# AC-0006-0020
+Scenario: 空 manifest は probe せず、manifest↔probe drift は error (error/boundary)
+  Given `runtimeDependencies` が空配列の manifest
+  When `qfai doctor --profile <skill>` を実行する
+  Then probe finding は 1 件も emit されない (false positive なし)
+  And 別ケースで manifest 宣言と probe 結果が drift した場合は `R-SKILL-MANIFEST-DRIFT` (SSOT-sync Pair III) が emit される
 ```

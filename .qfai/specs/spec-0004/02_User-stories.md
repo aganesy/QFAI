@@ -51,3 +51,15 @@ As a contributor changing either `findDesignMdViolations.ts` (scanner) or `gener
 ### US-0004-0036
 
 As a Reviewer-Gate consumer ingesting `R-PROMPT-SCANNER-DRIFT` findings, I want `qfai validate` to reject any such finding whose `justification:` is empty (mirroring the existing `R-WORKLOG-DRIFT` justification contract), so that drift findings always name the modified file, the missing-counterpart file, and the unmatched contract clause (REQ-0125).
+
+### US-0004-0037
+
+As a delivery lead shipping a SaaS-tenant project, I want `qfai validate --profile saas-package` to PASS when the prototyping-profile validate PASSes, a DCON-005 design-system attestation is present at `.qfai/contracts/design/design-system.yaml`, and the CLI-HANDOFF cross-skill handoff schema PASSes — while skipping ATDD / implement-class gates and naming each skip via `D-SAAS-PACKAGE-VERIFY-SKIPPED` (info), so that SaaS-tenant deliveries get a lightweight-but-honest gate that never silently claims work it did not check (REQ-0166).
+
+### US-0004-0038
+
+As a UI-contract author, I want `auditProfile.ts` to accept both the legacy string-only `primary_tasks` form and the structured `{id, label, acceptance}` form, and `QFAI-AUD-020` to name the recommended count band in its warning, so that I can migrate to the testable structured shape at my own pace during the deprecation window while string-only items continue to PASS (REQ-0164).
+
+### US-0004-0039
+
+As a contributor opening a PR, I want a `check-pack-locations.mjs` CI lane wired into `pnpm ci:lint` to reject `review-*/` or `discussion-*/` directories introduced outside the allowed roots (`tmp/`, `.qfai/review/<ts>/`, `.qfai/discussion/<ts>/`), emitting `R-PACK-LOCATION-DRIFT` that references `.agents/rules/root-additions-policy.md` and proposes the correct path, so that the textual root-additions rule becomes structural enforcement (REQ-0167).

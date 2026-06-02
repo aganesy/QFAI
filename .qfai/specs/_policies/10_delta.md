@@ -689,3 +689,101 @@
 
 - `.qfai/assistant/process/migrations/<pinned-version>-prototyping-defect-remediation.md` is the operational memo only. The seeded distributed copy at `packages/qfai/assets/init/.qfai/assistant/process/migrations/` MUST NOT contain internal IDs (`spec-NNNN`, `CAP-NNNN`, `DR-NNNN`, `DEC-NNNN-NNNN`, `OQ-NNNN-NNNN`) or `vN.M[.P]` markers per `.agents/rules/distributed-surface.md`. Only the canonical npm version (`packages/qfai/package.json#version`) is referenceable in the seeded copy.
 - New contract files under `.qfai/contracts/cli/` (`qfai-doctor.md`, `qfai-prototyping-iterate.md`) are authoring-zone and NOT in `package.json#files`.
+
+## 2026-05-27 — CHG-006 — Second-Wave Defect Remediation (v1.9.2, cross-spec)
+
+- adopted: cycle-0 `--emit-skeletons` (opt-in) token-driven placeholder emission for every `frozenSurfaceUnion` screen (DR-0261 / DR-0273)
+- adopted: DESIGN.md front-matter `patch_zone:` semantic (in-zone edits update `patchHash` only; `majorHash` stable) (DR-0262)
+- adopted: `prototyping.mode` discriminator (convergence | exploration) with medium gate-relaxation table; certify rejects exploration iterations (DR-0263)
+- adopted: stale review-pack TTL archival (14d default, `review.staleTtlDays` config) + `qfai doctor --autoremediate` / `--clean` (DR-0264)
+- adopted: `QFAI-MOCK-010` direction = anchor-form template default + strict validator; new SSOT-sync Pair V (template ↔ validator) enforced by `R-MOCK-HREF-DRIFT` (DR-0265)
+- adopted: active discussion session pointer SSOT = `.qfai/state.json#discussion.currentId`, `qfai discussion list --active` as read view (DR-0266)
+- adopted: `QFAI-AUD-020` `primary_tasks` recommended band 3..7 + structured `{id,label,acceptance}` closed schema, string-only accepted during window (DR-0267 / DR-0268)
+- adopted: SKILL.md `## Default Autopilot Policy` 3-bucket template (auto-decide / ask-user / hard-required); `R-AUTOPILOT-POLICY-MISSING` enforces presence (DR-0269)
+- adopted: envelope-deviation `AskUserQuestion` audit-log (four-context taxonomy) + `qfai audit log` CLI (`--scope`/`--operator`/`--clause`/`--format`) (DR-0270 / DR-0271)
+- adopted: `D-SCAFFOLD-PLACEHOLDER` escalates to error after 3 validate cycles (`atdd.scaffoldEscalateCycles`) (DR-0272)
+- adopted: pack-location CI lane scanning staged/changed dirs vs allowed roots; `R-PACK-LOCATION-DRIFT` (DR-0274)
+- adopted: per-skill `runtimeDependencies` manifest (`manifest.json`) + `qfai doctor --profile <skill>` probe; `R-SKILL-MANIFEST-DRIFT` enforces manifest↔probe SSOT-sync
+- adopted: cross-skill `handoff.yaml` canonical schema (`additionalProperties: true`); legacy ad-hoc files accepted with `D-HANDOFF-LEGACY-FORMAT`; `R-HANDOFF-SCHEMA-DRIFT` enforces
+- adopted: iter-NN evidence-mutation audit-log (`mutation-log.jsonl`); `R-EVIDENCE-MUTATION-UNLOGGED` enforces
+- adopted: SaaS-package lightweight verify profile (`qfai validate --profile saas-package`) + `certify --scope saas-package` (references DCON-005 design-system attestation)
+- adopted: `surface_type: ui-bearing` auto-population step in `/qfai-sdd`; `D-SURFACE-TYPE-MISSING` (warning → error at sunset)
+- adopted: one-minor-release backwards-compatible adapter window for every path/schema change; sunset = qfai 1.10.0 (mirrors OC-60)
+- superseded: hand-skeletoning of non-primary `frozenSurfaceUnion` screens as the only coverage path
+- superseded: any-byte DESIGN.md edit invalidating all prior cycle evidence (replaced by patch-zone semantic)
+- superseded: timestamp-inference as the way to find the active discussion session across 19+ dirs
+
+### Triage Table (cross-spec rows only)
+
+> Per-spec rows are owned by each `<spec>/09_delta.md` `## Triage`. The table below only lists the policy-layer rows that affect `.qfai/specs/_policies/**` directly. All operations are `UPDATE:APPEND` — no `CREATE`, no new `CAP`, no `MODIFY` rewrites of accepted text.
+
+| Source   | Subject                                                                                                                                                                                        | Existing Spec | Operation | Sub-op | Approved By   | Rationale                                                                                                                                                             |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| REQ-0167 | Review-pack / discussion-pack location CI lane (`check-pack-locations.mjs` into `pnpm ci:lint`); allowed roots `tmp/`, `.qfai/review/<ts>/`, `.qfai/discussion/<ts>/`; `R-PACK-LOCATION-DRIFT` | `_policies`   | UPDATE    | APPEND | yusuke_senaga | Structural enforcement of `.agents/rules/root-additions-policy.md` rule 6; cross-cuts no single spec. New OC row records the CI-lane obligation.                      |
+| REQ-0168 | New Reviewer-Gate finding-code catalog (8 codes, all severity error + mandatory `justification:` per OQ-0109 Option A / TC-71)                                                                 | `_policies`   | UPDATE    | APPEND | yusuke_senaga | Finding-code catalog cross-cuts spec-0004 / spec-0012 / spec-0014 / spec-0015; the SSOT severity/justification posture belongs in `_policies` glossary + constraints. |
+| REQ-0169 | One-minor-release backwards-compatible adapter + deprecation window for every path/schema change in this pack; sunset = qfai 1.10.0                                                            | `_policies`   | UPDATE    | APPEND | yusuke_senaga | Window/sunset policy is shared across all touched specs (mirrors OC-60). Belongs in `_policies/07_Constraints.md` so no spec re-invents it.                           |
+| REQ-0170 | Migration memo authored at `.qfai/assistant/process/migrations/1.9.2-second-wave-defect-remediation.md` (old→new per capability, window, sunset, recovery, spec cross-links)                   | `_policies`   | UPDATE    | APPEND | yusuke_senaga | Memo lives outside any single spec; precedent (`v1.9.1-prototyping-defect-remediation.md`) anchored from `_policies`. Records authoring + immutability obligation.    |
+| REQ-0173 | Documentation realignment of `references/iteration-loop.md` / `generator-prompt.md` / `handoff.md` / `evidence-requirements.md` + each SKILL.md to the OQ-0152..0157 outcomes                  | `_policies`   | UPDATE    | APPEND | yusuke_senaga | Doc realignment cross-cuts every touched skill; the cross-skill rewording rule + `W-SKILL-DOC-BROKEN-REF` zero-stale-ref obligation are shared (extends OC-62).       |
+
+### OQ → DR resolution log
+
+> Architect-resolved at this slice. The per-spec slices (Spec A–K) cite these DR IDs. OQ-0161 / OQ-0164 / OQ-0165 remain `deferred` (ops); the register's OQ-0167 `sdd lint --fix` autofix question (Spec I) remains `deferred`.
+
+| OQ         | DR      | Decision                                                                     | Spec |
+| ---------- | ------- | ---------------------------------------------------------------------------- | ---- |
+| OQ-0152    | DR-0261 | Cycle-0 skeleton = token-driven placeholder (option B)                       | A    |
+| OQ-0166    | DR-0273 | `--skeleton-mode full\|placeholder\|stub` flag, default placeholder          | A    |
+| OQ-0153    | DR-0262 | DESIGN.md front-matter `patch_zone:` block (option a)                        | B    |
+| OQ-0154    | DR-0263 | exploration gate-relaxation = medium (`QFAI-CRIT-008` + design-compliance)   | C    |
+| OQ-0155    | DR-0264 | stale review-pack TTL = 14d default, `review.staleTtlDays` config            | D    |
+| OQ-0156    | DR-0265 | `QFAI-MOCK-010` = anchor-form template default + strict validator (option b) | E    |
+| OQ-0157    | DR-0266 | active session pointer = `state.json#discussion.currentId` (option B)        | E    |
+| (REQ-0157) | DR-0272 | `D-SCAFFOLD-PLACEHOLDER` escalate after 3 validate cycles                    | F    |
+| OQ-0162    | DR-0270 | envelope-deviation audit trigger = four-context taxonomy (option C pinned)   | G    |
+| OQ-0163    | DR-0271 | `qfai audit log` = filtered query + `--format table\|json`                   | G    |
+| OQ-0160    | DR-0269 | Default Autopilot Policy = 3-bucket template (option C)                      | H    |
+| OQ-0158    | DR-0267 | `primary_tasks` band = 3..7 (option C)                                       | I    |
+| OQ-0159    | DR-0268 | `primary_tasks` structured schema = `{id,label,acceptance}` closed           | I    |
+| OQ-0167    | DR-0274 | pack-location lint scope = staged/changed dirs vs allowed roots              | K    |
+
+### New contracts / finding codes introduced
+
+- Contract index (`_policies/05_Contracts.md` § CHG-006): `CLI-HANDOFF` (handoff schema), `CLI-MANIFEST` (per-skill runtimeDependencies manifest schema), `CLI-AUDIT` (`qfai audit log`). DCON-005 (design-system) referenced for the saas-package attestation requirement (no new DCON).
+- Reviewer-Gate finding codes (REQ-0168 catalog; severity error + mandatory `justification:` per TC-71): `R-AUTOPILOT-POLICY-MISSING`, `R-HANDOFF-SCHEMA-DRIFT`, `R-EVIDENCE-MUTATION-UNLOGGED`, `R-DESIGN-MD-PATCH-OUT-OF-ZONE` (severity warning per REQ-0151), `R-PACK-LOCATION-DRIFT`, `R-SKILL-MANIFEST-DRIFT`, `R-EXPLORATION-CERTIFY-ATTEMPT`, `R-MOCK-HREF-DRIFT`.
+- `qfai validate` / lint findings: `D-SCAFFOLD-PLACEHOLDER`, `D-SURFACE-TYPE-MISSING`, `D-HANDOFF-LEGACY-FORMAT`, `D-SAAS-PACKAGE-VERIFY-SKIPPED` (info).
+- New SSOT-sync pairs (mirror v1.9.1 `R-PROMPT-SCANNER-DRIFT`; pair labels per the discussion pack `09_Constraints.md` C-4): Pair III per-skill `manifest.json` ↔ `qfai doctor` probe (`R-SKILL-MANIFEST-DRIFT`); Pair IV canonical `handoff.ts` schema ↔ all skill handoff writers (`R-HANDOFF-SCHEMA-DRIFT`); Pair V `qfai-discussion` mock template ↔ `QFAI-MOCK-010` validator (`R-MOCK-HREF-DRIFT`).
+
+### Impact-Cascade Verification
+
+- All companion rows above derive from REQ Source IDs declared in `discussion-20260527075558258/06_REQ.md`. The 8-spec distribution (spec-0012 / spec-0006 / spec-0010 / spec-0008 / spec-0015 / spec-0013 / spec-0014 / spec-0004) is recorded in the Distribution-by-spec table below; those rows are authored per-spec by a later wave.
+- No row is approval-gated (UPDATE:APPEND only). `_policies/11_Slice-Policy.md` §AskUserQuestion テンプレート is not triggered.
+- Deferred OQs (OQ-0161 / OQ-0164 / OQ-0165, and register OQ-0167 autofix) are mirrored to `13_Deferred.md` and the touched specs' `08_Open-questions.md`; this pack does not modify their disposition.
+
+### Distribution by spec (REQ counts)
+
+> Authored by the per-spec wave; recorded here as the cross-spec triage SSOT. All UPDATE:APPEND, no CREATE, no new CAP.
+
+| Spec        | CAP      | REQ                                    | Notes                                                                                                                   |
+| ----------- | -------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| spec-0012   | CAP-0012 | REQ-0150, 0151, 0152, 0162, 0165       | cycle-0 skeletons, DESIGN.md patch-zone, `prototyping.mode`, taskFidelity keywords, mutation-log                        |
+| spec-0006   | CAP-0006 | REQ-0153, 0156, 0159 (probe side)      | review-pack TTL archival, `doctor --autoremediate`, manifest probe                                                      |
+| spec-0010   | CAP-0010 | REQ-0154, 0155 (writer)                | `QFAI-MOCK-010` anchor template, active session pointer writer                                                          |
+| spec-0008   | CAP-0008 | REQ-0157                               | `qfai atdd scaffold` bulk skeleton generation                                                                           |
+| spec-0015   | CAP-0015 | REQ-0158, 0160, 0161, 0168, 0171, 0172 | envelope audit-log, Default Autopilot Policy, handoff schema, finding-code catalog, `audit log`, handoff upgrade helper |
+| spec-0013   | CAP-0013 | REQ-0155 (reader), 0163, 0164          | active session pointer reader, `surface_type` auto-populate, `primary_tasks` band + shape                               |
+| spec-0014   | CAP-0014 | REQ-0166 (certify)                     | `certify --scope saas-package`                                                                                          |
+| spec-0004   | CAP-0004 | REQ-0164 (validator), 0166, 0167       | `auditProfile.ts` shape accept, `--profile saas-package`, pack-location validator integration                           |
+| `_policies` | (none)   | REQ-0167, 0168, 0169, 0170, 0173       | pack-location CI lane, finding-code catalog SSOT, deprecation window, migration memo, doc realignment                   |
+
+### ID Stability
+
+- No CAP / spec / REQ / AC / BR / EX / TC / TDD ID is renumbered.
+- New plain `DR-NNNN` IDs begin at DR-0261 (DR-0258/0259/0260 were consumed by CHG-003); see `_policies/08_Decisions.md` § DR-0261..0274.
+- New spec-level append IDs follow each per-spec `09_delta.md` append rules.
+
+### Distributed-Surface Impact
+
+- The operational migration memo `.qfai/assistant/process/migrations/1.9.2-second-wave-defect-remediation.md` lives under the distributed asset tree shape; its prose MUST NOT contain internal IDs (`spec-NNNN` cross-links and the filename version slot are the structurally-required exceptions) or `vN.M[.P]` markers beyond the npm version per `.agents/rules/distributed-surface.md`.
+- New / updated shipped surfaces (SKILL.md `## Default Autopilot Policy` sections, `references/*.md` realignments, `handoff.ts` schema doc) MUST pass the layer 1/2/3 leakage guard. Per-skill `manifest.json` is consumer-authored (under the consuming project's `.qfai/assistant/skills/<skill>/manifest.json`); `skillManifestProbe.ts` reads it from the consumer tree, so it is NOT bundled under `assets/init/...`.
+- New authoring-zone contract files under `.qfai/contracts/cli/` are NOT in `package.json#files`.
+- `.qfai/evidence/decisions/` and `.qfai/evidence/prototyping/mutation-log.jsonl` are git-ignored by default (mirror `.qfai/evidence/prototyping/`); not distributed.

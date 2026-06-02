@@ -174,4 +174,157 @@ describe("Render Critique Loop validation", { timeout: 15000 }, () => {
     expect(issues.some((i) => i.code === "QFAI-CRIT-003")).toBe(false);
     expect(issues.some((i) => i.code === "QFAI-CRIT-004")).toBe(false);
   });
+
+  // Defense-in-depth for the `--capture` skeleton emitter: even
+  // when an evidence file lands at the root scan target with a
+  // syntactically-complete `## taskFidelity` section + all required
+  // keyword tokens, unfilled `TODO` / `FIXME` / `<placeholder>` /
+  // empty values MUST be rejected as `QFAI-CRIT-009` so the
+  // operator cannot accidentally satisfy the gate with the
+  // skeleton's own values copied verbatim. Mirrors the
+  // captureTemplate.ts skeleton emission.
+  it("rejects taskFidelity sections whose required-keyword values are TODO / FIXME / <placeholder> / empty", async () => {
+    await seedSkillPrompt(
+      "qfai-prototyping",
+      [
+        "# Prototyping Skill",
+        "",
+        "Render screenshots and review HTML; honor spec / DESIGN.md / .qfai/contracts/ui.",
+      ].join("\n"),
+    );
+    // Seed an evidence file at the SCAN ROOT (matches the pattern
+    // `.qfai/evidence/prototyping*.md`). The body has `## taskFidelity`
+    // + all required keywords AND verdict markers — pre-fix this
+    // would silently pass; post-fix the TODO / FIXME / <placeholder> /
+    // empty-value detector surfaces CRIT-009.
+    await seedEvidence(
+      "prototyping_unfilled.md",
+      [
+        "# Prototyping Iter (desktop 1024 / mobile 480 verdict: PASS)",
+        "",
+        "## taskFidelity",
+        "",
+        "- cta_visibility: TODO",
+        "- four_state_check: FIXME",
+        "- step_count: <placeholder>",
+        "- max_primary_steps: ",
+        "",
+      ].join("\n"),
+    );
+    const issues = await validateRenderCritique(root, makeConfig());
+    const placeholderFinding = issues.find(
+      (i) =>
+        i.code === "QFAI-CRIT-009" &&
+        typeof i.message === "string" &&
+        i.message.includes("placeholders not filled"),
+    );
+    expect(placeholderFinding).toBeDefined();
+    expect(placeholderFinding?.severity).toBe("error");
+    expect(placeholderFinding?.message ?? "").toMatch(/cta_visibility/);
+    expect(placeholderFinding?.message ?? "").toMatch(/four_state_check/);
+  });
+
+  // Pin the empty-value + `<placeholder>` detection on the SSOT
+  // required-keyword set itself (cta_visibility / four_state_check).
+  // The prior test placed `<placeholder>` on `step_count` and the
+  // empty value on `max_primary_steps`, which are NOT in
+  // `TASK_FIDELITY_REQUIRED_KEYWORDS` — so those branches of
+  // `TODO_PLACEHOLDER_RE` were not exercised on the SSOT walk path.
+  // Catches a regression where the colon-trailing `\s*` (vs `[ \t]*`)
+  // would consume newlines and miss the empty-value case.
+  it("flags required-keyword empty values and <placeholder> markers via the SSOT walk", async () => {
+    await seedSkillPrompt(
+      "qfai-prototyping",
+      [
+        "# Prototyping Skill",
+        "",
+        "Render screenshots and review HTML; honor spec / DESIGN.md / .qfai/contracts/ui.",
+      ].join("\n"),
+    );
+    await seedEvidence(
+      "prototyping_required_empty.md",
+      [
+        "# Prototyping Iter (desktop 1024 / mobile 480 verdict: PASS)",
+        "",
+        "## taskFidelity",
+        "",
+        // Empty value: line ends right after the colon. The capture
+        // must produce "" so TODO_PLACEHOLDER_RE matches.
+        "- cta_visibility:",
+        // <placeholder> on a required keyword.
+        "- four_state_check: <placeholder>",
+        "",
+      ].join("\n"),
+    );
+    const issues = await validateRenderCritique(root, makeConfig());
+    const placeholderFinding = issues.find(
+      (i) =>
+        i.code === "QFAI-CRIT-009" &&
+        typeof i.message === "string" &&
+        i.message.includes("placeholders not filled"),
+    );
+    expect(placeholderFinding).toBeDefined();
+    // BOTH required keywords must surface — the prior test only
+    // covered the TODO / FIXME shapes on required keywords, leaving
+    // empty + `<placeholder>` rejection unverified at the SSOT layer.
+    expect(placeholderFinding?.message ?? "").toMatch(/cta_visibility/);
+    expect(placeholderFinding?.message ?? "").toMatch(/four_state_check/);
+  });
+
+  // Pin the SAFE PLACEMENT INVARIANT (layer-1 of the
+  // captureTemplate.ts defense): the skeleton emitted under
+  // `.qfai/evidence/prototyping/iter-NN/task-fidelity-template.md`
+  // must NOT be matched by validateRenderCritique's evidence glob
+  // (`.qfai/evidence/{prototyping*,critique-*}.md` — direct
+  // children only). If a future change widens the glob to
+  // `**/*.md` or moves the template into the scanned root, this
+  // test fails and the contract is surfaced before any silent-pass
+  // regression lands.
+  it("does NOT match the iter-NN task-fidelity-template.md from the scan glob (layer-1 placement invariant)", async () => {
+    const { writeTaskFidelityTemplate } =
+      await import("../../src/core/prototyping/captureTemplate.js");
+    await seedSkillPrompt(
+      "qfai-prototyping",
+      [
+        "# Prototyping Skill",
+        "",
+        "Render screenshots and review HTML; honor spec / DESIGN.md / .qfai/contracts/ui.",
+      ].join("\n"),
+    );
+    // Seed the iter directory and let the emitter write the
+    // skeleton exactly where the real `--capture` path does.
+    const iterDir = path.join(root, ".qfai", "evidence", "prototyping", "iter-00");
+    await mkdir(iterDir, { recursive: true });
+    await writeTaskFidelityTemplate(iterDir);
+    // Seed a minimal evidence file at the scan root with viewport
+    // markers but NO taskFidelity content. If layer-1 were broken
+    // (template matched by the glob), the template's
+    // `cta_visibility: TODO` / `four_state_check: TODO` lines
+    // would land in the scan and we'd surface CRIT-009 with the
+    // placeholder message. With the intact glob the template is
+    // invisible, so the placeholder branch does NOT fire.
+    await seedEvidence(
+      "prototyping_iter.md",
+      [
+        "# Iteration evidence",
+        "",
+        "## Desktop viewport >= 1024px",
+        "verdict: PASS",
+        "",
+        "## Mobile viewport <= 480px",
+        "verdict: PASS",
+        "",
+      ].join("\n"),
+    );
+    const issues = await validateRenderCritique(root, makeConfig());
+    const placeholderFinding = issues.find(
+      (i) =>
+        i.code === "QFAI-CRIT-009" &&
+        typeof i.message === "string" &&
+        i.message.includes("placeholders not filled"),
+    );
+    // Placeholder branch MUST NOT fire — the template lives outside
+    // the scan glob, so its `TODO` values cannot have been observed.
+    expect(placeholderFinding).toBeUndefined();
+  });
 });

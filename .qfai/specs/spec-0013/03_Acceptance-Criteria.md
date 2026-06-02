@@ -100,3 +100,45 @@ Given a traceability validator declared in `packages/qfai/src/core/validators/`,
 - Given a newly authored `.qfai/contracts/ui/<screen>.yaml` whose `screens[].primary_tasks` is empty (`[]`) on any entry,
 - When the new validate lane (QFAI-AUD-001 aligned) runs as part of `qfai validate --fail-on error`,
 - Then the lane FAILS at severity error naming the offending screen ID and the empty-`primary_tasks` violation, AND `/qfai-prototyping` MUST NOT proceed past its preflight gate until each `screens[]` entry has ≥ 1 primary_task; non-empty `primary_tasks` passes the lane silently.
+
+## AC-0013-0020: Active discussion pack resolved via single helper over `state.json`
+
+- US-Refs: US-0013-0012
+- Given downstream `/qfai-sdd` skills need the active discussion pack,
+- When the pack is resolved,
+- Then it is read through one helper from `.qfai/state.json#discussion.currentId` (the SSOT written by `/qfai-discussion`, spec-0010) and is NOT inferred from filesystem mtime.
+
+## AC-0013-0021: Ambiguous active pointer surfaces recovery guidance
+
+- US-Refs: US-0013-0012
+- Given `.qfai/state.json#discussion.currentId` is absent OR resolves to a missing/duplicate pack,
+- When the helper resolves the active pack,
+- Then it raises an error naming the candidate `discussion-*` dirs and the recovery command (`qfai discussion use <id>`).
+
+## AC-0013-0022: `/qfai-sdd` auto-populates `surface_type: ui-bearing`
+
+- US-Refs: US-0013-0013
+- Given a spec that has a `.qfai/contracts/ui/<spec>-*.yaml` companion,
+- When `/qfai-sdd` runs,
+- Then it sets `surface_type: ui-bearing` frontmatter on that spec; `resolveAllUiBearingSpecs()` continues to require the frontmatter as the strict ui-bearing signal (no downstream behavior change).
+
+## AC-0013-0023: `D-SURFACE-TYPE-MISSING` warns on companion-without-frontmatter
+
+- US-Refs: US-0013-0013
+- Given a spec with a `.qfai/contracts/ui/<spec>-*.yaml` companion but no `surface_type: ui-bearing` frontmatter,
+- When `qfai sdd lint` (or equivalent) runs,
+- Then it emits `D-SURFACE-TYPE-MISSING` at severity warning during the deprecation window (sunsets to error at window close); specs without a UI companion emit no finding.
+
+## AC-0013-0024: `primary_tasks` count band documented and named in warning
+
+- US-Refs: US-0013-0014
+- Given the `ui-spec.yaml` template comments and `references/ui-contract-guide.md`,
+- When they are read,
+- Then the recommended `primary_tasks` count band 3..7 (DR-0267) is documented, and the `QFAI-AUD-020` warning text names the band; below 3 or above 7 emits the warning.
+
+## AC-0013-0025: `primary_tasks` accepts string-only and structured shapes
+
+- US-Refs: US-0013-0014
+- Given a UI contract whose `primary_tasks` entries are string-only (legacy) OR structured `{id, label, acceptance}` (all-required, closed schema per DR-0268),
+- When `auditProfile.ts` evaluates them during the deprecation window,
+- Then both shapes are accepted (string-only continues to PASS); a structured item missing any of `id` / `label` / `acceptance`, or carrying extra keys, is rejected.

@@ -1,9 +1,38 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
+import { loadConfig } from "./config.js";
 import type { UiBearingClassification } from "./detection/surfaceType.js";
 import { readValidatedClassification } from "./detection/surfaceType.js";
 import { findPacks, latestPack as selectLatestPack } from "./packLocator.js";
+import { readDiscussionCurrentId } from "./state.js";
+
+/**
+ * Resolve the discussion root for `<root>` honoring
+ * `config.paths.discussionDir` (which may be relative OR absolute).
+ * Currently only `resolveActiveDiscussionPack` consumes this helper;
+ * `inspectLatestDiscussionPack` receives the resolved
+ * `discussionRoot` from its caller (which already runs
+ * `resolvePath(root, config, "discussionDir")`).
+ *
+ * `path.resolve` (not `path.join`) preserves an absolute config
+ * value verbatim — projects that relocate their discussion packs
+ * outside `<root>` (e.g. shared review machines, custom CI layouts)
+ * still find the same packs the CLI-side
+ * `qfai discussion list --active` resolver does.
+ *
+ * Acknowledged DRY tech debt: this helper, the CLI-side
+ * `discussion.ts#resolveDiscussionRoot`, and the public
+ * `core/config.ts#resolvePath(root, config, "discussionDir")` are
+ * three copies of the same single-line resolution rule. Folding all
+ * three into one shared exported helper is a follow-up — for now the
+ * three callsites have been verified to use identical semantics so a
+ * change to ONE without the other two will introduce drift.
+ */
+async function resolveDiscussionRootFromConfig(root: string): Promise<string> {
+  const { config } = await loadConfig(root);
+  return path.resolve(root, config.paths.discussionDir);
+}
 
 export const DISCUSSION_PACK_DIR_RE = /^discussion-(\d{17})$/;
 
@@ -142,6 +171,93 @@ export async function inspectLatestDiscussionPack(
 export async function findLatestDiscussionPackDir(discussionRoot: string): Promise<string | null> {
   const packs = await findPacks(discussionRoot, "discussion");
   return selectLatestPack(packs)?.path ?? null;
+}
+
+/**
+ * Error thrown by `resolveActiveDiscussionPack` when the runtime-state
+ * pointer (`.qfai/state.json#discussion.currentId`) is absent OR
+ * resolves to a missing/duplicate pack. The message names each
+ * candidate `discussion-*` directory and the literal recovery command
+ * `qfai discussion use <id>` so consumers can self-recover without
+ * scanning filesystem mtimes.
+ */
+export class ResolveActiveDiscussionPackError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ResolveActiveDiscussionPackError";
+  }
+}
+
+/**
+ * Resolve the active discussion pack via the single runtime-state
+ * SSOT `.qfai/state.json#discussion.currentId`. Returns the absolute
+ * path of the pack directory. Filesystem modification-time inference
+ * is NOT used.
+ *
+ * Throws `ResolveActiveDiscussionPackError` when:
+ *   - `currentId` is absent / blank, or
+ *   - `currentId` resolves to a directory that does not exist, or
+ *   - `currentId` resolves to a name that matches more than one pack
+ *     entry under the discussion root (a malformed filesystem).
+ *
+ * The thrown message lists every candidate `discussion-*` directory
+ * present on disk plus the literal recovery command
+ * `qfai discussion use <id>`.
+ */
+export async function resolveActiveDiscussionPack(root: string): Promise<string> {
+  // Honor `paths.discussionDir` from qfai.config.yaml. The previous
+  // hardcoded `<root>/.qfai/discussion` did not match what the CLI
+  // `qfai discussion list --active` resolver (discussion.ts) reads,
+  // so a project that relocates discussionDir (relative OR absolute)
+  // could `qfai discussion use <id>` successfully, then have callers
+  // of this active-pack resolver report the pack as missing because
+  // it was scanning the wrong directory.
+  const discussionRoot = await resolveDiscussionRootFromConfig(root);
+  const currentId = await readDiscussionCurrentId(root);
+  const candidates = await findPacks(discussionRoot, "discussion");
+  const candidateNames = candidates
+    .map((pack) => pack.name)
+    .sort((left, right) => left.localeCompare(right));
+
+  if (currentId === null) {
+    throw new ResolveActiveDiscussionPackError(buildRecoveryMessage(candidateNames, null));
+  }
+
+  const matches = candidates.filter((pack) => pack.name === currentId);
+  if (matches.length === 0) {
+    throw new ResolveActiveDiscussionPackError(buildRecoveryMessage(candidateNames, currentId));
+  }
+  if (matches.length > 1) {
+    throw new ResolveActiveDiscussionPackError(
+      buildDuplicateMessage(candidateNames, currentId, matches.length),
+    );
+  }
+
+  const resolved = matches[0];
+  if (!resolved) {
+    throw new ResolveActiveDiscussionPackError(buildRecoveryMessage(candidateNames, currentId));
+  }
+  return resolved.path;
+}
+
+function buildRecoveryMessage(candidateNames: readonly string[], currentId: string | null): string {
+  const candidateList =
+    candidateNames.length > 0 ? candidateNames.join(", ") : "<none found on disk>";
+  const reason =
+    currentId === null
+      ? "no active discussion pointer is set in .qfai/state.json#discussion.currentId"
+      : `the active pointer .qfai/state.json#discussion.currentId='${currentId}' does not match any discussion pack on disk`;
+  return `${reason}; candidate discussion packs: ${candidateList}; recover with: qfai discussion use <id>`;
+}
+
+function buildDuplicateMessage(
+  candidateNames: readonly string[],
+  currentId: string,
+  count: number,
+): string {
+  const candidateList =
+    candidateNames.length > 0 ? candidateNames.join(", ") : "<none found on disk>";
+  return `the active pointer .qfai/state.json#discussion.currentId='${currentId}' resolves to ${count} duplicate pack entries; candidate discussion packs: ${candidateList}; recover with: qfai discussion use <id>`;
 }
 
 function isDiscussionPackFileIncomplete(text: string): boolean {

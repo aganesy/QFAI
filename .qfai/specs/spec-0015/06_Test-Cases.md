@@ -119,3 +119,123 @@
 - Type: error
 - Level: integration
 - Verify that when the upstream SSOT-sync-pair CI lane (spec-0004 BR-0004-0027) signals drift on a fixture PR (scanner edited but prompt not, or vice versa), the Reviewer Gate emits `R-PROMPT-SCANNER-DRIFT` at severity error with a non-empty 3-part `justification:` naming the modified file, the un-paired counterpart, and the Tailwind contract clause whose match cannot be confirmed. Downstream `qfai validate` ingestion accepts the 3-part justification and rejects an empty-`justification:` variant (cross-spec assertion against BR-0004-0028). Implemented under `packages/qfai/tests/integration/reviewerGatePromptScannerDrift.test.ts`.
+
+## TC-0015-0020: SKILL.md missing Default Autopilot Policy emits R-AUTOPILOT-POLICY-MISSING
+
+- EX-Ref: EX-0015-0011
+- AC-Refs: AC-0015-0015
+- Type: error
+- Level: integration
+- Verify that a fixture SKILL.md lacking the `## Default Autopilot Policy` section makes the Reviewer Gate emit `R-AUTOPILOT-POLICY-MISSING` (severity error) with a non-empty `justification:` naming the SKILL.md path and the absent section.
+
+## TC-0015-0021: SKILL.md with 3 named buckets passes (no autopilot finding)
+
+- EX-Ref: EX-0015-0011
+- AC-Refs: AC-0015-0015
+- Type: normal
+- Level: unit
+- Verify that a SKILL.md whose `## Default Autopilot Policy` lists all three buckets (auto-decide / ask-user / hard-required) per DR-0269 passes without `R-AUTOPILOT-POLICY-MISSING`; a section that widens the auto-decide bucket beyond the DR-0269 set is flagged.
+
+## TC-0015-0034: SKILL.md with section present but missing buckets emits R-AUTOPILOT-POLICY-MISSING
+
+- EX-Ref: EX-0015-0011
+- AC-Refs: AC-0015-0015
+- Type: error
+- Level: integration
+- Verify the present-but-incomplete branch of AC-0015-0015 / BR-0015-0010. A fixture SKILL.md whose `## Default Autopilot Policy` heading exists but the body lacks one or more required buckets (e.g. only `auto-decide`, or empty body) MUST emit `R-AUTOPILOT-POLICY-MISSING` (severity error) with a non-empty `justification:` that names each missing bucket by name (`ask-user`, `hard-required`, etc). Distinct from TC-0015-0020 (section absent) and TC-0015-0021 (fully populated PASS), this pins the partial-population trigger and the per-bucket justification enumeration introduced by the validator extension.
+
+## TC-0015-0022: Envelope-deviation AskUserQuestion writes a decision record
+
+- EX-Ref: EX-0015-0012
+- AC-Refs: AC-0015-0016
+- Type: normal
+- Level: integration
+- Verify that an `AskUserQuestion` naming one of the four envelope-deviation contexts writes `.qfai/evidence/decisions/<ISO8601-ts>.json` shaped `{question, answer, scope, operatorIdentity, timestamp, envelopeContractClause}` per DR-0270.
+
+## TC-0015-0023: Non-envelope AskUserQuestion writes no record (no fail-open)
+
+- EX-Ref: EX-0015-0012
+- AC-Refs: AC-0015-0016
+- Type: boundary
+- Level: unit
+- Verify that an `AskUserQuestion` naming none of the four contexts writes no decision record, and that `.qfai/evidence/decisions/` is git-ignored by default.
+
+## TC-0015-0024: Non-conforming handoff write emits R-HANDOFF-SCHEMA-DRIFT
+
+- EX-Ref: EX-0015-0013
+- AC-Refs: AC-0015-0017
+- Type: error
+- Level: integration
+- Verify that a skill writing a handoff file not conforming to the CLI-HANDOFF schema, or an asymmetric edit of SSOT-sync Pair IV (schema ↔ writers), makes the Reviewer Gate emit `R-HANDOFF-SCHEMA-DRIFT` (severity error) with a non-empty `justification:`.
+
+## TC-0015-0025: Conforming handoff with extra keys passes; legacy file warns
+
+- EX-Ref: EX-0015-0013
+- AC-Refs: AC-0015-0017
+- Type: normal
+- Level: unit
+- Verify that a `handoff.yaml` matching the minimum field set plus extra per-skill keys passes (`additionalProperties: true`), and a legacy `session-handoff.yaml` read during the window surfaces `D-HANDOFF-LEGACY-FORMAT` (warning) rather than `R-HANDOFF-SCHEMA-DRIFT`.
+
+## TC-0015-0026: All eight catalog codes enforce mandatory non-empty justification
+
+- EX-Ref: EX-0015-0014
+- AC-Refs: AC-0015-0018
+- Type: normal
+- Level: unit
+- Verify that the eight catalog codes (`R-AUTOPILOT-POLICY-MISSING`, `R-HANDOFF-SCHEMA-DRIFT`, `R-EVIDENCE-MUTATION-UNLOGGED`, `R-DESIGN-MD-PATCH-OUT-OF-ZONE`, `R-PACK-LOCATION-DRIFT`, `R-SKILL-MANIFEST-DRIFT`, `R-EXPLORATION-CERTIFY-ATTEMPT`, `R-MOCK-HREF-DRIFT`) are registered at severity error (with `R-DESIGN-MD-PATCH-OUT-OF-ZONE` documented warning per REQ-0151) and each requires a mandatory non-empty `justification:`.
+
+## TC-0015-0027: Catalog finding with empty justification rejected by validate
+
+- EX-Ref: EX-0015-0014
+- AC-Refs: AC-0015-0018
+- Type: error
+- Level: integration
+- Verify that a Reviewer report emitting a catalog code with empty / whitespace-only `justification:` is rejected by `qfai validate` ingestion (advisory-failing, R-WORKLOG-DRIFT family pattern), and the same code with a non-empty justification is accepted. The OQ-0119 prompt-augmentation-timing deferral is not exercised.
+
+## TC-0015-0028: `qfai audit log --scope/--operator/--clause` filters records
+
+- EX-Ref: EX-0015-0015
+- AC-Refs: AC-0015-0019
+- Type: normal
+- Level: integration
+- Verify that `qfai audit log` lists `.qfai/evidence/decisions/<ts>.json` records newest-first and that `--scope`, `--operator`, `--clause` filter the set and `--format json` emits JSON per DR-0271.
+
+## TC-0015-0029: `qfai audit log` default format is table; empty store handled
+
+- EX-Ref: EX-0015-0015
+- AC-Refs: AC-0015-0019
+- Type: boundary
+- Level: unit
+- Verify that `qfai audit log` with no `--format` defaults to `table`, and that an empty / absent `.qfai/evidence/decisions/` directory yields an empty result without error.
+
+## TC-0015-0030: `qfai handoff upgrade` emits conforming handoff with legacy: preserved
+
+- EX-Ref: EX-0015-0016
+- AC-Refs: AC-0015-0020
+- Type: normal
+- Level: integration
+- Verify that `qfai handoff upgrade <legacy-file>` emits a conforming `handoff.yaml` at the canonical path with recognized fields mapped and all original fields preserved under a `legacy:` key.
+
+## TC-0015-0031: `qfai handoff upgrade` on malformed legacy input errors without data loss
+
+- EX-Ref: EX-0015-0016
+- AC-Refs: AC-0015-0020
+- Type: error
+- Level: unit
+- Verify that `qfai handoff upgrade` on a malformed / unreadable legacy file fails with a clear error and does not overwrite or partially emit a canonical `handoff.yaml`.
+
+## TC-0015-0032: `validate --report` reports zero stale references for an in-PR doc rewrite
+
+- EX-Ref: EX-0015-0017
+- AC-Refs: AC-0015-0021
+- Type: normal
+- Level: integration
+- Verify that when `references/*.md` + SKILL.md are rewritten in the same atomic PR as the OQ-0152..0157 implementation, `qfai validate --report` reports zero stale references at HEAD.
+
+## TC-0015-0033: `validate --report` flags stale reference (warning in window, error at sunset)
+
+- EX-Ref: EX-0015-0017
+- AC-Refs: AC-0015-0021
+- Type: error
+- Level: integration
+- Verify that a `references/*.md` still describing pre-implementation behavior surfaces as a warning during the deprecation window and fails (error) at HEAD after sunset under the zero-stale-reference obligation.

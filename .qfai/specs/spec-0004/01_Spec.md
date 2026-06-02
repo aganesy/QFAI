@@ -30,6 +30,9 @@
   - layoutAntiPatternsDetected schema validator (`lap-001..008` whitelist)
   - designMdViolations schema validator (`{category: color|font|radius|shadow, expected, found, location}` shape)
   - `findDesignMdViolations(html, designMd)` purity / determinism contract
+  - SaaS-package validate profile (REQ-0166 validate side): `qfai validate --profile saas-package` gates on prototyping-profile PASS + DCON-005 attestation + CLI-HANDOFF schema; ATDD / implement-class gates SKIPPED with `D-SAAS-PACKAGE-VERIFY-SKIPPED` (info)
+  - `auditProfile.ts` `primary_tasks` shape acceptance (REQ-0164): string-only AND structured `{id,label,acceptance}` (DR-0268); `QFAI-AUD-020` warning names the `3..7` count band (DR-0267)
+  - pack-location CI lane (REQ-0167): `packages/qfai/scripts/check-pack-locations.mjs` wired into `pnpm ci:lint`, emits `R-PACK-LOCATION-DRIFT` (DR-0274 scope)
 - Out:
   - report rendering details
   - prototyping runtime execution
@@ -97,14 +100,17 @@
 - REQ-0029: `layoutAntiPatternsDetected` 配列が `lap-001-orphan-page` から `lap-008-no-back-affordance` の whitelist 外トークンを含む場合、validator は `QFAI-PROT-002` を error 重大度で報告する
 - REQ-0030: `designMdViolations` 配列が `{category: "color"|"font"|"radius"|"shadow", expected: string, found: string, location: string}` 形状のみを許容する
 - REQ-0031: `findDesignMdViolations(html, designMd)` は I/O / clock 依存を持たず、同一入力に対し同一出力を返す pure function である
+- REQ-0166: `qfai validate --profile saas-package` PASSes on prototyping-profile + DCON-005 design-system attestation + CLI-HANDOFF schema; ATDD / implement-class gates SKIPPED with `D-SAAS-PACKAGE-VERIFY-SKIPPED` (info) naming each skip (certify side owned by spec-0014)
+- REQ-0164: `auditProfile.ts` accepts string-only AND structured `{id,label,acceptance}` `primary_tasks` (DR-0268); `QFAI-AUD-020` warning names the `3..7` recommended count band (DR-0267); string-only continues to PASS during the deprecation window
+- REQ-0167: `packages/qfai/scripts/check-pack-locations.mjs` (DR-0274 staged/changed-dir scope) integrated into `pnpm ci:lint`; rejects misplaced `review-*/` / `discussion-*/` dirs with `R-PACK-LOCATION-DRIFT` referencing `.agents/rules/root-additions-policy.md`
 - REQ-0150: lint-shipping ID-class guard expansion — `packages/qfai/scripts/lint-shipping.ts` の `src-comment` ルールセットを拡張し、`REQ-NNNN` / `REQ-NNNN-NNNN` / `AC-NNNN-NNNN` / `TC-NNNN-NNNN` / `US-NNNN-NNNN` / `BR-NNNN-NNNN` の composite ID class を `src/**/*.ts` のコメント行で catch する (現状は確立済みの forbidden class のみ scan)。CHG-005 cycle で spec-0006 doctor.ts にこれら ID が leak し、manual implementation-reviewer audit のみで検出された defect を automation 化する。layer-2 post-build guard (`packages/qfai/scripts/check-no-internal-version-leakage.sh`) と SSOT-sync invariant に従い同一の regex 集合をミラーする。Acceptance signal: `pnpm ci:lint` 実行時に `REQ-0001-0001` などの composite ID class を含む新規コメント行を含む変更が exit 1 で fail する。
 
 ## Entry points
 
-- US range in this spec: US-0004-0001..US-0004-0036
-- AC range: AC-0004-0001..AC-0004-0035
-- BR range: BR-0004-0001..BR-0004-0029
-- EX range: EX-0004-0001..EX-0004-0036
-- TC range: TC-0004-0001..TC-0004-0064
+- US range in this spec: US-0004-0001..US-0004-0039
+- AC range: AC-0004-0001..AC-0004-0039
+- BR range: BR-0004-0001..BR-0004-0033
+- EX range: EX-0004-0001..EX-0004-0041
+- TC range: TC-0004-0001..TC-0004-0073
 - Primary actors: QA engineer, AI agent, CI pipeline
 - Notes: validate is the machine gate for current skill-first, contract-first downstream

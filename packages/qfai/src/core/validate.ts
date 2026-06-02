@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
+import { runSaasPackageProfile } from "./saasPackage/profile.js";
 import { collectScenarioFiles } from "./discovery.js";
 import {
   buildScCoverage,
@@ -19,6 +20,7 @@ import { validateReviewArtifacts } from "./validators/reviewArtifacts.js";
 import { validateSpecPacks } from "./validators/specPack.js";
 import { validateTraceability } from "./validators/traceability.js";
 import { validateAtddCodeTraceability } from "./validators/atddCodeTraceability.js";
+import { validateScaffoldPlaceholder } from "./validators/scaffoldPlaceholder.js";
 import {
   detectPlatform,
   validateAgentDefinition,
@@ -63,6 +65,14 @@ import {
   validateSkillDocReferences,
   validateReviewerJustification,
   validateReviewerGate,
+  detectMockHrefDrift,
+  validateSurfaceTypeDrift,
+  validateDesignMdPatchZone,
+  detectEvidenceMutationUnlogged,
+  detectSkillManifestDrift,
+  validateAutopilotPolicy,
+  detectHandoffSchemaDrift,
+  validateStaleReferences,
 } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
@@ -132,7 +142,18 @@ async function runProfileValidators(
     case "verify":
     case "full":
       return runFullValidators(root, config, platformOption);
+    case "saas-package":
+      return runSaasPackage(root, config, platformOption);
   }
+}
+
+async function runSaasPackage(
+  root: string,
+  config: ConfigLoadResult["config"],
+  platformOption?: string,
+): Promise<Issue[]> {
+  const prototypingIssues = await runPrototypingValidators(root, config, platformOption);
+  return runSaasPackageProfile(root, config, prototypingIssues);
 }
 
 async function runDiscussionValidators(
@@ -176,6 +197,23 @@ async function runSddValidators(
     ...(await validateSkillDocReferences(root, config)),
     ...(await validateReviewerJustification(root, config)),
     ...(await validateReviewerGate(root, config)),
+    ...(await validateSurfaceTypeDrift(root, config)),
+    // Skill governance: `R-AUTOPILOT-POLICY-MISSING` on a qfai-*
+    // SKILL.md that lacks the `## Default Autopilot Policy` section.
+    // SKILL.md governance lives in the sdd profile.
+    ...(await validateAutopilotPolicy(root, { config })),
+    // CLI-HANDOFF Pair IV — fire `R-HANDOFF-SCHEMA-DRIFT` on
+    // asymmetric schema ↔ writer edits. Handoff is a skill-governance
+    // surface so it lives in sdd.
+    ...(await detectHandoffSchemaDrift(root)),
+    // Pair III — fire `R-SKILL-MANIFEST-DRIFT` on asymmetric
+    // probe-impl ↔ manifest-schema edits. Skill-manifest governance
+    // lives in the sdd profile (skill-governance domain).
+    ...(await detectSkillManifestDrift(root)),
+    // Doc governance — surface pre-implementation tokens in
+    // `references/*.md` + SKILL.md as warning during the deprecation
+    // window and error at sunset.
+    ...(await validateStaleReferences(root, { config })),
   ];
 }
 
@@ -184,8 +222,16 @@ async function runPrototypingValidators(
   config: ConfigLoadResult["config"],
   platformOption?: string,
 ): Promise<Issue[]> {
-  return [
+  const raw: Issue[] = [
     ...(await runUiuxValidators(root, config, platformOption)),
+    ...(await detectMockHrefDrift(root)),
+    // CHG-006 second-wave reviewer-gate findings (prototyping
+    // surface). Both detectors no-op when their gating files are
+    // absent (consumer repo without the validator source / without a
+    // DESIGN.md.backup snapshot), so the prototyping profile stays
+    // safe to run on freshly-bootstrapped projects.
+    ...(await validateDesignMdPatchZone(root, config)),
+    ...(await detectEvidenceMutationUnlogged(root)),
     ...(await validatePrototypingEvidence(root, config)),
     ...(await validateScreenIdCasing(root, config.paths.contractsDir)),
     ...(await validateUiEvidenceArtifacts(root, config)),
@@ -198,13 +244,38 @@ async function runPrototypingValidators(
     ...(await validatePrototypingArtifactRefIntegrity(root, config)),
     ...(await validateSpecIdLinkage(root, config)),
   ];
+  // CHG-006 prototyping-mode relaxation: under `mode: exploration` the
+  // soft-rubric gates (QFAI-CRIT-008, QFAI-DCON-030..032) downgrade
+  // error → warning. Schema / path / license gates stay hard error.
+  // The mode is read from `prototyping.json#mode` written by iterate
+  // at cycle 0 (absent → legacy "convergence" interpretation).
+  return await relaxPrototypingIssuesIfExploration(root, raw);
+}
+
+async function relaxPrototypingIssuesIfExploration(
+  root: string,
+  issues: Issue[],
+): Promise<Issue[]> {
+  const { readPrototypingModeForRelax } = await import("./prototyping/modeRead.js");
+  const mode = await readPrototypingModeForRelax(root);
+  if (mode !== "exploration") return issues;
+  const { relaxIssuesForMode } = await import("./prototyping/mode.js");
+  return [...relaxIssuesForMode(issues, mode)];
 }
 
 async function runAtddValidators(
   root: string,
   config: ConfigLoadResult["config"],
 ): Promise<Issue[]> {
-  return [...(await validateAtddCodeTraceability(root, config))];
+  return [
+    ...(await validateAtddCodeTraceability(root, config)),
+    // D-SCAFFOLD-PLACEHOLDER (BR-0008-0008): surface unfilled
+    // `qfai atdd scaffold` skeletons at severity warning until the
+    // operator implements a real assertion. Wired into atdd + full
+    // profiles so the documented escalation path is reachable from
+    // the validate command surface.
+    ...(await validateScaffoldPlaceholder(root, config)),
+  ];
 }
 
 async function runTddValidators(

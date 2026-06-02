@@ -21,6 +21,7 @@
   - direct discussion-pack validation path の coexistence
   - prototyping evidence path is `.qfai/evidence/prototyping/iter-NN/{<screen>.png, <screen>.html, review.json}` per iter; legacy `screenshots/` / `html/` directory layout is no longer the active SSOT
   - `/qfai-verify` no longer references "full-harness profile" / "perfect-100 completion gate" / "weighted-total scoring"; review-profiles.yml drops the full-harness profile entirely
+  - SaaS-package certify scope (REQ-0166 certify side): `qfai prototyping certify --scope saas-package` seals `completion-certificate.json` with `scope: "saas-package"` + a `notes:` field naming what was skipped; MUST NOT claim full DONE; `--upgrade-scope full` upgrades only after the skipped gates land
 - Out:
   - diff-only verification
   - resurrecting a removed prototyping runtime
@@ -55,8 +56,9 @@
 - REQ-0028: `PROT-DS01` remains a validator for design-system compliance artifacts when that slice exists
 - REQ-0029: legacy full-harness wording in validators is treated as artifact compatibility language, not as a public entrypoint
 - REQ-0030: direct discussion-pack canonical validation may still exist, but is not the primary downstream completion gate
+- REQ-0166: `qfai prototyping certify --scope saas-package` seals a lightweight `completion-certificate.json` with `scope: "saas-package"` + a `notes:` field naming what was skipped; never claims full DONE; `--upgrade-scope full` upgrades only after missing gates land (validate side owned by spec-0004)
 
 ## Entry points
 
-- US range in this spec: US-0014-0001..US-0014-0019
+- US range in this spec: US-0014-0001..US-0014-0020
 - Primary actors: QFAI user, CI/CD pipeline, qa-gatekeeper

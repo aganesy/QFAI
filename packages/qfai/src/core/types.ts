@@ -37,7 +37,8 @@ export type ValidationProfile =
   | "atdd"
   | "tdd"
   | "verify"
-  | "full";
+  | "full"
+  | "saas-package";
 
 export type ValidationTraceability = {
   sc: ScCoverage;

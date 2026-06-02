@@ -126,7 +126,8 @@ function isValidationResult(value: unknown): value is ValidationResult {
     profile !== "atdd" &&
     profile !== "tdd" &&
     profile !== "verify" &&
-    profile !== "full"
+    profile !== "full" &&
+    profile !== "saas-package"
   ) {
     return false;
   }

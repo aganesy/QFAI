@@ -149,4 +149,141 @@ describe("parseArgs", () => {
     expect(parsed.options.help).toBe(true);
     expect(parsed.options.invalidExitCode).toBe(2);
   });
+
+  // CHG-006 second-wave flag parsing (spec-0012):
+  //   --emit-skeletons / --skeleton-mode / --mode under `prototyping iterate`.
+
+  it("parses --emit-skeletons on prototyping iterate (default-OFF without the flag)", () => {
+    const cwd = process.cwd();
+    const without = parseArgs(["prototyping", "iterate", "--cycle", "0"], cwd);
+    expect(without.invalid).toBe(false);
+    expect(without.options.prototypingEmitSkeletons).toBeUndefined();
+    const withFlag = parseArgs(["prototyping", "iterate", "--cycle", "0", "--emit-skeletons"], cwd);
+    expect(withFlag.invalid).toBe(false);
+    expect(withFlag.options.prototypingEmitSkeletons).toBe(true);
+  });
+
+  it("parses --skeleton-mode {placeholder|full|stub} and rejects other values", () => {
+    const cwd = process.cwd();
+    for (const value of ["placeholder", "full", "stub"] as const) {
+      const parsed = parseArgs(
+        ["prototyping", "iterate", "--cycle", "0", "--skeleton-mode", value],
+        cwd,
+      );
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.prototypingSkeletonMode).toBe(value);
+    }
+    const bogus = parseArgs(
+      ["prototyping", "iterate", "--cycle", "0", "--skeleton-mode", "bogus"],
+      cwd,
+    );
+    expect(bogus.invalid).toBe(true);
+    expect(bogus.options.help).toBe(true);
+  });
+
+  it("requires a value for --skeleton-mode", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0", "--skeleton-mode"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.help).toBe(true);
+  });
+
+  it("parses --mode {convergence|exploration} and rejects other values", () => {
+    const cwd = process.cwd();
+    for (const value of ["convergence", "exploration"] as const) {
+      const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0", "--mode", value], cwd);
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.prototypingMode).toBe(value);
+    }
+    const bogus = parseArgs(["prototyping", "iterate", "--cycle", "0", "--mode", "feral"], cwd);
+    expect(bogus.invalid).toBe(true);
+    expect(bogus.options.help).toBe(true);
+  });
+
+  it("requires a value for --mode", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0", "--mode"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.help).toBe(true);
+  });
+
+  // Pin the unified value-taking-flag contract (see args.ts contract
+  // block): when --spec / --scope / --upgrade-scope / --operator /
+  // --clause are used on a subcommand that does NOT accept the flag,
+  // the parser MUST (1) consume the value token so it cannot leak
+  // into the positional stream, AND (2) call markInvalid() so the
+  // misuse surfaces as a parse error. Pre-fix, --spec / --operator /
+  // --clause silently dropped on misuse, and --upgrade-scope did
+  // not consume its value. Per-flag assertions follow.
+  describe("misplaced-subcommand value-taking flags: markInvalid + consume value token", () => {
+    it("--spec on a non-atdd subcommand marks invalid AND consumes the value token", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["audit", "log", "--spec", "spec-0006", "--format", "json"], cwd);
+      expect(parsed.invalid).toBe(true);
+      // The "spec-0006" value must NOT have shifted into a positional;
+      // --format following it should still be honored.
+      expect(parsed.options.auditAction).toBe("log");
+      // No atdd spec id should have been recorded.
+      expect(parsed.options.atddSpecId).toBeUndefined();
+    });
+
+    it("--operator on a non-audit subcommand marks invalid AND consumes the value token", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["validate", "--operator", "alice", "--format", "github"], cwd);
+      expect(parsed.invalid).toBe(true);
+      // "alice" must NOT have shifted into a positional, so --format
+      // remains parseable downstream.
+      expect(parsed.options.validateFormat).toBe("github");
+      expect(parsed.options.auditOperator).toBeUndefined();
+    });
+
+    it("--clause on a non-audit subcommand marks invalid AND consumes the value token", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["report", "--clause", "skill-envelope", "--format", "json"], cwd);
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.reportFormat).toBe("json");
+      expect(parsed.options.auditClause).toBeUndefined();
+    });
+
+    it("--scope on a non-audit/non-certify subcommand marks invalid AND consumes the value token", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["validate", "--scope", "saas-package", "--format", "github"], cwd);
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.validateFormat).toBe("github");
+      // Neither audit-scope nor prototyping-scope should be populated.
+      expect(parsed.options.auditScope).toBeUndefined();
+      expect(parsed.options.prototypingScope).toBeUndefined();
+    });
+
+    it("--upgrade-scope on a non-certify subcommand marks invalid AND consumes the value token", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["validate", "--upgrade-scope", "full", "--format", "github"], cwd);
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.validateFormat).toBe("github");
+      expect(parsed.options.prototypingUpgradeScopeFull).toBeUndefined();
+    });
+
+    // Adjacent-flag regression probe. If a misplaced value-taking flag
+    // skips its `i += 1` (the pre-PR `--upgrade-scope` bug), the next
+    // iteration sees the flag's intended value as a token, which can
+    // shift downstream flag parsing in subtle ways. With the unified
+    // contract, `--upgrade-scope` on a non-certify subcommand always
+    // consumes the next token, so a following `--scope full` on an
+    // `audit` subcommand still parses to `auditScope === "full"`. A
+    // regression that strips the consume would re-process the dangling
+    // `full` as a positional and break the chain.
+    it("misplaced --upgrade-scope consumes its value before --scope on a chained audit invocation", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(
+        ["audit", "log", "--upgrade-scope", "full", "--scope", "deviation"],
+        cwd,
+      );
+      // The misplaced flag is invalid, but the downstream `--scope
+      // deviation` (which IS valid for audit) must still populate
+      // `auditScope`. With the consume contract this works because
+      // the dangling `full` does not interfere with the next iter.
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.auditScope).toBe("deviation");
+    });
+  });
 });

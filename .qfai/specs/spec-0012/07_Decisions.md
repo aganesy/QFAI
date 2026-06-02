@@ -162,3 +162,13 @@
   - B) Re-introduce as default-on (rejected — flips DR-0012-0029 bit-default; breaks every downstream consumer that relies on review-only output; violates Drift Protocol "amend, do not silently flip" rule).
   - C) Keep DR-0012-0029 as-is and require downstream to keep hand-authoring scripts (rejected — four independent reports document the cost; defending the existing posture against unanimous downstream evidence would be Rejected-Option-Readoption against the four feedback packs).
 - References: REQ-0109, REQ-0110, NFR-0106, REQ-0126, discussion-pack discussion-20260523221141355 SRC-0001/0002/0003/0004, DR-0012-0027 (preserved), DR-0012-0029 (amended).
+
+## Second-Wave Defect-Remediation (v1.9.2) — cross-spec DR references
+
+These rows reference the cross-spec decisions pinned in `_policies/08_Decisions.md` (DR-0261..0274); the full DR bodies are NOT duplicated here. See `09_delta.md` § 2026-05-27 — v1.9.2 Second-Wave (spec-0012) for the Triage.
+
+- DR-Ref DR-0261 (`_policies/08_Decisions.md`): Cycle-0 skeleton emission UX shape — token-driven placeholder (OQ-0152 resolved). Governs AC-0012-0072 / AC-0012-0073, BR-0012-0060 (REQ-0150).
+- DR-Ref DR-0273 (`_policies/08_Decisions.md`): Cycle-0 skeleton mode runtime control — `--skeleton-mode full|placeholder|stub` flag, default `placeholder` (OQ-0166 resolved). Governs AC-0012-0072, BR-0012-0060 (REQ-0150).
+- DR-Ref DR-0262 (`_policies/08_Decisions.md`): DESIGN.md patch-zone shape — front-matter `patch_zone:` block (OQ-0153 resolved). Governs AC-0012-0074 / AC-0012-0075, BR-0012-0061 (REQ-0151).
+- DR-Ref DR-0263 (`_policies/08_Decisions.md`): exploration-mode gate-relaxation table — medium (OQ-0154 resolved). Governs AC-0012-0076 / AC-0012-0077, BR-0012-0062 (REQ-0152).
+- REQ-0162 (`taskFidelity` keyword docs + template emission) and REQ-0165 (iter-NN evidence-mutation audit-log) are straight MUSTs with no governing DR; governed by AC-0012-0078..0079 / BR-0012-0063 and AC-0012-0080..0081 / BR-0012-0064 respectively.

@@ -471,6 +471,92 @@
 - When iterate validates the argument,
 - Then the error MUST read literally `--cycle accepts 0..9 (=10 cycles total). --cycle 10 would be the 11th cycle and is not supported.` and SHOULD recommend `--cycle 9 --check-convergence` or the equivalent peek mode.
 
+## AC-0012-0072: Cycle-0 `--emit-skeletons` frozenSurfaceUnion coverage (DR-0261, DR-0273)
+
+- US-Refs: US-0012-0138
+- REQ-Refs: REQ-0150
+- Given `qfai prototyping iterate --cycle 0 --emit-skeletons` invoked over a `frozenSurfaceUnion` resolved from multiple specs,
+- When cycle 0 runs,
+- Then iterate MUST emit one placeholder HTML per `screens[].id` in `frozenSurfaceUnion`, consuming DESIGN.md tokens (color / font / radius / shadow) for default styling and making no per-screen LLM generation call (token-driven placeholder per DR-0261).
+- And the default skeleton mode is `placeholder`; `--skeleton-mode full|placeholder|stub` (DR-0273) overrides it per-run with no config key added.
+- And after convergence, every `frozenSurfaceUnion` screen MUST carry at least one `evidenceRefs[]` entry per kind (`screenshot` AND `html`) regardless of which spec it belongs to.
+
+## AC-0012-0073: `--emit-skeletons` opt-in default unchanged (DR-0261)
+
+- US-Refs: US-0012-0138
+- REQ-Refs: REQ-0150
+- Given `qfai prototyping iterate --cycle 0` invoked WITHOUT `--emit-skeletons`,
+- When cycle 0 runs,
+- Then behavior MUST match v1.9.1 bit-for-bit with no skeleton emission and no regression (opt-in posture during the deprecation window).
+
+## AC-0012-0074: DESIGN.md patch-zone in-zone edit preserves evidence (DR-0262)
+
+- US-Refs: US-0012-0139
+- REQ-Refs: REQ-0151
+- Given DESIGN.md with a front-matter `patch_zone:` block declaring editable line ranges / token names,
+- When an edit whose diff is fully contained in the patch zone is made,
+- Then only a new `patchHash` field MUST be updated; `frozenDesignMdHash#majorHash` MUST remain stable and prototyping evidence MUST remain valid.
+
+## AC-0012-0075: DESIGN.md out-of-zone edit invalidates evidence (DR-0262)
+
+- US-Refs: US-0012-0139
+- REQ-Refs: REQ-0151
+- Given DESIGN.md with a front-matter `patch_zone:` block,
+- When an edit touches any line / token outside the zone (or removes the `patch_zone:` block itself),
+- Then evidence MUST be invalidated as today AND Reviewer Gate MUST emit `R-DESIGN-MD-PATCH-OUT-OF-ZONE` (severity warning).
+
+## AC-0012-0076: `prototyping.mode` discriminator + `--mode` override (DR-0263)
+
+- US-Refs: US-0012-0140
+- REQ-Refs: REQ-0152
+- Given `qfai.config.yaml#prototyping.mode` and the `qfai prototyping iterate --mode <convergence|exploration>` flag,
+- When iterate resolves the effective mode,
+- Then `--mode` MUST override the config value; absence of both MUST default to `convergence` (backwards-compatible).
+- And `prototyping.json#mode` MUST record the per-iteration mode.
+- And under `mode: exploration`, `QFAI-CRIT-008` (axes-exceptional) AND the design-compliance error MUST downgrade error → warning while structural / schema / path / license (exit 66) gates remain hard error (medium relaxation per DR-0263).
+
+## AC-0012-0077: Certify rejects exploration-mode iterations (DR-0263)
+
+- US-Refs: US-0012-0140
+- REQ-Refs: REQ-0152
+- Given a loop where one or more iterations were produced under `mode: exploration`,
+- When `qfai prototyping certify` runs,
+- Then certify MUST reject sealing with `R-EXPLORATION-CERTIFY-ATTEMPT` AND `acceptedIterationIndex` MUST reference a convergence-mode iteration only.
+
+## AC-0012-0078: `taskFidelity` keyword documentation + error text (REQ-0162)
+
+- US-Refs: US-0012-0141
+- REQ-Refs: REQ-0162
+- Given the `QFAI-CRIT-009` validator and `references/evidence-requirements.md`,
+- When `taskFidelity` evidence is missing a required keyword,
+- Then `QFAI-CRIT-009` error text MUST name every required keyword (`cta_visibility`, `four_state_check`, plus any others surfaced by the current implementation) and the expected document section.
+- And `references/evidence-requirements.md` MUST enumerate the keywords with example markdown structure.
+
+## AC-0012-0079: `iterate --capture` emits `taskFidelity` template skeleton (REQ-0162)
+
+- US-Refs: US-0012-0141
+- REQ-Refs: REQ-0162
+- Given `qfai prototyping iterate --capture`,
+- When the evidence template skeleton is emitted,
+- Then the skeleton MUST include every required `taskFidelity` keyword as a placeholder so the keyword set cannot be silently forgotten.
+
+## AC-0012-0080: iter-NN evidence mutation audit-log (REQ-0165)
+
+- US-Refs: US-0012-0142
+- REQ-Refs: REQ-0165
+- Given `iterate` or `certify` performing a destructive mutation (delete / overwrite) on any path under `.qfai/evidence/prototyping/iter-NN/*`,
+- When the mutation occurs,
+- Then a `.qfai/evidence/prototyping/mutation-log.jsonl` JSON-Lines entry shaped `{ ts, caller, path, action, priorSize, newSize }` MUST be appended for every such mutation, including each file moved by `iterate --cycle 0 --force`.
+- And the mutation-log MUST be git-ignored by default.
+
+## AC-0012-0081: Unlogged iter-NN mutation reviewer-gate finding (REQ-0165)
+
+- US-Refs: US-0012-0142
+- REQ-Refs: REQ-0165
+- Given a PR introducing a code path that mutates iter-NN evidence,
+- When the path does not call the mutation-log writer,
+- Then Reviewer Gate MUST emit `R-EVIDENCE-MUTATION-UNLOGGED` (severity error).
+
 ## Completion Gate
 
 - `/qfai-prototyping` completion requires `qfai validate --fail-on error` pass.

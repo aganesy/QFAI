@@ -188,8 +188,16 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
  * `validateJsonPath` of `.qfai/output/foo.json` still produces
  * `.qfai/output/foo-<profile>.json` — keeps backward compatibility with
  * non-default configurations.
+ *
+ * Exported so the certify-side `--upgrade-scope full` reader can derive
+ * the same canonical signal path from the loaded config rather than
+ * hardcoding a literal — otherwise an operator override of
+ * `output.validateJsonPath` in `qfai.config.yaml` redirects the writer
+ * but not the reader, and `--upgrade-scope full` refuses to upgrade
+ * even when the saas-package gates are actually passing under the
+ * custom location.
  */
-function profileSuffixedReportPath(configured: string, profile: string): string {
+export function profileSuffixedReportPath(configured: string, profile: string): string {
   const dir = path.posix.dirname(configured.replace(/\\/g, "/"));
   const base = path.posix.basename(configured.replace(/\\/g, "/"));
   const ext = path.posix.extname(base);

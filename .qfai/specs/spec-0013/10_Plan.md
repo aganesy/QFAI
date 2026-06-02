@@ -40,3 +40,9 @@
   2. `requirements-analyst` agent guide instructs authoring ≥ 1 `primary_task` per screen during SDD Phase 2 Slice.
   3. New validate lane (QFAI-AUD-001 aligned) blocks `/qfai-prototyping` from proceeding when any contracted screen has empty `primary_tasks`.
 - Cross-spec coupling: validator implementation lives in spec-0004 territory; the template + author guide are spec-0013 territory.
+
+## v1.9.2 Second-Wave — How
+
+- Active pointer reader (REQ-0155 / DR-0266): add a single helper that reads `.qfai/state.json#discussion.currentId` (writer in spec-0010); downstream `/qfai-sdd` skills resolve the active pack through it. Reject absent/missing/duplicate with an error naming candidate `discussion-*` dirs + `qfai discussion use <id>`. No mtime inference.
+- `surface_type` auto-population (REQ-0163): add a `/qfai-sdd` SKILL.md step that sets `surface_type: ui-bearing` frontmatter for every spec with a `.qfai/contracts/ui/<spec>-*.yaml` companion; `qfai sdd lint` emits `D-SURFACE-TYPE-MISSING` (warning during the window, sunsets to error). `resolveAllUiBearingSpecs()` keeps requiring the frontmatter as the strict signal.
+- `primary_tasks` band + shape (REQ-0164 / DR-0267 / DR-0268): document band 3..7 in `templates/contracts/ui-spec.yaml` comments and `references/ui-contract-guide.md`; `QFAI-AUD-020` warning text names the band; `auditProfile.ts` accepts string-only AND structured `{id,label,acceptance}` (all-required, closed) items during the window. Validator-implementation side is shared with spec-0004 (Source REQ-0164); this slice owns the SDD authoring + doc + template surface.

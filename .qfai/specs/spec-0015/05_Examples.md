@@ -71,3 +71,52 @@
 - When the Reviewer Gate processes the signal
 - Then it emits `R-PROMPT-SCANNER-DRIFT` (severity error) with `justification:` containing (a) the modified file path, (b) the un-paired counterpart path, (c) the Tailwind contract clause whose match could not be confirmed
 - The validate ingestion (owned by the `qfai validate` CLI spec) accepts the finding because `justification:` is non-empty and 3-part complete; if any of the 3 parts is missing, validate rejects (advisory-failing) per that ingestion rule
+
+## EX-0015-0011: SKILL.md missing Default Autopilot Policy fires R-AUTOPILOT-POLICY-MISSING
+
+- BR-Ref: BR-0015-0010
+- Given a SKILL.md with no `## Default Autopilot Policy` section OR a SKILL.md whose section is present but missing one or more required buckets (heading-only / partial population)
+- When the Reviewer Gate checks it
+- Then it emits `R-AUTOPILOT-POLICY-MISSING` (severity error) with `justification:` naming the SKILL.md path and either the absent section or the missing bucket(s) by name; a SKILL.md that lists all three buckets (auto-decide / ask-user / hard-required) passes without the finding
+
+## EX-0015-0012: Architectural-decision AskUserQuestion writes a decision record
+
+- BR-Ref: BR-0015-0011
+- Given an `AskUserQuestion` whose template names "architectural decision"
+- When the operator answers
+- Then the skill body writes `.qfai/evidence/decisions/2026-05-27T08-15-30Z.json` `{question, answer, scope: "architectural-decision", operatorIdentity, timestamp, envelopeContractClause}`, and a routine prompt that names none of the four contexts writes no record
+
+## EX-0015-0013: Skill writing a non-conforming handoff fires R-HANDOFF-SCHEMA-DRIFT
+
+- BR-Ref: BR-0015-0012
+- Given a skill that writes `handoff.yaml` missing the canonical schema shape (or an asymmetric edit touching only `handoff.ts` and not its consuming writers)
+- When the Reviewer Gate evaluates the PR
+- Then it emits `R-HANDOFF-SCHEMA-DRIFT` (severity error); a legacy `session-handoff.yaml` read during the window instead surfaces `D-HANDOFF-LEGACY-FORMAT` (warning), and a conforming `handoff.yaml` with extra per-skill keys passes (`additionalProperties: true`)
+
+## EX-0015-0014: Catalog finding with empty justification rejected by validate
+
+- BR-Ref: BR-0015-0013
+- Given a Reviewer report emitting `R-HANDOFF-SCHEMA-DRIFT` with `justification: ""`
+- When `qfai validate` ingests the report
+- Then it rejects the finding as advisory-failing (empty justification); the same code with a non-empty justification is accepted; all eight catalog codes share this posture
+
+## EX-0015-0015: `qfai audit log --scope` filters decision records
+
+- BR-Ref: BR-0015-0014
+- Given two records in `.qfai/evidence/decisions/`, one with `scope: "scope-expansion"` and one with `scope: "skill-envelope"`
+- When the operator runs `qfai audit log --scope scope-expansion --format json`
+- Then only the scope-expansion record is emitted as JSON; running `qfai audit log` with no filter lists both newest-first in a table (default `--format table`)
+
+## EX-0015-0016: `qfai handoff upgrade` preserves originals under legacy
+
+- BR-Ref: BR-0015-0015
+- Given a legacy `session-handoff.yaml` with fields not in the canonical schema
+- When the operator runs `qfai handoff upgrade session-handoff.yaml`
+- Then a conforming `handoff.yaml` is emitted at the canonical path with the recognized fields mapped and every original field preserved under a `legacy:` key (no data loss)
+
+## EX-0015-0017: validate --report flags a stale reference during the window
+
+- BR-Ref: BR-0015-0016
+- Given a `references/handoff.md` still describing pre-CLI-HANDOFF ad-hoc files after the implementation PR
+- When `qfai validate --report` runs during the deprecation window
+- Then the stale reference surfaces as a warning; after sunset the same stale reference at HEAD fails (zero-stale-reference obligation); a doc rewritten in the same atomic PR as the implementation reports zero stale references

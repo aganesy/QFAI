@@ -23,3 +23,7 @@ As a project lead, I want an independent Reviewer to validate coverage obligatio
 ## US-0008-0006: Test Case Quality Depth Verification
 
 As a QA Engineer, I want test cases evaluated for quality depth (boundary values, error paths, edge cases, equivalence partitioning) in addition to traceability coverage, so that normal-path-only test suites are identified as incomplete.
+
+## US-0008-0007: ATDD Scaffold Bulk Skeleton Generation
+
+As a QA Engineer, I want `qfai atdd scaffold --spec spec-NNNN` to read the spec test*cases and emit one `tests/atdd/spec-NNNN/<TC-ID>.test.*`skeleton per TC (with framework primitives, a`// TODO: implement assertion for <TC-ID>`marker, and comment references to related US-* / CON-API-\_), so that I can bootstrap acceptance-test files in bulk without hand-creating each file — while`qfai validate`flags any unfilled placeholder via`D-SCAFFOLD-PLACEHOLDER` (warning, escalating to error after 3 validate cycles per DR-0272) and re-running the scaffold never overwrites my filled-in (non-TODO) content.

@@ -56,3 +56,18 @@
 - When the test-design-analyst produces the Coverage Depth Matrix
 - Then US-0001-0001 shows ❌ for Error path and the overall Status is incomplete
 - And US-0001-0002 shows ✅ for Normal and Error paths
+
+## EX-0008-0009: Scaffold Emits Skeleton with TODO and Refs
+
+- BR-Ref: BR-0008-0008
+- Given a target spec `<spec-id>` whose test-case file defines a case realizing US-0008-0002, and an empty `tests/atdd/<spec-id>/` directory
+- When `qfai atdd scaffold --spec <spec-id>` runs
+- Then a `tests/atdd/<spec-id>/<TC-ID>.test.ts` file is created importing the test framework, containing a `// TODO: implement assertion for <TC-ID>` marker and a comment referencing US-0008-0002
+- And `qfai validate` reports `D-SCAFFOLD-PLACEHOLDER` (warning) for that file
+
+## EX-0008-0010: Scaffold Idempotency and 3-Cycle Escalation
+
+- BR-Ref: BR-0008-0009
+- Given a generated `<TC-ID-A>.test.ts` whose TODO has been replaced with a real `expect(...)` assertion, and a sibling `<TC-ID-B>.test.ts` whose `// TODO: implement assertion` marker remains
+- When `qfai atdd scaffold --spec <spec-id>` is re-run, then the filled `<TC-ID-A>` file is left untouched (non-TODO content preserved)
+- And when `qfai validate` is run 3 times with the default `atdd.scaffoldEscalateCycles: 3` and the `<TC-ID-B>` TODO still present, then `D-SCAFFOLD-PLACEHOLDER` is warning on cycles 1–2 and error on cycle 3 (DR-0272)

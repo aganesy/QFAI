@@ -2,7 +2,7 @@ import type { Dirent } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { QfaiConfig } from "../config.js";
+import { resolvePath, type QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
 import { resolveToolVersion } from "../version.js";
 import { LEGACY_STEERING_SUNSET } from "../paths/assistantPaths.js";
@@ -59,10 +59,18 @@ const QFAI_SKILL_ID_RE = /^qfai-/;
 
 export async function validateSkillDocReferences(
   root: string,
-  _config: QfaiConfig,
+  config: QfaiConfig,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+  // Honor `config.paths.skillsDir` via the canonical resolvePath
+  // helper so a project that relocates its skills tree (relative
+  // OR absolute) is still scanned. Pre-fix the validator hardcoded
+  // `.qfai/assistant/skills` and silently SKIPped every qfai-* SKILL
+  // file under the actual configured location — letting
+  // W-SKILL-DOC-BROKEN-REF / W-SKILL-PROJECT-MEMORY drift go
+  // unreported. The fix mirrors the sister validators
+  // `staleReferences.ts` and `autopilotPolicy.ts`.
+  const skillsDir = resolvePath(root, config, "skillsDir");
   if (!(await exists(skillsDir))) return issues;
 
   // Resolve current tool version once so broken-ref severity escalates
@@ -82,6 +90,11 @@ export async function validateSkillDocReferences(
     if (!entry.isDirectory()) continue;
     const skillId = entry.name;
     const skillDoc = path.join(skillsDir, skillId, "SKILL.md");
+    // Operator-facing relPath derived from the actual scan path so
+    // relocated skillsDir surfaces under its real (root-relative or
+    // absolute) location — not the hardcoded `.qfai/assistant/skills/`
+    // legacy.
+    const skillDocRelPath = path.relative(root, skillDoc).replace(/\\/g, "/");
     let body: string;
     try {
       body = await readFile(skillDoc, "utf-8");
@@ -108,7 +121,7 @@ export async function validateSkillDocReferences(
               "W-SKILL-DOC-BROKEN-REF",
               `${headline} ${ref.reason}`,
               refSeverity,
-              `.qfai/assistant/skills/${skillId}/SKILL.md`,
+              skillDocRelPath,
               "skillDocReferences.brokenRef",
             ),
           );
@@ -196,7 +209,7 @@ export async function validateSkillDocReferences(
             "W-SKILL-PROJECT-MEMORY",
             `${skillId}/SKILL.md is missing a trailing project_memory: block. Skills that participate in the work-log surface MUST declare project_memory to enumerate their remembered context.`,
             "warning",
-            `.qfai/assistant/skills/${skillId}/SKILL.md`,
+            skillDocRelPath,
             "skillDocReferences.projectMemory",
           ),
         );

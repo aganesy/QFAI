@@ -31,3 +31,31 @@ As a QFAI maintainer, I want the Reviewer Gate to emit `R-CERTIFY-VERIFY-CIRCULA
 ## US-0015-0008: Reviewer-Gate `R-PROMPT-SCANNER-DRIFT` emission with mandatory `justification:`
 
 As a Reviewer-Gate consumer, I want the Reviewer Gate to emit `R-PROMPT-SCANNER-DRIFT` (severity: error) with a non-empty `justification:` (naming the modified file, the un-paired counterpart, and the unmatched contract clause) whenever the upstream SSOT-sync-pair CI lane flags drift between `findDesignMdViolations.ts` and `generator-prompt.md`, so that downstream `qfai validate` ingestion can reject empty-justification findings under the existing prior-pack justification contract (REQ-0015-0014, per the discussion-20260522081618995 REQ-0006 justification text contract).
+
+## US-0015-0009: SKILL.md `## Default Autopilot Policy` section
+
+As a QFAI operator, I want every SKILL.md to carry a `## Default Autopilot Policy` section with three named buckets (auto-decide / ask-user / hard-required) and a Reviewer Gate that emits `R-AUTOPILOT-POLICY-MISSING` (severity error) when the section is absent OR is present but missing one or more required buckets (heading-only / partial population), so that avoidable per-session `AskUserQuestion` prompts collapse to 0–1 while triage / destructive / version-pin / scope-expansion decisions still require human authorization (REQ-0160, DR-0269).
+
+## US-0015-0010: Envelope-deviation `AskUserQuestion` audit-log
+
+As a QFAI maintainer, I want the skill body to write an envelope-deviation decision record to `.qfai/evidence/decisions/<ISO8601-ts>.json` whenever an `AskUserQuestion` names one of the four envelope-deviation contexts (skill-envelope / architectural-decision / rejected-option re-adoption / scope-expansion), so that future reviewers can map a deviation back to the architectural envelope-contract clause it touched (REQ-0158, DR-0270).
+
+## US-0015-0011: Cross-skill `handoff.yaml` schema
+
+As a QFAI maintainer, I want a single canonical cross-skill handoff schema (`packages/qfai/src/core/schemas/handoff.ts`, documented in `references/handoff.md`) that every skill producing or consuming handoff state reads and writes, with a Reviewer Gate emitting `R-HANDOFF-SCHEMA-DRIFT` (severity error) on non-conforming writes or asymmetric SSOT-sync-pair edits, so that handoff state stops fragmenting into ad-hoc per-skill files (REQ-0161, CLI-HANDOFF, SSOT-sync Pair IV).
+
+## US-0015-0012: New Reviewer-Gate finding-code catalog
+
+As a Reviewer-Gate consumer, I want the eight new second-wave finding codes registered as a catalog (all severity error, each carrying a mandatory non-empty `justification:`), so that Capabilities across the pack are tied to Reviewer-Gate enforcement under the single justification-text contract (REQ-0168, TC-71 advisory-failing posture).
+
+## US-0015-0013: `qfai audit log` CLI surface
+
+As a QFAI operator, I want a `qfai audit log` CLI (SHOULD) that lists the envelope-deviation decision records newest-first with `--scope` / `--operator` / `--clause` filters and `--format table|json` (table default), so that ops audit of recorded deviations does not require piping raw JSON through external tooling (REQ-0171, CLI-AUDIT, DR-0271).
+
+## US-0015-0014: Cross-skill handoff legacy adapter helper
+
+As a downstream-project operator on a legacy handoff file, I want `qfai handoff upgrade <legacy-file>` (SHOULD) to emit a conforming `handoff.yaml` at the canonical path while preserving all original fields under `legacy:`, so that migration to the CLI-HANDOFF schema is lossless during the deprecation window (REQ-0172).
+
+## US-0015-0015: Cross-skill documentation realignment to implementation
+
+As a QFAI maintainer, I want every `references/*.md` and each skill's SKILL.md rewritten to match the implementations chosen for the OQ-0152..0157 outcomes, landing in the same atomic PR as the implementation, with `qfai validate --report` verifying zero stale references at HEAD after sunset, so that cross-skill documentation does not drift from the shipped behavior (REQ-0173).

@@ -20,6 +20,11 @@ import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
 import { PROMPT_SCANNER_PAIRS } from "./promptScannerPairs.js";
+import {
+  MOCK_HREF_PAIRS,
+  MOCK_HREF_TEMPLATE_REL,
+  MOCK_HREF_VALIDATOR_REL,
+} from "./mockHrefPairs.js";
 
 const VERIFY_JSON_REL = ".qfai/output/verify.json";
 
@@ -168,8 +173,65 @@ async function detectPromptScannerDrift(root: string): Promise<Issue[]> {
 }
 
 /**
- * Composite Reviewer-Gate validator. Returns the union of all
- * CHG-005 findings (R-CERTIFY-VERIFY-CIRCULAR + R-PROMPT-SCANNER-DRIFT).
+ * Detect drift across the discussion mock template ↔ QFAI-MOCK-010
+ * validator SSOT-sync pair (Pair V). Fires R-MOCK-HREF-DRIFT (error)
+ * when one side adopts the same-origin absolute `/path/` form without
+ * the matching change on the other side.
+ *
+ * Like detectPromptScannerDrift, the check applies only when both
+ * source files exist (consumer repos installing the QFAI npm package
+ * lack the validator source, so the contract cannot drift there).
+ *
+ * Exported and invoked from the prototyping-profile validator set
+ * (runPrototypingValidators), because the surface it guards — the mock
+ * template + QFAI-MOCK-010 via validateHtmlMock — runs under the
+ * prototyping (and full) profiles, not under sdd. The full profile runs
+ * runPrototypingValidators exactly once, so coverage there stays single.
+ */
+export async function detectMockHrefDrift(root: string): Promise<Issue[]> {
+  const templateAbs = path.join(root, MOCK_HREF_TEMPLATE_REL);
+  const validatorAbs = path.join(root, MOCK_HREF_VALIDATOR_REL);
+
+  if (!(await exists(templateAbs))) return [];
+  if (!(await exists(validatorAbs))) return [];
+
+  const templateText = await readSafe(templateAbs);
+  const validatorText = await readSafe(validatorAbs);
+
+  const issues: Issue[] = [];
+  for (const pair of MOCK_HREF_PAIRS) {
+    const templateDrifted = pair.templateDriftTokens.every((token) => templateText.includes(token));
+    const validatorAccepts = pair.validatorAcceptTokens.every((token) =>
+      validatorText.includes(token),
+    );
+
+    if (templateDrifted === validatorAccepts) continue;
+
+    const modifiedFile = templateDrifted ? MOCK_HREF_TEMPLATE_REL : MOCK_HREF_VALIDATOR_REL;
+    const unpaired = templateDrifted ? MOCK_HREF_VALIDATOR_REL : MOCK_HREF_TEMPLATE_REL;
+    const missingTokens = templateDrifted ? pair.validatorAcceptTokens : pair.templateDriftTokens;
+
+    const message =
+      `R-MOCK-HREF-DRIFT: SSOT-sync pair for clause "${pair.clause}" is asymmetric ` +
+      `(justification: modified=${modifiedFile}, un-paired=${unpaired}, ` +
+      `clause=${pair.clause} — missing tokens [${missingTokens.join(", ")}]).`;
+
+    issues.push(
+      issue("R-MOCK-HREF-DRIFT", message, "error", modifiedFile, "reviewerGate.mockHrefDrift"),
+    );
+  }
+
+  return issues;
+}
+
+/**
+ * Composite Reviewer-Gate validator. Returns the union of the sdd-profile
+ * Reviewer-Gate findings (R-CERTIFY-VERIFY-CIRCULAR +
+ * R-PROMPT-SCANNER-DRIFT).
+ *
+ * R-MOCK-HREF-DRIFT is intentionally NOT part of this union: it guards a
+ * prototyping-profile surface (the mock template + QFAI-MOCK-010) and is
+ * invoked via detectMockHrefDrift from runPrototypingValidators instead.
  */
 export async function validateReviewerGate(root: string, _config: QfaiConfig): Promise<Issue[]> {
   const [circular, drift] = await Promise.all([

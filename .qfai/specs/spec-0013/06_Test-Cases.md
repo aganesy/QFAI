@@ -189,3 +189,67 @@ that predates this PR. Tracked for separate implementation as OQ-0016
 - Type: normal
 - Level: integration
 - Verify that the QFAI-AUD-001 aligned lane passes silently when every `screens[].primary_tasks` is non-empty (≥ 1 entry), and that `/qfai-prototyping` preflight proceeds without a `primary_tasks`-related blocker. Pre-existing UI contracts that predate the slot are treated under deprecation-window semantics (informational, non-blocking) — covered as a boundary sub-case within the same test file.
+
+## TC-0013-0028: Active pack resolved from `state.json#discussion.currentId`
+
+- EX-Ref: EX-0013-0017
+- AC-Refs: AC-0013-0020
+- Type: normal
+- Level: integration
+- Verify the single helper returns the pack named in `.qfai/state.json#discussion.currentId` without scanning filesystem mtimes (REQ-0155 reader side / DR-0266).
+
+## TC-0013-0029: Ambiguous/absent active pointer raises recovery error
+
+- EX-Ref: EX-0013-0017
+- AC-Refs: AC-0013-0021
+- Type: error
+- Level: integration
+- Verify that when `currentId` is absent or resolves to a missing/duplicate pack, the helper raises an error naming the candidate `discussion-*` dirs and the recovery command (`qfai discussion use <id>`).
+
+## TC-0013-0030: `/qfai-sdd` auto-populates `surface_type: ui-bearing`
+
+- EX-Ref: EX-0013-0018
+- AC-Refs: AC-0013-0022
+- Type: normal
+- Level: integration
+- Verify `/qfai-sdd` sets `surface_type: ui-bearing` frontmatter for a spec with a `.qfai/contracts/ui/<spec>-*.yaml` companion and that `resolveAllUiBearingSpecs()` still requires the frontmatter as the strict signal (REQ-0163).
+
+## TC-0013-0031: `D-SURFACE-TYPE-MISSING` warns on companion-without-frontmatter
+
+- EX-Ref: EX-0013-0018
+- AC-Refs: AC-0013-0023
+- Type: boundary
+- Level: integration
+- Verify `qfai sdd lint` emits `D-SURFACE-TYPE-MISSING` (warning during the window) when a UI companion exists but `surface_type: ui-bearing` is absent, and emits no finding for a spec with no UI companion.
+
+## TC-0013-0032: `primary_tasks` band documented and named in warning
+
+- EX-Ref: EX-0013-0019
+- AC-Refs: AC-0013-0024
+- Type: normal
+- Level: integration
+- Verify the recommended band `3..7` (DR-0267) appears in `templates/contracts/ui-spec.yaml` comments and `references/ui-contract-guide.md`, and that the `QFAI-AUD-020` warning text names the band.
+
+## TC-0013-0033: `primary_tasks` count below 3 / above 7 warns
+
+- EX-Ref: EX-0013-0019
+- AC-Refs: AC-0013-0024
+- Type: boundary
+- Level: integration
+- Verify a screen declaring fewer than 3 or more than 7 `primary_tasks` triggers the `QFAI-AUD-020` warning naming the band; 3 and 7 (inclusive bounds) do not.
+
+## TC-0013-0034: Structured `primary_tasks` shape accepted
+
+- EX-Ref: EX-0013-0020
+- AC-Refs: AC-0013-0025
+- Type: normal
+- Level: integration
+- Verify `auditProfile.ts` accepts string-only items AND complete structured `{id, label, acceptance}` items during the deprecation window (REQ-0164 / DR-0268).
+
+## TC-0013-0035: Incomplete / open structured `primary_tasks` rejected
+
+- EX-Ref: EX-0013-0020
+- AC-Refs: AC-0013-0025
+- Type: error
+- Level: integration
+- Verify a structured item missing any of `id` / `label` / `acceptance`, or carrying extra keys (closed schema violation), is rejected by `auditProfile.ts` (DR-0268).

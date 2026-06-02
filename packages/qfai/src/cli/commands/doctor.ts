@@ -2,6 +2,9 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { createDoctorData, type DoctorProfile } from "../../core/doctor.js";
+import { cleanStaleReviewPacks } from "../../core/doctor/cleanReviewPacks.js";
+import { runAutoremediate } from "../../core/doctor/autoremediate.js";
+import { findConfigRoot, loadConfig } from "../../core/config.js";
 import { info } from "../lib/logger.js";
 
 export type DoctorCommandOptions = {
@@ -11,7 +14,17 @@ export type DoctorCommandOptions = {
   outPath?: string;
   failOn?: "warning" | "error";
   profile?: DoctorProfile;
+  /** Skill name when `--profile <skill>` is passed (vs the legacy `prototyping`). */
+  skillProfile?: string;
   targetUrl?: string;
+  /** `--clean`: archive TTL-expired review packs into `.qfai/review/_archive/`. */
+  clean?: boolean;
+  /** `--autoremediate`: orchestrate install + clean + config-fill. */
+  autoremediate?: boolean;
+  /** `--dry-run`: preview only; no side effects. */
+  dryRun?: boolean;
+  /** `--yes`: skip interactive confirmation (autoremediate). */
+  yes?: boolean;
 };
 
 function formatDoctorText(data: Awaited<ReturnType<typeof createDoctorData>>): string {
@@ -74,27 +87,132 @@ function formatDoctorJson(data: unknown): string {
 }
 
 export async function runDoctor(options: DoctorCommandOptions): Promise<number> {
+  // Resolve the project root BEFORE running any side-effecting
+  // pre-step. Pre-fix `runAutoremediate` and `cleanStaleReviewPacks`
+  // received the raw `options.root` (effectively the cwd when
+  // `--root` was omitted), which meant remediation invoked from a
+  // subdirectory would probe / install / archive under that
+  // subdirectory and create `<subdir>/qfai.config.yaml` instead of
+  // touching the project root. The diagnostic pass below already
+  // walks up via `createDoctorData`; mirror that resolution here so
+  // the two paths agree on the operating root.
+  const resolvedRoot = options.rootExplicit
+    ? options.root
+    : (await findConfigRoot(options.root)).root;
+  // Side-effecting pre-steps run before the diagnostic build so the
+  // post-cleanup tree is what `createDoctorData` reports on.
+  const sideEffectLines: string[] = [];
+  if (options.autoremediate) {
+    const isCi = process.env["CI"] === "true";
+    // Thread the resolved skill profile into the autoremediate orchestrator
+    // so the install phase actually reaches the runtimeDependencies probe.
+    // Without `skill`, runAutoremediate's (1) install branch is skipped
+    // entirely — an operator running `qfai doctor --profile <skill>
+    // --autoremediate` would see clean + config-fill run but never the
+    // install they were expecting. The diagnostic pass below also receives
+    // `skillProfile`, so the two stay in lockstep on the same option.
+    const summary = await runAutoremediate({
+      root: resolvedRoot,
+      dryRun: Boolean(options.dryRun),
+      yes: Boolean(options.yes),
+      isCi,
+      ...(options.skillProfile ? { skill: options.skillProfile } : {}),
+    });
+    sideEffectLines.push(...summary.lines);
+    // When the operator did not pass `--profile <skill>`, the install
+    // phase of runAutoremediate is structurally skipped (there is no
+    // manifest to probe). Surface that explicitly so operators do not
+    // misread the absent install lines as "all dependencies satisfied".
+    if (!options.skillProfile && !summary.disabledInCi) {
+      sideEffectLines.push(
+        "doctor --autoremediate: install phase skipped (provide --profile <skill> to probe a skill manifest's runtimeDependencies).",
+      );
+    }
+    if (summary.disabledInCi) {
+      // Honor AC-0006-0018: autoremediate disabled in CI; no diagnostic
+      // build needed for the CI off path. Output-channel routing
+      // mirrors the main return path below: under `--format json`,
+      // side-effect lines go to stderr so the stdout channel remains
+      // valid JSON for downstream consumers (`jq` / `JSON.parse`). The
+      // CI-off path emits an empty `{}` JSON payload on stdout in that
+      // case so consumers see a parseable document rather than a bare
+      // newline.
+      if (options.format === "json") {
+        if (sideEffectLines.length > 0) {
+          process.stderr.write(`${sideEffectLines.join("\n")}\n`);
+        }
+        info("{}");
+      } else {
+        info(sideEffectLines.join("\n"));
+      }
+      return 0;
+    }
+  } else if (options.clean) {
+    const { config } = await loadConfig(resolvedRoot);
+    const ttlDays = config.review?.staleTtlDays;
+    const result = await cleanStaleReviewPacks(resolvedRoot, {
+      ...(typeof ttlDays === "number" ? { ttlDays } : {}),
+      ...(options.dryRun ? { dryRun: true } : {}),
+    });
+    // Phrase the side-effect summary in the future tense when `--dry-run`
+    // is in effect. `cleanStaleReviewPacks` still populates
+    // `result.archived` under dry-run (it lists the packs the live
+    // command WOULD move), so reusing the past-tense
+    // `archived=N` wording from the live path would falsely read as
+    // "rename happened". Mirror the `autoremediate` dry-run vocabulary
+    // (`would run ...` / `would fill ...`).
+    if (options.dryRun) {
+      sideEffectLines.push(
+        `doctor --clean (dry-run): would archive=${result.archived.length}, in-ttl=${result.skippedInTtl.length} (ttlDays=${result.ttlDays})`,
+      );
+      for (const entry of result.archived) {
+        sideEffectLines.push(`  would move -> _archive/${entry.packName}`);
+      }
+    } else {
+      sideEffectLines.push(
+        `doctor --clean: archived=${result.archived.length}, in-ttl=${result.skippedInTtl.length} (ttlDays=${result.ttlDays})`,
+      );
+      for (const entry of result.archived) {
+        sideEffectLines.push(`  -> _archive/${entry.packName}`);
+      }
+    }
+  }
+
   const data = await createDoctorData({
     startDir: options.root,
     rootExplicit: options.rootExplicit,
     ...(options.profile ? { profile: options.profile } : {}),
+    ...(options.skillProfile ? { skillProfile: options.skillProfile } : {}),
     ...(options.targetUrl ? { targetUrl: options.targetUrl } : {}),
   });
 
   const output = options.format === "json" ? formatDoctorJson(data) : formatDoctorText(data);
+  const isJson = options.format === "json";
+  // Keep `--format json` output machine-parseable: side-effect summary
+  // lines (clean / autoremediate) are routed to stderr instead of being
+  // prepended to stdout (and to the `--out` file), which would corrupt
+  // the JSON document for any consumer that pipes stdout to `jq` or
+  // reads the file with `JSON.parse`. Under `--format text` the prefix
+  // remains on stdout (legacy human-readable behavior).
+  const sideEffectPrefix =
+    !isJson && sideEffectLines.length > 0 ? `${sideEffectLines.join("\n")}\n` : "";
   const exitCode = shouldFailDoctor(data.summary, options.failOn) ? 1 : 0;
+
+  if (isJson && sideEffectLines.length > 0) {
+    process.stderr.write(`${sideEffectLines.join("\n")}\n`);
+  }
 
   if (options.outPath) {
     const outAbs = path.isAbsolute(options.outPath)
       ? options.outPath
       : path.resolve(process.cwd(), options.outPath);
     await mkdir(path.dirname(outAbs), { recursive: true });
-    await writeFile(outAbs, `${output}\n`, "utf-8");
+    await writeFile(outAbs, `${sideEffectPrefix}${output}\n`, "utf-8");
     info(`doctor: wrote ${outAbs}`);
     return exitCode;
   }
 
-  info(output);
+  info(`${sideEffectPrefix}${output}`);
   return exitCode;
 }
 

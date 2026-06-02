@@ -17,7 +17,26 @@ export type ParsedArgs = {
     doctorFormat: "text" | "json";
     doctorOut?: string;
     validateFormat: "text" | "github";
-    profile?: "discussion" | "sdd" | "prototyping" | "atdd" | "tdd" | "verify" | "full";
+    profile?:
+      | "discussion"
+      | "sdd"
+      | "prototyping"
+      | "atdd"
+      | "tdd"
+      | "verify"
+      | "full"
+      | "saas-package";
+    /**
+     * `qfai doctor --profile <skill>` per-skill profile. Distinct from
+     * the validate-side `profile` enum above: when `doctor --profile`
+     * receives a value outside the validate enum, the parser routes it
+     * here so the doctor command can probe the named skill manifest.
+     */
+    doctorSkillProfile?: string;
+    /** `qfai doctor --clean`: archive TTL-expired review packs. */
+    doctorClean?: boolean;
+    /** `qfai doctor --autoremediate`: orchestrate install + clean + config. */
+    doctorAutoremediate?: boolean;
     strict: boolean;
     failOn?: "never" | "warning" | "error";
     guardrailsAction?: "list" | "extract" | "check";
@@ -27,10 +46,33 @@ export type ParsedArgs = {
     platform?: string;
     prototypingAction?: "preflight" | "iterate" | "certify" | "show-spec";
     prototypingTargetUrl?: string;
+    /** Subcommand for `qfai discussion <list|use>`. */
+    discussionAction?: "list" | "use";
+    /** --active for `qfai discussion list`. */
+    discussionActive?: boolean;
+    /** --format <text|json> for `qfai discussion list --active`. */
+    discussionFormat?: "text" | "json";
+    /** Positional `<id>` for `qfai discussion use <id>`. */
+    discussionId?: string;
     /** --cycle <n> for `qfai prototyping iterate --cycle <n>`. */
     prototypingCycle?: number;
     /** --check flag for `qfai prototyping certify --check`. */
     prototypingCheckOnly?: boolean;
+    /**
+     * --scope <saas-package|full> for `qfai prototyping certify`. When
+     * set to `saas-package`, the sealed certificate carries
+     * `scope: "saas-package"` + `notes[]` enumerating the gates the
+     * saas-package profile deliberately skips. Default (omitted) seals
+     * a full-scope certificate.
+     */
+    prototypingScope?: "saas-package" | "full";
+    /**
+     * --upgrade-scope full for `qfai prototyping certify`. Re-gates the
+     * gates skipped by the existing scope-limited certificate against
+     * the current project state; rewrites the certificate without the
+     * scope-limited markers on success.
+     */
+    prototypingUpgradeScopeFull?: boolean;
     /** --license-patch <file> for `qfai prototyping iterate`. */
     prototypingLicensePatch?: string;
     /** --primary-spec-id <value> for `qfai prototyping iterate`. */
@@ -57,6 +99,54 @@ export type ParsedArgs = {
      * runner is loaded dynamically when no DI serverRunner is supplied.
      */
     prototypingAutoServe?: boolean;
+    /**
+     * --emit-skeletons for `qfai prototyping iterate --cycle 0`. Opt-in
+     * cycle-0 token-driven placeholder HTML emission (default OFF;
+     * preserves prior-release bit-for-bit behavior). Only meaningful at cycle 0;
+     * silently ignored on other cycles today.
+     */
+    prototypingEmitSkeletons?: boolean;
+    /**
+     * --skeleton-mode for `qfai prototyping iterate --cycle 0
+     * --emit-skeletons`. Selects the renderer behavior:
+     *   - `placeholder` (default): DESIGN.md-token-styled static HTML,
+     *     no per-screen LLM call
+     *   - `full`: callers may replace the body via generation (the
+     *     renderer itself never calls a model)
+     *   - `stub`: minimal `<!doctype html>` marker
+     * Unknown values are rejected via markInvalid().
+     */
+    prototypingSkeletonMode?: "placeholder" | "full" | "stub";
+    /**
+     * --mode for `qfai prototyping iterate`. Selects the prototyping
+     * loop posture:
+     *   - `convergence` (default): all gates apply at error severity.
+     *   - `exploration`: medium gate relaxation — soft-rubric gates
+     *     (QFAI-CRIT-008 axes-exceptional, QFAI-DCON-030..032 design
+     *     compliance) downgrade error → warning. Schema / path /
+     *     license (exit 66) gates stay hard error.
+     * Overrides `qfai.config.yaml#prototyping.mode`. Unknown values
+     * are rejected via markInvalid().
+     */
+    prototypingMode?: "convergence" | "exploration";
+    /** Subcommand for `qfai audit <log>`. */
+    auditAction?: "log";
+    /** --scope filter for `qfai audit log`. */
+    auditScope?: string;
+    /** --operator filter for `qfai audit log`. */
+    auditOperator?: string;
+    /** --clause filter for `qfai audit log`. */
+    auditClause?: string;
+    /** --format <table|json> for `qfai audit log`. */
+    auditFormat?: "table" | "json";
+    /** Subcommand for `qfai handoff <upgrade>`. */
+    handoffAction?: "upgrade";
+    /** Positional `<legacy-file>` for `qfai handoff upgrade`. */
+    handoffLegacyFile?: string;
+    /** Subcommand for `qfai atdd <scaffold>`. */
+    atddAction?: "scaffold";
+    /** `--spec <id>` value for `qfai atdd scaffold`. */
+    atddSpecId?: string;
     help: boolean;
     invalidExitCode: number;
   };
@@ -130,6 +220,73 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     }
   }
 
+  // `qfai audit <subcommand>` — currently only `log` is supported.
+  if (command === "audit") {
+    const candidate = args[0];
+    if (candidate && !candidate.startsWith("--")) {
+      if (candidate === "log") {
+        options.auditAction = candidate;
+      } else {
+        markInvalid();
+      }
+      args.shift();
+    }
+  }
+
+  // `qfai handoff <subcommand> [<legacy-file>]` — currently only `upgrade`.
+  if (command === "handoff") {
+    const candidate = args[0];
+    if (candidate && !candidate.startsWith("--")) {
+      if (candidate === "upgrade") {
+        options.handoffAction = candidate;
+      } else {
+        markInvalid();
+      }
+      args.shift();
+      if (options.handoffAction === "upgrade") {
+        const fileCandidate = args[0];
+        if (fileCandidate && !fileCandidate.startsWith("--")) {
+          options.handoffLegacyFile = fileCandidate;
+          args.shift();
+        }
+      }
+    }
+  }
+
+  // `qfai atdd <subcommand>` — currently only `scaffold` is supported.
+  if (command === "atdd") {
+    const candidate = args[0];
+    if (candidate && !candidate.startsWith("--")) {
+      if (candidate === "scaffold") {
+        options.atddAction = candidate;
+      } else {
+        markInvalid();
+      }
+      args.shift();
+    }
+  }
+
+  // `qfai discussion <subcommand> [<id>]` pulls the subcommand token (and the
+  // positional <id> for `use`) before the flag loop.
+  if (command === "discussion") {
+    const candidate = args[0];
+    if (candidate && !candidate.startsWith("--")) {
+      if (candidate === "list" || candidate === "use") {
+        options.discussionAction = candidate;
+      } else {
+        markInvalid();
+      }
+      args.shift();
+      if (options.discussionAction === "use") {
+        const idCandidate = args[0];
+        if (idCandidate && !idCandidate.startsWith("--")) {
+          options.discussionId = idCandidate;
+          args.shift();
+        }
+      }
+    }
+  }
+
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
     switch (arg) {
@@ -180,12 +337,35 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           i += 1;
           break;
         }
+        if (command === "discussion") {
+          if (next === "text" || next === "json") {
+            options.discussionFormat = next;
+          } else {
+            markInvalid();
+          }
+          i += 1;
+          break;
+        }
+        if (command === "audit") {
+          if (next === "table" || next === "json") {
+            options.auditFormat = next;
+          } else {
+            markInvalid();
+          }
+          i += 1;
+          break;
+        }
         if (!applyFormatOption(command, next, options)) {
           markInvalid();
         }
         i += 1;
         break;
       }
+      case "--active":
+        if (command === "discussion") {
+          options.discussionActive = true;
+        }
+        break;
       case "--strict":
         options.strict = true;
         break;
@@ -203,10 +383,27 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         if (isValidationProfile(next)) {
           options.profile = next;
+        } else if (command === "doctor" && isSkillProfileName(next)) {
+          // `qfai doctor --profile <skill>` accepts arbitrary skill
+          // names that fall outside the validate-side enum. The
+          // doctor command threads the value into the manifest probe.
+          options.doctorSkillProfile = next;
         } else {
           markInvalid();
         }
         i += 1;
+        break;
+      }
+      case "--clean": {
+        if (command === "doctor") {
+          options.doctorClean = true;
+        }
+        break;
+      }
+      case "--autoremediate": {
+        if (command === "doctor") {
+          options.doctorAutoremediate = true;
+        }
         break;
       }
       case "--fail-on": {
@@ -401,6 +598,140 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         options.prototypingAutoServe = true;
         break;
       }
+      case "--emit-skeletons": {
+        // Opt-in cycle-0 placeholder HTML emission. No value; presence
+        // flips the boolean. Only meaningful for
+        // `qfai prototyping iterate --cycle 0`; iterate itself ignores
+        // it on cycle >= 1.
+        options.prototypingEmitSkeletons = true;
+        break;
+      }
+      case "--skeleton-mode": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        if (next === "placeholder" || next === "full" || next === "stub") {
+          options.prototypingSkeletonMode = next;
+        } else {
+          markInvalid();
+        }
+        i += 1;
+        break;
+      }
+      case "--mode": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        if (next === "convergence" || next === "exploration") {
+          options.prototypingMode = next;
+        } else {
+          markInvalid();
+        }
+        i += 1;
+        break;
+      }
+      // Value-taking flag-handling contract (uniform across `--spec`,
+      // `--scope`, `--upgrade-scope`, `--operator`, `--clause`):
+      //   1. Always read and consume the value token via
+      //      `readOptionValue(args, i)` + `i += 1`. A missing value
+      //      (`null`) is a parse error → `markInvalid()`.
+      //   2. When the flag is used on a subcommand that does NOT
+      //      accept it, also call `markInvalid()` so the misuse is
+      //      surfaced rather than silently dropped. The value token
+      //      is STILL consumed so it cannot leak into the positional
+      //      stream — keeping consumption symmetric across all
+      //      value-taking flags.
+      //   3. The accepting-subcommand branch performs any per-flag
+      //      enum / domain validation and routes the value to the
+      //      right option slot.
+      // Pre-fix `--scope` (consumed-on-misuse) and `--upgrade-scope`
+      // (not-consumed-on-misuse) used opposite conventions for the
+      // same goal; this contract block plus the unified shape below
+      // resolves the asymmetry.
+      case "--spec": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        if (command === "atdd") {
+          options.atddSpecId = next;
+        } else {
+          markInvalid();
+        }
+        i += 1;
+        break;
+      }
+      case "--scope": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        if (command === "audit") {
+          options.auditScope = next;
+        } else if (command === "prototyping" && options.prototypingAction === "certify") {
+          if (next === "saas-package" || next === "full") {
+            options.prototypingScope = next;
+          } else {
+            markInvalid();
+          }
+        } else {
+          markInvalid();
+        }
+        i += 1;
+        break;
+      }
+      case "--upgrade-scope": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        if (command === "prototyping" && options.prototypingAction === "certify") {
+          if (next === "full") {
+            options.prototypingUpgradeScopeFull = true;
+          } else {
+            markInvalid();
+          }
+        } else {
+          markInvalid();
+        }
+        i += 1;
+        break;
+      }
+      case "--operator": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        if (command === "audit") {
+          options.auditOperator = next;
+        } else {
+          markInvalid();
+        }
+        i += 1;
+        break;
+      }
+      case "--clause": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        if (command === "audit") {
+          options.auditClause = next;
+        } else {
+          markInvalid();
+        }
+        i += 1;
+        break;
+      }
       case "--help":
       case "-h":
         options.help = true;
@@ -414,6 +745,18 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     markInvalid();
   }
   if (command === "prototyping" && !options.help && !options.prototypingAction) {
+    markInvalid();
+  }
+  if (command === "discussion" && !options.help && !options.discussionAction) {
+    markInvalid();
+  }
+  if (command === "audit" && !options.help && !options.auditAction) {
+    markInvalid();
+  }
+  if (command === "handoff" && !options.help && !options.handoffAction) {
+    markInvalid();
+  }
+  if (command === "atdd" && !options.help && !options.atddAction) {
     markInvalid();
   }
   return { command, invalid, options };
@@ -478,9 +821,23 @@ function normalizeGuardrailsAction(value: string): "list" | "extract" | "check" 
   }
 }
 
+function isSkillProfileName(value: string): boolean {
+  // Skill names are non-empty, lower-kebab-case-ish identifiers. Keep
+  // the gate permissive so future skills don't need a parser update.
+  return /^[a-z][a-z0-9-]*$/u.test(value);
+}
+
 function isValidationProfile(
   value: string,
-): value is "discussion" | "sdd" | "prototyping" | "atdd" | "tdd" | "verify" | "full" {
+): value is
+  | "discussion"
+  | "sdd"
+  | "prototyping"
+  | "atdd"
+  | "tdd"
+  | "verify"
+  | "full"
+  | "saas-package" {
   return (
     value === "discussion" ||
     value === "sdd" ||
@@ -488,6 +845,7 @@ function isValidationProfile(
     value === "atdd" ||
     value === "tdd" ||
     value === "verify" ||
-    value === "full"
+    value === "full" ||
+    value === "saas-package"
   );
 }

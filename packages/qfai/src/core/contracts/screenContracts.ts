@@ -23,7 +23,31 @@ export type CanonicalScreenContract = {
    */
   primaryTasksKeyPresent: boolean;
   sourceRef: string;
+  /**
+   * Findings raised at parse time when a structured `primary_tasks`
+   * entry (a mapping object rather than a plain string) violates the
+   * closed `{id, label, acceptance}` schema — either by omitting a
+   * required key OR by carrying an extra key. Each entry names the
+   * offending task index (1-based), the offending key set, and a
+   * brief reason. Empty when every structured item conforms or every
+   * item is a string (legacy shape).
+   */
+  primaryTaskShapeFindings: PrimaryTaskShapeFinding[];
 };
+
+export type PrimaryTaskShapeFinding = {
+  /** 1-based index of the offending primary_task item. */
+  index: number;
+  /** Identifier reported in messages: the entry's `id` when present, otherwise "#<index>". */
+  taskRef: string;
+  reason: "missing-required-key" | "extra-key" | "not-string-or-object";
+  /** Required keys missing from the structured entry (if any). */
+  missingKeys: string[];
+  /** Extra keys present beyond the closed schema (if any). */
+  extraKeys: string[];
+};
+
+const REQUIRED_PRIMARY_TASK_KEYS = ["id", "label", "acceptance"] as const;
 
 /**
  * `discussionDirRelative` is the repo-relative discussion directory (e.g.
@@ -142,6 +166,7 @@ export function parseCanonicalScreenContracts(content: string): CanonicalScreenC
         primaryTasks: [],
         primaryTasksKeyPresent: false,
         sourceRef: "",
+        primaryTaskShapeFindings: [],
       };
       inPrimaryTasks = false;
       continue;
@@ -263,11 +288,7 @@ export function extractUiScreens(parsed: unknown): CanonicalScreenContract[] {
         ? record.title.trim()
         : screenId;
     const primaryTasksKeyPresent = Object.prototype.hasOwnProperty.call(record, "primary_tasks");
-    const primaryTasks = Array.isArray(record.primary_tasks)
-      ? record.primary_tasks
-          .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
-          .map((entry) => entry.trim())
-      : [];
+    const { primaryTasks, primaryTaskShapeFindings } = extractPrimaryTasks(record.primary_tasks);
 
     return [
       {
@@ -277,7 +298,81 @@ export function extractUiScreens(parsed: unknown): CanonicalScreenContract[] {
         primaryTasks,
         primaryTasksKeyPresent,
         sourceRef: "",
+        primaryTaskShapeFindings,
       },
     ];
   });
+}
+
+function extractPrimaryTasks(value: unknown): {
+  primaryTasks: string[];
+  primaryTaskShapeFindings: PrimaryTaskShapeFinding[];
+} {
+  if (!Array.isArray(value)) {
+    return { primaryTasks: [], primaryTaskShapeFindings: [] };
+  }
+  const entries: unknown[] = value;
+  const primaryTasks: string[] = [];
+  const findings: PrimaryTaskShapeFinding[] = [];
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry: unknown = entries[index];
+    const taskNumber = index + 1;
+    if (typeof entry === "string") {
+      const trimmed = entry.trim();
+      if (trimmed.length > 0) {
+        primaryTasks.push(trimmed);
+      }
+      continue;
+    }
+    if (entry !== null && typeof entry === "object" && !Array.isArray(entry)) {
+      const record = entry as Record<string, unknown>;
+      const presentKeys = Object.keys(record);
+      const missingKeys = REQUIRED_PRIMARY_TASK_KEYS.filter((key) => {
+        const v = record[key];
+        return typeof v !== "string" || v.trim().length === 0;
+      });
+      const extraKeys = presentKeys.filter(
+        (key) =>
+          !REQUIRED_PRIMARY_TASK_KEYS.includes(key as (typeof REQUIRED_PRIMARY_TASK_KEYS)[number]),
+      );
+      const idValue = typeof record.id === "string" ? record.id.trim() : "";
+      const taskRef = idValue.length > 0 ? idValue : `#${taskNumber}`;
+      if (missingKeys.length > 0) {
+        findings.push({
+          index: taskNumber,
+          taskRef,
+          reason: "missing-required-key",
+          missingKeys,
+          extraKeys,
+        });
+      } else if (extraKeys.length > 0) {
+        findings.push({
+          index: taskNumber,
+          taskRef,
+          reason: "extra-key",
+          missingKeys: [],
+          extraKeys,
+        });
+      } else {
+        // Conforms to closed schema. Surface the label as the
+        // string-shape primaryTask so existing band / count semantics
+        // continue to work unchanged.
+        const label = typeof record.label === "string" ? record.label.trim() : "";
+        if (label.length > 0) {
+          primaryTasks.push(label);
+        }
+      }
+      continue;
+    }
+    // Neither a string nor an object — surface as a shape finding so
+    // the audit lane can reject it.
+    findings.push({
+      index: taskNumber,
+      taskRef: `#${taskNumber}`,
+      reason: "not-string-or-object",
+      missingKeys: [],
+      extraKeys: [],
+    });
+  }
+  return { primaryTasks, primaryTaskShapeFindings: findings };
 }

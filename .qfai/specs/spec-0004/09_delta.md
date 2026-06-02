@@ -131,3 +131,24 @@
 | Op            | Target spec | REQ / NFR | Rationale                                                                                                                                                                                  | Approver |
 | ------------- | ----------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
 | UPDATE:APPEND | spec-0004   | REQ-0150  | spec-0006 CHG-005 cycle で REQ/AC/TC composite ID が doctor.ts コメントに leak し manual reviewer audit でのみ検出された defect を lint-shipping `src-comment` lane で automation 化する。 | auto     |
+
+## 2026-05-27 — v1.9.2 Second-Wave (spec-0004)
+
+| Operation | Sub-op | Target                                                                                                                | Source (REQ)                 | Rationale        | DR-Ref                    | Status |
+| --------- | ------ | --------------------------------------------------------------------------------------------------------------------- | ---------------------------- | ---------------- | ------------------------- | ------ |
+| UPDATE    | APPEND | 01_Spec.md (Scope.In + Relevant Requirements + Entry-points ranges → US-0039 / AC-0039 / BR-0033 / EX-0041 / TC-0073) | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS   |
+| UPDATE    | APPEND | 02_User-stories.md (US-0004-0037..0039)                                                                               | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS   |
+| UPDATE    | APPEND | 03_Acceptance-Criteria.md (AC-0004-0036..0039)                                                                        | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS   |
+| UPDATE    | APPEND | 04_Business-Rules.md (BR-0004-0030..0033)                                                                             | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS   |
+| UPDATE    | APPEND | 05_Examples.md (EX-0004-0038..0041)                                                                                   | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS   |
+| UPDATE    | APPEND | 06_Test-Cases.md (TC-0004-0067..0073)                                                                                 | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS   |
+| UPDATE    | APPEND | 07_Decisions.md (DR-0004-0014)                                                                                        | REQ-0166, REQ-0164, REQ-0167 | cascade verified | DR-0267, DR-0268, DR-0274 | PASS   |
+| UPDATE    | APPEND | 08_Open-questions.md (OQ-0158/0159/0167 resolved notes)                                                               | REQ-0164, REQ-0167           | cascade verified | DR-0267, DR-0268, DR-0274 | PASS   |
+
+- Notes:
+  - REQ-0166 spans BOTH specs: this is the VALIDATE-PROFILE side (`qfai validate --profile saas-package`); the CERTIFY side (`certify --scope saas-package`) is owned by spec-0014 (same Source REQ, file-local IDs). The skip set named by `D-SAAS-PACKAGE-VERIFY-SKIPPED` (info) must match the certify-side `notes:`.
+  - Contract references: `_policies/05_Contracts.md` §CHG-006 — CLI-HANDOFF (cross-skill handoff schema), DCON-005 (design-system attestation, REFERENCE no-schema-change), CLI-VAL (`--profile saas-package` + `auditProfile.ts` dual-shape per DR-0268). Glossary §CHG-006 — `saas-package profile`, `R-PACK-LOCATION-DRIFT`, `D-SAAS-PACKAGE-VERIFY-SKIPPED`, `QFAI-AUD-020`.
+  - REQ-0164: `auditProfile.ts` is a NEW validator module (to be created); accepts string-only AND structured `{id,label,acceptance}` (DR-0268 closed schema); `QFAI-AUD-020` names `3..7` band (DR-0267). OQ-0158 / OQ-0159 resolved by the cited DRs.
+  - REQ-0167: `packages/qfai/scripts/check-pack-locations.mjs` is a NEW lint script (to be created) wired into `pnpm ci:lint` (no contract file; recorded under `_policies/07_Constraints.md` OC-65). OQ-0167 lint-scope dimension resolved by DR-0274; the register's `sdd lint --fix` OQ-0167 remains separately deferred.
+  - One-minor deprecation window per OC-63 applies to the new `D-*` findings.
+- Source: REQ-0166, REQ-0164, REQ-0167 (discussion-20260527075558258)

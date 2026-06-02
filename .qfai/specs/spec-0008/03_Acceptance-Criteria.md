@@ -35,3 +35,11 @@ Given the ATDD workflow, when the Reviewer gate runs, then the Reviewer is a dif
 ## AC-0008-0009: Coverage Depth Matrix Verification
 
 Given test cases produced by ATDD, when the test-design-analyst reviews them, then a Coverage Depth Matrix is produced for each spec showing normal/error/boundary/special/state-transition/combinatorial coverage per US/TC, and any US/TC with only normal-path test cases is flagged as incomplete.
+
+## AC-0008-0010: ATDD Scaffold Emits Per-TC Skeletons
+
+Given a spec `spec-NNNN` with declared test*cases, when `qfai atdd scaffold --spec spec-NNNN` runs against a directory with no pre-existing skeletons, then for every TC a file `tests/atdd/spec-NNNN/<TC-ID>.test.*`is emitted that imports test-framework primitives, contains`// TODO: implement assertion for <TC-ID>`, and includes comment references to the related US-* / CON-API-\_; and `qfai validate`emits`D-SCAFFOLD-PLACEHOLDER` (severity warning) for each file whose TODO marker is still present.
+
+## AC-0008-0011: ATDD Scaffold Idempotency and Escalation
+
+Given a `tests/atdd/spec-NNNN/<TC-ID>.test.*` file whose TODO marker has been replaced with a real assertion, when `qfai atdd scaffold --spec spec-NNNN` is re-run, then the non-TODO content is NOT overwritten (idempotent); and given a skeleton whose `// TODO: implement assertion for <TC-ID>` remains unremoved across 3 `qfai validate` cycles (the `atdd.scaffoldEscalateCycles` default per DR-0272), then `D-SCAFFOLD-PLACEHOLDER` escalates from warning to error on the 3rd cycle (configurable via `qfai.config.yaml#atdd.scaffoldEscalateCycles`).

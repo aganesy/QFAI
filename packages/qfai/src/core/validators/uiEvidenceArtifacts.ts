@@ -14,7 +14,20 @@ function toPosixRelative(root: string, targetPath: string): string {
   return path.relative(root, targetPath).replace(/\\/g, "/");
 }
 
-const SAFE_SCREEN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
+/**
+ * Canonical safe-screen-id pattern. Exported so the
+ * `--emit-skeletons` write boundary in
+ * `core/prototyping/emitSkeletons.ts` can consume the SAME regex
+ * literal — eliminating the "writer accepts a screenId the
+ * validator rejects (or vice versa)" drift class.
+ *
+ * Allowed: leading char `[A-Za-z0-9]`; subsequent chars
+ * `[A-Za-z0-9._-]`. Rejects path separators (`/`, `\`, `:`),
+ * leading dot/underscore/hyphen, and any other non-ASCII-safe
+ * input. See `emitSkeletons.ts` for the write-boundary guard
+ * and `prototypingCertify.ts` for the certify-time validation.
+ */
+export const SAFE_SCREEN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
 const ITERATION_DIR_PATTERN = /^iter-\d{2}$/u;
 
 async function hasEvidenceFile(
@@ -62,7 +75,7 @@ export async function validateUiEvidenceArtifacts(
           "uiEvidenceArtifacts.screenIdSafeFilename",
           [screen.sourceRef],
           "canonical",
-          "Use a screen id containing only letters, numbers, dot, underscore, and hyphen.",
+          "Use a screen id whose first character is a letter or digit and remaining characters are letters, numbers, dot, underscore, or hyphen.",
         ),
       );
       continue;

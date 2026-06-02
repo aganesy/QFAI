@@ -39,3 +39,11 @@ As a designer, I want `/qfai-discussion` to author root `DESIGN.md` so brand vis
 ## US-0010-0010: Legacy Sidecar Drop
 
 As a QFAI maintainer, I want `/qfai-discussion` to no longer emit legacy sidecars (`33_exploration_rubric.md`, `34_evaluator_calibration.md`, `30_exploration_brief.md`, `31_reference_pool.md`, `32_design_anti_goals.md`) so v2.0 / UX-loop runs cannot inherit deprecated framing.
+
+## US-0010-0011: Mock template emits anchor-form hrefs by default
+
+As a discussion author writing HTML mocks in `03_Story-Workshop.md`, I want the `qfai-discussion` template to emit anchor-form `<a href="#<name>">` links by default and SKILL.md to instruct me accordingly, so that mocks never encode same-origin routes the prototype cannot serve and `QFAI-MOCK-010` keeps passing without relaxing the validator. (REQ-0154 / DR-0265)
+
+## US-0010-0012: Discussion writes the active session pointer
+
+As a QFAI user finishing a `/qfai-discussion` run, I want the skill to write `.qfai/state.json#discussion.currentId` so the just-authored pack becomes the discoverable active session for downstream skills, and I want a clear error naming the candidate dirs and the recovery command when the active pointer is missing or ambiguous. (REQ-0155 / DR-0266)

@@ -13,7 +13,12 @@ screens:
     title: Create Order
     route: /orders/new
     # primary_tasks: at least one entry required per screen (QFAI-AUD-001).
-    # Replace the example below with the actual primary user action(s).
+    # Recommended count band: 3..7 entries per screen (QFAI-AUD-020).
+    # Counts outside the 3..7 band warn at validate time; tune the list
+    # so it covers the screen's core user actions without over-loading
+    # the surface. See references/ui-contract-guide.md for the rationale.
+    # Each entry may be either a plain string (legacy) or a structured
+    # `{id, label, acceptance}` object (closed schema — no other keys).
     primary_tasks:
       - submit a new order
     elements:

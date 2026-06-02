@@ -192,6 +192,26 @@ As a subagent author, I want `iter-NN/iterate-context.json` summarising the prio
 
 As an operator, I want `iterate --cycle N` with N outside `0..9` to surface a deterministic error naming the supported range AND recommending the peek-mode equivalent, so that off-by-one CLI mistakes are self-diagnosable. (REQ-0012-0073, SHOULD)
 
+### US-0012-0138
+
+As an operator running cycle 0 across a multi-spec frozen surface union, I want `qfai prototyping iterate --cycle 0 --emit-skeletons` (opt-in during the deprecation window) to emit one DESIGN.md-token-styled placeholder HTML per `screens[].id` in `frozenSurfaceUnion`, so that after convergence every `frozenSurfaceUnion` screen carries at least one `evidenceRefs[]` entry per kind (`screenshot` AND `html`) regardless of which spec it belongs to, while `--emit-skeletons` absence preserves v1.9.1 behavior with no regression. (REQ-0150)
+
+### US-0012-0139
+
+As a brand-SSOT maintainer, I want DESIGN.md to declare a front-matter `patch_zone:` block so that minor in-zone edits update only a `patchHash` field while `frozenDesignMdHash#majorHash` and prototyping evidence remain valid, and out-of-zone edits continue to invalidate evidence with a `R-DESIGN-MD-PATCH-OUT-OF-ZONE` warning, so that small token tweaks do not force a full cycle-0 re-run. (REQ-0151)
+
+### US-0012-0140
+
+As an operator, I want a `prototyping.mode` discriminator (`convergence` | `exploration`) settable via `qfai.config.yaml#prototyping.mode` and overridable per-run by `qfai prototyping iterate --mode <mode>` (default `convergence`), so that exploration iterations can use the relaxed gate table while `qfai prototyping certify` rejects sealing any exploration-mode iteration (`R-EXPLORATION-CERTIFY-ATTEMPT`) and `acceptedIterationIndex` references a convergence-mode iteration only. (REQ-0152)
+
+### US-0012-0141
+
+As a reviewer authoring `taskFidelity` evidence, I want `QFAI-CRIT-009` error text to name every required keyword (`cta_visibility`, `four_state_check`, and any others surfaced by the implementation), `references/evidence-requirements.md` to enumerate them with example markdown structure, and `qfai prototyping iterate --capture` to emit an evidence template skeleton with the keywords as placeholders, so that the keyword set cannot be silently forgotten. (REQ-0162)
+
+### US-0012-0142
+
+As a maintainer auditing evidence churn, I want `iterate` and `certify` to append a `.qfai/evidence/prototyping/mutation-log.jsonl` JSON-Lines entry shaped `{ ts, caller, path, action, priorSize, newSize }` for every destructive mutation (delete / overwrite) under `iter-NN/*` (including each file moved by `--cycle 0 --force`), git-ignored by default, so that iter-NN evidence disappearance becomes forensically reproducible; a code path mutating iter-NN without a mutation-log call surfaces `R-EVIDENCE-MUTATION-UNLOGGED` (error). (REQ-0165)
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline user-story identifier space is retained as historical traceability for existing tests and historical slices.

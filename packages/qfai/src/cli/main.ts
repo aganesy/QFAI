@@ -1,5 +1,9 @@
+import { runAtddScaffold } from "./commands/atddScaffold.js";
+import { runAuditLog } from "./commands/auditLog.js";
+import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runGuardrails } from "./commands/guardrails.js";
+import { runHandoffUpgrade } from "./commands/handoffUpgrade.js";
 import { runInit } from "./commands/init.js";
 import { runPrototypingIterate } from "./commands/prototypingIterate.js";
 import { runPrototypingCertify, runPrototypingShowSpec } from "./commands/prototypingCertify.js";
@@ -60,7 +64,9 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     case "doctor":
       {
         if (options.profile && options.profile !== "prototyping") {
-          error("qfai doctor: only --profile prototyping is supported.");
+          error(
+            "qfai doctor: --profile accepts 'prototyping' or a skill name (e.g. 'qfai-prototyping').",
+          );
           info(usage());
           process.exitCode = options.invalidExitCode;
           return;
@@ -72,9 +78,16 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.doctorOut !== undefined ? { outPath: options.doctorOut } : {}),
           ...(options.failOn && options.failOn !== "never" ? { failOn: options.failOn } : {}),
           ...(options.profile === "prototyping" ? { profile: "prototyping" as const } : {}),
+          ...(options.doctorSkillProfile !== undefined
+            ? { skillProfile: options.doctorSkillProfile }
+            : {}),
           ...(options.profile === "prototyping" && options.prototypingTargetUrl
             ? { targetUrl: options.prototypingTargetUrl }
             : {}),
+          ...(options.doctorClean ? { clean: true } : {}),
+          ...(options.doctorAutoremediate ? { autoremediate: true } : {}),
+          ...(options.dryRun ? { dryRun: true } : {}),
+          ...(options.yes ? { yes: true } : {}),
         });
         process.exitCode = exitCode;
       }
@@ -94,6 +107,87 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         process.exitCode = exitCode;
       }
       return;
+    case "audit":
+      {
+        if (!options.auditAction) {
+          error("qfai audit: unknown or missing subcommand. Expected: log");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        const resolvedRoot = await resolveRoot(options);
+        process.exitCode = await runAuditLog({
+          root: resolvedRoot,
+          ...(options.auditFormat ? { format: options.auditFormat } : {}),
+          ...(options.auditScope !== undefined ? { scope: options.auditScope } : {}),
+          ...(options.auditOperator !== undefined ? { operator: options.auditOperator } : {}),
+          ...(options.auditClause !== undefined ? { clause: options.auditClause } : {}),
+        });
+      }
+      return;
+    case "atdd":
+      {
+        if (!options.atddAction) {
+          error("qfai atdd: unknown or missing subcommand. Expected: scaffold");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        if (!options.atddSpecId) {
+          error("qfai atdd scaffold: --spec <id> is required.");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        const resolvedRoot = await resolveRoot(options);
+        process.exitCode = await runAtddScaffold({
+          root: resolvedRoot,
+          specId: options.atddSpecId,
+        });
+      }
+      return;
+    case "handoff":
+      {
+        if (!options.handoffAction) {
+          error("qfai handoff: unknown or missing subcommand. Expected: upgrade");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        // Only `upgrade` is supported today; the action gate above
+        // already markInvalid()s unrecognized values, so we land here
+        // with `upgrade` selected.
+        if (!options.handoffLegacyFile) {
+          error("qfai handoff upgrade: <legacy-file> is required.");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        const resolvedRoot = await resolveRoot(options);
+        process.exitCode = await runHandoffUpgrade({
+          root: resolvedRoot,
+          legacyFile: options.handoffLegacyFile,
+        });
+      }
+      return;
+    case "discussion":
+      {
+        if (!options.discussionAction) {
+          error("qfai discussion: unknown or missing subcommand. Expected: list|use");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        const resolvedRoot = await resolveRoot(options);
+        process.exitCode = await runDiscussion({
+          root: resolvedRoot,
+          action: options.discussionAction,
+          ...(options.discussionActive ? { active: true } : {}),
+          ...(options.discussionFormat ? { format: options.discussionFormat } : {}),
+          ...(options.discussionId !== undefined ? { id: options.discussionId } : {}),
+        });
+      }
+      return;
     case "prototyping":
       {
         if (!options.prototypingAction) {
@@ -110,6 +204,8 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           process.exitCode = await runPrototypingCertify({
             root: resolvedRoot,
             check: Boolean(options.prototypingCheckOnly),
+            ...(options.prototypingScope !== undefined ? { scope: options.prototypingScope } : {}),
+            ...(options.prototypingUpgradeScopeFull ? { upgradeScopeFull: true } : {}),
           });
           return;
         }
@@ -161,6 +257,11 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.prototypingCheckConvergence ? { checkConvergence: true } : {}),
           ...(options.prototypingCapture ? { capture: true } : {}),
           ...(options.prototypingAutoServe ? { autoServe: true } : {}),
+          ...(options.prototypingEmitSkeletons ? { emitSkeletons: true } : {}),
+          ...(options.prototypingSkeletonMode !== undefined
+            ? { skeletonMode: options.prototypingSkeletonMode }
+            : {}),
+          ...(options.prototypingMode !== undefined ? { mode: options.prototypingMode } : {}),
         });
       }
       return;
@@ -181,9 +282,16 @@ Commands:
   report                       検証結果と集計を出力
   doctor                       設定/パス/出力前提の診断
   guardrails                   Decision Guardrails の抽出/検査（list|extract|check）
+  discussion list --active     active discussion session pointer を表示（state.json#discussion.currentId）
+  discussion use <id>          active discussion session pointer を設定
+  audit log [filters]          .qfai/evidence/decisions/ の決定ログを一覧 (--scope/--operator/--clause + --format table|json)
+  handoff upgrade <legacy>     legacy handoff ファイルを canonical .qfai/handoff.yaml に変換 (CLI-HANDOFF)
+  atdd scaffold --spec <id>    spec の Test-Cases から per-TC test skeleton を生成（idempotent + N-cycle escalation）
   prototyping preflight        prototyping 実行前提（spec/ui/design contracts/roles/browser/targetUrl）を診断
   prototyping iterate          single-thread evolution loop の cycle 確定
   prototyping certify [--check]         completion-certificate.json を生成 / 検証
+                                        [--scope <saas-package|full>] scope 限定 certificate を発行
+                                        [--upgrade-scope full] scope 限定 certificate を full DONE に昇格
   prototyping show-spec                 解決された primary prototyping spec を出力
 
 Options:
@@ -196,10 +304,11 @@ Options:
   --dry-run       変更を行わず表示のみ
   --format <text|github>       validate の出力形式
   --format <md|json>           report の出力形式
-  --format <text|json>         doctor / prototyping preflight の出力形式
+  --format <text|json>         doctor / prototyping preflight / discussion list --active の出力形式
+  --active                     discussion list: active session pointer を表示
   --strict                     validate: warning 以上で exit 1
-  --profile <discussion|sdd|prototyping|atdd|tdd|verify|full>  validate/report: 検証profileを指定
-  --profile <prototyping>      doctor: prototyping 固有の preflight 診断を追加
+  --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full>  validate/report: 検証profileを指定
+  --profile <prototyping|<skill>>  doctor: prototyping 固有の preflight 診断、または skill manifest の runtimeDependencies 探索
   --fail-on <error|warning|never>  validate: 失敗条件
   --fail-on <error|warning>        doctor / prototyping preflight: 失敗条件
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UXプラットフォーム指定
@@ -217,6 +326,17 @@ Options:
   --auto-serve                  prototyping iterate: opt-in なローカル HTTP サーバを in-process で起動 (default OFF; default port 4321; node:http; SIGINT teardown <= 2s; EADDRINUSE は refusal)
   --license-patch <file>        prototyping iterate: cycle 0 ライセンス allowlist パッチを適用 (audit ledger に追記; replay 対応)
   --primary-spec-id <value>     prototyping iterate: 複数 UI-bearing spec から primary を明示指定
+  --emit-skeletons              prototyping iterate --cycle 0: frozenSurfaceUnion の screen ごとに placeholder HTML を出力 (default OFF; opt-in)
+  --skeleton-mode <placeholder|full|stub>  prototyping iterate --cycle 0 --emit-skeletons: 出力モード (default placeholder)
+  --mode <convergence|exploration>  prototyping iterate: loop posture (default convergence; exploration は soft-rubric gates のみ warning へ medium relaxation)
+  --scope <value>               audit log: scope フィールドで filter
+  --scope <saas-package|full>   prototyping certify: scope 限定 certificate を発行 (saas-package は notes[] に skip 対象 gate を列挙)
+  --upgrade-scope full          prototyping certify: scope 限定 certificate を full DONE に昇格 (validate --profile saas-package の signal を再評価)
+  --operator <value>            audit log: operatorIdentity フィールドで filter
+  --clause <substring>          audit log: envelopeContractClause で substring filter
+  --clean                       doctor: TTL 超過 review pack を _archive/ へ退避 (--dry-run 併用可)
+  --autoremediate               doctor: install + clean + config-fill をまとめて実行
+  --spec <id>                   atdd scaffold: 対象 spec (例: spec-0006)
   -h, --help      ヘルプ表示
 `;
 }
