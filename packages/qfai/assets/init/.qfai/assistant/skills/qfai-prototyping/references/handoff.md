@@ -57,15 +57,17 @@ the SSOT for brand identity. There is no preserve / adapt / copy split.
 
 ## Cert
 
-Order is load-bearing: `qfai prototyping certify` requires
-`.qfai/output/validate.json` (with `counts.error === 0`) and
-`.qfai/output/verify.json` (with `status === "PASS"`) to be present
-on disk before it will seal the certificate. Run the gates in this
-order, every time:
+Order is load-bearing: `qfai prototyping certify` requires the configured
+validate report (with `counts.error === 0`) and `.qfai/report/verify.json`
+(with `status === "PASS"`) to be present on disk before it will seal the
+certificate. Both reads are canonical-first: `verify.json` falls back to the
+legacy `.qfai/output/verify.json` and prints a migration note when it does.
+Run the gates in this order, every time:
 
-1. `qfai validate --profile prototyping --fail-on error` — writes
-   `.qfai/output/validate.json`.
-2. `/qfai-verify` — writes `.qfai/output/verify.json`.
+1. `qfai validate --profile prototyping --fail-on error` — writes the path
+   configured at `output.validateJsonPath` (default
+   `.qfai/report/validate.json`), not a fixed `.qfai/output/` literal.
+2. `/qfai-verify` — writes `.qfai/report/verify.json`.
 3. `qfai prototyping certify` — produces
    `.qfai/evidence/prototyping/completion-certificate.json`. The
    certificate includes `designMdPath` + `designMdSha256` for the

@@ -37,6 +37,11 @@ import { isEnoent } from "../../core/fs/errno.js";
 import { resolvePrototypingIterationViews } from "../../core/prototyping/modeRead.js";
 import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
 import {
+  readVerifyJson,
+  VERIFY_JSON_LEGACY_REL,
+  VERIFY_JSON_REL,
+} from "../../core/prototyping/verifyJson.js";
+import {
   buildCompletionCertificate,
   checkCompletionCertificate,
   COMPLETION_CERTIFICATE_REL_PATH,
@@ -289,12 +294,20 @@ export async function runPrototypingCertify(
     return 2;
   }
 
-  const verifyJsonPath = path.join(options.root, ".qfai/output/verify.json");
-  const verifyJson = await loadJson(verifyJsonPath);
-  const verifyStatus = extractString(verifyJson, "status");
+  // Canonical `.qfai/report/verify.json` first, legacy `.qfai/output/` as a
+  // fallback — the same shape `validate.json` and the saas-package gates
+  // signal already use in this file.
+  const verifyRead = await readVerifyJson(options.root);
+  if (verifyRead.source === "legacy") {
+    error(
+      `qfai prototyping certify: read ${VERIFY_JSON_LEGACY_REL} (legacy). ` +
+        `Move it to ${VERIFY_JSON_REL}; the legacy location will stop being read.`,
+    );
+  }
+  const verifyStatus = extractString(verifyRead.json, "status");
   if (verifyStatus !== "PASS") {
     error(
-      "qfai prototyping certify: verify.json status must be PASS " +
+      `qfai prototyping certify: ${verifyRead.rel} status must be PASS ` +
         "(run `/qfai-verify` and ensure it reports PASS).",
     );
     return 2;
@@ -310,10 +323,10 @@ export async function runPrototypingCertify(
   // (R-CERTIFY-VERIFY-CIRCULAR); this CLI-side gate keeps the certify
   // command self-contained instead of relying on a downstream validate
   // pass to surface the same condition.
-  const verifyScope = extractString(verifyJson, "scope");
+  const verifyScope = extractString(verifyRead.json, "scope");
   if (verifyScope !== undefined && verifyScope !== "prototyping") {
     error(
-      `qfai prototyping certify: verify.json scope is "${verifyScope}" but the ` +
+      `qfai prototyping certify: ${verifyRead.rel} scope is "${verifyScope}" but the ` +
         'prototyping certify gate accepts only scope="prototyping". ' +
         "Re-run `/qfai-verify` with the prototyping scope before certification " +
         "(ATDD / implement / full scopes are forbidden by the option-B phase-isolation contract).",

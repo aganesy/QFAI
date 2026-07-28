@@ -17,6 +17,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
+import { readVerifyJson } from "../prototyping/verifyJson.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
 import { PROMPT_SCANNER_PAIRS } from "./promptScannerPairs.js";
@@ -26,7 +27,6 @@ import {
   MOCK_HREF_VALIDATOR_REL,
 } from "./mockHrefPairs.js";
 
-const VERIFY_JSON_REL = ".qfai/output/verify.json";
 
 const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
 const PROMPT_REL =
@@ -94,9 +94,12 @@ function isPrototypingLoopActive(proto: Record<string, unknown> | null): boolean
 }
 
 async function detectCertifyVerifyCircular(root: string): Promise<Issue[]> {
-  const verifyAbs = path.join(root, VERIFY_JSON_REL);
-  const verify = await loadJsonObject(verifyAbs);
+  // Canonical-first with a legacy fallback; the literal used to be pinned to
+  // `.qfai/output/verify.json` here as well.
+  const verifyRead = await readVerifyJson(root);
+  const verify = verifyRead.json;
   if (!verify) return [];
+  const verifyRel = verifyRead.rel;
 
   const scopeField = verify.scope;
   const scopeRaw = typeof scopeField === "string" ? scopeField.trim().toLowerCase() : "";
@@ -111,11 +114,11 @@ async function detectCertifyVerifyCircular(root: string): Promise<Issue[]> {
   // (2) offending validator-output profile (scope),
   // (3) option-B contract clause violated.
   const message =
-    `R-CERTIFY-VERIFY-CIRCULAR: certify path reads ${VERIFY_JSON_REL} ` +
+    `R-CERTIFY-VERIFY-CIRCULAR: certify path reads ${verifyRel} ` +
     `with scope="${scopeRaw}" while a prototyping loop is iterating ` +
     `(canonical ${PROTOTYPING_JSON_REL} has stopReason=null). ` +
     `Option-B forbids the prototyping certify gate from depending on /qfai-atdd or ` +
-    `/qfai-implement validator outputs (justification: certify=${VERIFY_JSON_REL}, ` +
+    `/qfai-implement validator outputs (justification: certify=${verifyRel}, ` +
     `profile=${scopeRaw}, contract=option-B phase-isolation clause).`;
 
   return [
@@ -123,7 +126,7 @@ async function detectCertifyVerifyCircular(root: string): Promise<Issue[]> {
       "R-CERTIFY-VERIFY-CIRCULAR",
       message,
       "error",
-      VERIFY_JSON_REL,
+      verifyRel,
       "reviewerGate.certifyVerifyCircular",
     ),
   ];
