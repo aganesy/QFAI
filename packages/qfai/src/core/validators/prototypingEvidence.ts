@@ -417,7 +417,7 @@ function countWords(value: string): number {
  * Screen-id casing validator.
  *
  * Scans every `<contractsDir>/ui/*.yaml` declared in the consumer
- * project and emits `QFAI-PROT-008` for any `screens[].id` value that
+ * project and emits `QFAI-PROT-010` for any `screens[].id` value that
  * contains a hyphen. The accepted convention is underscore casing
  * (snake_case), which lets the iterate path mirror the screen id into
  * `.qfai/evidence/prototyping/screenshots/<id>.png` and
@@ -436,7 +436,7 @@ export async function validateScreenIdCasing(root: string, contractsDir: string)
   // (e.g. `/tmp/abs/contracts`) is honored as-is. Node's `path.join`
   // concatenates segments without recognizing absolute-path semantics on
   // the second arg, which would produce `${root}/tmp/abs/contracts/ui` and
-  // silently scan the wrong directory, dropping every QFAI-PROT-008 hit.
+  // silently scan the wrong directory, dropping every QFAI-PROT-010 hit.
   const uiDir = path.resolve(root, contractsDir, "ui");
   const matches = await fg("**/*.{yaml,yml}", { cwd: uiDir, absolute: true, onlyFiles: true });
   const issues: Issue[] = [];
@@ -466,7 +466,10 @@ export async function validateScreenIdCasing(root: string, contractsDir: string)
         const rel = path.relative(root, filePath).replace(/\\/g, "/");
         issues.push(
           issue(
-            "QFAI-PROT-008",
+            // Renamed from QFAI-PROT-008: that code is owned by
+            // `prototyping/specIdLinkage.ts`, and sharing it made the two
+            // unrelated checks impossible to grep, filter or waive apart.
+            "QFAI-PROT-010",
             `screens[].id "${id}" uses hyphen casing; underscore casing is required (e.g. "${id.replace(/-/g, "_")}"). Underscore casing keeps iter-NN/<id>.png and the evidence aggregate dirs consistent.`,
             "error",
             rel,
