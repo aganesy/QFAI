@@ -76,6 +76,13 @@ ID reference direction (the value of `Refs:` columns) must be lower-to-upper onl
   - `TC-0001` -> `EX-Ref` and `AC-Refs` in `06_Test-Cases.md`
 - `_policies/**` must not contain lower-layer IDs (`US/AC/BR/EX/TC`) or per-spec references.
 
+### Item granularity
+
+Depth expectations answer how many layers; item granularity answers how big one
+item may be. It is defined in
+`.qfai/assistant/constitution/requirements-decomposition.md#item-granularity-acbrextc`
+and signalled by `QFAI-DENSITY-005`.
+
 ## TDD Execution Ledger
 
 Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
