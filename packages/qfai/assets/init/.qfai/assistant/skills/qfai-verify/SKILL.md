@@ -58,9 +58,57 @@ When unsure, read inputs in this order:
 
 ## Verify Scope Rule (Mandatory)
 
-- `/qfai-verify` MUST always run full-scan verification.
+- `/qfai-verify` MUST always run full-scan verification **within the declared scope**.
 - Do NOT use Preflight Diff (or any diff-only shortcut) in this skill.
 - Preserve the verify-as-safety-gate intent: verify must not be reduced to incremental checks.
+- "Full-scan" means every gate that applies to the current stage, not every gate in the repository regardless of stage. The default and only scope for a post-ATDD run is `full`.
+- **Prototyping carve-out.** When `/qfai-verify` is invoked to satisfy the prototyping DONE gate — i.e. Work Order H of `/qfai-prototyping`, before `qfai prototyping certify` — the scope is `prototyping`, and the validate run is `qfai validate --profile prototyping --fail-on error`. This is NOT a diff-only shortcut and NOT a waiver: it is the phase-isolation contract the certify gate enforces (`prototypingCertify.ts` accepts only `scope="prototyping"`, and `reviewerGate.ts` raises `R-CERTIFY-VERIFY-CIRCULAR` at severity `error` when a `verify.json` carrying `atdd` / `full` / `implement` is present while a prototyping loop is active). A `full` run at that point necessarily fails `QFAI-ATDD-111/112/113`, which are obligations of stage 5 (`/qfai-atdd`) — a stage that has not run yet. Do not clear them with annotation-only tests; declare the prototyping scope instead.
+
+## Verify Output Contract — `.qfai/output/verify.json`
+
+`/qfai-verify` MUST write `.qfai/output/verify.json` at the end of the run. This file is the machine-readable verdict; `.qfai/evidence/verify-<spec-id>.md` remains the human-readable evidence and does not replace it. Two independent readers consume it — `qfai prototyping certify` and the `R-CERTIFY-VERIFY-CIRCULAR` validator — and both fail closed when it is missing or malformed.
+
+Canonical path: `.qfai/output/verify.json` (NOT `.qfai/evidence/`). Create the `.qfai/output/` directory if absent.
+
+| Field        | Type              | Required | Meaning                                                                                              |
+| ------------ | ----------------- | -------- | ---------------------------------------------------------------------------------------------------- |
+| `version`    | integer           | yes      | Schema version. Currently `1`.                                                                        |
+| `status`     | string            | yes      | `"PASS"` when every gate in scope passed; `"FAIL"` otherwise. Only `"PASS"` satisfies a downstream gate. |
+| `scope`      | string            | yes      | Which stage's gate set this run covers. See the enum below.                                            |
+| `specId`     | string            | no       | The spec this run targeted, when scoped to one (e.g. `"spec-0001"`).                                   |
+| `recordedAt` | ISO-8601 string   | no       | When the run completed.                                                                                |
+| `summary`    | string            | no       | One or two sentences an operator can read without opening the evidence markdown.                       |
+| `gates`      | array of objects  | no       | Per-gate results: `{ name, status, command }`. Advisory; no reader gates on it today.                  |
+
+`status` is a closed two-value enum: `"PASS"` / `"FAIL"`. There is no `"WARN"` — a run with only `warning` / `info` findings is `"PASS"` (waivers apply to those severities only). Any `error` finding makes it `"FAIL"`.
+
+`scope` is a closed enum. Write the one that matches the stage you were invoked for:
+
+| `scope`       | Written by                                             | validate profile                                | Accepted by                                                     |
+| ------------- | ------------------------------------------------------ | ----------------------------------------------- | --------------------------------------------------------------- |
+| `prototyping` | Work Order H of `/qfai-prototyping`, before `certify`   | `qfai validate --profile prototyping`           | `qfai prototyping certify` — this is the ONLY value it accepts    |
+| `atdd`        | after `/qfai-atdd`                                     | `qfai validate --profile verify` (= `full`)     | rejected by prototyping certify; `R-CERTIFY-VERIFY-CIRCULAR` when a prototyping loop is still active |
+| `implement`   | after `/qfai-implement`                                | `qfai validate --profile verify` (= `full`)     | same as `atdd`                                                    |
+| `full`        | a stage-independent whole-repository run                | `qfai validate --profile verify` (= `full`)     | same as `atdd`                                                    |
+
+Minimal conforming example for the prototyping gate:
+
+```json
+{
+  "version": 1,
+  "status": "PASS",
+  "scope": "prototyping",
+  "specId": "spec-0001",
+  "recordedAt": "2026-01-31T09:12:44Z",
+  "summary": "Prototyping gates passed: validate --profile prototyping error=0, per-iter evidence present for all declared screens, reviewer gate PASS."
+}
+```
+
+Rules:
+
+- Never write `"status": "PASS"` without the command outputs that justify it. A `FAIL` verdict is a legitimate output — the gate downstream is supposed to stop.
+- Never write a `scope` you did not actually run. Writing `"prototyping"` after a `full` run is a false verdict, not a workaround.
+- `scope` is optional only in the sense that `certify` tolerates its absence for backward compatibility with pre-1.9 files. New runs MUST write it.
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -131,8 +179,9 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 - You MUST produce the required evidence file: `.qfai/evidence/verify-<spec-id>.md`.
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
+- You MUST write `.qfai/output/verify.json` per "Verify Output Contract" above. Downstream gates read that file, not the evidence markdown.
 - You MUST run the mandatory checks listed below and record outcomes.
-- In CI, you MUST keep QFAI validation on full-scan mode (`qfai validate --profile verify --fail-on error` or default `qfai validate --fail-on error`). Do NOT use partial profiles.
+- In CI, you MUST keep QFAI validation on full-scan mode (`qfai validate --profile verify --fail-on error` or default `qfai validate --fail-on error`). Do NOT use partial profiles — with the single exception of `scope: "prototyping"` runs, which use `qfai validate --profile prototyping --fail-on error` per the prototyping carve-out in "Verify Scope Rule".
 - Waivers are only for `warning` / `info` findings. If a waiver attempts to suppress an `error`, treat it as a failure and fix the root cause.
 - You MUST stop and escalate if any gate fails without an actionable fix list.
 - Completion must be approved by a reviewer who did not run the gates.
@@ -149,11 +198,12 @@ Run quality gates and produce evidence that the change is correct and safe.
 ## Success Criteria (Definition of Done)
 
 - Repo quality gates PASS (format/lint/type/test/build/etc).
-- QFAI checks PASS (at minimum: `qfai validate --profile verify`, and optionally `qfai report`).
+- QFAI checks PASS (at minimum: `qfai validate --profile verify`, or `--profile prototyping` for a `scope: "prototyping"` run; optionally `qfai report`).
 - Declared screens have mandatory screenshot and HTML evidence.
 - A concise evidence summary exists (copy‑paste for PR).
 - The PR-ready summary includes **Change Classification (Primary/Tags)** per `.qfai/assistant/constitution/change-classification.md`.
 - Evidence file exists: `.qfai/evidence/verify-<spec-id>.md`.
+- Verdict file exists: `.qfai/output/verify.json`, with `status` and `scope` set per "Verify Output Contract".
 - Completion is approved by a reviewer who did not run the gates.
 
 ## Mandatory checks
@@ -469,9 +519,10 @@ If you cannot run these commands (environment limitation):
 
 ## Output
 
-- Evidence summary with all gate results
+- `.qfai/output/verify.json` — the machine-readable verdict (`status` + `scope`), per "Verify Output Contract". Downstream gates read this file.
+- `.qfai/evidence/verify-<spec-id>.md` — the human-readable evidence summary with all gate results
 - All gates: PASS confirmed
-- Next action suggestion: proceed to PR creation (use your platform workflow)
+- Next action suggestion: proceed to PR creation (use your platform workflow), or — for a `scope: "prototyping"` run — proceed to `qfai prototyping certify`
 
 ## DONE Declaration (Mandatory Output)
 
