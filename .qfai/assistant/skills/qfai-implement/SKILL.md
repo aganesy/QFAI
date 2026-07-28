@@ -165,11 +165,14 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 This skill delegates through the centralized routing policy in `.qfai/assistant/manifest/agent-routing.yml`.
 
 - `delivery-planner`
-  - reads `test-list.md`, selects the next pending item, enforces Red-Green-Refactor ordering, and is the sole authority for parallel dispatch decisions
+  - reads `test-list.md`, selects the next pending item, and is the sole authority for **item selection and item scope** — whether this row's selector is a sufficient slice of its `TC-*` obligation
+  - enforces Red-Green-Refactor **ordering** (which phase may run next), not the RED/GREEN observation itself
+  - is the sole authority for parallel dispatch decisions
 - `frontend-engineer` / `backend-engineer`
   - implement the selected item only, write the failing test first, write minimal passing code, and refactor without unrelated changes
 - `qa-gatekeeper`
-  - is the sole authority for validating RED/GREEN observation evidence and completion gate evidence
+  - is the sole authority for validating **RED/GREEN observation evidence** — did the test fail (or pass) for the expected reason — and completion gate evidence
+  - does not adjudicate item scope; a scope objection is `delivery-planner`'s call
 - `implementation-reviewer`
   - reviews code quality, maintainability, backend correctness, and hidden coupling
 - `completion-reviewer`
@@ -187,6 +190,20 @@ All agent-to-agent transitions follow these contracts:
 4. After GREEN, implementation agent submits the item to `completion-reviewer` for spec alignment and to `implementation-reviewer` for code quality review.
 5. `product-surface-reviewer` is added when the item affects UI behavior or rendered output.
 6. Only after all routed blocking reviewers pass may the item transition to `done`.
+
+#### Precedence between `delivery-planner` and `qa-gatekeeper`
+
+The two roles answer different questions and are ordered, not concurrent:
+
+- `delivery-planner` answers *is this item's scope sufficient to be the whole of its `TC-*` obligation*.
+- `qa-gatekeeper` answers *did the test fail (or pass) for the expected reason*.
+
+Precedence rules:
+
+- A `delivery-planner` REVISE on item scope MUST be resolved **before** RED evidence is submitted to `qa-gatekeeper` (step 2). Do not run step 2 while a scope REVISE is open.
+- Once `qa-gatekeeper` PASSes the observation for a RED round, item scope MUST NOT be re-litigated for that round. A newly discovered scope gap opens a **new** `test-list.md` row rather than reopening the passed one.
+- If a scope objection nonetheless arrives after step 3, it is treated as a new-row request; the existing PASS stands and is not discarded.
+- Neither role may overrule the other inside the other's domain: a `qa-gatekeeper` PASS never widens item scope, and a `delivery-planner` verdict never substitutes for RED/GREEN observation evidence.
 
 ### Capability Probe (MUST)
 
