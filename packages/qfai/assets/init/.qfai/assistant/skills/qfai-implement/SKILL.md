@@ -268,7 +268,10 @@ The skill may declare "this spec's implementation is complete" only when:
 - Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain
 - Checkpoint verification passed
-- No unresolved Change Request or waiver dependency exists
+- No unresolved Change Request or waiver dependency exists — "unresolved"
+  means a `.qfai/decisions/CR-*.md` whose `Status` is `open`. A CR is
+  resolved when its `Status` is `approved`, `rejected` or `superseded` and
+  `Approved by` / `Approved at` are populated
 
 ### Completion prohibition conditions
 

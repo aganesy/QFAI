@@ -84,6 +84,10 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - Coverage is measured as unit/component TC references from `06_Test-Cases.md` appearing in TC-Refs.
 - If `06_Test-Cases.md` has no test-case classification column, every TC is treated as a coverage target.
 - `Status=exception` requires a non-empty DR-ID.
+- `DR-ID` carries Decision Record (`DR-*`) **and** Change Request (`CR-*`)
+  references. A row reset by an approved upstream change records that CR's
+  ID here. Change Requests live at
+  `.qfai/decisions/CR-YYYYMMDD-NNNN-<slug>.md` (`CR-\d{8}-\d{4}`).
 - `Status` in `green`, `refactor`, or `done` requires an existing Test file resolved from project root.
 - `TDD-ID` must match `TDD-NNNN` and be unique within the spec.
 - Missing `tdd/test-list.md` is a warning; missing DR-ID/Evidence columns is an error.

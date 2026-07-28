@@ -25,7 +25,15 @@ Any exception beyond this list requires explicit user approval.
 ## When drift is detected
 
 1. STOP downstream editing immediately.
-2. Create a Change Request that includes:
+2. Create a Change Request as a file at
+   `.qfai/decisions/CR-YYYYMMDD-NNNN-<slug>.md`, from
+   `.qfai/assistant/skills/qfai-sdd/templates/change-request.md`. The ID
+   pattern is `CR-\d{8}-\d{4}` and the file carries `ID`, `Status`
+   (`open` / `approved` / `rejected` / `superseded`), `Approved by`,
+   `Approved at` and `Approved option` so the approval is a record, not a
+   memory. Reference it from `09_delta.md` / `07_Decisions.md` and from any
+   ledger row it resets, using the `DR-ID` column — that column carries both
+   `DR-*` and `CR-*` references. Contents:
    - context (what conflicts)
    - proposed change
    - options (at least 3) and recommendation
