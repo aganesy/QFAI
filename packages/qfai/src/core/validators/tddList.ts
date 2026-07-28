@@ -20,7 +20,19 @@ const REQUIRED_COLUMNS = [
   "Evidence",
 ];
 
-const VALID_STATUSES = new Set(["todo", "red", "green", "refactor", "done", "exception"]);
+// `review-fix` is the state an item holds while reworking a blocking
+// reviewer's REVISE. Without it a REVISE landed on `refactor`, whose only
+// outbound edge is `done`, and agents wrote invented state names into the
+// free-text Evidence column.
+const VALID_STATUSES = new Set([
+  "todo",
+  "red",
+  "green",
+  "refactor",
+  "review-fix",
+  "done",
+  "exception",
+]);
 
 const TEST_FILE_CHECK_STATUSES = new Set(["green", "refactor", "done"]);
 

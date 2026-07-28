@@ -98,7 +98,7 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` tracks progress
 
 ### Status Lifecycle
 
-Valid status values: `todo`, `red`, `green`, `refactor`, `done`, `exception`.
+Valid status values: `todo`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`.
 
 Allowed transitions:
 
@@ -106,10 +106,20 @@ Allowed transitions:
 - `red` -> `green` (make the test pass with minimal code)
 - `green` -> `refactor` (improve code quality while keeping tests green)
 - `refactor` -> `done` (item complete)
+- `refactor` -> `review-fix` (a blocking reviewer returned `REVISE`)
+- `review-fix` -> `refactor` (rework complete; re-submit to the reviewer)
 - Any active status -> `exception` (anomaly detected; record DR-ID in DR-ID column)
 
 Backward transitions are prohibited. Attempting `green` -> `red` must produce:
 `"Backward transition prohibited: green -> red"`.
+
+**Reviewer rework is not a backward transition.** A blocking reviewer's
+`REVISE` moves the item `refactor -> review-fix`. While at `review-fix` the
+item MAY re-enter the RED/GREEN cycle as many times as the rework needs —
+write the new failing test, watch it fail, make it pass — without any of those
+runs counting as a backward transition. When the rework is done the item
+returns to `refactor` and is re-submitted. `review-fix` is not a completion
+state: it appears in the completion-prohibition list.
 
 ### Exception Handling
 
@@ -277,7 +287,7 @@ Completion MUST NOT be declared when any of the following are true:
 - No RED fresh evidence exists for the item
 - No GREEN fresh evidence exists for the item
 - Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned FAIL
-- Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
+- Items with `todo`, `red`, `green`, `refactor`, or `review-fix` status still exist (for spec-level completion)
 - Parallel slices were used but integration verify has not been run post-merge
 - Checkpoint boundary was reached but verification was not executed
 - `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-001`). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID.
@@ -300,15 +310,29 @@ Each TDD item MUST have fresh evidence containing at minimum:
 
 - `TDD-ID` — the item identifier
 - `TC-ref` — reference to the test case(s)
-- `RED command` — the exact command executed to observe failure
-- `RED result` — the failure output (result completeness is best-effort; truncated output is acceptable)
-- `GREEN command` — the exact command executed to observe success
-- `GREEN result` — the success output
+
+Then one **round block** per RED/GREEN cycle. Round 1 is the original cycle;
+each blocking reviewer `REVISE` that requires new production behaviour adds a
+round. Rounds are numbered and repeatable — they are not appended as free prose:
+
+- `Round N: RED command` — the exact command executed to observe failure
+- `Round N: RED result` — the failure output (result completeness is best-effort; truncated output is acceptable)
+- `Round N: GREEN command` — the exact command executed to observe success
+- `Round N: GREEN result` — the success output
+- `Round N: reviewer verdict` — the verdict that closed the round (`PASS`, or
+  `REVISE` plus the finding that opened round N+1). Absent on round 1 when no
+  review has run yet.
+
+Then, once, for the item as a whole:
+
 - `Refactor verify command` — the exact command re-executed after refactor
 - `Refactor verify result` — the output confirming GREEN is maintained
 - `Spec review` — completion-reviewer result (PASS or FAIL)
 - `Code quality review` — implementation-reviewer result (PASS or FAIL)
 - `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE)
+
+A single-round item satisfies this with `Round 1: …` and no reviewer-verdict
+line, which is the same content the previous one-pair contract required.
 
 ### Evidence hard rules
 
