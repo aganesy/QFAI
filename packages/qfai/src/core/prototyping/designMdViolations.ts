@@ -857,11 +857,28 @@ const TAILWIND_PALETTE_SCALES: ReadonlySet<string> = new Set([
   "950",
 ]);
 
-// Tailwind built-in scale aliases for radius / shadow utilities. These
-// resolve to Tailwind's own scale (e.g. `rounded-md` → `0.375rem`,
-// `shadow-lg` → a fixed multi-stop drop shadow), not DESIGN.md tokens.
-// Bare `rounded` / `shadow` (no suffix) are also Tailwind defaults and
-// matched separately below. codex AHzR7.
+// Tailwind built-in scale aliases for radius / shadow utilities.
+//
+// An alias in this set resolves to Tailwind's own scale (e.g.
+// `rounded-xl`, `shadow-inner`) UNLESS `DESIGN.md` declares a
+// `visual.radius` / `visual.shadow` key of the same name. The mandated
+// envelope in `generator-prompt.md` injects those keys into
+// `tailwind.config.theme.extend.{borderRadius,boxShadow}`, and
+// `theme.extend` overrides the built-in entry of the same name — so
+// once the envelope has run, `rounded-md` cannot resolve to anything
+// other than the DESIGN.md token. `scanTailwindUtility` therefore
+// consults `dm` before flagging; this set is the candidate surface,
+// not the verdict.
+//
+// The distinction matters because the DESIGN.md schema fixes the legal
+// key names (`RADIUS_KEYS = sm|md|lg|full`, `SHADOW_KEYS = sm|md|lg`),
+// which are a strict subset of this list. Flagging the set
+// unconditionally left no Tailwind utility class able to reference a
+// DESIGN.md radius or shadow token at all.
+//
+// Bare `rounded` / `shadow` (no suffix) resolve to Tailwind's `DEFAULT`
+// theme key, which the DESIGN.md schema cannot declare, so they remain
+// unconditional drift and are matched separately below. codex AHzR7.
 const TAILWIND_RADIUS_SCALE_ALIASES: ReadonlySet<string> = new Set([
   "none",
   "sm",
@@ -1075,14 +1092,22 @@ function scanTailwindArbitrary(html: string, dm: DesignMd, out: DesignMdViolatio
 // `group-hover:`) are stripped before the utility lookup so
 // `hover:bg-blue-500` is detected.
 function scanTailwindUtility(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
-  // Pre-collect rendered token sets so the rare case of a DESIGN.md
-  // token whose VALUE happens to coincide with a Tailwind default is
-  // still flagged: Tailwind's CDN cannot read DESIGN.md, so the
-  // *class* identifier never references a DESIGN.md token. The
-  // contract is name-anchored, not value-anchored. We therefore do
-  // NOT cross-check against DESIGN.md values here — drift is the
-  // class shape itself.
-  void dm;
+  // The contract is name-anchored: drift is the class shape, not the
+  // value it happens to render to. But the name space is shared. The
+  // mandated `tailwind.config.theme.extend.{borderRadius,boxShadow}`
+  // injection re-binds exactly the alias names DESIGN.md declares, so
+  // for radius / shadow the class identifier DOES reference a
+  // DESIGN.md token whenever the alias is one of its keys. Those key
+  // names are what we cross-check below — the keys, never the values,
+  // so a token whose value coincides with a Tailwind default is
+  // unaffected.
+  //
+  // Color utilities are NOT treated this way: `bg-blue-500` names a
+  // Tailwind palette entry, and `theme.extend.colors` adds names
+  // rather than re-binding the built-in palette scale, so a
+  // `<palette>-<scale>` class is drift regardless of DESIGN.md.
+  const radiusKeys = new Set<string>(Object.keys(dm.visual.radius).map((k) => k.toLowerCase()));
+  const shadowKeys = new Set<string>(Object.keys(dm.visual.shadow).map((k) => k.toLowerCase()));
 
   for (const classMatch of html.matchAll(CLASS_ATTR_RE)) {
     const classes = classMatch[1] ?? classMatch[2] ?? "";
@@ -1121,16 +1146,24 @@ function scanTailwindUtility(html: string, dm: DesignMd, out: DesignMdViolation[
         }
       }
 
-      // Radius / shadow scale alias: `<prefix>-<alias>`.
+      // Radius / shadow scale alias: `<prefix>-<alias>`. An alias that
+      // names a DESIGN.md key is compliant — `theme.extend` re-binds it
+      // to the DESIGN.md token — so only aliases with no corresponding
+      // key (`rounded-xl`, `shadow-inner`, …) are drift.
       const aliasMatch = /^([a-z][a-z-]*)-([a-z0-9]+)$/.exec(cls);
       if (aliasMatch) {
         const prefix = aliasMatch[1] ?? "";
         const suffix = aliasMatch[2] ?? "";
         if (TAILWIND_RADIUS_PREFIXES.has(prefix) && TAILWIND_RADIUS_SCALE_ALIASES.has(suffix)) {
+          if (radiusKeys.has(suffix)) continue;
           out.push({ kind: "radius", found: cls });
           continue;
         }
         if (TAILWIND_SHADOW_PREFIXES.has(prefix) && TAILWIND_SHADOW_SCALE_ALIASES.has(suffix)) {
+          // `drop-shadow-*` resolves through `theme.dropShadow`, which
+          // the mandated envelope does not inject, so it stays drift
+          // even when the alias matches a `visual.shadow` key.
+          if (prefix === "shadow" && shadowKeys.has(suffix)) continue;
           out.push({ kind: "shadow", found: cls });
           continue;
         }

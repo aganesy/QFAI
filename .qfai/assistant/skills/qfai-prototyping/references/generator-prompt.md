@@ -92,10 +92,15 @@ forms caught:
 
 - Inline `border-radius: 12px` / `border-radius: 0.5rem`.
 - Tailwind arbitrary `rounded-[13px]`, `rounded-[0.5rem]`.
-- Tailwind scale aliases (`rounded`, `rounded-sm`, `rounded-md`,
-  `rounded-lg`, `rounded-xl`, `rounded-2xl`, `rounded-3xl`,
-  `rounded-full`, `rounded-none`) — all resolve to Tailwind defaults,
-  not `DESIGN.md` tokens.
+- Tailwind scale aliases with **no** `DESIGN.md.visual.radius` key of
+  the same name: bare `rounded` (Tailwind's `DEFAULT`), `rounded-xl`,
+  `rounded-2xl`, `rounded-3xl`, `rounded-none`. These resolve to
+  Tailwind defaults, not `DESIGN.md` tokens.
+- `rounded-sm` / `rounded-md` / `rounded-lg` / `rounded-full` are
+  **allowed**: the schema's `visual.radius` keys are exactly
+  `sm|md|lg|full`, and the mandatory `theme.extend.borderRadius`
+  injection re-binds those four names to the `DESIGN.md` tokens. Same
+  for the side/corner prefixes (`rounded-t-md`, `rounded-tl-lg`, …).
 
 ### 4. box-shadow literal ban (including rgba color slot)
 
@@ -105,9 +110,15 @@ Authored forms caught:
 
 - Inline `box-shadow: 0 1px 2px rgba(15,23,42,0.05)`.
 - Tailwind arbitrary `shadow-[0_4px_6px_rgba(0,0,0,0.1)]`.
-- Tailwind scale aliases (`shadow`, `shadow-sm`, `shadow-md`,
-  `shadow-lg`, `shadow-xl`, `shadow-2xl`, `shadow-inner`,
-  `shadow-none`, `drop-shadow-*`).
+- Tailwind scale aliases with **no** `DESIGN.md.visual.shadow` key of
+  the same name: bare `shadow` (Tailwind's `DEFAULT`), `shadow-xl`,
+  `shadow-2xl`, `shadow-inner`, `shadow-none`.
+- `drop-shadow-*` in every form — it resolves through
+  `theme.dropShadow`, which the mandatory envelope does not inject.
+- `shadow-sm` / `shadow-md` / `shadow-lg` are **allowed**: the schema's
+  `visual.shadow` keys are exactly `sm|md|lg`, and the mandatory
+  `theme.extend.boxShadow` injection re-binds those three names to the
+  `DESIGN.md` tokens.
 
 ### Safelisted CSS-wide keywords
 
