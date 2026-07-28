@@ -2,6 +2,34 @@
 
 This document is the SSOT for ATDD test-layer semantics and completion gates.
 
+## Layer vocabulary crosswalk (normative)
+
+qfai spells the same layer four ways across shipped artifacts. This table is
+the crosswalk; every artifact MUST use the spelling in its column.
+
+| Code | Word        | Tag                 | Test directory          | `06_Test-Cases.md#Level` | `tdd/test-list.md#Layer` |
+| ---- | ----------- | ------------------- | ----------------------- | ------------------------ | ------------------------ |
+| L1   | Unit        | `layer-unit`        | project convention      | `L1`                     | `Unit`                   |
+| L2   | Component   | `layer-component`   | project convention      | `L2`                     | `Component`              |
+| L3   | Integration | `layer-integration` | `tests/integration/**`  | `L3`                     | `Integration`            |
+| L4   | API         | `layer-api`         | `tests/api/**`          | `L4`                     | `API`                    |
+| L5   | E2E         | `layer-e2e`         | `tests/e2e/**`          | `L5`                     | `E2E`                    |
+
+Rules:
+
+- **One value per cell.** A `Level` cell and a `Layer` cell each hold exactly
+  one layer. An obligation spanning two layers is two rows, not one row with
+  two values.
+- `06_Test-Cases.md` uses the **code** (`L1`…`L5`) in its `Level` column.
+- `tdd/test-list.md` uses the **word** in its `Layer` column.
+- Test-strategy tags in prompts and policy files use the **tag** form.
+- L1 and L2 have no mandated directory: unit and component tests live wherever
+  the project's own convention puts them. Only L3-L5 are directory-pinned, and
+  only those directories are scanned by the ATDD traceability rules.
+- The two code-side word lists (`tddHelpers.ts#UNIT_COMPONENT_LAYERS` /
+  `#NON_COVERAGE_LAYERS`) accept both the code and the word form for the same
+  layer; they MUST stay in step with this table.
+
 ## Layer definitions
 
 ### L3 Integration

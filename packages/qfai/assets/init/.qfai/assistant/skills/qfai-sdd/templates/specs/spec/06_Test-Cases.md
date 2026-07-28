@@ -6,6 +6,22 @@
 - Include both `AC-Refs` and `EX-Ref` whenever possible.
 - Ensure test cases cover not only normal paths but also error paths, boundary values, and edge cases.
 
+## Level vocabulary
+
+`Level` holds exactly **one** layer code from the crosswalk in
+`.qfai/assistant/catalog/test-layers.md#layer-vocabulary-crosswalk-normative`:
+
+| Code | Layer       |
+| ---- | ----------- |
+| L1   | Unit        |
+| L2   | Component   |
+| L3   | Integration |
+| L4   | API         |
+| L5   | E2E         |
+
+`L1` and `L2` are TDD coverage targets — each needs a `tdd/test-list.md` row.
+`L3`-`L5` are not. An obligation that spans two layers is two TC rows.
+
 ## Test Case Table (required)
 
 | TC-ID   | Level | AC-Refs | EX-Ref  | Type     | Steps   | Expected   | Notes   |
