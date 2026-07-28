@@ -247,10 +247,41 @@ async function validateRootDesignMdAndLock(
   return { issues, designMd, lockSha };
 }
 
+/**
+ * True when `/qfai-prototyping` has demonstrably run in this project.
+ *
+ * `QFAI-DCON-019` guards against `/qfai-sdd` authoring prototyping outputs
+ * early. Keyed on file existence alone it also fired on the same files after
+ * prototyping legitimately produced them — where their *absence* is itself a
+ * `QFAI-DCON-001` error — making the SDD stop condition permanently
+ * unpassable for any UI-bearing project.
+ */
+async function hasPrototypingRun(root: string, config: QfaiConfig): Promise<boolean> {
+  const markers = [
+    path.join(root, ".qfai", "evidence", "prototyping", "prototyping.json"),
+    path.join(root, ".qfai", "evidence", "prototyping", "completion-certificate.json"),
+    path.join(root, config.paths.contractsDir, "design", "DESIGN.md.lock.yaml"),
+  ];
+  for (const marker of markers) {
+    try {
+      await readFile(marker, "utf-8");
+      return true;
+    } catch {
+      // try the next marker
+    }
+  }
+  return false;
+}
+
 async function validateNoPrematurePrototypingContracts(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
+  // Prototyping has run: these files are its required outputs, not premature.
+  if (await hasPrototypingRun(root, config)) {
+    return [];
+  }
+
   const designDir = path.join(root, config.paths.contractsDir, "design");
   const issues: Issue[] = [];
   for (const fileName of REQUIRED_PROTOTYPING_DESIGN_FILES) {
@@ -260,10 +291,13 @@ async function validateNoPrematurePrototypingContracts(
       issues.push(
         issue(
           "QFAI-DCON-019",
-          `${fileName} must be produced by /qfai-prototyping, not /qfai-sdd.`,
-          "error",
+          `${fileName} must be produced by /qfai-prototyping, not /qfai-sdd. No prototyping evidence was found, so this file appears to have been authored early.`,
+          "warning",
           toPosixRelative(root, filePath),
           "designContractReadiness.prematurePrototypingContract",
+          undefined,
+          "change",
+          "Run /qfai-prototyping to produce this file, or delete it if it was authored by mistake.",
         ),
       );
     } catch {
