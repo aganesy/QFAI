@@ -88,8 +88,21 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` tracks progress
 | Column    | Description                                              |
 | --------- | -------------------------------------------------------- |
 | TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)      |
-| TC-Refs   | References to test cases from `06_Test-Cases.md`         |
-| Layer     | Test layer (Unit, Integration, etc.)                     |
+| TC-Refs   | References to test cases from `06_Test-Cases.md`. TC coverage is measured **only** from `TC-*` tokens here |
+| Layer     | Test layer. Legal values: `Unit`, `Component`, `Integration`, `API`, `E2E` |
+
+Optional columns, required when the row carries a non-TC obligation:
+
+| Column         | Description                                                          |
+| -------------- | -------------------------------------------------------------------- |
+| US-Refs        | `US-*` obligations this row implements. Legal on `Layer = E2E` rows   |
+| CON-API-Refs   | `CON-API-*` obligations this row implements. Legal on `Layer = API` rows |
+
+`test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and
+`tests/api/**`, so an E2E or API row has no legal `TC-Refs` value. Those rows
+carry `-` in `TC-Refs` and record their obligation in `US-Refs` /
+`CON-API-Refs` instead. Coverage measurement is unaffected: it reads `TC-*`
+tokens only, so non-TC obligation IDs are inert to it by design.
 | Test file | Path to the test file                                    |
 | Selector  | Test selector/description for targeted execution         |
 | Status    | Current lifecycle status                                 |
@@ -265,6 +278,10 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 The skill may declare "this spec's implementation is complete" only when:
 
 - All TC-\* from `06_Test-Cases.md` with applicable layer are present in `test-list.md`
+- Every `US-*` the spec declares has a `Layer = E2E` row whose `US-Refs` names it,
+  and every declared `CON-API-*` has a `Layer = API` row whose `CON-API-Refs`
+  names it. Without these rows an all-`done` ledger can sit alongside a
+  `QFAI-ATDD-111` / `QFAI-ATDD-113` hard gate at 0%
 - Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain
 - Checkpoint verification passed

@@ -81,7 +81,15 @@ ID reference direction (the value of `Refs:` columns) must be lower-to-upper onl
 Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
 
 - Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
+- Optional columns: `US-Refs`, `CON-API-Refs` — the E2E and API obligations a
+  row implements. Required when the row carries one, since `TC-*` annotations
+  are forbidden in `tests/e2e/**` and `tests/api/**`.
 - Coverage is measured as unit/component TC references from `06_Test-Cases.md` appearing in TC-Refs.
+- TC coverage reads **`TC-*` tokens only**. `US-*` and `CON-API-*` IDs are
+  explicitly inert to it — recording one does not raise or lower TC coverage.
+- Legal `Layer` values: `Unit`, `Component`, `Integration`, `API`, `E2E`.
+  Legal obligation kinds per layer: `TC-*` on Unit / Component / Integration,
+  `US-*` on E2E, `CON-API-*` on API.
 - If `06_Test-Cases.md` has no test-case classification column, every TC is treated as a coverage target.
 - `Status=exception` requires a non-empty DR-ID.
 - `Status` in `green`, `refactor`, or `done` requires an existing Test file resolved from project root.

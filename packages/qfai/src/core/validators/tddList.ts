@@ -172,6 +172,34 @@ async function validateSpecTddList(
     }
   }
 
+  // Check 5b: optional obligation columns.
+  //
+  // `test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and
+  // `tests/api/**`, so an E2E or API row has no legal `TC-Refs` value and its
+  // obligation has nowhere to live in the eight-column schema. `US-Refs` and
+  // `CON-API-Refs` are the optional homes for those; when present their tokens
+  // must be well-formed, otherwise an all-`done` ledger silently misreports.
+  issues.push(
+    ...validateObligationColumn(table, normalizedHeaders, {
+      column: "US-Refs",
+      pattern: /^US-\d{4}(?:-\d{4})?$/,
+      expected: "US-NNNN",
+      relPath,
+      specNumber,
+      rule: "tddList.usRefsFormat",
+    }),
+  );
+  issues.push(
+    ...validateObligationColumn(table, normalizedHeaders, {
+      column: "CON-API-Refs",
+      pattern: /^CON-API-\d+$/,
+      expected: "CON-API-NNNN",
+      relPath,
+      specNumber,
+      rule: "tddList.conApiRefsFormat",
+    }),
+  );
+
   // ── Phase 2 checks ──
 
   const tddIdIndex = normalizedHeaders.indexOf("TDD-ID");
@@ -340,6 +368,55 @@ async function validateSpecTddList(
 }
 
 type TestCaseIds = { knownTcIds: Set<string>; unitComponentTcIds: Set<string> };
+
+type ObligationColumnSpec = {
+  column: string;
+  pattern: RegExp;
+  expected: string;
+  relPath: string;
+  specNumber: string;
+  rule: string;
+};
+
+/**
+ * Validates the token shape of an optional obligation column.
+ *
+ * Absent column, empty cell and `-` are all fine — the column is optional and
+ * only rows carrying that obligation fill it.
+ */
+function validateObligationColumn(
+  table: { rows: string[][] },
+  headers: string[],
+  spec: ObligationColumnSpec,
+): Issue[] {
+  const index = headers.indexOf(spec.column);
+  if (index < 0) {
+    return [];
+  }
+
+  const issues: Issue[] = [];
+  for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx += 1) {
+    const cell = (table.rows[rowIdx]?.[index] ?? "").trim();
+    if (cell.length === 0 || cell === "-") {
+      continue;
+    }
+    for (const token of cell.split(/[,;\s]+/).filter((value) => value.length > 0)) {
+      if (spec.pattern.test(token.toUpperCase())) {
+        continue;
+      }
+      issues.push(
+        issue(
+          "TDDLIST_INVALID_OBLIGATION_REF",
+          `Invalid ${spec.column} value "${token}" in tdd/test-list.md for spec-${spec.specNumber} (row ${rowIdx + 1}). Expected format: ${spec.expected}`,
+          "error",
+          spec.relPath,
+          spec.rule,
+        ),
+      );
+    }
+  }
+  return issues;
+}
 
 async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   const empty: TestCaseIds = { knownTcIds: new Set(), unitComponentTcIds: new Set() };
