@@ -131,6 +131,12 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       }
     : rawResult;
   const normalized = normalizeValidationResult(root, result);
+  const partialProfileNotice = buildPartialProfileNotice(normalized.profile);
+  if (partialProfileNotice) {
+    normalized.issues.push(partialProfileNotice);
+    normalized.counts = recountIssues(normalized.counts, partialProfileNotice);
+  }
+
   warnIfTruncated(normalized.traceability.testFiles, "validate");
 
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
@@ -347,6 +353,42 @@ function buildDeprecationIssue(args: {
   };
 }
 
+/**
+ * Hard-gate families a partial profile does NOT evaluate.
+ *
+ * A PASS on a partial profile is not layered coverage, and every profile
+ * writes the shared always-latest `validate.json` — so the omission has to be
+ * visible in the artifact, not only in the operator's head.
+ */
+const PROFILE_UNEVALUATED_GATES: Record<string, readonly string[]> = {
+  discussion: ["QFAI-SPACK-*", "QFAI-COV-*", "QFAI-ATDD-*", "TDDLIST_*", "QFAI-PROT-*"],
+  sdd: ["QFAI-ATDD-*", "TDDLIST_*", "QFAI-PROT-*"],
+  prototyping: ["QFAI-SPACK-*", "QFAI-COV-*", "QFAI-ATDD-*", "TDDLIST_*"],
+  atdd: ["QFAI-SPACK-*", "QFAI-COV-*", "TDDLIST_*", "QFAI-PROT-*"],
+  tdd: ["QFAI-SPACK-*", "QFAI-COV-*", "QFAI-PROT-*"],
+  "saas-package": ["QFAI-SPACK-*", "QFAI-COV-*", "TDDLIST_*"],
+};
+
+function buildPartialProfileNotice(profile: string | undefined): Issue | null {
+  if (!profile) {
+    return null;
+  }
+  const unevaluated = PROFILE_UNEVALUATED_GATES[profile];
+  if (!unevaluated || unevaluated.length === 0) {
+    return null;
+  }
+  return {
+    code: "QFAI-PROFILE-001",
+    severity: "info",
+    category: "canonical",
+    message:
+      `profile="${profile}" is a partial profile. Hard gates NOT evaluated in this run: ` +
+      `${unevaluated.join(", ")}. A PASS here is not full-scan coverage — run ` +
+      "`qfai validate --fail-on error` (full profile) before declaring completion.",
+    rule: "validate.partialProfileCoverage",
+  };
+}
+
 function recountIssues(
   counts: ValidationResult["counts"],
   added: Issue,
@@ -535,6 +577,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   E_OQ_STATUS_UNPARSEABLE: "Each OQ entry has a valid status (open|resolved|deferred).",
   E_DELTA_MISSING_REQUIRED:
     "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
+  "QFAI-PROFILE-001":
+    "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
   "QFAI-COV-201": "Every AC must be referenced by at least one TC (`AC-Refs`).",
   "QFAI-COV-202": "Every BR must be referenced by at least one EX (`BR-Ref`).",
   "QFAI-COV-203": "Every EX must be referenced by at least one TC (`EX-Ref`).",

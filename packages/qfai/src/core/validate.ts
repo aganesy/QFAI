@@ -282,10 +282,19 @@ async function runTddValidators(
   root: string,
   config: ConfigLoadResult["config"],
   includeTraceability = true,
+  // `full` already runs the ATDD profile, so it opts out here to avoid
+  // emitting every QFAI-ATDD-* finding twice.
+  includeAtddCodeTraceability = true,
 ): Promise<Issue[]> {
   return [
     ...(await validateTddList(root, config)),
     ...(await validateTestTodoStubs(root, config)),
+    // `qfai-implement` names `--profile tdd` as its only completion gate, and
+    // it is the stage that creates test-routing obligations. Without this the
+    // profile was structurally incapable of observing QFAI-ATDD-111/112/113/
+    // 121/122 — the US -> tests/e2e/**, TC -> tests/integration/** and
+    // CON-API -> tests/api/** gates it is supposed to satisfy.
+    ...(includeAtddCodeTraceability ? await validateAtddCodeTraceability(root, config) : []),
     ...(includeTraceability
       ? await validateTraceability(root, config, { includeCodeReferences: true })
       : []),
@@ -307,7 +316,7 @@ async function runFullValidators(
     ...(await validateReviewArtifacts(root)),
     ...(await runPrototypingValidators(root, config, platformOption)),
     ...(await runAtddValidators(root, config)),
-    ...(await runTddValidators(root, config, false)),
+    ...(await runTddValidators(root, config, false, false)),
     ...(await validatePrototypingSkill(root, config)),
   ];
 }
