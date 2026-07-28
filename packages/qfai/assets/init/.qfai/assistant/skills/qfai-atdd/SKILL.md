@@ -304,7 +304,7 @@ Template:
 ## Stage Gates (Do not skip)
 
 - P0: Plan and obligations checklist prepared.
-- P1: Layer assignment validated.
+- P1: Layer assignment validated against `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`.
 - P2: E2E implementation completed.
 - P3: API implementation completed.
 - P4: Integration implementation completed.

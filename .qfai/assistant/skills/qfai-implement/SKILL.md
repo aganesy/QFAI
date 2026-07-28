@@ -264,7 +264,7 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 
 The skill may declare "this spec's implementation is complete" only when:
 
-- All TC-\* from `06_Test-Cases.md` with applicable layer are present in `test-list.md`
+- All TC-\* from `06_Test-Cases.md` with applicable layer are present in `test-list.md`. "Applicable layer" is decided by `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`
 - Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain
 - Checkpoint verification passed

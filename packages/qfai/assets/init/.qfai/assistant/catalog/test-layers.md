@@ -22,6 +22,54 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
 - Goal: verify `US-*` obligations from specs.
 - Location rule: `tests/e2e/**`.
 
+## Layer derivation procedure (normative)
+
+Deciding a `TC-*`'s layer is a per-TC judgement, not a constant. Use the
+falsifying-oracle rule:
+
+1. **Find the oracle.** Identify the single assertion whose removal would let a
+   wrong implementation pass. That assertion, not the test's setup, is what the
+   TC verifies.
+2. **Restrict it to the parent BR's obligations.** Anything the oracle observes
+   that the parent business rule does not own is incidental and does not raise
+   the layer.
+3. **Read the layer off what the oracle observes:**
+   - inputs and return values only → **L1 Unit**
+   - collaboration with a port through a fixture adapter (no real
+     infrastructure) → **L2 Component**
+   - real infrastructure state — DB rows, queue messages, files → **L3 Integration**
+   - values at the service boundary — status codes, response bodies, auth and
+     error contracts → **L4 API**
+   - a full-system journey across UI/API/data → **L5 E2E**
+
+### Worked examples
+
+| Oracle asserts | Layer |
+| -------------- | ----- |
+| `price(order) === 1250` for a given input | L1 Unit |
+| the repository port was called with the normalized key, via a fake adapter | L2 Component |
+| the row is present in the database after commit | L3 Integration |
+| `POST /orders` returns `422` with `code: "OUT_OF_AREA"` | L4 API |
+| a user can register, order, and see the order in their history | L5 E2E |
+
+### Obligation spanning more than one layer
+
+**Split the row.** One TC = one oracle = one layer. If an obligation is
+observable at two layers, it is two obligations: write one TC per oracle and
+give each its own `Level`.
+
+- A multi-valued `Level` cell (`L3/L5`) is **illegal**. Nothing consumes it and
+  no validator can route it.
+- If splitting is genuinely impossible, escalate through the Drift Protocol
+  rather than inventing a combined value.
+
+### Direction of authority (anti-pattern)
+
+The test driver follows the declared layer. **The layer is never inferred from
+how a test happens to be driven.** A unit-level obligation exercised through an
+HTTP client is still L1 badly implemented — it is not an L4 test. Inverting
+this is what collapses a designed pyramid into an all-integration suite.
+
 ## TestKind resolution (single source)
 
 - `tests/e2e/**` -> E2E

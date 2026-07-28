@@ -6,6 +6,10 @@
 - Include both `AC-Refs` and `EX-Ref` whenever possible.
 - Ensure test cases cover not only normal paths but also error paths, boundary values, and edge cases.
 
+Derive each row's `Level` with
+`.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`.
+One oracle per TC; a multi-valued `Level` is illegal.
+
 ## Test Case Table (required)
 
 | TC-ID   | Level | AC-Refs | EX-Ref  | Type     | Steps   | Expected   | Notes   |
