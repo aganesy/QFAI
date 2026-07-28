@@ -2,7 +2,7 @@
 
 - reviewer_id: `Rxx`
 - reviewer_role: `<reviewer-name>`
-- verdict: `PASS` <!-- PASS | FAIL -->
+- Result: `PASS` <!-- PASS | REVISE -->
 - reviewed_at: `YYYY-MM-DDThh:mm:ssZ`
 
 ## Checked
@@ -27,4 +27,9 @@
 
 ## Decision
 
-- PASS / FAIL
+- PASS / REVISE
+
+> In-flight reviewer responses use `PASS` / `REVISE`, per
+> `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`.
+> A `REVISE` verdict maps to `status: "FAIL"` when the review pack's `summary.json` is written
+> — see `#verdict-vocabulary` in the same file. Do not invent a third verdict.
