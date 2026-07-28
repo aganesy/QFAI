@@ -417,7 +417,27 @@ async function validateLayeredScCodeReferences(
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const globs = config.validation.traceability.testFileGlobs;
+  const scMustHaveTest = config.validation.traceability.scMustHaveTest;
+  const configPath = path.join(root, "qfai.config.yaml");
+
+  // An unconfigured glob list is a "not configured yet" state, not a traceability failure.
+  // Surface it only when scMustHaveTest is on, because then it silently disables the gate.
   if (globs.length === 0) {
+    if (scMustHaveTest) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-124",
+          "validation.traceability.testFileGlobs が未設定のため、scMustHaveTest: true でも SC のコード参照は一切検査されていません。" +
+            "リポジトリの実テストレイアウトに合わせて設定してください (/qfai-configure)。",
+          "warning",
+          configPath,
+          "traceability.layered.testFileGlobsUnset",
+          undefined,
+          "canonical",
+          "/qfai-configure を実行し、validation.traceability.testFileGlobs を実際のテストパスに合わせて設定してください。",
+        ),
+      );
+    }
     return issues;
   }
 
@@ -427,6 +447,29 @@ async function validateLayeredScCodeReferences(
     config.validation.traceability.testFileExcludeGlobs,
   );
   const refs = refsResult.refs;
+
+  // A non-empty glob list that resolves to zero files is a configuration defect, not a coverage
+  // gap. Report it *before* the per-SC finding so the enumeration of every SC in the project is
+  // not mistaken for the root cause. Escalated to error under scMustHaveTest so it cannot be
+  // silently absorbed by an otherwise error=0 run.
+  if (refsResult.scan.matchedFileCount === 0) {
+    issues.push(
+      issue(
+        "QFAI-TRACE-124",
+        `validation.traceability.testFileGlobs が 1 ファイルにも一致しませんでした ` +
+          `(globs: ${globs.join(", ")})。設定が実際のテストレイアウトと一致していないため、` +
+          `以降の SC コード参照検査 (QFAI-TRACE-117) はすべて未参照として報告されます。` +
+          `/qfai-configure で調整してください。`,
+        scMustHaveTest ? "error" : "warning",
+        configPath,
+        "traceability.layered.testFileGlobsNoMatch",
+        globs,
+        "canonical",
+        "/qfai-configure を実行し、validation.traceability.testFileGlobs を実際のテストパスに合わせて設定してください。",
+      ),
+    );
+  }
+
   const missing = Array.from(scIds).filter((id) => !refs.has(id));
   if (missing.length > 0) {
     issues.push(

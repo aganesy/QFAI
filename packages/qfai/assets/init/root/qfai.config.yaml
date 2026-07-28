@@ -18,17 +18,20 @@ validation:
   traceability:
     brMustHaveSc: true
     scMustHaveTest: true
-    testFileGlobs:
-      - tests/**/*.test.ts
-      - tests/**/*.spec.ts
-      - packages/*/tests/**/*.test.ts
-      - packages/*/tests/**/*.spec.ts
-      - src/**/*.test.ts
-      - src/**/*.spec.ts
-      - packages/*/src/**/*.test.ts
-      - packages/*/src/**/*.spec.ts
-      - features/**/*.feature
-      - packages/*/features/**/*.feature
+    # Intentionally empty: this matches the in-code default and must be set to the
+    # repository's real test layout before the SC traceability gate means anything.
+    # Seeding a language-specific list here makes the gate silently pass on every
+    # other stack. Run /qfai-configure to populate it; `qfai validate` reports
+    # QFAI-TRACE-124 while this is unset or matches zero files.
+    #
+    # Examples:
+    #   TypeScript: tests/**/*.test.ts, src/**/*.spec.ts
+    #   Python:     tests/**/test_*.py, tests/**/*_test.py
+    #   Go:         **/*_test.go
+    #   Java/Kotlin: src/test/**/*.java, src/test/**/*.kt
+    #   Rust:       tests/**/*.rs
+    #   Cucumber:   features/**/*.feature
+    testFileGlobs: []
     testFileExcludeGlobs: []
     scNoTestSeverity: error
     orphanContractsPolicy: error
