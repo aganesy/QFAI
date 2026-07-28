@@ -552,6 +552,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-ATDD-111": "Every US must be referenced at least once from tests/e2e/**.",
   "QFAI-ATDD-112": "Every TC must be referenced at least once from tests/integration/**.",
   "QFAI-ATDD-113": "Every declared CON-API must be referenced at least once from tests/api/**.",
+  "QFAI-ATDD-114":
+    "CON-API contracts declaring `x-qfai-status: planned` are deferred from the API-test obligation.",
   "QFAI-ATDD-121": "tests/api/** must not include TC annotations (`QFAI:SPEC-XXXX:TC-YYYY`).",
   "QFAI-ATDD-122": "tests/e2e/** must not include TC annotations (`QFAI:SPEC-XXXX:TC-YYYY`).",
   "QFAI-ATDD-901":

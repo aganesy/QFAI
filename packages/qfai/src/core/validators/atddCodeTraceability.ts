@@ -69,6 +69,24 @@ export async function validateAtddCodeTraceability(
     );
   }
 
+  if (result.deferredApiContractIds.size > 0) {
+    const deferred = Array.from(result.deferredApiContractIds).sort((left, right) =>
+      left.localeCompare(right),
+    );
+    issues.push(
+      issue(
+        "QFAI-ATDD-114",
+        `CON-API の API テスト義務を \`x-qfai-status: planned\` で延期しています: ${deferred.join(", ")}`,
+        "info",
+        result.contractsApiRoot,
+        "atddCodeTraceability.coverage.conApiDeferred",
+        deferred,
+        "canonical",
+        "スライス実装時に `x-qfai-status` を planned 以外へ戻し、tests/api/** で参照してください。",
+      ),
+    );
+  }
+
   if (result.missing.conApi.length > 0) {
     issues.push(
       issue(

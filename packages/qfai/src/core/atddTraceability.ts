@@ -59,6 +59,12 @@ export type AtddCodeTraceabilityResult = {
   specUsIds: Map<string, Set<string>>;
   specTcIds: Map<string, Set<string>>;
   apiContractIds: Set<string>;
+  /**
+   * `CON-API-*` IDs excluded from the `QFAI-ATDD-113` obligation because their
+   * contract declares `x-qfai-status: planned`. Reported as `info` so the
+   * deferral stays visible instead of silently shrinking the gate.
+   */
+  deferredApiContractIds: Set<string>;
   refs: {
     us: AtddSpecRefs;
     tc: AtddSpecRefs;
@@ -81,10 +87,12 @@ export async function evaluateAtddCodeTraceability(
   const contractsRoot = resolvePath(root, config, "contractsDir");
   const contractsApiRoot = path.join(contractsRoot, "api");
 
-  const [specRefs, apiContractIds] = await Promise.all([
+  const [specRefs, collectedApiContracts] = await Promise.all([
     collectSpecRefs(specsRoot),
     collectApiContractIds(contractsApiRoot),
   ]);
+  const apiContractIds = collectedApiContracts.active;
+  const deferredApiContractIds = collectedApiContracts.deferred;
 
   const testsRoot = resolvePath(root, config, "testsDir");
   const e2eRoot = path.join(testsRoot, "e2e");
@@ -178,6 +186,7 @@ export async function evaluateAtddCodeTraceability(
     specUsIds,
     specTcIds,
     apiContractIds,
+    deferredApiContractIds,
     refs: {
       us: usRefs,
       tc: tcRefs,
@@ -231,22 +240,47 @@ async function collectSpecRefs(specsRoot: string): Promise<{
   return { us, tc };
 }
 
-async function collectApiContractIds(apiRoot: string): Promise<Set<string>> {
+/**
+ * Matches an explicit deferral marker in a contract file, in YAML front-matter
+ * or as a top-level key: `x-qfai-status: planned`. Quoting is optional.
+ */
+const PLANNED_CONTRACT_RE = /^\s*(?:#\s*)?["']?x-qfai-status["']?\s*:\s*["']?planned["']?\s*$/im;
+
+/**
+ * True when the contract declares itself not yet implemented.
+ *
+ * `/qfai-sdd` authors contracts in Phase 0 (Contracts-first) but slices them in
+ * Phase 2, so between the second contract and the last slice every declared
+ * `CON-API-*` would otherwise be a `QFAI-ATDD-113` error. The marker makes the
+ * deferral explicit and reviewable in the contract itself.
+ */
+export function isPlannedApiContract(text: string): boolean {
+  return PLANNED_CONTRACT_RE.test(text);
+}
+
+type CollectedApiContracts = {
+  active: Set<string>;
+  deferred: Set<string>;
+};
+
+async function collectApiContractIds(apiRoot: string): Promise<CollectedApiContracts> {
   const files = await collectApiContractFiles(apiRoot);
-  const ids = new Set<string>();
+  const active = new Set<string>();
+  const deferred = new Set<string>();
 
   for (const file of files) {
     const text = await readSafe(file);
+    const planned = isPlannedApiContract(text);
     const declared = extractDeclaredContractIds(text);
     for (const id of declared) {
       const normalized = id.toUpperCase();
       if (API_CONTRACT_ID_RE.test(normalized)) {
-        ids.add(normalized);
+        (planned ? deferred : active).add(normalized);
       }
     }
   }
 
-  return ids;
+  return { active, deferred };
 }
 
 function collectShortIds(text: string, prefix: "US" | "TC"): Set<string> {

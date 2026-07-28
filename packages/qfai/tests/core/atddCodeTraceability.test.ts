@@ -169,12 +169,72 @@ async function seedSpec(
   );
 }
 
-async function seedApiContract(root: string, contractId: string): Promise<void> {
+describe("QFAI-ATDD-113 deferral via x-qfai-status: planned", () => {
+  it("excludes a planned contract from the API-test obligation", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedApiContract(root, "CON-API-0002", {
+        planned: true,
+        fileName: "api-0002-planned.yaml",
+      });
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      expect(issues.some((entry) => entry.code === "QFAI-ATDD-113")).toBe(false);
+
+      const deferral = issues.find((entry) => entry.code === "QFAI-ATDD-114");
+      expect(deferral?.severity).toBe("info");
+      expect(deferral?.refs).toEqual(["CON-API-0002"]);
+    });
+  });
+
+  it("still errors on an unplanned contract with no API test", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      const error = issues.find((entry) => entry.code === "QFAI-ATDD-113");
+      expect(error?.severity).toBe("error");
+      expect(error?.refs).toContain("CON-API-0001");
+    });
+  });
+
+  it("emits no deferral notice when nothing is planned", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      expect(issues.some((entry) => entry.code === "QFAI-ATDD-114")).toBe(false);
+    });
+  });
+});
+
+async function seedApiContract(
+  root: string,
+  contractId: string,
+  opts: { planned?: boolean; fileName?: string } = {},
+): Promise<void> {
   const apiDir = path.join(root, ".qfai", "contracts", "api");
   await mkdir(apiDir, { recursive: true });
   await writeFile(
-    path.join(apiDir, "api-0001-sample.yaml"),
-    [`# QFAI-CONTRACT-ID: ${contractId}`, "openapi: 3.1.0", "paths: {}", ""].join("\n"),
+    path.join(apiDir, opts.fileName ?? "api-0001-sample.yaml"),
+    [
+      `# QFAI-CONTRACT-ID: ${contractId}`,
+      ...(opts.planned ? ["x-qfai-status: planned"] : []),
+      "openapi: 3.1.0",
+      "paths: {}",
+      "",
+    ].join("\n"),
     "utf-8",
   );
 }
