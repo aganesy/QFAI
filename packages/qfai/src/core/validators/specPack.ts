@@ -309,6 +309,26 @@ const APPROVAL_REQUIRED_OPS = new Set<TriageTopLevelOp>([
   "SUPERSEDE",
 ]);
 const TRIAGE_REQUIRED_COLUMNS = ["source", "subject", "existing spec", "operation"] as const;
+
+/**
+ * Operations whose unit is a whole spec directory, never an item inside one.
+ * `QFAI-TRIAGE-003` is a membership check on the Operation label, so it cannot
+ * catch `SPLIT` applied to a `BR-0001-0002` — the one case where the word means
+ * something the toolkit does not implement.
+ */
+const SPEC_SCOPED_OPS = new Set<TriageTopLevelOp>(["SPLIT", "MERGE", "SUPERSEDE"]);
+
+/**
+ * Item IDs (short or composite) appearing in a Triage `Subject` cell.
+ *
+ * Built per call rather than shared as a `/g` regex: a module-level `/g`
+ * instance carries `lastIndex` between rows and would alternate between firing
+ * and not firing.
+ */
+function findItemIdsInSubject(subject: string): string[] {
+  return subject.match(/\b(?:US|AC|BR|EX|TC)-\d{4}(?:-\d{4})?\b/g) ?? [];
+}
+
 const TRIAGE_TOP_LEVEL_LABELS = new Set<string>([...TRIAGE_TOP_LEVEL_OPS, "UPDATE"]);
 const TRIAGE_SUB_OPS = new Set<string>(TRIAGE_UPDATE_SUBOPS);
 
@@ -555,6 +575,7 @@ function validateTriageRows(
     const subCell = (row[headerMap.get("sub-op") ?? -1] ?? "").trim();
     const approvedCell = (row[headerMap.get("approved by") ?? -1] ?? "").trim();
     const sourceCell = (row[headerMap.get("source") ?? -1] ?? "").trim();
+    const subjectCell = (row[headerMap.get("subject") ?? -1] ?? "").trim();
     const baseLabel = sourceCell || `row ${rowIndex + 1}`;
     const rowLabel = tableLabel ? `${tableLabel.trim()} ${baseLabel}` : baseLabel;
 
@@ -615,6 +636,24 @@ function validateTriageRows(
           ),
         );
       }
+      continue;
+    }
+
+    const namedItemIds = SPEC_SCOPED_OPS.has(opUpper) ? findItemIdsInSubject(subjectCell) : [];
+    if (namedItemIds.length > 0) {
+      const named = namedItemIds;
+      issues.push(
+        issue(
+          "QFAI-TRIAGE-007",
+          `Triage ${opUpper} は spec 単位の操作です。Subject が item ID を指しています (${rowLabel}): ${named.join(", ")}`,
+          "error",
+          deltaPath,
+          "triage.specScopedOperation",
+          named,
+          "canonical",
+          "SPLIT / MERGE / SUPERSEDE は spec 全体が対象です。spec 内の item 分解は UPDATE:MODIFY + UPDATE:APPEND で表現してください。",
+        ),
+      );
       continue;
     }
 
