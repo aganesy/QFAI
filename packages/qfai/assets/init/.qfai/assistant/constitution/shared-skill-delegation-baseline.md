@@ -46,6 +46,40 @@ Every major artifact in the stage should include this table schema:
 - Do not declare DONE until all routed blocking reviewers return `PASS`.
 - Every reviewer returning `FAIL` or `REVISE` must include a concrete fix proposal.
 
+### Round budget (MUST)
+
+- **Two rounds per reviewer per artifact.** Round 1 is the initial review;
+  round 2 reviews the fixes. If a blocking reviewer would return `REVISE` a
+  third time, the orchestrator MUST stop and escalate to the user with the
+  open findings, the fixes already applied, and a recommendation — it MUST NOT
+  start another round.
+- Escalation is not failure. The artifact stays at its current status and the
+  user decides: accept with the finding recorded as an Open Question, apply a
+  named fix, or drop the item from scope.
+- The round number MUST be recorded on each reviewer response.
+
+### Convergence (MUST)
+
+- A finding first raised in round N > 1 MUST state why it was not raisable in
+  round N-1 — the fix introduced it, or the fix exposed it. A finding that was
+  raisable in round 1 and was not raised is **out of budget**: record it as an
+  Open Question or a `*_delta.md` Decision Record for the owning stage, do not
+  block on it.
+- A reviewer MUST NOT open a new blocking *class* of finding after the artifact
+  under review has been declared stable. New classes go to the owning stage.
+
+### Reviewer remit (in scope per stage)
+
+A finding outside the reviewing stage's remit is recorded and deferred, never
+blocking:
+
+| Stage | In scope | Out of scope (record and defer) |
+| ----- | -------- | ------------------------------- |
+| `/qfai-discussion` | Requirement clarity, scope boundary, decision traceability | Spec structure, runtime behavior |
+| `/qfai-sdd` | Spec / contract consistency, testability, traceability edges | Runtime enforcement correctness, code quality |
+| `/qfai-atdd` | Obligation coverage, layer placement, annotation validity | Implementation structure |
+| `/qfai-implement` | Code quality, spec alignment of the item, RED/GREEN evidence | Upstream spec content, contract design |
+
 ## Work order template
 
 ```text
