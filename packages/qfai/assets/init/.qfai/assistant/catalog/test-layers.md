@@ -41,7 +41,15 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
 ## ATDD annotation hard gate
 
 - E2E obligations:
-  - Every `US-*` in specs must be referenced at least once from `tests/e2e/**` (no exception).
+  - Every `US-*` in a **user-facing** spec must be referenced at least once from
+    `tests/e2e/**`. "User-facing" is the same surface resolution
+    `/qfai-prototyping` uses: a spec that declares no user-facing surface owes
+    no E2E reference, and `QFAI-ATDD-111` does not fire for it.
+  - Scoping applies only when the project declares at least one UI-bearing
+    spec. A project that has never declared a surface has not opted into
+    surface typing, so the obligation stays project-wide for it.
+  - Do not create an E2E tree whose only purpose is to receive annotations.
+    That is the "convert all obligations into E2E" anti-pattern below.
   - Use `QFAI:SPEC-XXXX:US-YYYY` annotations.
 - Integration obligations:
   - Every `TC-*` in specs must be referenced at least once from `tests/integration/**`.

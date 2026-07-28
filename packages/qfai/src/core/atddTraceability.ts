@@ -11,6 +11,7 @@ import {
   type CollectFilesByGlobsResult,
 } from "./fs.js";
 import { collectSpecEntries } from "./specLayout.js";
+import { resolveAllUiBearingSpecs } from "./prototyping/specResolution.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { collectMarkdownItems, uniqueMatches } from "./validators/utils.js";
 
@@ -85,6 +86,17 @@ export async function evaluateAtddCodeTraceability(
     collectSpecRefs(specsRoot),
     collectApiContractIds(contractsApiRoot),
   ]);
+
+  // `QFAI-ATDD-111` (US -> tests/e2e/**) is scoped by surface type, reusing the
+  // resolution `/qfai-prototyping` already performs. A spec that declares no
+  // user-facing surface owes no E2E reference — enforcing it there is the
+  // "convert all obligations into E2E" anti-pattern `test-layers.md` forbids.
+  //
+  // Scoping applies ONLY when the project actually uses surface typing (at
+  // least one spec declares a UI-bearing surface). A project that has never
+  // declared a surface has not opted in, so the obligation is unchanged for it
+  // rather than silently disappearing.
+  const uiBearingSpecs = await resolveUiBearingScope(root, config);
 
   const testsRoot = resolvePath(root, config, "testsDir");
   const e2eRoot = path.join(testsRoot, "e2e");
@@ -165,6 +177,7 @@ export async function evaluateAtddCodeTraceability(
 
   const missing = buildMissingRefs({
     specUsIds,
+    usObligationScope: uiBearingSpecs,
     specTcIds,
     apiContractIds,
     usRefs,
@@ -247,6 +260,26 @@ async function collectApiContractIds(apiRoot: string): Promise<Set<string>> {
   }
 
   return ids;
+}
+
+/**
+ * Resolves the set of spec numbers that owe a `US-*` E2E reference.
+ *
+ * Returns `null` when no spec in the project declares a user-facing surface —
+ * i.e. the project has not opted into surface typing — so the obligation
+ * remains project-wide and this change relaxes nothing for it. Failure to
+ * resolve also returns `null`, keeping the gate at its stricter setting.
+ */
+async function resolveUiBearingScope(
+  root: string,
+  config: QfaiConfig,
+): Promise<ReadonlySet<string> | null> {
+  try {
+    const uiBearing = await resolveAllUiBearingSpecs(root, config);
+    return uiBearing.length === 0 ? null : new Set(uiBearing);
+  } catch {
+    return null;
+  }
 }
 
 function collectShortIds(text: string, prefix: "US" | "TC"): Set<string> {
@@ -389,6 +422,11 @@ function pushUnknown(
 
 function buildMissingRefs(input: {
   specUsIds: Map<string, Set<string>>;
+  /**
+   * Spec numbers that owe a `US-*` E2E reference, or `null` when the project
+   * does not use surface typing and every spec owes one.
+   */
+  usObligationScope: ReadonlySet<string> | null;
   specTcIds: Map<string, Set<string>>;
   apiContractIds: Set<string>;
   usRefs: AtddSpecRefs;
@@ -397,6 +435,9 @@ function buildMissingRefs(input: {
 }): AtddTraceabilityMissing {
   const missingUs: string[] = [];
   for (const [spec, ids] of input.specUsIds.entries()) {
+    if (input.usObligationScope !== null && !input.usObligationScope.has(spec)) {
+      continue;
+    }
     const refsBySpec = input.usRefs.get(spec);
     for (const id of sortStrings(ids)) {
       const matchedFiles = refsBySpec?.get(id);
