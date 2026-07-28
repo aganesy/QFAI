@@ -4,11 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { buildContractIndex } from "../contractIndex.js";
-import {
-  extractIds,
-  extractInvalidIds as extractInvalidCoreIds,
-  type IdFormatPrefix,
-} from "../ids.js";
+import { extractIds, extractInvalidIdOccurrences, type IdFormatPrefix } from "../ids.js";
 import {
   collectMissingLayeredSharedRequiredFiles,
   collectMissingRequiredFiles,
@@ -922,12 +918,17 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
       readSafe(entry.testCasesPath),
     ]);
 
+  // The fix hints must name the files this spec actually has. Hardcoding the
+  // superseded v1416 names sent authors to files that do not exist in the
+  // v1421 default layout.
+  const layeredFileNames = layeredIdFileNames(entry);
+
   issues.push(
     ...validateLayeredIdFormat(
       entry.userStoriesPath,
       userStoriesText,
       ["US"],
-      "01_User-stories.md の US ID を `US-0001-0001` 形式へ修正してください。",
+      `${layeredFileNames.userStories} の US ID を \`US-0001-0001\` 形式へ修正してください。`,
     ),
   );
   issues.push(
@@ -935,7 +936,7 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
       entry.acceptanceCriteriaPath,
       acceptanceCriteriaText,
       ["US", "AC"],
-      "02_Acceptance-criteria.md の ID を `US-0001-0001` / `AC-0001-0001` 形式へ修正してください。",
+      `${layeredFileNames.acceptanceCriteria} の ID を \`US-0001-0001\` / \`AC-0001-0001\` 形式へ修正してください。`,
     ),
   );
   issues.push(
@@ -943,7 +944,7 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
       entry.businessRulesPath,
       businessRulesText,
       ["AC", "BR"],
-      "03_Business-rules.md の ID を `AC-0001-0001` / `BR-0001-0001` 形式へ修正してください。",
+      `${layeredFileNames.businessRules} の ID を \`AC-0001-0001\` / \`BR-0001-0001\` 形式へ修正してください。`,
     ),
   );
   issues.push(
@@ -951,7 +952,7 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
       entry.examplesPath,
       examplesText,
       ["SPEC", "SC", "AC"],
-      "04_Examples.feature の ID を `@SPEC-0001` / `@SC-0001-0001` / `AC-0001-0001` 形式へ修正してください。",
+      `${layeredFileNames.examples} の ID を \`@SPEC-0001\` / \`@SC-0001-0001\` / \`AC-0001-0001\` 形式へ修正してください。`,
     ),
   );
   issues.push(
@@ -959,7 +960,7 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
       entry.testCasesPath,
       testCasesText,
       ["CASE", "SC"],
-      "05_Test-cases.md の ID を `CASE-0001-0001` と `SC-0001-0001` 参照形式へ修正してください。",
+      `${layeredFileNames.testCases} の ID を \`CASE-0001-0001\` と \`SC-0001-0001\` 参照形式へ修正してください。`,
     ),
   );
 
@@ -1002,26 +1003,62 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
   return issues;
 }
 
+type LayeredIdFileNames = {
+  userStories: string;
+  acceptanceCriteria: string;
+  businessRules: string;
+  examples: string;
+  testCases: string;
+};
+
+/**
+ * Filenames to name in an `E_ID_INVALID_FORMAT` fix hint.
+ *
+ * `REQUIRED_LAYERED_SPEC_FILES` defaults to the v1421 set, so hints that
+ * hardcoded the v1416 names sent authors to files their spec does not have.
+ */
+function layeredIdFileNames(entry: SpecEntry): LayeredIdFileNames {
+  if (entry.layeredStyle === "v1416") {
+    return {
+      userStories: "01_User-stories.md",
+      acceptanceCriteria: "02_Acceptance-criteria.md",
+      businessRules: "03_Business-rules.md",
+      examples: "04_Examples.feature",
+      testCases: "05_Test-cases.md",
+    };
+  }
+  return {
+    userStories: "02_User-stories.md",
+    acceptanceCriteria: "03_Acceptance-Criteria.md",
+    businessRules: "04_Business-Rules.md",
+    examples: "05_Examples.md",
+    testCases: "06_Test-Cases.md",
+  };
+}
+
 function validateLayeredIdFormat(
   filePath: string,
   text: string,
   prefixes: IdFormatPrefix[],
   suggestedAction: string,
 ): Issue[] {
-  const invalid = extractInvalidCoreIds(text, prefixes);
-  if (invalid.length === 0) {
+  const occurrences = extractInvalidIdOccurrences(text, prefixes);
+  if (occurrences.length === 0) {
     return [];
   }
+  const invalid = occurrences.map((occurrence) => occurrence.id);
+  const firstLine = Math.min(...occurrences.map((occurrence) => occurrence.line));
   return [
     issue(
       "E_ID_INVALID_FORMAT",
-      `ID 形式が不正です: ${invalid.join(", ")}`,
+      `ID 形式が不正です: ${occurrences.map((o) => `${o.id} (line ${o.line})`).join(", ")}`,
       "error",
       filePath,
       "id.format",
       invalid,
       "canonical",
       suggestedAction,
+      { loc: { line: firstLine } },
     ),
   ];
 }
