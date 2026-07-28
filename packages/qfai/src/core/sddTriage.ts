@@ -319,22 +319,25 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
       }
       const target = capabilityMatches[0] ?? bestSubjectMatch(req.subject, active);
       if (target) {
-        // Symmetry with the additive path (PR #206 review #3): when the
-        // target spec already exceeds AC/TC thresholds, propose SPLIT
-        // before REMOVE so that traceability is preserved across the
-        // resulting child specs. Without this escalation the additive
-        // and removal branches diverged on size handling, which
-        // contradicts the append-first principle.
+        // Symmetry with the additive path (PR #206 review #3): the size
+        // breach is reported on the row, but it no longer decides the
+        // operation. A count-driven SPLIT of a single-capability spec is
+        // illegal — `validateSpecSplitByCapability` raises QFAI-SPLIT-102/104
+        // at `error` — so the breach starts a capability-ownership review
+        // instead.
         const tooLarge = target.acCount > thresholds.ac || target.tcCount > thresholds.tc;
         rows.push({
           source: req.id,
           subject: req.subject,
           existingSpec: target.specId,
-          op: tooLarge ? "SPLIT" : { update: "REMOVE" },
+          op: { update: "REMOVE" },
           ...(tooLarge
             ? {
                 rationale:
-                  "removal targets a spec exceeding size thresholds; SPLIT before REMOVE to preserve traceability",
+                  `size signal: ${target.specId} has ac=${target.acCount} (threshold ${thresholds.ac}), ` +
+                  `tc=${target.tcCount} (threshold ${thresholds.tc}). Removal proceeds as UPDATE:REMOVE; ` +
+                  `start a capability-ownership review separately — SPLIT only if the spec owns more ` +
+                  `than one CAP-NNNN (QFAI-SPLIT-102/104)`,
               }
             : {}),
         });
@@ -373,16 +376,37 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
 
     const primary = capabilityMatches[0] ?? bestSubjectMatch(req.subject, active);
     if (primary) {
+      // A size breach is a SIGNAL, not the operation decision. SPLIT asserts
+      // the spec must become N specs, and `validateSpecSplitByCapability`
+      // hard-enforces one CAP-NNNN per spec — so splitting a single-capability
+      // spec on a count alone raises QFAI-SPLIT-102/104 at `error` and has no
+      // legal end state. SPLIT is reserved for `capabilityMatches.length > 1`,
+      // which is handled by the MERGE/`> 1` branch above and by an explicit
+      // capability-ownership review.
       const tooLarge = primary.acCount > thresholds.ac || primary.tcCount > thresholds.tc;
       const isFallback = capabilityMatches.length === 0;
       const row: TriageRow = {
         source: req.id,
         subject: req.subject,
         existingSpec: primary.specId,
-        op: tooLarge ? "SPLIT" : { update: "APPEND" },
+        op: { update: "APPEND" },
       };
+      const notes: string[] = [];
       if (isFallback) {
-        row.rationale = `subject-overlap fallback to ${primary.specId}; verify impact cascade before persisting`;
+        notes.push(
+          `subject-overlap fallback to ${primary.specId}; verify impact cascade before persisting`,
+        );
+      }
+      if (tooLarge) {
+        notes.push(
+          `size signal: ${primary.specId} has ac=${primary.acCount} (threshold ${thresholds.ac}), ` +
+            `tc=${primary.tcCount} (threshold ${thresholds.tc}). Start a capability-ownership ` +
+            `review: SPLIT only if the spec owns more than one CAP-NNNN (QFAI-SPLIT-102/104), ` +
+            `otherwise record the reasoned non-split`,
+        );
+      }
+      if (notes.length > 0) {
+        row.rationale = notes.join("; ");
       }
       rows.push(row);
       continue;

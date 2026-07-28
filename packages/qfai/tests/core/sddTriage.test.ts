@@ -80,7 +80,7 @@ describe("classifyTriage", () => {
     expect(rows[0]?.rationale).toMatch(/subject-overlap fallback/);
   });
 
-  it("upgrades fallback to SPLIT when the closest spec exceeds AC threshold", () => {
+  it("keeps a fallback on an oversized spec as UPDATE:APPEND with a size signal", () => {
     const rows = classifyTriage({
       reqs: [{ id: "REQ-0001c", subject: "extend packaging command", capability: undefined }],
       summaries: [
@@ -93,8 +93,10 @@ describe("classifyTriage", () => {
         }),
       ],
     });
-    expect(rows[0]?.op).toBe("SPLIT");
+    expect(rows[0]?.op).toEqual({ update: "APPEND" });
     expect(rows[0]?.existingSpec).toBe("spec-0002");
+    expect(rows[0]?.rationale).toMatch(/size signal/);
+    expect(rows[0]?.rationale).toMatch(/QFAI-SPLIT-102/);
   });
 
   it("classifies REQs matching a single small spec as UPDATE:APPEND", () => {
@@ -124,7 +126,7 @@ describe("classifyTriage", () => {
     expect(rows[0]?.existingSpec).toBe("spec-0001+spec-0002");
   });
 
-  it("upgrades to SPLIT when the matching spec exceeds AC threshold", () => {
+  it("keeps an AC-threshold breach as UPDATE:APPEND with a size signal", () => {
     const rows = classifyTriage({
       reqs: [{ id: "REQ-0004", subject: "extend large spec", capability: "CAP-0001" }],
       summaries: [
@@ -135,10 +137,13 @@ describe("classifyTriage", () => {
         }),
       ],
     });
-    expect(rows[0]?.op).toBe("SPLIT");
+    // A count breach is a signal, not the operation. SPLIT on a
+    // single-capability spec would raise QFAI-SPLIT-102/104 at `error`.
+    expect(rows[0]?.op).toEqual({ update: "APPEND" });
+    expect(rows[0]?.rationale).toMatch(/size signal/);
   });
 
-  it("upgrades to SPLIT when the matching spec exceeds TC threshold", () => {
+  it("keeps a TC-threshold breach as UPDATE:APPEND with a size signal", () => {
     const rows = classifyTriage({
       reqs: [{ id: "REQ-0005", subject: "extend large spec", capability: "CAP-0001" }],
       summaries: [
@@ -149,7 +154,8 @@ describe("classifyTriage", () => {
         }),
       ],
     });
-    expect(rows[0]?.op).toBe("SPLIT");
+    expect(rows[0]?.op).toEqual({ update: "APPEND" });
+    expect(rows[0]?.rationale).toMatch(/size signal/);
   });
 
   it("respects custom thresholds", () => {
@@ -158,7 +164,8 @@ describe("classifyTriage", () => {
       summaries: [makeSummary({ specId: "spec-0001", capability: "CAP-0001", acCount: 5 })],
       thresholds: { ac: 3, tc: 100 },
     });
-    expect(rows[0]?.op).toBe("SPLIT");
+    expect(rows[0]?.op).toEqual({ update: "APPEND" });
+    expect(rows[0]?.rationale).toMatch(/threshold 3/);
   });
 
   it("classifies removal hints as UPDATE:REMOVE", () => {
@@ -215,7 +222,7 @@ describe("classifyTriage", () => {
     expect(rows[0]?.op).toBe("CREATE");
   });
 
-  it("escalates removal hint to SPLIT when the target spec exceeds AC threshold", () => {
+  it("keeps an oversized removal hint as UPDATE:REMOVE with a size signal (AC)", () => {
     // PR #206 review #3: removalHint path should mirror the additive
     // size-threshold escalation. Without this the additive and removal
     // branches diverge on size handling.
@@ -236,12 +243,13 @@ describe("classifyTriage", () => {
         }),
       ],
     });
-    expect(rows[0]?.op).toBe("SPLIT");
+    expect(rows[0]?.op).toEqual({ update: "REMOVE" });
     expect(rows[0]?.existingSpec).toBe("spec-0001");
-    expect(rows[0]?.rationale).toMatch(/SPLIT before REMOVE/);
+    expect(rows[0]?.rationale).toMatch(/size signal/);
+    expect(rows[0]?.rationale).toMatch(/QFAI-SPLIT-102/);
   });
 
-  it("escalates removal hint to SPLIT when the target spec exceeds TC threshold", () => {
+  it("keeps an oversized removal hint as UPDATE:REMOVE with a size signal (TC)", () => {
     const rows = classifyTriage({
       reqs: [
         {
@@ -259,8 +267,8 @@ describe("classifyTriage", () => {
         }),
       ],
     });
-    expect(rows[0]?.op).toBe("SPLIT");
-    expect(rows[0]?.rationale).toMatch(/SPLIT before REMOVE/);
+    expect(rows[0]?.op).toEqual({ update: "REMOVE" });
+    expect(rows[0]?.rationale).toMatch(/size signal/);
   });
 
   it("keeps removal hint as UPDATE:REMOVE when the target spec is within thresholds", () => {
