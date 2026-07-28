@@ -31,15 +31,40 @@ Skill files should reference this baseline and only add role-, stage-, or gate-s
 
 Every major artifact in the stage should include this table schema:
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | -------------------- |
+| 1    | <role>           | <instance id>  | <task>     | <refs>       | <refs>        | PASS/REVISE          |
 
 - `Output (refs)` should point to in-file anchors or relative evidence paths.
+- `Agent instance` is a run-stable identifier for the sub-agent that actually performed the step
+  (platform-supplied id where available, otherwise `<role>#<n>` assigned in order of first use).
+  It exists so an author→reviewer collision is detectable after the fact from the evidence alone;
+  the same instance appearing in an authoring step and in a review step over the same artifact is
+  a reviewer-independence violation.
 
 ## Reviewer Gate Baseline
 
 - Final completion gate must be delegated to an independent reviewer.
+
+### Definition: independent reviewer (NORMATIVE)
+
+An **independent reviewer** is a sub-agent that did **not** author or edit any artifact under
+review in this run.
+
+- The protected invariant is independence from authorship, not reviewer instance identity.
+  An agent that produced or modified none of the artifacts under review is independent even if
+  it filled another role earlier in the run; an agent that drafted or edited one of them is not
+  independent, however it is routed.
+- Independence is judged per review target, over the whole run — not per phase. Authoring in an
+  earlier phase disqualifies the agent from reviewing that artifact in a later one.
+- Role name alone never establishes independence. Routing dispatches by role; independence is a
+  separate constraint the routed agent must satisfy and attest to.
+- A reviewer that discovers it authored or edited a review target MUST stop, declare the
+  conflict, and hand the same evidence set to a non-participating reviewer. It MUST NOT return
+  `PASS` on an artifact it authored.
+- This definition governs every skill. Skill-local wording (e.g. `qfai-configure`'s "a reviewer
+  who did not modify the config") is an instance of it, not a competing rule.
+
 - Reviewers must verify Drift Protocol enforcement.
 - Reviewers must verify test-layer policy enforcement when relevant.
 - Do not treat test volume ratios or floors as hard gates unless the skill explicitly says so.
@@ -69,6 +94,7 @@ Quality bar:
 
 ```text
 Result: PASS | REVISE
+Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
 Findings:
 - <issue>
 Required fixes:
@@ -76,6 +102,11 @@ Required fixes:
 Evidence checked:
 - <refs>
 ```
+
+- `Authored/edited under review` is REQUIRED. A response omitting it is not a valid review verdict.
+- Anything other than `none` is a declared independence conflict: the verdict cannot be `PASS`,
+  and the review must be handed to a non-participating reviewer (see
+  `Definition: independent reviewer`).
 
 ### Verdict vocabulary
 
