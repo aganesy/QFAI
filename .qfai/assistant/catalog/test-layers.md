@@ -74,3 +74,12 @@ If a volume signal is unmet:
 - Do not treat `scenario.feature` or a coverage ledger as mandatory completion input.
 - Do not convert all obligations into E2E.
 - Do not inflate tests only to satisfy floor numbers.
+- Do not over-concentrate obligations into a single layer, module, or selector. Collapsing a matrix-shaped `TC-*` into one integration module — or into one test function behind one `test-list.md` selector — is the same failure mode as converting everything into E2E, and it additionally destroys the RED observation: a test function fails once, so only the first failing assert is ever observed. Split per independently observable boundary (see `qfai-implement/SKILL.md#selector-granularity-must`).
+
+### Concentration signals (non-gating)
+
+Treat these as review signals in the same class as volume floors — worth a finding, never a hard gate:
+
+- one test module holding a disproportionate share of a spec's `assert` statements
+- a very low `test_` functions per file ratio in a module that carries many obligations
+- a single selector whose recorded runtime grows monotonically across RED rounds

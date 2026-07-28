@@ -91,10 +91,27 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` tracks progress
 | TC-Refs   | References to test cases from `06_Test-Cases.md`         |
 | Layer     | Test layer (Unit, Integration, etc.)                     |
 | Test file | Path to the test file                                    |
-| Selector  | Test selector/description for targeted execution         |
+| Selector  | Test selector(s) for targeted execution — one entry, a comma-separated list, or a glob pattern |
 | Status    | Current lifecycle status                                 |
 | DR-ID     | Decision Record ID for exception items (blank otherwise) |
 | Evidence  | RED/GREEN command+result pairs proving the TDD cycle     |
+
+### Selector granularity (MUST)
+
+`Selector` is **not** restricted to a single test function. A row may legally own several, written as
+a comma-separated list (`test_rejects_expired_token, test_rejects_wrong_audience`) or a glob
+(`test_rejects_*`). What is restricted is what a row may *conflate*:
+
+- **One independently observable boundary per selector entry.** RED must be observed **per selector
+  entry**, not once per row — each entry needs its own "watch it fail for the expected reason"
+  observation, and each entry's failure reason is recorded separately in Evidence.
+- **A matrix-shaped `TC-*` must be decomposed before RED begins.** A `TC-*` that enumerates many
+  rejection reasons, a status-code matrix, or several independent state transitions is split across
+  multiple TDD rows — one falsifying oracle per row — rather than accumulated behind one selector.
+  The splitting rule: **one row per independently observable boundary**. Rows that decompose the
+  same `TC-*` all carry that `TC-*` in `TC-Refs`; `TC-Refs` is many-to-many with `TDD-ID`.
+- A selector that accumulates unrelated boundaries **invalidates the RED observation** — see the Red
+  phase below.
 
 ### Status Lifecycle
 
@@ -125,8 +142,18 @@ When transitioning to `exception`:
 1. Read `test-list.md` and select the first item with `Status = todo`.
 2. Transition status to `red`.
 3. Write a **failing test** based on the TC-Refs specification.
-4. Run the test and **watch it fail** — confirm the test actually fails for the expected reason.
+4. Run the test and **watch it fail** — confirm the test actually fails for the expected reason. When
+   the row's `Selector` holds several entries, observe each entry's failure separately; a single
+   aggregate run is not a valid RED observation.
 5. If the test unexpectedly passes, transition to `exception` and record the anomaly.
+
+> **RED observation is only as good as the selector's granularity.** A single test function can fail
+> only once, so if one selector entry carries an entire obligation matrix, "the expected reason" is
+> whichever assert happens to execute first — every assertion after it is unobserved on every RED
+> run, and a non-deterministic assertion placed early silently disables everything below it. A TDD
+> row whose selector accumulates unrelated boundaries therefore **invalidates its own RED
+> observation**. Split the row per `#selector-granularity-must` before continuing; do not proceed to
+> Green.
 
 ### Phase: Green (Make It Pass)
 
