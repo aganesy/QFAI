@@ -21,6 +21,12 @@ export type ValidateOptions = {
   profile?: ValidationProfile;
   platform?: string;
   /**
+   * Restrict the run to the named specs (`--spec`, repeatable). Repo-level
+   * findings are always kept; findings owned by an out-of-scope spec and that
+   * spec's `specs-coverage` report write are dropped.
+   */
+  specIds?: readonly string[];
+  /**
    * Override the tool version observed by the legacy-path deprecation
    * gate. Tests use this to simulate the post-sunset world (>= 1.10.0)
    * without mocking the resolver. Operational callers leave this
@@ -87,6 +93,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
     : await validateProject(root, configResult, {
         ...(options.profile ? { profile: options.profile } : {}),
         ...(options.platform ? { platform: options.platform } : {}),
+        ...(options.specIds && options.specIds.length > 0 ? { specIds: options.specIds } : {}),
       });
   // Resolve effective tool version for the legacy-path sunset gate.
   // Test callers override; production reads the same package.json#version

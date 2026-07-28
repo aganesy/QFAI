@@ -3,6 +3,7 @@ import path from "node:path";
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
 import { collectScenarioFiles } from "./discovery.js";
+import { buildSpecScope, isPathInSpecScope, type SpecScope } from "./specScope.js";
 import {
   buildScCoverage,
   collectScIdsFromScenarioFiles,
@@ -81,6 +82,12 @@ const UIUX_VALIDATION_BUDGET_MS = 2000;
 export type ValidationOptions = {
   profile?: ValidationProfile;
   platform?: string;
+  /**
+   * Restrict the run to the named specs (`--spec`). Repo-level findings are
+   * always kept; only findings owned by an out-of-scope `spec-NNNN` directory
+   * are dropped, and per-spec report writes are skipped for them.
+   */
+  specIds?: readonly string[];
 };
 
 export async function validateProject(
@@ -92,13 +99,18 @@ export async function validateProject(
   const { config, issues: configIssues } = resolved;
   const profile: ValidationProfile = options.profile ?? "full";
 
+  const specScope = buildSpecScope(options.specIds);
+  const specsRoot = resolvePath(root, config, "specsDir");
+
   const findings = [
     ...configIssues,
-    ...(await runProfileValidators(root, config, profile, options.platform)),
+    ...(await runProfileValidators(root, config, profile, options.platform, specScope)),
   ];
-  const { issues, waivers } = await applyWaivers(root, findings);
+  const scopedFindings = findings.filter((finding) =>
+    isPathInSpecScope(finding.file, specsRoot, specScope),
+  );
+  const { issues, waivers } = await applyWaivers(root, scopedFindings);
 
-  const specsRoot = resolvePath(root, config, "specsDir");
   const scenarioFiles = await collectScenarioFiles(specsRoot);
   const scIds = await collectScIdsFromScenarioFiles(scenarioFiles);
   const { refs: scTestRefs, scan: testFiles } = await collectScTestReferences(
@@ -127,12 +139,13 @@ async function runProfileValidators(
   config: ConfigLoadResult["config"],
   profile: ValidationProfile,
   platformOption?: string,
+  specScope?: SpecScope,
 ): Promise<Issue[]> {
   switch (profile) {
     case "discussion":
       return runDiscussionValidators(root, config);
     case "sdd":
-      return runSddValidators(root, config);
+      return runSddValidators(root, config, false, true, specScope);
     case "prototyping":
       return runPrototypingValidators(root, config, platformOption);
     case "atdd":
@@ -141,7 +154,7 @@ async function runProfileValidators(
       return runTddValidators(root, config);
     case "verify":
     case "full":
-      return runFullValidators(root, config, platformOption);
+      return runFullValidators(root, config, platformOption, specScope);
     case "saas-package":
       return runSaasPackage(root, config, platformOption);
   }
@@ -174,6 +187,7 @@ async function runSddValidators(
   config: ConfigLoadResult["config"],
   includeCodeReferences = false,
   enforceNoPrematurePrototypingContracts = true,
+  specScope?: SpecScope,
 ): Promise<Issue[]> {
   return [
     ...(await validateMermaidEnforcement(root)),
@@ -183,7 +197,7 @@ async function runSddValidators(
     ...(await validateSpecSplitByCapability(root, config)),
     ...(await validateLayeredTraceability(root, config)),
     ...(await validateOrphanProhibition(root, config)),
-    ...(await validateLayerCoverage(root, config)),
+    ...(await validateLayerCoverage(root, config, { ...(specScope ? { specScope } : {}) })),
     ...(await validateContractReferences(root, config)),
     ...(await validateSddDesignContractReadiness(root, config, {
       enforceNoPrematurePrototypingContracts,
@@ -297,13 +311,14 @@ async function runFullValidators(
   root: string,
   config: ConfigLoadResult["config"],
   platformOption?: string,
+  specScope?: SpecScope,
 ): Promise<Issue[]> {
   return [
     ...(await validateRepositoryHygiene(root, config)),
     ...(await validateSkillsIntegrity(root, config)),
     ...(await validateAssistantAssets(root, config)),
     ...(await runDiscussionValidators(root, config)),
-    ...(await runSddValidators(root, config, true, false)),
+    ...(await runSddValidators(root, config, true, false, specScope)),
     ...(await validateReviewArtifacts(root)),
     ...(await runPrototypingValidators(root, config, platformOption)),
     ...(await runAtddValidators(root, config)),
