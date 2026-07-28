@@ -27,6 +27,18 @@ Skill files should reference this baseline and only add role-, stage-, or gate-s
   - `User action needed: <settings or tooling changes required>`
   - `Retry condition: rerun after the required delegation succeeds`
 
+### Commit Scoping (MUST)
+
+- A delegated agent stages only the paths it declared as deliverables in its
+  work order: `git add <path> …`.
+- `git add -A`, `git add .` and `git commit -a` are forbidden for delegated
+  agents. Concurrent agents share one index; a sweeping stage command commits
+  a sibling agent's in-flight files and misattributes work in the audit trail.
+- When the agent's deliverable paths are not known up front, it hands back an
+  unstaged diff and the orchestrator commits.
+- Isolation requirements for concurrent stages are defined once in
+  `constitution/workflow.md#concurrency-stage-independent-mandatory`.
+
 ## Work Orders Summary
 
 Every major artifact in the stage should include this table schema:
