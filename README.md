@@ -26,6 +26,29 @@ The agent reads the repository, produces the required artifacts, and iterates un
 - Calibration SSOT is the calibration pack referenced by `calibrationRef.packPath`.
 - Current repo note: some repo-wide `qfai validate --fail-on error` blockers still come from historical review/evidence/ATDD/TDD artifacts and are being cleaned incrementally.
 
+## Installation
+
+qfai is published on npm as **`qfai`**. Install it as a dev dependency:
+
+```bash
+npm i -D qfai
+# or: pnpm add -D qfai / yarn add -D qfai
+```
+
+```jsonc
+// package.json
+"devDependencies": {
+  "qfai": "^1.9.2"
+}
+```
+
+> **Do not install from the GitHub repository.** A git specifier such as
+> `"qfai": "github:aganesy/QFAI"` resolves to the private monorepo root, which ships no
+> `bin` and no built `dist`. The install completes cleanly and reports no vulnerabilities,
+> but no `qfai` binary is linked and nothing is importable — the failure only surfaces at
+> the first `qfai <command>`. Use the npm package, or run it without installing via
+> `npx qfai@latest <command>`.
+
 ## Quick start
 
 > **Windows users:** `qfai init` creates symlinks internally.
