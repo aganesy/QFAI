@@ -72,6 +72,9 @@ ID reference direction (the value of `Refs:` columns) must be lower-to-upper onl
   - `US-0001` -> Parent: `CAP-0001`
   - `AC-0001` -> defined in `03_Acceptance-Criteria.md`
   - `BR-0001` -> `AC-Refs` in `04_Business-Rules.md`
+  - `BR-0001` -> `Contract-Refs` in `04_Business-Rules.md` (comma-separated
+    `CON-*` IDs; `-` when the rule binds no contract). Contract IDs recorded
+    only in `Notes` are untraced.
   - `EX-0001` -> `BR-Ref` in `05_Examples.md`
   - `TC-0001` -> `EX-Ref` and `AC-Refs` in `06_Test-Cases.md`
 - `_policies/**` must not contain lower-layer IDs (`US/AC/BR/EX/TC`) or per-spec references.
