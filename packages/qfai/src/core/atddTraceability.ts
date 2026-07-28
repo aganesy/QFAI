@@ -21,7 +21,14 @@ const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
 const US_ID_RE = /^US-\d{4}(?:-\d{4})?$/;
 const TC_ID_RE = /^TC-\d{4}(?:-\d{4})?$/;
 const API_CONTRACT_ID_RE = /^CON-API-\d+$/;
-const TEST_FILE_GLOB = "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}";
+/**
+ * Extension set used when the project declares no
+ * `validation.traceability.testFileGlobs`. It is a fallback, not the rule: a
+ * Python / Go / Java / Ruby / Rust repository matched zero files under it, so
+ * `QFAI-ATDD-111/112/113` reported 100% of obligations uncovered no matter how
+ * many correctly annotated tests existed.
+ */
+const DEFAULT_TEST_FILE_GLOB = "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}";
 
 export type AtddTestKind = "e2e" | "api" | "integration";
 
@@ -91,7 +98,11 @@ export async function evaluateAtddCodeTraceability(
   const apiRoot = path.join(testsRoot, "api");
   const integrationRoot = path.join(testsRoot, "integration");
 
-  const scanGlobs = buildAtddTestGlobs(root, testsRoot);
+  const scanGlobs = buildAtddTestGlobs(
+    root,
+    testsRoot,
+    deriveAtddFilePattern(config.validation.traceability.testFileGlobs),
+  );
   const scanResult = await collectTestFiles(root, scanGlobs);
 
   const usRefs: AtddSpecRefs = new Map<string, Map<string, Set<string>>>();
@@ -266,7 +277,37 @@ function collectShortIds(text: string, prefix: "US" | "TC"): Set<string> {
   return ids;
 }
 
-function buildAtddTestGlobs(root: string, testsRoot: string): string[] {
+/**
+ * Derives the per-layer file pattern from the project's configured
+ * `testFileGlobs`, so a non-JS repository is scanned with its own extensions.
+ *
+ * Configured globs describe whole paths (`tests/**\/*.py`); the ATDD scan needs
+ * a pattern to append under `tests/{e2e,api,integration}/`. The extension set
+ * is therefore lifted out of them and recombined. When no extension can be
+ * recovered, the JS/TS default is used.
+ */
+export function deriveAtddFilePattern(testFileGlobs: readonly string[]): string {
+  const extensions = new Set<string>();
+  for (const glob of testFileGlobs) {
+    for (const match of glob.matchAll(/\.\{([^}]+)\}$/g)) {
+      for (const ext of (match[1] ?? "").split(",")) {
+        const trimmed = ext.trim();
+        if (trimmed.length > 0) extensions.add(trimmed);
+      }
+    }
+    const single = /\.([A-Za-z0-9]+)$/.exec(glob);
+    if (single?.[1]) {
+      extensions.add(single[1]);
+    }
+  }
+  if (extensions.size === 0) {
+    return DEFAULT_TEST_FILE_GLOB;
+  }
+  const sorted = Array.from(extensions).sort();
+  return sorted.length === 1 ? `**/*.${sorted[0]}` : `**/*.{${sorted.join(",")}}`;
+}
+
+function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string): string[] {
   const relativeTestsRoot = path.relative(root, testsRoot);
   const isInsideRoot =
     relativeTestsRoot.length === 0 ||
@@ -276,9 +317,9 @@ function buildAtddTestGlobs(root: string, testsRoot: string): string[] {
     : toPosixPath(testsRoot);
   const normalizedBase = base.replace(/\/+$/, "");
   return [
-    `${normalizedBase}/e2e/${TEST_FILE_GLOB}`,
-    `${normalizedBase}/api/${TEST_FILE_GLOB}`,
-    `${normalizedBase}/integration/${TEST_FILE_GLOB}`,
+    `${normalizedBase}/e2e/${filePattern}`,
+    `${normalizedBase}/api/${filePattern}`,
+    `${normalizedBase}/integration/${filePattern}`,
   ];
 }
 
