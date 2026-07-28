@@ -4,7 +4,7 @@
 
 `.qfai/prototypes/iter-<final>/index.html` — the final accepted
 iteration HTML. The "final" iter is whichever iteration was the latest
-when `qfai prototyping iterate` returned exit 64 (convergence) or 65
+when `npx qfai prototyping iterate` returned exit 64 (convergence) or 65
 (max-iterations).
 
 `DESIGN.md` (root) and `.qfai/contracts/design/DESIGN.md.lock.yaml`
@@ -57,16 +57,16 @@ the SSOT for brand identity. There is no preserve / adapt / copy split.
 
 ## Cert
 
-Order is load-bearing: `qfai prototyping certify` requires
+Order is load-bearing: `npx qfai prototyping certify` requires
 `.qfai/output/validate.json` (with `counts.error === 0`) and
 `.qfai/output/verify.json` (with `status === "PASS"`) to be present
 on disk before it will seal the certificate. Run the gates in this
 order, every time:
 
-1. `qfai validate --profile prototyping --fail-on error` — writes
+1. `npx qfai validate --profile prototyping --fail-on error` — writes
    `.qfai/output/validate.json`.
 2. `/qfai-verify` — writes `.qfai/output/verify.json`.
-3. `qfai prototyping certify` — produces
+3. `npx qfai prototyping certify` — produces
    `.qfai/evidence/prototyping/completion-certificate.json`. The
    certificate includes `designMdPath` + `designMdSha256` for the
    locked brand identity. Use `certify --check` to verify digests

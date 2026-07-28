@@ -95,8 +95,8 @@ Use the shared schema.
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - Reviewer checks:
   - required roles were delegated;
-  - validate evidence exists: `qfai validate --profile verify --fail-on error` completed with `error=0`;
-  - per-iter evidence (screenshot + HTML + review.json) exists under `.qfai/evidence/prototyping/iter-NN/`, and the recorded final iteration in `.qfai/evidence/prototyping/prototyping.json#iterations[]` has both screenshot and HTML on disk. The completion-certificate is NOT a verify-gate input — `qfai prototyping certify` runs AFTER `/qfai-verify` (it requires a passing `verify.json`). Cert digest validation belongs to `certify --check`, run during the prototyping handoff or after edits to brand assets, not here;
+  - validate evidence exists: `npx qfai validate --profile verify --fail-on error` completed with `error=0`;
+  - per-iter evidence (screenshot + HTML + review.json) exists under `.qfai/evidence/prototyping/iter-NN/`, and the recorded final iteration in `.qfai/evidence/prototyping/prototyping.json#iterations[]` has both screenshot and HTML on disk. The completion-certificate is NOT a verify-gate input — `npx qfai prototyping certify` runs AFTER `/qfai-verify` (it requires a passing `verify.json`). Cert digest validation belongs to `certify --check`, run during the prototyping handoff or after edits to brand assets, not here;
   - Drift Protocol enforced;
   - test-layer policy enforced against `test-layers.md`.
   - gate counts and ratios are signals, not gates.
@@ -132,7 +132,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
 - You MUST run the mandatory checks listed below and record outcomes.
-- In CI, you MUST keep QFAI validation on full-scan mode (`qfai validate --profile verify --fail-on error` or default `qfai validate --fail-on error`). Do NOT use partial profiles.
+- In CI, you MUST keep QFAI validation on full-scan mode (`npx qfai validate --profile verify --fail-on error` or default `npx qfai validate --fail-on error`). Do NOT use partial profiles.
 - Waivers are only for `warning` / `info` findings. If a waiver attempts to suppress an `error`, treat it as a failure and fix the root cause.
 - You MUST stop and escalate if any gate fails without an actionable fix list.
 - Completion must be approved by a reviewer who did not run the gates.
@@ -149,7 +149,7 @@ Run quality gates and produce evidence that the change is correct and safe.
 ## Success Criteria (Definition of Done)
 
 - Repo quality gates PASS (format/lint/type/test/build/etc).
-- QFAI checks PASS (at minimum: `qfai validate --profile verify`, and optionally `qfai report`).
+- QFAI checks PASS (at minimum: `npx qfai validate --profile verify`, and optionally `npx qfai report`).
 - Declared screens have mandatory screenshot and HTML evidence.
 - A concise evidence summary exists (copy‑paste for PR).
 - The PR-ready summary includes **Change Classification (Primary/Tags)** per `.qfai/assistant/constitution/change-classification.md`.
@@ -337,8 +337,8 @@ If unknown, propose defaults and mark assumptions.
 
 Run (adjust as needed):
 
-- `qfai validate --profile verify --fail-on error`
-- `qfai report` (if used in this repo)
+- `npx qfai validate --profile verify --fail-on error`
+- `npx qfai report` (if used in this repo)
 
 Notes:
 
@@ -450,7 +450,7 @@ Evidence must include:
 1. QFAI validation:
 
    ```bash
-   qfai validate --profile verify --fail-on error
+   npx qfai validate --profile verify --fail-on error
    ```
 
 2. Repository standard gates (discover from package.json/CI/docs):
@@ -506,7 +506,7 @@ When this skill is complete, provide a final user-facing completion message and 
 - Any gate failed:
   Action: return to the owning skill, fix the issue, then rerun `/qfai-verify`.
 - Need a report artifact:
-  Action: run `qfai report` after validation outputs are up to date.
+  Action: run `npx qfai report` after validation outputs are up to date.
 
 ## Default Autopilot Policy
 

@@ -4,7 +4,7 @@ Use this file when working on traceability-heavy parts of `/qfai-sdd`.
 
 ## Required Layered Layout
 
-`qfai validate` treats specs as a layered package:
+`npx qfai validate` treats specs as a layered package:
 
 - Shared policies: `.qfai/specs/_policies/**`
 - Capability specs: `.qfai/specs/spec-*/**`

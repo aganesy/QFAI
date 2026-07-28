@@ -113,7 +113,7 @@ Use the shared schema.
 - ATDD-specific reviewer checks:
   - coverage obligations met: E2E covers `US`, Integration covers `TC`, API covers `CON-API`;
   - Coverage Depth Matrix is reviewed and no unjustified `X` cells remain;
-  - validation evidence exists and `qfai validate --profile atdd --fail-on error` passes;
+  - validation evidence exists and `npx qfai validate --profile atdd --fail-on error` passes;
   - Drift Protocol is enforced;
   - test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`;
   - coverage floors and ratios are signals, not gates;
@@ -148,7 +148,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 - Do NOT declare completion based on unit/component tests.
 - `10_Plan.md` is the primary How SSOT for execution phases.
 - If `10_Plan.md` is missing, stop and run owner planning flow before proceeding.
-- Completion gate is validation with zero errors (`qfai validate --profile atdd --fail-on error`).
+- Completion gate is validation with zero errors (`npx qfai validate --profile atdd --fail-on error`).
 - Coverage obligations are mandatory:
   - `tests/e2e/**` must cover all required `US-*`.
   - `tests/integration/**` must cover all required `TC-*`.
@@ -222,7 +222,7 @@ Notes:
 - All required `US` are covered by E2E tests.
 - All required `TC` are covered by integration tests.
 - All required `CON-API` are covered by API tests.
-- Validation passes: `qfai validate --profile atdd --fail-on error`.
+- Validation passes: `npx qfai validate --profile atdd --fail-on error`.
 - Repository quality gates (format/lint/type/tests/pack) pass with evidence.
 - Evidence file exists and includes work orders + reviewer notes.
 - Completion is approved by a reviewer who did not implement tests.
@@ -321,7 +321,7 @@ Before declaring completion:
 2. Run:
 
    ```bash
-   qfai validate --profile atdd --fail-on error
+   npx qfai validate --profile atdd --fail-on error
    ```
 
 3. Run repository standard gates:

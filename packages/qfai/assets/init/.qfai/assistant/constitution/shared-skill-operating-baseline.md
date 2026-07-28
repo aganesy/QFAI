@@ -11,6 +11,19 @@ Skill files should reference this baseline and only restate skill-specific addit
 - Preserve structured choice semantics when falling back.
 - State why AskUserQuestion was unavailable.
 
+## Canonical qfai Launcher (Mandatory)
+
+- qfai is a project dependency, not a global command. A bare `qfai …` is
+  `command not found` on a normal local install, and a gate that cannot run
+  is a gate that silently passes.
+- Invoke every gate as `npx qfai …`. This matches
+  `.qfai/assistant/catalog/tech.md`, `.qfai/assistant/catalog/structure.md`
+  and the CI workflow `qfai init` generates.
+- Canonical launcher: `npx --no-install qfai` or `node_modules/.bin/qfai` when
+  PATH reachability is uncertain.
+- If the launcher itself cannot be resolved, the gate is UNRUN, not PASS.
+  Report it as a blocker instead of completing the stage.
+
 ## FORMAT SSOT (Mandatory)
 
 - Before writing or editing `.qfai/**`, read the relevant README/template/sample for the target artifact.
