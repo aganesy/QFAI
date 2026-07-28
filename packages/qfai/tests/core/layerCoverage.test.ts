@@ -1,11 +1,14 @@
-import { mkdtemp, mkdir, rm, unlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { validateLayerCoverage } from "../../src/core/validators/layerCoverage.js";
+import {
+  collapseIdRuns,
+  validateLayerCoverage,
+} from "../../src/core/validators/layerCoverage.js";
 
 describe("validateLayerCoverage", () => {
   it("emits error when a US has no AC child", async () => {
@@ -503,3 +506,107 @@ async function seedV1421Spec(root: string, specNumber: string, capId: string): P
     "utf-8",
   );
 }
+
+describe("collapseIdRuns", () => {
+  it("collapses a contiguous numeric run into a range", () => {
+    expect(collapseIdRuns(["BR-0003-0001", "BR-0003-0002", "BR-0003-0003"])).toEqual([
+      "BR-0003-0001..BR-0003-0003",
+    ]);
+  });
+
+  it("keeps a lone ID as-is and splits on a gap", () => {
+    expect(collapseIdRuns(["AC-0001", "AC-0002", "AC-0009"])).toEqual([
+      "AC-0001..AC-0002",
+      "AC-0009",
+    ]);
+  });
+
+  it("does not merge across differing stems", () => {
+    expect(collapseIdRuns(["BR-0001-0002", "BR-0002-0003"])).toEqual([
+      "BR-0001-0002",
+      "BR-0002-0003",
+    ]);
+  });
+
+  it("returns an empty list for no IDs", () => {
+    expect(collapseIdRuns([])).toEqual([]);
+  });
+});
+
+describe("specs-coverage Signals section", () => {
+  const reportPathFor = (root: string, specNumber: string): string =>
+    path.join(root, ".qfai", "report", "specs-coverage", `spec-${specNumber}.md`);
+
+  it("collapses thin coverage into one coded, ranged row per layer", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-signals-"));
+    try {
+      await seedPolicies(root, ["CAP-0001"]);
+      await seedV1421Spec(root, "0001", "CAP-0001");
+
+      await validateLayerCoverage(root, defaultConfig);
+      const report = await readFile(reportPathFor(root, "0001"), "utf-8");
+
+      expect(report).toContain(
+        "QFAI-COV-207 (warning): 2 AC entries covered by exactly 1 TC — AC-0001..AC-0002",
+      );
+      expect(report).toContain(
+        "QFAI-COV-207 (warning): 2 BR entries covered by exactly 1 EX — BR-0001..BR-0002",
+      );
+      expect(report).toContain(
+        "QFAI-COV-207 (warning): 2 EX entries covered by exactly 1 TC — EX-0001..EX-0002",
+      );
+      // The old `AC signal: AC-0001 -> 1 TC` shape carried no code and no action.
+      expect(report).not.toContain("signal: AC-0001 ->");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("states the severity and the expected triage action", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-signals-"));
+    try {
+      await seedPolicies(root, ["CAP-0001"]);
+      await seedV1421Spec(root, "0001", "CAP-0001");
+
+      await validateLayerCoverage(root, defaultConfig);
+      const report = await readFile(reportPathFor(root, "0001"), "utf-8");
+
+      expect(report).toContain("is a **warning**, not a gate");
+      expect(report).toContain("already `QFAI-COV-201/202/203` errors");
+      expect(report).toContain("add a second case, merge the artifact into a sibling");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("omits uncovered artifacts, which are already hard errors", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-signals-"));
+    try {
+      await seedPolicies(root, ["CAP-0001"]);
+      await seedV1421Spec(root, "0001", "CAP-0001");
+
+      await writeFile(
+        path.join(root, ".qfai", "specs", "spec-0001", "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "| TC-ID   | Level | AC-Refs | EX-Ref  | Steps  | Expected   | Notes   |",
+          "| ------- | ----- | ------- | ------- | ------ | ---------- | ------- |",
+          "| TC-0001 | L2    | AC-0001 | EX-0001 | step-1 | expected-1 | note-1  |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validateLayerCoverage(root, defaultConfig);
+      expect(issues.some((entry) => entry.code === "QFAI-COV-201")).toBe(true);
+
+      const report = await readFile(reportPathFor(root, "0001"), "utf-8");
+      const signals = report.slice(report.indexOf("## Signals"));
+      expect(signals).not.toContain("AC-0002");
+      expect(signals).not.toContain("EX-0002");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});

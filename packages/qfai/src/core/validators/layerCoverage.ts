@@ -534,15 +534,83 @@ function findUncoveredIds(counts: Map<string, number>): string[] {
     .sort((left, right) => left.localeCompare(right));
 }
 
+/**
+ * Rule code carried by every `## Signals` row so the mandated triage in
+ * `qfai-sdd/SKILL.md` and the `warning_signal` entry in `review-gate.rules.yml`
+ * refer to something the report actually contains.
+ */
+const THIN_COVERAGE_SIGNAL_CODE = "QFAI-COV-207";
+
+/**
+ * Collapses a sorted ID list into contiguous runs on its trailing numeric
+ * segment, so `BR-0003-0001 … BR-0003-0016` prints as one range instead of
+ * sixteen identically-shaped lines.
+ */
+export function collapseIdRuns(ids: string[]): string[] {
+  const runs: string[] = [];
+  let runStart: string | undefined;
+  let runEnd: string | undefined;
+  let runStem = "";
+  let runLast = Number.NaN;
+
+  const flush = (): void => {
+    if (runStart === undefined || runEnd === undefined) {
+      return;
+    }
+    runs.push(runStart === runEnd ? runStart : `${runStart}..${runEnd}`);
+    runStart = undefined;
+    runEnd = undefined;
+  };
+
+  for (const id of ids) {
+    const match = /^(.*-)(\d+)$/.exec(id);
+    const stem = match?.[1] ?? id;
+    const last = match?.[2] === undefined ? Number.NaN : Number.parseInt(match[2], 10);
+    const contiguous =
+      runStart !== undefined && stem === runStem && Number.isFinite(last) && last === runLast + 1;
+
+    if (contiguous) {
+      runEnd = id;
+    } else {
+      flush();
+      runStart = id;
+      runEnd = id;
+    }
+    runStem = stem;
+    runLast = last;
+  }
+  flush();
+
+  return runs;
+}
+
+/**
+ * Builds the thin-coverage signal rows for one layer edge.
+ *
+ * `count === 0` is deliberately excluded: it is already reported as a hard
+ * `QFAI-COV-201/202/203` error, so repeating it here produced a signal list
+ * whose every entry was either a duplicate of an error or the ordinary
+ * `-> 1` case. Only `count === 1` survives, collapsed into one row per layer
+ * with an explicit rule code and severity.
+ */
 function buildSignalRows(
   prefix: "AC" | "BR" | "EX",
   counts: Map<string, number>,
   target: "TC" | "EX",
 ): string[] {
-  return Array.from(counts.entries())
-    .filter(([, count]) => count <= 1)
-    .sort((left, right) => left[0].localeCompare(right[0]))
-    .map(([id, count]) => `${prefix} signal: ${id} -> ${count} ${target}`);
+  const thin = Array.from(counts.entries())
+    .filter(([, count]) => count === 1)
+    .map(([id]) => id)
+    .sort((left, right) => left.localeCompare(right));
+
+  if (thin.length === 0) {
+    return [];
+  }
+
+  const noun = thin.length === 1 ? prefix : `${prefix} entries`;
+  return [
+    `${THIN_COVERAGE_SIGNAL_CODE} (warning): ${thin.length} ${noun} covered by exactly 1 ${target} — ${collapseIdRuns(thin).join(", ")}`,
+  ];
 }
 
 async function writeCoverageReport(
@@ -585,6 +653,16 @@ async function writeCoverageReport(
   lines.push("");
 
   lines.push("## Signals");
+  lines.push("");
+  lines.push(
+    `\`${THIN_COVERAGE_SIGNAL_CODE}\` is a **warning**, not a gate. It lists artifacts covered exactly once.`,
+  );
+  lines.push(
+    "Uncovered artifacts (count 0) are not repeated here — they are already `QFAI-COV-201/202/203` errors.",
+  );
+  lines.push(
+    "For each listed ID, record one of: add a second case, merge the artifact into a sibling, or accept it as intentionally single-case.",
+  );
   lines.push("");
   if (snapshot.signals.length === 0) {
     lines.push("- none");
