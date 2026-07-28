@@ -154,6 +154,31 @@ findings, then re-run `qfai prototyping iterate --cycle 0
 --target-url <url>` to refreeze. Do not seal a certificate against
 an unconverged iter-09.
 
+### Continuing or resetting a converged loop
+
+Once `prototyping.json` records a `stopReason` together with an
+`acceptedIterationIndex`, the loop is sealed. `qfai prototyping iterate
+--cycle N` refuses with exit `2` for any `N` greater than the accepted
+index, and writes nothing — no `iter-NN/` directory is created. That
+refusal is deliberate: such a directory is stale by construction and
+`qfai prototyping certify` hard-fails on it (`findStaleIterDirs`).
+
+Two paths remain open on a sealed loop:
+
+- **Seal it** — run `qfai prototyping certify`. This is the normal
+  next step after convergence.
+- **Start over** — run `qfai prototyping iterate --cycle 0
+  --target-url <url>`. Cycle 0 is a hard reset and is never refused;
+  it also deletes stale `iter-NN` directories.
+
+Re-running the accepted cycle itself (`--cycle <acceptedIterationIndex>`)
+is also permitted — that is a redo of recorded work, not an extension
+past the seal. Use `qfai prototyping iterate --check-convergence` to
+read the recorded `stopReason` / `acceptedIterationIndex` first.
+
+If an `iter-NN` directory was created that should not have been, delete
+it before running certify; there is no reserved quarantine name.
+
 ## Evaluator Inputs (Mandatory)
 
 - Screenshot evidence path: `.qfai/evidence/prototyping/iter-NN/<screen>.png`

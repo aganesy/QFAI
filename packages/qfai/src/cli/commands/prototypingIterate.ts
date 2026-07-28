@@ -465,6 +465,19 @@ export async function runPrototypingIterate(
     return 2;
   }
 
+  // Converged-loop guard. MUST run before any write path — the
+  // iteration directory used to be created unconditionally a few
+  // hundred lines below, so `--cycle N` against an already-sealed loop
+  // produced a fresh `iter-NN/` holding `iterate-plan.json` +
+  // `iterate-context.json`, printed "iter-NN ready", and exited 0. That
+  // debris is not inert: `certify`'s `findStaleIterDirs` guard
+  // hard-fails on exactly those directories. The state needed to refuse
+  // is the same `stopReason` / `acceptedIterationIndex` pair the
+  // `--check-convergence` peek reads; it just has to be read here
+  // rather than after the write.
+  const convergedRefusal = await refuseWhenLoopConverged(options.root, options.cycle);
+  if (convergedRefusal !== null) return convergedRefusal;
+
   // Normalise --primary-spec-id if provided. SHOULD-normalisation of
   // `1 / '1' / '01' / '0001'` to canonical `"0001"`; rejection emits the
   // canonical error message anchored by the unit ledger.
@@ -2527,6 +2540,58 @@ function buildDesignTokens(dm: DesignMd): DesignTokens {
  * to surface the same input-error class diagnostic the loop entry
  * gate uses, instead of masking a typo as "converged at cycle 99".
  */
+/**
+ * Refuse a cycle that would advance an already-terminal loop.
+ *
+ * Returns the exit code to propagate (`2`) when the recorded state says
+ * the loop is done and `cycle` is past the accepted iteration; returns
+ * `null` when the cycle is legal and iterate should proceed.
+ *
+ * Predicate — all three must hold:
+ *   1. `prototyping.json` records a non-null `stopReason` (a terminal
+ *      state was reached and sealed).
+ *   2. `acceptedIterationIndex` is an integer (an iteration was
+ *      actually accepted — a `max-iterations` stop with no accepted
+ *      index is NOT terminal for this purpose and still needs its
+ *      recovery path).
+ *   3. `cycle > acceptedIterationIndex`.
+ *
+ * Consequences of the predicate, both deliberate:
+ *   - `--cycle 0` never trips it (0 is never greater than a
+ *     non-negative accepted index), so the documented hard reset
+ *     stays available on a converged loop.
+ *   - Re-running the accepted cycle itself (`cycle ===
+ *     acceptedIterationIndex`) stays available too — that is a redo of
+ *     recorded work, not an extension past the seal.
+ *
+ * Pure read: never writes, never mutates `prototyping.json`.
+ */
+async function refuseWhenLoopConverged(root: string, cycle: number): Promise<number | null> {
+  const record = await readPrototypingJson(path.join(root, PROTOTYPING_JSON_REL));
+  if (record === null) return null;
+  const stopReasonRaw = record.stopReason;
+  if (typeof stopReasonRaw !== "string" || stopReasonRaw.length === 0) return null;
+  const acceptedRaw = record.acceptedIterationIndex;
+  if (typeof acceptedRaw !== "number" || !Number.isInteger(acceptedRaw)) return null;
+  if (cycle <= acceptedRaw) return null;
+  error(
+    `qfai prototyping iterate: refusing --cycle ${String(cycle)} — the loop is already ` +
+      `terminal (${PROTOTYPING_JSON_REL} records stopReason=${JSON.stringify(stopReasonRaw)}, ` +
+      `acceptedIterationIndex=${String(acceptedRaw)}). Nothing was written; no iter-` +
+      `${String(cycle).padStart(2, "0")} directory was created.`,
+  );
+  error(
+    "  Creating it would leave a stale iteration directory that `qfai prototyping certify` " +
+      "rejects (findStaleIterDirs).",
+  );
+  error(
+    "  Confirm the recorded state with `qfai prototyping iterate --check-convergence`, " +
+      "then either run `qfai prototyping certify` to seal the run, or " +
+      "`qfai prototyping iterate --cycle 0 --target-url <url>` to hard-reset and start a new loop.",
+  );
+  return 2;
+}
+
 async function runCheckConvergencePeek(root: string, cycle: number): Promise<number> {
   const protoJsonAbs = path.join(root, PROTOTYPING_JSON_REL);
   const header = `qfai prototyping iterate --check-convergence (cycle ${cycle}):`;
