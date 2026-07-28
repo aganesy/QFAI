@@ -74,7 +74,17 @@ ID reference direction (the value of `Refs:` columns) must be lower-to-upper onl
   - `BR-0001` -> `AC-Refs` in `04_Business-Rules.md`
   - `EX-0001` -> `BR-Ref` in `05_Examples.md`
   - `TC-0001` -> `EX-Ref` and `AC-Refs` in `06_Test-Cases.md`
-- `_policies/**` must not contain lower-layer IDs (`US/AC/BR/EX/TC`) or per-spec references.
+- `_policies/**` must not **define or own** lower-layer items. Concretely: no
+  traceability edge in `_policies/**` may name a lower-layer ID — no `Parent:`,
+  `Refs:`, `AC-Refs`, `BR-Ref` or `EX-Ref` value, and no heading that declares a
+  `US/AC/BR/EX/TC` item.
+- *Citing* a lower-layer ID or a `spec-NNNN` inside the `## Triage` section of
+  `_policies/10_delta.md` is explicitly allowed. `sdd-triage.md` requires
+  cross-spec and policy-only Triage rows to be persisted there, and
+  `QFAI-TRIAGE-002` makes `Existing Spec` (a `spec-NNNN` value) a required
+  column — so the `Existing Spec`, `Approved By` and `Rationale` cells must be
+  able to name what actually changed, verbatim. `QFAI-LAYER-100` and
+  `TRACE_SHARED_SCOPE_VIOLATION` skip the `## Triage` section for this reason.
 
 ## TDD Execution Ledger
 

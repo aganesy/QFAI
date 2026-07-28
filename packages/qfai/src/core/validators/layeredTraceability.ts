@@ -26,7 +26,9 @@ const POLICIES_FILES = [
   "10_delta.md",
 ] as const;
 
-const POLICIES_DOWNSTREAM_RE = /\b(?:spec-\d{4}|US-\d{4}|AC-\d{4}|BR-\d{4}|EX-\d{4}|TC-\d{4})\b/gi;
+// Composite (`BR-0001-0002`) as well as short IDs, so a finding reports the
+// whole ID instead of a truncated `BR-0001` the operator cannot search for.
+const POLICIES_DOWNSTREAM_RE = /\b(?:spec-\d{4}|(?:US|AC|BR|EX|TC)-\d{4}(?:-\d{4})?)\b/gi;
 const US_DOWNSTREAM_RE = /\b(?:AC|BR|EX|TC)-\d{4}\b/g;
 const AC_DOWNSTREAM_RE = /\b(?:BR|EX|TC)-\d{4}\b/g;
 const BR_DOWNSTREAM_RE = /\b(?:EX|TC)-\d{4}\b/g;
@@ -36,7 +38,7 @@ const AC_ID_RE = /^AC-\d{4}$/;
 const BR_OR_AC_ID_RE = /^(?:BR|AC)-\d{4}$/;
 const EX_ID_RE = /^EX-\d{4}$/;
 const LAYER_ID_RE = /\b(?:OBJ|INIT|CAP|FLOW|US|AC|BR|EX|TC)-\d{4}\b/gi;
-const POLICIES_DOWNSTREAM_V1421_RE = /\b(?:US|AC|BR|EX|TC)-\d{4}\b/gi;
+const POLICIES_DOWNSTREAM_V1421_RE = /\b(?:US|AC|BR|EX|TC)-\d{4}(?:-\d{4})?\b/gi;
 
 const LAYER_ORDER = {
   OBJ: 0,
@@ -136,6 +138,36 @@ export async function validateLayeredTraceability(
   return issues;
 }
 
+/**
+ * Blanks the `## Triage` section, preserving line count.
+ *
+ * `sdd-triage.md` requires cross-spec and policy-only Triage rows to be
+ * persisted in `_policies/10_delta.md`, and `QFAI-TRIAGE-002` makes
+ * `Existing Spec` (a `spec-NNNN` value) a required column — so the Triage
+ * table necessarily cites the very tokens this scan bans. The intent of the
+ * ban is that `_policies` must not *define or own* lower-layer items; citing
+ * one in a delta record is not the same thing, and the two rules were
+ * otherwise jointly unsatisfiable for any populated cross-spec Triage table.
+ */
+function maskTriageSection(text: string): string {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const start = lines.findIndex((line) => /^(#{1,6})\s*triage\b/i.test(line));
+  if (start === -1) {
+    return text;
+  }
+  const level = (/^(#{1,6})/.exec(lines[start] ?? "")?.[1] ?? "#").length;
+  const masked = [...lines];
+  for (let index = start + 1; index < lines.length; index += 1) {
+    const match = /^(#{1,6})\s+\S/.exec(lines[index] ?? "");
+    if (match && (match[1] ?? "").length <= level) {
+      break;
+    }
+    masked[index] = "";
+  }
+  masked[start] = "";
+  return masked.join("\n");
+}
+
 async function validatePoliciesDownstreamReferences(policiesDir: string): Promise<Issue[]> {
   const issues: Issue[] = [];
   for (const fileName of POLICIES_FILES) {
@@ -144,7 +176,7 @@ async function validatePoliciesDownstreamReferences(policiesDir: string): Promis
     if (text.trim().length === 0) {
       continue;
     }
-    const refs = uniqueMatches(text, POLICIES_DOWNSTREAM_RE);
+    const refs = uniqueMatches(maskTriageSection(text), POLICIES_DOWNSTREAM_RE);
     if (refs.length === 0) {
       continue;
     }
@@ -174,7 +206,7 @@ async function validatePoliciesScopeForV1421(policiesDir: string): Promise<Issue
     if (text.trim().length === 0) {
       continue;
     }
-    const refs = uniqueMatches(text, POLICIES_DOWNSTREAM_V1421_RE);
+    const refs = uniqueMatches(maskTriageSection(text), POLICIES_DOWNSTREAM_V1421_RE);
     if (refs.length === 0) {
       continue;
     }
