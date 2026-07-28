@@ -58,19 +58,32 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
 
 ## Volume policy
 
-- Floors and ratios are signals, not completion gates.
+- Floors and ratios are signals, not completion gates. This is the only
+  statement in this section: no volume observation blocks completion, and none
+  triggers a Change Request.
 - Completion gate is validation pass with no errors:
   - `qfai validate --fail-on error`
 
-If a volume signal is unmet:
+If an observed layer distribution looks wrong:
 
-1. STOP auto-adjustment.
-2. Raise a Change Request with 3 options and recommendation.
-3. Wait for explicit user approval.
-4. Update upstream artifacts via owner-phase rerun when required.
+1. Do not auto-adjust the distribution to make it look better.
+2. Record the observed distribution and the rationale for it in the spec's
+   `*_delta.md` or `09_Open-questions.md`.
+3. Continue. The stage is not blocked.
+
+A Change Request is reserved for `constitution/drift-protocol.md`-class events
+— an actual conflict with an upstream SSOT decision. A volume observation is
+not one: qfai defines no numeric floor, ratio or threshold anywhere, and no
+validator emits a volume rule, so "unmet" has no tool-checkable meaning. Raising
+a user-blocking Change Request against a per-project judgement call cannot
+conclude anything actionable.
 
 ## Anti-patterns
 
 - Do not treat `scenario.feature` or a coverage ledger as mandatory completion input.
 - Do not convert all obligations into E2E.
 - Do not inflate tests only to satisfy floor numbers.
+- Do not re-label an existing obligation's declared layer to change how a
+  distribution reads. Re-labelling is the cheapest way to clear a signal and
+  the one that destroys the most information; the layer of an obligation is
+  determined by what it verifies, never by how the totals look.
