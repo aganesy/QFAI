@@ -21,6 +21,38 @@ const V1421_REFS = {
   ex: /\bEX-\d{4}(?:-\d{4})?\b/gi,
 } as const;
 
+// QFAI-PLAN-002 (`plan.howOnly.status`): keep progress tracking out of
+// `10_Plan.md`.
+//
+// NOTE: bare-word matching is intentionally absent. The pre-fix pattern
+// was `/\b(?:status|progress|todo|remaining|done|wip)\b|進捗|残作業|状態/i`
+// tested against whole heading text, so it also rejected unavoidable
+// How-content headings — "HTTP Status Mapping", "Status Code Handling",
+// "Response Status Construction", "Definition of Done", 「状態遷移」,
+// 「状態機械」 — and `状態` has no word boundary, so ANY heading
+// containing that ordinary noun failed. There is no config key, waiver
+// list or per-rule severity override, so the only remedy was renaming a
+// heading to mean the same thing in different words.
+//
+// Match operational SHAPES instead, exactly as the sibling rule
+// `validateStatusInSpecs` does (see the equivalent NOTE in
+// `statusInSpecs.ts`, where the bare word `status` is likewise excluded
+// on purpose):
+//   - a heading used as an operational field  -> `Status: …`, 「進捗:」
+//   - a heading that IS a progress label      -> `Progress`, `TODO`, 「進捗」
+//
+// A heading that merely CONTAINS one of these words is now allowed.
+// Progress tracking is still caught, because progress tracking names
+// itself; domain vocabulary that happens to collide no longer is.
+const PLAN_STATUS_HEADING_PATTERNS = [
+  // Operational field promoted to a heading: `<field>: <value>`.
+  /^\s*(?:status|progress|todo|remaining|done|wip)\s*[:：]/i,
+  /^\s*(?:進捗|残作業|作業状況|実装状態|対応状況|ステータス)\s*[:：]/,
+  // Whole heading IS a progress label (no surrounding domain words).
+  /^\s*(?:progress(?:\s*tracking)?|todo|to\s*do|wip|work\s*in\s*progress|remaining(?:\s*(?:work|tasks?|items?))?|current\s*status|implementation\s*status|status\s*tracking)\s*$/i,
+  /^\s*(?:進捗|進捗状況|進捗管理|残作業|残タスク|作業状況|実装状態|対応状況|ステータス)\s*$/,
+] as const;
+
 type CoverageRow = {
   id: string;
   count: number;
@@ -120,25 +152,27 @@ async function validatePlanArtifacts(specsRoot: string, entries: SpecEntry[]): P
       {
         code: "QFAI-PLAN-002",
         rule: "plan.howOnly.status",
-        pattern: /\b(?:status|progress|todo|remaining|done|wip)\b|進捗|残作業|状態/i,
+        patterns: PLAN_STATUS_HEADING_PATTERNS,
         message: "10_Plan.md に状態管理系の見出しは記載できません（How専用）。",
       },
       {
         code: "QFAI-PLAN-003",
         rule: "plan.howOnly.history",
-        pattern: /\b(?:changelog|history|updated\s*at|update\s*history)\b|改訂履歴|更新履歴/i,
+        patterns: [/\b(?:changelog|history|updated\s*at|update\s*history)\b|改訂履歴|更新履歴/i],
         message: "10_Plan.md に更新履歴系の見出しは記載できません（How専用）。",
       },
       {
         code: "QFAI-PLAN-004",
         rule: "plan.howOnly.release",
-        pattern: /\b(?:release\s*candidate|go\s*\/?\s*no\s*\/?\s*go|rc)\b|リリース可否/i,
+        patterns: [/\b(?:release\s*candidate|go\s*\/?\s*no\s*\/?\s*go|rc)\b|リリース可否/i],
         message: "10_Plan.md に RC/Go-NoGo 判定の見出しは記載できません（How専用）。",
       },
     ] as const;
 
     for (const group of forbiddenHeadingGroups) {
-      const matched = headings.filter((heading) => group.pattern.test(heading));
+      const matched = headings.filter((heading) =>
+        group.patterns.some((pattern) => pattern.test(heading)),
+      );
       if (matched.length === 0) {
         continue;
       }
