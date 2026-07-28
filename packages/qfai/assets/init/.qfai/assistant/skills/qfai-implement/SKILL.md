@@ -107,9 +107,17 @@ Allowed transitions:
 - `green` -> `refactor` (improve code quality while keeping tests green)
 - `refactor` -> `done` (item complete)
 - Any active status -> `exception` (anomaly detected; record DR-ID in DR-ID column)
+- `green` | `refactor` | `done` -> `todo` — **upstream reset**, the only legal
+  reopen. Permitted **only** when an approved upstream change (Drift Protocol
+  step 4 rerun) invalidated the row's obligation. The invalidating CR/DR ID
+  MUST be recorded in the `DR-ID` column, and the reset MUST cite it in
+  `Evidence`. A reset without a recorded approval is a backward transition and
+  is prohibited.
 
 Backward transitions are prohibited. Attempting `green` -> `red` must produce:
-`"Backward transition prohibited: green -> red"`.
+`"Backward transition prohibited: green -> red"`. The upstream reset above is
+not a backward transition: it is an owner-approved re-entry, and the row starts
+its cycle again from `todo`.
 
 ### Exception Handling
 

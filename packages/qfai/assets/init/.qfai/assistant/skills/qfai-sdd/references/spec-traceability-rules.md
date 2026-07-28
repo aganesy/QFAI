@@ -84,7 +84,15 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - Coverage is measured as unit/component TC references from `06_Test-Cases.md` appearing in TC-Refs.
 - If `06_Test-Cases.md` has no test-case classification column, every TC is treated as a coverage target.
 - `Status=exception` requires a non-empty DR-ID.
-- `Status` in `green`, `refactor`, or `done` requires an existing Test file resolved from project root.
+- `Status = done` requires an existing Test file resolved from project root.
+  `green` and `refactor` require a non-empty `Test file` value but do not
+  require the file to exist yet — a row reset by a Drift Protocol sweep names
+  its declared target path before the rewritten test is in place.
+- `Layer` must be consistent with `Test file`: an `Integration` row may not
+  point into `tests/e2e/**` or `tests/api/**`, and vice versa.
+- More than one `TDD-*` row MAY reference the same `TC-*` — a TC split across
+  several test modules is legitimate. `TDD-ID` uniqueness is the only
+  identity constraint.
 - `TDD-ID` must match `TDD-NNNN` and be unique within the spec.
 - Missing `tdd/test-list.md` is a warning; missing DR-ID/Evidence columns is an error.
 
