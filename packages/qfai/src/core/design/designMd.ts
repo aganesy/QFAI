@@ -1201,3 +1201,35 @@ function validateShadow(d: DesignMd, issues: ValidationIssue[]): void {
 export function hashDesignMd(text: string): string {
   return createHash("sha256").update(text, "utf8").digest("hex");
 }
+
+// ---------------------------------------------------------------------------
+// Unreplaced-sample detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Sentinel carried by every DESIGN.md the package ships as a sample:
+ *   - `assets/init/root/DESIGN.md` (seeded into the project root by `qfai init`)
+ *   - `assets/init/.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`
+ *
+ * The two files are the same fictional brand but are NOT byte-identical
+ * (they differ in front-matter whitespace alignment), so a sha256-equality
+ * guard would have to enumerate — and keep in sync — one digest per shipped
+ * sample. A marker is content-addressed instead of byte-addressed: it
+ * survives whitespace edits, covers both samples with one constant, and
+ * keeps covering any future sample that carries it.
+ *
+ * The marker lives in the markdown body, so `parseDesignMd` (which only
+ * reads front-matter) is unaffected: an unreplaced sample still parses and
+ * validates, and is rejected by identity instead.
+ */
+export const DESIGN_MD_SAMPLE_MARKER = "QFAI-SAMPLE-DESIGN-MD";
+
+/**
+ * True when `text` is still (or is derived from) a DESIGN.md the package
+ * ships as a sample. Used to stop `/qfai-sdd` Phase 0 from sha256-freezing
+ * an unauthored brand as the project's brand contract, and to surface the
+ * same condition from `qfai validate` (QFAI-DCON-034).
+ */
+export function isUnreplacedDesignMdSample(text: string): boolean {
+  return typeof text === "string" && text.includes(DESIGN_MD_SAMPLE_MARKER);
+}

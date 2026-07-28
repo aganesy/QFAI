@@ -5,7 +5,7 @@ import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
-import { hashDesignMd, parseDesignMd } from "../design/designMd.js";
+import { hashDesignMd, isUnreplacedDesignMdSample, parseDesignMd } from "../design/designMd.js";
 import type { DesignMd } from "../design/designMd.js";
 import { DESIGN_MD_SHA_HEX_RE, readDesignMdLockSha } from "../design/designMdLock.js";
 import type { Issue } from "../types.js";
@@ -184,6 +184,33 @@ async function validateRootDesignMdAndLock(
   // failure code so automated remediation can route the two failure
   // modes correctly: missing -> regenerate template, parse failure
   // -> repair existing file without losing user edits.
+  // Identity gate, checked before the parse gate. `qfai init` seeds the
+  // shipped sample brand into the project root, so DCON-030 (file
+  // missing) can never fire on an initialized project and DCON-031..033
+  // are all content-agnostic: they verify that DESIGN.md exists, parses
+  // and has not changed since the freeze, never that it was authored.
+  // An unreplaced sample therefore parses, validates, and gets sha256-
+  // frozen as the project's brand contract — after which
+  // `/qfai-prototyping` enforces it and swapping in the real brand
+  // breaks the lock until it is refrozen. Detect the sample by marker
+  // rather than by sha256: the package ships two samples that are the
+  // same brand but not byte-identical, so a digest list would have to
+  // enumerate every shipped variant and would miss any whitespace edit.
+  if (designMdText !== null && isUnreplacedDesignMdSample(designMdText)) {
+    issues.push(
+      issue(
+        "QFAI-DCON-034",
+        "Root DESIGN.md is still the qfai sample brand (unreplaced placeholder marker present).",
+        "error",
+        ROOT_DESIGN_MD_REL,
+        "designContractReadiness.rootDesignMdSample",
+        undefined,
+        "canonical",
+        "Replace root DESIGN.md with this product's brand SSOT (run /qfai-discussion, which emits the draft, or author it from `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`) and delete the sample marker comment. Do this BEFORE /qfai-sdd Phase 0 freezes its sha256.",
+      ),
+    );
+  }
+
   if (designMdText !== null) {
     const parseResult = parseDesignMd(designMdText);
     if ("error" in parseResult) {

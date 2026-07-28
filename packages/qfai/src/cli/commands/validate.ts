@@ -735,6 +735,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Root DESIGN.md sha256 must match DESIGN.md.lock.yaml#designMdSha256 (re-freeze after intentional edits).",
   "QFAI-DCON-033":
     "Root DESIGN.md exists but failed to parse per design-md-spec (front-matter is malformed).",
+  "QFAI-DCON-034":
+    "Root DESIGN.md must be the project's own brand SSOT, not an unreplaced qfai sample (sample marker still present).",
   "QFAI-BREAK-001": "breakthrough.json is required for exploration-first UI prototyping evidence.",
   "QFAI-BREAK-002": "breakthrough.json must be a valid JSON object.",
   "QFAI-BREAK-003": "breakthrough.json.latestIteration must be a positive integer.",
