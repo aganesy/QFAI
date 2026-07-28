@@ -21,6 +21,21 @@ export const QFAI_GITIGNORE_REQUIRED_ENTRIES: readonly string[] = [
   ".qfai/state.json",
 ] as const;
 
+/**
+ * Governance records that must stay in version control: Change Requests
+ * carrying user approval, and durable decision records. `qfai init` writes
+ * these negations after the ignore lines so the later pattern wins.
+ *
+ * They are deliberately NOT in `QFAI_GITIGNORE_REQUIRED_ENTRIES`: an existing
+ * project whose `.gitignore` predates them must not start failing validation.
+ */
+export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
+  "!.qfai/decisions/",
+  "!.qfai/decisions/**",
+  "!.qfai/evidence/change-request-*.md",
+  "!.qfai/evidence/decision-*.md",
+] as const;
+
 /** Lines removed from the managed block in previous versions; stripped during migration. */
 export const QFAI_GITIGNORE_LEGACY_LINES: readonly string[] = [
   "!.qfai/report/README.md",
@@ -39,5 +54,8 @@ export const QFAI_GITIGNORE_BLOCK = [
   ".qfai/discussion/*",
   ".qfai/review/*",
   ".qfai/state.json",
+  // Negations last: git applies the last matching pattern, so these re-include
+  // the governance records the ignores above would otherwise swallow.
+  ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   "",
 ].join("\n");

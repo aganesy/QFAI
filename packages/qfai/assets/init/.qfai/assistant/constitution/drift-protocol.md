@@ -36,6 +36,15 @@ Any exception beyond this list requires explicit user approval.
 4. Rerun the owner skill for the upstream artifact.
 5. Resume downstream work only after upstream artifacts are updated.
 
+### Which evidence is committed
+
+- **Regenerable** — stage evidence (`.qfai/evidence/<stage>-<spec-id>.md`),
+  run logs, reports. Reproducible by rerunning the owner skill; not committed.
+- **Governance record** — Change Requests (`.qfai/decisions/CR-*.md`) and
+  durable decision records. They carry user approval and cannot be
+  regenerated, so they are committed. The managed `.gitignore` block written
+  by `qfai init` negates them after the ignore lines for exactly this reason.
+
 ## Non-negotiable constraints
 
 - Downstream skills must not patch upstream SSOT directly.
