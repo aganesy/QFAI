@@ -209,6 +209,20 @@ Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response 
 - Test volume floors/ratios are not gates; they are signals.
 - Do not declare DONE until Reviewer returns `PASS`; otherwise apply `REVISE`.
 
+#### Blocking vs advisory findings
+
+Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
+
+- A **blocking** finding cites an upstream obligation (`AC-*`, `BR-*`, `TC-*`, `CON-*`, or a named
+  constitution/catalog rule) in its `Traces to:` field. Only blocking findings force `REVISE` and
+  only blocking findings hold the item out of `done`.
+- An **advisory** finding is one whose `Traces to:` is `none` — reviewer-originated scope with no
+  upstream basis. It MUST NOT be implemented as production code or pinned as a test assertion.
+  Route it per `drift-protocol.md#reviewer-originated-obligations`: record it in the reviewer
+  response, log it to `08_Open-questions.md` or raise a Change Request, and let the owner phase
+  (`/qfai-sdd`) promote, defer, or reject it. The item may still reach `done` meanwhile.
+- `Do not declare DONE until Reviewer returns PASS` applies to **blocking** findings only.
+
 ## Parallelization Policy
 
 - **Default**: Serial execution. Items are processed one test at a time in `test-list.md` order.

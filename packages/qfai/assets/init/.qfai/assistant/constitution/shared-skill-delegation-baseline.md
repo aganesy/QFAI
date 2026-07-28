@@ -46,6 +46,17 @@ Every major artifact in the stage should include this table schema:
 - Do not declare DONE until all routed blocking reviewers return `PASS`.
 - Every reviewer returning `FAIL` or `REVISE` must include a concrete fix proposal.
 
+### Finding provenance (MUST)
+
+- Every finding must declare a severity (`blocking` or `advisory`) and a `Traces to:` value.
+- `Traces to:` must name the upstream obligation the finding enforces — an `AC-*`, `BR-*`, `TC-*`,
+  `CON-*` ID, or a named constitution/catalog rule. `none` is the only other legal value.
+- A finding whose `Traces to:` is `none` is by definition reviewer-originated scope and MUST be
+  recorded as `advisory`. It cannot be `blocking`, and it cannot gate `DONE`.
+- An advisory finding is routed to the Change Request / Open Question path defined in
+  `drift-protocol.md#reviewer-originated-obligations`, not to the implementer.
+- Only `blocking` findings — those that cite an existing upstream obligation — force `REVISE`.
+
 ## Work order template
 
 ```text
@@ -70,12 +81,17 @@ Quality bar:
 ```text
 Result: PASS | REVISE
 Findings:
-- <issue>
+- <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|none>
 Required fixes:
-- <action>
+- <action>   # blocking findings only
+Advisory / Change Request proposals:
+- <proposal>  # findings with `Traces to: none`; not a DONE gate
 Evidence checked:
 - <refs>
 ```
+
+`Result: REVISE` is legal only when at least one finding is `Severity: blocking`.
+A response whose findings are all advisory returns `Result: PASS` with the proposals attached.
 
 ### Verdict vocabulary
 

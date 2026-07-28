@@ -36,11 +36,16 @@ tools: [Read, Glob, Grep, Bash]
 - Required evidence, governing specs, or target artifacts are missing.
 - The request requires implementation or file editing instead of independent review.
 - The issue falls outside this review domain and must be rerouted to another specialist first.
+- The finding cannot be traced to an existing upstream obligation (`AC-*`, `BR-*`, `TC-*`, `CON-*`,
+  or a named constitution/catalog rule). Do not raise it as blocking; raise it as an advisory
+  finding plus a Change Request proposal per
+  `.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`.
 
 ## Sign-off
 
 - [ ] Review verdict is explicit
 - [ ] Findings cite concrete artifacts or evidence
+- [ ] Every finding declares `Severity:` and `Traces to:`; no blocking finding has `Traces to: none`
 - [ ] Required gates and residual risks are recorded
 
 ## When to use
