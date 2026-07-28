@@ -152,6 +152,44 @@ The generator MUST express every styled surface as one of:
 - All declared spec screens reachable; loading / empty / error /
   success states representable.
 
+## Output layout — two trees, two shapes
+
+There are two directory trees and they are NOT interchangeable. The
+generator writes to exactly one of them.
+
+| Tree                                             | Shape                          | Written by                            | Read by                                       |
+| ------------------------------------------------ | ------------------------------ | ------------------------------------- | --------------------------------------------- |
+| `.qfai/prototypes/iter-NN/`                      | one `index.html`               | **the generator** (you)               | `--auto-serve`, the operator, `/qfai-implement` |
+| `.qfai/evidence/prototyping/iter-NN/`            | `<screenId>.html` + `.png`, one pair per declared screen | `qfai prototyping iterate --capture` | `qfai prototyping certify`, the reviewer        |
+
+**The generator never writes the evidence tree.** The `--capture` step
+performs the fan-out: it drives a browser to each declared screen's
+contract `route`, and writes one HTML snapshot plus one screenshot per
+screen into `.qfai/evidence/prototyping/iter-NN/`. `certify` reads only
+that tree and hard-fails with "missing HTML for N declared screen(s)"
+when a declared screen has no snapshot there.
+
+### N declared screens, one file
+
+A spec declaring N screens is satisfied by **one** `index.html`
+containing N client-side routes — not N files. Each declared screen
+must be reachable at its own contract `route` (client-side routing,
+hash routing, or a `history.pushState` shell all qualify), so the
+capture step can navigate to it and snapshot it independently. This is
+what "all declared spec screens reachable" above means operationally.
+
+Opt-in alternative: `qfai prototyping iterate --emit-skeletons` (cycle 0
+only) and the `htmlSourceCopy` capture option both operate on
+per-screen `.qfai/prototypes/iter-NN/<screenId>.html` files instead.
+That shape is mutually exclusive with the single-file envelope above —
+do not mix them within one iteration.
+
+### Handoff
+
+`.qfai/prototypes/final/index.html` is a copy of the accepted
+`iter-NN/index.html` and is the deliverable `/qfai-implement` reads.
+It is not a certify input; certify never opens the `prototypes/` tree.
+
 ## Cycle 0 (seed)
 
 Produce one self-contained `iter-00/index.html` that satisfies the spec

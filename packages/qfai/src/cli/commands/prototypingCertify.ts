@@ -426,6 +426,20 @@ export async function runPrototypingCertify(
           `  - ${m.screenId} (expected ${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/${m.screenId}.html)`,
         );
       }
+      // Name the authoring artifact explicitly. The paths above are
+      // CAPTURE OUTPUT, not what the generator authors — an operator
+      // whose `.qfai/prototypes/iter-NN/index.html` is complete
+      // otherwise reads this as "my prototype is missing screens",
+      // when the real cause is that the capture step never ran or
+      // could not reach those routes.
+      error(
+        `  These are capture outputs, not authored files. The generator writes ` +
+          `.qfai/prototypes/${acceptedIterDir}/index.html; ` +
+          "`qfai prototyping iterate --capture` is what fans that out to one " +
+          `${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/<screenId>.html per declared screen. ` +
+          "Re-run the accepted cycle with --capture (and a server that resolves each screen's " +
+          "contract route) before certifying.",
+      );
       return 2;
     }
   }

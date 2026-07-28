@@ -7,6 +7,16 @@ iteration HTML. The "final" iter is whichever iteration was the latest
 when `qfai prototyping iterate` returned exit 64 (convergence) or 65
 (max-iterations).
 
+This is the **authoring** artifact — one self-contained file with one
+client-side route per declared screen, written by the generator. It is
+a distinct tree from the **capture** artifacts at
+`.qfai/evidence/prototyping/iter-<final>/<screenId>.{html,png}`, which
+`qfai prototyping iterate --capture` fans out one pair per declared
+screen. Handoff mirrors the authoring artifact; `qfai prototyping
+certify` gates on the capture artifacts and never opens the
+`prototypes/` tree. Both must exist before handoff can complete: see
+"Output layout" in `references/generator-prompt.md`.
+
 `DESIGN.md` (root) and `.qfai/contracts/design/DESIGN.md.lock.yaml`
 remain the brand SSOT through handoff.
 
