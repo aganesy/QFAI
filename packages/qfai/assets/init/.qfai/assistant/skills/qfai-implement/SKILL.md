@@ -244,7 +244,7 @@ Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`.
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
-### Item completion checklist (11-point gate)
+### Item completion checklist (12-point gate)
 
 An item in `test-list.md` may transition to `done` only when ALL of the following are satisfied:
 
@@ -258,7 +258,14 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 8. `implementation-reviewer` returned PASS (code quality review gate)
 9. UI-affecting items have prototype parity PASS from `product-surface-reviewer`
 10. `test-list.md` Status and Evidence columns are updated with fresh evidence
-11. Checkpoint verification passed
+11. `.qfai/evidence/implement-<spec-id>.md` is appended with both reviewer verdicts after items 7-8 returned PASS
+12. Checkpoint verification passed
+
+Sequencing note: the phase-authored part of `.qfai/evidence/implement-<spec-id>.md` (RED / GREEN /
+Refactor commands and results) is written **before** items 7-8, because it is the evidence the
+reviewers audit. The verdict fields are appended **after** items 7-8. A phase-authored evidence file
+whose only gap is the verdict fields is NOT a blocking finding at review time — see
+`Per-item evidence contract`.
 
 ### Spec completion conditions
 
@@ -277,6 +284,7 @@ Completion MUST NOT be declared when any of the following are true:
 - No RED fresh evidence exists for the item
 - No GREEN fresh evidence exists for the item
 - Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned FAIL
+- `.qfai/evidence/implement-<spec-id>.md` does not exist, or does not record both reviewer verdicts for the item (this is the single blocking statement about the evidence file; its absence of *verdicts* is never blocking before items 7-8)
 - Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
 - Parallel slices were used but integration verify has not been run post-merge
 - Checkpoint boundary was reached but verification was not executed
@@ -296,7 +304,10 @@ Required sections:
 
 ### Per-item evidence contract (fresh evidence required)
 
-Each TDD item MUST have fresh evidence containing at minimum:
+Each TDD item MUST have fresh evidence containing at minimum the fields below. The contract has two
+parts with different write points; the fields are the same, the sequencing is not.
+
+**Phase-authored (written before the reviewer gate, items 7-8):**
 
 - `TDD-ID` — the item identifier
 - `TC-ref` — reference to the test case(s)
@@ -306,9 +317,20 @@ Each TDD item MUST have fresh evidence containing at minimum:
 - `GREEN result` — the success output
 - `Refactor verify command` — the exact command re-executed after refactor
 - `Refactor verify result` — the output confirming GREEN is maintained
+
+These exist *for* the reviewers: they are the evidence items 7-8 audit. They MUST be present when a
+review is requested.
+
+**Gate-completed (appended after items 7-8 return PASS):**
+
 - `Spec review` — completion-reviewer result (PASS or FAIL)
 - `Code quality review` — implementation-reviewer result (PASS or FAIL)
 - `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE)
+
+These record verdicts that do not exist until the reviews have run. A reviewer MUST NOT treat their
+absence as a blocking gap during review — an evidence file complete in its phase-authored part and
+missing only the verdict fields is the expected state at review time. It becomes blocking only at
+the completion gate (see `Completion prohibition conditions`).
 
 ### Evidence hard rules
 
