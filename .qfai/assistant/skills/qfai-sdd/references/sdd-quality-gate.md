@@ -22,6 +22,15 @@ Use this file for the full quality gate checklist behind `/qfai-sdd`.
 - UPDATE rows carry a Sub-op of APPEND / MODIFY / REMOVE.
 - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE and UPDATE:REMOVE rows record an `Approved By` value.
 
+## Cross-contract Checks
+
+- Every terminal state, status enum value, and error code an API contract mandates has a
+  representable counterpart in the paired DB contract (`references/contract-artifact-rules.md#cross-contract-reconciliation-must`).
+- Failure / rejection paths in particular: the DB has an honest terminal value for each API-mandated
+  failure outcome, rather than a success state whose preconditions cannot hold on failure.
+- The reconciled API↔DB pairing is recorded in `_policies/05_Contracts.md`.
+- `QFAI-CONTRACT-040` warnings are resolved or explicitly triaged before sign-off.
+
 ## Traceability Checks
 
 - `US -> AC -> BR -> EX -> TC` edges exist.
