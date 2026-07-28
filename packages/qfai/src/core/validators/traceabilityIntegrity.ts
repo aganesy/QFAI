@@ -132,7 +132,7 @@ export async function validateTraceabilityIntegrity(
       issues.push(
         issue(
           "QFAI-TRACE-002",
-          `Traceability ledger not found for ${specId}. Skipping integrity check.`,
+          `Traceability ledger not found for ${specId}. The BR/AC to implementation integrity check (QFAI-TRACE-001) is skipped for this spec. This artifact is optional; to enable the check, create it with /qfai-sdd from .qfai/assistant/skills/qfai-sdd/templates/specs/spec/16_Traceability-ledger.md.`,
           "warning",
           ledgerPath,
           "traceability.integrity.ledgerMissing",
@@ -148,7 +148,7 @@ export async function validateTraceabilityIntegrity(
       issues.push(
         issue(
           "QFAI-TRACE-002",
-          `Traceability ledger for ${specId} uses unexpected format. Skipping integrity check.`,
+          `Traceability ledger for ${specId} uses unexpected format. The first Markdown table must have at least 3 columns, one of them named "Implementation File". Skipping integrity check. See .qfai/assistant/skills/qfai-sdd/templates/specs/spec/16_Traceability-ledger.md for the expected schema.`,
           "warning",
           ledgerPath,
           "traceability.integrity.ledgerFormatMismatch",
