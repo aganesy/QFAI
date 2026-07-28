@@ -11,6 +11,7 @@ import {
   type CollectFilesByGlobsResult,
 } from "./fs.js";
 import { collectSpecEntries } from "./specLayout.js";
+import { parseAllMarkdownTables } from "./specPackParsers.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { collectMarkdownItems, uniqueMatches } from "./validators/utils.js";
 
@@ -106,6 +107,7 @@ export async function evaluateAtddCodeTraceability(
 
   const specUsIds = specRefs.us;
   const specTcIds = specRefs.tc;
+  const tcLevels = specRefs.tcLevels;
 
   for (const file of scanResult.files) {
     const kind = resolveTestKind(file, {
@@ -140,13 +142,17 @@ export async function evaluateAtddCodeTraceability(
       if (!known) {
         pushUnknown(unknown, unknownDedup, file, token, "tc");
       }
-      if (kind === "integration" && known) {
+      const homeKind = resolveTcHomeKind(tcLevels, ref.spec, `TC-${ref.id}`);
+      if (kind === homeKind && known) {
         recordSpecRef(tcRefs, ref.spec, `TC-${ref.id}`, file);
       }
-      if (kind === "api") {
+      // Only flag a placement that is NOT the TC's declared home. Reporting an
+      // annotation as forbidden while also declining to count it produced two
+      // errors from one correct action.
+      if (kind === "api" && homeKind !== "api") {
         recordForbidden(forbiddenTcInApi, file, formatTcRef(ref.spec, ref.id));
       }
-      if (kind === "e2e") {
+      if (kind === "e2e" && homeKind !== "e2e") {
         recordForbidden(forbiddenTcInE2e, file, formatTcRef(ref.spec, ref.id));
       }
     }
@@ -206,10 +212,13 @@ type SpecScopedRef = {
 async function collectSpecRefs(specsRoot: string): Promise<{
   us: Map<string, Set<string>>;
   tc: Map<string, Set<string>>;
+  /** `spec -> TC-ID -> declared Level`, lower-cased. Absent when no Level column. */
+  tcLevels: Map<string, Map<string, string>>;
 }> {
   const entries = await collectSpecEntries(specsRoot);
   const us = new Map<string, Set<string>>();
   const tc = new Map<string, Set<string>>();
+  const tcLevels = new Map<string, Map<string, string>>();
 
   for (const entry of entries) {
     const [usText, tcText] = await Promise.all([
@@ -226,9 +235,73 @@ async function collectSpecRefs(specsRoot: string): Promise<{
     if (tcIds.size > 0) {
       tc.set(entry.specNumber, tcIds);
     }
+
+    const levels = collectTcLevels(tcText);
+    if (levels.size > 0) {
+      tcLevels.set(entry.specNumber, levels);
+    }
   }
 
-  return { us, tc };
+  return { us, tc, tcLevels };
+}
+
+/**
+ * Reads the `Level` column of `06_Test-Cases.md` so the TC obligation can be
+ * routed by declared layer instead of being hard-pinned to
+ * `tests/integration/**`.
+ */
+function collectTcLevels(tcText: string): Map<string, string> {
+  const levels = new Map<string, string>();
+  const table = parseAllMarkdownTables(tcText).find((candidate) =>
+    candidate.headers.some((header: string) => header.trim() === "TC-ID"),
+  );
+  if (!table) {
+    return levels;
+  }
+  const headers = table.headers.map((header: string) => header.trim());
+  const idIndex = headers.indexOf("TC-ID");
+  const levelIndex = headers.indexOf("Level");
+  if (idIndex < 0 || levelIndex < 0) {
+    return levels;
+  }
+  for (const row of table.rows) {
+    const id = (row[idIndex] ?? "").trim().toUpperCase();
+    const level = (row[levelIndex] ?? "").trim().toLowerCase();
+    if (id.length > 0 && level.length > 0) {
+      levels.set(id, level);
+    }
+  }
+  return levels;
+}
+
+/** Test directory a declared `Level` routes its TC obligation to. */
+const LEVEL_TO_TEST_KIND: Record<string, AtddTestKind | undefined> = {
+  l3: "integration",
+  integration: "integration",
+  l4: "api",
+  api: "api",
+  l5: "e2e",
+  e2e: "e2e",
+};
+
+/**
+ * Where a TC's annotation legally lives.
+ *
+ * Defaults to `integration` — the historical hard-coded answer — so a spec
+ * with no `Level` column behaves exactly as before. A TC that declares an
+ * API-level obligation routes to `tests/api/**`, which was previously both
+ * uncounted and reported as forbidden: two errors from one correct placement.
+ */
+function resolveTcHomeKind(
+  tcLevels: Map<string, Map<string, string>>,
+  spec: string,
+  tcId: string,
+): AtddTestKind {
+  const level = tcLevels.get(spec)?.get(tcId.toUpperCase());
+  if (level === undefined) {
+    return "integration";
+  }
+  return LEVEL_TO_TEST_KIND[level] ?? "integration";
 }
 
 async function collectApiContractIds(apiRoot: string): Promise<Set<string>> {

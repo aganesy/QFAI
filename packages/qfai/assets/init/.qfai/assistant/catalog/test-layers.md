@@ -44,13 +44,20 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
   - Every `US-*` in specs must be referenced at least once from `tests/e2e/**` (no exception).
   - Use `QFAI:SPEC-XXXX:US-YYYY` annotations.
 - Integration obligations:
-  - Every `TC-*` in specs must be referenced at least once from `tests/integration/**`.
+  - Every `TC-*` in specs must be referenced at least once from the directory its
+    declared `Level` routes to: L3/Integration -> `tests/integration/**`,
+    L4/API -> `tests/api/**`, L5/E2E -> `tests/e2e/**`. A TC with no declared
+    `Level` defaults to `tests/integration/**`.
   - Use `QFAI:SPEC-XXXX:TC-YYYY` annotations.
 - API obligations:
   - Every declared `CON-API-*` must be referenced at least once from `tests/api/**`.
   - Use `QFAI:CON-API-XXXX` annotations.
 - Forbidden references:
-  - `tests/api/**` must not include `QFAI:SPEC-XXXX:TC-YYYY`.
+  - `tests/api/**` must not include `QFAI:SPEC-XXXX:TC-YYYY` **for a TC whose
+  declared `Level` is not L4/API**. A TC that declares an API-level
+  obligation belongs in `tests/api/**`, and its annotation there counts as
+  coverage. The rule exists to stop obligations drifting into the wrong
+  layer, not to make the correct layer unusable.
   - `tests/e2e/**` must not include `QFAI:SPEC-XXXX:TC-YYYY`.
 - Unknown references (`US/TC/CON-API` not declared) are errors.
 - AC annotations are not required in code; AC coverage is treated as indirect through TC coverage.
