@@ -185,7 +185,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 4. `_policies/05_Contracts.md` must include a Contract Index aligned with `.qfai/contracts/**`.
 5. `_policies/04_Business-Flow.md` must be Markdown with Mermaid `flowchart` or `sequenceDiagram`.
 6. `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
-7. `06_Test-Cases.md` must include `TC-ID`, `EX-Ref`, `AC-Refs`, and `Type`, with normal-path plus error/boundary coverage.
+7. `06_Test-Cases.md` must include `TC-ID`, `Level`, `EX-Ref`, `AC-Refs`, and `Type`, with normal-path plus error/boundary coverage. `Level` gates `TDDLIST_TC_NOT_COVERED` at `error`, so it is required, not optional.
 8. Stop only when `qfai validate --profile sdd --fail-on error --format github | tee .qfai/report/validate.log` exits with `error=0`.
 
 ## Required Process

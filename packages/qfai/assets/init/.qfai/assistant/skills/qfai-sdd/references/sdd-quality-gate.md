@@ -26,7 +26,7 @@ Use this file for the full quality gate checklist behind `/qfai-sdd`.
 
 - `US -> AC -> BR -> EX -> TC` edges exist.
 - `05_Examples.md` includes `EX-ID` and `BR-Ref`.
-- `06_Test-Cases.md` includes `TC-ID`, `EX-Ref`, `AC-Refs`, and `Type`.
+- `06_Test-Cases.md` includes `TC-ID`, `Level`, `EX-Ref`, `AC-Refs`, and `Type`. `Level` holds exactly one code from `.qfai/assistant/catalog/test-layers.md`.
 - Error or boundary coverage is present, not only normal-path coverage.
 
 ## Validation Checks
