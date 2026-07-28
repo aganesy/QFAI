@@ -8,6 +8,22 @@
  * cycle), with `GET /` mapped to `index.html`. Path-traversal attempts
  * outside the iteration directory are rejected with HTTP 403.
  *
+ * SPA route fallback
+ * ------------------
+ * A document request (GET/HEAD whose `Accept` includes `text/html`)
+ * that resolves to a path with no file on disk is served
+ * `index.html` instead of 404. Capture URLs are composed verbatim from
+ * each UI contract's `route`, and real routes are largely
+ * client-side and often parameterized (`/pairs/:instrument`,
+ * `/reports/:reportId`) — no file layout can satisfy those, and `:`
+ * is not even a legal filename character on Windows. Without the
+ * fallback, `--auto-serve` + `--capture` cannot capture those screens
+ * at all, and capture evidence is a mandatory input to the prototyping
+ * DONE gate. Sub-resource requests (`.css`, `.png`, `fetch()`) do NOT
+ * carry `text/html` in `Accept`, so a genuinely missing asset still
+ * 404s rather than silently receiving an HTML body. The 403 traversal
+ * guard runs ahead of the fallback.
+ *
  * Design choice — in-process, no subprocess
  * ----------------------------------------
  * The auto-serve operator contract calls out `tree-kill` (Unix) /
@@ -226,6 +242,45 @@ function readErrorCode(err: unknown): string | null {
   return typeof code === "string" ? code : null;
 }
 
+function isReadableFile(candidate: string): boolean {
+  if (!existsSync(candidate)) return false;
+  try {
+    return statSync(candidate).isFile();
+  } catch {
+    return false;
+  }
+}
+
+// A document request is the navigation the SPA fallback exists for.
+// Browsers and Playwright send `Accept: text/html,...` on top-level
+// navigations; sub-resource loads (`<link rel=stylesheet>`, `<img>`,
+// `fetch()`) send image/*, text/css, or `*/*` instead. Keying the
+// fallback on that header is what keeps a missing `.css` / `.png` a
+// genuine 404 rather than an HTML body with a 200 status.
+function isDocumentRequest(req: IncomingMessage): boolean {
+  const method = (req.method ?? "GET").toUpperCase();
+  if (method !== "GET" && method !== "HEAD") return false;
+  const accept = req.headers.accept;
+  const header = Array.isArray(accept) ? accept.join(",") : (accept ?? "");
+  return header.toLowerCase().includes("text/html");
+}
+
+// Resolve the on-disk file to serve, or `null` for a 404. The caller
+// has already applied the path-traversal guard, so `candidate` is known
+// to be inside `serveRoot`.
+function resolveServablePath(
+  candidate: string,
+  serveRoot: string,
+  req: IncomingMessage,
+): string | null {
+  if (isReadableFile(candidate)) return candidate;
+  if (!isDocumentRequest(req)) return null;
+  const fallback = path.resolve(serveRoot, "index.html");
+  // No `index.html` in the tree means there is nothing to fall back
+  // to; preserve the 404 rather than inventing a response.
+  return isReadableFile(fallback) ? fallback : null;
+}
+
 function handleRequest(req: IncomingMessage, res: ServerResponse, serveRoot: string): void {
   try {
     const urlPath = (req.url ?? "/").split("?")[0] ?? "/";
@@ -260,27 +315,15 @@ function handleRequest(req: IncomingMessage, res: ServerResponse, serveRoot: str
       res.end("forbidden");
       return;
     }
-    if (!existsSync(candidate)) {
-      res.statusCode = 404;
-      res.end("not found");
-      return;
-    }
-    let stat;
-    try {
-      stat = statSync(candidate);
-    } catch {
-      res.statusCode = 404;
-      res.end("not found");
-      return;
-    }
-    if (!stat.isFile()) {
+    const servable = resolveServablePath(candidate, serveRoot, req);
+    if (servable === null) {
       res.statusCode = 404;
       res.end("not found");
       return;
     }
     res.statusCode = 200;
-    res.setHeader("content-type", contentTypeFor(candidate));
-    const stream = createReadStream(candidate);
+    res.setHeader("content-type", contentTypeFor(servable));
+    const stream = createReadStream(servable);
     stream.on("error", () => {
       // surface a 500 only if no body has been sent yet; otherwise just
       // tear the connection.
