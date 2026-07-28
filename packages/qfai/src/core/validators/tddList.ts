@@ -5,7 +5,14 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { parseFirstMarkdownTable } from "../specPackParsers.js";
-import { isCoverageTargetLevel, splitTcRefs, resolveParentTcId } from "../tddHelpers.js";
+import {
+  classifyCoverageLevel,
+  isCoverageTargetLevel,
+  splitTcRefs,
+  resolveParentTcId,
+  UNIT_COMPONENT_LAYERS,
+  NON_COVERAGE_LAYERS,
+} from "../tddHelpers.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
 
@@ -140,7 +147,20 @@ async function validateSpecTddList(
 
   // Check 5: TC reference existence
   const tcRefsIndex = normalizedHeaders.indexOf("TC-Refs");
-  const { knownTcIds, unitComponentTcIds } = await collectTestCaseIds(specDir);
+  const { knownTcIds, unitComponentTcIds, unrecognizedLevels } = await collectTestCaseIds(specDir);
+  if (unrecognizedLevels.size > 0) {
+    const accepted = [...UNIT_COMPONENT_LAYERS, ...NON_COVERAGE_LAYERS].sort().join(", ");
+    issues.push(
+      issue(
+        "TDDLIST_UNKNOWN_LEVEL",
+        `Unrecognized Level value(s) in 06_Test-Cases.md for spec-${specNumber}: ${[...unrecognizedLevels].sort().join(", ")}. Accepted: ${accepted}. Unrecognized values are treated as coverage targets, so every such TC becomes a mandatory ledger row`,
+        "warning",
+        relPath,
+        "tddList.levelVocabulary",
+        [...unrecognizedLevels].sort(),
+      ),
+    );
+  }
   if (tcRefsIndex >= 0) {
     if (knownTcIds.size > 0) {
       for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
@@ -339,10 +359,20 @@ async function validateSpecTddList(
   return issues;
 }
 
-type TestCaseIds = { knownTcIds: Set<string>; unitComponentTcIds: Set<string> };
+type TestCaseIds = {
+  knownTcIds: Set<string>;
+  unitComponentTcIds: Set<string>;
+  /** `Level` values that match neither vocabulary; reported so a mismatch is visible. */
+  unrecognizedLevels: Set<string>;
+};
 
 async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
-  const empty: TestCaseIds = { knownTcIds: new Set(), unitComponentTcIds: new Set() };
+  const empty: TestCaseIds = {
+    knownTcIds: new Set(),
+    unitComponentTcIds: new Set(),
+    unrecognizedLevels: new Set(),
+  };
+  const unrecognizedLevels = new Set<string>();
   const testCasesPath = path.join(specDir, "06_Test-Cases.md");
   if (!(await exists(testCasesPath))) return empty;
   let content: string;
@@ -366,10 +396,13 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
     knownTcIds.add(tcId);
     if (levelIndex >= 0) {
       const level = (row[levelIndex] ?? "").trim().toLowerCase();
+      if (classifyCoverageLevel(level) === "unrecognized") {
+        unrecognizedLevels.add((row[levelIndex] ?? "").trim());
+      }
       if (!isCoverageTargetLevel(level)) continue;
     }
     // Reaches here when: (a) Level is a coverage target, or (b) Level column is absent (fallback: all TCs)
     unitComponentTcIds.add(tcId);
   }
-  return { knownTcIds, unitComponentTcIds };
+  return { knownTcIds, unitComponentTcIds, unrecognizedLevels };
 }
