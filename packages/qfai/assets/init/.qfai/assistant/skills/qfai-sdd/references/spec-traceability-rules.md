@@ -74,7 +74,13 @@ ID reference direction (the value of `Refs:` columns) must be lower-to-upper onl
   - `BR-0001` -> `AC-Refs` in `04_Business-Rules.md`
   - `EX-0001` -> `BR-Ref` in `05_Examples.md`
   - `TC-0001` -> `EX-Ref` and `AC-Refs` in `06_Test-Cases.md`
-- `_policies/**` must not contain lower-layer IDs (`US/AC/BR/EX/TC`) or per-spec references.
+- `_policies/**` must not contain spec-local lower-layer IDs — the 4-digit forms
+  `US-NNNN` / `AC-NNNN` / `BR-NNNN` / `EX-NNNN` / `TC-NNNN` — or per-spec references.
+  This is exactly what `TRACE_SHARED_SCOPE_VIOLATION` enforces.
+- Discussion-layer IDs (`DUS-001`, `DAC-001-01`, `DTC-1`, `DSC-001`) are a different
+  namespace and are explicitly allowed in `_policies/**` and in `Source` fields. They are
+  how provenance back to the discussion pack stays machine-checkable; do not rewrite them
+  into prose to satisfy the rule above.
 
 ## TDD Execution Ledger
 

@@ -36,6 +36,10 @@ const AC_ID_RE = /^AC-\d{4}$/;
 const BR_OR_AC_ID_RE = /^(?:BR|AC)-\d{4}$/;
 const EX_ID_RE = /^EX-\d{4}$/;
 const LAYER_ID_RE = /\b(?:OBJ|INIT|CAP|FLOW|US|AC|BR|EX|TC)-\d{4}\b/gi;
+// Spec-local IDs only: exactly four digits. Discussion-layer IDs are `D`-prefixed
+// (`DUS-001`, `DAC-001-01`, `DTC-1`, `DSC-001`) and are deliberately NOT matched — they
+// are the provenance carriers that `02_User-stories.md`'s `Source:` field and the
+// `03_Acceptance-Criteria.md` `Source` column keep legal in shared files.
 const POLICIES_DOWNSTREAM_V1421_RE = /\b(?:US|AC|BR|EX|TC)-\d{4}\b/gi;
 
 const LAYER_ORDER = {
@@ -181,7 +185,7 @@ async function validatePoliciesScopeForV1421(policiesDir: string): Promise<Issue
     issues.push(
       issue(
         "TRACE_SHARED_SCOPE_VIOLATION",
-        `_policies で US/AC/BR/EX/TC の定義・参照は禁止です: ${refs.join(", ")}`,
+        `_policies で spec ローカルの US/AC/BR/EX/TC ID（4桁）の定義・参照は禁止です: ${refs.join(", ")}`,
         "error",
         filePath,
         "layeredTraceability.sharedScope",

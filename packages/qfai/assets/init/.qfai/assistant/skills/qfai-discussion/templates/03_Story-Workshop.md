@@ -2,7 +2,13 @@
 
 ## User Stories
 
-### US-001: <Story Title>
+> Discussion-layer IDs use the `D` prefix (`DUS-`, `DAC-`) so they can never be read as
+> spec-layer IDs (`US-0001`, `AC-0001`) or as a traceability scenario tag (`SC-NNNN-NNNN`).
+> Carry these IDs into the spec layer via the `Source:` field in
+> `qfai-sdd/templates/specs/spec/02_User-stories.md` and the `Source` column in
+> `03_Acceptance-Criteria.md`.
+
+### DUS-001: <Story Title>
 
 - As a: <role>
 - I want: <action>
@@ -10,8 +16,8 @@
 
 #### Acceptance Criteria
 
-- AC-001-01:
-- AC-001-02:
+- DAC-001-01:
+- DAC-001-02:
 
 #### Example Seeds
 
