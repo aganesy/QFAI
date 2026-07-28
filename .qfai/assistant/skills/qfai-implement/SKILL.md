@@ -138,7 +138,20 @@ When transitioning to `exception`:
 ### Phase: Refactor
 
 1. Improve code quality (naming, structure, duplication removal) while keeping all tests green.
-2. Run the full relevant test suite to confirm nothing broke.
+2. Run the **relevant test suite** to confirm nothing broke. "Relevant" means the
+   smallest selector that covers the module you touched **plus its declared
+   dependents**. Resolution order:
+   1. the test modules named by this item's ledger row and by any ledger row
+      whose `Test file` imports the touched module;
+   2. if dependents cannot be determined from imports, the package containing
+      the touched module;
+   3. never "every test in the repository" — the wide run has its own cadence
+      (below).
+
+   Cadence: **narrow suite per item, full suite at each checkpoint
+   verification.** Running the whole spec suite once per item costs the sum
+   over all prior items and is quadratic in ledger size; the checkpoint is
+   where that cost is paid once.
 3. Transition status to `refactor`.
 4. Submit for completion review (`completion-reviewer`) and code quality review (`implementation-reviewer`).
 5. After all routed blocking reviewers return PASS, run checkpoint verification, then transition to `done`.
@@ -258,7 +271,9 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 8. `implementation-reviewer` returned PASS (code quality review gate)
 9. UI-affecting items have prototype parity PASS from `product-surface-reviewer`
 10. `test-list.md` Status and Evidence columns are updated with fresh evidence
-11. Checkpoint verification passed
+11. Checkpoint verification passed — this is where the **full** suite runs. Items
+    6, 7 and 8 are evaluated against the narrow relevant suite defined in
+    Phase: Refactor step 2.
 
 ### Spec completion conditions
 
