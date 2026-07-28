@@ -101,16 +101,16 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // the stale path on this very run.
   const configuredValidateJsonPath = configResult.config.output.validateJsonPath;
   const configTargetsLegacyPath = configTargetsLegacyValidateJsonPath(configuredValidateJsonPath);
-  // Post-sunset, only emit the deprecation finding when there is
-  // observable evidence (config or on-disk file) that a consumer still
-  // depends on the legacy path. Otherwise every clean validate run on
-  // tool >= sunset would carry an unactionable error finding for a path
-  // the user never used. Pre-sunset the finding is always emitted as a
-  // warning because the tool itself is still writing the path.
-  const legacyOnDisk = !legacyWriteEnabled
-    ? await pathExists(path.join(root, LEGACY_VALIDATE_JSON_REL))
-    : false;
-  const emitDeprecationIssue = legacyWriteEnabled || legacyOnDisk || configTargetsLegacyPath;
+  // The deprecation finding requires observable evidence that a consumer
+  // still depends on the legacy path: the file is on disk, or the config
+  // aims the writer at it. This gate now applies BEFORE the sunset too.
+  // Previously the pre-sunset branch emitted unconditionally, so a project
+  // that had never touched `.qfai/output/` still carried a permanent warning
+  // floor on the whole 1.9 line — and `--strict` / `--fail-on warning` could
+  // never pass in CI. Read before any write so this run's own side-write
+  // cannot manufacture the evidence.
+  const legacyOnDisk = await pathExists(path.join(root, LEGACY_VALIDATE_JSON_REL));
+  const emitDeprecationIssue = legacyOnDisk || configTargetsLegacyPath;
   // Post-sunset, refuse to write to the configured legacy path. This is
   // the migration gate: the legacy SSOT is dead, the config must be
   // updated. Pre-sunset writes proceed normally (writer-side warning).
@@ -171,11 +171,13 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
     const profileSuffixedRel = profileSuffixedReportPath(configuredValidateJsonPath, profileLabel);
     await emitJson(normalized, root, profileSuffixedRel);
   }
-  // Legacy path — written only during the deprecation window AND only
-  // if the configured path is NOT already the legacy path (avoid
-  // double-write to the same file when the operator's config still
-  // points there pre-sunset).
-  if (legacyWriteEnabled && !configTargetsLegacyPath) {
+  // Legacy path — refreshed only during the deprecation window, only if the
+  // configured path is NOT already the legacy path (avoid double-writing the
+  // same file), and only if the legacy file already exists. Creating it for a
+  // project that never used it is what made the deprecation warning
+  // self-sustaining: the run wrote the file, then warned about the file it had
+  // just written, and the next run found it on disk.
+  if (legacyWriteEnabled && !configTargetsLegacyPath && legacyOnDisk) {
     await emitJson(normalized, root, LEGACY_VALIDATE_JSON_REL);
   }
 
@@ -330,9 +332,10 @@ function buildDeprecationIssue(args: {
           `backward compatibility but the sunset (${LEGACY_VALIDATE_JSON_SUNSET}) ` +
           `is approaching. Update output.validateJsonPath to ` +
           `.qfai/report/validate.json before the next minor.`
-        : `Legacy validate output path ${LEGACY_VALIDATE_JSON_REL} is still being written ` +
-          `for backward compatibility; sunset: ${LEGACY_VALIDATE_JSON_SUNSET}. Read ` +
-          `.qfai/report/validate.json (always-latest) or .qfai/report/validate-<profile>.json instead.`
+        : `Legacy validate output path ${LEGACY_VALIDATE_JSON_REL} exists on disk and is ` +
+          `still being refreshed for backward compatibility; sunset: ${LEGACY_VALIDATE_JSON_SUNSET}. ` +
+          `Point consumers at .qfai/report/validate.json (always-latest) or ` +
+          `.qfai/report/validate-<profile>.json and delete the legacy file to silence this finding.`
       : `Legacy validate output path ${LEGACY_VALIDATE_JSON_REL} is past the announced ` +
         `sunset (${LEGACY_VALIDATE_JSON_SUNSET}); the legacy file is no longer written but ` +
         `still exists on disk. Update consumers to read .qfai/report/validate.json or ` +
