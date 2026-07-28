@@ -72,16 +72,6 @@ const AGENT_VALIDATOR = path.resolve(
   "agentDefinition.ts",
 );
 
-const REVIEW_GATE_VALIDATOR = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "src",
-  "core",
-  "validators",
-  "reviewGate.ts",
-);
-
 const SHARED_DELEGATION_BASELINE = path.resolve(
   __dirname,
   "..",
@@ -197,9 +187,12 @@ describe("TC-0015-0003: Orchestrator No Direct Generation", () => {
 
 // TC-0015-0004: Devils-Advocate Concrete Alternative
 describe("TC-0015-0004: Devils-Advocate Concrete Alternative", () => {
-  it("review-gate validator exists", async () => {
-    const content = await readFile(REVIEW_GATE_VALIDATOR, "utf-8");
-    expect(content).toMatch(/review|gate/i);
+  it("review-gate rules declare the reviewer gate defaults and optional review modes", async () => {
+    const rulesPath = path.join(CATALOG_DIR, "review-gate.rules.yml");
+    const content = await readFile(rulesPath, "utf-8");
+    expect(content).toContain("quality_gates");
+    expect(content).toContain("optional_review_modes");
+    expect(content).toContain("completion-reviewer");
   });
 });
 
