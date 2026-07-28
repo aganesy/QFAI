@@ -1361,6 +1361,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "spec/07_Decisions.md",
       "spec/08_Open-questions.md",
       "spec/09_delta.md",
+      // The TDD execution ledger `/qfai-implement` selects from (#223).
+      "spec/tdd/test-list.md",
     ].sort();
 
     for (const skillId of ["qfai-sdd"]) {

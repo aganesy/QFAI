@@ -196,10 +196,15 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase, and freeze root `DESIGN.md` per the Phase 0 DESIGN.md Freeze step below).
 5. Phase 1: Outline (`_policies/01..11`).
 6. Phase 2: Slice (per spec, gate each).
-7. Phase 3: Plan finalize (after at least one slice gate passes).
-8. Phase 4: Delta update.
-9. Run validate; fix source-layer artifacts and rerun until `error=0`.
-10. Triage density-smell warnings in `.qfai/report/specs-coverage/spec-*.md`.
+7. Phase 2b: Seed each target spec's `tdd/test-list.md` from
+   `06_Test-Cases.md` — one row per coverage-target TC, `Status = todo`. Copy
+   `templates/specs/spec/tdd/test-list.md` when the file does not exist. This
+   is the ledger `/qfai-implement` selects from; without it that stage starts
+   with zero selectable items.
+8. Phase 3: Plan finalize (after at least one slice gate passes).
+9. Phase 4: Delta update.
+10. Run validate; fix source-layer artifacts and rerun until `error=0`.
+11. Triage density-smell warnings in `.qfai/report/specs-coverage/spec-*.md`.
 
 ## Mandatory Outputs
 

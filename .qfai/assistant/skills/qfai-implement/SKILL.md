@@ -31,6 +31,19 @@ QFAI Skill Body (SSOT)
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+## Preconditions
+
+- **`.qfai/specs/<spec-id>/tdd/test-list.md` must exist and contain the eight
+  required columns.** It is the ledger every step of this skill reads.
+- **Producer**: `/qfai-sdd` Phase 2b seeds one row per coverage-target TC from
+  `06_Test-Cases.md`; `/qfai-atdd` adds `Layer = E2E` / `Layer = API` rows for
+  `US-*` and `CON-API-*` obligations.
+- **Recovery when it is missing or empty**: rerun `/qfai-sdd <spec-id>` for the
+  target spec, or copy
+  `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/tdd/test-list.md` into
+  the spec directory and derive the rows from `06_Test-Cases.md`. Do **not**
+  proceed with an absent ledger and do **not** invent rows that no TC backs.
+
 ## Spec Auto-Discovery Protocol
 
 When no explicit argument is given, detect the candidate spec and constrain execution to one spec only. Auto-discovery selects at most one spec; this protocol does NOT enable multi-spec parallel execution.
