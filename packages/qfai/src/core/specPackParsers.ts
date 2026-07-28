@@ -82,6 +82,82 @@ export function resolveAllowedLayerTagsFromPolicy(policyText: string): Set<strin
   return new Set(Array.from(LAYER_TAGS));
 }
 
+/**
+ * Outcome of locating the test-case table inside `06_Test-Cases.md`.
+ *
+ * `source` records how the table was found so callers can tell a
+ * template-conformant spec (`section`) from an older one that only has a
+ * matching header row somewhere in the document (`header-match`).
+ */
+export type TestCaseTableResolution =
+  | { table: MarkdownTable; source: "section" | "header-match" }
+  | { table: null; reason: "no-table" | "no-tc-id-column" };
+
+/** Matches the template heading `## Test Case Table (required)` and its bare `## Test Case Table` form. */
+const TEST_CASE_TABLE_HEADING = /^(#{1,6})\s*test\s*case\s*table\b/i;
+
+const TC_ID_HEADER = "TC-ID";
+
+function hasTcIdColumn(table: MarkdownTable): boolean {
+  return table.headers.some((header) => header.trim() === TC_ID_HEADER);
+}
+
+/**
+ * Returns the body of the `## Test Case Table` section, or `null` when the
+ * document has no such heading. The section ends at the next heading of the
+ * same or a higher level.
+ */
+function extractTestCaseTableSection(text: string): string | null {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const start = lines.findIndex((line) => TEST_CASE_TABLE_HEADING.test(line));
+  if (start === -1) {
+    return null;
+  }
+  const level = (TEST_CASE_TABLE_HEADING.exec(lines[start] ?? "")?.[1] ?? "#").length;
+
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    const match = /^(#{1,6})\s+\S/.exec(lines[index] ?? "");
+    if (match && (match[1] ?? "").length <= level) {
+      end = index;
+      break;
+    }
+  }
+  return lines.slice(start + 1, end).join("\n");
+}
+
+/**
+ * Resolves the test-case table of `06_Test-Cases.md`.
+ *
+ * The template names the section `## Test Case Table (required)`, but the
+ * previous implementation read `parseFirstMarkdownTable` — literally the first
+ * table in document order — so any explanatory table placed above the heading
+ * hijacked TC extraction. Resolution order:
+ *
+ * 1. the first `TC-ID`-bearing table inside the `## Test Case Table` section;
+ * 2. otherwise the first `TC-ID`-bearing table anywhere in the document, so
+ *    specs written before the heading existed keep working;
+ * 3. otherwise a typed failure, so callers can report the miss instead of
+ *    silently treating "no TC found" as "all TCs covered".
+ */
+export function resolveTestCaseTable(text: string): TestCaseTableResolution {
+  const section = extractTestCaseTableSection(text);
+  if (section !== null) {
+    const sectionTable = parseAllMarkdownTables(section).find(hasTcIdColumn);
+    if (sectionTable) {
+      return { table: sectionTable, source: "section" };
+    }
+  }
+
+  const allTables = parseAllMarkdownTables(text);
+  const fallback = allTables.find(hasTcIdColumn);
+  if (fallback) {
+    return { table: fallback, source: "header-match" };
+  }
+
+  return { table: null, reason: allTables.length === 0 ? "no-table" : "no-tc-id-column" };
+}
+
 export function parseFirstMarkdownTable(text: string): MarkdownTable | null {
   const tables = parseAllMarkdownTables(text);
   return tables.length > 0 ? (tables[0] ?? null) : null;

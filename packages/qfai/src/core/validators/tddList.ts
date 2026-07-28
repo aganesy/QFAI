@@ -4,7 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
-import { parseFirstMarkdownTable } from "../specPackParsers.js";
+import { parseFirstMarkdownTable, resolveTestCaseTable } from "../specPackParsers.js";
 import { isCoverageTargetLevel, splitTcRefs, resolveParentTcId } from "../tddHelpers.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
@@ -140,7 +140,25 @@ async function validateSpecTddList(
 
   // Check 5: TC reference existence
   const tcRefsIndex = normalizedHeaders.indexOf("TC-Refs");
-  const { knownTcIds, unitComponentTcIds } = await collectTestCaseIds(specDir);
+  const { knownTcIds, unitComponentTcIds, unresolved } = await collectTestCaseIds(specDir);
+  if (unresolved) {
+    // Both TC checks below are no-ops without a resolved table. Say so, so a
+    // silent skip is distinguishable from a pass.
+    issues.push(
+      issue(
+        "TDDLIST_TC_TABLE_UNRESOLVED",
+        unresolved === "no-table"
+          ? `06_Test-Cases.md for spec-${specNumber} contains no Markdown table; TC coverage checks skipped`
+          : `No \`TC-ID\` column found in the Test Case Table of 06_Test-Cases.md for spec-${specNumber}; TC coverage checks skipped`,
+        "warning",
+        relPath,
+        "tddList.testCaseTableResolvable",
+        undefined,
+        "change",
+        "06_Test-Cases.md の `## Test Case Table` セクションに `TC-ID` 列を持つ表を記載してください。",
+      ),
+    );
+  }
   if (tcRefsIndex >= 0) {
     if (knownTcIds.size > 0) {
       for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
@@ -339,7 +357,16 @@ async function validateSpecTddList(
   return issues;
 }
 
-type TestCaseIds = { knownTcIds: Set<string>; unitComponentTcIds: Set<string> };
+type TestCaseIds = {
+  knownTcIds: Set<string>;
+  unitComponentTcIds: Set<string>;
+  /**
+   * Set when no `TC-ID`-bearing table could be located. Both TC checks go
+   * silent in that case, so the caller reports the miss rather than letting
+   * "nothing found" read as "everything covered".
+   */
+  unresolved?: "no-table" | "no-tc-id-column";
+};
 
 async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   const empty: TestCaseIds = { knownTcIds: new Set(), unitComponentTcIds: new Set() };
@@ -351,11 +378,16 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   } catch {
     return empty;
   }
-  const table = parseFirstMarkdownTable(content);
-  if (!table) return empty;
+  // Scoped to the `## Test Case Table` section the template names, with a
+  // header-match fallback for older specs. Reading the first table in
+  // document order let an explanatory table above the heading hijack the set.
+  const resolution = resolveTestCaseTable(content);
+  if (!resolution.table) {
+    return { ...empty, unresolved: resolution.reason };
+  }
+  const table = resolution.table;
   const headers = table.headers.map((h) => h.trim());
   const tcIdIndex = headers.indexOf("TC-ID");
-  if (tcIdIndex < 0) return empty;
   const levelIndex = headers.indexOf("Level");
 
   const knownTcIds = new Set<string>();
