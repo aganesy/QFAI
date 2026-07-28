@@ -107,11 +107,19 @@ Allowed transitions:
 - `green` -> `refactor` (improve code quality while keeping tests green)
 - `refactor` -> `done` (item complete)
 - Any active status -> `exception` (anomaly detected; record DR-ID in DR-ID column)
+- `exception` -> `todo` (anomaly resolved; the item re-enters the cycle from the
+  start). This is the exit `exception` previously lacked; without it a parked
+  item could never be un-parked without a lifecycle violation.
 
 Backward transitions are prohibited. Attempting `green` -> `red` must produce:
 `"Backward transition prohibited: green -> red"`.
 
 ### Exception Handling
+
+`exception` means **anomaly, work paused** — not "accepted risk, closed". The
+two are different states that happen to share a status today; the `DR-ID` is
+what distinguishes them, and only the accepted-risk form is completion-
+satisfying. Resolve a paused item via `exception -> todo`.
 
 When transitioning to `exception`:
 
@@ -147,7 +155,10 @@ When transitioning to `exception`:
 
 1. After processing all items, update `test-list.md` with final statuses.
 2. If all items are `done`, report "All items complete".
-3. If some items are `exception`, report them with their DR-IDs.
+3. If some items are `exception`, report them as **blocking output**, not as an
+   informational list: for each, the `TDD-ID`, the `DR-ID`, and whether that DR
+   is a user-approved accepted-risk waiver. Completion cannot be declared while
+   any `exception` row lacks such a waiver.
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -278,6 +289,10 @@ Completion MUST NOT be declared when any of the following are true:
 - No GREEN fresh evidence exists for the item
 - Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned FAIL
 - Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
+- Items with `exception` status still exist, **unless** the row's `DR-ID` names
+  a Decision Record explicitly recorded as a **user-approved accepted-risk
+  waiver**. An `exception` whose DR only describes the anomaly is a parked
+  defect, not a completed item, and does not satisfy completion.
 - Parallel slices were used but integration verify has not been run post-merge
 - Checkpoint boundary was reached but verification was not executed
 - `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-001`). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID.

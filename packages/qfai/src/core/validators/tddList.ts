@@ -223,6 +223,30 @@ async function validateSpecTddList(
     }
   }
 
+  // Phase 2 – Check 8b: parked items must be visible in CI.
+  //
+  // `exception` is a completion-satisfying terminal that no validator reported,
+  // so the cheapest fully-compliant path to "implementation complete" was to
+  // park every unfinished item there. A warning per row makes the parking
+  // visible without breaking existing runs.
+  if (statusIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const row = table.rows[rowIdx];
+      if (!row) continue;
+      if ((row[statusIndex] ?? "").trim().toLowerCase() !== "exception") continue;
+      const tddId = tddIdIndex >= 0 ? (row[tddIdIndex] ?? "").trim() : `row ${rowIdx + 1}`;
+      issues.push(
+        issue(
+          "TDDLIST_EXCEPTION_PARKED",
+          `TDD item "${tddId}" in spec-${specNumber} is parked at Status=exception. Resolve it (\`exception -> todo\`) or record its DR-ID as a user-approved accepted-risk waiver`,
+          "warning",
+          relPath,
+          "tddList.exceptionParked",
+        ),
+      );
+    }
+  }
+
   // Phase 2 – Check 8: Exception rows must have DR-ID
   if (statusIndex >= 0 && drIdIndex >= 0) {
     for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
