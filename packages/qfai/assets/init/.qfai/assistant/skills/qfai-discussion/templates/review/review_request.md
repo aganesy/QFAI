@@ -22,11 +22,13 @@
   - Acceptance criteria are consistent with flows/state transitions
   - Security/operations risks are reflected in diagrams where relevant
 - Mermaid diagrams use ` ```mermaid ` fences only (no ` ```text ` or language-less fences)
-- Taste interview completeness and clarity (when UI-bearing)
-- Trend freshness and evidence traceability (when UI-bearing)
-- 3-layer evaluation quality and traceability (when UI-bearing)
-- Option comparison integrity and selected anchor clarity (when UI-bearing)
-- Strong screen contract completeness (when UI-bearing)
+- Root `DESIGN.md` completeness and differentiation clarity (when UI-bearing)
+- Reference pool freshness and translation quality into `DESIGN.md` (when UI-bearing)
+- Evaluator scoring covers all four canonical UX axes — information architecture / navigation flow / usability / functionality, fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` (when UI-bearing)
+- Evaluator critique skepticism and blandness rejection quality applied against the four axes (when UI-bearing)
+- Best-of-history handling and winner selection consistency (when UI-bearing)
+- Screen contract sufficiency and strong schema completeness (when UI-bearing)
+- Generic fallback risk — ensure no unreviewed generic/placeholder UI remains (when UI-bearing)
 - OQ register exit condition (open count = 0)
 - Deferred items have full metadata in `13_Deferred.md`
 - Validate hard gate evidence exists (`.qfai/report/validate.log`).
