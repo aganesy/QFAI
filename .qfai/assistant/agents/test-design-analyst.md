@@ -43,7 +43,10 @@ When reviewing or producing test cases, apply the checklist in `.qfai/assistant/
 
 - Coverage plan and layer ownership
 - Test-case quality and traceability findings
-- **Coverage Depth Matrix** (per spec, using the template in the depth checklist reference)
+- **Coverage Depth Matrix** (per spec, using the template in the depth checklist reference).
+  Destination: `.qfai/evidence/atdd-<spec-id>.md` from the ATDD stage onward. During SDD there is
+  no evidence artifact that holds it, so report depth gaps as findings instead of producing the
+  matrix format.
 - Volume estimate and risk notes
 - Scope-boundary decisions for tests
 
