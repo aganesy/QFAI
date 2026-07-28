@@ -24,7 +24,10 @@ Use this file for the full quality gate checklist behind `/qfai-sdd`.
 
 ## Traceability Checks
 
-- `US -> AC -> BR -> EX -> TC` edges exist.
+- `US -> AC -> BR -> EX -> TC` edges exist. Check this against `.qfai/report/run-*/traceability.json`,
+  which is built from the parsed spec pack and carries typed edges (`AC_TO_US`, `BR_TO_AC`,
+  `SC_TO_AC`, `CASE_TO_SC`) on every run, clean or failing. An empty `edges` array on a spec pack
+  that has specs is a finding, not a tool limitation.
 - `05_Examples.md` includes `EX-ID` and `BR-Ref`.
 - `06_Test-Cases.md` includes `TC-ID`, `EX-Ref`, `AC-Refs`, and `Type`.
 - Error or boundary coverage is present, not only normal-path coverage.

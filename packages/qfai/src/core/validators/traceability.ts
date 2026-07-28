@@ -132,6 +132,88 @@ export async function validateTraceability(
   return issues;
 }
 
+export type TraceabilityGraphNode = {
+  id: string;
+  layer: string;
+  path?: string;
+};
+
+export type TraceabilityGraphEdge = {
+  from: string;
+  to: string;
+  type: string;
+};
+
+export type TraceabilityGraph = {
+  nodes: TraceabilityGraphNode[];
+  edges: TraceabilityGraphEdge[];
+};
+
+/**
+ * Builds the `US -> AC -> BR -> SC -> CASE` graph from the parsed spec pack.
+ *
+ * This is the same walk `validateTraceability` performs, exposed so the per-run
+ * `traceability.json` artifact can be populated from the specs themselves rather than from the
+ * refs of emitted findings. Deriving it from findings inverted the artifact's intent: it was
+ * empty precisely when the spec pack was healthy, and populated only with IDs that failed.
+ *
+ * Emits no issues; parse problems are reported by `validateTraceability` on the same inputs.
+ */
+export async function buildLayeredTraceabilityGraph(
+  root: string,
+  config: QfaiConfig,
+): Promise<TraceabilityGraph> {
+  const specsRoot = resolvePath(root, config, "specsDir");
+  const entries = await collectSpecEntries(specsRoot);
+  const layeredEntries = entries.filter(
+    (entry) => entry.layout === "layered" && entry.layeredStyle === "v1416",
+  );
+
+  const nodes = new Map<string, TraceabilityGraphNode>();
+  const edges = new Map<string, TraceabilityGraphEdge>();
+  const discarded: Issue[] = [];
+
+  const addNodes = (ids: Iterable<string>, layer: string, filePath: string): void => {
+    for (const id of ids) {
+      if (nodes.has(id)) {
+        continue;
+      }
+      nodes.set(id, { id, layer, path: toGraphPath(root, filePath) });
+    }
+  };
+  const addEdges = (refs: Map<string, Set<string>>, type: string): void => {
+    for (const [from, parents] of refs.entries()) {
+      for (const to of parents) {
+        edges.set(`${from}->${to}:${type}`, { from, to, type });
+      }
+    }
+  };
+
+  for (const entry of layeredEntries) {
+    const data = await collectLayeredEdgeData(entry, discarded);
+    addNodes(data.usIds, "US", entry.userStoriesPath);
+    addNodes(data.acIds, "AC", entry.acceptanceCriteriaPath);
+    addNodes(data.brIds, "BR", entry.businessRulesPath);
+    addNodes(data.scIds, "SC", entry.examplesPath);
+    addNodes(data.caseIds, "CASE", entry.testCasesPath);
+    addEdges(data.acToUs, "AC_TO_US");
+    addEdges(data.brToAc, "BR_TO_AC");
+    addEdges(data.scToAc, "SC_TO_AC");
+    addEdges(data.caseToSc, "CASE_TO_SC");
+  }
+
+  return {
+    nodes: Array.from(nodes.values()).sort((a, b) => a.id.localeCompare(b.id)),
+    edges: Array.from(edges.values()).sort(
+      (a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to),
+    ),
+  };
+}
+
+function toGraphPath(root: string, filePath: string): string {
+  return path.relative(root, filePath).split(path.sep).join("/");
+}
+
 async function validatePoliciesLayerDownRef(policiesDir: string): Promise<Issue[]> {
   const issues: Issue[] = [];
   const targets = [
