@@ -31,8 +31,9 @@ Use this file for the full quality gate checklist behind `/qfai-sdd`.
 
 ## Validation Checks
 
-- `qfai validate --profile sdd --fail-on error --format github | tee .qfai/report/validate.log`
+- `qfai validate --profile sdd --fail-on error --format github`
 - `error=0`
+- `.qfai/report/validate.log` — written automatically by the command above (no `tee` redirect); its `run_log:` line points at the `.qfai/report/run-*/` directory of that run
 - `.qfai/report/specs-coverage/spec-*.md` reviewed
 - Density-smell warnings triaged
 

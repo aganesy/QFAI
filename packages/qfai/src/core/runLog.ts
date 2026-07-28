@@ -93,10 +93,59 @@ export async function writeValidateRunLog(input: {
   await writeJson(path.join(reportDir, "traceability.json"), traceabilityJson);
   await writeFile(path.join(reportDir, "summary.md"), `${summaryMd}\n`, "utf-8");
 
+  // Validate Hard Gate evidence. Written unconditionally so it can never go stale:
+  // every run overwrites it with a pointer at the run-log directory it just created.
+  // Previously this file only existed as a side effect of `| tee`, which the Hard
+  // Gate command line itself omits (and which is not portable to PowerShell).
+  await writeFile(
+    path.join(outDir, "validate.log"),
+    `${buildValidateLog({
+      runId,
+      startedAt: input.startedAt.toISOString(),
+      status,
+      relativeReportDir,
+      command: runJson.command,
+      errorCount: input.result.counts.error,
+      warningCount: input.result.counts.warning,
+      summaryMd,
+    })}\n`,
+    "utf-8",
+  );
+
   return {
     runId,
     reportDir,
   };
+}
+
+function buildValidateLog(input: {
+  runId: string;
+  startedAt: string;
+  status: RunLogResultStatus;
+  relativeReportDir: string;
+  command: string;
+  errorCount: number;
+  warningCount: number;
+  summaryMd: string;
+}): string {
+  const lines: string[] = [];
+  lines.push("# qfai validate log");
+  lines.push("");
+  lines.push(
+    "This file is written by every `qfai validate` run and always points at the newest",
+  );
+  lines.push("run-log directory. Do not edit it by hand; do not pipe stdout into it.");
+  lines.push("");
+  lines.push(`- run_id: ${input.runId}`);
+  lines.push(`- started_at: ${input.startedAt}`);
+  lines.push(`- command: ${input.command}`);
+  lines.push(`- status: ${input.status}`);
+  lines.push(`- errors: ${input.errorCount}`);
+  lines.push(`- warnings: ${input.warningCount}`);
+  lines.push(`- run_log: ${input.relativeReportDir}`);
+  lines.push("");
+  lines.push(input.summaryMd);
+  return lines.join("\n");
 }
 
 async function writeJson(filePath: string, value: unknown): Promise<void> {
