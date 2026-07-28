@@ -414,20 +414,45 @@ function countWords(value: string): number {
 }
 
 /**
- * Screen-id casing validator.
+ * Canonical screen-contract id shape, as shipped by
+ * `qfai-discussion/templates/uiux/40_screen_contracts.md` (`SCR-001`) and as
+ * produced by `contracts/screenContracts.ts#slugifyScreenId`.
+ */
+const CANONICAL_SCREEN_ID_PATTERN = /^[A-Z]{2,4}-\d{2,4}$/u;
+
+/**
+ * True when the id is either the canonical `SCR-001` contract form or a
+ * hyphen-free identifier. Anything else — `home-page`, `Main Screen`, `a/b` —
+ * is reported.
+ */
+function isAcceptedScreenId(id: string): boolean {
+  if (CANONICAL_SCREEN_ID_PATTERN.test(id)) {
+    return true;
+  }
+  return /^[A-Za-z0-9][A-Za-z0-9._]*$/u.test(id);
+}
+
+/**
+ * Screen-id shape validator.
  *
- * Scans every `<contractsDir>/ui/*.yaml` declared in the consumer
- * project and emits `QFAI-PROT-008` for any `screens[].id` value that
- * contains a hyphen. The accepted convention is underscore casing
- * (snake_case), which lets the iterate path mirror the screen id into
- * `.qfai/evidence/prototyping/screenshots/<id>.png` and
- * `html/<id>.html` without re-casing — keeping the evidence aggregate
- * dirs consistent end-to-end with the UI contract surface.
+ * Scans every `<contractsDir>/ui/*.yaml` declared in the consumer project and
+ * emits `QFAI-PROT-008` for a `screens[].id` that is neither the canonical
+ * `SCR-001` form nor an underscore-cased identifier.
  *
- * Validation is per-file but emits one issue per offending screen id
- * so the operator gets a fan-out list of the exact entries that need
- * to be renamed. Empty / non-string ids are ignored here (they are
- * caught by `validateScreenContractSchema` instead).
+ * This was previously a blanket hyphen ban demanding underscore casing — a
+ * convention that appears in no shipped document, that the shipped screen
+ * contract template violates by prescribing `SCR-001`, that `slugifyScreenId`
+ * violates by emitting hyphens, and that `SAFE_SCREEN_ID_PATTERN` (the
+ * canonical screen-id pattern used by the evidence validator in this same
+ * profile) explicitly permits. Following qfai's own template guaranteed a
+ * blocking failure with no config switch and no migration command.
+ *
+ * The severity is `warning`, not `error`: no re-casing migration exists, and a
+ * project cannot rename frozen contract IDs by hand across a spec pack.
+ *
+ * Validation is per-file but emits one issue per offending screen id so the
+ * operator gets a fan-out list of the exact entries. Empty / non-string ids are
+ * ignored here (they are caught by `validateScreenContractSchema` instead).
  */
 export async function validateScreenIdCasing(root: string, contractsDir: string): Promise<Issue[]> {
   const fg = (await import("fast-glob")).default;
@@ -462,13 +487,13 @@ export async function validateScreenIdCasing(root: string, contractsDir: string)
       if (typeof idRaw !== "string") continue;
       const id = idRaw.trim();
       if (id.length === 0) continue;
-      if (id.includes("-")) {
+      if (!isAcceptedScreenId(id)) {
         const rel = path.relative(root, filePath).replace(/\\/g, "/");
         issues.push(
           issue(
             "QFAI-PROT-008",
-            `screens[].id "${id}" uses hyphen casing; underscore casing is required (e.g. "${id.replace(/-/g, "_")}"). Underscore casing keeps iter-NN/<id>.png and the evidence aggregate dirs consistent.`,
-            "error",
+            `screens[].id "${id}" is neither the canonical \`SCR-001\` form nor an underscore-cased identifier. Use the shape shipped in \`40_screen_contracts.md\`, or snake_case, so \`iter-NN/<id>.png\` and the evidence aggregate dirs stay consistent.`,
+            "warning",
             rel,
             "prototypingEvidence.screenIdCasing",
           ),
