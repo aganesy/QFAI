@@ -5,6 +5,11 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runValidate } from "../../../../src/cli/commands/validate.js";
+import {
+  SAAS_PACKAGE_SKIPPED_GATES,
+  SAAS_PACKAGE_SKIPPED_GATE_FAMILIES,
+  saasPackageSkippedGateFamilies,
+} from "../../../../src/core/saasPackage/skippedGates.js";
 
 const CANONICAL_REL = ".qfai/report/validate.json";
 
@@ -81,5 +86,27 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
       const codes = (await findings(root)).map((entry) => entry.code);
       expect(codes).not.toContain("QFAI-PROFILE-001");
     });
+  });
+
+  it("lists every family the saas-package skip-set actually skips", async () => {
+    await withProject(async (root) => {
+      await runValidate({ root, strict: false, profile: "saas-package" });
+      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+      expect(notice?.message).toContain('profile="saas-package" is a partial profile');
+      // `runSaasPackageProfile` skips validateAtddCodeTraceability, so a
+      // reader of validate-saas-package.json must not be told otherwise.
+      for (const family of saasPackageSkippedGateFamilies()) {
+        expect(notice?.message).toContain(family);
+      }
+      expect(notice?.message).toContain("QFAI-ATDD-*");
+    });
+  });
+
+  it("keeps the notice families in step with the skip-set SSOT", () => {
+    // Every skipped gate must map to at least one code family, or the notice
+    // silently under-reports what was not evaluated.
+    for (const gate of SAAS_PACKAGE_SKIPPED_GATES) {
+      expect(SAAS_PACKAGE_SKIPPED_GATE_FAMILIES[gate] ?? []).not.toHaveLength(0);
+    }
   });
 });

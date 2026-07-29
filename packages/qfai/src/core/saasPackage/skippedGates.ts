@@ -18,3 +18,32 @@ export const SAAS_PACKAGE_SKIPPED_GATES: readonly string[] = [
   "validateTestTodoStubs",
   "validateTraceabilityIntegrity",
 ] as const;
+
+/**
+ * Finding-code families each skipped gate would have produced.
+ *
+ * `SAAS_PACKAGE_SKIPPED_GATES` names validator functions, which is the right
+ * granularity for the `D-SAAS-PACKAGE-VERIFY-SKIPPED` findings, but the
+ * partial-profile notice in `validate.json` speaks in code families. Deriving
+ * one from the other keeps the two surfaces from drifting: a gate added to the
+ * skip-set without a family here fails `saasPackageSkipFamilies` typing.
+ */
+export const SAAS_PACKAGE_SKIPPED_GATE_FAMILIES: Record<string, readonly string[]> = {
+  validateAtddCodeTraceability: ["QFAI-ATDD-*"],
+  validateTddList: ["TDDLIST_*"],
+  validateTestTodoStubs: ["QFAI-TEST-001"],
+  validateTraceabilityIntegrity: ["QFAI-TRACE-*"],
+};
+
+/** Deduped, order-preserving code families the saas-package profile skips. */
+export function saasPackageSkippedGateFamilies(): string[] {
+  const families: string[] = [];
+  for (const gate of SAAS_PACKAGE_SKIPPED_GATES) {
+    for (const family of SAAS_PACKAGE_SKIPPED_GATE_FAMILIES[gate] ?? []) {
+      if (!families.includes(family)) {
+        families.push(family);
+      }
+    }
+  }
+  return families;
+}

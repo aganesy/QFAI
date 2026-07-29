@@ -6,6 +6,7 @@ import { loadConfig } from "../../core/config.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import { buildCiProfileIssue, createProfileGuardResult } from "../../core/phasePolicy.js";
 import { toRelativePath } from "../../core/paths.js";
+import { saasPackageSkippedGateFamilies } from "../../core/saasPackage/skippedGates.js";
 import type { Issue, ValidationProfile, ValidationResult } from "../../core/types.js";
 import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
@@ -366,7 +367,11 @@ const PROFILE_UNEVALUATED_GATES: Record<string, readonly string[]> = {
   prototyping: ["QFAI-SPACK-*", "QFAI-COV-*", "QFAI-ATDD-*", "TDDLIST_*"],
   atdd: ["QFAI-SPACK-*", "QFAI-COV-*", "TDDLIST_*", "QFAI-PROT-*"],
   tdd: ["QFAI-SPACK-*", "QFAI-COV-*", "QFAI-PROT-*"],
-  "saas-package": ["QFAI-SPACK-*", "QFAI-COV-*", "TDDLIST_*"],
+  // Derived from the skip-set SSOT rather than restated, so a gate added to
+  // `SAAS_PACKAGE_SKIPPED_GATES` cannot silently stay absent from the notice
+  // and leave a reader of `validate-saas-package.json` believing, for example,
+  // that QFAI-ATDD-* was evaluated.
+  "saas-package": ["QFAI-SPACK-*", "QFAI-COV-*", ...saasPackageSkippedGateFamilies()],
 };
 
 function buildPartialProfileNotice(profile: string | undefined): Issue | null {
