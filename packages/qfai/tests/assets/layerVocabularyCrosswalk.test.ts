@@ -71,6 +71,19 @@ describe("the layer vocabulary has one crosswalk", () => {
       expect(template).toContain("`L1` and `L2` are TDD coverage targets");
     });
 
+    it(`${tree}: the TC table stays the first markdown table in the template`, async () => {
+      const template = await read(
+        tree,
+        "assistant/skills/qfai-sdd/templates/specs/spec/06_Test-Cases.md",
+      );
+      // `collectTestCaseIds` / `collectTddCoverage` read parseFirstMarkdownTable
+      // and bail without a `TC-ID` column, which would disable
+      // TDDLIST_TC_NOT_COVERED for the whole spec.
+      const firstTableHeader = template.split(/\r?\n/).find((line) => line.trim().startsWith("|"));
+      expect(firstTableHeader).toContain("TC-ID");
+      expect(template).toContain("Deliberately a list, not a table");
+    });
+
     it(`${tree}: the directory column defers to the configured testsDir`, async () => {
       const catalog = await read(tree, "assistant/catalog/test-layers.md");
       const directories = crosswalkRows(catalog)

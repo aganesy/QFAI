@@ -11,11 +11,15 @@
 `Level` holds exactly **one** layer code from the crosswalk in
 `.qfai/assistant/catalog/test-layers.md#layer-vocabulary-crosswalk-normative`:
 
-| Code | Layer       |
-| ---- | ----------- |
-| L1   | Unit        |
-| L2   | Component   |
-| L3   | Integration |
+- `L1` — Unit
+- `L2` — Component
+- `L3` — Integration
+
+(Deliberately a list, not a table: `collectTestCaseIds` and the TDD coverage
+report both read `parseFirstMarkdownTable`, so the **Test Case Table below must
+be the first markdown table in this file**. A table here would be parsed as the
+TC table, find no `TC-ID` column, and silently disable `TDDLIST_TC_NOT_COVERED`
+for the whole spec.)
 
 `L1` and `L2` are TDD coverage targets — each needs a `tdd/test-list.md` row.
 `L3` is not. An obligation that spans two layers is two TC rows.
