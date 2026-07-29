@@ -256,7 +256,7 @@ async function validateRootDesignMdAndLock(
  * `QFAI-DCON-001` error — making the SDD stop condition permanently
  * unpassable for any UI-bearing project.
  */
-async function hasPrototypingRun(root: string, config: QfaiConfig): Promise<boolean> {
+async function hasPrototypingRun(root: string): Promise<boolean> {
   // Only artifacts /qfai-prototyping itself writes count. `DESIGN.md.lock.yaml`
   // is deliberately NOT a marker: /qfai-sdd Phase 0 freezes the lock for every
   // UI-bearing target before prototyping starts, so keying on it would make
@@ -281,7 +281,7 @@ async function validateNoPrematurePrototypingContracts(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   // Prototyping has run: these files are its required outputs, not premature.
-  if (await hasPrototypingRun(root, config)) {
+  if (await hasPrototypingRun(root)) {
     return [];
   }
 
