@@ -124,14 +124,21 @@ describe("TC-0004-0056: always-latest validate.json#profile reflects most-recent
 });
 
 describe("TC-0004-0057: legacy .qfai/output/validate.json path retained under deprecation window", () => {
-  it("legacy path is written and D-DEPRECATED-PATH warning body literally contains `sunset: 1.10.0`", async () => {
+  it("legacy path is refreshed and D-DEPRECATED-PATH warning body literally contains `sunset: 1.10.0`", async () => {
+    // #238: pre-sunset the side-write is no longer unconditional — it requires
+    // observable evidence that a consumer depends on the legacy path. Seed the
+    // file to represent such a consumer; a project that has never used the
+    // path now gets neither the write nor the warning.
+    const legacy = path.join(root, ".qfai/output/validate.json");
+    await mkdir(path.dirname(legacy), { recursive: true });
+    await writeFile(legacy, "{}", "utf-8");
+
     await runValidate({
       root,
       strict: false,
       profile: "prototyping",
       toolVersionOverride: "1.9.1",
     });
-    const legacy = path.join(root, ".qfai/output/validate.json");
     expect(await pathExists(legacy)).toBe(true);
 
     const body = JSON.parse(await readFile(legacy, "utf-8")) as {
