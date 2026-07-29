@@ -157,10 +157,10 @@ The generator MUST express every styled surface as one of:
 There are two directory trees and they are NOT interchangeable. The
 generator writes to exactly one of them.
 
-| Tree                                             | Shape                          | Written by                            | Read by                                       |
-| ------------------------------------------------ | ------------------------------ | ------------------------------------- | --------------------------------------------- |
-| `.qfai/prototypes/iter-NN/`                      | one `index.html`               | **the generator** (you)               | `--auto-serve`, the operator, `/qfai-implement` |
-| `.qfai/evidence/prototyping/iter-NN/`            | `<screenId>.html` + `.png`, one pair per declared screen | `qfai prototyping iterate --capture` | `qfai prototyping certify`, the reviewer        |
+| Tree                                  | Shape                                                    | Written by                           | Read by                                         |
+| ------------------------------------- | -------------------------------------------------------- | ------------------------------------ | ----------------------------------------------- |
+| `.qfai/prototypes/iter-NN/`           | one `index.html`                                         | **the generator** (you)              | `--auto-serve`, the operator, `/qfai-implement` |
+| `.qfai/evidence/prototyping/iter-NN/` | `<screenId>.html` + `.png`, one pair per declared screen | `qfai prototyping iterate --capture` | `qfai prototyping certify`, the reviewer        |
 
 **The generator never writes the evidence tree.** The `--capture` step
 performs the fan-out: it drives a browser to each declared screen's
