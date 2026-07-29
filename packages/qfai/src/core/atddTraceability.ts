@@ -101,18 +101,22 @@ export const ATDD_TEST_KIND_DIRS: Record<AtddTestKind, string> = {
  * The scan already follows `testsDir`, so a project that renamed it to e.g.
  * `spec-tests` would otherwise be told by `QFAI-ATDD-112` to annotate
  * `tests/api/**` — a directory the scan never reads, leaving the finding
- * unclearable. {@link ATDD_TEST_KIND_DIRS} stays as the default-shaped
- * fallback for callers with no config in hand.
+ * unclearable. A root-level layout (`testsDir: "."`) is the same trap in the
+ * other direction: the scan reads `api/**` at the repository root, so the
+ * `tests/` segment must be dropped rather than kept.
+ * {@link ATDD_TEST_KIND_DIRS} stays as the default-shaped fallback for callers
+ * with no config in hand.
  */
 export function atddTestKindDirs(testsDirRelative: string): Record<AtddTestKind, string> {
   const base = toPosixPath(testsDirRelative).replace(/\/+$/, "");
-  if (base.length === 0 || base === "." || base === "tests") {
+  if (base === "tests") {
     return ATDD_TEST_KIND_DIRS;
   }
+  const prefix = base.length === 0 || base === "." ? "" : `${base}/`;
   return {
-    integration: `${base}/integration/**`,
-    api: `${base}/api/**`,
-    e2e: `${base}/e2e/**`,
+    integration: `${prefix}integration/**`,
+    api: `${prefix}api/**`,
+    e2e: `${prefix}e2e/**`,
   };
 }
 

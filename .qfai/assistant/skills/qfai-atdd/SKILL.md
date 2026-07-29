@@ -234,7 +234,11 @@ Notes:
 ## Success Criteria (Definition of Done)
 
 - All required `US` are covered by E2E tests.
-- All required `TC` are covered by integration tests.
+- All required `TC` are covered from the directory their declared `Level` routes
+  to (`L3`/`Integration` -> `tests/integration/**`, `L4`/`API` ->
+  `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`, no declared `Level` ->
+  `tests/integration/**`). Duplicating a TC into a second layer is a
+  not-done condition, not extra credit.
 - All required `CON-API` are covered by API tests.
 - Validation passes: `qfai validate --profile atdd --fail-on error`.
 - Repository quality gates (format/lint/type/tests/pack) pass with evidence.

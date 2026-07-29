@@ -188,4 +188,41 @@ describe("the reported directories follow the configured testsDir", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it('drops the tests/ segment for a root-level layout (testsDir ".")', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tc-routing-root-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
+      await writeFile(path.join(specDir, "02_User-stories.md"), "# 02 US\n", "utf-8");
+      await writeFile(path.join(specDir, "06_Test-Cases.md"), tcTable("L4"), "utf-8");
+
+      const config = {
+        ...defaultConfig,
+        paths: { ...defaultConfig.paths, testsDir: "." },
+      };
+
+      // The scan reads `<root>/api/**`, so naming `tests/api/**` would send the
+      // author to a directory nothing reads.
+      const missing = (await validateAtddCodeTraceability(root, config)).find(
+        (entry) => entry.code === "QFAI-ATDD-112",
+      );
+      expect(missing?.message).toContain("api/** -> SPEC-0001:TC-0001");
+      expect(missing?.message).not.toMatch(/(^|[^-\w])tests\//);
+      expect(missing?.suggested_action).not.toMatch(/(^|[^-\w])tests\//);
+
+      // Following the fix exactly must clear the finding.
+      await mkdir(path.join(root, "api"), { recursive: true });
+      await writeFile(
+        path.join(root, "api", "a.test.ts"),
+        "/* QFAI:SPEC-0001:TC-0001 */\n",
+        "utf-8",
+      );
+      const after = await validateAtddCodeTraceability(root, config);
+      expect(after.map((entry) => entry.code)).not.toContain("QFAI-ATDD-112");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
