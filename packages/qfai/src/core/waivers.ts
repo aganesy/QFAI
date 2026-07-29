@@ -873,6 +873,10 @@ const STATIC_RULE_SEVERITY: Record<string, IssueSeverity> = {
   "DELTA-003": "error",
   "SCOPE-001": "warning",
   "SCOPE-002": "info",
+  // TDDLIST_EXCEPTION_PARKED. Registered statically so a project can pre-record
+  // an accepted-risk waiver without QFAI-WAIVER-003 calling the rule unknown on
+  // the runs where no item is currently parked.
+  "TDDLIST-001": "warning",
   "WAIVER-001": "error",
   "WAIVER-002": "error",
   "WAIVER-003": "warning",

@@ -28,6 +28,18 @@ const TDD_ID_FORMAT = /^TDD-\d{4}$/;
 
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
 
+/**
+ * Waiver rule id for `TDDLIST_EXCEPTION_PARKED`.
+ *
+ * A parked item that carries a user-approved accepted risk is a legitimate
+ * end state, but the ledger row alone cannot prove the DR-ID was approved.
+ * `.qfai/waivers.yml` is the approval artifact QFAI already has (it requires
+ * `id`/`reason`/`expires`/`evidence` and expires), so the finding is emitted
+ * under a rule id `waivers.ts#resolveRuleId` accepts — `^[A-Z]+-\d{3}$` —
+ * instead of a dotted path no waiver could ever match.
+ */
+export const EXCEPTION_PARKED_RULE_ID = "TDDLIST-001";
+
 export async function validateTddList(root: string, config: QfaiConfig): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
@@ -235,13 +247,20 @@ async function validateSpecTddList(
       if (!row) continue;
       if ((row[statusIndex] ?? "").trim().toLowerCase() !== "exception") continue;
       const tddId = tddIdIndex >= 0 ? (row[tddIdIndex] ?? "").trim() : `row ${rowIdx + 1}`;
+      const drId = drIdIndex >= 0 ? (row[drIdIndex] ?? "").trim() : "";
       issues.push(
         issue(
           "TDDLIST_EXCEPTION_PARKED",
-          `TDD item "${tddId}" in spec-${specNumber} is parked at Status=exception. Resolve it (\`exception -> todo\`) or record its DR-ID as a user-approved accepted-risk waiver`,
+          `TDD item "${tddId}" in spec-${specNumber} is parked at Status=exception${drId.length > 0 && drId !== "-" ? ` (DR-ID ${drId})` : ""}. Resolve it (\`exception -> todo\`), or record the accepted risk as a \`TDDLIST-001\` waiver in \`.qfai/waivers.yml\``,
           "warning",
           relPath,
-          "tddList.exceptionParked",
+          // Rule id, not a dotted path: `waivers.ts#resolveRuleId` only accepts
+          // `^[A-Z]+-\d{3}$`, so a dotted name could never be waived and the
+          // accepted-risk case the message points at had no way to clear.
+          EXCEPTION_PARKED_RULE_ID,
+          drId.length > 0 && drId !== "-" ? [drId] : undefined,
+          "change",
+          `承認済みの accepted risk である場合は \`.qfai/waivers.yml\` に rule: ${EXCEPTION_PARKED_RULE_ID} の waiver（id / reason / expires / evidence / scope.paths が必須）を登録してください。作業を再開する場合は \`exception -> todo\` で戻してください。`,
         ),
       );
     }

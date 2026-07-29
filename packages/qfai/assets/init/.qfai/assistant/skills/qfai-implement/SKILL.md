@@ -121,6 +121,13 @@ two are different states that happen to share a status today; the `DR-ID` is
 what distinguishes them, and only the accepted-risk form is completion-
 satisfying. Resolve a paused item via `exception -> todo`.
 
+Every `exception` row raises `TDDLIST_EXCEPTION_PARKED` (warning, rule
+`TDDLIST-001`). The validator cannot read the DR to tell a paused defect from
+an approved accepted risk, so the approval is recorded where QFAI already
+checks approvals: a `TDDLIST-001` waiver in `.qfai/waivers.yml`
+(`id` / `reason` / `expires` / `evidence` / `scope.paths` required, and it
+expires). Without one the warning stands, which is the intended signal.
+
 When transitioning to `exception`:
 
 - A DR-ID (Decision Record ID) must be recorded in the DR-ID column.
@@ -291,8 +298,8 @@ Completion MUST NOT be declared when any of the following are true:
 - Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
 - Items with `exception` status still exist, **unless** the row's `DR-ID` names
   a Decision Record explicitly recorded as a **user-approved accepted-risk
-  waiver**. An `exception` whose DR only describes the anomaly is a parked
-  defect, not a completed item, and does not satisfy completion.
+  waiver** (a `TDDLIST-001` entry in `.qfai/waivers.yml`). An `exception` whose
+  DR only describes the anomaly is a parked defect, not a completed item.
 - Parallel slices were used but integration verify has not been run post-merge
 - Checkpoint boundary was reached but verification was not executed
 - `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-001`). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID.

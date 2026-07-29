@@ -5,7 +5,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { validateTddList } from "../../src/core/validators/tddList.js";
+import { applyWaivers } from "../../src/core/waivers.js";
+import { EXCEPTION_PARKED_RULE_ID, validateTddList } from "../../src/core/validators/tddList.js";
 
 const HEADERS =
   "| TDD-ID   | TC-Refs | Layer | Test file       | Selector | Status    | DR-ID  | Evidence |";
@@ -51,7 +52,9 @@ describe("parked exception rows are visible in CI", () => {
         expect(parked(issues)).toHaveLength(2);
         expect(parked(issues)[0]?.severity).toBe("warning");
         expect(parked(issues)[0]?.message).toContain("TDD-0001");
-        expect(parked(issues)[0]?.message).toContain("accepted-risk waiver");
+        expect(parked(issues)[0]?.message).toContain("`TDDLIST-001` waiver");
+        expect(parked(issues)[0]?.message).toContain("(DR-ID DR-1)");
+        expect(parked(issues)[0]?.refs).toEqual(["DR-1"]);
       },
     );
   });
@@ -77,5 +80,77 @@ describe("parked exception rows are visible in CI", () => {
         expect(issues.map((entry) => entry.code)).toContain("TDDLIST_EXCEPTION_MISSING_DR");
       },
     );
+  });
+
+  it("is emitted under a rule id the waiver mechanism accepts", async () => {
+    await withLedger(
+      [
+        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-1   | anomaly  |",
+      ],
+      (issues) => {
+        const finding = parked(issues)[0];
+        expect(finding?.rule).toBe(EXCEPTION_PARKED_RULE_ID);
+        // `waivers.ts#resolveRuleId` only accepts this shape; a dotted rule
+        // name made an approved accepted risk permanently unwaivable.
+        expect(finding?.rule).toMatch(/^[A-Z]+-\d{3}$/);
+        expect(finding?.suggested_action).toContain(".qfai/waivers.yml");
+      },
+    );
+  });
+});
+
+describe("an approved accepted risk can clear the parked warning", () => {
+  it("suppresses the finding through a TDDLIST-001 waiver", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tdd-exception-waiver-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(path.join(specDir, "tdd"), { recursive: true });
+      for (const file of [
+        "01_Spec.md",
+        "02_User-stories.md",
+        "03_Acceptance-Criteria.md",
+        "06_Test-Cases.md",
+      ]) {
+        await writeFile(path.join(specDir, file), "# seed\n", "utf-8");
+      }
+      await writeFile(
+        path.join(specDir, "tdd", "test-list.md"),
+        [
+          HEADERS,
+          SEP,
+          "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-1   | anomaly  |",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(root, ".qfai", "waivers.yml"),
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WV-0001",
+          `    rule: ${EXCEPTION_PARKED_RULE_ID}`,
+          "    reason: accepted risk approved by the operator (DR-1)",
+          "    expires: 2099-12-31",
+          "    evidence: .qfai/specs/spec-0001/09_delta.md#DR-1",
+          "    action: suppress",
+          "    scope:",
+          "      paths:",
+          '        - ".qfai/specs/spec-0001/tdd/test-list.md"',
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const findings = await validateTddList(root, defaultConfig);
+      const { issues } = await applyWaivers(root, findings);
+      const finding = issues.find((entry) => entry.code === "TDDLIST_EXCEPTION_PARKED");
+      expect(finding?.suppressed).toBe(true);
+      // Suppressed findings are excluded from the counts `--fail-on warning`
+      // reads, so the approved parking no longer blocks validation forever.
+      expect(issues.filter((entry) => entry.severity === "warning" && !entry.suppressed)).toEqual(
+        [],
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });
