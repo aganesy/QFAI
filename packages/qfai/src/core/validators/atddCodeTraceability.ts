@@ -49,7 +49,10 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.usToE2e",
         result.missing.us,
         "change",
-        "tests/e2e/** に `QFAI:SPEC-XXXX:US-YYYY` 注釈を追加し、全 US を少なくとも1回参照してください。",
+        // Scoped wording: the obligation covers user-facing specs only, so the
+        // fix must not read as "annotate every US in the repository" — that is
+        // the annotation-only E2E tree `catalog/test-layers.md` forbids.
+        "tests/e2e/** に `QFAI:SPEC-XXXX:US-YYYY` 注釈を追加し、上記の US を少なくとも1回参照してください。対象は user-facing surface を宣言した spec のみです（`.qfai/assistant/catalog/test-layers.md#atdd-annotation-hard-gate`）。",
       ),
     );
   }

@@ -99,6 +99,36 @@ describe("QFAI-ATDD-111 is scoped by surface type", () => {
     });
   });
 
+  it("keeps a spec whose only surface signal is a UI contract inside the scope", async () => {
+    await withProject(async (root) => {
+      // `resolveAllUiBearingSpecs` admits `.qfai/contracts/ui/<spec-id>*.yaml`,
+      // so a project that declares surfaces only through contracts is in scope.
+      await seed(root, [
+        { specNumber: "0001", usIds: ["US-0001"], uiBearing: true },
+        { specNumber: "0002", usIds: ["US-0002"] },
+      ]);
+      const uiDir = path.join(root, ".qfai", "contracts", "ui");
+      await mkdir(uiDir, { recursive: true });
+      await writeFile(path.join(uiDir, "ui-0002-screen.yaml"), "screens: []\n", "utf-8");
+
+      const refs = missingUsRefs(await validateAtddCodeTraceability(root, defaultConfig));
+      expect(refs.some((ref) => ref.includes("SPEC-0002"))).toBe(true);
+    });
+  });
+
+  it("scopes the user-facing wording of the finding and its expected text", async () => {
+    await withProject(async (root) => {
+      await seed(root, [{ specNumber: "0003", usIds: ["US-0001"], uiBearing: true }]);
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      const finding = issues.find((entry) => entry.code === "QFAI-ATDD-111");
+      // "全 US" would send the operator to annotate the exempted non-UI specs
+      // too, re-introducing the annotation-only E2E tree this scope prevents.
+      expect(finding?.suggested_action ?? "").not.toContain("全 US");
+      expect(finding?.suggested_action ?? "").toContain("user-facing surface を宣言した spec のみ");
+    });
+  });
+
   it("keeps a legacy title-marker spec inside the scope", async () => {
     await withProject(async (root) => {
       await seed(root, [{ specNumber: "0001", usIds: ["US-0001"], uiBearing: true }]);
