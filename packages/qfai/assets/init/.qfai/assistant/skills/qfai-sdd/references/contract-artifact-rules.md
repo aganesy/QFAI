@@ -25,7 +25,7 @@ Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes 
 
 ## Cross-contract Reconciliation (MUST)
 
-Contracts are validated per file; agreement *between* contracts is an authoring obligation.
+Contracts are validated per file; agreement _between_ contracts is an authoring obligation.
 
 - Every terminal state, status enum value, and error code an API contract mandates MUST have a
   representable counterpart in the paired DB contract. An outcome the API requires but the DB

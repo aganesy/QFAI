@@ -117,10 +117,10 @@ function walk(
   if (!node || typeof node !== "object") {
     return;
   }
-  if (seen.has(node as object)) {
+  if (seen.has(node)) {
     return;
   }
-  seen.add(node as object);
+  seen.add(node);
 
   if (Array.isArray(node)) {
     for (const item of node) {
