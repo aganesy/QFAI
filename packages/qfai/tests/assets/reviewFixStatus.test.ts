@@ -79,6 +79,24 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
       expect(reference).toContain("## Resuming a `review-fix` item");
       expect(reference).toContain("selected **before** any `todo` row");
     });
+
+    it(`${relativePath}: rework never writes an illegal review-fix -> red hop`, async () => {
+      const skill = await readFile(path.join(repoRoot, relativePath), "utf-8");
+      // Phase Red step 2 would otherwise demand `review-fix -> red`, which the
+      // allowed-transition list does not contain.
+      expect(skill).toContain("**only for a `todo` row**");
+      expect(skill).toContain("A `review-fix` row **stays at `review-fix`** for the whole rework");
+      expect(skill).toContain("`review-fix -> red` is not an allowed transition");
+
+      const reference = await readFile(
+        path.join(repoRoot, path.dirname(relativePath), "references", "round-evidence.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("**The row's `Status` stays `review-fix` throughout.**");
+      expect(reference).toContain(
+        "`review-fix -> refactor` is the only status change the\nrework produces",
+      );
+    });
   }
 });
 

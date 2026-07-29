@@ -29,6 +29,12 @@ An item at `review-fix` may re-enter the RED/GREEN cycle as many times as the
 rework needs. Each pass is its own round block. Returning to `refactor`
 re-submits the item to the reviewer that opened the round.
 
+**The row's `Status` stays `review-fix` throughout.** The RED/GREEN passes are
+work, not ledger states here: `review-fix -> red` and `review-fix -> green` are
+not allowed transitions, and writing either would be the backward transition
+the lifecycle forbids. `review-fix -> refactor` is the only status change the
+rework produces; the rounds themselves are recorded in `Evidence`.
+
 ## Resuming a `review-fix` item
 
 A `review-fix` row can outlive the session that created it — the operator

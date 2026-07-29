@@ -133,7 +133,7 @@ When transitioning to `exception`:
 ### Phase: Red (Write Failing Test)
 
 1. Read `test-list.md`. **Rework first**: if any row is at `review-fix`, select the first such row and resume its rework (`references/round-evidence.md`) before any `todo` row — a `review-fix` row left by an interrupted session is otherwise never picked up. Otherwise select the first row with `Status = todo`.
-2. Transition status to `red`.
+2. Transition status to `red` — **only for a `todo` row**. A `review-fix` row **stays at `review-fix`** for the whole rework: it runs steps 3-5 and the Green phase in place, and its only status change is `review-fix -> refactor` when the rework is done. `review-fix -> red` is not an allowed transition and must not be written to the ledger.
 3. Write a **failing test** based on the TC-Refs specification.
 4. Run the test and **watch it fail** — confirm the test actually fails for the expected reason.
 5. If the test unexpectedly passes, transition to `exception` and record the anomaly.
