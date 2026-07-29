@@ -35,10 +35,12 @@ const DIGIT_AHEAD = "(?=[A-Za-z0-9_-]*\\d)";
  * `US-0006-*` used to backtrack to `US-0006` and be reported as an invalid ID
  * — a truncation artifact that is also the prefix of every valid
  * `US-0006-NNNN` ID in the same spec, and therefore useless as a search key.
- * Refusing to end immediately before `-`, `*` or `?` means a prose wildcard is
- * either matched verbatim or not matched at all.
+ * The lookahead is deliberately narrow: only a following `-*` or `-?` (an
+ * actual wildcard segment) suppresses the candidate. A trailing sentence mark
+ * (`Is it US-6?`) or a stray separator left by a typo (`US-6-`,
+ * `US-0006-0001-`) is a genuinely malformed ID and must still be reported.
  */
-const NO_TRUNCATION = "(?![-*?])";
+const NO_TRUNCATION = "(?!-[*?])";
 
 const STRICT_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
   CAP: /\bCAP-\d{4}\b/g,
@@ -95,11 +97,17 @@ export function extractAllIds(text: string): string[] {
  */
 const SCANNED_FENCE_LANGUAGES = new Set(["gherkin", "feature", "cucumber"]);
 
-/** Opening fence: marker run, then an optional info string. */
-const FENCE_OPEN_RE = /^[ \t]*(`{3,}|~{3,})[ \t]*([^\s`]*)/;
+/**
+ * Opening fence: marker run, then an optional info string.
+ *
+ * At most 3 leading spaces, per CommonMark. Four or more makes the line an
+ * indented code block, not a fence opener — accepting it would swallow the rest
+ * of the document (or up to the next fence-looking line) and hide real IDs.
+ */
+const FENCE_OPEN_RE = /^ {0,3}(`{3,}|~{3,})[ \t]*([^\s`]*)/;
 
 /** Closing fence: marker run and nothing else (CommonMark forbids an info string). */
-const FENCE_CLOSE_RE = /^[ \t]*(`{3,}|~{3,})[ \t]*$/;
+const FENCE_CLOSE_RE = /^ {0,3}(`{3,}|~{3,})[ \t]*$/;
 
 /**
  * Blanks the body of illustrative fenced code blocks while preserving the line

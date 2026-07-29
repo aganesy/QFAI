@@ -20,6 +20,15 @@ describe("extractInvalidIds", () => {
     expect(extractInvalidIds("Parent: US-0006-1", ["US"])).toEqual(["US-0006-1"]);
   });
 
+  it("suppresses only a wildcard segment, not ordinary trailing punctuation", () => {
+    // `?` as sentence punctuation and a stray separator left by a typo are
+    // malformed IDs, not prose wildcards.
+    expect(extractInvalidIds("Is it US-6?", ["US"])).toEqual(["US-6"]);
+    expect(extractInvalidIds("Parent: US-6-", ["US"])).toEqual(["US-6"]);
+    expect(extractInvalidIds("Parent: US-0006-0001-", ["US"])).toEqual([]);
+    expect(extractInvalidIds("Parent: US-0006-1-", ["US"])).toEqual(["US-0006-1"]);
+  });
+
   it("accepts canonical IDs", () => {
     expect(extractInvalidIds("Parent: US-0006-0001", ["US"])).toEqual([]);
     expect(extractInvalidIds("Parent: CAP-0001", ["CAP"])).toEqual([]);
@@ -90,6 +99,13 @@ describe("maskFencedCodeBlocks", () => {
   it("does not close on a marker line that carries an info string", () => {
     const text = ["```", "```js", "US-6", "```", "US-7"].join("\n");
     expect(extractInvalidIds(text, ["US"])).toEqual(["US-7"]);
+  });
+
+  it("does not treat a 4-space-indented fence line as a fence opener", () => {
+    // Four or more spaces makes it an indented code block, not a fence; taking
+    // it as an opener would blank the rest of the document.
+    const text = ["a", "    ```text", "US-6", "Parent: US-7"].join("\n");
+    expect(extractInvalidIds(text, ["US"]).sort()).toEqual(["US-6", "US-7"]);
   });
 
   it("keeps a gherkin fence body but still blanks the fence lines", () => {
