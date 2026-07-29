@@ -4,9 +4,11 @@
 
 > Discussion-layer IDs use the `D` prefix (`DUS-`, `DAC-`) so they can never be read as
 > spec-layer IDs (`US-0001`, `AC-0001`) or as a traceability scenario tag (`SC-NNNN-NNNN`).
-> Carry these IDs into the spec layer via the `Source:` field in
-> `qfai-sdd/templates/specs/spec/02_User-stories.md` and the `Source` column in
-> `03_Acceptance-Criteria.md`.
+> Carry these IDs into the spec layer as `<pack-id>#<discussion-id>`: the `- Source:` line of
+> the matching `## US-NNNN` block in `qfai-sdd/templates/specs/spec/02_User-stories.md`, and
+> the `# Source:` comment inside the AC's Gherkin block in `03_Acceptance-Criteria.md`. The
+> AC Catalog table has no `Source` column — provenance lives in the required Gherkin block so
+> a spec that omits the optional catalog still carries it.
 
 ### DUS-001: <Story Title>
 

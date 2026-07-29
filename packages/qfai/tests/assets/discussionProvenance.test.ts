@@ -35,6 +35,37 @@ describe("discussion provenance carried into the spec layer", () => {
     }
   });
 
+  // `inspectLatestDiscussionPack()` does not check ID shape, so a pack written
+  // before the `D` prefix is still "ready". Requiring a `DUS-` form would make an
+  // agent either invent an ID the pack does not contain or ship an off-contract
+  // value; the pack half already disambiguates the legacy ID.
+  it("accepts legacy unprefixed pack IDs verbatim", async () => {
+    for (const dir of SPEC_TEMPLATE_DIRS) {
+      const stories = await readTemplate(dir, "02_User-stories.md");
+      expect(stories).toContain("discussion-YYYYMMDDhhmmssSSS#US-001");
+      expect(stories).toContain("Do NOT invent a `DUS-`");
+
+      const criteria = await readTemplate(dir, "03_Acceptance-Criteria.md");
+      expect(criteria).toContain("discussion-YYYYMMDDhhmmssSSS#AC-001-01");
+    }
+  });
+
+  // The Story Workshop is what an agent reads when producing the pack; pointing
+  // it at a column that no longer exists sends it to re-add the column.
+  it("sends the Story Workshop to the Gherkin comment, not a catalog column", async () => {
+    const workshop = await Promise.all(
+      [
+        "packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/03_Story-Workshop.md",
+        ".qfai/assistant/skills/qfai-discussion/templates/03_Story-Workshop.md",
+      ].map((relative) => readFile(path.join(repoRoot, relative), "utf-8")),
+    );
+    for (const content of workshop) {
+      expect(content).toContain("`# Source:` comment inside the AC's Gherkin block");
+      expect(content).toContain("`<pack-id>#<discussion-id>`");
+      expect(content).not.toContain("the `Source` column in");
+    }
+  });
+
   // The AC Catalog is optional. Holding Source only there meant a spec that
   // skipped it had nowhere to record provenance at all.
   it("keeps the AC Source in the required Gherkin block and nowhere else", async () => {

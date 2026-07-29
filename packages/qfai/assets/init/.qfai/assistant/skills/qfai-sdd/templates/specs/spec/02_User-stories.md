@@ -24,3 +24,9 @@
 > prose, and never renumber it into the spec-local `US-0001` form. Discussion IDs are
 > `D`-prefixed precisely so they cannot be mistaken for spec IDs, and the `_policies`
 > lower-layer-ID rule does not apply to them (it covers spec-local 4-digit IDs only).
+>
+> **Packs written before the `D` prefix** carry unprefixed IDs (`US-001`, `AC-001-01`).
+> Copy those verbatim too: `discussion-YYYYMMDDhhmmssSSS#US-001`. Do NOT invent a `DUS-`
+> form for them — that ID does not exist in the pack, so the `Source` would resolve to
+> nothing. The pack half already disambiguates it from the spec-local `US-0001`, and the
+> pack is immutable: rewriting its IDs to match this template is not a migration.

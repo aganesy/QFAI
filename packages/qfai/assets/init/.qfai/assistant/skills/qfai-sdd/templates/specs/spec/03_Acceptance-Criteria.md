@@ -25,6 +25,10 @@ Scenario: <scenario title>
 > every pack numbers its criteria from `DAC-001-01`, so a bare `DAC-001-01` cannot say which
 > pack it came from, and two packs updating the same spec would collide. Use `-` when the AC
 > has no discussion ancestor. Keep the discussion ID verbatim; do not paraphrase it into prose.
+>
+> Packs written before the `D` prefix carry unprefixed IDs (`AC-001-01`). Copy those verbatim
+> as well — `discussion-YYYYMMDDhhmmssSSS#AC-001-01` — rather than inventing a `DAC-` form
+> the pack does not contain.
 
 ## AC Catalog (optional)
 
