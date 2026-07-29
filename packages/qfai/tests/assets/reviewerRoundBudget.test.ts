@@ -34,12 +34,7 @@ describe("reviewer gates terminate", () => {
     it(`${tree}: each stage's reviewer remit is bounded`, async () => {
       const content = await read(tree, DELEGATION);
       expect(content).toContain("### Reviewer remit (in scope per stage)");
-      for (const stage of [
-        "/qfai-discussion",
-        "/qfai-sdd",
-        "/qfai-atdd",
-        "/qfai-implement",
-      ]) {
+      for (const stage of ["/qfai-discussion", "/qfai-sdd", "/qfai-atdd", "/qfai-implement"]) {
         expect(content).toContain(stage);
       }
       expect(content).toContain("Out of scope (record and defer)");
