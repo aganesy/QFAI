@@ -3,7 +3,14 @@ import path from "node:path";
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
 import { collectScenarioFiles } from "./discovery.js";
-import { buildSpecScope, isPathInSpecScope, type SpecScope } from "./specScope.js";
+import { collectSpecEntries } from "./specLayout.js";
+import { issue } from "./validators/utils.js";
+import {
+  isFindingInSpecScope,
+  isPathInSpecScope,
+  resolveSpecScope,
+  type SpecScope,
+} from "./specScope.js";
 import {
   buildScCoverage,
   collectScIdsFromScenarioFiles,
@@ -99,19 +106,36 @@ export async function validateProject(
   const { config, issues: configIssues } = resolved;
   const profile: ValidationProfile = options.profile ?? "full";
 
-  const specScope = buildSpecScope(options.specIds);
   const specsRoot = resolvePath(root, config, "specsDir");
+  const scopeRoots = { root, specsRoot };
+  const { scope: requestedScope, invalid: invalidSpecValues } = resolveSpecScope(options.specIds);
+  const scopeIssues = await buildSpecScopeIssues(
+    specsRoot,
+    requestedScope,
+    invalidSpecValues,
+    options.specIds,
+  );
+  // A `--spec` that resolves to nothing must not silently widen to the whole
+  // repo: keep the (possibly unsatisfiable) scope so no spec-owned finding
+  // slips through while `QFAI-SCOPE-00x` reports the misuse.
+  const specScope = requestedScope;
 
   const findings = [
     ...configIssues,
+    ...scopeIssues,
     ...(await runProfileValidators(root, config, profile, options.platform, specScope)),
   ];
   const scopedFindings = findings.filter((finding) =>
-    isPathInSpecScope(finding.file, specsRoot, specScope),
+    isFindingInSpecScope(finding, scopeRoots, specScope),
   );
   const { issues, waivers } = await applyWaivers(root, scopedFindings);
 
-  const scenarioFiles = await collectScenarioFiles(specsRoot);
+  // Traceability is part of the same scoped answer: leaving every spec's
+  // Examples in would report a sibling's SC totals, missing IDs and refs as the
+  // coverage of the requested slice.
+  const scenarioFiles = (await collectScenarioFiles(specsRoot)).filter((file) =>
+    isPathInSpecScope(file, scopeRoots, specScope),
+  );
   const scIds = await collectScIdsFromScenarioFiles(scenarioFiles);
   const { refs: scTestRefs, scan: testFiles } = await collectScTestReferences(
     root,
@@ -132,6 +156,65 @@ export async function validateProject(
     },
     waivers,
   };
+}
+
+/**
+ * Reports a `--spec` that cannot select anything.
+ *
+ * Without this, `--spec nope` collapsed to "no scoping" and validated the whole
+ * repo, and `--spec 9999` produced an empty target set — both exiting 0 while
+ * never looking at the spec the operator named. Both are `error`, so a gate
+ * fails instead of reporting a green run on the wrong thing.
+ */
+async function buildSpecScopeIssues(
+  specsRoot: string,
+  scope: SpecScope | undefined,
+  invalid: readonly string[],
+  requested: readonly string[] | undefined,
+): Promise<Issue[]> {
+  if (requested === undefined || requested.length === 0) {
+    return [];
+  }
+  const issues: Issue[] = [];
+  if (invalid.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-SCOPE-001",
+        `--spec の値を spec 番号として解釈できません: ${invalid.join(", ")}`,
+        "error",
+        specsRoot,
+        "specScope.value",
+        Array.from(invalid),
+        "canonical",
+        "`--spec 0003` / `--spec spec-0003` のように 1-4 桁の spec 番号を指定してください。",
+      ),
+    );
+  }
+  if (scope === undefined || scope.size === 0) {
+    return issues;
+  }
+  const entries = await collectSpecEntries(specsRoot);
+  const existing = new Set(entries.map((entry) => entry.specNumber));
+  const missing = Array.from(scope)
+    .filter((specNumber) => !existing.has(specNumber))
+    .sort();
+  if (missing.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-SCOPE-002",
+        `--spec で指定された spec ディレクトリが存在しません: ${missing
+          .map((specNumber) => `spec-${specNumber}`)
+          .join(", ")}`,
+        "error",
+        specsRoot,
+        "specScope.exists",
+        missing.map((specNumber) => `spec-${specNumber}`),
+        "canonical",
+        "spec ディレクトリ名を確認してください。存在しない spec を指定した run は対象を1件も検証しません。",
+      ),
+    );
+  }
+  return issues;
 }
 
 async function runProfileValidators(

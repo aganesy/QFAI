@@ -4,6 +4,7 @@ import path from "node:path";
 import type { FailOn, OutputFormat } from "../../core/config.js";
 import { loadConfig } from "../../core/config.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
+import { normalizeSpecId } from "../../core/specScope.js";
 import { buildCiProfileIssue, createProfileGuardResult } from "../../core/phasePolicy.js";
 import { toRelativePath } from "../../core/paths.js";
 import type { Issue, ValidationProfile, ValidationResult } from "../../core/types.js";
@@ -108,6 +109,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // the stale path on this very run.
   const configuredValidateJsonPath = configResult.config.output.validateJsonPath;
   const configTargetsLegacyPath = configTargetsLegacyValidateJsonPath(configuredValidateJsonPath);
+  const scopedSpecIds = options.specIds ?? [];
   // Post-sunset, only emit the deprecation finding when there is
   // observable evidence (config or on-disk file) that a consumer still
   // depends on the legacy path. Otherwise every clean validate run on
@@ -166,27 +168,60 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       runLogPath,
     });
   }
-  // Always-latest report + profile-suffixed report.
-  // Post-sunset, refuse to write to the configured legacy path: the
-  // migration gate must direct the operator to update their config
-  // instead of silently producing a stale-named file. The accompanying
-  // deprecation issue (severity=error) already carries the actionable
-  // text; here we just skip the physical write.
-  if (!refuseConfiguredLegacyWrite) {
-    await emitJson(normalized, root, configuredValidateJsonPath);
-    const profileLabel = normalized.profile ?? options.profile ?? "full";
-    const profileSuffixedRel = profileSuffixedReportPath(configuredValidateJsonPath, profileLabel);
-    await emitJson(normalized, root, profileSuffixedRel);
-  }
-  // Legacy path — written only during the deprecation window AND only
-  // if the configured path is NOT already the legacy path (avoid
-  // double-write to the same file when the operator's config still
-  // points there pre-sunset).
-  if (legacyWriteEnabled && !configTargetsLegacyPath) {
-    await emitJson(normalized, root, LEGACY_VALIDATE_JSON_REL);
+  if (scopedSpecIds.length > 0) {
+    // A `--spec` run is one worker's view of one slice. Writing it to the
+    // shared `validate.json` / `validate-<profile>.json` / legacy path would
+    // let parallel Slice workers race on the same files, leaving the last
+    // finisher's single spec looking like a repo-wide PASS to every downstream
+    // reader. Scoped runs get their own file instead.
+    await emitJson(normalized, root, scopedReportPath(configuredValidateJsonPath, scopedSpecIds));
+  } else {
+    // Always-latest report + profile-suffixed report.
+    // Post-sunset, refuse to write to the configured legacy path: the
+    // migration gate must direct the operator to update their config
+    // instead of silently producing a stale-named file. The accompanying
+    // deprecation issue (severity=error) already carries the actionable
+    // text; here we just skip the physical write.
+    if (!refuseConfiguredLegacyWrite) {
+      await emitJson(normalized, root, configuredValidateJsonPath);
+      const profileLabel = normalized.profile ?? options.profile ?? "full";
+      const profileSuffixedRel = profileSuffixedReportPath(
+        configuredValidateJsonPath,
+        profileLabel,
+      );
+      await emitJson(normalized, root, profileSuffixedRel);
+    }
+    // Legacy path — written only during the deprecation window AND only
+    // if the configured path is NOT already the legacy path (avoid
+    // double-write to the same file when the operator's config still
+    // points there pre-sunset).
+    if (legacyWriteEnabled && !configTargetsLegacyPath) {
+      await emitJson(normalized, root, LEGACY_VALIDATE_JSON_REL);
+    }
   }
 
   return willFail ? 1 : 0;
+}
+
+/**
+ * Report path for a `--spec`-scoped run: `<dir>/<base>.spec-0003+0004.json`.
+ *
+ * Derived from the configured path so a custom `output.validateJsonPath` still
+ * lands next to its siblings, and deterministic in the spec ids so re-running
+ * the same worker overwrites only its own file.
+ */
+export function scopedReportPath(configuredPath: string, specIds: readonly string[]): string {
+  const normalized = configuredPath.replace(/\\/g, "/");
+  const slash = normalized.lastIndexOf("/");
+  const dir = slash === -1 ? "" : normalized.slice(0, slash + 1);
+  const base = slash === -1 ? normalized : normalized.slice(slash + 1);
+  const dot = base.lastIndexOf(".");
+  const stem = dot === -1 ? base : base.slice(0, dot);
+  const ext = dot === -1 ? "" : base.slice(dot);
+  const suffix = Array.from(new Set(specIds.map((id) => normalizeSpecId(id) ?? id)))
+    .sort()
+    .join("+");
+  return `${dir}${stem}.spec-${suffix}${ext}`;
 }
 
 /**
@@ -529,6 +564,8 @@ function resolveJsonPath(root: string, jsonPath: string): string {
 const GITHUB_ANNOTATION_LIMIT = 100;
 
 const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
+  "QFAI-SCOPE-001": "Every `--spec` value resolves to a 1-4 digit spec number.",
+  "QFAI-SCOPE-002": "Every `--spec` value names a spec directory that exists.",
   E_SPEC_MISSING_FILESET: "Spec Pack required files (01..18) are complete.",
   E_LEDGER_MISSING_COLUMN:
     "Traceability Ledger has all required columns: trace_id,obj_id,init_id,cap_id,flow_id,us_id,ac_id,ex_ids,tc_ids.",
