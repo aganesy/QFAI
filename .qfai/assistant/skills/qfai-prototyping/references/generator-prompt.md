@@ -97,10 +97,15 @@ forms caught:
   `rounded-2xl`, `rounded-3xl`, `rounded-none`. These resolve to
   Tailwind defaults, not `DESIGN.md` tokens.
 - `rounded-sm` / `rounded-md` / `rounded-lg` / `rounded-full` are
-  **allowed**: the schema's `visual.radius` keys are exactly
-  `sm|md|lg|full`, and the mandatory `theme.extend.borderRadius`
-  injection re-binds those four names to the `DESIGN.md` tokens. Same
-  for the side/corner prefixes (`rounded-t-md`, `rounded-tl-lg`, …).
+  **allowed only in an iter whose own envelope re-binds that name**.
+  The schema's `visual.radius` keys are exactly `sm|md|lg|full`, and
+  the mandatory `theme.extend.borderRadius` injection re-binds those
+  four names to the `DESIGN.md` tokens — but the gate verifies that in
+  the iter's html rather than assuming it. An iter that omits the
+  envelope, drops a key from the `borderRadius` map, or binds it to a
+  different value renders Tailwind's default, and the alias is flagged
+  exactly as before. Same for the side/corner prefixes
+  (`rounded-t-md`, `rounded-tl-lg`, …).
 
 ### 4. box-shadow literal ban (including rgba color slot)
 
@@ -113,12 +118,20 @@ Authored forms caught:
 - Tailwind scale aliases with **no** `DESIGN.md.visual.shadow` key of
   the same name: bare `shadow` (Tailwind's `DEFAULT`), `shadow-xl`,
   `shadow-2xl`, `shadow-inner`, `shadow-none`.
-- `drop-shadow-*` in every form — it resolves through
-  `theme.dropShadow`, which the mandatory envelope does not inject.
-- `shadow-sm` / `shadow-md` / `shadow-lg` are **allowed**: the schema's
-  `visual.shadow` keys are exactly `sm|md|lg`, and the mandatory
+- Every `drop-shadow-<alias>` form, including `drop-shadow-sm|md|lg` —
+  the alias resolves through `theme.dropShadow`, which the mandatory
+  envelope does not inject, so it renders a Tailwind default no matter
+  what `visual.shadow` declares. The arbitrary form
+  `drop-shadow-[...]` carries its own literal and is judged like any
+  other arbitrary value: compliant when the literal is one of the
+  `visual.shadow` tokens, drift otherwise.
+- `shadow-sm` / `shadow-md` / `shadow-lg` are **allowed only in an iter
+  whose own envelope re-binds that name**. The schema's `visual.shadow`
+  keys are exactly `sm|md|lg`, and the mandatory
   `theme.extend.boxShadow` injection re-binds those three names to the
-  `DESIGN.md` tokens.
+  `DESIGN.md` tokens — but the gate verifies that in the iter's html
+  rather than assuming it, so an iter with a missing, incomplete, or
+  overwritten `boxShadow` map still has its aliases flagged.
 
 ### Safelisted CSS-wide keywords
 
