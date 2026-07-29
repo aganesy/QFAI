@@ -7,13 +7,13 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
 qfai spells the same layer four ways across shipped artifacts. This table is
 the crosswalk; every artifact MUST use the spelling in its column.
 
-| Code | Word        | Tag                 | Test directory          | `06_Test-Cases.md#Level` | `tdd/test-list.md#Layer` |
-| ---- | ----------- | ------------------- | ----------------------- | ------------------------ | ------------------------ |
-| L1   | Unit        | `layer-unit`        | project convention      | `L1`                     | `Unit`                   |
-| L2   | Component   | `layer-component`   | project convention      | `L2`                     | `Component`              |
-| L3   | Integration | `layer-integration` | `tests/integration/**`  | `L3`                     | `Integration`            |
-| L4   | API         | `layer-api`         | `tests/api/**`          | `L4`                     | `API`                    |
-| L5   | E2E         | `layer-e2e`         | `tests/e2e/**`          | `L5`                     | `E2E`                    |
+| Code | Word        | Tag                 | Test directory         | `06_Test-Cases.md#Level` | `tdd/test-list.md#Layer` |
+| ---- | ----------- | ------------------- | ---------------------- | ------------------------ | ------------------------ |
+| L1   | Unit        | `layer-unit`        | project convention     | `L1`                     | `Unit`                   |
+| L2   | Component   | `layer-component`   | project convention     | `L2`                     | `Component`              |
+| L3   | Integration | `layer-integration` | `tests/integration/**` | `L3`                     | `Integration`            |
+| L4   | API         | `layer-api`         | `tests/api/**`         | `L4`                     | `API`                    |
+| L5   | E2E         | `layer-e2e`         | `tests/e2e/**`         | `L5`                     | `E2E`                    |
 
 Rules:
 
