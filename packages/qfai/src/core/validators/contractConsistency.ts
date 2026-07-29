@@ -104,7 +104,7 @@ type ApiStateEnum = {
  */
 export function collectApiStateEnums(doc: unknown): Map<string, ApiStateEnum> {
   const found = new Map<string, ApiStateEnum>();
-  walk(doc, null, found, new Set());
+  walk(doc, null, found, new Set(), doc);
   return found;
 }
 
@@ -113,6 +113,7 @@ function walk(
   key: string | null,
   out: Map<string, ApiStateEnum>,
   seen: Set<object>,
+  root: unknown,
 ): void {
   if (!node || typeof node !== "object") {
     return;
@@ -124,14 +125,14 @@ function walk(
 
   if (Array.isArray(node)) {
     for (const item of node) {
-      walk(item, key, out, seen);
+      walk(item, key, out, seen, root);
     }
     return;
   }
 
   const record = node as Record<string, unknown>;
   if (key && isStateLikeFieldName(key)) {
-    const values = readStringEnum(record.enum);
+    const values = readFieldEnum(record, root);
     if (values.length > 0) {
       const normalized = normalizeFieldName(key);
       const existing = out.get(normalized);
@@ -144,8 +145,77 @@ function walk(
   }
 
   for (const [childKey, childValue] of Object.entries(record)) {
-    walk(childValue, childKey, out, seen);
+    walk(childValue, childKey, out, seen, root);
   }
+}
+
+/**
+ * Enum domain a state-like property declares, whether inline or behind a local `$ref`.
+ *
+ * `status: { $ref: "#/components/schemas/OrderStatus" }` is the idiomatic OpenAPI shape and the
+ * referencing site carries no `enum` of its own. Without resolving the pointer the domain is only
+ * ever collected under the component name (`orderstatus`), which never reconciles with a DB
+ * contract that bounds the column `status` — the pairing this validator exists to check silently
+ * degrades to a no-op. Resolve it so the values are keyed by the *referencing field* name.
+ */
+function readFieldEnum(record: Record<string, unknown>, root: unknown): string[] {
+  const direct = readStringEnum(record.enum);
+  if (direct.length > 0) {
+    return direct;
+  }
+  return readEnumThroughRef(record.$ref, root, new Set());
+}
+
+/**
+ * Follows a chain of local (`#/...`) `$ref` pointers until one resolves to a node carrying an
+ * `enum`. Remote refs (`other.yaml#/...`, URLs) are out of scope: the validator only reads the
+ * contract files handed to it, so it cannot honestly resolve a pointer into a document it has not
+ * loaded. The visited set makes a self-referential ref cycle terminate instead of recursing.
+ */
+function readEnumThroughRef(ref: unknown, root: unknown, seen: Set<string>): string[] {
+  if (typeof ref !== "string" || !ref.startsWith("#/") || seen.has(ref)) {
+    return [];
+  }
+  seen.add(ref);
+  const target = resolveLocalRef(root, ref);
+  if (!target || typeof target !== "object" || Array.isArray(target)) {
+    return [];
+  }
+  const record = target as Record<string, unknown>;
+  const direct = readStringEnum(record.enum);
+  if (direct.length > 0) {
+    return direct;
+  }
+  return readEnumThroughRef(record.$ref, root, seen);
+}
+
+/** Resolves a JSON-pointer fragment (`#/components/schemas/OrderStatus`) against `root`. */
+function resolveLocalRef(root: unknown, ref: string): unknown {
+  let current: unknown = root;
+  for (const rawSegment of ref.slice(2).split("/")) {
+    if (rawSegment.length === 0) {
+      continue;
+    }
+    // RFC 6901 escaping: `~1` is `/`, `~0` is `~`. Order matters.
+    const segment = rawSegment.replace(/~1/g, "/").replace(/~0/g, "~");
+    if (!current || typeof current !== "object") {
+      return undefined;
+    }
+    if (Array.isArray(current)) {
+      const index = Number(segment);
+      if (!Number.isInteger(index) || index < 0 || index >= current.length) {
+        return undefined;
+      }
+      current = current[index];
+      continue;
+    }
+    const record = current as Record<string, unknown>;
+    if (!Object.prototype.hasOwnProperty.call(record, segment)) {
+      return undefined;
+    }
+    current = record[segment];
+  }
+  return current;
 }
 
 function readStringEnum(value: unknown): string[] {
@@ -169,6 +239,20 @@ const CHECK_IN_PATTERN = /\bCHECK\s*\(\s*\(?\s*"?([A-Za-z_][A-Za-z0-9_]*)"?\s+IN
 const CREATE_TYPE_ENUM_PATTERN =
   /\bCREATE\s+TYPE\s+(?:[A-Za-z_][A-Za-z0-9_]*\s*\.\s*)?"?([A-Za-z_][A-Za-z0-9_]*)"?\s+AS\s+ENUM\s*\(([^)]*)\)/gi;
 const INLINE_ENUM_PATTERN = /^\s*"?([A-Za-z_][A-Za-z0-9_]*)"?\s+ENUM\s*\(([^)]*)\)/gim;
+
+// Column declarations that USE a named enum type. `CREATE TYPE ... AS ENUM` binds values to the
+// type name, not to any column, so the domain has to be carried across the usage edge before it
+// can be reconciled with an API field name. Each pattern captures (column, type):
+//   1. a column line inside a CREATE TABLE body — `status order_status NOT NULL`
+//   2. `ALTER TABLE ... ADD COLUMN status order_status`
+//   3. `ALTER TABLE ... ALTER COLUMN status [SET DATA] TYPE order_status`
+// A schema qualifier (`public.order_status`) is consumed and ignored: types are matched by their
+// bare name, which is how the declaration side records them too.
+const NAMED_TYPE_USAGE_PATTERNS = [
+  /(?:^|[(,])\s*"?([A-Za-z_][A-Za-z0-9_]*)"?\s+(?:"?[A-Za-z_][A-Za-z0-9_]*"?\s*\.\s*)?"?([A-Za-z_][A-Za-z0-9_]*)"?/gim,
+  /\bADD\s+(?:COLUMN\s+)?(?:IF\s+NOT\s+EXISTS\s+)?"?([A-Za-z_][A-Za-z0-9_]*)"?\s+(?:"?[A-Za-z_][A-Za-z0-9_]*"?\s*\.\s*)?"?([A-Za-z_][A-Za-z0-9_]*)"?/gi,
+  /\bALTER\s+(?:COLUMN\s+)?"?([A-Za-z_][A-Za-z0-9_]*)"?\s+(?:SET\s+DATA\s+)?TYPE\s+(?:"?[A-Za-z_][A-Za-z0-9_]*"?\s*\.\s*)?"?([A-Za-z_][A-Za-z0-9_]*)"?/gi,
+] as const;
 
 async function collectDbStateDomains(dbFiles: string[]): Promise<Map<string, DbDomain>> {
   const domains = new Map<string, DbDomain>();
@@ -203,6 +287,12 @@ async function collectDbStateDomains(dbFiles: string[]): Promise<Map<string, DbD
 export function collectSqlEnumDomains(text: string): Map<string, string[]> {
   const domains = new Map<string, string[]>();
   const patterns = [CHECK_IN_PATTERN, CREATE_TYPE_ENUM_PATTERN, INLINE_ENUM_PATTERN];
+  const namedTypes = new Map<string, { name: string; literals: string[] }>();
+
+  const add = (name: string, literals: string[]): void => {
+    const existing = domains.get(name);
+    domains.set(name, existing ? Array.from(new Set([...existing, ...literals])) : literals);
+  };
 
   for (const pattern of patterns) {
     const scoped = new RegExp(pattern.source, pattern.flags);
@@ -211,14 +301,80 @@ export function collectSqlEnumDomains(text: string): Map<string, string[]> {
       const name = match[1];
       const literals = readSqlStringLiterals(match[2] ?? "");
       if (name && literals.length > 0) {
-        const existing = domains.get(name);
-        domains.set(name, existing ? Array.from(new Set([...existing, ...literals])) : literals);
+        // `CREATE TYPE` binds values to a TYPE, not to a field. Hold it aside until the column
+        // usages are known so the type name is not published as if it were a column.
+        if (pattern === CREATE_TYPE_ENUM_PATTERN) {
+          const key = name.toLowerCase();
+          const existing = namedTypes.get(key);
+          namedTypes.set(key, {
+            name,
+            literals: existing
+              ? Array.from(new Set([...existing.literals, ...literals]))
+              : literals,
+          });
+        } else {
+          add(name, literals);
+        }
       }
       match = scoped.exec(text);
     }
   }
 
+  // Carry each named enum type's domain onto the columns declared with it. Without this the
+  // values stay keyed by the type name (`order_status`), so a column `status order_status` is
+  // invisible to a reconciliation keyed on the API field name `status`.
+  const resolved = resolveNamedTypeColumns(text, namedTypes);
+  for (const [column, literals] of resolved.columns.entries()) {
+    add(column, literals);
+  }
+  // Fall back to the type name only for types whose column usage is not visible here (declared in
+  // one contract file, used in another). Publishing it alongside a resolved column would report
+  // the same contradiction twice — once as `status`, once as `order_status`.
+  for (const [key, entry] of namedTypes.entries()) {
+    if (!resolved.usedTypes.has(key)) {
+      add(entry.name, entry.literals);
+    }
+  }
+
   return domains;
+}
+
+/**
+ * Maps `column -> values` for every column declared with one of `namedTypes`, and reports which
+ * type keys were consumed so the caller can suppress the now-redundant type-name entry.
+ *
+ * The type-name filter is what keeps the column patterns safe: they are permissive enough to
+ * match ordinary DDL noise, but a capture is only kept when its second token is a type this file
+ * actually declared as an enum, which no keyword or built-in type will be.
+ */
+function resolveNamedTypeColumns(
+  text: string,
+  namedTypes: Map<string, { name: string; literals: string[] }>,
+): { columns: Map<string, string[]>; usedTypes: Set<string> } {
+  const columns = new Map<string, string[]>();
+  const usedTypes = new Set<string>();
+  if (namedTypes.size === 0) {
+    return { columns, usedTypes };
+  }
+  for (const pattern of NAMED_TYPE_USAGE_PATTERNS) {
+    const scoped = new RegExp(pattern.source, pattern.flags);
+    let match: RegExpExecArray | null = scoped.exec(text);
+    while (match !== null) {
+      const column = match[1];
+      const typeKey = match[2]?.toLowerCase();
+      const entry = typeKey ? namedTypes.get(typeKey) : undefined;
+      if (column && typeKey && entry) {
+        usedTypes.add(typeKey);
+        const existing = columns.get(column);
+        columns.set(
+          column,
+          existing ? Array.from(new Set([...existing, ...entry.literals])) : [...entry.literals],
+        );
+      }
+      match = scoped.exec(text);
+    }
+  }
+  return { columns, usedTypes };
 }
 
 function readSqlStringLiterals(list: string): string[] {
