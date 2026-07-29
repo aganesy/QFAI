@@ -66,8 +66,21 @@ Every major artifact in the stage should include this table schema:
     Request).
   - _Apply a named fix_ — one **verification review** of exactly that fix is
     permitted and does not consume budget (it is round 2b, not round 3). Its
-    remit is the named fix only; it may not raise new findings, and it returns
-    `PASS` or escalates again.
+    remit is the named fix only. It may not raise findings unrelated to that
+    fix, but a defect the fix **introduced or exposed** is in remit and MUST be
+    reported rather than passed over: verifying only the named lines and
+    returning `PASS` while a regression sits next to them is a false `PASS`.
+    Such a finding escalates immediately (see the severity floor below) and
+    still does not start a round 3. The review returns `PASS` or escalates
+    again.
+  - **Severity floor on the exit.** _Accept as Open Question_ is NOT available
+    for a finding that names a concrete security defect, data loss or
+    corruption, or a correctness defect that would break a released contract.
+    Present the user only _apply a named fix_ or _drop the item from scope_ for
+    those, and say why the third option is withheld. Without this the general
+    exit is a route around "deferring such a finding to an Open Question so a
+    `PASS` can be returned is prohibited" — one that needs no lateness and no
+    reviewer consent, only a user click.
 - The round number MUST be recorded on each reviewer response
   (`Round:` in the shared response template).
 
@@ -88,6 +101,9 @@ Every major artifact in the stage should include this table schema:
   round budget is spent. It is still not a third round — no further review is
   started, the finding goes straight to the user with its evidence. Deferring
   such a finding to an Open Question so a `PASS` can be returned is prohibited.
+  That prohibition does not depend on lateness or on who proposes the deferral:
+  the escalation exit in the round budget withholds _Accept as Open Question_
+  for this same class, so a user choice cannot supersede it either.
 
 ### Reviewer remit (in scope per stage)
 

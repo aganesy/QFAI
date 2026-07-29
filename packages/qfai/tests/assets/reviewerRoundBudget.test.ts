@@ -37,6 +37,33 @@ describe("reviewer gates terminate", () => {
       expect(content).toContain("it is round 2b, not round 3");
     });
 
+    it(`${tree}: the exit withholds accept-as-OQ for a critical finding`, async () => {
+      const content = await read(tree, DELEGATION);
+      // Without this, the general exit is a route around the severity floor
+      // that needs no lateness and no reviewer consent — only a user click.
+      expect(content).toContain("**Severity floor on the exit.**");
+      expect(content).toContain("_Accept as Open Question_ is NOT available");
+      expect(content).toContain("only _apply a named fix_ or _drop the item from scope_");
+      // Both directions must say it, so neither section reads as the whole rule.
+      expect(content).toContain(
+        "the escalation exit in the round budget withholds _Accept as Open Question_",
+      );
+    });
+
+    it(`${tree}: round 2b may report a regression the named fix caused`, async () => {
+      const content = await read(tree, DELEGATION);
+      // The convergence rule already accepts that a fix introduces or exposes
+      // findings; a 2b reviewer that may not report one can only return a
+      // false PASS or break the rule.
+      expect(content).toContain(
+        "a defect the fix **introduced or exposed** is in remit and MUST be\n    reported",
+      );
+      expect(content).toContain("returning `PASS` while a regression sits next to them");
+      expect(content).toContain("still does not start a round 3");
+      // The old absolute wording must be gone.
+      expect(content).not.toContain("it may not raise new findings");
+    });
+
     it(`${tree}: a late high-severity finding still blocks`, async () => {
       const content = await read(tree, DELEGATION);
       expect(content).toContain("**Severity overrides lateness.**");
