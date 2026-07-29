@@ -9,18 +9,10 @@ const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
 
-/** Returns the `## Parallelization Policy` body. */
-function policy(content: string): string {
-  // Anchor on the heading LINE — the phrase also appears as a cross-reference
-  // inside CRITICAL CONSTRAINTS.
-  const start = content.indexOf("\n## Parallelization Policy\n");
-  if (start === -1) {
-    return "";
-  }
-  const rest = content.slice(start + 1);
-  const next = rest.indexOf("\n## ");
-  return next === -1 ? rest : rest.slice(0, next);
-}
+const REFERENCE = "assistant/skills/qfai-implement/references/parallelization-policy.md";
+
+/** The full rules live in a reference file; the skill keeps the summary. */
+const policy = (tree: string): Promise<string> => read(tree, REFERENCE);
 
 describe("qfai-implement states one parallelization policy", () => {
   for (const tree of QFAI_TREES) {
@@ -36,8 +28,8 @@ describe("qfai-implement states one parallelization policy", () => {
     it(`${tree}: states precedence between the technical and consent gates`, async () => {
       const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
       expect(skill).toContain("**both must hold**");
-      expect(skill).toContain("User approval cannot
-  override a technical DENY.");
+      expect(skill).toContain("User approval cannot");
+      expect(skill).toContain("override a technical DENY.");
       expect(skill).toContain("sole authority");
     });
 
