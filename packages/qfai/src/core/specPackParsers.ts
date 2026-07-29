@@ -93,8 +93,19 @@ export type TestCaseTableResolution =
   | { table: MarkdownTable; source: "section" | "header-match" }
   | { table: null; reason: "no-table" | "no-tc-id-column" };
 
-/** Matches the template heading `## Test Case Table (required)` and its bare `## Test Case Table` form. */
-const TEST_CASE_TABLE_HEADING = /^ {0,3}(#{1,6})\s*test\s*case\s*table\b/i;
+/**
+ * Matches the template heading `## Test Case Table (required)` and its bare
+ * `## Test Case Table` form — and nothing else.
+ *
+ * The suffix is limited to a single parenthesised qualifier (so a translated
+ * `(必須)` still matches) and the heading must then end. A trailing word makes
+ * it a different section: `## Test Case Table Format` / `## Test Case Table
+ * Notes` document the format, and treating one of those as the named section
+ * hands the validators an illustration table — or, when it holds no `TC-ID`
+ * table at all, produces an `unresolved` result even though the real table is
+ * right there in the document.
+ */
+const TEST_CASE_TABLE_HEADING = /^ {0,3}(#{1,6})\s*test\s*case\s*table\s*(?:\([^)]*\))?\s*$/i;
 
 /** Any ATX heading, with the 0-3 leading spaces CommonMark permits. */
 const ANY_HEADING = /^ {0,3}(#{1,6})\s+\S/;
@@ -103,31 +114,78 @@ const ANY_HEADING = /^ {0,3}(#{1,6})\s+\S/;
 const FENCE_LINE = /^ {0,3}(`{3,}|~{3,})/;
 
 /**
- * Blanks fenced code blocks, preserving line count.
+ * Removes the HTML-comment regions of a single line.
  *
- * `06_Test-Cases.md` often documents its own format in a fenced sample. Without
- * this, an illustrative `## Test Case Table` plus `TC-ID` table inside a fence
- * is selected as the named section and its example IDs are handed to the
- * validators and the report — and for a heading-less legacy document it flips
- * a previously correct resolution into a wrong one.
+ * Returns the visible remainder plus whether a comment is still open at the end
+ * of the line, so the caller can carry the state across lines.
  */
-function maskFences(text: string): string {
+function maskLineComments(line: string, inComment: boolean): { text: string; open: boolean } {
+  let visible = "";
+  let index = 0;
+  let open = inComment;
+
+  while (index < line.length) {
+    if (open) {
+      const close = line.indexOf("-->", index);
+      if (close === -1) {
+        return { text: visible, open: true };
+      }
+      index = close + 3;
+      open = false;
+      continue;
+    }
+    const start = line.indexOf("<!--", index);
+    if (start === -1) {
+      visible += line.slice(index);
+      break;
+    }
+    visible += line.slice(index, start);
+    index = start + 4;
+    open = true;
+  }
+  return { text: visible, open };
+}
+
+/**
+ * Blanks the regions of `06_Test-Cases.md` that are not the spec, preserving
+ * line count: fenced code blocks and HTML comments.
+ *
+ * `06_Test-Cases.md` often documents its own format in a fenced sample or a
+ * commented-out block. Without this, an illustrative `## Test Case Table` plus
+ * `TC-ID` table inside one is selected as the named section and its example IDs
+ * are handed to the validators and the report — and for a heading-less legacy
+ * document it flips a previously correct resolution into a wrong one, because
+ * the hidden sample outranks the real table.
+ *
+ * Fence state wins over comment state: `<!--` inside a fenced sample is sample
+ * text, not a comment opener, so an unclosed one cannot swallow the rest of the
+ * document. Comments are stripped before the fence check on a line, so a fence
+ * marker that only appears inside a comment does not open a block either.
+ */
+function maskNonSpecRegions(text: string): string {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   let open: { marker: string; length: number } | null = null;
+  let inComment = false;
+
   return lines
     .map((line) => {
-      const fence = FENCE_LINE.exec(line)?.[1];
-      if (open === null) {
-        if (fence) {
-          open = { marker: fence.charAt(0), length: fence.length };
-          return "";
+      if (open !== null) {
+        const closing = FENCE_LINE.exec(line)?.[1];
+        if (closing && closing.charAt(0) === open.marker && closing.length >= open.length) {
+          open = null;
         }
-        return line;
+        return "";
       }
-      if (fence && fence.charAt(0) === open.marker && fence.length >= open.length) {
-        open = null;
+
+      const masked = maskLineComments(line, inComment);
+      inComment = masked.open;
+
+      const fence = FENCE_LINE.exec(masked.text)?.[1];
+      if (fence) {
+        open = { marker: fence.charAt(0), length: fence.length };
+        return "";
       }
-      return "";
+      return masked.text;
     })
     .join("\n");
 }
@@ -185,8 +243,9 @@ function extractTestCaseTableSection(text: string): string | null {
  * as "all TCs covered".
  */
 export function resolveTestCaseTable(rawText: string): TestCaseTableResolution {
-  // Illustrative headings and tables inside fenced samples are not the spec.
-  const text = maskFences(rawText);
+  // Illustrative headings and tables inside fenced samples or HTML comments
+  // are not the spec.
+  const text = maskNonSpecRegions(rawText);
   const section = extractTestCaseTableSection(text);
   if (section !== null) {
     const sectionTables = parseAllMarkdownTables(section);

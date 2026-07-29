@@ -131,6 +131,99 @@ describe("resolveTestCaseTable", () => {
     expect(resolved).toMatchObject({ source: "header-match" });
   });
 
+  it("ignores a heading and table hidden inside an HTML comment", () => {
+    // Only fences were masked, so a commented-out format sample placed after a
+    // heading-less legacy table outranked the real one.
+    const doc = [
+      "# 06 Test Cases",
+      "",
+      ...TC_TABLE,
+      "",
+      "<!--",
+      "## Test Case Table (required)",
+      "",
+      "| TC-ID   | Level |",
+      "| ------- | ----- |",
+      "| TC-9999 | unit  |",
+      "-->",
+      "",
+    ].join("\n");
+
+    const resolved = resolveTestCaseTable(doc);
+    expect(resolved.table?.rows.map((row) => row[0])).toEqual(["TC-0001"]);
+    expect(resolved).toMatchObject({ source: "header-match" });
+  });
+
+  it("resumes reading after the comment closes on the same line", () => {
+    const doc = [
+      "# 06 Test Cases",
+      "",
+      "<!-- draft --> ## Test Case Table (required)",
+      "",
+      ...TC_TABLE,
+      "",
+    ].join("\n");
+
+    expect(resolveTestCaseTable(doc)).toMatchObject({ source: "section" });
+  });
+
+  it("does not let a comment marker inside a fenced sample swallow the document", () => {
+    // Fence state wins over comment state, so an unclosed `<!--` in a sample
+    // must not blank everything that follows it.
+    const doc = [
+      "# 06 Test Cases",
+      "",
+      "## Format",
+      "",
+      "```markdown",
+      "<!-- unclosed sample comment",
+      "```",
+      "",
+      "## Test Case Table (required)",
+      "",
+      ...TC_TABLE,
+      "",
+    ].join("\n");
+
+    const resolved = resolveTestCaseTable(doc);
+    expect(resolved.table?.rows.map((row) => row[0])).toEqual(["TC-0001"]);
+    expect(resolved).toMatchObject({ source: "section" });
+  });
+
+  it("does not treat a suffixed heading as the named section", () => {
+    // `## Test Case Table Format` / `... Notes` document the format; matching
+    // them made a heading-less legacy document resolve to the illustration —
+    // or to nothing at all when the suffixed section held no TC-ID table.
+    for (const heading of ["## Test Case Table Format", "## Test Case Table Notes"]) {
+      const doc = [
+        "# 06 Test Cases",
+        "",
+        ...TC_TABLE,
+        "",
+        heading,
+        "",
+        "The columns are described below.",
+        "",
+      ].join("\n");
+
+      const resolved = resolveTestCaseTable(doc);
+      expect(resolved.table?.rows.map((row) => row[0])).toEqual(["TC-0001"]);
+      expect(resolved).toMatchObject({ source: "header-match" });
+    }
+  });
+
+  it("still accepts the bare and parenthesised heading forms", () => {
+    for (const heading of [
+      "## Test Case Table",
+      "## Test Case Table (required)",
+      "## Test Case Table (必須)",
+      "###   test case table   ",
+    ]) {
+      const doc = ["# 06 Test Cases", "", heading, "", ...TC_TABLE, ""].join("\n");
+      expect(resolveTestCaseTable(doc)).toMatchObject({ source: "section" });
+    }
+  });
+
   it("ends the section at an indented heading too", () => {
     // 1-3 leading spaces is still a heading in CommonMark; missing that let the
     // section run into an Appendix table.
