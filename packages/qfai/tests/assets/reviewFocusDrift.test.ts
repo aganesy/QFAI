@@ -25,12 +25,7 @@ const discussionRoots = [
  * `validateForbiddenLegacyFiles` rejects at `error` severity, so they must not
  * survive in any shipped review form.
  */
-const RETIRED_CRITERIA = [
-  "taste interview",
-  "3-layer",
-  "option comparison",
-  "selected anchor",
-];
+const RETIRED_CRITERIA = ["taste interview", "3-layer", "option comparison", "selected anchor"];
 
 const REVIEW_FORMS = [
   path.join("templates", "review", "review_request.md"),
@@ -39,9 +34,7 @@ const REVIEW_FORMS = [
 
 /** Strips list markers (`- `, `- [ ] `) and normalizes a `## Review Focus` / `## Checked` bullet. */
 function normalizeBullet(line: string): string {
-  return line
-    .replace(/^\s*-\s*(?:\[[ xX]\]\s*)?/, "")
-    .trim();
+  return line.replace(/^\s*-\s*(?:\[[ xX]\]\s*)?/, "").trim();
 }
 
 /** Returns the bullets of `heading` up to the next `## ` heading. */
@@ -86,10 +79,7 @@ describe("shipped review forms track the canonical UI-bearing review focus", () 
     it(`${label}: review forms carry the same UI-bearing bullets as 14_Review-Request.md`, async () => {
       const canonical = uiBearingOnly(
         sectionBullets(
-          await readFile(
-            path.join(discussionRoot, "templates", "14_Review-Request.md"),
-            "utf-8",
-          ),
+          await readFile(path.join(discussionRoot, "templates", "14_Review-Request.md"), "utf-8"),
           "## Review Focus",
         ),
       );
