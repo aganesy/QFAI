@@ -701,7 +701,7 @@ function normalizeDimensionValue(value: string): string {
       // Only a zero that is redundant is dropped: the number must start
       // at a value boundary (string start, whitespace, `,`, `(`, `/`, or
       // a leading `-`), so `10.5rem` and `1.5rem` are untouched.
-      .replace(/(^|[\s,(\/-])0+\.(\d)/g, "$1.$2")
+      .replace(/(^|[\s,(/-])0+\.(\d)/g, "$1.$2")
   );
 }
 
@@ -1225,5 +1225,8 @@ export function findDesignMdViolations(html: string, dm: DesignMd): DesignMdViol
   // `rounded-xl`, etc.) carry no CSS literal in the rendered HTML
   // and would otherwise slip past every other scanner above.
   scanTailwindUtility(html, dm, out);
-  return out;
+  // The doc contract above promises one entry per distinct {kind, found}
+  // pair; without this call the helper was dead code and the promise was
+  // not kept.
+  return dedupeViolations(out);
 }

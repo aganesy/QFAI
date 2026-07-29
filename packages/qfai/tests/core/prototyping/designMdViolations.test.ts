@@ -271,10 +271,13 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
     // values entirely; named-color drift was silent on the longhand
     // shorthand. Post-fix, each whitespace-separated token is
     // checked against CSS_NAMED_COLORS independently.
+    // #242 also made the return value one entry per distinct {kind, found}
+    // pair, so the repeated `red` collapses; each distinct token is still
+    // reported, which is what this obligation is about.
     const html = '<div style="border-color: red blue green red"></div>';
     const out = findDesignMdViolations(html, sampleDesignMd());
     const colorHits = out.filter((v) => v.kind === "color");
-    expect(colorHits.map((v) => v.found)).toEqual(["red", "blue", "green", "red"]);
+    expect(colorHits.map((v) => v.found)).toEqual(["red", "blue", "green"]);
   });
 
   it("border-color 2-side shorthand flags both tokens", () => {
@@ -567,7 +570,10 @@ describe("findDesignMdViolations — aggregation (TC-3.2.25..28)", () => {
     `;
     const out = findDesignMdViolations(html, sampleDesignMd());
     const colorHits = out.filter((v) => v.kind === "color" && v.found === "#abcdef");
-    expect(colorHits.length).toBe(2);
+    // Both regions are scanned; the shared value is reported once because
+    // #242 de-duplicates on {kind, found}. Scanning coverage is asserted by
+    // the region-specific cases above.
+    expect(colorHits.length).toBe(1);
   });
 
   // TC-3.2.28
