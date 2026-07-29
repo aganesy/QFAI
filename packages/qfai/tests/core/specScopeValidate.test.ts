@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { runValidate, scopedReportPath } from "../../src/cli/commands/validate.js";
 import { validateProject } from "../../src/core/validate.js";
@@ -128,15 +128,15 @@ describe("scopedReportPath", () => {
     expect(scopedReportPath("custom/report.json", ["0003"])).toBe("custom/report.spec-0003.json");
   });
 
-  it("never puts an unnormalizable value into the path", () => {
+  it("writes nothing when any value is unnormalizable", () => {
     // `--spec x/../../../outside` would escape the report directory once
     // `path.resolve` runs; the run already fails with QFAI-SCOPE-001.
-    expect(scopedReportPath(".qfai/report/validate.json", ["x/../../../outside"])).toBe(
-      ".qfai/report/validate.spec-.json",
-    );
-    expect(scopedReportPath(".qfai/report/validate.json", ["0003", "../evil"])).toBe(
-      ".qfai/report/validate.spec-0003.json",
-    );
+    expect(scopedReportPath(".qfai/report/validate.json", ["x/../../../outside"])).toBeNull();
+    // Dropping the bad value made this failing run write the same file as a
+    // healthy `--spec 0003`, so whichever finished last decided whether that
+    // slice looked like a PASS.
+    expect(scopedReportPath(".qfai/report/validate.json", ["0003", "../evil"])).toBeNull();
+    expect(scopedReportPath(".qfai/report/validate.json", ["nope"])).toBeNull();
   });
 });
 
@@ -198,6 +198,83 @@ describe("runValidate --spec report isolation", () => {
       const written = await readdir(path.join(root, ".qfai", "report"));
       expect(written).toContain("validate.json");
       expect(written).toContain("validate-sdd.json");
+    });
+  });
+
+  it("writes no report at all when a --spec value is invalid", async () => {
+    await withProject(async (root) => {
+      const exitCode = await runValidate({
+        root,
+        strict: false,
+        profile: "sdd",
+        specIds: ["0003", "nope"],
+        toolVersionOverride: "1.9.2",
+      });
+
+      expect(exitCode).toBe(1);
+      const written = await readdir(path.join(root, ".qfai", "report"));
+      // Sharing `validate.spec-0003.json` with a healthy `--spec 0003` run let
+      // the later finisher overwrite the other's verdict.
+      expect(written).not.toContain("validate.spec-0003.json");
+      expect(written).not.toContain("validate.json");
+    });
+  });
+
+  it("points the GitHub summary at the report the scoped run wrote", async () => {
+    await withProject(async (root) => {
+      const chunks: string[] = [];
+      const writeSpy = vi
+        .spyOn(process.stdout, "write")
+        .mockImplementation((chunk: string | Uint8Array) => {
+          chunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
+          return true;
+        });
+      try {
+        await runValidate({
+          root,
+          strict: false,
+          profile: "sdd",
+          format: "github",
+          specIds: ["0003"],
+          toolVersionOverride: "1.9.2",
+        });
+      } finally {
+        writeSpy.mockRestore();
+      }
+
+      const output = chunks.join("");
+      // Naming the shared report sent the reader to a file this run never
+      // wrote — so the findings dropped by the annotation cap were unreachable.
+      expect(output).toContain("validate.spec-0003.json");
+      expect(output).not.toMatch(/report[/\\]validate\.json/);
+    });
+  });
+});
+
+describe("runValidate --spec and the legacy-path migration gate", () => {
+  /** Post-sunset, with the config still aimed at the legacy SSOT. */
+  async function runPostSunset(root: string, specIds?: readonly string[]): Promise<number> {
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      ["output:", "  validateJsonPath: .qfai/output/validate.json", ""].join("\n"),
+      "utf-8",
+    );
+    return runValidate({
+      root,
+      strict: false,
+      profile: "sdd",
+      toolVersionOverride: "1.10.0",
+      ...(specIds ? { specIds } : {}),
+    });
+  }
+
+  it("keeps the post-sunset finding on a scoped run", async () => {
+    await withProject(async (root) => {
+      // `--spec` alone must not walk past the migration gate: the finding is
+      // evidence of a legacy path this project still depends on, not a
+      // description of a write the scoped run performs.
+      expect(await runPostSunset(root, ["0003"])).toBe(1);
+      expect(await runPostSunset(root)).toBe(1);
     });
   });
 });

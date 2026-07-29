@@ -119,11 +119,16 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const legacyOnDisk = !legacyWriteEnabled
     ? await pathExists(path.join(root, LEGACY_VALIDATE_JSON_REL))
     : false;
-  // A scoped run writes no shared report at all, so the writer-side notice
-  // would describe a deprecated write that never happens — and fail an
-  // otherwise-clean slice gate under `--strict` / `--fail-on warning`.
-  const emitDeprecationIssue =
-    scopedSpecIds.length === 0 && (legacyWriteEnabled || legacyOnDisk || configTargetsLegacyPath);
+  // A scoped run writes no shared report at all, so the PRE-sunset writer-side
+  // notice would describe a deprecated write that never happens — and fail an
+  // otherwise-clean slice gate under `--strict` / `--fail-on warning`. That is
+  // the only part a scope may suppress. Post-sunset the finding is evidence of
+  // a legacy path this project still depends on (config or stale file), and
+  // suppressing it would let `--spec` alone walk past the migration gate with
+  // exit 0.
+  const emitDeprecationIssue = legacyWriteEnabled
+    ? scopedSpecIds.length === 0
+    : legacyOnDisk || configTargetsLegacyPath;
   // Post-sunset, refuse to write to the configured legacy path. This is
   // the migration gate: the legacy SSOT is dead, the config must be
   // updated. Pre-sunset writes proceed normally (writer-side warning).
@@ -159,13 +164,24 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   });
   const runLogPath = toRelativePath(root, runLog.reportDir);
 
+  // A `--spec` run is one worker's view of one slice, so it writes its own
+  // report rather than the shared one. Resolve it BEFORE the GitHub summary:
+  // pointing that summary at the shared `validate.json` named a file this run
+  // never wrote — either missing, or a stale repo-wide report from another run
+  // — so the findings dropped by the annotation cap were unreachable.
+  const scopedReportRel =
+    scopedSpecIds.length > 0 ? scopedReportPath(configuredValidateJsonPath, scopedSpecIds) : null;
+
   const format = options.format ?? "text";
   if (format === "text") {
     emitText(normalized);
     emitTextRunLog(runLogPath);
   }
   if (format === "github") {
-    const jsonPath = resolveJsonPath(root, configResult.config.output.validateJsonPath);
+    const jsonPath = resolveJsonPath(
+      root,
+      scopedReportRel ?? configResult.config.output.validateJsonPath,
+    );
     emitGitHubOutput(normalized, root, jsonPath, {
       failOn,
       willFail,
@@ -173,12 +189,13 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
     });
   }
   if (scopedSpecIds.length > 0) {
-    // A `--spec` run is one worker's view of one slice. Writing it to the
-    // shared `validate.json` / `validate-<profile>.json` / legacy path would
-    // let parallel Slice workers race on the same files, leaving the last
-    // finisher's single spec looking like a repo-wide PASS to every downstream
-    // reader. Scoped runs get their own file instead.
-    await emitJson(normalized, root, scopedReportPath(configuredValidateJsonPath, scopedSpecIds));
+    // Writing a scoped result to the shared `validate.json` /
+    // `validate-<profile>.json` / legacy path would let parallel Slice workers
+    // race on the same files, leaving the last finisher's single spec looking
+    // like a repo-wide PASS to every downstream reader.
+    if (scopedReportRel !== null) {
+      await emitJson(normalized, root, scopedReportRel);
+    }
   } else {
     // Always-latest report + profile-suffixed report.
     // Post-sunset, refuse to write to the configured legacy path: the
@@ -208,13 +225,36 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
 }
 
 /**
- * Report path for a `--spec`-scoped run: `<dir>/<base>.spec-0003+0004.json`.
+ * Report path for a `--spec`-scoped run: `<dir>/<base>.spec-0003+0004.json`,
+ * or `null` when the scope is not writable.
  *
  * Derived from the configured path so a custom `output.validateJsonPath` still
  * lands next to its siblings, and deterministic in the spec ids so re-running
  * the same worker overwrites only its own file.
+ *
+ * `null` when ANY value is unnormalizable. Two reasons, both load-bearing:
+ * raw user input must never reach a filename (`--spec x/../../../outside`
+ * escapes the report directory once `path.resolve` runs); and dropping the bad
+ * value would make `--spec 0003 --spec nope` — a run that fails with
+ * `QFAI-SCOPE-001` — write the SAME file as a healthy `--spec 0003`, so
+ * whichever finished last decided whether that slice looked like a PASS. The
+ * run's exit code, stdout and run-log still carry the failure.
  */
-export function scopedReportPath(configuredPath: string, specIds: readonly string[]): string {
+export function scopedReportPath(
+  configuredPath: string,
+  specIds: readonly string[],
+): string | null {
+  const normalizedIds: string[] = [];
+  for (const id of specIds) {
+    const normalizedId = normalizeSpecId(id);
+    if (normalizedId === null) {
+      return null;
+    }
+    normalizedIds.push(normalizedId);
+  }
+  if (normalizedIds.length === 0) {
+    return null;
+  }
   const normalized = configuredPath.replace(/\\/g, "/");
   const slash = normalized.lastIndexOf("/");
   const dir = slash === -1 ? "" : normalized.slice(0, slash + 1);
@@ -222,13 +262,6 @@ export function scopedReportPath(configuredPath: string, specIds: readonly strin
   const dot = base.lastIndexOf(".");
   const stem = dot === -1 ? base : base.slice(0, dot);
   const ext = dot === -1 ? "" : base.slice(dot);
-  // Only normalized ids reach the path. An unnormalizable value would be raw
-  // user input in a filename — `--spec x/../../../outside` escapes the report
-  // directory once `path.resolve` runs — and the run already fails with
-  // QFAI-SCOPE-001, so there is nothing legitimate to name it after.
-  const normalizedIds = specIds
-    .map((id) => normalizeSpecId(id))
-    .filter((id): id is string => id !== null);
   const suffix = Array.from(new Set(normalizedIds)).sort().join("+");
   return `${dir}${stem}.spec-${suffix}${ext}`;
 }
