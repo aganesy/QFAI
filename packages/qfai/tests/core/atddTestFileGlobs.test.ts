@@ -15,18 +15,29 @@ describe("deriveAtddFilePattern", () => {
     );
   });
 
+  it("always keeps the structural annotation carriers", () => {
+    // This repository carries its own US annotations in
+    // tests/e2e/qfai-traceability.md; testFileGlobs lists only .ts.
+    const pattern = deriveAtddFilePattern(["packages/*/tests/**/*.test.ts"]);
+    for (const ext of ["feature", "md", "markdown", "ts"]) {
+      expect(pattern).toContain(ext);
+    }
+  });
+
   it("lifts a single extension out of a configured glob", () => {
-    expect(deriveAtddFilePattern(["tests/**/*.py"])).toBe("**/*.py");
+    expect(deriveAtddFilePattern(["tests/**/*.py"])).toBe("**/*.{feature,markdown,md,py}");
   });
 
   it("lifts and merges a brace set", () => {
-    expect(deriveAtddFilePattern(["tests/**/*.{py,pyi}"])).toBe("**/*.{py,pyi}");
+    expect(deriveAtddFilePattern(["tests/**/*.{py,pyi}"])).toBe(
+      "**/*.{feature,markdown,md,py,pyi}",
+    );
   });
 
   it("merges extensions across several globs, deduped and sorted", () => {
     expect(
       deriveAtddFilePattern(["tests/**/*.go", "internal/**/*_test.go", "spec/**/*.feature"]),
-    ).toBe("**/*.{feature,go}");
+    ).toBe("**/*.{feature,go,markdown,md}");
   });
 
   it("falls back when no glob carries a recoverable extension", () => {

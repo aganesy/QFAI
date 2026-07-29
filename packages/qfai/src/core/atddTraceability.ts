@@ -278,13 +278,25 @@ function collectShortIds(text: string, prefix: "US" | "TC"): Set<string> {
 }
 
 /**
+ * Extensions the ATDD scan must always read, whatever the project configures.
+ *
+ * `validation.traceability.testFileGlobs` describes executable test *code*, but
+ * annotations also legitimately live in Gherkin features and in markdown
+ * traceability files (this repository carries its own `US-*` annotations in
+ * `tests/e2e/qfai-traceability.md`). These are annotation carriers, not code,
+ * so they are unioned in rather than replaced.
+ */
+const STRUCTURAL_ANNOTATION_EXTENSIONS = ["feature", "md", "markdown"] as const;
+
+/**
  * Derives the per-layer file pattern from the project's configured
  * `testFileGlobs`, so a non-JS repository is scanned with its own extensions.
  *
  * Configured globs describe whole paths (`tests/**\/*.py`); the ATDD scan needs
- * a pattern to append under `tests/{e2e,api,integration}/`. The extension set
- * is therefore lifted out of them and recombined. When no extension can be
- * recovered, the JS/TS default is used.
+ * a pattern to append under `tests/{e2e,api,integration}/`. The extension set is
+ * therefore lifted out of them, unioned with the structural annotation carriers
+ * above, and recombined. When no extension can be recovered, the JS/TS default
+ * is used.
  */
 export function deriveAtddFilePattern(testFileGlobs: readonly string[]): string {
   const extensions = new Set<string>();
@@ -302,6 +314,9 @@ export function deriveAtddFilePattern(testFileGlobs: readonly string[]): string 
   }
   if (extensions.size === 0) {
     return DEFAULT_TEST_FILE_GLOB;
+  }
+  for (const ext of STRUCTURAL_ANNOTATION_EXTENSIONS) {
+    extensions.add(ext);
   }
   const sorted = Array.from(extensions).sort();
   return sorted.length === 1 ? `**/*.${sorted[0]}` : `**/*.{${sorted.join(",")}}`;
