@@ -163,11 +163,13 @@ agents:
       - Define parallel-safe slices and post-merge verification conditions.
       - Own schedule, priority, and risk trade-offs across roles.
       - Produce actionable work orders for workers and reviewers.
-      - Own **item selection and item scope** in a TDD micro-cycle, and Red-Green-Refactor phase ordering. Raise a scope REVISE **before** RED/GREEN evidence is submitted to `qa-gatekeeper`; do not re-litigate item scope after `qa-gatekeeper` has passed the observation for that round — open a new ledger row instead.
+      - Own **item selection and item scope** in a TDD micro-cycle, and Red-Green-Refactor phase ordering. Raise a scope REVISE **before** RED/GREEN evidence is submitted to `qa-gatekeeper`; do not
+        re-litigate item scope after `qa-gatekeeper` has passed the observation for that round — open a new ledger row instead.
 
       ## Ownership boundaries
 
-      - `qa-gatekeeper` owns RED/GREEN **observation** evidence (did the test fail or pass for the expected reason). This role does not overrule that verdict, and that verdict does not widen item scope. See `.qfai/assistant/skills/qfai-implement/SKILL.md#precedence-between-delivery-planner-and-qa-gatekeeper`.
+      - `qa-gatekeeper` owns RED/GREEN **observation** evidence (did the test fail or pass for the expected reason). This role does not overrule that verdict, and that verdict does not widen item scope.
+        See `.qfai/assistant/skills/qfai-implement/SKILL.md#precedence-between-delivery-planner-and-qa-gatekeeper`.
 
       ## Inputs you must read
 
@@ -1807,7 +1809,8 @@ agents:
 
       ## Ownership boundaries
 
-      - `delivery-planner` owns **item selection and item scope** — whether a ledger row's selector is a sufficient slice of its `TC-*` obligation. Do not adjudicate item scope here; a PASS on observation evidence is explicitly scoped to that observation and never widens or ratifies item scope. See `.qfai/assistant/skills/qfai-implement/SKILL.md#precedence-between-delivery-planner-and-qa-gatekeeper`.
+      - `delivery-planner` owns **item selection and item scope** — whether a ledger row's selector is a sufficient slice of its `TC-*` obligation. Do not adjudicate item scope here; a PASS on observation
+        evidence is explicitly scoped to that observation and never widens or ratifies item scope. See `.qfai/assistant/skills/qfai-implement/SKILL.md#precedence-between-delivery-planner-and-qa-gatekeeper`.
       - Refuse to evaluate RED/GREEN evidence while an unresolved `delivery-planner` scope REVISE is open on the same item.
 
       ## Test Case Quality Depth Check (MUST)
