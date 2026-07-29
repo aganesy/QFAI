@@ -7,8 +7,10 @@ import { describe, expect, it } from "vitest";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
 
-const HEADERS = "| TDD-ID   | TC-Refs | Layer | Test file       | Selector | Status    | DR-ID  | Evidence |";
-const SEP = "| -------- | ------- | ----- | --------------- | -------- | --------- | ------ | -------- |";
+const HEADERS =
+  "| TDD-ID   | TC-Refs | Layer | Test file       | Selector | Status    | DR-ID  | Evidence |";
+const SEP =
+  "| -------- | ------- | ----- | --------------- | -------- | --------- | ------ | -------- |";
 
 async function withLedger(
   rows: string[],
@@ -56,7 +58,9 @@ describe("parked exception rows are visible in CI", () => {
 
   it("says nothing about non-exception rows", async () => {
     await withLedger(
-      ["| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | todo      | -      | -        |"],
+      [
+        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | todo      | -      | -        |",
+      ],
       (issues) => {
         expect(parked(issues)).toEqual([]);
       },
@@ -65,7 +69,9 @@ describe("parked exception rows are visible in CI", () => {
 
   it("does not replace the missing-DR error", async () => {
     await withLedger(
-      ["| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception |        | anomaly  |"],
+      [
+        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception |        | anomaly  |",
+      ],
       (issues) => {
         expect(parked(issues)).toHaveLength(1);
         expect(issues.map((entry) => entry.code)).toContain("TDDLIST_EXCEPTION_MISSING_DR");
