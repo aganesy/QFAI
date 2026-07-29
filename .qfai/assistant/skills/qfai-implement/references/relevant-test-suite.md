@@ -44,22 +44,32 @@ and is quadratic in ledger size. That cost is paid at boundaries instead.
 The full suite runs at, and only at:
 
 - the **last row of the ledger** — so every spec pays for one full run;
-- the **last row of each BR/AC group** of rows, as grouped in
-  `06_Test-Cases.md`;
 - any row whose implementation touched a module **outside** the package
-  resolved in step 3 — a cross-package edit re-widens the run immediately.
+  resolved in step 3 — a cross-package edit re-widens the run immediately;
+- every **N-th** completed row, with `N = 10` by default. Record the chosen `N`
+  in the item's evidence when a project overrides it.
+
+The counted interval is what keeps the cadence sub-quadratic. An AC or BR group
+is **not** a boundary: in a spec where TC and AC are close to one-to-one — as in
+this repository's `spec-0006`, whose `TC-0006-0001..0009` each map to a distinct
+AC and each occupy one ledger row — every row would be the last of its group and
+the per-item full run would be right back. The boundary must be coarser than the
+obligation granularity, so it is defined by count, not by grouping.
 
 Rows that are not on a boundary are gated on the narrow suite alone: items 6, 7
 and 8 of the 11-point gate are evaluated against it, and item 11 requires the
 full suite only for a row that sits on a boundary.
 
-### A boundary failure is an anomaly, not a rollback
+### Checkpoint runs before `done`, never after
 
-Backward transitions stay prohibited. A row already `done` is never re-opened
-when a later boundary's full suite fails. Instead:
+The lifecycle allows `refactor -> exception` but forbids re-opening a `done`
+row, so verification has to happen while the row is still `refactor`:
 
-- the row **at** the boundary transitions to `exception` with a DR-ID;
-- the regression is filed as a new `todo` row in the ledger, carrying the
-  failing selector;
-- spec completion is blocked until that row reaches `done`, because
-  "Checkpoint verification passed" is a spec completion condition.
+- run the checkpoint at the end of Refactor, after the reviewers return PASS;
+- PASS -> `refactor -> done`;
+- FAIL -> `refactor -> exception` with a DR-ID, and the regression is filed as
+  a new `todo` row carrying the failing selector.
+
+Rows already `done` from earlier boundaries are never re-opened. Spec completion
+stays blocked until the new row reaches `done`, because "Checkpoint verification
+passed" is a spec completion condition.

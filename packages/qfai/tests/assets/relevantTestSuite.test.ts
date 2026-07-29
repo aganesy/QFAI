@@ -57,12 +57,28 @@ describe('"relevant test suite" is defined and bounded', () => {
       expect(skill).toContain("the last ledger row is always a boundary");
     });
 
-    it(`${tree}: a boundary failure uses no backward transition`, async () => {
+    it(`${tree}: the checkpoint runs before done, so no backward transition is needed`, async () => {
       const section = unwrap(await read(tree, REFERENCE));
-      expect(section).toContain("### A boundary failure is an anomaly, not a rollback");
-      expect(section).toContain("Backward transitions stay prohibited");
-      expect(section).toContain("transitions to `exception` with a DR-ID");
+      const skill = unwrap(await read(tree, SKILL));
+      expect(section).toContain("### Checkpoint runs before `done`, never after");
+      expect(section).toContain("run the checkpoint at the end of Refactor");
+      expect(section).toContain("FAIL -> `refactor -> exception` with a DR-ID");
       expect(section).toContain("filed as a new `todo` row");
+      expect(section).toContain("Rows already `done` from earlier boundaries are never re-opened");
+      // Refactor step 5 must not mark `done` before verifying.
+      expect(skill).toContain("run checkpoint verification **while the item is still `refactor`**");
+      expect(skill).toContain("Transition to `done` only on PASS");
+    });
+
+    it(`${tree}: boundaries are counted, not grouped by AC`, async () => {
+      const section = unwrap(await read(tree, REFERENCE));
+      // With a ~1:1 TC-to-AC spec every row is the last of its group, so an
+      // AC-group boundary degenerates back to a full run per item.
+      expect(section).toContain("every **N-th** completed row, with `N = 10` by default");
+      expect(section).toContain("An AC or BR group is **not** a boundary");
+      expect(section).toContain("`TC-0006-0001..0009`");
+      expect(section).toContain("coarser than the obligation granularity");
+      expect(section).not.toContain("the **last row of each BR/AC group**");
     });
 
     it(`${tree}: test-layers.md bounds test-file granularity`, async () => {
