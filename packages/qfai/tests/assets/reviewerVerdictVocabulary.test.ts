@@ -62,6 +62,35 @@ describe("reviewer verdict vocabulary", () => {
     }
   });
 
+  // The review REQUEST is what tells a reviewer which verdicts are legal. Leaving
+  // `FAIL` there let a reviewer return a verdict the response template and both
+  // playbooks no longer accept, so the fix cycle never started.
+  it("offers only the in-flight verdicts in both review-request templates", async () => {
+    for (const relative of [
+      "skills/qfai-discussion/templates/14_Review-Request.md",
+      "skills/qfai-discussion/templates/review/review_request.md",
+    ]) {
+      for (const content of await readShipped(relative)) {
+        expect(content).toContain("Allowed in-flight verdicts: `PASS`, `REVISE`");
+        expect(content).not.toContain("Allowed verdicts: `PASS`, `FAIL`");
+        // The serialized status stays documented, not deleted.
+        expect(content).toContain('status: "FAIL"');
+      }
+    }
+  });
+
+  // qfai-implement is the direct consumer of completion-reviewer /
+  // implementation-reviewer, so its evidence fields and its completion-blocking
+  // branch have to name the verdict those reviewers now return.
+  it("matches qfai-implement's evidence fields and blocking branch to the verdict", async () => {
+    for (const content of await readShipped("skills/qfai-implement/SKILL.md")) {
+      expect(content).toContain("completion-reviewer result (PASS or REVISE)");
+      expect(content).toContain("implementation-reviewer result (PASS or REVISE)");
+      expect(content).toContain("has not been run or returned REVISE");
+      expect(content).not.toContain("(PASS or FAIL)");
+    }
+  });
+
   it("keeps the review response template on PASS | REVISE", async () => {
     for (const content of await readShipped(
       "skills/qfai-discussion/templates/review/Rxx_reviewer.md",

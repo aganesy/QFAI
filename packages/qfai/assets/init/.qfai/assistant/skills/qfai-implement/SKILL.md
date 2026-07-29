@@ -276,7 +276,7 @@ Completion MUST NOT be declared when any of the following are true:
 
 - No RED fresh evidence exists for the item
 - No GREEN fresh evidence exists for the item
-- Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned FAIL
+- Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned REVISE
 - Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
 - Parallel slices were used but integration verify has not been run post-merge
 - Checkpoint boundary was reached but verification was not executed
@@ -306,8 +306,8 @@ Each TDD item MUST have fresh evidence containing at minimum:
 - `GREEN result` — the success output
 - `Refactor verify command` — the exact command re-executed after refactor
 - `Refactor verify result` — the output confirming GREEN is maintained
-- `Spec review` — completion-reviewer result (PASS or FAIL)
-- `Code quality review` — implementation-reviewer result (PASS or FAIL)
+- `Spec review` — completion-reviewer result (PASS or REVISE)
+- `Code quality review` — implementation-reviewer result (PASS or REVISE)
 - `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE)
 
 ### Evidence hard rules
