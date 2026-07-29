@@ -27,7 +27,7 @@ tools: [Read, Glob, Grep, Bash]
 
 ## Deliverables
 
-- PASS or FAIL with concrete rework list
+- PASS or REVISE with concrete rework list
 - Evidence summary and gaps
 - Open risks or blocking assumptions
 

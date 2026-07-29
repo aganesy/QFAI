@@ -1479,7 +1479,7 @@ agents:
       ## Deliverables
 
 
-      - PASS or FAIL with concrete rework list
+      - PASS or REVISE with concrete rework list
 
       - Evidence summary and gaps
 
@@ -2045,7 +2045,7 @@ agents:
 
 
       - Confirm a Coverage Depth Matrix exists (produced by
-      `test-design-analyst`). If missing, return FAIL.
+      `test-design-analyst`). If missing, return REVISE.
 
       - Check that each US/TC has test cases for at minimum: normal path AND
       error/failure path.
@@ -2082,7 +2082,7 @@ agents:
       ## Deliverables
 
 
-      - Gate decision (PASS / FAIL) with rationale
+      - Gate decision (PASS / REVISE) with rationale
 
       - Hard gate status and required fixes
 
