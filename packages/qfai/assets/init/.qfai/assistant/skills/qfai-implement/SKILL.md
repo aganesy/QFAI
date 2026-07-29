@@ -56,7 +56,7 @@ Skill-specific examples:
 - Each item goes through the full TDD micro-cycle: write a **failing test** first, then make it pass, then refactor.
 - The execution ledger is located at `.qfai/specs/<spec-id>/tdd/test-list.md`.
 - Items are processed **serially** by default. Parallel processing is allowed only when items target independent SUT slices with no shared state.
-- Status transitions follow a strict forward-only lifecycle: `todo` -> `red` -> `green` -> `refactor` -> `done`.
+- Status transitions follow a strict forward-only lifecycle: `todo` -> `red` -> `green` -> `refactor` -> `done`. The single re-entry is `refactor` -> `red` after a `qa-gatekeeper` `REVISE` on the row's RED/GREEN evidence.
 - The `exception` status can be reached from any active status when an anomaly is detected.
 - Backward transitions are prohibited (e.g., `green` -> `red` is not allowed).
 - Completed items (`done`) are skipped on re-execution.
@@ -107,8 +107,11 @@ Allowed transitions:
 - `green` -> `refactor` (improve code quality while keeping tests green)
 - `refactor` -> `done` (item complete)
 - Any active status -> `exception` (anomaly detected; record DR-ID in DR-ID column)
+- `refactor` -> `red` (**QA rejection recovery — the only re-entry**): a routed
+  `qa-gatekeeper` returned `REVISE` on this row's RED/GREEN evidence because the
+  cycle itself was wrong. Cite the verdict in `Evidence`, re-run the micro-cycle; rules: `references/volume-policy.md#group-formation-states-and-transitions`.
 
-Backward transitions are prohibited. Attempting `green` -> `red` must produce:
+Backward transitions are otherwise prohibited and nothing but that QA rejection re-opens a row. Attempting `green` -> `red` must produce:
 `"Backward transition prohibited: green -> red"`.
 
 ### Exception Handling
@@ -391,6 +394,6 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 
 project_memory:
 
-- One TDD item at a time from test-list.md; status lifecycle is forward-only (todo → red → green → refactor → done); exception requires DR-ID.
+- One TDD item at a time from test-list.md; status lifecycle is forward-only (todo → red → green → refactor → done) with one recorded re-entry, refactor → red on a qa-gatekeeper REVISE of the row's RED/GREEN evidence; exception requires DR-ID.
 - Fresh RED + GREEN command/result evidence is mandatory per item; status-only evidence (e.g. "Status: PASS") is rejected.
 - UI-affecting items require product-surface-reviewer prototype-parity PASS before the item can transition to done.

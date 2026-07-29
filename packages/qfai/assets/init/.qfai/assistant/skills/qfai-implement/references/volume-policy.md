@@ -66,10 +66,12 @@ a BR or an AC — instead of one pass per item. The group is the review unit:
 
 ### Group formation (states and transitions)
 
-Batching adds **no** status value and **no** lifecycle edge. A T1 row whose
-refactor verify is GREEN sits in `refactor` — that is the review-ready state —
-and waits there for its group. Members still move `refactor -> done`, only
-together.
+Batching adds **no** status value. It adds exactly **one** lifecycle edge, the
+`refactor -> red` QA rejection recovery in `SKILL.md`, because confirming
+RED/GREEN after the row has left `red` is only meaningful if a rejected row can
+redo it. A T1 row whose refactor verify is GREEN sits in `refactor` — that is
+the review-ready state — and waits there for its group. Members still move
+`refactor -> done`, only together.
 
 - **Open** the group when the first T1 row of a BR/AC reaches `refactor`.
 - **Fill** it by continuing to process that BR/AC's remaining rows one item at
@@ -83,8 +85,17 @@ together.
   spec, so finishing a ledger also closes the open group.
 - **Review** on close: one `qa-gatekeeper` turn over the members' recorded
   RED/GREEN evidence, one `completion-reviewer` pass, one
-  `implementation-reviewer` pass. On `REVISE` from any of them every member
-  stays in `refactor`.
+  `implementation-reviewer` pass. On `REVISE` no member goes `done`; where the
+  faulted member goes depends on what was faulted:
+  - `completion-reviewer` / `implementation-reviewer` `REVISE`, or a
+    `qa-gatekeeper` `REVISE` about how the evidence was **written** — fix in
+    place; the member stays in `refactor` and the refactor verify re-runs.
+  - `qa-gatekeeper` `REVISE` rejecting the **cycle** (the RED never failed, or
+    failed for the wrong reason) — that member takes the `refactor -> red` QA
+    rejection recovery, cites the verdict in `Evidence`, and re-runs its
+    micro-cycle. The group stays open and is reviewed again on close. Leaving it
+    in `refactor` instead would strand it: forward-only means it could never
+    redo the RED the gatekeeper rejected.
 - **Checkpoint, then the ledger write.** Reviews passing is not the last gate:
   `SKILL.md` Refactor step 5 and item 11 of the 11-point gate both require
   checkpoint verification to pass **before** a row becomes `done`. Run it once

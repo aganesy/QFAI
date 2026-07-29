@@ -94,7 +94,7 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       const section = unwrap(await read(tree, REFERENCE));
       const skill = unwrap(await read(tree, SKILL));
       expect(section).toContain("### Group formation (states and transitions)");
-      expect(section).toContain("adds **no** status value and **no** lifecycle edge");
+      expect(section).toContain("adds **no** status value");
       expect(section).toContain("this is the review-start condition");
       expect(section).toContain("Members still move `refactor -> done`, only together");
       // Item 11 of the 11-point gate must not be skipped by the batch write.
@@ -107,6 +107,38 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
         "A T1 row parked in `refactor` waiting for its review group (see Volume Policy) does not violate this",
       );
       expect(skill).toContain("stays in `refactor` until the group closes");
+    });
+
+    it(`${tree}: a QA rejection of the cycle has a recovery edge`, async () => {
+      // T1 defers the RED/GREEN confirmation until after the row has left
+      // `red`. Forward-only plus "every member stays in `refactor`" left a
+      // rejected row unable to redo the RED it was faulted for — permanently
+      // unable to reach `done`.
+      const skill = unwrap(await read(tree, SKILL));
+      const section = unwrap(await read(tree, REFERENCE));
+
+      // The edge must exist in the lifecycle SSOT, not only in the reference.
+      const lifecycle = skill.slice(
+        skill.indexOf("Allowed transitions:"),
+        skill.indexOf("### Exception Handling"),
+      );
+      expect(lifecycle).toContain("`refactor` -> `red`");
+      expect(lifecycle).toContain("QA rejection recovery — the only re-entry");
+      expect(lifecycle).toContain("Cite the verdict in `Evidence`");
+      // Every other backward move stays prohibited.
+      expect(lifecycle).toContain(
+        "Backward transitions are otherwise prohibited and nothing but that QA rejection re-opens a row",
+      );
+      expect(lifecycle).toContain('"Backward transition prohibited: green -> red"');
+
+      // The reference splits the two kinds of REVISE so the edge is not used
+      // for a merely badly written evidence cell.
+      expect(section).toContain("It adds exactly **one** lifecycle edge");
+      expect(section).toContain("about how the evidence was **written** — fix in place");
+      expect(section).toContain("takes the `refactor -> red` QA rejection recovery");
+      expect(section).toContain("The group stays open and is reviewed again on close");
+      // The anchor the skill points at must resolve.
+      expect(section).toContain("### Group formation (states and transitions)");
     });
 
     it(`${tree}: criticality forces T2 regardless of layer`, async () => {
