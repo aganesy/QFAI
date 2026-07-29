@@ -8,7 +8,8 @@ import { parseScenarioDocument, type ScenarioNode } from "../scenarioModel.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import { collectScTestReferences } from "../traceability.js";
 import type { Issue } from "../types.js";
-import { issue } from "./utils.js";
+import { collectV1421LayerRefs, isV1421LayeredEntry } from "./layerCoverage.js";
+import { collectMarkdownItems, collectScenarioItems, issue } from "./utils.js";
 
 const SC_TAG_RE = /^SC-\d{4}-\d{4}$/;
 const SC_TAG_RE_GLOBAL = /\bSC-\d{4}-\d{4}\b/g;
@@ -16,6 +17,8 @@ const SPEC_TAG_RE = /^SPEC-\d{4}$/;
 const US_ID_RE = /\bUS-\d{4}-\d{4}\b/g;
 const AC_ID_RE = /\bAC-\d{4}-\d{4}\b/g;
 const DOWNSTREAM_ID_RE = /\b(?:US|AC|BR|SC|CASE)-\d{4}-\d{4}\b/g;
+/** v1421 accepts both the short and spec-local composite US id forms. */
+const V1421_US_ID_RE = /\bUS-\d{4}(?:-\d{4})?\b/g;
 
 type LayeredEdgeData = {
   usIds: Set<string>;
@@ -150,14 +153,21 @@ export type TraceabilityGraph = {
 };
 
 /**
- * Builds the `US -> AC -> BR -> SC -> CASE` graph from the parsed spec pack.
+ * Builds the requirement graph from the parsed spec pack.
  *
- * This is the same walk `validateTraceability` performs, exposed so the per-run
- * `traceability.json` artifact can be populated from the specs themselves rather than from the
- * refs of emitted findings. Deriving it from findings inverted the artifact's intent: it was
- * empty precisely when the spec pack was healthy, and populated only with IDs that failed.
+ * Exposed so the per-run `traceability.json` artifact can be populated from the specs themselves
+ * rather than from the refs of emitted findings. Deriving it from findings inverted the artifact's
+ * intent: it was empty precisely when the spec pack was healthy, and populated only with IDs that
+ * failed.
  *
- * Emits no issues; parse problems are reported by `validateTraceability` on the same inputs.
+ * Every layered style `collectSpecEntries` recognises is walked, because restricting this to the
+ * v1416 style `validateTraceability` gates would leave the artifact empty for every spec written
+ * in the current v1421 layout. The layer vocabulary differs per style — v1416 links
+ * `US -> AC -> BR -> SC -> CASE`, v1417/v1421 link `US -> AC -> BR -> EX -> TC` — so the edge
+ * types differ too; the node/edge shape does not.
+ *
+ * Emits no issues; parse problems are reported by `validateTraceability` and
+ * `validateLayerCoverage` on the same inputs.
  */
 export async function buildLayeredTraceabilityGraph(
   root: string,
@@ -165,49 +175,168 @@ export async function buildLayeredTraceabilityGraph(
 ): Promise<TraceabilityGraph> {
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
-  const layeredEntries = entries.filter(
-    (entry) => entry.layout === "layered" && entry.layeredStyle === "v1416",
-  );
+  const layeredEntries = entries.filter((entry) => entry.layout === "layered");
 
-  const nodes = new Map<string, TraceabilityGraphNode>();
-  const edges = new Map<string, TraceabilityGraphEdge>();
-  const discarded: Issue[] = [];
-
-  const addNodes = (ids: Iterable<string>, layer: string, filePath: string): void => {
-    for (const id of ids) {
-      if (nodes.has(id)) {
-        continue;
-      }
-      nodes.set(id, { id, layer, path: toGraphPath(root, filePath) });
-    }
-  };
-  const addEdges = (refs: Map<string, Set<string>>, type: string): void => {
-    for (const [from, parents] of refs.entries()) {
-      for (const to of parents) {
-        edges.set(`${from}->${to}:${type}`, { from, to, type });
-      }
-    }
-  };
+  const builder = createGraphBuilder(root);
 
   for (const entry of layeredEntries) {
-    const data = await collectLayeredEdgeData(entry, discarded);
-    addNodes(data.usIds, "US", entry.userStoriesPath);
-    addNodes(data.acIds, "AC", entry.acceptanceCriteriaPath);
-    addNodes(data.brIds, "BR", entry.businessRulesPath);
-    addNodes(data.scIds, "SC", entry.examplesPath);
-    addNodes(data.caseIds, "CASE", entry.testCasesPath);
-    addEdges(data.acToUs, "AC_TO_US");
-    addEdges(data.brToAc, "BR_TO_AC");
-    addEdges(data.scToAc, "SC_TO_AC");
-    addEdges(data.caseToSc, "CASE_TO_SC");
+    if (isV1421LayeredEntry(entry)) {
+      await addV1421Entry(builder, entry);
+      continue;
+    }
+    if (entry.layeredStyle === "v1417") {
+      await addV1417Entry(builder, entry);
+      continue;
+    }
+    await addV1416Entry(builder, entry);
   }
 
+  return builder.build();
+}
+
+type GraphBuilder = {
+  addNodes: (ids: Iterable<string>, layer: string, filePath: string) => void;
+  addEdges: (refs: Map<string, Set<string>>, type: string) => void;
+  build: () => TraceabilityGraph;
+};
+
+function createGraphBuilder(root: string): GraphBuilder {
+  const nodes = new Map<string, TraceabilityGraphNode>();
+  const edges = new Map<string, TraceabilityGraphEdge>();
+
   return {
-    nodes: Array.from(nodes.values()).sort((a, b) => a.id.localeCompare(b.id)),
-    edges: Array.from(edges.values()).sort(
-      (a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to),
-    ),
+    addNodes: (ids, layer, filePath) => {
+      for (const id of ids) {
+        if (nodes.has(id)) {
+          continue;
+        }
+        nodes.set(id, { id, layer, path: toGraphPath(root, filePath) });
+      }
+    },
+    addEdges: (refs, type) => {
+      for (const [from, parents] of refs.entries()) {
+        for (const to of parents) {
+          edges.set(`${from}->${to}:${type}`, { from, to, type });
+        }
+      }
+    },
+    build: () => ({
+      nodes: Array.from(nodes.values()).sort((a, b) => a.id.localeCompare(b.id)),
+      edges: Array.from(edges.values()).sort(
+        (a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to),
+      ),
+    }),
   };
+}
+
+/** v1416: markdown tables, `SC`/`CASE` layer names, composite `XX-nnnn-nnnn` IDs. */
+async function addV1416Entry(builder: GraphBuilder, entry: SpecEntry): Promise<void> {
+  // Parse findings are the business of validateTraceability, which walks the same files.
+  const discarded: Issue[] = [];
+  const data = await collectLayeredEdgeData(entry, discarded);
+  builder.addNodes(data.usIds, "US", entry.userStoriesPath);
+  builder.addNodes(data.acIds, "AC", entry.acceptanceCriteriaPath);
+  builder.addNodes(data.brIds, "BR", entry.businessRulesPath);
+  builder.addNodes(data.scIds, "SC", entry.examplesPath);
+  builder.addNodes(data.caseIds, "CASE", entry.testCasesPath);
+  builder.addEdges(data.acToUs, "AC_TO_US");
+  builder.addEdges(data.brToAc, "BR_TO_AC");
+  builder.addEdges(data.scToAc, "SC_TO_AC");
+  builder.addEdges(data.caseToSc, "CASE_TO_SC");
+}
+
+/**
+ * v1421: every layer is a markdown table keyed by its own ID column, with the
+ * parents in named reference columns (`AC-Refs`, `BR-Ref`, `EX-Ref`). The layout
+ * carries no AC->US column, so no `AC_TO_US` edge is emitted for it; that link
+ * is not recorded in the format rather than missing from this walk.
+ */
+async function addV1421Entry(builder: GraphBuilder, entry: SpecEntry): Promise<void> {
+  const refs = await collectV1421LayerRefs(entry);
+  const userStoriesText = await readSafe(entry.userStoriesPath);
+
+  // Both the short (`US-0001`) and spec-local composite (`US-0006-0001`) forms are
+  // valid v1421 IDs, so the strict composite-only matcher in `../ids.js` would drop
+  // half the catalogs. `02_User-stories.md` is a prose catalog, not a table, so the
+  // IDs are read directly rather than through a column parser.
+  builder.addNodes(userStoriesText.match(V1421_US_ID_RE) ?? [], "US", entry.userStoriesPath);
+  builder.addNodes(refs.acIds, "AC", entry.acceptanceCriteriaPath);
+  builder.addNodes(refs.brToAcRefs.keys(), "BR", entry.businessRulesPath);
+  builder.addNodes(refs.exToBrRefs.keys(), "EX", entry.examplesPath);
+  builder.addNodes(refs.tcToExRefs.keys(), "TC", entry.testCasesPath);
+  builder.addNodes(refs.tcToAcRefs.keys(), "TC", entry.testCasesPath);
+  builder.addEdges(refs.brToAcRefs, "BR_TO_AC");
+  builder.addEdges(refs.exToBrRefs, "EX_TO_BR");
+  builder.addEdges(refs.tcToAcRefs, "TC_TO_AC");
+  builder.addEdges(refs.tcToExRefs, "TC_TO_EX");
+}
+
+/**
+ * v1417: `## XX-nnnn` headings with a `- Parent: YY-nnnn` line, and a gherkin
+ * `05_Examples.feature` whose `@EX-nnnn` tags carry the same parent comment.
+ */
+async function addV1417Entry(builder: GraphBuilder, entry: SpecEntry): Promise<void> {
+  const [usText, acText, brText, exText, tcText] = await Promise.all([
+    readSafe(entry.userStoriesPath),
+    readSafe(entry.acceptanceCriteriaPath),
+    readSafe(entry.businessRulesPath),
+    readSafe(entry.examplesPath),
+    readSafe(entry.testCasesPath),
+  ]);
+
+  const usItems = collectMarkdownItems(usText, "US");
+  const acItems = collectMarkdownItems(acText, "AC");
+  const brItems = collectMarkdownItems(brText, "BR");
+  const tcItems = collectMarkdownItems(tcText, "TC");
+  const exItems = collectScenarioItems(exText);
+
+  builder.addNodes(
+    usItems.map((item) => item.id),
+    "US",
+    entry.userStoriesPath,
+  );
+  builder.addNodes(
+    acItems.map((item) => item.id),
+    "AC",
+    entry.acceptanceCriteriaPath,
+  );
+  builder.addNodes(
+    brItems.map((item) => item.id),
+    "BR",
+    entry.businessRulesPath,
+  );
+  builder.addNodes(
+    exItems.map((item) => item.exId.replace(/^@/, "")),
+    "EX",
+    entry.examplesPath,
+  );
+  builder.addNodes(
+    tcItems.map((item) => item.id),
+    "TC",
+    entry.testCasesPath,
+  );
+
+  builder.addEdges(toParentRefs(acItems.map((item) => [item.id, item.parent])), "AC_TO_US");
+  builder.addEdges(toParentRefs(brItems.map((item) => [item.id, item.parent])), "BR_TO_AC");
+  builder.addEdges(
+    toParentRefs(exItems.map((item) => [item.exId.replace(/^@/, ""), item.parent])),
+    "EX_TO_BR",
+  );
+  builder.addEdges(toParentRefs(tcItems.map((item) => [item.id, item.parent])), "TC_TO_EX");
+}
+
+/** Collapses `[childId, parentId | null]` pairs into the ref-map shape `addEdges` takes. */
+function toParentRefs(pairs: Array<[string, string | null]>): Map<string, Set<string>> {
+  const refs = new Map<string, Set<string>>();
+  for (const [child, parent] of pairs) {
+    if (!parent) {
+      continue;
+    }
+    const existing = refs.get(child) ?? new Set<string>();
+    existing.add(parent);
+    refs.set(child, existing);
+  }
+  return refs;
 }
 
 function toGraphPath(root: string, filePath: string): string {

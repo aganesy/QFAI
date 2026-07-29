@@ -175,9 +175,23 @@ async function validatePlanArtifacts(specsRoot: string, entries: SpecEntry[]): P
   return issues;
 }
 
-async function validateV1421Coverage(
-  entry: SpecEntry,
-): Promise<{ issues: Issue[]; snapshot: CoverageSnapshot }> {
+/**
+ * Parsed AC/BR/EX/TC layer references of one v1421 spec.
+ *
+ * Exported because the traceability graph writer needs exactly the same walk:
+ * duplicating the table parsing there is how the two views of a spec pack drift
+ * apart.
+ */
+export type V1421LayerRefs = {
+  acIds: Set<string>;
+  brToAcRefs: Map<string, Set<string>>;
+  exToBrRefs: Map<string, Set<string>>;
+  tcToAcRefs: Map<string, Set<string>>;
+  tcToExRefs: Map<string, Set<string>>;
+};
+
+/** Reads the four v1421 layer files and returns their definitions and references. */
+export async function collectV1421LayerRefs(entry: SpecEntry): Promise<V1421LayerRefs> {
   const [acText, brText, exText, tcText] = await Promise.all([
     readSafe(entry.acceptanceCriteriaPath),
     readSafe(entry.businessRulesPath),
@@ -185,19 +199,28 @@ async function validateV1421Coverage(
     readSafe(entry.testCasesPath),
   ]);
 
-  const acIds = parseAcceptanceCriteriaIds(acText);
-  const brToAcRefs = parseDefinitionRefs(brText, "BR", V1421_REFS.ac, {
-    referenceColumns: ["AC-Refs"],
-  });
-  const exToBrRefs = parseDefinitionRefs(exText, "EX", V1421_REFS.br, {
-    referenceColumns: ["BR-Ref"],
-  });
-  const tcToAcRefs = parseDefinitionRefs(tcText, "TC", V1421_REFS.ac, {
-    referenceColumns: ["AC-Refs"],
-  });
-  const tcToExRefs = parseDefinitionRefs(tcText, "TC", V1421_REFS.ex, {
-    referenceColumns: ["EX-Ref"],
-  });
+  return {
+    acIds: parseAcceptanceCriteriaIds(acText),
+    brToAcRefs: parseDefinitionRefs(brText, "BR", V1421_REFS.ac, {
+      referenceColumns: ["AC-Refs"],
+    }),
+    exToBrRefs: parseDefinitionRefs(exText, "EX", V1421_REFS.br, {
+      referenceColumns: ["BR-Ref"],
+    }),
+    tcToAcRefs: parseDefinitionRefs(tcText, "TC", V1421_REFS.ac, {
+      referenceColumns: ["AC-Refs"],
+    }),
+    tcToExRefs: parseDefinitionRefs(tcText, "TC", V1421_REFS.ex, {
+      referenceColumns: ["EX-Ref"],
+    }),
+  };
+}
+
+async function validateV1421Coverage(
+  entry: SpecEntry,
+): Promise<{ issues: Issue[]; snapshot: CoverageSnapshot }> {
+  const { acIds, brToAcRefs, exToBrRefs, tcToAcRefs, tcToExRefs } =
+    await collectV1421LayerRefs(entry);
 
   const brIds = new Set(brToAcRefs.keys());
   const exIds = new Set(exToBrRefs.keys());
@@ -598,7 +621,12 @@ async function writeCoverageReport(
   await writeFile(reportPath, `${lines.join("\n")}\n`, "utf-8");
 }
 
-function isV1421LayeredEntry(entry: SpecEntry): boolean {
+/**
+ * True for the v1421 table layout. Also accepts an entry whose examples file is
+ * markdown, because `05_Examples.md` (rather than the v1416/v1417
+ * `Examples.feature`) is the distinguishing artifact of the layout.
+ */
+export function isV1421LayeredEntry(entry: SpecEntry): boolean {
   if (entry.layeredStyle === "v1421") {
     return true;
   }
