@@ -33,8 +33,27 @@ for the natural RED and let the row proceed to `green` and `done`:
 ## Effect on the gates
 
 The `Evidence` cell carries `Satisfied-by`, `Falsifiability command`,
-`Falsifiability result` and the GREEN pair in place of a RED pair.
+`Falsifiability result` and the GREEN pair in place of a RED pair. The
+11-point gate is all-conditions-required, so every item this path touches is
+listed here — a substitute that only covered item 3 would still leave the row
+unable to reach `done`.
 
-- Item 3 of the 11-point gate is satisfied by the falsifiability evidence.
-- The completion prohibition "No RED fresh evidence exists for the item" does
-  not apply to a row carrying it.
+- **Item 2 ("A failing test was added first")** is satisfied by adding the
+  correct test first and proving it falsifiable by mutation. A test that
+  passes on its first run because the predicate is already implemented is
+  still test-first; the alternative — weakening it until it fails — is what
+  the classification step forbids.
+- **Item 3 ("RED was observed")** is satisfied by the falsifiability evidence.
+- **Item 4 ("Minimal production code was written")** is **waived**: the
+  `Satisfied-by` row already wrote it. Inventing an unrelated change to tick
+  this box is worse than the gap it fills. `Phase: Green` step 1 likewise has
+  nothing to write on this path and proceeds straight to running the test.
+- **The per-item evidence contract** treats the RED pair and the
+  falsifiability trio as **exclusive alternatives**: exactly one form is
+  present, never both and never neither. `qa-gatekeeper` accepts the
+  falsifiability form as the minimum evidence for this row.
+- **The completion prohibition** "No RED fresh evidence exists for the item"
+  does not apply to a row carrying falsifiability evidence.
+
+Every other gate item is unchanged: GREEN must still be observed, refactor
+must still be verified, and both blocking reviewers must still return PASS.

@@ -134,7 +134,7 @@ When transitioning to `exception`:
 
 ### Phase: Green (Make It Pass)
 
-1. Write the **minimum production code** to make the failing test pass.
+1. Write the **minimum production code** to make the failing test pass. On the _RED not observable_ path there is none to write — the `Satisfied-by` row already implements the predicate — so go straight to step 2.
 2. Run the test and **watch it pass**.
 3. Transition status to `green`.
 4. If the test still fails after implementation, investigate and fix. Do not skip to refactor.
@@ -253,9 +253,9 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-fai
 An item in `test-list.md` may transition to `done` only when ALL of the following are satisfied:
 
 1. Corresponding `TDD-ID` has been selected and is in progress
-2. A failing test was added first (test-first)
+2. A failing test was added first (test-first) — **or**, on the _RED not observable_ path, the correct test was added first and proven falsifiable by mutation instead of by a natural failure
 3. RED was observed — `qa-gatekeeper` confirmed the test failed for the expected reason (watch it fail), **or** the row carries falsifiability evidence per _RED not observable_
-4. Minimal production code was written to make the test pass
+4. Minimal production code was written to make the test pass — **waived** on the _RED not observable_ path, where the `Satisfied-by` row already implements the predicate; do not manufacture a change to satisfy this item
 5. GREEN was observed — `qa-gatekeeper` confirmed the test passes after implementation (watch it pass)
 6. Refactor was performed and GREEN was re-confirmed after refactor
 7. `completion-reviewer` returned PASS (spec / completion review gate)
@@ -306,6 +306,10 @@ Each TDD item MUST have fresh evidence containing at minimum:
 - `TC-ref` — reference to the test case(s)
 - `RED command` — the exact command executed to observe failure
 - `RED result` — the failure output (result completeness is best-effort; truncated output is acceptable)
+  - **Exclusive alternative**: a row on the _RED not observable_ path carries
+    `Satisfied-by`, `Falsifiability command` and `Falsifiability result` in
+    place of the RED pair. Exactly one of the two forms must be present —
+    never both, never neither (`references/red-not-observable.md`).
 - `GREEN command` — the exact command executed to observe success
 - `GREEN result` — the success output
 - `Refactor verify command` — the exact command re-executed after refactor

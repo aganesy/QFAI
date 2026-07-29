@@ -37,10 +37,45 @@ describe("an unobservable RED has a non-anomalous outcome", () => {
     it(`${tree}: the gate and the prohibition both accept the substitute`, async () => {
       const reference = await read(tree, REFERENCE);
       expect(reference).toContain(
-        "Item 3 of the 11-point gate is satisfied by the falsifiability evidence.",
+        '**Item 3 ("RED was observed")** is satisfied by the falsifiability evidence.',
       );
       expect(reference).toContain(
-        'The completion prohibition "No RED fresh evidence exists for the item" does',
+        '**The completion prohibition** "No RED fresh evidence exists for the item"',
+      );
+    });
+
+    it(`${tree}: every all-required gate item this path touches is covered`, async () => {
+      // The 11-point gate is ALL-conditions-required, so covering only item 3
+      // still left the row unable to reach `done`.
+      const skill = await read(tree, SKILL);
+      expect(skill).toContain(
+        "the correct test was added first and proven falsifiable by mutation instead of by a natural failure",
+      );
+      expect(skill).toContain(
+        "**waived** on the _RED not observable_ path, where the `Satisfied-by` row already implements the predicate",
+      );
+      expect(skill).toContain(
+        "On the _RED not observable_ path there is none to write — the `Satisfied-by` row already implements the predicate",
+      );
+
+      const reference = await read(tree, REFERENCE);
+      expect(reference).toContain('**Item 2 ("A failing test was added first")**');
+      expect(reference).toContain(
+        '**Item 4 ("Minimal production code was written")** is **waived**',
+      );
+    });
+
+    it(`${tree}: the evidence contract states the two forms are exclusive`, async () => {
+      const skill = await read(tree, SKILL);
+      expect(skill).toContain("**Exclusive alternative**");
+      expect(skill).toContain(
+        "Exactly one of the two forms must be present —\n    never both, never neither",
+      );
+
+      const reference = await read(tree, REFERENCE);
+      expect(reference).toContain("**exclusive alternatives**");
+      expect(reference).toContain(
+        "`qa-gatekeeper` accepts the\n  falsifiability form as the minimum evidence for this row.",
       );
     });
   }
