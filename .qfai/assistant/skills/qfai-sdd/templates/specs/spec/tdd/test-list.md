@@ -16,21 +16,21 @@ is missing.
 
 Required columns, in this order:
 
-| Column    | Description                                              |
-| --------- | -------------------------------------------------------- |
-| TDD-ID    | `TDD-NNNN`, unique within this spec                      |
-| TC-Refs   | Test cases from `06_Test-Cases.md` this row implements   |
-| Layer     | `Unit`, `Component`, `Integration`, `API` or `E2E`       |
-| Test file | Project-root-relative path to the test module            |
-| Selector  | Test selector/description for targeted execution         |
+| Column    | Description                                                  |
+| --------- | ------------------------------------------------------------ |
+| TDD-ID    | `TDD-NNNN`, unique within this spec                          |
+| TC-Refs   | Test cases from `06_Test-Cases.md` this row implements       |
+| Layer     | `Unit`, `Component`, `Integration`, `API` or `E2E`           |
+| Test file | Project-root-relative path to the test module                |
+| Selector  | Test selector/description for targeted execution             |
 | Status    | `todo` / `red` / `green` / `refactor` / `done` / `exception` |
-| DR-ID     | Decision Record ID for exception rows (`-` otherwise)    |
-| Evidence  | RED/GREEN command+result pairs proving the TDD cycle     |
+| DR-ID     | Decision Record ID for exception rows (`-` otherwise)        |
+| Evidence  | RED/GREEN command+result pairs proving the TDD cycle         |
 
 See `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
 for the full rules.
 
 ## Ledger
 
-| TDD-ID   | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |
-| -------- | ------- | ----- | --------- | -------- | ------ | ----- | -------- |
+| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |
+| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |
