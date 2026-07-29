@@ -2128,7 +2128,14 @@ function buildHotspots(issues: Issue[]): Hotspot[] {
   );
 }
 
-async function collectTddCoverage(entries: readonly SpecEntry[]): Promise<ReportTddCoverage> {
+/**
+ * TDD ledger coverage per spec. Exported for direct testing: the resolution rule
+ * spans multiple ledger rows, which the report-level output cannot show in
+ * isolation.
+ */
+export async function collectTddCoverage(
+  entries: readonly SpecEntry[],
+): Promise<ReportTddCoverage> {
   const specs: ReportTddCoverageSpec[] = [];
 
   for (const entry of entries) {
@@ -2209,35 +2216,63 @@ async function collectTddCoverage(entries: readonly SpecEntry[]): Promise<Report
     const drIdIdx = tddHeaders.indexOf("DR-ID");
 
     const coveredTcIds = new Set<string>();
-    const doneTcIds = new Set<string>();
-    const exceptionTcIds = new Set<string>();
     const exceptionRows: Array<{ tddId: string; drId: string }> = [];
 
+    // A TC is resolved only when EVERY TDD row referencing it is resolved.
+    // One TC is deliberately split across several rows (a matrix TC must be
+    // decomposed, one row per selector), so a first-row-wins rule reported the
+    // TC as `done` while its remaining boundary rows were still `todo` —
+    // `qfai report` printed `done: 1 / open: 0` mid-decomposition. Tallying per
+    // TC instead makes partial progress visible as unresolved.
+    const rowsPerTc = new Map<string, number>();
+    const doneRowsPerTc = new Map<string, number>();
+    const exceptionRowsPerTc = new Map<string, number>();
+    const bump = (counts: Map<string, number>, tc: string): void => {
+      counts.set(tc, (counts.get(tc) ?? 0) + 1);
+    };
+
     for (const row of tddTable.rows) {
-      const rowRefs: string[] = [];
+      // A set, not a list: a row naming two children of the same parent would
+      // otherwise contribute that parent twice and never reach its row total.
+      const rowRefs = new Set<string>();
       if (tcRefsIdx >= 0) {
         const refs = splitTcRefs(row[tcRefsIdx] ?? "");
         for (const ref of refs) {
           const upper = ref.toUpperCase();
           coveredTcIds.add(upper);
-          rowRefs.push(upper);
+          rowRefs.add(upper);
           const parent = resolveParentTcId(upper);
           if (parent) {
             coveredTcIds.add(parent);
-            rowRefs.push(parent);
+            rowRefs.add(parent);
           }
         }
       }
+      for (const tc of rowRefs) bump(rowsPerTc, tc);
+
       const status = statusIdx >= 0 ? (row[statusIdx] ?? "").trim().toLowerCase() : "";
       if (TDD_DONE_STATUSES.has(status)) {
-        for (const tc of rowRefs) doneTcIds.add(tc);
+        for (const tc of rowRefs) bump(doneRowsPerTc, tc);
       }
       if (status === "exception") {
-        for (const tc of rowRefs) exceptionTcIds.add(tc);
+        for (const tc of rowRefs) bump(exceptionRowsPerTc, tc);
         exceptionRows.push({
           tddId: tddIdIdx >= 0 ? (row[tddIdIdx] ?? "").trim() : "",
           drId: drIdIdx >= 0 ? (row[drIdIdx] ?? "").trim() : "",
         });
+      }
+    }
+
+    const doneTcIds = new Set<string>();
+    const exceptionTcIds = new Set<string>();
+    for (const [tc, total] of rowsPerTc) {
+      const done = doneRowsPerTc.get(tc) ?? 0;
+      const exception = exceptionRowsPerTc.get(tc) ?? 0;
+      if (done === total) {
+        doneTcIds.add(tc);
+      } else if (exception > 0 && done + exception === total) {
+        // Every row is accounted for and at least one carries a DR-ID waiver.
+        exceptionTcIds.add(tc);
       }
     }
 
