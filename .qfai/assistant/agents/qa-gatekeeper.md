@@ -22,7 +22,7 @@ tools: [Read, Glob, Grep, Bash]
 
 In addition to traceability-based coverage (US/TC/CON-API existence), verify the **depth** of test cases:
 
-- Confirm a Coverage Depth Matrix exists (produced by `test-design-analyst`). If missing, record it as a finding — its absence alone is NOT grounds for FAIL. See the scope note below.
+- Confirm a Coverage Depth Matrix exists (produced by `test-design-analyst`). Missing matrix: FAIL from the ATDD review cycle onward; on an SDD review cycle record it as a finding. See the scope note.
 - Check that each US/TC has test cases for at minimum: normal path AND error/failure path.
 - Flag any US/TC that has only normal-path test cases as a coverage gap.
 - Reference: `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`
@@ -35,7 +35,9 @@ The Coverage Depth Matrix is an **ATDD-stage artifact**: it is defined in
 and written into `.qfai/evidence/atdd-<spec-id>.md`. `qfai-sdd` neither defines its layout nor
 ships a section for it, so:
 
-- Apply this check from the **ATDD review cycle onward**.
+- Apply this check from the **ATDD review cycle onward**, where `skills/qfai-atdd/SKILL.md` lists
+  the matrix under both Mandatory Outputs and Not-done criteria. A missing matrix is a FAIL there,
+  and so is one whose ❌ cells are unjustified.
 - Do NOT evaluate it against an SDD spec pack that has no tests yet. On an SDD review cycle,
   assess depth directly from `06_Test-Cases.md` (normal path plus error/boundary coverage per
   AC) and record any gap as a finding, without requiring the matrix format.
