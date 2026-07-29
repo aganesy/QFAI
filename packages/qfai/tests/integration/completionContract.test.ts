@@ -37,7 +37,21 @@ describe("item completion checklist end-to-end enforcement", () => {
     // #251 split the evidence write into its own gate point, so the count in
     // the heading is not fixed at 11. The obligation is that the checklist
     // exists and covers every gate item below.
-    expect(c).toMatch(/Item completion checklist \(\d+-point gate\)/i);
+    const heading = /Item completion checklist \((\d+)-point gate\)/i.exec(c);
+    expect(heading, "the checklist heading must declare its point count").not.toBeNull();
+
+    // Pin the declared count to the list itself: a heading and a list that
+    // disagree is how "12-point gate" shipped over an 11-item list, and a
+    // count-agnostic regex alone cannot see that.
+    const listSection = c.slice(heading?.index ?? 0);
+    const items = Array.from(listSection.matchAll(/^(\d+)\. /gm), (match) => Number(match[1]));
+    const declared = Number(heading?.[1]);
+    const numbered: number[] = [];
+    for (const item of items) {
+      if (item !== numbered.length + 1) break;
+      numbered.push(item);
+    }
+    expect(numbered).toHaveLength(declared);
     // Must contain every gate item
     expect(c).toMatch(/TDD-ID.*selected|selected.*TDD-ID/i);
     expect(c).toMatch(/failing test.*first|test.first/i);
@@ -51,6 +65,11 @@ describe("item completion checklist end-to-end enforcement", () => {
       /prototype parity.*product-surface-reviewer|product-surface-reviewer.*prototype parity/i,
     );
     expect(c).toMatch(/test-list\.md.*updated|Status.*Evidence.*updated/i);
+    // The gate point #251 added: the verdict half of the evidence file is
+    // appended only after both reviewers have returned PASS.
+    expect(c).toMatch(
+      /`\.qfai\/evidence\/implement-<spec-id>\.md` is appended with both reviewer verdicts after items 7-8 returned PASS/,
+    );
     expect(c).toMatch(/checkpoint.*verif/i);
   });
 });
