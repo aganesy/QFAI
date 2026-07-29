@@ -50,6 +50,21 @@ describe("11_Slice-Policy.md treats item counts as a signal, not a SPLIT trigger
       expect(section).toContain("validateSpecSplitByCapability");
     });
 
+    it(`${relativePath}: the size-signal step is reached even when step 2 already decided`, async () => {
+      const section = unwrap(algorithm(await readFile(path.join(repoRoot, relativePath), "utf-8")));
+      // "Apply in order" plus an unconditional step 2 let an agent stop before
+      // ever reaching the recording obligation for an oversized owner.
+      expect(section).toContain("the **first** one that matches wins");
+      expect(section).toContain(
+        "Step 4 is **not** an alternative branch — it is a recording obligation that always runs afterwards",
+      );
+      expect(section).toContain("Do not stop at step 2.");
+      expect(section).toContain(
+        "Continue to step 4: an oversized owner still needs its `Rationale` entry",
+      );
+      expect(section).toContain("**Always evaluate, whatever step 2/3/5 decided.**");
+    });
+
     it(`${relativePath}: obligation-conserving re-granulation is named as a non-trigger`, async () => {
       const section = algorithm(await readFile(path.join(repoRoot, relativePath), "utf-8"));
       expect(section).toMatch(/obligation-conserving re-granulation/i);

@@ -67,13 +67,18 @@ approval before any spec edits begin.
 
 ## APPEND vs CREATE algorithm
 
-For each incoming REQ/NFR, apply in order (append-first):
+Steps 1-3, 5 and 6 select the operation; the **first** one that matches wins.
+Step 4 is **not** an alternative branch — it is a recording obligation that
+always runs afterwards, on whichever spec the selected operation targets. Do not
+stop at step 2.
 
 1. Resolve the REQ's capability from `_policies/03_Capabilities.md`.
 2. If a single active spec already owns that capability → **UPDATE:APPEND**.
-   Item counts do not change this answer.
+   Item counts do not change this answer. Continue to step 4: an oversized
+   owner still needs its `Rationale` entry and its capability-ownership review.
 3. If multiple active specs share the capability → **MERGE**.
-4. If the owning spec exceeds the AC/TC thresholds (`acCount > 30` or
+4. **Always evaluate, whatever step 2/3/5 decided.** If the targeted spec
+   exceeds the AC/TC thresholds (`acCount > 30` or
    `tcCount > 50`), that is a **size signal, not an operation**. Record it in
    the Triage row's `Rationale` and start a **capability-ownership review**:
    - the spec genuinely owns more than one `CAP-NNNN` → **SPLIT** (approval
