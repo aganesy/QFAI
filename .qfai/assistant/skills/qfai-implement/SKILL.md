@@ -98,20 +98,12 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` tracks progress
 
 ### Selector granularity (MUST)
 
-`Selector` is **not** restricted to a single test function. A row may legally own several, written as
-a comma-separated list (`test_rejects_expired_token, test_rejects_wrong_audience`) or a glob
-(`test_rejects_*`). What is restricted is what a row may _conflate_:
-
-- **One independently observable boundary per selector entry.** RED must be observed **per selector
-  entry**, not once per row — each entry needs its own "watch it fail for the expected reason"
-  observation, and each entry's failure reason is recorded separately in Evidence.
-- **A matrix-shaped `TC-*` must be decomposed before RED begins.** A `TC-*` that enumerates many
-  rejection reasons, a status-code matrix, or several independent state transitions is split across
-  multiple TDD rows — one falsifying oracle per row — rather than accumulated behind one selector.
-  The splitting rule: **one row per independently observable boundary**. Rows that decompose the
-  same `TC-*` all carry that `TC-*` in `TC-Refs`; `TC-Refs` is many-to-many with `TDD-ID`.
-- A selector that accumulates unrelated boundaries **invalidates the RED observation** — see the Red
-  phase below.
+`Selector` is **not** restricted to a single test function: a row may own several entries, written as
+a comma-separated list or a glob. What is restricted is what a row may _conflate_ — **one
+independently observable boundary per selector entry**, with RED observed per entry, and a
+matrix-shaped `TC-*` decomposed across rows before RED begins (`TC-Refs` is many-to-many with
+`TDD-ID`). A selector that accumulates unrelated boundaries invalidates the RED observation. Rules
+and examples: `references/selector-granularity.md`.
 
 ### Status Lifecycle
 
