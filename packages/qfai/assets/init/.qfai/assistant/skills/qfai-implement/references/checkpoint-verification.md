@@ -23,13 +23,30 @@ the placeholders; record the literal commands actually executed in evidence.
 2. The full test suite — `<test runner>` with no selector.
 3. The project's static gates, when the repository defines them — formatter check, linter, and type
    check.
-4. `qfai validate --profile tdd --fail-on error`
+4. `npx qfai validate --profile tdd --fail-on error` — qfai is a project dependency, not a global
+   command; a bare `qfai …` is `command not found` (exit 127) on a normal local install, which would
+   fail every checkpoint.
 
 ## Pass criteria
 
 Checkpoint verification PASSES only when **every** command in the set exits 0, and step 4 reports
 zero `QFAI-TEST-001` findings. Any non-zero exit is a FAIL: the item stays at `refactor`, and the
 failure is fixed and the whole set re-run. A partial run is not a pass.
+
+## Spec-level boundary on an already-complete ledger
+
+The per-spec boundary is owed once per ledger state, not once per session. Two cases leave it
+unrecorded:
+
+- the run was interrupted between the last item reaching `done` and the spec-level verification;
+- `/qfai-implement` is re-run against a ledger whose rows are already all `done`.
+
+In both, the skill's "all items `done` -> nothing to do" exit would skip the boundary permanently,
+and no later re-run could repair it. So before that exit: read
+`.qfai/evidence/implement-<spec-id>.md` for spec-level `Checkpoint verification command` /
+`Checkpoint verification result` entries covering the current ledger state. Run the command set
+above and record them when they are absent, or when they predate the last ledger change. Only then
+report "nothing to do".
 
 ## Evidence
 

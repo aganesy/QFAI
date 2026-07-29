@@ -60,7 +60,11 @@ Skill-specific examples:
 - The `exception` status can be reached from any active status when an anomaly is detected.
 - Backward transitions are prohibited (e.g., `green` -> `red` is not allowed).
 - Completed items (`done`) are skipped on re-execution.
-- When all items are `done`, report "nothing to do" and exit.
+- When all items are `done`, the per-item work is finished but the **spec-level checkpoint boundary**
+  may still be owed — an interrupted run, or a re-run of an already-complete ledger, leaves it
+  unrecorded. Before reporting "nothing to do" and exiting, confirm fresh spec-level checkpoint
+  verification evidence exists for this ledger state; run the verification first when it is missing
+  or stale. See `references/checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`.
 
 ## Goal
 
@@ -279,7 +283,7 @@ Completion MUST NOT be declared when any of the following are true:
 - Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned FAIL
 - Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
 - Parallel slices were used but integration verify has not been run post-merge
-- A checkpoint boundary was reached (see `#checkpoint-boundary`) but the verification command set was not executed, or any command in it exited non-zero
+- A checkpoint boundary was reached (see `#checkpoint-verification`) but the verification command set was not executed, or any command in it exited non-zero
 - `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-001`). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID.
 
 ## Evidence (MANDATORY)
