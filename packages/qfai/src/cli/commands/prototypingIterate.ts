@@ -2548,12 +2548,21 @@ function buildDesignTokens(dm: DesignMd): DesignTokens {
  * `null` when the cycle is legal and iterate should proceed.
  *
  * Predicate — all three must hold:
- *   1. `prototyping.json` records a non-null `stopReason` (a terminal
- *      state was reached and sealed).
+ *   1. `prototyping.json` records `stopReason === "axes-exceptional"`.
+ *      That is the only SEALED state: the only one
+ *      `--check-convergence` reports as converged and the only one
+ *      `qfai prototyping certify` will seal. The other members of the
+ *      stop enum are terminal but not sealed, and every one of them is
+ *      a state the operator is told to fix and retry —
+ *      `license-verify-fail` ("replace with allowlisted sources"),
+ *      `input-error` (a typo in the invocation), `max-iterations`
+ *      (budget exhausted, no certifiable result). Refusing those made
+ *      the fix un-verifiable: `acceptedIterationIndex` keeps the value
+ *      it already had, so the retry of the very same cycle was rejected
+ *      before the verifier ran, and the only way forward was discarding
+ *      the whole loop from cycle 0.
  *   2. `acceptedIterationIndex` is an integer (an iteration was
- *      actually accepted — a `max-iterations` stop with no accepted
- *      index is NOT terminal for this purpose and still needs its
- *      recovery path).
+ *      actually accepted).
  *   3. `cycle > acceptedIterationIndex`.
  *
  * Consequences of the predicate, both deliberate:
@@ -2566,11 +2575,18 @@ function buildDesignTokens(dm: DesignMd): DesignTokens {
  *
  * Pure read: never writes, never mutates `prototyping.json`.
  */
+/**
+ * The one stop reason that means the loop is SEALED rather than merely
+ * finished. `--check-convergence` reports only this as converged, and only a
+ * loop in this state can be sealed by `qfai prototyping certify`.
+ */
+const SEALED_STOP_REASON = "axes-exceptional";
+
 async function refuseWhenLoopConverged(root: string, cycle: number): Promise<number | null> {
   const record = await readPrototypingJson(path.join(root, PROTOTYPING_JSON_REL));
   if (record === null) return null;
   const stopReasonRaw = record.stopReason;
-  if (typeof stopReasonRaw !== "string" || stopReasonRaw.length === 0) return null;
+  if (stopReasonRaw !== SEALED_STOP_REASON) return null;
   const acceptedRaw = record.acceptedIterationIndex;
   if (typeof acceptedRaw !== "number" || !Number.isInteger(acceptedRaw)) return null;
   if (cycle <= acceptedRaw) return null;
@@ -2581,13 +2597,16 @@ async function refuseWhenLoopConverged(root: string, cycle: number): Promise<num
       `${String(cycle).padStart(2, "0")} directory was created.`,
   );
   error(
-    "  Creating it would leave a stale iteration directory that `qfai prototyping certify` " +
-      "rejects (findStaleIterDirs).",
+    "  Creating it would leave a stale iteration directory, which the stale-iteration-directory " +
+      "check in `qfai prototyping certify` rejects.",
   );
   error(
     "  Confirm the recorded state with `qfai prototyping iterate --check-convergence`, " +
       "then either run `qfai prototyping certify` to seal the run, or " +
-      "`qfai prototyping iterate --cycle 0 --target-url <url>` to hard-reset and start a new loop.",
+      "`qfai prototyping iterate --cycle 0 --target-url <url> --force` to hard-reset and start " +
+      "a new loop. `--force` is required: a converged loop always has an iter-00, and the " +
+      "cycle-0 destructive-rerun gate refuses to overwrite it without that flag (it backs the " +
+      "directory up to iter-00.backup-<ISO> first).",
   );
   return 2;
 }

@@ -3412,3 +3412,97 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Sealed-loop guard (#246). Only the converged state seals a loop; every other
+// terminal stop reason is something the operator is told to fix and retry, and
+// refusing those made the retry impossible — `acceptedIterationIndex` keeps its
+// prior value, so the re-run of the very same cycle was rejected before the
+// verifier ran.
+// ---------------------------------------------------------------------------
+describe("runPrototypingIterate sealed-loop guard", () => {
+  async function seedSealedLoop(root: string, stopReason: string): Promise<void> {
+    await seedMinimalProject(root);
+    await seedRawPrototypingJson(root, {
+      specsCovered: ["0001"],
+      frozenSpecsCovered: ["0001"],
+      frozenSurfaceUnion: ["0001"],
+      designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
+      iterations: [{ index: 0 }, { index: 1 }],
+      acceptedIterationIndex: 1,
+      stopReason,
+    });
+  }
+
+  async function refusalMessages(root: string, cycle: number): Promise<string[]> {
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      await runPrototypingIterate({ root, cycle, targetUrl: "http://localhost:4173" });
+      return errorSpy.mock.calls.map((call) => String(call[0]));
+    } finally {
+      errorSpy.mockRestore();
+      infoSpy.mockRestore();
+      warnSpy.mockRestore();
+    }
+  }
+
+  it("refuses a cycle past the accepted index on a converged loop", async () => {
+    const root = await newTempDir();
+    await seedSealedLoop(root, "axes-exceptional");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({
+        root,
+        cycle: 2,
+        targetUrl: "http://localhost:4173",
+      });
+      expect(exit).toBe(2);
+      expect(errorSpy.mock.calls.map((call) => String(call[0])).join("\n")).toContain(
+        "refusing --cycle 2",
+      );
+    } finally {
+      errorSpy.mockRestore();
+    }
+
+    // Nothing written: no iter-02 debris for certify to trip over.
+    const evidenceDirs = await readdir(path.join(root, ".qfai/evidence/prototyping"));
+    expect(evidenceDirs).not.toContain("iter-02");
+  });
+
+  it("lets a license-verify failure be fixed and the same cycle retried", async () => {
+    const root = await newTempDir();
+    await seedSealedLoop(root, "license-verify-fail");
+
+    const messages = await refusalMessages(root, 2);
+    expect(messages.join("\n")).not.toContain("refusing --cycle");
+  });
+
+  it.each(["input-error", "max-iterations"])(
+    "does not treat stopReason=%s as sealed",
+    async (stopReason) => {
+      const root = await newTempDir();
+      await seedSealedLoop(root, stopReason);
+
+      const messages = await refusalMessages(root, 2);
+      expect(messages.join("\n")).not.toContain("refusing --cycle");
+    },
+  );
+
+  it("names --force in the reset hint and no internal symbol", async () => {
+    const root = await newTempDir();
+    await seedSealedLoop(root, "axes-exceptional");
+
+    const messages = (await refusalMessages(root, 2)).join("\n");
+    expect(messages).toContain("--cycle 0 --target-url <url> --force");
+    // A converged loop always has an iter-00, so the destructive-rerun gate
+    // would reject the reset without the flag.
+    expect(messages).toContain("cycle-0 destructive-rerun gate");
+    // Distributed diagnostics must not leak implementation identifiers.
+    expect(messages).not.toContain("findStaleIterDirs");
+  });
+});

@@ -156,12 +156,13 @@ an unconverged iter-09.
 
 ### Continuing or resetting a converged loop
 
-Once `prototyping.json` records a `stopReason` with an `acceptedIterationIndex`
-the loop is sealed: `iterate --cycle N` refuses with exit `2` for any `N`
-greater than the accepted index and writes nothing. Two paths remain — seal it
-with `certify`, or start over with `--cycle 0` (a hard reset, never refused,
-which also deletes stale `iter-NN` directories). Re-running the accepted cycle
-itself is permitted. Details: `references/iteration-loop.md#sealed-loop`.
+Only `stopReason: "axes-exceptional"` + `acceptedIterationIndex` seals a loop;
+`iterate --cycle N` then refuses with exit `2` past the accepted index, writing
+nothing. `license-verify-fail` / `input-error` / `max-iterations` do NOT seal —
+fix the cause and re-run the same cycle. On a sealed loop: `certify`, or
+`--cycle 0 --target-url <url> --force` to hard-reset (`--force` required — the
+converged `iter-00` exists and is backed up first). Re-running the accepted
+cycle is permitted. Details: `references/iteration-loop.md#sealed-loop`.
 
 ## Evaluator Inputs (Mandatory)
 

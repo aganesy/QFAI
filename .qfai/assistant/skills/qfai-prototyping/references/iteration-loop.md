@@ -76,20 +76,32 @@ start `/qfai-prototyping` from cycle 0.
 
 ## Sealed loop
 
-Once `prototyping.json` records a `stopReason` together with an
-`acceptedIterationIndex`, the loop is sealed. `qfai prototyping iterate
---cycle N` refuses with exit `2` for any `N` greater than the accepted
-index, and writes nothing — no `iter-NN/` directory is created. That
-refusal is deliberate: such a directory is stale by construction and
-`qfai prototyping certify` hard-fails on it (`findStaleIterDirs`).
+A loop is **sealed** once `prototyping.json` records
+`stopReason: "axes-exceptional"` together with an `acceptedIterationIndex`.
+That is the converged state — the only one `--check-convergence` reports as
+converged and the only one `qfai prototyping certify` will seal. On a sealed
+loop `qfai prototyping iterate --cycle N` refuses with exit `2` for any `N`
+greater than the accepted index, and writes nothing — no `iter-NN/` directory
+is created. That refusal is deliberate: such a directory is stale by
+construction, and the stale-iteration-directory check in
+`qfai prototyping certify` hard-fails on it.
+
+The other terminal stop reasons — `license-verify-fail`, `input-error`,
+`max-iterations` — do **not** seal the loop. They are states you are expected
+to fix and retry, so the same cycle can be re-run and the fix verified.
 
 Two paths remain open on a sealed loop:
 
 - **Seal it** — run `qfai prototyping certify`. This is the normal
   next step after convergence.
 - **Start over** — run `qfai prototyping iterate --cycle 0
---target-url <url>`. Cycle 0 is a hard reset and is never refused;
-  it also deletes stale `iter-NN` directories.
+--target-url <url> --force`. Cycle 0 is a hard reset and is never
+  refused by the sealed-loop guard; it also deletes stale `iter-NN`
+  directories. `--force` is required, not optional: a converged loop
+  always has an `iter-00`, and the cycle-0 destructive-rerun gate
+  refuses to overwrite it without the flag. With it, `iter-00` is moved
+  to `iter-00.backup-<ISO>` before the reset, so the prior loop is
+  recoverable.
 
 Re-running the accepted cycle itself (`--cycle <acceptedIterationIndex>`)
 is also permitted — that is a redo of recorded work, not an extension
