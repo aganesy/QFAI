@@ -49,14 +49,27 @@ Every major artifact in the stage should include this table schema:
 ### Round budget (MUST)
 
 - **Two rounds per reviewer per artifact.** Round 1 is the initial review;
-  round 2 reviews the fixes. If a blocking reviewer would return `REVISE` a
-  third time, the orchestrator MUST stop and escalate to the user with the
-  open findings, the fixes already applied, and a recommendation — it MUST NOT
-  start another round.
+  round 2 reviews the fixes. **The budget is spent the moment round 2 returns
+  `REVISE`**: the orchestrator MUST NOT start a third review, and MUST stop and
+  escalate to the user with the open findings, the fixes already applied, and a
+  recommendation. The decision point is round 2's verdict, never a prediction
+  about a review that must not run.
 - Escalation is not failure. The artifact stays at its current status and the
   user decides: accept with the finding recorded as an Open Question, apply a
   named fix, or drop the item from scope.
-- The round number MUST be recorded on each reviewer response.
+- **Completion after escalation.** The user's decision is the exception to
+  "no DONE until all blocking reviewers `PASS`", so the escalation has an exit:
+  - _Accept as Open Question_ or _drop from scope_ — the artifact may reach
+    DONE with the finding recorded; the reviewer's outstanding `REVISE` is
+    superseded by the recorded user decision. Cite the decision where the
+    stage records decisions (`*_delta.md` / `07_Decisions.md` / a Change
+    Request).
+  - _Apply a named fix_ — one **verification review** of exactly that fix is
+    permitted and does not consume budget (it is round 2b, not round 3). Its
+    remit is the named fix only; it may not raise new findings, and it returns
+    `PASS` or escalates again.
+- The round number MUST be recorded on each reviewer response
+  (`Round:` in the shared response template).
 
 ### Convergence (MUST)
 
@@ -67,18 +80,34 @@ Every major artifact in the stage should include this table schema:
   block on it.
 - A reviewer MUST NOT open a new blocking _class_ of finding after the artifact
   under review has been declared stable. New classes go to the owning stage.
+- **Severity overrides lateness.** The out-of-budget rule is about review
+  discipline, not about shipping known harm. A late finding that names a
+  concrete security defect, data loss or corruption, or a correctness defect
+  that would break a released contract is **not** deferrable: the orchestrator
+  stops and escalates to the user immediately, exactly as it does when the
+  round budget is spent. It is still not a third round — no further review is
+  started, the finding goes straight to the user with its evidence. Deferring
+  such a finding to an Open Question so a `PASS` can be returned is prohibited.
 
 ### Reviewer remit (in scope per stage)
 
 A finding outside the reviewing stage's remit is recorded and deferred, never
 blocking:
 
-| Stage              | In scope                                                     | Out of scope (record and defer)               |
-| ------------------ | ------------------------------------------------------------ | --------------------------------------------- |
-| `/qfai-discussion` | Requirement clarity, scope boundary, decision traceability   | Spec structure, runtime behavior              |
-| `/qfai-sdd`        | Spec / contract consistency, testability, traceability edges | Runtime enforcement correctness, code quality |
-| `/qfai-atdd`       | Obligation coverage, layer placement, annotation validity    | Implementation structure                      |
-| `/qfai-implement`  | Code quality, spec alignment of the item, RED/GREEN evidence | Upstream spec content, contract design        |
+| Stage              | In scope                                                          | Out of scope (record and defer)                |
+| ------------------ | ----------------------------------------------------------------- | ---------------------------------------------- |
+| `/qfai-discussion` | Requirement clarity, scope boundary, decision traceability        | Spec structure, runtime behavior               |
+| `/qfai-sdd`        | Spec / contract consistency, testability, traceability edges      | Runtime enforcement correctness, code quality  |
+| `/qfai-atdd`       | Obligation coverage, layer placement, annotation validity         | Implementation structure                       |
+| `/qfai-implement`  | Code quality, spec alignment of the item, RED/GREEN evidence      | Upstream spec content, contract design         |
+| `/qfai-configure`  | Config / manifest validity and the surfaces the run generated     | Spec content, implementation structure         |
+| `/qfai-verify`     | Gate execution, evidence completeness, report / artifact fidelity | Authoring quality of the artifacts it verifies |
+
+**Fallback for any stage not listed.** A stage that references this baseline
+without a row above has, as its remit, the artifacts that stage itself
+produces; everything upstream of them is out of scope, recorded and deferred.
+Add the row when a new stage starts routing blocking reviewers, so the
+in/out split is not re-derived per run.
 
 ## Work order template
 
@@ -102,6 +131,7 @@ Quality bar:
 ## Reviewer response template
 
 ```text
+Round: 1 | 2 | 2b
 Result: PASS | REVISE
 Findings:
 - <issue>
@@ -110,6 +140,9 @@ Required fixes:
 Evidence checked:
 - <refs>
 ```
+
+`Round` is required — the round budget above is counted from it. `2b` is the
+post-escalation verification review of a user-named fix.
 
 ### Verdict vocabulary
 
