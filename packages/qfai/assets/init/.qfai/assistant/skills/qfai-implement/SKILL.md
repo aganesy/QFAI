@@ -85,16 +85,16 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` tracks progress with these required columns:
 
-| Column    | Description                                                                                                |
-| --------- | ---------------------------------------------------------------------------------------------------------- |
-| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                                        |
-| TC-Refs   | References to test cases from `06_Test-Cases.md`. TC coverage is measured **only** from `TC-*` tokens here |
-| Layer     | Test layer. Legal values: `Unit`, `Component`, `Integration`, `API`, `E2E`                                 |
-| Test file | Path to the test file                                                                                      |
-| Selector  | Test selector/description for targeted execution                                                           |
-| Status    | Current lifecycle status                                                                                   |
-| DR-ID     | Decision Record ID for exception items (blank otherwise)                                                   |
-| Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                                       |
+| Column    | Description                                                                                                                                                                              |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                                                                                                                      |
+| TC-Refs   | References to test cases from `06_Test-Cases.md`. Legal **only** on `Layer = Unit` / `Component` / `Integration` rows; TC coverage is measured **only** from `TC-*` tokens on those rows |
+| Layer     | Test layer. Legal values: `Unit`, `Component`, `Integration`, `API`, `E2E`                                                                                                               |
+| Test file | Path to the test file                                                                                                                                                                    |
+| Selector  | Test selector/description for targeted execution                                                                                                                                         |
+| Status    | Current lifecycle status                                                                                                                                                                 |
+| DR-ID     | Decision Record ID for exception items (blank otherwise)                                                                                                                                 |
+| Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                                                                                                                     |
 
 Optional columns, required when the row carries a non-TC obligation:
 
@@ -106,8 +106,11 @@ Optional columns, required when the row carries a non-TC obligation:
 `test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and
 `tests/api/**`, so an E2E or API row has no legal `TC-Refs` value. Those rows
 carry `-` in `TC-Refs` and record their obligation in `US-Refs` /
-`CON-API-Refs` instead. Coverage measurement is unaffected: it reads `TC-*`
-tokens only, so non-TC obligation IDs are inert to it by design.
+`CON-API-Refs` instead. The binding is enforced in both directions: a `TC-*` on
+an E2E/API row raises `TDDLIST_OBLIGATION_LAYER_MISMATCH` and is **not** counted
+towards TC coverage, so a forbidden placement cannot close a coverage-target TC.
+A `Layer` outside the legal values raises `TDDLIST_UNKNOWN_LAYER` (warning) —
+without a legal `Layer` the row has no obligation column. Coverage measurement is otherwise unaffected: it reads `TC-*` tokens only, so non-TC obligation IDs are inert to it by design.
 `TDDLIST_OBLIGATION_LAYER_MISMATCH` rejects the pairing on any other layer.
 
 ### Status Lifecycle
