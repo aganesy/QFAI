@@ -253,14 +253,11 @@ Run the full checklist from `references/sdd-quality-gate.md`. The gate also cove
 Create `.qfai/evidence/sdd-<spec-id>.md` from `templates/evidence/sdd-spec.md`. That template is the
 canonical layout for this artifact — copy it, keep every `##` heading in order, and fill it in.
 
-Summary of the required sections (the template is authoritative if the two ever disagree):
-Objective, Inputs reviewed, Preflight summary path, Triage decisions (op + approver per row),
-Open questions, Decisions made, Work performed, Commands executed, Validate evidence paths,
-Work Orders Summary, Gaps / Open risks, Final status.
-
-The Work Orders Summary must use the fixed 6-column schema from
-`.qfai/assistant/constitution/shared-skill-delegation-baseline.md`, whose `Status` column accepts
-only `PASS` or `REVISE`. `Final status` uses the same two values.
+Required sections, in order (the template is authoritative if the two ever disagree): Objective,
+Inputs reviewed, Preflight summary path, Triage decisions (op + approver per row), Open questions,
+Decisions made, Work performed, Commands executed, Validate evidence paths, Work Orders Summary,
+Gaps / Open risks, Final status. Work Orders Summary uses the fixed 6-column schema from
+`shared-skill-delegation-baseline.md`; its `Status` and `Final status` accept only `PASS` or `REVISE`.
 
 ## Done Declaration
 
