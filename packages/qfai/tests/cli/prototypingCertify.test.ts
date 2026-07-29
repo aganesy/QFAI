@@ -456,9 +456,17 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
       const messages = errorSpy.mock.calls.map((c) => String(c[0]));
       const recovery = messages.find((m) => m.includes("Recovery:"));
       expect(recovery).toBeDefined();
-      expect(recovery).toContain("re-run the loop from cycle 0 with `--force`");
+      expect(recovery).toContain("re-run the loop from cycle 0");
       expect(recovery).toContain("expected-next-cycle gate");
       expect(recovery).toContain(".qfai/contracts/ui/");
+
+      // --force is not a backup of the loop: it renames iter-00 only, and the
+      // reset then deletes iter-01+ and clears iterations / reviewerGate.
+      const destructive = messages.find((m) => m.includes("DESTRUCTIVE"));
+      expect(destructive).toBeDefined();
+      expect(destructive).toContain("renames only iter-00");
+      expect(destructive).toContain("iter-01 and up are deleted outright");
+      expect(destructive).toContain("Copy the whole");
       // The unreachable instruction must not come back.
       expect(messages.some((m) => m.includes("Re-run the accepted cycle with --capture"))).toBe(
         false,

@@ -449,12 +449,19 @@ export async function runPrototypingCertify(
         "  Recovery: first make each missing screen's contract route reachable from the " +
           "capture target (the built-in --auto-serve server is a static file server and 404s " +
           "path routes; use hash routes or point --target-url at a server with SPA fallback). " +
-          "Then re-run the loop from cycle 0 with `--force` — it backs the prior loop up to " +
-          "iter-00.backup-<ISO> and re-captures every declared screen. Re-invoking the " +
-          "accepted cycle with --capture will not work: that iteration is already recorded in " +
-          "prototyping.json#iterations, so iterate exits first on the expected-next-cycle gate. " +
-          "If a listed screen is no longer part of the product, delete it from " +
-          ".qfai/contracts/ui/ instead so it stops being a declared screen.",
+          "Then re-run the loop from cycle 0. Re-invoking the accepted cycle with --capture " +
+          "will not work: that iteration is already recorded in prototyping.json#iterations, " +
+          "so iterate exits first on the expected-next-cycle gate. If a listed screen is no " +
+          "longer part of the product, delete it from .qfai/contracts/ui/ instead so it stops " +
+          "being a declared screen.",
+      );
+      error(
+        "  The cycle-0 re-run is DESTRUCTIVE, and --force does not make it safe: it renames " +
+          "only iter-00 to iter-00.backup-<ISO>. Everything else in " +
+          `${PROTOTYPING_EVIDENCE_REL}/ is then reset — iter-01 and up are deleted outright, ` +
+          "and prototyping.json#iterations / #reviewerGate are cleared. Copy the whole " +
+          `${PROTOTYPING_EVIDENCE_REL}/ directory somewhere safe first if the earlier ` +
+          "iterations still matter.",
       );
       return 2;
     }

@@ -191,9 +191,13 @@ target server does with that URL therefore decides the routing shape:
 - **Path routes** (`/settings`) and any `history.pushState` shell need
   a server that rewrites unknown paths to `index.html`. Run one
   yourself and pass `--target-url`; they will 404 under `--auto-serve`.
-- Per-screen files (`--emit-skeletons` / `htmlSourceCopy`, below) are
-  the third option: those are real files, so the static server serves
-  them directly.
+- Per-screen files (`--emit-skeletons`, below) are a third option, but
+  only if the contract `route` names the file: `--emit-skeletons` writes
+  `<screenId>.html`, and the static server resolves a URL to a literal
+  path — it does not append `.html`, so a `/settings` route 404s while
+  `/settings.html` serves. `htmlSourceCopy` does not help here: it runs
+  after the capture has already navigated successfully, so it cannot
+  rescue a route the server could not resolve.
 
 Pick the routing shape to match the server you will capture against,
 and keep the contract `route` values consistent with it.
