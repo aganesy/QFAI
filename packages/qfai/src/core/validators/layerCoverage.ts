@@ -44,14 +44,48 @@ const V1421_REFS = {
 // A heading that merely CONTAINS one of these words is now allowed.
 // Progress tracking is still caught, because progress tracking names
 // itself; domain vocabulary that happens to collide no longer is.
+//
+// The label sets below are shared by both shapes on purpose. A composite label
+// is no less operational when it carries a value: `## Current Status: Complete`
+// is the same finding as `## Current Status`, and listing it only under the
+// whole-heading (`\s*$`-anchored) shape let the valued form through.
+const PLAN_STATUS_LABELS_EN =
+  "progress(?:\\s*tracking)?|todo|to\\s*do|wip|work\\s*in\\s*progress|" +
+  "remaining(?:\\s*(?:work|tasks?|items?))?|current\\s*status|implementation\\s*status|" +
+  "status\\s*tracking";
+const PLAN_STATUS_LABELS_JA =
+  "進捗状況|進捗管理|進捗|残作業|残タスク|作業状況|実装状態|対応状況|ステータス";
+// Bare field names that read as operational only in the `field: value` shape.
+// `## Status` / `## Done` alone stay allowed — `統合ステータス` style domain
+// headings and "Definition of Done" are the reason the bare word was dropped.
+const PLAN_STATUS_FIELD_ONLY_EN = "status|done";
+
 const PLAN_STATUS_HEADING_PATTERNS = [
   // Operational field promoted to a heading: `<field>: <value>`.
-  /^\s*(?:status|progress|todo|remaining|done|wip)\s*[:：]/i,
-  /^\s*(?:進捗|残作業|作業状況|実装状態|対応状況|ステータス)\s*[:：]/,
+  new RegExp(`^(?:${PLAN_STATUS_LABELS_EN}|${PLAN_STATUS_FIELD_ONLY_EN})\\s*[:：]`, "i"),
+  new RegExp(`^(?:${PLAN_STATUS_LABELS_JA})\\s*[:：]`),
   // Whole heading IS a progress label (no surrounding domain words).
-  /^\s*(?:progress(?:\s*tracking)?|todo|to\s*do|wip|work\s*in\s*progress|remaining(?:\s*(?:work|tasks?|items?))?|current\s*status|implementation\s*status|status\s*tracking)\s*$/i,
-  /^\s*(?:進捗|進捗状況|進捗管理|残作業|残タスク|作業状況|実装状態|対応状況|ステータス)\s*$/,
+  new RegExp(`^(?:${PLAN_STATUS_LABELS_EN})\\s*$`, "i"),
+  new RegExp(`^(?:${PLAN_STATUS_LABELS_JA})\\s*$`),
 ] as const;
+
+/**
+ * Strips markdown decoration so a label is matched by what it says, not by how
+ * it is dressed. `extractHeadings` returns the raw inline text, so a valid ATX
+ * closing sequence (`## TODO ##`) and inline emphasis (`## **TODO**`) both
+ * survive into the heading and defeated the anchored label patterns above —
+ * decoration alone was enough to smuggle a forbidden heading through.
+ *
+ * Only unambiguous markers are removed. An interior `_` is left alone so
+ * ordinary identifiers (`snake_case handling`) are not rewritten.
+ */
+function normalizeHeadingText(heading: string): string {
+  return heading
+    .replace(/\s+#+\s*$/, "")
+    .replace(/[*`~]/g, "")
+    .replace(/^_+|_+$/g, "")
+    .trim();
+}
 
 type CoverageRow = {
   id: string;
@@ -146,7 +180,12 @@ async function validatePlanArtifacts(specsRoot: string, entries: SpecEntry[]): P
     }
 
     const text = await readSafe(entry.planPath);
-    const headings = extractHeadings(text);
+    // Match on the decoration-stripped form, report the heading as authored so
+    // the author can find the line.
+    const headings = extractHeadings(text).map((raw) => ({
+      raw,
+      normalized: normalizeHeadingText(raw),
+    }));
 
     const forbiddenHeadingGroups = [
       {
@@ -170,9 +209,9 @@ async function validatePlanArtifacts(specsRoot: string, entries: SpecEntry[]): P
     ] as const;
 
     for (const group of forbiddenHeadingGroups) {
-      const matched = headings.filter((heading) =>
-        group.patterns.some((pattern) => pattern.test(heading)),
-      );
+      const matched = headings
+        .filter((heading) => group.patterns.some((pattern) => pattern.test(heading.normalized)))
+        .map((heading) => heading.raw);
       if (matched.length === 0) {
         continue;
       }
