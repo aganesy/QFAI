@@ -52,7 +52,7 @@ Skill-specific examples:
 
 ## CRITICAL CONSTRAINTS (Read First)
 
-- This skill processes **one test at a time** from `test-list.md`.
+- This skill processes **one test at a time** from `test-list.md`, except under an item-level parallel dispatch authorized by `## Parallelization Policy` below.
 - Each item goes through the full TDD micro-cycle: write a **failing test** first, then make it pass, then refactor.
 - The execution ledger is located at `.qfai/specs/<spec-id>/tdd/test-list.md`.
 - Items are processed **serially** by default. Item-level parallel processing inside one spec is allowed only under `## Parallelization Policy` below — both its technical gate and its consent gate must hold, and user approval cannot override a technical DENY. Cross-spec parallelism is never allowed.
@@ -220,10 +220,11 @@ Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response 
   (the sole authority), and explicit user approval. **User approval cannot
   override a technical DENY.**
 - **Default**: Serial execution, one test at a time in `test-list.md` order.
-- The allow/deny conditions are stated as **concurrent write conflicts**, not
-  as the existence of shared things, and authorized parallel runs use the
-  coordinated mode in which the orchestrator owns every `test-list.md` write.
-  Full rules: `references/parallelization-policy.md`.
+- The allow/deny conditions are stated as **concurrent write conflicts** —
+  including one item writing a module another item's test or implementation
+  reads — not as the existence of shared things, and authorized parallel runs
+  use the coordinated mode in which the orchestrator owns every `test-list.md`
+  write. Full rules: `references/parallelization-policy.md`.
 - `parallel_groups: []` in `agent-routing.yml` describes **role fan-out within
   a phase**, not item dispatch.
 
@@ -314,7 +315,7 @@ Each TDD item MUST have fresh evidence containing at minimum:
 ## FINAL CHECKLIST (Check Last)
 
 - [ ] CRITICAL CONSTRAINTS were followed.
-- [ ] Each item was processed one test at a time.
+- [ ] Each item was processed one test at a time, or inside an item-level parallel dispatch authorized by `## Parallelization Policy`.
 - [ ] Red phase: test was written and confirmed to fail.
 - [ ] Green phase: minimal code was written and test confirmed to pass.
 - [ ] Refactor phase: code improved with tests still passing.
@@ -366,6 +367,6 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 
 project_memory:
 
-- One TDD item at a time from test-list.md; status lifecycle is forward-only (todo → red → green → refactor → done); exception requires DR-ID.
+- One TDD item at a time from test-list.md by default; item-level parallelism inside one spec only when the Parallelization Policy technical gate and user consent both pass; status lifecycle is forward-only (todo → red → green → refactor → done); exception requires DR-ID.
 - Fresh RED + GREEN command/result evidence is mandatory per item; status-only evidence (e.g. "Status: PASS") is rejected.
 - UI-affecting items require product-surface-reviewer prototype-parity PASS before the item can transition to done.

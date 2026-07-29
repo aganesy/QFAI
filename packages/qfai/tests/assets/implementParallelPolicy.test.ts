@@ -14,6 +14,12 @@ const REFERENCE = "assistant/skills/qfai-implement/references/parallelization-po
 /** The full rules live in a reference file; the skill keeps the summary. */
 const policy = (tree: string): Promise<string> => read(tree, REFERENCE);
 
+/**
+ * Collapse markdown soft wraps so assertions pin wording, not the column at
+ * which prettier happened to break the line.
+ */
+const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
+
 describe("qfai-implement states one parallelization policy", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: separates cross-spec (barred) from item-level (governed)`, async () => {
@@ -58,10 +64,44 @@ describe("qfai-implement states one parallelization policy", () => {
       expect(routing).toContain("describes ROLE FAN-OUT within a phase, not item");
     });
 
-    it(`${tree}: worktree separation is a recommendation, not an unmeetable allow-condition`, async () => {
+    it(`${tree}: worktree separation is adjudicated outside the all-must-be-true list`, async () => {
       const section = await policy(tree);
-      expect(section).toContain("**Recommendation, not a hard allow-condition**");
-      expect(section).toMatch(/worktree.*separation/i);
+      expect(section).toContain("## Isolation requirement (worktree separation)");
+      expect(section).toContain('Adjudicated separately from the "all must be true" list');
+      // Three evaluable outcomes, so `delivery-planner` is never left guessing.
+      expect(section).toContain("nothing to record");
+      expect(section).toContain("**declared degraded mode**");
+      expect(section).toContain("no declared degraded mode recorded -> **DENY**");
+      // The allow-condition list must no longer carry the unevaluable bullet.
+      expect(section).not.toContain("**Recommendation, not a hard allow-condition**");
+      expect(section).not.toContain("`constitution/workflow.md` Concurrency rules");
+    });
+
+    it(`${tree}: a write/read overlap between items is a conflict`, async () => {
+      const section = unwrap(await policy(tree));
+      expect(section).toContain(
+        "No item **writes** a module that another concurrently dispatched item's test or implementation **reads**",
+      );
+      expect(section).toContain("become timing-dependent");
+      expect(section).toContain("resolves the importers reachable from the other items");
+    });
+
+    it(`${tree}: worker evidence blocks carry the whole per-item contract`, async () => {
+      const section = unwrap(await policy(tree));
+      for (const field of [
+        "`TDD-ID`",
+        "`TC-ref`",
+        "RED command and result",
+        "GREEN command and result",
+        "Refactor verify command and result",
+        "`Spec review`",
+        "`Code quality review`",
+        "`Prototype parity`",
+        "`DR-ID`",
+      ]) {
+        expect(section).toContain(field);
+      }
+      expect(section).toContain("A block missing any contract field does not satisfy item 10");
     });
   }
 });

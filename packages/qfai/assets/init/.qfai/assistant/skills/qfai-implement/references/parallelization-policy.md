@@ -37,6 +37,10 @@ per-worker schema isolation, not by a blanket deny.
 
 - No two concurrently dispatched items **write** the same source module.
 - No two concurrently dispatched items **write** the same test module.
+- No item **writes** a module that another concurrently dispatched item's test
+  or implementation **reads**. A write/read overlap is a conflict even when no
+  two items write the same file: the reader's RED/GREEN would observe a
+  half-applied module and become timing-dependent.
 - No two concurrently dispatched items **mutate** the same fixture instance,
   singleton instance, or DI container instance. (Constructing a fresh instance
   per item is fine.)
@@ -44,11 +48,25 @@ per-worker schema isolation, not by a blanket deny.
   database rows. Per-worker schema or database isolation satisfies this.
 - No sequential dependency: item B does not consume item A's output.
 - A post-merge integration verify plan exists.
-- Worktree separation (or branch separation) per
-  `constitution/workflow.md` Concurrency rules is in force, or the declared
-  degraded mode is recorded. **Recommendation, not a hard allow-condition**:
-  qfai does not currently provision worktrees itself, so requiring worktree
-  separation as a precondition would make the exception unreachable.
+
+Read dependencies are enumerated from the declared write sets: for every write
+target, `delivery-planner` resolves the importers reachable from the other
+items' test and implementation files. An import graph that cannot be resolved
+is a DENY, because the independence claim then has no concrete evidence.
+
+## Isolation requirement (worktree separation)
+
+Adjudicated separately from the "all must be true" list above, and never waived
+silently. `constitution/workflow.md` (Implementation stage) requires worktree
+separation for parallel execution; qfai does not provision worktrees itself, so
+`delivery-planner` evaluates it as three outcomes:
+
+- Worktree or branch separation in force -> requirement met, nothing to record.
+- Not in force, and the dispatch decision records a **declared degraded mode**
+  naming (a) the shared worktree path and (b) every allow condition above
+  re-verified for that shared tree -> ALLOW. Absence of worktree separation is
+  not by itself a DENY.
+- Not in force and no declared degraded mode recorded -> **DENY**.
 
 ## Deny conditions (any one blocks parallel dispatch)
 
@@ -64,7 +82,12 @@ per-worker schema isolation, not by a blanket deny.
 When parallel dispatch is authorized, the ledger has one writer:
 
 - The **orchestrator** owns every `test-list.md` write. Workers never edit it.
-- Workers return a per-item evidence block (RED/GREEN commands and output,
-  status, `DR-ID`).
-- Item 10 of the 11-point gate is satisfied by the orchestrator applying the
-  worker's evidence block to the row, not by the worker writing it.
+- Workers return a per-item evidence block carrying **every** field of the
+  `SKILL.md` "Per-item evidence contract": `TDD-ID`, `TC-ref`, RED command and
+  result, GREEN command and result, Refactor verify command and result,
+  `Spec review`, `Code quality review`, and `Prototype parity` for UI-affecting
+  items — plus the resulting status and `DR-ID`.
+- Item 10 of the 11-point gate is satisfied by the orchestrator applying a
+  **complete** evidence block to the row, not by the worker writing it. A block
+  missing any contract field does not satisfy item 10: the orchestrator obtains
+  the missing fields first, and the row stays out of `done` until it has them.
