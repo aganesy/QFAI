@@ -74,8 +74,17 @@ describe("TC-0011-0004: Exception Missing DR-ID Error", () => {
 // TC-0011-0005: Parallel Dispatch Deny Conditions
 describe("TC-0011-0005: Parallel Dispatch Deny Conditions", () => {
   it("SKILL.md defines parallel processing constraints", async () => {
-    const content = await readFile(SKILL_PATH, "utf-8");
-    expect(content).toMatch(/[Pp]arallel.*independent.*SUT|independent.*SUT.*parallel/i);
+    // #232: the conditions moved to references/parallelization-policy.md and
+    // are stated as concurrent write conflicts, not shared-thing existence.
+    const content = [
+      await readFile(SKILL_PATH, "utf-8"),
+      await readFile(
+        path.join(path.dirname(SKILL_PATH), "references", "parallelization-policy.md"),
+        "utf-8",
+      ),
+    ].join("\n");
+    expect(content).toMatch(/Deny conditions/i);
+    expect(content).toMatch(/write.*same source module|concurrent write conflict/i);
   });
 });
 

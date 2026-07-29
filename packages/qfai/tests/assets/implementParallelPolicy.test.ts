@@ -60,7 +60,8 @@ describe("qfai-implement states one parallelization policy", () => {
 
     it(`${tree}: worktree separation is a recommendation, not an unmeetable allow-condition`, async () => {
       const section = await policy(tree);
-      expect(section).toContain("Recommendation, not a hard\n  allow-condition");
+      expect(section).toContain("**Recommendation, not a hard allow-condition**");
+      expect(section).toMatch(/worktree.*separation/i);
     });
   }
 });

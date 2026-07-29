@@ -44,15 +44,18 @@ per-worker schema isolation, not by a blanket deny.
   database rows. Per-worker schema or database isolation satisfies this.
 - No sequential dependency: item B does not consume item A's output.
 - A post-merge integration verify plan exists.
-- Isolation per `constitution/workflow.md` Concurrency rules is in force, or
-  the declared degraded mode is recorded. (Recommendation, not a hard
-  allow-condition: qfai does not currently provision worktrees itself.)
+- Worktree separation (or branch separation) per
+  `constitution/workflow.md` Concurrency rules is in force, or the declared
+  degraded mode is recorded. **Recommendation, not a hard allow-condition**:
+  qfai does not currently provision worktrees itself, so requiring worktree
+  separation as a precondition would make the exception unreachable.
 
 ## Deny conditions (any one blocks parallel dispatch)
 
 - Two concurrently dispatched items share the same behavior's Red/Green/Refactor cycle.
 - Two concurrently dispatched items modify the same public API surface.
-- Two concurrently dispatched items write the same fixture, mock, or global setup **file**.
+- Two concurrently dispatched items write the same shared fixture, shared mock,
+  or shared global setup **file**.
 - Sequential dependency: "A must finish before B has meaning".
 - The independence claim cannot be explained with concrete file/module evidence.
 
