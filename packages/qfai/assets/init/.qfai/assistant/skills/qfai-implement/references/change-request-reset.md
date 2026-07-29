@@ -10,6 +10,21 @@ invalidates". Without a stated exception that instruction is unperformable:
 the skill would either violate the forward-only rule or leave a `done` row
 holding an implementation result the approved change already invalidated.
 
+## The mandatory preflight
+
+The reset cannot be reached from the normal loop: `Required Process` starts by
+selecting the first `todo` row, and the skill exits with "nothing to do" when
+every row is `done` — exactly the state an approved reset is meant to reopen.
+So the sweep is a **preflight**, not an opportunistic step:
+
+1. On every run, before the ledger is read for any other purpose, enumerate
+   `.qfai/decisions/CR-*.md` and keep those in scope for the target spec.
+2. Apply every reset the approved ones authorise (conditions below).
+3. Only then judge the ledger. A run whose preflight reset rows must not report
+   "nothing to do", because the all-`done` state it would report is stale.
+
+A run with no in-scope approved CR does nothing here and proceeds unchanged.
+
 ## The exception
 
 A `.qfai/decisions/CR-*.md` whose "Approved actions" name a downstream ledger
@@ -26,11 +41,20 @@ all of the following hold:
   approved and not what the skill later decided was invalidated. A row outside
   that enumeration is not approved; widening the scope needs a new CR;
 - each reset row records that CR's ID in its `DR-ID` column — that column
-  carries both `DR-*` and `CR-*` references, and the ID is **retained** as the
-  row re-runs through `red` / `green` / `refactor` / `done`, since clearing it
-  on the next transition erases the only record of the approved reopen; and
+  carries both `DR-*` and `CR-*` references as a comma-separated list, and the
+  ID is **retained** as the row re-runs through `red` / `green` / `refactor` /
+  `done`, since clearing it on the next transition erases the only record of the
+  approved reopen; and
 - the reset is recorded in the CR's `Resolution` section (which rows, by
   `TDD-ID`).
+
+## A retained `CR-*` is not an exception's `DR-*`
+
+A reset row that later hits an anomaly still owes a Decision Record. The
+retained `CR-*` records the approved reopen, not the anomaly, so it does not
+satisfy the `exception` requirement on its own: add the `DR-*` alongside it
+(`DR-NNNN, CR-YYYYMMDD-NNNN`). `TDDLIST_EXCEPTION_MISSING_DR` fires on an
+`exception` row whose `DR-ID` cell is empty **or holds `CR-*` references only**.
 
 ## What stays prohibited
 

@@ -31,9 +31,10 @@ Any exception beyond this list requires explicit user approval.
    pattern is `CR-\d{8}-\d{4}` and the file carries `ID`, `Status`
    (`open` / `approved` / `rejected` / `superseded`), `Approved by`,
    `Approved at` and `Approved option` so the approval is a record, not a
-   memory. Reference it from `09_delta.md` / `07_Decisions.md` and from any
-   ledger row it resets, using the `DR-ID` column — that column carries both
-   `DR-*` and `CR-*` references. Contents:
+   memory. Creating this file is the only write this step makes: `09_delta.md`
+   and `07_Decisions.md` are upstream SSOT, so the reference to this CR is
+   written there by the owner skill in step 4, never before approval.
+   Contents:
    - context (what conflicts)
    - proposed change
    - options (at least 3) and recommendation
@@ -41,11 +42,14 @@ Any exception beyond this list requires explicit user approval.
    - decision needed from user
    - approved actions (owner skill rerun plan)
 3. Wait for explicit user approval, then set `Status` and the approval fields.
-4. Rerun the owner skill for the upstream artifact.
-5. Resume downstream work only after upstream artifacts are updated. Record
-   that fact in the CR: fill `Resolution` and set `Applied at`. Approval alone
-   does not release the downstream gate — `qfai-implement` treats an
-   `approved` CR without `Applied at` as unresolved.
+4. Rerun the owner skill for the upstream artifact. That rerun is what records
+   the CR reference in `09_delta.md` / `07_Decisions.md`.
+5. Resume downstream work only after upstream artifacts are updated. Any
+   downstream ledger row this CR resets records its ID in the `DR-ID` column —
+   that column carries both `DR-*` and `CR-*` references. Record the fact in
+   the CR: fill `Resolution` and set `Applied at`. Approval alone does not
+   release the downstream gate — `qfai-implement` treats an `approved` CR
+   without `Applied at` as unresolved.
 
 ## Non-negotiable constraints
 

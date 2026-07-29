@@ -26,6 +26,23 @@ const TEST_FILE_CHECK_STATUSES = new Set(["green", "refactor", "done"]);
 
 const TDD_ID_FORMAT = /^TDD-\d{4}$/;
 
+/**
+ * A `CR-*` reference in the `DR-ID` column records an approved Change Request
+ * reset and is retained through the row's later statuses. It is not a Decision
+ * Record for an anomaly, so a cell holding nothing but `CR-*` references leaves
+ * an `exception` row without the DR it owes.
+ */
+const CHANGE_REQUEST_REF = /^CR-\d{8}-\d{4}$/i;
+
+/** True when the `DR-ID` cell carries no reference other than `CR-*` ones. */
+function isChangeRequestRefsOnly(drId: string): boolean {
+  const refs = drId
+    .split(/[,;]/)
+    .map((ref) => ref.trim())
+    .filter((ref) => ref.length > 0);
+  return refs.length > 0 && refs.every((ref) => CHANGE_REQUEST_REF.test(ref));
+}
+
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
 
 export async function validateTddList(root: string, config: QfaiConfig): Promise<Issue[]> {
@@ -231,11 +248,13 @@ async function validateSpecTddList(
       const status = (row[statusIndex] ?? "").trim().toLowerCase();
       if (status !== "exception") continue;
       const drId = (row[drIdIndex] ?? "").trim();
-      if (drId.length === 0) {
+      if (drId.length === 0 || isChangeRequestRefsOnly(drId)) {
+        const reason =
+          drId.length === 0 ? "DR-ID is empty" : "DR-ID holds only Change Request references";
         issues.push(
           issue(
             "TDDLIST_EXCEPTION_MISSING_DR",
-            `Status=exception but DR-ID is empty in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Add a DR-ID reference`,
+            `Status=exception but ${reason} in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Add a DR-ID reference`,
             "error",
             relPath,
             "tddList.exceptionDrId",

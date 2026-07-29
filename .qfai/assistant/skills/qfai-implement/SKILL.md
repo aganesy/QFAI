@@ -60,7 +60,7 @@ Skill-specific examples:
 - The `exception` status can be reached from any active status when an anomaly is detected.
 - Backward transitions are prohibited (e.g., `green` -> `red` is not allowed). The only exception is an approved Change Request reset (see Status Lifecycle).
 - Completed items (`done`) are skipped on re-execution, unless an approved Change Request reset them.
-- When all items are `done`, report "nothing to do" and exit.
+- When all items are `done` **and the mandatory Change Request preflight (see Required Process) reset nothing**, report "nothing to do" and exit.
 
 ## Goal
 
@@ -85,16 +85,16 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` tracks progress with these required columns:
 
-| Column    | Description                                                                                                                                                                       |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                                                                                                               |
-| TC-Refs   | References to test cases from `06_Test-Cases.md`                                                                                                                                  |
-| Layer     | Test layer (Unit, Integration, etc.)                                                                                                                                              |
-| Test file | Path to the test file                                                                                                                                                             |
-| Selector  | Test selector/description for targeted execution                                                                                                                                  |
-| Status    | Current lifecycle status                                                                                                                                                          |
-| DR-ID     | Decision Record / Change Request ID: required for `exception` rows and for a row reset by an approved Change Request, retained through that row's later statuses; blank otherwise |
-| Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                                                                                                              |
+| Column    | Description                                                                                                                                                                                                                 |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                                                                                                                                                         |
+| TC-Refs   | References to test cases from `06_Test-Cases.md`                                                                                                                                                                            |
+| Layer     | Test layer (Unit, Integration, etc.)                                                                                                                                                                                        |
+| Test file | Path to the test file                                                                                                                                                                                                       |
+| Selector  | Test selector/description for targeted execution                                                                                                                                                                            |
+| Status    | Current lifecycle status                                                                                                                                                                                                    |
+| DR-ID     | Decision Record / Change Request IDs, comma-separated: a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses; blank otherwise |
+| Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                                                                                                                                                        |
 
 ### Status Lifecycle
 
@@ -120,9 +120,14 @@ backward transition. Preconditions and the reset procedure:
 When transitioning to `exception`:
 
 - A DR-ID (Decision Record ID) must be recorded in the DR-ID column.
-- If the DR-ID column is empty, emit error: `"exception status requires DR-ID in DR-ID column"`.
+- A retained `CR-*` does not satisfy this: it records the approved reopen, not the anomaly. Add the `DR-*` alongside it (`DR-NNNN, CR-YYYYMMDD-NNNN`).
+- If the DR-ID column is empty, or holds `CR-*` references only, emit error: `"exception status requires DR-ID in DR-ID column"`.
 
 ## Required Process
+
+### Phase: Preflight (Change Request reset) — MANDATORY, runs first
+
+1. Enumerate the in-scope `.qfai/decisions/CR-*.md` and apply every approved reset per `references/change-request-reset.md` **before** any other ledger judgement — including the all-`done` "nothing to do" exit, which an approved reset invalidates.
 
 ### Phase: Red (Write Failing Test)
 
@@ -272,10 +277,12 @@ The skill may declare "this spec's implementation is complete" only when:
 - Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain
 - Checkpoint verification passed
-- No unresolved Change Request or waiver dependency exists. A
-  `.qfai/decisions/CR-*.md` is **resolved** only when every condition below
-  holds; a CR failing any one of them — a half-filled record included — is
-  **unresolved** and blocks completion:
+- No unresolved Change Request or waiver dependency exists. The gate covers only
+  the `.qfai/decisions/CR-*.md` **in scope for this spec** — `Impact scope` names
+  this spec or a shared policy it depends on, or this spec's artifacts reference
+  it; a CR confined to another spec never blocks this one. An in-scope CR
+  is **resolved** only when every condition below holds; a CR failing any one of
+  them — a half-filled record included — is **unresolved** and blocks completion:
   - `Status` is `approved`, `rejected` or `superseded` (never `open`);
   - `Approved by` / `Approved at` are populated, plus `Approved option` when
     `Status` is `approved` and `Superseded by` when it is `superseded`;

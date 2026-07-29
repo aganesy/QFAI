@@ -91,14 +91,74 @@ describe("a Change Request is a defined artifact", () => {
       // `exception`.
       expect(skill).not.toContain("Decision Record ID for exception items (blank otherwise)");
       expect(skill).toContain(
-        "required for `exception` rows and for a row reset by an approved Change Request, retained through that row's later statuses",
+        "a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses",
       );
 
       const reference = await read(
         tree,
         "assistant/skills/qfai-implement/references/change-request-reset.md",
       );
-      expect(reference).toContain("the ID is **retained** as the");
+      expect(reference).toContain("the\n  ID is **retained** as the");
+    });
+
+    it(`${tree}: a retained CR-ID does not stand in for an exception's DR-ID`, async () => {
+      const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+      expect(skill).toContain(
+        "A retained `CR-*` does not satisfy this: it records the approved reopen, not the anomaly.",
+      );
+      expect(skill).toContain(
+        'If the DR-ID column is empty, or holds `CR-*` references only, emit error: `"exception status requires DR-ID in DR-ID column"`',
+      );
+
+      const reference = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/change-request-reset.md",
+      );
+      expect(reference).toContain("## A retained `CR-*` is not an exception's `DR-*`");
+      expect(reference).toContain("or holds `CR-*` references only");
+    });
+
+    it(`${tree}: the CR reset sweep is a mandatory preflight, not an opportunistic step`, async () => {
+      // The normal loop starts at the first `todo` row and exits on all-`done`,
+      // so without a preflight an approved reset would never be reached.
+      const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+      expect(skill).toContain(
+        "### Phase: Preflight (Change Request reset) — MANDATORY, runs first",
+      );
+      expect(skill).toContain(
+        'When all items are `done` **and the mandatory Change Request preflight (see Required Process) reset nothing**, report "nothing to do" and exit.',
+      );
+      expect(skill.indexOf("### Phase: Preflight")).toBeLessThan(
+        skill.indexOf("### Phase: Red (Write Failing Test)"),
+      );
+
+      const reference = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/change-request-reset.md",
+      );
+      expect(reference).toContain("## The mandatory preflight");
+      expect(reference).toContain("before the ledger is read for any other purpose");
+    });
+
+    it(`${tree}: the completion gate covers only CRs in scope for this spec`, async () => {
+      const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+      expect(skill).toContain("**in scope for this spec**");
+      expect(skill).toContain("a CR confined to another spec never blocks this one");
+    });
+
+    it(`${tree}: the CR reference lands upstream only after approval`, async () => {
+      // `09_delta.md` / `07_Decisions.md` are upstream SSOT, so step 2 (before
+      // approval) must not write them.
+      const drift = await read(tree, "assistant/constitution/drift-protocol.md");
+      expect(drift).toContain(
+        "Creating this file is the only write this step makes: `09_delta.md`\n   and `07_Decisions.md` are upstream SSOT",
+      );
+      expect(drift).toContain("written there by the owner skill in step 4, never before approval");
+      expect(drift).toContain(
+        "4. Rerun the owner skill for the upstream artifact. That rerun is what records\n   the CR reference in `09_delta.md` / `07_Decisions.md`.",
+      );
+      const step2 = drift.slice(drift.indexOf("2. Create a Change Request"), drift.indexOf("3. "));
+      expect(step2).not.toContain("Reference it from `09_delta.md`");
     });
 
     it(`${tree}: superseded requires the approval fields the gate demands`, async () => {
