@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "./config.js";
@@ -93,13 +93,12 @@ export async function writeValidateRunLog(input: {
   await writeJson(path.join(reportDir, "traceability.json"), traceabilityJson);
   await writeFile(path.join(reportDir, "summary.md"), `${summaryMd}\n`, "utf-8");
 
-  // Validate Hard Gate evidence. Written unconditionally so it can never go stale:
-  // every run overwrites it with a pointer at the run-log directory it just created.
-  // Previously this file only existed as a side effect of `| tee`, which the Hard
-  // Gate command line itself omits (and which is not portable to PowerShell).
-  await writeFile(
-    path.join(outDir, "validate.log"),
-    `${buildValidateLog({
+  // Validate Hard Gate evidence. Written on every run so it can never go stale:
+  // it always points at the newest run-log directory. Previously this file only
+  // existed as a side effect of `| tee`, which the Hard Gate command line itself
+  // omits (and which is not portable to PowerShell).
+  await writeLatestValidateLog(path.join(outDir, "validate.log"), runId, () =>
+    buildValidateLog({
       runId,
       startedAt: input.startedAt.toISOString(),
       status,
@@ -108,14 +107,53 @@ export async function writeValidateRunLog(input: {
       errorCount: input.result.counts.error,
       warningCount: input.result.counts.warning,
       summaryMd,
-    })}\n`,
-    "utf-8",
+    }),
   );
 
   return {
     runId,
     reportDir,
   };
+}
+
+const RUN_ID_LINE_RE = /^-\s*run_id:\s*(run-\d{17})\s*$/m;
+
+/**
+ * Write the shared `validate.log` only when this run is the newest one to have
+ * reached this point.
+ *
+ * Two validates on the same root race here. Run-log directory names come from
+ * the run's START time, so a long run A started before a short run B finishes
+ * after it — and an unconditional write would leave `validate.log` pointing at
+ * A's older `run-*` directory while B's newer one sits beside it. The freshness
+ * rule the shipped Hard Gate documents ("`run_log:` names the newest `run-*`")
+ * would then fail on a repository where nothing is actually wrong.
+ *
+ * Run ids are `run-<17-digit local timestamp>`, so lexical order is
+ * chronological order and the comparison needs no parsing. The write is skipped
+ * when the file already names a strictly newer run. This is not mutual
+ * exclusion — two processes can still interleave read and write — but it removes
+ * the outcome that matters, an older run replacing a newer pointer, without
+ * introducing a lock file that a crashed run would leave behind.
+ *
+ * An unreadable or unparseable existing file is treated as "no newer run", so a
+ * truncated or hand-edited log self-heals on the next validate.
+ */
+async function writeLatestValidateLog(
+  filePath: string,
+  runId: string,
+  buildContents: () => string,
+): Promise<void> {
+  let existingRunId: string | null = null;
+  try {
+    existingRunId = RUN_ID_LINE_RE.exec(await readFile(filePath, "utf-8"))?.[1] ?? null;
+  } catch {
+    existingRunId = null;
+  }
+  if (existingRunId !== null && existingRunId > runId) {
+    return;
+  }
+  await writeFile(filePath, `${buildContents()}\n`, "utf-8");
 }
 
 function buildValidateLog(input: {

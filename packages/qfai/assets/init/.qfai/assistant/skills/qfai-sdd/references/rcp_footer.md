@@ -34,7 +34,8 @@
 - 各 review cycle で `qfai validate --profile sdd --fail-on error --format github` を実行していること
 - `.qfai/report/validate.log` が存在し、最新の成果物に対応していること
   - このファイルは `qfai validate` が実行のたびに自動で書き出す。`| tee` などのシェルリダイレクトは不要（PowerShell では動作しないため使用しない）
-  - 最新性は `validate.log` の `run_log:` 行が最新の `.qfai/report/run-*/` を指しているかで確認する
+  - 出力先は `qfai.config.yaml` の `paths.outDir` 配下（既定 `.qfai/report`）。`paths.outDir` を変更したプロジェクトでは `<paths.outDir>/validate.log` と `<paths.outDir>/run-*/` を見ること
+  - 最新性は `validate.log` の `run_log:` 行が最新の `run-*/` を指しているかで確認する
 
 ---
 
