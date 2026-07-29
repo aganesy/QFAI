@@ -224,7 +224,10 @@ Notes:
 
 - A TC's annotation belongs in exactly one directory — the one its declared
   `Level` routes to. Placing it elsewhere is both uncovered (`QFAI-ATDD-112`)
-  and forbidden (`QFAI-ATDD-121` / `QFAI-ATDD-122`).
+  and forbidden (`QFAI-ATDD-121` / `QFAI-ATDD-122` / `QFAI-ATDD-123`). The rule
+  is symmetric: an annotation left behind in `tests/integration/**` after the
+  TC moved to `L4`/`L5` is rejected by `QFAI-ATDD-123` just as an early one in
+  `tests/api/**` is rejected by `QFAI-ATDD-121`.
 - AC annotations are optional in code.
 - `QFAI:CON-API-*` in E2E is not forbidden, but contract guarantee belongs to API tests.
 

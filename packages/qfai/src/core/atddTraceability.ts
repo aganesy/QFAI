@@ -75,6 +75,8 @@ export type AtddCodeTraceabilityResult = {
   forbidden: {
     tcInApi: AtddForbiddenRef[];
     tcInE2e: AtddForbiddenRef[];
+    /** TC annotated under integration although its declared Level routes elsewhere. */
+    tcInIntegration: AtddForbiddenRef[];
   };
   missing: AtddTraceabilityMissing;
   /**
@@ -92,6 +94,27 @@ export const ATDD_TEST_KIND_DIRS: Record<AtddTestKind, string> = {
   api: "tests/api/**",
   e2e: "tests/e2e/**",
 };
+
+/**
+ * The same map rendered against the project's configured `paths.testsDir`.
+ *
+ * The scan already follows `testsDir`, so a project that renamed it to e.g.
+ * `spec-tests` would otherwise be told by `QFAI-ATDD-112` to annotate
+ * `tests/api/**` — a directory the scan never reads, leaving the finding
+ * unclearable. {@link ATDD_TEST_KIND_DIRS} stays as the default-shaped
+ * fallback for callers with no config in hand.
+ */
+export function atddTestKindDirs(testsDirRelative: string): Record<AtddTestKind, string> {
+  const base = toPosixPath(testsDirRelative).replace(/\/+$/, "");
+  if (base.length === 0 || base === "." || base === "tests") {
+    return ATDD_TEST_KIND_DIRS;
+  }
+  return {
+    integration: `${base}/integration/**`,
+    api: `${base}/api/**`,
+    e2e: `${base}/e2e/**`,
+  };
+}
 
 export async function evaluateAtddCodeTraceability(
   root: string,
@@ -123,6 +146,7 @@ export async function evaluateAtddCodeTraceability(
 
   const forbiddenTcInApi = new Map<string, Set<string>>();
   const forbiddenTcInE2e = new Map<string, Set<string>>();
+  const forbiddenTcInIntegration = new Map<string, Set<string>>();
 
   const specUsIds = specRefs.us;
   const specTcIds = specRefs.tc;
@@ -174,6 +198,14 @@ export async function evaluateAtddCodeTraceability(
       if (kind === "e2e" && homeKind !== "e2e") {
         recordForbidden(forbiddenTcInE2e, file, formatTcRef(ref.spec, ref.id));
       }
+      // Symmetry: a TC whose declared home is api/e2e is equally misplaced when
+      // it is (still) annotated under integration. Without this, a migration
+      // that added the correct `tests/api/**` annotation and left the old
+      // `tests/integration/**` one behind validated clean, contradicting the
+      // shipped rule that a TC annotation belongs to exactly one directory.
+      if (kind === "integration" && homeKind !== "integration") {
+        recordForbidden(forbiddenTcInIntegration, file, formatTcRef(ref.spec, ref.id));
+      }
     }
 
     for (const contractId of apiAnnotations) {
@@ -213,6 +245,7 @@ export async function evaluateAtddCodeTraceability(
     forbidden: {
       tcInApi: toForbiddenList(forbiddenTcInApi),
       tcInE2e: toForbiddenList(forbiddenTcInE2e),
+      tcInIntegration: toForbiddenList(forbiddenTcInIntegration),
     },
     missing,
     missingTcHomes,

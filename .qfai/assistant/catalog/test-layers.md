@@ -62,6 +62,11 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
     declared `Level` is not L5/E2E**. Same reason as above: the routing rule
     and the forbidden rule must agree, or the layer the routing selects
     becomes unusable.
+  - `tests/integration/**` must not include `QFAI:SPEC-XXXX:TC-YYYY` **for a TC
+    whose declared `Level` is not L3/Integration** (`QFAI-ATDD-123`). The rule
+    is symmetric so "exactly one directory" holds in both directions: an
+    annotation left behind here after the TC moved to L4/L5 is as wrong as one
+    filed early into `tests/api/**`.
 - Unknown references (`US/TC/CON-API` not declared) are errors.
 - AC annotations are not required in code; AC coverage is treated as indirect through TC coverage.
 - `QFAI:CON-API-*` in `tests/e2e/**` is not forbidden, but contract guarantee belongs to API tests.

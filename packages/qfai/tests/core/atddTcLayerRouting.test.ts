@@ -141,4 +141,51 @@ describe("the TC obligation routes by declared Level", () => {
       expect(missing?.rule).toBe("atddCodeTraceability.coverage.tcToDeclaredLayer");
     });
   });
+
+  it("forbids an L4 TC left behind in tests/integration", async () => {
+    // A migration that adds the correct tests/api/** annotation and leaves the
+    // old integration one behind used to validate clean, contradicting the
+    // shipped "exactly one directory" rule.
+    await withProject({ testCases: tcTable("L4"), annotationIn: "integration" }, (issues) => {
+      const finding = issues.find((entry) => entry.code === "QFAI-ATDD-123");
+      expect(finding?.severity).toBe("error");
+      expect(finding?.message).toContain("SPEC-0001:TC-0001");
+      expect(finding?.suggested_action).toContain("tests/integration/**");
+    });
+  });
+
+  it("says nothing about an L3 TC annotated in tests/integration", async () => {
+    await withProject({ testCases: tcTable("L3"), annotationIn: "integration" }, (issues) => {
+      expect(codes(issues)).not.toContain("QFAI-ATDD-123");
+    });
+  });
+});
+
+describe("the reported directories follow the configured testsDir", () => {
+  it("names <testsDir>/api instead of the literal tests/api", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tc-routing-dir-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
+      await writeFile(path.join(specDir, "02_User-stories.md"), "# 02 US\n", "utf-8");
+      await writeFile(path.join(specDir, "06_Test-Cases.md"), tcTable("L4"), "utf-8");
+
+      const config = {
+        ...defaultConfig,
+        paths: { ...defaultConfig.paths, testsDir: "spec-tests" },
+      };
+      const issues = await validateAtddCodeTraceability(root, config);
+      const missing = issues.find((entry) => entry.code === "QFAI-ATDD-112");
+      // Following a fix that names an unscanned directory can never clear it.
+      expect(missing?.message).toContain("spec-tests/api/**");
+      expect(missing?.suggested_action).toContain("spec-tests/api/**");
+      // No bare `tests/...` literal survives (the substring inside
+      // "spec-tests/..." does not count).
+      expect(missing?.message).not.toMatch(/(^|[^-\w])tests\//);
+      expect(missing?.suggested_action).not.toMatch(/(^|[^-\w])tests\//);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

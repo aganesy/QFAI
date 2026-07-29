@@ -4,7 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import {
-  ATDD_TEST_KIND_DIRS,
+  atddTestKindDirs,
   evaluateAtddCodeTraceability,
   type AtddCodeTraceabilityResult,
   type AtddTestKind,
@@ -25,6 +25,7 @@ type AtddTraceabilitySummary = {
   forbidden: {
     tcInApi: Array<{ file: string; ids: string[] }>;
     tcInE2e: Array<{ file: string; ids: string[] }>;
+    tcInIntegration: Array<{ file: string; ids: string[] }>;
   };
   scan: {
     matchedFileCount: number;
@@ -39,6 +40,8 @@ export async function validateAtddCodeTraceability(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const result = await evaluateAtddCodeTraceability(root, config);
+  // Display paths must follow the configured testsDir; the scan already does.
+  const dirs = atddTestKindDirs(config.paths.testsDir);
   const issues: Issue[] = [];
 
   issues.push(...buildUnknownIssues(result.unknown));
@@ -63,13 +66,13 @@ export async function validateAtddCodeTraceability(
     issues.push(
       issue(
         "QFAI-ATDD-112",
-        `宣言 Level が指すディレクトリで参照されていない TC があります: ${formatMissingTcGroups(grouped)}`,
+        `宣言 Level が指すディレクトリで参照されていない TC があります: ${formatMissingTcGroups(grouped, dirs)}`,
         "error",
         result.specsRoot,
         "atddCodeTraceability.coverage.tcToDeclaredLayer",
         result.missing.tc,
         "change",
-        buildMissingTcFix(grouped),
+        buildMissingTcFix(grouped, dirs),
       ),
     );
   }
@@ -99,7 +102,7 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.forbidden.tcInApi",
         forbidden.ids,
         "change",
-        "tests/api/** から TC 参照を削除して契約ID（`QFAI:CON-API-XXXX`）を使うか、その TC の `Level` を `L4`/`API` に修正してください。",
+        `${dirs.api} から TC 参照を削除して契約ID（\`QFAI:CON-API-XXXX\`）を使うか、その TC の \`Level\` を \`L4\`/\`API\` に修正してください。`,
       ),
     );
   }
@@ -114,7 +117,22 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.forbidden.tcInE2e",
         forbidden.ids,
         "change",
-        "tests/e2e/** から TC 参照を削除して US 参照（`QFAI:SPEC-XXXX:US-YYYY`）を使うか、その TC の `Level` を `L5`/`E2E` に修正してください。",
+        `${dirs.e2e} から TC 参照を削除して US 参照（\`QFAI:SPEC-XXXX:US-YYYY\`）を使うか、その TC の \`Level\` を \`L5\`/\`E2E\` に修正してください。`,
+      ),
+    );
+  }
+
+  for (const forbidden of result.forbidden.tcInIntegration) {
+    issues.push(
+      issue(
+        "QFAI-ATDD-123",
+        `宣言 Level が Integration ではない TC を Integration テストで参照しています: ${forbidden.ids.join(", ")}`,
+        "error",
+        forbidden.file,
+        "atddCodeTraceability.forbidden.tcInIntegration",
+        forbidden.ids,
+        "change",
+        `TC 注釈は宣言 Level が指す1ディレクトリだけに置きます。${dirs.integration} に残存する TC 参照を削除するか、その TC の \`Level\` を \`L3\`/\`Integration\` に戻してください。`,
       ),
     );
   }
@@ -164,17 +182,23 @@ function orderedMissingTcGroups(
   );
 }
 
-function formatMissingTcGroups(grouped: Map<AtddTestKind, string[]>): string {
+function formatMissingTcGroups(
+  grouped: Map<AtddTestKind, string[]>,
+  dirs: Record<AtddTestKind, string>,
+): string {
   return orderedMissingTcGroups(grouped)
-    .map(([kind, refs]) => `${ATDD_TEST_KIND_DIRS[kind]} -> ${refs.join(", ")}`)
+    .map(([kind, refs]) => `${dirs[kind]} -> ${refs.join(", ")}`)
     .join(" / ");
 }
 
-function buildMissingTcFix(grouped: Map<AtddTestKind, string[]>): string {
+function buildMissingTcFix(
+  grouped: Map<AtddTestKind, string[]>,
+  dirs: Record<AtddTestKind, string>,
+): string {
   const perHome = orderedMissingTcGroups(grouped)
-    .map(([kind, refs]) => `${ATDD_TEST_KIND_DIRS[kind]}: ${refs.join(", ")}`)
+    .map(([kind, refs]) => `${dirs[kind]}: ${refs.join(", ")}`)
     .join(" / ");
-  return `各 TC の宣言 Level が指すディレクトリに \`QFAI:SPEC-XXXX:TC-YYYY\` 注釈を追加してください（L3/Integration -> tests/integration/**、L4/API -> tests/api/**、L5/E2E -> tests/e2e/**、Level 未宣言は tests/integration/**）: ${perHome}`;
+  return `各 TC の宣言 Level が指すディレクトリに \`QFAI:SPEC-XXXX:TC-YYYY\` 注釈を追加してください（L3/Integration -> ${dirs.integration}、L4/API -> ${dirs.api}、L5/E2E -> ${dirs.e2e}、Level 未宣言は ${dirs.integration}）: ${perHome}`;
 }
 
 function buildUnknownIssues(unknown: AtddUnknownRef[]): Issue[] {
@@ -264,12 +288,13 @@ async function writeAtddTraceabilityReport(
     missingTcHomes: Object.fromEntries(
       result.missing.tc.map((ref) => [
         ref,
-        ATDD_TEST_KIND_DIRS[result.missingTcHomes.get(ref) ?? "integration"],
+        atddTestKindDirs(config.paths.testsDir)[result.missingTcHomes.get(ref) ?? "integration"],
       ]),
     ),
     forbidden: {
       tcInApi: result.forbidden.tcInApi,
       tcInE2e: result.forbidden.tcInE2e,
+      tcInIntegration: result.forbidden.tcInIntegration,
     },
     scan: {
       matchedFileCount: result.scan.matchedFileCount,
@@ -323,6 +348,8 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
   lines.push(...toFileIdList(summary.forbidden.tcInApi));
   lines.push("- TC in tests/e2e/**");
   lines.push(...toFileIdList(summary.forbidden.tcInE2e));
+  lines.push("- TC outside its declared home in tests/integration/**");
+  lines.push(...toFileIdList(summary.forbidden.tcInIntegration));
   lines.push("");
   lines.push("## Scan");
   lines.push("");
