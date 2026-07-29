@@ -49,6 +49,36 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
   }
 }
 
+/**
+ * Runs `task` with CI detection forced on or off.
+ *
+ * `discussion`, `prototyping`, `atdd` and `saas-package` are not in
+ * `CI_ALLOWED_PROFILES`, so under the real CI environment the guard short-
+ * circuits the run and the partial-profile notice is replaced by the
+ * blocked-run notice. Tests that mean one or the other must say which.
+ */
+async function withCiEnv(inCi: boolean, task: () => Promise<void>): Promise<void> {
+  // `isCiEnvironment` reads exactly these two.
+  const previousCi = process.env.CI;
+  const previousGha = process.env.GITHUB_ACTIONS;
+  const restore = (key: "CI" | "GITHUB_ACTIONS", value: string | undefined): void => {
+    if (value === undefined) {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- literal union key
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  };
+  restore("CI", inCi ? "true" : undefined);
+  restore("GITHUB_ACTIONS", inCi ? "true" : undefined);
+  try {
+    await task();
+  } finally {
+    restore("CI", previousCi);
+    restore("GITHUB_ACTIONS", previousGha);
+  }
+}
+
 describe("--profile tdd can observe the ATDD routing gates", () => {
   it("raises QFAI-ATDD-111/112 under the tdd profile", async () => {
     await withProject(async (root) => {
@@ -106,21 +136,23 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
   });
 
   it("names the discussion profile's own group as evaluated and the rest as not", async () => {
-    await withProject(async (root) => {
-      await runValidate({ root, strict: false, profile: "discussion" });
-      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
-      expect(notice?.message).toContain('profile="discussion" is a partial profile');
-      expect(notice?.message).toContain("QFAI-HYG-*");
-      expect(notice?.message).toContain("TDDLIST_*");
-      expect(notice?.message).not.toContain("QFAI-DPACK-*");
+    // `discussion` is not CI-allowed, so this must run outside CI detection or
+    // the guard replaces the notice with the blocked-run message.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await runValidate({ root, strict: false, profile: "discussion" });
+        const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+        expect(notice?.message).toContain('profile="discussion" is a partial profile');
+        expect(notice?.message).toContain("QFAI-HYG-*");
+        expect(notice?.message).toContain("TDDLIST_*");
+        expect(notice?.message).not.toContain("QFAI-DPACK-*");
+      });
     });
   });
 
   it("says nothing ran when the CI profile guard blocked the run", async () => {
-    await withProject(async (root) => {
-      const previous = { CI: process.env.CI, GITHUB_ACTIONS: process.env.GITHUB_ACTIONS };
-      process.env.CI = "true";
-      try {
+    await withCiEnv(true, async () => {
+      await withProject(async (root) => {
         await runValidate({ root, strict: false, profile: "atdd" });
         const all = await findings(root);
         expect(all.map((entry) => entry.code)).toContain("QFAI-VALIDATE-017");
@@ -130,12 +162,7 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
         // The partial-profile wording would imply atdd's own gates ran.
         expect(notice?.message).not.toContain("is a partial profile");
         expect(notice?.message).not.toContain("QFAI-ATDD-*");
-      } finally {
-        if (previous.CI === undefined) delete process.env.CI;
-        else process.env.CI = previous.CI;
-        if (previous.GITHUB_ACTIONS === undefined) delete process.env.GITHUB_ACTIONS;
-        else process.env.GITHUB_ACTIONS = previous.GITHUB_ACTIONS;
-      }
+      });
     });
   });
 
@@ -148,16 +175,19 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
   });
 
   it("lists every family the saas-package skip-set actually skips", async () => {
-    await withProject(async (root) => {
-      await runValidate({ root, strict: false, profile: "saas-package" });
-      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
-      expect(notice?.message).toContain('profile="saas-package" is a partial profile');
-      // `runSaasPackageProfile` skips validateAtddCodeTraceability, so a
-      // reader of validate-saas-package.json must not be told otherwise.
-      for (const family of saasPackageSkippedGateFamilies()) {
-        expect(notice?.message).toContain(family);
-      }
-      expect(notice?.message).toContain("QFAI-ATDD-*");
+    // Same reason as the discussion case: `saas-package` is not CI-allowed.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await runValidate({ root, strict: false, profile: "saas-package" });
+        const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+        expect(notice?.message).toContain('profile="saas-package" is a partial profile');
+        // `runSaasPackageProfile` skips validateAtddCodeTraceability, so a
+        // reader of validate-saas-package.json must not be told otherwise.
+        for (const family of saasPackageSkippedGateFamilies()) {
+          expect(notice?.message).toContain(family);
+        }
+        expect(notice?.message).toContain("QFAI-ATDD-*");
+      });
     });
   });
 
