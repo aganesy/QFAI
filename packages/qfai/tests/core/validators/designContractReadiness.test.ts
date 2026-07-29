@@ -1305,6 +1305,38 @@ describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-03
     expect(dcon034[0]?.severity).toBe("error");
   });
 
+  it("escalates on a `surface_type: ui-bearing` spec before any UI contract exists", async () => {
+    // This is the Phase 0 moment the gate exists for: the spec already
+    // declares the project UI-bearing, `contracts/ui` yaml has not been
+    // authored yet, and the freeze is about to happen. Keying severity on the
+    // contracts alone would leave it a warning here and pass `--fail-on error`.
+    const root = await newTempDir();
+    await mkdir(path.join(root, ".qfai/specs/spec-0001"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0001/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# 01 Spec\n\n- Spec: spec-0001\n",
+      "utf-8",
+    );
+    await writeFile(path.join(root, "DESIGN.md"), await readShippedSample(), "utf-8");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const dcon034 = issues.filter((i) => i.code === "QFAI-DCON-034");
+    expect(dcon034).toHaveLength(1);
+    expect(dcon034[0]?.severity).toBe("error");
+  });
+
+  it("stays a warning when no spec declares itself UI-bearing", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, ".qfai/specs/spec-0001"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0001/01_Spec.md"),
+      "# 01 Spec\n\n- Spec: spec-0001\n",
+      "utf-8",
+    );
+    await writeFile(path.join(root, "DESIGN.md"), await readShippedSample(), "utf-8");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.find((i) => i.code === "QFAI-DCON-034")?.severity).toBe("warning");
+  });
+
   it("reports DCON-034 for a marker-less legacy sample seeded by an older init", async () => {
     const root = await newTempDir();
     const legacy = (await readShippedSample()).replace(
