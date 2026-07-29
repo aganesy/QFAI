@@ -671,13 +671,19 @@ async function buildPrototypingDesignMdChecks(
     // so "file exists and parses" cannot distinguish an authored brand
     // from an unauthored one. Report it here, before /qfai-sdd Phase 0
     // freezes its sha256 as the project's brand contract.
+    //
+    // Samples seeded by releases that predate the marker are detected by
+    // content fingerprint instead, so the remediation text must not tell
+    // those projects to delete a comment that is not there.
+    const markerPresent = designMdText.includes(DESIGN_MD_SAMPLE_MARKER);
     checks.push({
       id: "prototyping.designMdRoot",
       severity: "error",
       title: "Root DESIGN.md",
-      message:
-        "root DESIGN.md is still the qfai sample brand — replace it with this product's brand SSOT and delete the sample marker before freezing",
-      details: { path: designMdRel, marker: DESIGN_MD_SAMPLE_MARKER },
+      message: markerPresent
+        ? "root DESIGN.md is still the qfai sample brand — replace it with this product's brand SSOT and delete the sample marker before freezing"
+        : "root DESIGN.md is still the qfai sample brand (seeded by a release older than the sample marker) — replace it with this product's brand SSOT before freezing",
+      details: { path: designMdRel, marker: markerPresent ? DESIGN_MD_SAMPLE_MARKER : null },
     });
   } else {
     const parsed = parseDesignMd(designMdText);

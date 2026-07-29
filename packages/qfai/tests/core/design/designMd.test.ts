@@ -7,10 +7,12 @@ import { describe, expect, it } from "vitest";
 import {
   ARCHETYPES,
   COLOR_KEYS,
+  DESIGN_MD_SAMPLE_MARKER,
   FONT_KEYS,
   RADIUS_KEYS,
   SHADOW_KEYS,
   hashDesignMd,
+  isUnreplacedDesignMdSample,
   parseDesignMd,
   validateDesignMd,
   type DesignMd,
@@ -1158,5 +1160,66 @@ describe("shipped DESIGN.md template", () => {
     expect("error" in result).toBe(false);
     if ("error" in result) return;
     expect(validateDesignMd(result.data)).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isUnreplacedDesignMdSample — marker detection plus the legacy migration
+// path for projects that ran `qfai init` before the marker existed.
+// ---------------------------------------------------------------------------
+
+describe("isUnreplacedDesignMdSample", () => {
+  const shippedSamplePaths = [
+    path.join(getInitAssetsDir(), "root", "DESIGN.md"),
+    path.join(
+      getInitAssetsDir(),
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-prototyping",
+      "templates",
+      "DESIGN.md.sample",
+    ),
+  ];
+
+  it.each(shippedSamplePaths)("flags the shipped sample at %s", async (file) => {
+    const text = await readFile(file, "utf-8");
+    expect(text).toContain(DESIGN_MD_SAMPLE_MARKER);
+    expect(isUnreplacedDesignMdSample(text)).toBe(true);
+  });
+
+  it("flags a marker-less legacy copy of the shipped sample", async () => {
+    // `qfai init` copies root/DESIGN.md under `protect: ["DESIGN.md"]`, so
+    // a project initialized before the marker existed keeps a marker-less
+    // copy forever — including across `qfai init --force`. Simulate that
+    // installed-base file by stripping the marker comment from the
+    // shipped sample.
+    const text = await readFile(path.join(getInitAssetsDir(), "root", "DESIGN.md"), "utf-8");
+    const legacy = text.replace(/<!-- QFAI-SAMPLE-DESIGN-MD:[\s\S]*?-->\n\n/, "");
+    expect(legacy).not.toContain(DESIGN_MD_SAMPLE_MARKER);
+    expect(isUnreplacedDesignMdSample(legacy)).toBe(true);
+  });
+
+  it("does not flag a sample whose brand name was replaced", async () => {
+    const text = await readFile(path.join(getInitAssetsDir(), "root", "DESIGN.md"), "utf-8");
+    const legacy = text
+      .replace(/<!-- QFAI-SAMPLE-DESIGN-MD:[\s\S]*?-->\n\n/, "")
+      .replace('name: "Acme Ledger"', 'name: "Northwind Freight"');
+    expect(isUnreplacedDesignMdSample(legacy)).toBe(false);
+  });
+
+  it("does not flag a sample whose brand-philosophy body was rewritten", async () => {
+    const text = await readFile(path.join(getInitAssetsDir(), "root", "DESIGN.md"), "utf-8");
+    const legacy = text
+      .replace(/<!-- QFAI-SAMPLE-DESIGN-MD:[\s\S]*?-->\n\n/, "")
+      .replace(
+        "Acme Ledger is a calm, confident financial comparison surface.",
+        "Acme Ledger is our internal reconciliation console.",
+      );
+    expect(isUnreplacedDesignMdSample(legacy)).toBe(false);
+  });
+
+  it("does not flag an unrelated authored DESIGN.md", () => {
+    expect(isUnreplacedDesignMdSample(VALID_SAMPLE)).toBe(false);
   });
 });

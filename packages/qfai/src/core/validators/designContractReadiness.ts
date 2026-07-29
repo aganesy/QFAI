@@ -75,12 +75,23 @@ async function validateDesignContractReadinessForStage(
     "**/*.yaml",
   );
   const uiContracts = await fg(uiPattern, { absolute: true });
-  if (uiContracts.length === 0) {
-    return [];
+  const uiBearing = uiContracts.length > 0;
+
+  // The unreplaced-sample gate runs BEFORE the UI-contract gate below.
+  // Every other check in this validator presupposes a UI-bearing project
+  // (they compare design contracts that only exist once prototyping has
+  // started), but the sample gate has to fire earlier than that: `qfai
+  // init` seeds the sample DESIGN.md on day one, UI contracts are only
+  // authored later in SDD, and `/qfai-sdd` Phase 0 freezes the file's
+  // sha256 in between. Gated behind `uiContracts.length === 0` the gate
+  // could only ever report a freeze that already happened.
+  const sampleIssues = await validateRootDesignMdSample(root, uiBearing);
+  if (!uiBearing) {
+    return sampleIssues;
   }
 
   const designDir = path.join(root, config.paths.contractsDir, "design");
-  const issues: Issue[] = [];
+  const issues: Issue[] = [...sampleIssues];
 
   const rootResult = await validateRootDesignMdAndLock(root, designDir);
   issues.push(...rootResult.issues);
@@ -114,6 +125,56 @@ async function validateDesignContractReadinessForStage(
     issues.push(...(await validateNoPrematurePrototypingContracts(root, config)));
   }
   return issues;
+}
+
+/**
+ * Identity gate for root DESIGN.md (QFAI-DCON-034).
+ *
+ * DCON-030..033 are all content-agnostic: they verify that DESIGN.md
+ * exists, parses and has not changed since the freeze — never that it was
+ * authored by this project. `qfai init` seeds the shipped sample brand
+ * into the project root, so an unreplaced sample satisfies every one of
+ * them, gets sha256-frozen as the project's brand contract, and from then
+ * on `/qfai-prototyping` enforces a fictional identity while swapping in
+ * the real brand breaks the lock until it is refrozen.
+ *
+ * Severity scales with how far the project has committed to a brand
+ * contract:
+ *   - UI-bearing (at least one `contracts/ui` yaml) -> `error`. The
+ *     project is on the path that runs Phase 0 and freezes this file.
+ *   - otherwise -> `warning`. Every `qfai init` seeds the sample,
+ *     including into projects that never ship a UI and never freeze
+ *     anything; turning that into a hard failure would break projects
+ *     that never opted into the design surface at all. The warning still
+ *     surfaces the condition from `qfai validate` on day one, which is
+ *     what the shipped sample's own instructions promise.
+ *
+ * A missing DESIGN.md is not this gate's business (DCON-030 owns it, and
+ * only for UI-bearing projects), so an unreadable file is silently
+ * skipped.
+ */
+async function validateRootDesignMdSample(root: string, uiBearing: boolean): Promise<Issue[]> {
+  let designMdText: string;
+  try {
+    designMdText = await readFile(path.join(root, ROOT_DESIGN_MD_REL), "utf-8");
+  } catch {
+    return [];
+  }
+  if (!isUnreplacedDesignMdSample(designMdText)) {
+    return [];
+  }
+  return [
+    issue(
+      "QFAI-DCON-034",
+      "Root DESIGN.md is still the qfai sample brand (unreplaced `qfai init` seed).",
+      uiBearing ? "error" : "warning",
+      ROOT_DESIGN_MD_REL,
+      "designContractReadiness.rootDesignMdSample",
+      undefined,
+      "canonical",
+      "Replace root DESIGN.md with this product's brand SSOT (run /qfai-discussion, which emits the draft, or author it from `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`) and delete the sample marker comment if present. Do this BEFORE /qfai-sdd Phase 0 freezes its sha256.",
+    ),
+  ];
 }
 
 type RootDesignMdResult = {
@@ -184,33 +245,6 @@ async function validateRootDesignMdAndLock(
   // failure code so automated remediation can route the two failure
   // modes correctly: missing -> regenerate template, parse failure
   // -> repair existing file without losing user edits.
-  // Identity gate, checked before the parse gate. `qfai init` seeds the
-  // shipped sample brand into the project root, so DCON-030 (file
-  // missing) can never fire on an initialized project and DCON-031..033
-  // are all content-agnostic: they verify that DESIGN.md exists, parses
-  // and has not changed since the freeze, never that it was authored.
-  // An unreplaced sample therefore parses, validates, and gets sha256-
-  // frozen as the project's brand contract — after which
-  // `/qfai-prototyping` enforces it and swapping in the real brand
-  // breaks the lock until it is refrozen. Detect the sample by marker
-  // rather than by sha256: the package ships two samples that are the
-  // same brand but not byte-identical, so a digest list would have to
-  // enumerate every shipped variant and would miss any whitespace edit.
-  if (designMdText !== null && isUnreplacedDesignMdSample(designMdText)) {
-    issues.push(
-      issue(
-        "QFAI-DCON-034",
-        "Root DESIGN.md is still the qfai sample brand (unreplaced placeholder marker present).",
-        "error",
-        ROOT_DESIGN_MD_REL,
-        "designContractReadiness.rootDesignMdSample",
-        undefined,
-        "canonical",
-        "Replace root DESIGN.md with this product's brand SSOT (run /qfai-discussion, which emits the draft, or author it from `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`) and delete the sample marker comment. Do this BEFORE /qfai-sdd Phase 0 freezes its sha256.",
-      ),
-    );
-  }
-
   if (designMdText !== null) {
     const parseResult = parseDesignMd(designMdText);
     if ("error" in parseResult) {

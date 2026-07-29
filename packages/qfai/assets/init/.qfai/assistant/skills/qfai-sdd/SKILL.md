@@ -220,14 +220,15 @@ When the target spec is UI-bearing, Phase 0 MUST freeze the brand SSOT:
    missing, stop and ask the user to run `/qfai-discussion` (which
    emits the draft) or to author it manually using the sample at
    `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`.
-2. Call `isUnreplacedDesignMdSample(text)`. If it returns `true`, the
-   file is still a qfai sample brand and MUST NOT be frozen: stop and
-   ask the user to author this product's own brand SSOT and delete the
-   `QFAI-SAMPLE-DESIGN-MD` marker comment. `qfai init` seeds the sample
-   into the project root, so the missing-file check in step 1 cannot
-   catch this — an unreplaced sample parses and validates by
-   construction, and freezing it would bind `/qfai-prototyping` and the
-   architecture reviewer's lock rule to a fictional brand.
+2. Call `isUnreplacedDesignMdSample(text)`. If it returns `true`, the file
+   is still a qfai sample brand and MUST NOT be frozen: stop and ask the
+   user to author this product's own brand SSOT, deleting the
+   `QFAI-SAMPLE-DESIGN-MD` marker comment if present (samples from
+   releases older than the marker are recognised by content instead).
+   `qfai init` seeds the sample into the project root and never overwrites
+   it, so step 1's missing-file check cannot catch this — an unreplaced
+   sample parses and validates by construction, and freezing it binds
+   `/qfai-prototyping` and the reviewer lock rule to a fictional brand.
 3. Call `parseDesignMd(text)`. If the result is `{ error: ParseError }`,
    stop and report `path` / `code` / `message` for the parse error.
    Otherwise the result is `{ data: DesignMd; body: string }`; pass
