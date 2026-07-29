@@ -22,7 +22,9 @@
  * DONE gate. Sub-resource requests (`.css`, `.png`, `fetch()`) do NOT
  * carry `text/html` in `Accept`, so a genuinely missing asset still
  * 404s rather than silently receiving an HTML body. The 403 traversal
- * guard runs ahead of the fallback.
+ * guard runs ahead of the fallback — including on the decoded path,
+ * before normalization, so an escape payload cannot reach the fallback
+ * by having its `..` segments collapsed away first.
  *
  * Design choice — in-process, no subprocess
  * ----------------------------------------
@@ -281,6 +283,42 @@ function resolveServablePath(
   return isReadableFile(fallback) ? fallback : null;
 }
 
+/**
+ * True when the DECODED request path is shaped like a filesystem escape
+ * rather than a route.
+ *
+ * This has to run before `path.normalize`, because normalization is what
+ * destroys the evidence: `/../../etc/passwd` collapses to `/etc/passwd`,
+ * which then resolves to a harmless-looking path INSIDE `serveRoot` and
+ * sails past the `startsWith(rootWithSep)` guard. That containment kept
+ * the old code honest — the request simply 404'd — but with the SPA
+ * fallback in place a non-existent contained path is answered with
+ * `index.html` and HTTP 200, turning a rejected traversal attempt into a
+ * success. Reject the shape up front so the documented "403 traversal
+ * guard runs ahead of the fallback" contract is literally true.
+ *
+ * Three shapes, all matched on the decoded string so percent-encoded
+ * payloads are seen for what they are:
+ *   - any backslash (`..\..\etc\passwd`, `\\server\share\secret`)
+ *   - a `..` path segment (`/../../etc/passwd`)
+ *   - a drive-qualified first segment (`/C:/Windows/...`)
+ * None of them is a legal SPA route, so no capture URL is lost.
+ */
+function looksLikeFilesystemEscape(decodedPath: string): boolean {
+  // Backslash is not a legal URL path character — browsers rewrite it to
+  // `/` before the request is sent — so one arriving here means a crafted
+  // Windows-shaped payload, not a file a prototype legitimately serves.
+  if (decodedPath.includes("\\")) {
+    return true;
+  }
+  const segments = decodedPath.split("/").filter((segment) => segment.length > 0);
+  if (segments.includes("..")) {
+    return true;
+  }
+  const first = segments[0];
+  return first !== undefined && /^[A-Za-z]:$/.test(first);
+}
+
 function handleRequest(req: IncomingMessage, res: ServerResponse, serveRoot: string): void {
   try {
     const urlPath = (req.url ?? "/").split("?")[0] ?? "/";
@@ -296,15 +334,22 @@ function handleRequest(req: IncomingMessage, res: ServerResponse, serveRoot: str
       res.end("bad request");
       return;
     }
+    // Traversal guard #1, evaluated on the decoded path BEFORE
+    // `path.normalize` can collapse the evidence away. See
+    // `looksLikeFilesystemEscape` for why the post-normalization
+    // containment check is not sufficient once the SPA fallback exists.
+    if (looksLikeFilesystemEscape(decoded)) {
+      res.statusCode = 403;
+      res.end("forbidden");
+      return;
+    }
     // Defense-in-depth: collapse backslashes to forward slashes BEFORE
     // calling `path.normalize`. On POSIX `path.normalize("..\\..\\etc")`
     // treats backslashes as literal filename characters, so a
     // URL-encoded `..\..\etc\passwd` payload would normalize to a
-    // single literal filename inside `serveRoot` and slip past the
-    // `..` token check. The final `startsWith(rootWithSep)` guard
-    // already catches the traversal (the candidate stays inside
-    // serveRoot once resolved), but normalising slashes first keeps
-    // the platform-independent intent explicit.
+    // single literal filename inside `serveRoot`. Guard #1 above already
+    // rejects that payload; normalising slashes keeps the containment
+    // check platform-independent for anything that gets this far.
     const slashNormalised = decoded.replace(/\\/g, "/");
     const normalised = path.normalize(slashNormalised).replace(/^[\\/]+/, "");
     const candidate = path.resolve(serveRoot, normalised);

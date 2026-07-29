@@ -345,6 +345,98 @@ describe("iterate --auto-serve: (7a) defaultServerRunner path-traversal — Wind
   });
 });
 
+describe("iterate --auto-serve: (7b) SPA fallback must not answer traversal payloads", () => {
+  // The SPA fallback answers a document request for a missing path with
+  // `index.html` + 200. `path.normalize` collapses `/../../etc/passwd`
+  // into a path that IS inside serveRoot, so the containment guard never
+  // fires and the fallback would turn a rejected traversal attempt into a
+  // 200 — a regression against the pre-fallback 404. The header condition
+  // is load-bearing: `http.get` sends no `Accept`, so only a browser-shaped
+  // request reaches the fallback at all.
+
+  type Probe = { status: number; body: string };
+
+  async function probe(port: number, urlPath: string, accept?: string): Promise<Probe> {
+    const { get } = await import("node:http");
+    return new Promise<Probe>((resolve, reject) => {
+      const req = get(
+        {
+          host: "127.0.0.1",
+          port,
+          path: urlPath,
+          ...(accept ? { headers: { accept } } : {}),
+        },
+        (res) => {
+          let body = "";
+          res.setEncoding("utf-8");
+          res.on("data", (chunk: string) => {
+            body += chunk;
+          });
+          res.on("end", () => resolve({ status: res.statusCode ?? 0, body }));
+        },
+      );
+      req.on("error", reject);
+    });
+  }
+
+  async function withServer(fn: (port: number) => Promise<void>): Promise<void> {
+    const root = await newTempDir();
+    await seedMinimal(root);
+    const mod = await import("../../../../src/core/prototyping/defaultServerRunner.js");
+    await mkdir(path.join(root, ".qfai", "prototypes", "iter-00"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai", "prototypes", "iter-00", "index.html"),
+      "<html>iter-00</html>",
+      "utf-8",
+    );
+    const result = await mod.defaultServerRunner({ root, cycle: 0 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    try {
+      await fn(mod.DEFAULT_AUTO_SERVE_PORT);
+    } finally {
+      await result.teardown();
+    }
+  }
+
+  it("rejects GET /..%2f..%2fetc/passwd with Accept: text/html as 403, not an index.html 200", async () => {
+    await withServer(async (port) => {
+      const res = await probe(port, "/..%2f..%2fetc/passwd", "text/html,application/xhtml+xml");
+      expect(res.status).toBe(403);
+      expect(res.body).not.toContain("iter-00");
+    });
+  });
+
+  it("rejects the same payload without the Accept header too", async () => {
+    await withServer(async (port) => {
+      expect((await probe(port, "/..%2f..%2fetc/passwd")).status).toBe(403);
+    });
+  });
+
+  it("rejects an encoded backslash payload and a drive-qualified path", async () => {
+    await withServer(async (port) => {
+      const backslash = await probe(port, "/..%5C..%5Cetc%5Cpasswd", "text/html");
+      expect(backslash.status).toBe(403);
+      const drive = await probe(port, "/C:/Windows/system32/config/sam", "text/html");
+      expect(drive.status).toBe(403);
+    });
+  });
+
+  it("still serves index.html for a legitimate client-side route", async () => {
+    await withServer(async (port) => {
+      const res = await probe(port, "/pairs/BTCUSD", "text/html,application/xhtml+xml");
+      expect(res.status).toBe(200);
+      expect(res.body).toContain("iter-00");
+    });
+  });
+
+  it("still 404s a missing sub-resource that does not accept text/html", async () => {
+    await withServer(async (port) => {
+      expect((await probe(port, "/assets/app.css", "text/css,*/*;q=0.1")).status).toBe(404);
+    });
+  });
+});
+
 describe("iterate --auto-serve: (7) foreign-process refusal on EADDRINUSE", () => {
   it("default runner returns {ok:false, reason:/already in use/i} when port is busy, iterate exits 2", async () => {
     const root = await newTempDir();
