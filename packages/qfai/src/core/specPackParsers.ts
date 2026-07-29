@@ -94,7 +94,43 @@ export type TestCaseTableResolution =
   | { table: null; reason: "no-table" | "no-tc-id-column" };
 
 /** Matches the template heading `## Test Case Table (required)` and its bare `## Test Case Table` form. */
-const TEST_CASE_TABLE_HEADING = /^(#{1,6})\s*test\s*case\s*table\b/i;
+const TEST_CASE_TABLE_HEADING = /^ {0,3}(#{1,6})\s*test\s*case\s*table\b/i;
+
+/** Any ATX heading, with the 0-3 leading spaces CommonMark permits. */
+const ANY_HEADING = /^ {0,3}(#{1,6})\s+\S/;
+
+/** A fenced code block delimiter, per CommonMark (0-3 leading spaces). */
+const FENCE_LINE = /^ {0,3}(`{3,}|~{3,})/;
+
+/**
+ * Blanks fenced code blocks, preserving line count.
+ *
+ * `06_Test-Cases.md` often documents its own format in a fenced sample. Without
+ * this, an illustrative `## Test Case Table` plus `TC-ID` table inside a fence
+ * is selected as the named section and its example IDs are handed to the
+ * validators and the report — and for a heading-less legacy document it flips
+ * a previously correct resolution into a wrong one.
+ */
+function maskFences(text: string): string {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  let open: { marker: string; length: number } | null = null;
+  return lines
+    .map((line) => {
+      const fence = FENCE_LINE.exec(line)?.[1];
+      if (open === null) {
+        if (fence) {
+          open = { marker: fence.charAt(0), length: fence.length };
+          return "";
+        }
+        return line;
+      }
+      if (fence && fence.charAt(0) === open.marker && fence.length >= open.length) {
+        open = null;
+      }
+      return "";
+    })
+    .join("\n");
+}
 
 const TC_ID_HEADER = "TC-ID";
 
@@ -117,7 +153,7 @@ function extractTestCaseTableSection(text: string): string | null {
 
   let end = lines.length;
   for (let index = start + 1; index < lines.length; index += 1) {
-    const match = /^(#{1,6})\s+\S/.exec(lines[index] ?? "");
+    const match = ANY_HEADING.exec(lines[index] ?? "");
     if (match && (match[1] ?? "").length <= level) {
       end = index;
       break;
@@ -148,7 +184,9 @@ function extractTestCaseTableSection(text: string): string | null {
  * Either way, "no table found" is reported rather than being allowed to read
  * as "all TCs covered".
  */
-export function resolveTestCaseTable(text: string): TestCaseTableResolution {
+export function resolveTestCaseTable(rawText: string): TestCaseTableResolution {
+  // Illustrative headings and tables inside fenced samples are not the spec.
+  const text = maskFences(rawText);
   const section = extractTestCaseTableSection(text);
   if (section !== null) {
     const sectionTables = parseAllMarkdownTables(section);

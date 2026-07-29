@@ -106,6 +106,50 @@ describe("resolveTestCaseTable", () => {
     expect(resolveTestCaseTable(doc)).toEqual({ table: null, reason: "no-tc-id-column" });
   });
 
+  it("ignores a heading and table that only appear inside a fenced sample", () => {
+    // A document that explains its own format must not have the example
+    // adopted as the named section.
+    const doc = [
+      "# 06 Test Cases",
+      "",
+      ...TC_TABLE,
+      "",
+      "## Format",
+      "",
+      "````markdown",
+      "## Test Case Table (required)",
+      "",
+      "| TC-ID   | Level |",
+      "| ------- | ----- |",
+      "| TC-9999 | unit  |",
+      "````",
+      "",
+    ].join("\n");
+
+    const resolved = resolveTestCaseTable(doc);
+    expect(resolved.table?.rows.map((row) => row[0])).toEqual(["TC-0001"]);
+    expect(resolved).toMatchObject({ source: "header-match" });
+  });
+
+  it("ends the section at an indented heading too", () => {
+    // 1-3 leading spaces is still a heading in CommonMark; missing that let the
+    // section run into an Appendix table.
+    const doc = [
+      "## Test Case Table (required)",
+      "",
+      "| TC-Id   | Level |",
+      "| ------- | ----- |",
+      "| TC-0001 | unit  |",
+      "",
+      "  ## Appendix",
+      "",
+      ...INTRUDING_TABLE,
+      "",
+    ].join("\n");
+
+    expect(resolveTestCaseTable(doc)).toEqual({ table: null, reason: "no-tc-id-column" });
+  });
+
   it("reports no-table when the named section holds no table at all", () => {
     const doc = [
       "## Test Case Table (required)",
