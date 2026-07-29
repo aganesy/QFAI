@@ -60,13 +60,18 @@ Likewise do not reach for `DELETE` to remove one item — that is
 `UPDATE:REMOVE`.
 
 `QFAI-TRIAGE-007` (error) rejects a `SPLIT` / `MERGE` / `SUPERSEDE` / `DELETE`
-row whose `Subject` names an item ID **and no spec-level target**. Naming the
-item is allowed when the same cell also names the target `spec-NNNN` or
-`CAP-NNNN`, because a spec-level row often cites the item that motivated it;
-what the rule rejects is a spec-scoped operation whose only stated object is an
-item. Item IDs are matched with the shared digit semantics of
-`specPackIds.ts`, so `BR-1` and `TC-12345` are caught alongside the canonical
-4-digit form.
+row whose `Subject` names an item ID **as the operation's object**. The object
+is decided structurally: whichever the `Subject` names first — an item ID, or a
+`spec-NNNN` / `CAP-NNNN` — is what the operation acts on.
+
+- `delete BR-0006-0004 from spec-0006` -> item first, so the spec is only its
+  location: rejected. Co-occurring with a spec name is not an exemption.
+- `split spec-0006 (motivated by BR-0006-0004)` -> target first, motivating
+  item cited afterwards: accepted.
+
+So a genuinely spec-level row leads with its `spec-NNNN` / `CAP-NNNN` target.
+Item IDs are matched with the shared digit semantics of `specPackIds.ts`, so
+`BR-1` and `TC-12345` are caught alongside the canonical 4-digit form.
 
 Because `UPDATE:MODIFY` and `UPDATE:APPEND` are approval-free by operation
 type, an item decomposition carries no approval-required row. Record the

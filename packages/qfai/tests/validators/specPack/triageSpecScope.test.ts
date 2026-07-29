@@ -60,13 +60,27 @@ describe("QFAI-TRIAGE-007 keeps SPLIT/MERGE/SUPERSEDE/DELETE spec-scoped", () =>
     }
   });
 
-  it("stays silent when the Subject also names the spec-level target", () => {
-    // `classifyTriage` copies the REQ subject verbatim onto the MERGE/SPLIT
-    // rows it proposes, so an item ID alone must not condemn a spec-level row.
+  it("still fires when the item is the object and the spec is only its location", () => {
+    // Co-occurrence is not exemption: `delete BR-... from spec-...` names the
+    // item as the object and the spec merely as where it lives.
+    for (const subject of [
+      "delete BR-0006-0004 from spec-0006",
+      "split BR-0006-0004 in spec-0006",
+      "BR-0006-0004 を spec-0006 から削除",
+    ]) {
+      expect(
+        codes(delta(`| REQ-0001 | ${subject} | spec-0006 | DELETE | - | u@h | - |`)),
+      ).toContain("QFAI-TRIAGE-007");
+    }
+  });
+
+  it("stays silent when the Subject names the spec-level target first", () => {
+    // Whichever the Subject names first is the object, so a spec-level row
+    // leads with its target and may cite the motivating item afterwards.
     expect(
       codes(
         delta(
-          "| REQ-0001 | AC-0002-0007 の重複解消のため spec-0004 と spec-0009 を統合 | spec-0004+spec-0009 | MERGE | - | u@h | - |",
+          "| REQ-0001 | spec-0004 と spec-0009 を統合 (AC-0002-0007 の重複解消) | spec-0004+spec-0009 | MERGE | - | u@h | - |",
         ),
       ),
     ).not.toContain("QFAI-TRIAGE-007");
@@ -82,6 +96,18 @@ describe("QFAI-TRIAGE-007 keeps SPLIT/MERGE/SUPERSEDE/DELETE spec-scoped", () =>
         delta("| REQ-0001 | CAP-0003 を分離 (BR-0006-0004) | spec-0006 | SPLIT | - | u@h | - |"),
       ),
     ).not.toContain("QFAI-TRIAGE-007");
+  });
+
+  it("fires when a spec-level row leads with the motivating item instead of its target", () => {
+    // Deliberately not exempt: leading with the item is indistinguishable from
+    // an item-scoped misuse, and the remediation is to name the target first.
+    expect(
+      codes(
+        delta(
+          "| REQ-0001 | AC-0002-0007 の重複解消のため spec-0004 と spec-0009 を統合 | spec-0004+spec-0009 | MERGE | - | u@h | - |",
+        ),
+      ),
+    ).toContain("QFAI-TRIAGE-007");
   });
 });
 

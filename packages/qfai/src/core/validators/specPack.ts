@@ -328,18 +328,33 @@ function findItemIdsInSubject(subject: string): string[] {
   return subject.match(buildItemIdPattern()) ?? [];
 }
 
+const SPEC_LEVEL_TARGET_RE = /\b(?:spec-\d+|CAP-\d+)\b/i;
+
 /**
- * Whether a `Subject` names a spec-level target: a spec directory or a
- * capability.
+ * Whether the operation's object is an item rather than a spec.
  *
- * A mention of an item ID does not by itself prove the row operates on that
- * item — a legitimate spec-level row often cites the item that motivated it,
- * and `classifyTriage` copies the REQ subject verbatim onto the MERGE and
- * SPLIT rows it proposes. When the same cell also names the spec-level target,
- * the item ID is context and `QFAI-TRIAGE-007` must stay silent.
+ * Mere co-occurrence is not enough in either direction. A spec-level row often
+ * cites the item that motivated it (`classifyTriage` copies the REQ subject
+ * verbatim onto its MERGE and SPLIT rows), and an item-level misuse often names
+ * the containing spec (`delete BR-0006-0004 from spec-0006`) — so "an item ID
+ * is present" over-fires and "a spec is also present" under-fires.
+ *
+ * The structural rule is **whichever the Subject names first is the object**:
+ *
+ * - `delete BR-0006-0004 from spec-0006` -> item first -> item-scoped, finding.
+ * - `split spec-0006 (BR-0006-0004 起点)` -> spec first -> spec-scoped, silent.
+ * - `CAP-0003 を分離 (BR-0006-0004)` -> capability first -> silent.
+ *
+ * It is deterministic, needs no grammar, and matches the remediation text: a
+ * genuinely spec-level row names its `spec-NNNN` / `CAP-NNNN` target up front.
  */
-function namesSpecLevelTarget(subject: string): boolean {
-  return /\b(?:spec-\d+|CAP-\d+)\b/i.test(subject);
+function itemIsOperationObject(subject: string): boolean {
+  const item = buildItemIdPattern().exec(subject);
+  if (!item) {
+    return false;
+  }
+  const specLevel = SPEC_LEVEL_TARGET_RE.exec(subject);
+  return specLevel === null || item.index < specLevel.index;
 }
 
 const TRIAGE_TOP_LEVEL_LABELS = new Set<string>([...TRIAGE_TOP_LEVEL_OPS, "UPDATE"]);
@@ -653,7 +668,7 @@ function validateTriageRows(
     }
 
     const namedItemIds =
-      SPEC_SCOPED_OPS.has(opUpper) && !namesSpecLevelTarget(subjectCell)
+      SPEC_SCOPED_OPS.has(opUpper) && itemIsOperationObject(subjectCell)
         ? findItemIdsInSubject(subjectCell)
         : [];
     if (namedItemIds.length > 0) {
@@ -661,13 +676,13 @@ function validateTriageRows(
       issues.push(
         issue(
           "QFAI-TRIAGE-007",
-          `Triage ${opUpper} は spec 単位の操作です。Subject が item ID だけを指しています (${rowLabel}): ${named.join(", ")}`,
+          `Triage ${opUpper} は spec 単位の操作です。Subject が操作対象として item ID を先に指しています (${rowLabel}): ${named.join(", ")}`,
           "error",
           deltaPath,
           "triage.specScopedOperation",
           named,
           "canonical",
-          "SPLIT / MERGE / SUPERSEDE / DELETE は spec 全体が対象です。spec 内の item 分解は UPDATE:MODIFY + UPDATE:APPEND、item 単体の削除は UPDATE:REMOVE で表現してください。spec 単位の操作である場合は Subject に対象 spec (spec-NNNN) か capability (CAP-NNNN) を明記してください。",
+          "SPLIT / MERGE / SUPERSEDE / DELETE は spec 全体が対象です。spec 内の item 分解は UPDATE:MODIFY + UPDATE:APPEND、item 単体の削除は UPDATE:REMOVE で表現してください。spec 単位の操作である場合は Subject の先頭で対象 spec (spec-NNNN) か capability (CAP-NNNN) を名指ししてください (item ID はその後ろに置けば文脈として許容されます)。",
         ),
       );
       continue;
