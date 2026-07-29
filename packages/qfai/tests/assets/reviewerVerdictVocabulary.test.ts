@@ -28,9 +28,35 @@ describe("reviewer verdict vocabulary", () => {
     for (const relative of ["agents/qa-gatekeeper.md", "agents/completion-reviewer.md"]) {
       for (const content of await readShipped(relative)) {
         expect(content, `${relative} must not instruct a FAIL verdict`).not.toMatch(/\bFAIL\b/);
+        // Case-sensitively: `Return pass/fail only` survived the first sweep and
+        // told the agent to emit a verdict the playbook does not route.
+        expect(content, `${relative} must not instruct a pass/fail verdict`).not.toMatch(
+          /\bpass\s*\/\s*fail\b/i,
+        );
         expect(content).toMatch(/\bREVISE\b/);
       }
     }
+  });
+
+  // The agent definitions are one of three faces of the same instructions
+  // (`agents/<id>.md` <-> `manifest/agent-catalog.yml#developer_instructions`
+  // <-> `.codex/agents/<id>.toml`). A sweep that touched only the markdown
+  // would leave the runtime the catalog and the toml serve unchanged.
+  it("carries the same verdict vocabulary into the catalog and the codex agent", async () => {
+    for (const content of await readShipped("manifest/agent-catalog.yml")) {
+      expect(content).toContain("Return only PASS or REVISE");
+      // The exact sentence that survived the first sweep. A blanket pass/fail
+      // ban would also hit `orchestrator`, whose "decide pass/fail" is its own
+      // integration decision, not a verdict returned to a rework cycle.
+      expect(content).not.toContain("Return pass/fail only");
+    }
+
+    const codex = await readFile(
+      path.join(repoRoot, ".codex/agents/completion-reviewer.toml"),
+      "utf-8",
+    );
+    expect(codex).toContain("Return only PASS or REVISE");
+    expect(codex).not.toContain("Return pass/fail only");
   });
 
   it("triggers the rerun cycle on REVISE in both playbooks", async () => {
