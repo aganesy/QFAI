@@ -24,9 +24,9 @@ describe("deriveAtddFilePattern", () => {
   });
 
   it("merges extensions across several globs, deduped and sorted", () => {
-    expect(deriveAtddFilePattern(["tests/**/*.go", "internal/**/*_test.go", "spec/**/*.feature"])).toBe(
-      "**/*.{feature,go}",
-    );
+    expect(
+      deriveAtddFilePattern(["tests/**/*.go", "internal/**/*_test.go", "spec/**/*.feature"]),
+    ).toBe("**/*.{feature,go}");
   });
 
   it("falls back when no glob carries a recoverable extension", () => {
