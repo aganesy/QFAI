@@ -21,10 +21,14 @@ all of the following hold:
 
 - the CR's `Status` is `approved`, with `Approved by` and `Approved at`
   populated;
-- the CR's "Approved actions" section names the ledger sweep, so the rows being
-  reset are the ones the operator approved resetting;
+- the CR's "Approved actions" section **enumerates the rows** — the `TDD-ID`s,
+  or a verifiable selection rule — so the reset scope is what the operator
+  approved and not what the skill later decided was invalidated. A row outside
+  that enumeration is not approved; widening the scope needs a new CR;
 - each reset row records that CR's ID in its `DR-ID` column — that column
-  carries both `DR-*` and `CR-*` references; and
+  carries both `DR-*` and `CR-*` references, and the ID is **retained** as the
+  row re-runs through `red` / `green` / `refactor` / `done`, since clearing it
+  on the next transition erases the only record of the approved reopen; and
 - the reset is recorded in the CR's `Resolution` section (which rows, by
   `TDD-ID`).
 

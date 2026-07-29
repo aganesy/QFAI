@@ -13,7 +13,7 @@ while an unresolved CR exists, so `Status` must be a real, checkable field.
 - Raised by: `<skill or agent>`
 - Raised at: `YYYY-MM-DDThh:mm:ssZ`
 - Status: `open` <!-- open | approved | rejected | superseded -->
-- Approved by: `-` <!-- required when Status is approved or rejected -->
+- Approved by: `-` <!-- required whenever Status leaves `open` (approved / rejected / superseded) -->
 - Approved at: `-` <!-- YYYY-MM-DDThh:mm:ssZ -->
 - Approved option: `-` <!-- the option number below that was chosen -->
 - Applied at: `-` <!-- YYYY-MM-DDThh:mm:ssZ; set only after the owner-skill rerun below completed and upstream artifacts are updated -->
@@ -58,11 +58,16 @@ upstream artifacts have been updated.
 ## Approved actions (owner skill rerun plan)
 
 1. `<owner skill>` rerun scope: `<what>`
-2. Downstream ledger sweep: reset the `tdd/test-list.md` rows this change
-   invalidates, recording this CR's ID in their `DR-ID` column. This is the
-   only sanctioned backward status transition — see
-   `.qfai/assistant/skills/qfai-implement/SKILL.md`, "Approved Change Request
-   reset".
+2. Downstream ledger sweep: reset these `tdd/test-list.md` rows, recording this
+   CR's ID in their `DR-ID` column. **Enumerate them here, before approval** —
+   list the `TDD-ID`s (or a verifiable selection rule such as "every row whose
+   `TC-Refs` names TC-0007"), because what the operator approves is this list.
+   A reset of any row not covered by it is not operator-approved, and
+   `Resolution` must match this list.
+   - `<TDD-NNNN>`, `<TDD-NNNN>`, …
+     This is the only sanctioned backward status transition — see
+     `.qfai/assistant/skills/qfai-implement/SKILL.md`, "Approved Change Request
+     reset".
 
 ## Resolution
 

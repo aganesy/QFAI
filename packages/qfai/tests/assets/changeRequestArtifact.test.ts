@@ -53,7 +53,7 @@ describe("a Change Request is a defined artifact", () => {
       expect(skill).toContain("`references/change-request-reset.md`");
 
       const template = await read(tree, TEMPLATE);
-      expect(template).toContain("the\n   only sanctioned backward status transition");
+      expect(template).toContain("This is the only sanctioned backward status transition");
     });
 
     it(`${tree}: the reset reference states its preconditions and what stays prohibited`, async () => {
@@ -69,6 +69,43 @@ describe("a Change Request is a defined artifact", () => {
       expect(reference).toContain("A CR at `Status: open` authorises nothing.");
       expect(reference).toContain('"Backward transition prohibited: green -> red"');
       expect(reference).toContain("An `approved` CR without\n`Applied at` is still unresolved");
+    });
+
+    it(`${tree}: the reset scope is enumerated before approval`, async () => {
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("**Enumerate them here, before approval**");
+      expect(template).toContain("`Resolution` must match this list");
+
+      const reference = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/change-request-reset.md",
+      );
+      expect(reference).toContain("**enumerates the rows**");
+      expect(reference).toContain("widening the scope needs a new CR");
+    });
+
+    it(`${tree}: the DR-ID column and the reset rule agree`, async () => {
+      const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+      // The old wording ("exception items (blank otherwise)") let the CR-ID be
+      // cleared on the next transition; no validator reads DR-ID outside
+      // `exception`.
+      expect(skill).not.toContain("Decision Record ID for exception items (blank otherwise)");
+      expect(skill).toContain(
+        "required for `exception` rows and for a row reset by an approved Change Request, retained through that row's later statuses",
+      );
+
+      const reference = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/change-request-reset.md",
+      );
+      expect(reference).toContain("the ID is **retained** as the");
+    });
+
+    it(`${tree}: superseded requires the approval fields the gate demands`, async () => {
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain(
+        "required whenever Status leaves `open` (approved / rejected / superseded)",
+      );
     });
 
     it(`${tree}: the template carries the six contents the protocol mandates`, async () => {
