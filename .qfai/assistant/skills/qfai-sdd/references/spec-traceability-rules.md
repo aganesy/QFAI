@@ -78,13 +78,25 @@ ID reference direction (the value of `Refs:` columns) must be lower-to-upper onl
   traceability edge in `_policies/**` may name a lower-layer ID — no `Parent:`,
   `Refs:`, `AC-Refs`, `BR-Ref` or `EX-Ref` value, and no heading that declares a
   `US/AC/BR/EX/TC` item.
-- _Citing_ a lower-layer ID or a `spec-NNNN` inside the `## Triage` section of
+- _Citing_ a lower-layer ID or a `spec-NNNN` inside the **Triage table rows** of
   `_policies/10_delta.md` is explicitly allowed. `sdd-triage.md` requires
   cross-spec and policy-only Triage rows to be persisted there, and
   `QFAI-TRIAGE-002` makes `Existing Spec` (a `spec-NNNN` value) a required
   column — so the `Existing Spec`, `Approved By` and `Rationale` cells must be
   able to name what actually changed, verbatim. `QFAI-LAYER-100` and
-  `TRACE_SHARED_SCOPE_VIOLATION` skip the `## Triage` section for this reason.
+  `TRACE_SHARED_SCOPE_VIOLATION` skip those rows for this reason.
+- The carve-out is exactly that narrow, so it cannot be used as an escape
+  hatch:
+  - **file** — `_policies/10_delta.md` only. A `## Triage` heading anywhere
+    else under `_policies/**` (`11_Slice-Policy.md`, `01_Objective.md`, ...)
+    gets no exemption.
+  - **heading** — the canonical `## Triage` H2 only, matching what
+    `QFAI-TRIAGE-001..007` validate. `# Triage`, `### Triage` and
+    `## Triage notes` are not exempt.
+  - **line shape** — markdown table rows only. A heading that declares an item
+    (`### AC-0001-0001`) or a traceability edge (`- Parent: US-0001-0001`)
+    inside the Triage section is still a violation, because it defines or owns
+    rather than cites.
 
 ## TDD Execution Ledger
 

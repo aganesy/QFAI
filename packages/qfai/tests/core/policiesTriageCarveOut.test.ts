@@ -19,6 +19,7 @@ const TRIAGE_SECTION = [
 async function withPolicies(
   delta: string,
   assertion: (issues: Awaited<ReturnType<typeof validateLayeredTraceability>>) => void,
+  extraPolicyFiles: Record<string, string> = {},
 ): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-policies-triage-"));
   try {
@@ -38,6 +39,9 @@ async function withPolicies(
       "utf-8",
     );
     await writeFile(path.join(policiesDir, "10_delta.md"), delta, "utf-8");
+    for (const [fileName, content] of Object.entries(extraPolicyFiles)) {
+      await writeFile(path.join(policiesDir, fileName), content, "utf-8");
+    }
 
     assertion(await validateLayeredTraceability(root, defaultConfig));
   } finally {
@@ -90,6 +94,67 @@ describe("_policies scope bans carve out the mandated Triage table", () => {
       ),
       (issues) => {
         expect(policyScopeFindings(issues)).toContain("TC-0003-0001");
+      },
+    );
+  });
+
+  it("does not exempt a ## Triage heading in another _policies file", async () => {
+    await withPolicies(
+      ["# 10 Delta", "", ...TRIAGE_SECTION, ""].join("\n"),
+      (issues) => {
+        const refs = policyScopeFindings(issues);
+        expect(refs).toContain("AC-0001-0009");
+        expect(refs).toContain("BR-0001-0003");
+      },
+      {
+        "11_Slice-Policy.md": [
+          "# Slice Policy",
+          "",
+          "## Triage",
+          "",
+          "Owns AC-0001-0009.",
+          "",
+        ].join("\n"),
+        "01_Objective.md": ["# Objective", "", "## Triage", "", "Owns BR-0001-0003.", ""].join(
+          "\n",
+        ),
+      },
+    );
+  });
+
+  it("only exempts the canonical `## Triage` H2, not near-miss headings", async () => {
+    const row = "| REQ-0042 | x | spec-0007 | UPDATE | MODIFY | - | AC-0007-0004 renamed |";
+    const table = [
+      "| Source   | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale |",
+      "| -------- | ------- | ------------- | --------- | ------ | ----------- | --------- |",
+      row,
+    ];
+    for (const heading of ["# Triage", "### Triage", "## Triage notes"]) {
+      await withPolicies(["# 10 Delta", "", heading, "", ...table, ""].join("\n"), (issues) => {
+        expect(policyScopeFindings(issues)).toContain("AC-0007-0004");
+      });
+    }
+  });
+
+  it("exempts only table rows, never definitions or ownership edges inside Triage", async () => {
+    await withPolicies(
+      [
+        "# 10 Delta",
+        "",
+        ...TRIAGE_SECTION,
+        "",
+        "### AC-0001-0001",
+        "",
+        "- Parent: US-0001-0001",
+        "",
+      ].join("\n"),
+      (issues) => {
+        const refs = policyScopeFindings(issues);
+        expect(refs).toContain("AC-0001-0001");
+        expect(refs).toContain("US-0001-0001");
+        // The mandated table's own citations stay exempt.
+        expect(refs).not.toContain("AC-0007-0004");
+        expect(refs).not.toContain("BR-0009-0002");
       },
     );
   });

@@ -138,8 +138,25 @@ export async function validateLayeredTraceability(
   return issues;
 }
 
+/** The one file `sdd-triage.md` mandates for cross-spec / policy-only rows. */
+const POLICIES_TRIAGE_FILE = "10_delta.md";
+
 /**
- * Blanks the `## Triage` section, preserving line count.
+ * The canonical `## Triage` heading — exactly what `validateTriageSection`
+ * recognizes (an H2 whose normalized text is `triage`). `# Triage`,
+ * `### Triage` and `## Triage notes` are deliberately excluded.
+ */
+const CANONICAL_TRIAGE_HEADING_RE = /^##[ \t]+triage[ \t]*$/i;
+
+/** A markdown table row: the only line shape the carve-out exempts. */
+const TABLE_ROW_RE = /^[ \t]*\|/;
+
+/** An H1 or H2 heading, which closes the `## Triage` section. */
+const SECTION_BOUNDARY_RE = /^#{1,2}[ \t]+\S/;
+
+/**
+ * Blanks the **table rows** of the canonical `## Triage` section in
+ * `_policies/10_delta.md`, preserving line count.
  *
  * `sdd-triage.md` requires cross-spec and policy-only Triage rows to be
  * persisted in `_policies/10_delta.md`, and `QFAI-TRIAGE-002` makes
@@ -148,23 +165,41 @@ export async function validateLayeredTraceability(
  * ban is that `_policies` must not *define or own* lower-layer items; citing
  * one in a delta record is not the same thing, and the two rules were
  * otherwise jointly unsatisfiable for any populated cross-spec Triage table.
+ *
+ * Three deliberate narrowings keep the carve-out from becoming a hole:
+ *
+ * - **File** — only `10_delta.md`. A `## Triage` heading in
+ *   `11_Slice-Policy.md` or `01_Objective.md` is not the mandated table, so it
+ *   earns no exemption.
+ * - **Heading** — only the canonical H2 that `validateTriageSection` itself
+ *   accepts, and only its first occurrence, because `extractMarkdownSection`
+ *   reads the first one. Exempting a heading no Triage validator inspects
+ *   would leave the content covered by nothing at all.
+ * - **Line shape** — only table rows. The carve-out exists for *citations* in
+ *   the `Existing Spec` / `Approved By` / `Rationale` cells. A
+ *   `### AC-0001-0001` heading or a `- Parent: US-0001-0001` bullet inside the
+ *   same section is a definition or a traceability edge — precisely what the
+ *   ban is for — so it stays visible to the scan.
  */
-function maskTriageSection(text: string): string {
+function maskTriageSection(fileName: string, text: string): string {
+  if (fileName !== POLICIES_TRIAGE_FILE) {
+    return text;
+  }
   const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const start = lines.findIndex((line) => /^(#{1,6})\s*triage\b/i.test(line));
+  const start = lines.findIndex((line) => CANONICAL_TRIAGE_HEADING_RE.test(line));
   if (start === -1) {
     return text;
   }
-  const level = (/^(#{1,6})/.exec(lines[start] ?? "")?.[1] ?? "#").length;
   const masked = [...lines];
   for (let index = start + 1; index < lines.length; index += 1) {
-    const match = /^(#{1,6})\s+\S/.exec(lines[index] ?? "");
-    if (match && (match[1] ?? "").length <= level) {
+    const line = lines[index] ?? "";
+    if (SECTION_BOUNDARY_RE.test(line)) {
       break;
     }
-    masked[index] = "";
+    if (TABLE_ROW_RE.test(line)) {
+      masked[index] = "";
+    }
   }
-  masked[start] = "";
   return masked.join("\n");
 }
 
@@ -176,7 +211,7 @@ async function validatePoliciesDownstreamReferences(policiesDir: string): Promis
     if (text.trim().length === 0) {
       continue;
     }
-    const refs = uniqueMatches(maskTriageSection(text), POLICIES_DOWNSTREAM_RE);
+    const refs = uniqueMatches(maskTriageSection(fileName, text), POLICIES_DOWNSTREAM_RE);
     if (refs.length === 0) {
       continue;
     }
@@ -206,7 +241,11 @@ async function validatePoliciesScopeForV1421(policiesDir: string): Promise<Issue
     if (text.trim().length === 0) {
       continue;
     }
-    const refs = uniqueMatches(maskTriageSection(text), POLICIES_DOWNSTREAM_V1421_RE);
+    // The mandated Triage table is `_policies/10_delta.md` itself, not a
+    // same-named file in some nested directory, so compare the path relative
+    // to `_policies/` rather than the basename.
+    const relative = path.relative(policiesDir, filePath).replace(/\\/g, "/");
+    const refs = uniqueMatches(maskTriageSection(relative, text), POLICIES_DOWNSTREAM_V1421_RE);
     if (refs.length === 0) {
       continue;
     }
