@@ -38,4 +38,4 @@
 - Lint: `<lint command>`
 - Typecheck: `<typecheck command>`
 - Build: `<build command>`
-- Validate: `npx --no-install qfai validate --fail-on error --format github`
+- Validate: `npx qfai validate --fail-on error --format github`

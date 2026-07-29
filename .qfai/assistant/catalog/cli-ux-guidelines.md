@@ -1,11 +1,11 @@
 # CLI UX Guidelines
 
-QFAI が定義する、`npx --no-install qfai validate` の UI/UX 関連出力ガイドライン。
+QFAI が定義する、`npx qfai validate` の UI/UX 関連出力ガイドライン。
 
 ## Output Format
 
 - Issue メッセージにタイムスタンプやランダム値を含めない（冪等性確保）
-- `## Auto Check Results` — `npx --no-install qfai validate` による自動チェック結果セクション
+- `## Auto Check Results` — `npx qfai validate` による自動チェック結果セクション
 - `## Manual Review Results` — product-surface-reviewer による手動レビュー結果セクション
 
 ## Error Message Format

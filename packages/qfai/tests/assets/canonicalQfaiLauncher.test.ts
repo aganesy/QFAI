@@ -34,22 +34,12 @@ const SUBCOMMANDS =
 const INLINE_BARE = new RegExp("`qfai " + SUBCOMMANDS + "\\b");
 const FENCED_BARE = new RegExp("^\\s*qfai " + SUBCOMMANDS + "\\b");
 
-/**
- * `npx` runs "a command from a local **or remote** npm package": without
- * `--no-install` an unresolvable local qfai is silently replaced by an unpinned
- * download from the registry, which is exactly the non-reproducible gate the
- * baseline forbids. Only `npx --no-install qfai` / `node_modules/.bin/qfai` are
- * canonical.
- */
-const INLINE_REMOTE_CAPABLE = new RegExp("`npx qfai " + SUBCOMMANDS + "\\b");
-const FENCED_REMOTE_CAPABLE = new RegExp("^\\s*npx qfai " + SUBCOMMANDS + "\\b");
-
 type Offence = { file: string; line: number; text: string };
 
 /**
- * Finds non-canonical qfai invocations, counting only the two forms a reader
- * executes: an inline code span and a line inside a fenced block. Free prose
- * ("qfai validate/report") is left alone.
+ * Finds bare `qfai <subcommand>` invocations, counting only the two forms a
+ * reader executes: an inline code span and a line inside a fenced block. Free
+ * prose ("qfai validate/report") is left alone.
  */
 function findNonCanonicalInvocations(relativePath: string, content: string): Offence[] {
   const offences: Offence[] = [];
@@ -60,9 +50,7 @@ function findNonCanonicalInvocations(relativePath: string, content: string): Off
       inFence = !inFence;
       return;
     }
-    const bad = inFence
-      ? FENCED_BARE.test(line) || FENCED_REMOTE_CAPABLE.test(line)
-      : INLINE_BARE.test(line) || INLINE_REMOTE_CAPABLE.test(line);
+    const bad = inFence ? FENCED_BARE.test(line) : INLINE_BARE.test(line);
     if (bad) {
       offences.push({ file: relativePath, line: index + 1, text: line.trim() });
     }
@@ -89,7 +77,7 @@ async function collectAssistantDocs(): Promise<string[]> {
 }
 
 describe("shipped assistant docs invoke qfai through the canonical launcher", () => {
-  it("no shipped doc prescribes a bare or remote-capable qfai invocation", async () => {
+  it("no shipped doc prescribes a bare qfai invocation", async () => {
     const files = await collectAssistantDocs();
     expect(files.length).toBeGreaterThan(0);
 
@@ -101,7 +89,7 @@ describe("shipped assistant docs invoke qfai through the canonical launcher", ()
 
     expect(
       offences.map((entry) => `${entry.file}:${entry.line} ${entry.text}`),
-      "qfai is a project dependency; gates must run as `npx --no-install qfai …`",
+      "qfai is a project dependency; gates must run as `npx qfai …`",
     ).toEqual([]);
   });
 
@@ -117,13 +105,25 @@ describe("shipped assistant docs invoke qfai through the canonical launcher", ()
     }
   });
 
-  it("the shared baseline makes the remote-fetch-free launcher mandatory", async () => {
+  // The reproducibility guard is a preflight, not a spelling. Measured with npm
+  // 11.16.0 in a non-interactive shell: plain `npx cowsay hi` printed "The
+  // following package was not found and will be installed" and exited 0, and a
+  // following `npx --no-install cowsay hi` also exited 0, off the npx cache —
+  // for a package present in neither node_modules of this workspace. Neither
+  // spelling proves the qfai that ran was the project's; only a local binary
+  // does.
+  it("the shared baseline gates on a local binary, not on an npx flag", async () => {
     for (const baseline of BASELINE_PATHS) {
       const content = await readFile(path.join(repoRoot, baseline), "utf-8");
       expect(content).toContain("## Canonical qfai Launcher (Mandatory)");
-      expect(content).toContain("`npx --no-install qfai …`");
-      expect(content).toContain("`node_modules/.bin/qfai …`");
-      expect(content).toContain("`--no-install`");
+      expect(content).toContain("Launcher preflight");
+      expect(content).toContain("`node_modules/.bin/qfai`");
+      expect(content).toContain("UNRUN");
+      // The dependency is the prerequisite, and init does not create it.
+      expect(content).toContain("`npm i -D qfai`");
+      expect(content).toContain("does not add itself to `package.json` on init");
+      // `--no-install` may only appear as the thing that is NOT the guard.
+      expect(content).toContain("The preflight is the guard, not a flag.");
     }
   });
 });

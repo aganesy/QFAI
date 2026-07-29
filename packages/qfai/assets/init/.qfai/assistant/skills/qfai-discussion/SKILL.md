@@ -80,7 +80,7 @@ Before declaring completion, you MUST:
 - ensure every deferred item has full metadata in `13_Deferred.md`;
 - ensure `02_Inception-Deck.md` and `03_Story-Workshop.md` include Mermaid diagrams;
 - ensure the UI-bearing sidecar family is complete and the root `DESIGN.md` draft exists at the consuming-project root and parses as valid front-matter;
-- run `npx --no-install qfai validate --profile discussion --fail-on error` and fix discussion-owned findings;
+- run `npx qfai validate --profile discussion --fail-on error` and fix discussion-owned findings;
 - avoid selecting a single visual winner in discussion artifacts.
 
 ### Reviewer Gate (MUST)

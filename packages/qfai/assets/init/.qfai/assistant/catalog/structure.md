@@ -36,6 +36,6 @@
 <install command>
 <build command>
 <test command>
-npx --no-install qfai validate
-npx --no-install qfai doctor
+npx qfai validate
+npx qfai doctor
 ```

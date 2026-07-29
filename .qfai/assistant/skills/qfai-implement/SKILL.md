@@ -328,7 +328,7 @@ Each TDD item MUST have fresh evidence containing at minimum:
 - [ ] No backward transitions occurred.
 - [ ] Exception items have DR-IDs recorded.
 - [ ] All tests pass.
-- [ ] `npx --no-install qfai validate --profile tdd --fail-on error` passes with zero `QFAI-TEST-001` findings (no `it.todo` / `test.todo` / `describe.todo` stubs remain).
+- [ ] `npx qfai validate --profile tdd --fail-on error` passes with zero `QFAI-TEST-001` findings (no `it.todo` / `test.todo` / `describe.todo` stubs remain).
 
 ## Completion Checklist (MUST)
 
@@ -343,7 +343,7 @@ Each TDD item MUST have fresh evidence containing at minimum:
 When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
 
 - Verify gates: `/qfai-verify`.
-  Action: run `npx --no-install qfai validate --profile tdd --fail-on error` for this skill, then `/qfai-verify` for full-scan approval.
+  Action: run `npx qfai validate --profile tdd --fail-on error` for this skill, then `/qfai-verify` for full-scan approval.
 - Spec updates needed: `/qfai-sdd`.
   Action: update spec artifacts if implementation revealed scope changes.
 - Acceptance tests: `/qfai-atdd`.

@@ -40,7 +40,7 @@ Do not proceed without a declared Change Type.
 
 - Read and enforce `.qfai/assistant/catalog/test-layers.md`.
 - Treat floors/ratios as signals, not completion gates.
-- Completion gate is `npx --no-install qfai validate --fail-on error` with evidence.
+- Completion gate is `npx qfai validate --fail-on error` with evidence.
 
 ---
 
@@ -64,7 +64,7 @@ Stage 3 (`/qfai-sdd`) target policy:
 Prototyping stage policy:
 
 - `/qfai-prototyping` scope is fixed to **ALL specs** discovered from `.qfai/specs/spec-*`.
-- Completion requires prototyping evidence (markdown + json in `.qfai/evidence/`) and `npx --no-install qfai validate --fail-on error` pass.
+- Completion requires prototyping evidence (markdown + json in `.qfai/evidence/`) and `npx qfai validate --fail-on error` pass.
 - Coverage gaps (missing spec rows, unresolved declared checks, API 404) are blocking.
 
 Implementation stage:
@@ -128,7 +128,7 @@ Typical minimum:
 - typecheck
 - tests
 - pack/verify (if distributed)
-- In CI, use default/full validation (`npx --no-install qfai validate --fail-on error`); `--phase refinement` is local-only.
+- In CI, use default/full validation (`npx qfai validate --fail-on error`); `--phase refinement` is local-only.
 - Waivers are for `warning` / `info` findings only. Waivers targeting `error` findings are treated as configuration errors and must fail.
 
 ---
