@@ -50,8 +50,13 @@ describe("a Change Request is a defined artifact", () => {
     });
 
     it(`${tree}: DR-ID is documented as the CR carrier`, async () => {
-      const rules = await read(tree, "assistant/skills/qfai-sdd/references/spec-traceability-rules.md");
-      expect(rules).toContain("`DR-ID` carries Decision Record (`DR-*`) **and** Change Request (`CR-*`)");
+      const rules = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+      );
+      expect(rules).toContain(
+        "`DR-ID` carries Decision Record (`DR-*`) **and** Change Request (`CR-*`)",
+      );
     });
 
     it(`${tree}: "unresolved" is defined at the completion gate`, async () => {

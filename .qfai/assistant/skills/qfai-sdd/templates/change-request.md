@@ -28,11 +28,11 @@ while an unresolved CR exists, so `Status` must be a real, checkable field.
 
 ## Options (at least 3) and recommendation
 
-| # | Option | Cost | Risk | Recommended |
-| - | ------ | ---- | ---- | ----------- |
-| 1 | `<option>` | `<cost>` | `<risk>` | |
-| 2 | `<option>` | `<cost>` | `<risk>` | ✅ |
-| 3 | `<option>` | `<cost>` | `<risk>` | |
+| #   | Option     | Cost     | Risk     | Recommended |
+| --- | ---------- | -------- | -------- | ----------- |
+| 1   | `<option>` | `<cost>` | `<risk>` |             |
+| 2   | `<option>` | `<cost>` | `<risk>` | ✅          |
+| 3   | `<option>` | `<cost>` | `<risk>` |             |
 
 ## Impact scope
 
