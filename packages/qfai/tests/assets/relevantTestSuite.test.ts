@@ -24,7 +24,9 @@ describe('"relevant test suite" is defined and bounded', () => {
       expect(skill).toContain("narrow suite per item, full suite at each checkpoint");
       expect(skill).toContain("quadratic in ledger size");
       // Item 11 of the 11-point gate is where the full suite is paid for.
-      expect(skill).toMatch(/11\. Checkpoint verification passed — this is where the \*\*full\*\* suite runs/);
+      expect(skill).toMatch(
+        /11\. Checkpoint verification passed — this is where the \*\*full\*\* suite runs/,
+      );
     });
 
     it(`${tree}: test-layers.md bounds test-file granularity`, async () => {

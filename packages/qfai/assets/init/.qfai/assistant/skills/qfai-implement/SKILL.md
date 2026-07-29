@@ -152,6 +152,7 @@ When transitioning to `exception`:
    verification.** Running the whole spec suite once per item costs the sum
    over all prior items and is quadratic in ledger size; the checkpoint is
    where that cost is paid once.
+
 3. Transition status to `refactor`.
 4. Submit for completion review (`completion-reviewer`) and code quality review (`implementation-reviewer`).
 5. After all routed blocking reviewers return PASS, run checkpoint verification, then transition to `done`.
