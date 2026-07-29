@@ -74,9 +74,46 @@ describe("QFAI-TRIAGE-007 keeps SPLIT/MERGE/SUPERSEDE/DELETE spec-scoped", () =>
     }
   });
 
-  it("stays silent when the Subject names the spec-level target first", () => {
-    // Whichever the Subject names first is the object, so a spec-level row
-    // leads with its target and may cite the motivating item afterwards.
+  it("still fires when a spec-level ID merely qualifies the item's scope", () => {
+    // Word order cannot decide the object: these all name the spec or the
+    // capability FIRST, yet the operation's object is the bare item.
+    for (const subject of [
+      "CAP-0003 では BR-0006-0004 を削除",
+      "spec-0006 にある BR-0006-0004 を削除",
+      "spec-0006 の BR-0006-0004 を分割",
+      "in spec-0006, delete BR-0006-0004",
+    ]) {
+      expect(
+        codes(delta(`| REQ-0001 | ${subject} | spec-0006 | DELETE | - | u@h | - |`)),
+      ).toContain("QFAI-TRIAGE-007");
+    }
+  });
+
+  it("treats every bracket flavour as a citation, and only inside it", () => {
+    for (const subject of [
+      "split spec-0006 (BR-0006-0004 起点)",
+      "split spec-0006 （BR-0006-0004 起点）",
+      "split spec-0006 [BR-0006-0004 起点]",
+      "split spec-0006 【BR-0006-0004 起点】",
+      "split spec-0006 (起点: BR-0006-0004 と AC-0006-0001)",
+    ]) {
+      expect(
+        codes(delta(`| REQ-0001 | ${subject} | spec-0006 | SPLIT | - | u@h | - |`)),
+      ).not.toContain("QFAI-TRIAGE-007");
+    }
+    // One bracketed citation does not shelter a second, bare item ID.
+    expect(
+      codes(
+        delta(
+          "| REQ-0001 | split spec-0006 (BR-0006-0004 起点) then drop AC-0006-0001 | spec-0006 | SPLIT | - | u@h | - |",
+        ),
+      ),
+    ).toContain("QFAI-TRIAGE-007");
+  });
+
+  it("stays silent when the motivating item is bracketed", () => {
+    // A motivating item is cited in brackets; anything outside them is the
+    // object of the operation.
     expect(
       codes(
         delta(
@@ -98,9 +135,9 @@ describe("QFAI-TRIAGE-007 keeps SPLIT/MERGE/SUPERSEDE/DELETE spec-scoped", () =>
     ).not.toContain("QFAI-TRIAGE-007");
   });
 
-  it("fires when a spec-level row leads with the motivating item instead of its target", () => {
-    // Deliberately not exempt: leading with the item is indistinguishable from
-    // an item-scoped misuse, and the remediation is to name the target first.
+  it("fires when a spec-level row states the motivating item unbracketed", () => {
+    // Deliberately not exempt: an unbracketed item is indistinguishable from an
+    // item-scoped misuse, and the remediation is to bracket the citation.
     expect(
       codes(
         delta(
