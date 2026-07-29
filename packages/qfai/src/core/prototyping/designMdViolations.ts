@@ -6,6 +6,13 @@
  * Returns one violation per occurrence (no de-duplication, no
  * short-circuit). Used by the certify gate to block convergence when a
  * generated prototype drifts from the SSOT design tokens.
+ *
+ * Input tree: this scanner reads the HTML the generator writes to
+ * `.qfai/prototypes/iter-NN/index.html`, NOT the capture fan-out under
+ * `.qfai/evidence/prototyping/iter-NN/`. The two trees and their writers
+ * are documented in `generator-prompt.md#output-layout--two-trees-two-shapes`;
+ * this file and that prompt are an SSOT-sync pair (see
+ * `validators/promptScannerPairs.ts`).
  */
 
 import type { DesignMd } from "../design/designMd.js";
