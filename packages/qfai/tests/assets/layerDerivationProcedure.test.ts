@@ -37,16 +37,41 @@ describe("deriving a TC's layer is a published procedure", () => {
       );
     });
 
+    it(`${tree}: step 2 is declared to outrank step 3`, async () => {
+      const catalog = await read(tree, "assistant/catalog/test-layers.md");
+      expect(catalog).toContain("**Step 2 outranks step 3.**");
+      expect(catalog).toContain("`response.body.price` over HTTP, reads as L1");
+    });
+
+    it(`${tree}: the derived Level does not move the annotation`, async () => {
+      const catalog = await read(tree, "assistant/catalog/test-layers.md");
+      expect(catalog).toContain("### Annotation routing is by ID type, not by `Level`");
+      for (const code of [
+        "QFAI-ATDD-111",
+        "QFAI-ATDD-112",
+        "QFAI-ATDD-113",
+        "QFAI-ATDD-121",
+        "QFAI-ATDD-122",
+      ]) {
+        expect(catalog).toContain(code);
+      }
+      expect(catalog).toContain("**A `TC-*` row's `Level` stays within L1–L3.**");
+      expect(catalog).toContain("**An L1/L2 `Level` does not relax `QFAI-ATDD-112`.**");
+    });
+
     it(`${tree}: the gates cite the procedure`, async () => {
       expect(await read(tree, "assistant/skills/qfai-atdd/SKILL.md")).toContain(ANCHOR);
       expect(await read(tree, "assistant/skills/qfai-implement/SKILL.md")).toContain(ANCHOR);
       expect(await read(tree, "assistant/skills/qfai-sdd/SKILL.md")).toContain(ANCHOR);
     });
 
-    it(`${tree}: the per-TC pinning claim is withdrawn`, async () => {
+    it(`${tree}: the Level is per-TC while the annotation routing stays enforced`, async () => {
       const sdd = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
-      expect(sdd).not.toContain("(US→E2E, TC→Integration, CON-API→API)");
-      expect(sdd).toContain("A `TC-*`'s layer is **not** pinned");
+      expect(sdd).toContain(
+        "annotation routing is enforced by obligation ID (US→E2E, TC→Integration, CON-API→API)",
+      );
+      expect(sdd).toContain("a `TC-*`'s `Level` is **not** a constant");
+      expect(sdd).toContain("keeping the row inside L1–L3");
     });
 
     it(`${tree}: the TC template points authors at the procedure`, async () => {

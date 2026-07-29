@@ -132,7 +132,7 @@ Reviewer routing is fixed by `.qfai/assistant/manifest/agent-routing.yml` and `.
 - Default: `completion-reviewer`.
 - Conditional: `architecture-reviewer` (structural / contract / CLI), `product-surface-reviewer` (UI-bearing), `qa-gatekeeper` (validate / coverage / runtime / prototyping evidence affected).
 - Drift Protocol compliance is mandatory; reviewers MUST verify no rejected option was reintroduced and no drift from prior decisions.
-- Test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`; layer pinning is enforced (US→E2E, CON-API→API). A `TC-*`'s layer is **not** pinned: derive it per TC with `catalog/test-layers.md#layer-derivation-procedure-normative`, defaulting to Integration only when the derivation is genuinely indeterminate.
+- Test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`; annotation routing is enforced by obligation ID (US→E2E, TC→Integration, CON-API→API) and is unchanged by the derived `Level`. Within that routing a `TC-*`'s `Level` is **not** a constant: derive it per TC with `catalog/test-layers.md#layer-derivation-procedure-normative`, keeping the row inside L1–L3 and defaulting to Integration when the derivation is genuinely indeterminate or when no `tests/integration/**` trace exists for a lower layer.
 - Coverage floors / ratios are planning signals, not gates; reviewers must not block on them.
 - Do not declare DONE until all routed blocking reviewers return `PASS`.
 

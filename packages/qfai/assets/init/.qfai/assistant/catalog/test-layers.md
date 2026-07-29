@@ -66,9 +66,38 @@ give each its own `Level`.
 ### Direction of authority (anti-pattern)
 
 The test driver follows the declared layer. **The layer is never inferred from
-how a test happens to be driven.** A unit-level obligation exercised through an
-HTTP client is still L1 badly implemented — it is not an L4 test. Inverting
-this is what collapses a designed pyramid into an all-integration suite.
+how a test happens to be driven.** A unit-level obligation — one whose oracle,
+after step 2, observes only inputs and return values — exercised through an
+HTTP client is still L1 badly implemented; it is not an L4 test.
+
+**Step 2 outranks step 3.** Restriction to the parent BR's obligations runs
+first, so a transport the parent BR does not own is incidental and never
+raises the layer. A BR that owns only the price calculation, asserted as
+`response.body.price` over HTTP, reads as L1: the price is the BR-owned value,
+the response envelope is the incidental transport. Step 3's "response bodies →
+L4" applies only when the service-boundary values are themselves what the
+parent BR owns. Inverting this is what collapses a designed pyramid into an
+all-integration suite.
+
+### Annotation routing is by ID type, not by `Level`
+
+The derived `Level` records which oracle owns the obligation. It does **not**
+move the traceability annotation. The [ATDD annotation hard gate](#atdd-annotation-hard-gate)
+routes by obligation ID: `US-*` is answered from `tests/e2e/**`
+(`QFAI-ATDD-111`), `TC-*` from `tests/integration/**` (`QFAI-ATDD-112`), and
+`CON-API-*` from `tests/api/**` (`QFAI-ATDD-113`); a `TC-*` reference inside
+`tests/api/**` or `tests/e2e/**` is rejected outright (`QFAI-ATDD-121` /
+`QFAI-ATDD-122`). Two consequences bind every `TC-*` row:
+
+- **A `TC-*` row's `Level` stays within L1–L3.** L4's goal is `CON-API-*` and
+  L5's goal is `US-*` (see the layer definitions above), so an oracle that
+  derives to L4 or L5 means the obligation is misfiled, not that the TC is an
+  L4/L5 test. Re-file it as `CON-API-*` or `US-*` and remove the `TC-*` row.
+- **An L1/L2 `Level` does not relax `QFAI-ATDD-112`.** The
+  `QFAI:SPEC-XXXX:TC-YYYY` annotation is still owed to `tests/integration/**`.
+  Declare L1 or L2 only when that integration-level trace exists; otherwise
+  keep the row at L3, because a spec whose TC has no integration reference
+  cannot pass `qfai validate --fail-on error`.
 
 ## TestKind resolution (single source)
 
