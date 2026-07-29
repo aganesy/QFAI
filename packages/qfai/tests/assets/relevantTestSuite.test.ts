@@ -54,7 +54,37 @@ describe('"relevant test suite" is defined and bounded', () => {
         "The **full** suite is required here only when the item sits on a checkpoint boundary",
       );
       // ...while still running at least once per spec.
-      expect(skill).toContain("the last ledger row is always a boundary");
+      expect(skill).toContain("the last row a run completes is always a boundary");
+    });
+
+    it(`${tree}: the once-per-spec boundary follows work, not file position`, async () => {
+      // A re-executed ledger routinely has its remaining `todo` rows above
+      // already-`done` ones (spec-0015), so the physical last row is skipped
+      // and would never trigger the full suite.
+      const section = unwrap(await read(tree, REFERENCE));
+      expect(section).toContain("the **last incomplete row this run completes**");
+      expect(section).toContain(
+        "if no other row is left at `todo` / `red` / `green` / `refactor` / `review-fix`, that row is a boundary",
+      );
+      expect(section).toContain("deliberately **not** the physical last row of the file");
+      expect(section).toContain(
+        "A run that completes no row has nothing to verify and no boundary",
+      );
+      expect(section).not.toContain("the **last row of the ledger**");
+
+      const skill = unwrap(await read(tree, SKILL));
+      expect(skill).not.toContain("the last ledger row is always a boundary");
+    });
+
+    it(`${tree}: the cross-package boundary does not depend on the fallback firing`, async () => {
+      // Step 3's package is resolved only when the reverse walk fails, so a
+      // boundary phrased against it is unevaluable on a fully resolved graph.
+      const section = unwrap(await read(tree, REFERENCE));
+      expect(section).toContain("**touched modules belonging to more than one package**");
+      expect(section).toContain("Resolve the owning package of every touched module directly");
+      expect(section).toContain("**independently of the resolution step used above**");
+      expect(section).toContain("does not skip it");
+      expect(section).not.toContain("touched a module **outside** the package resolved in step 3");
     });
 
     it(`${tree}: the checkpoint runs before done, so no backward transition is needed`, async () => {

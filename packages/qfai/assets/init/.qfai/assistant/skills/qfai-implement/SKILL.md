@@ -279,7 +279,7 @@ Completion MUST NOT be declared when any of the following are true:
 - Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned FAIL
 - Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
 - Parallel slices were used but integration verify has not been run post-merge
-- Checkpoint boundary was reached but verification was not executed (the last ledger row is always a boundary, so every spec runs the full suite at least once)
+- Checkpoint boundary was reached but verification was not executed (the last row a run completes is always a boundary — not the physical last row of the file, which is often already `done` and skipped — so every spec runs the full suite at least once)
 - `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-001`). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID.
 
 ## Evidence (MANDATORY)

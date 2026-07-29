@@ -43,9 +43,21 @@ and is quadratic in ledger size. That cost is paid at boundaries instead.
 
 The full suite runs at, and only at:
 
-- the **last row of the ledger** — so every spec pays for one full run;
-- any row whose implementation touched a module **outside** the package
-  resolved in step 3 — a cross-package edit re-widens the run immediately;
+- the **last incomplete row this run completes** — while finishing a row, if no
+  other row is left at `todo` / `red` / `green` / `refactor` / `review-fix`,
+  that row is a boundary. It is deliberately **not** the physical last row of
+  the file: a re-executed ledger routinely has its remaining `todo` rows above
+  already-`done` or `exception` ones — rows appended later, or a backfilled
+  gap — and the physical last row is then skipped, so the spec would finish
+  without a full run at all. A run that completes no row has nothing to verify
+  and no boundary;
+- any row whose implementation **touched modules belonging to more than one
+  package**, or touched a module outside the package that owns this item's own
+  test modules — a cross-package edit re-widens the run immediately. Resolve
+  the owning package of every touched module directly from its path; this is
+  evaluated **independently of the resolution step used above**, so a fully
+  closed reverse walk (step 2, where step 3's fallback package never exists)
+  does not skip it;
 - every **N-th** completed row, with `N = 10` by default. Record the chosen `N`
   in the item's evidence when a project overrides it.
 
