@@ -42,9 +42,12 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
 
 - E2E obligations:
   - Every `US-*` in a **user-facing** spec must be referenced at least once from
-    `tests/e2e/**`. "User-facing" is the same surface resolution
-    `/qfai-prototyping` uses: a spec that declares no user-facing surface owes
-    no E2E reference, and `QFAI-ATDD-111` does not fire for it.
+    `tests/e2e/**`. "User-facing" is the same surface **union**
+    `/qfai-prototyping` enforces — frontmatter `surface_type: ui-bearing`, a
+    legacy `# … prototyping …` heading, or a spec pinned by
+    `qfai.config.yaml#prototyping.primarySpecId`. A spec that declares no
+    user-facing surface by any of those signals owes no E2E reference, and
+    `QFAI-ATDD-111` does not fire for it.
   - Scoping applies only when the project declares at least one UI-bearing
     spec. A project that has never declared a surface has not opted into
     surface typing, so the obligation stays project-wide for it.

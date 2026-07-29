@@ -11,7 +11,7 @@ import {
   type CollectFilesByGlobsResult,
 } from "./fs.js";
 import { collectSpecEntries } from "./specLayout.js";
-import { resolveAllUiBearingSpecs } from "./prototyping/specResolution.js";
+import { resolveSurfaceUnion } from "./prototyping/specResolution.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { collectMarkdownItems, uniqueMatches } from "./validators/utils.js";
 
@@ -265,6 +265,15 @@ async function collectApiContractIds(apiRoot: string): Promise<Set<string>> {
 /**
  * Resolves the set of spec numbers that owe a `US-*` E2E reference.
  *
+ * Uses `resolveSurfaceUnion` — the same SSOT `/qfai-prototyping` enforces
+ * (`prototypingIterate`'s drift gate and `prototypingCertify`'s `liveUiBearing`
+ * both read it) — rather than the strict frontmatter-only
+ * `resolveAllUiBearingSpecs`. The union also admits a spec pinned by
+ * `qfai.config.yaml#prototyping.primarySpecId` and the legacy
+ * `# … prototyping …` heading; scoping on the narrower set would drop such a
+ * spec out of `QFAI-ATDD-111` as soon as any other spec declared
+ * `surface_type: ui-bearing`, silently passing its unreferenced US.
+ *
  * Returns `null` when no spec in the project declares a user-facing surface —
  * i.e. the project has not opted into surface typing — so the obligation
  * remains project-wide and this change relaxes nothing for it. Failure to
@@ -275,7 +284,7 @@ async function resolveUiBearingScope(
   config: QfaiConfig,
 ): Promise<ReadonlySet<string> | null> {
   try {
-    const uiBearing = await resolveAllUiBearingSpecs(root, config);
+    const uiBearing = await resolveSurfaceUnion(root, config);
     return uiBearing.length === 0 ? null : new Set(uiBearing);
   } catch {
     return null;

@@ -80,4 +80,44 @@ describe("QFAI-ATDD-111 is scoped by surface type", () => {
       expect(finding?.severity).toBe("error");
     });
   });
+
+  it("keeps a spec pinned by prototyping.primarySpecId inside the scope", async () => {
+    await withProject(async (root) => {
+      // The strict frontmatter-only resolver would drop spec-0002 as soon as
+      // spec-0001 declared a surface, silently passing its unreferenced US.
+      await seed(root, [
+        { specNumber: "0001", usIds: ["US-0001"], uiBearing: true },
+        { specNumber: "0002", usIds: ["US-0002"] },
+      ]);
+
+      const pinnedConfig = {
+        ...defaultConfig,
+        prototyping: { ...defaultConfig.prototyping, primarySpecId: "0002" },
+      };
+      const refs = missingUsRefs(await validateAtddCodeTraceability(root, pinnedConfig));
+      expect(refs.some((ref) => ref.includes("SPEC-0002"))).toBe(true);
+    });
+  });
+
+  it("keeps a legacy title-marker spec inside the scope", async () => {
+    await withProject(async (root) => {
+      await seed(root, [{ specNumber: "0001", usIds: ["US-0001"], uiBearing: true }]);
+
+      const specDir = path.join(root, ".qfai", "specs", "spec-0002");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(
+        path.join(specDir, "01_Spec.md"),
+        ["# 01 Spec prototyping surface", ""].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(specDir, "02_User-stories.md"),
+        ["# 02 User stories", "", "## US-0002: title", "- Parent: CAP-0001", ""].join("\n"),
+        "utf-8",
+      );
+
+      const refs = missingUsRefs(await validateAtddCodeTraceability(root, defaultConfig));
+      expect(refs.some((ref) => ref.includes("SPEC-0002"))).toBe(true);
+    });
+  });
 });
