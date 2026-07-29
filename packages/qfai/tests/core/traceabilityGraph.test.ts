@@ -88,6 +88,38 @@ describe("buildLayeredTraceabilityGraph", () => {
     }
   });
 
+  // Item IDs are file-local and the shipped templates start every spec at
+  // `US-0001` / `AC-0001`, so two short-form specs collide on the raw ID. Keying
+  // the graph on it dropped the second spec's nodes and overwrote its
+  // same-shaped edges.
+  it("namespaces short spec-local IDs so two specs cannot overwrite each other", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-trace-graph-"));
+    try {
+      await seedShortIdSpec(root, "0001");
+      await seedShortIdSpec(root, "0002");
+
+      const graph = await buildLayeredTraceabilityGraph(root, defaultConfig);
+      const acNodes = graph.nodes.filter((node) => node.layer === "AC");
+
+      expect(acNodes.map((node) => node.id)).toEqual(["spec-0001/AC-0001", "spec-0002/AC-0001"]);
+      expect(acNodes.map((node) => node.path)).toEqual([
+        ".qfai/specs/spec-0001/03_Acceptance-Criteria.md",
+        ".qfai/specs/spec-0002/03_Acceptance-Criteria.md",
+      ]);
+
+      // Both specs' identically-shaped edges survive.
+      for (const specNumber of ["0001", "0002"]) {
+        expect(graph.edges).toContainEqual({
+          from: `spec-${specNumber}/BR-0001`,
+          to: `spec-${specNumber}/AC-0001`,
+          type: "BR_TO_AC",
+        });
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("returns an empty graph when there is no spec pack, without throwing", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-trace-graph-"));
     try {
@@ -156,6 +188,44 @@ async function seedV1421Spec(root: string, specNumber: string): Promise<void> {
     "| ----------------- | ----- | ----------------- | ----------------- | ------- |",
     `| TC-${specNumber}-0001 | L2    | AC-${specNumber}-0001 | EX-${specNumber}-0001 | title-1 |`,
     `| TC-${specNumber}-0002 | L2    | AC-${specNumber}-0002 | EX-${specNumber}-0002 | title-2 |`,
+  ]);
+}
+
+/** v1421 pack written the way the shipped templates do: file-local short IDs. */
+async function seedShortIdSpec(root: string, specNumber: string): Promise<void> {
+  const specDir = path.join(root, ".qfai", "specs", `spec-${specNumber}`);
+  await mkdir(specDir, { recursive: true });
+
+  await write(specDir, "01_Spec.md", ["# 01 Spec"]);
+  await write(specDir, "02_User-stories.md", ["# 02 User Stories", "", "- US-0001: a story"]);
+  await write(specDir, "03_Acceptance-Criteria.md", [
+    "# 03 Acceptance Criteria",
+    "",
+    "```gherkin",
+    "# AC-0001",
+    "Scenario: first",
+    "```",
+  ]);
+  await write(specDir, "04_Business-Rules.md", [
+    "# 04 Business Rules",
+    "",
+    "| BR-ID   | Title  | AC-Refs | Rule   |",
+    "| ------- | ------ | ------- | ------ |",
+    "| BR-0001 | rule-1 | AC-0001 | body-1 |",
+  ]);
+  await write(specDir, "05_Examples.md", [
+    "# 05 Examples",
+    "",
+    "| EX-ID   | BR-Ref  | Input   | Expected   |",
+    "| ------- | ------- | ------- | ---------- |",
+    "| EX-0001 | BR-0001 | input-1 | expected-1 |",
+  ]);
+  await write(specDir, "06_Test-Cases.md", [
+    "# 06 Test Cases",
+    "",
+    "| TC-ID   | Level | AC-Refs | EX-Ref  | Title   |",
+    "| ------- | ----- | ------- | ------- | ------- |",
+    "| TC-0001 | L2    | AC-0001 | EX-0001 | title-1 |",
   ]);
 }
 

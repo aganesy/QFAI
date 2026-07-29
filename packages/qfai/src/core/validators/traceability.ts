@@ -180,46 +180,77 @@ export async function buildLayeredTraceabilityGraph(
   const builder = createGraphBuilder(root);
 
   for (const entry of layeredEntries) {
+    const scoped = builder.forSpec(entry.specNumber);
     if (isV1421LayeredEntry(entry)) {
-      await addV1421Entry(builder, entry);
+      await addV1421Entry(scoped, entry);
       continue;
     }
     if (entry.layeredStyle === "v1417") {
-      await addV1417Entry(builder, entry);
+      await addV1417Entry(scoped, entry);
       continue;
     }
-    await addV1416Entry(builder, entry);
+    await addV1416Entry(scoped, entry);
   }
 
   return builder.build();
 }
 
-type GraphBuilder = {
+/** Node and edge sink for one spec. Ids are spec-qualified on the way in. */
+type SpecScopedBuilder = {
   addNodes: (ids: Iterable<string>, layer: string, filePath: string) => void;
   addEdges: (refs: Map<string, Set<string>>, type: string) => void;
+};
+
+type GraphBuilder = {
+  forSpec: (specNumber: string) => SpecScopedBuilder;
   build: () => TraceabilityGraph;
 };
+
+/** `US-0006-0001` — the spec number is already the first numeric segment. */
+const COMPOSITE_ID_RE = /^[A-Za-z]+-\d{4}-\d{4}$/;
+
+/**
+ * Make an item ID unique across the pack.
+ *
+ * Item IDs are file-local (`spec-traceability-rules.md`, "ID and Parent
+ * Rules") and the shipped templates start every spec at `US-0001` / `AC-0001`,
+ * so two specs using the short form collide. Keying the graph on the raw ID
+ * silently dropped the second spec's nodes and overwrote its same-shaped edges,
+ * leaving `traceability.json` holding only the first spec's paths.
+ *
+ * The composite form already carries its spec number, so it is left untouched —
+ * qualifying it would rewrite every ID in the packs that actually ship today
+ * for no gain.
+ */
+function qualifyId(specNumber: string, id: string): string {
+  return COMPOSITE_ID_RE.test(id) ? id : `spec-${specNumber}/${id}`;
+}
 
 function createGraphBuilder(root: string): GraphBuilder {
   const nodes = new Map<string, TraceabilityGraphNode>();
   const edges = new Map<string, TraceabilityGraphEdge>();
 
   return {
-    addNodes: (ids, layer, filePath) => {
-      for (const id of ids) {
-        if (nodes.has(id)) {
-          continue;
+    forSpec: (specNumber) => ({
+      addNodes: (ids, layer, filePath) => {
+        for (const rawId of ids) {
+          const id = qualifyId(specNumber, rawId);
+          if (nodes.has(id)) {
+            continue;
+          }
+          nodes.set(id, { id, layer, path: toGraphPath(root, filePath) });
         }
-        nodes.set(id, { id, layer, path: toGraphPath(root, filePath) });
-      }
-    },
-    addEdges: (refs, type) => {
-      for (const [from, parents] of refs.entries()) {
-        for (const to of parents) {
-          edges.set(`${from}->${to}:${type}`, { from, to, type });
+      },
+      addEdges: (refs, type) => {
+        for (const [rawFrom, parents] of refs.entries()) {
+          const from = qualifyId(specNumber, rawFrom);
+          for (const rawTo of parents) {
+            const to = qualifyId(specNumber, rawTo);
+            edges.set(`${from}->${to}:${type}`, { from, to, type });
+          }
         }
-      }
-    },
+      },
+    }),
     build: () => ({
       nodes: Array.from(nodes.values()).sort((a, b) => a.id.localeCompare(b.id)),
       edges: Array.from(edges.values()).sort(
@@ -230,7 +261,7 @@ function createGraphBuilder(root: string): GraphBuilder {
 }
 
 /** v1416: markdown tables, `SC`/`CASE` layer names, composite `XX-nnnn-nnnn` IDs. */
-async function addV1416Entry(builder: GraphBuilder, entry: SpecEntry): Promise<void> {
+async function addV1416Entry(builder: SpecScopedBuilder, entry: SpecEntry): Promise<void> {
   // Parse findings are the business of validateTraceability, which walks the same files.
   const discarded: Issue[] = [];
   const data = await collectLayeredEdgeData(entry, discarded);
@@ -251,7 +282,7 @@ async function addV1416Entry(builder: GraphBuilder, entry: SpecEntry): Promise<v
  * carries no AC->US column, so no `AC_TO_US` edge is emitted for it; that link
  * is not recorded in the format rather than missing from this walk.
  */
-async function addV1421Entry(builder: GraphBuilder, entry: SpecEntry): Promise<void> {
+async function addV1421Entry(builder: SpecScopedBuilder, entry: SpecEntry): Promise<void> {
   const refs = await collectV1421LayerRefs(entry);
   const userStoriesText = await readSafe(entry.userStoriesPath);
 
@@ -275,7 +306,7 @@ async function addV1421Entry(builder: GraphBuilder, entry: SpecEntry): Promise<v
  * v1417: `## XX-nnnn` headings with a `- Parent: YY-nnnn` line, and a gherkin
  * `05_Examples.feature` whose `@EX-nnnn` tags carry the same parent comment.
  */
-async function addV1417Entry(builder: GraphBuilder, entry: SpecEntry): Promise<void> {
+async function addV1417Entry(builder: SpecScopedBuilder, entry: SpecEntry): Promise<void> {
   const [usText, acText, brText, exText, tcText] = await Promise.all([
     readSafe(entry.userStoriesPath),
     readSafe(entry.acceptanceCriteriaPath),
