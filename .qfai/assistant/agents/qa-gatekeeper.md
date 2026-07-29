@@ -22,8 +22,7 @@ tools: [Read, Glob, Grep, Bash]
 
 In addition to traceability-based coverage (US/TC/CON-API existence), verify the **depth** of test cases:
 
-- Confirm a Coverage Depth Matrix exists (produced by `test-design-analyst`). If missing, record it
-  as a finding — its absence alone is NOT grounds for FAIL. See the scope note below.
+- Confirm a Coverage Depth Matrix exists (produced by `test-design-analyst`). If missing, record it as a finding — its absence alone is NOT grounds for FAIL. See the scope note below.
 - Check that each US/TC has test cases for at minimum: normal path AND error/failure path.
 - Flag any US/TC that has only normal-path test cases as a coverage gap.
 - Reference: `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`
