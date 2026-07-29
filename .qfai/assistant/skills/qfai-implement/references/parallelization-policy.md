@@ -57,8 +57,8 @@ is a DENY, because the independence claim then has no concrete evidence.
 ## Isolation requirement (worktree separation)
 
 Adjudicated separately from the "all must be true" list above, and **not
-waivable**. Per `constitution/workflow.md` (Implementation stage) and spec-0011
-REQ-0010, worktree separation is required for parallel execution, so
+waivable**. Per `constitution/workflow.md` (Implementation stage),
+worktree separation is required for parallel execution, so
 `delivery-planner` has two outcomes, not three:
 
 - **Separate worktrees in force** (one worker per `git worktree`, one index
