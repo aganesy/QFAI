@@ -35,6 +35,13 @@ const TDD_ID_FORMAT = /^TDD-\d{4}$/;
 
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
 
+const TEST_CASES_REL_PATH = "06_Test-Cases.md";
+
+/** Repo-relative, posix-slashed path used for the `file` field of an issue. */
+function toRelPath(root: string, filePath: string): string {
+  return path.relative(root, filePath).replace(/\\/g, "/");
+}
+
 export async function validateTddList(root: string, config: QfaiConfig): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
@@ -54,7 +61,7 @@ async function validateSpecTddList(
   specNumber: string,
 ): Promise<Issue[]> {
   const filePath = path.join(specDir, TDD_LIST_REL_PATH);
-  const relPath = path.relative(root, filePath).replace(/\\/g, "/");
+  const relPath = toRelPath(root, filePath);
   const issues: Issue[] = [];
 
   // Check 1: File existence
@@ -150,12 +157,16 @@ async function validateSpecTddList(
   const { knownTcIds, unitComponentTcIds, unrecognizedLevels } = await collectTestCaseIds(specDir);
   if (unrecognizedLevels.size > 0) {
     const accepted = [...UNIT_COMPONENT_LAYERS, ...NON_COVERAGE_LAYERS].sort().join(", ");
+    // The offending `Level` cell lives in 06_Test-Cases.md, not in the ledger
+    // this validator is otherwise reading. Reporting `relPath` here pointed
+    // the CLI, the JSON `file` field and any `scope.paths` waiver at a file
+    // that cannot be edited to clear the finding.
     issues.push(
       issue(
         "TDDLIST_UNKNOWN_LEVEL",
         `Unrecognized Level value(s) in 06_Test-Cases.md for spec-${specNumber}: ${[...unrecognizedLevels].sort().join(", ")}. Accepted: ${accepted}. Unrecognized values are treated as coverage targets, so every such TC becomes a mandatory ledger row`,
         "warning",
-        relPath,
+        toRelPath(root, path.join(specDir, TEST_CASES_REL_PATH)),
         "tddList.levelVocabulary",
         [...unrecognizedLevels].sort(),
       ),
@@ -373,7 +384,7 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
     unrecognizedLevels: new Set(),
   };
   const unrecognizedLevels = new Set<string>();
-  const testCasesPath = path.join(specDir, "06_Test-Cases.md");
+  const testCasesPath = path.join(specDir, TEST_CASES_REL_PATH);
   if (!(await exists(testCasesPath))) return empty;
   let content: string;
   try {

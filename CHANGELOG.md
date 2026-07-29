@@ -4,8 +4,24 @@
 
 ## [Unreleased]
 
+### Added
+
+- `TDDLIST_UNKNOWN_LEVEL` (warning): `tdd/test-list.md` validation now reports
+  a `Level` value in `06_Test-Cases.md` that matches neither the coverage-target
+  vocabulary nor the non-coverage vocabulary, lists the accepted values, and
+  states that an unrecognized value is still treated as a coverage target. The
+  finding is attributed to `06_Test-Cases.md` — the file whose cell must be
+  edited — so `scope.paths` waivers match the real input.
+
 ### Changed
 
+- The TDD coverage-level filter now recognizes the `L1`…`L5` codes the shipped
+  `06_Test-Cases.md` template actually produces, not only the word spellings.
+  Previously every `L*` value was unknown and therefore a coverage target, so
+  `TDDLIST_TC_NOT_COVERED` demanded a ledger row for every test case including
+  the integration/api/e2e layers. Projects whose specs use the code form will
+  see those `TDDLIST_TC_NOT_COVERED` findings disappear for `L3`–`L5` rows and
+  remain for `L1`/`L2` rows.
 - `QFAI-REVIEW-001` (root `.gitignore` managed-block check) now also
   requires the `.qfai/state.json` entry. The file is per-runtime state
   (written by `qfai discussion use`, `qfai atdd scaffold` escalation

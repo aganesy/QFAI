@@ -104,6 +104,18 @@ describe("TDDLIST_TC_NOT_COVERED respects the shipped Level vocabulary", () => {
     );
   });
 
+  it("attributes the warning to 06_Test-Cases.md, the file that must be edited", async () => {
+    await withSpec(
+      tcTable(["| TC-0001 | smoke | AC-0001 | EX-0001 | step-1 | expected-1 | note-1 |"]),
+      (issues) => {
+        const finding = issues.find((entry) => entry.code === "TDDLIST_UNKNOWN_LEVEL");
+        // Not tdd/test-list.md: a scope.paths waiver keyed on the ledger would
+        // never match the file whose Level cell raised the finding.
+        expect(finding?.file).toBe(".qfai/specs/spec-0001/06_Test-Cases.md");
+      },
+    );
+  });
+
   it("stays quiet on a template-conformant Level set", async () => {
     await withSpec(
       tcTable(["| TC-0001 | L2    | AC-0001 | EX-0001 | step-1 | expected-1 | note-1 |"]),
