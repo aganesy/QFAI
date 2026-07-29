@@ -60,9 +60,15 @@ describe("resolveTestCaseTable", () => {
   });
 
   it("falls back to the first TC-ID-bearing table when the heading is absent", () => {
-    const doc = ["# 06 Test Cases", "", "| A | B |", "| --- | --- |", "| 1 | 2 |", "", ...TC_TABLE].join(
-      "\n",
-    );
+    const doc = [
+      "# 06 Test Cases",
+      "",
+      "| A | B |",
+      "| --- | --- |",
+      "| 1 | 2 |",
+      "",
+      ...TC_TABLE,
+    ].join("\n");
 
     const resolved = resolveTestCaseTable(doc);
     expect(resolved.table?.rows[0]?.[0]).toBe("TC-0001");
@@ -75,7 +81,9 @@ describe("resolveTestCaseTable", () => {
       reason: "no-table",
     });
     expect(
-      resolveTestCaseTable(["## Test Case Table", "", "| A | B |", "| --- | --- |", "| 1 | 2 |"].join("\n")),
+      resolveTestCaseTable(
+        ["## Test Case Table", "", "| A | B |", "| --- | --- |", "| 1 | 2 |"].join("\n"),
+      ),
     ).toEqual({ table: null, reason: "no-tc-id-column" });
   });
 });
@@ -139,9 +147,16 @@ describe("validateTddList TC extraction", () => {
     await withProject(async (root) => {
       await seed(
         root,
-        ["# 06 Test Cases", "", "## Test Case Table (required)", "", "| A | B |", "| --- | --- |", "| 1 | 2 |", ""].join(
-          "\n",
-        ),
+        [
+          "# 06 Test Cases",
+          "",
+          "## Test Case Table (required)",
+          "",
+          "| A | B |",
+          "| --- | --- |",
+          "| 1 | 2 |",
+          "",
+        ].join("\n"),
         LEDGER,
       );
 
