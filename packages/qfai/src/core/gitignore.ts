@@ -30,6 +30,21 @@ export const QFAI_GITIGNORE_REQUIRED_ENTRIES: readonly string[] = [
  * project whose `.gitignore` predates them must not start failing validation.
  */
 export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
+  // Parent re-inclusions. Git cannot re-include a path whose PARENT directory
+  // is excluded, so a leaf negation alone is inert against a broad pre-existing
+  // rule an adopting project already had:
+  //   `.qfai/`          excludes `.qfai` itself -> `!.qfai/` is required
+  //   `.qfai/*`         excludes `.qfai/evidence` -> `!.qfai/evidence/` too
+  //   `.qfai/evidence/` excludes the directory   -> `!.qfai/evidence/` too
+  // Measured with `git check-ignore -v .qfai/evidence/decisions/a.json`: without
+  // these two lines all three shapes still report the broad rule as the winner.
+  // Neither line widens the managed block. `!.qfai/` and `!.qfai/evidence/`
+  // match the directories only, so the `.qfai/<subtree>/*` ignores above still
+  // win for every generated file (evidence/prototyping, report, discussion,
+  // review); the only paths they re-expose are the ones QFAI already expects to
+  // be tracked (`specs/`, `contracts/`, `assistant/`).
+  "!.qfai/",
+  "!.qfai/evidence/",
   "!.qfai/decisions/",
   "!.qfai/decisions/**",
   // The real durable-decision write target: `writeDecisionRecord` persists
