@@ -151,6 +151,10 @@ The generator MUST express every styled surface as one of:
 - One self-contained HTML file; embedded CSS / JS minimal.
 - All declared spec screens reachable; loading / empty / error /
   success states representable.
+- The compliance gate reports **one finding per distinct offending value**, not
+  one per occurrence: a single drifting token repeated across N screens is one
+  entry in `designMdViolations[]`. Fix the value once and the finding clears —
+  do not expect the count to track the number of places it appears.
 
 ## Cycle 0 (seed)
 
