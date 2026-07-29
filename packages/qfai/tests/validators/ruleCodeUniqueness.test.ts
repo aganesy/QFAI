@@ -27,14 +27,14 @@ const KNOWN_COLLISIONS = new Map<string, readonly string[]>([
  * this test, forcing the author to emit a literal or a module-level constant
  * the ownership scan can see, or to justify the addition here.
  */
-const DYNAMIC_CODE_SITES = new Map<string, readonly string[]>([
-  ["agentDefinition.ts", ["code"]],
-  ["designAudit.ts", ["finding"]],
-  ["designFidelity.ts", ["issueCode"]],
-  ["layerCoverage.ts", ["group"]],
-  ["orphanProhibition.ts", ["input"]],
-  ["requirementsContext.ts", ["code"]],
-  ["reviewerJustification.ts", ["code"]],
+const DYNAMIC_CODE_SITES = new Map<string, ReadonlyMap<string, number>>([
+  ["agentDefinition.ts", new Map([["code", 1]])],
+  ["designAudit.ts", new Map([["finding", 1]])],
+  ["designFidelity.ts", new Map([["issueCode", 1]])],
+  ["layerCoverage.ts", new Map([["group", 1]])],
+  ["orphanProhibition.ts", new Map([["input", 3]])],
+  ["requirementsContext.ts", new Map([["code", 1]])],
+  ["reviewerJustification.ts", new Map([["code", 1]])],
 ]);
 
 /** `const NAME = "CODE";` / `export const NAME: string = "CODE";` */
@@ -49,14 +49,40 @@ const CONST_DECL =
 const ISSUE_FIRST_ARG =
   /(?<!function\s)\bissue\(\s*(?:\/\/[^\n]*\n\s*|\/\*[\s\S]*?\*\/\s*)*("[^"\n]*"|[A-Za-z_$][\w$]*)/g;
 
+/**
+ * `code: "..."` / `code: CONST` on an object literal that is (or becomes) an
+ * `Issue`. Several validators build the object directly instead of calling
+ * `issue()` — `skillsIntegrity.ts`, `uix/designSystemPresence.ts`,
+ * `justificationCatalog.ts` — and a scan that only follows `issue()` records no
+ * owner for those codes at all, so re-using one from a second module would
+ * never reach two owners.
+ */
+const OBJECT_LITERAL_CODE = /(?:^|[\s,{(])code:\s*("[^"\n]*"|[A-Za-z_$][\w$]*)/g;
+
+/**
+ * Modules that *declare* codes without emitting findings.
+ * `justificationCatalog.ts` is a registry of every `R-*` code and its
+ * justification contract, so counting it as an owner would make every
+ * catalogued code look like a collision with its real emitter.
+ */
+const DECLARATION_ONLY_MODULES = new Set(["justificationCatalog.ts"]);
+
+/** `code: string` in a type declaration is a field type, not a rule code. */
+const TYPE_ANNOTATIONS = new Set(["string", "number", "boolean", "unknown", "any"]);
+
 /** Shape of a rule code, used to ignore non-code first arguments. */
 const RULE_CODE = /^[A-Z][A-Z0-9_]*(?:-[A-Z0-9]+)+$/;
 
 type Scan = {
   /** rule code -> validator files that emit it. */
   owners: Map<string, Set<string>>;
-  /** validator file -> first-argument identifiers that could not be resolved. */
-  dynamic: Map<string, Set<string>>;
+  /**
+   * validator file -> `identifier x N` for each unresolved code expression.
+   * The count is pinned as well as the identifier: `orphanProhibition.ts` has
+   * three sites all named `input`, so an identifier-only set would not notice a
+   * fourth.
+   */
+  dynamic: Map<string, Map<string, number>>;
 };
 
 async function collectTsFiles(dir: string): Promise<string[]> {
@@ -87,7 +113,7 @@ async function scanValidators(): Promise<Scan> {
   expect(files.length).toBeGreaterThan(0);
 
   const owners = new Map<string, Set<string>>();
-  const dynamic = new Map<string, Set<string>>();
+  const dynamic = new Map<string, Map<string, number>>();
 
   for (const file of files) {
     const source = await readFile(file, "utf-8");
@@ -102,15 +128,22 @@ async function scanValidators(): Promise<Scan> {
       }
     }
 
-    for (const match of source.matchAll(ISSUE_FIRST_ARG)) {
-      const token = match[1];
-      if (token === undefined) {
+    if (DECLARATION_ONLY_MODULES.has(relative)) {
+      continue;
+    }
+
+    const tokens = [...source.matchAll(ISSUE_FIRST_ARG), ...source.matchAll(OBJECT_LITERAL_CODE)]
+      .map((match) => match[1])
+      .filter((token): token is string => token !== undefined);
+
+    for (const token of tokens) {
+      if (TYPE_ANNOTATIONS.has(token)) {
         continue;
       }
       const resolved = token.startsWith('"') ? token.slice(1, -1) : constants.get(token);
       if (resolved === undefined) {
-        const site = dynamic.get(relative) ?? new Set<string>();
-        site.add(token);
+        const site = dynamic.get(relative) ?? new Map<string, number>();
+        site.set(token, (site.get(token) ?? 0) + 1);
         dynamic.set(relative, site);
         continue;
       }
@@ -128,14 +161,27 @@ async function scanValidators(): Promise<Scan> {
 
 const sorted = (values: Iterable<string>): string[] => Array.from(values).sort();
 
-const describeSites = (sites: Map<string, readonly string[] | Set<string>>): string[] =>
-  sorted(sites.keys()).map((file) => `${file}: ${sorted(sites.get(file) ?? []).join(", ")}`);
+/** `file: ident x N, ident x N` — the count pins the number of call sites. */
+const describeSites = (sites: Map<string, ReadonlyMap<string, number>>): string[] =>
+  sorted(sites.keys()).map((file) => {
+    const counts = sites.get(file) ?? new Map<string, number>();
+    const parts = sorted(counts.keys()).map((ident) => `${ident} x ${counts.get(ident) ?? 0}`);
+    return `${file}: ${parts.join(", ")}`;
+  });
 
 describe("validator rule codes are owned by exactly one module", () => {
   it("resolves codes passed through a module-level constant, not only literals", async () => {
     const { owners } = await scanValidators();
     expect(sorted(owners.get("R-SKILL-MANIFEST-DRIFT") ?? [])).toEqual(["skillManifestDrift.ts"]);
     expect(sorted(owners.get("R-HANDOFF-SCHEMA-DRIFT") ?? [])).toEqual(["handoffSchemaDrift.ts"]);
+  });
+
+  it("records codes built as an object literal, not only `issue()` calls", async () => {
+    const { owners } = await scanValidators();
+    // Neither of these modules calls `issue()`; both return the `Issue` object
+    // directly, so a call-site-only scan gave them no owner at all.
+    expect(sorted(owners.get("QFAI-SKILLS-001") ?? [])).toEqual(["skillsIntegrity.ts"]);
+    expect(sorted(owners.get("UIX-VAL-DS01") ?? [])).toEqual(["uix/designSystemPresence.ts"]);
   });
 
   it("has no unaccounted-for dynamic code argument", async () => {
