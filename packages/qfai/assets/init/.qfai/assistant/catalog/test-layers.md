@@ -101,6 +101,16 @@ measurable:
   report warning in the evidence, so the breach is auditable rather than
   paraphrased.
 
+  **What it counts is narrow.** These two knobs measure **Gherkin scenarios
+  parsed out of each spec's Examples file**, bucketed by their `@layer-*` tags.
+  They never inspect `<testsDir>/e2e/**` or any other code test. A project that
+  writes no Gherkin — the normal shape for a layered project whose E2E lives in
+  code — measures zero scenarios, so the guardrail stays silent however many
+  code E2E tests exist. Treat them as a guardrail over the **scenario**
+  distribution, not over the real test-layer distribution: when they are silent,
+  the observation is the judgement call above, and the evidence entry must say
+  how the distribution was counted so it is not read as a tool measurement.
+
 Either way completion is not blocked and no Change Request is raised: a
 user-blocking Change Request against a project's own tuning knob cannot conclude
 anything actionable.

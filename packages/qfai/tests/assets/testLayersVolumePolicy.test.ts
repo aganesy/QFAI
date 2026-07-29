@@ -84,6 +84,25 @@ describe("test-layers.md volume policy is a recording obligation, not a gate", (
       expect(section).not.toContain('so "unmet" has no tool-checkable meaning');
     });
 
+    it(`${relativePath}: scopes the guardrail to the scenario distribution`, async () => {
+      const section = unwrap(
+        volumePolicy(await readFile(path.join(repoRoot, relativePath), "utf-8")),
+      );
+      // `collectTestStrategy` is fed `collectScenarioFiles(specsRoot)` and
+      // counts Gherkin scenario tags only, so a layered project whose E2E lives
+      // in `<testsDir>/e2e/**` measures 0 and never trips the knobs.
+      expect(section).toContain("**What it counts is narrow.**");
+      expect(section).toContain("Gherkin scenarios parsed out of each spec's Examples file");
+      expect(section).toContain("never inspect `<testsDir>/e2e/**` or any other code test");
+      expect(section).toContain(
+        "measures zero scenarios, so the guardrail stays silent however many code E2E tests exist",
+      );
+      expect(section).toContain(
+        "a guardrail over the **scenario** distribution, not over the real test-layer distribution",
+      );
+      expect(section).toContain("how the distribution was counted");
+    });
+
     it(`${relativePath}: names the per-spec Open Questions file each layout actually uses`, async () => {
       const section = unwrap(
         volumePolicy(await readFile(path.join(repoRoot, relativePath), "utf-8")),
