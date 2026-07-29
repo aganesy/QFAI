@@ -25,10 +25,15 @@ for the whole spec.)
 `L3` is not. An obligation that spans two layers is two TC rows.
 
 **`L4` and `L5` are not `TC-*` values.** The ATDD gate routes an obligation by
-its ID, not by `Level`: a `TC-*` is answered from `tests/integration/**`, and a
-`TC-*` reference inside `tests/api/**` or `tests/e2e/**` is rejected. An oracle
-that lands at the service boundary (L4) or on a full-system journey (L5) is a
-misfiled obligation — record it as `CON-API-*` or `US-*`, not as a `TC-*` row.
+its ID, not by `Level`: a `TC-*` is answered from `<testsDir>/integration/**`,
+and a `TC-*` reference inside `<testsDir>/api/**` or `<testsDir>/e2e/**` is
+rejected. An oracle that lands at the service boundary (L4) or on a
+full-system journey (L5) is a misfiled obligation — record it as `CON-API-*` or
+`US-*`, not as a `TC-*` row.
+
+`<testsDir>` is `paths.testsDir` from `qfai.config.yaml` (default `tests`); the
+traceability scan follows the configured value, so write the paths relative to
+it rather than hard-coding a literal `tests/` prefix.
 
 ## Test Case Table (required)
 

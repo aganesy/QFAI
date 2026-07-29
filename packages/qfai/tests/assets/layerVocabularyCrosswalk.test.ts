@@ -113,6 +113,20 @@ describe("the layer vocabulary has one crosswalk", () => {
       );
       expect(template).toContain("**`L4` and `L5` are not `TC-*` values.**");
     });
+
+    it(`${tree}: the TC template spells the gate's directories with <testsDir>`, async () => {
+      const template = await read(
+        tree,
+        "assistant/skills/qfai-sdd/templates/specs/spec/06_Test-Cases.md",
+      );
+      // `evaluateAtddCodeTraceability` roots its scan at `paths.testsDir`, so a
+      // project that repoints it would not match a literal `tests/` prefix.
+      for (const dir of ["integration", "api", "e2e"]) {
+        expect(template).toContain(`\`<testsDir>/${dir}/**\``);
+      }
+      expect(template).not.toMatch(/`tests\/(integration|api|e2e)\/\*\*`/);
+      expect(template).toContain("`<testsDir>` is `paths.testsDir` from `qfai.config.yaml`");
+    });
   }
 
   it("the code-side layer sets carry both spellings of every crosswalk row", () => {
