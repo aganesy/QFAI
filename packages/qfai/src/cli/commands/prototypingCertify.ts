@@ -298,6 +298,18 @@ export async function runPrototypingCertify(
   // fallback — the same shape `validate.json` and the saas-package gates
   // signal already use in this file.
   const verifyRead = await readVerifyJson(options.root);
+  if (verifyRead.source === "unreadable") {
+    // A gate file that exists but cannot be parsed is a broken gate, not an
+    // absent one. Certifying from the other location here would mean issuing a
+    // certificate off a stale result while the real one was never readable.
+    error(
+      `qfai prototyping certify: ${verifyRead.rel} exists but is not a usable verify ` +
+        `result (${verifyRead.error ?? "unknown error"}). Fix or remove the file and ` +
+        "re-run `/qfai-verify`; certify does not fall back to another location while " +
+        "this one is broken.",
+    );
+    return 2;
+  }
   if (verifyRead.source === "legacy") {
     error(
       `qfai prototyping certify: read ${VERIFY_JSON_LEGACY_REL} (legacy). ` +

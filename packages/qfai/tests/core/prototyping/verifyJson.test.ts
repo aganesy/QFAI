@@ -39,6 +39,7 @@ describe("readVerifyJson", () => {
         expect(read.source).toBe("canonical");
         expect(read.rel).toBe(VERIFY_JSON_REL);
         expect(read.json?.status).toBe("PASS");
+        expect(read.error).toBeNull();
       },
     );
   });
@@ -51,6 +52,7 @@ describe("readVerifyJson", () => {
         expect(read.source).toBe("legacy");
         expect(read.rel).toBe(VERIFY_JSON_LEGACY_REL);
         expect(read.json?.status).toBe("PASS");
+        expect(read.error).toBeNull();
       },
     );
   });
@@ -58,11 +60,18 @@ describe("readVerifyJson", () => {
   it("reports missing against the canonical path, not the legacy one", async () => {
     await withRoot({}, async (root) => {
       const read = await readVerifyJson(root);
-      expect(read).toEqual({ source: "missing", rel: VERIFY_JSON_REL, json: null });
+      expect(read).toEqual({
+        source: "missing",
+        rel: VERIFY_JSON_REL,
+        json: null,
+        error: null,
+      });
     });
   });
 
-  it("treats an unparseable canonical file as absent and falls through", async () => {
+  it("refuses to fall back past an unparseable canonical file", async () => {
+    // A stale legacy PASS left behind by the migration must not be able to
+    // certify a run whose canonical gate result was never readable.
     await withRoot(
       {
         [VERIFY_JSON_REL]: "{ not json",
@@ -70,14 +79,50 @@ describe("readVerifyJson", () => {
       },
       async (root) => {
         const read = await readVerifyJson(root);
-        expect(read.source).toBe("legacy");
+        expect(read.source).toBe("unreadable");
+        expect(read.rel).toBe(VERIFY_JSON_REL);
+        expect(read.json).toBeNull();
+        expect(read.error).toContain("invalid JSON");
       },
     );
   });
 
-  it("rejects a non-object payload", async () => {
-    await withRoot({ [VERIFY_JSON_REL]: JSON.stringify(["PASS"]) }, async (root) => {
-      expect((await readVerifyJson(root)).source).toBe("missing");
+  it("refuses to fall back past a non-object canonical payload", async () => {
+    await withRoot(
+      {
+        [VERIFY_JSON_REL]: JSON.stringify(["PASS"]),
+        [VERIFY_JSON_LEGACY_REL]: JSON.stringify({ status: "PASS" }),
+      },
+      async (root) => {
+        const read = await readVerifyJson(root);
+        expect(read.source).toBe("unreadable");
+        expect(read.rel).toBe(VERIFY_JSON_REL);
+        expect(read.error).toBe("expected a JSON object, got an array");
+      },
+    );
+  });
+
+  it("reports a broken legacy file instead of calling it missing", async () => {
+    await withRoot({ [VERIFY_JSON_LEGACY_REL]: "null" }, async (root) => {
+      const read = await readVerifyJson(root);
+      expect(read.source).toBe("unreadable");
+      expect(read.rel).toBe(VERIFY_JSON_LEGACY_REL);
+      expect(read.error).toBe("expected a JSON object, got null");
     });
+  });
+
+  it("treats a directory at the canonical path as unreadable, not absent", async () => {
+    // Not ENOENT: something occupies the path and cannot be read, so the
+    // fallback must not fire.
+    await withRoot(
+      { [VERIFY_JSON_LEGACY_REL]: JSON.stringify({ status: "PASS" }) },
+      async (root) => {
+        await mkdir(path.join(root, VERIFY_JSON_REL), { recursive: true });
+        const read = await readVerifyJson(root);
+        expect(read.source).toBe("unreadable");
+        expect(read.rel).toBe(VERIFY_JSON_REL);
+        expect(read.error).not.toBeNull();
+      },
+    );
   });
 });

@@ -97,6 +97,10 @@ async function detectCertifyVerifyCircular(root: string): Promise<Issue[]> {
   // `.qfai/output/verify.json` here as well.
   const verifyRead = await readVerifyJson(root);
   const verify = verifyRead.json;
+  // `missing` and `unreadable` both leave no `scope` to reason about, so this
+  // circular-read detector has nothing to say. The broken file itself is not
+  // swallowed: `prototyping certify` hard-fails on `source: "unreadable"`
+  // rather than falling back to the other location.
   if (!verify) return [];
   const verifyRel = verifyRead.rel;
 
