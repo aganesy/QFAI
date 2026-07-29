@@ -202,11 +202,20 @@ target server does with that URL therefore decides the routing shape:
 Pick the routing shape to match the server you will capture against,
 and keep the contract `route` values consistent with it.
 
-Opt-in alternative: `qfai prototyping iterate --emit-skeletons` (cycle 0
-only) and the `htmlSourceCopy` capture option both operate on
-per-screen `.qfai/prototypes/iter-NN/<screenId>.html` files instead.
-That shape is mutually exclusive with the single-file envelope above —
-do not mix them within one iteration.
+Opt-in **seed aid**, not an alternative output shape:
+`qfai prototyping iterate --emit-skeletons` (cycle 0 only) writes one
+placeholder `.qfai/prototypes/iter-00/<screenId>.html` per declared
+screen, and the `htmlSourceCopy` capture option likewise operates on
+per-screen files. Neither writes an `index.html`.
+
+An accepted iteration must still carry `iter-NN/index.html`: Handoff
+below copies it to `.qfai/prototypes/final/index.html`, and without it
+`/qfai-implement` has nothing to read. So consolidate the skeletons into
+the single-file envelope before the loop converges — including when a
+cycle-0 skeleton set scores well enough that cycle 1 would otherwise
+accept it as it stands. If you keep the per-screen files because your
+capture routing needs them, author `index.html` alongside them so the
+accepted iteration carries both.
 
 ### Handoff
 

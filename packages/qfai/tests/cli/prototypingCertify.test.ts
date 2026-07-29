@@ -471,6 +471,16 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
       expect(messages.some((m) => m.includes("Re-run the accepted cycle with --capture"))).toBe(
         false,
       );
+
+      // Retiring a screen must not read as a way around the gate: certify
+      // recomputes the declared-screen set per run, so a bare contract
+      // deletion would drop that screen's HTML / review.json checks while
+      // re-using validate.json, verify.json and reviewerGate from the old
+      // scope.
+      expect(recovery).toContain("AND still re-run the loop from cycle 0");
+      expect(recovery).toContain("deleting alone is not a shortcut past this gate");
+      expect(recovery).toContain("recomputes the declared-screen set from the contracts");
+      expect(recovery).toContain("are re-used as they are");
     } finally {
       errorSpy.mockRestore();
     }

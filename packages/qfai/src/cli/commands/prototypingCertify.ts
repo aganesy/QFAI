@@ -452,8 +452,13 @@ export async function runPrototypingCertify(
           "Then re-run the loop from cycle 0. Re-invoking the accepted cycle with --capture " +
           "will not work: that iteration is already recorded in prototyping.json#iterations, " +
           "so iterate exits first on the expected-next-cycle gate. If a listed screen is no " +
-          "longer part of the product, delete it from .qfai/contracts/ui/ instead so it stops " +
-          "being a declared screen.",
+          "longer part of the product, delete it from .qfai/contracts/ui/ AND still re-run the " +
+          "loop from cycle 0 — deleting alone is not a shortcut past this gate. certify " +
+          "recomputes the declared-screen set from the contracts on every run, so a bare " +
+          "deletion silently drops that screen's HTML and per-spec review.json checks while " +
+          "the already-recorded validate.json, verify.json and reviewerGate results — produced " +
+          "against the old scope — are re-used as they are, sealing a certificate whose " +
+          "evidence never covered the screen you were experimenting on.",
       );
       error(
         "  The cycle-0 re-run is DESTRUCTIVE, and --force does not make it safe: it renames " +
