@@ -10,9 +10,19 @@ const HEADER = [
 ];
 
 const delta = (...rows: string[]): string =>
-  ["# 10 Delta", "", "## Change Summary", "", "- change", "", "## Triage", "", ...HEADER, ...rows, ""].join(
-    "\n",
-  );
+  [
+    "# 10 Delta",
+    "",
+    "## Change Summary",
+    "",
+    "- change",
+    "",
+    "## Triage",
+    "",
+    ...HEADER,
+    ...rows,
+    "",
+  ].join("\n");
 
 const codes = (text: string): string[] =>
   validateTriageSection(text, DELTA_PATH).map((entry) => entry.code);
