@@ -204,10 +204,10 @@ interface SubjectCandidate {
  *    capability-exact-match branch in `classifyTriage` short-circuits
  *    before this fallback runs whenever the REQ carries a capability,
  *    so the divergence only appears for capability-less REQs that
- *    still token-overlap with both specs. The size-threshold escalation
- *    (`tooLarge` -> SPLIT) absorbs the worst case; the agent driving
- *    Stage 1 is also expected to verify the proposed primary spec
- *    against the impact cascade before persisting.
+ *    still token-overlap with both specs. A size-threshold breach is only
+ *    a `size signal: ...` rationale note (it never escalates to SPLIT), so
+ *    the agent driving Stage 1 is expected to verify the proposed primary
+ *    spec against the impact cascade before persisting.
  * 3. Lexicographically smaller `specId` wins. This keeps the result
  *    deterministic for any input order, provided the comparator below
  *    is fed a stable iteration. `bestSubjectMatch` snapshots the input
@@ -284,7 +284,9 @@ export function bestSubjectMatch(
  *    - otherwise UPDATE:REMOVE on a capability-matched spec, or on the
  *      closest subject-overlap match. Falls through to DELETE only when
  *      no active spec can absorb the removal.
- * 2. capability matches multiple active specs -> MERGE.
+ * 2. capability matches multiple active specs -> MERGE. A breached AC/TC
+ *    threshold on any target is reported on the row and never changes the
+ *    operation.
  * 3. capability matches a single active spec -> APPEND. A breached AC/TC
  *    threshold is reported on the row and never changes the operation.
  * 4. capability does not match (or is absent) but subject tokens overlap
@@ -307,6 +309,36 @@ export function bestSubjectMatch(
  * the table, and to add cascade rows for any other specs that need
  * MODIFY/REMOVE in support of the primary change.
  */
+/**
+ * The `size signal: ...` note for a MERGE row, or `undefined` when no target
+ * breaches a threshold.
+ *
+ * A MERGE row targets several specs at once, so the note names every breaching
+ * target. The operation is unchanged — MERGE and its approval stand — exactly
+ * as a breach on an APPEND target leaves APPEND in place; the breach only asks
+ * for a capability-ownership review of the merged owner.
+ */
+function mergeSizeSignal(targets: SpecSummary[], thresholds: TriageThresholds): string | undefined {
+  const breached = targets.filter(
+    (target) => target.acCount > thresholds.ac || target.tcCount > thresholds.tc,
+  );
+  if (breached.length === 0) {
+    return undefined;
+  }
+  const details = breached
+    .map(
+      (target) =>
+        `${target.specId} has ac=${target.acCount} (threshold ${thresholds.ac}), ` +
+        `tc=${target.tcCount} (threshold ${thresholds.tc})`,
+    )
+    .join(" / ");
+  return (
+    `size signal: ${details}. MERGE stands; start a capability-ownership review on the ` +
+    `merged owner — SPLIT only if it owns more than one CAP-NNNN (QFAI-SPLIT-102/104), ` +
+    `otherwise record the reasoned non-split`
+  );
+}
+
 export function classifyTriage(input: TriageInput): TriageRow[] {
   const thresholds = input.thresholds ?? DEFAULT_TRIAGE_THRESHOLDS;
   const active = input.summaries.filter((s) => s.status === "active");
@@ -319,13 +351,19 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
 
     if (req.removalHint) {
       if (capabilityMatches.length > 1) {
+        const notes = [
+          "removal-intent across multiple capability-matched specs; consolidate before REMOVE",
+        ];
+        const breach = mergeSizeSignal(capabilityMatches, thresholds);
+        if (breach) {
+          notes.push(breach);
+        }
         rows.push({
           source: req.id,
           subject: req.subject,
           existingSpec: capabilityMatches.map((m) => m.specId).join("+"),
           op: "MERGE",
-          rationale:
-            "removal-intent across multiple capability-matched specs; consolidate before REMOVE",
+          rationale: notes.join("; "),
         });
         continue;
       }
@@ -377,11 +415,17 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
     }
 
     if (capabilityMatches.length > 1) {
+      // Step 4 of the Slice Policy runs after step 3, not instead of it: the
+      // MERGE targets are evaluated against the thresholds too. Without this
+      // the size signal the policy promises was simply absent whenever the
+      // selected operation was MERGE.
+      const breach = mergeSizeSignal(capabilityMatches, thresholds);
       rows.push({
         source: req.id,
         subject: req.subject,
         existingSpec: capabilityMatches.map((m) => m.specId).join("+"),
         op: "MERGE",
+        ...(breach ? { rationale: breach } : {}),
       });
       continue;
     }

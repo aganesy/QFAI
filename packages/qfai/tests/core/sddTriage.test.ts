@@ -124,6 +124,39 @@ describe("classifyTriage", () => {
     });
     expect(rows[0]?.op).toBe("MERGE");
     expect(rows[0]?.existingSpec).toBe("spec-0001+spec-0002");
+    // No breach, no note.
+    expect(rows[0]?.rationale).toBeUndefined();
+  });
+
+  it("records the size signal on a MERGE row, naming every breaching target", () => {
+    // Step 4 of the Slice Policy runs after step 3, not instead of it. The
+    // MERGE branch returned before the thresholds were evaluated, so the
+    // signal the policy promises was simply absent for every MERGE row.
+    const rows = classifyTriage({
+      reqs: [{ id: "REQ-0031", subject: "consolidation", capability: "CAP-0001" }],
+      summaries: [
+        makeSummary({
+          specId: "spec-0001",
+          capability: "CAP-0001",
+          acCount: DEFAULT_TRIAGE_THRESHOLDS.ac + 1,
+        }),
+        makeSummary({ specId: "spec-0002", capability: "CAP-0001" }),
+        makeSummary({
+          specId: "spec-0003",
+          capability: "CAP-0001",
+          tcCount: DEFAULT_TRIAGE_THRESHOLDS.tc + 1,
+        }),
+      ],
+    });
+    // The operation is untouched — the breach never rewrites MERGE to APPEND.
+    expect(rows[0]?.op).toBe("MERGE");
+    expect(rows[0]?.rationale).toMatch(/size signal/);
+    expect(rows[0]?.rationale).toContain("spec-0001 has ac=31");
+    expect(rows[0]?.rationale).toContain("spec-0003 has ac=0");
+    // The target that is within both thresholds is not named.
+    expect(rows[0]?.rationale).not.toContain("spec-0002");
+    expect(rows[0]?.rationale).toContain("MERGE stands");
+    expect(rows[0]?.rationale).toContain("QFAI-SPLIT-102/104");
   });
 
   it("keeps an AC-threshold breach as UPDATE:APPEND with a size signal", () => {
@@ -234,6 +267,32 @@ describe("classifyTriage", () => {
     expect(rows[0]?.op).toBe("MERGE");
     expect(rows[0]?.existingSpec).toBe("spec-0001+spec-0002");
     expect(rows[0]?.rationale).toMatch(/removal-intent/);
+  });
+
+  it("records the size signal on a removal-intent MERGE too", () => {
+    const rows = classifyTriage({
+      reqs: [
+        {
+          id: "REQ-0032",
+          subject: "retire",
+          capability: "CAP-0001",
+          removalHint: true,
+        },
+      ],
+      summaries: [
+        makeSummary({
+          specId: "spec-0001",
+          capability: "CAP-0001",
+          acCount: DEFAULT_TRIAGE_THRESHOLDS.ac + 1,
+        }),
+        makeSummary({ specId: "spec-0002", capability: "CAP-0001" }),
+      ],
+    });
+    expect(rows[0]?.op).toBe("MERGE");
+    // The existing removal-intent note is kept, the signal is appended.
+    expect(rows[0]?.rationale).toMatch(/removal-intent/);
+    expect(rows[0]?.rationale).toMatch(/size signal/);
+    expect(rows[0]?.rationale).toContain("spec-0001 has ac=31");
   });
 
   it("ignores non-active specs when looking up matches", () => {

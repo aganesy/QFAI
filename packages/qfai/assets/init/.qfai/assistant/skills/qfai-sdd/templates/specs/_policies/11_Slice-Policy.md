@@ -77,15 +77,17 @@ stop at step 2.
    Item counts do not change this answer. Continue to step 4: an oversized
    owner still needs its `Rationale` entry and its capability-ownership review.
 3. If multiple active specs share the capability → **MERGE**.
-4. **Always evaluate, whatever step 2/3/5 decided.** If the targeted spec
-   exceeds the AC/TC thresholds (`acCount > 30` or
-   `tcCount > 50`), that is a **size signal, not an operation**. Record it in
-   the Triage row's `Rationale` and start a **capability-ownership review**:
+4. **Always evaluate, whatever step 2/3/5 decided.** If any spec the selected
+   operation targets exceeds the AC/TC thresholds (`acCount > 30` or
+   `tcCount > 50`), that is a **size signal, not an operation**. A MERGE row
+   targets several specs, so check them all. Record every breach in the Triage
+   row's `Rationale` and start a **capability-ownership review**:
    - the spec genuinely owns more than one `CAP-NNNN` → **SPLIT** (approval
      required, see below);
-   - the spec owns exactly one capability → the operation stays
-     **UPDATE:APPEND**. Record the reasoned non-split; there is nothing to
-     split into.
+   - the spec owns exactly one capability → **the operation selected in steps
+     1-3/5 is unchanged** — MERGE stays MERGE with its approval, APPEND stays
+     APPEND. This step never rewrites the operation; it only records the
+     reasoned non-split, because there is nothing to split into.
 
    > A count-driven SPLIT of a single-capability spec is **illegal**.
    > `validateSpecSplitByCapability` hard-enforces one `CAP-NNNN` per spec

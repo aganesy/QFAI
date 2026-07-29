@@ -65,6 +65,19 @@ describe("11_Slice-Policy.md treats item counts as a signal, not a SPLIT trigger
       expect(section).toContain("**Always evaluate, whatever step 2/3/5 decided.**");
     });
 
+    it(`${relativePath}: the size check records, it does not rewrite the operation`, async () => {
+      const section = unwrap(algorithm(await readFile(path.join(repoRoot, relativePath), "utf-8")));
+      // Reading "the operation stays UPDATE:APPEND" after step 3 chose MERGE
+      // dropped the MERGE and its approval, and appended onto one of several
+      // duplicate owners without resolving the duplication.
+      expect(section).toContain(
+        "**the operation selected in steps 1-3/5 is unchanged** — MERGE stays MERGE with its approval, APPEND stays APPEND",
+      );
+      expect(section).toContain("This step never rewrites the operation");
+      // A MERGE row targets several specs; all of them are checked.
+      expect(section).toContain("A MERGE row targets several specs, so check them all");
+    });
+
     it(`${relativePath}: obligation-conserving re-granulation is named as a non-trigger`, async () => {
       const section = algorithm(await readFile(path.join(repoRoot, relativePath), "utf-8"));
       expect(section).toMatch(/obligation-conserving re-granulation/i);
@@ -84,7 +97,10 @@ describe("11_Slice-Policy.md treats item counts as a signal, not a SPLIT trigger
       expect(content).not.toContain("If the spec is over the size threshold, propose **SPLIT**");
       expect(content).toContain("A spec over the size threshold is a **signal, not an operation**");
       expect(content).toContain("capability-ownership review");
-      expect(content).toContain("the operation stays **UPDATE:APPEND**");
+      expect(content).toContain(
+        "the operation already selected is unchanged (MERGE stays MERGE, APPEND stays APPEND)",
+      );
+      expect(content).toContain("for a MERGE row, every breaching target");
       expect(content).toContain("QFAI-SPLIT-102");
       expect(content).toContain("QFAI-SPLIT-104");
       expect(content).toContain("validateSpecSplitByCapability");

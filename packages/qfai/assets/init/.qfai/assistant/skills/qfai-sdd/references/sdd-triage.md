@@ -20,10 +20,11 @@ Concretely, before persisting any Triage row:
 2. Pick the spec whose scope most closely absorbs the new requirement.
 3. Append a new BR/AC/EX/TC there. Never CREATE-as-shortcut. A spec over the
    size threshold is a **signal, not an operation**: record the breach in the
-   row's `Rationale` and start a capability-ownership review. Propose
-   **SPLIT** only if that review shows the spec genuinely owns more than one
-   `CAP-NNNN`; if it owns exactly one, the operation stays **UPDATE:APPEND**
-   and the reasoned non-split is recorded. A count-driven SPLIT of a
+   row's `Rationale` — for a MERGE row, every breaching target — and start a
+   capability-ownership review. Propose **SPLIT** only if that review shows the
+   spec genuinely owns more than one `CAP-NNNN`; if it owns exactly one, the
+   operation already selected is unchanged (MERGE stays MERGE, APPEND stays
+   APPEND) and the reasoned non-split is recorded. A count-driven SPLIT of a
    single-capability spec is illegal — `validateSpecSplitByCapability` raises
    `QFAI-SPLIT-102` / `QFAI-SPLIT-104` at `error`, so it has no legal end
    state. See `_policies/11_Slice-Policy.md` step 4.
