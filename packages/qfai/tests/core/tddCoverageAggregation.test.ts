@@ -12,7 +12,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { collectTddCoverage } from "../../src/core/report.js";
+import { collectTddCoverage } from "../../src/core/reportTddCoverage.js";
 import { collectSpecEntries } from "../../src/core/specLayout.js";
 
 const TC_TABLE = [
@@ -147,5 +147,18 @@ describe("TDD coverage resolution across duplicate TC rows", () => {
     );
     expect(complete.doneCount).toBe(1);
     expect(complete.openCount).toBe(0);
+  });
+});
+
+describe("collectTddCoverage stays off the package's public surface", () => {
+  it("is not reachable from the published barrels", async () => {
+    // `src/core/index.ts` re-exports `./report.js` with `export *`, and
+    // `src/index.ts` re-exports core — so exporting the helper from report.ts
+    // put it in `dist/index.d.ts` and made an internal aggregation signature
+    // (`SpecEntry`, the on-disk ledger layout) part of the package API.
+    const core: Record<string, unknown> = await import("../../src/core/index.js");
+    const root: Record<string, unknown> = await import("../../src/index.js");
+    expect(Object.keys(core)).not.toContain("collectTddCoverage");
+    expect(Object.keys(root)).not.toContain("collectTddCoverage");
   });
 });
