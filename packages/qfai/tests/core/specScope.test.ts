@@ -60,13 +60,15 @@ describe("isSpecInScope", () => {
 
 describe("owningSpecNumber", () => {
   it("resolves the owning spec of a spec-pack file", () => {
-    expect(owningSpecNumber(path.join(specsRoot, "spec-0003", "04_Business-Rules.md"), specsRoot)).toBe(
-      "0003",
-    );
+    expect(
+      owningSpecNumber(path.join(specsRoot, "spec-0003", "04_Business-Rules.md"), specsRoot),
+    ).toBe("0003");
   });
 
   it("returns null for shared and out-of-tree paths", () => {
-    expect(owningSpecNumber(path.join(specsRoot, "_policies", "10_delta.md"), specsRoot)).toBeNull();
+    expect(
+      owningSpecNumber(path.join(specsRoot, "_policies", "10_delta.md"), specsRoot),
+    ).toBeNull();
     expect(owningSpecNumber(path.join("/repo", "qfai.config.yaml"), specsRoot)).toBeNull();
     expect(owningSpecNumber(specsRoot, specsRoot)).toBeNull();
   });
@@ -88,9 +90,9 @@ describe("isPathInSpecScope", () => {
   });
 
   it("always keeps repo-level findings, including _policies and fileless issues", () => {
-    expect(isPathInSpecScope(path.join(specsRoot, "_policies", "03_Capabilities.md"), specsRoot, scope)).toBe(
-      true,
-    );
+    expect(
+      isPathInSpecScope(path.join(specsRoot, "_policies", "03_Capabilities.md"), specsRoot, scope),
+    ).toBe(true);
     expect(isPathInSpecScope(path.join("/repo", "qfai.config.yaml"), specsRoot, scope)).toBe(true);
     expect(isPathInSpecScope(undefined, specsRoot, scope)).toBe(true);
   });
