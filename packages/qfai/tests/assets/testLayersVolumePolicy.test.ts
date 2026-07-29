@@ -9,6 +9,12 @@ const TEST_LAYERS = [
   ".qfai/assistant/catalog/test-layers.md",
 ];
 
+/**
+ * Collapse markdown soft wraps so assertions pin wording, not the column at
+ * which the sentence happened to break.
+ */
+const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
+
 /** Returns the body of `## Volume policy` up to the next `## ` heading. */
 function volumePolicy(content: string): string {
   const lines = content.split(/\r?\n/);
@@ -44,6 +50,33 @@ describe("test-layers.md volume policy is a recording obligation, not a gate", (
       const section = volumePolicy(await readFile(path.join(repoRoot, relativePath), "utf-8"));
       expect(section).toContain("constitution/drift-protocol.md");
       expect(section).toMatch(/record the observed distribution/i);
+    });
+
+    it(`${relativePath}: records into evidence, which the drift protocol whitelists`, async () => {
+      const section = unwrap(
+        volumePolicy(await readFile(path.join(repoRoot, relativePath), "utf-8")),
+      );
+      // A downstream stage may not write `*_delta.md` or the per-spec Open
+      // Questions file without approval, so recording there would re-impose
+      // the STOP-and-wait this section removes.
+      expect(section).toContain("stage's evidence file under `.qfai/evidence/`");
+      expect(section).toContain(".qfai/evidence/atdd-<spec-id>.md");
+      expect(section).toContain(".qfai/evidence/implement-<spec-id>.md");
+      expect(section).toContain("whitelists `.qfai/evidence/**` append/update");
+      expect(section).not.toMatch(/Record the observed distribution[^.]*`\*_delta\.md`/);
+    });
+
+    it(`${relativePath}: names the per-spec Open Questions file each layout actually uses`, async () => {
+      const section = unwrap(
+        volumePolicy(await readFile(path.join(repoRoot, relativePath), "utf-8")),
+      );
+      // `09_Open-questions.md` is the shared `_policies` file; the per-spec
+      // names are `08_` (layered) and `15_` (spec pack).
+      expect(section).toContain("`08_Open-questions.md` in a layered spec");
+      expect(section).toContain("`15_Open-questions.md` in a spec pack");
+      expect(section).toContain(
+        "(`09_Open-questions.md` is the shared `_policies` file, not a per-spec one.)",
+      );
     });
 
     it(`${relativePath}: forbids re-labelling a declared layer to clear a signal`, async () => {

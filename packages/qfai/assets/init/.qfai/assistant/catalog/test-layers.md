@@ -67,9 +67,23 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
 If an observed layer distribution looks wrong:
 
 1. Do not auto-adjust the distribution to make it look better.
-2. Record the observed distribution and the rationale for it in the spec's
-   `*_delta.md` or `09_Open-questions.md`.
+2. Record the observed distribution and the rationale for it in the running
+   stage's evidence file under `.qfai/evidence/` — for example
+   `.qfai/evidence/atdd-<spec-id>.md` or
+   `.qfai/evidence/implement-<spec-id>.md`.
 3. Continue. The stage is not blocked.
+
+The record goes to evidence, not into the spec, on purpose.
+`constitution/drift-protocol.md` lists `*_delta.md` and the per-spec Open
+Questions file among the upstream SSOT a downstream stage must not edit without
+explicit user approval, and whitelists `.qfai/evidence/**` append/update as an
+allowed exception. Pointing this step at the spec would send ATDD and implement
+straight back into the STOP-and-wait state the policy exists to avoid.
+
+The owner phase (`/qfai-sdd`) is the one that may carry the note into the
+spec's own Open Questions file on a later run: `08_Open-questions.md` in a
+layered spec, `15_Open-questions.md` in a spec pack.
+(`09_Open-questions.md` is the shared `_policies` file, not a per-spec one.)
 
 A Change Request is reserved for `constitution/drift-protocol.md`-class events
 — an actual conflict with an upstream SSOT decision. A volume observation is
