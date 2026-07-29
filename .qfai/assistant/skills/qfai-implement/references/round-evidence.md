@@ -28,3 +28,25 @@ contract required. Nothing existing becomes non-conformant.
 An item at `review-fix` may re-enter the RED/GREEN cycle as many times as the
 rework needs. Each pass is its own round block. Returning to `refactor`
 re-submits the item to the reviewer that opened the round.
+
+## Resuming a `review-fix` item
+
+A `review-fix` row can outlive the session that created it — the operator
+interrupts, or the run ends between the `REVISE` and the rework. On the next
+start, `review-fix` rows are selected **before** any `todo` row (Required
+Process, Phase: Red, step 1), so an interrupted rework is always resumed
+rather than stranded behind newer items.
+
+Resuming a `review-fix` row:
+
+1. Read the round blocks already in the item's evidence and take the highest
+   `Round N`; the reviewer verdict on that round names the finding to fix.
+2. Open round `N + 1` and run the RED/GREEN cycle for the rework.
+3. Return the row to `refactor` and re-submit to the reviewer that opened the
+   round.
+
+A `review-fix` row must already have a `Test file` — it reached `refactor`
+before the `REVISE`. `validateTddList` checks the file exists for
+`review-fix` exactly as it does for `green`, `refactor` and `done`, so a
+rework row that lost its test file is reported (`TDDLIST_TEST_FILE_MISSING`)
+instead of being accepted as a valid ledger state.

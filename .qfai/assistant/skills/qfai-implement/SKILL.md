@@ -132,7 +132,7 @@ When transitioning to `exception`:
 
 ### Phase: Red (Write Failing Test)
 
-1. Read `test-list.md` and select the first item with `Status = todo`.
+1. Read `test-list.md`. **Rework first**: if any row is at `review-fix`, select the first such row and resume its rework (`references/round-evidence.md`) before any `todo` row — a `review-fix` row left by an interrupted session is otherwise never picked up. Otherwise select the first row with `Status = todo`.
 2. Transition status to `red`.
 3. Write a **failing test** based on the TC-Refs specification.
 4. Run the test and **watch it fail** — confirm the test actually fails for the expected reason.
@@ -194,7 +194,7 @@ All agent-to-agent transitions follow these contracts:
 1. `delivery-planner` selects the next item and assigns it to the appropriate implementation agent.
 2. Implementation agent submits RED/GREEN execution evidence to `qa-gatekeeper`.
 3. `qa-gatekeeper` confirms or rejects the RED/GREEN observation.
-4. After GREEN, implementation agent submits the item to `completion-reviewer` for spec alignment and to `implementation-reviewer` for code quality review.
+4. After the item reaches `refactor`, implementation agent submits it to `completion-reviewer` for spec alignment and to `implementation-reviewer` for code quality review. Review is requested from `refactor`, never from `green`, so a `REVISE` always lands on the one status with an outbound `review-fix` edge.
 5. `product-surface-reviewer` is added when the item affects UI behavior or rendered output.
 6. Only after all routed blocking reviewers pass may the item transition to `done`.
 

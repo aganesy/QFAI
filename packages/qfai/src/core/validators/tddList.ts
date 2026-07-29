@@ -34,7 +34,10 @@ const VALID_STATUSES = new Set([
   "exception",
 ]);
 
-const TEST_FILE_CHECK_STATUSES = new Set(["green", "refactor", "done"]);
+// `review-fix` is reached from `refactor`, so the item's test file already
+// exists; a rework row whose Test file is blank or deleted is an incomplete
+// ledger, not a valid intermediate state.
+const TEST_FILE_CHECK_STATUSES = new Set(["green", "refactor", "review-fix", "done"]);
 
 const TDD_ID_FORMAT = /^TDD-\d{4}$/;
 
