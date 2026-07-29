@@ -51,21 +51,30 @@ describe("the layer SSOT defines every layer the rest of qfai names", () => {
       expect(catalog).toContain("- `tests/component/**` -> Component");
     });
 
-    it(`${tree}: the TC obligation routes by level instead of forcing integration`, async () => {
+    it(`${tree}: the per-level routing is published as an unenforced target state`, async () => {
       const catalog = await read(tree, CATALOG);
-      expect(catalog).not.toContain(
-        "Every `TC-*` in specs must be referenced at least once from `tests/integration/**`.",
-      );
+      // The routing must be documented, but flagged as not-yet-enforced: the
+      // scanner globs only tests/{e2e,api,integration}, so following it today
+      // makes QFAI-ATDD-112 report the TC as uncovered.
+      expect(catalog).toContain("target state — **not enforced, do not follow yet**");
       expect(catalog).toContain("L1 -> `tests/unit/**`, L2 -> `tests/component/**`");
-      expect(catalog).toContain("L5 journeys are carried by");
+      expect(catalog).toContain("buildAtddTestGlobs");
+      expect(catalog).toContain("keep discharging every `TC-*` in `tests/integration/**`");
     });
 
-    it(`${tree}: the coverage metric no longer contradicts the location rule`, async () => {
+    it(`${tree}: an L4 obligation is discharged as CON-API, never as TC`, async () => {
+      const catalog = await read(tree, CATALOG);
+      expect(catalog).toContain("`QFAI-ATDD-121` / `QFAI-ATDD-122`");
+      expect(catalog).toContain("never as a `TC-*` one");
+    });
+
+    it(`${tree}: the coverage metric is separated from the file location`, async () => {
       const rules = await read(
         tree,
         "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
       );
-      expect(rules).toContain("they are NOT expected in\n  `tests/integration/**`");
+      expect(rules).toContain("it says nothing about where the test file lives");
+      expect(rules).toContain("still discharged in `tests/integration/**`");
     });
   }
 });

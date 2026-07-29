@@ -82,9 +82,11 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 
 - Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
 - Coverage is measured as unit/component TC references from `06_Test-Cases.md`
-  appearing in TC-Refs. Those TCs are discharged in `tests/unit/**` /
-  `tests/component/**` per `catalog/test-layers.md`; they are NOT expected in
-  `tests/integration/**`.
+  appearing in TC-Refs. That measures which TCs need a `tdd/test-list.md` row;
+  it says nothing about where the test file lives. Every `TC-*` — including
+  unit/component ones — is still discharged in `tests/integration/**` for
+  `QFAI-ATDD-112` until the scanner supports the per-level routing described as
+  a target state in `catalog/test-layers.md`.
 - If `06_Test-Cases.md` has no test-case classification column, every TC is treated as a coverage target.
 - `Status=exception` requires a non-empty DR-ID.
 - `Status` in `green`, `refactor`, or `done` requires an existing Test file resolved from project root.

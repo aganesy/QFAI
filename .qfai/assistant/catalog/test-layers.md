@@ -60,13 +60,25 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
 - E2E obligations:
   - Every `US-*` in specs must be referenced at least once from `tests/e2e/**` (no exception).
   - Use `QFAI:SPEC-XXXX:US-YYYY` annotations.
-- Integration obligations:
-  - Every `TC-*` in specs must be referenced at least once from the directory its
-    declared `Level` routes to: L1 -> `tests/unit/**`, L2 -> `tests/component/**`,
-    L3 -> `tests/integration/**`, L4 -> `tests/api/**`. L5 journeys are carried by
-    `US-*` annotations in `tests/e2e/**`, not by `TC-*`. A TC with no declared
-    `Level` defaults to `tests/integration/**`.
+- Integration obligations (enforced today):
+  - Every `TC-*` in specs must be referenced at least once from
+    `tests/integration/**`, whatever its declared `Level`. This is what
+    `QFAI-ATDD-112` checks.
   - Use `QFAI:SPEC-XXXX:TC-YYYY` annotations.
+  - `tests/api/**` and `tests/e2e/**` must not carry `TC-*` annotations
+    (`QFAI-ATDD-121` / `QFAI-ATDD-122`), so an L4 obligation is discharged as a
+    `CON-API-*` reference, never as a `TC-*` one.
+
+- Per-level routing (target state — **not enforced, do not follow yet**):
+  - The intended end state is one required location per declared `Level`:
+    L1 -> `tests/unit/**`, L2 -> `tests/component/**`,
+    L3 -> `tests/integration/**`. L4 stays `CON-API-*` in `tests/api/**` and
+    L5 stays `US-*` in `tests/e2e/**`.
+  - **This is not live.** `buildAtddTestGlobs` scans only
+    `tests/{e2e,api,integration}`, so an annotation placed in `tests/unit/**`
+    or `tests/component/**` is invisible to the scanner and `QFAI-ATDD-112`
+    still reports the TC as uncovered. Until the scanner and `QFAI-ATDD-112`
+    resolve per-TC, keep discharging every `TC-*` in `tests/integration/**`.
 - API obligations:
   - Every declared `CON-API-*` must be referenced at least once from `tests/api/**`.
   - Use `QFAI:CON-API-XXXX` annotations.
