@@ -31,7 +31,7 @@ Use this file for the full quality gate checklist behind `/qfai-sdd`.
 
 ## Validation Checks
 
-- `npx qfai validate --profile sdd --fail-on error --format github | tee .qfai/report/validate.log`
+- `npx --no-install qfai validate --profile sdd --fail-on error --format github | tee .qfai/report/validate.log`
 - `error=0`
 - `.qfai/report/specs-coverage/spec-*.md` reviewed
 - Density-smell warnings triaged

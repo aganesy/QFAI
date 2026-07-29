@@ -31,7 +31,7 @@
 
 ## Validate Hard Gate（必須）
 
-- 各 review cycle で `npx qfai validate --profile sdd --fail-on error --format github` を実行していること
+- 各 review cycle で `npx --no-install qfai validate --profile sdd --fail-on error --format github` を実行していること
 - `.qfai/report/validate.log` が存在し、最新の成果物に対応していること
 
 ---

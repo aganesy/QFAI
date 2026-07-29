@@ -77,8 +77,8 @@ agents:
 
       - Subagent delegation missing when required
 
-      - Validation gate evidence missing/failing (`qfai validate --fail-on
-      error`)
+      - Validation gate evidence missing/failing (`npx --no-install qfai
+      validate --fail-on error`)
 
       - Required hard obligations in `test-layers.md` are unmet
 

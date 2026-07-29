@@ -60,7 +60,7 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
 
 - Floors and ratios are signals, not completion gates.
 - Completion gate is validation pass with no errors:
-  - `qfai validate --fail-on error`
+  - `npx --no-install qfai validate --fail-on error`
 
 If a volume signal is unmet:
 

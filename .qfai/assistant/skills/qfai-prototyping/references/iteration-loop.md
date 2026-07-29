@@ -21,7 +21,7 @@ one-line summary at each iter's end.
 
 ## Stop conditions (deterministic)
 
-Exit codes for `npx qfai prototyping iterate --cycle <n+1>`:
+Exit codes for `npx --no-install qfai prototyping iterate --cycle <n+1>`:
 
 - `0` — continue.
 - `64` — convergence: latest iter has all 4 UX axes
