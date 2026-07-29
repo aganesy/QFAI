@@ -32,6 +32,13 @@ export const QFAI_GITIGNORE_REQUIRED_ENTRIES: readonly string[] = [
 export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   "!.qfai/decisions/",
   "!.qfai/decisions/**",
+  // The real durable-decision write target: `writeDecisionRecord` persists
+  // `.qfai/evidence/decisions/<ISO8601-stamp>.json` (see
+  // `core/decisionRecord.ts#DECISIONS_REL`). Git never descends into an
+  // ignored directory, so `.qfai/evidence/*` must be undone for the directory
+  // itself before its contents can be re-included.
+  "!.qfai/evidence/decisions/",
+  "!.qfai/evidence/decisions/**",
   "!.qfai/evidence/change-request-*.md",
   "!.qfai/evidence/decision-*.md",
 ] as const;

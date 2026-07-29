@@ -21,7 +21,10 @@ import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { runInit } from "../../src/cli/commands/init.js";
 import { copyTemplateTree } from "../../src/cli/lib/fs.js";
 import { captureStdout } from "../helpers/stdout.js";
-import { QFAI_GITIGNORE_MARKER } from "../../src/core/gitignore.js";
+import {
+  QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
+  QFAI_GITIGNORE_MARKER,
+} from "../../src/core/gitignore.js";
 
 const REQUIRED_SKILLS = [
   "qfai-configure",
@@ -1101,6 +1104,39 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(content).not.toContain("!.qfai/review/review-*/**");
       expect(content).toContain(".qfai/review/*");
       expect(content).not.toContain("!.qfai/review/README.md");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("adds the governance negations to an existing managed block on re-init", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      // A block from before the negations shipped: marker + every required
+      // entry, no legacy lines. The early return used to fire here, so the
+      // negations only ever reached fresh inits.
+      const preNegationBlock = [
+        QFAI_GITIGNORE_MARKER,
+        ".qfai/report/*",
+        ".qfai/evidence/*",
+        ".qfai/discussion/*",
+        ".qfai/review/*",
+        ".qfai/state.json",
+        "",
+      ].join("\n");
+      await writeFile(path.join(root, ".gitignore"), preNegationBlock, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const content = await readFile(path.join(root, ".gitignore"), "utf-8");
+      expect(content.split(QFAI_GITIGNORE_MARKER).length - 1).toBe(1);
+      for (const negation of QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) {
+        expect(content).toContain(negation);
+      }
+
+      // Still idempotent once the negations are present.
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      expect(await readFile(path.join(root, ".gitignore"), "utf-8")).toBe(content);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

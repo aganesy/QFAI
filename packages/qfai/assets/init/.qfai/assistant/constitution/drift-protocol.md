@@ -41,9 +41,10 @@ Any exception beyond this list requires explicit user approval.
 - **Regenerable** — stage evidence (`.qfai/evidence/<stage>-<spec-id>.md`),
   run logs, reports. Reproducible by rerunning the owner skill; not committed.
 - **Governance record** — Change Requests (`.qfai/decisions/CR-*.md`) and
-  durable decision records. They carry user approval and cannot be
-  regenerated, so they are committed. The managed `.gitignore` block written
-  by `qfai init` negates them after the ignore lines for exactly this reason.
+  durable decision records (`.qfai/evidence/decisions/*.json`). They carry
+  user approval and cannot be regenerated, so they are committed. The managed
+  `.gitignore` block written by `qfai init` negates them after the ignore
+  lines for exactly this reason.
 
 ## Non-negotiable constraints
 

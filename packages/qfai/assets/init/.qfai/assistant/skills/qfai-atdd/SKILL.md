@@ -162,8 +162,9 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 - Evidence file is required under `.qfai/evidence/`. Stage evidence is
   **regenerable** and is not committed. **Governance records are different**:
   Change Requests (`.qfai/decisions/CR-*.md`) and durable decision records
-  carry user approval, are not regenerable, and stay in version control —
-  the managed `.gitignore` block negates them for that reason.
+  (`.qfai/evidence/decisions/*.json`) carry user approval, are not
+  regenerable, and stay in version control — the managed `.gitignore` block
+  negates them for that reason.
 
 ## Completion Contract (Shared)
 

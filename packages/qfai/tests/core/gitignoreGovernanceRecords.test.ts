@@ -42,6 +42,18 @@ describe("the managed block keeps governance records tracked", () => {
       expect(QFAI_GITIGNORE_REQUIRED_ENTRIES).not.toContain(negation);
     }
   });
+
+  it("re-includes the directory writeDecisionRecord actually writes to", () => {
+    // `.qfai/evidence/decisions/<ISO8601-stamp>.json` — git will not descend
+    // into a directory ignored by `.qfai/evidence/*`, so the directory itself
+    // must be negated before its contents.
+    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/decisions/");
+    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/decisions/**");
+    const lines = QFAI_GITIGNORE_BLOCK.split("\n");
+    expect(lines.indexOf("!.qfai/evidence/decisions/")).toBeLessThan(
+      lines.indexOf("!.qfai/evidence/decisions/**"),
+    );
+  });
 });
 
 describe("QFAI-REVIEW-001 does not punish tracking the audit trail", () => {

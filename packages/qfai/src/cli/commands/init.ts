@@ -21,6 +21,7 @@ import { isEnoent } from "../../core/fs/errno.js";
 import {
   QFAI_GITIGNORE_MARKER,
   QFAI_GITIGNORE_BLOCK,
+  QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_LEGACY_LINES,
   QFAI_GITIGNORE_REQUIRED_ENTRIES,
 } from "../../core/gitignore.js";
@@ -596,9 +597,16 @@ async function ensureRootGitignoreEntries(
     // File does not exist yet — will create
   }
 
+  // The governance negations are checked here but deliberately NOT in
+  // `QFAI_GITIGNORE_REQUIRED_ENTRIES`: a project that removed them must not
+  // start failing validation, yet a project that never had them must still
+  // receive them on the next `qfai init`. Without this term the early return
+  // fires for every pre-existing managed block and the negations only ever
+  // reach fresh inits.
   if (
     existing.includes(QFAI_GITIGNORE_MARKER) &&
     QFAI_GITIGNORE_REQUIRED_ENTRIES.every((entry) => existing.includes(entry)) &&
+    QFAI_GITIGNORE_GOVERNANCE_NEGATIONS.every((entry) => existing.includes(entry)) &&
     QFAI_GITIGNORE_LEGACY_LINES.every((entry) => !existing.includes(entry))
   ) {
     return { copied: [], skipped: [gitignorePath] };
