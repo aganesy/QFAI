@@ -80,6 +80,65 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     });
   });
 
+  it("names every group --profile tdd skips, not only the headline three", async () => {
+    await withProject(async (root) => {
+      await runValidate({ root, strict: false, profile: "tdd" });
+      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+      // `runTddValidators` calls none of repository hygiene, skills integrity,
+      // assistant assets, the discussion validators, review artifacts or the
+      // prototyping-skill gate, so each family must appear.
+      for (const family of [
+        "QFAI-HYG-*",
+        "QFAI-SKILLS-*",
+        "QFAI-ASSETS-*",
+        "QFAI-DPACK-*",
+        "QFAI-RESEARCH-*",
+        "QFAI-REVIEW-*",
+        "UIX-VAL-SKILL-*",
+        "QFAI-PROT-*",
+        "D-SCAFFOLD-PLACEHOLDER",
+      ]) {
+        expect(notice?.message).toContain(family);
+      }
+      // What tdd does run must stay off the list.
+      expect(notice?.message).not.toContain("TDDLIST_*");
+    });
+  });
+
+  it("names the discussion profile's own group as evaluated and the rest as not", async () => {
+    await withProject(async (root) => {
+      await runValidate({ root, strict: false, profile: "discussion" });
+      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+      expect(notice?.message).toContain('profile="discussion" is a partial profile');
+      expect(notice?.message).toContain("QFAI-HYG-*");
+      expect(notice?.message).toContain("TDDLIST_*");
+      expect(notice?.message).not.toContain("QFAI-DPACK-*");
+    });
+  });
+
+  it("says nothing ran when the CI profile guard blocked the run", async () => {
+    await withProject(async (root) => {
+      const previous = { CI: process.env.CI, GITHUB_ACTIONS: process.env.GITHUB_ACTIONS };
+      process.env.CI = "true";
+      try {
+        await runValidate({ root, strict: false, profile: "atdd" });
+        const all = await findings(root);
+        expect(all.map((entry) => entry.code)).toContain("QFAI-VALIDATE-017");
+        const notice = all.find((entry) => entry.code === "QFAI-PROFILE-001");
+        expect(notice?.message).toContain("was blocked by the CI profile guard");
+        expect(notice?.message).toContain("NO hard gate was evaluated");
+        // The partial-profile wording would imply atdd's own gates ran.
+        expect(notice?.message).not.toContain("is a partial profile");
+        expect(notice?.message).not.toContain("QFAI-ATDD-*");
+      } finally {
+        if (previous.CI === undefined) delete process.env.CI;
+        else process.env.CI = previous.CI;
+        if (previous.GITHUB_ACTIONS === undefined) delete process.env.GITHUB_ACTIONS;
+        else process.env.GITHUB_ACTIONS = previous.GITHUB_ACTIONS;
+      }
+    });
+  });
+
   it("emits no partial-profile notice for the full profile", async () => {
     await withProject(async (root) => {
       await runValidate({ root, strict: false });
