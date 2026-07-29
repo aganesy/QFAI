@@ -34,9 +34,7 @@ describe("the Level column is specified where it is used", () => {
 
     it(`${tree}: the seeded example rows use a code the legend defines`, async () => {
       const template = await read(tree, TEMPLATE);
-      const rows = template
-        .split(/\r?\n/)
-        .filter((line) => /^\|\s*TC-\d{4}\s*\|/.test(line));
+      const rows = template.split(/\r?\n/).filter((line) => /^\|\s*TC-\d{4}\s*\|/.test(line));
       expect(rows.length).toBeGreaterThan(0);
       for (const row of rows) {
         const level = (row.split("|")[2] ?? "").trim();
