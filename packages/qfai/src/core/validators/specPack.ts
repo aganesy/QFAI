@@ -18,6 +18,7 @@ import {
   type RequiredSpecPackFile,
 } from "../specLayout.js";
 import {
+  buildItemIdPattern,
   buildLoosePrefixPattern,
   extractInvalidIds as extractInvalidSpecPackIds,
   isValidId,
@@ -315,18 +316,30 @@ const TRIAGE_REQUIRED_COLUMNS = ["source", "subject", "existing spec", "operatio
  * `QFAI-TRIAGE-003` is a membership check on the Operation label, so it cannot
  * catch `SPLIT` applied to a `BR-0001-0002` — the one case where the word means
  * something the toolkit does not implement.
+ *
+ * `DELETE` belongs here for the same reason: `sdd-triage.md` "Operation scope"
+ * defines it as removing the spec directory itself, and deleting one item is
+ * `UPDATE:REMOVE`.
  */
-const SPEC_SCOPED_OPS = new Set<TriageTopLevelOp>(["SPLIT", "MERGE", "SUPERSEDE"]);
+const SPEC_SCOPED_OPS = new Set<TriageTopLevelOp>(["SPLIT", "MERGE", "SUPERSEDE", "DELETE"]);
+
+/** Item IDs (short or composite) appearing in a Triage `Subject` cell. */
+function findItemIdsInSubject(subject: string): string[] {
+  return subject.match(buildItemIdPattern()) ?? [];
+}
 
 /**
- * Item IDs (short or composite) appearing in a Triage `Subject` cell.
+ * Whether a `Subject` names a spec-level target: a spec directory or a
+ * capability.
  *
- * Built per call rather than shared as a `/g` regex: a module-level `/g`
- * instance carries `lastIndex` between rows and would alternate between firing
- * and not firing.
+ * A mention of an item ID does not by itself prove the row operates on that
+ * item — a legitimate spec-level row often cites the item that motivated it,
+ * and `classifyTriage` copies the REQ subject verbatim onto the MERGE and
+ * SPLIT rows it proposes. When the same cell also names the spec-level target,
+ * the item ID is context and `QFAI-TRIAGE-007` must stay silent.
  */
-function findItemIdsInSubject(subject: string): string[] {
-  return subject.match(/\b(?:US|AC|BR|EX|TC)-\d{4}(?:-\d{4})?\b/g) ?? [];
+function namesSpecLevelTarget(subject: string): boolean {
+  return /\b(?:spec-\d+|CAP-\d+)\b/i.test(subject);
 }
 
 const TRIAGE_TOP_LEVEL_LABELS = new Set<string>([...TRIAGE_TOP_LEVEL_OPS, "UPDATE"]);
@@ -639,19 +652,22 @@ function validateTriageRows(
       continue;
     }
 
-    const namedItemIds = SPEC_SCOPED_OPS.has(opUpper) ? findItemIdsInSubject(subjectCell) : [];
+    const namedItemIds =
+      SPEC_SCOPED_OPS.has(opUpper) && !namesSpecLevelTarget(subjectCell)
+        ? findItemIdsInSubject(subjectCell)
+        : [];
     if (namedItemIds.length > 0) {
       const named = namedItemIds;
       issues.push(
         issue(
           "QFAI-TRIAGE-007",
-          `Triage ${opUpper} は spec 単位の操作です。Subject が item ID を指しています (${rowLabel}): ${named.join(", ")}`,
+          `Triage ${opUpper} は spec 単位の操作です。Subject が item ID だけを指しています (${rowLabel}): ${named.join(", ")}`,
           "error",
           deltaPath,
           "triage.specScopedOperation",
           named,
           "canonical",
-          "SPLIT / MERGE / SUPERSEDE は spec 全体が対象です。spec 内の item 分解は UPDATE:MODIFY + UPDATE:APPEND で表現してください。",
+          "SPLIT / MERGE / SUPERSEDE / DELETE は spec 全体が対象です。spec 内の item 分解は UPDATE:MODIFY + UPDATE:APPEND、item 単体の削除は UPDATE:REMOVE で表現してください。spec 単位の操作である場合は Subject に対象 spec (spec-NNNN) か capability (CAP-NNNN) を明記してください。",
         ),
       );
       continue;

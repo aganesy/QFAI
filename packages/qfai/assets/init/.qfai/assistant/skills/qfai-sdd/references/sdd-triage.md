@@ -40,7 +40,7 @@ shares the most subject tokens. CREATE is emitted only when there is
 | UPDATE    | APPEND | Add new US/AC/BR/EX/TC to an active spec (no semantic change). Item-level only. With UPDATE:MODIFY this is also how an item is decomposed into N siblings — see Operation scope below                                                                                                                                                                   | -        |
 | UPDATE    | MODIFY | Change the meaning of an existing US/AC/BR/EX/TC. Item-level only                                                                                                                                                                                                                                                                                       | -        |
 | UPDATE    | REMOVE | Delete an existing US/AC/BR/EX/TC (cuts downstream refs)                                                                                                                                                                                                                                                                                                | Required |
-| DELETE    | -      | Subject was removed from the product; the spec itself goes away                                                                                                                                                                                                                                                                                         | Required |
+| DELETE    | -      | Subject was removed from the product; the spec itself goes away. **Spec-scoped only** — deleting one item is UPDATE:REMOVE (QFAI-TRIAGE-007)                                                                                                                                                                                                            | Required |
 | SPLIT     | -      | One spec carries >1 capability; split into N specs. **Spec-scoped only** — never use it to split an item (QFAI-TRIAGE-007)                                                                                                                                                                                                                              | Required |
 | MERGE     | -      | Multiple specs converge on one capability; collapse them. **Spec-scoped only** (QFAI-TRIAGE-007)                                                                                                                                                                                                                                                        | Required |
 | SUPERSEDE | -      | Responsibilities move to a new spec; flip status, keep history. Also covers single-spec **RENAME** (subject change at the same ID is normally UPDATE:MODIFY; if the spec ID itself must change while scope stays the same — i.e. **RENUMBER** — emit SUPERSEDE: create the new ID, mark the old as superseded). MERGE handles multi-spec consolidation. | Required |
@@ -56,8 +56,17 @@ original) plus one `UPDATE:APPEND` row per new sibling.
 Do not reach for `SPLIT` to mean "split this business rule": `SPLIT` asserts
 that the spec itself must become N specs, which
 `validateSpecSplitByCapability` then enforces as one `CAP-NNNN` per spec.
-`QFAI-TRIAGE-007` (error) rejects a `SPLIT` / `MERGE` / `SUPERSEDE` row whose
-`Subject` names an item ID rather than a spec.
+Likewise do not reach for `DELETE` to remove one item — that is
+`UPDATE:REMOVE`.
+
+`QFAI-TRIAGE-007` (error) rejects a `SPLIT` / `MERGE` / `SUPERSEDE` / `DELETE`
+row whose `Subject` names an item ID **and no spec-level target**. Naming the
+item is allowed when the same cell also names the target `spec-NNNN` or
+`CAP-NNNN`, because a spec-level row often cites the item that motivated it;
+what the rule rejects is a spec-scoped operation whose only stated object is an
+item. Item IDs are matched with the shared digit semantics of
+`specPackIds.ts`, so `BR-1` and `TC-12345` are caught alongside the canonical
+4-digit form.
 
 Because `UPDATE:MODIFY` and `UPDATE:APPEND` are approval-free by operation
 type, an item decomposition carries no approval-required row. Record the
