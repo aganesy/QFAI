@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { evaluateAtddCodeTraceability } from "../../src/core/atddTraceability.js";
 import { validateAtddCodeTraceability } from "../../src/core/validators/atddCodeTraceability.js";
 
 describe("validateAtddCodeTraceability", () => {
@@ -304,6 +305,24 @@ describe("QFAI-ATDD-113 deferral via x-qfai-status: planned", () => {
       const issues = await validateAtddCodeTraceability(root, defaultConfig);
       expect(issues.filter((entry) => entry.severity === "error")).toEqual([]);
       expect(issues.some((entry) => entry.code === "QFAI-ATDD-103")).toBe(false);
+    });
+  });
+
+  it("keeps the public apiContractIds as the declared set, active plus deferred", async () => {
+    await withProject(async (root) => {
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"]);
+      await seedApiContract(root, "CON-API-0001");
+      await seedApiContract(root, "CON-API-0002", {
+        planned: true,
+        fileName: "api-0002-planned.yaml",
+      });
+
+      const result = await evaluateAtddCodeTraceability(root, defaultConfig);
+      // Deferral suspends the obligation, not the declaration: an external
+      // consumer asking "is this ID declared?" must still see the planned one.
+      expect([...result.apiContractIds].sort()).toEqual(["CON-API-0001", "CON-API-0002"]);
+      expect([...result.activeApiContractIds]).toEqual(["CON-API-0001"]);
+      expect([...result.deferredApiContractIds]).toEqual(["CON-API-0002"]);
     });
   });
 

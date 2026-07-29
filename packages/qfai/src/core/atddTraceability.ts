@@ -60,7 +60,15 @@ export type AtddCodeTraceabilityResult = {
   contractsApiRoot: string;
   specUsIds: Map<string, Set<string>>;
   specTcIds: Map<string, Set<string>>;
+  /**
+   * Every declared `CON-API-*`, active and deferred alike. This is the public
+   * meaning the field has always had — adding `x-qfai-status: planned` defers
+   * the test obligation, it does not un-declare the contract, so an external
+   * consumer using this set for "is this ID declared?" must keep seeing it.
+   */
   apiContractIds: Set<string>;
+  /** The subset that carries the `QFAI-ATDD-113` obligation. */
+  activeApiContractIds: Set<string>;
   /**
    * `CON-API-*` IDs excluded from the `QFAI-ATDD-113` obligation because their
    * contract declares `x-qfai-status: planned`. Reported as `info` so the
@@ -95,9 +103,9 @@ export async function evaluateAtddCodeTraceability(
   ]);
   // `active` drives the missing-coverage gate; `declared` (active ∪ deferred)
   // drives the "is this ID known?" check.
-  const apiContractIds = collectedApiContracts.active;
+  const activeApiContractIds = collectedApiContracts.active;
   const deferredApiContractIds = collectedApiContracts.deferred;
-  const declaredApiContractIds = new Set([...apiContractIds, ...deferredApiContractIds]);
+  const declaredApiContractIds = new Set([...activeApiContractIds, ...deferredApiContractIds]);
 
   const testsRoot = resolvePath(root, config, "testsDir");
   const e2eRoot = path.join(testsRoot, "e2e");
@@ -183,7 +191,7 @@ export async function evaluateAtddCodeTraceability(
   const missing = buildMissingRefs({
     specUsIds,
     specTcIds,
-    apiContractIds,
+    apiContractIds: activeApiContractIds,
     usRefs,
     tcRefs,
     apiRefs,
@@ -194,7 +202,8 @@ export async function evaluateAtddCodeTraceability(
     contractsApiRoot,
     specUsIds,
     specTcIds,
-    apiContractIds,
+    apiContractIds: declaredApiContractIds,
+    activeApiContractIds,
     deferredApiContractIds,
     refs: {
       us: usRefs,
