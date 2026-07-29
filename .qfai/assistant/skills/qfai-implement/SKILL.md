@@ -107,14 +107,16 @@ Allowed transitions:
 - `green` -> `refactor` (improve code quality while keeping tests green)
 - `refactor` -> `done` (item complete)
 - Any active status -> `exception` (anomaly detected; record DR-ID in DR-ID column)
-- `green` | `refactor` | `done` -> `todo` — **upstream reset**, the only legal
-  reopen. Permitted **only** when an approved upstream change (Drift Protocol
-  step 4 rerun) invalidated the row's obligation. The invalidating CR/DR ID
-  MUST be recorded in the `DR-ID` column, and the reset MUST cite it in
-  `Evidence`. That ID MUST be retained as the row moves on through `red`,
-  `green`, `refactor` and `done` — clearing it on the next transition erases
-  the only record of why a completed row was reopened. A reset without a
-  recorded approval is a backward transition and is prohibited.
+- `red` | `green` | `refactor` | `done` | `exception` -> `todo` — **upstream
+  reset**, the only legal reopen, available from every status a row can hold.
+  Permitted **only** when an approved upstream change (Drift Protocol step 4
+  rerun) invalidated the row's obligation. The invalidating CR/DR ID MUST be
+  recorded in the `DR-ID` column, and the reset MUST cite it in `Evidence`.
+  That ID MUST be retained as the row moves on through `red`, `green`,
+  `refactor` and `done` — clearing it on the next transition erases the only
+  record of why a completed row was reopened. A row swept out of `exception`
+  keeps the anomaly's DR-ID alongside the reset ID. A reset without a recorded
+  approval is a backward transition and is prohibited.
 - A reset row is at `todo`, so it owes no test file until it reaches `green`.
   The `Test file` existence check is unchanged for `green` / `refactor` /
   `done`: those statuses assert a test that ran.

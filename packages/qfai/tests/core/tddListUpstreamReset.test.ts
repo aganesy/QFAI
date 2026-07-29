@@ -174,8 +174,43 @@ describe("the DR-ID column definition covers the reset row", () => {
         "required for `exception` rows and for a row reopened by an upstream reset, retained through the row's later statuses",
       );
       expect(skill).toContain(
-        "MUST be retained as the row moves on through `red`,\n  `green`, `refactor` and `done`",
+        "MUST be retained as the row moves on through `red`, `green`,\n  `refactor` and `done`",
       );
+    });
+
+    it(`${tree}: the reset is available from every status, including red and exception`, async () => {
+      // Drift Protocol step 5 requires sweeping every invalidated row; a reset
+      // limited to green/refactor/done left `red` and `exception` rows with no
+      // legal way back to `todo`.
+      const skill = await readFile(
+        path.join(repoRoot, tree, "assistant/skills/qfai-implement/SKILL.md"),
+        "utf-8",
+      );
+      expect(skill).toContain(
+        "- `red` | `green` | `refactor` | `done` | `exception` -> `todo` — **upstream\n  reset**, the only legal reopen, available from every status a row can hold.",
+      );
+      expect(skill).toContain(
+        "A row swept out of `exception`\n  keeps the anomaly's DR-ID alongside the reset ID.",
+      );
+
+      const drift = await readFile(
+        path.join(repoRoot, tree, "assistant/constitution/drift-protocol.md"),
+        "utf-8",
+      );
+      expect(drift).toContain("(any status -> `todo`)");
+      expect(drift).toContain(
+        "The\n   sweep covers in-flight rows too: a `red` row whose obligation changed, and\n   an `exception` row whose anomaly the rerun resolved or superseded, reset the\n   same way.",
+      );
+
+      const rules = await readFile(
+        path.join(
+          repoRoot,
+          tree,
+          "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+        ),
+        "utf-8",
+      );
+      expect(rules).toContain("An `exception` row is not a\n  dead end");
     });
 
     it(`${tree}: the traceability rules keep the green/refactor file check`, async () => {
