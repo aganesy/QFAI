@@ -66,6 +66,24 @@ describe("test-layers.md volume policy is a recording obligation, not a gate", (
       expect(section).not.toMatch(/Record the observed distribution[^.]*`\*_delta\.md`/);
     });
 
+    it(`${relativePath}: distinguishes a configured guardrail from a judgement call`, async () => {
+      const section = unwrap(
+        volumePolicy(await readFile(path.join(repoRoot, relativePath), "utf-8")),
+      );
+      // `report.ts::collectTestStrategy` measures a configured
+      // maxE2eScenarioRatio / maxE2eScenarioCount and warns on breach, so
+      // "no tool-checkable meaning" was wrong for those projects.
+      expect(section).toContain("`validation.testStrategy.maxE2eScenarioRatio`");
+      expect(section).toContain("`maxE2eScenarioCount`");
+      expect(section).toContain("`ratioExceeded` / `countExceeded`");
+      expect(section).toContain(
+        "record the configured value, the measured value and the report warning",
+      );
+      // Still non-blocking in both cases.
+      expect(section).toContain("Either way completion is not blocked");
+      expect(section).not.toContain('so "unmet" has no tool-checkable meaning');
+    });
+
     it(`${relativePath}: names the per-spec Open Questions file each layout actually uses`, async () => {
       const section = unwrap(
         volumePolicy(await readFile(path.join(repoRoot, relativePath), "utf-8")),

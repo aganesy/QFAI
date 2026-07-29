@@ -86,11 +86,24 @@ layered spec, `15_Open-questions.md` in a spec pack.
 (`09_Open-questions.md` is the shared `_policies` file, not a per-spec one.)
 
 A Change Request is reserved for `constitution/drift-protocol.md`-class events
-— an actual conflict with an upstream SSOT decision. A volume observation is
-not one: qfai defines no numeric floor, ratio or threshold anywhere, and no
-validator emits a volume rule, so "unmet" has no tool-checkable meaning. Raising
-a user-blocking Change Request against a per-project judgement call cannot
-conclude anything actionable.
+— an actual conflict with an upstream SSOT decision. A volume observation is not
+one, and it stays non-blocking either way. What differs is how much of it is
+measurable:
+
+- **No configured guardrail.** qfai ships no default floor, ratio or threshold,
+  and no validator emits a volume rule, so "unmet" is a judgement call with no
+  tool-checkable meaning. Record the observation and the reasoning.
+- **A configured guardrail.** When a project sets
+  `validation.testStrategy.maxE2eScenarioRatio` or `maxE2eScenarioCount` to a
+  non-null value, `report.ts` measures it and reports `ratioExceeded` /
+  `countExceeded` with a warning. That is the project's own stated limit, not a
+  subjective read: record the configured value, the measured value and the
+  report warning in the evidence, so the breach is auditable rather than
+  paraphrased.
+
+Either way completion is not blocked and no Change Request is raised: a
+user-blocking Change Request against a project's own tuning knob cannot conclude
+anything actionable.
 
 ## Anti-patterns
 
