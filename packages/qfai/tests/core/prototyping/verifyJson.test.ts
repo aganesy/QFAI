@@ -44,12 +44,15 @@ describe("readVerifyJson", () => {
   });
 
   it("falls back to the legacy .qfai/output location", async () => {
-    await withRoot({ [VERIFY_JSON_LEGACY_REL]: JSON.stringify({ status: "PASS" }) }, async (root) => {
-      const read = await readVerifyJson(root);
-      expect(read.source).toBe("legacy");
-      expect(read.rel).toBe(VERIFY_JSON_LEGACY_REL);
-      expect(read.json?.status).toBe("PASS");
-    });
+    await withRoot(
+      { [VERIFY_JSON_LEGACY_REL]: JSON.stringify({ status: "PASS" }) },
+      async (root) => {
+        const read = await readVerifyJson(root);
+        expect(read.source).toBe("legacy");
+        expect(read.rel).toBe(VERIFY_JSON_LEGACY_REL);
+        expect(read.json?.status).toBe("PASS");
+      },
+    );
   });
 
   it("reports missing against the canonical path, not the legacy one", async () => {

@@ -27,7 +27,6 @@ import {
   MOCK_HREF_VALIDATOR_REL,
 } from "./mockHrefPairs.js";
 
-
 const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
 const PROMPT_REL =
   "packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md";
