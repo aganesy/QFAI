@@ -130,7 +130,7 @@ When transitioning to `exception`:
    - **Obligation already satisfied by a sibling row** — the new test exercises
      a predicate an earlier `done` row already made pass (the usual case when a
      BR binds several ACs to one common validator). This is **not an anomaly**
-     and does **not** go to `exception`. Follow *RED not observable* below.
+     and does **not** go to `exception`. Follow _RED not observable_ below.
    - **Anything else** — the test is wrong, the SUT is wrong, or the cause is
      unknown. Transition to `exception` and record the anomaly.
 
@@ -280,7 +280,7 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 
 1. Corresponding `TDD-ID` has been selected and is in progress
 2. A failing test was added first (test-first)
-3. RED was observed — `qa-gatekeeper` confirmed the test failed for the expected reason (watch it fail), **or** the row carries falsifiability evidence per *RED not observable*
+3. RED was observed — `qa-gatekeeper` confirmed the test failed for the expected reason (watch it fail), **or** the row carries falsifiability evidence per _RED not observable_
 4. Minimal production code was written to make the test pass
 5. GREEN was observed — `qa-gatekeeper` confirmed the test passes after implementation (watch it pass)
 6. Refactor was performed and GREEN was re-confirmed after refactor
