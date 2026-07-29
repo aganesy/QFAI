@@ -28,7 +28,7 @@ describe("reviewer gates terminate", () => {
       expect(content).toContain("### Convergence (MUST)");
       expect(content).toContain("MUST state why it was not raisable in\n  round N-1");
       expect(content).toContain("out of budget");
-      expect(content).toContain("MUST NOT open a new blocking *class*");
+      expect(content).toContain("MUST NOT open a new blocking _class_");
     });
 
     it(`${tree}: each stage's reviewer remit is bounded`, async () => {
