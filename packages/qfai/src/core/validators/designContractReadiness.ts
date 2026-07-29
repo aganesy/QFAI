@@ -257,10 +257,13 @@ async function validateRootDesignMdAndLock(
  * unpassable for any UI-bearing project.
  */
 async function hasPrototypingRun(root: string, config: QfaiConfig): Promise<boolean> {
+  // Only artifacts /qfai-prototyping itself writes count. `DESIGN.md.lock.yaml`
+  // is deliberately NOT a marker: /qfai-sdd Phase 0 freezes the lock for every
+  // UI-bearing target before prototyping starts, so keying on it would make
+  // this guard unreachable in exactly the runs it exists to police.
   const markers = [
     path.join(root, ".qfai", "evidence", "prototyping", "prototyping.json"),
     path.join(root, ".qfai", "evidence", "prototyping", "completion-certificate.json"),
-    path.join(root, config.paths.contractsDir, "design", "DESIGN.md.lock.yaml"),
   ];
   for (const marker of markers) {
     try {

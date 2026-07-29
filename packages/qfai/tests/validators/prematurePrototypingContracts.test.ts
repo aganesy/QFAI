@@ -61,9 +61,11 @@ describe("QFAI-DCON-019 keys on prototyping state, not file existence", () => {
     });
   });
 
-  it("is silent when the DESIGN.md lock exists", async () => {
+  it("still reports when only the DESIGN.md lock exists", async () => {
+    // /qfai-sdd Phase 0 freezes the lock before prototyping runs, so it is not
+    // evidence that prototyping happened.
     await withProject({ designLock: true }, (issues) => {
-      expect(dcon019(issues)).toEqual([]);
+      expect(dcon019(issues)).toHaveLength(2);
     });
   });
 
