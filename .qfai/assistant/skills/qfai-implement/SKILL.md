@@ -138,24 +138,10 @@ When transitioning to `exception`:
 ### Phase: Refactor
 
 1. Improve code quality (naming, structure, duplication removal) while keeping all tests green.
-2. Run the **relevant test suite** to confirm nothing broke. "Relevant" means the
-   smallest selector that covers the module you touched **plus its declared
-   dependents**. Resolution order:
-   1. the test modules named by this item's ledger row and by any ledger row
-      whose `Test file` imports the touched module;
-   2. if dependents cannot be determined from imports, the package containing
-      the touched module;
-   3. never "every test in the repository" — the wide run has its own cadence
-      (below).
-
-   Cadence: **narrow suite per item, full suite at each checkpoint
-   verification.** Running the whole spec suite once per item costs the sum
-   over all prior items and is quadratic in ledger size; the checkpoint is
-   where that cost is paid once.
-
+2. Run the **relevant test suite** to confirm nothing broke. "Relevant" means the smallest selector that covers the module you touched **plus its reverse dependency closure** — walk the production import graph backwards, not just the test files that import the module directly. Fall back to the package containing the touched module whenever that walk cannot be completed; never "every test in the repository" at this step. Cadence: **narrow suite per item, full suite at each checkpoint boundary**, because a full run per item is quadratic in ledger size. Full rules, the fallback triggers and the boundary list: `references/relevant-test-suite.md`.
 3. Transition status to `refactor`.
 4. Submit for completion review (`completion-reviewer`) and code quality review (`implementation-reviewer`).
-5. After all routed blocking reviewers return PASS, run checkpoint verification, then transition to `done`.
+5. After all routed blocking reviewers return PASS, transition to `done`. Run checkpoint verification — the full suite — when the item sits on a checkpoint boundary; items between boundaries are gated on step 2's narrow suite.
 
 ### Completion
 
@@ -272,9 +258,7 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 8. `implementation-reviewer` returned PASS (code quality review gate)
 9. UI-affecting items have prototype parity PASS from `product-surface-reviewer`
 10. `test-list.md` Status and Evidence columns are updated with fresh evidence
-11. Checkpoint verification passed — this is where the **full** suite runs. Items
-    6, 7 and 8 are evaluated against the narrow relevant suite defined in
-    Phase: Refactor step 2.
+11. Checkpoint verification passed. The **full** suite is required here only when the item sits on a checkpoint boundary; a row between boundaries satisfies this with the narrow relevant suite from Phase: Refactor step 2, which is also what items 6, 7 and 8 are evaluated against.
 
 ### Spec completion conditions
 
@@ -295,7 +279,7 @@ Completion MUST NOT be declared when any of the following are true:
 - Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned FAIL
 - Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
 - Parallel slices were used but integration verify has not been run post-merge
-- Checkpoint boundary was reached but verification was not executed
+- Checkpoint boundary was reached but verification was not executed (the last ledger row is always a boundary, so every spec runs the full suite at least once)
 - `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-001`). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID.
 
 ## Evidence (MANDATORY)
