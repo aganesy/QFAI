@@ -246,21 +246,29 @@ async function validateSpecTddList(
       const row = table.rows[rowIdx];
       if (!row) continue;
       if ((row[statusIndex] ?? "").trim().toLowerCase() !== "exception") continue;
-      const tddId = tddIdIndex >= 0 ? (row[tddIdIndex] ?? "").trim() : `row ${rowIdx + 1}`;
+      const tddId = tddIdIndex >= 0 ? (row[tddIdIndex] ?? "").trim() : "";
       const drId = drIdIndex >= 0 ? (row[drIdIndex] ?? "").trim() : "";
+      const hasDrId = drId.length > 0 && drId !== "-";
+      // Every row of one ledger shares the same rule AND the same file, so a
+      // waiver matched on `rule` + `scope.paths` alone would clear every parked
+      // row at once — including ones the operator never approved. `dl_id` is the
+      // only per-finding key `waivers.ts#matchesWaiver` compares, so the row
+      // identity goes there and `WAIVER-005` refuses a waiver that omits it.
+      const rowKey = tddId.length > 0 ? tddId : hasDrId ? drId : `row ${rowIdx + 1}`;
       issues.push(
         issue(
           "TDDLIST_EXCEPTION_PARKED",
-          `TDD item "${tddId}" in spec-${specNumber} is parked at Status=exception${drId.length > 0 && drId !== "-" ? ` (DR-ID ${drId})` : ""}. Resolve it (\`exception -> todo\`), or record the accepted risk as a \`TDDLIST-001\` waiver in \`.qfai/waivers.yml\``,
+          `TDD item "${rowKey}" in spec-${specNumber} is parked at Status=exception${hasDrId ? ` (DR-ID ${drId})` : ""}. Resolve it (\`exception -> todo\`), or record the accepted risk as a \`TDDLIST-001\` waiver in \`.qfai/waivers.yml\` naming this row in \`match.dl_ids\``,
           "warning",
           relPath,
           // Rule id, not a dotted path: `waivers.ts#resolveRuleId` only accepts
           // `^[A-Z]+-\d{3}$`, so a dotted name could never be waived and the
           // accepted-risk case the message points at had no way to clear.
           EXCEPTION_PARKED_RULE_ID,
-          drId.length > 0 && drId !== "-" ? [drId] : undefined,
+          hasDrId ? [drId] : undefined,
           "change",
-          `承認済みの accepted risk である場合は \`.qfai/waivers.yml\` に rule: ${EXCEPTION_PARKED_RULE_ID} の waiver（id / reason / expires / evidence / scope.paths が必須）を登録してください。作業を再開する場合は \`exception -> todo\` で戻してください。`,
+          `承認済みの accepted risk である場合は \`.qfai/waivers.yml\` に rule: ${EXCEPTION_PARKED_RULE_ID} の waiver（id / reason / expires / evidence / scope.paths / match.dl_ids が必須）を登録してください。match.dl_ids には対象行の TDD-ID（${rowKey}）だけを列挙します。作業を再開する場合は \`exception -> todo\` で戻してください。`,
+          { dl_id: rowKey },
         ),
       );
     }

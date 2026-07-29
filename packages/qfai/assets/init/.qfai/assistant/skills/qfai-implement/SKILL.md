@@ -116,17 +116,17 @@ Backward transitions are prohibited. Attempting `green` -> `red` must produce:
 
 ### Exception Handling
 
-`exception` means **anomaly, work paused** — not "accepted risk, closed". The
-two are different states that happen to share a status today; the `DR-ID` is
-what distinguishes them, and only the accepted-risk form is completion-
-satisfying. Resolve a paused item via `exception -> todo`.
+`exception` means **anomaly, work paused** — not "accepted risk, closed". The two
+are different states sharing one status today; the `DR-ID` distinguishes them and
+only the accepted-risk form is completion-satisfying. Resolve a paused item via `exception -> todo`.
 
 Every `exception` row raises `TDDLIST_EXCEPTION_PARKED` (warning, rule
 `TDDLIST-001`). The validator cannot read the DR to tell a paused defect from
 an approved accepted risk, so the approval is recorded where QFAI already
-checks approvals: a `TDDLIST-001` waiver in `.qfai/waivers.yml`
-(`id` / `reason` / `expires` / `evidence` / `scope.paths` required, and it
-expires). Without one the warning stands, which is the intended signal.
+checks approvals: a `TDDLIST-001` waiver in `.qfai/waivers.yml` (`id` / `reason` /
+`expires` / `evidence` / `scope.paths`, plus `match.dl_ids` listing the approved
+rows' `TDD-ID`s — omit it and `QFAI-WAIVER-005` rejects the waiver, because one
+path-scoped entry would clear every parked row in the same ledger). Without a matching waiver the warning stands, which is the intended signal.
 
 When transitioning to `exception`:
 

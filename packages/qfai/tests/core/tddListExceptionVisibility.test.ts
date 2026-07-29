@@ -55,6 +55,9 @@ describe("parked exception rows are visible in CI", () => {
         expect(parked(issues)[0]?.message).toContain("`TDDLIST-001` waiver");
         expect(parked(issues)[0]?.message).toContain("(DR-ID DR-1)");
         expect(parked(issues)[0]?.refs).toEqual(["DR-1"]);
+        // `dl_id` is the only per-finding key `matchesWaiver` compares, so the
+        // row identity has to land there for a per-row waiver to be possible.
+        expect(parked(issues).map((entry) => entry.dl_id)).toEqual(["TDD-0001", "TDD-0002"]);
       },
     );
   });
@@ -100,7 +103,12 @@ describe("parked exception rows are visible in CI", () => {
 });
 
 describe("an approved accepted risk can clear the parked warning", () => {
-  it("suppresses the finding through a TDDLIST-001 waiver", async () => {
+  /** Builds a spec whose ledger holds `rows`, plus an optional waivers.yml. */
+  async function withWaivedLedger(
+    rows: string[],
+    dlIds: string[] | null,
+    assertion: (issues: Awaited<ReturnType<typeof applyWaivers>>["issues"]) => void,
+  ): Promise<void> {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tdd-exception-waiver-"));
     try {
       const specDir = path.join(root, ".qfai", "specs", "spec-0001");
@@ -115,11 +123,7 @@ describe("an approved accepted risk can clear the parked warning", () => {
       }
       await writeFile(
         path.join(specDir, "tdd", "test-list.md"),
-        [
-          HEADERS,
-          SEP,
-          "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-1   | anomaly  |",
-        ].join("\n"),
+        [HEADERS, SEP, ...rows].join("\n"),
         "utf-8",
       );
       await writeFile(
@@ -133,6 +137,9 @@ describe("an approved accepted risk can clear the parked warning", () => {
           "    expires: 2099-12-31",
           "    evidence: .qfai/specs/spec-0001/09_delta.md#DR-1",
           "    action: suppress",
+          ...(dlIds
+            ? ["    match:", "      dl_ids:", ...dlIds.map((dlId) => `        - "${dlId}"`)]
+            : []),
           "    scope:",
           "      paths:",
           '        - ".qfai/specs/spec-0001/tdd/test-list.md"',
@@ -141,16 +148,71 @@ describe("an approved accepted risk can clear the parked warning", () => {
       );
 
       const findings = await validateTddList(root, defaultConfig);
-      const { issues } = await applyWaivers(root, findings);
-      const finding = issues.find((entry) => entry.code === "TDDLIST_EXCEPTION_PARKED");
-      expect(finding?.suppressed).toBe(true);
-      // Suppressed findings are excluded from the counts `--fail-on warning`
-      // reads, so the approved parking no longer blocks validation forever.
-      expect(issues.filter((entry) => entry.severity === "warning" && !entry.suppressed)).toEqual(
-        [],
-      );
+      assertion((await applyWaivers(root, findings)).issues);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  }
+
+  it("suppresses the finding through a TDDLIST-001 waiver naming the row", async () => {
+    await withWaivedLedger(
+      [
+        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-1   | anomaly  |",
+      ],
+      ["TDD-0001"],
+      (issues) => {
+        const finding = issues.find((entry) => entry.code === "TDDLIST_EXCEPTION_PARKED");
+        expect(finding?.suppressed).toBe(true);
+        // Suppressed findings are excluded from the counts `--fail-on warning`
+        // reads, so the approved parking no longer blocks validation forever.
+        expect(issues.filter((entry) => entry.severity === "warning" && !entry.suppressed)).toEqual(
+          [],
+        );
+      },
+    );
+  });
+
+  it("leaves an unapproved row next to the approved one unsuppressed", async () => {
+    // Every row of one ledger shares the rule AND the file, so a waiver matched
+    // on rule + scope.paths alone silently closed the parked row nobody
+    // approved and `--fail-on warning` went green.
+    await withWaivedLedger(
+      [
+        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-1   | accepted |",
+        "| TDD-0002 | TC-0002 | Unit  | tests/b.test.ts | case b   | exception | DR-2   | anomaly  |",
+      ],
+      ["TDD-0001"],
+      (issues) => {
+        const parkedFindings = issues.filter((entry) => entry.code === "TDDLIST_EXCEPTION_PARKED");
+        expect(parkedFindings.map((entry) => [entry.dl_id, entry.suppressed === true])).toEqual([
+          ["TDD-0001", true],
+          ["TDD-0002", false],
+        ]);
+        expect(
+          issues.filter((entry) => entry.severity === "warning" && !entry.suppressed).length,
+        ).toBeGreaterThan(0);
+      },
+    );
+  });
+
+  it("refuses a path-only waiver with QFAI-WAIVER-005", async () => {
+    await withWaivedLedger(
+      [
+        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-1   | accepted |",
+        "| TDD-0002 | TC-0002 | Unit  | tests/b.test.ts | case b   | exception | DR-2   | anomaly  |",
+      ],
+      null,
+      (issues) => {
+        const rejection = issues.find((entry) => entry.code === "QFAI-WAIVER-005");
+        expect(rejection?.severity).toBe("warning");
+        expect(rejection?.message).toContain("match.dl_ids");
+        // The blanket waiver applies to nothing, so both rows stay visible.
+        expect(
+          issues
+            .filter((entry) => entry.code === "TDDLIST_EXCEPTION_PARKED")
+            .every((entry) => entry.suppressed !== true),
+        ).toBe(true);
+      },
+    );
   });
 });
