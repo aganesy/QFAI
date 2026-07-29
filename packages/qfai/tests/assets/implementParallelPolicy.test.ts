@@ -64,14 +64,18 @@ describe("qfai-implement states one parallelization policy", () => {
       expect(routing).toContain("describes ROLE FAN-OUT within a phase, not item");
     });
 
-    it(`${tree}: worktree separation is adjudicated outside the all-must-be-true list`, async () => {
-      const section = await policy(tree);
+    it(`${tree}: worktree separation is required, with no degraded-mode escape`, async () => {
+      const section = unwrap(await policy(tree));
       expect(section).toContain("## Isolation requirement (worktree separation)");
       expect(section).toContain('Adjudicated separately from the "all must be true" list');
-      // Three evaluable outcomes, so `delivery-planner` is never left guessing.
-      expect(section).toContain("nothing to record");
-      expect(section).toContain("**declared degraded mode**");
-      expect(section).toContain("no declared degraded mode recorded -> **DENY**");
+      // `constitution/workflow.md` and spec-0011 REQ-0010 both require it, so
+      // the only outcomes are "separate worktrees" and DENY.
+      expect(section).toContain("**not waivable**");
+      expect(section).toContain("two outcomes, not three");
+      expect(section).toContain("**Anything else -> DENY.**");
+      // A branch shares the working tree and the index: not a substitute.
+      expect(section).toContain("A branch is **not** a substitute");
+      expect(section).not.toContain("**declared degraded mode**");
       // The allow-condition list must no longer carry the unevaluable bullet.
       expect(section).not.toContain("**Recommendation, not a hard allow-condition**");
       expect(section).not.toContain("`constitution/workflow.md` Concurrency rules");

@@ -56,17 +56,27 @@ is a DENY, because the independence claim then has no concrete evidence.
 
 ## Isolation requirement (worktree separation)
 
-Adjudicated separately from the "all must be true" list above, and never waived
-silently. `constitution/workflow.md` (Implementation stage) requires worktree
-separation for parallel execution; qfai does not provision worktrees itself, so
-`delivery-planner` evaluates it as three outcomes:
+Adjudicated separately from the "all must be true" list above, and **not
+waivable**. Per `constitution/workflow.md` (Implementation stage) and spec-0011
+REQ-0010, worktree separation is required for parallel execution, so
+`delivery-planner` has two outcomes, not three:
 
-- Worktree or branch separation in force -> requirement met, nothing to record.
-- Not in force, and the dispatch decision records a **declared degraded mode**
-  naming (a) the shared worktree path and (b) every allow condition above
-  re-verified for that shared tree -> ALLOW. Absence of worktree separation is
-  not by itself a DENY.
-- Not in force and no declared degraded mode recorded -> **DENY**.
+- **Separate worktrees in force** (one worker per `git worktree`, one index
+  each) -> requirement met.
+- **Anything else -> DENY.** Record the reason in the dispatch decision and run
+  the items serially.
+
+A branch is **not** a substitute. Branch separation still shares one working
+tree and one index: workers observe each other's half-written files and
+generated artifacts, which is exactly the hidden coupling the requirement
+exists to prevent, and a sweeping stage command would commit a sibling's
+in-flight files.
+
+qfai does not provision worktrees itself, so in practice this exception stays
+unreachable until the operator (or the orchestrator, explicitly) creates one
+worktree per worker. That is the intended outcome: serial execution is the
+correct behaviour when isolation cannot be guaranteed, and an unreachable
+exception is preferable to a documented way around an upstream SSOT rule.
 
 ## Deny conditions (any one blocks parallel dispatch)
 
