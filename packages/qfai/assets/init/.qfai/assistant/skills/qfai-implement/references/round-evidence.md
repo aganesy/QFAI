@@ -14,8 +14,8 @@ reviewer `REVISE` that requires new production behaviour adds a round.
 - `Round N: GREEN command` — the exact command executed to observe success
 - `Round N: GREEN result` — the success output
 - `Round N: reviewer verdict` — the verdict that closed the round (`PASS`, or
-  `REVISE` plus the finding that opened round N+1). Absent on round 1 when no
-  review has run yet.
+  `REVISE` plus the finding, and which rework path it took). Absent on round 1
+  when no review has run yet.
 
 ## Single-round items
 
@@ -26,14 +26,44 @@ contract required. Nothing existing becomes non-conformant.
 ## Where the rounds happen
 
 An item at `review-fix` may re-enter the RED/GREEN cycle as many times as the
-rework needs. Each pass is its own round block. Returning to `refactor`
-re-submits the item to the reviewer that opened the round.
+rework needs. Each pass is its own round block.
 
 **The row's `Status` stays `review-fix` throughout.** The RED/GREEN passes are
 work, not ledger states here: `review-fix -> red` and `review-fix -> green` are
 not allowed transitions, and writing either would be the backward transition
 the lifecycle forbids. `review-fix -> refactor` is the only status change the
 rework produces; the rounds themselves are recorded in `Evidence`.
+
+## A `REVISE` that needs no new production behaviour
+
+`implementation-reviewer` frequently returns `REVISE` for naming, duplication
+or a comment — rework that changes no observable behaviour. There is no new
+failing test to write, so opening a round would mean inventing a RED phase for
+a change that has none. That rework takes the second path:
+
+1. The status contract is unchanged: the row still moves
+   `refactor -> review-fix` and back.
+2. **No round is opened.** Round blocks record RED/GREEN cycles; a
+   behaviour-preserving change has none.
+3. Make the change, re-run the item's tests, and refresh
+   `Refactor verify command` / `Refactor verify result`. That refreshed pair is
+   the evidence the change kept GREEN, and it must be fresh — the pre-rework
+   pair is stale evidence.
+4. Record the trigger and the path taken on the current round's
+   `Round N: reviewer verdict` line, then return to `refactor` and re-submit.
+
+Which path applies is decided by the finding, not by the reviewer: a `REVISE`
+that requires new production behaviour opens round N+1 even when it came from
+`implementation-reviewer`.
+
+## Who the rework goes back to
+
+Returning to `refactor` re-submits the item to **every routed blocking reviewer
+whose verdict the rework could invalidate** — always the reviewer that opened
+the round, plus any reviewer that already returned `PASS` on artifacts the
+rework changed. A `PASS` recorded against the pre-rework test or production
+code is stale evidence: it does not count towards "After all routed blocking
+reviewers return PASS" and must be re-earned before the item may reach `done`.
 
 ## Resuming a `review-fix` item
 
@@ -47,9 +77,11 @@ Resuming a `review-fix` row:
 
 1. Read the round blocks already in the item's evidence and take the highest
    `Round N`; the reviewer verdict on that round names the finding to fix.
-2. Open round `N + 1` and run the RED/GREEN cycle for the rework.
-3. Return the row to `refactor` and re-submit to the reviewer that opened the
-   round.
+2. Pick the path the finding calls for: open round `N + 1` and run the
+   RED/GREEN cycle when the fix needs new production behaviour, or take the
+   behaviour-preserving path above when it does not.
+3. Return the row to `refactor` and re-submit per **Who the rework goes back
+   to** above.
 
 A `review-fix` row must already have a `Test file` — it reached `refactor`
 before the `REVISE`. `validateTddList` checks the file exists for

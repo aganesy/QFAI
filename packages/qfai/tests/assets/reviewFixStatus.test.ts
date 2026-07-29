@@ -97,6 +97,55 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
         "`review-fix -> refactor` is the only status change the\nrework produces",
       );
     });
+
+    it(`${relativePath}: the Green phase keeps a review-fix row at review-fix`, async () => {
+      const skill = await readFile(path.join(repoRoot, relativePath), "utf-8");
+      // An unconditional "Transition status to `green`" would write the
+      // prohibited `review-fix -> green` for every rework row.
+      expect(skill).toContain(
+        "Transition status to `green` — **only for a row that entered from `todo`**",
+      );
+      expect(skill).toContain("`review-fix -> green` is not an allowed transition");
+      expect(skill).not.toContain("3. Transition status to `green`.\n");
+    });
+
+    it(`${relativePath}: a behaviour-preserving REVISE has a stated path`, async () => {
+      const skill = await readFile(path.join(repoRoot, relativePath), "utf-8");
+      expect(skill).toContain(
+        "A `REVISE` that needs none (naming,\nduplication, comments) opens no round and is verified by a refreshed\n`Refactor verify` pair instead.",
+      );
+
+      const reference = await readFile(
+        path.join(repoRoot, path.dirname(relativePath), "references", "round-evidence.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("## A `REVISE` that needs no new production behaviour");
+      expect(reference).toContain("**No round is opened.**");
+      expect(reference).toContain(
+        "refresh\n   `Refactor verify command` / `Refactor verify result`",
+      );
+      expect(reference).toContain("Which path applies is decided by the finding, not by the");
+    });
+
+    it(`${relativePath}: rework is re-submitted to every reviewer it could invalidate`, async () => {
+      // A PASS from the other blocking reviewer was given on the pre-rework
+      // artifact, so it cannot satisfy "all routed blocking reviewers PASS".
+      const reference = await readFile(
+        path.join(repoRoot, path.dirname(relativePath), "references", "round-evidence.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("## Who the rework goes back to");
+      expect(reference).toContain(
+        "**every routed blocking reviewer\nwhose verdict the rework could invalidate**",
+      );
+      expect(reference).toContain(
+        "plus any reviewer that already returned `PASS` on artifacts the",
+      );
+      expect(reference).toContain("is stale evidence: it does not count towards");
+      // The narrower "re-submit to the reviewer that opened the round" is gone.
+      expect(reference).not.toContain("re-submits the item to the reviewer that opened the round");
+      expect(reference).not.toContain("re-submit to the reviewer that opened the\n   round");
+    });
   }
 });
 

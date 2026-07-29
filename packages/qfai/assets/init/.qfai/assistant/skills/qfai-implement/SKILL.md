@@ -142,7 +142,7 @@ When transitioning to `exception`:
 
 1. Write the **minimum production code** to make the failing test pass.
 2. Run the test and **watch it pass**.
-3. Transition status to `green`.
+3. Transition status to `green` — **only for a row that entered from `todo`**. A `review-fix` row stays at `review-fix` here too; `review-fix -> green` is not an allowed transition and must not be written to the ledger.
 4. If the test still fails after implementation, investigate and fix. Do not skip to refactor.
 
 ### Phase: Refactor
@@ -314,8 +314,10 @@ Each TDD item MUST have fresh evidence containing at minimum:
 Then one **round block** per RED/GREEN cycle — `Round N: RED command` /
 `RED result` / `GREEN command` / `GREEN result` / `reviewer verdict`. Round 1
 is the original cycle; each blocking reviewer `REVISE` that requires new
-production behaviour adds a round. Rounds are numbered and repeatable, not
-appended as free prose. Field-by-field rules:
+production behaviour adds a round. A `REVISE` that needs none (naming,
+duplication, comments) opens no round and is verified by a refreshed
+`Refactor verify` pair instead. Rounds are numbered and repeatable, not
+appended as free prose. Field-by-field rules and both rework paths:
 `references/round-evidence.md`.
 
 Then, once, for the item as a whole:
