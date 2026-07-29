@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -109,6 +109,30 @@ describe("readVerifyJson", () => {
       expect(read.rel).toBe(VERIFY_JSON_LEGACY_REL);
       expect(read.error).toBe("expected a JSON object, got null");
     });
+  });
+
+  it("treats a dangling symlink at the canonical path as unreadable, not absent", async () => {
+    // `readFile` reports a dangling link as ENOENT, exactly like a missing
+    // file, so the fallback would have handed certify the legacy PASS.
+    await withRoot(
+      { [VERIFY_JSON_LEGACY_REL]: JSON.stringify({ status: "PASS" }) },
+      async (root) => {
+        const canonical = path.join(root, VERIFY_JSON_REL);
+        await mkdir(path.dirname(canonical), { recursive: true });
+        try {
+          await symlink(path.join(root, "no-such-target.json"), canonical);
+        } catch {
+          // Windows without developer mode refuses symlink creation; the
+          // behaviour under test is unreachable there.
+          return;
+        }
+
+        const read = await readVerifyJson(root);
+        expect(read.source).toBe("unreadable");
+        expect(read.rel).toBe(VERIFY_JSON_REL);
+        expect(read.error).toContain("dangling symlink");
+      },
+    );
   });
 
   it("treats a directory at the canonical path as unreadable, not absent", async () => {

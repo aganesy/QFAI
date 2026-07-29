@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { lstat, readFile } from "node:fs/promises";
 import path from "node:path";
 
 /**
@@ -50,6 +50,16 @@ function isFileNotFound(error: unknown): boolean {
   return hasErrorCode(error) && error.code === "ENOENT";
 }
 
+/** True when a directory entry exists at the path, even a dangling symlink. */
+async function entryExists(absolutePath: string): Promise<boolean> {
+  try {
+    await lstat(absolutePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -73,6 +83,14 @@ async function loadVerifyPayload(absolutePath: string): Promise<LoadOutcome> {
     raw = await readFile(absolutePath, "utf-8");
   } catch (error: unknown) {
     if (isFileNotFound(error)) {
+      // ENOENT from `readFile` is ambiguous: a dangling symlink has a
+      // directory entry but no target, and `readFile` reports it exactly like
+      // a missing file. `lstat` sees the link itself, so an entry that exists
+      // but cannot be read is `unreadable` — otherwise a broken canonical link
+      // would fall through to a stale legacy `status: "PASS"`.
+      if (await entryExists(absolutePath)) {
+        return { kind: "unreadable", reason: "path exists but cannot be read (dangling symlink?)" };
+      }
       return { kind: "absent" };
     }
     // EACCES, EISDIR, EIO, ... — the path is occupied by something we cannot
