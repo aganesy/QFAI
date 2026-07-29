@@ -93,17 +93,25 @@ Move volatile or bulky detail into the `ui_ux/` sidecar references and research 
 
 ## QFAI-Specific Authoring Guidance
 
-### Use the sidecar family as the design SSOT for UI-bearing work
+### Where design direction resolves for UI-bearing work
 
-For UI-bearing packs, core design direction should resolve through:
+Brand-level direction is no longer authored as sidecars. For UI-bearing
+packs it resolves through:
 
-- strategy: `uiux/10_implementation_strategy.md`
-- taste constraints: `uiux/11_design_taste_interview.md`
-- scoring axes: `uiux/20-24`
-- option decision: `uiux/30_option_comparison.md`
-- selected anchor: `uiux/31_selected_anchor_screen.md`
+- brand identity, taste constraints, anti-goals, and the selected visual
+  direction: root `DESIGN.md` (front-matter tokens + `# Brand Philosophy`
+  body)
+- sidecar manifest: `uiux/00_index.md`
 - screen behavior contracts: `uiux/40_screen_contracts.md`
 - review handoff: `uiux/50_review_input_bundle.md`
+
+Those three are the entire canonical sidecar family. Evaluation axes are
+global constants (`core/prototyping/evaluatorReview.ts#ORDINAL_AXES`),
+not authored files. Do NOT create `10_implementation_strategy.md`,
+`11_design_taste_interview.md`, the `20-24` design-evaluation family,
+`30_option_comparison.md`, or `31_selected_anchor_screen.md` — they are
+on the forbidden-legacy list in `uiux/00_index.md` and creating them
+fails validation.
 
 ### What must be explicit in the discussion pack
 
