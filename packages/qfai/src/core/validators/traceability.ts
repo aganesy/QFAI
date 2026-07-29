@@ -6,7 +6,12 @@ import { resolvePath } from "../config.js";
 import { extractIds } from "../ids.js";
 import { parseScenarioDocument, type ScenarioNode } from "../scenarioModel.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
-import { collectScTestReferences } from "../traceability.js";
+import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
+import {
+  collectScTestReferences,
+  DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+  normalizeGlobs,
+} from "../traceability.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -40,6 +45,14 @@ export async function validateTraceability(
   const layeredEntries = entries.filter(
     (entry) => entry.layout === "layered" && entry.layeredStyle === "v1416",
   );
+
+  // Diagnose the test-glob configuration for every layout, before the v1416 filter below.
+  // A v1417/v1421 project never reaches `validateLayeredScCodeReferences`, so keeping the
+  // diagnosis there meant the one class of project that most needs it — a modern layout with
+  // `scMustHaveTest: true` and globs matching nothing — got a clean `--fail-on error` run.
+  if (options.includeCodeReferences) {
+    issues.push(...(await validateTestFileGlobsConfiguration(root, config, entries)));
+  }
 
   if (layeredEntries.length === 0) {
     return issues;
@@ -409,6 +422,83 @@ function validateLayeredHeuristics(entry: SpecEntry, data: LayeredEdgeData): Iss
   return issues;
 }
 
+/**
+ * Reports `validation.traceability.testFileGlobs` that cannot do their job.
+ *
+ * This is a configuration diagnosis, not a coverage finding, so it is layout-independent: it
+ * runs for v1416, v1417 and v1421 spec packs alike. Two states are reported under
+ * `scMustHaveTest: true`, because in both of them the SC→test gate is on but inert:
+ *
+ * - unset (`[]`) — nothing is scanned at all. Reported as a `warning`: the project may simply
+ *   not have configured QFAI yet, and a fresh `qfai init` ships this value empty on purpose.
+ * - configured but matching zero files — the operator believes the gate is running. Reported as
+ *   an `error`, so an otherwise clean `--fail-on error` run cannot absorb it.
+ *
+ * Silent when `scMustHaveTest` is off (the gate is deliberately disabled) or when the project
+ * has no spec pack at all (nothing to trace yet).
+ */
+async function validateTestFileGlobsConfiguration(
+  root: string,
+  config: QfaiConfig,
+  entries: SpecEntry[],
+): Promise<Issue[]> {
+  if (!config.validation.traceability.scMustHaveTest || entries.length === 0) {
+    return [];
+  }
+
+  const globs = config.validation.traceability.testFileGlobs;
+  const configPath = path.join(root, "qfai.config.yaml");
+  const fix =
+    "/qfai-configure を実行し、validation.traceability.testFileGlobs を実際のテストパスに合わせて設定してください。";
+
+  if (globs.length === 0) {
+    return [
+      issue(
+        "QFAI-TRACE-124",
+        "validation.traceability.testFileGlobs が未設定のため、scMustHaveTest: true でも SC のコード参照は一切検査されていません。" +
+          "リポジトリの実テストレイアウトに合わせて設定してください (/qfai-configure)。",
+        "warning",
+        configPath,
+        "traceability.layered.testFileGlobsUnset",
+        undefined,
+        "canonical",
+        fix,
+      ),
+    ];
+  }
+
+  const scan = await collectFilesByGlobs(root, {
+    globs: normalizeGlobs(globs),
+    ignore: Array.from(
+      new Set([
+        ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+        ...normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
+      ]),
+    ),
+    limit: DEFAULT_GLOB_FILE_LIMIT,
+  }).catch(() => null);
+
+  if (scan === null || scan.files.length > 0) {
+    return [];
+  }
+
+  return [
+    issue(
+      "QFAI-TRACE-124",
+      `validation.traceability.testFileGlobs が 1 ファイルにも一致しませんでした ` +
+        `(globs: ${globs.join(", ")})。設定が実際のテストレイアウトと一致していないため、` +
+        `SC のコード参照検査 (QFAI-TRACE-117) はすべて未参照として報告されます。` +
+        `/qfai-configure で調整してください。`,
+      "error",
+      configPath,
+      "traceability.layered.testFileGlobsNoMatch",
+      globs,
+      "canonical",
+      fix,
+    ),
+  ];
+}
+
 async function validateLayeredScCodeReferences(
   root: string,
   config: QfaiConfig,
@@ -417,27 +507,10 @@ async function validateLayeredScCodeReferences(
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const globs = config.validation.traceability.testFileGlobs;
-  const scMustHaveTest = config.validation.traceability.scMustHaveTest;
-  const configPath = path.join(root, "qfai.config.yaml");
 
-  // An unconfigured glob list is a "not configured yet" state, not a traceability failure.
-  // Surface it only when scMustHaveTest is on, because then it silently disables the gate.
+  // Unset globs are diagnosed by `validateTestFileGlobsConfiguration`, which runs for every
+  // spec layout. Nothing left to check here.
   if (globs.length === 0) {
-    if (scMustHaveTest) {
-      issues.push(
-        issue(
-          "QFAI-TRACE-124",
-          "validation.traceability.testFileGlobs が未設定のため、scMustHaveTest: true でも SC のコード参照は一切検査されていません。" +
-            "リポジトリの実テストレイアウトに合わせて設定してください (/qfai-configure)。",
-          "warning",
-          configPath,
-          "traceability.layered.testFileGlobsUnset",
-          undefined,
-          "canonical",
-          "/qfai-configure を実行し、validation.traceability.testFileGlobs を実際のテストパスに合わせて設定してください。",
-        ),
-      );
-    }
     return issues;
   }
 
@@ -447,28 +520,6 @@ async function validateLayeredScCodeReferences(
     config.validation.traceability.testFileExcludeGlobs,
   );
   const refs = refsResult.refs;
-
-  // A non-empty glob list that resolves to zero files is a configuration defect, not a coverage
-  // gap. Report it *before* the per-SC finding so the enumeration of every SC in the project is
-  // not mistaken for the root cause. Escalated to error under scMustHaveTest so it cannot be
-  // silently absorbed by an otherwise error=0 run.
-  if (refsResult.scan.matchedFileCount === 0) {
-    issues.push(
-      issue(
-        "QFAI-TRACE-124",
-        `validation.traceability.testFileGlobs が 1 ファイルにも一致しませんでした ` +
-          `(globs: ${globs.join(", ")})。設定が実際のテストレイアウトと一致していないため、` +
-          `以降の SC コード参照検査 (QFAI-TRACE-117) はすべて未参照として報告されます。` +
-          `/qfai-configure で調整してください。`,
-        scMustHaveTest ? "error" : "warning",
-        configPath,
-        "traceability.layered.testFileGlobsNoMatch",
-        globs,
-        "canonical",
-        "/qfai-configure を実行し、validation.traceability.testFileGlobs を実際のテストパスに合わせて設定してください。",
-      ),
-    );
-  }
 
   const missing = Array.from(scIds).filter((id) => !refs.has(id));
   if (missing.length > 0) {
