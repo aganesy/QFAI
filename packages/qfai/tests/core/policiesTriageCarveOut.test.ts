@@ -162,6 +162,53 @@ describe("_policies scope bans carve out the mandated Triage table", () => {
     );
   });
 
+  it("exempts a table whose separator omits the trailing pipe", async () => {
+    // `isTableSeparator` accepts `| --- | ---`, so the Triage validators DO
+    // parse this table and require its `Existing Spec` cell — a stricter local
+    // regex left it unmasked and raised QFAI-LAYER-100 on the required cell.
+    await withPolicies(
+      [
+        "# 10 Delta",
+        "",
+        "## Triage",
+        "",
+        "| Source   | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale",
+        "| -------- | ------- | ------------- | --------- | ------ | ----------- | ---------",
+        "| REQ-0042 | rename  | spec-0007     | UPDATE    | MODIFY | -           | AC-0007-0004 renamed",
+        "",
+      ].join("\n"),
+      (issues) => {
+        const refs = policyScopeFindings(issues);
+        expect(refs).not.toContain("spec-0007");
+        expect(refs).not.toContain("AC-0007-0004");
+      },
+    );
+  });
+
+  it("does not mask a column the Triage validators never inspect", async () => {
+    // `validateTriageSection` only checks for MISSING required columns, so an
+    // extra `Parent` column is accepted — and blanking the whole row hid the
+    // ownership edge it carries from every check that covers it.
+    await withPolicies(
+      [
+        "# 10 Delta",
+        "",
+        "## Triage",
+        "",
+        "| Source   | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale | Parent       |",
+        "| -------- | ------- | ------------- | --------- | ------ | ----------- | --------- | ------------ |",
+        "| REQ-0042 | rename  | spec-0007     | UPDATE    | MODIFY | -           | see below | US-0001-0001 |",
+        "",
+      ].join("\n"),
+      (issues) => {
+        const refs = policyScopeFindings(issues);
+        expect(refs).toContain("US-0001-0001");
+        // The canonical columns are still exempt.
+        expect(refs).not.toContain("spec-0007");
+      },
+    );
+  });
+
   it("exempts only table rows, never definitions or ownership edges inside Triage", async () => {
     await withPolicies(
       [

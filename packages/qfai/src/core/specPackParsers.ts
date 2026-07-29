@@ -170,11 +170,24 @@ export function splitMarkdownRow(line: string): string[] {
   return cells;
 }
 
-function looksLikeTableRow(line: string): boolean {
+/**
+ * The exact line shape {@link parseAllMarkdownTables} treats as a table row.
+ *
+ * Exported so callers that must agree with the parser about "is this line part
+ * of a table" reuse this predicate instead of re-deriving a regex. A stricter
+ * private copy silently disagrees with the parser on the shapes GFM allows.
+ */
+export function looksLikeTableRow(line: string): boolean {
   return /^\s*\|/.test(line);
 }
 
-function isTableSeparator(line: string): boolean {
+/**
+ * The exact line shape {@link parseAllMarkdownTables} accepts as the separator
+ * row. Notably it does **not** require a trailing `|`: `| --- | ---` is a valid
+ * GFM separator and this parser accepts it. Exported for the same reason as
+ * {@link looksLikeTableRow}.
+ */
+export function isTableSeparator(line: string): boolean {
   if (!looksLikeTableRow(line)) {
     return false;
   }

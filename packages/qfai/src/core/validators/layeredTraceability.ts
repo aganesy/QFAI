@@ -3,7 +3,9 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { isTableSeparator, looksLikeTableRow, splitMarkdownRow } from "../specPackParsers.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
+import { TRIAGE_TABLE_HEADER } from "../sddTriage.js";
 import type { Issue } from "../types.js";
 import {
   collectMarkdownItems,
@@ -148,11 +150,17 @@ const POLICIES_TRIAGE_FILE = "10_delta.md";
  */
 const CANONICAL_TRIAGE_HEADING_RE = /^##[ \t]+triage[ \t]*$/i;
 
-/** A markdown table row: the only line shape the carve-out exempts. */
-const TABLE_ROW_RE = /^[ \t]*\|/;
-
-/** The `| --- | --- |` line that turns the preceding row into a table header. */
-const TABLE_SEPARATOR_RE = /^[ \t]*\|(?:[ \t]*:?-{3,}:?[ \t]*\|)+[ \t]*$/;
+/**
+ * The Triage columns whose cells the carve-out exempts, normalized the way
+ * `validateTriageSection` normalizes a header (`trim().toLowerCase()`).
+ *
+ * Any column outside this set is an author's own addition that no Triage
+ * validator inspects, so its cells stay visible to the scan: a `Parent` or
+ * `Refs` column is an ownership edge, which is exactly what the ban is for.
+ */
+const EXEMPT_TRIAGE_COLUMNS = new Set<string>(
+  TRIAGE_TABLE_HEADER.map((column) => column.trim().toLowerCase()),
+);
 
 /** An H1 or H2 heading, which closes the `## Triage` section. */
 const SECTION_BOUNDARY_RE = /^#{1,2}[ \t]+\S/;
@@ -183,6 +191,10 @@ const SECTION_BOUNDARY_RE = /^#{1,2}[ \t]+\S/;
  *   `### AC-0001-0001` heading or a `- Parent: US-0001-0001` bullet inside the
  *   same section is a definition or a traceability edge — precisely what the
  *   ban is for — so it stays visible to the scan.
+ * - **Column** — only cells under a canonical Triage column. Extra columns are
+ *   allowed by `validateTriageSection` (it checks only for *missing* required
+ *   columns), so blanking the whole row would let a `Parent` column carry an
+ *   ownership edge past every check. Those cells stay visible.
  */
 function maskTriageSection(fileName: string, text: string): string {
   if (fileName !== POLICIES_TRIAGE_FILE) {
@@ -212,25 +224,47 @@ function maskTriageSection(fileName: string, text: string): string {
 }
 
 /**
- * If a markdown table starts at `index`, blank its lines in `masked` and return
- * the index just past it. Returns `index` when there is no table here.
+ * If a markdown table starts at `index`, blank the exempt cells of its rows in
+ * `masked` and return the index just past it. Returns `index` when there is no
+ * table here.
  *
- * Mirrors `parseAllMarkdownTables`: header row, separator row, then rows while
- * they keep looking like table rows.
+ * Uses `parseAllMarkdownTables`' own `looksLikeTableRow` / `isTableSeparator`
+ * rather than a private regex, so the carve-out and the parser agree on what a
+ * table is. A stricter local copy (one that required a trailing `|` on the
+ * separator, say) left a table the Triage validators DO parse unmasked, and its
+ * required `Existing Spec` cell then raised `QFAI-LAYER-100`.
+ *
+ * Only cells under a canonical Triage column are blanked; cells of any extra
+ * column survive into the scanned text.
  */
 function maskTableAt(lines: readonly string[], index: number, masked: string[]): number {
   const header = lines[index] ?? "";
   const separator = lines[index + 1] ?? "";
-  if (!TABLE_ROW_RE.test(header) || !TABLE_SEPARATOR_RE.test(separator)) {
+  if (!looksLikeTableRow(header) || !isTableSeparator(separator)) {
     return index;
   }
+  const exemptColumns = splitMarkdownRow(header).map((column) =>
+    EXEMPT_TRIAGE_COLUMNS.has(column.trim().toLowerCase()),
+  );
   masked[index] = "";
   masked[index + 1] = "";
   let cursor = index + 2;
-  for (; cursor < lines.length && TABLE_ROW_RE.test(lines[cursor] ?? ""); cursor += 1) {
-    masked[cursor] = "";
+  for (; cursor < lines.length && looksLikeTableRow(lines[cursor] ?? ""); cursor += 1) {
+    masked[cursor] = retainedCells(lines[cursor] ?? "", exemptColumns);
   }
   return cursor;
+}
+
+/**
+ * The row's cells that are NOT exempt, joined so the scan still sees them on
+ * one line (the mask preserves line count). A cell past the header's last
+ * column has no declared owner, so it is retained.
+ */
+function retainedCells(line: string, exemptColumns: readonly boolean[]): string {
+  return splitMarkdownRow(line)
+    .filter((_cell, column) => exemptColumns[column] !== true)
+    .join(" ")
+    .trim();
 }
 
 async function validatePoliciesDownstreamReferences(policiesDir: string): Promise<Issue[]> {
