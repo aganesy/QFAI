@@ -6,10 +6,7 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
-const SKILL_ROOTS = [
-  "packages/qfai/assets/init/.qfai/assistant/skills",
-  ".qfai/assistant/skills",
-];
+const SKILL_ROOTS = ["packages/qfai/assets/init/.qfai/assistant/skills", ".qfai/assistant/skills"];
 
 const BASELINE_PATHS = [
   "packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-operating-baseline.md",
