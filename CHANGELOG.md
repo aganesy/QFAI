@@ -11,7 +11,9 @@
   vocabulary nor the non-coverage vocabulary, lists the accepted values, and
   states that an unrecognized value is still treated as a coverage target. The
   finding is attributed to `06_Test-Cases.md` — the file whose cell must be
-  edited — so `scope.paths` waivers match the real input.
+  edited — so `scope.paths` waivers match the real input, and it is emitted
+  under rule id `TDDLIST-002` so a project that deliberately uses its own Level
+  vocabulary can suppress or downgrade it through `.qfai/waivers.yml`.
 
 ### Changed
 

@@ -873,6 +873,10 @@ const STATIC_RULE_SEVERITY: Record<string, IssueSeverity> = {
   "DELTA-003": "error",
   "SCOPE-001": "warning",
   "SCOPE-002": "info",
+  // TDDLIST_UNKNOWN_LEVEL. Registered statically so a project using its own
+  // Level vocabulary can pre-record the waiver without QFAI-WAIVER-004 calling
+  // the rule unknown on runs where every Level is recognized.
+  "TDDLIST-002": "warning",
   "WAIVER-001": "error",
   "WAIVER-002": "error",
   "WAIVER-003": "warning",

@@ -37,6 +37,16 @@ const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
 
 const TEST_CASES_REL_PATH = "06_Test-Cases.md";
 
+/**
+ * Waiver rule id for `TDDLIST_UNKNOWN_LEVEL`.
+ *
+ * A project may deliberately ship a Level vocabulary QFAI does not know.
+ * `.qfai/waivers.yml` is the mechanism for that, and `waivers.ts#resolveRuleId`
+ * only resolves `^[A-Z]+-\d{3}$` (or a `QFAI-<RULE>` code) — a dotted rule name
+ * would have left the warning permanently unsuppressible.
+ */
+export const UNKNOWN_LEVEL_RULE_ID = "TDDLIST-002";
+
 /** Repo-relative, posix-slashed path used for the `file` field of an issue. */
 function toRelPath(root: string, filePath: string): string {
   return path.relative(root, filePath).replace(/\\/g, "/");
@@ -167,8 +177,15 @@ async function validateSpecTddList(
         `Unrecognized Level value(s) in 06_Test-Cases.md for spec-${specNumber}: ${[...unrecognizedLevels].sort().join(", ")}. Accepted: ${accepted}. Unrecognized values are treated as coverage targets, so every such TC becomes a mandatory ledger row`,
         "warning",
         toRelPath(root, path.join(specDir, TEST_CASES_REL_PATH)),
-        "tddList.levelVocabulary",
+        // Rule id, not a dotted path: `waivers.ts#resolveRuleId` accepts only
+        // `^[A-Z]+-\d{3}$` (or a `QFAI-<RULE>` code), so a dotted name would
+        // make the finding permanently unwaivable — and a project that
+        // deliberately uses its own Level vocabulary has no other way to
+        // silence it.
+        UNKNOWN_LEVEL_RULE_ID,
         [...unrecognizedLevels].sort(),
+        "change",
+        `独自の Level 語彙を意図的に使用している場合は \`.qfai/waivers.yml\` に rule: ${UNKNOWN_LEVEL_RULE_ID} の waiver（id / reason / expires / evidence / scope.paths が必須）を登録してください。`,
       ),
     );
   }

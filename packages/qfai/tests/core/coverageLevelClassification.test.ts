@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { classifyCoverageLevel } from "../../src/core/tddHelpers.js";
-import { validateTddList } from "../../src/core/validators/tddList.js";
+import { UNKNOWN_LEVEL_RULE_ID, validateTddList } from "../../src/core/validators/tddList.js";
 
 describe("classifyCoverageLevel", () => {
   it("classifies positively rather than by exclusion", () => {
@@ -112,6 +112,20 @@ describe("TDDLIST_TC_NOT_COVERED respects the shipped Level vocabulary", () => {
         // Not tdd/test-list.md: a scope.paths waiver keyed on the ledger would
         // never match the file whose Level cell raised the finding.
         expect(finding?.file).toBe(".qfai/specs/spec-0001/06_Test-Cases.md");
+      },
+    );
+  });
+
+  it("is emitted under a rule id the waiver mechanism can resolve", async () => {
+    await withSpec(
+      tcTable(["| TC-0001 | smoke | AC-0001 | EX-0001 | step-1 | expected-1 | note-1 |"]),
+      (issues) => {
+        const finding = issues.find((entry) => entry.code === "TDDLIST_UNKNOWN_LEVEL");
+        expect(finding?.rule).toBe(UNKNOWN_LEVEL_RULE_ID);
+        // `waivers.ts#resolveRuleId` accepts only this shape; a dotted rule
+        // name left a project with its own Level vocabulary no way to waive.
+        expect(finding?.rule).toMatch(/^[A-Z]+-\d{3}$/);
+        expect(finding?.suggested_action).toContain(".qfai/waivers.yml");
       },
     );
   });
