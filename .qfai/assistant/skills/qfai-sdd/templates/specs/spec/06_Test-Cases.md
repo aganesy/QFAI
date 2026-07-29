@@ -16,8 +16,8 @@
 
 ### Level column values
 
-The layer this test case verifies. Defined in
-`.qfai/assistant/catalog/test-layers.md`; exactly one code per cell.
+The layer this test case verifies; exactly one code per cell. L3-L5 are defined
+in `.qfai/assistant/catalog/test-layers.md`; L1 and L2 are described here.
 
 - `L1` — Unit. The oracle observes inputs and return values only.
 - `L2` — Component. The oracle observes collaboration with a port through a
@@ -29,9 +29,13 @@ The layer this test case verifies. Defined in
 - `L5` — E2E. The oracle observes a full-system journey. Tests live in
   `tests/e2e/**`.
 
-`L1` and `L2` are TDD coverage targets: each such TC needs a
-`tdd/test-list.md` row, enforced by `TDDLIST_TC_NOT_COVERED` at `error`
-severity. `L3`-`L5` do not.
+Which codes require a `tdd/test-list.md` row is decided by
+`isCoverageTargetLevel`. It currently recognises the **word** forms
+(`integration`, `e2e`, …) as non-targets and treats anything it does not
+recognise — including every `L1`-`L5` code — as a coverage target. So today an
+`L3`-`L5` TC still needs a ledger row, or `TDDLIST_TC_NOT_COVERED` fires at
+`error`. The intent is that `L1`/`L2` are targets and `L3`-`L5` are not; until
+the helper recognises the code form, write the ledger row.
 
 ### Type column values
 

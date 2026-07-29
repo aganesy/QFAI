@@ -24,12 +24,17 @@ describe("the Level column is specified where it is used", () => {
         expect(template).toContain(code);
       }
       expect(template).toContain("exactly one code per cell");
+      expect(template).toContain("L1 and L2 are described here");
     });
 
     it(`${tree}: the legend names the definition file and the enforcing rule`, async () => {
       const template = await read(tree, TEMPLATE);
       expect(template).toContain(".qfai/assistant/catalog/test-layers.md");
       expect(template).toContain("TDDLIST_TC_NOT_COVERED");
+      // The legend must describe what the helper does today, not an
+      // intent it does not yet implement.
+      expect(template).toContain("isCoverageTargetLevel");
+      expect(template).toContain("the helper recognises the code form");
     });
 
     it(`${tree}: the seeded example rows use a code the legend defines`, async () => {
