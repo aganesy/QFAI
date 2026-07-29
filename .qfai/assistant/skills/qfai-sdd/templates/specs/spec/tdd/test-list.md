@@ -15,10 +15,17 @@ traced by `QFAI:` annotations in the test tree per
 `.qfai/assistant/catalog/test-layers.md`, and `/qfai-atdd` does not write to
 this ledger.
 
-Reseeding is a **delta**, never a regeneration: an existing row keeps its
-`TDD-ID`, `Status`, `Test file`, `Selector`, `DR-ID` and `Evidence`, and only
-TCs with no row yet are appended at `Status = todo`. Rewriting a row that has
+Reseeding is a **delta**, never a regeneration: an unchanged TC's row keeps its
+`TDD-ID`, `Status`, `Test file`, `Selector`, `DR-ID` and `Evidence`, and TCs
+with no row yet are appended at `Status = todo`. Rewriting a row that has
 already progressed would destroy the RED/GREEN evidence that proves its cycle.
+
+The delta runs in both directions. A TC whose obligation changed has its row
+returned to `todo` under the upstream-reset rule (driving `CR-*` / `DR-*` in
+`DR-ID`, prior `Evidence` kept); a TC deleted upstream, or no longer a
+coverage target, has its row retired the same way. Leaving a stale `done` row
+hides re-implementation work, and leaving a `todo` row for a deleted TC feeds
+`/qfai-implement` an obligation that no longer exists.
 
 ## Ledger
 

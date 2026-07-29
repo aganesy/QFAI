@@ -62,15 +62,39 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(template).toContain("Reseeding is a **delta**, never a regeneration");
 
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
-      expect(skill).toContain("**Seeding is a delta, not a regeneration**");
+      expect(skill).toContain("**Seeding is a delta,\n   not a regeneration, in both directions**");
 
       const checklists = await read(
         tree,
         "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
       );
       expect(checklists).toContain(
-        "Delta only: an existing row keeps its `TDD-ID`, `Status`, `Test file`, `Selector`, `DR-ID` and `Evidence`.",
+        "Delta only: an unchanged TC's row keeps its `TDD-ID`, `Status`, `Test file`, `Selector`, `DR-ID` and `Evidence`.",
       );
+    });
+
+    it(`${tree}: the delta reconciles changed and removed TCs, not only new ones`, async () => {
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("The delta runs in both directions.");
+      expect(template).toContain("has its row retired the same way");
+
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      expect(skill).toContain("changed / removed TCs are reset or retired");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain("Reconcile changed and removed TCs");
+    });
+
+    it(`${tree}: an empty ledger is only "nothing to do" when 06_Test-Cases.md agrees`, async () => {
+      const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+      expect(skill).toContain(
+        "**An empty ledger is a fault only when `06_Test-Cases.md` disagrees.**",
+      );
+      expect(skill).toContain("read `06_Test-Cases.md` and");
+      expect(skill).toContain("run the recovery above instead of exiting");
     });
 
     it(`${tree}: qfai-sdd owns a ledger-seeding phase in every phase-order surface`, async () => {
@@ -113,8 +137,10 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         skill.indexOf("## Spec Auto-Discovery Protocol"),
       );
       expect(preconditions).toContain("**Recovery when it is missing**");
-      expect(preconditions).toContain("**An empty ledger is not a fault.**");
-      expect(preconditions).toContain('Report "nothing to do" and exit');
+      expect(preconditions).toContain(
+        "**An empty ledger is a fault only when `06_Test-Cases.md` disagrees.**",
+      );
+      expect(preconditions).toContain('report "nothing to do" and exit');
     });
 
     it(`${tree}: a spec seeded from the template passes validateTddList`, async () => {

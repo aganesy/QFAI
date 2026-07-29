@@ -43,10 +43,14 @@ QFAI Skill Body (SSOT)
   `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/tdd/test-list.md` into
   the spec directory and derive the rows from `06_Test-Cases.md`. Do **not**
   proceed with an absent ledger and do **not** invent rows that no TC backs.
-- **An empty ledger is not a fault.** A present file whose table has only a
-  header means `06_Test-Cases.md` declares no coverage-target TC; the validator
-  agrees (`TDDLIST_INFO`, not an error). Report "nothing to do" and exit —
-  rerunning `/qfai-sdd` would derive the same empty table and loop.
+- **An empty ledger is a fault only when `06_Test-Cases.md` disagrees.** Before
+  treating a header-only table as "nothing to do", read `06_Test-Cases.md` and
+  confirm it declares **no** coverage-target TC (`Level` `L1` / `L2`). If it
+  does, the ledger is truthfully empty: report "nothing to do" and exit —
+  rerunning `/qfai-sdd` derives the same empty table and loops. If it declares
+  coverage-target TCs, the ledger is incomplete (a partial copy or an
+  interrupted Phase 2b) and `qfai validate` reports
+  `TDDLIST_TC_NOT_COVERED`; run the recovery above instead of exiting.
 
 ## Spec Auto-Discovery Protocol
 

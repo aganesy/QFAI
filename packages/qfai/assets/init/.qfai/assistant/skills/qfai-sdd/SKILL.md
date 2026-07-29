@@ -197,13 +197,13 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase, and freeze root `DESIGN.md` per the Phase 0 DESIGN.md Freeze step below).
 5. Phase 1: Outline (`_policies/01..11`).
 6. Phase 2: Slice (per spec, gate each).
-7. Phase 2b: Seed each target spec's `tdd/test-list.md` from
-   `06_Test-Cases.md` — one row per coverage-target TC, `Status = todo`. Copy
-   `templates/specs/spec/tdd/test-list.md` when the file does not exist. This
-   is the ledger `/qfai-implement` selects from; without it that stage starts
-   with zero selectable items. **Seeding is a delta, not a regeneration**: a TC
-   that already has a row keeps its `TDD-ID`, `Status`, `Test file`, `Selector`,
-   `DR-ID` and `Evidence`, and only TCs with no row yet are appended at `todo`.
+7. Phase 2b: Seed each target spec's `tdd/test-list.md` from `06_Test-Cases.md`
+   — one row per coverage-target TC, `Status = todo`; copy
+   `templates/specs/spec/tdd/test-list.md` when absent. Without it
+   `/qfai-implement` starts with zero selectable items. **Seeding is a delta,
+   not a regeneration, in both directions**: unchanged rows keep their state,
+   new TCs append at `todo`, and changed / removed TCs are reset or retired
+   under the upstream-reset rule (`references/sdd-phase-checklists.md`).
 8. Phase 3: Plan finalize (after at least one slice gate passes).
 9. Phase 4: Delta update.
 10. Run validate; fix source-layer artifacts and rerun until `error=0`.
