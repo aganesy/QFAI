@@ -5,10 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import {
-  collapseIdRuns,
-  validateLayerCoverage,
-} from "../../src/core/validators/layerCoverage.js";
+import { collapseIdRuns, validateLayerCoverage } from "../../src/core/validators/layerCoverage.js";
 
 describe("validateLayerCoverage", () => {
   it("emits error when a US has no AC child", async () => {
