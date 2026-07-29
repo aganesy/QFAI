@@ -119,7 +119,11 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const legacyOnDisk = !legacyWriteEnabled
     ? await pathExists(path.join(root, LEGACY_VALIDATE_JSON_REL))
     : false;
-  const emitDeprecationIssue = legacyWriteEnabled || legacyOnDisk || configTargetsLegacyPath;
+  // A scoped run writes no shared report at all, so the writer-side notice
+  // would describe a deprecated write that never happens — and fail an
+  // otherwise-clean slice gate under `--strict` / `--fail-on warning`.
+  const emitDeprecationIssue =
+    scopedSpecIds.length === 0 && (legacyWriteEnabled || legacyOnDisk || configTargetsLegacyPath);
   // Post-sunset, refuse to write to the configured legacy path. This is
   // the migration gate: the legacy SSOT is dead, the config must be
   // updated. Pre-sunset writes proceed normally (writer-side warning).
@@ -218,9 +222,14 @@ export function scopedReportPath(configuredPath: string, specIds: readonly strin
   const dot = base.lastIndexOf(".");
   const stem = dot === -1 ? base : base.slice(0, dot);
   const ext = dot === -1 ? "" : base.slice(dot);
-  const suffix = Array.from(new Set(specIds.map((id) => normalizeSpecId(id) ?? id)))
-    .sort()
-    .join("+");
+  // Only normalized ids reach the path. An unnormalizable value would be raw
+  // user input in a filename — `--spec x/../../../outside` escapes the report
+  // directory once `path.resolve` runs — and the run already fails with
+  // QFAI-SCOPE-001, so there is nothing legitimate to name it after.
+  const normalizedIds = specIds
+    .map((id) => normalizeSpecId(id))
+    .filter((id): id is string => id !== null);
+  const suffix = Array.from(new Set(normalizedIds)).sort().join("+");
   return `${dir}${stem}.spec-${suffix}${ext}`;
 }
 

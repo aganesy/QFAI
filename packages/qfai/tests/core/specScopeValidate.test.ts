@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -127,6 +127,17 @@ describe("scopedReportPath", () => {
     );
     expect(scopedReportPath("custom/report.json", ["0003"])).toBe("custom/report.spec-0003.json");
   });
+
+  it("never puts an unnormalizable value into the path", () => {
+    // `--spec x/../../../outside` would escape the report directory once
+    // `path.resolve` runs; the run already fails with QFAI-SCOPE-001.
+    expect(scopedReportPath(".qfai/report/validate.json", ["x/../../../outside"])).toBe(
+      ".qfai/report/validate.spec-.json",
+    );
+    expect(scopedReportPath(".qfai/report/validate.json", ["0003", "../evil"])).toBe(
+      ".qfai/report/validate.spec-0003.json",
+    );
+  });
 });
 
 describe("runValidate --spec report isolation", () => {
@@ -147,6 +158,36 @@ describe("runValidate --spec report isolation", () => {
       expect(written).not.toContain("validate.json");
       expect(written).not.toContain("validate-sdd.json");
       await expect(readdir(path.join(root, ".qfai", "output"))).rejects.toThrow();
+    });
+  });
+
+  it("does not warn about a legacy write a scoped run never performs", async () => {
+    // The writer-side D-DEPRECATED-PATH would otherwise fail an
+    // otherwise-clean slice gate under --strict / --fail-on warning.
+    await withProject(async (root) => {
+      await runValidate({
+        root,
+        strict: false,
+        profile: "sdd",
+        specIds: ["0003"],
+        toolVersionOverride: "1.9.2",
+      });
+
+      const body: unknown = JSON.parse(
+        await readFile(path.join(root, ".qfai/report/validate.spec-0003.json"), "utf-8"),
+      );
+      const issues =
+        typeof body === "object" && body !== null && "issues" in body ? body.issues : [];
+      expect(Array.isArray(issues)).toBe(true);
+      expect(
+        (Array.isArray(issues) ? issues : []).some(
+          (entry) =>
+            typeof entry === "object" &&
+            entry !== null &&
+            "code" in entry &&
+            entry.code === "D-DEPRECATED-PATH",
+        ),
+      ).toBe(false);
     });
   });
 
