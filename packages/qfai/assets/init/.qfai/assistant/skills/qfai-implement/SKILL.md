@@ -329,8 +329,8 @@ Each TDD item MUST have fresh evidence containing at minimum:
 
 - [ ] CRITICAL CONSTRAINTS were followed.
 - [ ] Each item was processed one test at a time.
-- [ ] Red phase: test was written and confirmed to fail.
-- [ ] Green phase: minimal code was written and test confirmed to pass.
+- [ ] Red phase: test was written and confirmed to fail — or, on the _RED not observable_ path, the correct test was written first and the falsifiability trio replaces the natural RED (`references/red-not-observable.md`).
+- [ ] Green phase: test confirmed to pass, with the minimal production code that made it pass — waived on the _RED not observable_ path, where the `Satisfied-by` row already implements the predicate.
 - [ ] Refactor phase: code improved with tests still passing.
 - [ ] `test-list.md` statuses are accurate.
 - [ ] No backward transitions occurred.
@@ -381,5 +381,5 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 project_memory:
 
 - One TDD item at a time from test-list.md; status lifecycle is forward-only (todo → red → green → refactor → done); exception requires DR-ID.
-- Fresh RED + GREEN command/result evidence is mandatory per item; status-only evidence (e.g. "Status: PASS") is rejected.
+- Fresh RED + GREEN command/result evidence is mandatory per item, except on the _RED not observable_ path where `Satisfied-by` + falsifiability command/result replace the RED pair (exclusive alternative, never both); status-only evidence (e.g. "Status: PASS") is rejected.
 - UI-affecting items require product-surface-reviewer prototype-parity PASS before the item can transition to done.

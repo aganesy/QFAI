@@ -65,6 +65,36 @@ describe("an unobservable RED has a non-anomalous outcome", () => {
       );
     });
 
+    it(`${tree}: the closing checklist and the memory context carry the exception`, async () => {
+      // These are the surfaces an agent re-reads at the end of a run. Left
+      // absolute, they force either an unclosable item or a fabricated RED.
+      const skill = await read(tree, SKILL);
+      const checklist = skill.slice(
+        skill.indexOf("## FINAL CHECKLIST"),
+        skill.indexOf("## Completion Checklist"),
+      );
+      expect(checklist).toContain("_RED not observable_");
+      expect(checklist).not.toContain("- [ ] Red phase: test was written and confirmed to fail.");
+      expect(checklist).not.toContain(
+        "- [ ] Green phase: minimal code was written and test confirmed to pass.",
+      );
+
+      const memory = skill.slice(skill.indexOf("project_memory:"));
+      expect(memory).toContain("_RED not observable_");
+      expect(memory).not.toContain(
+        "Fresh RED + GREEN command/result evidence is mandatory per item; status-only",
+      );
+
+      // The constitution states the same obligation for every skill.
+      const workflow = await read(tree, "assistant/constitution/workflow.md");
+      expect(workflow).toContain("references/red-not-observable.md");
+      expect(workflow).toContain("Weakening a correct test to manufacture a RED is forbidden.");
+
+      const reference = await read(tree, REFERENCE);
+      expect(reference).toContain("**The `FINAL CHECKLIST` Red and Green boxes**");
+      expect(reference).toContain("**`project_memory` and `constitution/workflow.md`**");
+    });
+
     it(`${tree}: the evidence contract states the two forms are exclusive`, async () => {
       const skill = await read(tree, SKILL);
       expect(skill).toContain("**Exclusive alternative**");

@@ -54,6 +54,13 @@ unable to reach `done`.
   falsifiability form as the minimum evidence for this row.
 - **The completion prohibition** "No RED fresh evidence exists for the item"
   does not apply to a row carrying falsifiability evidence.
+- **The `FINAL CHECKLIST` Red and Green boxes** are ticked by this path's
+  substitutes: the falsifiability trio for Red, and the observed pass with no
+  new production code for Green.
+- **`project_memory` and `constitution/workflow.md`** restate "fresh RED +
+  GREEN evidence is mandatory per item"; both now carry this path's exception,
+  so a run that reloads only its memory context does not re-impose the RED pair
+  and force a fabricated failure.
 
 Every other gate item is unchanged: GREEN must still be observed, refactor
 must still be verified, and both blocking reviewers must still return PASS.
