@@ -437,6 +437,11 @@ function validateLayeredHeuristics(entry: SpecEntry, data: LayeredEdgeData): Iss
  * Silent when `scMustHaveTest` is off (the gate is deliberately disabled) or when the project
  * has no spec pack at all (nothing to trace yet).
  */
+/** Message half of a caught scan error, without leaking a stack trace into a finding. */
+function formatScanError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 async function validateTestFileGlobsConfiguration(
   root: string,
   config: QfaiConfig,
@@ -467,18 +472,41 @@ async function validateTestFileGlobsConfiguration(
     ];
   }
 
-  const scan = await collectFilesByGlobs(root, {
-    globs: normalizeGlobs(globs),
-    ignore: Array.from(
-      new Set([
-        ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
-        ...normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
-      ]),
-    ),
-    limit: DEFAULT_GLOB_FILE_LIMIT,
-  }).catch(() => null);
+  let scan: Awaited<ReturnType<typeof collectFilesByGlobs>>;
+  try {
+    scan = await collectFilesByGlobs(root, {
+      globs: normalizeGlobs(globs),
+      ignore: Array.from(
+        new Set([
+          ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+          ...normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
+        ]),
+      ),
+      limit: DEFAULT_GLOB_FILE_LIMIT,
+    });
+  } catch (error) {
+    // A scan that throws — an invalid pattern (`[" "]` is valid YAML but makes
+    // fast-glob throw) or a filesystem error — means the gate could not run at
+    // all. Swallowing it returned "no finding", which reads as "configuration
+    // fine" and let `--fail-on error` pass over a gate that never executed.
+    // `doctor.ts` already reports this class as `error`; validate now agrees.
+    return [
+      issue(
+        "QFAI-TRACE-124",
+        `validation.traceability.testFileGlobs の走査に失敗しました ` +
+          `(globs: ${globs.join(", ")}): ${formatScanError(error)}。` +
+          `パターンが不正か、ファイルシステムエラーです。SC のコード参照検査は実行されていません。`,
+        "error",
+        configPath,
+        "traceability.layered.testFileGlobsScanFailed",
+        globs,
+        "canonical",
+        fix,
+      ),
+    ];
+  }
 
-  if (scan === null || scan.files.length > 0) {
+  if (scan.files.length > 0) {
     return [];
   }
 
