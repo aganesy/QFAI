@@ -14,39 +14,63 @@ A checkpoint boundary is reached in exactly two places:
 
 No other point is a checkpoint boundary. There is no "every N items" rule.
 
-## Verification command set
+## Verification command set (per item)
 
 Run all of the following from the repository root, in order. Substitute the project's own runner for
 the placeholders; record the literal commands actually executed in evidence.
 
-1. The item's own selector — `<test runner> <Selector>` for the item just completed.
-2. The full test suite — `<test runner>` with no selector.
+1. The item's own test — the ledger's `Test file` **plus** the runner's test-name option applied to
+   the ledger's `Selector`. The `Selector` is a test NAME, and every common runner takes a name
+   through a flag, not a positional argument: a positional is a file filter. Vitest and Jest use
+   `-t`, pytest uses `-k`, `go test` uses `-run`. For vitest:
+
+   ```bash
+   <test runner> <Test file> -t '<Selector>'
+   ```
+
+   Passing the selector positionally (`<test runner> '<Selector>'`) exits 1 with "No test files
+   found", so the checkpoint would fail on every item and none could leave `refactor`.
+
+2. The full test suite — `<test runner>` with no file filter and no test-name option.
 3. The project's static gates, when the repository defines them — formatter check, linter, and type
    check.
 4. `npx qfai validate --profile tdd --fail-on error` — qfai is a project dependency, not a global
    command; a bare `qfai …` is `command not found` (exit 127) on a normal local install, which would
    fail every checkpoint.
 
+## Verification command set (per spec)
+
+The spec-level boundary has no "item just completed" — a re-run in a later session has none, and
+under parallel slices the ledger order does not identify one either. So step 1 is dropped: the
+spec-level set is steps 2, 3 and 4 only. Everything step 1 would have proved is already covered by
+the full suite.
+
 ## Pass criteria
 
-Checkpoint verification PASSES only when **every** command in the set exits 0, and step 4 reports
-zero `QFAI-TEST-001` findings. Any non-zero exit is a FAIL: the item stays at `refactor`, and the
-failure is fixed and the whole set re-run. A partial run is not a pass.
+Checkpoint verification PASSES only when **every** command in the applicable set exits 0, and step 4
+reports zero `QFAI-TEST-001` findings. Any non-zero exit is a FAIL: for a per-item checkpoint the
+item stays at `refactor`, the failure is fixed, and the whole set is re-run. A partial run is not a
+pass.
 
 ## Spec-level boundary on an already-complete ledger
 
-The per-spec boundary is owed once per ledger state, not once per session. Two cases leave it
-unrecorded:
+A ledger is **terminal** when every row is `done` or a valid `exception` — the same condition the
+spec completion conditions use. The last row reaching `exception` ends the loop exactly as `done`
+does, so both must reach this boundary.
 
-- the run was interrupted between the last item reaching `done` and the spec-level verification;
-- `/qfai-implement` is re-run against a ledger whose rows are already all `done`.
+The per-spec boundary is owed once per terminal ledger state, not once per session. Two cases leave
+it unrecorded:
 
-In both, the skill's "all items `done` -> nothing to do" exit would skip the boundary permanently,
-and no later re-run could repair it. So before that exit: read
+- the run was interrupted between the last row reaching its terminal status and the spec-level
+  verification;
+- `/qfai-implement` is re-run against a ledger that is already terminal.
+
+In both, an unconditional "nothing to do" exit would skip the boundary permanently, and no later
+re-run could repair it — a re-run finds no `todo` rows to process either. So before that exit: read
 `.qfai/evidence/implement-<spec-id>.md` for spec-level `Checkpoint verification command` /
-`Checkpoint verification result` entries covering the current ledger state. Run the command set
-above and record them when they are absent, or when they predate the last ledger change. Only then
-report "nothing to do".
+`Checkpoint verification result` entries covering the current ledger state. Run the **per spec**
+command set above and record them when they are absent, or when they predate the last ledger
+change. Only then report "nothing to do".
 
 ## Evidence
 

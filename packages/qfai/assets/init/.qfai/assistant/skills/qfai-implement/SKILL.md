@@ -60,11 +60,12 @@ Skill-specific examples:
 - The `exception` status can be reached from any active status when an anomaly is detected.
 - Backward transitions are prohibited (e.g., `green` -> `red` is not allowed).
 - Completed items (`done`) are skipped on re-execution.
-- When all items are `done`, the per-item work is finished but the **spec-level checkpoint boundary**
-  may still be owed — an interrupted run, or a re-run of an already-complete ledger, leaves it
-  unrecorded. Before reporting "nothing to do" and exiting, confirm fresh spec-level checkpoint
-  verification evidence exists for this ledger state; run the verification first when it is missing
-  or stale. See `references/checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`.
+- When every item is terminal (`done` or a valid `exception`) the per-item work is finished, but the
+  **spec-level checkpoint boundary** may still be owed — an interrupted run, or a re-run of an
+  already-terminal ledger, leaves it unrecorded. Before reporting "nothing to do" and exiting,
+  confirm fresh spec-level checkpoint verification evidence exists for this ledger state; run the
+  per-spec verification first when it is missing or stale. See
+  `references/checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`.
 
 ## Goal
 
