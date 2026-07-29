@@ -56,7 +56,13 @@ describe("deriving a TC's layer is a published procedure", () => {
         expect(catalog).toContain(code);
       }
       expect(catalog).toContain("**A `TC-*` row's `Level` stays within L1–L3.**");
-      expect(catalog).toContain("**An L1/L2 `Level` does not relax `QFAI-ATDD-112`.**");
+      expect(catalog).toContain(
+        "**An L1/L2 `Level` does not relax `QFAI-ATDD-112`, and the gate does not\n  change the `Level`.**",
+      );
+      // The derived Level records the oracle; it must not depend on whether an
+      // integration test happens to exist yet.
+      expect(catalog).toContain("Never rewrite a derived L1/L2 to L3");
+      expect(catalog).toContain("depend on implementation order");
     });
 
     it(`${tree}: the gates cite the procedure`, async () => {
@@ -72,6 +78,9 @@ describe("deriving a TC's layer is a published procedure", () => {
       );
       expect(sdd).toContain("a `TC-*`'s `Level` is **not** a constant");
       expect(sdd).toContain("keeping the row inside L1–L3");
+      expect(sdd).toContain(
+        "A missing `tests/integration/**` trace never rewrites a derived `Level`.",
+      );
     });
 
     it(`${tree}: the TC template points authors at the procedure`, async () => {

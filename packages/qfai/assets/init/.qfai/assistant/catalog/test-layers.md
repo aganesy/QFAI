@@ -93,11 +93,14 @@ routes by obligation ID: `US-*` is answered from `tests/e2e/**`
   L5's goal is `US-*` (see the layer definitions above), so an oracle that
   derives to L4 or L5 means the obligation is misfiled, not that the TC is an
   L4/L5 test. Re-file it as `CON-API-*` or `US-*` and remove the `TC-*` row.
-- **An L1/L2 `Level` does not relax `QFAI-ATDD-112`.** The
+- **An L1/L2 `Level` does not relax `QFAI-ATDD-112`, and the gate does not
+  change the `Level`.** The two are independent: the `Level` records what the
+  oracle observes and is derived before any test exists, while the
   `QFAI:SPEC-XXXX:TC-YYYY` annotation is still owed to `tests/integration/**`.
-  Declare L1 or L2 only when that integration-level trace exists; otherwise
-  keep the row at L3, because a spec whose TC has no integration reference
-  cannot pass `qfai validate --fail-on error`.
+  Never rewrite a derived L1/L2 to L3 because no integration trace exists yet —
+  that would make the recorded oracle depend on implementation order and hide
+  the unit/component work `/qfai-implement` selects. The missing annotation is
+  an open ATDD obligation to satisfy, not evidence that the `Level` was wrong.
 
 ## TestKind resolution (single source)
 
