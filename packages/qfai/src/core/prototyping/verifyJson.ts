@@ -1,4 +1,4 @@
-import { lstat, readFile } from "node:fs/promises";
+import { lstat, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 /**
@@ -64,6 +64,65 @@ function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+const toPosix = (value: string): string => value.replace(/\\/g, "/");
+
+/**
+ * Reason the path's directory chain is broken, or `null` when every ancestor
+ * below `root` is a real, traversable directory (or simply not created yet).
+ *
+ * `lstat` on the full path only inspects the last component. When an
+ * *ancestor* is a dangling symlink — `.qfai/report` pointing at a directory
+ * that no longer exists — both `readFile` and `lstat` on the leaf report
+ * ENOENT, which is indistinguishable from "the gate file was never written".
+ * Walking the chain separates the two, so a broken canonical route stops the
+ * lookup instead of falling through to a stale legacy `status: "PASS"`.
+ */
+async function describeBrokenAncestor(root: string, absolutePath: string): Promise<string | null> {
+  const rootAbs = path.resolve(root);
+  const relative = path.relative(rootAbs, path.dirname(absolutePath));
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    // The artifact lives outside the project root; there is no chain we own.
+    return null;
+  }
+
+  let current = rootAbs;
+  for (const segment of relative.split(path.sep)) {
+    if (segment.length === 0 || segment === ".") continue;
+    current = path.join(current, segment);
+    const rel = toPosix(path.relative(rootAbs, current));
+
+    let link;
+    try {
+      link = await lstat(current);
+    } catch (error: unknown) {
+      if (isFileNotFound(error)) {
+        // Nothing here at all — the report tree simply has not been created.
+        return null;
+      }
+      return `${rel} cannot be inspected (${describeError(error)})`;
+    }
+
+    if (!link.isSymbolicLink()) {
+      // A regular file in the middle makes `readFile` fail with ENOTDIR, which
+      // the non-ENOENT branch already reports; nothing to add here.
+      continue;
+    }
+
+    try {
+      const target = await stat(current);
+      if (!target.isDirectory()) {
+        return `${rel} is a symlink to a non-directory`;
+      }
+    } catch (error: unknown) {
+      if (isFileNotFound(error)) {
+        return `${rel} is a dangling symlink`;
+      }
+      return `${rel} cannot be resolved (${describeError(error)})`;
+    }
+  }
+  return null;
+}
+
 function describePayload(value: unknown): string {
   if (value === null) return "null";
   return Array.isArray(value) ? "an array" : typeof value;
@@ -77,7 +136,7 @@ function describePayload(value: unknown): string {
  * indistinguishable from an absent one, so a stale legacy file left behind by
  * a migration could hand `certify` an obsolete `status: "PASS"`.
  */
-async function loadVerifyPayload(absolutePath: string): Promise<LoadOutcome> {
+async function loadVerifyPayload(root: string, absolutePath: string): Promise<LoadOutcome> {
   let raw: string;
   try {
     raw = await readFile(absolutePath, "utf-8");
@@ -90,6 +149,13 @@ async function loadVerifyPayload(absolutePath: string): Promise<LoadOutcome> {
       // would fall through to a stale legacy `status: "PASS"`.
       if (await entryExists(absolutePath)) {
         return { kind: "unreadable", reason: "path exists but cannot be read (dangling symlink?)" };
+      }
+      // The leaf check only sees the last component. A dangling symlink at an
+      // *ancestor* also surfaces as ENOENT on both calls, so walk the chain
+      // before concluding the file was simply never written.
+      const broken = await describeBrokenAncestor(root, absolutePath);
+      if (broken !== null) {
+        return { kind: "unreadable", reason: `path is unreachable: ${broken}` };
       }
       return { kind: "absent" };
     }
@@ -122,7 +188,7 @@ async function loadVerifyPayload(absolutePath: string): Promise<LoadOutcome> {
  * certify a run whose real gate result was never readable.
  */
 export async function readVerifyJson(root: string): Promise<VerifyJsonRead> {
-  const canonical = await loadVerifyPayload(path.resolve(root, VERIFY_JSON_REL));
+  const canonical = await loadVerifyPayload(root, path.resolve(root, VERIFY_JSON_REL));
   if (canonical.kind === "ok") {
     return { source: "canonical", rel: VERIFY_JSON_REL, json: canonical.json, error: null };
   }
@@ -130,7 +196,7 @@ export async function readVerifyJson(root: string): Promise<VerifyJsonRead> {
     return { source: "unreadable", rel: VERIFY_JSON_REL, json: null, error: canonical.reason };
   }
 
-  const legacy = await loadVerifyPayload(path.resolve(root, VERIFY_JSON_LEGACY_REL));
+  const legacy = await loadVerifyPayload(root, path.resolve(root, VERIFY_JSON_LEGACY_REL));
   if (legacy.kind === "ok") {
     return { source: "legacy", rel: VERIFY_JSON_LEGACY_REL, json: legacy.json, error: null };
   }

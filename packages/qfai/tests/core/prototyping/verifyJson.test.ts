@@ -135,6 +135,44 @@ describe("readVerifyJson", () => {
     );
   });
 
+  it("treats a dangling symlink at an ancestor as unreadable, not absent", async () => {
+    // The leaf `lstat` cannot see this: with `.qfai/report` itself a broken
+    // link, both `readFile` and `lstat` on `.qfai/report/verify.json` report
+    // ENOENT, so the canonical route looked simply "not written yet" and the
+    // stale legacy PASS was handed to certify.
+    await withRoot(
+      { [VERIFY_JSON_LEGACY_REL]: JSON.stringify({ status: "PASS" }) },
+      async (root) => {
+        const reportDir = path.join(root, ".qfai", "report");
+        await mkdir(path.dirname(reportDir), { recursive: true });
+        try {
+          await symlink(path.join(root, "no-such-dir"), reportDir, "dir");
+        } catch {
+          // Windows without developer mode refuses symlink creation; the
+          // behaviour under test is unreachable there.
+          return;
+        }
+
+        const read = await readVerifyJson(root);
+        expect(read.source).toBe("unreadable");
+        expect(read.rel).toBe(VERIFY_JSON_REL);
+        expect(read.error).toContain(".qfai/report is a dangling symlink");
+        expect(read.json).toBeNull();
+      },
+    );
+  });
+
+  it("still reports missing when the report directory simply does not exist", async () => {
+    // The ancestor walk must not turn an ordinary fresh project into a hard
+    // stop: nothing at all on the canonical path is still `missing`.
+    await withRoot({}, async (root) => {
+      const read = await readVerifyJson(root);
+      expect(read.source).toBe("missing");
+      expect(read.rel).toBe(VERIFY_JSON_REL);
+      expect(read.error).toBeNull();
+    });
+  });
+
   it("treats a directory at the canonical path as unreadable, not absent", async () => {
     // Not ENOENT: something occupies the path and cannot be read, so the
     // fallback must not fire.
