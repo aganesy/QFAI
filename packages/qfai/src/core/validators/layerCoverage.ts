@@ -539,7 +539,16 @@ function findUncoveredIds(counts: Map<string, number>): string[] {
  * `qfai-sdd/SKILL.md` and the `warning_signal` entry in `review-gate.rules.yml`
  * refer to something the report actually contains.
  */
-const THIN_COVERAGE_SIGNAL_CODE = "QFAI-COV-207";
+export const THIN_COVERAGE_SIGNAL_CODE = "QFAI-COV-207";
+
+/**
+ * Single definition of what `QFAI-COV-207` means, so the specs-coverage report
+ * and the validate issue catalog cannot drift apart. The code originally
+ * flagged EX rows referencing multiple BR IDs; that emission was removed and
+ * the code now carries the thin-coverage signal the report actually prints.
+ */
+export const THIN_COVERAGE_SIGNAL_EXPECTATION =
+  "Artifacts covered by exactly 1 downstream case are review signals, not gate failures; triage each one in the specs-coverage report.";
 
 /**
  * Collapses a sorted ID list into contiguous runs on its trailing numeric

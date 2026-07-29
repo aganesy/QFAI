@@ -4,8 +4,14 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { resolveIssueExpected } from "../../src/cli/commands/validate.js";
 import { defaultConfig } from "../../src/core/config.js";
-import { collapseIdRuns, validateLayerCoverage } from "../../src/core/validators/layerCoverage.js";
+import {
+  THIN_COVERAGE_SIGNAL_CODE,
+  THIN_COVERAGE_SIGNAL_EXPECTATION,
+  collapseIdRuns,
+  validateLayerCoverage,
+} from "../../src/core/validators/layerCoverage.js";
 
 describe("validateLayerCoverage", () => {
   it("emits error when a US has no AC child", async () => {
@@ -605,5 +611,24 @@ describe("specs-coverage Signals section", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+
+  // The code previously meant "an EX references multiple BR IDs"; that emission
+  // was removed, and the validate issue catalog still carried the stale wording.
+  // Both surfaces now read the same exported constant, so they cannot disagree
+  // about what a reader is being asked to triage.
+  it("shares one definition of the signal code with the validate issue catalog", () => {
+    expect(THIN_COVERAGE_SIGNAL_CODE).toBe("QFAI-COV-207");
+    expect(THIN_COVERAGE_SIGNAL_EXPECTATION).toContain("exactly 1 downstream case");
+    // The retired meaning ("an EX references multiple BR IDs") must not survive.
+    expect(THIN_COVERAGE_SIGNAL_EXPECTATION).not.toContain("BR");
+
+    const expected = resolveIssueExpected({
+      code: THIN_COVERAGE_SIGNAL_CODE,
+      severity: "warning",
+      category: "change",
+      message: "thin coverage",
+    });
+    expect(expected).toBe(THIN_COVERAGE_SIGNAL_EXPECTATION);
   });
 });
