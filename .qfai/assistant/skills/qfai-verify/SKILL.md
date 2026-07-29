@@ -70,26 +70,26 @@ When unsure, read inputs in this order:
 
 Canonical path: `.qfai/output/verify.json` (NOT `.qfai/evidence/`). Create the `.qfai/output/` directory if absent.
 
-| Field        | Type              | Required | Meaning                                                                                              |
-| ------------ | ----------------- | -------- | ---------------------------------------------------------------------------------------------------- |
-| `version`    | integer           | yes      | Schema version. Currently `1`.                                                                        |
-| `status`     | string            | yes      | `"PASS"` when every gate in scope passed; `"FAIL"` otherwise. Only `"PASS"` satisfies a downstream gate. |
-| `scope`      | string            | yes      | Which stage's gate set this run covers. See the enum below.                                            |
-| `specId`     | string            | no       | The spec this run targeted, when scoped to one (e.g. `"spec-0001"`).                                   |
-| `recordedAt` | ISO-8601 string   | no       | When the run completed.                                                                                |
-| `summary`    | string            | no       | One or two sentences an operator can read without opening the evidence markdown.                       |
-| `gates`      | array of objects  | no       | Per-gate results: `{ name, status, command }`. Advisory; no reader gates on it today.                  |
+| Field        | Type             | Required | Meaning                                                                                                  |
+| ------------ | ---------------- | -------- | -------------------------------------------------------------------------------------------------------- |
+| `version`    | integer          | yes      | Schema version. Currently `1`.                                                                           |
+| `status`     | string           | yes      | `"PASS"` when every gate in scope passed; `"FAIL"` otherwise. Only `"PASS"` satisfies a downstream gate. |
+| `scope`      | string           | yes      | Which stage's gate set this run covers. See the enum below.                                              |
+| `specId`     | string           | no       | The spec this run targeted, when scoped to one (e.g. `"spec-0001"`).                                     |
+| `recordedAt` | ISO-8601 string  | no       | When the run completed.                                                                                  |
+| `summary`    | string           | no       | One or two sentences an operator can read without opening the evidence markdown.                         |
+| `gates`      | array of objects | no       | Per-gate results: `{ name, status, command }`. Advisory; no reader gates on it today.                    |
 
 `status` is a closed two-value enum: `"PASS"` / `"FAIL"`. There is no `"WARN"` — a run with only `warning` / `info` findings is `"PASS"` (waivers apply to those severities only). Any `error` finding makes it `"FAIL"`.
 
 `scope` is a closed enum. Write the one that matches the stage you were invoked for:
 
-| `scope`       | Written by                                             | validate profile                                | Accepted by                                                     |
-| ------------- | ------------------------------------------------------ | ----------------------------------------------- | --------------------------------------------------------------- |
-| `prototyping` | Work Order H of `/qfai-prototyping`, before `certify`   | `qfai validate --profile prototyping`           | `qfai prototyping certify` — this is the ONLY value it accepts    |
-| `atdd`        | after `/qfai-atdd`                                     | `qfai validate --profile verify` (= `full`)     | rejected by prototyping certify; `R-CERTIFY-VERIFY-CIRCULAR` when a prototyping loop is still active |
-| `implement`   | after `/qfai-implement`                                | `qfai validate --profile verify` (= `full`)     | same as `atdd`                                                    |
-| `full`        | a stage-independent whole-repository run                | `qfai validate --profile verify` (= `full`)     | same as `atdd`                                                    |
+| `scope`       | Written by                                            | validate profile                            | Accepted by                                                                                          |
+| ------------- | ----------------------------------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `prototyping` | Work Order H of `/qfai-prototyping`, before `certify` | `qfai validate --profile prototyping`       | `qfai prototyping certify` — this is the ONLY value it accepts                                       |
+| `atdd`        | after `/qfai-atdd`                                    | `qfai validate --profile verify` (= `full`) | rejected by prototyping certify; `R-CERTIFY-VERIFY-CIRCULAR` when a prototyping loop is still active |
+| `implement`   | after `/qfai-implement`                               | `qfai validate --profile verify` (= `full`) | same as `atdd`                                                                                       |
+| `full`        | a stage-independent whole-repository run              | `qfai validate --profile verify` (= `full`) | same as `atdd`                                                                                       |
 
 Minimal conforming example for the prototyping gate:
 
