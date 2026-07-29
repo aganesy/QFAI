@@ -85,29 +85,29 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` tracks progress with these required columns:
 
-| Column    | Description                                              |
-| --------- | -------------------------------------------------------- |
-| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)      |
-| TC-Refs   | References to test cases from `06_Test-Cases.md`. TC coverage is measured **only** from `TC-*` tokens here |
-| Layer     | Test layer. Legal values: `Unit`, `Component`, `Integration`, `API`, `E2E` |
+| Column  | Description                                                                                                |
+| ------- | ---------------------------------------------------------------------------------------------------------- |
+| TDD-ID  | Unique identifier for the TDD item (e.g., TDD-0001)                                                        |
+| TC-Refs | References to test cases from `06_Test-Cases.md`. TC coverage is measured **only** from `TC-*` tokens here |
+| Layer   | Test layer. Legal values: `Unit`, `Component`, `Integration`, `API`, `E2E`                                 |
 
 Optional columns, required when the row carries a non-TC obligation:
 
-| Column         | Description                                                          |
-| -------------- | -------------------------------------------------------------------- |
-| US-Refs        | `US-*` obligations this row implements. Legal on `Layer = E2E` rows   |
-| CON-API-Refs   | `CON-API-*` obligations this row implements. Legal on `Layer = API` rows |
+| Column       | Description                                                              |
+| ------------ | ------------------------------------------------------------------------ |
+| US-Refs      | `US-*` obligations this row implements. Legal on `Layer = E2E` rows      |
+| CON-API-Refs | `CON-API-*` obligations this row implements. Legal on `Layer = API` rows |
 
 `test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and
 `tests/api/**`, so an E2E or API row has no legal `TC-Refs` value. Those rows
 carry `-` in `TC-Refs` and record their obligation in `US-Refs` /
 `CON-API-Refs` instead. Coverage measurement is unaffected: it reads `TC-*`
 tokens only, so non-TC obligation IDs are inert to it by design.
-| Test file | Path to the test file                                    |
-| Selector  | Test selector/description for targeted execution         |
-| Status    | Current lifecycle status                                 |
-| DR-ID     | Decision Record ID for exception items (blank otherwise) |
-| Evidence  | RED/GREEN command+result pairs proving the TDD cycle     |
+| Test file | Path to the test file |
+| Selector | Test selector/description for targeted execution |
+| Status | Current lifecycle status |
+| DR-ID | Decision Record ID for exception items (blank otherwise) |
+| Evidence | RED/GREEN command+result pairs proving the TDD cycle |
 
 ### Status Lifecycle
 

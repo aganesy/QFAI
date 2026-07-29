@@ -7,8 +7,10 @@ import { describe, expect, it } from "vitest";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
 
-const BASE_HEADERS = "| TDD-ID   | TC-Refs | Layer | Test file       | Selector | Status | DR-ID | Evidence |";
-const BASE_SEP = "| -------- | ------- | ----- | --------------- | -------- | ------ | ----- | -------- |";
+const BASE_HEADERS =
+  "| TDD-ID   | TC-Refs | Layer | Test file       | Selector | Status | DR-ID | Evidence |";
+const BASE_SEP =
+  "| -------- | ------- | ----- | --------------- | -------- | ------ | ----- | -------- |";
 
 async function withLedger(
   lines: string[],
