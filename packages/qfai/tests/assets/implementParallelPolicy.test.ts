@@ -27,21 +27,22 @@ describe("qfai-implement states one parallelization policy", () => {
     it(`${tree}: separates cross-spec (barred) from item-level (governed)`, async () => {
       const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
       expect(skill).toContain("Parallel execution across multiple **specs** simultaneously");
-      const section = policy(skill);
-      expect(section).toContain("Cross-spec parallelism is barred");
-      expect(section).toContain("it is not approvable");
-      expect(section).toContain("Item-level parallelism inside one spec");
+      expect(skill).toContain("Cross-spec parallelism is barred");
+      expect(skill).toContain("it is not approvable");
+      expect(skill).toContain("Item-level parallelism inside one spec");
+      expect(skill).toContain("references/parallelization-policy.md");
     });
 
     it(`${tree}: states precedence between the technical and consent gates`, async () => {
-      const section = policy(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
-      expect(section).toContain("**both must hold**");
-      expect(section).toContain("user approval cannot override a technical DENY");
-      expect(section).toContain("sole authority for authorizing parallel");
+      const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+      expect(skill).toContain("**both must hold**");
+      expect(skill).toContain("User approval cannot
+  override a technical DENY.");
+      expect(skill).toContain("sole authority");
     });
 
     it(`${tree}: conditions are write conflicts, not existence of shared things`, async () => {
-      const section = policy(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      const section = await policy(tree);
       expect(section).toContain("concurrent write conflicts");
       expect(section).toContain("per-worker schema isolation");
       // A DI container's mere existence must no longer be a blanket deny.
@@ -54,8 +55,8 @@ describe("qfai-implement states one parallelization policy", () => {
     });
 
     it(`${tree}: defines coordinated parallel ledger ownership`, async () => {
-      const section = policy(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
-      expect(section).toContain("### Coordinated parallel mode (ledger ownership)");
+      const section = await policy(tree);
+      expect(section).toContain("## Coordinated parallel mode (ledger ownership)");
       expect(section).toContain("owns every `test-list.md` write");
       expect(section).toContain("Item 10 of the 11-point gate is satisfied by the orchestrator");
     });
@@ -66,7 +67,7 @@ describe("qfai-implement states one parallelization policy", () => {
     });
 
     it(`${tree}: worktree separation is a recommendation, not an unmeetable allow-condition`, async () => {
-      const section = policy(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      const section = await policy(tree);
       expect(section).toContain("Recommendation, not a hard\n  allow-condition");
     });
   }
