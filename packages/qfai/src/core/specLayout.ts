@@ -1,4 +1,4 @@
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "./fs/errno.js";
@@ -664,6 +664,10 @@ function normalizeRequiredFileNames(
  * result identical on every platform (matching the stricter, case-sensitive
  * behaviour), so a mis-cased required file is reported everywhere.
  *
+ * The listing is still an existence probe, not just a name probe: symlink
+ * entries are resolved (see `listExistingNames`) so a required name backed by
+ * a broken link stays missing, as it was under `access()`.
+ *
  * The `listings` map memoizes one `readdir` per directory across a single
  * collection pass.
  */
@@ -688,6 +692,17 @@ async function listExistingNames(dir: string): Promise<Set<string>> {
       if (item.isDirectory()) {
         continue;
       }
+      // A `Dirent` describes the LINK, not its target: a dangling symlink and
+      // a symlink to a directory both report `isDirectory() === false`, so
+      // taking the name at face value would count a required file that cannot
+      // be read. The previous `access()` probe followed the link and failed,
+      // and the gate must keep failing — otherwise a layout whose validators
+      // early-return without opening the file (v1417) passes the completion
+      // gate with a required file that has no content behind it. Resolve the
+      // link and keep only those that land on a regular file.
+      if (item.isSymbolicLink() && !(await resolvesToFile(path.join(dir, item.name)))) {
+        continue;
+      }
       names.add(item.name);
     }
   } catch {
@@ -695,4 +710,12 @@ async function listExistingNames(dir: string): Promise<Set<string>> {
     // every required file as missing — same as the previous access() probe.
   }
   return names;
+}
+
+async function resolvesToFile(target: string): Promise<boolean> {
+  try {
+    return (await stat(target)).isFile();
+  } catch {
+    return false;
+  }
 }
