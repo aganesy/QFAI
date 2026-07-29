@@ -52,7 +52,7 @@ Skill-specific examples:
 
 ## CRITICAL CONSTRAINTS (Read First)
 
-- This skill processes **one test at a time** from `test-list.md`.
+- This skill processes **one test at a time** from `test-list.md`: at most one row is in `red` or `green` at any moment. A T1 row parked in `refactor` waiting for its review group (see Volume Policy) does not violate this.
 - Each item goes through the full TDD micro-cycle: write a **failing test** first, then make it pass, then refactor.
 - The execution ledger is located at `.qfai/specs/<spec-id>/tdd/test-list.md`.
 - Items are processed **serially** by default. Parallel processing is allowed only when items target independent SUT slices with no shared state.
@@ -60,7 +60,7 @@ Skill-specific examples:
 - The `exception` status can be reached from any active status when an anomaly is detected.
 - Backward transitions are prohibited (e.g., `green` -> `red` is not allowed).
 - Completed items (`done`) are skipped on re-execution.
-- When all items are `done`, report "nothing to do" and exit.
+- When all items in the current ledger are `done`, report "nothing to do" for that spec, then advance to the next spec of a confirmed queue; exit when the queue is empty.
 
 ## Goal
 
@@ -140,14 +140,15 @@ When transitioning to `exception`:
 1. Improve code quality (naming, structure, duplication removal) while keeping all tests green.
 2. Run the full relevant test suite to confirm nothing broke.
 3. Transition status to `refactor`.
-4. Submit for completion review (`completion-reviewer`) and code quality review (`implementation-reviewer`).
-5. After all routed blocking reviewers return PASS, run checkpoint verification, then transition to `done`.
+4. Submit for completion review (`completion-reviewer`) and code quality review (`implementation-reviewer`). A T1 row submits with its coherent group and stays in `refactor` until the group closes (Volume Policy > Group formation).
+5. After all routed blocking reviewers return PASS, run checkpoint verification, then transition to `done` — for a T1 group, every member transitions in the same ledger write.
 
 ### Completion
 
 1. After processing all items, update `test-list.md` with final statuses.
 2. If all items are `done`, report "All items complete".
 3. If some items are `exception`, report them with their DR-IDs.
+4. If a multi-spec queue was confirmed, announce the next queued spec and restart at Phase: Red with its ledger; exit only after the last entry (Volume Policy > Advancing the queue).
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -183,10 +184,14 @@ The per-item ceremony below is written for a ledger of tens of rows. At the
 volume `/qfai-sdd` and `/qfai-atdd` routinely produce it is arithmetically
 unfinishable, and an unfinishable process is abandoned wholesale — taking the
 RED/GREEN evidence and drift discipline with it. Scale the ceremony instead:
-derive a **risk tier** per row, **batch** T1 reviews per coherent BR/AC group,
-process multiple specs as a **sequential queue**, and state the implied
-**cost** before starting. Full rules, including the tier table and the batching
-guardrails, are in `references/volume-policy.md`.
+derive a **risk tier** per row, **batch** T1 gatekeeping and reviews per
+coherent BR/AC group, process multiple specs as a **sequential queue**, and
+state the implied **cost** before starting. The tier scales how **often** a gate
+runs, never **whether** it runs: `agent-routing.yml` keeps `qa-gatekeeper`,
+`completion-reviewer` and `implementation-reviewer` mandatory and blocking, and
+criticality (authz, crypto, money, data integrity) forces T2 regardless of
+layer. Full rules, including the tier table, the group-formation transitions and
+the queue-advance steps, are in `references/volume-policy.md`.
 
 ### Handoff Contracts
 
@@ -198,6 +203,7 @@ All agent-to-agent transitions follow these contracts:
 4. After GREEN, implementation agent submits the item to `completion-reviewer` for spec alignment and to `implementation-reviewer` for code quality review.
 5. `product-surface-reviewer` is added when the item affects UI behavior or rendered output.
 6. Only after all routed blocking reviewers pass may the item transition to `done`.
+7. For T1 rows the submitted unit in steps 2-4 is the coherent group, not the row; every routed blocking agent still runs, once per group. T2/T3 rows submit alone.
 
 ### Capability Probe (MUST)
 
@@ -257,7 +263,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-fai
 
 ### Item completion checklist (11-point gate)
 
-An item in `test-list.md` may transition to `done` only when ALL of the following are satisfied:
+An item in `test-list.md` may transition to `done` only when ALL of the following are satisfied. For T1 rows, items 3, 5, 7 and 8 are satisfied by the confirmation covering the row's coherent group; they are never waived.
 
 1. Corresponding `TDD-ID` has been selected and is in progress
 2. A failing test was added first (test-first)
