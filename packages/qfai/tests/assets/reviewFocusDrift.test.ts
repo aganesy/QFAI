@@ -27,6 +27,13 @@ const discussionRoots = [
  */
 const RETIRED_CRITERIA = ["taste interview", "3-layer", "option comparison", "selected anchor"];
 
+/**
+ * Live criteria the recut must NOT drop. Trend Scan was not retired — only its
+ * sidecar was; the SSOT moved to `04_Sources.md#Trend Scan`
+ * (`references/ui-bearing-playbook.md`).
+ */
+const RETAINED_CRITERIA = ["04_Sources.md#Trend Scan"];
+
 const REVIEW_FORMS = [
   path.join("templates", "review", "review_request.md"),
   path.join("templates", "review", "Rxx_reviewer.md"),
@@ -73,6 +80,26 @@ describe("shipped review forms track the canonical UI-bearing review focus", () 
             `${form} still names the retired criterion "${criterion}"`,
           ).toBe(false);
         }
+      }
+    });
+
+    it(`${label}: the live Trend Scan check survives the recut`, async () => {
+      for (const form of REVIEW_FORMS) {
+        const content = await readFile(path.join(discussionRoot, form), "utf-8");
+        for (const criterion of RETAINED_CRITERIA) {
+          expect(content, `${form} dropped the live criterion "${criterion}"`).toContain(criterion);
+        }
+      }
+    });
+
+    it(`${label}: no review form asks for a single visual winner`, async () => {
+      // qfai-discussion forbids choosing one, and qfai-prototyping accepts the
+      // latest iteration with no best-of-history, so the old bullet was
+      // unsatisfiable.
+      for (const form of REVIEW_FORMS) {
+        const content = await readFile(path.join(discussionRoot, form), "utf-8");
+        expect(content).not.toContain("Best-of-history handling and winner selection consistency");
+        expect(content).toContain("no single visual winner was selected");
       }
     });
 
