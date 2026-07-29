@@ -31,11 +31,14 @@ async function loadContent(): Promise<string> {
 }
 
 // QFAI:SPEC-0011:TC-0011-0005
-describe("11-point checklist end-to-end enforcement", () => {
-  it("defines an 11-point item completion checklist", async () => {
+describe("item completion checklist end-to-end enforcement", () => {
+  it("defines a numbered item completion checklist", async () => {
     const c = await loadContent();
-    expect(c).toMatch(/11-point/i);
-    // Must contain all 11 gate items
+    // #251 split the evidence write into its own gate point, so the count in
+    // the heading is not fixed at 11. The obligation is that the checklist
+    // exists and covers every gate item below.
+    expect(c).toMatch(/Item completion checklist \(\d+-point gate\)/i);
+    // Must contain every gate item
     expect(c).toMatch(/TDD-ID.*selected|selected.*TDD-ID/i);
     expect(c).toMatch(/failing test.*first|test.first/i);
     expect(c).toMatch(/RED.*observed|watch it fail/i);
