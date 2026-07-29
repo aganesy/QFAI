@@ -17,6 +17,12 @@ function cells(row: string): string[] {
     .map((cell) => cell.trim());
 }
 
+/**
+ * Collapse markdown soft wraps so assertions pin wording, not the column at
+ * which prettier happened to break the line.
+ */
+const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
+
 describe("04_Business-Rules.md gives contract references a typed column", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: the Rule Table declares Contract-Refs`, async () => {
@@ -35,12 +41,27 @@ describe("04_Business-Rules.md gives contract references a typed column", () => 
         "NFR-Refs",
       ]);
 
-      // The sample row must demonstrate the column, not leave a bare placeholder.
-      expect(cells(rows[2])[header.indexOf("Contract-Refs")]).toMatch(/^CON-[A-Z]+-\d{4}$/);
+      // The sample row must demonstrate the column, not leave a bare
+      // placeholder, and only with a kind the toolchain actually recognises.
+      expect(cells(rows[2])[header.indexOf("Contract-Refs")]).toMatch(/^CON-(?:API|DB|UI)-\d{4}$/);
+    });
+
+    it(`${tree}: only offers the contract kinds the toolchain recognises`, async () => {
+      const content = unwrap(await readFile(path.join(repoRoot, tree, TEMPLATE), "utf-8"));
+      // `specPackIds.ts` and `contractReferences.ts` both match
+      // `CON-(API|DB|UI)-N` only, so any other kind an author copies from this
+      // template is silently untracked.
+      expect(content).toContain("`CON-API-*`, `CON-DB-*` and `CON-UI-*`");
+      expect(content).toContain("`CON-API-0001`, `CON-DB-0002`, `CON-UI-0003`");
+      const exampleIds = content.match(/\bCON-[A-Z]+-\d{4}\b/g) ?? [];
+      expect(exampleIds.length).toBeGreaterThan(0);
+      for (const id of exampleIds) {
+        expect(id).toMatch(/^CON-(?:API|DB|UI)-\d{4}$/);
+      }
     });
 
     it(`${tree}: the template states the delimiter convention and demotes Notes`, async () => {
-      const content = await readFile(path.join(repoRoot, tree, TEMPLATE), "utf-8");
+      const content = unwrap(await readFile(path.join(repoRoot, tree, TEMPLATE), "utf-8"));
       expect(content).toContain("## Reference Column Conventions");
       expect(content).toContain("comma-separated list of IDs");
       expect(content).toContain("Do not put contract IDs in `Notes`.");

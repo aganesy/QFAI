@@ -10,9 +10,13 @@
 - `AC-Refs`, `NFR-Refs` and `Contract-Refs` are typed reference columns. Each
   holds a comma-separated list of IDs and nothing else — no prose, no
   parentheses, no trailing commentary.
-- `Contract-Refs` holds the contract IDs this rule is bound by:
-  `CON-API-0001`, `CON-DB-0002`, `CON-EVT-0003`, … Use `-` when the rule binds
-  no contract. Do not put contract IDs in `Notes`.
+- `Contract-Refs` holds the contract IDs this rule is bound by. The supported
+  kinds are exactly `CON-API-*`, `CON-DB-*` and `CON-UI-*` — for example
+  `CON-API-0001`, `CON-DB-0002`, `CON-UI-0003`. Any other kind is silently
+  untracked: `specPackIds.ts` and `contractReferences.ts` only recognise these
+  three, so an invented kind such as `CON-EVT-*` is neither declarable nor
+  traceable. Use `-` when the rule binds no contract. Do not put contract IDs
+  in `Notes`.
 - `Notes` is free prose. IDs written there are **not** traced by any tool and
   must not be the only place an obligation is recorded.
 
