@@ -18,7 +18,7 @@ const tcTable = (level: string): string =>
   ].join("\n");
 
 async function withProject(
-  opts: { testCases: string; annotationIn: "integration" | "api" },
+  opts: { testCases: string; annotationIn: "integration" | "api" | "e2e" },
   assertion: (issues: Awaited<ReturnType<typeof validateAtddCodeTraceability>>) => void,
 ): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tc-routing-"));
@@ -75,6 +75,70 @@ describe("the TC obligation routes by declared Level", () => {
 
     await withProject({ testCases: noLevel, annotationIn: "integration" }, (issues) => {
       expect(codes(issues)).not.toContain("QFAI-ATDD-112");
+    });
+  });
+
+  it("counts an L5 TC annotated in tests/e2e and does not forbid it", async () => {
+    await withProject({ testCases: tcTable("L5"), annotationIn: "e2e" }, (issues) => {
+      expect(codes(issues)).not.toContain("QFAI-ATDD-122");
+      expect(codes(issues)).not.toContain("QFAI-ATDD-112");
+    });
+  });
+
+  it("still forbids an L3 TC annotated in tests/e2e", async () => {
+    await withProject({ testCases: tcTable("L3"), annotationIn: "e2e" }, (issues) => {
+      expect(codes(issues)).toContain("QFAI-ATDD-122");
+    });
+  });
+
+  it("reads the Level from a later TC-ID table, not only the first", async () => {
+    // A split catalogue: the first table has no Level column at all.
+    const splitTables = [
+      "# 06 Test Cases",
+      "",
+      "| TC-ID   | AC-Refs | Notes  |",
+      "| ------- | ------- | ------ |",
+      "| TC-0002 | AC-0002 | note-2 |",
+      "",
+      "## Second table",
+      "",
+      "| TC-ID   | Level | AC-Refs | Notes  |",
+      "| ------- | ----- | ------- | ------ |",
+      "| TC-0001 | L4    | AC-0001 | note-1 |",
+      "",
+    ].join("\n");
+
+    await withProject({ testCases: splitTables, annotationIn: "api" }, (issues) => {
+      const missing = issues.find((entry) => entry.code === "QFAI-ATDD-112");
+      expect(codes(issues)).not.toContain("QFAI-ATDD-121");
+      // TC-0002 is still uncovered, but TC-0001 must not be listed.
+      expect(missing?.refs).toEqual(["SPEC-0001:TC-0002"]);
+    });
+  });
+
+  it("reads the Level from the heading form's meta line", async () => {
+    const headingForm = [
+      "# 06 Test Cases",
+      "",
+      "## TC-0001: pricing over the service boundary",
+      "",
+      "- Level: L4",
+      "- AC-Refs: AC-0001",
+      "",
+    ].join("\n");
+
+    await withProject({ testCases: headingForm, annotationIn: "api" }, (issues) => {
+      expect(codes(issues)).not.toContain("QFAI-ATDD-121");
+      expect(codes(issues)).not.toContain("QFAI-ATDD-112");
+    });
+  });
+
+  it("names the declared home directory in the QFAI-ATDD-112 message and fix", async () => {
+    await withProject({ testCases: tcTable("L4"), annotationIn: "integration" }, (issues) => {
+      const missing = issues.find((entry) => entry.code === "QFAI-ATDD-112");
+      expect(missing?.message).toContain("tests/api/** -> SPEC-0001:TC-0001");
+      expect(missing?.suggested_action).toContain("tests/api/**: SPEC-0001:TC-0001");
+      expect(missing?.rule).toBe("atddCodeTraceability.coverage.tcToDeclaredLayer");
     });
   });
 });

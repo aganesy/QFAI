@@ -555,7 +555,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-ATDD-113": "Every declared CON-API must be referenced at least once from tests/api/**.",
   "QFAI-ATDD-121":
     "tests/api/** must not include TC annotations for a TC whose declared Level is not API.",
-  "QFAI-ATDD-122": "tests/e2e/** must not include TC annotations (`QFAI:SPEC-XXXX:TC-YYYY`).",
+  "QFAI-ATDD-122":
+    "tests/e2e/** must not include TC annotations for a TC whose declared Level is not E2E.",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
   "QFAI-DPACK-001":

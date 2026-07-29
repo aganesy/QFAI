@@ -74,6 +74,14 @@ describe("isCoverageTargetLevel", () => {
     expect(isCoverageTargetLevel("L2")).toBe(true);
   });
 
+  it("excludes the ATDD-routed spellings so --profile full agrees with the TC routing", () => {
+    // A `Level: L4` TC carrying its correct tests/api/** annotation must not
+    // also be demanded as a TDD obligation (TDDLIST_TC_NOT_COVERED).
+    for (const level of ["L3", "L4", "L5", "api"]) {
+      expect(isCoverageTargetLevel(level)).toBe(false);
+    }
+  });
+
   it("treats empty string as coverage target", () => {
     expect(isCoverageTargetLevel("")).toBe(true);
   });

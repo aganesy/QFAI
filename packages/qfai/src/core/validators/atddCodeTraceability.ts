@@ -4,8 +4,10 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import {
+  ATDD_TEST_KIND_DIRS,
   evaluateAtddCodeTraceability,
   type AtddCodeTraceabilityResult,
+  type AtddTestKind,
   type AtddUnknownRef,
 } from "../atddTraceability.js";
 import type { Issue } from "../types.js";
@@ -17,6 +19,8 @@ type AtddTraceabilitySummary = {
     tc: string[];
     conApi: string[];
   };
+  /** Missing TC ref -> the test directory its declared `Level` routes to. */
+  missingTcHomes: Record<string, string>;
   unknown: Array<{ file: string; token: string }>;
   forbidden: {
     tcInApi: Array<{ file: string; ids: string[] }>;
@@ -55,16 +59,17 @@ export async function validateAtddCodeTraceability(
   }
 
   if (result.missing.tc.length > 0) {
+    const grouped = groupMissingTcByHome(result.missing.tc, result.missingTcHomes);
     issues.push(
       issue(
         "QFAI-ATDD-112",
-        `Integration で参照されていない TC があります: ${result.missing.tc.join(", ")}`,
+        `宣言 Level が指すディレクトリで参照されていない TC があります: ${formatMissingTcGroups(grouped)}`,
         "error",
         result.specsRoot,
-        "atddCodeTraceability.coverage.tcToIntegration",
+        "atddCodeTraceability.coverage.tcToDeclaredLayer",
         result.missing.tc,
         "change",
-        "tests/integration/** に `QFAI:SPEC-XXXX:TC-YYYY` 注釈を追加し、全 TC を少なくとも1回参照してください。",
+        buildMissingTcFix(grouped),
       ),
     );
   }
@@ -88,13 +93,13 @@ export async function validateAtddCodeTraceability(
     issues.push(
       issue(
         "QFAI-ATDD-121",
-        `API テストで TC 参照は禁止です: ${forbidden.ids.join(", ")}`,
+        `宣言 Level が API ではない TC を API テストで参照しています: ${forbidden.ids.join(", ")}`,
         "error",
         forbidden.file,
         "atddCodeTraceability.forbidden.tcInApi",
         forbidden.ids,
         "change",
-        "tests/api/** では TC 参照を削除し、契約ID（`QFAI:CON-API-XXXX`）のみを使用してください。",
+        "tests/api/** から TC 参照を削除して契約ID（`QFAI:CON-API-XXXX`）を使うか、その TC の `Level` を `L4`/`API` に修正してください。",
       ),
     );
   }
@@ -103,13 +108,13 @@ export async function validateAtddCodeTraceability(
     issues.push(
       issue(
         "QFAI-ATDD-122",
-        `E2E テストで TC 参照は禁止です: ${forbidden.ids.join(", ")}`,
+        `宣言 Level が E2E ではない TC を E2E テストで参照しています: ${forbidden.ids.join(", ")}`,
         "error",
         forbidden.file,
         "atddCodeTraceability.forbidden.tcInE2e",
         forbidden.ids,
         "change",
-        "tests/e2e/** では TC 参照を削除し、US 参照（`QFAI:SPEC-XXXX:US-YYYY`）を使用してください。",
+        "tests/e2e/** から TC 参照を削除して US 参照（`QFAI:SPEC-XXXX:US-YYYY`）を使うか、その TC の `Level` を `L5`/`E2E` に修正してください。",
       ),
     );
   }
@@ -129,6 +134,47 @@ export async function validateAtddCodeTraceability(
   }
 
   return issues;
+}
+
+const MISSING_TC_HOME_ORDER: AtddTestKind[] = ["integration", "api", "e2e"];
+
+/**
+ * Buckets the missing TC refs by the directory their declared `Level` routes
+ * to, so the message and the fix name the layer the author actually declared.
+ */
+function groupMissingTcByHome(
+  missingTc: string[],
+  homes: Map<string, AtddTestKind>,
+): Map<AtddTestKind, string[]> {
+  const grouped = new Map<AtddTestKind, string[]>();
+  for (const ref of missingTc) {
+    const home = homes.get(ref) ?? "integration";
+    const bucket = grouped.get(home) ?? [];
+    bucket.push(ref);
+    grouped.set(home, bucket);
+  }
+  return grouped;
+}
+
+function orderedMissingTcGroups(
+  grouped: Map<AtddTestKind, string[]>,
+): Array<[AtddTestKind, string[]]> {
+  return MISSING_TC_HOME_ORDER.filter((kind) => (grouped.get(kind)?.length ?? 0) > 0).map(
+    (kind) => [kind, grouped.get(kind) ?? []],
+  );
+}
+
+function formatMissingTcGroups(grouped: Map<AtddTestKind, string[]>): string {
+  return orderedMissingTcGroups(grouped)
+    .map(([kind, refs]) => `${ATDD_TEST_KIND_DIRS[kind]} -> ${refs.join(", ")}`)
+    .join(" / ");
+}
+
+function buildMissingTcFix(grouped: Map<AtddTestKind, string[]>): string {
+  const perHome = orderedMissingTcGroups(grouped)
+    .map(([kind, refs]) => `${ATDD_TEST_KIND_DIRS[kind]}: ${refs.join(", ")}`)
+    .join(" / ");
+  return `各 TC の宣言 Level が指すディレクトリに \`QFAI:SPEC-XXXX:TC-YYYY\` 注釈を追加してください（L3/Integration -> tests/integration/**、L4/API -> tests/api/**、L5/E2E -> tests/e2e/**、Level 未宣言は tests/integration/**）: ${perHome}`;
 }
 
 function buildUnknownIssues(unknown: AtddUnknownRef[]): Issue[] {
@@ -215,6 +261,12 @@ async function writeAtddTraceabilityReport(
       file: entry.file,
       token: entry.token,
     })),
+    missingTcHomes: Object.fromEntries(
+      result.missing.tc.map((ref) => [
+        ref,
+        ATDD_TEST_KIND_DIRS[result.missingTcHomes.get(ref) ?? "integration"],
+      ]),
+    ),
     forbidden: {
       tcInApi: result.forbidden.tcInApi,
       tcInE2e: result.forbidden.tcInE2e,
@@ -243,8 +295,15 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
   lines.push("");
   lines.push("- US -> E2E");
   lines.push(...toList(summary.missing.us));
-  lines.push("- TC -> Integration");
-  lines.push(...toList(summary.missing.tc));
+  lines.push("- TC -> declared Level home (L3 integration / L4 api / L5 e2e)");
+  lines.push(
+    ...toList(
+      summary.missing.tc.map((ref) => {
+        const home = summary.missingTcHomes[ref];
+        return home === undefined ? ref : `${ref} (${home})`;
+      }),
+    ),
+  );
   lines.push("- CON-API -> API");
   lines.push(...toList(summary.missing.conApi));
   lines.push("");

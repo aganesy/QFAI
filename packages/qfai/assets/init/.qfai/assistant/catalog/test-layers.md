@@ -58,7 +58,10 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
     obligation belongs in `tests/api/**`, and its annotation there counts as
     coverage. The rule exists to stop obligations drifting into the wrong
     layer, not to make the correct layer unusable.
-  - `tests/e2e/**` must not include `QFAI:SPEC-XXXX:TC-YYYY`.
+  - `tests/e2e/**` must not include `QFAI:SPEC-XXXX:TC-YYYY` **for a TC whose
+    declared `Level` is not L5/E2E**. Same reason as above: the routing rule
+    and the forbidden rule must agree, or the layer the routing selects
+    becomes unusable.
 - Unknown references (`US/TC/CON-API` not declared) are errors.
 - AC annotations are not required in code; AC coverage is treated as indirect through TC coverage.
 - `QFAI:CON-API-*` in `tests/e2e/**` is not forbidden, but contract guarantee belongs to API tests.

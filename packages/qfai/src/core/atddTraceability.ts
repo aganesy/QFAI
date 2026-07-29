@@ -21,6 +21,12 @@ const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
 
 const US_ID_RE = /^US-\d{4}(?:-\d{4})?$/;
 const TC_ID_RE = /^TC-\d{4}(?:-\d{4})?$/;
+/** Heading form of a test case, e.g. `## TC-0001-0002: title`. */
+const TC_HEADING_RE = /^##\s+(TC-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
+/** `- Level: L4` meta line inside a heading-form test case block. */
+const LEVEL_META_LINE_RE = /^[-*]\s+Level\s*[:：]\s*(.+?)\s*$/i;
+/** Parses a `SPEC-0001:TC-0002` ref produced by `formatTcRef`. */
+const MISSING_TC_REF_RE = /^SPEC-(\d{4}):TC-(\d{4}(?:-\d{4})?)$/;
 const API_CONTRACT_ID_RE = /^CON-API-\d+$/;
 const TEST_FILE_GLOB = "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}";
 
@@ -71,7 +77,20 @@ export type AtddCodeTraceabilityResult = {
     tcInE2e: AtddForbiddenRef[];
   };
   missing: AtddTraceabilityMissing;
+  /**
+   * Formatted missing TC ref -> the test kind its declared `Level` routes to.
+   * Lets the CLI phrase `QFAI-ATDD-112` (message, `suggested_action`, report)
+   * per declared layer instead of naming `tests/integration/**` for every TC.
+   */
+  missingTcHomes: Map<string, AtddTestKind>;
   scan: AtddTraceabilityScan;
+};
+
+/** Test directory each `AtddTestKind` owns, for user-facing messages. */
+export const ATDD_TEST_KIND_DIRS: Record<AtddTestKind, string> = {
+  integration: "tests/integration/**",
+  api: "tests/api/**",
+  e2e: "tests/e2e/**",
 };
 
 export async function evaluateAtddCodeTraceability(
@@ -177,6 +196,7 @@ export async function evaluateAtddCodeTraceability(
     tcRefs,
     apiRefs,
   });
+  const missingTcHomes = buildMissingTcHomes(missing.tc, tcLevels);
 
   return {
     specsRoot,
@@ -195,6 +215,7 @@ export async function evaluateAtddCodeTraceability(
       tcInE2e: toForbiddenList(forbiddenTcInE2e),
     },
     missing,
+    missingTcHomes,
     scan: {
       globs: scanGlobs,
       matchedFileCount: scanResult.matchedFileCount,
@@ -246,32 +267,78 @@ async function collectSpecRefs(specsRoot: string): Promise<{
 }
 
 /**
- * Reads the `Level` column of `06_Test-Cases.md` so the TC obligation can be
- * routed by declared layer instead of being hard-pinned to
+ * Reads the declared `Level` of every TC in `06_Test-Cases.md` so the TC
+ * obligation can be routed by declared layer instead of being hard-pinned to
  * `tests/integration/**`.
+ *
+ * Both shipped shapes are read, matching `parseTestCases` in
+ * `core/atdd/scaffold.ts`: the heading form (`## TC-NNNN` plus `- Level: L4`
+ * meta lines) and the table form. Heading form wins on duplicates; within the
+ * table form the first declaration wins. Every `TC-ID` table is scanned, not
+ * just the first — a spec may split its catalogue across several tables, and
+ * only scanning the first silently dropped the later tables' layers.
  */
 function collectTcLevels(tcText: string): Map<string, string> {
   const levels = new Map<string, string>();
-  const table = parseAllMarkdownTables(tcText).find((candidate) =>
-    candidate.headers.some((header: string) => header.trim() === "TC-ID"),
-  );
-  if (!table) {
-    return levels;
+  for (const [id, level] of collectHeadingTcLevels(tcText)) {
+    levels.set(id, level);
   }
-  const headers = table.headers.map((header: string) => header.trim());
-  const idIndex = headers.indexOf("TC-ID");
-  const levelIndex = headers.indexOf("Level");
-  if (idIndex < 0 || levelIndex < 0) {
-    return levels;
-  }
-  for (const row of table.rows) {
-    const id = (row[idIndex] ?? "").trim().toUpperCase();
-    const level = (row[levelIndex] ?? "").trim().toLowerCase();
-    if (id.length > 0 && level.length > 0) {
+  for (const [id, level] of collectTableTcLevels(tcText)) {
+    if (!levels.has(id)) {
       levels.set(id, level);
     }
   }
   return levels;
+}
+
+function collectTableTcLevels(tcText: string): Array<[string, string]> {
+  const pairs: Array<[string, string]> = [];
+  for (const table of parseAllMarkdownTables(tcText)) {
+    const headers = table.headers.map((header: string) => header.trim());
+    const idIndex = headers.indexOf("TC-ID");
+    const levelIndex = headers.indexOf("Level");
+    if (idIndex < 0 || levelIndex < 0) {
+      continue;
+    }
+    for (const row of table.rows) {
+      const id = (row[idIndex] ?? "").trim().toUpperCase();
+      const level = (row[levelIndex] ?? "").trim().toLowerCase();
+      if (id.length > 0 && level.length > 0) {
+        pairs.push([id, level]);
+      }
+    }
+  }
+  return pairs;
+}
+
+function collectHeadingTcLevels(tcText: string): Array<[string, string]> {
+  const pairs: Array<[string, string]> = [];
+  let currentId: string | null = null;
+
+  for (const rawLine of tcText.replace(/\r\n/g, "\n").split("\n")) {
+    const line = rawLine.trim();
+    const heading = TC_HEADING_RE.exec(line);
+    if (heading?.[1] !== undefined) {
+      currentId = heading[1].toUpperCase();
+      continue;
+    }
+    if (line.startsWith("#")) {
+      // Any other heading closes the current TC block.
+      currentId = null;
+      continue;
+    }
+    if (currentId === null) {
+      continue;
+    }
+    const level = LEVEL_META_LINE_RE.exec(line)?.[1]?.trim().toLowerCase();
+    if (level !== undefined && level.length > 0) {
+      // First `- Level:` line of the block wins.
+      pairs.push([currentId, level]);
+      currentId = null;
+    }
+  }
+
+  return pairs;
 }
 
 /** Test directory a declared `Level` routes its TC obligation to. */
@@ -302,6 +369,28 @@ function resolveTcHomeKind(
     return "integration";
   }
   return LEVEL_TO_TEST_KIND[level] ?? "integration";
+}
+
+/**
+ * Resolves the home kind of every missing TC so `QFAI-ATDD-112` can name the
+ * directory the TC's declared `Level` actually routes to.
+ */
+function buildMissingTcHomes(
+  missingTc: string[],
+  tcLevels: Map<string, Map<string, string>>,
+): Map<string, AtddTestKind> {
+  const homes = new Map<string, AtddTestKind>();
+  for (const ref of missingTc) {
+    const parsed = MISSING_TC_REF_RE.exec(ref);
+    const spec = parsed?.[1];
+    const id = parsed?.[2];
+    if (spec === undefined || id === undefined) {
+      homes.set(ref, "integration");
+      continue;
+    }
+    homes.set(ref, resolveTcHomeKind(tcLevels, spec, `TC-${id}`));
+  }
+  return homes;
 }
 
 async function collectApiContractIds(apiRoot: string): Promise<Set<string>> {
