@@ -85,22 +85,22 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` tracks progress with these required columns:
 
-| Column    | Description                                              |
-| --------- | -------------------------------------------------------- |
-| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)      |
-| TC-Refs   | References to test cases from `06_Test-Cases.md`         |
-| Layer     | Test layer (Unit, Integration, etc.)                     |
-| Test file | Path to the test file                                    |
+| Column    | Description                                                                                    |
+| --------- | ---------------------------------------------------------------------------------------------- |
+| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                            |
+| TC-Refs   | References to test cases from `06_Test-Cases.md`                                               |
+| Layer     | Test layer (Unit, Integration, etc.)                                                           |
+| Test file | Path to the test file                                                                          |
 | Selector  | Test selector(s) for targeted execution — one entry, a comma-separated list, or a glob pattern |
-| Status    | Current lifecycle status                                 |
-| DR-ID     | Decision Record ID for exception items (blank otherwise) |
-| Evidence  | RED/GREEN command+result pairs proving the TDD cycle     |
+| Status    | Current lifecycle status                                                                       |
+| DR-ID     | Decision Record ID for exception items (blank otherwise)                                       |
+| Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                           |
 
 ### Selector granularity (MUST)
 
 `Selector` is **not** restricted to a single test function. A row may legally own several, written as
 a comma-separated list (`test_rejects_expired_token, test_rejects_wrong_audience`) or a glob
-(`test_rejects_*`). What is restricted is what a row may *conflate*:
+(`test_rejects_*`). What is restricted is what a row may _conflate_:
 
 - **One independently observable boundary per selector entry.** RED must be observed **per selector
   entry**, not once per row — each entry needs its own "watch it fail for the expected reason"
