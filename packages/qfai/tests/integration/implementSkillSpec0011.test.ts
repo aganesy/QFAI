@@ -85,6 +85,13 @@ describe("TC-0011-0005: Parallel Dispatch Deny Conditions", () => {
     ].join("\n");
     expect(content).toMatch(/Deny conditions/i);
     expect(content).toMatch(/write.*same source module|concurrent write conflict/i);
+    // EX-0011-0005 / TC-0011-0005 distinguish "shared exists" from "shared
+    // written": a written shared fixture file denies, a read-only shared
+    // fixture module does not.
+    expect(content).toMatch(
+      /write the same shared fixture, shared mock,\s*or shared global setup \*\*file\*\*/i,
+    );
+    expect(content).toMatch(/neither item\s*writes and each consumes read-only is not a deny/i);
   });
 });
 

@@ -90,6 +90,31 @@ describe("qfai-implement states one parallelization policy", () => {
       expect(section).toContain("resolves the importers reachable from the other items");
     });
 
+    it(`${tree}: external runtime resources are gated too`, async () => {
+      // A worktree separates the checkout and the index only, so two items can
+      // satisfy every module/fixture/DB condition and still collide at run time
+      // on a fixed port, an out-of-worktree temp path or an external cache.
+      const section = unwrap(await policy(tree));
+      expect(section).toContain("contend for the same **external runtime resource**");
+      expect(section).toContain("Worktree separation isolates the checkout and the index");
+      for (const resource of ["ports", "os.tmpdir()", "caches, queues, brokers", "environment"]) {
+        expect(section).toContain(resource);
+      }
+      expect(section).toContain("**disjoint write set**");
+      expect(section).toContain("**per-worker isolation**");
+      expect(section).toContain("`constitution/workflow.md` (Implementation stage) requires no");
+      expect(section).toContain("Worktree separation is also **not sufficient on its own**");
+      // And the deny list must name the same collisions.
+      expect(section).toContain("bind the same fixed port, write the same out-of-worktree path");
+    });
+
+    it(`${tree}: a read-only shared fixture is not a deny`, async () => {
+      const section = unwrap(await policy(tree));
+      expect(section).toContain(
+        "A shared fixture module that neither item writes and each consumes read-only is not a deny",
+      );
+    });
+
     it(`${tree}: worker evidence blocks carry the whole per-item contract`, async () => {
       const section = unwrap(await policy(tree));
       for (const field of [
