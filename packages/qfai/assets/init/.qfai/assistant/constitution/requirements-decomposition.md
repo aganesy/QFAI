@@ -86,18 +86,18 @@ needs its own rule.
 
 Too coarse:
 
-| BR-ID   | Rule |
-| ------- | ---- |
+| BR-ID   | Rule                                                                                                                                                                                                                        |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | BR-0001 | An order is accepted when the customer is verified, the stock is reserved, the payment authorisation succeeds, and the delivery address is inside the service area; otherwise it is rejected with the first failing reason. |
 
 Each clause is independently falsifiable, so it is four rules:
 
-| BR-ID   | Rule |
-| ------- | ---- |
-| BR-0001 | An unverified customer's order is rejected. |
-| BR-0002 | An order whose stock cannot be reserved is rejected. |
-| BR-0003 | An order whose payment authorisation fails is rejected. |
+| BR-ID   | Rule                                                     |
+| ------- | -------------------------------------------------------- |
+| BR-0001 | An unverified customer's order is rejected.              |
+| BR-0002 | An order whose stock cannot be reserved is rejected.     |
+| BR-0003 | An order whose payment authorisation fails is rejected.  |
 | BR-0004 | An order addressed outside the service area is rejected. |
 
-Rejection *ordering* is a fifth rule if the order is observable, and belongs in
+Rejection _ordering_ is a fifth rule if the order is observable, and belongs in
 its own BR rather than as a trailing clause on the others.

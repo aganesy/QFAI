@@ -144,8 +144,7 @@ function checkRuleCellOutliers(brText: string, businessRulesPath: string): Issue
 
   // Compared against the mean of the OTHER rows: including the candidate in
   // its own baseline lets one huge cell inflate the threshold past itself.
-  const siblingMean = (row: { length: number }): number =>
-    (total - row.length) / (rows.length - 1);
+  const siblingMean = (row: { length: number }): number => (total - row.length) / (rows.length - 1);
 
   const outliers = rows.filter(
     (row) =>
