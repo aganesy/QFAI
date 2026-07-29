@@ -839,22 +839,27 @@ describe("findDesignMdViolations — Tailwind palette/scale utility classes (cod
     expect(out.some((v) => v.kind === "radius" && v.found === "rounded-xl")).toBe(true);
   });
 
-  it("rounded-2xl / rounded-3xl / rounded-full (multi-char aliases) are flagged", () => {
+  it("rounded-2xl / rounded-3xl (multi-char aliases) are flagged", () => {
     const html = '<div class="rounded-2xl rounded-3xl rounded-full">x</div>';
     const out = findDesignMdViolations(html, sampleDesignMd());
     const founds = out.filter((v) => v.kind === "radius").map((v) => v.found);
     expect(founds).toContain("rounded-2xl");
     expect(founds).toContain("rounded-3xl");
-    expect(founds).toContain("rounded-full");
+    // #243: `full` is a DESIGN.md radius key, and the mandated
+    // theme.extend.borderRadius injection re-binds `rounded-full` to that
+    // token, so it is compliant rather than drift.
+    expect(founds).not.toContain("rounded-full");
   });
 
-  it("shadow-lg / shadow-2xl / shadow-inner (shadow scale aliases) are flagged", () => {
+  it("shadow-2xl / shadow-inner (shadow scale aliases) are flagged", () => {
     const html = '<div class="shadow-lg shadow-2xl shadow-inner">x</div>';
     const out = findDesignMdViolations(html, sampleDesignMd());
     const founds = out.filter((v) => v.kind === "shadow").map((v) => v.found);
-    expect(founds).toContain("shadow-lg");
     expect(founds).toContain("shadow-2xl");
     expect(founds).toContain("shadow-inner");
+    // #243: `lg` is a DESIGN.md shadow key re-bound by
+    // theme.extend.boxShadow, so `shadow-lg` references the token.
+    expect(founds).not.toContain("shadow-lg");
   });
 
   it("bare `rounded` (no suffix) is flagged as a Tailwind default", () => {
@@ -881,10 +886,13 @@ describe("findDesignMdViolations — Tailwind palette/scale utility classes (cod
     expect(out.some((v) => v.kind === "radius" && v.found === "rounded-xl")).toBe(true);
   });
 
-  it("dark:shadow-lg (dark-mode prefix) is flagged", () => {
-    const html = '<div class="dark:shadow-lg">x</div>';
+  it("dark:shadow-inner (dark-mode prefix) is flagged on the underlying utility", () => {
+    // `inner` is not a DESIGN.md shadow key, so it is still drift; the
+    // point of this case is that the `dark:` prefix is stripped before
+    // the lookup.
+    const html = '<div class="dark:shadow-inner">x</div>';
     const out = findDesignMdViolations(html, sampleDesignMd());
-    expect(out.some((v) => v.kind === "shadow" && v.found === "shadow-lg")).toBe(true);
+    expect(out.some((v) => v.kind === "shadow" && v.found === "shadow-inner")).toBe(true);
   });
 
   it("text-sm / text-center / text-base (non-color text utilities) are NOT flagged", () => {
@@ -914,12 +922,14 @@ describe("findDesignMdViolations — Tailwind palette/scale utility classes (cod
   });
 
   it("multiple palette+scale + scale-alias classes in one element are all flagged", () => {
-    const html = '<div class="bg-blue-500 text-slate-900 rounded-xl shadow-lg">x</div>';
+    // `shadow-inner` rather than `shadow-lg`: #243 makes an alias that names a
+    // DESIGN.md key compliant, and `lg` is one.
+    const html = '<div class="bg-blue-500 text-slate-900 rounded-xl shadow-inner">x</div>';
     const out = findDesignMdViolations(html, sampleDesignMd());
     expect(out.some((v) => v.kind === "color" && v.found === "bg-blue-500")).toBe(true);
     expect(out.some((v) => v.kind === "color" && v.found === "text-slate-900")).toBe(true);
     expect(out.some((v) => v.kind === "radius" && v.found === "rounded-xl")).toBe(true);
-    expect(out.some((v) => v.kind === "shadow" && v.found === "shadow-lg")).toBe(true);
+    expect(out.some((v) => v.kind === "shadow" && v.found === "shadow-inner")).toBe(true);
   });
 
   it("border-t-blue-500 / border-x-emerald-700 (sided color prefix + palette+scale) are flagged", () => {
