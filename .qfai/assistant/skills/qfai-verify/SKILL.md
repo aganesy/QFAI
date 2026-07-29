@@ -66,7 +66,7 @@ When unsure, read inputs in this order:
 
 ## Verify Output Contract — `.qfai/output/verify.json`
 
-`/qfai-verify` MUST write `.qfai/output/verify.json` at the end of the run. This file is the machine-readable verdict; `.qfai/evidence/verify-<spec-id>.md` remains the human-readable evidence and does not replace it. Two independent readers consume it — `qfai prototyping certify` and the `R-CERTIFY-VERIFY-CIRCULAR` validator — and both fail closed when it is missing or malformed.
+`/qfai-verify` MUST write `.qfai/output/verify.json` at the end of the run. This file is the machine-readable verdict; `.qfai/evidence/verify-<spec-id>.md` remains the human-readable evidence and does not replace it. Two independent readers consume it — `qfai prototyping certify` and the `R-CERTIFY-VERIFY-CIRCULAR` validator. Only `certify` fails closed: it refuses to seal a certificate when the file is missing, unparseable, or not `status: "PASS"` with `scope: "prototyping"`. The validator is advisory in the other direction — a missing, unparseable, scope-less or unknown-scope `verify.json` produces no finding (`reviewerGate.ts#detectCertifyVerifyCircular`), because its job is to catch a _wrong-phase_ verdict, not to demand that one exist. So an absent `verify.json` will not fail `qfai validate`; it will stop `certify`.
 
 Canonical path: `.qfai/output/verify.json` (NOT `.qfai/evidence/`). Create the `.qfai/output/` directory if absent.
 
@@ -88,8 +88,12 @@ Canonical path: `.qfai/output/verify.json` (NOT `.qfai/evidence/`). Create the `
 | ------------- | ----------------------------------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `prototyping` | Work Order H of `/qfai-prototyping`, before `certify` | `qfai validate --profile prototyping`       | `qfai prototyping certify` — this is the ONLY value it accepts                                       |
 | `atdd`        | after `/qfai-atdd`                                    | `qfai validate --profile verify` (= `full`) | rejected by prototyping certify; `R-CERTIFY-VERIFY-CIRCULAR` when a prototyping loop is still active |
-| `implement`   | after `/qfai-implement`                               | `qfai validate --profile verify` (= `full`) | same as `atdd`                                                                                       |
 | `full`        | a stage-independent whole-repository run              | `qfai validate --profile verify` (= `full`) | same as `atdd`                                                                                       |
+
+There is no `implement` value: the enum is closed at these three, and a run after
+`/qfai-implement` is recorded as `full`. (`reviewerGate.ts` still recognises a
+legacy `implement` string so an old file is not silently treated as
+prototyping-scoped, but nothing accepts it as a verdict — do not write it.)
 
 Minimal conforming example for the prototyping gate:
 
@@ -143,7 +147,7 @@ Use the shared schema.
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - Reviewer checks:
   - required roles were delegated;
-  - validate evidence exists: `qfai validate --profile verify --fail-on error` completed with `error=0`;
+  - validate evidence exists: `qfai validate --profile verify --fail-on error` completed with `error=0` — for a `scope: "prototyping"` run this is `qfai validate --profile prototyping --fail-on error` instead, per the prototyping carve-out in "Verify Scope Rule". Requiring the `verify` profile here would reinstate the circular gate: it fails `QFAI-ATDD-111/112/113`, so no reviewer could return PASS before `/qfai-atdd` has run;
   - per-iter evidence (screenshot + HTML + review.json) exists under `.qfai/evidence/prototyping/iter-NN/`, and the recorded final iteration in `.qfai/evidence/prototyping/prototyping.json#iterations[]` has both screenshot and HTML on disk. The completion-certificate is NOT a verify-gate input — `qfai prototyping certify` runs AFTER `/qfai-verify` (it requires a passing `verify.json`). Cert digest validation belongs to `certify --check`, run during the prototyping handoff or after edits to brand assets, not here;
   - Drift Protocol enforced;
   - test-layer policy enforced against `test-layers.md`.
@@ -387,12 +391,12 @@ If unknown, propose defaults and mark assumptions.
 
 Run (adjust as needed):
 
-- `qfai validate --profile verify --fail-on error`
+- `qfai validate --profile verify --fail-on error` — or `qfai validate --profile prototyping --fail-on error` when this run's scope is `prototyping`
 - `qfai report` (if used in this repo)
 
 Notes:
 
-- CI must run default/full validation only. Partial profiles are local skill checks only.
+- CI must run default/full validation only. Partial profiles are local skill checks only. The `prototyping` scope is the one exception, and it is a stage carve-out rather than a shortcut — see "Verify Scope Rule".
 - If `QFAI-WAIVER-002` appears, remove the invalid waiver and resolve the underlying `error` finding.
 
 Capture:
@@ -503,6 +507,11 @@ Evidence must include:
    qfai validate --profile verify --fail-on error
    ```
 
+   For a `scope: "prototyping"` run, this gate is
+   `qfai validate --profile prototyping --fail-on error` instead. The `verify`
+   profile is not achievable before `/qfai-atdd` has run — see the prototyping
+   carve-out in "Verify Scope Rule".
+
 2. Repository standard gates (discover from package.json/CI/docs):
    - format check
    - lint
@@ -583,5 +592,5 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 project_memory:
 
 - Verify is the full-scan approval gate; per-skill validate runs (sdd/atdd/tdd) are signals, the verify gate is the binding pass.
-- Completion requires zero errors across all profiles AND zero leakage in the distributed-surface guard AND a clean branch version pin.
+- Completion requires zero errors across every profile in the declared scope AND zero leakage in the distributed-surface guard AND a clean branch version pin. A `scope: "prototyping"` run's scope is the `prototyping` profile only; stage-5 obligations (QFAI-ATDD-111/112/113) belong to the later `atdd` / `full` run.
 - Verify never rewrites artifacts; it only reads and reports. Drift fixes belong to /qfai-sdd / /qfai-implement / /qfai-atdd respectively.
