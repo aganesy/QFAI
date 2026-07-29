@@ -284,7 +284,7 @@ Completion MUST NOT be declared when any of the following are true:
 - No RED fresh evidence exists for the item
 - No GREEN fresh evidence exists for the item
 - Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned FAIL
-- `.qfai/evidence/implement-<spec-id>.md` does not exist, or does not record both reviewer verdicts for the item (this is the single blocking statement about the evidence file; its absence of *verdicts* is never blocking before items 7-8)
+- `.qfai/evidence/implement-<spec-id>.md` does not exist, or does not record both reviewer verdicts for the item (this is the single blocking statement about the evidence file; its absence of _verdicts_ is never blocking before items 7-8)
 - Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
 - Parallel slices were used but integration verify has not been run post-merge
 - Checkpoint boundary was reached but verification was not executed
@@ -318,7 +318,7 @@ parts with different write points; the fields are the same, the sequencing is no
 - `Refactor verify command` — the exact command re-executed after refactor
 - `Refactor verify result` — the output confirming GREEN is maintained
 
-These exist *for* the reviewers: they are the evidence items 7-8 audit. They MUST be present when a
+These exist _for_ the reviewers: they are the evidence items 7-8 audit. They MUST be present when a
 review is requested.
 
 **Gate-completed (appended after items 7-8 return PASS):**
