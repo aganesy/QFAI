@@ -184,6 +184,7 @@ async function validateSpecTddList(
       column: "US-Refs",
       pattern: /^US-\d{4}(?:-\d{4})?$/,
       expected: "US-NNNN",
+      layer: "e2e",
       relPath,
       specNumber,
       rule: "tddList.usRefsFormat",
@@ -194,6 +195,7 @@ async function validateSpecTddList(
       column: "CON-API-Refs",
       pattern: /^CON-API-\d+$/,
       expected: "CON-API-NNNN",
+      layer: "api",
       relPath,
       specNumber,
       rule: "tddList.conApiRefsFormat",
@@ -373,16 +375,22 @@ type ObligationColumnSpec = {
   column: string;
   pattern: RegExp;
   expected: string;
+  /** Lower-cased `Layer` value this obligation column is legal on. */
+  layer: string;
   relPath: string;
   specNumber: string;
   rule: string;
 };
 
 /**
- * Validates the token shape of an optional obligation column.
+ * Validates an optional obligation column: token shape AND the row `Layer` the
+ * obligation is legal on.
  *
  * Absent column, empty cell and `-` are all fine — the column is optional and
- * only rows carrying that obligation fill it.
+ * only rows carrying that obligation fill it. Checking the shape alone let a
+ * `Layer = Unit` row claim a `US-*` obligation, which the ATDD gates route to
+ * `tests/e2e/**`: the ledger would record a layer-scoped obligation the
+ * completion gate reads at the wrong layer.
  */
 function validateObligationColumn(
   table: { rows: string[][] },
@@ -393,6 +401,7 @@ function validateObligationColumn(
   if (index < 0) {
     return [];
   }
+  const layerIndex = headers.indexOf("Layer");
 
   const issues: Issue[] = [];
   for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx += 1) {
@@ -414,6 +423,26 @@ function validateObligationColumn(
         ),
       );
     }
+
+    if (layerIndex < 0) {
+      continue;
+    }
+    const rawLayer = (table.rows[rowIdx]?.[layerIndex] ?? "").trim();
+    if (rawLayer.toLowerCase() === spec.layer) {
+      continue;
+    }
+    issues.push(
+      issue(
+        "TDDLIST_OBLIGATION_LAYER_MISMATCH",
+        `${spec.column} is only legal on a Layer=${spec.layer.toUpperCase()} row, but spec-${spec.specNumber} (row ${rowIdx + 1}) declares Layer="${rawLayer}"`,
+        "error",
+        spec.relPath,
+        `${spec.rule}Layer`,
+        [spec.column, rawLayer],
+        "change",
+        `Set Layer to ${spec.layer.toUpperCase()} for this row, or move the obligation to the column its Layer owns (TC-Refs for Unit/Component/Integration, US-Refs for E2E, CON-API-Refs for API).`,
+      ),
+    );
   }
   return issues;
 }

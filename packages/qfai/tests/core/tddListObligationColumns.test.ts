@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -35,6 +35,11 @@ const obligationFindings = (
   issues: Awaited<ReturnType<typeof validateTddList>>,
 ): Awaited<ReturnType<typeof validateTddList>> =>
   issues.filter((entry) => entry.code === "TDDLIST_INVALID_OBLIGATION_REF");
+
+const layerFindings = (
+  issues: Awaited<ReturnType<typeof validateTddList>>,
+): Awaited<ReturnType<typeof validateTddList>> =>
+  issues.filter((entry) => entry.code === "TDDLIST_OBLIGATION_LAYER_MISMATCH");
 
 describe("optional obligation columns on the TDD ledger", () => {
   it("accepts a ledger without the optional columns", async () => {
@@ -104,7 +109,102 @@ describe("optional obligation columns on the TDD ledger", () => {
       ],
       (issues) => {
         expect(obligationFindings(issues)).toEqual([]);
+        expect(layerFindings(issues)).toEqual([]);
       },
     );
   });
+});
+
+describe("an obligation is only legal on the Layer that owns it", () => {
+  it("rejects US-Refs on a non-E2E row", async () => {
+    // Shape alone was accepted, so a Unit row could claim a US obligation the
+    // ATDD gates route to tests/e2e/**.
+    await withLedger(
+      [
+        `${BASE_HEADERS} US-Refs |`,
+        `${BASE_SEP} ------- |`,
+        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | todo   | -     | -        | US-0001 |",
+      ],
+      (issues) => {
+        const finding = layerFindings(issues)[0];
+        expect(finding?.severity).toBe("error");
+        expect(finding?.message).toContain("US-Refs is only legal on a Layer=E2E row");
+        expect(finding?.message).toContain('Layer="Unit"');
+        expect(finding?.suggested_action).toContain("CON-API-Refs for API");
+      },
+    );
+  });
+
+  it("rejects CON-API-Refs on a non-API row", async () => {
+    await withLedger(
+      [
+        `${BASE_HEADERS} CON-API-Refs |`,
+        `${BASE_SEP} ------------ |`,
+        "| TDD-0001 | -       | E2E   | tests/e2e/a.ts  | journey  | todo   | -     | -        | CON-API-0001 |",
+      ],
+      (issues) => {
+        expect(layerFindings(issues)[0]?.message).toContain(
+          "CON-API-Refs is only legal on a Layer=API row",
+        );
+      },
+    );
+  });
+
+  it("accepts the matching layer case-insensitively", async () => {
+    await withLedger(
+      [
+        `${BASE_HEADERS} US-Refs |`,
+        `${BASE_SEP} ------- |`,
+        "| TDD-0001 | -       | e2e   | tests/e2e/a.ts  | journey  | todo   | -     | -        | US-0001 |",
+      ],
+      (issues) => {
+        expect(layerFindings(issues)).toEqual([]);
+      },
+    );
+  });
+});
+
+const repoRoot = path.resolve(process.cwd(), "..", "..");
+const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
+
+describe("the shipped ledger schema documents all eight required columns", () => {
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: the required-columns table is not split by the optional section`, async () => {
+      const skill = await readFile(
+        path.join(repoRoot, tree, "assistant/skills/qfai-implement/SKILL.md"),
+        "utf-8",
+      );
+      const start = skill.indexOf("## Execution Ledger: test-list.md");
+      const optional = skill.indexOf("Optional columns, required when the row carries");
+      const required = skill.slice(start, optional);
+      // Inserting the optional section mid-table ended the rendered table at
+      // `Layer` and orphaned the last five rows as plain text.
+      for (const column of [
+        "| TDD-ID ",
+        "| TC-Refs ",
+        "| Layer ",
+        "| Test file ",
+        "| Selector ",
+        "| Status ",
+        "| DR-ID ",
+        "| Evidence ",
+      ]) {
+        expect(required).toContain(column);
+      }
+      expect(skill.indexOf("| US-Refs ")).toBeGreaterThan(optional);
+    });
+
+    it(`${tree}: the Red phase and the evidence contract branch by Layer`, async () => {
+      const skill = await readFile(
+        path.join(repoRoot, tree, "assistant/skills/qfai-implement/SKILL.md"),
+        "utf-8",
+      );
+      expect(skill).toContain(
+        "`TC-Refs` for `Unit` / `Component` / `Integration`, `US-Refs` for `E2E`, `CON-API-Refs` for `API`",
+      );
+      expect(skill).toContain("authored by `/qfai-atdd` (Non-goals)");
+      expect(skill).toContain("On a `Layer = E2E` row read `US-ref`");
+      expect(skill).toContain("`Layer = E2E` / `Layer = API` ledger rows are tracked here");
+    });
+  }
 });

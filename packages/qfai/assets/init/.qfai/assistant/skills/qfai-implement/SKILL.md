@@ -77,7 +77,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 ## Non-goals
 
 - Writing spec artifacts (use `/qfai-sdd`).
-- Writing acceptance tests (use `/qfai-atdd`).
+- Writing acceptance tests (use `/qfai-atdd`). `Layer = E2E` / `Layer = API` ledger rows are tracked here but their tests are authored there.
 - Running validation gates (use `/qfai-verify`).
 - Parallel execution across multiple specs simultaneously.
 
@@ -85,29 +85,30 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` tracks progress with these required columns:
 
-| Column  | Description                                                                                                |
-| ------- | ---------------------------------------------------------------------------------------------------------- |
-| TDD-ID  | Unique identifier for the TDD item (e.g., TDD-0001)                                                        |
-| TC-Refs | References to test cases from `06_Test-Cases.md`. TC coverage is measured **only** from `TC-*` tokens here |
-| Layer   | Test layer. Legal values: `Unit`, `Component`, `Integration`, `API`, `E2E`                                 |
+| Column    | Description                                                                                                |
+| --------- | ---------------------------------------------------------------------------------------------------------- |
+| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                                        |
+| TC-Refs   | References to test cases from `06_Test-Cases.md`. TC coverage is measured **only** from `TC-*` tokens here |
+| Layer     | Test layer. Legal values: `Unit`, `Component`, `Integration`, `API`, `E2E`                                 |
+| Test file | Path to the test file                                                                                      |
+| Selector  | Test selector/description for targeted execution                                                           |
+| Status    | Current lifecycle status                                                                                   |
+| DR-ID     | Decision Record ID for exception items (blank otherwise)                                                   |
+| Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                                       |
 
 Optional columns, required when the row carries a non-TC obligation:
 
-| Column       | Description                                                              |
-| ------------ | ------------------------------------------------------------------------ |
-| US-Refs      | `US-*` obligations this row implements. Legal on `Layer = E2E` rows      |
-| CON-API-Refs | `CON-API-*` obligations this row implements. Legal on `Layer = API` rows |
+| Column       | Description                                                                       |
+| ------------ | --------------------------------------------------------------------------------- |
+| US-Refs      | `US-*` obligations this row implements. Legal **only** on `Layer = E2E` rows      |
+| CON-API-Refs | `CON-API-*` obligations this row implements. Legal **only** on `Layer = API` rows |
 
 `test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and
 `tests/api/**`, so an E2E or API row has no legal `TC-Refs` value. Those rows
 carry `-` in `TC-Refs` and record their obligation in `US-Refs` /
 `CON-API-Refs` instead. Coverage measurement is unaffected: it reads `TC-*`
 tokens only, so non-TC obligation IDs are inert to it by design.
-| Test file | Path to the test file |
-| Selector | Test selector/description for targeted execution |
-| Status | Current lifecycle status |
-| DR-ID | Decision Record ID for exception items (blank otherwise) |
-| Evidence | RED/GREEN command+result pairs proving the TDD cycle |
+`TDDLIST_OBLIGATION_LAYER_MISMATCH` rejects the pairing on any other layer.
 
 ### Status Lifecycle
 
@@ -137,7 +138,7 @@ When transitioning to `exception`:
 
 1. Read `test-list.md` and select the first item with `Status = todo`.
 2. Transition status to `red`.
-3. Write a **failing test** based on the TC-Refs specification.
+3. Write a **failing test** from the row's obligation column, selected by `Layer`: `TC-Refs` for `Unit` / `Component` / `Integration`, `US-Refs` for `E2E`, `CON-API-Refs` for `API`. An `E2E` or `API` row's test is authored by `/qfai-atdd` (Non-goals); this skill only drives that row's status and evidence once the acceptance test exists, and stops with a handoff note if it does not.
 4. Run the test and **watch it fail** — confirm the test actually fails for the expected reason.
 5. If the test unexpectedly passes, transition to `exception` and record the anomaly.
 
@@ -316,7 +317,7 @@ Required sections:
 Each TDD item MUST have fresh evidence containing at minimum:
 
 - `TDD-ID` — the item identifier
-- `TC-ref` — reference to the test case(s)
+- `TC-ref` — reference to the test case(s). On a `Layer = E2E` row read `US-ref` (the row's `US-Refs`) instead, and on a `Layer = API` row read `CON-API-ref` (the row's `CON-API-Refs`): exactly one obligation reference is required, the one the row's `Layer` selects
 - `RED command` — the exact command executed to observe failure
 - `RED result` — the failure output (result completeness is best-effort; truncated output is acceptable)
 - `GREEN command` — the exact command executed to observe success
