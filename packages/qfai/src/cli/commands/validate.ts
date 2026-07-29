@@ -118,7 +118,14 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // - Post-sunset the tool has stopped writing it, so a file on disk IS a real
   //   leftover a consumer may still be reading, and the finding says to delete
   //   it.
-  const emitDeprecationIssue = configTargetsLegacyPath || (!legacyWriteEnabled && legacyOnDisk);
+  // Pre-sunset the compatibility side-write happens on every run, and
+  // BR-0004-0026 / AC-0004-0032 tie the warning to that write: a downstream job
+  // reading `.qfai/output/validate.json` is invisible from the writer side, so
+  // withholding the notice would let a real legacy reader reach the 1.10.0 hard
+  // error having never seen a single sunset warning. The evidence gate therefore
+  // applies only after the sunset, where the tool has stopped writing and a file
+  // on disk is genuine leftover evidence.
+  const emitDeprecationIssue = legacyWriteEnabled || configTargetsLegacyPath || legacyOnDisk;
   // Post-sunset, refuse to write to the configured legacy path. This is
   // the migration gate: the legacy SSOT is dead, the config must be
   // updated. Pre-sunset writes proceed normally (writer-side warning).
@@ -127,6 +134,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
     ? buildDeprecationIssue({
         severity: legacySeverity,
         legacyWriteEnabled,
+        configTargetsLegacyPath,
         refuseConfiguredLegacyWrite,
       })
     : null;
@@ -323,6 +331,7 @@ function isAtOrPastSunset(currentVersion: string, sunsetVersion: string): boolea
 function buildDeprecationIssue(args: {
   severity: "warning" | "error";
   legacyWriteEnabled: boolean;
+  configTargetsLegacyPath: boolean;
   refuseConfiguredLegacyWrite: boolean;
 }): Issue {
   const message = args.refuseConfiguredLegacyWrite
@@ -333,13 +342,17 @@ function buildDeprecationIssue(args: {
       `to .qfai/report/validate.json (canonical) and rerun validate.`
     : args.legacyWriteEnabled
       ? // BR-0004-0026 requires the sunset version as a literal `sunset: X`
-        // string in the warning body; this is the only pre-sunset message the
-        // gate can emit, so the literal lives here.
-        `qfai.config.yaml#output.validateJsonPath still points at the legacy ` +
-        `SSOT ${LEGACY_VALIDATE_JSON_REL}; the file is still being written for ` +
-        `backward compatibility; sunset: ${LEGACY_VALIDATE_JSON_SUNSET}. ` +
-        `Update output.validateJsonPath to .qfai/report/validate.json ` +
-        `before the next minor.`
+        // string in every pre-sunset warning body, so both branches carry it.
+        args.configTargetsLegacyPath
+        ? `qfai.config.yaml#output.validateJsonPath still points at the legacy ` +
+          `SSOT ${LEGACY_VALIDATE_JSON_REL}; the file is still being written for ` +
+          `backward compatibility; sunset: ${LEGACY_VALIDATE_JSON_SUNSET}. ` +
+          `Update output.validateJsonPath to .qfai/report/validate.json ` +
+          `before the next minor.`
+        : `Legacy validate output path ${LEGACY_VALIDATE_JSON_REL} is still being written ` +
+          `for backward compatibility; sunset: ${LEGACY_VALIDATE_JSON_SUNSET}. Point consumers ` +
+          `at .qfai/report/validate.json (always-latest) or ` +
+          `.qfai/report/validate-<profile>.json before the next minor.`
       : `Legacy validate output path ${LEGACY_VALIDATE_JSON_REL} is past the announced ` +
         `sunset (${LEGACY_VALIDATE_JSON_SUNSET}); the legacy file is no longer written but ` +
         `still exists on disk. Update consumers to read .qfai/report/validate.json or ` +

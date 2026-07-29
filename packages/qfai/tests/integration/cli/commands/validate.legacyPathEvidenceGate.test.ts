@@ -42,22 +42,19 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
 }
 
 describe("D-DEPRECATED-PATH requires evidence the legacy path is in use", () => {
-  it("pre-sunset, a project that never used .qfai/output/ gets no finding", async () => {
+  it("pre-sunset, the warning accompanies the compatibility side-write", async () => {
+    // BR-0004-0026 / AC-0004-0032: a downstream reader of `.qfai/output/` is
+    // invisible from the writer side, so every run that still deposits the
+    // legacy file must also carry the sunset notice — otherwise a real legacy
+    // reader reaches the 1.10.0 hard error having never been warned.
     await withProject(async (root) => {
       await runValidate({ root, strict: false, toolVersionOverride: "1.9.2" });
 
-      const findings = await readFindings(root);
-      expect(findings.some((entry) => entry.code === "D-DEPRECATED-PATH")).toBe(false);
-    });
-  });
-
-  it("pre-sunset, the deprecation notice adds nothing to the --strict warning count", async () => {
-    await withProject(async (root) => {
-      await runValidate({ root, strict: true, toolVersionOverride: "1.9.2" });
-      const findings = await readFindings(root);
-      // Whatever a project's own findings are, the deprecation notice is no
-      // longer a permanent floor underneath them.
-      expect(findings.some((entry) => entry.code === "D-DEPRECATED-PATH")).toBe(false);
+      const finding = (await readFindings(root)).find(
+        (entry) => entry.code === "D-DEPRECATED-PATH",
+      );
+      expect(finding?.severity).toBe("warning");
+      expect(finding?.message).toContain("sunset: 1.10.0");
     });
   });
 
@@ -72,19 +69,6 @@ describe("D-DEPRECATED-PATH requires evidence the legacy path is in use", () => 
         issues?: unknown;
       };
       expect(legacyBody.issues).toBeDefined();
-    });
-  });
-
-  it("pre-sunset, the file this run wrote is not evidence for the next run", async () => {
-    // The loop the gate exists to break: run 1 deposits the file, run 2 finds
-    // it and warns about the file qfai itself created.
-    await withProject(async (root) => {
-      await runValidate({ root, strict: false, toolVersionOverride: "1.9.2" });
-      expect(await pathExists(path.join(root, LEGACY_REL))).toBe(true);
-
-      await runValidate({ root, strict: false, toolVersionOverride: "1.9.2" });
-      const findings = await readFindings(root);
-      expect(findings.some((entry) => entry.code === "D-DEPRECATED-PATH")).toBe(false);
     });
   });
 
