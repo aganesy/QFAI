@@ -5,7 +5,8 @@
  * The writer triggers only when `envelopeContractClause` names one of
  * the four envelope-deviation contexts (DR-0270). The record shape is
  * `{question, answer, scope, operatorIdentity, timestamp, envelopeContractClause}`.
- * The decisions/ directory is git-ignored by default.
+ * The decisions/ directory is tracked in version control (the managed
+ * .gitignore block negates it after .qfai/evidence/*).
  */
 // QFAI:SPEC-0015:TC-0015-0022
 

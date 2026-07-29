@@ -76,7 +76,7 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
         "reviewArtifacts.gitignoreRecommended",
         [...missingRecommendedEntries],
         "change",
-        "意図的に追跡している場合は対応不要です。既定に戻す場合は `qfai init` を再実行してください。",
+        "意図的に追跡している場合は対応不要です。`qfai init` を再実行しても、削除したエントリは復活しません（管理ブロックの鮮度判定は governance negation の有無と順序だけを見ます）。既定に戻す場合はエントリを手動で追加してください。",
       ),
     );
   }

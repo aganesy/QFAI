@@ -1142,6 +1142,62 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("rewrites a managed block whose negations sit above their ignore line", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      // Every negation string is present, but git applies the LAST matching
+      // pattern, so `.qfai/evidence/*` still wins and the decision records
+      // stay ignored. A presence-only freshness check called this current.
+      const misordered = [
+        QFAI_GITIGNORE_MARKER,
+        ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
+        ".qfai/report/*",
+        ".qfai/evidence/*",
+        ".qfai/discussion/*",
+        ".qfai/review/*",
+        ".qfai/state.json",
+        "",
+      ].join("\n");
+      await writeFile(path.join(root, ".gitignore"), misordered, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const content = await readFile(path.join(root, ".gitignore"), "utf-8");
+      const lines = content.split("\n");
+      for (const negation of QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) {
+        expect(lines.indexOf(negation)).toBeGreaterThan(lines.indexOf(".qfai/evidence/*"));
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps an intentionally removed ignore entry across re-init", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      // A project that tracks its whole audit trail deletes `.qfai/evidence/*`.
+      // QFAI-REVIEW-008 says that is fine; re-init must not undo it.
+      const tracked = [
+        QFAI_GITIGNORE_MARKER,
+        ".qfai/report/*",
+        ".qfai/discussion/*",
+        ".qfai/review/*",
+        ".qfai/state.json",
+        ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
+        "",
+      ].join("\n");
+      await writeFile(path.join(root, ".gitignore"), tracked, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const content = await readFile(path.join(root, ".gitignore"), "utf-8");
+      expect(content).not.toContain(".qfai/evidence/*");
+      expect(content.split(QFAI_GITIGNORE_MARKER).length - 1).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // TC-1.4.1 — fresh init creates DESIGN.md at root with template byte content
   it("ships DESIGN.md at root with template byte content (TC-1.4.1)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-design-"));
