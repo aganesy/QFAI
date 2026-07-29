@@ -11,17 +11,6 @@ const REFERENCE = "assistant/skills/qfai-implement/references/volume-policy.md";
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
 
-/** Returns the `## Volume Policy (MUST)` body. */
-function volumePolicy(content: string): string {
-  const start = content.indexOf("## Volume Policy (MUST)");
-  if (start === -1) {
-    return "";
-  }
-  const rest = content.slice(start + 1);
-  const next = rest.indexOf("\n## ");
-  return next === -1 ? rest : rest.slice(0, next);
-}
-
 describe("qfai-implement scales its ceremony to ledger volume", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: the skill keeps a pointer to the full rules`, async () => {
