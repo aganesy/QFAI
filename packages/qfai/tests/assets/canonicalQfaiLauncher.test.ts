@@ -126,4 +126,28 @@ describe("shipped assistant docs invoke qfai through the canonical launcher", ()
       expect(content).toContain("The preflight is the guard, not a flag.");
     }
   });
+
+  // Yarn Berry defaults to `nodeLinker: pnp`, which writes no
+  // `node_modules/.bin` even for a correctly installed dependency. Gating on
+  // that file alone would report every PnP project as UNRUN forever, and the
+  // shipped CI workflow deliberately keeps Berry working (it selects
+  // `--immutable` for Berry vs `--frozen-lockfile` for Classic).
+  it("the preflight accepts Plug'n'Play resolution, not only node_modules/.bin", async () => {
+    for (const baseline of BASELINE_PATHS) {
+      const content = await readFile(path.join(repoRoot, baseline), "utf-8");
+      expect(content).toContain("Either proof is sufficient");
+      expect(content).toContain("**A Plug'n'Play install.**");
+      expect(content).toContain("Yarn Berry's default `nodeLinker: pnp` writes no");
+      expect(content).toContain("`.pnp.cjs` / `.pnp.loader.mjs`");
+      expect(content).toContain("`yarn exec qfai --help`");
+      // …and the launcher follows the proof, rather than staying npx-only.
+      expect(content).toContain("Plug'n'Play -> `yarn exec qfai …`");
+      expect(content).toContain("Do **not** fall back to");
+      expect(content).toContain("the launcher the\n  preflight established");
+      // The old unconditional wording must be gone.
+      expect(content).not.toContain(
+        "Confirm the project\n  has a local qfai binary at `node_modules/.bin/qfai`",
+      );
+    }
+  });
 });
