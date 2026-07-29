@@ -29,6 +29,22 @@ describe("extractInvalidIds", () => {
     const text = ["Prose is scanned.", "", "```text", "US-6 sample output", "```", ""].join("\n");
     expect(extractInvalidIds(text, ["US"])).toEqual([]);
   });
+
+  it("still scans the required AC Gherkin, which the template puts in a fence", () => {
+    // `03_Acceptance-Criteria.md` (v1421) defines the required ACs inside a
+    // ```gherkin fence, so masking it would let a typo in a primary definition
+    // pass validation.
+    const text = [
+      "## AC Gherkin (required)",
+      "",
+      "```gherkin",
+      "# AC-0001-1",
+      "Scenario: broken id",
+      "```",
+      "",
+    ].join("\n");
+    expect(extractInvalidIds(text, ["AC"])).toEqual(["AC-0001-1"]);
+  });
 });
 
 describe("extractInvalidIdOccurrences", () => {
@@ -55,5 +71,29 @@ describe("maskFencedCodeBlocks", () => {
   it("handles tilde fences and CRLF input", () => {
     const text = "a\r\n~~~\r\nb\r\n~~~\r\nc";
     expect(maskFencedCodeBlocks(text).split("\n")).toEqual(["a", "", "", "", "c"]);
+  });
+
+  it("closes only on the opening marker at the opening length or longer", () => {
+    // A 4-backtick block quoting a 3-backtick sample is legal markdown; a
+    // toggle-on-any-fence scan ends the outer block at the inner opener and
+    // re-exposes the sample it was meant to hide.
+    const text = ["a", "````markdown", "```text", "US-6", "```", "````", "US-7"].join("\n");
+    expect(maskFencedCodeBlocks(text).split("\n")).toEqual(["a", "", "", "", "", "", "US-7"]);
+    expect(extractInvalidIds(text, ["US"])).toEqual(["US-7"]);
+  });
+
+  it("does not close a backtick fence on a tilde fence", () => {
+    const text = ["```", "~~~", "US-6", "```", "US-7"].join("\n");
+    expect(extractInvalidIds(text, ["US"])).toEqual(["US-7"]);
+  });
+
+  it("does not close on a marker line that carries an info string", () => {
+    const text = ["```", "```js", "US-6", "```", "US-7"].join("\n");
+    expect(extractInvalidIds(text, ["US"])).toEqual(["US-7"]);
+  });
+
+  it("keeps a gherkin fence body but still blanks the fence lines", () => {
+    const text = ["a", "```gherkin", "# AC-0001", "```", "b"].join("\n");
+    expect(maskFencedCodeBlocks(text).split("\n")).toEqual(["a", "", "# AC-0001", "", "b"]);
   });
 });

@@ -85,23 +85,70 @@ export function extractAllIds(text: string): string[] {
 }
 
 /**
- * Blanks the body of every fenced code block while preserving the line count,
- * so an ID-shaped token inside a sample or a diagram is not read as a spec ID
- * and reported line numbers still point at the source file.
+ * Fence info strings whose body is primary spec content rather than an
+ * illustration, so it stays in the ID scan.
+ *
+ * The v1421 `03_Acceptance-Criteria.md` template puts the **required** AC
+ * Gherkin inside a ```` ```gherkin ```` fence, so masking every fence would let
+ * a mistyped required definition (`# AC-0001-1`) reach `validateLayeredIdFormat`
+ * as if it did not exist.
+ */
+const SCANNED_FENCE_LANGUAGES = new Set(["gherkin", "feature", "cucumber"]);
+
+/** Opening fence: marker run, then an optional info string. */
+const FENCE_OPEN_RE = /^[ \t]*(`{3,}|~{3,})[ \t]*([^\s`]*)/;
+
+/** Closing fence: marker run and nothing else (CommonMark forbids an info string). */
+const FENCE_CLOSE_RE = /^[ \t]*(`{3,}|~{3,})[ \t]*$/;
+
+/**
+ * Blanks the body of illustrative fenced code blocks while preserving the line
+ * count, so an ID-shaped token inside a sample or a diagram is not read as a
+ * spec ID and reported line numbers still point at the source file.
+ *
+ * Two properties matter:
+ *
+ * - A fence closes only on the **same marker character** at **at least the
+ *   opening length**. A ```` ```` ```` block that quotes a ```` ``` ```` sample
+ *   inside itself is legal markdown; toggling on any fence line would end the
+ *   outer block early and re-expose the very sample it was hiding.
+ * - A fence tagged with a `SCANNED_FENCE_LANGUAGES` info string keeps its body,
+ *   because that body is the spec's own definition.
  */
 export function maskFencedCodeBlocks(text: string): string {
-  let inFence = false;
-  return text
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .map((line) => {
-      if (/^\s*(?:```|~~~)/.test(line)) {
-        inFence = !inFence;
-        return "";
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const masked: string[] = [];
+  let open: { marker: string; length: number; scanned: boolean } | null = null;
+
+  for (const line of lines) {
+    if (open === null) {
+      const opening = FENCE_OPEN_RE.exec(line);
+      if (opening) {
+        const fence = opening[1] ?? "";
+        const language = (opening[2] ?? "").toLowerCase();
+        open = {
+          marker: fence.charAt(0),
+          length: fence.length,
+          scanned: SCANNED_FENCE_LANGUAGES.has(language),
+        };
+        masked.push("");
+        continue;
       }
-      return inFence ? "" : line;
-    })
-    .join("\n");
+      masked.push(line);
+      continue;
+    }
+
+    const closing = FENCE_CLOSE_RE.exec(line);
+    const fence = closing?.[1] ?? "";
+    if (fence.charAt(0) === open.marker && fence.length >= open.length) {
+      open = null;
+      masked.push("");
+      continue;
+    }
+    masked.push(open.scanned ? line : "");
+  }
+
+  return masked.join("\n");
 }
 
 export type InvalidIdOccurrence = {
