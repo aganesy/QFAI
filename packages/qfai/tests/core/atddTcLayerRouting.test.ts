@@ -31,11 +31,7 @@ async function withProject(
 
     const testDir = path.join(root, "tests", opts.annotationIn);
     await mkdir(testDir, { recursive: true });
-    await writeFile(
-      path.join(testDir, "a.test.ts"),
-      "/* QFAI:SPEC-0001:TC-0001 */\n",
-      "utf-8",
-    );
+    await writeFile(path.join(testDir, "a.test.ts"), "/* QFAI:SPEC-0001:TC-0001 */\n", "utf-8");
 
     assertion(await validateAtddCodeTraceability(root, defaultConfig));
   } finally {
@@ -43,9 +39,8 @@ async function withProject(
   }
 }
 
-const codes = (
-  issues: Awaited<ReturnType<typeof validateAtddCodeTraceability>>,
-): string[] => issues.map((entry) => entry.code);
+const codes = (issues: Awaited<ReturnType<typeof validateAtddCodeTraceability>>): string[] =>
+  issues.map((entry) => entry.code);
 
 describe("the TC obligation routes by declared Level", () => {
   it("counts an L4 TC annotated in tests/api and does not forbid it", async () => {
