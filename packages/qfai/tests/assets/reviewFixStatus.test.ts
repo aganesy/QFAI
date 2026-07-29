@@ -21,7 +21,9 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
         "Valid status values: `todo`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`.",
       );
       expect(skill).toContain("`refactor` -> `review-fix` (a blocking reviewer returned `REVISE`)");
-      expect(skill).toContain("`review-fix` -> `refactor` (rework complete; re-submit to the reviewer)");
+      expect(skill).toContain(
+        "`review-fix` -> `refactor` (rework complete; re-submit to the reviewer)",
+      );
     });
 
     it(`${relativePath}: rework is explicitly not a backward transition`, async () => {
@@ -57,7 +59,12 @@ describe("validateTddList accepts review-fix", () => {
     try {
       const specDir = path.join(root, ".qfai", "specs", "spec-0001");
       await mkdir(path.join(specDir, "tdd"), { recursive: true });
-      for (const file of ["01_Spec.md", "02_User-stories.md", "03_Acceptance-Criteria.md", "06_Test-Cases.md"]) {
+      for (const file of [
+        "01_Spec.md",
+        "02_User-stories.md",
+        "03_Acceptance-Criteria.md",
+        "06_Test-Cases.md",
+      ]) {
         await writeFile(path.join(specDir, file), "# seed\n", "utf-8");
       }
       await writeFile(
