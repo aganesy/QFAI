@@ -17,16 +17,30 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Estimate test volume as a planning signal, not a hard gate.
 - Prevent unit/component scope creep and ambiguous layer ownership.
 - Evaluate test-case depth using the structured checklist (see reference below).
-- Produce a Coverage Depth Matrix for each spec to expose gaps in boundary values, error paths, edge cases, and combinatorial scenarios.
+- Produce a Coverage Depth Matrix per spec from the ATDD stage onward, exposing gaps in boundary values, error paths, edge cases,
+  and combinatorial scenarios. During SDD, report the same gaps as findings instead — see the stage split below.
 
 ## Test Case Quality Depth (MUST)
 
 When reviewing or producing test cases, apply the checklist in `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`.
 
+Read the stage split first: the checklist's full category set and the Coverage Depth Matrix are ATDD-stage obligations. `qfai-sdd` neither
+defines the matrix layout nor ships an artifact that holds it, and the tests do not exist yet, so the SDD rules below replace them.
+
+From the ATDD stage onward:
+
 - For each US/TC, verify that test cases exist for: normal path, error path, boundary values, special values, state transitions, and combinatorial scenarios.
 - Produce the Coverage Depth Matrix as a required deliverable. Flag any ❌ cells as gaps.
 - Test cases covering only normal (happy) paths are INCOMPLETE. Return REVISE with specific missing scenarios.
-- When business rules (BR-\*) exist, verify each BR has at least one positive and one negative test case.
+
+During SDD:
+
+- Require normal path plus error/boundary coverage per AC, read directly from `06_Test-Cases.md`.
+- Record any further depth gap (special values, state transitions, combinatorial) as a finding.
+- Do NOT produce the matrix, and do NOT return REVISE solely because the matrix is absent or because
+  special / state-transition / combinatorial cases are not yet enumerated.
+
+At both stages: when business rules (BR-\*) exist, verify each BR has at least one positive and one negative test case.
 
 ## Inputs you must read
 
