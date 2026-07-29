@@ -7,8 +7,10 @@ import { describe, expect, it } from "vitest";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
 
-const HEADERS = "| TDD-ID   | TC-Refs | Layer       | Test file             | Selector | Status   | DR-ID | Evidence |";
-const SEP = "| -------- | ------- | ----------- | --------------------- | -------- | -------- | ----- | -------- |";
+const HEADERS =
+  "| TDD-ID   | TC-Refs | Layer       | Test file             | Selector | Status   | DR-ID | Evidence |";
+const SEP =
+  "| -------- | ------- | ----------- | --------------------- | -------- | -------- | ----- | -------- |";
 
 async function withLedger(
   rows: string[],
@@ -56,7 +58,9 @@ describe("test-file existence is required only at done", () => {
 
   it("still requires a non-empty Test file at green", async () => {
     await withLedger(
-      ["| TDD-0001 | TC-0001 | Unit        |                       | case a   | green    | -     | -        |"],
+      [
+        "| TDD-0001 | TC-0001 | Unit        |                       | case a   | green    | -     | -        |",
+      ],
       (issues) => {
         expect(codes(issues)).toContain("TDDLIST_TEST_FILE_MISSING");
       },
@@ -65,7 +69,9 @@ describe("test-file existence is required only at done", () => {
 
   it("still requires the file to exist at done", async () => {
     await withLedger(
-      ["| TDD-0001 | TC-0001 | Unit        | tests/missing.test.ts | case a   | done     | -     | -        |"],
+      [
+        "| TDD-0001 | TC-0001 | Unit        | tests/missing.test.ts | case a   | done     | -     | -        |",
+      ],
       (issues) => {
         expect(codes(issues)).toContain("TDDLIST_TEST_FILE_MISSING");
       },
@@ -74,7 +80,9 @@ describe("test-file existence is required only at done", () => {
 
   it("accepts a done row whose file exists", async () => {
     await withLedger(
-      ["| TDD-0001 | TC-0001 | Unit        | tests/a.test.ts       | case a   | done     | -     | -        |"],
+      [
+        "| TDD-0001 | TC-0001 | Unit        | tests/a.test.ts       | case a   | done     | -     | -        |",
+      ],
       (issues) => {
         expect(codes(issues)).not.toContain("TDDLIST_TEST_FILE_MISSING");
       },
