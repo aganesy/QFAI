@@ -136,6 +136,32 @@ describe("_policies scope bans carve out the mandated Triage table", () => {
     }
   });
 
+  it("exempts only rows of a parsed table, not a stray pipe-prefixed line", async () => {
+    // `parseAllMarkdownTables` does not read a lone pipe line as a table, so no
+    // Triage validator inspects it; blanking it here would hide the edge from
+    // the only checks that cover it.
+    await withPolicies(
+      [
+        "# 10 Delta",
+        "",
+        ...TRIAGE_SECTION,
+        "",
+        "| - Parent: US-0001-0001 |",
+        "",
+        "| AC-0001-0001 | orphan header without separator |",
+        "",
+      ].join("\n"),
+      (issues) => {
+        const refs = policyScopeFindings(issues);
+        expect(refs).toContain("US-0001-0001");
+        expect(refs).toContain("AC-0001-0001");
+        // The mandated table's own citations stay exempt.
+        expect(refs).not.toContain("AC-0007-0004");
+        expect(refs).not.toContain("BR-0009-0002");
+      },
+    );
+  });
+
   it("exempts only table rows, never definitions or ownership edges inside Triage", async () => {
     await withPolicies(
       [

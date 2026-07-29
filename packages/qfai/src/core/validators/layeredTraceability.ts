@@ -151,6 +151,9 @@ const CANONICAL_TRIAGE_HEADING_RE = /^##[ \t]+triage[ \t]*$/i;
 /** A markdown table row: the only line shape the carve-out exempts. */
 const TABLE_ROW_RE = /^[ \t]*\|/;
 
+/** The `| --- | --- |` line that turns the preceding row into a table header. */
+const TABLE_SEPARATOR_RE = /^[ \t]*\|(?:[ \t]*:?-{3,}:?[ \t]*\|)+[ \t]*$/;
+
 /** An H1 or H2 heading, which closes the `## Triage` section. */
 const SECTION_BOUNDARY_RE = /^#{1,2}[ \t]+\S/;
 
@@ -191,16 +194,43 @@ function maskTriageSection(fileName: string, text: string): string {
     return text;
   }
   const masked = [...lines];
-  for (let index = start + 1; index < lines.length; index += 1) {
-    const line = lines[index] ?? "";
-    if (SECTION_BOUNDARY_RE.test(line)) {
+  let index = start + 1;
+  while (index < lines.length) {
+    if (SECTION_BOUNDARY_RE.test(lines[index] ?? "")) {
       break;
     }
-    if (TABLE_ROW_RE.test(line)) {
-      masked[index] = "";
-    }
+    // Only a real table is exempt: a header row followed by a separator row,
+    // then its contiguous body. A lone pipe-prefixed line — `| - Parent:
+    // US-0001-0001 |` dropped under the table after a blank line — is not
+    // parsed as a table by `parseAllMarkdownTables`, so no Triage validator
+    // ever inspects it. Blanking it here would hide an ownership edge from the
+    // only checks that cover it.
+    const consumed = maskTableAt(lines, index, masked);
+    index = consumed > index ? consumed : index + 1;
   }
   return masked.join("\n");
+}
+
+/**
+ * If a markdown table starts at `index`, blank its lines in `masked` and return
+ * the index just past it. Returns `index` when there is no table here.
+ *
+ * Mirrors `parseAllMarkdownTables`: header row, separator row, then rows while
+ * they keep looking like table rows.
+ */
+function maskTableAt(lines: readonly string[], index: number, masked: string[]): number {
+  const header = lines[index] ?? "";
+  const separator = lines[index + 1] ?? "";
+  if (!TABLE_ROW_RE.test(header) || !TABLE_SEPARATOR_RE.test(separator)) {
+    return index;
+  }
+  masked[index] = "";
+  masked[index + 1] = "";
+  let cursor = index + 2;
+  for (; cursor < lines.length && TABLE_ROW_RE.test(lines[cursor] ?? ""); cursor += 1) {
+    masked[cursor] = "";
+  }
+  return cursor;
 }
 
 async function validatePoliciesDownstreamReferences(policiesDir: string): Promise<Issue[]> {
