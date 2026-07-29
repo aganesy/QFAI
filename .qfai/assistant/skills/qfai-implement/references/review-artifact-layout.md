@@ -24,5 +24,7 @@ not left in conversation. There is exactly **one** `.qfai/review/**` layout, the
   `shared-skill-delegation-baseline.md#verdict-vocabulary`.
 - Each additional review round creates a **new** `review-<timestamp>/` pack. Do not append
   ad-hoc per-round filenames inside an existing pack.
-- `qfai validate --profile tdd` does not check review artifacts; run
-  `qfai validate --profile sdd --fail-on error` (or `/qfai-verify`) to see `QFAI-REVIEW-*` findings.
+- Review artifacts are checked only by the full-scan profiles. Neither `--profile tdd` nor
+  `--profile sdd` reports `QFAI-REVIEW-*`, so a malformed or missing `summary.json` passes both.
+  Run `qfai validate --profile verify --fail-on error` (or the default full scan,
+  `qfai validate --fail-on error`, or `/qfai-verify`, which runs the same profile) to see them.
