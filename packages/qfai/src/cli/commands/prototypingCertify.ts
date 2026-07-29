@@ -436,9 +436,25 @@ export async function runPrototypingCertify(
         `  These are capture outputs, not authored files. The generator writes ` +
           `.qfai/prototypes/${acceptedIterDir}/index.html; ` +
           "`qfai prototyping iterate --capture` is what fans that out to one " +
-          `${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/<screenId>.html per declared screen. ` +
-          "Re-run the accepted cycle with --capture (and a server that resolves each screen's " +
-          "contract route) before certifying.",
+          `${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/<screenId>.html per declared screen.`,
+      );
+      // Recovery must be reachable. Re-invoking the accepted cycle with
+      // `--capture` is NOT: the iteration is already recorded, so
+      // `evaluateCycleGteOneGate` rejects it with "expected --cycle
+      // <iterations.length>" before capture runs, and cycle 0 refuses an
+      // existing iter-00 without `--force`. There is no capture-only
+      // entry point today, so the two routes below are the ones an
+      // operator can actually execute.
+      error(
+        "  Recovery: first make each missing screen's contract route reachable from the " +
+          "capture target (the built-in --auto-serve server is a static file server and 404s " +
+          "path routes; use hash routes or point --target-url at a server with SPA fallback). " +
+          "Then re-run the loop from cycle 0 with `--force` — it backs the prior loop up to " +
+          "iter-00.backup-<ISO> and re-captures every declared screen. Re-invoking the " +
+          "accepted cycle with --capture will not work: that iteration is already recorded in " +
+          "prototyping.json#iterations, so iterate exits first on the expected-next-cycle gate. " +
+          "If a listed screen is no longer part of the product, delete it from " +
+          ".qfai/contracts/ui/ instead so it stops being a declared screen.",
       );
       return 2;
     }

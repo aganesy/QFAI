@@ -173,10 +173,30 @@ when a declared screen has no snapshot there.
 
 A spec declaring N screens is satisfied by **one** `index.html`
 containing N client-side routes — not N files. Each declared screen
-must be reachable at its own contract `route` (client-side routing,
-hash routing, or a `history.pushState` shell all qualify), so the
-capture step can navigate to it and snapshot it independently. This is
-what "all declared spec screens reachable" above means operationally.
+must be reachable at its own contract `route`, so the capture step can
+navigate to it and snapshot it independently. This is what "all
+declared spec screens reachable" above means operationally.
+
+**Which routing shapes the capture step can actually reach.** Capture
+navigates to `new URL(<contract route>, <target url>)` and treats any
+HTTP status >= 400 as a failed screen, writing no evidence. What the
+target server does with that URL therefore decides the routing shape:
+
+- `--auto-serve` starts the built-in static file server. It resolves
+  every non-root URL to a real file under the served directory and
+  returns 404 when there is none — it has no SPA fallback. With it,
+  declare **hash routes** (`/#/settings`): the browser never sends the
+  fragment, so the server always serves `index.html` and the shell
+  routes client-side.
+- **Path routes** (`/settings`) and any `history.pushState` shell need
+  a server that rewrites unknown paths to `index.html`. Run one
+  yourself and pass `--target-url`; they will 404 under `--auto-serve`.
+- Per-screen files (`--emit-skeletons` / `htmlSourceCopy`, below) are
+  the third option: those are real files, so the static server serves
+  them directly.
+
+Pick the routing shape to match the server you will capture against,
+and keep the contract `route` values consistent with it.
 
 Opt-in alternative: `qfai prototyping iterate --emit-skeletons` (cycle 0
 only) and the `htmlSourceCopy` capture option both operate on
