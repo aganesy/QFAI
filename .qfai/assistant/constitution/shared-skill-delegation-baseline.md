@@ -21,10 +21,10 @@ Skill files should reference this baseline and only add role-, stage-, or gate-s
 
 Every delegation failure belongs to exactly one of two classes.
 
-| Class | Meaning | Sanctioned response |
-| ----- | ------- | ------------------- |
-| `unavailable` | The host has no usable delegation mechanism, the role is unknown, or the failure is a configuration / tooling gap only the user can close. | Hard stop. |
-| `saturated` | The host can delegate but is momentarily out of budget — `agent thread limit reached`, concurrency cap, queue full, rate limit, busy pool. The identical call would succeed later with no change by anyone. | Bounded wait-and-retry on the same stage. |
+| Class         | Meaning                                                                                                                                                                                                     | Sanctioned response                       |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `unavailable` | The host has no usable delegation mechanism, the role is unknown, or the failure is a configuration / tooling gap only the user can close.                                                                  | Hard stop.                                |
+| `saturated`   | The host can delegate but is momentarily out of budget — `agent thread limit reached`, concurrency cap, queue full, rate limit, busy pool. The identical call would succeed later with no change by anyone. | Bounded wait-and-retry on the same stage. |
 
 - Classify from the raw failure reason. A reason naming a limit, cap, quota, queue, rate, slot, or busy pool is `saturated`; anything else defaults to `unavailable`.
 - `saturated` never authorises self-execution of a primary artifact or of a blocking review, and never authorises discarding stage progress.
