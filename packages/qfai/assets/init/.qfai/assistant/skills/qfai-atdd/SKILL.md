@@ -133,7 +133,7 @@ Use the shared template.
 
 Use the shared template.
 
-- Required field: `Status (PASS/REVISE)`.
+- Required field: `Status (PASS/REVISE/PENDING)`. `PENDING` marks a gate that could not be run (see the baseline's reviewer-budget branch); it never counts as `PASS`.
 
 ## Stage 0 — Steering completion refresh (mandatory)
 

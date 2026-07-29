@@ -86,7 +86,11 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "### Delegation Failure (Hard Stop)",
       "Do not simulate roles",
       "## Work Orders Summary",
-      "Status (PASS/REVISE)",
+      // #248 review: the reviewer-budget branch mandates recording an
+      // un-runnable gate as `PENDING`, so the status vocabulary each skill
+      // declares has to admit it. `PASS/REVISE` is now a prefix of the
+      // required value rather than the whole of it.
+      "Status (PASS/REVISE/PENDING)",
       "### Reviewer Gate (MUST)",
       "Reviewer",
       "PASS",

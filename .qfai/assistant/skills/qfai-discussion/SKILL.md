@@ -92,7 +92,7 @@ Reviewer checks must confirm:
 - discussion stayed planner-first and did not choose a single visual winner;
 - Drift Protocol is enforced; review policy is checked against `.qfai/assistant/catalog/test-layers.md`;
 - planning and coverage heuristics are signals, not gates;
-- review findings end with `Status (PASS/REVISE)` and Reviewer result is explicit as `PASS` or `REVISE`.
+- review findings end with `Status (PASS/REVISE/PENDING)` and Reviewer result is explicit as `PASS` or `REVISE` (`PENDING` marks a gate that could not be run and never counts as `PASS`).
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -113,7 +113,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ## Work Orders Summary
 
-Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response `Result: PASS | REVISE`).
+Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer response `Result: PASS | REVISE`).
 
 ## Completion Message & Next Actions (MUST)
 

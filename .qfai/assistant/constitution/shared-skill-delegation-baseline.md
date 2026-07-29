@@ -23,10 +23,20 @@ Every delegation failure belongs to exactly one of two classes.
 
 | Class         | Meaning                                                                                                                                                                                                     | Sanctioned response                       |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `unavailable` | The host has no usable delegation mechanism, the role is unknown, or the failure is a configuration / tooling gap only the user can close.                                                                  | Hard stop.                                |
+| `unavailable` | The host has no usable delegation mechanism, the role is unknown, or the failure is a configuration / tooling / quota gap only the user can close — including a limit that waiting cannot clear.            | Hard stop.                                |
 | `saturated`   | The host can delegate but is momentarily out of budget — `agent thread limit reached`, concurrency cap, queue full, rate limit, busy pool. The identical call would succeed later with no change by anyone. | Bounded wait-and-retry on the same stage. |
 
-- Classify from the raw failure reason. A reason naming a limit, cap, quota, queue, rate, slot, or busy pool is `saturated`; anything else defaults to `unavailable`.
+- Classify from the raw failure reason, and classify `saturated` only when the reason states or
+  plainly implies that the identical call would succeed later **with no change by anyone**: a queue
+  or pool that is currently full, a rate limit with a retry window, a concurrency cap that is
+  momentarily reached, an explicit "try again later".
+- A limit or quota that only a user can lift is `unavailable`, not `saturated` — a configured
+  concurrency cap of 0, a maximum delegation depth, an input-size limit, an exhausted account
+  quota or plan. Waiting cannot clear those, so the retry loop would burn 30/60/120 seconds and
+  then report "no user action needed" about a condition that needs exactly that.
+- When retryability is not explicit, default to `unavailable`. The two classes are not
+  symmetric: mis-classifying as `unavailable` costs one unnecessary stop the user can act on,
+  while mis-classifying as `saturated` hides an actionable failure behind a pointless wait.
 - `saturated` never authorises self-execution of a primary artifact or of a blocking review, and never authorises discarding stage progress.
 - When the `saturated` retry budget is exhausted, fall through to the hard stop and report the class as `saturated (retry budget exhausted)`.
 
@@ -61,11 +71,15 @@ Applies to `unavailable`, and to `saturated` once the retry budget is exhausted.
 
 Every major artifact in the stage should include this table schema:
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
+| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE/PENDING          |
 
 - `Output (refs)` should point to in-file anchors or relative evidence paths.
+- `PENDING` records a gate that could not be run — the only honest status for the exhausted-budget
+  branch below, which mandates it. It is never a substitute for `PASS`: DONE stays blocked while
+  any row is `PENDING`, and the stage stays resumable. A skill that allows only `PASS`/`REVISE`
+  would force an agent on that path to either break the schema or mislabel an unrun gate.
 
 ## Reviewer Gate Baseline
 

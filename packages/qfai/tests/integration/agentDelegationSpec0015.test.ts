@@ -423,3 +423,74 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
     );
   });
 });
+
+// TC-0015-0011 follow-up (#248 review): the taxonomy has to be usable
+// without mis-routing a permanent failure into a pointless wait, and the
+// status vocabulary has to admit the value the taxonomy mandates.
+describe("delegation failure taxonomy is actionable", () => {
+  const SKILLS_WITH_STATUS_VOCABULARY = [
+    "qfai-atdd",
+    "qfai-configure",
+    "qfai-verify",
+    "qfai-sdd",
+    "qfai-discussion",
+    "qfai-implement",
+  ];
+
+  function shippedSkill(skillId: string): string {
+    return path.resolve(
+      __dirname,
+      "..",
+      "..",
+      "assets",
+      "init",
+      ".qfai",
+      "assistant",
+      "skills",
+      skillId,
+      "SKILL.md",
+    );
+  }
+
+  it("classifies a limit the user must lift as unavailable, not saturated", async () => {
+    // A configured cap of 0, a max delegation depth, an input-size limit
+    // or an exhausted quota all name a "limit"/"quota" but never clear on
+    // their own. Routing them to the retry branch burns 30/60/120s and
+    // then reports that no user action is needed.
+    for (const file of [SHARED_DELEGATION_BASELINE, LIVE_SHARED_DELEGATION_BASELINE]) {
+      const content = await readAsset(file);
+      const taxonomy = getSection(content, "### Delegation Failure Taxonomy (MUST)");
+      expect(taxonomy).toContain("A limit or quota that only a user can lift is `unavailable`");
+      expect(taxonomy).toMatch(/retryability is not explicit, default to `unavailable`/);
+    }
+  });
+
+  it("admits PENDING in the Work Orders status vocabulary everywhere it is mandated", async () => {
+    // The reviewer-budget branch mandates recording the gate as PENDING;
+    // a schema that allows only PASS/REVISE leaves an agent no legal way
+    // to do that.
+    for (const file of [SHARED_DELEGATION_BASELINE, LIVE_SHARED_DELEGATION_BASELINE]) {
+      const content = await readAsset(file);
+      expect(content).toContain("Status (PASS/REVISE/PENDING)");
+      expect(getSection(content, "### Reviewer budget exhausted")).toContain("`PENDING`");
+    }
+    for (const skillId of SKILLS_WITH_STATUS_VOCABULARY) {
+      const content = await readAsset(shippedSkill(skillId));
+      expect(content).not.toContain("Status (PASS/REVISE)`");
+      expect(content).toContain("Status (PASS/REVISE/PENDING)");
+    }
+  });
+
+  it("keeps spec-0015 obligations aligned with the two-class contract", async () => {
+    const specDir = path.resolve(__dirname, "..", "..", "..", "..", ".qfai", "specs", "spec-0015");
+    const [ac, br] = await Promise.all([
+      readAsset(path.join(specDir, "03_Acceptance-Criteria.md")),
+      readAsset(path.join(specDir, "04_Business-Rules.md")),
+    ]);
+    for (const content of [ac, br]) {
+      expect(content).toContain("`unavailable`");
+      expect(content).toContain("`saturated`");
+    }
+    expect(br).toContain("classify it before responding");
+  });
+});

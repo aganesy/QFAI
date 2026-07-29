@@ -199,7 +199,7 @@ All agent-to-agent transitions follow these contracts:
 
 ## Work Orders Summary
 
-Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response `Result: PASS | REVISE`).
+Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer response `Result: PASS | REVISE`).
 
 ### Reviewer Gate (MUST)
 
