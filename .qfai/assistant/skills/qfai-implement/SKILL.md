@@ -39,18 +39,19 @@ QFAI Skill Body (SSOT)
   `06_Test-Cases.md`. `US-*` / `CON-API-*` are ATDD obligations traced by
   `QFAI:` annotations, not ledger rows.
 - **Recovery when it is missing**: rerun `/qfai-sdd <spec-id>` for the target
-  spec, or copy
-  `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/tdd/test-list.md` into
-  the spec directory and derive the rows from `06_Test-Cases.md`. Do **not**
+  spec, or copy `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/tdd/test-list.md`
+  into the spec directory and derive the rows from `06_Test-Cases.md`. Do **not**
   proceed with an absent ledger and do **not** invent rows that no TC backs.
 - **An empty ledger is a fault only when `06_Test-Cases.md` disagrees.** Before
   treating a header-only table as "nothing to do", read `06_Test-Cases.md` and
-  confirm it declares **no** coverage-target TC (`Level` `L1` / `L2`). If it
-  does, the ledger is truthfully empty: report "nothing to do" and exit —
-  rerunning `/qfai-sdd` derives the same empty table and loops. If it declares
-  coverage-target TCs, the ledger is incomplete (a partial copy or an
-  interrupted Phase 2b) and `qfai validate` reports
-  `TDDLIST_TC_NOT_COVERED`; run the recovery above instead of exiting.
+  confirm it declares **no** coverage-target TC, judged exactly as the validator
+  does (`qfai-sdd/references/spec-traceability-rules.md#tdd-execution-ledger`):
+  a TC is a target unless its `Level` reads `integration` / `e2e` / `system` /
+  `acceptance`, so an empty or unrecognised `Level` — or no `Level` column at
+  all — makes **every** TC a target; never narrow that to a chosen pair of level
+  names. If none is declared the ledger is truthfully empty:
+  report "nothing to do" and exit — rerunning `/qfai-sdd` derives the same empty
+  table and loops. Otherwise it is incomplete (a partial copy or an interrupted Phase 2b) and `qfai validate` reports `TDDLIST_TC_NOT_COVERED`; run the recovery above instead of exiting.
 
 ## Spec Auto-Discovery Protocol
 

@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { isCoverageTargetLevel, NON_COVERAGE_LAYERS } from "../../src/core/tddHelpers.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -95,6 +96,29 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       );
       expect(skill).toContain("read `06_Test-Cases.md` and");
       expect(skill).toContain("run the recovery above instead of exiting");
+    });
+
+    it(`${tree}: the coverage-target test matches the validator, not a level allowlist`, async () => {
+      const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+      const preconditions = skill.slice(
+        skill.indexOf("## Preconditions"),
+        skill.indexOf("## Spec Auto-Discovery Protocol"),
+      );
+      // `isCoverageTargetLevel` excludes only these four; everything else —
+      // including `unit`, `component` and any unrecognised value — is a target,
+      // and a `06_Test-Cases.md` with no `Level` column makes every TC one.
+      // Guidance naming a narrower allowlist makes a header-only ledger look
+      // truthful and skips the whole implementation.
+      for (const layer of NON_COVERAGE_LAYERS) {
+        expect(isCoverageTargetLevel(layer)).toBe(false);
+        expect(preconditions).toContain(`\`${layer}\``);
+      }
+      for (const target of ["unit", "component", "l1", "l2", "l3", ""]) {
+        expect(isCoverageTargetLevel(target)).toBe(true);
+      }
+      expect(preconditions).toMatch(/no `Level` column/);
+      // The removed claim: only `L1` / `L2` counted as coverage targets.
+      expect(preconditions).not.toMatch(/`L1`\s*\/\s*`L2`/);
     });
 
     it(`${tree}: qfai-sdd owns a ledger-seeding phase in every phase-order surface`, async () => {
