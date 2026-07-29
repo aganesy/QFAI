@@ -44,13 +44,13 @@ falsifying-oracle rule:
 
 ### Worked examples
 
-| Oracle asserts | Layer |
-| -------------- | ----- |
-| `price(order) === 1250` for a given input | L1 Unit |
-| the repository port was called with the normalized key, via a fake adapter | L2 Component |
-| the row is present in the database after commit | L3 Integration |
-| `POST /orders` returns `422` with `code: "OUT_OF_AREA"` | L4 API |
-| a user can register, order, and see the order in their history | L5 E2E |
+| Oracle asserts                                                             | Layer          |
+| -------------------------------------------------------------------------- | -------------- |
+| `price(order) === 1250` for a given input                                  | L1 Unit        |
+| the repository port was called with the normalized key, via a fake adapter | L2 Component   |
+| the row is present in the database after commit                            | L3 Integration |
+| `POST /orders` returns `422` with `code: "OUT_OF_AREA"`                    | L4 API         |
+| a user can register, order, and see the order in their history             | L5 E2E         |
 
 ### Obligation spanning more than one layer
 
