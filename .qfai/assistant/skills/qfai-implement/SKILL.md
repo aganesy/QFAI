@@ -311,17 +311,12 @@ Each TDD item MUST have fresh evidence containing at minimum:
 - `TDD-ID` — the item identifier
 - `TC-ref` — reference to the test case(s)
 
-Then one **round block** per RED/GREEN cycle. Round 1 is the original cycle;
-each blocking reviewer `REVISE` that requires new production behaviour adds a
-round. Rounds are numbered and repeatable — they are not appended as free prose:
-
-- `Round N: RED command` — the exact command executed to observe failure
-- `Round N: RED result` — the failure output (result completeness is best-effort; truncated output is acceptable)
-- `Round N: GREEN command` — the exact command executed to observe success
-- `Round N: GREEN result` — the success output
-- `Round N: reviewer verdict` — the verdict that closed the round (`PASS`, or
-  `REVISE` plus the finding that opened round N+1). Absent on round 1 when no
-  review has run yet.
+Then one **round block** per RED/GREEN cycle — `Round N: RED command` /
+`RED result` / `GREEN command` / `GREEN result` / `reviewer verdict`. Round 1
+is the original cycle; each blocking reviewer `REVISE` that requires new
+production behaviour adds a round. Rounds are numbered and repeatable, not
+appended as free prose. Field-by-field rules:
+`references/round-evidence.md`.
 
 Then, once, for the item as a whole:
 
@@ -330,9 +325,6 @@ Then, once, for the item as a whole:
 - `Spec review` — completion-reviewer result (PASS or FAIL)
 - `Code quality review` — implementation-reviewer result (PASS or FAIL)
 - `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE)
-
-A single-round item satisfies this with `Round 1: …` and no reviewer-verdict
-line, which is the same content the previous one-pair contract required.
 
 ### Evidence hard rules
 

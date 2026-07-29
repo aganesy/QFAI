@@ -41,14 +41,21 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
 
     it(`${relativePath}: the evidence contract is a repeatable round shape`, async () => {
       const skill = await readFile(path.join(repoRoot, relativePath), "utf-8");
+      expect(skill).toContain("one **round block** per RED/GREEN cycle");
+      expect(skill).toContain("references/round-evidence.md");
+
+      const reference = await readFile(
+        path.join(repoRoot, path.dirname(relativePath), "references", "round-evidence.md"),
+        "utf-8",
+      );
       for (const field of [
         "`Round N: RED command`",
         "`Round N: GREEN result`",
         "`Round N: reviewer verdict`",
       ]) {
-        expect(skill).toContain(field);
+        expect(reference).toContain(field);
       }
-      expect(skill).toContain("A single-round item satisfies this with `Round 1: …`");
+      expect(reference).toContain("## Single-round items");
     });
   }
 });
