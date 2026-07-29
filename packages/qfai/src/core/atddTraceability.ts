@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { parse as parseYaml } from "yaml";
+
 import type { QfaiConfig } from "./config.js";
 import { resolvePath } from "./config.js";
 import { extractDeclaredContractIds } from "./contractsDecl.js";
@@ -91,8 +93,11 @@ export async function evaluateAtddCodeTraceability(
     collectSpecRefs(specsRoot),
     collectApiContractIds(contractsApiRoot),
   ]);
+  // `active` drives the missing-coverage gate; `declared` (active ∪ deferred)
+  // drives the "is this ID known?" check.
   const apiContractIds = collectedApiContracts.active;
   const deferredApiContractIds = collectedApiContracts.deferred;
+  const declaredApiContractIds = new Set([...apiContractIds, ...deferredApiContractIds]);
 
   const testsRoot = resolvePath(root, config, "testsDir");
   const e2eRoot = path.join(testsRoot, "e2e");
@@ -160,7 +165,11 @@ export async function evaluateAtddCodeTraceability(
     }
 
     for (const contractId of apiAnnotations) {
-      const known = apiContractIds.has(contractId);
+      // Declared = active ∪ deferred. `x-qfai-status: planned` defers the
+      // API-test *obligation*; it does not un-declare the contract, so writing
+      // the test ahead of the slice must not become a `QFAI-ATDD-103` unknown
+      // reference.
+      const known = declaredApiContractIds.has(contractId);
       if (!known) {
         pushUnknown(unknown, unknownDedup, file, `QFAI:${contractId}`, "conApi");
         continue;
@@ -240,11 +249,18 @@ async function collectSpecRefs(specsRoot: string): Promise<{
   return { us, tc };
 }
 
+export const PLANNED_CONTRACT_KEY = "x-qfai-status";
+const PLANNED_CONTRACT_VALUE = "planned";
+
 /**
- * Matches an explicit deferral marker in a contract file, in YAML front-matter
- * or as a top-level key: `x-qfai-status: planned`. Quoting is optional.
+ * Fallback marker for a document that does not parse: an unindented
+ * `x-qfai-status: planned`, optionally as a comment. Column 0 is required, so
+ * the marker cannot be mistaken for one nested under an operation.
  */
-const PLANNED_CONTRACT_RE = /^\s*(?:#\s*)?["']?x-qfai-status["']?\s*:\s*["']?planned["']?\s*$/im;
+const PLANNED_CONTRACT_RE = new RegExp(
+  `^(?:#[ \\t]*)?["']?${PLANNED_CONTRACT_KEY}["']?[ \\t]*:[ \\t]*["']?${PLANNED_CONTRACT_VALUE}["']?[ \\t]*$`,
+  "im",
+);
 
 /**
  * True when the contract declares itself not yet implemented.
@@ -253,9 +269,34 @@ const PLANNED_CONTRACT_RE = /^\s*(?:#\s*)?["']?x-qfai-status["']?\s*:\s*["']?pla
  * Phase 2, so between the second contract and the last slice every declared
  * `CON-API-*` would otherwise be a `QFAI-ATDD-113` error. The marker makes the
  * deferral explicit and reviewable in the contract itself.
+ *
+ * The marker is only honoured at the **document root**. A text scan that
+ * accepted any indentation would let an `x-qfai-status: planned` on a single
+ * OpenAPI operation defer the whole file, silently dropping the API-test
+ * obligation for every other `CON-API-*` it declares. The document is therefore
+ * parsed (YAML is a superset of JSON, so both contract formats go through the
+ * same path) and only a top-level key counts. An unparseable document falls
+ * back to a column-0 text match, which cannot see a nested key either.
  */
 export function isPlannedApiContract(text: string): boolean {
-  return PLANNED_CONTRACT_RE.test(text);
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(text);
+  } catch {
+    // Malformed contract: other validators report the syntax error. Here the
+    // conservative reading is the column-0 marker only.
+    return PLANNED_CONTRACT_RE.test(text);
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return PLANNED_CONTRACT_RE.test(text);
+  }
+  if (!(PLANNED_CONTRACT_KEY in parsed)) {
+    // A commented-out marker survives parsing as nothing at all, so still allow
+    // the column-0 comment form.
+    return PLANNED_CONTRACT_RE.test(text);
+  }
+  const status: unknown = Reflect.get(parsed, PLANNED_CONTRACT_KEY);
+  return typeof status === "string" && status.trim().toLowerCase() === PLANNED_CONTRACT_VALUE;
 }
 
 type CollectedApiContracts = {

@@ -17,6 +17,15 @@ type AtddTraceabilitySummary = {
     tc: string[];
     conApi: string[];
   };
+  /**
+   * `CON-API-*` IDs whose contract declares `x-qfai-status: planned`, so they
+   * are outside the `QFAI-ATDD-113` obligation. Persisted because
+   * `missing.conApi: []` alone cannot tell "every contract is covered" apart
+   * from "every contract is deferred" — the audit artifact has to answer that.
+   */
+  deferred: {
+    conApi: string[];
+  };
   unknown: Array<{ file: string; token: string }>;
   forbidden: {
     tcInApi: Array<{ file: string; ids: string[] }>;
@@ -229,6 +238,11 @@ async function writeAtddTraceabilityReport(
       tc: result.missing.tc,
       conApi: result.missing.conApi,
     },
+    deferred: {
+      conApi: Array.from(result.deferredApiContractIds).sort((left, right) =>
+        left.localeCompare(right),
+      ),
+    },
     unknown: result.unknown.map((entry) => ({
       file: entry.file,
       token: entry.token,
@@ -265,6 +279,11 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
   lines.push(...toList(summary.missing.tc));
   lines.push("- CON-API -> API");
   lines.push(...toList(summary.missing.conApi));
+  lines.push("");
+  lines.push("## Deferred Coverage");
+  lines.push("");
+  lines.push("- CON-API (`x-qfai-status: planned`, outside QFAI-ATDD-113)");
+  lines.push(...toList(summary.deferred.conApi));
   lines.push("");
   lines.push("## Unknown References");
   lines.push("");
