@@ -168,7 +168,7 @@ Two paths remain open on a sealed loop:
 - **Seal it** — run `qfai prototyping certify`. This is the normal
   next step after convergence.
 - **Start over** — run `qfai prototyping iterate --cycle 0
-  --target-url <url>`. Cycle 0 is a hard reset and is never refused;
+--target-url <url>`. Cycle 0 is a hard reset and is never refused;
   it also deletes stale `iter-NN` directories.
 
 Re-running the accepted cycle itself (`--cycle <acceptedIterationIndex>`)
