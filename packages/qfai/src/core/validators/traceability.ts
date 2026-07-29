@@ -222,8 +222,26 @@ const COMPOSITE_ID_RE = /^[A-Za-z]+-\d{4}-\d{4}$/;
  * qualifying it would rewrite every ID in the packs that actually ship today
  * for no gain.
  */
-function qualifyId(specNumber: string, id: string): string {
+export function qualifyId(specNumber: string, id: string): string {
   return COMPOSITE_ID_RE.test(id) ? id : `spec-${specNumber}/${id}`;
+}
+
+/** `.../.qfai/specs/spec-0003/03_Acceptance-Criteria.md` -> `0003`. */
+const SPEC_DIR_IN_PATH_RE = /(?:^|[/\\])spec-(\d{4})(?:[/\\]|$)/;
+
+/**
+ * The spec number owning `filePath`, or `null` for a repo-level file.
+ *
+ * Exported next to {@link qualifyId} because every producer of graph IDs has to
+ * namespace them the same way. A finding-derived node built from a raw short ID
+ * lands beside — not on — the `spec-NNNN/AC-0001` node the edges point at, and
+ * two specs' findings then merge onto the same unqualified node.
+ */
+export function specNumberForPath(filePath: string | undefined): string | null {
+  if (!filePath) {
+    return null;
+  }
+  return SPEC_DIR_IN_PATH_RE.exec(filePath)?.[1] ?? null;
 }
 
 function createGraphBuilder(root: string): GraphBuilder {
@@ -349,11 +367,29 @@ async function addV1417Entry(builder: SpecScopedBuilder, entry: SpecEntry): Prom
 
   builder.addEdges(toParentRefs(acItems.map((item) => [item.id, item.parent])), "AC_TO_US");
   builder.addEdges(toParentRefs(brItems.map((item) => [item.id, item.parent])), "BR_TO_AC");
+  // `validateExamplesParentFormat` accepts `BR-XXXX` **or** `AC-XXXX` as an
+  // EX parent, so tagging every EX edge `EX_TO_BR` left edges whose `to` is an
+  // AC node claiming a BR target — a hierarchy any consumer of `type` reads
+  // wrong. Split by the parent's own layer; a parent of neither shape is
+  // already an error from that validator and contributes no edge.
+  const exParents: Array<[string, string | null]> = exItems.map((item) => [
+    item.exId.replace(/^@/, ""),
+    item.parent,
+  ]);
   builder.addEdges(
-    toParentRefs(exItems.map((item) => [item.exId.replace(/^@/, ""), item.parent])),
+    toParentRefs(exParents.filter(([, parent]) => isLayerId(parent, "BR"))),
     "EX_TO_BR",
   );
+  builder.addEdges(
+    toParentRefs(exParents.filter(([, parent]) => isLayerId(parent, "AC"))),
+    "EX_TO_AC",
+  );
   builder.addEdges(toParentRefs(tcItems.map((item) => [item.id, item.parent])), "TC_TO_EX");
+}
+
+/** True when `id` is a `<layer>-NNNN` / `<layer>-NNNN-NNNN` ID of that layer. */
+function isLayerId(id: string | null, layer: string): boolean {
+  return id !== null && new RegExp(`^${layer}-\\d{4}(?:-\\d{4})?$`, "i").test(id);
 }
 
 /** Collapses `[childId, parentId | null]` pairs into the ref-map shape `addEdges` takes. */

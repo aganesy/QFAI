@@ -8,6 +8,8 @@ import { toRelativePath } from "./paths.js";
 import type { Issue, ValidationResult } from "./types.js";
 import {
   buildLayeredTraceabilityGraph,
+  qualifyId,
+  specNumberForPath,
   type TraceabilityGraph,
   type TraceabilityGraphEdge,
 } from "./validators/traceability.js";
@@ -185,14 +187,21 @@ function buildTraceabilityJson(
     if (!issue.refs || issue.refs.length === 0) {
       continue;
     }
+    // The graph namespaces file-local short IDs as `spec-NNNN/AC-0001`, so a
+    // raw `AC-0001` from a finding lands beside — not on — the node the edges
+    // point at, and two specs' findings then merge onto one unqualified node.
+    // Repo-level findings (`_policies/**`, config) have no owning spec and stay
+    // unqualified, which is what the graph does for them too.
+    const specNumber = specNumberForPath(issue.file);
     for (const ref of issue.refs) {
       idRegex.lastIndex = 0;
       const match = idRegex.exec(ref);
-      const id = match?.[0];
+      const rawId = match?.[0];
       const layer = match?.[1];
-      if (!id || !layer) {
+      if (!rawId || !layer) {
         continue;
       }
+      const id = specNumber === null ? rawId : qualifyId(specNumber, rawId);
       if (nodes.has(id)) {
         continue;
       }

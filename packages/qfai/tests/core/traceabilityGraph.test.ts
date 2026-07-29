@@ -1,10 +1,12 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { writeValidateRunLog } from "../../src/core/runLog.js";
+import type { ValidationResult } from "../../src/core/types.js";
 import { buildLayeredTraceabilityGraph } from "../../src/core/validators/traceability.js";
 
 // The graph feeds the per-run `traceability.json` artifact. It used to be built
@@ -120,6 +122,38 @@ describe("buildLayeredTraceabilityGraph", () => {
     }
   });
 
+  it("types a v1417 EX edge by the parent's own layer", async () => {
+    // `validateExamplesParentFormat` accepts `BR-XXXX` **or** `AC-XXXX`, so
+    // labelling every EX edge `EX_TO_BR` left an edge whose `to` is an AC node
+    // claiming a BR target — a hierarchy any consumer of `type` reads wrong.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-trace-graph-"));
+    try {
+      await seedV1417Spec(root, "0005");
+
+      const graph = await buildLayeredTraceabilityGraph(root, defaultConfig);
+      const exEdges = graph.edges.filter((edge) => edge.from.includes("EX-"));
+
+      expect(exEdges).toContainEqual({
+        from: "spec-0005/EX-0001",
+        to: "spec-0005/BR-0001",
+        type: "EX_TO_BR",
+      });
+      expect(exEdges).toContainEqual({
+        from: "spec-0005/EX-0002",
+        to: "spec-0005/AC-0001",
+        type: "EX_TO_AC",
+      });
+      // The AC-parented example must not also claim a BR target.
+      expect(exEdges).not.toContainEqual({
+        from: "spec-0005/EX-0002",
+        to: "spec-0005/AC-0001",
+        type: "EX_TO_BR",
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("returns an empty graph when there is no spec pack, without throwing", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-trace-graph-"));
     try {
@@ -129,6 +163,72 @@ describe("buildLayeredTraceabilityGraph", () => {
         nodes: [],
         edges: [],
       });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("traceability.json merges finding-derived IDs into the graph namespace", () => {
+  /** A minimal result carrying one finding with a short ref. */
+  const resultWith = (issues: ValidationResult["issues"]): ValidationResult =>
+    ({
+      toolVersion: "0.0.0",
+      profile: "full",
+      issues,
+      counts: { error: 0, warning: 0, info: issues.length },
+      traceability: {
+        sc: { total: 0, covered: 0, missingIds: [], refs: {} },
+        testFiles: { matched: 0, truncated: false, limit: 0, globs: [] },
+      },
+    }) as unknown as ValidationResult;
+
+  it("qualifies a short ref with the spec that owns the finding's file", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-trace-runlog-"));
+    try {
+      await seedShortIdSpec(root, "0001");
+      await seedShortIdSpec(root, "0002");
+
+      const runLog = await writeValidateRunLog({
+        root,
+        config: defaultConfig,
+        startedAt: new Date("2026-01-01T00:00:00.000Z"),
+        result: resultWith([
+          {
+            code: "TRACE_DOWNSTREAM_REF",
+            severity: "info",
+            category: "canonical",
+            message: "x",
+            file: path.join(root, ".qfai/specs/spec-0002/03_Acceptance-Criteria.md"),
+            refs: ["AC-0001"],
+          },
+          {
+            code: "QFAI-LAYER-100",
+            severity: "info",
+            category: "canonical",
+            message: "y",
+            file: path.join(root, ".qfai/specs/_policies/01_Objective.md"),
+            refs: ["CAP-0001"],
+          },
+        ]),
+      });
+
+      const body: unknown = JSON.parse(
+        await readFile(path.join(runLog.reportDir, "traceability.json"), "utf-8"),
+      );
+      const nodes =
+        typeof body === "object" && body !== null && "nodes" in body && Array.isArray(body.nodes)
+          ? (body.nodes as Array<{ id: string }>)
+          : [];
+      const ids = nodes.map((node) => node.id);
+
+      // The graph's own node for that AC — the finding must land ON it, not
+      // beside it, or two specs' findings merge onto one unqualified node.
+      expect(ids).toContain("spec-0002/AC-0001");
+      expect(ids).not.toContain("AC-0001");
+      // A repo-level finding has no owning spec and stays unqualified, exactly
+      // as the graph leaves policy-level IDs.
+      expect(ids).toContain("CAP-0001");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -270,6 +370,49 @@ async function seedV1416Spec(root: string, specNumber: string): Promise<void> {
     "| CASE-ID             | SC-Ref            | Title  |",
     "| ------------------- | ----------------- | ------ |",
     `| CASE-${specNumber}-0001 | SC-${specNumber}-0001 | case-1 |`,
+  ]);
+}
+
+/** v1417 pack: `05_Examples.feature` with `- Parent:` comments per scenario. */
+async function seedV1417Spec(root: string, specNumber: string): Promise<void> {
+  const specDir = path.join(root, ".qfai", "specs", `spec-${specNumber}`);
+  await mkdir(specDir, { recursive: true });
+
+  await write(specDir, "01_Spec.md", ["# 01 Spec"]);
+  await write(specDir, "02_User-stories.md", ["# 02 User Stories", "", "## US-0001", "", "- x"]);
+  await write(specDir, "03_Acceptance-criteria.md", [
+    "# 03 Acceptance Criteria",
+    "",
+    "## AC-0001",
+    "",
+    "- Parent: US-0001",
+  ]);
+  await write(specDir, "04_Business-rules.md", [
+    "# 04 Business Rules",
+    "",
+    "## BR-0001",
+    "",
+    "- Parent: AC-0001",
+  ]);
+  await write(specDir, "05_Examples.feature", [
+    "Feature: examples",
+    "",
+    "  @EX-0001",
+    "  # Parent: BR-0001",
+    "  Scenario: br parented",
+    "    Given a precondition",
+    "",
+    "  @EX-0002",
+    "  # Parent: AC-0001",
+    "  Scenario: ac parented",
+    "    Given a precondition",
+  ]);
+  await write(specDir, "06_Test-cases.md", [
+    "# 06 Test Cases",
+    "",
+    "## TC-0001",
+    "",
+    "- Parent: EX-0001",
   ]);
 }
 
