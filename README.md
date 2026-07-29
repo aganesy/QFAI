@@ -35,18 +35,16 @@ npm i -D qfai
 # or: pnpm add -D qfai / yarn add -D qfai
 ```
 
-```jsonc
-// package.json
-"devDependencies": {
-  "qfai": "^1.9.2"
-}
-```
+Let the package manager write the `devDependencies` entry. Do not hand-pin a version
+here: `package.json#version` in the published package is the only version source, and a
+number copied from prose goes stale on the next release.
 
 > **Do not install from the GitHub repository.** A git specifier such as
-> `"qfai": "github:aganesy/QFAI"` resolves to the private monorepo root, which ships no
-> `bin` and no built `dist`. The install completes cleanly and reports no vulnerabilities,
-> but no `qfai` binary is linked and nothing is importable — the failure only surfaces at
-> the first `qfai <command>`. Use the npm package, or run it without installing via
+> `"qfai": "github:aganesy/QFAI"` maps the dependency key `qfai` to the private monorepo
+> root — the manifest `name` is irrelevant, so it lands in `node_modules/qfai` regardless.
+> That root ships no `bin` and no built `dist`, so nothing would be runnable or
+> importable. The repository refuses such an install with an explanatory error instead of
+> completing silently. Use the npm package, or run it without installing via
 > `npx qfai@latest <command>`.
 
 ## Quick start
