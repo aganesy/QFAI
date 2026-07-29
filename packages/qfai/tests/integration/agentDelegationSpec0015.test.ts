@@ -275,9 +275,9 @@ describe("TC-0015-0011: Delegation Failure Hard Stop Reporting", () => {
     );
     const skillHardStopSection = getSection(skillContent, "### Delegation Failure (Hard Stop)");
 
-    expect(capabilitySection).toContain("If the delegation fails, stop the stage immediately.");
+    expect(capabilitySection).toContain("If the delegation fails, classify the failure first");
     expect(capabilitySection).toContain(
-      "Do not simulate roles and do not continue with self-execution.",
+      "Never simulate roles and never continue with self-execution",
     );
 
     expect(baselineHardStopSection).toContain("Delegation failure:");
@@ -290,9 +290,7 @@ describe("TC-0015-0011: Delegation Failure Hard Stop Reporting", () => {
 
     expect(skillHardStopSection).toContain("No additional overrides.");
     expect(skillHardStopSection).toContain("Do not simulate roles.");
-    expect(skillHardStopSection).toContain(
-      "If the first required delegation fails, stop the stage and report remediation.",
-    );
+    expect(skillHardStopSection).toContain("Classify the failure per the baseline taxonomy first");
 
     // Live operational files must satisfy the same hard-stop reporting contract
     const liveCapabilitySection = getSection(liveBaselineContent, "### Capability Probe (MUST)");
@@ -305,9 +303,9 @@ describe("TC-0015-0011: Delegation Failure Hard Stop Reporting", () => {
       "### Delegation Failure (Hard Stop)",
     );
 
-    expect(liveCapabilitySection).toContain("If the delegation fails, stop the stage immediately.");
+    expect(liveCapabilitySection).toContain("If the delegation fails, classify the failure first");
     expect(liveCapabilitySection).toContain(
-      "Do not simulate roles and do not continue with self-execution.",
+      "Never simulate roles and never continue with self-execution",
     );
 
     expect(liveBaselineHardStopSection).toContain("Delegation failure:");
@@ -321,7 +319,7 @@ describe("TC-0015-0011: Delegation Failure Hard Stop Reporting", () => {
     expect(liveSkillHardStopSection).toContain("No additional overrides.");
     expect(liveSkillHardStopSection).toContain("Do not simulate roles.");
     expect(liveSkillHardStopSection).toContain(
-      "If the first required delegation fails, stop the stage and report remediation.",
+      "Classify the failure per the baseline taxonomy first",
     );
   });
 });
@@ -355,7 +353,7 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
       "Treat that first real delegation attempt as the capability check.",
     );
     expect(baselineCapabilitySection).toContain(
-      "If the delegation fails, stop the stage immediately.",
+      "If the delegation fails, classify the failure first",
     );
 
     expect(skillCapabilitySection).toContain("No additional overrides.");
@@ -363,9 +361,7 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
     expect(skillContent.indexOf("### Capability Probe (MUST)")).toBeLessThan(
       skillContent.indexOf("### Delegation Failure (Hard Stop)"),
     );
-    expect(skillHardStopSection).toContain(
-      "If the first required delegation fails, stop the stage and report remediation.",
-    );
+    expect(skillHardStopSection).toContain("Classify the failure per the baseline taxonomy first");
 
     expect(baselineHardStopSection).toContain("Delegation failure:");
     expect(baselineHardStopSection).toContain("Attempted role:");
@@ -403,7 +399,7 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
       "Treat that first real delegation attempt as the capability check.",
     );
     expect(liveBaselineCapabilitySection).toContain(
-      "If the delegation fails, stop the stage immediately.",
+      "If the delegation fails, classify the failure first",
     );
 
     expect(liveSkillCapabilitySection).toContain("No additional overrides.");
@@ -412,7 +408,7 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
       liveSkillContent.indexOf("### Delegation Failure (Hard Stop)"),
     );
     expect(liveSkillHardStopSection).toContain(
-      "If the first required delegation fails, stop the stage and report remediation.",
+      "Classify the failure per the baseline taxonomy first",
     );
 
     expect(liveBaselineHardStopSection).toContain("Delegation failure:");

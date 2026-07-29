@@ -122,7 +122,11 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const requiredHardStopPayload = [
       "Attempt the first required delegation at stage start using the platform's native delegation mechanism.",
       "Treat that first real delegation attempt as the capability check. Do not gate execution on preflight availability questions or synthetic probe-only checks.",
-      "If the delegation fails, stop the stage immediately. Do not simulate roles and do not continue with self-execution.",
+      // #248 splits delegation failure into unavailable vs saturated, so the
+      // response is class-dependent; the invariant that survives is that a
+      // failure is never answered by simulating roles or self-executing.
+      "If the delegation fails, classify the failure first",
+      "Never simulate roles and never continue with self-execution",
       "Delegation failure:",
       "Attempted role:",
       "Attempted task:",
