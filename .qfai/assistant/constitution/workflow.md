@@ -74,10 +74,16 @@ Implementation stage:
 - Completion requires independent spec review and code quality review gates — both must PASS before an item is marked done.
 - Parallel execution is allowed only for independent slices with no shared state.
 
-Concurrency (stage-independent, mandatory):
+Legacy note:
+
+- The three legacy TDD skills were abolished. Use `/qfai-implement` instead.
+
+### Concurrency (stage-independent, mandatory)
 
 This subsection binds **every** stage that delegates in parallel, including
-`/qfai-sdd` no-argument batch runs and `/qfai-implement` slice execution.
+`/qfai-sdd` no-argument batch runs and `/qfai-implement` slice execution. It is
+a real heading so `workflow.md#concurrency-stage-independent-mandatory` resolves
+from the skills and baselines that cite it.
 
 - Worktree separation is required whenever two or more delegated agents write
   files concurrently. One agent per worktree; no shared index.
@@ -85,15 +91,17 @@ This subsection binds **every** stage that delegates in parallel, including
   "one agent commits at a time; the others hand back an unstaged diff to the
   orchestrator". State which of the two modes is in force in the stage
   evidence.
-- Commit scoping is mandatory in both modes: a delegated agent stages only the
-  paths it declared as deliverables (`git add <paths>`). `git add -A`,
-  `git add .` and `git commit -a` are forbidden for delegated agents, because
+- Commit scoping is mandatory in both modes and binds **every** committer —
+  delegated agent and orchestrator alike. Stage only the paths belonging to the
+  task being committed (`git add <paths>`). `git add -A`, `git add .` and
+  `git commit -a` are forbidden while any parallel stage is in flight, because
   they sweep a sibling agent's in-flight files into an unrelated commit and
   misattribute work in the audit trail the Drift Protocol depends on.
-
-Legacy note:
-
-- The three legacy TDD skills were abolished. Use `/qfai-implement` instead.
+- Degraded mode makes this the **orchestrator's** obligation above all, since
+  it is the one holding the commit: it commits one handed-back diff at a time,
+  staging that agent's declared deliverable paths only, and never blanket-stages
+  the shared worktree. A diff whose paths it cannot enumerate is not
+  committable — ask the agent for its path list first.
 
 ### Stage 0 — Steering refresh contract (mandatory)
 

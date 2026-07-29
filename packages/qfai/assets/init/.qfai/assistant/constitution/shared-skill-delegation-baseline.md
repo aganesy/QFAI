@@ -35,7 +35,12 @@ Skill files should reference this baseline and only add role-, stage-, or gate-s
   agents. Concurrent agents share one index; a sweeping stage command commits
   a sibling agent's in-flight files and misattributes work in the audit trail.
 - When the agent's deliverable paths are not known up front, it hands back an
-  unstaged diff and the orchestrator commits.
+  unstaged diff and the orchestrator commits — under the same rule. The
+  orchestrator commits one handed-back diff at a time, stages that agent's
+  declared paths only, and is equally forbidden from `git add -A` / `git add .`
+  / `git commit -a` while a parallel stage is in flight. Being the committer
+  does not exempt it; in degraded mode it is the only committer, so a sweeping
+  stage there mixes every sibling's work into one commit.
 - Isolation requirements for concurrent stages are defined once in
   `constitution/workflow.md#concurrency-stage-independent-mandatory`.
 

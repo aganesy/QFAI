@@ -11,6 +11,12 @@ const ANCHOR = "workflow.md#concurrency-stage-independent-mandatory";
 const read = async (tree: string, relativePath: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, relativePath), "utf-8");
 
+/**
+ * Collapse markdown soft wraps so assertions pin wording, not the column at
+ * which prettier happened to break the line.
+ */
+const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
+
 /** Returns the body of `heading` up to the next same-or-higher-level heading. */
 function section(content: string, heading: string): string {
   const lines = content.split(/\r?\n/);
@@ -35,20 +41,57 @@ describe("parallel delegation isolation is stage-independent", () => {
     it(`${tree}: workflow.md states concurrency rules outside the implementation stage`, async () => {
       const workflow = await read(tree, "assistant/constitution/workflow.md");
 
-      expect(workflow).toContain("Concurrency (stage-independent, mandatory):");
+      // A real heading, not a bold paragraph: the fragment every citing document
+      // uses is only generated for a heading.
+      expect(workflow).toContain("### Concurrency (stage-independent, mandatory)");
+      expect(workflow).not.toContain("Concurrency (stage-independent, mandatory):");
 
-      const concurrency = workflow.slice(
-        workflow.indexOf("Concurrency (stage-independent, mandatory):"),
-      );
+      const concurrency = section(workflow, "### Concurrency (stage-independent, mandatory)");
+      expect(concurrency).not.toBe("");
       expect(concurrency).toContain("Worktree separation is required");
       expect(concurrency).toContain("/qfai-sdd");
 
       // The worktree clause must no longer be scoped to the implementation stage.
       const implementation = workflow.slice(
         workflow.indexOf("Implementation stage:"),
-        workflow.indexOf("Concurrency (stage-independent, mandatory):"),
+        workflow.indexOf("### Concurrency (stage-independent, mandatory)"),
       );
       expect(implementation).not.toContain("worktree separation is required");
+    });
+
+    it(`${tree}: the anchor every citing document uses matches the heading slug`, async () => {
+      const workflow = await read(tree, "assistant/constitution/workflow.md");
+      const heading = workflow.split(/\r?\n/).find((line) => line.startsWith("### Concurrency"));
+      expect(heading).toBeDefined();
+      // GitHub slug: lowercase, punctuation dropped, spaces to hyphens.
+      const slug = (heading ?? "")
+        .replace(/^#+\s*/, "")
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, "")
+        .trim()
+        .replace(/\s+/g, "-");
+      expect(`workflow.md#${slug}`).toBe(ANCHOR);
+    });
+
+    it(`${tree}: commit scoping binds the orchestrator, not only delegated agents`, async () => {
+      const workflow = await read(tree, "assistant/constitution/workflow.md");
+      const concurrency = unwrap(
+        section(workflow, "### Concurrency (stage-independent, mandatory)"),
+      );
+      // In degraded mode the orchestrator is the committer, so a rule aimed
+      // only at delegated agents leaves the actual committer free to sweep.
+      expect(concurrency).toContain(
+        "binds **every** committer — delegated agent and orchestrator alike",
+      );
+      expect(concurrency).toContain("never blanket-stages the shared worktree");
+
+      const baseline = await read(
+        tree,
+        "assistant/constitution/shared-skill-delegation-baseline.md",
+      );
+      const commitScoping = unwrap(section(baseline, "### Commit Scoping (MUST)"));
+      expect(commitScoping).toContain("the orchestrator commits — under the same rule");
+      expect(commitScoping).toContain("Being the committer does not exempt it");
     });
 
     it(`${tree}: the delegation baseline forbids sweeping stage commands`, async () => {
