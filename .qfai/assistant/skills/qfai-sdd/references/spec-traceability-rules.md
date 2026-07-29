@@ -100,12 +100,13 @@ Template: `templates/specs/spec/16_Traceability-ledger.md`.
 - Schema for the **layered** layout — the first Markdown table is the one read; header needs ≥3
   columns, one named `Implementation File`:
 
-  | BR/AC   | Implementation File | Test File     |
-  | ------- | ------------------- | ------------- |
-  | AC-0001 | src/…               | tests/…       |
+  | BR/AC   | Implementation File | Test File |
+  | ------- | ------------------- | --------- |
+  | AC-0001 | src/…               | tests/…   |
 
   First cell must be a `BR-NNNN` / `AC-NNNN` ID; second cell one repo-root-relative path (no globs,
   no `./`). One row per BR/AC ↔ file pair. Extra trailing columns are ignored.
+
 - The legacy **spec-pack** layout uses the same filename with a different schema
   (`trace_id, obj_id, init_id, cap_id, flow_id, us_id, ac_id, ex_ids, tc_ids`, checked by
   `QFAI-LEDGER-001`). That check runs only on spec-pack layouts — the two schemas never apply to the

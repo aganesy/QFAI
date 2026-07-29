@@ -19,10 +19,10 @@ least three columns and one of them must be named `Implementation File`. Each da
 must be a `BR-NNNN` or `AC-NNNN` ID, and the second cell must be a repository-root-relative path to
 the implementation file.
 
-| BR/AC   | Implementation File            | Test File                              | Notes   |
-| ------- | ------------------------------ | -------------------------------------- | ------- |
-| AC-0001 | src/<module>/<file>.<ext>      | tests/integration/<spec>/<file>.<ext>  | <notes> |
-| BR-0001 | src/<module>/<file>.<ext>      | tests/unit/<spec>/<file>.<ext>         | <notes> |
+| BR/AC   | Implementation File       | Test File                             | Notes   |
+| ------- | ------------------------- | ------------------------------------- | ------- |
+| AC-0001 | src/<module>/<file>.<ext> | tests/integration/<spec>/<file>.<ext> | <notes> |
+| BR-0001 | src/<module>/<file>.<ext> | tests/unit/<spec>/<file>.<ext>        | <notes> |
 
 ### Column rules
 
