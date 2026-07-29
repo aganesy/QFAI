@@ -28,7 +28,12 @@ export interface TriageRequirement {
 export interface TriageInput {
   reqs: TriageRequirement[];
   summaries: SpecSummary[];
-  /** Spec size thresholds beyond which APPEND is upgraded to SPLIT. */
+  /**
+   * Spec size thresholds. A breach is a *signal* recorded in the row's
+   * `rationale`, asking for a capability-ownership review; it never changes
+   * the classified operation, and in particular never upgrades APPEND to
+   * SPLIT (see {@link classifyTriage}).
+   */
   thresholds?: TriageThresholds;
 }
 
@@ -280,15 +285,22 @@ export function bestSubjectMatch(
  *      closest subject-overlap match. Falls through to DELETE only when
  *      no active spec can absorb the removal.
  * 2. capability matches multiple active specs -> MERGE.
- * 3. capability matches a single active spec -> APPEND, escalating to
- *    SPLIT when AC/TC thresholds are exceeded.
+ * 3. capability matches a single active spec -> APPEND. A breached AC/TC
+ *    threshold is reported on the row and never changes the operation.
  * 4. capability does not match (or is absent) but subject tokens overlap
  *    an active spec's title/capability/scope -> APPEND on the closest
- *    spec, with a fallback rationale prompting cascade verification.
- *    SPLIT applies if the closest spec exceeds size thresholds.
+ *    spec, with a fallback rationale prompting cascade verification. A
+ *    breached threshold on that spec is likewise only a rationale note.
  * 5. No subject overlap with any active spec -> CREATE candidate. The
  *    caller MUST add the new CAP to `_policies/03_Capabilities.md` and
  *    cite it in the Rationale column (validator: QFAI-TRIAGE-006).
+ *
+ * This classifier never emits SPLIT. SPLIT asserts one spec must become N
+ * specs, and `validateSpecSplitByCapability` hard-enforces one `CAP-NNNN`
+ * per spec, so a count-driven SPLIT of a single-capability spec raises
+ * `QFAI-SPLIT-102` / `QFAI-SPLIT-104` at `error` and has no legal end
+ * state. Size breaches surface as a `size signal: ...` rationale that asks
+ * for a capability-ownership review; only that review can propose SPLIT.
  *
  * The classifier output is a *proposal*. The agent driving Stage 1 Triage
  * is expected to read the candidate spec's scope/AC/BR before persisting

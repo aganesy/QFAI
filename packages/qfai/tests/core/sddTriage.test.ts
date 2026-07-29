@@ -158,6 +158,39 @@ describe("classifyTriage", () => {
     expect(rows[0]?.rationale).toMatch(/size signal/);
   });
 
+  it("never emits SPLIT, whatever the counts or the branch taken", () => {
+    const oversized = {
+      acCount: DEFAULT_TRIAGE_THRESHOLDS.ac + 1,
+      tcCount: DEFAULT_TRIAGE_THRESHOLDS.tc + 1,
+    };
+    const rows = classifyTriage({
+      reqs: [
+        // capability match on an oversized spec
+        { id: "REQ-0101", subject: "extend alpha", capability: "CAP-0001" },
+        // subject-overlap fallback onto an oversized spec
+        { id: "REQ-0102", subject: "beta tweak" },
+        // removal hint against an oversized spec
+        { id: "REQ-0103", subject: "extend alpha", capability: "CAP-0001", removalHint: true },
+        // no overlap at all -> CREATE
+        { id: "REQ-0104", subject: "unrelated zeta subject", capability: "CAP-0099" },
+      ],
+      summaries: [
+        makeSummary({ specId: "spec-0001", capability: "CAP-0001", title: "alpha", ...oversized }),
+        makeSummary({
+          specId: "spec-0002",
+          capability: "CAP-0002",
+          title: "beta",
+          scopeIn: ["beta"],
+          ...oversized,
+        }),
+      ],
+    });
+    expect(rows).toHaveLength(4);
+    for (const row of rows) {
+      expect(topLevelOp(row.op)).not.toBe("SPLIT");
+    }
+  });
+
   it("respects custom thresholds", () => {
     const rows = classifyTriage({
       reqs: [{ id: "REQ-0006", subject: "extend", capability: "CAP-0001" }],
