@@ -45,8 +45,12 @@ describe("qfai-implement states one parallelization policy", () => {
       expect(section).toContain("concurrent write conflicts");
       expect(section).toContain("per-worker schema isolation");
       // A DI container's mere existence must no longer be a blanket deny.
-      expect(section).not.toContain("No shared state (no shared database, global variable, singleton, or DI container)");
-      expect(section).not.toContain("Shared fixture, shared mock, shared DI container, shared global setup");
+      expect(section).not.toContain(
+        "No shared state (no shared database, global variable, singleton, or DI container)",
+      );
+      expect(section).not.toContain(
+        "Shared fixture, shared mock, shared DI container, shared global setup",
+      );
     });
 
     it(`${tree}: defines coordinated parallel ledger ownership`, async () => {

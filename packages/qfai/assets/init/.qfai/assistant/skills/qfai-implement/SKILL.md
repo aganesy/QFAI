@@ -80,7 +80,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 - Writing acceptance tests (use `/qfai-atdd`).
 - Running validation gates (use `/qfai-verify`).
 - Parallel execution across multiple **specs** simultaneously. (Item-level
-  parallelism *within* one spec is a separate question, governed by
+  parallelism _within_ one spec is a separate question, governed by
   `## Parallelization Policy` below.)
 
 ## Execution Ledger: test-list.md
