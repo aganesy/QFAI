@@ -49,13 +49,20 @@ Every major artifact in the stage should include this table schema:
 ### Finding provenance (MUST)
 
 - Every finding must declare a severity (`blocking` or `advisory`) and a `Traces to:` value.
-- `Traces to:` must name the upstream obligation the finding enforces — an `AC-*`, `BR-*`, `TC-*`,
-  `CON-*` ID, or a named constitution/catalog rule. `none` is the only other legal value.
-- A finding whose `Traces to:` is `none` is by definition reviewer-originated scope and MUST be
-  recorded as `advisory`. It cannot be `blocking`, and it cannot gate `DONE`.
+- `Traces to:` names what the finding enforces. Legal values:
+  - an upstream obligation — an `AC-*`, `BR-*`, `TC-*`, `CON-*` ID, or a named
+    constitution/catalog rule;
+  - `defect:correctness`, `defect:security`, or `defect:code-quality` — a defect demonstrable from
+    the changed artifacts themselves, cited together with the evidence that demonstrates it. See
+    `drift-protocol.md#defect-or-new-scope-decide-this-first`. A reviewer who can show the
+    deliverable is wrong on its own terms does not need an `AC-*` to say so;
+  - `none` — reviewer-originated scope, i.e. a new product obligation upstream never asked for.
+- A finding whose `Traces to:` is `none` MUST be recorded as `advisory`. It cannot be `blocking`,
+  and it cannot gate `DONE`.
 - An advisory finding is routed to the Change Request / Open Question path defined in
   `drift-protocol.md#reviewer-originated-obligations`, not to the implementer.
-- Only `blocking` findings — those that cite an existing upstream obligation — force `REVISE`.
+- Only `blocking` findings — those citing an upstream obligation or a defect class — force
+  `REVISE`.
 
 ## Work order template
 
@@ -81,7 +88,7 @@ Quality bar:
 ```text
 Result: PASS | REVISE
 Findings:
-- <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|none>
+- <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|none>
 Required fixes:
 - <action>   # blocking findings only
 Advisory / Change Request proposals:

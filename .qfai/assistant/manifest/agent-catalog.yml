@@ -1433,10 +1433,11 @@ agents:
       - Required evidence, governing specs, or target artifacts are missing.
       - The request requires implementation or file editing instead of independent review.
       - The issue falls outside this review domain and must be rerouted to another specialist first.
-      - The finding cannot be traced to an existing upstream obligation (`AC-*`, `BR-*`, `TC-*`, `CON-*`,
-        or a named constitution/catalog rule). Do not raise it as blocking; raise it as an advisory
-        finding plus a Change Request proposal per
-        `.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`.
+      - The finding would add a product obligation upstream never asked for. Do not raise it as blocking;
+        raise it as an advisory finding plus a Change Request proposal per
+        `.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`. A defect you can
+        demonstrate from the changed artifacts (correctness, security / data integrity, or a repository
+        quality gate) is NOT in this category: it stays blocking and traces to its `defect:*` class.
 
       ## Sign-off
 
@@ -1675,10 +1676,11 @@ agents:
       - The request requires implementation or file editing instead of independent review.
       - The issue falls outside this review domain and must be rerouted to another specialist first.
       - The review would rely on speculative future requirements instead of current scope and evidence.
-      - The finding cannot be traced to an existing upstream obligation (`AC-*`, `BR-*`, `TC-*`, `CON-*`,
-        or a named constitution/catalog rule). Do not raise it as blocking; raise it as an advisory
-        finding plus a Change Request proposal per
-        `.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`.
+      - The finding would add a product obligation upstream never asked for. Do not raise it as blocking;
+        raise it as an advisory finding plus a Change Request proposal per
+        `.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`. A defect you can
+        demonstrate from the changed artifacts (correctness, security / data integrity, or a repository
+        quality gate) is NOT in this category: it stays blocking and traces to its `defect:*` class.
 
       ## Sign-off
 
