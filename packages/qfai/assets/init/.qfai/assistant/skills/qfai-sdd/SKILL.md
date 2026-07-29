@@ -37,6 +37,7 @@ QFAI Skill Body (SSOT)
 ```
 Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
                   -> Phase 1 Outline -> Phase 2 Slice (per spec)
+                  -> Phase 2b Seed tdd/test-list.md (per spec)
                   -> Phase 3 Plan finalize -> Phase 4 Delta update
 ```
 
@@ -200,7 +201,9 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    `06_Test-Cases.md` — one row per coverage-target TC, `Status = todo`. Copy
    `templates/specs/spec/tdd/test-list.md` when the file does not exist. This
    is the ledger `/qfai-implement` selects from; without it that stage starts
-   with zero selectable items.
+   with zero selectable items. **Seeding is a delta, not a regeneration**: a TC
+   that already has a row keeps its `TDD-ID`, `Status`, `Test file`, `Selector`,
+   `DR-ID` and `Evidence`, and only TCs with no row yet are appended at `todo`.
 8. Phase 3: Plan finalize (after at least one slice gate passes).
 9. Phase 4: Delta update.
 10. Run validate; fix source-layer artifacts and rerun until `error=0`.
@@ -300,6 +303,7 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 
 project_memory:
 
-- Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
+- Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
+- Phase 2b seeds each target spec's tdd/test-list.md from 06_Test-Cases.md (one row per coverage-target TC, Status = todo) and is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence.
 - Append-first is the Stage 1 default: UPDATE on an active spec whose subject tokens overlap; CREATE only when there is zero overlap AND the REQ adds a new CAP-NNNN, registered before the CREATE row.
 - Phase 0 DESIGN.md Freeze is mandatory for UI-bearing targets; .qfai/contracts/design/DESIGN.md.lock.yaml is the brand-lock SSOT.

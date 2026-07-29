@@ -36,13 +36,17 @@ QFAI Skill Body (SSOT)
 - **`.qfai/specs/<spec-id>/tdd/test-list.md` must exist and contain the eight
   required columns.** It is the ledger every step of this skill reads.
 - **Producer**: `/qfai-sdd` Phase 2b seeds one row per coverage-target TC from
-  `06_Test-Cases.md`; `/qfai-atdd` adds `Layer = E2E` / `Layer = API` rows for
-  `US-*` and `CON-API-*` obligations.
-- **Recovery when it is missing or empty**: rerun `/qfai-sdd <spec-id>` for the
-  target spec, or copy
+  `06_Test-Cases.md`. `US-*` / `CON-API-*` are ATDD obligations traced by
+  `QFAI:` annotations, not ledger rows.
+- **Recovery when it is missing**: rerun `/qfai-sdd <spec-id>` for the target
+  spec, or copy
   `.qfai/assistant/skills/qfai-sdd/templates/specs/spec/tdd/test-list.md` into
   the spec directory and derive the rows from `06_Test-Cases.md`. Do **not**
   proceed with an absent ledger and do **not** invent rows that no TC backs.
+- **An empty ledger is not a fault.** A present file whose table has only a
+  header means `06_Test-Cases.md` declares no coverage-target TC; the validator
+  agrees (`TDDLIST_INFO`, not an error). Report "nothing to do" and exit —
+  rerunning `/qfai-sdd` would derive the same empty table and loop.
 
 ## Spec Auto-Discovery Protocol
 
