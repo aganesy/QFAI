@@ -65,6 +65,19 @@ describe("deriving a TC's layer is a published procedure", () => {
       expect(catalog).toContain("depend on implementation order");
     });
 
+    it(`${tree}: re-filing an L4/L5 obligation keeps the EX→TC edge satisfiable`, async () => {
+      const catalog = await read(tree, "assistant/catalog/test-layers.md");
+      // Removing the TC row on its own would orphan the EX it verified, which
+      // `qfai validate --profile sdd --fail-on error` rejects. The procedure
+      // must therefore describe the re-file as an upstream chain move.
+      expect(catalog).toContain("**Re-filing is an upstream change, never a bare row deletion.**");
+      for (const code of ["QFAI-COV-201", "QFAI-COV-202", "QFAI-COV-203"]) {
+        expect(catalog).toContain(code);
+      }
+      expect(catalog).toContain("Move the whole chain in one\n  change through the Drift Protocol");
+      expect(catalog).toContain("split the row instead");
+    });
+
     it(`${tree}: the gates cite the procedure`, async () => {
       expect(await read(tree, "assistant/skills/qfai-atdd/SKILL.md")).toContain(ANCHOR);
       expect(await read(tree, "assistant/skills/qfai-implement/SKILL.md")).toContain(ANCHOR);

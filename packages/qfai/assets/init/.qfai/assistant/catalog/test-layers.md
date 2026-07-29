@@ -92,7 +92,20 @@ routes by obligation ID: `US-*` is answered from `tests/e2e/**`
 - **A `TC-*` row's `Level` stays within L1–L3.** L4's goal is `CON-API-*` and
   L5's goal is `US-*` (see the layer definitions above), so an oracle that
   derives to L4 or L5 means the obligation is misfiled, not that the TC is an
-  L4/L5 test. Re-file it as `CON-API-*` or `US-*` and remove the `TC-*` row.
+  L4/L5 test. Re-file it as `CON-API-*` or `US-*`.
+  **Re-filing is an upstream change, never a bare row deletion.** By step 2 the
+  derivation reaches L4/L5 only when the parent `BR-*` itself owns the
+  service-boundary contract or the journey, so the `TC-*` row is removed only
+  together with the `EX-*` it verifies and the `BR-*`/`AC-*` that EX
+  concretizes. Dropping the row alone leaves the parent EX with no `EX-Ref`
+  and `qfai validate --profile sdd --fail-on error` reports `QFAI-COV-203`
+  (and `QFAI-COV-201` when that TC was the AC's only cover); dropping the EX
+  but keeping its BR reports `QFAI-COV-202`. Move the whole chain in one
+  change through the Drift Protocol so `04_Business-Rules.md`,
+  `05_Examples.md`, `06_Test-Cases.md` and the contract stay consistent. If the
+  parent BR keeps a spec-side obligation, split the row instead: keep a `TC-*`
+  for the part the BR owns — by step 2 that part derives to L1–L3 — and re-file
+  only the boundary assertion as `CON-API-*` / `US-*`.
 - **An L1/L2 `Level` does not relax `QFAI-ATDD-112`, and the gate does not
   change the `Level`.** The two are independent: the `Level` records what the
   oracle observes and is derived before any test exists, while the
