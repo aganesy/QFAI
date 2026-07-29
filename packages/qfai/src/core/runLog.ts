@@ -131,9 +131,7 @@ function buildValidateLog(input: {
   const lines: string[] = [];
   lines.push("# qfai validate log");
   lines.push("");
-  lines.push(
-    "This file is written by every `qfai validate` run and always points at the newest",
-  );
+  lines.push("This file is written by every `qfai validate` run and always points at the newest");
   lines.push("run-log directory. Do not edit it by hand; do not pipe stdout into it.");
   lines.push("");
   lines.push(`- run_id: ${input.runId}`);
