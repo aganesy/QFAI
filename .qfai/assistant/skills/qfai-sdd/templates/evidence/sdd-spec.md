@@ -50,8 +50,14 @@
 ## Commands executed
 
 ```
-qfai validate --profile sdd --fail-on error --format github
+qfai validate --profile sdd --fail-on error --format github | tee .qfai/report/validate.log
 ```
+
+> Keep the `| tee` — `qfai validate` writes the run directory but not
+> `.qfai/report/validate.log`. Without it the log below is either absent or a
+> stale copy from an earlier run, so the evidence no longer backs the hard-gate
+> result it claims. Same command as `SKILL.md` step 8 and
+> `references/sdd-quality-gate.md`.
 
 ## Validate evidence paths
 
