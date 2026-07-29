@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -44,11 +44,13 @@ async function withLedger(
 const codes = (issues: Awaited<ReturnType<typeof validateTddList>>): string[] =>
   issues.map((entry) => entry.code);
 
-describe("test-file existence is required only at done", () => {
-  it("allows a reset green row to name a target path that does not exist yet", async () => {
+describe("a reset row owes no test file until it re-earns green", () => {
+  it("allows a reset todo row to name a target path that does not exist yet", async () => {
+    // The upstream reset returns the row to `todo`; the test is (re)written in
+    // the following `red` phase.
     await withLedger(
       [
-        "| TDD-0001 | TC-0001 | Unit        | tests/pending.test.ts | case a   | green    | DR-1  | reset    |",
+        "| TDD-0001 | TC-0001 | Unit        | tests/pending.test.ts | case a   | todo     | DR-1  | reset    |",
       ],
       (issues) => {
         expect(codes(issues)).not.toContain("TDDLIST_TEST_FILE_MISSING");
@@ -64,6 +66,33 @@ describe("test-file existence is required only at done", () => {
       (issues) => {
         expect(codes(issues)).toContain("TDDLIST_TEST_FILE_MISSING");
       },
+    );
+  });
+
+  it("still requires the file to exist at green and refactor", async () => {
+    // `green` asserts a test that passed; a ledger may not claim that with a
+    // file that is not on disk.
+    for (const status of ["green   ", "refactor"]) {
+      await withLedger(
+        [
+          `| TDD-0001 | TC-0001 | Unit        | tests/missing.test.ts | case a   | ${status} | -     | -        |`,
+        ],
+        (issues) => {
+          expect(codes(issues)).toContain("TDDLIST_TEST_FILE_MISSING");
+        },
+      );
+    }
+  });
+
+  it("accepts a green row whose file exists", async () => {
+    await withLedger(
+      [
+        "| TDD-0001 | TC-0001 | Unit        | tests/a.test.ts       | case a   | green    | -     | -        |",
+      ],
+      (issues) => {
+        expect(codes(issues)).not.toContain("TDDLIST_TEST_FILE_MISSING");
+      },
+      ["tests/a.test.ts"],
     );
   });
 
@@ -126,4 +155,43 @@ describe("Layer and Test file must agree", () => {
       },
     );
   });
+});
+
+const repoRoot = path.resolve(process.cwd(), "..", "..");
+const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
+
+describe("the DR-ID column definition covers the reset row", () => {
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: the column definition is not "exception items only"`, async () => {
+      const skill = await readFile(
+        path.join(repoRoot, tree, "assistant/skills/qfai-implement/SKILL.md"),
+        "utf-8",
+      );
+      // The old wording let an agent blank the approval ID on the next
+      // transition, and no validator checks DR-ID outside `exception`.
+      expect(skill).not.toContain("Decision Record ID for exception items (blank otherwise)");
+      expect(skill).toContain(
+        "required for `exception` rows and for a row reopened by an upstream reset, retained through the row's later statuses",
+      );
+      expect(skill).toContain(
+        "MUST be retained as the row moves on through `red`,\n  `green`, `refactor` and `done`",
+      );
+    });
+
+    it(`${tree}: the traceability rules keep the green/refactor file check`, async () => {
+      const rules = await readFile(
+        path.join(
+          repoRoot,
+          tree,
+          "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+        ),
+        "utf-8",
+      );
+      expect(rules).toContain(
+        "`Status` in `green`, `refactor`, or `done` requires an existing Test file",
+      );
+      expect(rules).toContain("a swept\n  row returns to `todo`");
+      expect(rules).toContain("retains it through `red`, `green`,\n  `refactor` and `done`");
+    });
+  }
 });

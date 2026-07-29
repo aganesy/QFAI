@@ -84,10 +84,15 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - Coverage is measured as unit/component TC references from `06_Test-Cases.md` appearing in TC-Refs.
 - If `06_Test-Cases.md` has no test-case classification column, every TC is treated as a coverage target.
 - `Status=exception` requires a non-empty DR-ID.
-- `Status = done` requires an existing Test file resolved from project root.
-  `green` and `refactor` require a non-empty `Test file` value but do not
-  require the file to exist yet — a row reset by a Drift Protocol sweep names
-  its declared target path before the rewritten test is in place.
+- `Status` in `green`, `refactor`, or `done` requires an existing Test file
+  resolved from project root. The upstream reset does not relax this: a swept
+  row returns to `todo`, where no file is required, and writes its test in the
+  following `red` phase.
+- `DR-ID` carries the approval that authorised an upstream reset, not only
+  `Status = exception`. A row reset by a Drift Protocol sweep records the
+  approved `CR-*` / `DR-*` ID there and **retains it through `red`, `green`,
+  `refactor` and `done`** — the ledger is the audit trail for why a completed
+  row was reopened.
 - `Layer` must be consistent with `Test file`: an `Integration` row may not
   point into `tests/e2e/**` or `tests/api/**`, and vice versa.
 - More than one `TDD-*` row MAY reference the same `TC-*` — a TC split across

@@ -297,13 +297,6 @@ async function validateSpecTddList(
         );
         continue;
       }
-      // Existence is required only at `done`. A row reset by a Drift Protocol
-      // sweep sits at `green`/`refactor` naming its declared target path
-      // before the rewritten test exists; demanding the file there left an
-      // owner-approved reopen with no legal state.
-      if (status !== "done") {
-        continue;
-      }
       let isFile = false;
       try {
         isFile = (await stat(resolved)).isFile();
