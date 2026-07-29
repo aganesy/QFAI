@@ -42,14 +42,12 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
 }
 
 describe("D-DEPRECATED-PATH requires evidence the legacy path is in use", () => {
-  it("pre-sunset, a project that never used .qfai/output/ gets no finding and no side-write", async () => {
+  it("pre-sunset, a project that never used .qfai/output/ gets no finding", async () => {
     await withProject(async (root) => {
       await runValidate({ root, strict: false, toolVersionOverride: "1.9.2" });
 
       const findings = await readFindings(root);
       expect(findings.some((entry) => entry.code === "D-DEPRECATED-PATH")).toBe(false);
-      // The run must not manufacture its own evidence for the next run.
-      expect(await pathExists(path.join(root, LEGACY_REL))).toBe(false);
     });
   });
 
@@ -63,24 +61,69 @@ describe("D-DEPRECATED-PATH requires evidence the legacy path is in use", () => 
     });
   });
 
-  it("pre-sunset, a project with the legacy file on disk still gets the warning and a refresh", async () => {
+  it("pre-sunset, the compatibility write is not gated on the finding's evidence", async () => {
+    // BR-0004-0026: the write continues for the whole deprecation window, so a
+    // consumer reading `.qfai/output/` from a clean checkout keeps working.
     await withProject(async (root) => {
-      await mkdir(path.join(root, ".qfai", "output"), { recursive: true });
-      await writeFile(path.join(root, LEGACY_REL), "{}", "utf-8");
-
       await runValidate({ root, strict: false, toolVersionOverride: "1.9.2" });
 
-      const finding = (await readFindings(root)).find(
-        (entry) => entry.code === "D-DEPRECATED-PATH",
-      );
-      expect(finding?.severity).toBe("warning");
-      expect(finding?.message).toContain("exists on disk");
-
-      // Existing consumers keep working: the file is still refreshed.
+      expect(await pathExists(path.join(root, LEGACY_REL))).toBe(true);
       const legacyBody = JSON.parse(await readFile(path.join(root, LEGACY_REL), "utf-8")) as {
         issues?: unknown;
       };
       expect(legacyBody.issues).toBeDefined();
+    });
+  });
+
+  it("pre-sunset, the file this run wrote is not evidence for the next run", async () => {
+    // The loop the gate exists to break: run 1 deposits the file, run 2 finds
+    // it and warns about the file qfai itself created.
+    await withProject(async (root) => {
+      await runValidate({ root, strict: false, toolVersionOverride: "1.9.2" });
+      expect(await pathExists(path.join(root, LEGACY_REL))).toBe(true);
+
+      await runValidate({ root, strict: false, toolVersionOverride: "1.9.2" });
+      const findings = await readFindings(root);
+      expect(findings.some((entry) => entry.code === "D-DEPRECATED-PATH")).toBe(false);
+    });
+  });
+
+  it("pre-sunset, a config still aiming at the legacy path gets the warning", async () => {
+    await withProject(async (root) => {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        ["output:", `  validateJsonPath: ${LEGACY_REL}`, ""].join("\n"),
+        "utf-8",
+      );
+
+      await runValidate({ root, strict: false, toolVersionOverride: "1.9.2" });
+
+      const body = JSON.parse(await readFile(path.join(root, LEGACY_REL), "utf-8")) as {
+        issues: Finding[];
+      };
+      const finding = body.issues.find((entry) => entry.code === "D-DEPRECATED-PATH");
+      expect(finding?.severity).toBe("warning");
+      expect(finding?.message).toContain("output.validateJsonPath still points at the legacy");
+      // BR-0004-0026: the sunset version stays a literal in the warning body.
+      expect(finding?.message).toContain("sunset: 1.10.0");
+    });
+  });
+
+  it("post-sunset, a stale legacy file on disk is evidence and the write has stopped", async () => {
+    await withProject(async (root) => {
+      await mkdir(path.join(root, ".qfai", "output"), { recursive: true });
+      const stale = '{"stale":true}';
+      await writeFile(path.join(root, LEGACY_REL), stale, "utf-8");
+
+      await runValidate({ root, strict: false, toolVersionOverride: "1.10.0" });
+
+      const finding = (await readFindings(root)).find(
+        (entry) => entry.code === "D-DEPRECATED-PATH",
+      );
+      expect(finding?.severity).toBe("error");
+      expect(finding?.message).toContain("no longer written but");
+      // The stale file is left untouched, not refreshed and not deleted.
+      expect(await readFile(path.join(root, LEGACY_REL), "utf-8")).toBe(stale);
     });
   });
 });

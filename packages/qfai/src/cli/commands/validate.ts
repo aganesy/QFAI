@@ -101,16 +101,24 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // the stale path on this very run.
   const configuredValidateJsonPath = configResult.config.output.validateJsonPath;
   const configTargetsLegacyPath = configTargetsLegacyValidateJsonPath(configuredValidateJsonPath);
-  // The deprecation finding requires observable evidence that a consumer
-  // still depends on the legacy path: the file is on disk, or the config
-  // aims the writer at it. This gate now applies BEFORE the sunset too.
-  // Previously the pre-sunset branch emitted unconditionally, so a project
-  // that had never touched `.qfai/output/` still carried a permanent warning
-  // floor on the whole 1.9 line — and `--strict` / `--fail-on warning` could
-  // never pass in CI. Read before any write so this run's own side-write
-  // cannot manufacture the evidence.
+  // Read before any write, so this run's own side-write cannot manufacture
+  // the evidence the finding is gated on.
   const legacyOnDisk = await pathExists(path.join(root, LEGACY_VALIDATE_JSON_REL));
-  const emitDeprecationIssue = legacyOnDisk || configTargetsLegacyPath;
+  // The finding requires observable evidence that a consumer still depends on
+  // the legacy path. What counts as evidence differs across the sunset, and it
+  // is deliberately NOT the same condition as the compatibility side-write
+  // below (BR-0004-0026 keeps that write running for the whole window):
+  //
+  // - Pre-sunset, the tool itself deposits the legacy file on every run, so
+  //   "the file is on disk" is self-manufactured and proves nothing. Only the
+  //   operator's config naming the legacy literal is real evidence. Emitting
+  //   unconditionally, as before, put a permanent warning floor on the whole
+  //   1.9 line for projects that never used the path, so `--strict` /
+  //   `--fail-on warning` could never pass in CI.
+  // - Post-sunset the tool has stopped writing it, so a file on disk IS a real
+  //   leftover a consumer may still be reading, and the finding says to delete
+  //   it.
+  const emitDeprecationIssue = configTargetsLegacyPath || (!legacyWriteEnabled && legacyOnDisk);
   // Post-sunset, refuse to write to the configured legacy path. This is
   // the migration gate: the legacy SSOT is dead, the config must be
   // updated. Pre-sunset writes proceed normally (writer-side warning).
@@ -119,7 +127,6 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
     ? buildDeprecationIssue({
         severity: legacySeverity,
         legacyWriteEnabled,
-        configTargetsLegacyPath,
         refuseConfiguredLegacyWrite,
       })
     : null;
@@ -171,13 +178,15 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
     const profileSuffixedRel = profileSuffixedReportPath(configuredValidateJsonPath, profileLabel);
     await emitJson(normalized, root, profileSuffixedRel);
   }
-  // Legacy path — refreshed only during the deprecation window, only if the
-  // configured path is NOT already the legacy path (avoid double-writing the
-  // same file), and only if the legacy file already exists. Creating it for a
-  // project that never used it is what made the deprecation warning
-  // self-sustaining: the run wrote the file, then warned about the file it had
-  // just written, and the next run found it on disk.
-  if (legacyWriteEnabled && !configTargetsLegacyPath && legacyOnDisk) {
+  // Legacy path — written for the whole deprecation window per BR-0004-0026,
+  // only skipped when the configured path is already the legacy path (avoid
+  // double-writing the same file). This is intentionally NOT gated on the
+  // finding's evidence: a downstream consumer reading `.qfai/output/` from a
+  // clean checkout has left no evidence to find, and withholding the write
+  // would break it before the announced sunset. Post-sunset
+  // (`legacyWriteEnabled === false`) the write stops, which is the whole point
+  // of the sunset.
+  if (legacyWriteEnabled && !configTargetsLegacyPath) {
     await emitJson(normalized, root, LEGACY_VALIDATE_JSON_REL);
   }
 
@@ -298,25 +307,22 @@ function isAtOrPastSunset(currentVersion: string, sunsetVersion: string): boolea
 
 /**
  * Build the `D-DEPRECATED-PATH` finding for the legacy validate output
- * SSOT. The message depends on three orthogonal signals:
+ * SSOT. Exactly three states can reach this function, matching
+ * `emitDeprecationIssue` in `runValidate`:
  *
- *   - `legacyWriteEnabled` — the tool is still in the deprecation
- *     window (pre-sunset). Severity is `warning`.
- *   - `configTargetsLegacyPath` — the operator's project config still
- *     names the legacy literal as its `output.validateJsonPath`.
- *   - `refuseConfiguredLegacyWrite` — post-sunset AND the config points
- *     at the legacy path: the writer skips and the message must direct
- *     the operator to update their config.
- *
- * Pre-sunset the writer keeps depositing the legacy file (either via
- * the configured path or the side-write below) and the finding warns.
- * Post-sunset the file may exist on disk as a stale artifact: the
- * finding reports that and asks the operator to delete it.
+ *   1. `refuseConfiguredLegacyWrite` — post-sunset AND the config points
+ *      at the legacy path: the writer skipped, so the message must direct
+ *      the operator to update their config.
+ *   2. `legacyWriteEnabled` — pre-sunset. Reachable only when the config
+ *      names the legacy literal, because pre-sunset the tool writes the
+ *      file itself and its presence on disk proves nothing. Severity is
+ *      `warning`; the compatibility write still happens.
+ *   3. Otherwise — post-sunset with a stale file left on disk. The write
+ *      has stopped, so the message asks the operator to delete it.
  */
 function buildDeprecationIssue(args: {
   severity: "warning" | "error";
   legacyWriteEnabled: boolean;
-  configTargetsLegacyPath: boolean;
   refuseConfiguredLegacyWrite: boolean;
 }): Issue {
   const message = args.refuseConfiguredLegacyWrite
@@ -326,16 +332,14 @@ function buildDeprecationIssue(args: {
       `write to enforce the migration gate. Update output.validateJsonPath ` +
       `to .qfai/report/validate.json (canonical) and rerun validate.`
     : args.legacyWriteEnabled
-      ? args.configTargetsLegacyPath
-        ? `qfai.config.yaml#output.validateJsonPath still points at the legacy ` +
-          `SSOT ${LEGACY_VALIDATE_JSON_REL}; the file is being written for ` +
-          `backward compatibility but the sunset (${LEGACY_VALIDATE_JSON_SUNSET}) ` +
-          `is approaching. Update output.validateJsonPath to ` +
-          `.qfai/report/validate.json before the next minor.`
-        : `Legacy validate output path ${LEGACY_VALIDATE_JSON_REL} exists on disk and is ` +
-          `still being refreshed for backward compatibility; sunset: ${LEGACY_VALIDATE_JSON_SUNSET}. ` +
-          `Point consumers at .qfai/report/validate.json (always-latest) or ` +
-          `.qfai/report/validate-<profile>.json and delete the legacy file to silence this finding.`
+      ? // BR-0004-0026 requires the sunset version as a literal `sunset: X`
+        // string in the warning body; this is the only pre-sunset message the
+        // gate can emit, so the literal lives here.
+        `qfai.config.yaml#output.validateJsonPath still points at the legacy ` +
+        `SSOT ${LEGACY_VALIDATE_JSON_REL}; the file is still being written for ` +
+        `backward compatibility; sunset: ${LEGACY_VALIDATE_JSON_SUNSET}. ` +
+        `Update output.validateJsonPath to .qfai/report/validate.json ` +
+        `before the next minor.`
       : `Legacy validate output path ${LEGACY_VALIDATE_JSON_REL} is past the announced ` +
         `sunset (${LEGACY_VALIDATE_JSON_SUNSET}); the legacy file is no longer written but ` +
         `still exists on disk. Update consumers to read .qfai/report/validate.json or ` +
