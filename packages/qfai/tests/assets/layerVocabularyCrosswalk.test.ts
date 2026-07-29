@@ -3,6 +3,11 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import {
+  NON_COVERAGE_LAYERS,
+  UNIT_COMPONENT_LAYERS,
+  isCoverageTargetLevel,
+} from "../../src/core/tddHelpers.js";
 import { LAYER_TAGS } from "../../src/core/testStrategyTags.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -65,5 +70,46 @@ describe("the layer vocabulary has one crosswalk", () => {
       expect(template).toContain("holds exactly **one** layer code");
       expect(template).toContain("`L1` and `L2` are TDD coverage targets");
     });
+
+    it(`${tree}: the directory column defers to the configured testsDir`, async () => {
+      const catalog = await read(tree, "assistant/catalog/test-layers.md");
+      const directories = crosswalkRows(catalog)
+        .slice(2)
+        .map((row) => row[3] ?? "");
+      expect(directories.slice(2)).toEqual([
+        "`<testsDir>/integration/**`",
+        "`<testsDir>/api/**`",
+        "`<testsDir>/e2e/**`",
+      ]);
+      expect(catalog).toContain("**`<testsDir>` is `paths.testsDir` from `qfai.config.yaml`**");
+      expect(catalog).toContain("whose default\n  is `tests`");
+    });
+
+    it(`${tree}: a TC row's Level is restricted to the layers the gate can route`, async () => {
+      const catalog = await read(tree, "assistant/catalog/test-layers.md");
+      expect(catalog).toContain("**A `TC-*` row's `Level` is L1-L3.**");
+      // L4 / L5 carry no `06_Test-Cases.md#Level` spelling.
+      const levelCells = crosswalkRows(catalog)
+        .slice(2)
+        .map((row) => row[4] ?? "");
+      expect(levelCells).toEqual(["`L1`", "`L2`", "`L3`", "—", "—"]);
+
+      const template = await read(
+        tree,
+        "assistant/skills/qfai-sdd/templates/specs/spec/06_Test-Cases.md",
+      );
+      expect(template).toContain("**`L4` and `L5` are not `TC-*` values.**");
+    });
   }
+
+  it("the code-side layer sets carry both spellings of every crosswalk row", () => {
+    for (const spelling of ["unit", "l1", "component", "l2"]) {
+      expect(UNIT_COMPONENT_LAYERS.has(spelling)).toBe(true);
+      expect(isCoverageTargetLevel(spelling)).toBe(true);
+    }
+    for (const spelling of ["integration", "l3", "api", "l4", "e2e", "l5"]) {
+      expect(NON_COVERAGE_LAYERS.has(spelling)).toBe(true);
+      expect(isCoverageTargetLevel(spelling)).toBe(false);
+    }
+  });
 });

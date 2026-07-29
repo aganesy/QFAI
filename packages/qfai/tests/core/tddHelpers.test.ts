@@ -70,8 +70,21 @@ describe("isCoverageTargetLevel", () => {
     expect(isCoverageTargetLevel("acceptance")).toBe(false);
   });
 
-  it("conservatively includes unknown values like L2", () => {
+  it("includes the code spelling of the unit and component layers", () => {
+    expect(isCoverageTargetLevel("L1")).toBe(true);
     expect(isCoverageTargetLevel("L2")).toBe(true);
+  });
+
+  it("excludes the code spelling the crosswalk mandates for L3-L5", () => {
+    // `06_Test-Cases.md#Level` must carry the code form; without these the
+    // code form was an unknown value and became a TDD coverage target.
+    for (const level of ["L3", "L4", "L5", "api"]) {
+      expect(isCoverageTargetLevel(level)).toBe(false);
+    }
+  });
+
+  it("conservatively includes a genuinely unknown value", () => {
+    expect(isCoverageTargetLevel("L9")).toBe(true);
   });
 
   it("treats empty string as coverage target", () => {

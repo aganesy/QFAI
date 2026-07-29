@@ -5,18 +5,41 @@
  * classification in a single source of truth.
  */
 
-export const UNIT_COMPONENT_LAYERS = new Set(["unit", "component"]);
+/**
+ * Layers that are TDD coverage targets.
+ *
+ * Both spellings of each layer are accepted — the code form used by
+ * `06_Test-Cases.md#Level` and the word form used by `tdd/test-list.md#Layer`.
+ * The pairing is the crosswalk in `catalog/test-layers.md`; this set and
+ * {@link NON_COVERAGE_LAYERS} MUST stay in step with that table.
+ */
+export const UNIT_COMPONENT_LAYERS = new Set(["unit", "l1", "component", "l2"]);
 
 /**
  * Layers explicitly excluded from TDD coverage targets.
  * Unknown Level values are conservatively included to avoid silent false negatives.
+ *
+ * Carries both spellings for the same reason as {@link UNIT_COMPONENT_LAYERS}:
+ * a spec that writes the mandated code form (`L3`) would otherwise be an
+ * unknown value here, be counted as a TDD coverage target, and raise
+ * `TDDLIST_TC_NOT_COVERED` for a row the layer policy says is not owed.
  */
-export const NON_COVERAGE_LAYERS = new Set(["integration", "e2e", "system", "acceptance"]);
+export const NON_COVERAGE_LAYERS = new Set([
+  "integration",
+  "l3",
+  "api",
+  "l4",
+  "e2e",
+  "l5",
+  "system",
+  "acceptance",
+]);
 
 /**
  * Determine whether a Level value should be treated as a coverage target.
- * - Known unit/component → true
- * - Known non-coverage (integration/e2e/system/acceptance) → false
+ * - Known unit/component (`unit`/`L1`, `component`/`L2`) → true
+ * - Known non-coverage (integration/api/e2e in either spelling,
+ *   plus legacy `system`/`acceptance`) → false
  * - Unknown/unrecognized → true (conservative: avoids silent coverage gaps)
  * - Empty → true (treated same as missing)
  */

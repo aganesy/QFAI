@@ -16,11 +16,15 @@
 | L1   | Unit        |
 | L2   | Component   |
 | L3   | Integration |
-| L4   | API         |
-| L5   | E2E         |
 
 `L1` and `L2` are TDD coverage targets — each needs a `tdd/test-list.md` row.
-`L3`-`L5` are not. An obligation that spans two layers is two TC rows.
+`L3` is not. An obligation that spans two layers is two TC rows.
+
+**`L4` and `L5` are not `TC-*` values.** The ATDD gate routes an obligation by
+its ID, not by `Level`: a `TC-*` is answered from `tests/integration/**`, and a
+`TC-*` reference inside `tests/api/**` or `tests/e2e/**` is rejected. An oracle
+that lands at the service boundary (L4) or on a full-system journey (L5) is a
+misfiled obligation — record it as `CON-API-*` or `US-*`, not as a `TC-*` row.
 
 ## Test Case Table (required)
 

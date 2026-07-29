@@ -7,25 +7,40 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
 qfai spells the same layer four ways across shipped artifacts. This table is
 the crosswalk; every artifact MUST use the spelling in its column.
 
-| Code | Word        | Tag                 | Test directory         | `06_Test-Cases.md#Level` | `tdd/test-list.md#Layer` |
-| ---- | ----------- | ------------------- | ---------------------- | ------------------------ | ------------------------ |
-| L1   | Unit        | `layer-unit`        | project convention     | `L1`                     | `Unit`                   |
-| L2   | Component   | `layer-component`   | project convention     | `L2`                     | `Component`              |
-| L3   | Integration | `layer-integration` | `tests/integration/**` | `L3`                     | `Integration`            |
-| L4   | API         | `layer-api`         | `tests/api/**`         | `L4`                     | `API`                    |
-| L5   | E2E         | `layer-e2e`         | `tests/e2e/**`         | `L5`                     | `E2E`                    |
+| Code | Word        | Tag                 | Test directory              | `06_Test-Cases.md#Level` | `tdd/test-list.md#Layer` |
+| ---- | ----------- | ------------------- | --------------------------- | ------------------------ | ------------------------ |
+| L1   | Unit        | `layer-unit`        | project convention          | `L1`                     | `Unit`                   |
+| L2   | Component   | `layer-component`   | project convention          | `L2`                     | `Component`              |
+| L3   | Integration | `layer-integration` | `<testsDir>/integration/**` | `L3`                     | `Integration`            |
+| L4   | API         | `layer-api`         | `<testsDir>/api/**`         | —                        | `API`                    |
+| L5   | E2E         | `layer-e2e`         | `<testsDir>/e2e/**`         | —                        | `E2E`                    |
 
 Rules:
 
 - **One value per cell.** A `Level` cell and a `Layer` cell each hold exactly
   one layer. An obligation spanning two layers is two rows, not one row with
   two values.
-- `06_Test-Cases.md` uses the **code** (`L1`…`L5`) in its `Level` column.
+- `06_Test-Cases.md` uses the **code** (`L1`…`L3`) in its `Level` column.
 - `tdd/test-list.md` uses the **word** in its `Layer` column.
 - Test-strategy tags in prompts and policy files use the **tag** form.
+- **`<testsDir>` is `paths.testsDir` from `qfai.config.yaml`**, whose default
+  is `tests` — hence the shipped `tests/integration/**`, `tests/api/**` and
+  `tests/e2e/**`. A project that repoints `paths.testsDir` moves all three at
+  once; the ATDD traceability scan follows the configured value, so never
+  hard-code the literal `tests/` prefix in a project's own artifacts.
 - L1 and L2 have no mandated directory: unit and component tests live wherever
   the project's own convention puts them. Only L3-L5 are directory-pinned, and
   only those directories are scanned by the ATDD traceability rules.
+- **A `TC-*` row's `Level` is L1-L3.** The ATDD annotation hard gate routes an
+  obligation by its ID, not by its `Level`: `US-*` is answered from
+  `<testsDir>/e2e/**` (`QFAI-ATDD-111`), `TC-*` from
+  `<testsDir>/integration/**` (`QFAI-ATDD-112`) and `CON-API-*` from
+  `<testsDir>/api/**` (`QFAI-ATDD-113`), while a `TC-*` reference inside
+  `<testsDir>/api/**` or `<testsDir>/e2e/**` is rejected outright
+  (`QFAI-ATDD-121` / `QFAI-ATDD-122`). L4's goal is `CON-API-*` and L5's is
+  `US-*` (see the layer definitions below), so an oracle that lands at L4 or L5
+  means the obligation is misfiled: record it as `CON-API-*` or `US-*` rather
+  than as a `TC-*` row no test directory can carry.
 - The two code-side word lists (`tddHelpers.ts#UNIT_COMPONENT_LAYERS` /
   `#NON_COVERAGE_LAYERS`) accept both the code and the word form for the same
   layer; they MUST stay in step with this table.
