@@ -86,6 +86,40 @@ describe("resolveTestCaseTable", () => {
       ),
     ).toEqual({ table: null, reason: "no-tc-id-column" });
   });
+
+  it("does not fall back to a later table once the named section exists", () => {
+    // A mistyped column in the real table must surface as a failure, not be
+    // masked by an Appendix table whose IDs are illustrations.
+    const doc = [
+      "## Test Case Table (required)",
+      "",
+      "| TC-Id   | Level |",
+      "| ------- | ----- |",
+      "| TC-0001 | unit  |",
+      "",
+      "## Appendix",
+      "",
+      ...INTRUDING_TABLE,
+      "",
+    ].join("\n");
+
+    expect(resolveTestCaseTable(doc)).toEqual({ table: null, reason: "no-tc-id-column" });
+  });
+
+  it("reports no-table when the named section holds no table at all", () => {
+    const doc = [
+      "## Test Case Table (required)",
+      "",
+      "TBD",
+      "",
+      "## Appendix",
+      "",
+      ...INTRUDING_TABLE,
+      "",
+    ].join("\n");
+
+    expect(resolveTestCaseTable(doc)).toEqual({ table: null, reason: "no-table" });
+  });
 });
 
 describe("validateTddList TC extraction", () => {
@@ -164,6 +198,41 @@ describe("validateTddList TC extraction", () => {
       const warning = issues.find((entry) => entry.code === "TDDLIST_TC_TABLE_UNRESOLVED");
       expect(warning?.severity).toBe("warning");
       expect(warning?.message).toContain("TC coverage checks skipped");
+      // The file to edit is 06_Test-Cases.md, and `file` is what GitHub
+      // annotations, report hotspots and `scope.paths` waivers key on.
+      expect(warning?.file).toBe(".qfai/specs/spec-0001/06_Test-Cases.md");
+    });
+  });
+
+  it("does not adopt an Appendix table when the named section's column is mistyped", async () => {
+    await withProject(async (root) => {
+      await seed(
+        root,
+        [
+          "# 06 Test Cases",
+          "",
+          "## Test Case Table (required)",
+          "",
+          "| TC-Id   | Level |",
+          "| ------- | ----- |",
+          "| TC-0001 | unit  |",
+          "",
+          "## Appendix",
+          "",
+          ...INTRUDING_TABLE,
+          "",
+        ].join("\n"),
+        LEDGER,
+      );
+
+      const issues = await validateTddList(root, defaultConfig);
+      const warning = issues.find((entry) => entry.code === "TDDLIST_TC_TABLE_UNRESOLVED");
+      expect(warning?.severity).toBe("warning");
+      expect(warning?.file).toBe(".qfai/specs/spec-0001/06_Test-Cases.md");
+      // TC-9999 lives only in the Appendix; adopting it would make the ledger's
+      // TC-0001 an unknown reference and TC-9999 an uncovered one.
+      expect(issues.some((entry) => entry.code === "TDDLIST_UNKNOWN_REF")).toBe(false);
+      expect(issues.some((entry) => entry.code === "TDDLIST_TC_NOT_COVERED")).toBe(false);
     });
   });
 

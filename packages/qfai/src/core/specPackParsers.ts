@@ -132,21 +132,34 @@ function extractTestCaseTableSection(text: string): string | null {
  * The template names the section `## Test Case Table (required)`, but the
  * previous implementation read `parseFirstMarkdownTable` — literally the first
  * table in document order — so any explanatory table placed above the heading
- * hijacked TC extraction. Resolution order:
+ * hijacked TC extraction.
  *
- * 1. the first `TC-ID`-bearing table inside the `## Test Case Table` section;
- * 2. otherwise the first `TC-ID`-bearing table anywhere in the document, so
- *    specs written before the heading existed keep working;
- * 3. otherwise a typed failure, so callers can report the miss instead of
- *    silently treating "no TC found" as "all TCs covered".
+ * Resolution is section-first and the legacy fallback is **mutually
+ * exclusive** with it:
+ *
+ * - The `## Test Case Table` heading exists -> only that section is searched.
+ *   If its table has no `TC-ID` column, that is a typed failure, not a licence
+ *   to adopt an Appendix table: a mistyped column in the real table would
+ *   otherwise be masked by an explanatory table further down, silently
+ *   producing unknown/coverage findings keyed on illustration IDs.
+ * - The heading does not exist -> the first `TC-ID`-bearing table anywhere in
+ *   the document, so specs written before the heading existed keep working.
+ *
+ * Either way, "no table found" is reported rather than being allowed to read
+ * as "all TCs covered".
  */
 export function resolveTestCaseTable(text: string): TestCaseTableResolution {
   const section = extractTestCaseTableSection(text);
   if (section !== null) {
-    const sectionTable = parseAllMarkdownTables(section).find(hasTcIdColumn);
+    const sectionTables = parseAllMarkdownTables(section);
+    const sectionTable = sectionTables.find(hasTcIdColumn);
     if (sectionTable) {
       return { table: sectionTable, source: "section" };
     }
+    return {
+      table: null,
+      reason: sectionTables.length === 0 ? "no-table" : "no-tc-id-column",
+    };
   }
 
   const allTables = parseAllMarkdownTables(text);

@@ -28,6 +28,9 @@ const TDD_ID_FORMAT = /^TDD-\d{4}$/;
 
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
 
+/** Per-spec file that owns the Test Case Table, and the target of its findings. */
+const TEST_CASES_FILE_NAME = "06_Test-Cases.md";
+
 export async function validateTddList(root: string, config: QfaiConfig): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
@@ -144,18 +147,26 @@ async function validateSpecTddList(
   if (unresolved) {
     // Both TC checks below are no-ops without a resolved table. Say so, so a
     // silent skip is distinguishable from a pass.
+    //
+    // The finding points at `06_Test-Cases.md`, not at the ledger: that is the
+    // file to edit, and `file` is what GitHub annotations, report hotspots and
+    // `scope.paths` waivers key on. Blaming `tdd/test-list.md` would send all
+    // three at a document that is not the problem.
+    const testCasesRelPath = path
+      .relative(root, path.join(specDir, TEST_CASES_FILE_NAME))
+      .replace(/\\/g, "/");
     issues.push(
       issue(
         "TDDLIST_TC_TABLE_UNRESOLVED",
         unresolved === "no-table"
-          ? `06_Test-Cases.md for spec-${specNumber} contains no Markdown table; TC coverage checks skipped`
-          : `No \`TC-ID\` column found in the Test Case Table of 06_Test-Cases.md for spec-${specNumber}; TC coverage checks skipped`,
+          ? `${TEST_CASES_FILE_NAME} for spec-${specNumber} contains no Markdown table; TC coverage checks skipped`
+          : `No \`TC-ID\` column found in the Test Case Table of ${TEST_CASES_FILE_NAME} for spec-${specNumber}; TC coverage checks skipped`,
         "warning",
-        relPath,
+        testCasesRelPath,
         "tddList.testCaseTableResolvable",
         undefined,
         "change",
-        "06_Test-Cases.md の `## Test Case Table` セクションに `TC-ID` 列を持つ表を記載してください。",
+        `${TEST_CASES_FILE_NAME} の \`## Test Case Table\` セクションに \`TC-ID\` 列を持つ表を記載してください。`,
       ),
     );
   }
@@ -370,7 +381,7 @@ type TestCaseIds = {
 
 async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   const empty: TestCaseIds = { knownTcIds: new Set(), unitComponentTcIds: new Set() };
-  const testCasesPath = path.join(specDir, "06_Test-Cases.md");
+  const testCasesPath = path.join(specDir, TEST_CASES_FILE_NAME);
   if (!(await exists(testCasesPath))) return empty;
   let content: string;
   try {
