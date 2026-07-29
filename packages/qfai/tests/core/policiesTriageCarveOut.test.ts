@@ -32,7 +32,11 @@ async function withPolicies(
     await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n- Parent: CAP-0001\n", "utf-8");
     await writeFile(path.join(specDir, "02_User-stories.md"), "# 02 US\n", "utf-8");
     await writeFile(path.join(specDir, "03_Acceptance-Criteria.md"), "# 03 AC\n", "utf-8");
-    await writeFile(path.join(policiesDir, "03_Capabilities.md"), "# Capabilities\n\n## CAP-0001\n", "utf-8");
+    await writeFile(
+      path.join(policiesDir, "03_Capabilities.md"),
+      "# Capabilities\n\n## CAP-0001\n",
+      "utf-8",
+    );
     await writeFile(path.join(policiesDir, "10_delta.md"), delta, "utf-8");
 
     assertion(await validateLayeredTraceability(root, defaultConfig));
@@ -46,8 +50,7 @@ const policyScopeFindings = (
 ): string[] =>
   issues
     .filter(
-      (entry) =>
-        entry.code === "QFAI-LAYER-100" || entry.code === "TRACE_SHARED_SCOPE_VIOLATION",
+      (entry) => entry.code === "QFAI-LAYER-100" || entry.code === "TRACE_SHARED_SCOPE_VIOLATION",
     )
     .flatMap((entry) => entry.refs ?? []);
 

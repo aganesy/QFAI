@@ -78,7 +78,7 @@ ID reference direction (the value of `Refs:` columns) must be lower-to-upper onl
   traceability edge in `_policies/**` may name a lower-layer ID — no `Parent:`,
   `Refs:`, `AC-Refs`, `BR-Ref` or `EX-Ref` value, and no heading that declares a
   `US/AC/BR/EX/TC` item.
-- *Citing* a lower-layer ID or a `spec-NNNN` inside the `## Triage` section of
+- _Citing_ a lower-layer ID or a `spec-NNNN` inside the `## Triage` section of
   `_policies/10_delta.md` is explicitly allowed. `sdd-triage.md` requires
   cross-spec and policy-only Triage rows to be persisted there, and
   `QFAI-TRIAGE-002` makes `Existing Spec` (a `spec-NNNN` value) a required
