@@ -29,18 +29,20 @@ export const ID_PREFIXES: IdPrefix[] = [
 const DIGIT_AHEAD = "(?=[A-Za-z0-9_-]*\\d)";
 
 /**
- * Rejects a candidate that stops mid-ID.
+ * A wildcard segment written after an ID base, e.g. the `-*` of `AC-0017-*`.
  *
  * The loose patterns end on `\b`, and `-` is not a word character, so
- * `US-0006-*` used to backtrack to `US-0006` and be reported as an invalid ID
- * — a truncation artifact that is also the prefix of every valid
- * `US-0006-NNNN` ID in the same spec, and therefore useless as a search key.
- * The lookahead is deliberately narrow: only a following `-*` or `-?` (an
- * actual wildcard segment) suppresses the candidate. A trailing sentence mark
- * (`Is it US-6?`) or a stray separator left by a typo (`US-6-`,
- * `US-0006-0001-`) is a genuinely malformed ID and must still be reported.
+ * `US-0006-*` backtracks to `US-0006` — a truncation artifact that is also the
+ * prefix of every valid `US-0006-NNNN` ID in the same spec, and therefore
+ * useless as a search key. {@link isWildcardBase} decides whether to suppress
+ * it. A trailing sentence mark (`Is it US-6?`) or a stray separator left by a
+ * typo (`US-6-`, `US-0006-0001-`) is a genuinely malformed ID and is still
+ * reported.
  */
-const NO_TRUNCATION = "(?!-[*?])";
+const WILDCARD_SEGMENT_RE = /^-[*?]/;
+
+/** The segment a wildcard stands in for, used to test the base's shape. */
+const WILDCARD_STAND_IN = "0000";
 
 const STRICT_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
   CAP: /\bCAP-\d{4}\b/g,
@@ -58,18 +60,18 @@ const STRICT_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
 };
 
 const LOOSE_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
-  CAP: new RegExp(`\\bCAP-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b${NO_TRUNCATION}`, "gi"),
-  SPEC: new RegExp(`\\bSPEC-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b${NO_TRUNCATION}`, "gi"),
-  US: new RegExp(`\\bUS-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b${NO_TRUNCATION}`, "gi"),
-  BR: new RegExp(`\\bBR-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b${NO_TRUNCATION}`, "gi"),
-  SC: new RegExp(`\\bSC-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b${NO_TRUNCATION}`, "gi"),
-  AC: new RegExp(`\\bAC-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b${NO_TRUNCATION}`, "gi"),
-  CASE: new RegExp(`\\bCASE-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b${NO_TRUNCATION}`, "gi"),
-  UI: new RegExp(`\\bUI-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b${NO_TRUNCATION}`, "gi"),
-  API: new RegExp(`\\bAPI-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b${NO_TRUNCATION}`, "gi"),
-  DB: new RegExp(`\\bDB-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b${NO_TRUNCATION}`, "gi"),
-  THEMA: new RegExp(`\\bTHEMA-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b${NO_TRUNCATION}`, "gi"),
-  ADR: new RegExp(`\\bADR-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b${NO_TRUNCATION}`, "gi"),
+  CAP: new RegExp(`\\bCAP-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  SPEC: new RegExp(`\\bSPEC-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  US: new RegExp(`\\bUS-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  BR: new RegExp(`\\bBR-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  SC: new RegExp(`\\bSC-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  AC: new RegExp(`\\bAC-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  CASE: new RegExp(`\\bCASE-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  UI: new RegExp(`\\bUI-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  API: new RegExp(`\\bAPI-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  DB: new RegExp(`\\bDB-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  THEMA: new RegExp(`\\bTHEMA-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  ADR: new RegExp(`\\bADR-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
 };
 
 export function extractIds(text: string, prefix: IdPrefix): string[] {
@@ -87,15 +89,38 @@ export function extractAllIds(text: string): string[] {
 }
 
 /**
- * Fence info strings whose body is primary spec content rather than an
- * illustration, so it stays in the ID scan.
+ * Fence info strings whose body may be primary spec content rather than an
+ * illustration.
  *
- * The v1421 `03_Acceptance-Criteria.md` template puts the **required** AC
- * Gherkin inside a ```` ```gherkin ```` fence, so masking every fence would let
- * a mistyped required definition (`# AC-0001-1`) reach `validateLayeredIdFormat`
- * as if it did not exist.
+ * The language alone is not enough to decide: a ```` ```gherkin ```` block in a
+ * Purpose paragraph, or in any layered file other than the acceptance criteria,
+ * is an illustration. It is scanned only when it also sits inside the section
+ * named by {@link FenceMaskOptions.scannedSection}.
  */
 const SCANNED_FENCE_LANGUAGES = new Set(["gherkin", "feature", "cucumber"]);
+
+/**
+ * The one section whose fenced bodies are primary spec content: the v1421
+ * `03_Acceptance-Criteria.md` `## AC Gherkin (required)` block. Masking it
+ * would let a mistyped required definition (`# AC-0001-1`) reach
+ * `validateLayeredIdFormat` as if it did not exist.
+ */
+export const AC_GHERKIN_SECTION = "ac gherkin (required)";
+
+/** An ATX heading; only H1/H2 close the section a fence belongs to. */
+const HEADING_RE = /^ {0,3}(#{1,6})[ \t]+(.*?)[ \t]*#*[ \t]*$/;
+
+export type FenceMaskOptions = {
+  /**
+   * Normalized H2 heading (see {@link AC_GHERKIN_SECTION}) whose fenced bodies
+   * stay in the ID scan when their info string is a Gherkin dialect. Omitted:
+   * every fence body is masked.
+   */
+  scannedSection?: string;
+};
+
+const normalizeSectionTitle = (title: string): string =>
+  title.trim().toLowerCase().replace(/\s+/g, " ");
 
 /**
  * Opening fence: marker run, then an optional info string.
@@ -120,16 +145,28 @@ const FENCE_CLOSE_RE = /^ {0,3}(`{3,}|~{3,})[ \t]*$/;
  *   opening length**. A ```` ```` ```` block that quotes a ```` ``` ```` sample
  *   inside itself is legal markdown; toggling on any fence line would end the
  *   outer block early and re-expose the very sample it was hiding.
- * - A fence tagged with a `SCANNED_FENCE_LANGUAGES` info string keeps its body,
- *   because that body is the spec's own definition.
+ * - A fence keeps its body only when it is tagged with a
+ *   `SCANNED_FENCE_LANGUAGES` info string **and** sits inside
+ *   `options.scannedSection`. Keying on the language alone exempted every
+ *   ```` ```gherkin ```` block in every layered file — including an
+ *   illustration in a Purpose paragraph — which is the case the mask exists
+ *   for. Only the required AC Gherkin section is the spec's own definition.
  */
-export function maskFencedCodeBlocks(text: string): string {
+export function maskFencedCodeBlocks(text: string, options: FenceMaskOptions = {}): string {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const masked: string[] = [];
   let open: { marker: string; length: number; scanned: boolean } | null = null;
+  let inScannedSection = false;
 
   for (const line of lines) {
     if (open === null) {
+      // H1/H2 close the section a fence belongs to; H3+ are subsections of it.
+      const heading = HEADING_RE.exec(line);
+      if (heading && (heading[1] ?? "").length <= 2) {
+        inScannedSection =
+          options.scannedSection !== undefined &&
+          normalizeSectionTitle(heading[2] ?? "") === options.scannedSection;
+      }
       const opening = FENCE_OPEN_RE.exec(line);
       if (opening) {
         const fence = opening[1] ?? "";
@@ -137,7 +174,7 @@ export function maskFencedCodeBlocks(text: string): string {
         open = {
           marker: fence.charAt(0),
           length: fence.length,
-          scanned: SCANNED_FENCE_LANGUAGES.has(language),
+          scanned: inScannedSection && SCANNED_FENCE_LANGUAGES.has(language),
         };
         masked.push("");
         continue;
@@ -172,16 +209,21 @@ export type InvalidIdOccurrence = {
 export function extractInvalidIdOccurrences(
   text: string,
   prefixes: IdFormatPrefix[],
+  options: FenceMaskOptions = {},
 ): InvalidIdOccurrence[] {
-  const lines = maskFencedCodeBlocks(text).split("\n");
+  const lines = maskFencedCodeBlocks(text, options).split("\n");
   const firstSeen = new Map<string, number>();
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index] ?? "";
     for (const prefix of prefixes) {
-      const candidates = line.match(LOOSE_ID_PATTERNS[prefix]) ?? [];
-      for (const candidate of candidates) {
+      for (const match of line.matchAll(LOOSE_ID_PATTERNS[prefix])) {
+        const candidate = match[0];
         if (isValidId(candidate, prefix) || firstSeen.has(candidate)) {
+          continue;
+        }
+        const rest = line.slice(match.index + candidate.length);
+        if (isWildcardBase(candidate, prefix, rest)) {
           continue;
         }
         firstSeen.set(candidate, index + 1);
@@ -192,8 +234,27 @@ export function extractInvalidIdOccurrences(
   return Array.from(firstSeen, ([id, line]) => ({ id, line }));
 }
 
-export function extractInvalidIds(text: string, prefixes: IdFormatPrefix[]): string[] {
-  return extractInvalidIdOccurrences(text, prefixes).map((occurrence) => occurrence.id);
+/**
+ * True when `candidate` is the base of a prose wildcard such as `AC-0017-*`,
+ * i.e. the wildcard stands in for one more numeric segment and the result is a
+ * canonical ID.
+ *
+ * The check has to run here rather than as a lookahead in the loose pattern: a
+ * blanket `(?!-[*?])` also swallowed a malformed base. `US-6-*` looks like a
+ * wildcard but `US-6` is not a valid spec namespace, so suppressing it let a
+ * wrong digit count bypass `E_ID_INVALID_FORMAT` entirely — the exact failure
+ * the format check exists to catch.
+ */
+function isWildcardBase(candidate: string, prefix: IdFormatPrefix, rest: string): boolean {
+  return WILDCARD_SEGMENT_RE.test(rest) && isValidId(`${candidate}-${WILDCARD_STAND_IN}`, prefix);
+}
+
+export function extractInvalidIds(
+  text: string,
+  prefixes: IdFormatPrefix[],
+  options: FenceMaskOptions = {},
+): string[] {
+  return extractInvalidIdOccurrences(text, prefixes, options).map((occurrence) => occurrence.id);
 }
 
 export function extractSpecNumber(specId: string): string | null {

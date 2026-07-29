@@ -4,7 +4,13 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { buildContractIndex } from "../contractIndex.js";
-import { extractIds, extractInvalidIdOccurrences, type IdFormatPrefix } from "../ids.js";
+import {
+  AC_GHERKIN_SECTION,
+  extractIds,
+  extractInvalidIdOccurrences,
+  type FenceMaskOptions,
+  type IdFormatPrefix,
+} from "../ids.js";
 import {
   collectMissingLayeredSharedRequiredFiles,
   collectMissingRequiredFiles,
@@ -937,6 +943,10 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
       acceptanceCriteriaText,
       ["US", "AC"],
       `${layeredFileNames.acceptanceCriteria} の ID を \`US-0001-0001\` / \`AC-0001-0001\` 形式へ修正してください。`,
+      // The required AC Gherkin block is the definition of these IDs, so it is
+      // the one fence body that stays scanned. Every other fence — here or in
+      // any other layered file — is an illustration.
+      { scannedSection: AC_GHERKIN_SECTION },
     ),
   );
   issues.push(
@@ -1041,8 +1051,9 @@ function validateLayeredIdFormat(
   text: string,
   prefixes: IdFormatPrefix[],
   suggestedAction: string,
+  fenceOptions: FenceMaskOptions = {},
 ): Issue[] {
-  const occurrences = extractInvalidIdOccurrences(text, prefixes);
+  const occurrences = extractInvalidIdOccurrences(text, prefixes, fenceOptions);
   if (occurrences.length === 0) {
     return [];
   }
