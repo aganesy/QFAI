@@ -21,11 +21,54 @@ describe("a Change Request is a defined artifact", () => {
         "- Approved by:",
         "- Approved at:",
         "- Approved option:",
+        "- Applied at:",
         "- Superseded by:",
       ]) {
         expect(template).toContain(field);
       }
       expect(template).toContain("open | approved | rejected | superseded");
+    });
+
+    it(`${tree}: Applied at separates "approved" from "carried out"`, async () => {
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain(
+        "`Status: approved` records the operator's decision; `Applied at` records that",
+      );
+
+      const drift = await read(tree, "assistant/constitution/drift-protocol.md");
+      expect(drift).toContain("fill `Resolution` and set `Applied at`");
+
+      const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+      expect(skill).toContain("`Applied at` is populated — approval alone");
+    });
+
+    it(`${tree}: the approved CR reset is a stated exception to forward-only status`, async () => {
+      const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+      expect(skill).toContain(
+        "The only exception is an approved Change Request reset (see Status Lifecycle).",
+      );
+      expect(skill).toContain(
+        "Completed items (`done`) are skipped on re-execution, unless an approved Change Request reset them.",
+      );
+      expect(skill).toContain("`references/change-request-reset.md`");
+
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("the\n   only sanctioned backward status transition");
+    });
+
+    it(`${tree}: the reset reference states its preconditions and what stays prohibited`, async () => {
+      const reference = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/change-request-reset.md",
+      );
+      expect(reference).toContain(
+        "# Approved Change Request reset (the only sanctioned backward transition)",
+      );
+      expect(reference).toContain("may reset the rows that change invalidates back to `todo`");
+      expect(reference).toContain("records that CR's ID in its `DR-ID` column");
+      expect(reference).toContain("A CR at `Status: open` authorises nothing.");
+      expect(reference).toContain('"Backward transition prohibited: green -> red"');
+      expect(reference).toContain("An `approved` CR without\n`Applied at` is still unresolved");
     });
 
     it(`${tree}: the template carries the six contents the protocol mandates`, async () => {
@@ -59,10 +102,13 @@ describe("a Change Request is a defined artifact", () => {
       );
     });
 
-    it(`${tree}: "unresolved" is defined at the completion gate`, async () => {
+    it(`${tree}: "unresolved" has one definition at the completion gate`, async () => {
       const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
-      expect(skill).toContain('"unresolved"');
-      expect(skill).toContain("`.qfai/decisions/CR-*.md` whose `Status` is `open`");
+      // A single positive definition of "resolved": everything else is
+      // unresolved, so a half-filled record cannot slip through.
+      expect(skill).toContain("is **resolved** only when every condition below");
+      expect(skill).toContain("**unresolved** and blocks completion");
+      expect(skill).toContain("`Status` is `approved`, `rejected` or `superseded` (never `open`)");
     });
   }
 });

@@ -16,7 +16,16 @@ while an unresolved CR exists, so `Status` must be a real, checkable field.
 - Approved by: `-` <!-- required when Status is approved or rejected -->
 - Approved at: `-` <!-- YYYY-MM-DDThh:mm:ssZ -->
 - Approved option: `-` <!-- the option number below that was chosen -->
+- Applied at: `-` <!-- YYYY-MM-DDThh:mm:ssZ; set only after the owner-skill rerun below completed and upstream artifacts are updated -->
 - Superseded by: `-` <!-- CR-ID, required when Status is superseded -->
+
+<!--
+`Status: approved` records the operator's decision; `Applied at` records that
+the approved actions were carried out. `qfai-implement` treats an approved CR
+as unresolved until `Applied at` and `Resolution` are both filled, because
+`constitution/drift-protocol.md` resumes downstream work only after the
+upstream artifacts have been updated.
+-->
 
 ## Context (what conflicts)
 
@@ -50,8 +59,15 @@ while an unresolved CR exists, so `Status` must be a real, checkable field.
 
 1. `<owner skill>` rerun scope: `<what>`
 2. Downstream ledger sweep: reset the `tdd/test-list.md` rows this change
-   invalidates, recording this CR's ID in their `DR-ID` column.
+   invalidates, recording this CR's ID in their `DR-ID` column. This is the
+   only sanctioned backward status transition — see
+   `.qfai/assistant/skills/qfai-implement/SKILL.md`, "Approved Change Request
+   reset".
 
 ## Resolution
 
-<!-- Filled in when Status leaves `open`. Record what was actually done. -->
+<!--
+Filled in when Status leaves `open`. Record what was actually done: the owner
+skill that was rerun and the upstream artifacts it updated, and the ledger rows
+reset (by TDD-ID). Set `Applied at` in the header once this section is true.
+-->

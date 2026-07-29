@@ -58,8 +58,8 @@ Skill-specific examples:
 - Items are processed **serially** by default. Parallel processing is allowed only when items target independent SUT slices with no shared state.
 - Status transitions follow a strict forward-only lifecycle: `todo` -> `red` -> `green` -> `refactor` -> `done`.
 - The `exception` status can be reached from any active status when an anomaly is detected.
-- Backward transitions are prohibited (e.g., `green` -> `red` is not allowed).
-- Completed items (`done`) are skipped on re-execution.
+- Backward transitions are prohibited (e.g., `green` -> `red` is not allowed). The only exception is an approved Change Request reset (see Status Lifecycle).
+- Completed items (`done`) are skipped on re-execution, unless an approved Change Request reset them.
 - When all items are `done`, report "nothing to do" and exit.
 
 ## Goal
@@ -110,6 +110,10 @@ Allowed transitions:
 
 Backward transitions are prohibited. Attempting `green` -> `red` must produce:
 `"Backward transition prohibited: green -> red"`.
+
+The one exception is an approved Change Request reset — the only sanctioned
+backward transition. Preconditions and the reset procedure:
+`references/change-request-reset.md`.
 
 ### Exception Handling
 
@@ -268,10 +272,18 @@ The skill may declare "this spec's implementation is complete" only when:
 - Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain
 - Checkpoint verification passed
-- No unresolved Change Request or waiver dependency exists — "unresolved"
-  means a `.qfai/decisions/CR-*.md` whose `Status` is `open`. A CR is
-  resolved when its `Status` is `approved`, `rejected` or `superseded` and
-  `Approved by` / `Approved at` are populated
+- No unresolved Change Request or waiver dependency exists. A
+  `.qfai/decisions/CR-*.md` is **resolved** only when every condition below
+  holds; a CR failing any one of them — a half-filled record included — is
+  **unresolved** and blocks completion:
+  - `Status` is `approved`, `rejected` or `superseded` (never `open`);
+  - `Approved by` / `Approved at` are populated, plus `Approved option` when
+    `Status` is `approved` and `Superseded by` when it is `superseded`;
+  - `Resolution` records what was actually done; and
+  - when `Status` is `approved`, `Applied at` is populated — approval alone
+    does not release the gate. It is set only after the owner-skill rerun in
+    "Approved actions" completed and upstream artifacts are updated, which is
+    when `constitution/drift-protocol.md` resumes downstream work
 
 ### Completion prohibition conditions
 

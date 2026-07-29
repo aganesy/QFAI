@@ -40,9 +40,12 @@ Any exception beyond this list requires explicit user approval.
    - impact scope (spec/plan/tests/contracts/schema)
    - decision needed from user
    - approved actions (owner skill rerun plan)
-3. Wait for explicit user approval.
+3. Wait for explicit user approval, then set `Status` and the approval fields.
 4. Rerun the owner skill for the upstream artifact.
-5. Resume downstream work only after upstream artifacts are updated.
+5. Resume downstream work only after upstream artifacts are updated. Record
+   that fact in the CR: fill `Resolution` and set `Applied at`. Approval alone
+   does not release the downstream gate — `qfai-implement` treats an
+   `approved` CR without `Applied at` as unresolved.
 
 ## Non-negotiable constraints
 
