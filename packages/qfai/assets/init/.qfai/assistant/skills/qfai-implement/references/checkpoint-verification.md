@@ -20,16 +20,34 @@ Run all of the following from the repository root, in order. Substitute the proj
 the placeholders; record the literal commands actually executed in evidence.
 
 1. The item's own test — the ledger's `Test file` **plus** the runner's test-name option applied to
-   the ledger's `Selector`. The `Selector` is a test NAME, and every common runner takes a name
+   the ledger's `Selector`. Two runner-specific decisions, and both must be made from the ledger row:
+
+   **a. The name option.** The `Selector` is a test NAME, and every common runner takes a name
    through a flag, not a positional argument: a positional is a file filter. Vitest and Jest use
-   `-t`, pytest uses `-k`, `go test` uses `-run`. For vitest:
+   `-t`, pytest uses `-k`, `go test` uses `-run`. Passing the selector positionally
+   (`<test runner> '<Selector>'`) exits 1 with "No test files found", so the checkpoint would fail
+   on every item and none could leave `refactor`.
 
-   ```bash
-   <test runner> <Test file> -t '<Selector>'
-   ```
+   **b. The unit of selection.** What goes in front of the name option is whatever the runner
+   selects by, which is not always a file:
+   - **File-selecting runners** (vitest, jest, pytest) take the `Test file` itself:
 
-   Passing the selector positionally (`<test runner> '<Selector>'`) exits 1 with "No test files
-   found", so the checkpoint would fail on every item and none could leave `refactor`.
+     ```bash
+     <test runner> <Test file> -t '<Selector>'
+     ```
+
+   - **Package-selecting runners** (`go test`) take a package. `go help test` documents the usage
+     as `go test [build/test flags] [packages] [build/test flags & test binary flags]`, and it
+     compiles the package's sources together with the matching `*_test.go` files. Handing it a lone
+     file switches it into file mode and drops the rest of the package from the build, so the item's
+     test normally fails on undefined symbols. Derive the package from the `Test file`'s directory:
+
+     ```bash
+     go test ./<dir of Test file> -run '<Selector>'
+     ```
+
+   Record the literal command actually run either way. If a project's runner selects by something
+   else again, derive that unit from `Test file` in the same manner and say so in the evidence.
 
 2. The full test suite — `<test runner>` with no file filter and no test-name option.
 3. The project's static gates, when the repository defines them — formatter check, linter, and type
@@ -51,6 +69,15 @@ Checkpoint verification PASSES only when **every** command in the applicable set
 reports zero `QFAI-TEST-001` findings. Any non-zero exit is a FAIL: for a per-item checkpoint the
 item stays at `refactor`, the failure is fixed, and the whole set is re-run. A partial run is not a
 pass.
+
+**A fix invalidates the reviewer PASS that preceded it.** The per-item boundary sits after
+`completion-reviewer` and `implementation-reviewer` returned PASS (Phase: Refactor, steps 4-5), so
+those verdicts were given against the pre-fix test and production code. Whenever the fix changes
+either, re-submit to every routed blocking reviewer the change could affect — always the ones whose
+scope it touches — and obtain a fresh PASS **before** re-running the command set. Re-running the
+commands alone would let an item reach `done` carrying code no reviewer ever saw, which the
+skill's own stale-evidence rule forbids. A fix that changes nothing a reviewer judged — re-running
+after a flaky external service, say — needs no re-review; record which case applied.
 
 ## Spec-level boundary on an already-complete ledger
 

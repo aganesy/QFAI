@@ -87,6 +87,38 @@ describe("qfai-implement checkpoint verification contract", () => {
     }
   });
 
+  // `go test` selects by package, not by file: handing it a lone `*_test.go`
+  // switches it into file mode and drops the rest of the package from the
+  // build, so the item's test normally fails on undefined symbols.
+  it("derives a package, not a file, for package-selecting runners", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("**b. The unit of selection.**");
+      expect(reference).toContain("**Package-selecting runners** (`go test`) take a package");
+      expect(reference).toContain("go test ./<dir of Test file> -run '<Selector>'");
+      expect(reference).toContain("drops the rest of the package from the build");
+      expect(reference).toContain("Derive the package from the `Test file`'s directory");
+    }
+  });
+
+  // The reviewers PASS before the per-item checkpoint, so a fix made because
+  // the checkpoint failed is code no reviewer has judged.
+  it("requires a fresh reviewer PASS after a checkpoint fix", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("**A fix invalidates the reviewer PASS that preceded it.**");
+      expect(reference).toContain("re-submit to every routed blocking reviewer");
+      expect(reference).toContain("obtain a fresh PASS **before** re-running the command set");
+      expect(reference).toContain("carrying code no reviewer ever saw");
+    }
+  });
+
   // A spec-level re-run has no "item just completed" to build step 1 from.
   it("defines a per-spec command set without the item selector", async () => {
     for (const dir of SKILL_DIRS) {
