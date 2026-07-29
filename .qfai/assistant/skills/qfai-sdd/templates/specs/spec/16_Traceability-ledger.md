@@ -14,10 +14,11 @@ implementation drift.
 
 ## Ledger Table (required when this file exists)
 
-The **first** Markdown table in this file is the one the validator reads. Its header must have at
-least three columns and one of them must be named `Implementation File`. Each data row's first cell
-must be a `BR-NNNN` or `AC-NNNN` ID, and the second cell must be a repository-root-relative path to
-the implementation file.
+The **first** Markdown table in this file is the one the validator reads, and the only one: any
+further table in this document is prose, never a ledger row, even if its first cell looks like a
+`BR`/`AC` ID. Its header must have at least three columns and one of them must be named
+`Implementation File`. Each data row's first cell must be a `BR-NNNN` or `AC-NNNN` ID, and the
+second cell must be a repository-root-relative path to the implementation file.
 
 | BR/AC   | Implementation File       | Test File                             | Notes   |
 | ------- | ------------------------- | ------------------------------------- | ------- |

@@ -4,6 +4,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { parseFirstMarkdownTable, type MarkdownTable } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -19,40 +20,39 @@ function normalizePath(p: string): string {
 }
 
 /**
+ * The ledger table is the **first** Markdown table in the file — the contract the
+ * shipped `16_Traceability-ledger.md` template declares.
+ *
+ * Both the format probe and the row reader must agree on that, which is why they
+ * take one already-parsed table rather than rescanning the text. Reading every
+ * `|` line in the document instead let a supplementary table further down
+ * contribute rows: any row whose first cell happened to look like `AC-0001`
+ * produced a `QFAI-TRACE-001` error naming whatever its second cell held, even
+ * when the real linked implementation had been modified.
+ */
+function readLedgerTable(content: string): MarkdownTable | null {
+  return parseFirstMarkdownTable(content);
+}
+
+/**
  * Checks whether the ledger table header matches the expected
  * 3-column format: BR/AC | Implementation File | Test File.
  * This validator uses this specific table format for implementation traceability.
  */
-function isExpectedLedgerFormat(content: string): boolean {
-  const lines = content.replace(/\r\n/g, "\n").split("\n");
-  for (const line of lines) {
-    if (!line.startsWith("|")) continue;
-    if (/^\|\s*-/.test(line)) continue;
-    // First non-separator table row = header
-    const cells = line
-      .split("|")
-      .map((c) => c.trim())
-      .filter((c) => c.length > 0);
-    return cells.length >= 3 && cells.some((c) => /Implementation File/i.test(c));
+function isExpectedLedgerFormat(table: MarkdownTable | null): boolean {
+  if (!table) {
+    return false;
   }
-  return false;
+  const headers = table.headers.filter((cell) => cell.length > 0);
+  return headers.length >= 3 && headers.some((cell) => /Implementation File/i.test(cell));
 }
 
-function parseLedger(content: string): LedgerEntry[] {
+function parseLedger(table: MarkdownTable | null): LedgerEntry[] {
+  if (!table) {
+    return [];
+  }
   const entries: LedgerEntry[] = [];
-  const lines = content.replace(/\r\n/g, "\n").split("\n");
-  for (const line of lines) {
-    // Skip non-table rows, header rows, and separator rows
-    if (!line.startsWith("|")) {
-      continue;
-    }
-    if (/^\|\s*-/.test(line)) {
-      continue;
-    }
-    const cells = line
-      .split("|")
-      .map((c) => c.trim())
-      .filter((c) => c.length > 0);
+  for (const cells of table.rows) {
     const brAcCell = cells[0];
     const implCell = cells[1];
     if (!brAcCell || !implCell) {
@@ -141,10 +141,11 @@ export async function validateTraceabilityIntegrity(
       continue;
     }
 
-    const entries = parseLedger(ledgerContent);
+    const ledgerTable = readLedgerTable(ledgerContent);
+    const entries = parseLedger(ledgerTable);
 
     // FIX 6: Format detection — skip if ledger uses a different table format
-    if (!isExpectedLedgerFormat(ledgerContent)) {
+    if (!isExpectedLedgerFormat(ledgerTable)) {
       issues.push(
         issue(
           "QFAI-TRACE-002",
