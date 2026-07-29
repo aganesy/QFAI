@@ -2583,12 +2583,24 @@ function buildDesignTokens(dm: DesignMd): DesignTokens {
 const SEALED_STOP_REASON = "axes-exceptional";
 
 async function refuseWhenLoopConverged(root: string, cycle: number): Promise<number | null> {
+  // Cycle 0 is the documented escape hatch out of every terminal state and is
+  // exempted before anything is read from the record. Deriving the exemption
+  // from `cycle > acceptedIterationIndex` made it depend on the recorded value
+  // being sane: a corrupt or legacy `-1` turned `0 > -1` true and refused the
+  // one command that could repair the loop.
+  if (cycle === 0) return null;
   const record = await readPrototypingJson(path.join(root, PROTOTYPING_JSON_REL));
   if (record === null) return null;
   const stopReasonRaw = record.stopReason;
   if (stopReasonRaw !== SEALED_STOP_REASON) return null;
   const acceptedRaw = record.acceptedIterationIndex;
-  if (typeof acceptedRaw !== "number" || !Number.isInteger(acceptedRaw)) return null;
+  // A negative index is not an accepted iteration; it is a corrupt or
+  // pre-format record, and the seal it would imply has no accepted work behind
+  // it. Treated as "nothing accepted", which is what the JSDoc above already
+  // assumes when it says "a non-negative accepted index".
+  if (typeof acceptedRaw !== "number" || !Number.isInteger(acceptedRaw) || acceptedRaw < 0) {
+    return null;
+  }
   if (cycle <= acceptedRaw) return null;
   error(
     `qfai prototyping iterate: refusing --cycle ${String(cycle)} — the loop is already ` +

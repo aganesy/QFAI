@@ -86,9 +86,15 @@ is created. That refusal is deliberate: such a directory is stale by
 construction, and the stale-iteration-directory check in
 `qfai prototyping certify` hard-fails on it.
 
-The other terminal stop reasons — `license-verify-fail`, `input-error`,
-`max-iterations` — do **not** seal the loop. They are states you are expected
-to fix and retry, so the same cycle can be re-run and the fix verified.
+`license-verify-fail` and `input-error` do **not** seal the loop. They are
+states you are expected to fix and retry, so the same cycle can be re-run and
+the fix verified.
+
+`max-iterations` does not seal the loop either, but it is **not** retryable in
+the same way: the recorded `iter-09` remains the last iteration, so
+`shouldStop()` returns `max-iterations` again and every `--cycle N >= 1` exits
+`65` before any path is assigned. Its only recovery is the cycle-0 reset
+below.
 
 Two paths remain open on a sealed loop:
 
@@ -104,9 +110,13 @@ Two paths remain open on a sealed loop:
   recoverable.
 
 Re-running the accepted cycle itself (`--cycle <acceptedIterationIndex>`)
-is also permitted — that is a redo of recorded work, not an extension
-past the seal. Use `qfai prototyping iterate --check-convergence` to
-read the recorded `stopReason` / `acceptedIterationIndex` first.
+is not refused by the sealed-loop guard — that would be a redo of recorded
+work, not an extension past the seal — but it does not re-run the cycle
+either: the convergence gate reads the same recorded iteration, reports
+`axes-exceptional` and exits `64` without assigning paths or writing
+anything. Treat it as a state read, and prefer
+`qfai prototyping iterate --check-convergence`, which reports the recorded
+`stopReason` / `acceptedIterationIndex` without the exit-code ambiguity.
 
 If an `iter-NN` directory was created that should not have been, delete
 it before running certify; there is no reserved quarantine name.
