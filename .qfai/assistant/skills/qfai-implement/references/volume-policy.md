@@ -41,10 +41,18 @@ whether a row is critical, it is critical.
 
 The tier scales **how often** a gate runs, never **whether** it runs.
 `agent-routing.yml` keeps `qa-gatekeeper`, `completion-reviewer` and
-`implementation-reviewer` mandatory and blocking for `qfai-implement`; T1 only
+`implementation-reviewer` all **mandatory** for `qfai-implement`; T1 only
 changes the submitted unit from one row to one coherent group. Every row is
 still covered by a live turn from each of those agents, and a group that has
 not been confirmed leaves all of its members short of the 11-point gate.
+
+Note the asymmetry, because "all routed blocking reviewers pass" alone is not
+the item gate: `blocking_agents` lists only `qa-gatekeeper` and
+`completion-reviewer`. `implementation-reviewer` is mandatory but not in that
+list, and a `REVISE` from it still blocks `done` — item 8 of the 11-point gate
+requires its PASS independently of the routing list. Read the 11-point gate as
+the authority for an item transition; `blocking_agents` governs phase
+progression, not the ledger write.
 
 ## Batched review
 
@@ -75,9 +83,15 @@ together.
   spec, so finishing a ledger also closes the open group.
 - **Review** on close: one `qa-gatekeeper` turn over the members' recorded
   RED/GREEN evidence, one `completion-reviewer` pass, one
-  `implementation-reviewer` pass. On PASS every member transitions
-  `refactor -> done` in the same ledger write; on `REVISE` every member stays in
-  `refactor`.
+  `implementation-reviewer` pass. On `REVISE` from any of them every member
+  stays in `refactor`.
+- **Checkpoint, then the ledger write.** Reviews passing is not the last gate:
+  `SKILL.md` Refactor step 5 and item 11 of the 11-point gate both require
+  checkpoint verification to pass **before** a row becomes `done`. Run it once
+  for the group after the three reviews return PASS, and only then transition
+  every member `refactor -> done` in the same ledger write. A failing checkpoint
+  leaves the whole group in `refactor` — no member goes `done` on a regression
+  the checkpoint would have caught.
 - A group left open when the run ends is a completion prohibition: rows still in
   `refactor` already block spec-level completion.
 

@@ -188,10 +188,12 @@ derive a **risk tier** per row, **batch** T1 gatekeeping and reviews per
 coherent BR/AC group, process multiple specs as a **sequential queue**, and
 state the implied **cost** before starting. The tier scales how **often** a gate
 runs, never **whether** it runs: `agent-routing.yml` keeps `qa-gatekeeper`,
-`completion-reviewer` and `implementation-reviewer` mandatory and blocking, and
-criticality (authz, crypto, money, data integrity) forces T2 regardless of
-layer. Full rules, including the tier table, the group-formation transitions and
-the queue-advance steps, are in `references/volume-policy.md`.
+`completion-reviewer` and `implementation-reviewer` all mandatory (only the
+first two are in `blocking_agents`, but item 8 of the 11-point gate makes an
+`implementation-reviewer` REVISE block `done` anyway), and criticality (authz,
+crypto, money, data integrity) forces T2 regardless of layer. Full rules,
+including the tier table, the group-formation transitions and the queue-advance
+steps, are in `references/volume-policy.md`.
 
 ### Handoff Contracts
 
