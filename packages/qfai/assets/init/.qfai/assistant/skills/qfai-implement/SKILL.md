@@ -188,11 +188,11 @@ RED/GREEN evidence and drift discipline with it. Scale the ceremony instead.
 
 Derive the tier from the ledger row's `Layer` and what the item touches:
 
-| Tier | Row shape | Ceremony |
-| ---- | --------- | -------- |
-| **T1 — standard** | Pure decision logic; unit/component layer; touches no infrastructure, no public API surface, no UI | RED/GREEN evidence in the ledger satisfies `qa-gatekeeper`; no live gatekeeper turn. Reviews are batched (below). |
-| **T2 — elevated** | Touches infrastructure, a public API surface, a contract (`CON-*`), or persisted schema | Full per-item ceremony: live `qa-gatekeeper` RED and GREEN turns, per-item `completion-reviewer` and `implementation-reviewer`. |
-| **T3 — surface** | Changes UI behavior or rendered output | T2 plus `product-surface-reviewer`. |
+| Tier              | Row shape                                                                                          | Ceremony                                                                                                                        |
+| ----------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **T1 — standard** | Pure decision logic; unit/component layer; touches no infrastructure, no public API surface, no UI | RED/GREEN evidence in the ledger satisfies `qa-gatekeeper`; no live gatekeeper turn. Reviews are batched (below).               |
+| **T2 — elevated** | Touches infrastructure, a public API surface, a contract (`CON-*`), or persisted schema            | Full per-item ceremony: live `qa-gatekeeper` RED and GREEN turns, per-item `completion-reviewer` and `implementation-reviewer`. |
+| **T3 — surface**  | Changes UI behavior or rendered output                                                             | T2 plus `product-surface-reviewer`.                                                                                             |
 
 Record the tier in the row's `Evidence` cell alongside the RED/GREEN commands.
 A row with no recorded tier is treated as **T2**.
@@ -200,7 +200,7 @@ A row with no recorded tier is treated as **T2**.
 ### Batched review
 
 For T1 rows, run **one** `completion-reviewer` pass and **one**
-`implementation-reviewer` pass per *coherent group* — a set of items that share
+`implementation-reviewer` pass per _coherent group_ — a set of items that share
 a BR or an AC — instead of one pass per item. The group is the review unit:
 
 - record the group's member `TDD-ID`s as a single block in the evidence file;
