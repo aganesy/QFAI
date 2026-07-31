@@ -51,14 +51,14 @@
 
 - Brand SSOT: verify root `DESIGN.md` defines `brand`, `audience`, and `visual.*` tokens, and that `# Brand Philosophy` body documents product intent, must-preserve interactions, brand signals, and differentiation targets
 - Evaluator axes: confirm reviewers will score against the four canonical UX axes (information architecture / navigation flow / usability / functionality) — these are fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` and no longer authored as sidecar files
-- History handling: verify `uiux/50_review_input_bundle.md` documents best-of-history comparison instead of latest-only preference
+- History handling: verify `uiux/50_review_input_bundle.md` matches the one-lineage rule in `qfai-prototyping/SKILL.md` — no parallel candidates, no best-of-history, the latest iteration is accepted
 
 ## Sidecar Artifact Review Scope
 
 <!-- Required for UI-bearing packs. Reviews root DESIGN.md + uiux/ sidecar artifacts. -->
 
 - Verify root `DESIGN.md` is specific enough to support divergent exploration (front-matter populated, `# Brand Philosophy` body written, do/don't and reference notes framed as deviate-from inputs)
-- Verify `uiux/50_review_input_bundle.md` preserves best-of-history handling
+- Verify `uiux/50_review_input_bundle.md` states the one-lineage handling (latest iteration accepted, no best-of-history)
 - Verify screen contracts use nested strong schema with all 4 required states (default/loading/empty/error) and treat `uiux/40_screen_contracts.md` as the state SSOT
 
 ## Required Reviewers

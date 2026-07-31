@@ -135,4 +135,32 @@ describe("shipped review forms track the canonical UI-bearing review focus", () 
       expect(reviewerBullets).toEqual(canonical);
     });
   }
+
+  it("carries the same canonical bullets in both trees, not just within each", async () => {
+    // Every case above runs per tree, so the shipped assets and the repo-root
+    // mirror could each be internally consistent while disagreeing with each
+    // other — exactly what happens when `packages/qfai/assets/init/` is edited
+    // and `pnpm sync:ssot` is forgotten. Compare the trees directly, against
+    // discussionRoots[0], which is the SSOT the mirror is generated from.
+    const [ssotRoot, ...mirrorRoots] = discussionRoots;
+    const expected = uiBearingOnly(
+      sectionBullets(
+        await readFile(path.join(ssotRoot, "templates", "14_Review-Request.md"), "utf-8"),
+        "## Review Focus",
+      ),
+    );
+    expect(expected.length).toBeGreaterThan(0);
+
+    for (const mirrorRoot of mirrorRoots) {
+      const actual = uiBearingOnly(
+        sectionBullets(
+          await readFile(path.join(mirrorRoot, "templates", "14_Review-Request.md"), "utf-8"),
+          "## Review Focus",
+        ),
+      );
+      expect(actual, `${path.relative(repoRoot, mirrorRoot)} drifted from the init assets`).toEqual(
+        expected,
+      );
+    }
+  });
 });
