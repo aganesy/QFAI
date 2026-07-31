@@ -3,7 +3,7 @@
 ## Purpose
 
 Link each `BR-*` / `AC-*` in this spec to the implementation file that realizes it and the test file
-that proves it. `qfai validate` reads this file to enforce **implementation integrity**: when a
+that proves it. `npx qfai validate` reads this file to enforce **implementation integrity**: when a
 spec's `03_Acceptance-Criteria.md` or `04_Business-Rules.md` changes on a branch, every
 implementation file linked from a changed spec must also have changed in that branch, otherwise
 `QFAI-TRACE-001` (severity `error`) fires.

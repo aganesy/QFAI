@@ -173,7 +173,7 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 Optional per-spec artifact linking `BR-*` / `AC-*` to the implementation file that realizes them.
 Template: `templates/specs/spec/16_Traceability-ledger.md`.
 
-- It is **optional**. Without it `qfai validate` emits `QFAI-TRACE-002` (`warning`) and skips the
+- It is **optional**. Without it `npx qfai validate` emits `QFAI-TRACE-002` (`warning`) and skips the
   implementation-integrity check; the spec is still valid.
 - With it, `QFAI-TRACE-001` (`error`) fires when a spec's `03_Acceptance-Criteria.md` or
   `04_Business-Rules.md` changed on the branch but a linked implementation file did not.
