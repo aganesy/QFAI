@@ -60,7 +60,12 @@ Skill-specific examples:
 - The `exception` status can be reached from any active status when an anomaly is detected.
 - Backward transitions are prohibited (e.g., `green` -> `red` is not allowed).
 - Completed items (`done`) are skipped on re-execution.
-- When all items are `done`, report "nothing to do" and exit.
+- When every item is terminal (`done` or a valid `exception`) the per-item work is finished, but the
+  **spec-level checkpoint boundary** may still be owed — an interrupted run, or a re-run of an
+  already-terminal ledger, leaves it unrecorded. Before reporting "nothing to do" and exiting,
+  confirm fresh spec-level checkpoint verification evidence exists for this ledger state; run the
+  per-spec verification first when it is missing or stale. See
+  `references/checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`.
 
 ## Goal
 
@@ -141,7 +146,7 @@ When transitioning to `exception`:
 2. Run the full relevant test suite to confirm nothing broke.
 3. Transition status to `refactor`.
 4. Submit for completion review (`completion-reviewer`) and code quality review (`implementation-reviewer`).
-5. After all routed blocking reviewers return PASS, run checkpoint verification, then transition to `done`.
+5. After all routed blocking reviewers return PASS, run checkpoint verification (see `#checkpoint-verification`), then transition to `done`.
 
 ### Completion
 
@@ -258,7 +263,7 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 8. `implementation-reviewer` returned PASS (code quality review gate)
 9. UI-affecting items have prototype parity PASS from `product-surface-reviewer`
 10. `test-list.md` Status and Evidence columns are updated with fresh evidence
-11. Checkpoint verification passed
+11. Checkpoint verification passed (see `#checkpoint-verification`)
 
 ### Spec completion conditions
 
@@ -267,7 +272,7 @@ The skill may declare "this spec's implementation is complete" only when:
 - All TC-\* from `06_Test-Cases.md` with applicable layer are present in `test-list.md`
 - Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain
-- Checkpoint verification passed
+- Checkpoint verification passed at the spec-level boundary (see `#checkpoint-verification`)
 - No unresolved Change Request or waiver dependency exists
 
 ### Completion prohibition conditions
@@ -279,7 +284,7 @@ Completion MUST NOT be declared when any of the following are true:
 - Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned FAIL
 - Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
 - Parallel slices were used but integration verify has not been run post-merge
-- Checkpoint boundary was reached but verification was not executed
+- A checkpoint boundary was reached (see `#checkpoint-verification`) but the verification command set was not executed, or any command in it exited non-zero
 - `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-001`). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID.
 
 ## Evidence (MANDATORY)
@@ -309,6 +314,8 @@ Each TDD item MUST have fresh evidence containing at minimum:
 - `Spec review` — completion-reviewer result (PASS or FAIL)
 - `Code quality review` — implementation-reviewer result (PASS or FAIL)
 - `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE)
+- `Checkpoint verification command` — the exact command set executed at the checkpoint boundary
+- `Checkpoint verification result` — the outcome of that command set (PASS only when every command exits 0)
 
 ### Evidence hard rules
 
@@ -316,6 +323,19 @@ Each TDD item MUST have fresh evidence containing at minimum:
 - Both command and result are required; "should pass" or "looks good" alone is not acceptable
 - Stale evidence from a previous run MUST NOT be reused to claim completion for a new cycle
 - Empty evidence entries are rejected: minimum evidence per TDD item must be met
+
+## Checkpoint Verification
+
+"Checkpoint verification" is the whole-repository regression check run at a checkpoint boundary. It
+is what item 11 of the 11-point gate refers to and the only thing it refers to.
+
+A checkpoint boundary is reached in exactly two places: **per item**, after all routed blocking
+reviewers return PASS and before `refactor` -> `done`; and **per spec**, after the last ledger row
+reaches `done` or a valid `exception`. There is no "every N items" rule.
+
+It PASSES only when **every** command in the verification command set exits 0. A partial run is not
+a pass. The command set, the pass criteria and the evidence fields are in
+`references/checkpoint-verification.md`.
 
 ## FINAL CHECKLIST (Check Last)
 
