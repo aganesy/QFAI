@@ -9,14 +9,33 @@
 
 ```gherkin
 # AC-0001
+# Source: discussion-YYYYMMDDhhmmssSSS#DAC-001-01
 Scenario: <scenario title>
   Given <precondition>
   When <action>
   Then <expected outcome>
 ```
 
+> The `# Source:` comment is required on every AC and lives in this block, not in the optional
+> catalog below — a spec that skips the catalog would otherwise have nowhere to record
+> provenance, losing the only machine-checkable trace back to the discussion pack.
+>
+> Write it as `<pack-id>#<discussion-id>`: the pack directory name under `.qfai/discussion/`,
+> then the discussion criterion ID inside it, joined by `#`. Both halves are required —
+> every pack numbers its criteria from `DAC-001-01`, so a bare `DAC-001-01` cannot say which
+> pack it came from, and two packs updating the same spec would collide. Use `-` when the AC
+> has no discussion ancestor. Keep the discussion ID verbatim; do not paraphrase it into prose.
+>
+> Packs written before the `D` prefix carry unprefixed IDs (`AC-001-01`). Copy those verbatim
+> as well — `discussion-YYYYMMDDhhmmssSSS#AC-001-01` — rather than inventing a `DAC-` form
+> the pack does not contain.
+
 ## AC Catalog (optional)
 
 | AC-ID   | Title   | Notes   | Priority |
 | ------- | ------- | ------- | -------- |
 | AC-0001 | <title> | <notes> | P1       |
+
+> This catalog is a human-facing index. It deliberately carries no `Source` column: provenance
+> has exactly one home, the `# Source:` comment in the required Gherkin block above, so the two
+> can never disagree.

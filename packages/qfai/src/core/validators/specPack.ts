@@ -5,8 +5,10 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { buildContractIndex } from "../contractIndex.js";
 import {
+  AC_GHERKIN_SECTION,
   extractIds,
-  extractInvalidIds as extractInvalidCoreIds,
+  extractInvalidIdOccurrences,
+  type FenceMaskOptions,
   type IdFormatPrefix,
 } from "../ids.js";
 import {
@@ -1036,12 +1038,17 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
       readSafe(entry.testCasesPath),
     ]);
 
+  // The fix hints must name the files this spec actually has. Hardcoding the
+  // superseded v1416 names sent authors to files that do not exist in the
+  // v1421 default layout.
+  const layeredFileNames = layeredIdFileNames(entry);
+
   issues.push(
     ...validateLayeredIdFormat(
       entry.userStoriesPath,
       userStoriesText,
       ["US"],
-      "01_User-stories.md の US ID を `US-0001-0001` 形式へ修正してください。",
+      `${layeredFileNames.userStories} の US ID を \`US-0001-0001\` 形式へ修正してください。`,
     ),
   );
   issues.push(
@@ -1049,7 +1056,11 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
       entry.acceptanceCriteriaPath,
       acceptanceCriteriaText,
       ["US", "AC"],
-      "02_Acceptance-criteria.md の ID を `US-0001-0001` / `AC-0001-0001` 形式へ修正してください。",
+      `${layeredFileNames.acceptanceCriteria} の ID を \`US-0001-0001\` / \`AC-0001-0001\` 形式へ修正してください。`,
+      // The required AC Gherkin block is the definition of these IDs, so it is
+      // the one fence body that stays scanned. Every other fence — here or in
+      // any other layered file — is an illustration.
+      { scannedSection: AC_GHERKIN_SECTION },
     ),
   );
   issues.push(
@@ -1057,7 +1068,7 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
       entry.businessRulesPath,
       businessRulesText,
       ["AC", "BR"],
-      "03_Business-rules.md の ID を `AC-0001-0001` / `BR-0001-0001` 形式へ修正してください。",
+      `${layeredFileNames.businessRules} の ID を \`AC-0001-0001\` / \`BR-0001-0001\` 形式へ修正してください。`,
     ),
   );
   issues.push(
@@ -1065,7 +1076,7 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
       entry.examplesPath,
       examplesText,
       ["SPEC", "SC", "AC"],
-      "04_Examples.feature の ID を `@SPEC-0001` / `@SC-0001-0001` / `AC-0001-0001` 形式へ修正してください。",
+      `${layeredFileNames.examples} の ID を \`@SPEC-0001\` / \`@SC-0001-0001\` / \`AC-0001-0001\` 形式へ修正してください。`,
     ),
   );
   issues.push(
@@ -1073,7 +1084,7 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
       entry.testCasesPath,
       testCasesText,
       ["CASE", "SC"],
-      "05_Test-cases.md の ID を `CASE-0001-0001` と `SC-0001-0001` 参照形式へ修正してください。",
+      `${layeredFileNames.testCases} の ID を \`CASE-0001-0001\` と \`SC-0001-0001\` 参照形式へ修正してください。`,
     ),
   );
 
@@ -1116,26 +1127,58 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
   return issues;
 }
 
+type LayeredIdFileNames = {
+  userStories: string;
+  acceptanceCriteria: string;
+  businessRules: string;
+  examples: string;
+  testCases: string;
+};
+
+/**
+ * Filenames to name in an `E_ID_INVALID_FORMAT` fix hint.
+ *
+ * Taken from the paths this validator actually read, so the hint always names
+ * the file whose contents produced the finding. A second hardcoded table —
+ * one branch per layered style — is what produced the original defect (v1421
+ * specs were sent to the v1416 filenames), and it would drift again the next
+ * time a layout is added or a file renamed, because nothing forces the two
+ * lists to agree.
+ */
+function layeredIdFileNames(entry: SpecEntry): LayeredIdFileNames {
+  return {
+    userStories: path.basename(entry.userStoriesPath),
+    acceptanceCriteria: path.basename(entry.acceptanceCriteriaPath),
+    businessRules: path.basename(entry.businessRulesPath),
+    examples: path.basename(entry.examplesPath),
+    testCases: path.basename(entry.testCasesPath),
+  };
+}
+
 function validateLayeredIdFormat(
   filePath: string,
   text: string,
   prefixes: IdFormatPrefix[],
   suggestedAction: string,
+  fenceOptions: FenceMaskOptions = {},
 ): Issue[] {
-  const invalid = extractInvalidCoreIds(text, prefixes);
-  if (invalid.length === 0) {
+  const occurrences = extractInvalidIdOccurrences(text, prefixes, fenceOptions);
+  if (occurrences.length === 0) {
     return [];
   }
+  const invalid = occurrences.map((occurrence) => occurrence.id);
+  const firstLine = Math.min(...occurrences.map((occurrence) => occurrence.line));
   return [
     issue(
       "E_ID_INVALID_FORMAT",
-      `ID 形式が不正です: ${invalid.join(", ")}`,
+      `ID 形式が不正です: ${occurrences.map((o) => `${o.id} (line ${o.line})`).join(", ")}`,
       "error",
       filePath,
       "id.format",
       invalid,
       "canonical",
       suggestedAction,
+      { loc: { line: firstLine } },
     ),
   ];
 }
@@ -1811,30 +1854,68 @@ async function loadExistingRequiredTexts(
   return texts;
 }
 
+/**
+ * Resolves the test-layer policy canonical-first, then legacy.
+ *
+ * `qfai init` ships the file at `assistant/catalog/test-layers.md`, but this
+ * resolver read only `assistant/steering/test-layers.md` and created no
+ * `steering/` directory — so on a freshly initialized project the read always
+ * threw, `QFAI-SPACK-090` fired as an un-clearable warning on every run, and
+ * the catch branch silently substituted the full built-in `LAYER_TAGS` set.
+ * The file 11 shipped agents and 7 shipped skills name as the layer SSOT was
+ * never actually read. The bug was masked in qfai's own repo, which carries
+ * byte-identical copies at both paths.
+ */
 async function loadLayerPolicy(root: string, config: QfaiConfig): Promise<LayerPolicyResult> {
   const skillsDir = resolvePath(root, config, "skillsDir");
   const assistantRoot = path.dirname(skillsDir);
-  const policyPath = path.join(assistantRoot, "steering", "test-layers.md");
-  try {
-    const policyText = await readFile(policyPath, "utf-8");
-    return {
-      tags: resolveAllowedLayerTagsFromPolicy(policyText),
-      issues: [],
-    };
-  } catch {
-    return {
-      tags: new Set(Array.from(LAYER_TAGS)),
-      issues: [
-        issue(
-          "QFAI-SPACK-090",
-          "test-layer policy が見つからないため既定の layer タグ集合を使用します。",
-          "warning",
-          policyPath,
-          "specPack.layerPolicy",
-        ),
-      ],
-    };
+  const canonicalPath = path.join(assistantRoot, "catalog", "test-layers.md");
+  const legacyPath = path.join(assistantRoot, "steering", "test-layers.md");
+
+  for (const policyPath of [canonicalPath, legacyPath]) {
+    let policyText: string;
+    try {
+      policyText = await readFile(policyPath, "utf-8");
+    } catch {
+      continue;
+    }
+    const tags = resolveAllowedLayerTagsFromPolicy(policyText);
+    if (tags.size === 0) {
+      // A silent widen is indistinguishable from a pass, so say so.
+      return {
+        tags: new Set(Array.from(LAYER_TAGS)),
+        issues: [
+          issue(
+            "QFAI-SPACK-090",
+            "test-layer policy を読み取れましたが layer タグを抽出できませんでした。既定の layer タグ集合を使用します。",
+            "error",
+            policyPath,
+            "specPack.layerPolicy",
+            undefined,
+            "change",
+            "`catalog/test-layers.md` の `## Layer definitions` 見出し（例: `### L3 Integration`）または `layer-*` タグを確認してください。",
+          ),
+        ],
+      };
+    }
+    return { tags, issues: [] };
   }
+
+  return {
+    tags: new Set(Array.from(LAYER_TAGS)),
+    issues: [
+      issue(
+        "QFAI-SPACK-090",
+        "test-layer policy が見つからないため既定の layer タグ集合を使用します。",
+        "error",
+        canonicalPath,
+        "specPack.layerPolicy",
+        undefined,
+        "change",
+        "`qfai init` を再実行して `catalog/test-layers.md` を配置してください。",
+      ),
+    ],
+  };
 }
 
 function validateLedgerId(
