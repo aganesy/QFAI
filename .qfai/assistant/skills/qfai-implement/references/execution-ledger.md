@@ -11,10 +11,19 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single r
 | TC-Refs   | References to test cases from `06_Test-Cases.md`                                                                                                                           |
 | Layer     | Test layer (Unit, Integration, etc.)                                                                                                                                       |
 | Test file | Path to the test file                                                                                                                                                      |
-| Selector  | Test selector/description for targeted execution                                                                                                                           |
+| Selector  | Test selector(s) for targeted execution — one entry, a comma-separated list, or a glob pattern                                                                             |
 | Status    | Current lifecycle status                                                                                                                                                   |
 | DR-ID     | Decision Record / Change Request ID: required for `exception` rows and for a row reopened by an upstream reset, retained through the row's later statuses; blank otherwise |
 | Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                                                                                                       |
+
+## Selector granularity (MUST)
+
+`Selector` is **not** restricted to a single test function: a row may own several entries, written
+as a comma-separated list or a glob. What is restricted is what a row may _conflate_ — **one
+independently observable boundary per selector entry**, with RED observed per entry, and a
+matrix-shaped `TC-*` decomposed across rows before RED begins (`TC-Refs` is many-to-many with
+`TDD-ID`). A selector that accumulates unrelated boundaries invalidates the RED observation. Rules
+and examples: `selector-granularity.md`.
 
 ## Status Lifecycle
 
