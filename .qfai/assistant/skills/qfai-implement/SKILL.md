@@ -207,8 +207,8 @@ All agent-to-agent transitions follow these contracts:
 3. `qa-gatekeeper` confirms or rejects the RED/GREEN observation.
 4. After GREEN, implementation agent submits the item to `completion-reviewer` for spec alignment and to `implementation-reviewer` for code quality review.
 5. `product-surface-reviewer` is added when the item affects UI behavior or rendered output.
-6. Only after all routed blocking reviewers pass may the item transition to `done`.
-7. For T1 rows the submitted unit in steps 2-4 is the coherent group, not the row; every routed blocking agent still runs, once per group. T2/T3 rows submit alone.
+6. Only after every required reviewer passes may the item transition to `done`. "Required" is wider than `blocking_agents`, which lists just `qa-gatekeeper` and `completion-reviewer`: `implementation-reviewer` is mandatory and its `REVISE` blocks `done` independently of that list, and `product-surface-reviewer` joins for UI-affecting items. The authority for an item transition is the 11-point gate below (see `#item-completion-checklist-11-point-gate`), not the routing list; `blocking_agents` governs phase progression. Rationale: `references/volume-policy.md#routing-is-unchanged`.
+7. For T1 rows the submitted unit in steps 2-4 is the coherent group, not the row; every required reviewer still runs, once per group. T2/T3 rows submit alone.
 
 ### Capability Probe (MUST)
 

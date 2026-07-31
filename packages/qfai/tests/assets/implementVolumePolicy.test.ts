@@ -1,9 +1,14 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-const repoRoot = path.resolve(process.cwd(), "..", "..");
+// Anchored to this file, not to `process.cwd()`. A runner launched from the
+// repo root resolves `../..` to the directory ABOVE the repo, and every read
+// below then fails on a path unrelated to what is being asserted.
+// tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const SKILL = "assistant/skills/qfai-implement/SKILL.md";
 const REFERENCE = "assistant/skills/qfai-implement/references/volume-policy.md";
@@ -118,10 +123,16 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       const section = unwrap(await read(tree, REFERENCE));
 
       // The edge must exist in the lifecycle SSOT, not only in the reference.
-      const lifecycle = skill.slice(
-        skill.indexOf("Allowed transitions:"),
-        skill.indexOf("### Exception Handling"),
+      // Assert both anchors first: an `indexOf` miss returns -1, and `slice`
+      // then succeeds on a different range, so a renamed heading would make
+      // every assertion below vacuous instead of failing.
+      const lifecycleStart = skill.indexOf("Allowed transitions:");
+      const lifecycleEnd = skill.indexOf("### Exception Handling");
+      expect(lifecycleStart, "SKILL.md has no `Allowed transitions:`").toBeGreaterThan(-1);
+      expect(lifecycleEnd, "SKILL.md has no `### Exception Handling`").toBeGreaterThan(
+        lifecycleStart,
       );
+      const lifecycle = skill.slice(lifecycleStart, lifecycleEnd);
       expect(lifecycle).toContain("`refactor` -> `red`");
       expect(lifecycle).toContain("QA rejection recovery — the only re-entry");
       expect(lifecycle).toContain("Cite the verdict in `Evidence`");
