@@ -107,8 +107,18 @@ The eight required columns, the allowed transitions and the exception rules are 
 1. Read `test-list.md` and select the first item with `Status = todo`.
 2. Transition status to `red`.
 3. Write a **failing test** based on the TC-Refs specification.
-4. Run the test and **watch it fail** — confirm the test actually fails for the expected reason.
+4. Run the test and **watch it fail** — confirm the test actually fails for the expected reason. When
+   the row's `Selector` holds several entries, observe each entry's failure separately; a single
+   aggregate run is not a valid RED observation.
 5. If the test unexpectedly passes, transition to `exception` and record the anomaly.
+
+> **RED observation is only as good as the selector's granularity.** A single test function can fail
+> only once, so if one selector entry carries an entire obligation matrix, "the expected reason" is
+> whichever assert happens to execute first — every assertion after it is unobserved on every RED
+> run, and a non-deterministic assertion placed early silently disables everything below it. A TDD
+> row whose selector accumulates unrelated boundaries therefore **invalidates its own RED
+> observation**. Split the row per `#selector-granularity-must` before continuing; do not proceed to
+> Green.
 
 ### Phase: Green (Make It Pass)
 
@@ -147,11 +157,14 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 This skill delegates through the centralized routing policy in `.qfai/assistant/manifest/agent-routing.yml`.
 
 - `delivery-planner`
-  - reads `test-list.md`, selects the next pending item, enforces Red-Green-Refactor ordering, and is the sole authority for parallel dispatch decisions
+  - reads `test-list.md`, selects the next pending item, and is the sole authority for **item selection and item scope** — whether this row's selector is a sufficient slice of its `TC-*` obligation
+  - enforces Red-Green-Refactor **ordering** (which phase may run next), not the RED/GREEN observation itself
+  - is the sole authority for parallel dispatch decisions
 - `frontend-engineer` / `backend-engineer`
   - implement the selected item only, write the failing test first, write minimal passing code, and refactor without unrelated changes
 - `qa-gatekeeper`
-  - is the sole authority for validating RED/GREEN observation evidence and completion gate evidence
+  - is the sole authority for validating **RED/GREEN observation evidence** — did the test fail (or pass) for the expected reason — and completion gate evidence
+  - does not adjudicate item scope; a scope objection is `delivery-planner`'s call
 - `implementation-reviewer`
   - reviews code quality, maintainability, backend correctness, and hidden coupling
 - `completion-reviewer`
@@ -170,6 +183,20 @@ All agent-to-agent transitions follow these contracts:
 5. `product-surface-reviewer` is added when the item affects UI behavior or rendered output.
 6. Only after all routed blocking reviewers pass may the item transition to `done`.
 
+#### Precedence between `delivery-planner` and `qa-gatekeeper`
+
+The two roles answer different questions and are ordered, not concurrent:
+
+- `delivery-planner` answers _is this item's scope sufficient to be the whole of its `TC-*` obligation_.
+- `qa-gatekeeper` answers _did the test fail (or pass) for the expected reason_.
+
+Precedence rules:
+
+- A `delivery-planner` REVISE on item scope MUST be resolved **before** RED evidence is submitted to `qa-gatekeeper` (step 2). Do not run step 2 while a scope REVISE is open.
+- Once `qa-gatekeeper` PASSes the observation for a RED round, item scope MUST NOT be re-litigated for that round. A newly discovered scope gap opens a **new** `test-list.md` row rather than reopening the passed one.
+- If a scope objection nonetheless arrives after step 3, it is treated as a new-row request; the existing PASS stands and is not discarded.
+- Neither role may overrule the other inside the other's domain: a `qa-gatekeeper` PASS never widens item scope, and a `delivery-planner` verdict never substitutes for RED/GREEN observation evidence.
+
 ### Capability Probe (MUST)
 
 - No additional overrides.
@@ -177,11 +204,11 @@ All agent-to-agent transitions follow these contracts:
 ### Delegation Failure (Hard Stop)
 
 - No additional overrides.
-- Do not simulate roles. If the first required delegation fails, stop the stage and report remediation.
+- Do not simulate roles. Classify the failure per the baseline taxonomy first: `unavailable` stops the stage with a remediation report; `saturated` uses the bounded retry branch and keeps the stage open.
 
 ## Work Orders Summary
 
-Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response `Result: PASS | REVISE`).
+Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer response `Result: PASS | REVISE`).
 
 ### Reviewer Gate (MUST)
 
@@ -190,6 +217,31 @@ Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response 
 - Reviewer checks Drift Protocol compliance and alignment with `.qfai/assistant/catalog/test-layers.md`.
 - Test volume floors/ratios are not gates; they are signals.
 - Do not declare DONE until Reviewer returns `PASS`; otherwise apply `REVISE`.
+
+#### Blocking vs advisory findings
+
+Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
+
+- A **blocking** finding cites either an upstream obligation (`AC-*`, `BR-*`, `TC-*`, `CON-*`, or
+  a named constitution/catalog rule) or a defect class (`defect:correctness`, `defect:security`,
+  `defect:code-quality`) in its `Traces to:` field. A defect demonstrable from the changed code —
+  an unhandled rejection, a missing validation on trusted input, a leak, a broken contract the
+  code itself declares — is blocking without needing an `AC-*`. Only blocking findings force
+  `REVISE` and only blocking findings hold the item out of `done`.
+- An **advisory** finding is one whose `Traces to:` is `none` — a new product obligation upstream
+  never asked for. It MUST NOT be implemented as production code or pinned as a test assertion.
+  Route it per `drift-protocol.md#reviewer-originated-obligations`: record it in the reviewer
+  response under `Advisory / Change Request proposals`. Do **not** edit `08_Open-questions.md`
+  here — it is upstream SSOT under the Drift Protocol and creating spec artifacts is a non-goal of
+  this skill; the owner phase (`/qfai-sdd`) records and adjudicates it.
+- A new advisory that does not change an already-approved obligation leaves the item free to reach
+  `done`. One that **does** change an approved obligation takes the Change Request path, and
+  `drift-protocol.md#when-drift-is-detected` applies: STOP, and no `done` for items depending on
+  the obligation under dispute until approval and the owner rerun.
+- `Do not declare DONE until Reviewer returns PASS` is never waived: the Reviewer verdict is
+  required on every item, including one whose review produced only advisories. What **blocking**
+  findings change is the verdict itself — only they force `REVISE` and hold `done`. An
+  advisory-only review returns `PASS`, and that `PASS` is still what releases `done`.
 
 ## Parallelization Policy
 
@@ -226,7 +278,7 @@ Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`.
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
-### Item completion checklist (11-point gate)
+### Item completion checklist (12-point gate)
 
 An item in `test-list.md` may transition to `done` only when ALL of the following are satisfied:
 
@@ -240,7 +292,23 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 8. `implementation-reviewer` returned PASS (code quality review gate)
 9. UI-affecting items have prototype parity PASS from `product-surface-reviewer`
 10. `test-list.md` Status and Evidence columns are updated with fresh evidence
-11. Checkpoint verification passed (see `#checkpoint-verification`)
+11. `.qfai/evidence/implement-<spec-id>.md` is appended with both reviewer verdicts after items 7-8 returned PASS
+12. Checkpoint verification passed (see `#checkpoint-verification`)
+
+Sequencing note: the phase-authored part of `.qfai/evidence/implement-<spec-id>.md` (RED / GREEN /
+Refactor commands and results) is written **before** items 7-8, because it is the evidence the
+reviewers audit. The verdict fields are appended **after** items 7-8. A phase-authored evidence file
+whose only gap is the verdict fields is NOT a blocking finding at review time — see
+`Per-item evidence contract`.
+
+### Review artifact layout (MUST)
+
+Gate items 7-9 are evidence-bearing: reviewer verdicts must be written to a review pack, not left in
+conversation. There is exactly **one** `.qfai/review/**` layout — `review-<17-digit-timestamp>/`
+holding `review_request.md`, `R01_<reviewer-id>.md` (at least one) and `summary.json`. Do not nest
+`<scope>/<layer>/attempt-NN/` directories: packs written there are invisible to `qfai validate`.
+Each review round creates a new pack. Full schema and the `REVISE` -> `status: "FAIL"` mapping:
+`references/review-artifact-layout.md`.
 
 ### Spec completion conditions
 
@@ -272,6 +340,7 @@ Completion MUST NOT be declared when any of the following are true:
 - No RED fresh evidence exists for the item
 - No GREEN fresh evidence exists for the item
 - Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned FAIL
+- `.qfai/evidence/implement-<spec-id>.md` does not exist, or does not record both reviewer verdicts for the item (this is the single blocking statement about the evidence file; its absence of _verdicts_ is never blocking before items 7-8)
 - Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
 - Parallel slices were used but integration verify has not been run post-merge
 - A checkpoint boundary was reached (see `#checkpoint-verification`) but the verification command set was not executed, or any command in it exited non-zero
@@ -291,7 +360,10 @@ Required sections:
 
 ### Per-item evidence contract (fresh evidence required)
 
-Each TDD item MUST have fresh evidence containing at minimum:
+Each TDD item MUST have fresh evidence containing at minimum the fields below. The contract has two
+parts with different write points; the fields are the same, the sequencing is not.
+
+**Phase-authored (written before the reviewer gate, items 7-8):**
 
 - `TDD-ID` — the item identifier
 - `TC-ref` — reference to the test case(s)
@@ -301,11 +373,22 @@ Each TDD item MUST have fresh evidence containing at minimum:
 - `GREEN result` — the success output
 - `Refactor verify command` — the exact command re-executed after refactor
 - `Refactor verify result` — the output confirming GREEN is maintained
+
+These exist _for_ the reviewers: they are the evidence items 7-8 audit. They MUST be present when a
+review is requested.
+
+**Gate-completed (appended after items 7-8 return PASS):**
+
 - `Spec review` — completion-reviewer result (PASS or FAIL)
 - `Code quality review` — implementation-reviewer result (PASS or FAIL)
 - `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE)
 - `Checkpoint verification command` — the exact command set executed at the checkpoint boundary
 - `Checkpoint verification result` — the outcome of that command set (PASS only when every command exits 0)
+
+These record verdicts that do not exist until the reviews have run. A reviewer MUST NOT treat their
+absence as a blocking gap during review — an evidence file complete in its phase-authored part and
+missing only the verdict fields is the expected state at review time. It becomes blocking only at
+the completion gate (see `Completion prohibition conditions`).
 
 ### Evidence hard rules
 
@@ -317,7 +400,7 @@ Each TDD item MUST have fresh evidence containing at minimum:
 ## Checkpoint Verification
 
 "Checkpoint verification" is the whole-repository regression check run at a checkpoint boundary. It
-is what item 11 of the 11-point gate refers to and the only thing it refers to. A boundary is
+is what item 12 of the 12-point gate refers to and the only thing it refers to. A boundary is
 reached **per item** (after all routed blocking reviewers return PASS, before `refactor` -> `done`)
 and **per spec** (after the last ledger row is terminal). There is no "every N items" rule.
 
