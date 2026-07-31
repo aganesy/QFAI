@@ -43,9 +43,10 @@ number copied from prose goes stale on the next release.
 > `"qfai": "github:aganesy/QFAI"` maps the dependency key `qfai` to the private monorepo
 > root — the manifest `name` is irrelevant, so it lands in `node_modules/qfai` regardless.
 > That root ships no `bin` and no built `dist`, so nothing would be runnable or
-> importable. The repository refuses such an install with an explanatory error instead of
-> completing silently. Use the npm package, or run it without installing via
-> `npx qfai@latest <command>`.
+> importable. Under npm or yarn a `preinstall` guard refuses the install with an
+> explanatory error rather than completing silently; under pnpm — or any package manager
+> that reports no user agent — it is not caught, so the mistake is yours to avoid. Use the
+> npm package, or run it without installing via `npx qfai@latest <command>`.
 
 ## Quick start
 

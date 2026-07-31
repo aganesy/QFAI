@@ -24,7 +24,10 @@
  * heuristic. This repository is a pnpm workspace — `packageManager` pins
  * pnpm and every CI job runs `pnpm install --frozen-lockfile` — so a
  * legitimate install of this manifest is always a pnpm install. npm or yarn
- * reaching this file means it was pulled in as a git dependency.
+ * reaching this file therefore means one of two mistakes: the repository was
+ * pulled in as a git dependency, or someone is developing the monorepo itself
+ * with an unsupported package manager. Both are refused, and the message below
+ * addresses both.
  *
  * The check is deliberately fail-open: only a positive `npm/` or `yarn/`
  * signal refuses. An unrecognised or absent user agent proceeds, so a future
