@@ -120,7 +120,6 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       // `red`. Forward-only plus "every member stays in `refactor`" left a
       // rejected row unable to redo the RED it was faulted for — permanently
       // unable to reach `done`.
-      const skill = unwrap(await read(tree, SKILL));
       const section = unwrap(await read(tree, REFERENCE));
 
       // The edge must exist in the lifecycle SSOT. That SSOT is now
