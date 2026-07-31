@@ -90,7 +90,13 @@ prior invocation pattern is byte-equivalent when no flag is passed:
 - `--auto-serve` — start an in-process `node:http` server rooted at
   the prototype tree for the cycle. SIGINT teardown <= 2 s;
   EADDRINUSE on a foreign owner exits 2 (no foreign-process kill).
-  Use when no external dev server is running.
+  Use when no external dev server is running. Routing is SPA-style:
+  a document request (GET/HEAD with `text/html` in `Accept`) that
+  matches no file on disk is served `index.html`, so client-side and
+  parameterized contract routes (`/overview`,
+  `/pairs/:instrument`) resolve instead of 404-ing. Sub-resource
+  requests (`.css`, `.png`, `fetch()`) still 404 when genuinely
+  missing, and the path-traversal 403 guard runs first.
 - `--check-convergence` — read-only peek of `prototyping.json`.
   Exits `0` when converged (`stopReason === "axes-exceptional"` with
   `acceptedIterationIndex` set), exits `2` otherwise. No writes,
@@ -153,6 +159,16 @@ in `references/reviewer-prompt.md`, and the latest `review.json`
 findings, then re-run `npx qfai prototyping iterate --cycle 0
 --target-url <url>` to refreeze. Do not seal a certificate against
 an unconverged iter-09.
+
+### Continuing or resetting a converged loop
+
+Only `stopReason: "axes-exceptional"` + `acceptedIterationIndex` seals a loop; `iterate --cycle N`
+then refuses with exit `2` past the accepted index, writing nothing. `license-verify-fail` /
+`input-error` do NOT seal — fix the cause and re-run the same cycle.
+`max-iterations` does not seal either, but iter-09 still stops every `--cycle N >= 1` at exit `65`.
+Recovery for both is the cycle-0 reset; re-running the accepted cycle is reported by the convergence
+gate (exit `64`) and writes nothing, so it is a state read, not a rerun. The reset command, the
+`--force` requirement and the `certify` alternative are in `references/iteration-loop.md#sealed-loop`.
 
 ## Evaluator Inputs (Mandatory)
 

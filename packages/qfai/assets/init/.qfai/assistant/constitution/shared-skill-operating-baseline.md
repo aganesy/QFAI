@@ -3,6 +3,32 @@
 Use this document to keep SKILL bodies compact.
 Skill files should reference this baseline and only restate skill-specific additions or overrides.
 
+## SKILL.md Authoring Shape (Mandatory)
+
+A `SKILL.md` states the contract and points at the file that carries the detail.
+It is not where the detail lives.
+
+- **Keep in `SKILL.md`**: what the skill is for, its non-goals, its hard
+  constraints, the phase/step order, and the gate conditions. Enough for an
+  agent to know what it must do and when it is done.
+- **Move out**: command sets, table schemas, field-by-field contracts, worked
+  procedures, checklists and rationale. These go under the skill's own
+  directory:
+  - `references/` — normative detail the skill body cites (`references/<topic>.md`)
+  - `templates/` — artifacts the skill produces, as fillable skeletons
+  - `examples/` — worked instances that illustrate, and bind, nothing
+- **One topic per file.** Do not replace an oversized `SKILL.md` with an
+  oversized `references/everything.md`; that is the same problem one directory
+  down. Split by topic and keep each file readable on its own — a reader who
+  followed one pointer should not have to scan past three unrelated subjects to
+  reach the one they came for.
+- **Every pointer resolves.** A `SKILL.md` line that moves detail out must name
+  the file (and anchor, when the file covers more than one topic) so the reader
+  is never left guessing where the rule went.
+
+A hard line ceiling backs this up in the asset tests, but it is a backstop, not
+the rule. A skill approaching it is a signal to move a section out.
+
 ## User Questions (AskUserQuestion Protocol)
 
 - When a question to the user is needed, use AskUserQuestion if the tool is available.

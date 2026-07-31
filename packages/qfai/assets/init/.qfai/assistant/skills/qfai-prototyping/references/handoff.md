@@ -65,7 +65,14 @@ order, every time:
 
 1. `npx qfai validate --profile prototyping --fail-on error` — writes
    `.qfai/output/validate.json`.
-2. `/qfai-verify` — writes `.qfai/output/verify.json`.
+2. `/qfai-verify` — writes `.qfai/output/verify.json` with
+   `status: "PASS"` and `scope: "prototyping"`. Certify accepts no
+   other scope: `atdd` / `implement` / `full` are refused by the
+   option-B phase-isolation contract, and a `full` run at this point
+   necessarily fails the stage-5 ATDD traceability rules
+   (`QFAI-ATDD-111/112/113`). The field list and the `scope` enum are
+   specified under "Verify Output Contract" in
+   `.qfai/assistant/skills/qfai-verify/SKILL.md`.
 3. `npx qfai prototyping certify` — produces
    `.qfai/evidence/prototyping/completion-certificate.json`. The
    certificate includes `designMdPath` + `designMdSha256` for the
