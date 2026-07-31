@@ -1113,11 +1113,19 @@ function scanTailwindArbitrary(html: string, dm: DesignMd, out: DesignMdViolatio
  */
 function readThemeExtendMap(html: string, section: string): Map<string, string> {
   const out = new Map<string, string>();
+  // Scope to the `tailwind.config` assignment first. `borderRadius` and
+  // `boxShadow` are ordinary identifiers, so an unrelated object elsewhere in
+  // the document (an app-level settings literal, an inline data blob) would
+  // otherwise register as a re-binding and grant `rounded-md` / `shadow-lg` an
+  // allowance while the browser still renders Tailwind's defaults — a silent
+  // approval of exactly the drift this scanner exists to catch.
+  const config = readTailwindConfigBlock(html);
+  if (config === null) return out;
   const sectionRe = new RegExp(`\\b${section}\\s*:\\s*\\{`, "g");
   let lastBlock: string | null = null;
-  for (const match of html.matchAll(sectionRe)) {
+  for (const match of config.matchAll(sectionRe)) {
     const openIndex = match.index + match[0].length - 1;
-    const block = extractBraceBlock(html, openIndex);
+    const block = extractBraceBlock(config, openIndex);
     if (block !== null) lastBlock = block;
   }
   if (lastBlock === null) return out;
@@ -1134,7 +1142,39 @@ function readThemeExtendMap(html: string, section: string): Map<string, string> 
 // `"md": "0.5rem"`, `'md': '0.5rem'`, `md: "0.5rem"`. Only string
 // values are read — a nested object or an identifier reference is not a
 // literal re-binding this scanner can vouch for.
-const THEME_ENTRY_RE = /(?:"([^"]+)"|'([^']+)'|([A-Za-z_$][\w$-]*))\s*:\s*(?:"([^"]*)"|'([^']*)')/g;
+//
+// The unquoted-key alternative is a JavaScript identifier, so it excludes `-`:
+// `foo-bar: "…"` does not parse as an object literal, and the browser would
+// never apply it, so treating it as a re-binding would grant an allowance the
+// render never honours. A key that needs a hyphen has to be quoted, which the
+// first two alternatives already cover.
+//
+// Excluding `-` from the identifier is not enough on its own: without the
+// lookbehind the scan would simply start one character later and read
+// `rounded-md: "0.5rem"` as a binding of `md`, reinstating the allowance
+// through the very syntax being rejected. The guard anchors the identifier to
+// a real token start.
+const THEME_ENTRY_RE =
+  /(?:"([^"]+)"|'([^']+)'|(?<![-\w$])([A-Za-z_$][\w$]*))\s*:\s*(?:"([^"]*)"|'([^']*)')/g;
+
+// `tailwind.config = {` — the assignment the mandated envelope performs.
+const TAILWIND_CONFIG_ASSIGN_RE = /\btailwind\s*\.\s*config\s*=\s*\{/g;
+
+/**
+ * Body of the LAST `tailwind.config = {...}` assignment, or null when the
+ * document makes none. Last wins for the same reason `readThemeExtendMap`
+ * takes the last section block: a later assignment replaces the earlier one at
+ * render time.
+ */
+function readTailwindConfigBlock(html: string): string | null {
+  let lastBlock: string | null = null;
+  for (const match of html.matchAll(TAILWIND_CONFIG_ASSIGN_RE)) {
+    const openIndex = match.index + match[0].length - 1;
+    const block = extractBraceBlock(html, openIndex);
+    if (block !== null) lastBlock = block;
+  }
+  return lastBlock;
+}
 
 /** Body of the `{...}` starting at `openIndex`, or null when unbalanced. */
 function extractBraceBlock(text: string, openIndex: number): string | null {
@@ -1235,10 +1275,13 @@ function scanTailwindUtility(html: string, dm: DesignMd, out: DesignMdViolation[
         }
       }
 
-      // Radius / shadow scale alias: `<prefix>-<alias>`. An alias that
-      // names a DESIGN.md key is compliant — `theme.extend` re-binds it
-      // to the DESIGN.md token — so only aliases with no corresponding
-      // key (`rounded-xl`, `shadow-inner`, …) are drift.
+      // Radius / shadow scale alias: `<prefix>-<alias>`. Naming a
+      // DESIGN.md key is necessary but not sufficient: `radiusKeys` /
+      // `shadowKeys` hold only the aliases THIS document's
+      // `tailwind.config` re-binds AND binds to the matching DESIGN.md
+      // value. An alias with no key at all (`rounded-xl`,
+      // `shadow-inner`, …), one the envelope omits, and one the envelope
+      // binds to some other value are all drift.
       const aliasMatch = /^([a-z][a-z-]*)-([a-z0-9]+)$/.exec(cls);
       if (aliasMatch) {
         const prefix = aliasMatch[1] ?? "";

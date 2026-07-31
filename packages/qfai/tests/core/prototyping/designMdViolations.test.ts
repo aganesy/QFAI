@@ -953,6 +953,45 @@ describe("findDesignMdViolations — Tailwind palette/scale utility classes (cod
     expect(out.some((v) => v.found === "shadow-lg")).toBe(false);
   });
 
+  it("a borderRadius map outside tailwind.config does not grant the allowance", () => {
+    // `borderRadius` is an ordinary identifier, so an app-level settings
+    // literal names it just as readily as the envelope does. Reading it as a
+    // re-binding would certify a prototype that still renders Tailwind's
+    // default `rounded-md` — the scanner must key on the `tailwind.config`
+    // assignment, not on the section name appearing anywhere in the document.
+    const decoy = [
+      "<script>",
+      '  const themePreview = { borderRadius: { "md": "0.5rem" } };',
+      '  const shadowPreview = { boxShadow: { "lg": "0 12px 24px rgba(15,23,42,0.10)" } };',
+      "</script>",
+    ].join("\n");
+    const out = findDesignMdViolations(
+      `${decoy}<div class="rounded-md shadow-lg">x</div>`,
+      sampleDesignMd(),
+    );
+    expect(out.some((v) => v.kind === "radius" && v.found === "rounded-md")).toBe(true);
+    expect(out.some((v) => v.kind === "shadow" && v.found === "shadow-lg")).toBe(true);
+  });
+
+  it("an unquoted hyphenated key is not read as a re-binding", () => {
+    // `foo-bar: "…"` is not a valid object literal, so the browser never
+    // applies it. Accepting it would grant an allowance the render does not
+    // honour. Here the envelope binds `md` through an unquoted hyphenated key,
+    // which must not count.
+    const invalidKey = [
+      "<script>",
+      "  tailwind.config = { theme: { extend: {",
+      '    borderRadius: { rounded-md: "0.5rem" }',
+      "  } } };",
+      "</script>",
+    ].join("\n");
+    const out = findDesignMdViolations(
+      `${invalidKey}<div class="rounded-md">x</div>`,
+      sampleDesignMd(),
+    );
+    expect(out.some((v) => v.kind === "radius" && v.found === "rounded-md")).toBe(true);
+  });
+
   it("an alias the envelope omits is still flagged even with the envelope present", () => {
     // `borderRadius` binds sm/md/lg but not `full`.
     const partial = [
