@@ -35,9 +35,11 @@ function readLedgerTable(content: string): MarkdownTable | null {
 }
 
 /**
- * Checks whether the ledger table header matches the expected
- * 3-column format: BR/AC | Implementation File | Test File.
- * This validator uses this specific table format for implementation traceability.
+ * Checks whether the ledger table header matches the expected shape: at least
+ * three columns, one of them named `Implementation File`. The canonical layout
+ * is `BR/AC | Implementation File | Test File`, but extra columns are allowed —
+ * a ledger that carries a Notes or Owner column is still a ledger, and the
+ * validator only ever reads the ID cell and the implementation-file cell.
  */
 function isExpectedLedgerFormat(table: MarkdownTable | null): boolean {
   if (!table) {
@@ -142,9 +144,9 @@ export async function validateTraceabilityIntegrity(
     }
 
     const ledgerTable = readLedgerTable(ledgerContent);
-    const entries = parseLedger(ledgerTable);
 
-    // FIX 6: Format detection — skip if ledger uses a different table format
+    // Format check before parse: a table that fails it is skipped, so parsing
+    // it first only built rows nothing reads.
     if (!isExpectedLedgerFormat(ledgerTable)) {
       issues.push(
         issue(
@@ -158,6 +160,7 @@ export async function validateTraceabilityIntegrity(
       continue;
     }
 
+    const entries = parseLedger(ledgerTable);
     for (const entry of entries) {
       if (!changedFiles.has(normalizePath(entry.implFile))) {
         issues.push(

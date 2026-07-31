@@ -8,9 +8,9 @@ spec's `03_Acceptance-Criteria.md` or `04_Business-Rules.md` changes on a branch
 implementation file linked from a changed spec must also have changed in that branch, otherwise
 `QFAI-TRACE-001` (severity `error`) fires.
 
-This file is **optional**. A spec without it is not invalid — validation emits the informational
-`QFAI-TRACE-002` and skips the integrity check. Add it to any spec whose BR/AC you want held to
-implementation drift.
+This file is **optional**. A spec without it is not invalid — validation emits `QFAI-TRACE-002` at
+severity `warning` and skips the integrity check, so `--fail-on error` still passes. Add it to any
+spec whose BR/AC you want held to implementation drift.
 
 ## Ledger Table (required when this file exists)
 
