@@ -5,16 +5,16 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single r
 
 ## Required columns
 
-| Column    | Description                                                                                                                                                                |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                                                                                                        |
-| TC-Refs   | References to test cases from `06_Test-Cases.md`                                                                                                                           |
-| Layer     | Test layer (Unit, Integration, etc.)                                                                                                                                       |
-| Test file | Path to the test file                                                                                                                                                      |
-| Selector  | Test selector(s) for targeted execution — one entry, a comma-separated list, or a glob pattern                                                                             |
-| Status    | Current lifecycle status                                                                                                                                                   |
-| DR-ID     | Decision Record / Change Request ID: required for `exception` rows and for a row reopened by an upstream reset, retained through the row's later statuses; blank otherwise |
-| Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                                                                                                       |
+| Column    | Description                                                                                                                                                                                                                 |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                                                                                                                                                         |
+| TC-Refs   | References to test cases from `06_Test-Cases.md`                                                                                                                                                                            |
+| Layer     | Test layer (Unit, Integration, etc.)                                                                                                                                                                                        |
+| Test file | Path to the test file                                                                                                                                                                                                       |
+| Selector  | Test selector(s) for targeted execution — one entry, a comma-separated list, or a glob pattern                                                                                                                              |
+| Status    | Current lifecycle status                                                                                                                                                                                                    |
+| DR-ID     | Decision Record / Change Request IDs, comma-separated: a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses; blank otherwise |
+| Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                                                                                                                                                        |
 
 ## Selector granularity (MUST)
 
@@ -60,6 +60,10 @@ Backward transitions are prohibited. Attempting `green` -> `red` must produce:
 not a backward transition: it is an owner-approved re-entry, and the row starts
 its cycle again from `todo`.
 
+The one exception is an approved Change Request reset — the only sanctioned
+backward transition. Preconditions and the reset procedure:
+`references/change-request-reset.md`.
+
 ## Exception Handling
 
 `exception` means **anomaly, work paused** — not "accepted risk, closed". The
@@ -70,7 +74,8 @@ item via `exception` -> `todo`.
 When transitioning to `exception`:
 
 - A DR-ID (Decision Record ID) must be recorded in the DR-ID column.
-- If the DR-ID column is empty, emit error: `"exception status requires DR-ID in DR-ID column"`.
+- A retained `CR-*` does not satisfy this: it records the approved reopen, not the anomaly. Add the `DR-*` alongside it (`DR-NNNN, CR-YYYYMMDD-NNNN`).
+- If the DR-ID column is empty, or holds `CR-*` references only, emit error: `"exception status requires DR-ID in DR-ID column"`.
 
 ### Parked items and the `TDDLIST-001` waiver
 

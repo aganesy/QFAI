@@ -25,25 +25,39 @@ Any exception beyond this list requires explicit user approval.
 ## When drift is detected
 
 1. STOP downstream editing immediately.
-2. Create a Change Request that includes:
+2. Create a Change Request as a file at
+   `.qfai/decisions/CR-YYYYMMDD-NNNN-<slug>.md`, from
+   `.qfai/assistant/skills/qfai-sdd/templates/change-request.md`. The ID
+   pattern is `CR-\d{8}-\d{4}` and the file carries `ID`, `Status`
+   (`open` / `approved` / `rejected` / `superseded`), `Approved by`,
+   `Approved at` and `Approved option` so the approval is a record, not a
+   memory. Creating this file is the only write this step makes: `09_delta.md`
+   and `07_Decisions.md` are upstream SSOT, so the reference to this CR is
+   written there by the owner skill in step 4, never before approval.
+   Contents:
    - context (what conflicts)
    - proposed change
    - options (at least 3) and recommendation
    - impact scope (spec/plan/tests/contracts/schema)
    - decision needed from user
    - approved actions (owner skill rerun plan)
-3. Wait for explicit user approval.
-4. Rerun the owner skill for the upstream artifact.
+3. Wait for explicit user approval, then set `Status` and the approval fields.
+4. Rerun the owner skill for the upstream artifact. That rerun is what records
+   the CR reference in `09_delta.md` / `07_Decisions.md`.
 5. **Sweep the downstream ledgers.** Identify every `tdd/test-list.md` row the
    rerun invalidated — its `TC-Refs` / `US-Refs` / `CON-API-Refs` obligation
    changed or disappeared — and apply the upstream reset transition
-   (any status -> `todo`), recording the approved CR/DR ID in `DR-ID`. The
+   (any status -> `todo`), recording the approved CR/DR ID in `DR-ID` — that
+   column carries both `DR-*` and `CR-*` references. The
    sweep covers in-flight rows too: a `red` row whose obligation changed, and
    an `exception` row whose anomaly the rerun resolved or superseded, reset the
    same way. A row whose obligation was deleted outright is removed, not reset.
 6. Resume downstream work only after upstream artifacts are updated **and** the
    sweep has run. Resuming with a stale `done` row is resuming on a ledger that
    asserts something known to be false.
+7. Record the outcome in the CR: fill `Resolution` and set `Applied at`.
+   Approval alone does not release the downstream gate — `qfai-implement`
+   treats an `approved` CR without `Applied at` as unresolved.
 
 ## Reviewer-originated obligations
 

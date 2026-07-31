@@ -58,9 +58,10 @@ Skill-specific examples:
 - Items are processed **serially** by default. Parallel processing is allowed only when items target independent SUT slices with no shared state.
 - Status transitions follow a strict forward-only lifecycle: `todo` -> `red` -> `green` -> `refactor` -> `done`.
 - The `exception` status can be reached from any active status when an anomaly is detected.
-- Backward transitions are prohibited (e.g., `green` -> `red` is not allowed).
-- Completed items (`done`) are skipped on re-execution.
-- When every item is terminal (`done` or a valid `exception`) the per-item work is finished, but the
+- Backward transitions are prohibited (e.g., `green` -> `red` is not allowed). The only exception is an approved Change Request reset (see Status Lifecycle).
+- Completed items (`done`) are skipped on re-execution, unless an approved Change Request reset them.
+- When every item is terminal (`done` or a valid `exception`) **and the mandatory Change Request
+  preflight (see Required Process) reset nothing**, the per-item work is finished — but the
   **spec-level checkpoint boundary** may still be owed — an interrupted run, or a re-run of an
   already-terminal ledger, leaves it unrecorded. Before reporting "nothing to do" and exiting,
   confirm fresh spec-level checkpoint verification evidence exists for this ledger state; run the
@@ -96,6 +97,10 @@ The eight required columns, the allowed transitions and the exception rules are 
 `references/execution-ledger.md`. Read it before writing to the ledger.
 
 ## Required Process
+
+### Phase: Preflight (Change Request reset) — MANDATORY, runs first
+
+1. Enumerate the in-scope `.qfai/decisions/CR-*.md` and apply every approved reset per `references/change-request-reset.md` **before** any other ledger judgement — including the all-`done` "nothing to do" exit, which an approved reset invalidates.
 
 ### Phase: Red (Write Failing Test)
 
@@ -316,7 +321,20 @@ The skill may declare "this spec's implementation is complete" only when:
 - Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain
 - Checkpoint verification passed at the spec-level boundary (see `#checkpoint-verification`)
-- No unresolved Change Request or waiver dependency exists
+- No unresolved Change Request or waiver dependency exists. The gate covers only
+  the `.qfai/decisions/CR-*.md` **in scope for this spec** — `Impact scope` names
+  this spec or a shared policy it depends on, or this spec's artifacts reference
+  it; a CR confined to another spec never blocks this one. An in-scope CR
+  is **resolved** only when every condition below holds; a CR failing any one of
+  them — a half-filled record included — is **unresolved** and blocks completion:
+  - `Status` is `approved`, `rejected` or `superseded` (never `open`);
+  - `Approved by` / `Approved at` are populated, plus `Approved option` when
+    `Status` is `approved` and `Superseded by` when it is `superseded`;
+  - `Resolution` records what was actually done; and
+  - when `Status` is `approved`, `Applied at` is populated — approval alone
+    does not release the gate. It is set only after the owner-skill rerun in
+    "Approved actions" completed and upstream artifacts are updated, which is
+    when `constitution/drift-protocol.md` resumes downstream work
 
 ### Completion prohibition conditions
 

@@ -204,8 +204,11 @@ describe("the DR-ID column definition covers the reset row", () => {
       // The old wording let an agent blank the approval ID on the next
       // transition, and no validator checks DR-ID outside `exception`.
       expect(skill).not.toContain("Decision Record ID for exception items (blank otherwise)");
+      // Same rule, stated per ID kind since the Change Request artifact landed:
+      // the `DR-*` is what an `exception` owes, the `CR-*` is what a reset row
+      // carries forward. `changeRequestArtifact.test.ts` asserts the same cell.
       expect(skill).toContain(
-        "required for `exception` rows and for a row reopened by an upstream reset, retained through the row's later statuses",
+        "a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses",
       );
       expect(skill).toContain(
         "MUST be retained as the row moves on through `red`, `green`,\n  `refactor` and `done`",

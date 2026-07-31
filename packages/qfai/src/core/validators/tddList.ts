@@ -52,6 +52,37 @@ function isUnderTestDir(testFile: string, dir: string): boolean {
   return testFile.replace(/^\.\//, "").startsWith(dir);
 }
 
+/**
+ * A Change Request reference in any documented form: the bare id, the canonical
+ * filename with its slug, and either with or without the `.md` extension.
+ *
+ * A `CR-*` in the `DR-ID` column records an approved reset and is retained
+ * through the row's later statuses. It is not a Decision Record for an anomaly,
+ * so a cell holding nothing but `CR-*` references leaves an `exception` row
+ * without the DR it owes.
+ *
+ * Matching the bare id alone let the check be bypassed by writing what an
+ * author naturally pastes — the filename `CR-20260731-0001-tighten-scope.md`
+ * did not match, so the cell read as "carries a real DR" and the exception row
+ * kept its exemption without ever owing a DR.
+ */
+const CHANGE_REQUEST_REF = /^CR-\d{8}-\d{4}(?:-[A-Za-z0-9][A-Za-z0-9-]*)?(?:\.md)?$/i;
+
+/**
+ * True when the `DR-ID` cell carries no reference other than `CR-*` ones.
+ *
+ * Tokens split on commas, semicolons AND whitespace: a cell written
+ * `CR-20260731-0001 CR-20260731-0002` is two references, and treating it as one
+ * token made it fail the CR pattern and silently satisfy the DR requirement.
+ */
+function isChangeRequestRefsOnly(drId: string): boolean {
+  const refs = drId
+    .split(/[,;\s]+/)
+    .map((ref) => ref.trim())
+    .filter((ref) => ref.length > 0);
+  return refs.length > 0 && refs.every((ref) => CHANGE_REQUEST_REF.test(ref));
+}
+
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
 
 /**
@@ -351,11 +382,13 @@ async function validateSpecTddList(
       const status = (row[statusIndex] ?? "").trim().toLowerCase();
       if (status !== "exception") continue;
       const drId = (row[drIdIndex] ?? "").trim();
-      if (drId.length === 0) {
+      if (drId.length === 0 || isChangeRequestRefsOnly(drId)) {
+        const reason =
+          drId.length === 0 ? "DR-ID is empty" : "DR-ID holds only Change Request references";
         issues.push(
           issue(
             "TDDLIST_EXCEPTION_MISSING_DR",
-            `Status=exception but DR-ID is empty in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Add a DR-ID reference`,
+            `Status=exception but ${reason} in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Add a DR-ID reference`,
             "error",
             relPath,
             "tddList.exceptionDrId",

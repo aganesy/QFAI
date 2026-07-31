@@ -153,11 +153,13 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   resolved from project root. The upstream reset does not relax this: a swept
   row returns to `todo`, where no file is required, and writes its test in the
   following `red` phase.
-- `DR-ID` carries the approval that authorised an upstream reset, not only
-  `Status = exception`. A row reset by a Drift Protocol sweep records the
+- `DR-ID` carries Decision Record (`DR-*`) **and** Change Request (`CR-*`)
+  references, so it carries the approval that authorised an upstream reset, not
+  only `Status = exception`. A row reset by a Drift Protocol sweep records the
   approved `CR-*` / `DR-*` ID there and **retains it through `red`, `green`,
   `refactor` and `done`** — the ledger is the audit trail for why a completed
-  row was reopened.
+  row was reopened. Change Requests live at
+  `.qfai/decisions/CR-YYYYMMDD-NNNN-<slug>.md` (`CR-\d{8}-\d{4}`).
 - `Layer` must be consistent with `Test file`: an `Integration` row may not
   point into `tests/e2e/**` or `tests/api/**`, and vice versa.
 - More than one `TDD-*` row MAY reference the same `TC-*` — a TC split across
