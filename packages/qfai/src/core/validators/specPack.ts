@@ -1024,25 +1024,20 @@ type LayeredIdFileNames = {
 /**
  * Filenames to name in an `E_ID_INVALID_FORMAT` fix hint.
  *
- * `REQUIRED_LAYERED_SPEC_FILES` defaults to the v1421 set, so hints that
- * hardcoded the v1416 names sent authors to files their spec does not have.
+ * Taken from the paths this validator actually read, so the hint always names
+ * the file whose contents produced the finding. A second hardcoded table —
+ * one branch per layered style — is what produced the original defect (v1421
+ * specs were sent to the v1416 filenames), and it would drift again the next
+ * time a layout is added or a file renamed, because nothing forces the two
+ * lists to agree.
  */
 function layeredIdFileNames(entry: SpecEntry): LayeredIdFileNames {
-  if (entry.layeredStyle === "v1416") {
-    return {
-      userStories: "01_User-stories.md",
-      acceptanceCriteria: "02_Acceptance-criteria.md",
-      businessRules: "03_Business-rules.md",
-      examples: "04_Examples.feature",
-      testCases: "05_Test-cases.md",
-    };
-  }
   return {
-    userStories: "02_User-stories.md",
-    acceptanceCriteria: "03_Acceptance-Criteria.md",
-    businessRules: "04_Business-Rules.md",
-    examples: "05_Examples.md",
-    testCases: "06_Test-Cases.md",
+    userStories: path.basename(entry.userStoriesPath),
+    acceptanceCriteria: path.basename(entry.acceptanceCriteriaPath),
+    businessRules: path.basename(entry.businessRulesPath),
+    examples: path.basename(entry.examplesPath),
+    testCases: path.basename(entry.testCasesPath),
   };
 }
 
