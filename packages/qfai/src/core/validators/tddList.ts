@@ -32,12 +32,27 @@ const TDD_ID_FORMAT = /^TDD-\d{4}$/;
  * Record for an anomaly, so a cell holding nothing but `CR-*` references leaves
  * an `exception` row without the DR it owes.
  */
-const CHANGE_REQUEST_REF = /^CR-\d{8}-\d{4}$/i;
+/**
+ * A Change Request reference in any documented form: the bare id, the canonical
+ * filename with its slug, and either with or without the `.md` extension.
+ *
+ * Matching the bare id alone let the check be bypassed by writing what an
+ * author naturally pastes — the filename `CR-20260731-0001-tighten-scope.md`
+ * did not match, so the cell read as "carries a real DR" and the exception row
+ * kept its exemption without ever owing a DR.
+ */
+const CHANGE_REQUEST_REF = /^CR-\d{8}-\d{4}(?:-[A-Za-z0-9][A-Za-z0-9-]*)?(?:\.md)?$/i;
 
-/** True when the `DR-ID` cell carries no reference other than `CR-*` ones. */
+/**
+ * True when the `DR-ID` cell carries no reference other than `CR-*` ones.
+ *
+ * Tokens split on commas, semicolons AND whitespace: a cell written
+ * `CR-20260731-0001 CR-20260731-0002` is two references, and treating it as one
+ * token made it fail the CR pattern and silently satisfy the DR requirement.
+ */
 function isChangeRequestRefsOnly(drId: string): boolean {
   const refs = drId
-    .split(/[,;]/)
+    .split(/[,;\s]+/)
     .map((ref) => ref.trim())
     .filter((ref) => ref.length > 0);
   return refs.length > 0 && refs.every((ref) => CHANGE_REQUEST_REF.test(ref));
