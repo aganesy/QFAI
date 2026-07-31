@@ -37,7 +37,7 @@
 - Resolve reviewers from `.qfai/assistant/manifest/agent-routing.yml` and `.qfai/assistant/manifest/review-profiles.yml`.
 - Always run reviewers listed in `profiles.<routing_profile>.always_required` in `review-profiles.yml`.
 - Add conditional reviewers according to `conditional_required` and related routing rules defined in `agent-routing.yml` and `review-profiles.yml` (do not introduce additional ad-hoc conditions in this template).
-- Allowed in-flight verdicts: `PASS`, `REVISE`. `REVISE` is what starts the fix-and-rerun cycle; it serializes to `status: "FAIL"` when the pack's `summary.json` is written (see `constitution/shared-skill-delegation-baseline.md#verdict-vocabulary`).
+- Allowed in-flight verdicts: `PASS`, `REVISE`. `REVISE` is what starts the fix-and-rerun cycle; it serializes to `status: "FAIL"` when the pack's `summary.json` is written (see `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#verdict-vocabulary`).
 
 ## RCP Rules (Mandatory)
 

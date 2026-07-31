@@ -32,4 +32,5 @@
 > In-flight reviewer responses use `PASS` / `REVISE`, per
 > `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`.
 > A `REVISE` verdict maps to `status: "FAIL"` when the review pack's `summary.json` is written
-> — see `#verdict-vocabulary` in the same file. Do not invent a third verdict.
+> — see `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#verdict-vocabulary`.
+> Do not invent a third verdict.

@@ -28,8 +28,10 @@ describe("reviewer verdict vocabulary", () => {
     for (const relative of ["agents/qa-gatekeeper.md", "agents/completion-reviewer.md"]) {
       for (const content of await readShipped(relative)) {
         expect(content, `${relative} must not instruct a FAIL verdict`).not.toMatch(/\bFAIL\b/);
-        // Case-sensitively: `Return pass/fail only` survived the first sweep and
-        // told the agent to emit a verdict the playbook does not route.
+        // Case-insensitive on purpose. The `\bFAIL\b` check above is
+        // case-sensitive, so lowercase `Return pass/fail only` survived the
+        // first sweep and went on telling the agent to emit a verdict the
+        // playbook does not route.
         expect(content, `${relative} must not instruct a pass/fail verdict`).not.toMatch(
           /\bpass\s*\/\s*fail\b/i,
         );

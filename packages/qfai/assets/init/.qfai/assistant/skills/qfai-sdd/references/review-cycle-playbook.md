@@ -14,7 +14,7 @@ Use this file when you need the detailed review-cycle mechanics for `/qfai-sdd`.
 2. Build one review pack for the current cycle only.
 3. Apply the footer SSOT without rewriting it locally.
 4. Collect verdicts.
-5. If any blocking reviewer returns `REVISE`, fix only the affected scope and rerun that reviewer plus any reviewer whose scope changed. `REVISE` is the in-flight verdict (`shared-skill-delegation-baseline.md#reviewer-response-template`); it becomes `status: "FAIL"` only when the pack's `summary.json` is written.
+5. If any blocking reviewer returns `REVISE`, fix only the affected scope and rerun that reviewer plus any reviewer whose scope changed. `REVISE` is the in-flight verdict (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`); it becomes `status: "FAIL"` only when the pack's `summary.json` is written.
 6. Mark the cycle fixed only when all routed blocking reviewers return `PASS`.
 
 ## Required Outputs
