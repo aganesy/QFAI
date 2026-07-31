@@ -1201,3 +1201,72 @@ function validateShadow(d: DesignMd, issues: ValidationIssue[]): void {
 export function hashDesignMd(text: string): string {
   return createHash("sha256").update(text, "utf8").digest("hex");
 }
+
+// ---------------------------------------------------------------------------
+// Unreplaced-sample detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Sentinel carried by every DESIGN.md the package ships as a sample:
+ *   - `assets/init/root/DESIGN.md` (seeded into the project root by `qfai init`)
+ *   - `assets/init/.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`
+ *
+ * The two files are the same fictional brand but are NOT byte-identical
+ * (they differ in front-matter whitespace alignment), so a sha256-equality
+ * guard would have to enumerate — and keep in sync — one digest per shipped
+ * sample. A marker is content-addressed instead of byte-addressed: it
+ * survives whitespace edits, covers both samples with one constant, and
+ * keeps covering any future sample that carries it.
+ *
+ * The marker lives in the markdown body, so `parseDesignMd` (which only
+ * reads front-matter) is unaffected: an unreplaced sample still parses and
+ * validates, and is rejected by identity instead.
+ */
+export const DESIGN_MD_SAMPLE_MARKER = "QFAI-SAMPLE-DESIGN-MD";
+
+/**
+ * Fingerprint of the sample brand as it shipped BEFORE
+ * `DESIGN_MD_SAMPLE_MARKER` existed.
+ *
+ * A marker-only test cannot see the installed base this gate exists to
+ * rescue: `qfai init` copies `assets/init/root/DESIGN.md` under
+ * `protect: ["DESIGN.md"]` (see `src/cli/commands/init.ts`), so a project
+ * that initialized on an older release keeps its marker-less copy of the
+ * sample even across `qfai init --force`. Those projects are exactly the
+ * ones at risk of freezing an unauthored brand.
+ *
+ * BOTH signals are required — the front-matter brand name AND the opening
+ * sentence of the shipped brand-philosophy body. Requiring both keeps the
+ * migration test conservative: a project that adopted the sample as a
+ * starting point and then authored its own identity (renamed `brand.name`
+ * OR rewrote the philosophy body) is no longer "unreplaced" and is not
+ * flagged. Only a copy that still carries both halves verbatim is.
+ */
+const LEGACY_SAMPLE_BRAND_NAME_RE = /^\s{0,4}name:\s*["']?Acme Ledger["']?\s*$/m;
+const LEGACY_SAMPLE_BODY_PHRASE = "Acme Ledger is a calm, confident financial comparison surface";
+
+/**
+ * True when `text` is still (or is derived from) a DESIGN.md the package
+ * ships as a sample. Used to stop `/qfai-sdd` Phase 0 from sha256-freezing
+ * an unauthored brand as the project's brand contract, and to surface the
+ * same condition from `qfai validate` (QFAI-DCON-034).
+ *
+ * Two detectors, because the marker only covers samples seeded by releases
+ * that carry it:
+ *   1. `DESIGN_MD_SAMPLE_MARKER` — current samples, survives any edit that
+ *      leaves the comment in place.
+ *   2. Legacy content fingerprint — samples seeded before the marker
+ *      existed, which `qfai init` will never overwrite.
+ *
+ * `text` is `unknown` rather than `string` because this is re-exported from
+ * `core/index.ts` and so is reachable from untyped JavaScript, where a caller
+ * can hand over the result of a read that failed or a value that was never a
+ * file body. The guard below is what makes that safe; typing the parameter
+ * `string` would have made it dead code that only looked defensive. Internal
+ * callers pass a string and are unaffected.
+ */
+export function isUnreplacedDesignMdSample(text: unknown): boolean {
+  if (typeof text !== "string") return false;
+  if (text.includes(DESIGN_MD_SAMPLE_MARKER)) return true;
+  return LEGACY_SAMPLE_BRAND_NAME_RE.test(text) && text.includes(LEGACY_SAMPLE_BODY_PHRASE);
+}
