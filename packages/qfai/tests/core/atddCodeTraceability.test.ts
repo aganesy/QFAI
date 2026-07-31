@@ -363,8 +363,11 @@ async function seedApiContract(
 ): Promise<void> {
   const apiDir = path.join(root, ".qfai", "contracts", "api");
   await mkdir(apiDir, { recursive: true });
+  // Default the filename off the contract id. A shared constant meant two
+  // seeds in one test silently wrote the same file, so the second contract
+  // replaced the first instead of joining it.
   await writeFile(
-    path.join(apiDir, opts.fileName ?? "api-0001-sample.yaml"),
+    path.join(apiDir, opts.fileName ?? `${contractId.toLowerCase()}.yaml`),
     [
       `# QFAI-CONTRACT-ID: ${contractId}`,
       ...(opts.planned ? ["x-qfai-status: planned"] : []),

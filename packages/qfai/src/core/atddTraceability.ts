@@ -266,8 +266,18 @@ const PLANNED_CONTRACT_VALUE = "planned";
  * `x-qfai-status: planned`, optionally as a comment. Column 0 is required, so
  * the marker cannot be mistaken for one nested under an operation.
  */
+/** Quote a value for literal use inside a RegExp source. */
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Both interpolations are escaped. They are plain identifiers today, so this
+// changes nothing now; it keeps a future key containing `.` or `-`-in-a-class
+// from silently turning into a pattern that matches more than the literal.
 const PLANNED_CONTRACT_RE = new RegExp(
-  `^(?:#[ \\t]*)?["']?${PLANNED_CONTRACT_KEY}["']?[ \\t]*:[ \\t]*["']?${PLANNED_CONTRACT_VALUE}["']?[ \\t]*$`,
+  `^(?:#[ \\t]*)?["']?${escapeRegExp(PLANNED_CONTRACT_KEY)}["']?[ \\t]*:[ \\t]*["']?${escapeRegExp(
+    PLANNED_CONTRACT_VALUE,
+  )}["']?[ \\t]*$`,
   "im",
 );
 
@@ -288,9 +298,23 @@ const PLANNED_CONTRACT_RE = new RegExp(
  * back to a column-0 text match, which cannot see a nested key either.
  */
 export function isPlannedApiContract(text: string): boolean {
+  // The overwhelmingly common contract does not carry the marker at all, and
+  // this runs once per contract file during collection. A substring test skips
+  // the parse for those: the key must appear literally somewhere for any of the
+  // paths below to return true, so a miss here is a definitive `false`.
+  if (!text.includes(PLANNED_CONTRACT_KEY)) {
+    return false;
+  }
+
   let parsed: unknown;
   try {
-    parsed = parseYaml(text);
+    // `maxAliasCount: 0` disables alias expansion. Contracts are repository
+    // files, but they are also the one input a PR author fully controls, and
+    // an alias bomb (`*a` referenced repeatedly through nested anchors) turns a
+    // small document into an out-of-memory CI failure. No contract format needs
+    // aliases; a document that uses them is rejected and falls through to the
+    // column-0 text match below.
+    parsed = parseYaml(text, { maxAliasCount: 0 });
   } catch {
     // Malformed contract: other validators report the syntax error. Here the
     // conservative reading is the column-0 marker only.
