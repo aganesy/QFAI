@@ -1455,6 +1455,11 @@ agents:
       ## Stop conditions
 
       - Required evidence, governing specs, or target artifacts are missing.
+        - "Required evidence" means the evidence this review audits — the phase-authored record produced
+          before the review was requested. A completion record that this review's own verdict will be
+          written into is not yet expected to be finalized; its missing verdict fields are not a stop
+          condition and not a blocking finding. Report an unfinalized completion record as a sequencing
+          note, not as a gap.
       - The request requires implementation or file editing instead of independent review.
       - The issue falls outside this review domain and must be rerouted to another specialist first.
       - The finding would add a product obligation upstream never asked for. Do not raise it as blocking;
