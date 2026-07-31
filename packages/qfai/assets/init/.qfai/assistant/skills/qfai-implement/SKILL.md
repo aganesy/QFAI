@@ -130,10 +130,24 @@ The eight required columns, the allowed transitions and the exception rules are 
 ### Phase: Refactor
 
 1. Improve code quality (naming, structure, duplication removal) while keeping all tests green.
-2. Run the full relevant test suite to confirm nothing broke.
+2. Run the **relevant test suite** to confirm nothing broke. "Relevant" means the
+   smallest selector that covers the module you touched **plus its reverse
+   dependency closure** — walk the production import graph backwards, not just the
+   test files that import the module directly. Fall back to the package containing
+   the touched module whenever that walk cannot be completed; never "every test in
+   the repository" at this step. Cadence: **narrow suite per item, full suite at
+   each checkpoint boundary**, because a full run per item is quadratic in ledger
+   size. Full rules, the fallback triggers and the boundary list:
+   `references/relevant-test-suite.md`.
 3. Transition status to `refactor`.
-4. Submit for completion review (`completion-reviewer`) and code quality review (`implementation-reviewer`).
-5. After all routed blocking reviewers return PASS, run checkpoint verification (see `#checkpoint-verification`), then transition to `done`.
+4. Submit for completion review (`completion-reviewer`) and code quality review
+   (`implementation-reviewer`).
+5. After all routed blocking reviewers return PASS, run checkpoint verification
+   **while the item is still `refactor`** (see `#checkpoint-verification`). On a
+   checkpoint boundary that means the full suite. Off a boundary it is already
+   satisfied by step 2's narrow suite — nothing is re-run. Transition to `done`
+   only on PASS; on failure transition to `exception` with a DR-ID (legal from
+   `refactor`, whereas re-opening a `done` row is not).
 
 ### Completion
 
@@ -296,7 +310,7 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 9. UI-affecting items have prototype parity PASS from `product-surface-reviewer`
 10. `test-list.md` Status and Evidence columns are updated with fresh evidence
 11. `.qfai/evidence/implement-<spec-id>.md` is appended with both reviewer verdicts after items 7-8 returned PASS
-12. Checkpoint verification passed (see `#checkpoint-verification`)
+12. Checkpoint verification passed (see `#checkpoint-verification`). The **full** suite is required here only when the item sits on a checkpoint boundary; a row between boundaries satisfies this with the narrow relevant suite from Phase: Refactor step 2, which is also what items 6, 7 and 8 are evaluated against.
 
 Sequencing note: the phase-authored part of `.qfai/evidence/implement-<spec-id>.md` (RED / GREEN /
 Refactor commands and results) is written **before** items 7-8, because it is the evidence the
@@ -350,7 +364,7 @@ Completion MUST NOT be declared when any of the following are true:
   waiver** (a `TDDLIST-001` entry in `.qfai/waivers.yml`). An `exception` whose
   DR only describes the anomaly is a parked defect, not a completed item.
 - Parallel slices were used but integration verify has not been run post-merge
-- A checkpoint boundary was reached (see `#checkpoint-verification`) but the verification command set was not executed, or any command in it exited non-zero
+- A checkpoint boundary was reached (see `#checkpoint-verification`) but the verification command set was not executed, or any command in it exited non-zero — the last row a run completes is always a boundary, not the physical last row of the file, which is often already `done` and skipped, so every spec runs the full suite at least once
 - `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-001`). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID.
 
 ## Evidence (MANDATORY)

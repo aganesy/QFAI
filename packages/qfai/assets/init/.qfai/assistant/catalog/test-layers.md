@@ -48,7 +48,9 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
 ## Annotation schema (code-side)
 
 - Smallest trace unit is ID.
-- Multiple IDs per test file are allowed.
+- Multiple IDs per test file are allowed — but this is a trace rule, not
+  licence to aggregate a whole spec into one module. See Test-file granularity
+  below.
 - AC annotations are optional (indirect coverage through TC is acceptable).
 - Allowed forms:
   - `QFAI:SPEC-0001:US-0001`
@@ -106,6 +108,19 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
   locations `tests/unit/**` and `tests/component/**`.
 - AC annotations are not required in code; AC coverage is treated as indirect through TC coverage.
 - `QFAI:CON-API-*` in `tests/e2e/**` is not forbidden, but contract guarantee belongs to API tests.
+
+## Test-file granularity
+
+- Default: **one test module per `TC-*`**. A TDD ledger row's `Test file`
+  names that module.
+- Grouping several `TC-*` into one module is allowed when they verify the same
+  BR and the module stays reviewable in one pass. Above that, split by BR, then
+  by AC.
+- A single `Test file` value shared by every row of a spec is an anti-pattern:
+  it makes the per-item "relevant test suite" indistinguishable from the whole
+  spec suite, and it puts the whole spec's test code in front of every
+  in-context reviewer gate.
+- `qfai-sdd` should emit a per-item `Test file` value, not a per-spec one.
 
 ## Volume policy
 
