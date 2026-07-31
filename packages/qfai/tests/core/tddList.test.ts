@@ -289,6 +289,92 @@ describe("tddList Phase 2 validators", { timeout: 15000 }, () => {
     });
   });
 
+  it("emits TDDLIST_EXCEPTION_MISSING_DR when exception has only a retained CR-ID", async () => {
+    await withTddProject(async (root) => {
+      // A `CR-*` retained from an approved Change Request reset records the
+      // reopen, not the anomaly, so it must not satisfy the exception's DR.
+      const testList = [
+        EIGHT_COL_HEADER,
+        row("TDD-0001", "TC-0001", "unit", "", "test1", "exception", "CR-20260115-0001", ""),
+      ].join("\n");
+      await seedSpec(root, "0001", {
+        testCases: TC_TABLE_UNIT_COMPONENT,
+        testList,
+      });
+      const issues = await validateTddList(root, defaultConfig);
+      const dr = issues.find((i) => i.code === "TDDLIST_EXCEPTION_MISSING_DR");
+      expect(dr).toBeDefined();
+      expect(dr?.severity).toBe("error");
+      expect(dr?.message).toContain("DR-ID holds only Change Request references");
+    });
+  });
+
+  it.each([
+    ["a pasted CR filename", "CR-20260115-0001-tighten-scope.md"],
+    ["a CR filename without the extension", "CR-20260115-0001-tighten-scope"],
+    ["whitespace-separated CR refs", "CR-20260115-0001 CR-20260115-0002"],
+  ])("emits TDDLIST_EXCEPTION_MISSING_DR for %s in the DR-ID cell", async (_label, drIdCell) => {
+    // Each of these is a documented way to write a Change Request reference,
+    // and each previously failed the bare-id pattern — so the cell read as
+    // "carries a real DR" and the exception row kept its exemption without
+    // ever owing one.
+    await withTddProject(async (root) => {
+      const testList = [
+        EIGHT_COL_HEADER,
+        row("TDD-0001", "TC-0001", "unit", "", "test1", "exception", drIdCell, ""),
+      ].join("\n");
+      await seedSpec(root, "0001", {
+        testCases: TC_TABLE_UNIT_COMPONENT,
+        testList,
+      });
+      const issues = await validateTddList(root, defaultConfig);
+      const dr = issues.find((i) => i.code === "TDDLIST_EXCEPTION_MISSING_DR");
+      expect(dr).toBeDefined();
+      expect(dr?.message).toContain("DR-ID holds only Change Request references");
+    });
+  });
+
+  it("does not emit TDDLIST_EXCEPTION_MISSING_DR when a DR-ID accompanies the CR-ID", async () => {
+    await withTddProject(async (root) => {
+      const testList = [
+        EIGHT_COL_HEADER,
+        row(
+          "TDD-0001",
+          "TC-0001",
+          "unit",
+          "",
+          "test1",
+          "exception",
+          "DR-0007, CR-20260115-0001",
+          "",
+        ),
+      ].join("\n");
+      await seedSpec(root, "0001", {
+        testCases: TC_TABLE_UNIT_COMPONENT,
+        testList,
+      });
+      const issues = await validateTddList(root, defaultConfig);
+      expect(issues.find((i) => i.code === "TDDLIST_EXCEPTION_MISSING_DR")).toBeUndefined();
+    });
+  });
+
+  it("keeps a non-CR decision reference acceptable on an exception row", async () => {
+    await withTddProject(async (root) => {
+      // Only a CR-only cell is newly rejected; project-specific spellings that
+      // are not Change Request IDs keep passing.
+      const testList = [
+        EIGHT_COL_HEADER,
+        row("TDD-0001", "TC-0001", "unit", "", "test1", "exception", "ADR-12", ""),
+      ].join("\n");
+      await seedSpec(root, "0001", {
+        testCases: TC_TABLE_UNIT_COMPONENT,
+        testList,
+      });
+      const issues = await validateTddList(root, defaultConfig);
+      expect(issues.find((i) => i.code === "TDDLIST_EXCEPTION_MISSING_DR")).toBeUndefined();
+    });
+  });
+
   it("does not emit TDDLIST_EXCEPTION_MISSING_DR for non-exception status", async () => {
     await withTddProject(async (root) => {
       const testList = [

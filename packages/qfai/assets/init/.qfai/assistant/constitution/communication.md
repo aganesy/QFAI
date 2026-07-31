@@ -36,7 +36,7 @@ When an agent needs to ask the user a question, the following rules apply (see a
 All SKILL.md files MUST include a
 `## User Questions (AskUserQuestion Protocol)` section with MUST-level wording.
 SSOT: `packages/qfai/assets/init/.qfai/assistant/skills/*/SKILL.md`.
-Deployed copy (updated by `qfai init`): `.qfai/assistant/skills/*/SKILL.md`.
+Deployed copy (updated by `npx qfai init`): `.qfai/assistant/skills/*/SKILL.md`.
 
 ## Error handling
 

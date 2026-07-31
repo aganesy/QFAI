@@ -12,6 +12,7 @@ import {
   collectUiContractFiles,
 } from "../discovery.js";
 import type { Issue } from "../types.js";
+import { validateContractConsistency } from "./contractConsistency.js";
 import { issue } from "./utils.js";
 
 const SQL_DANGEROUS_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
@@ -85,6 +86,8 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
 
   const contractIndex = await buildContractIndex(root, config);
   issues.push(...validateDuplicateContractIds(contractIndex.idToFiles));
+
+  issues.push(...(await validateContractConsistency(apiFiles, dbFiles)));
 
   return issues;
 }

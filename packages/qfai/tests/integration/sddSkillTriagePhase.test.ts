@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 const SKILL_PATH = path.resolve(
   here,
@@ -85,11 +87,10 @@ describe("qfai-sdd SKILL.md surface", () => {
   it("stays under the SKILL.md size budget", async () => {
     const skill = await readFile(SKILL_PATH, "utf-8");
     const lines = skill.split(/\r?\n/);
-    // Budget bumped from 280 to 310 to absorb the mandatory
-    // `## Default Autopilot Policy` section (3 named buckets +
-    // narrow-vs-widen guidance) required by the SKILL.md governance
-    // contract (R-AUTOPILOT-POLICY-MISSING).
-    expect(lines.length).toBeLessThanOrEqual(310);
+    // Same ceiling as every other skill (see SKILL_MD_MAX_LINES). This number
+    // had been raised 280 -> 310 on its own while three other files carried
+    // different values for the same kind of file.
+    expect(lines.length).toBeLessThanOrEqual(SKILL_MD_MAX_LINES);
   });
 });
 
