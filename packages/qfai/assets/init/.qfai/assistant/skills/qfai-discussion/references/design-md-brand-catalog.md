@@ -83,8 +83,8 @@ Each archetype supplies defaults that the agent maps to the project's design sys
 
 Use this catalog during Step 11.3 Phase A:
 
-1. Score each archetype against the taste-interview results from `uiux/11_design_taste_interview.md`.
+1. Score each archetype against the brand intent captured in root `DESIGN.md` front-matter (`brand.voice`, `audience.emotion`, `audience.do_not_look_like`).
 2. Apply the archetype tie-breaker when two archetypes tie: highest visual-theme weight wins, then alphabetical name.
-3. Record the selected archetype in `uiux/12_design_system.md` under `## Visual Theme`.
+3. Record the selected archetype in root `DESIGN.md` front-matter as `brand.archetype`.
 4. The selected archetype's `aesthetic_properties` become the defaults for Color Palette, Typography, Spacing, and Animation sections.
 5. Step 11.3 Phase B then customizes those defaults to project-specific overrides.
