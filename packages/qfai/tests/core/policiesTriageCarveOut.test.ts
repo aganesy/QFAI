@@ -209,6 +209,54 @@ describe("_policies scope bans carve out the mandated Triage table", () => {
     );
   });
 
+  it("does not exempt a second table under ## Triage that is not the mandated one", async () => {
+    // The carve-out keyed on "is a table inside `## Triage`", so an author
+    // could add a table reusing one or two canonical column names and park
+    // prohibited IDs in those cells — the mask blanked them and the ban never
+    // saw them. Exemption now requires the full canonical column set.
+    await withPolicies(
+      [
+        "# 10 Delta",
+        "",
+        ...TRIAGE_SECTION,
+        "",
+        "| Existing Spec | Rationale                        |",
+        "| ------------- | -------------------------------- |",
+        "| spec-0003     | AC-0003-0001 owns this behaviour |",
+        "",
+      ].join("\n"),
+      (issues) => {
+        const refs = policyScopeFindings(issues);
+        // The decoy table earns no exemption. (`spec-NNNN` is not asserted:
+        // the v1421 ban pattern covers US/AC/BR/EX/TC only.)
+        expect(refs).toContain("AC-0003-0001");
+        // The mandated table above it is unaffected.
+        expect(refs).not.toContain("AC-0007-0004");
+      },
+    );
+  });
+
+  it("keeps the exemption when the mandated columns are reordered", async () => {
+    // `validateTriageSection` resolves every column by name, so a reordered
+    // table is still the mandated one and must keep the carve-out.
+    await withPolicies(
+      [
+        "# 10 Delta",
+        "",
+        "## Triage",
+        "",
+        "| Operation | Sub-op | Source   | Subject | Existing Spec | Approved By | Rationale                        |",
+        "| --------- | ------ | -------- | ------- | ------------- | ----------- | -------------------------------- |",
+        "| UPDATE    | MODIFY | REQ-0042 | rename  | spec-0007     | -           | AC-0007-0004 references the term |",
+        "",
+      ].join("\n"),
+      (issues) => {
+        const refs = policyScopeFindings(issues);
+        expect(refs).not.toContain("AC-0007-0004");
+      },
+    );
+  });
+
   it("exempts only table rows, never definitions or ownership edges inside Triage", async () => {
     await withPolicies(
       [

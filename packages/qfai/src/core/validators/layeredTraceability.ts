@@ -243,16 +243,52 @@ function maskTableAt(lines: readonly string[], index: number, masked: string[]):
   if (!looksLikeTableRow(header) || !isTableSeparator(separator)) {
     return index;
   }
+  const end = tableEnd(lines, index);
+  if (!isMandatedTriageHeader(header)) {
+    // A second table under `## Triage` earns no exemption. Without this, an
+    // author could add a table whose header merely reuses one or two canonical
+    // column names and park prohibited IDs in those cells — the carve-out
+    // would blank them and the ban would never see them. Skip it entirely; its
+    // cells stay visible to the scan.
+    return end;
+  }
   const exemptColumns = splitMarkdownRow(header).map((column) =>
     EXEMPT_TRIAGE_COLUMNS.has(column.trim().toLowerCase()),
   );
-  masked[index] = "";
+  // The header is masked cell-by-cell like the body rather than blanked whole,
+  // so an author-added column's name survives into the scanned text along with
+  // its cells. The separator is the one line blanked outright: `isTableSeparator`
+  // admits only dashes, colons and pipes, so it cannot carry an ID.
+  masked[index] = retainedCells(header, exemptColumns);
   masked[index + 1] = "";
-  let cursor = index + 2;
-  for (; cursor < lines.length && looksLikeTableRow(lines[cursor] ?? ""); cursor += 1) {
+  for (let cursor = index + 2; cursor < end; cursor += 1) {
     masked[cursor] = retainedCells(lines[cursor] ?? "", exemptColumns);
   }
+  return end;
+}
+
+/** Index just past the contiguous body of the table whose header is at `index`. */
+function tableEnd(lines: readonly string[], index: number): number {
+  let cursor = index + 2;
+  while (cursor < lines.length && looksLikeTableRow(lines[cursor] ?? "")) {
+    cursor += 1;
+  }
   return cursor;
+}
+
+/**
+ * True when this header is the mandated Triage table's.
+ *
+ * Membership, not order: `validateTriageSection` resolves every column by name
+ * (`headerIndex`), so a legally reordered table must keep the exemption. What
+ * this rejects is a table carrying only *some* canonical names — the shape an
+ * author would reach for to smuggle an ownership edge through the carve-out. A
+ * table that does carry all seven is a Triage table by every validator's
+ * reckoning and is checked as one.
+ */
+function isMandatedTriageHeader(header: string): boolean {
+  const present = new Set(splitMarkdownRow(header).map((column) => column.trim().toLowerCase()));
+  return TRIAGE_TABLE_HEADER.every((column) => present.has(column.trim().toLowerCase()));
 }
 
 /**
