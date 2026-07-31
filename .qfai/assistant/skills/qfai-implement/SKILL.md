@@ -262,6 +262,15 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 10. `test-list.md` Status and Evidence columns are updated with fresh evidence
 11. Checkpoint verification passed (see `#checkpoint-verification`)
 
+### Review artifact layout (MUST)
+
+Gate items 7-9 are evidence-bearing: reviewer verdicts must be written to a review pack, not left in
+conversation. There is exactly **one** `.qfai/review/**` layout — `review-<17-digit-timestamp>/`
+holding `review_request.md`, `R01_<reviewer-id>.md` (at least one) and `summary.json`. Do not nest
+`<scope>/<layer>/attempt-NN/` directories: packs written there are invisible to `qfai validate`.
+Each review round creates a new pack. Full schema and the `REVISE` -> `status: "FAIL"` mapping:
+`references/review-artifact-layout.md`.
+
 ### Spec completion conditions
 
 The skill may declare "this spec's implementation is complete" only when:
