@@ -15,28 +15,35 @@ const TEMPLATE_REL = "skills/qfai-sdd/templates/evidence/sdd-spec.md";
 const SKILL_REL = "skills/qfai-sdd/SKILL.md";
 const GATE_REL = "skills/qfai-sdd/references/sdd-quality-gate.md";
 
-const VALIDATE_LOG_REDIRECT = "| tee .qfai/report/validate.log";
+/** The `| tee` this template used to mandate — see the first case below. */
+const RETIRED_LOG_REDIRECT = "| tee";
 
 async function readShipped(relative: string): Promise<string[]> {
   return Promise.all(ASSISTANT_ROOTS.map((root) => readFile(path.join(root, relative), "utf-8")));
 }
 
 describe("sdd evidence template", () => {
-  // `qfai validate` writes the run directory but never
-  // `.qfai/report/validate.log`. A template whose command omits the redirect
-  // leaves the log it then lists under "Validate evidence paths" absent, or —
-  // worse — a stale copy from an earlier run that no longer describes the gate
-  // result the evidence claims.
-  it("captures the validate output into the log it cites as evidence", async () => {
+  // The log this template lists under "Validate evidence paths" has to be the
+  // one the command above it produces. That used to require a `| tee`, because
+  // `qfai validate` wrote the run directory and nothing else. It no longer
+  // does: the writer emits `<paths.outDir>/validate.log` on every run, pointing
+  // at that run's `run-*/`. So the redirect is now the wrong instruction — it
+  // is unnecessary, and `| tee` is not portable to PowerShell, which is the
+  // shell a Windows operator following this template would be in.
+  it("cites the log the validate command writes, without a redirect", async () => {
     for (const template of await readShipped(TEMPLATE_REL)) {
-      expect(template).toContain(VALIDATE_LOG_REDIRECT);
       expect(template).toContain("`.qfai/report/validate.log`");
 
-      const commandBlock = template.slice(
+      const section = template.slice(
         template.indexOf("## Commands executed"),
         template.indexOf("## Validate evidence paths"),
       );
-      expect(commandBlock).toContain(VALIDATE_LOG_REDIRECT);
+      // The fenced command only. The prose around it explains why there is no
+      // redirect and necessarily names `| tee` to do so, so asserting over the
+      // whole section would fail on its own explanation.
+      const fenced = /```[^\n]*\n([\s\S]*?)```/.exec(section)?.[1] ?? "";
+      expect(fenced).toContain("qfai validate --profile sdd --fail-on error --format github");
+      expect(fenced).not.toContain(RETIRED_LOG_REDIRECT);
     }
   });
 
@@ -46,7 +53,7 @@ describe("sdd evidence template", () => {
       readShipped(GATE_REL),
       readShipped(TEMPLATE_REL),
     ]);
-    const expectedCommand = `qfai validate --profile sdd --fail-on error --format github ${VALIDATE_LOG_REDIRECT}`;
+    const expectedCommand = "qfai validate --profile sdd --fail-on error --format github";
 
     // Indexed against ASSISTANT_ROOTS so BOTH halves are asserted. Destructuring
     // the first element checked only the shipped tree and left `.qfai/assistant`

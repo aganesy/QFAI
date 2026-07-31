@@ -50,14 +50,13 @@
 ## Commands executed
 
 ```
-qfai validate --profile sdd --fail-on error --format github | tee .qfai/report/validate.log
+qfai validate --profile sdd --fail-on error --format github
 ```
 
-> Keep the `| tee` — `qfai validate` writes the run directory but not
-> `.qfai/report/validate.log`. Without it the log below is either absent or a
-> stale copy from an earlier run, so the evidence no longer backs the hard-gate
-> result it claims. Same command as `SKILL.md` step 8 and
-> `references/sdd-quality-gate.md`.
+> No redirect. `qfai validate` writes `<paths.outDir>/validate.log` itself on
+> every run, always pointing at that run's `run-*/` directory, so a `| tee` is
+> both unnecessary and not portable to PowerShell. Same command as `SKILL.md`
+> step 8 and `references/sdd-quality-gate.md`.
 
 ## Validate evidence paths
 
