@@ -97,7 +97,7 @@ A good discussion artifact should make these reviewable without guesswork:
 ## Recommended Audit Order
 
 1. Validate user goal and flow.
-2. Validate option comparison and anchor choice.
+2. Validate that root `DESIGN.md` is authored and that exploration directions stay unranked (no winner selected here).
 3. Validate state coverage and contracts.
 4. Validate accessibility and platform fit.
 5. Validate anti-pattern absence.
