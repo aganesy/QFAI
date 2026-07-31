@@ -24,6 +24,7 @@
 import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 
 import { parseAgentFrontmatter } from "../../src/core/agentFrontmatter.js";
 
@@ -70,16 +71,6 @@ const AGENT_VALIDATOR = path.resolve(
   "core",
   "validators",
   "agentDefinition.ts",
-);
-
-const REVIEW_GATE_VALIDATOR = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "src",
-  "core",
-  "validators",
-  "reviewGate.ts",
 );
 
 const SHARED_DELEGATION_BASELINE = path.resolve(
@@ -134,6 +125,20 @@ const LIVE_QFAI_IMPLEMENT_SKILL = path.resolve(
 
 async function readAsset(filePath: string) {
   return readFile(filePath, "utf-8");
+}
+
+type ReviewGateRules = {
+  quality_gates?: { defaults?: Array<{ id?: string; role?: string }> };
+  optional_review_modes?: { supported?: string[] };
+};
+
+async function readReviewGateRules(): Promise<ReviewGateRules> {
+  const raw = await readFile(path.join(CATALOG_DIR, "review-gate.rules.yml"), "utf-8");
+  const parsed: unknown = parseYaml(raw);
+  if (typeof parsed !== "object" || parsed === null) {
+    throw new Error("review-gate.rules.yml did not parse to a mapping");
+  }
+  return parsed;
 }
 
 function getSection(content: string, heading: string) {
@@ -197,18 +202,24 @@ describe("TC-0015-0003: Orchestrator No Direct Generation", () => {
 
 // TC-0015-0004: Devils-Advocate Concrete Alternative
 describe("TC-0015-0004: Devils-Advocate Concrete Alternative", () => {
-  it("review-gate validator exists", async () => {
-    const content = await readFile(REVIEW_GATE_VALIDATOR, "utf-8");
-    expect(content).toMatch(/review|gate/i);
+  it("review-gate rules declare the reviewer gate defaults and optional review modes", async () => {
+    // Asserted against the parsed document, not the raw text: a substring
+    // check passes on a key that only appears in a comment, and breaks on a
+    // reflow that changes nothing semantically.
+    const rules = await readReviewGateRules();
+    expect(Object.keys(rules)).toEqual(expect.arrayContaining(["quality_gates"]));
+    expect(rules.quality_gates?.defaults?.map((entry) => entry.id)).toContain(
+      "completion-reviewer",
+    );
+    expect(rules.optional_review_modes?.supported).toBeInstanceOf(Array);
   });
 });
 
 // TC-0015-0005: Devils-Advocate 3-FAIL Demotion
 describe("TC-0015-0005: Devils-Advocate 3-FAIL Demotion", () => {
   it("review-gate rules support devils-advocate review mode", async () => {
-    const rulesPath = path.join(CATALOG_DIR, "review-gate.rules.yml");
-    const content = await readFile(rulesPath, "utf-8");
-    expect(content).toContain("devils-advocate");
+    const rules = await readReviewGateRules();
+    expect(rules.optional_review_modes?.supported).toContain("devils-advocate");
   });
 });
 
@@ -275,9 +286,9 @@ describe("TC-0015-0011: Delegation Failure Hard Stop Reporting", () => {
     );
     const skillHardStopSection = getSection(skillContent, "### Delegation Failure (Hard Stop)");
 
-    expect(capabilitySection).toContain("If the delegation fails, stop the stage immediately.");
+    expect(capabilitySection).toContain("If the delegation fails, classify the failure first");
     expect(capabilitySection).toContain(
-      "Do not simulate roles and do not continue with self-execution.",
+      "Never simulate roles and never continue with self-execution",
     );
 
     expect(baselineHardStopSection).toContain("Delegation failure:");
@@ -290,9 +301,7 @@ describe("TC-0015-0011: Delegation Failure Hard Stop Reporting", () => {
 
     expect(skillHardStopSection).toContain("No additional overrides.");
     expect(skillHardStopSection).toContain("Do not simulate roles.");
-    expect(skillHardStopSection).toContain(
-      "If the first required delegation fails, stop the stage and report remediation.",
-    );
+    expect(skillHardStopSection).toContain("Classify the failure per the baseline taxonomy first");
 
     // Live operational files must satisfy the same hard-stop reporting contract
     const liveCapabilitySection = getSection(liveBaselineContent, "### Capability Probe (MUST)");
@@ -305,9 +314,9 @@ describe("TC-0015-0011: Delegation Failure Hard Stop Reporting", () => {
       "### Delegation Failure (Hard Stop)",
     );
 
-    expect(liveCapabilitySection).toContain("If the delegation fails, stop the stage immediately.");
+    expect(liveCapabilitySection).toContain("If the delegation fails, classify the failure first");
     expect(liveCapabilitySection).toContain(
-      "Do not simulate roles and do not continue with self-execution.",
+      "Never simulate roles and never continue with self-execution",
     );
 
     expect(liveBaselineHardStopSection).toContain("Delegation failure:");
@@ -321,7 +330,7 @@ describe("TC-0015-0011: Delegation Failure Hard Stop Reporting", () => {
     expect(liveSkillHardStopSection).toContain("No additional overrides.");
     expect(liveSkillHardStopSection).toContain("Do not simulate roles.");
     expect(liveSkillHardStopSection).toContain(
-      "If the first required delegation fails, stop the stage and report remediation.",
+      "Classify the failure per the baseline taxonomy first",
     );
   });
 });
@@ -355,7 +364,7 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
       "Treat that first real delegation attempt as the capability check.",
     );
     expect(baselineCapabilitySection).toContain(
-      "If the delegation fails, stop the stage immediately.",
+      "If the delegation fails, classify the failure first",
     );
 
     expect(skillCapabilitySection).toContain("No additional overrides.");
@@ -363,9 +372,7 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
     expect(skillContent.indexOf("### Capability Probe (MUST)")).toBeLessThan(
       skillContent.indexOf("### Delegation Failure (Hard Stop)"),
     );
-    expect(skillHardStopSection).toContain(
-      "If the first required delegation fails, stop the stage and report remediation.",
-    );
+    expect(skillHardStopSection).toContain("Classify the failure per the baseline taxonomy first");
 
     expect(baselineHardStopSection).toContain("Delegation failure:");
     expect(baselineHardStopSection).toContain("Attempted role:");
@@ -403,7 +410,7 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
       "Treat that first real delegation attempt as the capability check.",
     );
     expect(liveBaselineCapabilitySection).toContain(
-      "If the delegation fails, stop the stage immediately.",
+      "If the delegation fails, classify the failure first",
     );
 
     expect(liveSkillCapabilitySection).toContain("No additional overrides.");
@@ -412,7 +419,7 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
       liveSkillContent.indexOf("### Delegation Failure (Hard Stop)"),
     );
     expect(liveSkillHardStopSection).toContain(
-      "If the first required delegation fails, stop the stage and report remediation.",
+      "Classify the failure per the baseline taxonomy first",
     );
 
     expect(liveBaselineHardStopSection).toContain("Delegation failure:");
@@ -425,5 +432,80 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
     expect(liveBaselineHardStopSection).toContain(
       "Retry condition: rerun after the required delegation succeeds",
     );
+  });
+});
+
+// TC-0015-0011 follow-up (#248 review): the taxonomy has to be usable
+// without mis-routing a permanent failure into a pointless wait, and the
+// status vocabulary has to admit the value the taxonomy mandates.
+describe("delegation failure taxonomy is actionable", () => {
+  const SKILLS_WITH_STATUS_VOCABULARY = [
+    "qfai-atdd",
+    "qfai-configure",
+    "qfai-verify",
+    "qfai-sdd",
+    "qfai-discussion",
+    "qfai-implement",
+  ];
+
+  function shippedSkill(skillId: string): string {
+    return path.resolve(
+      __dirname,
+      "..",
+      "..",
+      "assets",
+      "init",
+      ".qfai",
+      "assistant",
+      "skills",
+      skillId,
+      "SKILL.md",
+    );
+  }
+
+  it("classifies a limit the user must lift as unavailable, not saturated", async () => {
+    // A configured cap of 0, a max delegation depth, an input-size limit
+    // or an exhausted quota all name a "limit"/"quota" but never clear on
+    // their own. Routing them to the retry branch burns 30/60/120s and
+    // then reports that no user action is needed.
+    for (const file of [SHARED_DELEGATION_BASELINE, LIVE_SHARED_DELEGATION_BASELINE]) {
+      const content = await readAsset(file);
+      const taxonomy = getSection(content, "### Delegation Failure Taxonomy (MUST)");
+      expect(taxonomy).toContain("A limit or quota that only a user can lift is `unavailable`");
+      expect(taxonomy).toMatch(/retryability is not explicit, default to `unavailable`/);
+    }
+  });
+
+  it("admits PENDING in the Work Orders status vocabulary everywhere it is mandated", async () => {
+    // The reviewer-budget branch mandates recording the gate as PENDING;
+    // a schema that allows only PASS/REVISE leaves an agent no legal way
+    // to do that.
+    for (const file of [SHARED_DELEGATION_BASELINE, LIVE_SHARED_DELEGATION_BASELINE]) {
+      const content = await readAsset(file);
+      expect(content).toContain("Status (PASS/REVISE/PENDING)");
+      expect(getSection(content, "### Reviewer budget exhausted")).toContain("`PENDING`");
+    }
+    for (const skillId of SKILLS_WITH_STATUS_VOCABULARY) {
+      const content = await readAsset(shippedSkill(skillId));
+      // The closing `)` is what separates the retired schema from the current
+      // one, so the complete token catches it in both carriers the skills use:
+      // the code span `Status (PASS/REVISE)` and the bare Work Orders table
+      // header `| ... | Status (PASS/REVISE) |`.
+      expect(content).not.toContain("Status (PASS/REVISE)");
+      expect(content).toContain("Status (PASS/REVISE/PENDING)");
+    }
+  });
+
+  it("keeps spec-0015 obligations aligned with the two-class contract", async () => {
+    const specDir = path.resolve(__dirname, "..", "..", "..", "..", ".qfai", "specs", "spec-0015");
+    const [ac, br] = await Promise.all([
+      readAsset(path.join(specDir, "03_Acceptance-Criteria.md")),
+      readAsset(path.join(specDir, "04_Business-Rules.md")),
+    ]);
+    for (const content of [ac, br]) {
+      expect(content).toContain("`unavailable`");
+      expect(content).toContain("`saturated`");
+    }
+    expect(br).toContain("classify it before responding");
   });
 });

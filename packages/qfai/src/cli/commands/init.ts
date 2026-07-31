@@ -21,8 +21,8 @@ import { isEnoent } from "../../core/fs/errno.js";
 import {
   QFAI_GITIGNORE_MARKER,
   QFAI_GITIGNORE_BLOCK,
+  QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_LEGACY_LINES,
-  QFAI_GITIGNORE_REQUIRED_ENTRIES,
 } from "../../core/gitignore.js";
 import {
   ASSISTANT_LAYERS,
@@ -596,9 +596,25 @@ async function ensureRootGitignoreEntries(
     // File does not exist yet — will create
   }
 
+  // The governance negations are checked here but deliberately NOT in
+  // `QFAI_GITIGNORE_RECOMMENDED_ENTRIES`: a project that removed them must not
+  // start failing validation, yet a project that never had them must still
+  // receive them on the next `qfai init`. Without this term the early return
+  // fires for every pre-existing managed block and the negations only ever
+  // reach fresh inits.
+  //
+  // Presence alone is not enough — git applies the LAST matching pattern, so a
+  // negation hand-placed above `.qfai/evidence/*` is inert and the decision
+  // records stay ignored. `governanceNegationsEffective` re-checks the order.
+  //
+  // Required entries are matched only against the managed block: a project that
+  // deliberately removed, say, `.qfai/evidence/*` to track its own audit trail
+  // must not have that choice silently undone by the next `qfai init`.
+  const managedBlock = extractManagedBlock(existing);
   if (
     existing.includes(QFAI_GITIGNORE_MARKER) &&
-    QFAI_GITIGNORE_REQUIRED_ENTRIES.every((entry) => existing.includes(entry)) &&
+    QFAI_GITIGNORE_GOVERNANCE_NEGATIONS.every((entry) => managedBlock.includes(entry)) &&
+    governanceNegationsEffective(managedBlock) &&
     QFAI_GITIGNORE_LEGACY_LINES.every((entry) => !existing.includes(entry))
   ) {
     return { copied: [], skipped: [gitignorePath] };
@@ -620,6 +636,55 @@ async function ensureRootGitignoreEntries(
   await writeFile(gitignorePath, content, "utf-8");
   info("  updated: .gitignore (appended QFAI entries)");
   return { copied: [gitignorePath], skipped: [] };
+}
+
+/**
+ * The contiguous QFAI managed block, or `""` when the marker is absent.
+ *
+ * Freshness is judged against the block this writer owns, not the whole file:
+ * a project that deliberately deleted an ignore line to track its own audit
+ * trail keeps that choice, and a line the user re-added elsewhere does not
+ * make a stale managed block look current.
+ */
+function extractManagedBlock(content: string): string {
+  const lines = content.split("\n");
+  const startIdx = lines.findIndex((line) => line.includes(QFAI_GITIGNORE_MARKER));
+  if (startIdx === -1) {
+    return "";
+  }
+  const knownLines = new Set([...QFAI_GITIGNORE_BLOCK.split("\n"), ...QFAI_GITIGNORE_LEGACY_LINES]);
+  let endIdx = startIdx + 1;
+  while (endIdx < lines.length && knownLines.has(lines[endIdx] ?? "")) {
+    endIdx += 1;
+  }
+  return lines.slice(startIdx, endIdx).join("\n");
+}
+
+/**
+ * True when every governance negation appears AFTER the ignore line it undoes.
+ *
+ * Git applies the last matching pattern, so `!.qfai/evidence/decisions/` placed
+ * above `.qfai/evidence/*` re-ignores the directory and the decision records
+ * stay untracked while the file looks correct to a presence-only check.
+ */
+function governanceNegationsEffective(block: string): boolean {
+  const lines = block.split("\n");
+  for (const negation of QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) {
+    const negationIdx = lines.indexOf(negation);
+    if (negationIdx === -1) {
+      return false;
+    }
+    // The ignore line this negation undoes, e.g. `.qfai/evidence/*`.
+    const target = negation.replace(/^!/, "").replace(/\/(\*\*)?$/, "");
+    const ignoreIdx = lines.findIndex(
+      (line) =>
+        !line.startsWith("!") && line.endsWith("/*") && target.startsWith(line.slice(0, -2)),
+    );
+    if (ignoreIdx !== -1 && ignoreIdx > negationIdx) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /** Remove all QFAI managed blocks (known block lines only; stops at unknown lines). */

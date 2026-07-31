@@ -1,5 +1,13 @@
 # Volume Policy
 
+## Why this exists
+
+The per-item ceremony in `SKILL.md` is written for a ledger of tens of rows. At
+the volume `/qfai-sdd` and `/qfai-atdd` routinely produce it is arithmetically
+unfinishable, and an unfinishable process is abandoned wholesale — taking the
+RED/GREEN evidence and the drift discipline with it. Scaling the ceremony is
+what keeps those intact; dropping a gate is not on the table.
+
 The per-item ceremony below is written for a ledger of tens of rows. At the
 volume `/qfai-sdd` and `/qfai-atdd` routinely produce it is arithmetically
 unfinishable, and an unfinishable process is abandoned wholesale — taking the

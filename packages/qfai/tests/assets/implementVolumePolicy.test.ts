@@ -12,6 +12,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const SKILL = "assistant/skills/qfai-implement/SKILL.md";
 const REFERENCE = "assistant/skills/qfai-implement/references/volume-policy.md";
+const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -122,17 +123,24 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       const skill = unwrap(await read(tree, SKILL));
       const section = unwrap(await read(tree, REFERENCE));
 
-      // The edge must exist in the lifecycle SSOT, not only in the reference.
+      // The edge must exist in the lifecycle SSOT. That SSOT is now
+      // `references/execution-ledger.md` — SKILL.md carries a summary and a
+      // pointer under the progressive-disclosure budget (#414).
+      //
       // Assert both anchors first: an `indexOf` miss returns -1, and `slice`
-      // then succeeds on a different range, so a renamed heading would make
-      // every assertion below vacuous instead of failing.
-      const lifecycleStart = skill.indexOf("Allowed transitions:");
-      const lifecycleEnd = skill.indexOf("### Exception Handling");
-      expect(lifecycleStart, "SKILL.md has no `Allowed transitions:`").toBeGreaterThan(-1);
-      expect(lifecycleEnd, "SKILL.md has no `### Exception Handling`").toBeGreaterThan(
+      // then succeeds on a different range, so a moved heading would make every
+      // assertion below vacuous instead of failing. That is exactly what it
+      // caught when the lifecycle moved out of SKILL.md.
+      const ledger = unwrap(await read(tree, LEDGER));
+      const lifecycleStart = ledger.indexOf("Allowed transitions:");
+      const lifecycleEnd = ledger.indexOf("## Exception Handling");
+      expect(lifecycleStart, "execution-ledger.md has no `Allowed transitions:`").toBeGreaterThan(
+        -1,
+      );
+      expect(lifecycleEnd, "execution-ledger.md has no `## Exception Handling`").toBeGreaterThan(
         lifecycleStart,
       );
-      const lifecycle = skill.slice(lifecycleStart, lifecycleEnd);
+      const lifecycle = ledger.slice(lifecycleStart, lifecycleEnd);
       expect(lifecycle).toContain("`refactor` -> `red`");
       expect(lifecycle).toContain("QA rejection recovery — the only re-entry");
       expect(lifecycle).toContain("Cite the verdict in `Evidence`");
