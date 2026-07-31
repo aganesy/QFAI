@@ -1392,7 +1392,7 @@ async function runCapturePath(
   // project-wide aggregate dirs once the capture pass completes.
   // Best-effort copy; missing files are skipped so a partial capture
   // run does not block the cycle. Screen ids are validated for
-  // underscore casing at the UI contract surface (QFAI-PROT-008 in
+  // underscore casing at the UI contract surface (QFAI-PROT-010 in
   // `prototypingEvidence.ts`).
   await mirrorAcceptedIterToAggregateDirs(options.root, options.cycle);
   return 0;
@@ -2398,7 +2398,7 @@ function buildRunId(designMdSha: string): string {
  *   `.qfai/evidence/prototyping/html/<screen-id>.html`
  *
  * Underscore-cased screen ids are used end-to-end (validator rejects
- * hyphen form via QFAI-PROT-008); this helper does NOT re-case ids
+ * hyphen form via QFAI-PROT-010); this helper does NOT re-case ids
  * itself — it just byte-copies the latest iter content if present.
  * Mirroring is best-effort: missing source files are silently skipped
  * so a non-capture run (default) does not fail on an empty iter dir.

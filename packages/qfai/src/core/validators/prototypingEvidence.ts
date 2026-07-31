@@ -447,16 +447,17 @@ function isAcceptedScreenId(id: string): boolean {
  * Screen-id shape validator.
  *
  * Scans every `<contractsDir>/ui/*.yaml` declared in the consumer project and
- * emits `QFAI-PROT-008` for a `screens[].id` that is neither the canonical
+ * emits `QFAI-PROT-010` for a `screens[].id` that is neither the canonical
  * `SCR-001` form nor a path-safe hyphen-free identifier (`SAFE_SCREEN_ID_PATTERN`
  * without the hyphen — see `isAcceptedScreenId`). Case is not part of the test:
  * `Main.Screen` and `main_screen` are equally accepted.
  *
- * The name still says "casing" because that is what the check used to be, and
- * the rule code `QFAI-PROT-008` plus the issue source
- * `prototypingEvidence.screenIdCasing` are the strings consumers grep, filter
- * and waive on. Renaming them silently retires every existing waiver, so the
- * name is left alone and the behaviour is stated here instead.
+ * The name still says "casing" because that is what the check used to be. The
+ * issue source `prototypingEvidence.screenIdCasing` is what consumers grep,
+ * filter and waive on, so it is left alone and the behaviour is stated here
+ * instead. The rule code did move — `QFAI-PROT-008` -> `QFAI-PROT-010` — because
+ * `prototyping/specIdLinkage.ts` also emits `QFAI-PROT-008`, and one code owned
+ * by two modules cannot be grepped, filtered or waived apart at all.
  *
  * This was previously a blanket hyphen ban demanding underscore casing — a
  * convention that appears in no shipped document, that the shipped screen
@@ -480,7 +481,7 @@ export async function validateScreenIdCasing(root: string, contractsDir: string)
   // (e.g. `/tmp/abs/contracts`) is honored as-is. Node's `path.join`
   // concatenates segments without recognizing absolute-path semantics on
   // the second arg, which would produce `${root}/tmp/abs/contracts/ui` and
-  // silently scan the wrong directory, dropping every QFAI-PROT-008 hit.
+  // silently scan the wrong directory, dropping every QFAI-PROT-010 hit.
   const uiDir = path.resolve(root, contractsDir, "ui");
   const matches = await fg("**/*.{yaml,yml}", { cwd: uiDir, absolute: true, onlyFiles: true });
   const issues: Issue[] = [];
@@ -510,7 +511,7 @@ export async function validateScreenIdCasing(root: string, contractsDir: string)
         const rel = path.relative(root, filePath).replace(/\\/g, "/");
         issues.push(
           issue(
-            "QFAI-PROT-008",
+            "QFAI-PROT-010",
             `screens[].id "${id}" is neither the canonical \`SCR-001\` form nor a path-safe hyphen-free identifier (letters, digits, \`.\` and \`_\`, starting with a letter or digit). Use the shape shipped in \`40_screen_contracts.md\`, or replace the hyphens, so \`iter-NN/<id>.png\` and the evidence aggregate dirs stay consistent.`,
             "warning",
             rel,

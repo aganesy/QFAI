@@ -47,7 +47,7 @@ describe("validateScreenIdCasing accepts the shipped contract shape", () => {
   it("still reports a free-form hyphenated slug, but only as a warning", async () => {
     await withUiContract(["home-page"], (issues) => {
       expect(issues).toHaveLength(1);
-      expect(issues[0]?.code).toBe("QFAI-PROT-008");
+      expect(issues[0]?.code).toBe("QFAI-PROT-010");
       // No re-casing migration exists, so this must not block a project that
       // followed the shipped template.
       expect(issues[0]?.severity).toBe("warning");
@@ -75,7 +75,7 @@ describe("screen id acceptance boundary", () => {
   for (const id of accepted) {
     it(`accepts ${id}`, async () => {
       await withUiContract([id], (issues) => {
-        expect(issues.filter((entry) => entry.code === "QFAI-PROT-008")).toEqual([]);
+        expect(issues.filter((entry) => entry.code === "QFAI-PROT-010")).toEqual([]);
       });
     });
   }
@@ -83,7 +83,7 @@ describe("screen id acceptance boundary", () => {
   for (const id of reported) {
     it(`reports ${id}`, async () => {
       await withUiContract([id], (issues) => {
-        expect(issues.some((entry) => entry.code === "QFAI-PROT-008")).toBe(true);
+        expect(issues.some((entry) => entry.code === "QFAI-PROT-010")).toBe(true);
       });
     });
   }
