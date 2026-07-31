@@ -144,10 +144,10 @@ Note: /qfai-sdd includes a preflight step that bootstraps missing config/steerin
 
 - `qfai.config.yaml` is updated with a **minimal diff** focused on traceability globs.
 - `validation.traceability.testFileGlobs` reflects the real test layout.
-  - `qfai init` ships this empty on purpose. Detect the stack before setting it — `pyproject.toml` / `setup.cfg` (Python), `go.mod` (Go), `pom.xml` / `build.gradle` (JVM), `Cargo.toml` (Rust), `package.json` (JS/TS), `Gemfile` (Ruby), `composer.json` (PHP) — and derive globs from the test paths that actually exist, not from the language's convention alone.
+  - `npx qfai init` ships this empty on purpose. Detect the stack before setting it — `pyproject.toml` / `setup.cfg` (Python), `go.mod` (Go), `pom.xml` / `build.gradle` (JVM), `Cargo.toml` (Rust), `package.json` (JS/TS), `Gemfile` (Ruby), `composer.json` (PHP) — and derive globs from the test paths that actually exist, not from the language's convention alone.
   - Cross-check against the test paths the spec ledgers declare (`.qfai/specs/*/tdd/test-list.md`, `06_Test-Cases.md`). Globs that do not cover the declared paths leave the traceability gate reporting success while covering nothing.
   - The evidence file MUST show at least one matched file per declared test layer (unit / integration / api / e2e / component as applicable). A layer with zero matched files is a blocking gap, not a note.
-  - `qfai validate` emits `QFAI-TRACE-124` while the globs are unset or match zero files; the run is not done until it is gone.
+  - `npx qfai validate` emits `QFAI-TRACE-124` while the globs are unset or match zero files; the run is not done until it is gone.
 - `validation.traceability.testFileExcludeGlobs` is added only when needed.
 - If strict spec sections are explicitly requested, `validation.require.specSections` is updated with a minimal, evidence-based list.
 - A validation checklist with evidence (sample matched files) is produced.
