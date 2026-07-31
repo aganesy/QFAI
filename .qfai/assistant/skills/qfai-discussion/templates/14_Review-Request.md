@@ -74,7 +74,7 @@
 - Always run reviewers listed in `profiles.<routing_profile>.always_required` in `review-profiles.yml`.
 - Add `architecture-reviewer` only when architecture-affecting decisions exist.
 - Add `product-surface-reviewer` only when the pack is UI-bearing.
-- Allowed verdicts: `PASS`, `FAIL`.
+- Allowed in-flight verdicts: `PASS`, `REVISE`. `REVISE` is what starts the fix-and-rerun cycle; it serializes to `status: "FAIL"` when the pack's `summary.json` is written (see `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#verdict-vocabulary`).
 
 ## RCP Rules (Mandatory)
 

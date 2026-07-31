@@ -157,7 +157,7 @@ Per-spec evidence at `.qfai/evidence/sdd-<spec-id>.md` is mandatory and MUST inc
 
 - Follow `references/review-cycle-playbook.md`.
 - Footer SSOT: `references/rcp_footer.md`.
-- Allowed reviewer verdicts: `PASS` and `FAIL`.
+- Allowed in-flight reviewer verdicts: `PASS` and `REVISE` (`REVISE` serializes to `status: "FAIL"` in the pack summary).
 
 ## Workflow Convention
 

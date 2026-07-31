@@ -21,8 +21,11 @@
 - 条件付き reviewer:
   - `architecture-reviewer` — architecture-affecting decision がある場合
   - `product-surface-reviewer` — UI-bearing の場合
-- 各レビューは `PASS` / `FAIL` を返す
-- `FAIL` が出たら、失敗 reviewer と修正影響を受ける reviewer のみ再実行する
+- 各レビューは `PASS` / `REVISE` を返す（in-flight のレビュアー応答の語彙。SSOT は
+  `.qfai/assistant/constitution/shared-skill-delegation-baseline.md` の `## Reviewer response template`）
+- `REVISE` は review pack の `summary.json` を書き出す際に `status: "FAIL"` へ対応付けられる（同ファイルの
+  `### Verdict vocabulary` を参照）。第3の判定値を作らないこと
+- `REVISE` が出たら、失敗 reviewer と修正影響を受ける reviewer のみ再実行する
 
 ---
 

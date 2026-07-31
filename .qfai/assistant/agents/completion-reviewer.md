@@ -12,7 +12,7 @@ tools: [Read, Glob, Grep, Bash]
 
 ## Domain Responsibilities
 
-- Return pass/fail only with actionable rework instructions.
+- Return only PASS or REVISE, with actionable rework instructions on REVISE.
 - Enforce validate evidence, required coverage obligations, and no self-approval.
 - Verify rejected options are not reintroduced without RE-OPEN.
 
@@ -27,7 +27,7 @@ tools: [Read, Glob, Grep, Bash]
 
 ## Deliverables
 
-- PASS or FAIL with concrete rework list
+- PASS or REVISE with concrete rework list
 - Evidence summary and gaps
 - Open risks or blocking assumptions
 

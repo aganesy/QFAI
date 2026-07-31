@@ -310,7 +310,7 @@ Gate items 7-9 are evidence-bearing: reviewer verdicts must be written to a revi
 conversation. There is exactly **one** `.qfai/review/**` layout — `review-<17-digit-timestamp>/`
 holding `review_request.md`, `R01_<reviewer-id>.md` (at least one) and `summary.json`. Do not nest
 `<scope>/<layer>/attempt-NN/` directories: packs written there are invisible to `npx qfai validate`.
-Each review round creates a new pack. Full schema and the `REVISE` -> `status: "FAIL"` mapping:
+Each review round creates a new pack. Full schema and the `REVISE` -> `status: "REVISE"` mapping:
 `references/review-artifact-layout.md`.
 
 ### Spec completion conditions
@@ -342,7 +342,7 @@ Completion MUST NOT be declared when any of the following are true:
 
 - No RED fresh evidence exists for the item
 - No GREEN fresh evidence exists for the item
-- Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned FAIL
+- Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned REVISE
 - `.qfai/evidence/implement-<spec-id>.md` does not exist, or does not record both reviewer verdicts for the item (this is the single blocking statement about the evidence file; its absence of _verdicts_ is never blocking before items 7-8)
 - Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
 - Items with `exception` status still exist, **unless** the row's `DR-ID` names
@@ -386,8 +386,8 @@ review is requested.
 
 **Gate-completed (appended after items 7-8 return PASS):**
 
-- `Spec review` — completion-reviewer result (PASS or FAIL)
-- `Code quality review` — implementation-reviewer result (PASS or FAIL)
+- `Spec review` — completion-reviewer result (PASS or REVISE)
+- `Code quality review` — implementation-reviewer result (PASS or REVISE)
 - `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE)
 - `Checkpoint verification command` — the exact command set executed at the checkpoint boundary
 - `Checkpoint verification result` — the outcome of that command set (PASS only when every command exits 0)
