@@ -321,10 +321,15 @@ function isAtOrPastSunset(currentVersion: string, sunsetVersion: string): boolea
  *   1. `refuseConfiguredLegacyWrite` — post-sunset AND the config points
  *      at the legacy path: the writer skipped, so the message must direct
  *      the operator to update their config.
- *   2. `legacyWriteEnabled` — pre-sunset. Reachable only when the config
- *      names the legacy literal, because pre-sunset the tool writes the
- *      file itself and its presence on disk proves nothing. Severity is
- *      `warning`; the compatibility write still happens.
+ *   2. `legacyWriteEnabled` — pre-sunset, on any unscoped run, whether or
+ *      not the config names the legacy literal. This branch is deliberately
+ *      NOT evidence-gated: pre-sunset the tool still writes the legacy file
+ *      on every run, so the warning describes a write that is really
+ *      happening, and a project reading `.qfai/output/` from a clean
+ *      checkout produces no evidence to gate on. `configTargetsLegacyPath`
+ *      only selects which of the two pre-sunset messages is used. Severity
+ *      is `warning`; the compatibility write still happens.
+ *      The evidence gate this PR adds applies to state 3.
  *   3. Otherwise — post-sunset with a stale file left on disk. The write
  *      has stopped, so the message asks the operator to delete it.
  */
