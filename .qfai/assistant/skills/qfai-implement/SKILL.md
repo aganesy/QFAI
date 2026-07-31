@@ -33,12 +33,12 @@ QFAI Skill Body (SSOT)
 
 ## Spec Auto-Discovery Protocol
 
-When no explicit argument is given, detect the candidate spec and constrain execution to one spec only. Auto-discovery selects at most one spec; this protocol does NOT enable multi-spec parallel execution.
+When no explicit argument is given, detect the candidate specs. Execution is constrained to one spec at a time. Auto-discovery MAY present several specs as a queue to be processed sequentially (see Volume Policy > Multi-spec queue); this protocol does NOT enable multi-spec parallel execution.
 
 ### User Selection Flow
 
 - Single spec: announce the detected spec; ask for confirmation when scope is ambiguous.
-- Multiple specs: display the candidates and require the user to choose one spec.
+- Multiple specs: display the candidates and require the user to choose one spec, or to confirm an ordered queue processed one spec at a time.
 - Zero specs: stop and ask the user to provide the target spec explicitly.
 
 ## User Questions (AskUserQuestion Protocol)
@@ -52,11 +52,11 @@ Skill-specific examples:
 
 ## CRITICAL CONSTRAINTS (Read First)
 
-- This skill processes **one test at a time** from `test-list.md`.
+- This skill processes **one test at a time** from `test-list.md`: at most one row is in `red` or `green` at any moment. A T1 row parked in `refactor` waiting for its review group (see Volume Policy) does not violate this.
 - Each item goes through the full TDD micro-cycle: write a **failing test** first, then make it pass, then refactor.
 - The execution ledger is located at `.qfai/specs/<spec-id>/tdd/test-list.md`.
 - Items are processed **serially** by default. Parallel processing is allowed only when items target independent SUT slices with no shared state.
-- Status transitions follow a strict forward-only lifecycle: `todo` -> `red` -> `green` -> `refactor` -> `done`.
+- Status transitions follow a strict forward-only lifecycle: `todo` -> `red` -> `green` -> `refactor` -> `done`. The single re-entry is `refactor` -> `red` after a `qa-gatekeeper` `REVISE` on the row's RED/GREEN evidence.
 - The `exception` status can be reached from any active status when an anomaly is detected.
 - Backward transitions are prohibited (e.g., `green` -> `red` is not allowed). The only exception is an approved Change Request reset (see Status Lifecycle).
 - Completed items (`done`) are skipped on re-execution, unless an approved Change Request reset them.
@@ -66,7 +66,8 @@ Skill-specific examples:
   already-terminal ledger, leaves it unrecorded. Before reporting "nothing to do" and exiting,
   confirm fresh spec-level checkpoint verification evidence exists for this ledger state; run the
   per-spec verification first when it is missing or stale. See
-  `references/checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`.
+  `references/checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`. Only
+  then report "nothing to do" for that spec, then advance to the next spec of a confirmed queue; exit when the queue is empty (Volume Policy > Advancing the queue).
 
 ## Goal
 
@@ -141,13 +142,15 @@ The eight required columns, the allowed transitions and the exception rules are 
    `references/relevant-test-suite.md`.
 3. Transition status to `refactor`.
 4. Submit for completion review (`completion-reviewer`) and code quality review
-   (`implementation-reviewer`).
+   (`implementation-reviewer`). A T1 row submits with its coherent group and stays in
+   `refactor` until the group closes (Volume Policy > Group formation).
 5. After all routed blocking reviewers return PASS, run checkpoint verification
    **while the item is still `refactor`** (see `#checkpoint-verification`). On a
    checkpoint boundary that means the full suite. Off a boundary it is already
    satisfied by step 2's narrow suite — nothing is re-run. Transition to `done`
    only on PASS; on failure transition to `exception` with a DR-ID (legal from
-   `refactor`, whereas re-opening a `done` row is not).
+   `refactor`, whereas re-opening a `done` row is not). For a T1 group every member
+   transitions in the same ledger write.
 
 ### Completion
 
@@ -157,6 +160,9 @@ The eight required columns, the allowed transitions and the exception rules are 
    informational list: for each, the `TDD-ID`, the `DR-ID`, and whether that DR
    is a user-approved accepted-risk waiver. Completion cannot be declared while
    any `exception` row lacks such a waiver.
+4. If a multi-spec queue was confirmed, announce the next queued spec and restart at
+   Phase: Red with its ledger; exit only after the last entry (Volume Policy >
+   Advancing the queue).
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -189,6 +195,17 @@ This skill delegates through the centralized routing policy in `.qfai/assistant/
 - `product-surface-reviewer`
   - reviews UI-affecting implementation when the item changes surface behavior
 
+## Volume Policy (MUST)
+
+Scale the ceremony to the ledger: derive a **risk tier** per row, **batch** T1 gatekeeping and
+reviews per coherent BR/AC group, process multiple specs as a **sequential queue**, state the
+implied **cost** before starting. The tier scales how **often** a gate runs, never **whether** it
+runs: `agent-routing.yml` keeps `qa-gatekeeper`, `completion-reviewer` and
+`implementation-reviewer` all mandatory (only the first two are in `blocking_agents`, but item 8 of
+the 11-point gate makes an `implementation-reviewer` REVISE block `done` anyway), and criticality
+(authz, crypto, money, data integrity) forces T2 regardless of layer. Why this exists, the tier
+table, the group-formation transitions and the queue-advance steps: `references/volume-policy.md`.
+
 ### Handoff Contracts
 
 All agent-to-agent transitions follow these contracts:
@@ -198,7 +215,8 @@ All agent-to-agent transitions follow these contracts:
 3. `qa-gatekeeper` confirms or rejects the RED/GREEN observation.
 4. After GREEN, implementation agent submits the item to `completion-reviewer` for spec alignment and to `implementation-reviewer` for code quality review.
 5. `product-surface-reviewer` is added when the item affects UI behavior or rendered output.
-6. Only after all routed blocking reviewers pass may the item transition to `done`.
+6. Only after every required reviewer passes may the item transition to `done`. "Required" is wider than `blocking_agents`: `implementation-reviewer` is mandatory and its `REVISE` blocks `done` independently of that list, and `product-surface-reviewer` joins for UI-affecting items. The authority for an item transition is `#item-completion-checklist-12-point-gate`, not the routing list, which governs phase progression (`references/volume-policy.md#routing-is-unchanged`).
+7. For T1 rows the submitted unit in steps 2-4 is the coherent group, not the row; every required reviewer still runs, once per group. T2/T3 rows submit alone.
 
 #### Precedence between `delivery-planner` and `qa-gatekeeper`
 
@@ -297,7 +315,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-fai
 
 ### Item completion checklist (12-point gate)
 
-An item in `test-list.md` may transition to `done` only when ALL of the following are satisfied:
+An item in `test-list.md` may transition to `done` only when ALL of the following are satisfied. For T1 rows, items 3, 5, 7 and 8 are satisfied by the confirmation covering the row's coherent group; they are never waived.
 
 1. Corresponding `TDD-ID` has been selected and is in progress
 2. A failing test was added first (test-first)
@@ -476,6 +494,6 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 
 project_memory:
 
-- One TDD item at a time from test-list.md; status lifecycle is forward-only (todo → red → green → refactor → done); exception requires DR-ID.
+- One TDD item at a time from test-list.md; status lifecycle is forward-only (todo → red → green → refactor → done) with one recorded re-entry, refactor → red on a qa-gatekeeper REVISE of the row's RED/GREEN evidence; exception requires DR-ID.
 - Fresh RED + GREEN command/result evidence is mandatory per item; status-only evidence (e.g. "Status: PASS") is rejected.
 - UI-affecting items require product-surface-reviewer prototype-parity PASS before the item can transition to done.

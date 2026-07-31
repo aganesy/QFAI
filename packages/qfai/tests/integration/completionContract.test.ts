@@ -118,7 +118,7 @@ describe("implementation review remains independent from the implementation agen
     const c = await loadContent();
     expect(c).toMatch(/Code quality review.*implementation-reviewer result/i);
     expect(c).toMatch(
-      /Only after all routed blocking reviewers pass may the item transition to `done`/i,
+      /Only after every required reviewer passes may the item transition to `done`/i,
     );
   });
 });

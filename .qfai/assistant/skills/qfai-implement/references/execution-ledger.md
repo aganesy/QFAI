@@ -55,7 +55,16 @@ Allowed transitions:
   The `Test file` existence check is unchanged for `green` / `refactor` /
   `done`: those statuses assert a test that ran.
 
-Backward transitions are prohibited. Attempting `green` -> `red` must produce:
+- `refactor` -> `red` (**QA rejection recovery — the only re-entry**): a routed
+  `qa-gatekeeper` returned `REVISE` on this row's RED/GREEN evidence because the
+  cycle itself was wrong. Batched (T1) review defers that confirmation until
+  after the row has left `red`, so without this edge a rejected row could never
+  redo the RED it was faulted for and could never reach `done`. Cite the verdict
+  in `Evidence`, re-run the micro-cycle; rules:
+  `volume-policy.md#group-formation-states-and-transitions`.
+
+Backward transitions are otherwise prohibited and nothing but that QA rejection
+re-opens a row. Attempting `green` -> `red` must produce:
 `"Backward transition prohibited: green -> red"`. The upstream reset above is
 not a backward transition: it is an owner-approved re-entry, and the row starts
 its cycle again from `todo`.
