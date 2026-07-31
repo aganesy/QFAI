@@ -5,6 +5,7 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { splitMarkdownRow } from "../specPackParsers.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
+import { isSpecInScope, type SpecScope } from "../specScope.js";
 import type { Issue } from "../types.js";
 import { collectMarkdownItems, collectScenarioItems, exists, issue, readSafe } from "./utils.js";
 
@@ -106,10 +107,33 @@ type ParseDefinitionOptions = {
   referenceColumns?: readonly string[];
 };
 
-export async function validateLayerCoverage(root: string, config: QfaiConfig): Promise<Issue[]> {
+export type LayerCoverageOptions = {
+  /**
+   * When set, only the named specs are validated and only their
+   * `specs-coverage/spec-NNNN.md` reports are (re)written. A `--spec`-limited
+   * run must not dirty a sibling spec's report.
+   */
+  /**
+   * Explicitly `| undefined` so callers can pass the value through as-is under
+   * `exactOptionalPropertyTypes`. Without it, a caller holding a possibly-
+   * undefined scope had to spread conditionally, and the natural way to write
+   * that check — `specScope ? … : {}` — reads as if an EMPTY scope were also
+   * being skipped. It is not: an empty `Set` is truthy, and `isSpecInScope`
+   * already treats `undefined` as "everything is in scope".
+   */
+  specScope?: SpecScope | undefined;
+};
+
+export async function validateLayerCoverage(
+  root: string,
+  config: QfaiConfig,
+  options: LayerCoverageOptions = {},
+): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
-  const layeredEntries = entries.filter((entry) => entry.layout === "layered");
+  const layeredEntries = entries
+    .filter((entry) => entry.layout === "layered")
+    .filter((entry) => isSpecInScope(entry.specNumber, options.specScope));
 
   const issues: Issue[] = [];
   issues.push(...(await validatePlanArtifacts(specsRoot, layeredEntries)));
