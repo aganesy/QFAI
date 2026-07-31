@@ -3,9 +3,31 @@
  *
  * Scans an HTML string for color / font / radius / shadow values and
  * compares them against the allowed token set in a DesignMd record.
- * Returns one violation per occurrence (no de-duplication, no
- * short-circuit). Used by the certify gate to block convergence when a
- * generated prototype drifts from the SSOT design tokens.
+ * Returns one violation per distinct `{kind, found}` pair (no
+ * short-circuit): a token that drifts on every one of a thousand CSS
+ * occurrences is one finding, not a thousand, so the operator sees the
+ * distinct offending values. Used by the certify gate to block
+ * convergence when a generated prototype drifts from the SSOT design
+ * tokens.
+ *
+ * Input tree: both production call sites feed this scanner the CAPTURE
+ * fan-out under `.qfai/evidence/prototyping/iter-NN/` — `prototypingCertify`
+ * via `findIterationHtmlFiles(evidenceRoot, …)`, and
+ * `prototypingIterate#recomputeFinalIterDesignMdViolations` via the same
+ * evidence path. The authored tree the generator writes
+ * (`.qfai/prototypes/iter-NN/index.html`) is NOT scanned today; a violation
+ * that the capture step never renders is therefore not caught. The two trees
+ * and their writers are documented in
+ * `generator-prompt.md#output-layout--two-trees-two-shapes`; this file and
+ * that prompt are an SSOT-sync pair (see `../validators/promptScannerPairs.ts`).
+ *
+ * Both trees are written by the CLI the prompt prescribes: the capture fan-out
+ * by `npx qfai prototyping iterate --capture`, and this scanner runs under
+ * `npx qfai prototyping certify`. `npx` is not cosmetic — qfai is a project
+ * dependency, so a bare `qfai …` exits 127 on a normal local install and the
+ * gate never runs at all. `canonicalQfaiLauncher.test.ts` enforces the launcher
+ * across the shipped surface, which is what put those two commands in the
+ * prompt in this form.
  */
 
 import type { DesignMd } from "../design/designMd.js";
@@ -21,8 +43,16 @@ export type DesignMdViolation = {
 // `{3,8}` would accept 5/7-digit substrings of unrelated hashes (e.g.
 // `#abcde` from a commit-hash prefix) as colors.
 const HEX_RE = /#(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{3})\b/g;
-const RGB_RE = /rgba?\([^)]*\)/gi;
-const HSL_RE = /hsla?\([^)]*\)/gi;
+// `rgb()` / `hsl()` arguments can themselves contain a parenthesized
+// CSS function — Tailwind's rendered DOM uses the opacity-variable form
+// `rgb(23 56 77 / var(--tw-bg-opacity, 1))`. A `[^)]*` body cannot
+// cross a `)`, so it stops one paren short and reports a `found` string
+// that is unbalanced, invalid CSS, and absent from the source. The body
+// therefore admits one level of nesting: either a non-paren character,
+// or a complete `(...)` group. The two alternatives start with disjoint
+// characters, so the engine never backtracks between them.
+const RGB_RE = /rgba?\((?:[^()]|\([^()]*\))*\)/gi;
+const HSL_RE = /hsla?\((?:[^()]|\([^()]*\))*\)/gi;
 // `url(...)` in CSS carries SVG/filter/mask references whose `#fragment`
 // is an element-id selector, not a color literal. The arg can be quoted
 // (`url("#abc")` / `url('#abc')`) or unquoted (`url(#abc)`), and CSS
@@ -118,8 +148,8 @@ const TAILWIND_PREFLIGHT_LITERALS: ReadonlySet<string> = new Set([
 // / HSL_RE rather than scattered after the scan helpers, so a future
 // reader sees all color-literal regexes at the top of the file.
 const HEX_RE_TEST = /#(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{3})\b/;
-const RGB_RE_TEST = /rgba?\([^)]*\)/i;
-const HSL_RE_TEST = /hsla?\([^)]*\)/i;
+const RGB_RE_TEST = /rgba?\((?:[^()]|\([^()]*\))*\)/i;
+const HSL_RE_TEST = /hsla?\((?:[^()]|\([^()]*\))*\)/i;
 
 // CSS named-color keywords (CSS Color Module Level 4 + legacy). The set
 // is closed: any keyword not here is either a non-color identifier
@@ -667,8 +697,37 @@ function allCssRegions(html: string): string {
   return parts.join("\n");
 }
 
+// Normalize a CSS dimension-bearing value so the *rendered* form and
+// the *authored* DESIGN.md token compare equal. A browser re-serializes
+// what it parsed: `0.375rem` is minified to `.375rem`, inter-token
+// whitespace is collapsed, and unit casing is normalized. Comparing raw
+// strings therefore reports drift for values that are byte-identical
+// once normalized — a `DESIGN.md` declaring `radius.md: "0.375rem"`
+// surfaces as `kind=radius found=".375rem"`. Applied to BOTH sides of
+// the comparison, so the canonical form chosen here is arbitrary as
+// long as it is stable.
+//
+//   `0.375rem`    -> `.375rem`   (redundant leading zero dropped)
+//   `0 0  12px`   -> `0 0 12px`  (whitespace collapsed)
+//   `12PX`        -> `12px`      (case-folded)
+//   `10.5rem`     -> `10.5rem`   (significant leading digits kept)
+function normalizeDimensionValue(value: string): string {
+  return (
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      // Only a zero that is redundant is dropped: the number must start
+      // at a value boundary (string start, whitespace, `,`, `(`, `/`, or
+      // a leading `-`), so `10.5rem` and `1.5rem` are untouched.
+      .replace(/(^|[\s,(/-])0+\.(\d)/g, "$1.$2")
+  );
+}
+
 function scanRadius(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
-  const allowed = new Set<string>(Object.values(dm.visual.radius));
+  const allowed = new Set<string>(
+    Object.values(dm.visual.radius).map((token) => normalizeDimensionValue(token)),
+  );
   const rootDecls = parseRootDeclarations(allCssRegions(html));
   for (const match of html.matchAll(RADIUS_RE)) {
     const captured = match[1] ?? "";
@@ -677,7 +736,9 @@ function scanRadius(html: string, dm: DesignMd, out: DesignMdViolation[]): void 
     const value = unwrapVarReference(raw, rootDecls).trim();
     if (value.length === 0) continue;
     if (SAFE_LITERALS.has(value.toLowerCase())) continue;
-    if (allowed.has(value)) continue;
+    // Compare normalized, report raw: the operator needs to see the
+    // string that is actually in the document.
+    if (allowed.has(normalizeDimensionValue(value))) continue;
     out.push({ kind: "radius", found: value });
   }
 }
@@ -857,11 +918,28 @@ const TAILWIND_PALETTE_SCALES: ReadonlySet<string> = new Set([
   "950",
 ]);
 
-// Tailwind built-in scale aliases for radius / shadow utilities. These
-// resolve to Tailwind's own scale (e.g. `rounded-md` → `0.375rem`,
-// `shadow-lg` → a fixed multi-stop drop shadow), not DESIGN.md tokens.
-// Bare `rounded` / `shadow` (no suffix) are also Tailwind defaults and
-// matched separately below. codex AHzR7.
+// Tailwind built-in scale aliases for radius / shadow utilities.
+//
+// An alias in this set resolves to Tailwind's own scale (e.g.
+// `rounded-xl`, `shadow-inner`) UNLESS `DESIGN.md` declares a
+// `visual.radius` / `visual.shadow` key of the same name. The mandated
+// envelope in `generator-prompt.md` injects those keys into
+// `tailwind.config.theme.extend.{borderRadius,boxShadow}`, and
+// `theme.extend` overrides the built-in entry of the same name — so
+// once the envelope has run, `rounded-md` cannot resolve to anything
+// other than the DESIGN.md token. `scanTailwindUtility` therefore
+// consults `dm` before flagging; this set is the candidate surface,
+// not the verdict.
+//
+// The distinction matters because the DESIGN.md schema fixes the legal
+// key names (`RADIUS_KEYS = sm|md|lg|full`, `SHADOW_KEYS = sm|md|lg`),
+// which are a strict subset of this list. Flagging the set
+// unconditionally left no Tailwind utility class able to reference a
+// DESIGN.md radius or shadow token at all.
+//
+// Bare `rounded` / `shadow` (no suffix) resolve to Tailwind's `DEFAULT`
+// theme key, which the DESIGN.md schema cannot declare, so they remain
+// unconditional drift and are matched separately below. codex AHzR7.
 const TAILWIND_RADIUS_SCALE_ALIASES: ReadonlySet<string> = new Set([
   "none",
   "sm",
@@ -1074,15 +1152,152 @@ function scanTailwindArbitrary(html: string, dm: DesignMd, out: DesignMdViolatio
 // State / responsive prefixes (`hover:`, `md:`, `dark:`,
 // `group-hover:`) are stripped before the utility lookup so
 // `hover:bg-blue-500` is detected.
+
+/**
+ * Read one `tailwind.config.theme.extend.<section>` map out of the html
+ * envelope, as `alias -> literal value`.
+ *
+ * Only the LAST assignment of the section is read. A later script that
+ * re-assigns `tailwind.config` replaces the section wholesale, so a key
+ * present in an earlier block but absent from the last one is no longer
+ * bound at render time; merging the blocks would credit the iter with a
+ * binding the browser never applies. A section the html never assigns
+ * yields an empty map, which is the conservative answer: no alias is
+ * treated as re-bound and the pre-existing "Tailwind default" verdict
+ * stands.
+ *
+ * Deliberately a text scan, not an evaluator: the envelope is inert
+ * markup at this point and must never be executed to be validated.
+ * Anything the scan cannot read (computed keys, spread syntax, a value
+ * built at runtime) simply does not register as a re-binding, which
+ * fails toward flagging rather than toward silent approval.
+ */
+function readThemeExtendMap(html: string, section: string): Map<string, string> {
+  const out = new Map<string, string>();
+  // Scope to the `tailwind.config` assignment first. `borderRadius` and
+  // `boxShadow` are ordinary identifiers, so an unrelated object elsewhere in
+  // the document (an app-level settings literal, an inline data blob) would
+  // otherwise register as a re-binding and grant `rounded-md` / `shadow-lg` an
+  // allowance while the browser still renders Tailwind's defaults — a silent
+  // approval of exactly the drift this scanner exists to catch.
+  const config = readTailwindConfigBlock(html);
+  if (config === null) return out;
+  const sectionRe = new RegExp(`\\b${section}\\s*:\\s*\\{`, "g");
+  let lastBlock: string | null = null;
+  for (const match of config.matchAll(sectionRe)) {
+    const openIndex = match.index + match[0].length - 1;
+    const block = extractBraceBlock(config, openIndex);
+    if (block !== null) lastBlock = block;
+  }
+  if (lastBlock === null) return out;
+  for (const entry of lastBlock.matchAll(THEME_ENTRY_RE)) {
+    const key = entry[1] ?? entry[2] ?? entry[3];
+    const value = entry[4] ?? entry[5];
+    if (key !== undefined && value !== undefined) {
+      out.set(key.toLowerCase(), value.trim());
+    }
+  }
+  return out;
+}
+
+// `"md": "0.5rem"`, `'md': '0.5rem'`, `md: "0.5rem"`. Only string
+// values are read — a nested object or an identifier reference is not a
+// literal re-binding this scanner can vouch for.
+//
+// The unquoted-key alternative is a JavaScript identifier, so it excludes `-`:
+// `foo-bar: "…"` does not parse as an object literal, and the browser would
+// never apply it, so treating it as a re-binding would grant an allowance the
+// render never honours. A key that needs a hyphen has to be quoted, which the
+// first two alternatives already cover.
+//
+// Excluding `-` from the identifier is not enough on its own: without the
+// lookbehind the scan would simply start one character later and read
+// `rounded-md: "0.5rem"` as a binding of `md`, reinstating the allowance
+// through the very syntax being rejected. The guard anchors the identifier to
+// a real token start.
+const THEME_ENTRY_RE =
+  /(?:"([^"]+)"|'([^']+)'|(?<![-\w$])([A-Za-z_$][\w$]*))\s*:\s*(?:"([^"]*)"|'([^']*)')/g;
+
+// `tailwind.config = {` — the assignment the mandated envelope performs.
+const TAILWIND_CONFIG_ASSIGN_RE = /\btailwind\s*\.\s*config\s*=\s*\{/g;
+
+/**
+ * Body of the LAST `tailwind.config = {...}` assignment, or null when the
+ * document makes none. Last wins for the same reason `readThemeExtendMap`
+ * takes the last section block: a later assignment replaces the earlier one at
+ * render time.
+ */
+function readTailwindConfigBlock(html: string): string | null {
+  let lastBlock: string | null = null;
+  for (const match of html.matchAll(TAILWIND_CONFIG_ASSIGN_RE)) {
+    const openIndex = match.index + match[0].length - 1;
+    const block = extractBraceBlock(html, openIndex);
+    if (block !== null) lastBlock = block;
+  }
+  return lastBlock;
+}
+
+/** Body of the `{...}` starting at `openIndex`, or null when unbalanced. */
+function extractBraceBlock(text: string, openIndex: number): string | null {
+  let depth = 0;
+  for (let i = openIndex; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === "{") {
+      depth += 1;
+    } else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return text.slice(openIndex + 1, i);
+    }
+  }
+  return null;
+}
+
+/**
+ * Alias names the html re-binds to the DESIGN.md token of the same
+ * name. Value equality is required, not just key presence: an envelope
+ * that maps `md` to something other than `visual.radius.md` renders a
+ * value DESIGN.md never declared, which is exactly the drift this
+ * scanner exists to catch.
+ */
+function reboundAliasNames(
+  tokens: Record<string, string>,
+  rebinds: Map<string, string>,
+): ReadonlySet<string> {
+  const allowed = new Set<string>();
+  for (const [key, value] of Object.entries(tokens)) {
+    const lowerKey = key.toLowerCase();
+    if (rebinds.get(lowerKey) === value) {
+      allowed.add(lowerKey);
+    }
+  }
+  return allowed;
+}
+
 function scanTailwindUtility(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
-  // Pre-collect rendered token sets so the rare case of a DESIGN.md
-  // token whose VALUE happens to coincide with a Tailwind default is
-  // still flagged: Tailwind's CDN cannot read DESIGN.md, so the
-  // *class* identifier never references a DESIGN.md token. The
-  // contract is name-anchored, not value-anchored. We therefore do
-  // NOT cross-check against DESIGN.md values here — drift is the
-  // class shape itself.
-  void dm;
+  // The contract is name-anchored: drift is the class shape, not the
+  // value it happens to render to. But the name space is shared. The
+  // mandated `tailwind.config.theme.extend.{borderRadius,boxShadow}`
+  // injection re-binds exactly the alias names DESIGN.md declares, so
+  // for radius / shadow the class identifier DOES reference a
+  // DESIGN.md token whenever the alias has actually been re-bound.
+  //
+  // "Actually" is the operative word: DESIGN.md declaring a key `md`
+  // says nothing about what THIS html does. An iter whose envelope is
+  // missing, whose `borderRadius` map omits `md`, or which re-binds
+  // `md` to some other value renders Tailwind's default for
+  // `rounded-md` — a non-compliant prototype that certify would pass
+  // if the allowance were granted on the DESIGN.md key alone
+  // (`prototypingCertify` feeds each html straight to
+  // `findDesignMdViolations` and does not separately verify the
+  // envelope). So the allowance is granted per class name only when
+  // this html re-binds that name to that DESIGN.md token value.
+  //
+  // Color utilities are NOT treated this way: `bg-blue-500` names a
+  // Tailwind palette entry, and `theme.extend.colors` adds names
+  // rather than re-binding the built-in palette scale, so a
+  // `<palette>-<scale>` class is drift regardless of DESIGN.md.
+  const radiusKeys = reboundAliasNames(dm.visual.radius, readThemeExtendMap(html, "borderRadius"));
+  const shadowKeys = reboundAliasNames(dm.visual.shadow, readThemeExtendMap(html, "boxShadow"));
 
   for (const classMatch of html.matchAll(CLASS_ATTR_RE)) {
     const classes = classMatch[1] ?? classMatch[2] ?? "";
@@ -1121,16 +1336,27 @@ function scanTailwindUtility(html: string, dm: DesignMd, out: DesignMdViolation[
         }
       }
 
-      // Radius / shadow scale alias: `<prefix>-<alias>`.
+      // Radius / shadow scale alias: `<prefix>-<alias>`. Naming a
+      // DESIGN.md key is necessary but not sufficient: `radiusKeys` /
+      // `shadowKeys` hold only the aliases THIS document's
+      // `tailwind.config` re-binds AND binds to the matching DESIGN.md
+      // value. An alias with no key at all (`rounded-xl`,
+      // `shadow-inner`, …), one the envelope omits, and one the envelope
+      // binds to some other value are all drift.
       const aliasMatch = /^([a-z][a-z-]*)-([a-z0-9]+)$/.exec(cls);
       if (aliasMatch) {
         const prefix = aliasMatch[1] ?? "";
         const suffix = aliasMatch[2] ?? "";
         if (TAILWIND_RADIUS_PREFIXES.has(prefix) && TAILWIND_RADIUS_SCALE_ALIASES.has(suffix)) {
+          if (radiusKeys.has(suffix)) continue;
           out.push({ kind: "radius", found: cls });
           continue;
         }
         if (TAILWIND_SHADOW_PREFIXES.has(prefix) && TAILWIND_SHADOW_SCALE_ALIASES.has(suffix)) {
+          // `drop-shadow-*` resolves through `theme.dropShadow`, which
+          // the mandated envelope does not inject, so it stays drift
+          // even when the alias matches a `visual.shadow` key.
+          if (prefix === "shadow" && shadowKeys.has(suffix)) continue;
           out.push({ kind: "shadow", found: cls });
           continue;
         }
@@ -1139,10 +1365,36 @@ function scanTailwindUtility(html: string, dm: DesignMd, out: DesignMdViolation[
   }
 }
 
+// Collapse repeats of the same `{kind, found}` pair, keeping the first
+// occurrence. What that preserves is the order of the array this module
+// built — scanner by scanner, and within a scanner the order its regex
+// walked the document — not the order the values appear in the HTML, since
+// the scanners each sweep the whole document in turn. Every downstream reader
+// (`certify`'s exit-2 gate, `isConverged`, the reviewer-facing
+// `designMdViolations[]` array) treats the list as a set of distinct
+// offending values; before de-duplication a handful of drifting tokens
+// rendered across N screens produced hundreds of identical entries,
+// burying the actual finding count.
+function dedupeViolations(violations: readonly DesignMdViolation[]): DesignMdViolation[] {
+  const seen = new Set<string>();
+  const out: DesignMdViolation[] = [];
+  for (const violation of violations) {
+    // `kind` is a closed enum with no whitespace in any member, so the
+    // first space is an unambiguous field separator even though `found`
+    // (a CSS value) may itself contain spaces.
+    const key = `${violation.kind} ${violation.found}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(violation);
+  }
+  return out;
+}
+
 /**
  * Scan `html` for DESIGN.md token violations. Returns a flat array of
- * violations, one per occurrence, preserving source order within each
- * scan kind. The function is pure (no I/O, no global state).
+ * violations, one per distinct `{kind, found}` pair, preserving source
+ * order within each scan kind. The function is pure (no I/O, no global
+ * state).
  */
 export function findDesignMdViolations(html: string, dm: DesignMd): DesignMdViolation[] {
   const out: DesignMdViolation[] = [];
@@ -1160,5 +1412,8 @@ export function findDesignMdViolations(html: string, dm: DesignMd): DesignMdViol
   // `rounded-xl`, etc.) carry no CSS literal in the rendered HTML
   // and would otherwise slip past every other scanner above.
   scanTailwindUtility(html, dm, out);
-  return out;
+  // The doc contract above promises one entry per distinct {kind, found}
+  // pair; without this call the helper was dead code and the promise was
+  // not kept.
+  return dedupeViolations(out);
 }

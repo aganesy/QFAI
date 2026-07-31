@@ -147,6 +147,8 @@ export type ParsedArgs = {
     atddAction?: "scaffold";
     /** `--spec <id>` value for `qfai atdd scaffold`. */
     atddSpecId?: string;
+    /** `--spec <id>` values for `qfai validate` (repeatable; empty = whole repo). */
+    validateSpecIds: string[];
     help: boolean;
     invalidExitCode: number;
   };
@@ -167,6 +169,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     validateFormat: "text",
     strict: false,
     guardrailsPaths: [],
+    validateSpecIds: [],
     help: false,
     invalidExitCode: 1,
   };
@@ -660,6 +663,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         if (command === "atdd") {
           options.atddSpecId = next;
+        } else if (command === "validate") {
+          // Repeatable: `--spec 0003 --spec 0004` scopes the run to both.
+          options.validateSpecIds.push(next);
         } else {
           markInvalid();
         }

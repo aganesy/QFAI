@@ -133,6 +133,82 @@ describe("TDD-0012: spec BR changed + impl changed", () => {
 });
 
 // ---------------------------------------------------------------------------
+// The shipped template promises "the first Markdown table in this file is the
+// one the validator reads". The reader used to scan every `|` line in the
+// document, so a supplementary table whose first cell looked like a BR/AC ID
+// produced a false QFAI-TRACE-001 against whatever its second cell held.
+// ---------------------------------------------------------------------------
+describe("ledger reads only the first Markdown table", () => {
+  let tmpRoot: string;
+
+  beforeEach(async () => {
+    vi.mocked(execFileSync).mockReset();
+    tmpRoot = await import("node:fs/promises").then((fs) =>
+      fs.mkdtemp(path.join(os.tmpdir(), "qfai-trace-int-")),
+    );
+  });
+
+  afterEach(async () => {
+    await rm(tmpRoot, { recursive: true, force: true });
+  });
+
+  it("ignores BR/AC-shaped rows in a supplementary table below the ledger", async () => {
+    const specsRoot = path.join(tmpRoot, ".qfai", "specs");
+    const specDir = path.join(specsRoot, "spec-0001");
+    await mkdir(specDir, { recursive: true });
+
+    const ledger = [
+      "# Traceability Ledger",
+      "",
+      "| BR/AC | Implementation File | Test File |",
+      "| --- | --- | --- |",
+      "| BR-0001-0001 | src/core/someModule.ts | tests/core/someModule.test.ts |",
+      "",
+      "## Historical mapping (documentation only)",
+      "",
+      "| BR/AC | Superseded by | Notes |",
+      "| --- | --- | --- |",
+      "| AC-0001-0009 | src/core/retiredModule.ts | moved in v1.2 |",
+    ].join("\n");
+    await writeFile(path.join(specDir, "16_Traceability-ledger.md"), ledger, "utf-8");
+
+    // The real linked implementation changed; the retired path did not.
+    vi.mocked(execFileSync).mockReturnValue(
+      ".qfai/specs/spec-0001/04_Business-Rules.md\nsrc/core/someModule.ts\n",
+    );
+
+    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
+    expect(issues).toEqual([]);
+  });
+
+  it("still reports the first table's unchanged implementation files", async () => {
+    const specsRoot = path.join(tmpRoot, ".qfai", "specs");
+    const specDir = path.join(specsRoot, "spec-0001");
+    await mkdir(specDir, { recursive: true });
+
+    const ledger = [
+      "# Traceability Ledger",
+      "",
+      "| BR/AC | Implementation File | Test File |",
+      "| --- | --- | --- |",
+      "| BR-0001-0001 | src/core/someModule.ts | tests/core/someModule.test.ts |",
+      "",
+      "| BR/AC | Superseded by | Notes |",
+      "| --- | --- | --- |",
+      "| AC-0001-0009 | src/core/retiredModule.ts | moved in v1.2 |",
+    ].join("\n");
+    await writeFile(path.join(specDir, "16_Traceability-ledger.md"), ledger, "utf-8");
+
+    vi.mocked(execFileSync).mockReturnValue(".qfai/specs/spec-0001/04_Business-Rules.md\n");
+
+    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
+    const trace001 = issues.filter((entry) => entry.code === "QFAI-TRACE-001");
+    expect(trace001).toHaveLength(1);
+    expect(trace001[0]?.file).toBe("src/core/someModule.ts");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // TDD-0013 (TC-0013-0012): Ledger absent → warning + skip
 // ---------------------------------------------------------------------------
 describe("TDD-0013: ledger absent", () => {
