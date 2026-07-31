@@ -212,6 +212,35 @@ describe("parseArgs", () => {
   // --clause are used on a subcommand that does NOT accept the flag,
   // the parser MUST (1) consume the value token so it cannot leak
   // into the positional stream, AND (2) call markInvalid() so the
+  describe("validate --spec", () => {
+    it("collects a single --spec value", () => {
+      const parsed = parseArgs(["validate", "--spec", "0003"], process.cwd());
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.validateSpecIds).toEqual(["0003"]);
+    });
+
+    it("is repeatable and preserves order", () => {
+      const parsed = parseArgs(
+        ["validate", "--spec", "0003", "--spec", "spec-0004", "--profile", "sdd"],
+        process.cwd(),
+      );
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.validateSpecIds).toEqual(["0003", "spec-0004"]);
+      expect(parsed.options.profile).toBe("sdd");
+    });
+
+    it("defaults to an empty scope, which means the whole repo", () => {
+      const parsed = parseArgs(["validate"], process.cwd());
+      expect(parsed.options.validateSpecIds).toEqual([]);
+    });
+
+    it("still marks --spec invalid on a subcommand that does not accept it", () => {
+      const parsed = parseArgs(["audit", "log", "--spec", "0003"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.validateSpecIds).toEqual([]);
+    });
+  });
+
   // misuse surfaces as a parse error. Pre-fix, --spec / --operator /
   // --clause silently dropped on misuse, and --upgrade-scope did
   // not consume its value. Per-flag assertions follow.

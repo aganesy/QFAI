@@ -25,6 +25,8 @@ export function issue(
   suggested_action?: string,
   details?: {
     dl_id?: string;
+    /** Other files this finding implicates when `file` is a representative. */
+    relatedFiles?: string[];
     loc?: IssueLocation;
   },
 ): Issue {
@@ -48,6 +50,9 @@ export function issue(
   }
   if (details?.dl_id) {
     issue.dl_id = details.dl_id;
+  }
+  if (details?.relatedFiles && details.relatedFiles.length > 0) {
+    issue.relatedFiles = details.relatedFiles;
   }
   if (details?.loc) {
     issue.loc = details.loc;
