@@ -76,8 +76,11 @@ const PLAN_STATUS_HEADING_PATTERNS = [
  * survive into the heading and defeated the anchored label patterns above —
  * decoration alone was enough to smuggle a forbidden heading through.
  *
- * Only unambiguous markers are removed. An interior `_` is left alone so
- * ordinary identifiers (`snake_case handling`) are not rewritten.
+ * `*`, `` ` `` and `~` are stripped wherever they occur, not only at the edges:
+ * they carry no meaning inside a heading label, and pair-matching them would
+ * miss the asymmetric decoration (`## **TODO`) that a heading can still be
+ * smuggled through. `_` is different — it is ordinary inside an identifier
+ * (`snake_case handling`), so only leading and trailing runs are removed.
  */
 function normalizeHeadingText(heading: string): string {
   return heading

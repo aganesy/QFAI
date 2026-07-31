@@ -21,7 +21,7 @@ import { defaultConfig } from "../../src/core/config.js";
 import { validateLayerCoverage } from "../../src/core/validators/layerCoverage.js";
 
 /** Runs the validator over a v1421 spec whose `10_Plan.md` has these headings. */
-async function planFindings(headings: string[]): Promise<string[]> {
+async function planFindings(headings: string[], code = "QFAI-PLAN-002"): Promise<string[]> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-plan-"));
   try {
     const specDir = path.join(root, ".qfai", "specs", "spec-0001");
@@ -36,9 +36,7 @@ async function planFindings(headings: string[]): Promise<string[]> {
     );
 
     const issues = await validateLayerCoverage(root, defaultConfig);
-    return issues
-      .filter((entry) => entry.code === "QFAI-PLAN-002")
-      .flatMap((entry) => entry.refs ?? []);
+    return issues.filter((entry) => entry.code === code).flatMap((entry) => entry.refs ?? []);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -128,5 +126,23 @@ describe("QFAI-PLAN-002 blocking set", () => {
     // Only the `field: value` shape makes these operational; as whole headings
     // they are ordinary domain vocabulary.
     await expect(planFindings(["## Status", "## Done"])).resolves.toEqual([]);
+  });
+});
+
+describe("heading normalization reaches the other how-only groups", () => {
+  // All three forbidden groups match against the normalized heading. Decoration
+  // smuggling a forbidden heading past the gate is the same defect for
+  // `Changelog` as for `TODO`, so the same stripping applies — and the finding
+  // still reports the heading as authored.
+  it("rejects a decorated changelog heading under QFAI-PLAN-003", async () => {
+    await expect(
+      planFindings(["## **Changelog**", "## `更新履歴`"], "QFAI-PLAN-003"),
+    ).resolves.toEqual(["**Changelog**", "`更新履歴`"]);
+  });
+
+  it("rejects a decorated release-decision heading under QFAI-PLAN-004", async () => {
+    await expect(planFindings(["## **Go / No Go** ##"], "QFAI-PLAN-004")).resolves.toEqual([
+      "**Go / No Go** ##",
+    ]);
   });
 });
