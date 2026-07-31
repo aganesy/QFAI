@@ -32,8 +32,12 @@ Skill files should reference this baseline and only add role-, stage-, or gate-s
 - A delegated agent stages only the paths it declared as deliverables in its
   work order: `git add <path> …`.
 - `git add -A`, `git add .` and `git commit -a` are forbidden for delegated
-  agents. Concurrent agents share one index; a sweeping stage command commits
-  a sibling agent's in-flight files and misattributes work in the audit trail.
+  agents, in both isolation modes. In degraded / shared-index mode the
+  concurrent agents share one index, so a sweeping stage command commits a
+  sibling agent's in-flight files and misattributes work in the audit trail.
+  Under worktree separation there is no shared index and no sibling file to
+  sweep, but the command still stages everything else loose in that agent's own
+  worktree, so the commit still stops matching its declared deliverables.
 - When the agent's deliverable paths are not known up front, it hands back an
   unstaged diff and the orchestrator commits — under the same rule. The
   orchestrator commits one handed-back diff at a time, stages that agent's

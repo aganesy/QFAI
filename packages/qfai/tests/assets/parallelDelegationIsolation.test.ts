@@ -52,10 +52,18 @@ describe("parallel delegation isolation is stage-independent", () => {
       expect(concurrency).toContain("/qfai-sdd");
 
       // The worktree clause must no longer be scoped to the implementation stage.
-      const implementation = workflow.slice(
-        workflow.indexOf("Implementation stage:"),
-        workflow.indexOf("### Concurrency (stage-independent, mandatory)"),
+      // Assert both bounds are real first: `indexOf` returning -1 makes `slice`
+      // succeed on a different — possibly empty — range, so a renamed heading
+      // would silently retire this check instead of failing it.
+      const implementationStart = workflow.indexOf("Implementation stage:");
+      const concurrencyStart = workflow.indexOf("### Concurrency (stage-independent, mandatory)");
+      expect(implementationStart, "workflow.md has no `Implementation stage:`").toBeGreaterThan(-1);
+      expect(concurrencyStart, "workflow.md has no Concurrency heading").toBeGreaterThan(
+        implementationStart,
       );
+
+      const implementation = workflow.slice(implementationStart, concurrencyStart);
+      expect(implementation).not.toBe("");
       expect(implementation).not.toContain("worktree separation is required");
     });
 

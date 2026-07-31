@@ -94,9 +94,16 @@ from the skills and baselines that cite it.
 - Commit scoping is mandatory in both modes and binds **every** committer —
   delegated agent and orchestrator alike. Stage only the paths belonging to the
   task being committed (`git add <paths>`). `git add -A`, `git add .` and
-  `git commit -a` are forbidden while any parallel stage is in flight, because
-  they sweep a sibling agent's in-flight files into an unrelated commit and
-  misattribute work in the audit trail the Drift Protocol depends on.
+  `git commit -a` are forbidden while any parallel stage is in flight.
+  - In **degraded / shared-index** mode the damage is immediate: the siblings
+    share one index, so a sweeping stage commits their in-flight files into an
+    unrelated commit and misattributes work in the audit trail the Drift
+    Protocol depends on.
+  - Under **worktree separation** there is no shared index, so no sibling file
+    can be swept in. The ban still holds: a sweeping stage commits whatever
+    else is loose in that agent's own worktree — build output, scratch files, a
+    half-finished edit outside the work order — so the commit still stops
+    matching its declared deliverables, which is what the audit trail reads.
 - Degraded mode makes this the **orchestrator's** obligation above all, since
   it is the one holding the commit: it commits one handed-back diff at a time,
   staging that agent's declared deliverable paths only, and never blanket-stages
