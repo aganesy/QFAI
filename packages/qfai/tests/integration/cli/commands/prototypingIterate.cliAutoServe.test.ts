@@ -348,11 +348,20 @@ describe("iterate --auto-serve: (7a) defaultServerRunner path-traversal — Wind
 describe("iterate --auto-serve: (7b) SPA fallback must not answer traversal payloads", () => {
   // The SPA fallback answers a document request for a missing path with
   // `index.html` + 200. `path.normalize` collapses `/../../etc/passwd`
-  // into a path that IS inside serveRoot, so the containment guard never
-  // fires and the fallback would turn a rejected traversal attempt into a
-  // 200 — a regression against the pre-fallback 404. The header condition
-  // is load-bearing: `http.get` sends no `Accept`, so only a browser-shaped
-  // request reaches the fallback at all.
+  // into a path that IS inside serveRoot, so the containment guard alone
+  // never fires and the fallback would turn a rejected traversal attempt
+  // into a 200 — a regression against the pre-fallback 404.
+  //
+  // Two independent conditions keep that from happening, and the cases below
+  // cover both:
+  //   1. `looksLikeFilesystemEscape` rejects the payload with a 403 before
+  //      resolution runs, so a traversal request never reaches the fallback
+  //      regardless of its headers. This is the primary guard.
+  //   2. The `Accept: text/html` condition in `isDocumentRequest`, which keeps
+  //      a non-document request (`http.get` sends no `Accept`) on the 404 path
+  //      even if it did reach resolution.
+  // Asserting only through guard 1 would leave the header condition untested,
+  // so the browser-shaped probes below exercise it explicitly.
 
   type Probe = { status: number; body: string };
 
@@ -376,6 +385,31 @@ describe("iterate --auto-serve: (7b) SPA fallback must not answer traversal payl
         },
       );
       req.on("error", reject);
+    });
+  }
+
+  async function headProbe(port: number, urlPath: string, accept?: string): Promise<Probe> {
+    const { request } = await import("node:http");
+    return new Promise<Probe>((resolve, reject) => {
+      const req = request(
+        {
+          method: "HEAD",
+          host: "127.0.0.1",
+          port,
+          path: urlPath,
+          ...(accept ? { headers: { accept } } : {}),
+        },
+        (res) => {
+          let body = "";
+          res.setEncoding("utf-8");
+          res.on("data", (chunk: string) => {
+            body += chunk;
+          });
+          res.on("end", () => resolve({ status: res.statusCode ?? 0, body }));
+        },
+      );
+      req.on("error", reject);
+      req.end();
     });
   }
 
@@ -433,6 +467,27 @@ describe("iterate --auto-serve: (7b) SPA fallback must not answer traversal payl
   it("still 404s a missing sub-resource that does not accept text/html", async () => {
     await withServer(async (port) => {
       expect((await probe(port, "/assets/app.css", "text/css,*/*;q=0.1")).status).toBe(404);
+    });
+  });
+
+  it("answers HEAD with the GET status and no body", async () => {
+    // `isDocumentRequest` admits HEAD so a HEAD probe against a client-side
+    // route resolves through the same index.html fallback as GET. HEAD must
+    // carry the headers of that GET and no body (RFC 9110 §9.3.2), so piping
+    // the file would answer the probe with content it must not have.
+    await withServer(async (port) => {
+      const route = await headProbe(port, "/pairs/BTCUSD", "text/html,application/xhtml+xml");
+      expect(route.status).toBe(200);
+      expect(route.body).toBe("");
+
+      const root = await headProbe(port, "/index.html", "text/html");
+      expect(root.status).toBe(200);
+      expect(root.body).toBe("");
+
+      // The non-200 paths already end() without a body; pin them so a future
+      // change cannot start writing one.
+      expect((await headProbe(port, "/assets/app.css", "text/css")).status).toBe(404);
+      expect((await headProbe(port, "/..%2f..%2fetc/passwd", "text/html")).status).toBe(403);
     });
   });
 });

@@ -368,6 +368,14 @@ function handleRequest(req: IncomingMessage, res: ServerResponse, serveRoot: str
     }
     res.statusCode = 200;
     res.setHeader("content-type", contentTypeFor(servable));
+    // HEAD carries the headers of the equivalent GET and no body (RFC 9110
+    // §9.3.2). `isDocumentRequest` admits HEAD alongside GET so a HEAD probe
+    // against an SPA route resolves through the same index.html fallback;
+    // piping the file would answer that probe with a body it must not have.
+    if ((req.method ?? "GET").toUpperCase() === "HEAD") {
+      res.end();
+      return;
+    }
     const stream = createReadStream(servable);
     stream.on("error", () => {
       // surface a 500 only if no body has been sent yet; otherwise just
