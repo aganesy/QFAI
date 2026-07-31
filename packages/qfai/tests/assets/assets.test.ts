@@ -388,7 +388,10 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       expect(generatorRef).toContain("Neither writes an `index.html`.");
       expect(generatorRef).toContain("An accepted iteration must still carry `iter-NN/index.html`");
       expect(generatorRef).toContain("before the loop converges");
-      expect(generatorRef).toContain("cycle 1 would otherwise\naccept it as it stands");
+      // Whitespace-tolerant: the phrase spans a line break today, and a reflow
+      // of the surrounding paragraph would otherwise break this assertion
+      // without the meaning having changed.
+      expect(generatorRef).toMatch(/cycle 1 would otherwise\s+accept it as it stands/);
       expect(generatorRef).not.toContain("mutually exclusive with the single-file envelope");
     }
   });

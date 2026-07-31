@@ -16,7 +16,7 @@
  * that the capture step never renders is therefore not caught. The two trees
  * and their writers are documented in
  * `generator-prompt.md#output-layout--two-trees-two-shapes`; this file and
- * that prompt are an SSOT-sync pair (see `validators/promptScannerPairs.ts`).
+ * that prompt are an SSOT-sync pair (see `../validators/promptScannerPairs.ts`).
  */
 
 import type { DesignMd } from "../design/designMd.js";
