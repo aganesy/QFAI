@@ -4,7 +4,7 @@
 
 - scope: `discussion-YYYYMMDDhhmmssSSS`
 - layer: `discussion`
-- review-pack: assigned per review cycle — see `.qfai/review/`
+- review-pack: `assigned per review cycle` — see `.qfai/review/`
 
 <!-- Do NOT record a single review-pack id here. `references/review-cycle-playbook.md`
      requires a new review pack per cycle, so one discussion pack is reviewed by N packs.
