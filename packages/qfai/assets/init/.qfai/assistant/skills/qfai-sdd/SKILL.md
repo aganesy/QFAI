@@ -114,7 +114,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ### Delegation Failure (Hard Stop)
 
-- Do not simulate roles. If the first required delegation fails, stop the stage and report remediation.
+- Do not simulate roles. Classify the failure per the baseline taxonomy first: `unavailable` stops the stage with a remediation report; `saturated` uses the bounded retry branch and keeps the stage open.
 
 Stage minimum roles:
 
@@ -123,7 +123,7 @@ Stage minimum roles:
 - `test-design-analyst` drafts traceability, examples, and test-design.
 - `product-experience-architect` is added when the target is UI-bearing.
 - `orchestrator` integrates outputs and presents for confirmation; never drafts the primary artifact and never self-approves.
-- `completion-reviewer` is delegated independently. Required field: `Status (PASS/REVISE)`.
+- `completion-reviewer` is delegated independently. Required field: `Status (PASS/REVISE/PENDING)`; `PENDING` marks an unrun gate and never counts as `PASS`.
 
 Reviewer routing is fixed by `.qfai/assistant/manifest/agent-routing.yml` and `.qfai/assistant/manifest/review-profiles.yml`.
 
@@ -183,17 +183,18 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 2. Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
 3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`. UI-bearing targets MUST also validate the consuming-project root `DESIGN.md` and freeze its sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml` (see Phase 0 DESIGN.md Freeze below).
 4. `_policies/05_Contracts.md` must include a Contract Index aligned with `.qfai/contracts/**`.
+   - Phase 0 must also reconcile paired contracts against each other, not only validate each file: every terminal state, status enum value, and error code an API contract mandates must be representable in the paired DB contract. See `references/contract-artifact-rules.md#cross-contract-reconciliation-must`. The reviewer gate checks the pairing before sign-off.
 5. `_policies/04_Business-Flow.md` must be Markdown with Mermaid `flowchart` or `sequenceDiagram`.
 6. `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
 7. `06_Test-Cases.md` must include `TC-ID`, `EX-Ref`, `AC-Refs`, and `Type`, with normal-path plus error/boundary coverage.
-8. Stop only when `qfai validate --profile sdd --fail-on error --format github | tee .qfai/report/validate.log` exits with `error=0`.
+8. Stop only when `qfai validate --profile sdd --fail-on error --format github` exits with `error=0`.
 
 ## Required Process
 
 1. Stage 0: Preflight (stop on blockers).
 2. Stage 1: Triage (classify + approve + persist Triage table).
 3. Write `.qfai/report/preflight_summary.md`.
-4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase, and freeze root `DESIGN.md` per the Phase 0 DESIGN.md Freeze step below).
+4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase, and freeze root `DESIGN.md` per the Phase 0 DESIGN.md Freeze step below). Close Phase 0 with the cross-contract reconciliation step in `references/contract-artifact-rules.md#cross-contract-reconciliation-must`.
 5. Phase 1: Outline (`_policies/01..11`).
 6. Phase 2: Slice (per spec, gate each).
 7. Phase 3: Plan finalize (after at least one slice gate passes).

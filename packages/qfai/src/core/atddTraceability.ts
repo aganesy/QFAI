@@ -21,7 +21,17 @@ const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
 const US_ID_RE = /^US-\d{4}(?:-\d{4})?$/;
 const TC_ID_RE = /^TC-\d{4}(?:-\d{4})?$/;
 const API_CONTRACT_ID_RE = /^CON-API-\d+$/;
-const TEST_FILE_GLOB = "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}";
+/**
+ * Extension set used when the project declares no
+ * `validation.traceability.testFileGlobs`. It is a fallback, not the rule: its
+ * code extensions are all JavaScript/TypeScript, so a Python / Go / Java /
+ * Ruby / Rust repository matched none of its executable test files under it.
+ * (`feature` / `md` / `markdown` still match, but those are annotation
+ * carriers, not test code — a repo with no Gherkin or markdown ledger matches
+ * nothing at all.) `QFAI-ATDD-111/112/113` therefore reported obligations as
+ * uncovered no matter how many correctly annotated tests existed.
+ */
+const DEFAULT_TEST_FILE_GLOB = "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}";
 
 export type AtddTestKind = "e2e" | "api" | "integration";
 
@@ -91,7 +101,11 @@ export async function evaluateAtddCodeTraceability(
   const apiRoot = path.join(testsRoot, "api");
   const integrationRoot = path.join(testsRoot, "integration");
 
-  const scanGlobs = buildAtddTestGlobs(root, testsRoot);
+  const scanGlobs = buildAtddTestGlobs(
+    root,
+    testsRoot,
+    deriveAtddFilePattern(config.validation.traceability.testFileGlobs),
+  );
   const scanResult = await collectTestFiles(root, scanGlobs);
 
   const usRefs: AtddSpecRefs = new Map<string, Map<string, Set<string>>>();
@@ -266,7 +280,55 @@ function collectShortIds(text: string, prefix: "US" | "TC"): Set<string> {
   return ids;
 }
 
-function buildAtddTestGlobs(root: string, testsRoot: string): string[] {
+/**
+ * Extensions the ATDD scan must always read, whatever the project configures.
+ *
+ * `validation.traceability.testFileGlobs` describes executable test *code*, but
+ * annotations also legitimately live in Gherkin features and in markdown
+ * traceability files (this repository carries its own `US-*` annotations in
+ * `tests/e2e/qfai-traceability.md`). These are annotation carriers, not code,
+ * so they are unioned in rather than replaced.
+ */
+const STRUCTURAL_ANNOTATION_EXTENSIONS = ["feature", "md", "markdown"] as const;
+
+/**
+ * Derives the per-layer file pattern from the project's configured
+ * `testFileGlobs`, so a non-JS repository is scanned with its own extensions.
+ *
+ * Configured globs describe whole paths (`tests/**\/*.py`); the ATDD scan needs
+ * a pattern to append under `tests/{e2e,api,integration}/`. The extension set is
+ * therefore lifted out of them, unioned with the structural annotation carriers
+ * above, and recombined. When no extension can be recovered, the JS/TS default
+ * is used.
+ */
+export function deriveAtddFilePattern(testFileGlobs: readonly string[]): string {
+  const extensions = new Set<string>();
+  for (const glob of testFileGlobs) {
+    for (const match of glob.matchAll(/\.\{([^}]+)\}$/g)) {
+      for (const ext of (match[1] ?? "").split(",")) {
+        const trimmed = ext.trim();
+        if (trimmed.length > 0) extensions.add(trimmed);
+      }
+    }
+    const single = /\.([A-Za-z0-9]+)$/.exec(glob);
+    if (single?.[1]) {
+      extensions.add(single[1]);
+    }
+  }
+  if (extensions.size === 0) {
+    return DEFAULT_TEST_FILE_GLOB;
+  }
+  for (const ext of STRUCTURAL_ANNOTATION_EXTENSIONS) {
+    extensions.add(ext);
+  }
+  // Always the brace form: the loop above unions in
+  // STRUCTURAL_ANNOTATION_EXTENSIONS, three entries, so a non-empty set can
+  // never have one member and a `**/*.<ext>` branch would be dead code.
+  const sorted = Array.from(extensions).sort();
+  return `**/*.{${sorted.join(",")}}`;
+}
+
+function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string): string[] {
   const relativeTestsRoot = path.relative(root, testsRoot);
   const isInsideRoot =
     relativeTestsRoot.length === 0 ||
@@ -276,9 +338,9 @@ function buildAtddTestGlobs(root: string, testsRoot: string): string[] {
     : toPosixPath(testsRoot);
   const normalizedBase = base.replace(/\/+$/, "");
   return [
-    `${normalizedBase}/e2e/${TEST_FILE_GLOB}`,
-    `${normalizedBase}/api/${TEST_FILE_GLOB}`,
-    `${normalizedBase}/integration/${TEST_FILE_GLOB}`,
+    `${normalizedBase}/e2e/${filePattern}`,
+    `${normalizedBase}/api/${filePattern}`,
+    `${normalizedBase}/integration/${filePattern}`,
   ];
 }
 
