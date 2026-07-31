@@ -101,7 +101,10 @@ describe("validate.log placement", () => {
   });
 });
 
-describe("validate.log freshness under concurrent runs", () => {
+describe("validate.log freshness under out-of-order completion", () => {
+  // These cases drive `writeValidateRunLog` sequentially with out-of-order
+  // START times, which is the ordering a real overlap produces. They do not
+  // interleave two in-flight runs at the fs level.
   it("does not let an older run overwrite a newer pointer", async () => {
     // Run-log directory names come from the run's START time, so a long run
     // started earlier can finish later. Writing unconditionally would leave the
@@ -146,6 +149,27 @@ describe("validate.log freshness under concurrent runs", () => {
     expect(await readValidateLog(root, defaultConfig.paths.outDir)).toContain(
       `- run_id: ${newerRun.runId}`,
     );
+  });
+
+  it("defers to a newer run-* directory even when no validate.log names it", async () => {
+    // The pointer decision is keyed on the run-* directory listing, not on
+    // validate.log alone: a newer run allocates its directory at START but
+    // writes the log at END, so during that window only the directory exists.
+    // An older run finishing inside that window must not claim the pointer.
+    const root = await newTempDir();
+    const outDir = path.join(root, defaultConfig.paths.outDir);
+    const newerRunId = expectedRunId(new Date("2026-05-05T10:00:05.000Z"));
+    await mkdir(path.join(outDir, newerRunId), { recursive: true });
+
+    const olderRun = await writeValidateRunLog({
+      root,
+      config: defaultConfig,
+      result: cleanResult(),
+      startedAt: new Date("2026-05-05T10:00:00.000Z"),
+    });
+
+    expect(olderRun.runId < newerRunId).toBe(true);
+    await expect(readValidateLog(root, defaultConfig.paths.outDir)).rejects.toThrow();
   });
 
   it("self-heals from an unparseable existing log", async () => {
