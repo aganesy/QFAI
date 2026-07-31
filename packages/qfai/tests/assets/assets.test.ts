@@ -1395,6 +1395,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "spec/07_Decisions.md",
       "spec/08_Open-questions.md",
       "spec/09_delta.md",
+      // The traceability ledger QFAI-TRACE-001 requires (#271).
+      "spec/16_Traceability-ledger.md",
     ].sort();
 
     for (const skillId of ["qfai-sdd"]) {
