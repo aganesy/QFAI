@@ -31,9 +31,9 @@
 ## EX-0015-0005: Delegation Failure Hard Stop Reporting
 
 - BR-Ref: BR-0015-0003
-- Given the first required delegation to `delivery-planner` fails with a native tool error
+- Given the first required delegation to `delivery-planner` fails with a native tool error that names no retry window
 - When the stage starts
-- Then the stage stops immediately and reports the attempted role/task, failure summary, required user remediation, and retry condition
+- Then the failure is classified `unavailable`, the stage stops immediately, and it reports the attempted role/task, failure summary, failure class, required user remediation, and retry condition
 
 ## EX-0015-0006: Capability Probe Uses First Required Delegation
 

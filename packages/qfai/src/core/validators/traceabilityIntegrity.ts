@@ -4,6 +4,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { parseFirstMarkdownTable, type MarkdownTable } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -19,40 +20,41 @@ function normalizePath(p: string): string {
 }
 
 /**
- * Checks whether the ledger table header matches the expected
- * 3-column format: BR/AC | Implementation File | Test File.
- * This validator uses this specific table format for implementation traceability.
+ * The ledger table is the **first** Markdown table in the file — the contract the
+ * shipped `16_Traceability-ledger.md` template declares.
+ *
+ * Both the format probe and the row reader must agree on that, which is why they
+ * take one already-parsed table rather than rescanning the text. Reading every
+ * `|` line in the document instead let a supplementary table further down
+ * contribute rows: any row whose first cell happened to look like `AC-0001`
+ * produced a `QFAI-TRACE-001` error naming whatever its second cell held, even
+ * when the real linked implementation had been modified.
  */
-function isExpectedLedgerFormat(content: string): boolean {
-  const lines = content.replace(/\r\n/g, "\n").split("\n");
-  for (const line of lines) {
-    if (!line.startsWith("|")) continue;
-    if (/^\|\s*-/.test(line)) continue;
-    // First non-separator table row = header
-    const cells = line
-      .split("|")
-      .map((c) => c.trim())
-      .filter((c) => c.length > 0);
-    return cells.length >= 3 && cells.some((c) => /Implementation File/i.test(c));
-  }
-  return false;
+function readLedgerTable(content: string): MarkdownTable | null {
+  return parseFirstMarkdownTable(content);
 }
 
-function parseLedger(content: string): LedgerEntry[] {
+/**
+ * Checks whether the ledger table header matches the expected shape: at least
+ * three columns, one of them named `Implementation File`. The canonical layout
+ * is `BR/AC | Implementation File | Test File`, but extra columns are allowed —
+ * a ledger that carries a Notes or Owner column is still a ledger, and the
+ * validator only ever reads the ID cell and the implementation-file cell.
+ */
+function isExpectedLedgerFormat(table: MarkdownTable | null): boolean {
+  if (!table) {
+    return false;
+  }
+  const headers = table.headers.filter((cell) => cell.length > 0);
+  return headers.length >= 3 && headers.some((cell) => /Implementation File/i.test(cell));
+}
+
+function parseLedger(table: MarkdownTable | null): LedgerEntry[] {
+  if (!table) {
+    return [];
+  }
   const entries: LedgerEntry[] = [];
-  const lines = content.replace(/\r\n/g, "\n").split("\n");
-  for (const line of lines) {
-    // Skip non-table rows, header rows, and separator rows
-    if (!line.startsWith("|")) {
-      continue;
-    }
-    if (/^\|\s*-/.test(line)) {
-      continue;
-    }
-    const cells = line
-      .split("|")
-      .map((c) => c.trim())
-      .filter((c) => c.length > 0);
+  for (const cells of table.rows) {
     const brAcCell = cells[0];
     const implCell = cells[1];
     if (!brAcCell || !implCell) {
@@ -132,7 +134,7 @@ export async function validateTraceabilityIntegrity(
       issues.push(
         issue(
           "QFAI-TRACE-002",
-          `Traceability ledger not found for ${specId}. Skipping integrity check.`,
+          `Traceability ledger not found for ${specId}. The BR/AC to implementation integrity check (QFAI-TRACE-001) is skipped for this spec. This artifact is optional; to enable the check, create it with /qfai-sdd from .qfai/assistant/skills/qfai-sdd/templates/specs/spec/16_Traceability-ledger.md.`,
           "warning",
           ledgerPath,
           "traceability.integrity.ledgerMissing",
@@ -141,14 +143,15 @@ export async function validateTraceabilityIntegrity(
       continue;
     }
 
-    const entries = parseLedger(ledgerContent);
+    const ledgerTable = readLedgerTable(ledgerContent);
 
-    // FIX 6: Format detection — skip if ledger uses a different table format
-    if (!isExpectedLedgerFormat(ledgerContent)) {
+    // Format check before parse: a table that fails it is skipped, so parsing
+    // it first only built rows nothing reads.
+    if (!isExpectedLedgerFormat(ledgerTable)) {
       issues.push(
         issue(
           "QFAI-TRACE-002",
-          `Traceability ledger for ${specId} uses unexpected format. Skipping integrity check.`,
+          `Traceability ledger for ${specId} uses unexpected format. The first Markdown table must have at least 3 columns, one of them named "Implementation File". Skipping integrity check. See .qfai/assistant/skills/qfai-sdd/templates/specs/spec/16_Traceability-ledger.md for the expected schema.`,
           "warning",
           ledgerPath,
           "traceability.integrity.ledgerFormatMismatch",
@@ -157,6 +160,7 @@ export async function validateTraceabilityIntegrity(
       continue;
     }
 
+    const entries = parseLedger(ledgerTable);
     for (const entry of entries) {
       if (!changedFiles.has(normalizePath(entry.implFile))) {
         issues.push(
