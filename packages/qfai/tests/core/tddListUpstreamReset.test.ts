@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -134,6 +135,31 @@ describe("Layer and Test file must agree", () => {
     );
   });
 
+  it("does not fire on a path that merely contains a mandated directory name", async () => {
+    // `src/tests/e2e/...` and `mytests/e2e/...` are not the repo-root
+    // `tests/e2e/`. A substring test read them as such and warned that an
+    // Integration row was in the e2e directory, against a file that is in
+    // neither mandated directory.
+    await withLedger(
+      [
+        "| TDD-0001 | TC-0001 | Integration | src/tests/e2e/a.ts    | case a   | todo     | -     | -        |",
+        "| TDD-0002 | TC-0002 | Integration | mytests/e2e/b.ts      | case b   | todo     | -     | -        |",
+      ],
+      (issues) => {
+        expect(codes(issues)).not.toContain("TDDLIST_LAYER_PATH_MISMATCH");
+      },
+    );
+  });
+
+  it("accepts a leading ./ on an otherwise matching path", async () => {
+    await withLedger(
+      ["| TDD-0001 | TC-0001 | Integration | ./tests/integration/a.ts | case a | todo | - | - |"],
+      (issues) => {
+        expect(codes(issues)).not.toContain("TDDLIST_LAYER_PATH_MISMATCH");
+      },
+    );
+  });
+
   it("accepts a matching layer and path", async () => {
     await withLedger(
       [
@@ -157,7 +183,12 @@ describe("Layer and Test file must agree", () => {
   });
 });
 
-const repoRoot = path.resolve(process.cwd(), "..", "..");
+// Anchored to this file, not to `process.cwd()`: the resolved root then does
+// not depend on the directory Vitest was launched from, so the reads below
+// stay deterministic whether the suite runs from the repo root or from
+// `packages/qfai`.
+// tests/core/<this file> -> packages/qfai -> packages -> repo root
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 describe("the DR-ID column definition covers the reset row", () => {

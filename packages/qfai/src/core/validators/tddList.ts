@@ -38,6 +38,19 @@ const LAYER_TEST_DIRS: Record<string, string | null> = {
 
 const TDD_ID_FORMAT = /^TDD-\d{4}$/;
 
+/**
+ * True when `testFile` is placed under the repo-root `dir`.
+ *
+ * A substring test matched anywhere in the path, so `src/tests/e2e/foo.test.ts`
+ * and `mytests/e2e/foo.test.ts` both read as `tests/e2e/` and produced a
+ * TDDLIST_LAYER_PATH_MISMATCH warning against a file that is not in the
+ * mandated directory at all. Anchoring at the start, after stripping a leading
+ * `./`, keeps the claim to real directory placement.
+ */
+function isUnderTestDir(testFile: string, dir: string): boolean {
+  return testFile.replace(/^\.\//, "").startsWith(dir);
+}
+
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
 
 export async function validateTddList(root: string, config: QfaiConfig): Promise<Issue[]> {
@@ -332,7 +345,7 @@ async function validateSpecTddList(
       if (!expectedDir || testFile.length === 0) continue;
 
       const actualDir = Object.entries(LAYER_TEST_DIRS).find(
-        ([, dir]) => dir !== null && testFile.includes(dir),
+        ([, dir]) => dir !== null && isUnderTestDir(testFile, dir),
       );
       if (actualDir && actualDir[1] !== expectedDir) {
         issues.push(
