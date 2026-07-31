@@ -85,6 +85,32 @@ describe("--check-convergence CLI flag wiring (REQ-0012-0078)", () => {
     }
   });
 
+  it("axes-exceptional with a negative acceptedIterationIndex is NOT converged", async () => {
+    // The peek and the sealed-loop guard must agree on what counts as an
+    // accepted iteration. `refuseWhenLoopConverged` treats a negative index as
+    // a corrupt / pre-format record and lets `--cycle N` proceed; reporting
+    // "Converged" here would tell the operator the opposite about the same
+    // file, and they would choose the wrong recovery path.
+    const root = await newTempDir();
+    await seedPrototypingJson(root, {
+      stopReason: "axes-exceptional",
+      acceptedIterationIndex: -1,
+      iterations: [{ index: 0 }],
+    });
+    const captured = captureStdout();
+    try {
+      const exit = await runPrototypingIterate({ root, cycle: 9, checkConvergence: true });
+      expect(exit).toBe(2);
+      const out = captured.lines.join("");
+      expect(out).toMatch(/Not converged/);
+      // The raw value stays visible so the operator can see the corruption.
+      expect(out).toMatch(/acceptedIterationIndex:\s*-1/);
+      expect(out).toMatch(/records no accepted iteration/);
+    } finally {
+      captured.restore();
+    }
+  });
+
   it("Test 2: max-iterations + acceptedIterationIndex null -> exit 2 + Not converged", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {

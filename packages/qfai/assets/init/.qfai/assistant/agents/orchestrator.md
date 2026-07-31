@@ -37,7 +37,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 ## Stop conditions
 
 - Subagent delegation missing when required
-- Validation gate evidence missing/failing (`qfai validate --fail-on error`)
+- Validation gate evidence missing/failing (`npx qfai validate --fail-on error`)
 - Required hard obligations in `test-layers.md` are unmet
 - Reviewer sign-off missing
 - Rejected option would be reintroduced without RE-OPEN DR
