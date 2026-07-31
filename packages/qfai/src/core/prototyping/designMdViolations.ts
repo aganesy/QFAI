@@ -1182,7 +1182,10 @@ function scanTailwindUtility(html: string, dm: DesignMd, out: DesignMdViolation[
 }
 
 // Collapse repeats of the same `{kind, found}` pair, keeping the first
-// occurrence so source order is preserved. Every downstream reader
+// occurrence. What that preserves is the order of the array this module
+// built — scanner by scanner, and within a scanner the order its regex
+// walked the document — not the order the values appear in the HTML, since
+// the scanners each sweep the whole document in turn. Every downstream reader
 // (`certify`'s exit-2 gate, `isConverged`, the reviewer-facing
 // `designMdViolations[]` array) treats the list as a set of distinct
 // offending values; before de-duplication a handful of drifting tokens
