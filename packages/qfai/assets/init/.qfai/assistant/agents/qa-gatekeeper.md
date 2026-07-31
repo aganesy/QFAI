@@ -26,7 +26,10 @@ In addition to traceability-based coverage (US/TC/CON-API existence), verify the
 - Check that each US/TC has test cases for at minimum: normal path AND error/failure path.
 - Flag any US/TC that has only normal-path test cases as a coverage gap.
 - Reference: `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`
-- Which verdict applies depends on the review cycle, per the scope note below: on an **SDD** cycle this check is a review signal (not a hard gate that blocks validation); from the **ATDD** cycle onward a missing matrix — or one whose ❌ cells are unjustified — is a FAIL. Either way, unjustified gaps MUST be documented as findings.
+- Which verdict applies depends on the review cycle, per the scope note below.
+  On an **SDD** cycle this check is a review signal, not a hard gate that blocks validation.
+  From the **ATDD** cycle onward a missing matrix — or one whose ❌ cells are unjustified — is a FAIL.
+  Either way, unjustified gaps MUST be documented as findings.
 
 ### Scope of this check
 
