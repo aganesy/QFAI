@@ -1,4 +1,4 @@
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -261,8 +261,10 @@ describe("resolveTestCaseTable", () => {
 
 describe("validateTddList TC extraction", () => {
   const withProject = async (fn: (root: string) => Promise<void>): Promise<void> => {
-    const root = path.join(os.tmpdir(), `qfai-tc-table-${Math.random().toString(36).slice(2, 10)}`);
-    await mkdir(root, { recursive: true });
+    // `mkdtemp` rather than a random suffix + `mkdir`: the OS guarantees the
+    // name is unique, matching how the rest of the suite (e.g.
+    // tests/assets/assets.test.ts) creates its scratch roots.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tc-table-"));
     try {
       await fn(root);
     } finally {

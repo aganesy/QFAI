@@ -159,7 +159,7 @@ async function validateSpecTddList(
       issue(
         "TDDLIST_TC_TABLE_UNRESOLVED",
         unresolved === "no-table"
-          ? `${TEST_CASES_FILE_NAME} for spec-${specNumber} contains no Markdown table; TC coverage checks skipped`
+          ? `Could not resolve the Test Case Table in ${TEST_CASES_FILE_NAME} for spec-${specNumber}: no Markdown table was found under the \`## Test Case Table\` section (a table elsewhere in the file is not used); TC coverage checks skipped`
           : `No \`TC-ID\` column found in the Test Case Table of ${TEST_CASES_FILE_NAME} for spec-${specNumber}; TC coverage checks skipped`,
         "warning",
         testCasesRelPath,
