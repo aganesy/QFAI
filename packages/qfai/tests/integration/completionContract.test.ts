@@ -38,14 +38,20 @@ describe("item completion checklist end-to-end enforcement", () => {
     // the heading is not fixed at 11. The obligation is that the checklist
     // exists and covers every gate item below.
     const heading = /Item completion checklist \((\d+)-point gate\)/i.exec(c);
-    expect(heading, "the checklist heading must declare its point count").not.toBeNull();
+    // Thrown rather than only asserted so the type is narrowed for the lines
+    // below. With optional chaining, a heading that stopped matching would
+    // slice from index 0 and make `declared` NaN, and the failure would surface
+    // as an opaque length mismatch instead of "the heading is missing".
+    if (!heading) {
+      throw new Error("the checklist heading must declare its point count");
+    }
 
     // Pin the declared count to the list itself: a heading and a list that
     // disagree is how "12-point gate" shipped over an 11-item list, and a
     // count-agnostic regex alone cannot see that.
-    const listSection = c.slice(heading?.index ?? 0);
+    const listSection = c.slice(heading.index);
     const items = Array.from(listSection.matchAll(/^(\d+)\. /gm), (match) => Number(match[1]));
-    const declared = Number(heading?.[1]);
+    const declared = Number(heading[1]);
     const numbered: number[] = [];
     for (const item of items) {
       if (item !== numbered.length + 1) break;
