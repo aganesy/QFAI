@@ -1,9 +1,14 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-const repoRoot = path.resolve(process.cwd(), "..", "..");
+// Anchored to this file, not to `process.cwd()`: the reads below must resolve
+// the same way whether the suite is launched from the repo root, from
+// `packages/qfai`, or by an IDE runner with its own CWD.
+// tests/assets/<this file> -> packages/qfai -> packages -> repo root
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const TEST_LAYERS = [
   "packages/qfai/assets/init/.qfai/assistant/catalog/test-layers.md",
   ".qfai/assistant/catalog/test-layers.md",
@@ -118,7 +123,15 @@ describe("test-layers.md volume policy is a recording obligation, not a gate", (
 
     it(`${relativePath}: forbids re-labelling a declared layer to clear a signal`, async () => {
       const content = await readFile(path.join(repoRoot, relativePath), "utf-8");
-      const antiPatterns = content.slice(content.indexOf("## Anti-patterns"));
+      // Assert the heading exists before slicing: `indexOf` returns -1 when it
+      // does not, and `slice(-1)` would run both assertions against the last
+      // character of the file — a failure that names the wrong problem.
+      const antiPatternsIndex = content.indexOf("## Anti-patterns");
+      expect(
+        antiPatternsIndex,
+        `${relativePath} must carry an ## Anti-patterns section`,
+      ).toBeGreaterThanOrEqual(0);
+      const antiPatterns = content.slice(antiPatternsIndex);
       expect(antiPatterns).toContain("Do not inflate tests only to satisfy floor numbers.");
       expect(antiPatterns).toMatch(/re-label/i);
     });
