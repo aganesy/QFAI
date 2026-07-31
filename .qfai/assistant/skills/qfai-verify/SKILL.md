@@ -70,14 +70,14 @@ When unsure, read inputs in this order:
 
 Canonical path: `.qfai/output/verify.json` (NOT `.qfai/evidence/`). Create the `.qfai/output/` directory if absent.
 
-| Field        | Type             | Required | Meaning                                                                                                  |
-| ------------ | ---------------- | -------- | -------------------------------------------------------------------------------------------------------- |
-| `status`     | string           | yes      | `"PASS"` when every gate in scope passed; `"FAIL"` otherwise. Only `"PASS"` satisfies a downstream gate. |
-| `scope`      | string           | yes      | Which stage's gate set this run covers. See the enum below.                                              |
-| `specId`     | string           | no       | The spec this run targeted, when scoped to one (e.g. `"spec-0001"`).                                     |
-| `recordedAt` | ISO-8601 string  | no       | When the run completed.                                                                                  |
-| `summary`    | string           | no       | One or two sentences an operator can read without opening the evidence markdown.                         |
-| `gates`      | array of objects | no       | Per-gate results: `{ name, status, command }`. Advisory; no reader gates on it today.                    |
+| Field        | Type             | Required | Meaning                                                                                                                                                                                                                                    |
+| ------------ | ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `status`     | string           | yes      | `"PASS"` when every gate in scope passed; `"FAIL"` otherwise. Only `"PASS"` satisfies a downstream gate.                                                                                                                                   |
+| `scope`      | string           | yes\*    | Which stage's gate set this run covers. See the enum below. \*Required on every new run. `certify` still accepts a file written before this field existed, so a reader MUST treat absence as "legacy file", never as a licence to omit it. |
+| `specId`     | string           | no       | The spec this run targeted, when scoped to one (e.g. `"spec-0001"`).                                                                                                                                                                       |
+| `recordedAt` | ISO-8601 string  | no       | When the run completed.                                                                                                                                                                                                                    |
+| `summary`    | string           | no       | One or two sentences an operator can read without opening the evidence markdown.                                                                                                                                                           |
+| `gates`      | array of objects | no       | Per-gate results: `{ name, status, command }`. Advisory; no reader gates on it today.                                                                                                                                                      |
 
 `status` is a closed two-value enum: `"PASS"` / `"FAIL"`. There is no `"WARN"` — a run with only `warning` / `info` findings is `"PASS"` (waivers apply to those severities only). Any `error` finding makes it `"FAIL"`.
 
@@ -110,7 +110,7 @@ Rules:
 
 - Never write `"status": "PASS"` without the command outputs that justify it. A `FAIL` verdict is a legitimate output — the gate downstream is supposed to stop.
 - Never write a `scope` you did not actually run. Writing `"prototyping"` after a `full` run is a false verdict, not a workaround — and the reverse is just as wrong: a `--profile verify` run is `scope: "full"`, not `scope: "atdd"`, because `atdd` means the ATDD gate set only (see `_policies/06_Glossary.md`, `verify.json#scope`).
-- `scope` is optional only in the sense that `certify` tolerates its absence for backward compatibility with older files. New runs MUST write it.
+- `scope` is marked `yes\*` in the table above for exactly one reason: `certify` tolerates its absence in a file written before the field existed. That is a read-side allowance for legacy artifacts, not a write-side option — a new run that omits it is producing a malformed `verify.json`, and no reader should be built assuming the field may be missing.
 - Do not add a `version` / `schemaVersion` field. No reader validates one, and a second version series in a distributed artifact is exactly what the distributed-surface rule forbids: the npm package version is the only version this surface has.
 
 ## Sub-agent Delegation (MANDATORY)
