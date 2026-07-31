@@ -20,6 +20,7 @@ import {
   type RequiredSpecPackFile,
 } from "../specLayout.js";
 import {
+  buildItemIdPattern,
   buildLoosePrefixPattern,
   extractInvalidIds as extractInvalidSpecPackIds,
   isValidId,
@@ -311,6 +312,98 @@ const APPROVAL_REQUIRED_OPS = new Set<TriageTopLevelOp>([
   "SUPERSEDE",
 ]);
 const TRIAGE_REQUIRED_COLUMNS = ["source", "subject", "existing spec", "operation"] as const;
+
+/**
+ * Operations whose unit is a whole spec directory, never an item inside one.
+ * `QFAI-TRIAGE-003` is a membership check on the Operation label, so it cannot
+ * catch `SPLIT` applied to a `BR-0001-0002` — the one case where the word means
+ * something the toolkit does not implement.
+ *
+ * `DELETE` belongs here for the same reason: `sdd-triage.md` "Operation scope"
+ * defines it as removing the spec directory itself, and deleting one item is
+ * `UPDATE:REMOVE`.
+ */
+const SPEC_SCOPED_OPS = new Set<TriageTopLevelOp>(["SPLIT", "MERGE", "SUPERSEDE", "DELETE"]);
+
+/** Bracket pairs that mark a parenthetical citation in a `Subject` cell. */
+const CITATION_BRACKETS: ReadonlyArray<readonly [string, string]> = [
+  ["(", ")"],
+  ["（", "）"],
+  ["[", "]"],
+  ["［", "］"],
+  ["【", "】"],
+];
+
+/**
+ * Half-open `[start, end)` spans of the Subject that sit inside a parenthetical
+ * citation. Nesting is handled per bracket kind; an unclosed opener runs to the
+ * end of the cell, which keeps a malformed Subject on the permissive side of
+ * "cited" only for the text after the opener.
+ */
+function citationSpans(subject: string): Array<[number, number]> {
+  const spans: Array<[number, number]> = [];
+  for (const [open, close] of CITATION_BRACKETS) {
+    let depth = 0;
+    let start = -1;
+    for (let index = 0; index < subject.length; index++) {
+      const char = subject[index];
+      if (char === open) {
+        if (depth === 0) start = index;
+        depth++;
+      } else if (char === close && depth > 0) {
+        depth--;
+        if (depth === 0 && start >= 0) {
+          spans.push([start, index + 1]);
+          start = -1;
+        }
+      }
+    }
+    if (depth > 0 && start >= 0) {
+      spans.push([start, subject.length]);
+    }
+  }
+  return spans;
+}
+
+/**
+ * Item IDs a Triage `Subject` names as the **object** of its operation.
+ *
+ * Mere co-occurrence decides nothing in either direction. A spec-level row
+ * often cites the item that motivated it (`classifyTriage` copies the REQ
+ * subject verbatim onto its MERGE and SPLIT rows), and an item-level misuse
+ * often names the containing spec — so "an item ID is present" over-fires and
+ * "a spec is also present" under-fires.
+ *
+ * The structural rule is **a motivating item is cited in brackets; anything
+ * outside brackets is the object**:
+ *
+ * - `delete BR-0006-0004 from spec-0006` -> bare item -> item-scoped, finding.
+ * - `spec-0006 にある BR-0006-0004 を削除` -> bare item -> finding. Position
+ *   cannot decide this: the spec is named first but only as the item's
+ *   location, which is why the earlier first-mention-wins rule missed it.
+ * - `split spec-0006 (BR-0006-0004 起点)` -> item bracketed -> silent.
+ * - `CAP-0003 を分離 (BR-0006-0004)` -> item bracketed -> silent.
+ *
+ * It is deterministic, needs no grammar, and matches the remediation text: a
+ * genuinely spec-level row names only its `spec-NNNN` / `CAP-NNNN` target
+ * outside brackets and puts the motivating item inside them.
+ */
+function findOperationObjectItemIds(subject: string): string[] {
+  const spans = citationSpans(subject);
+  // First-seen order, deduplicated: an ID written twice unbracketed is one
+  // offending ID, and listing it twice repeats it in both the message and
+  // `refs` without telling the reader anything new.
+  const ids = new Set<string>();
+  for (const match of subject.matchAll(buildItemIdPattern())) {
+    const index = match.index;
+    const cited = spans.some(([start, end]) => index >= start && index < end);
+    if (!cited) {
+      ids.add(match[0]);
+    }
+  }
+  return Array.from(ids);
+}
+
 const TRIAGE_TOP_LEVEL_LABELS = new Set<string>([...TRIAGE_TOP_LEVEL_OPS, "UPDATE"]);
 const TRIAGE_SUB_OPS = new Set<string>(TRIAGE_UPDATE_SUBOPS);
 
@@ -557,6 +650,7 @@ function validateTriageRows(
     const subCell = (row[headerMap.get("sub-op") ?? -1] ?? "").trim();
     const approvedCell = (row[headerMap.get("approved by") ?? -1] ?? "").trim();
     const sourceCell = (row[headerMap.get("source") ?? -1] ?? "").trim();
+    const subjectCell = (row[headerMap.get("subject") ?? -1] ?? "").trim();
     const baseLabel = sourceCell || `row ${rowIndex + 1}`;
     const rowLabel = tableLabel ? `${tableLabel.trim()} ${baseLabel}` : baseLabel;
 
@@ -617,6 +711,26 @@ function validateTriageRows(
           ),
         );
       }
+      continue;
+    }
+
+    const namedItemIds = SPEC_SCOPED_OPS.has(opUpper)
+      ? findOperationObjectItemIds(subjectCell)
+      : [];
+    if (namedItemIds.length > 0) {
+      const named = namedItemIds;
+      issues.push(
+        issue(
+          "QFAI-TRIAGE-007",
+          `Triage ${opUpper} は spec 単位の操作です。Subject が操作対象として item ID を指しています (${rowLabel}): ${named.join(", ")}`,
+          "error",
+          deltaPath,
+          "triage.specScopedOperation",
+          named,
+          "canonical",
+          "SPLIT / MERGE / SUPERSEDE / DELETE は spec 全体が対象です。spec 内の item 分解は UPDATE:MODIFY + UPDATE:APPEND、item 単体の削除は UPDATE:REMOVE で表現してください。spec 単位の操作である場合は Subject の括弧の外では対象 spec (spec-NNNN) か capability (CAP-NNNN) のみを名指しし、きっかけとなった item ID は括弧内に置いてください (例: `split spec-0006 (BR-0006-0004 起点)`)。",
+        ),
+      );
       continue;
     }
 
