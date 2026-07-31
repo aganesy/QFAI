@@ -21,7 +21,7 @@ one-line summary at each iter's end.
 
 ## Stop conditions (deterministic)
 
-Exit codes for `qfai prototyping iterate --cycle <n+1>`:
+Exit codes for `npx qfai prototyping iterate --cycle <n+1>`:
 
 - `0` — continue.
 - `64` — convergence: latest iter has all 4 UX axes
@@ -79,12 +79,12 @@ start `/qfai-prototyping` from cycle 0.
 A loop is **sealed** once `prototyping.json` records
 `stopReason: "axes-exceptional"` together with an `acceptedIterationIndex`.
 That is the converged state — the only one `--check-convergence` reports as
-converged and the only one `qfai prototyping certify` will seal. On a sealed
-loop `qfai prototyping iterate --cycle N` refuses with exit `2` for any `N`
+converged and the only one `npx qfai prototyping certify` will seal. On a sealed
+loop `npx qfai prototyping iterate --cycle N` refuses with exit `2` for any `N`
 greater than the accepted index, and writes nothing — no `iter-NN/` directory
 is created. That refusal is deliberate: such a directory is stale by
 construction, and the stale-iteration-directory check in
-`qfai prototyping certify` hard-fails on it.
+`npx qfai prototyping certify` hard-fails on it.
 
 `license-verify-fail` and `input-error` do **not** seal the loop. They are
 states you are expected to fix and retry, so the same cycle can be re-run and
@@ -98,9 +98,9 @@ below.
 
 Two paths remain open on a sealed loop:
 
-- **Seal it** — run `qfai prototyping certify`. This is the normal
+- **Seal it** — run `npx qfai prototyping certify`. This is the normal
   next step after convergence.
-- **Start over** — run `qfai prototyping iterate --cycle 0
+- **Start over** — run `npx qfai prototyping iterate --cycle 0
 --target-url <url> --force`. Cycle 0 is a hard reset and is never
   refused by the sealed-loop guard; it also deletes stale `iter-NN`
   directories. `--force` is required, not optional: a converged loop
@@ -115,7 +115,7 @@ work, not an extension past the seal — but it does not re-run the cycle
 either: the convergence gate reads the same recorded iteration, reports
 `axes-exceptional` and exits `64` without assigning paths or writing
 anything. Treat it as a state read, and prefer
-`qfai prototyping iterate --check-convergence`, which reports the recorded
+`npx qfai prototyping iterate --check-convergence`, which reports the recorded
 `stopReason` / `acceptedIterationIndex` without the exit-code ambiguity.
 
 If an `iter-NN` directory was created that should not have been, delete

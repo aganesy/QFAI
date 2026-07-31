@@ -185,10 +185,10 @@ The generator MUST express every styled surface as one of:
 There are two directory trees and they are NOT interchangeable. The
 generator writes to exactly one of them.
 
-| Tree                                  | Shape                                                    | Written by                           | Read by                                         |
-| ------------------------------------- | -------------------------------------------------------- | ------------------------------------ | ----------------------------------------------- |
-| `.qfai/prototypes/iter-NN/`           | one `index.html`                                         | **the generator** (you)              | `--auto-serve`, the operator, `/qfai-implement` |
-| `.qfai/evidence/prototyping/iter-NN/` | `<screenId>.html` + `.png`, one pair per declared screen | `qfai prototyping iterate --capture` | `qfai prototyping certify`, the reviewer        |
+| Tree                                  | Shape                                                    | Written by                               | Read by                                         |
+| ------------------------------------- | -------------------------------------------------------- | ---------------------------------------- | ----------------------------------------------- |
+| `.qfai/prototypes/iter-NN/`           | one `index.html`                                         | **the generator** (you)                  | `--auto-serve`, the operator, `/qfai-implement` |
+| `.qfai/evidence/prototyping/iter-NN/` | `<screenId>.html` + `.png`, one pair per declared screen | `npx qfai prototyping iterate --capture` | `npx qfai prototyping certify`, the reviewer    |
 
 **The generator never writes the evidence tree.** The `--capture` step
 performs the fan-out: it drives a browser to each declared screen's
@@ -231,7 +231,7 @@ Pick the routing shape to match the server you will capture against,
 and keep the contract `route` values consistent with it.
 
 Opt-in **seed aid**, not an alternative output shape:
-`qfai prototyping iterate --emit-skeletons` (cycle 0 only) writes one
+`npx qfai prototyping iterate --emit-skeletons` (cycle 0 only) writes one
 placeholder `.qfai/prototypes/iter-00/<screenId>.html` per declared
 screen, and the `htmlSourceCopy` capture option likewise operates on
 per-screen files. Neither writes an `index.html`.

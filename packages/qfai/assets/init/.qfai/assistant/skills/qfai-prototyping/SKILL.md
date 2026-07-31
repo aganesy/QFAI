@@ -38,7 +38,7 @@ One final prototype satisfying the spec under a locked brand identity, with all 
 - `references/design-md-spec.md` — DESIGN.md front-matter schema and
   validation rules
 - `templates/DESIGN.md.sample` — reference content shipped at the
-  consuming-project root by `qfai init`
+  consuming-project root by `npx qfai init`
 
 ## Required Contracts
 
@@ -60,13 +60,13 @@ current `DESIGN.md` hash does not match the lock.
   strict `surface_type: ui-bearing` frontmatter + matching
   `.qfai/contracts/ui/<spec-id>*.yaml`, with legacy title-marker and
   `qfai.config.yaml` `prototyping` pinning folded in. Run
-  `qfai doctor --profile prototyping` to surface the resolved value.
+  `npx qfai doctor --profile prototyping` to surface the resolved value.
   Zero UI-bearing specs at cycle 0 is a deterministic no-op exit `0`.
   Confirm each resolved spec has a supported `surface`.
 - Confirm root `DESIGN.md` and `.qfai/contracts/design/DESIGN.md.lock.yaml`
   both exist; confirm `.qfai/contracts/ui/*.yaml` exists.
-- Run `qfai prototyping preflight --target-url <url>` (alias for
-  `qfai doctor --profile prototyping`) — verifies DESIGN.md parses and
+- Run `npx qfai prototyping preflight --target-url <url>` (alias for
+  `npx qfai doctor --profile prototyping`) — verifies DESIGN.md parses and
   matches the lock sha256.
 
 ### Step 2-B — Verify Environment Preconditions
@@ -80,7 +80,7 @@ current `DESIGN.md` hash does not match the lock.
 
 ### Step 2-B.1 — Opt-in iterate flags
 
-Three flags extend `qfai prototyping iterate`; all default OFF so the
+Three flags extend `npx qfai prototyping iterate`; all default OFF so the
 prior invocation pattern is byte-equivalent when no flag is passed:
 
 - `--capture` — enable PNG / HTML capture per screen each cycle via
@@ -104,11 +104,11 @@ prior invocation pattern is byte-equivalent when no flag is passed:
 
 ### Step 2-C — Run the Loop
 
-| Step  | Actor                                                     | Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Output                                   |
-| ----- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| C0    | product-experience-architect                              | `qfai prototyping iterate --cycle 0 --target-url <url>`. CLI computes `sha256(DESIGN.md)`; lock match enforced. Generator reads contracts + `references/generator-prompt.md` + DESIGN.md tokens and writes `.qfai/prototypes/iter-00/index.html`. Capture + review → `iter-00/review.json`. Append entry; commit `prototyping: iter-00`.                                                                                                                                                                                                                        | iter-00, prototyping.json#designMdSha256 |
-| C1..9 | (a) devops, (b) reviewer, (c) orchestrator, (d) generator | (a) playwright-cli writes `iter-NN/<screen>.{png,html}`; (b) reviewer writes `iter-NN/review.json` per `references/reviewer-prompt.md` (4 UX axes ordinal, 200..500 word critique, `layoutAntiPatternsDetected[]`, `designMdViolations[]`, `pivotDirective`); (c) update `prototyping.json#iterations[]` + `progress.md`, commit `prototyping: iter-NN`; (d) `qfai prototyping iterate --cycle <n+1>` decides exit. After C9 do NOT call `--cycle 10` — the CLI rejects out-of-range cycles. See the "Cycle 9 budget exhaustion" subsection below for recovery. | iter-NN, exit ∈ {0, 64, 65, 66, 2}       |
-| H     | orchestrator                                              | Mirror latest to `.qfai/prototypes/final/index.html`. Per `references/handoff.md`: write `design-system.yaml` (deterministic DESIGN.md token mirror, no HTML extraction) + `prototype-handoff.yaml`. Run `qfai validate --profile prototyping --fail-on error` (produces `validate.json` with `counts.error === 0`), then `/qfai-verify` (produces `verify.json` with `status === "PASS"`), then `qfai prototyping certify` — certify requires both gate files to be present and passing before it will seal the certificate.                                   | DONE                                     |
+| Step  | Actor                                                     | Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Output                                   |
+| ----- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| C0    | product-experience-architect                              | `npx qfai prototyping iterate --cycle 0 --target-url <url>`. CLI computes `sha256(DESIGN.md)`; lock match enforced. Generator reads contracts + `references/generator-prompt.md` + DESIGN.md tokens and writes `.qfai/prototypes/iter-00/index.html`. Capture + review → `iter-00/review.json`. Append entry; commit `prototyping: iter-00`.                                                                                                                                                                                                                        | iter-00, prototyping.json#designMdSha256 |
+| C1..9 | (a) devops, (b) reviewer, (c) orchestrator, (d) generator | (a) playwright-cli writes `iter-NN/<screen>.{png,html}`; (b) reviewer writes `iter-NN/review.json` per `references/reviewer-prompt.md` (4 UX axes ordinal, 200..500 word critique, `layoutAntiPatternsDetected[]`, `designMdViolations[]`, `pivotDirective`); (c) update `prototyping.json#iterations[]` + `progress.md`, commit `prototyping: iter-NN`; (d) `npx qfai prototyping iterate --cycle <n+1>` decides exit. After C9 do NOT call `--cycle 10` — the CLI rejects out-of-range cycles. See the "Cycle 9 budget exhaustion" subsection below for recovery. | iter-NN, exit ∈ {0, 64, 65, 66, 2}       |
+| H     | orchestrator                                              | Mirror latest to `.qfai/prototypes/final/index.html`. Per `references/handoff.md`: write `design-system.yaml` (deterministic DESIGN.md token mirror, no HTML extraction) + `prototype-handoff.yaml`. Run `npx qfai validate --profile prototyping --fail-on error` (produces `validate.json` with `counts.error === 0`), then `/qfai-verify` (produces `verify.json` with `status === "PASS"`), then `npx qfai prototyping certify` — certify requires both gate files to be present and passing before it will seal the certificate.                               | DONE                                     |
 
 **Exit codes**: `0` continue (read `pivotDirective`); `64` convergence (4
 axes `exceptional` AND `layoutAntiPatternsDetected` empty AND
@@ -123,7 +123,7 @@ covers `frozenSurfaceUnion` / `frozenLicenseCatalog` drift on cycle ≥ 1).
 
 ### License-verify hard-stop (exit 66)
 
-`qfai prototyping iterate` exits `66` when an `imageSources[]` entry on
+`npx qfai prototyping iterate` exits `66` when an `imageSources[]` entry on
 `prototyping.json` violates the cycle-0 frozen license catalog. The
 verifier rejects five distinct error codes:
 
@@ -148,15 +148,15 @@ Recovery path (no in-loop retry — the verifier is fail-closed):
 
 If convergence is not reached at iter-09, certify rejects the run; H
 handoff artifacts and `validate` / `/qfai-verify` can still execute for
-inspection, but `qfai prototyping certify --check` will exit non-zero
+inspection, but `npx qfai prototyping certify --check` will exit non-zero
 and prevent DONE.
 
-Use `qfai prototyping iterate --cycle 9 --check-convergence` for a
+Use `npx qfai prototyping iterate --cycle 9 --check-convergence` for a
 read-only peek of `prototyping.json` before refreezing: exit `0`
 confirms convergence (no recovery needed), exit `2` confirms the run
 did not converge. Recovery: review `DESIGN.md`, the pivot strategy
 in `references/reviewer-prompt.md`, and the latest `review.json`
-findings, then re-run `qfai prototyping iterate --cycle 0
+findings, then re-run `npx qfai prototyping iterate --cycle 0
 --target-url <url>` to refreeze. Do not seal a certificate against
 an unconverged iter-09.
 
@@ -187,7 +187,7 @@ gate (exit `64`) and writes nothing, so it is a state read, not a rerun. The res
 - Token-only colors / fonts / radii / shadows — non-DESIGN.md hex /
   rgb / rgba / hsl / font / radius / shadow values land in
   `designMdViolations[]` and block exit 64.
-- DONE only when `qfai prototyping certify --check` returns 0.
+- DONE only when `npx qfai prototyping certify --check` returns 0.
 - No `mode / round / polish / branch / concept-fit` artifacts.
 
 ## Delegation Scope Table
@@ -208,7 +208,7 @@ gate (exit `64`) and writes nothing, so it is a state read, not a rerun. The res
 ## Completion
 
 DONE = `completion-certificate.json` exists AND
-`qfai prototyping certify --check` returns 0 AND `/qfai-verify` returns
+`npx qfai prototyping certify --check` returns 0 AND `/qfai-verify` returns
 PASS.
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.

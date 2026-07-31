@@ -304,7 +304,7 @@ whose only gap is the verdict fields is NOT a blocking finding at review time â€
 Gate items 7-9 are evidence-bearing: reviewer verdicts must be written to a review pack, not left in
 conversation. There is exactly **one** `.qfai/review/**` layout â€” `review-<17-digit-timestamp>/`
 holding `review_request.md`, `R01_<reviewer-id>.md` (at least one) and `summary.json`. Do not nest
-`<scope>/<layer>/attempt-NN/` directories: packs written there are invisible to `qfai validate`.
+`<scope>/<layer>/attempt-NN/` directories: packs written there are invisible to `npx qfai validate`.
 Each review round creates a new pack. Full schema and the `REVISE` -> `status: "FAIL"` mapping:
 `references/review-artifact-layout.md`.
 
@@ -415,7 +415,7 @@ must be ticked; a box that cannot be ticked is a reason not to declare completio
 When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
 
 - Verify gates: `/qfai-verify`.
-  Action: run `qfai validate --profile tdd --fail-on error` for this skill, then `/qfai-verify` for full-scan approval.
+  Action: run `npx qfai validate --profile tdd --fail-on error` for this skill, then `/qfai-verify` for full-scan approval.
 - Spec updates needed: `/qfai-sdd`.
   Action: update spec artifacts if implementation revealed scope changes.
 - Acceptance tests: `/qfai-atdd`.

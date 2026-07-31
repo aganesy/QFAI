@@ -193,7 +193,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 5. `_policies/04_Business-Flow.md` must be Markdown with Mermaid `flowchart` or `sequenceDiagram`.
 6. `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
 7. `06_Test-Cases.md` must include `TC-ID`, `EX-Ref`, `AC-Refs`, and `Type`, with normal-path plus error/boundary coverage.
-8. Stop only when `qfai validate --profile sdd --fail-on error --format github` exits with `error=0`.
+8. Stop only when `npx qfai validate --profile sdd --fail-on error --format github` exits with `error=0`.
 
 ## Required Process
 
@@ -232,7 +232,7 @@ When the target spec is UI-bearing, Phase 0 MUST freeze the brand SSOT:
    user to author this product's own brand SSOT, deleting the
    `QFAI-SAMPLE-DESIGN-MD` marker comment if present (samples from
    releases older than the marker are recognised by content instead).
-   `qfai init` seeds the sample into the project root and never overwrites
+   `npx qfai init` seeds the sample into the project root and never overwrites
    it, so step 1's missing-file check cannot catch this — an unreplaced
    sample parses and validates by construction, and freezing it binds
    `/qfai-prototyping` and the reviewer lock rule to a fictional brand.

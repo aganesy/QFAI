@@ -20,6 +20,14 @@
  * and their writers are documented in
  * `generator-prompt.md#output-layout--two-trees-two-shapes`; this file and
  * that prompt are an SSOT-sync pair (see `../validators/promptScannerPairs.ts`).
+ *
+ * Both trees are written by the CLI the prompt prescribes: the capture fan-out
+ * by `npx qfai prototyping iterate --capture`, and this scanner runs under
+ * `npx qfai prototyping certify`. `npx` is not cosmetic — qfai is a project
+ * dependency, so a bare `qfai …` exits 127 on a normal local install and the
+ * gate never runs at all. `canonicalQfaiLauncher.test.ts` enforces the launcher
+ * across the shipped surface, which is what put those two commands in the
+ * prompt in this form.
  */
 
 import type { DesignMd } from "../design/designMd.js";

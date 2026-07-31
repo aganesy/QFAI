@@ -50,10 +50,10 @@
 ## Commands executed
 
 ```
-qfai validate --profile sdd --fail-on error --format github
+npx qfai validate --profile sdd --fail-on error --format github
 ```
 
-> No redirect. `qfai validate` writes `<paths.outDir>/validate.log` itself on
+> No redirect. `npx qfai validate` writes `<paths.outDir>/validate.log` itself on
 > every run, always pointing at that run's `run-*/` directory, so a `| tee` is
 > both unnecessary and not portable to PowerShell. Same command as `SKILL.md`
 > step 8 and `references/sdd-quality-gate.md`.
