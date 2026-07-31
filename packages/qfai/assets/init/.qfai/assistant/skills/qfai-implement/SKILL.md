@@ -229,7 +229,10 @@ Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
   `done`. One that **does** change an approved obligation takes the Change Request path, and
   `drift-protocol.md#when-drift-is-detected` applies: STOP, and no `done` for items depending on
   the obligation under dispute until approval and the owner rerun.
-- `Do not declare DONE until Reviewer returns PASS` applies to **blocking** findings only.
+- `Do not declare DONE until Reviewer returns PASS` is never waived: the Reviewer verdict is
+  required on every item, including one whose review produced only advisories. What **blocking**
+  findings change is the verdict itself — only they force `REVISE` and hold `done`. An
+  advisory-only review returns `PASS`, and that `PASS` is still what releases `done`.
 
 ## Parallelization Policy
 
