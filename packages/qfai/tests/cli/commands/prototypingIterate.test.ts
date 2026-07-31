@@ -3414,11 +3414,13 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
 });
 
 // ---------------------------------------------------------------------------
-// Sealed-loop guard (#246). Only the converged state seals a loop; every other
-// terminal stop reason is something the operator is told to fix and retry, and
-// refusing those made the retry impossible — `acceptedIterationIndex` keeps its
-// prior value, so the re-run of the very same cycle was rejected before the
-// verifier ran.
+// Sealed-loop guard (#246). Only the converged state seals a loop. The
+// retryable terminal stop reasons — `license-verify-fail` and `input-error` —
+// name a condition the operator is told to fix and re-run on the same cycle,
+// and refusing those made the retry impossible: `acceptedIterationIndex` keeps
+// its prior value, so the re-run of the very same cycle was rejected before the
+// verifier ran. (`max-iterations` is terminal but not retryable that way — it
+// means the 10-cycle budget is spent, and the recovery is a cycle-0 reset.)
 // ---------------------------------------------------------------------------
 describe("runPrototypingIterate sealed-loop guard", () => {
   async function seedSealedLoop(root: string, stopReason: string): Promise<void> {

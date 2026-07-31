@@ -2604,7 +2604,7 @@ async function refuseWhenLoopConverged(root: string, cycle: number): Promise<num
   if (cycle <= acceptedRaw) return null;
   error(
     `qfai prototyping iterate: refusing --cycle ${String(cycle)} — the loop is already ` +
-      `terminal (${PROTOTYPING_JSON_REL} records stopReason=${JSON.stringify(stopReasonRaw)}, ` +
+      `sealed (${PROTOTYPING_JSON_REL} records stopReason=${JSON.stringify(stopReasonRaw)}, ` +
       `acceptedIterationIndex=${String(acceptedRaw)}). Nothing was written; no iter-` +
       `${String(cycle).padStart(2, "0")} directory was created.`,
   );
@@ -2640,8 +2640,14 @@ async function runCheckConvergencePeek(root: string, cycle: number): Promise<num
   const stopReason =
     typeof stopReasonRaw === "string" || stopReasonRaw === null ? stopReasonRaw : undefined;
   const acceptedRaw = record.acceptedIterationIndex;
-  const acceptedIterationIndex =
-    typeof acceptedRaw === "number" && Number.isInteger(acceptedRaw) ? acceptedRaw : null;
+  const acceptedIsInteger = typeof acceptedRaw === "number" && Number.isInteger(acceptedRaw);
+  // A negative index is not an accepted iteration; it is a corrupt or
+  // pre-format record, and the seal it would imply has no accepted work behind
+  // it. `refuseWhenLoopConverged` already reads it that way, so this peek has
+  // to agree — otherwise the peek reports "Converged" while the guard lets
+  // `--cycle N` through, and the operator picks a recovery path from two
+  // commands that disagree about the state.
+  const acceptedIterationIndex = acceptedIsInteger && acceptedRaw >= 0 ? acceptedRaw : null;
   const iterations = asIterations(record);
   info(header);
   // Asymmetry note: `stopReason` printed as `<missing>` indicates the
@@ -2650,9 +2656,9 @@ async function runCheckConvergencePeek(root: string, cycle: number): Promise<num
   // canonical "pre-convergence" literal written by cycle 0. The two
   // shapes are intentionally different — do not unify on `<missing>`.
   info(`  stopReason: ${stopReason === undefined ? "<missing>" : String(stopReason)}`);
-  info(
-    `  acceptedIterationIndex: ${acceptedIterationIndex === null ? "null" : String(acceptedIterationIndex)}`,
-  );
+  // Printed from the raw value, not the normalized one, so a recorded `-1`
+  // stays visible to the operator instead of being reported as `null`.
+  info(`  acceptedIterationIndex: ${acceptedIsInteger ? String(acceptedRaw) : "null"}`);
   info(`  iterations: ${iterations.length}`);
   if (stopReason === "axes-exceptional" && acceptedIterationIndex !== null) {
     info("  Converged: axes-exceptional with accepted iteration recorded.");
@@ -2671,6 +2677,15 @@ async function runCheckConvergencePeek(root: string, cycle: number): Promise<num
   } else if (stopReason === null || stopReason === undefined) {
     reason =
       "stopReason is null and no acceptedIterationIndex was recorded; the loop has not yet reached a terminal state.";
+  } else if (stopReason === "axes-exceptional") {
+    // Reachable only when the seal is present but the accepted index is not a
+    // non-negative integer, which is the state the guard also refuses to treat
+    // as sealed. Naming it beats falling through to "is not a converged state",
+    // which would blame the stopReason the record actually carries.
+    reason =
+      'stopReason="axes-exceptional" but acceptedIterationIndex is ' +
+      `${acceptedIsInteger ? String(acceptedRaw) : JSON.stringify(acceptedRaw)}, which records no ` +
+      "accepted iteration; the seal has no accepted work behind it.";
   } else {
     reason = `stopReason=${JSON.stringify(stopReason)} is not a converged state.`;
   }
