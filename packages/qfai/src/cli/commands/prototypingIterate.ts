@@ -465,6 +465,19 @@ export async function runPrototypingIterate(
     return 2;
   }
 
+  // Converged-loop guard. MUST run before any write path — the
+  // iteration directory used to be created unconditionally a few
+  // hundred lines below, so `--cycle N` against an already-sealed loop
+  // produced a fresh `iter-NN/` holding `iterate-plan.json` +
+  // `iterate-context.json`, printed "iter-NN ready", and exited 0. That
+  // debris is not inert: `certify`'s `findStaleIterDirs` guard
+  // hard-fails on exactly those directories. The state needed to refuse
+  // is the same `stopReason` / `acceptedIterationIndex` pair the
+  // `--check-convergence` peek reads; it just has to be read here
+  // rather than after the write.
+  const convergedRefusal = await refuseWhenLoopConverged(options.root, options.cycle);
+  if (convergedRefusal !== null) return convergedRefusal;
+
   // Normalise --primary-spec-id if provided. SHOULD-normalisation of
   // `1 / '1' / '01' / '0001'` to canonical `"0001"`; rejection emits the
   // canonical error message anchored by the unit ledger.
@@ -1379,7 +1392,7 @@ async function runCapturePath(
   // project-wide aggregate dirs once the capture pass completes.
   // Best-effort copy; missing files are skipped so a partial capture
   // run does not block the cycle. Screen ids are validated for
-  // underscore casing at the UI contract surface (QFAI-PROT-008 in
+  // underscore casing at the UI contract surface (QFAI-PROT-010 in
   // `prototypingEvidence.ts`).
   await mirrorAcceptedIterToAggregateDirs(options.root, options.cycle);
   return 0;
@@ -2385,7 +2398,7 @@ function buildRunId(designMdSha: string): string {
  *   `.qfai/evidence/prototyping/html/<screen-id>.html`
  *
  * Underscore-cased screen ids are used end-to-end (validator rejects
- * hyphen form via QFAI-PROT-008); this helper does NOT re-case ids
+ * hyphen form via QFAI-PROT-010); this helper does NOT re-case ids
  * itself — it just byte-copies the latest iter content if present.
  * Mirroring is best-effort: missing source files are silently skipped
  * so a non-capture run (default) does not fail on an empty iter dir.
@@ -2527,6 +2540,89 @@ function buildDesignTokens(dm: DesignMd): DesignTokens {
  * to surface the same input-error class diagnostic the loop entry
  * gate uses, instead of masking a typo as "converged at cycle 99".
  */
+/**
+ * Refuse a cycle that would advance an already-terminal loop.
+ *
+ * Returns the exit code to propagate (`2`) when the recorded state says
+ * the loop is done and `cycle` is past the accepted iteration; returns
+ * `null` when the cycle is legal and iterate should proceed.
+ *
+ * Predicate — all three must hold:
+ *   1. `prototyping.json` records `stopReason === "axes-exceptional"`.
+ *      That is the only SEALED state: the only one
+ *      `--check-convergence` reports as converged and the only one
+ *      `qfai prototyping certify` will seal. The other members of the
+ *      stop enum are terminal but not sealed, and every one of them is
+ *      a state the operator is told to fix and retry —
+ *      `license-verify-fail` ("replace with allowlisted sources"),
+ *      `input-error` (a typo in the invocation), `max-iterations`
+ *      (budget exhausted, no certifiable result). Refusing those made
+ *      the fix un-verifiable: `acceptedIterationIndex` keeps the value
+ *      it already had, so the retry of the very same cycle was rejected
+ *      before the verifier ran, and the only way forward was discarding
+ *      the whole loop from cycle 0.
+ *   2. `acceptedIterationIndex` is an integer (an iteration was
+ *      actually accepted).
+ *   3. `cycle > acceptedIterationIndex`.
+ *
+ * Consequences of the predicate, both deliberate:
+ *   - `--cycle 0` never trips it (0 is never greater than a
+ *     non-negative accepted index), so the documented hard reset
+ *     stays available on a converged loop.
+ *   - Re-running the accepted cycle itself (`cycle ===
+ *     acceptedIterationIndex`) stays available too — that is a redo of
+ *     recorded work, not an extension past the seal.
+ *
+ * Pure read: never writes, never mutates `prototyping.json`.
+ */
+/**
+ * The one stop reason that means the loop is SEALED rather than merely
+ * finished. `--check-convergence` reports only this as converged, and only a
+ * loop in this state can be sealed by `qfai prototyping certify`.
+ */
+const SEALED_STOP_REASON = "axes-exceptional";
+
+async function refuseWhenLoopConverged(root: string, cycle: number): Promise<number | null> {
+  // Cycle 0 is the documented escape hatch out of every terminal state and is
+  // exempted before anything is read from the record. Deriving the exemption
+  // from `cycle > acceptedIterationIndex` made it depend on the recorded value
+  // being sane: a corrupt or legacy `-1` turned `0 > -1` true and refused the
+  // one command that could repair the loop.
+  if (cycle === 0) return null;
+  const record = await readPrototypingJson(path.join(root, PROTOTYPING_JSON_REL));
+  if (record === null) return null;
+  const stopReasonRaw = record.stopReason;
+  if (stopReasonRaw !== SEALED_STOP_REASON) return null;
+  const acceptedRaw = record.acceptedIterationIndex;
+  // A negative index is not an accepted iteration; it is a corrupt or
+  // pre-format record, and the seal it would imply has no accepted work behind
+  // it. Treated as "nothing accepted", which is what the JSDoc above already
+  // assumes when it says "a non-negative accepted index".
+  if (typeof acceptedRaw !== "number" || !Number.isInteger(acceptedRaw) || acceptedRaw < 0) {
+    return null;
+  }
+  if (cycle <= acceptedRaw) return null;
+  error(
+    `qfai prototyping iterate: refusing --cycle ${String(cycle)} — the loop is already ` +
+      `sealed (${PROTOTYPING_JSON_REL} records stopReason=${JSON.stringify(stopReasonRaw)}, ` +
+      `acceptedIterationIndex=${String(acceptedRaw)}). Nothing was written; no iter-` +
+      `${String(cycle).padStart(2, "0")} directory was created.`,
+  );
+  error(
+    "  Creating it would leave a stale iteration directory, which the stale-iteration-directory " +
+      "check in `qfai prototyping certify` rejects.",
+  );
+  error(
+    "  Confirm the recorded state with `qfai prototyping iterate --check-convergence`, " +
+      "then either run `qfai prototyping certify` to seal the run, or " +
+      "`qfai prototyping iterate --cycle 0 --target-url <url> --force` to hard-reset and start " +
+      "a new loop. `--force` is required: a converged loop always has an iter-00, and the " +
+      "cycle-0 destructive-rerun gate refuses to overwrite it without that flag (it backs the " +
+      "directory up to iter-00.backup-<ISO> first).",
+  );
+  return 2;
+}
+
 async function runCheckConvergencePeek(root: string, cycle: number): Promise<number> {
   const protoJsonAbs = path.join(root, PROTOTYPING_JSON_REL);
   const header = `qfai prototyping iterate --check-convergence (cycle ${cycle}):`;
@@ -2544,8 +2640,14 @@ async function runCheckConvergencePeek(root: string, cycle: number): Promise<num
   const stopReason =
     typeof stopReasonRaw === "string" || stopReasonRaw === null ? stopReasonRaw : undefined;
   const acceptedRaw = record.acceptedIterationIndex;
-  const acceptedIterationIndex =
-    typeof acceptedRaw === "number" && Number.isInteger(acceptedRaw) ? acceptedRaw : null;
+  const acceptedIsInteger = typeof acceptedRaw === "number" && Number.isInteger(acceptedRaw);
+  // A negative index is not an accepted iteration; it is a corrupt or
+  // pre-format record, and the seal it would imply has no accepted work behind
+  // it. `refuseWhenLoopConverged` already reads it that way, so this peek has
+  // to agree — otherwise the peek reports "Converged" while the guard lets
+  // `--cycle N` through, and the operator picks a recovery path from two
+  // commands that disagree about the state.
+  const acceptedIterationIndex = acceptedIsInteger && acceptedRaw >= 0 ? acceptedRaw : null;
   const iterations = asIterations(record);
   info(header);
   // Asymmetry note: `stopReason` printed as `<missing>` indicates the
@@ -2554,9 +2656,9 @@ async function runCheckConvergencePeek(root: string, cycle: number): Promise<num
   // canonical "pre-convergence" literal written by cycle 0. The two
   // shapes are intentionally different — do not unify on `<missing>`.
   info(`  stopReason: ${stopReason === undefined ? "<missing>" : String(stopReason)}`);
-  info(
-    `  acceptedIterationIndex: ${acceptedIterationIndex === null ? "null" : String(acceptedIterationIndex)}`,
-  );
+  // Printed from the raw value, not the normalized one, so a recorded `-1`
+  // stays visible to the operator instead of being reported as `null`.
+  info(`  acceptedIterationIndex: ${acceptedIsInteger ? String(acceptedRaw) : "null"}`);
   info(`  iterations: ${iterations.length}`);
   if (stopReason === "axes-exceptional" && acceptedIterationIndex !== null) {
     info("  Converged: axes-exceptional with accepted iteration recorded.");
@@ -2575,6 +2677,15 @@ async function runCheckConvergencePeek(root: string, cycle: number): Promise<num
   } else if (stopReason === null || stopReason === undefined) {
     reason =
       "stopReason is null and no acceptedIterationIndex was recorded; the loop has not yet reached a terminal state.";
+  } else if (stopReason === "axes-exceptional") {
+    // Reachable only when the seal is present but the accepted index is not a
+    // non-negative integer, which is the state the guard also refuses to treat
+    // as sealed. Naming it beats falling through to "is not a converged state",
+    // which would blame the stopReason the record actually carries.
+    reason =
+      'stopReason="axes-exceptional" but acceptedIterationIndex is ' +
+      `${acceptedIsInteger ? String(acceptedRaw) : JSON.stringify(acceptedRaw)}, which records no ` +
+      "accepted iteration; the seal has no accepted work behind it.";
   } else {
     reason = `stopReason=${JSON.stringify(stopReason)} is not a converged state.`;
   }
