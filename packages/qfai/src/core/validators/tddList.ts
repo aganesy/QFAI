@@ -4,7 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
-import { parseFirstMarkdownTable } from "../specPackParsers.js";
+import { parseFirstMarkdownTable, resolveTestCaseTable } from "../specPackParsers.js";
 import { isCoverageTargetLevel, splitTcRefs, resolveParentTcId } from "../tddHelpers.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
@@ -24,9 +24,37 @@ const VALID_STATUSES = new Set(["todo", "red", "green", "refactor", "done", "exc
 
 const TEST_FILE_CHECK_STATUSES = new Set(["green", "refactor", "done"]);
 
+/**
+ * Test directories a `Layer` value implies. `null` means the layer has no
+ * mandated directory, so no consistency claim is made about it.
+ */
+const LAYER_TEST_DIRS: Record<string, string | null> = {
+  unit: null,
+  component: null,
+  integration: "tests/integration/",
+  api: "tests/api/",
+  e2e: "tests/e2e/",
+};
+
 const TDD_ID_FORMAT = /^TDD-\d{4}$/;
 
+/**
+ * True when `testFile` is placed under the repo-root `dir`.
+ *
+ * A substring test matched anywhere in the path, so `src/tests/e2e/foo.test.ts`
+ * and `mytests/e2e/foo.test.ts` both read as `tests/e2e/` and produced a
+ * TDDLIST_LAYER_PATH_MISMATCH warning against a file that is not in the
+ * mandated directory at all. Anchoring at the start, after stripping a leading
+ * `./`, keeps the claim to real directory placement.
+ */
+function isUnderTestDir(testFile: string, dir: string): boolean {
+  return testFile.replace(/^\.\//, "").startsWith(dir);
+}
+
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
+
+/** Per-spec file that owns the Test Case Table, and the target of its findings. */
+const TEST_CASES_FILE_NAME = "06_Test-Cases.md";
 
 export async function validateTddList(root: string, config: QfaiConfig): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
@@ -140,7 +168,33 @@ async function validateSpecTddList(
 
   // Check 5: TC reference existence
   const tcRefsIndex = normalizedHeaders.indexOf("TC-Refs");
-  const { knownTcIds, unitComponentTcIds } = await collectTestCaseIds(specDir);
+  const { knownTcIds, unitComponentTcIds, unresolved } = await collectTestCaseIds(specDir);
+  if (unresolved) {
+    // Both TC checks below are no-ops without a resolved table. Say so, so a
+    // silent skip is distinguishable from a pass.
+    //
+    // The finding points at `06_Test-Cases.md`, not at the ledger: that is the
+    // file to edit, and `file` is what GitHub annotations, report hotspots and
+    // `scope.paths` waivers key on. Blaming `tdd/test-list.md` would send all
+    // three at a document that is not the problem.
+    const testCasesRelPath = path
+      .relative(root, path.join(specDir, TEST_CASES_FILE_NAME))
+      .replace(/\\/g, "/");
+    issues.push(
+      issue(
+        "TDDLIST_TC_TABLE_UNRESOLVED",
+        unresolved === "no-table"
+          ? `Could not resolve the Test Case Table in ${TEST_CASES_FILE_NAME} for spec-${specNumber}: no Markdown table was found under the \`## Test Case Table\` section (a table elsewhere in the file is not used); TC coverage checks skipped`
+          : `No \`TC-ID\` column found in the Test Case Table of ${TEST_CASES_FILE_NAME} for spec-${specNumber}; TC coverage checks skipped`,
+        "warning",
+        testCasesRelPath,
+        "tddList.testCaseTableResolvable",
+        undefined,
+        "change",
+        `${TEST_CASES_FILE_NAME} の \`## Test Case Table\` セクションに \`TC-ID\` 列を持つ表を記載してください。`,
+      ),
+    );
+  }
   if (tcRefsIndex >= 0) {
     if (knownTcIds.size > 0) {
       for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
@@ -305,6 +359,37 @@ async function validateSpecTddList(
     }
   }
 
+  // Phase 2 – Check 9b: Layer <-> Test file consistency.
+  //
+  // `Layer` was a required column whose value was never read, so a `Unit` row
+  // pointing at `tests/integration/**` was an invisible state.
+  const layerIndex = normalizedHeaders.indexOf("Layer");
+  if (layerIndex >= 0 && testFileIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const row = table.rows[rowIdx];
+      if (!row) continue;
+      const layer = (row[layerIndex] ?? "").trim().toLowerCase();
+      const testFile = (row[testFileIndex] ?? "").trim().replace(/\\/g, "/");
+      const expectedDir = LAYER_TEST_DIRS[layer];
+      if (!expectedDir || testFile.length === 0) continue;
+
+      const actualDir = Object.entries(LAYER_TEST_DIRS).find(
+        ([, dir]) => dir !== null && isUnderTestDir(testFile, dir),
+      );
+      if (actualDir && actualDir[1] !== expectedDir) {
+        issues.push(
+          issue(
+            "TDDLIST_LAYER_PATH_MISMATCH",
+            `Layer "${(row[layerIndex] ?? "").trim()}" for spec-${specNumber} (row ${rowIdx + 1}) does not match Test file "${testFile}" (expected a path under ${expectedDir})`,
+            "warning",
+            relPath,
+            "tddList.layerPathConsistency",
+          ),
+        );
+      }
+    }
+  }
+
   // Phase 2 – Check 10: TC coverage (unit/component TCs must appear in test-list)
   if (tcRefsIndex >= 0) {
     if (unitComponentTcIds.size > 0) {
@@ -339,11 +424,20 @@ async function validateSpecTddList(
   return issues;
 }
 
-type TestCaseIds = { knownTcIds: Set<string>; unitComponentTcIds: Set<string> };
+type TestCaseIds = {
+  knownTcIds: Set<string>;
+  unitComponentTcIds: Set<string>;
+  /**
+   * Set when no `TC-ID`-bearing table could be located. Both TC checks go
+   * silent in that case, so the caller reports the miss rather than letting
+   * "nothing found" read as "everything covered".
+   */
+  unresolved?: "no-table" | "no-tc-id-column";
+};
 
 async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   const empty: TestCaseIds = { knownTcIds: new Set(), unitComponentTcIds: new Set() };
-  const testCasesPath = path.join(specDir, "06_Test-Cases.md");
+  const testCasesPath = path.join(specDir, TEST_CASES_FILE_NAME);
   if (!(await exists(testCasesPath))) return empty;
   let content: string;
   try {
@@ -351,11 +445,16 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   } catch {
     return empty;
   }
-  const table = parseFirstMarkdownTable(content);
-  if (!table) return empty;
+  // Scoped to the `## Test Case Table` section the template names, with a
+  // header-match fallback for older specs. Reading the first table in
+  // document order let an explanatory table above the heading hijack the set.
+  const resolution = resolveTestCaseTable(content);
+  if (!resolution.table) {
+    return { ...empty, unresolved: resolution.reason };
+  }
+  const table = resolution.table;
   const headers = table.headers.map((h) => h.trim());
   const tcIdIndex = headers.indexOf("TC-ID");
-  if (tcIdIndex < 0) return empty;
   const levelIndex = headers.indexOf("Level");
 
   const knownTcIds = new Set<string>();

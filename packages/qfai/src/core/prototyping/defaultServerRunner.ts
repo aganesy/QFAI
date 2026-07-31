@@ -8,6 +8,24 @@
  * cycle), with `GET /` mapped to `index.html`. Path-traversal attempts
  * outside the iteration directory are rejected with HTTP 403.
  *
+ * SPA route fallback
+ * ------------------
+ * A document request (GET/HEAD whose `Accept` includes `text/html`)
+ * that resolves to a path with no file on disk is served
+ * `index.html` instead of 404. Capture URLs are composed verbatim from
+ * each UI contract's `route`, and real routes are largely
+ * client-side and often parameterized (`/pairs/:instrument`,
+ * `/reports/:reportId`) — no file layout can satisfy those, and `:`
+ * is not even a legal filename character on Windows. Without the
+ * fallback, `--auto-serve` + `--capture` cannot capture those screens
+ * at all, and capture evidence is a mandatory input to the prototyping
+ * DONE gate. Sub-resource requests (`.css`, `.png`, `fetch()`) do NOT
+ * carry `text/html` in `Accept`, so a genuinely missing asset still
+ * 404s rather than silently receiving an HTML body. The 403 traversal
+ * guard runs ahead of the fallback — including on the decoded path,
+ * before normalization, so an escape payload cannot reach the fallback
+ * by having its `..` segments collapsed away first.
+ *
  * Design choice — in-process, no subprocess
  * ----------------------------------------
  * The auto-serve operator contract calls out `tree-kill` (Unix) /
@@ -226,6 +244,81 @@ function readErrorCode(err: unknown): string | null {
   return typeof code === "string" ? code : null;
 }
 
+function isReadableFile(candidate: string): boolean {
+  if (!existsSync(candidate)) return false;
+  try {
+    return statSync(candidate).isFile();
+  } catch {
+    return false;
+  }
+}
+
+// A document request is the navigation the SPA fallback exists for.
+// Browsers and Playwright send `Accept: text/html,...` on top-level
+// navigations; sub-resource loads (`<link rel=stylesheet>`, `<img>`,
+// `fetch()`) send image/*, text/css, or `*/*` instead. Keying the
+// fallback on that header is what keeps a missing `.css` / `.png` a
+// genuine 404 rather than an HTML body with a 200 status.
+function isDocumentRequest(req: IncomingMessage): boolean {
+  const method = (req.method ?? "GET").toUpperCase();
+  if (method !== "GET" && method !== "HEAD") return false;
+  const accept = req.headers.accept;
+  const header = Array.isArray(accept) ? accept.join(",") : (accept ?? "");
+  return header.toLowerCase().includes("text/html");
+}
+
+// Resolve the on-disk file to serve, or `null` for a 404. The caller
+// has already applied the path-traversal guard, so `candidate` is known
+// to be inside `serveRoot`.
+function resolveServablePath(
+  candidate: string,
+  serveRoot: string,
+  req: IncomingMessage,
+): string | null {
+  if (isReadableFile(candidate)) return candidate;
+  if (!isDocumentRequest(req)) return null;
+  const fallback = path.resolve(serveRoot, "index.html");
+  // No `index.html` in the tree means there is nothing to fall back
+  // to; preserve the 404 rather than inventing a response.
+  return isReadableFile(fallback) ? fallback : null;
+}
+
+/**
+ * True when the DECODED request path is shaped like a filesystem escape
+ * rather than a route.
+ *
+ * This has to run before `path.normalize`, because normalization is what
+ * destroys the evidence: `/../../etc/passwd` collapses to `/etc/passwd`,
+ * which then resolves to a harmless-looking path INSIDE `serveRoot` and
+ * sails past the `startsWith(rootWithSep)` guard. That containment kept
+ * the old code honest — the request simply 404'd — but with the SPA
+ * fallback in place a non-existent contained path is answered with
+ * `index.html` and HTTP 200, turning a rejected traversal attempt into a
+ * success. Reject the shape up front so the documented "403 traversal
+ * guard runs ahead of the fallback" contract is literally true.
+ *
+ * Three shapes, all matched on the decoded string so percent-encoded
+ * payloads are seen for what they are:
+ *   - any backslash (`..\..\etc\passwd`, `\\server\share\secret`)
+ *   - a `..` path segment (`/../../etc/passwd`)
+ *   - a drive-qualified first segment (`/C:/Windows/...`)
+ * None of them is a legal SPA route, so no capture URL is lost.
+ */
+function looksLikeFilesystemEscape(decodedPath: string): boolean {
+  // Backslash is not a legal URL path character — browsers rewrite it to
+  // `/` before the request is sent — so one arriving here means a crafted
+  // Windows-shaped payload, not a file a prototype legitimately serves.
+  if (decodedPath.includes("\\")) {
+    return true;
+  }
+  const segments = decodedPath.split("/").filter((segment) => segment.length > 0);
+  if (segments.includes("..")) {
+    return true;
+  }
+  const first = segments[0];
+  return first !== undefined && /^[A-Za-z]:$/.test(first);
+}
+
 function handleRequest(req: IncomingMessage, res: ServerResponse, serveRoot: string): void {
   try {
     const urlPath = (req.url ?? "/").split("?")[0] ?? "/";
@@ -241,15 +334,22 @@ function handleRequest(req: IncomingMessage, res: ServerResponse, serveRoot: str
       res.end("bad request");
       return;
     }
+    // Traversal guard #1, evaluated on the decoded path BEFORE
+    // `path.normalize` can collapse the evidence away. See
+    // `looksLikeFilesystemEscape` for why the post-normalization
+    // containment check is not sufficient once the SPA fallback exists.
+    if (looksLikeFilesystemEscape(decoded)) {
+      res.statusCode = 403;
+      res.end("forbidden");
+      return;
+    }
     // Defense-in-depth: collapse backslashes to forward slashes BEFORE
     // calling `path.normalize`. On POSIX `path.normalize("..\\..\\etc")`
     // treats backslashes as literal filename characters, so a
     // URL-encoded `..\..\etc\passwd` payload would normalize to a
-    // single literal filename inside `serveRoot` and slip past the
-    // `..` token check. The final `startsWith(rootWithSep)` guard
-    // already catches the traversal (the candidate stays inside
-    // serveRoot once resolved), but normalising slashes first keeps
-    // the platform-independent intent explicit.
+    // single literal filename inside `serveRoot`. Guard #1 above already
+    // rejects that payload; normalising slashes keeps the containment
+    // check platform-independent for anything that gets this far.
     const slashNormalised = decoded.replace(/\\/g, "/");
     const normalised = path.normalize(slashNormalised).replace(/^[\\/]+/, "");
     const candidate = path.resolve(serveRoot, normalised);
@@ -260,27 +360,23 @@ function handleRequest(req: IncomingMessage, res: ServerResponse, serveRoot: str
       res.end("forbidden");
       return;
     }
-    if (!existsSync(candidate)) {
-      res.statusCode = 404;
-      res.end("not found");
-      return;
-    }
-    let stat;
-    try {
-      stat = statSync(candidate);
-    } catch {
-      res.statusCode = 404;
-      res.end("not found");
-      return;
-    }
-    if (!stat.isFile()) {
+    const servable = resolveServablePath(candidate, serveRoot, req);
+    if (servable === null) {
       res.statusCode = 404;
       res.end("not found");
       return;
     }
     res.statusCode = 200;
-    res.setHeader("content-type", contentTypeFor(candidate));
-    const stream = createReadStream(candidate);
+    res.setHeader("content-type", contentTypeFor(servable));
+    // HEAD carries the headers of the equivalent GET and no body (RFC 9110
+    // §9.3.2). `isDocumentRequest` admits HEAD alongside GET so a HEAD probe
+    // against an SPA route resolves through the same index.html fallback;
+    // piping the file would answer that probe with a body it must not have.
+    if ((req.method ?? "GET").toUpperCase() === "HEAD") {
+      res.end();
+      return;
+    }
+    const stream = createReadStream(servable);
     stream.on("error", () => {
       // surface a 500 only if no body has been sent yet; otherwise just
       // tear the connection.
