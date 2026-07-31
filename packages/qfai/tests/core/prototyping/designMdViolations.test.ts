@@ -271,10 +271,13 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
     // values entirely; named-color drift was silent on the longhand
     // shorthand. Post-fix, each whitespace-separated token is
     // checked against CSS_NAMED_COLORS independently.
+    // #242 also made the return value one entry per distinct {kind, found}
+    // pair, so the repeated `red` collapses; each distinct token is still
+    // reported, which is what this obligation is about.
     const html = '<div style="border-color: red blue green red"></div>';
     const out = findDesignMdViolations(html, sampleDesignMd());
     const colorHits = out.filter((v) => v.kind === "color");
-    expect(colorHits.map((v) => v.found)).toEqual(["red", "blue", "green", "red"]);
+    expect(colorHits.map((v) => v.found)).toEqual(["red", "blue", "green"]);
   });
 
   it("border-color 2-side shorthand flags both tokens", () => {
@@ -386,6 +389,24 @@ describe("findDesignMdViolations — color (TC-3.2.1..9)", () => {
     const out = findDesignMdViolations(html, sampleDesignMd());
     const founds = out.filter((v) => v.kind === "color").map((v) => v.found);
     expect(founds).toEqual(["#aaaaaa", "#bbbbbb", "#cccccc"]);
+  });
+
+  it("rgb() carrying a nested var() is reported through its final paren", () => {
+    // Issue #242: Tailwind's rendered DOM writes the opacity-variable form.
+    // A `[^)]*` body stops at the inner `)`, so the reported `found` lost the
+    // outer one — an unbalanced string that is invalid CSS and appears nowhere
+    // in the source, which sends the operator looking for a value that does
+    // not exist. The body admits one level of nesting, so the match now runs
+    // to the closing paren of the `rgb(` invocation itself.
+    const html = '<div style="background: rgb(23 56 77 / var(--tw-bg-opacity, 1))"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out).toEqual([{ kind: "color", found: "rgb(23 56 77 / var(--tw-bg-opacity, 1))" }]);
+  });
+
+  it("hsl() carrying a nested var() is reported through its final paren", () => {
+    const html = '<div style="color: hsl(210 40% 96% / var(--tw-text-opacity, 1))"></div>';
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out).toEqual([{ kind: "color", found: "hsl(210 40% 96% / var(--tw-text-opacity, 1))" }]);
   });
 });
 
@@ -502,6 +523,27 @@ describe("findDesignMdViolations — radius (TC-3.2.16..20)", () => {
     const out = findDesignMdViolations(html, sampleDesignMd());
     expect(out).toEqual([{ kind: "radius", found: "1.5rem" }]);
   });
+
+  it("a browser-reserialized leading-zero-less radius matches its DESIGN.md token", () => {
+    // Issue #242: DESIGN.md registers `0.375rem`, but a value that has been
+    // through the browser's CSS serializer comes back as `.375rem`. Comparing
+    // the raw strings reported that as drift against the operator's own token.
+    const designMd = sampleDesignMd({
+      radius: { sm: "0.375rem", md: "0.5rem", lg: "0.75rem", full: "9999px" },
+    });
+    const html = '<div style="border-radius: .375rem"></div>';
+    expect(findDesignMdViolations(html, designMd)).toEqual([]);
+  });
+
+  it("normalization does not admit a radius DESIGN.md never registered", () => {
+    // The counterpart to the case above: normalizing both sides must not turn
+    // the allow-list into a wildcard.
+    const designMd = sampleDesignMd({
+      radius: { sm: "0.375rem", md: "0.5rem", lg: "0.75rem", full: "9999px" },
+    });
+    const html = '<div style="border-radius: .625rem"></div>';
+    expect(findDesignMdViolations(html, designMd)).toEqual([{ kind: "radius", found: ".625rem" }]);
+  });
 });
 
 describe("findDesignMdViolations — shadow (TC-3.2.21..24)", () => {
@@ -567,7 +609,10 @@ describe("findDesignMdViolations — aggregation (TC-3.2.25..28)", () => {
     `;
     const out = findDesignMdViolations(html, sampleDesignMd());
     const colorHits = out.filter((v) => v.kind === "color" && v.found === "#abcdef");
-    expect(colorHits.length).toBe(2);
+    // Both regions are scanned; the shared value is reported once because
+    // #242 de-duplicates on {kind, found}. Scanning coverage is asserted by
+    // the region-specific cases above.
+    expect(colorHits.length).toBe(1);
   });
 
   // TC-3.2.28

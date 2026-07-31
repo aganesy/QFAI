@@ -3,9 +3,12 @@
  *
  * Scans an HTML string for color / font / radius / shadow values and
  * compares them against the allowed token set in a DesignMd record.
- * Returns one violation per occurrence (no de-duplication, no
- * short-circuit). Used by the certify gate to block convergence when a
- * generated prototype drifts from the SSOT design tokens.
+ * Returns one violation per distinct `{kind, found}` pair (no
+ * short-circuit): a token that drifts on every one of a thousand CSS
+ * occurrences is one finding, not a thousand, so the operator sees the
+ * distinct offending values. Used by the certify gate to block
+ * convergence when a generated prototype drifts from the SSOT design
+ * tokens.
  */
 
 import type { DesignMd } from "../design/designMd.js";
@@ -21,8 +24,16 @@ export type DesignMdViolation = {
 // `{3,8}` would accept 5/7-digit substrings of unrelated hashes (e.g.
 // `#abcde` from a commit-hash prefix) as colors.
 const HEX_RE = /#(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{3})\b/g;
-const RGB_RE = /rgba?\([^)]*\)/gi;
-const HSL_RE = /hsla?\([^)]*\)/gi;
+// `rgb()` / `hsl()` arguments can themselves contain a parenthesized
+// CSS function — Tailwind's rendered DOM uses the opacity-variable form
+// `rgb(23 56 77 / var(--tw-bg-opacity, 1))`. A `[^)]*` body cannot
+// cross a `)`, so it stops one paren short and reports a `found` string
+// that is unbalanced, invalid CSS, and absent from the source. The body
+// therefore admits one level of nesting: either a non-paren character,
+// or a complete `(...)` group. The two alternatives start with disjoint
+// characters, so the engine never backtracks between them.
+const RGB_RE = /rgba?\((?:[^()]|\([^()]*\))*\)/gi;
+const HSL_RE = /hsla?\((?:[^()]|\([^()]*\))*\)/gi;
 // `url(...)` in CSS carries SVG/filter/mask references whose `#fragment`
 // is an element-id selector, not a color literal. The arg can be quoted
 // (`url("#abc")` / `url('#abc')`) or unquoted (`url(#abc)`), and CSS
@@ -118,8 +129,8 @@ const TAILWIND_PREFLIGHT_LITERALS: ReadonlySet<string> = new Set([
 // / HSL_RE rather than scattered after the scan helpers, so a future
 // reader sees all color-literal regexes at the top of the file.
 const HEX_RE_TEST = /#(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{3})\b/;
-const RGB_RE_TEST = /rgba?\([^)]*\)/i;
-const HSL_RE_TEST = /hsla?\([^)]*\)/i;
+const RGB_RE_TEST = /rgba?\((?:[^()]|\([^()]*\))*\)/i;
+const HSL_RE_TEST = /hsla?\((?:[^()]|\([^()]*\))*\)/i;
 
 // CSS named-color keywords (CSS Color Module Level 4 + legacy). The set
 // is closed: any keyword not here is either a non-color identifier
@@ -667,8 +678,37 @@ function allCssRegions(html: string): string {
   return parts.join("\n");
 }
 
+// Normalize a CSS dimension-bearing value so the *rendered* form and
+// the *authored* DESIGN.md token compare equal. A browser re-serializes
+// what it parsed: `0.375rem` is minified to `.375rem`, inter-token
+// whitespace is collapsed, and unit casing is normalized. Comparing raw
+// strings therefore reports drift for values that are byte-identical
+// once normalized — a `DESIGN.md` declaring `radius.md: "0.375rem"`
+// surfaces as `kind=radius found=".375rem"`. Applied to BOTH sides of
+// the comparison, so the canonical form chosen here is arbitrary as
+// long as it is stable.
+//
+//   `0.375rem`    -> `.375rem`   (redundant leading zero dropped)
+//   `0 0  12px`   -> `0 0 12px`  (whitespace collapsed)
+//   `12PX`        -> `12px`      (case-folded)
+//   `10.5rem`     -> `10.5rem`   (significant leading digits kept)
+function normalizeDimensionValue(value: string): string {
+  return (
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      // Only a zero that is redundant is dropped: the number must start
+      // at a value boundary (string start, whitespace, `,`, `(`, `/`, or
+      // a leading `-`), so `10.5rem` and `1.5rem` are untouched.
+      .replace(/(^|[\s,(/-])0+\.(\d)/g, "$1.$2")
+  );
+}
+
 function scanRadius(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
-  const allowed = new Set<string>(Object.values(dm.visual.radius));
+  const allowed = new Set<string>(
+    Object.values(dm.visual.radius).map((token) => normalizeDimensionValue(token)),
+  );
   const rootDecls = parseRootDeclarations(allCssRegions(html));
   for (const match of html.matchAll(RADIUS_RE)) {
     const captured = match[1] ?? "";
@@ -677,7 +717,9 @@ function scanRadius(html: string, dm: DesignMd, out: DesignMdViolation[]): void 
     const value = unwrapVarReference(raw, rootDecls).trim();
     if (value.length === 0) continue;
     if (SAFE_LITERALS.has(value.toLowerCase())) continue;
-    if (allowed.has(value)) continue;
+    // Compare normalized, report raw: the operator needs to see the
+    // string that is actually in the document.
+    if (allowed.has(normalizeDimensionValue(value))) continue;
     out.push({ kind: "radius", found: value });
   }
 }
@@ -1139,10 +1181,36 @@ function scanTailwindUtility(html: string, dm: DesignMd, out: DesignMdViolation[
   }
 }
 
+// Collapse repeats of the same `{kind, found}` pair, keeping the first
+// occurrence. What that preserves is the order of the array this module
+// built — scanner by scanner, and within a scanner the order its regex
+// walked the document — not the order the values appear in the HTML, since
+// the scanners each sweep the whole document in turn. Every downstream reader
+// (`certify`'s exit-2 gate, `isConverged`, the reviewer-facing
+// `designMdViolations[]` array) treats the list as a set of distinct
+// offending values; before de-duplication a handful of drifting tokens
+// rendered across N screens produced hundreds of identical entries,
+// burying the actual finding count.
+function dedupeViolations(violations: readonly DesignMdViolation[]): DesignMdViolation[] {
+  const seen = new Set<string>();
+  const out: DesignMdViolation[] = [];
+  for (const violation of violations) {
+    // `kind` is a closed enum with no whitespace in any member, so the
+    // first space is an unambiguous field separator even though `found`
+    // (a CSS value) may itself contain spaces.
+    const key = `${violation.kind} ${violation.found}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(violation);
+  }
+  return out;
+}
+
 /**
  * Scan `html` for DESIGN.md token violations. Returns a flat array of
- * violations, one per occurrence, preserving source order within each
- * scan kind. The function is pure (no I/O, no global state).
+ * violations, one per distinct `{kind, found}` pair, preserving source
+ * order within each scan kind. The function is pure (no I/O, no global
+ * state).
  */
 export function findDesignMdViolations(html: string, dm: DesignMd): DesignMdViolation[] {
   const out: DesignMdViolation[] = [];
@@ -1160,5 +1228,8 @@ export function findDesignMdViolations(html: string, dm: DesignMd): DesignMdViol
   // `rounded-xl`, etc.) carry no CSS literal in the rendered HTML
   // and would otherwise slip past every other scanner above.
   scanTailwindUtility(html, dm, out);
-  return out;
+  // The doc contract above promises one entry per distinct {kind, found}
+  // pair; without this call the helper was dead code and the promise was
+  // not kept.
+  return dedupeViolations(out);
 }
