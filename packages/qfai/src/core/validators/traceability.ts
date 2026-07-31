@@ -271,8 +271,13 @@ function createGraphBuilder(root: string): GraphBuilder {
     }),
     build: () => ({
       nodes: Array.from(nodes.values()).sort((a, b) => a.id.localeCompare(b.id)),
+      // `type` is a tie-breaker, not decoration: one `from`/`to` pair can carry
+      // two edges — v1417 gives an EX both `EX_TO_BR` and `EX_TO_AC` — and
+      // sorting on the pair alone left their order at insertion order, so
+      // `traceability.json` diffed against itself between runs.
       edges: Array.from(edges.values()).sort(
-        (a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to),
+        (a, b) =>
+          a.from.localeCompare(b.from) || a.to.localeCompare(b.to) || a.type.localeCompare(b.type),
       ),
     }),
   };

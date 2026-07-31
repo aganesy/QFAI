@@ -92,7 +92,8 @@ export async function writeValidateRunLog(input: {
   try {
     graph = await buildLayeredTraceabilityGraph(root, input.config);
   } catch {
-    graph = { nodes: [], edges: [] };
+    // Keep the empty graph declared above and fall through to the
+    // issue-derived nodes. Reassigning it here said the same thing twice.
   }
   const traceabilityJson = buildTraceabilityJson(root, input.result.issues, graph);
   const summaryMd = buildSummaryMarkdown({
