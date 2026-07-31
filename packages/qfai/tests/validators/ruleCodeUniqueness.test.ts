@@ -1,9 +1,15 @@
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-const coreRoot = path.resolve(process.cwd(), "src", "core");
+// Anchored to this file, not to `process.cwd()`: a runner launched from the
+// repo root resolves `src/core` to a path that does not exist, and the walk
+// below would then scan nothing and pass vacuously.
+// tests/validators/<this file> -> tests -> packages/qfai
+const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const coreRoot = path.join(packageRoot, "src", "core");
 
 /**
  * Every module whose findings `validateProject` merges into its result, not
@@ -181,8 +187,12 @@ const CONST_DECL =
  * makes this a call carrying at least the `(code, message)` pair, so the word
  * "issue(s)" inside a message string is not mistaken for one.
  */
+// The leading `(?<![.\w$])` rejects a member call: `\bissue(` alone matches the
+// tail of `helper.issue(...)`, which is a different function and would be
+// attributed to this one. `(?<!function\s)` still drops the helper's own
+// declaration in `utils.ts`.
 const ISSUE_FIRST_ARG =
-  /(?<!function\s)\bissue\(\s*(?:\/\/[^\n]*\n\s*|\/\*[\s\S]*?\*\/\s*)*("[^"\n]*"|[A-Za-z_$][\w$.]*)\s*,/g;
+  /(?<!function\s)(?<![.\w$])issue\(\s*(?:\/\/[^\n]*\n\s*|\/\*[\s\S]*?\*\/\s*)*("[^"\n]*"|[A-Za-z_$][\w$.]*)\s*,/g;
 
 /**
  * `code: "..."` / `ruleId: "..."` / `code: CONST` on an object literal that is
@@ -237,7 +247,10 @@ async function walkTsFiles(dir: string): Promise<string[]> {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       files.push(...(await walkTsFiles(full)));
-    } else if (entry.name.endsWith(".ts")) {
+    } else if (entry.name.endsWith(".ts") && !entry.name.endsWith(".d.ts")) {
+      // Declaration files emit nothing. Scanning them can only add type-only
+      // constructs to the "dynamic site" set, which is noise in a guard whose
+      // whole output is a list of real emit sites.
       files.push(full);
     }
   }
@@ -262,6 +275,63 @@ async function collectScanFiles(): Promise<string[]> {
  * invisible to the ownership check and a second module could have re-used one
  * without this guard noticing.
  */
+/**
+ * Blank out comments, preserving offsets and line structure.
+ *
+ * `DYNAMIC_SITE_CODES` pins the rule codes a dynamic module can emit, and the
+ * harvest that fills it reads string literals out of the raw source. Without
+ * this, a code named in a comment — the usual way these modules document what
+ * they emit — joined the pinned set, so editing a comment changed the guard's
+ * expected value and the guard failed for no behavioural reason.
+ *
+ * Replacing rather than deleting keeps every other regex in this file matching
+ * the same text at the same place. Not a parser: it tracks string and template
+ * literals so a `//` inside a string is not mistaken for a comment, which is
+ * the only ambiguity that matters here.
+ */
+function stripComments(source: string): string {
+  let out = "";
+  let i = 0;
+  while (i < source.length) {
+    const two = source.slice(i, i + 2);
+    if (two === "//") {
+      const end = source.indexOf("\n", i);
+      const stop = end === -1 ? source.length : end;
+      out += " ".repeat(stop - i);
+      i = stop;
+      continue;
+    }
+    if (two === "/*") {
+      const end = source.indexOf("*/", i + 2);
+      const stop = end === -1 ? source.length : end + 2;
+      out += source.slice(i, stop).replace(/[^\n]/g, " ");
+      i = stop;
+      continue;
+    }
+    const ch = source[i] ?? "";
+    if (ch === '"' || ch === "'" || ch === "`") {
+      let j = i + 1;
+      while (j < source.length) {
+        if (source[j] === "\\") {
+          j += 2;
+          continue;
+        }
+        if (source[j] === ch) {
+          j += 1;
+          break;
+        }
+        j += 1;
+      }
+      out += source.slice(i, j);
+      i = j;
+      continue;
+    }
+    out += ch;
+    i += 1;
+  }
+  return out;
+}
+
 async function scanIssueSources(): Promise<Scan> {
   const files = await collectScanFiles();
   expect(files.length).toBeGreaterThan(0);
@@ -271,7 +341,7 @@ async function scanIssueSources(): Promise<Scan> {
   const dynamicCodes = new Map<string, string[]>();
 
   for (const file of files) {
-    const source = await readFile(file, "utf-8");
+    const source = stripComments(await readFile(file, "utf-8"));
     const relative = path.relative(coreRoot, file).replace(/\\/g, "/");
 
     const constants = new Map<string, string>();
