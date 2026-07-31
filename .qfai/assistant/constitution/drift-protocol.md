@@ -136,7 +136,7 @@ is a defect.
 - **Governance record** — Change Requests (`.qfai/decisions/CR-*.md`) and
   durable decision records (`.qfai/evidence/decisions/*.json`). They carry
   user approval and cannot be regenerated, so they are committed. The managed
-  `.gitignore` block written by `qfai init` negates them after the ignore
+  `.gitignore` block written by `npx qfai init` negates them after the ignore
   lines for exactly this reason.
 
 ## Non-negotiable constraints

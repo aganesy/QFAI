@@ -62,11 +62,11 @@ When unsure, read inputs in this order:
 - Do NOT use Preflight Diff (or any diff-only shortcut) in this skill.
 - Preserve the verify-as-safety-gate intent: verify must not be reduced to incremental checks.
 - "Full-scan" means every gate that applies to the current stage, not every gate in the repository regardless of stage. Each scope names the profile that produces it, and they must match — a `full`-profile run is recorded as `scope: "full"` whatever stage triggered it.
-- **Prototyping carve-out (local only — see "Mandatory checks": CI rejects narrow profiles).** When `/qfai-verify` is invoked to satisfy the prototyping DONE gate — i.e. Work Order H of `/qfai-prototyping`, before `qfai prototyping certify` — the scope is `prototyping`, and the validate run is `qfai validate --profile prototyping --fail-on error`. This is NOT a diff-only shortcut and NOT a waiver: it is the phase-isolation contract the certify gate enforces (`prototypingCertify.ts` accepts only `scope="prototyping"`, and `reviewerGate.ts` raises `R-CERTIFY-VERIFY-CIRCULAR` at severity `error` when a `verify.json` carrying `atdd` / `full` / `implement` is present while a prototyping loop is active). A `full` run at that point necessarily fails `QFAI-ATDD-111/112/113`, which are obligations of stage 5 (`/qfai-atdd`) — a stage that has not run yet. Do not clear them with annotation-only tests; declare the prototyping scope instead.
+- **Prototyping carve-out (local only — see "Mandatory checks": CI rejects narrow profiles).** When `/qfai-verify` is invoked to satisfy the prototyping DONE gate — i.e. Work Order H of `/qfai-prototyping`, before `npx qfai prototyping certify` — the scope is `prototyping`, and the validate run is `npx qfai validate --profile prototyping --fail-on error`. This is NOT a diff-only shortcut and NOT a waiver: it is the phase-isolation contract the certify gate enforces (`prototypingCertify.ts` accepts only `scope="prototyping"`, and `reviewerGate.ts` raises `R-CERTIFY-VERIFY-CIRCULAR` at severity `error` when a `verify.json` carrying `atdd` / `full` / `implement` is present while a prototyping loop is active). A `full` run at that point necessarily fails `QFAI-ATDD-111/112/113`, which are obligations of stage 5 (`/qfai-atdd`) — a stage that has not run yet. Do not clear them with annotation-only tests; declare the prototyping scope instead.
 
 ## Verify Output Contract — `.qfai/output/verify.json`
 
-`/qfai-verify` MUST write `.qfai/output/verify.json` at the end of the run. This file is the machine-readable verdict; `.qfai/evidence/verify-<spec-id>.md` remains the human-readable evidence and does not replace it. Two independent readers consume it — `qfai prototyping certify` and the `R-CERTIFY-VERIFY-CIRCULAR` validator. Only `certify` fails closed: it refuses to seal a certificate when the file is missing, unparseable, or not `status: "PASS"` with `scope: "prototyping"`. The validator is advisory in the other direction — a missing, unparseable, scope-less or unknown-scope `verify.json` produces no finding (`reviewerGate.ts#detectCertifyVerifyCircular`), because its job is to catch a _wrong-phase_ verdict, not to demand that one exist. So an absent `verify.json` will not fail `qfai validate`; it will stop `certify`.
+`/qfai-verify` MUST write `.qfai/output/verify.json` at the end of the run. This file is the machine-readable verdict; `.qfai/evidence/verify-<spec-id>.md` remains the human-readable evidence and does not replace it. Two independent readers consume it — `npx qfai prototyping certify` and the `R-CERTIFY-VERIFY-CIRCULAR` validator. Only `certify` fails closed: it refuses to seal a certificate when the file is missing, unparseable, or not `status: "PASS"` with `scope: "prototyping"`. The validator is advisory in the other direction — a missing, unparseable, scope-less or unknown-scope `verify.json` produces no finding (`reviewerGate.ts#detectCertifyVerifyCircular`), because its job is to catch a _wrong-phase_ verdict, not to demand that one exist. So an absent `verify.json` will not fail `npx qfai validate`; it will stop `certify`.
 
 Canonical path: `.qfai/output/verify.json` (NOT `.qfai/evidence/`). Create the `.qfai/output/` directory if absent.
 
@@ -83,11 +83,11 @@ Canonical path: `.qfai/output/verify.json` (NOT `.qfai/evidence/`). Create the `
 
 `scope` is a closed enum. Write the one that matches the stage you were invoked for:
 
-| `scope`       | Written by                                                                          | validate profile                            | Accepted by                                                                                          |
-| ------------- | ----------------------------------------------------------------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `prototyping` | Work Order H of `/qfai-prototyping`, before `certify`                               | `qfai validate --profile prototyping`       | `qfai prototyping certify` — this is the ONLY value it accepts                                       |
-| `atdd`        | after `/qfai-atdd`, checking ATDD obligations only                                  | `qfai validate --profile atdd`              | rejected by prototyping certify; `R-CERTIFY-VERIFY-CIRCULAR` when a prototyping loop is still active |
-| `full`        | any whole-repository run, including the one after `/qfai-atdd` or `/qfai-implement` | `qfai validate --profile verify` (= `full`) | same as `atdd`                                                                                       |
+| `scope`       | Written by                                                                          | validate profile                                | Accepted by                                                                                          |
+| ------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `prototyping` | Work Order H of `/qfai-prototyping`, before `certify`                               | `npx qfai validate --profile prototyping`       | `npx qfai prototyping certify` — this is the ONLY value it accepts                                   |
+| `atdd`        | after `/qfai-atdd`, checking ATDD obligations only                                  | `npx qfai validate --profile atdd`              | rejected by prototyping certify; `R-CERTIFY-VERIFY-CIRCULAR` when a prototyping loop is still active |
+| `full`        | any whole-repository run, including the one after `/qfai-atdd` or `/qfai-implement` | `npx qfai validate --profile verify` (= `full`) | same as `atdd`                                                                                       |
 
 There is no `implement` value: the enum is closed at these three, and a run after
 `/qfai-implement` is recorded as `full`. (`reviewerGate.ts` still recognises a
@@ -146,8 +146,8 @@ Use the shared schema.
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - Reviewer checks:
   - required roles were delegated;
-  - validate evidence exists: `qfai validate --profile verify --fail-on error` completed with `error=0` — for a `scope: "prototyping"` run this is `qfai validate --profile prototyping --fail-on error` instead, per the prototyping carve-out in "Verify Scope Rule". Requiring the `verify` profile here would reinstate the circular gate: it fails `QFAI-ATDD-111/112/113`, so no reviewer could return PASS before `/qfai-atdd` has run;
-  - per-iter evidence (screenshot + HTML + review.json) exists under `.qfai/evidence/prototyping/iter-NN/`, and the recorded final iteration in `.qfai/evidence/prototyping/prototyping.json#iterations[]` has both screenshot and HTML on disk. The completion-certificate is NOT a verify-gate input — `qfai prototyping certify` runs AFTER `/qfai-verify` (it requires a passing `verify.json`). Cert digest validation belongs to `certify --check`, run during the prototyping handoff or after edits to brand assets, not here;
+  - validate evidence exists: `npx qfai validate --profile verify --fail-on error` completed with `error=0` — for a `scope: "prototyping"` run this is `npx qfai validate --profile prototyping --fail-on error` instead, per the prototyping carve-out in "Verify Scope Rule". Requiring the `verify` profile here would reinstate the circular gate: it fails `QFAI-ATDD-111/112/113`, so no reviewer could return PASS before `/qfai-atdd` has run;
+  - per-iter evidence (screenshot + HTML + review.json) exists under `.qfai/evidence/prototyping/iter-NN/`, and the recorded final iteration in `.qfai/evidence/prototyping/prototyping.json#iterations[]` has both screenshot and HTML on disk. The completion-certificate is NOT a verify-gate input — `npx qfai prototyping certify` runs AFTER `/qfai-verify` (it requires a passing `verify.json`). Cert digest validation belongs to `certify --check`, run during the prototyping handoff or after edits to brand assets, not here;
   - Drift Protocol enforced;
   - test-layer policy enforced against `test-layers.md`.
   - gate counts and ratios are signals, not gates.
@@ -184,7 +184,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
 - You MUST write `.qfai/output/verify.json` per "Verify Output Contract" above. Downstream gates read that file, not the evidence markdown.
 - You MUST run the mandatory checks listed below and record outcomes.
-- In CI, you MUST keep QFAI validation on full-scan mode (`qfai validate --profile verify --fail-on error` or default `qfai validate --fail-on error`). Do NOT use partial profiles. This has no exception: `phasePolicy.ts` rejects every narrow profile (`discussion` / `prototyping` / `atdd`) under `CI=true` or `GITHUB_ACTIONS=true` with `QFAI-VALIDATE-017`. The prototyping carve-out below is a local, pre-`certify` run — it cannot be, and must not be wired as, a CI job.
+- In CI, you MUST keep QFAI validation on full-scan mode (`npx qfai validate --profile verify --fail-on error` or default `npx qfai validate --fail-on error`). Do NOT use partial profiles. This has no exception: `phasePolicy.ts` rejects every narrow profile (`discussion` / `prototyping` / `atdd`) under `CI=true` or `GITHUB_ACTIONS=true` with `QFAI-VALIDATE-017`. The prototyping carve-out below is a local, pre-`certify` run — it cannot be, and must not be wired as, a CI job.
 - Waivers are only for `warning` / `info` findings. If a waiver attempts to suppress an `error`, treat it as a failure and fix the root cause.
 - You MUST stop and escalate if any gate fails without an actionable fix list.
 - Completion must be approved by a reviewer who did not run the gates.
@@ -201,7 +201,7 @@ Run quality gates and produce evidence that the change is correct and safe.
 ## Success Criteria (Definition of Done)
 
 - Repo quality gates PASS (format/lint/type/test/build/etc).
-- QFAI checks PASS (at minimum: `qfai validate --profile verify`, or `--profile prototyping` for a `scope: "prototyping"` run; optionally `qfai report`).
+- QFAI checks PASS (at minimum: `npx qfai validate --profile verify`, or `--profile prototyping` for a `scope: "prototyping"` run; optionally `npx qfai report`).
 - Declared screens have mandatory screenshot and HTML evidence.
 - A concise evidence summary exists (copy‑paste for PR).
 - The PR-ready summary includes **Change Classification (Primary/Tags)** per `.qfai/assistant/constitution/change-classification.md`.
@@ -390,8 +390,8 @@ If unknown, propose defaults and mark assumptions.
 
 Run (adjust as needed):
 
-- `qfai validate --profile verify --fail-on error` — or `qfai validate --profile prototyping --fail-on error` when this run's scope is `prototyping`
-- `qfai report` (if used in this repo)
+- `npx qfai validate --profile verify --fail-on error` — or `npx qfai validate --profile prototyping --fail-on error` when this run's scope is `prototyping`
+- `npx qfai report` (if used in this repo)
 
 Notes:
 
@@ -503,11 +503,11 @@ Evidence must include:
 1. QFAI validation:
 
    ```bash
-   qfai validate --profile verify --fail-on error
+   npx qfai validate --profile verify --fail-on error
    ```
 
    For a `scope: "prototyping"` run, this gate is
-   `qfai validate --profile prototyping --fail-on error` instead. The `verify`
+   `npx qfai validate --profile prototyping --fail-on error` instead. The `verify`
    profile is not achievable before `/qfai-atdd` has run — see the prototyping
    carve-out in "Verify Scope Rule".
 
@@ -530,7 +530,7 @@ If you cannot run these commands (environment limitation):
 - `.qfai/output/verify.json` — the machine-readable verdict (`status` + `scope`), per "Verify Output Contract". Downstream gates read this file.
 - `.qfai/evidence/verify-<spec-id>.md` — the human-readable evidence summary with all gate results
 - All gates: PASS confirmed
-- Next action suggestion: proceed to PR creation (use your platform workflow), or — for a `scope: "prototyping"` run — proceed to `qfai prototyping certify`
+- Next action suggestion: proceed to PR creation (use your platform workflow), or — for a `scope: "prototyping"` run — proceed to `npx qfai prototyping certify`
 
 ## DONE Declaration (Mandatory Output)
 
@@ -565,7 +565,7 @@ When this skill is complete, provide a final user-facing completion message and 
 - Any gate failed:
   Action: return to the owning skill, fix the issue, then rerun `/qfai-verify`.
 - Need a report artifact:
-  Action: run `qfai report` after validation outputs are up to date.
+  Action: run `npx qfai report` after validation outputs are up to date.
 
 ## Default Autopilot Policy
 

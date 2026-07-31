@@ -5,6 +5,7 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { parseFirstMarkdownTable, resolveTestCaseTable } from "../specPackParsers.js";
+import { EXCEPTION_PARKED_RULE_ID } from "../ruleIds.js";
 import { isCoverageTargetLevel, splitTcRefs, resolveParentTcId } from "../tddHelpers.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
@@ -83,6 +84,20 @@ function isChangeRequestRefsOnly(drId: string): boolean {
 }
 
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
+
+/**
+ * Waiver rule id for `TDDLIST_EXCEPTION_PARKED`.
+ *
+ * A parked item that carries a user-approved accepted risk is a legitimate
+ * end state, but the ledger row alone cannot prove the DR-ID was approved.
+ * `.qfai/waivers.yml` is the approval artifact QFAI already has (it requires
+ * `id`/`reason`/`expires`/`evidence` and expires), so the finding is emitted
+ * under a rule id `waivers.ts#resolveRuleId` accepts.
+ *
+ * Re-exported from `core/ruleIds.ts`, which `waivers.ts` also reads, so the two
+ * cannot drift apart on a rename.
+ */
+export { EXCEPTION_PARKED_RULE_ID };
 
 /** Per-spec file that owns the Test Case Table, and the target of its findings. */
 const TEST_CASES_FILE_NAME = "06_Test-Cases.md";
@@ -305,6 +320,57 @@ async function validateSpecTddList(
       } else {
         seen.set(tddId, rowIdx);
       }
+    }
+  }
+
+  // Phase 2 – Check 8b: parked items must be visible in CI.
+  //
+  // `exception` is a completion-satisfying terminal that no validator reported,
+  // so the cheapest fully-compliant path to "implementation complete" was to
+  // park every unfinished item there. A warning per row makes the parking
+  // visible without breaking existing runs.
+  if (statusIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const row = table.rows[rowIdx];
+      if (!row) continue;
+      if ((row[statusIndex] ?? "").trim().toLowerCase() !== "exception") continue;
+      const tddId = tddIdIndex >= 0 ? (row[tddIdIndex] ?? "").trim() : "";
+      const drId = drIdIndex >= 0 ? (row[drIdIndex] ?? "").trim() : "";
+      const hasDrId = drId.length > 0 && drId !== "-";
+      // Every row of one ledger shares the same rule AND the same file, so a
+      // waiver matched on `rule` + `scope.paths` alone would clear every parked
+      // row at once — including ones the operator never approved. `dl_id` is the
+      // only per-finding key `waivers.ts#matchesWaiver` compares, so the row
+      // identity goes there and `WAIVER-005` refuses a waiver that omits it.
+      //
+      // That identity must be unique to ONE row. TDD-ID is (TDDLIST_DUPLICATE_ID
+      // enforces it within a ledger), so it is used when present. A DR-ID is
+      // NOT: several parked rows can cite the same decision record, and keying
+      // on it let one `match.dl_ids` entry suppress every row carrying that DR —
+      // reintroducing the over-suppression this key exists to prevent. Anything
+      // without a TDD-ID falls back to its row position, which is unique by
+      // construction.
+      const rowKey = tddId.length > 0 ? tddId : `row ${rowIdx + 1}`;
+      // Only the TDD-ID form is a "TDD-ID"; the fallback is a row position, and
+      // telling an operator to put a TDD-ID in `match.dl_ids` when the value is
+      // `row 3` would send them looking for one that does not exist.
+      const rowKeyLabel = tddId.length > 0 ? `TDD-ID ${rowKey}` : `row identifier "${rowKey}"`;
+      issues.push(
+        issue(
+          "TDDLIST_EXCEPTION_PARKED",
+          `TDD item "${rowKey}" in spec-${specNumber} is parked at Status=exception${hasDrId ? ` (DR-ID ${drId})` : ""}. Resolve it (\`exception -> todo\`), or record the accepted risk as a \`${EXCEPTION_PARKED_RULE_ID}\` waiver in \`.qfai/waivers.yml\` naming this row in \`match.dl_ids\``,
+          "warning",
+          relPath,
+          // Rule id, not a dotted path: `waivers.ts#resolveRuleId` only accepts
+          // `^[A-Z]+-\d{3}$`, so a dotted name could never be waived and the
+          // accepted-risk case the message points at had no way to clear.
+          EXCEPTION_PARKED_RULE_ID,
+          hasDrId ? [drId] : undefined,
+          "change",
+          `承認済みの accepted risk である場合は \`.qfai/waivers.yml\` に rule: ${EXCEPTION_PARKED_RULE_ID} の waiver（id / reason / expires / evidence / scope.paths / match.dl_ids が必須）を登録してください。match.dl_ids には対象行の ${rowKeyLabel} だけを列挙します。作業を再開する場合は \`exception -> todo\` で戻してください。`,
+          { dl_id: rowKey },
+        ),
+      );
     }
   }
 

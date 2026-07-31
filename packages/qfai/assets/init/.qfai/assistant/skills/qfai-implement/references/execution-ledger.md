@@ -46,6 +46,11 @@ Allowed transitions:
   record of why a completed row was reopened. A row swept out of `exception`
   keeps the anomaly's DR-ID alongside the reset ID. A reset without a recorded
   approval is a backward transition and is prohibited.
+- `exception` -> `todo` — **anomaly resolved**, the item re-enters the cycle
+  from the start. This is the exit `exception` previously lacked; without it a
+  parked item could never be un-parked without a lifecycle violation. Distinct
+  from the upstream reset above: nothing upstream changed, so it needs no CR/DR
+  approval — the anomaly's own DR-ID stays in place.
 - A reset row is at `todo`, so it owes no test file until it reaches `green`.
   The `Test file` existence check is unchanged for `green` / `refactor` /
   `done`: those statuses assert a test that ran.
@@ -61,8 +66,27 @@ backward transition. Preconditions and the reset procedure:
 
 ## Exception Handling
 
+`exception` means **anomaly, work paused** — not "accepted risk, closed". The
+two are different states sharing one status today; the `DR-ID` distinguishes
+them and only the accepted-risk form is completion-satisfying. Resolve a paused
+item via `exception` -> `todo`.
+
 When transitioning to `exception`:
 
 - A DR-ID (Decision Record ID) must be recorded in the DR-ID column.
 - A retained `CR-*` does not satisfy this: it records the approved reopen, not the anomaly. Add the `DR-*` alongside it (`DR-NNNN, CR-YYYYMMDD-NNNN`).
 - If the DR-ID column is empty, or holds `CR-*` references only, emit error: `"exception status requires DR-ID in DR-ID column"`.
+
+### Parked items and the `TDDLIST-001` waiver
+
+Every `exception` row raises `TDDLIST_EXCEPTION_PARKED` (warning, rule
+`TDDLIST-001`). The validator cannot read the DR to tell a paused defect from an
+approved accepted risk, so the approval is recorded where QFAI already checks
+approvals: a `TDDLIST-001` waiver in `.qfai/waivers.yml`.
+
+The waiver carries `id` / `reason` / `expires` / `evidence` / `scope.paths`,
+plus `match.dl_ids` listing the approved rows' `TDD-ID`s. `match.dl_ids` is not
+optional — omit it and `QFAI-WAIVER-005` rejects the waiver, because a single
+path-scoped entry would otherwise clear every parked row in the same ledger.
+
+Without a matching waiver the warning stands, which is the intended signal.

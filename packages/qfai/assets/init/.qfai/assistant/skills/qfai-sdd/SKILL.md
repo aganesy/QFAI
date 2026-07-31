@@ -193,7 +193,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 5. `_policies/04_Business-Flow.md` must be Markdown with Mermaid `flowchart` or `sequenceDiagram`.
 6. `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
 7. `06_Test-Cases.md` must include `TC-ID`, `EX-Ref`, `AC-Refs`, and `Type`, with normal-path plus error/boundary coverage.
-8. Stop only when `qfai validate --profile sdd --fail-on error --format github` exits with `error=0`.
+8. Stop only when `npx qfai validate --profile sdd --fail-on error --format github` exits with `error=0`.
 
 ## Required Process
 
@@ -202,7 +202,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 3. Write `.qfai/report/preflight_summary.md`.
 4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase, and freeze root `DESIGN.md` per the Phase 0 DESIGN.md Freeze step below). Close Phase 0 with the cross-contract reconciliation step in `references/contract-artifact-rules.md#cross-contract-reconciliation-must`.
 5. Phase 1: Outline (`_policies/01..11`).
-6. Phase 2: Slice (per spec, gate each).
+6. Phase 2: Slice (per spec, gate each with `npx qfai validate --profile sdd --fail-on error --spec <spec-id>` so a parallel worker gates on its own spec only and does not import a sibling agent's in-flight failures). A `--spec` run writes `<report>/validate.spec-<id>.json` and never the shared `validate.json` / `validate-<profile>.json`, so parallel workers cannot race on one file; an unknown or unparseable `--spec` value fails the run (`QFAI-SCOPE-001` / `QFAI-SCOPE-002`) instead of silently widening to the whole repo.
 7. Phase 3: Plan finalize (after at least one slice gate passes).
 8. Phase 4: Delta update.
 9. Run validate; fix source-layer artifacts and rerun until `error=0`.
@@ -232,7 +232,7 @@ When the target spec is UI-bearing, Phase 0 MUST freeze the brand SSOT:
    user to author this product's own brand SSOT, deleting the
    `QFAI-SAMPLE-DESIGN-MD` marker comment if present (samples from
    releases older than the marker are recognised by content instead).
-   `qfai init` seeds the sample into the project root and never overwrites
+   `npx qfai init` seeds the sample into the project root and never overwrites
    it, so step 1's missing-file check cannot catch this — an unreplaced
    sample parses and validates by construction, and freezing it binds
    `/qfai-prototyping` and the reviewer lock rule to a fictional brand.

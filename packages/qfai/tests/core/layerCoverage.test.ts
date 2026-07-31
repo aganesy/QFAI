@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
+import { access, mkdtemp, mkdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -652,5 +652,55 @@ describe("specs-coverage Signals section", () => {
       message: "thin coverage",
     });
     expect(expected).toBe(THIN_COVERAGE_SIGNAL_EXPECTATION);
+  });
+});
+
+describe("validateLayerCoverage spec scope", () => {
+  const exists = async (target: string): Promise<boolean> => {
+    try {
+      await access(target);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  it("validates and reports only the scoped specs", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-scope-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"]);
+      await seedV1421Spec(root, "0003", "CAP-0001");
+      await seedV1421Spec(root, "0004", "CAP-0002");
+
+      // spec-0004 is broken: AC-0002 loses its only TC.
+      await writeFile(
+        path.join(root, ".qfai", "specs", "spec-0004", "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "| TC-ID   | Level | AC-Refs | EX-Ref  | Steps  | Expected   | Notes   |",
+          "| ------- | ----- | ------- | ------- | ------ | ---------- | ------- |",
+          "| TC-0001 | L2    | AC-0001 | EX-0001 | step-1 | expected-1 | note-1  |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const scoped = await validateLayerCoverage(root, defaultConfig, {
+        specScope: new Set(["0003"]),
+      });
+      expect(scoped.some((entry) => entry.code === "QFAI-COV-201")).toBe(false);
+
+      const coverageRoot = path.join(root, ".qfai", "report", "specs-coverage");
+      expect(await exists(path.join(coverageRoot, "spec-0003.md"))).toBe(true);
+      // A --spec-limited run must not dirty a sibling spec's report.
+      expect(await exists(path.join(coverageRoot, "spec-0004.md"))).toBe(false);
+
+      const unscoped = await validateLayerCoverage(root, defaultConfig);
+      expect(unscoped.some((entry) => entry.code === "QFAI-COV-201")).toBe(true);
+      expect(await exists(path.join(coverageRoot, "spec-0004.md"))).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

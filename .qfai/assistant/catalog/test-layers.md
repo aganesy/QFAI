@@ -98,7 +98,7 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
   statement in this section: no volume observation blocks completion, and none
   triggers a Change Request.
 - Completion gate is validation pass with no errors:
-  - `qfai validate --fail-on error`
+  - `npx qfai validate --fail-on error`
 
 If an observed layer distribution looks wrong:
 

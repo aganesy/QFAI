@@ -4,7 +4,7 @@ Use this file when working on traceability-heavy parts of `/qfai-sdd`.
 
 ## Required Layered Layout
 
-`qfai validate` treats specs as a layered package:
+`npx qfai validate` treats specs as a layered package:
 
 - Shared policies: `.qfai/specs/_policies/**`
 - Capability specs: `.qfai/specs/spec-*/**`
@@ -77,9 +77,46 @@ ID reference direction (the value of `Refs:` columns) must be lower-to-upper onl
     only in `Notes` are untraced.
   - `EX-0001` -> `BR-Ref` in `05_Examples.md`
   - `TC-0001` -> `EX-Ref` and `AC-Refs` in `06_Test-Cases.md`
-- `_policies/**` must not contain spec-local lower-layer IDs — the 4-digit forms
-  `US-NNNN` / `AC-NNNN` / `BR-NNNN` / `EX-NNNN` / `TC-NNNN` — or per-spec references.
-  This is exactly what `TRACE_SHARED_SCOPE_VIOLATION` enforces.
+- `_policies/**` must not **define or own** lower-layer items. Concretely: no
+  traceability edge in `_policies/**` may name a lower-layer ID — no `Parent:`,
+  `Refs:`, `AC-Refs`, `BR-Ref` or `EX-Ref` value, and no heading that declares a
+  `US/AC/BR/EX/TC` item.
+- **How this is enforced today is broader than that intent.** `QFAI-LAYER-100`
+  and `TRACE_SHARED_SCOPE_VIOLATION` are a token scan: they match any
+  `US/AC/BR/EX/TC-NNNN` anywhere in a `_policies/**` file, not only in an
+  ownership or definition position. Outside the Triage carve-out below, a plain
+  prose citation is therefore reported too. Treat the ownership/definition rule
+  as the _intent_ and the token scan as the _current mechanism_; when you need
+  to name a lower-layer item in `_policies/**`, put it in the Triage table rows,
+  which is the one place the scan skips.
+- _Citing_ a lower-layer ID or a `spec-NNNN` inside the **Triage table rows** of
+  `_policies/10_delta.md` is explicitly allowed. `sdd-triage.md` requires
+  cross-spec and policy-only Triage rows to be persisted there, and
+  `QFAI-TRIAGE-002` makes `Existing Spec` (a `spec-NNNN` value) a required
+  column — so the `Existing Spec`, `Approved By` and `Rationale` cells must be
+  able to name what actually changed, verbatim. `QFAI-LAYER-100` and
+  `TRACE_SHARED_SCOPE_VIOLATION` skip those rows for this reason.
+- The carve-out is exactly that narrow, so it cannot be used as an escape
+  hatch:
+  - **file** — `_policies/10_delta.md` only. A `## Triage` heading anywhere
+    else under `_policies/**` (`11_Slice-Policy.md`, `01_Objective.md`, ...)
+    gets no exemption.
+  - **heading** — the canonical `## Triage` H2 only, matching what
+    `QFAI-TRIAGE-001..007` validate. `# Triage`, `### Triage` and
+    `## Triage notes` are not exempt.
+  - **line shape** — markdown table rows only. A heading that declares an item
+    (`### AC-0001-0001`) or a traceability edge (`- Parent: US-0001-0001`)
+    inside the Triage section is still a violation, because it defines or owns
+    rather than cites.
+  - **table identity** — the mandated Triage table only. A second table under
+    `## Triage` is exempt only when its header carries the full canonical
+    column set (`Source`, `Subject`, `Existing Spec`, `Operation`, `Sub-op`,
+    `Approved By`, `Rationale`); order may differ, since the Triage validators
+    resolve columns by name. A table reusing only one or two of those names
+    earns no exemption.
+  - **column** — within an exempt table, only cells under a canonical column
+    are skipped. An author-added column (`Parent`, `Refs`, ...) keeps its cells
+    visible to the scan.
 - Discussion-layer IDs (`DUS-001`, `DAC-001-01`, `DTC-1`, `DSC-001`) are a different
   namespace and are explicitly allowed in `_policies/**` and in `Source` fields. They are
   how provenance back to the discussion pack stays machine-checkable; do not rewrite them
