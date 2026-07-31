@@ -60,7 +60,13 @@ Skill-specific examples:
 - The `exception` status can be reached from any active status when an anomaly is detected.
 - Backward transitions are prohibited (e.g., `green` -> `red` is not allowed). The only exception is an approved Change Request reset (see Status Lifecycle).
 - Completed items (`done`) are skipped on re-execution, unless an approved Change Request reset them.
-- When all items are `done` **and the mandatory Change Request preflight (see Required Process) reset nothing**, report "nothing to do" and exit.
+- When every item is terminal (`done` or a valid `exception`) **and the mandatory Change Request
+  preflight (see Required Process) reset nothing**, the per-item work is finished — but the
+  **spec-level checkpoint boundary** may still be owed — an interrupted run, or a re-run of an
+  already-terminal ledger, leaves it unrecorded. Before reporting "nothing to do" and exiting,
+  confirm fresh spec-level checkpoint verification evidence exists for this ledger state; run the
+  per-spec verification first when it is missing or stale. See
+  `references/checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`.
 
 ## Goal
 
@@ -83,45 +89,12 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 ## Execution Ledger: test-list.md
 
-The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` tracks progress with these required columns:
+The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single record of what this
+skill has done and may still do. Status values are `todo`, `red`, `green`, `refactor`, `done`,
+`exception`; the lifecycle is forward-only and an `exception` requires a DR-ID.
 
-| Column    | Description                                                                                                                                                                                                                 |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                                                                                                                                                         |
-| TC-Refs   | References to test cases from `06_Test-Cases.md`                                                                                                                                                                            |
-| Layer     | Test layer (Unit, Integration, etc.)                                                                                                                                                                                        |
-| Test file | Path to the test file                                                                                                                                                                                                       |
-| Selector  | Test selector/description for targeted execution                                                                                                                                                                            |
-| Status    | Current lifecycle status                                                                                                                                                                                                    |
-| DR-ID     | Decision Record / Change Request IDs, comma-separated: a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses; blank otherwise |
-| Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                                                                                                                                                        |
-
-### Status Lifecycle
-
-Valid status values: `todo`, `red`, `green`, `refactor`, `done`, `exception`.
-
-Allowed transitions:
-
-- `todo` -> `red` (write a failing test)
-- `red` -> `green` (make the test pass with minimal code)
-- `green` -> `refactor` (improve code quality while keeping tests green)
-- `refactor` -> `done` (item complete)
-- Any active status -> `exception` (anomaly detected; record DR-ID in DR-ID column)
-
-Backward transitions are prohibited. Attempting `green` -> `red` must produce:
-`"Backward transition prohibited: green -> red"`.
-
-The one exception is an approved Change Request reset — the only sanctioned
-backward transition. Preconditions and the reset procedure:
-`references/change-request-reset.md`.
-
-### Exception Handling
-
-When transitioning to `exception`:
-
-- A DR-ID (Decision Record ID) must be recorded in the DR-ID column.
-- A retained `CR-*` does not satisfy this: it records the approved reopen, not the anomaly. Add the `DR-*` alongside it (`DR-NNNN, CR-YYYYMMDD-NNNN`).
-- If the DR-ID column is empty, or holds `CR-*` references only, emit error: `"exception status requires DR-ID in DR-ID column"`.
+The eight required columns, the allowed transitions and the exception rules are in
+`references/execution-ledger.md`. Read it before writing to the ledger.
 
 ## Required Process
 
@@ -150,7 +123,7 @@ When transitioning to `exception`:
 2. Run the full relevant test suite to confirm nothing broke.
 3. Transition status to `refactor`.
 4. Submit for completion review (`completion-reviewer`) and code quality review (`implementation-reviewer`).
-5. After all routed blocking reviewers return PASS, run checkpoint verification, then transition to `done`.
+5. After all routed blocking reviewers return PASS, run checkpoint verification (see `#checkpoint-verification`), then transition to `done`.
 
 ### Completion
 
@@ -267,7 +240,7 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 8. `implementation-reviewer` returned PASS (code quality review gate)
 9. UI-affecting items have prototype parity PASS from `product-surface-reviewer`
 10. `test-list.md` Status and Evidence columns are updated with fresh evidence
-11. Checkpoint verification passed
+11. Checkpoint verification passed (see `#checkpoint-verification`)
 
 ### Spec completion conditions
 
@@ -276,7 +249,7 @@ The skill may declare "this spec's implementation is complete" only when:
 - All TC-\* from `06_Test-Cases.md` with applicable layer are present in `test-list.md`
 - Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain
-- Checkpoint verification passed
+- Checkpoint verification passed at the spec-level boundary (see `#checkpoint-verification`)
 - No unresolved Change Request or waiver dependency exists. The gate covers only
   the `.qfai/decisions/CR-*.md` **in scope for this spec** — `Impact scope` names
   this spec or a shared policy it depends on, or this spec's artifacts reference
@@ -301,7 +274,7 @@ Completion MUST NOT be declared when any of the following are true:
 - Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned FAIL
 - Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
 - Parallel slices were used but integration verify has not been run post-merge
-- Checkpoint boundary was reached but verification was not executed
+- A checkpoint boundary was reached (see `#checkpoint-verification`) but the verification command set was not executed, or any command in it exited non-zero
 - `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-001`). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID.
 
 ## Evidence (MANDATORY)
@@ -331,6 +304,8 @@ Each TDD item MUST have fresh evidence containing at minimum:
 - `Spec review` — completion-reviewer result (PASS or FAIL)
 - `Code quality review` — implementation-reviewer result (PASS or FAIL)
 - `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE)
+- `Checkpoint verification command` — the exact command set executed at the checkpoint boundary
+- `Checkpoint verification result` — the outcome of that command set (PASS only when every command exits 0)
 
 ### Evidence hard rules
 
@@ -339,18 +314,21 @@ Each TDD item MUST have fresh evidence containing at minimum:
 - Stale evidence from a previous run MUST NOT be reused to claim completion for a new cycle
 - Empty evidence entries are rejected: minimum evidence per TDD item must be met
 
+## Checkpoint Verification
+
+"Checkpoint verification" is the whole-repository regression check run at a checkpoint boundary. It
+is what item 11 of the 11-point gate refers to and the only thing it refers to. A boundary is
+reached **per item** (after all routed blocking reviewers return PASS, before `refactor` -> `done`)
+and **per spec** (after the last ledger row is terminal). There is no "every N items" rule.
+
+It PASSES only when **every** command in the verification command set exits 0; a partial run is not
+a pass. The boundary definition, command set, pass criteria and evidence fields are in
+`references/checkpoint-verification.md`.
+
 ## FINAL CHECKLIST (Check Last)
 
-- [ ] CRITICAL CONSTRAINTS were followed.
-- [ ] Each item was processed one test at a time.
-- [ ] Red phase: test was written and confirmed to fail.
-- [ ] Green phase: minimal code was written and test confirmed to pass.
-- [ ] Refactor phase: code improved with tests still passing.
-- [ ] `test-list.md` statuses are accurate.
-- [ ] No backward transitions occurred.
-- [ ] Exception items have DR-IDs recorded.
-- [ ] All tests pass.
-- [ ] `qfai validate --profile tdd --fail-on error` passes with zero `QFAI-TEST-001` findings (no `it.todo` / `test.todo` / `describe.todo` stubs remain).
+Work through `references/final-checklist.md` immediately before the completion message. Every box
+must be ticked; a box that cannot be ticked is a reason not to declare completion.
 
 ## Completion Checklist (MUST)
 

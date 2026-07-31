@@ -90,12 +90,18 @@ describe("a Change Request is a defined artifact", () => {
     });
 
     it(`${tree}: the DR-ID column and the reset rule agree`, async () => {
-      const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+      // The ledger column table moved out of SKILL.md into this reference under
+      // the progressive-disclosure budget (#414), so the column definition is
+      // asserted where it now lives.
+      const ledger = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/execution-ledger.md",
+      );
       // The old wording ("exception items (blank otherwise)") let the CR-ID be
       // cleared on the next transition; no validator reads DR-ID outside
       // `exception`.
-      expect(skill).not.toContain("Decision Record ID for exception items (blank otherwise)");
-      expect(skill).toContain(
+      expect(ledger).not.toContain("Decision Record ID for exception items (blank otherwise)");
+      expect(ledger).toContain(
         "a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses",
       );
 
@@ -107,11 +113,16 @@ describe("a Change Request is a defined artifact", () => {
     });
 
     it(`${tree}: a retained CR-ID does not stand in for an exception's DR-ID`, async () => {
-      const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
-      expect(skill).toContain(
+      // Exception handling moved alongside the column table into the ledger
+      // reference (#414); assert it where it lives.
+      const ledger = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/execution-ledger.md",
+      );
+      expect(ledger).toContain(
         "A retained `CR-*` does not satisfy this: it records the approved reopen, not the anomaly.",
       );
-      expect(skill).toContain(
+      expect(ledger).toContain(
         'If the DR-ID column is empty, or holds `CR-*` references only, emit error: `"exception status requires DR-ID in DR-ID column"`',
       );
 
@@ -130,8 +141,11 @@ describe("a Change Request is a defined artifact", () => {
       expect(skill).toContain(
         "### Phase: Preflight (Change Request reset) — MANDATORY, runs first",
       );
+      // The all-terminal exit bullet also carries the spec-level checkpoint
+      // obligation added by #304, so assert the preflight clause rather than
+      // the whole sentence.
       expect(skill).toContain(
-        'When all items are `done` **and the mandatory Change Request preflight (see Required Process) reset nothing**, report "nothing to do" and exit.',
+        "**and the mandatory Change Request\n  preflight (see Required Process) reset nothing**",
       );
       expect(skill.indexOf("### Phase: Preflight")).toBeLessThan(
         skill.indexOf("### Phase: Red (Write Failing Test)"),
