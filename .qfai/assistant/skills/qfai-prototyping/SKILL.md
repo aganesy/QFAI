@@ -90,7 +90,13 @@ prior invocation pattern is byte-equivalent when no flag is passed:
 - `--auto-serve` — start an in-process `node:http` server rooted at
   the prototype tree for the cycle. SIGINT teardown <= 2 s;
   EADDRINUSE on a foreign owner exits 2 (no foreign-process kill).
-  Use when no external dev server is running.
+  Use when no external dev server is running. Routing is SPA-style:
+  a document request (GET/HEAD with `text/html` in `Accept`) that
+  matches no file on disk is served `index.html`, so client-side and
+  parameterized contract routes (`/overview`,
+  `/pairs/:instrument`) resolve instead of 404-ing. Sub-resource
+  requests (`.css`, `.png`, `fetch()`) still 404 when genuinely
+  missing, and the path-traversal 403 guard runs first.
 - `--check-convergence` — read-only peek of `prototyping.json`.
   Exits `0` when converged (`stopReason === "axes-exceptional"` with
   `acceptedIterationIndex` set), exits `2` otherwise. No writes,
