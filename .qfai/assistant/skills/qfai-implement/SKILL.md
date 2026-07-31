@@ -138,10 +138,24 @@ When transitioning to `exception`:
 ### Phase: Refactor
 
 1. Improve code quality (naming, structure, duplication removal) while keeping all tests green.
-2. Run the **relevant test suite** to confirm nothing broke. "Relevant" means the smallest selector that covers the module you touched **plus its reverse dependency closure** — walk the production import graph backwards, not just the test files that import the module directly. Fall back to the package containing the touched module whenever that walk cannot be completed; never "every test in the repository" at this step. Cadence: **narrow suite per item, full suite at each checkpoint boundary**, because a full run per item is quadratic in ledger size. Full rules, the fallback triggers and the boundary list: `references/relevant-test-suite.md`.
+2. Run the **relevant test suite** to confirm nothing broke. "Relevant" means the
+   smallest selector that covers the module you touched **plus its reverse
+   dependency closure** — walk the production import graph backwards, not just the
+   test files that import the module directly. Fall back to the package containing
+   the touched module whenever that walk cannot be completed; never "every test in
+   the repository" at this step. Cadence: **narrow suite per item, full suite at
+   each checkpoint boundary**, because a full run per item is quadratic in ledger
+   size. Full rules, the fallback triggers and the boundary list:
+   `references/relevant-test-suite.md`.
 3. Transition status to `refactor`.
-4. Submit for completion review (`completion-reviewer`) and code quality review (`implementation-reviewer`).
-5. After all routed blocking reviewers return PASS, run checkpoint verification **while the item is still `refactor`** — the full suite when the item sits on a checkpoint boundary, step 2's narrow suite otherwise. Transition to `done` only on PASS; on failure transition to `exception` with a DR-ID (legal from `refactor`, whereas re-opening a `done` row is not).
+4. Submit for completion review (`completion-reviewer`) and code quality review
+   (`implementation-reviewer`).
+5. After all routed blocking reviewers return PASS, run checkpoint verification
+   **while the item is still `refactor`**. On a checkpoint boundary that means the
+   full suite. Off a boundary it is already satisfied by step 2's narrow suite —
+   nothing is re-run. Transition to `done` only on PASS; on failure transition to
+   `exception` with a DR-ID (legal from `refactor`, whereas re-opening a `done` row
+   is not).
 
 ### Completion
 
