@@ -13,6 +13,23 @@ const HEADERS =
 const SEP =
   "| -------- | ------- | ----- | --------------- | -------- | --------- | ------ | -------- |";
 
+/**
+ * A `06_Test-Cases.md` whose table resolves. `resolveTestCaseTable` is
+ * section-scoped, so the `## Test Case Table` heading is load-bearing: without
+ * it the pack raises TDDLIST_TC_TABLE_UNRESOLVED, which is a warning about the
+ * spec pack rather than about the parked row under test.
+ */
+const TEST_CASE_TABLE = [
+  "# 06 Test Cases",
+  "",
+  "## Test Case Table",
+  "",
+  "| TC-ID   | Level | AC-Refs | EX-Ref  | Steps  | Expected   |",
+  "| ------- | ----- | ------- | ------- | ------ | ---------- |",
+  "| TC-0001 | L1    | AC-0001 | EX-0001 | step-1 | expected-1 |",
+  "",
+].join("\n");
+
 async function withLedger(
   rows: string[],
   assertion: (issues: Awaited<ReturnType<typeof validateTddList>>) => void,
@@ -146,14 +163,14 @@ describe("an approved accepted risk can clear the parked warning", () => {
     try {
       const specDir = path.join(root, ".qfai", "specs", "spec-0001");
       await mkdir(path.join(specDir, "tdd"), { recursive: true });
-      for (const file of [
-        "01_Spec.md",
-        "02_User-stories.md",
-        "03_Acceptance-Criteria.md",
-        "06_Test-Cases.md",
-      ]) {
+      for (const file of ["01_Spec.md", "02_User-stories.md", "03_Acceptance-Criteria.md"]) {
         await writeFile(path.join(specDir, file), "# seed\n", "utf-8");
       }
+      // A resolvable `## Test Case Table` — otherwise the pack raises
+      // TDDLIST_TC_TABLE_UNRESOLVED, an unrelated warning that would make the
+      // "no un-suppressed warning remains" assertions below fail for a reason
+      // that has nothing to do with waiving the parked row.
+      await writeFile(path.join(specDir, "06_Test-Cases.md"), TEST_CASE_TABLE, "utf-8");
       await writeFile(
         path.join(specDir, "tdd", "test-list.md"),
         [HEADERS, SEP, ...rows].join("\n"),

@@ -92,10 +92,20 @@ forms caught:
 
 - Inline `border-radius: 12px` / `border-radius: 0.5rem`.
 - Tailwind arbitrary `rounded-[13px]`, `rounded-[0.5rem]`.
-- Tailwind scale aliases (`rounded`, `rounded-sm`, `rounded-md`,
-  `rounded-lg`, `rounded-xl`, `rounded-2xl`, `rounded-3xl`,
-  `rounded-full`, `rounded-none`) — all resolve to Tailwind defaults,
-  not `DESIGN.md` tokens.
+- Tailwind scale aliases with **no** `DESIGN.md.visual.radius` key of
+  the same name: bare `rounded` (Tailwind's `DEFAULT`), `rounded-xl`,
+  `rounded-2xl`, `rounded-3xl`, `rounded-none`. These resolve to
+  Tailwind defaults, not `DESIGN.md` tokens.
+- `rounded-sm` / `rounded-md` / `rounded-lg` / `rounded-full` are
+  **allowed only in an iter whose own envelope re-binds that name**.
+  The schema's `visual.radius` keys are exactly `sm|md|lg|full`, and
+  the mandatory `theme.extend.borderRadius` injection re-binds those
+  four names to the `DESIGN.md` tokens — but the gate verifies that in
+  the iter's html rather than assuming it. An iter that omits the
+  envelope, drops a key from the `borderRadius` map, or binds it to a
+  different value renders Tailwind's default, and the alias is flagged
+  exactly as before. Same for the side/corner prefixes
+  (`rounded-t-md`, `rounded-tl-lg`, …).
 
 ### 4. box-shadow literal ban (including rgba color slot)
 
@@ -105,9 +115,23 @@ Authored forms caught:
 
 - Inline `box-shadow: 0 1px 2px rgba(15,23,42,0.05)`.
 - Tailwind arbitrary `shadow-[0_4px_6px_rgba(0,0,0,0.1)]`.
-- Tailwind scale aliases (`shadow`, `shadow-sm`, `shadow-md`,
-  `shadow-lg`, `shadow-xl`, `shadow-2xl`, `shadow-inner`,
-  `shadow-none`, `drop-shadow-*`).
+- Tailwind scale aliases with **no** `DESIGN.md.visual.shadow` key of
+  the same name: bare `shadow` (Tailwind's `DEFAULT`), `shadow-xl`,
+  `shadow-2xl`, `shadow-inner`, `shadow-none`.
+- Every `drop-shadow-<alias>` form, including `drop-shadow-sm|md|lg` —
+  the alias resolves through `theme.dropShadow`, which the mandatory
+  envelope does not inject, so it renders a Tailwind default no matter
+  what `visual.shadow` declares. The arbitrary form
+  `drop-shadow-[...]` carries its own literal and is judged like any
+  other arbitrary value: compliant when the literal is one of the
+  `visual.shadow` tokens, drift otherwise.
+- `shadow-sm` / `shadow-md` / `shadow-lg` are **allowed only in an iter
+  whose own envelope re-binds that name**. The schema's `visual.shadow`
+  keys are exactly `sm|md|lg`, and the mandatory
+  `theme.extend.boxShadow` injection re-binds those three names to the
+  `DESIGN.md` tokens — but the gate verifies that in the iter's html
+  rather than assuming it, so an iter with a missing, incomplete, or
+  overwritten `boxShadow` map still has its aliases flagged.
 
 ### Safelisted CSS-wide keywords
 
@@ -151,6 +175,81 @@ The generator MUST express every styled surface as one of:
 - One self-contained HTML file; embedded CSS / JS minimal.
 - All declared spec screens reachable; loading / empty / error /
   success states representable.
+- The compliance gate reports **one finding per distinct offending value**, not
+  one per occurrence: a single drifting token repeated across N screens is one
+  entry in `designMdViolations[]`. Fix the value once and the finding clears —
+  do not expect the count to track the number of places it appears.
+
+## Output layout — two trees, two shapes
+
+There are two directory trees and they are NOT interchangeable. The
+generator writes to exactly one of them.
+
+| Tree                                  | Shape                                                    | Written by                           | Read by                                         |
+| ------------------------------------- | -------------------------------------------------------- | ------------------------------------ | ----------------------------------------------- |
+| `.qfai/prototypes/iter-NN/`           | one `index.html`                                         | **the generator** (you)              | `--auto-serve`, the operator, `/qfai-implement` |
+| `.qfai/evidence/prototyping/iter-NN/` | `<screenId>.html` + `.png`, one pair per declared screen | `qfai prototyping iterate --capture` | `qfai prototyping certify`, the reviewer        |
+
+**The generator never writes the evidence tree.** The `--capture` step
+performs the fan-out: it drives a browser to each declared screen's
+contract `route`, and writes one HTML snapshot plus one screenshot per
+screen into `.qfai/evidence/prototyping/iter-NN/`. `certify` reads only
+that tree and hard-fails with "missing HTML for N declared screen(s)"
+when a declared screen has no snapshot there.
+
+### N declared screens, one file
+
+A spec declaring N screens is satisfied by **one** `index.html`
+containing N client-side routes — not N files. Each declared screen
+must be reachable at its own contract `route`, so the capture step can
+navigate to it and snapshot it independently. This is what "all
+declared spec screens reachable" above means operationally.
+
+**Which routing shapes the capture step can actually reach.** Capture
+navigates to `new URL(<contract route>, <target url>)` and treats any
+HTTP status >= 400 as a failed screen, writing no evidence. What the
+target server does with that URL therefore decides the routing shape:
+
+- `--auto-serve` starts the built-in static file server. It resolves
+  every non-root URL to a real file under the served directory and
+  returns 404 when there is none — it has no SPA fallback. With it,
+  declare **hash routes** (`/#/settings`): the browser never sends the
+  fragment, so the server always serves `index.html` and the shell
+  routes client-side.
+- **Path routes** (`/settings`) and any `history.pushState` shell need
+  a server that rewrites unknown paths to `index.html`. Run one
+  yourself and pass `--target-url`; they will 404 under `--auto-serve`.
+- Per-screen files (`--emit-skeletons`, below) are a third option, but
+  only if the contract `route` names the file: `--emit-skeletons` writes
+  `<screenId>.html`, and the static server resolves a URL to a literal
+  path — it does not append `.html`, so a `/settings` route 404s while
+  `/settings.html` serves. `htmlSourceCopy` does not help here: it runs
+  after the capture has already navigated successfully, so it cannot
+  rescue a route the server could not resolve.
+
+Pick the routing shape to match the server you will capture against,
+and keep the contract `route` values consistent with it.
+
+Opt-in **seed aid**, not an alternative output shape:
+`qfai prototyping iterate --emit-skeletons` (cycle 0 only) writes one
+placeholder `.qfai/prototypes/iter-00/<screenId>.html` per declared
+screen, and the `htmlSourceCopy` capture option likewise operates on
+per-screen files. Neither writes an `index.html`.
+
+An accepted iteration must still carry `iter-NN/index.html`: Handoff
+below copies it to `.qfai/prototypes/final/index.html`, and without it
+`/qfai-implement` has nothing to read. So consolidate the skeletons into
+the single-file envelope before the loop converges — including when a
+cycle-0 skeleton set scores well enough that cycle 1 would otherwise
+accept it as it stands. If you keep the per-screen files because your
+capture routing needs them, author `index.html` alongside them so the
+accepted iteration carries both.
+
+### Handoff
+
+`.qfai/prototypes/final/index.html` is a copy of the accepted
+`iter-NN/index.html` and is the deliverable `/qfai-implement` reads.
+It is not a certify input; certify never opens the `prototypes/` tree.
 
 ## Cycle 0 (seed)
 
