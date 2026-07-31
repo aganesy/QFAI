@@ -884,7 +884,10 @@ describe("findDesignMdViolations — Tailwind palette/scale utility classes (cod
     expect(out.some((v) => v.kind === "radius" && v.found === "rounded-xl")).toBe(true);
   });
 
-  it("rounded-2xl / rounded-3xl / rounded-full (multi-char aliases) are flagged", () => {
+  it("rounded-2xl / rounded-3xl / rounded-full are flagged without the envelope", () => {
+    // No `theme.extend.borderRadius` in this html, so nothing re-binds
+    // `full` — `rounded-full` renders Tailwind's own 9999px default and
+    // is drift like the other two.
     const html = '<div class="rounded-2xl rounded-3xl rounded-full">x</div>';
     const out = findDesignMdViolations(html, sampleDesignMd());
     const founds = out.filter((v) => v.kind === "radius").map((v) => v.found);
@@ -893,7 +896,7 @@ describe("findDesignMdViolations — Tailwind palette/scale utility classes (cod
     expect(founds).toContain("rounded-full");
   });
 
-  it("shadow-lg / shadow-2xl / shadow-inner (shadow scale aliases) are flagged", () => {
+  it("shadow-lg / shadow-2xl / shadow-inner are flagged without the envelope", () => {
     const html = '<div class="shadow-lg shadow-2xl shadow-inner">x</div>';
     const out = findDesignMdViolations(html, sampleDesignMd());
     const founds = out.filter((v) => v.kind === "shadow").map((v) => v.found);
@@ -926,10 +929,13 @@ describe("findDesignMdViolations — Tailwind palette/scale utility classes (cod
     expect(out.some((v) => v.kind === "radius" && v.found === "rounded-xl")).toBe(true);
   });
 
-  it("dark:shadow-lg (dark-mode prefix) is flagged", () => {
-    const html = '<div class="dark:shadow-lg">x</div>';
+  it("dark:shadow-inner (dark-mode prefix) is flagged on the underlying utility", () => {
+    // `inner` is not a DESIGN.md shadow key, so it is still drift; the
+    // point of this case is that the `dark:` prefix is stripped before
+    // the lookup.
+    const html = '<div class="dark:shadow-inner">x</div>';
     const out = findDesignMdViolations(html, sampleDesignMd());
-    expect(out.some((v) => v.kind === "shadow" && v.found === "shadow-lg")).toBe(true);
+    expect(out.some((v) => v.kind === "shadow" && v.found === "shadow-inner")).toBe(true);
   });
 
   it("text-sm / text-center / text-base (non-color text utilities) are NOT flagged", () => {
@@ -959,12 +965,138 @@ describe("findDesignMdViolations — Tailwind palette/scale utility classes (cod
   });
 
   it("multiple palette+scale + scale-alias classes in one element are all flagged", () => {
-    const html = '<div class="bg-blue-500 text-slate-900 rounded-xl shadow-lg">x</div>';
+    const html = '<div class="bg-blue-500 text-slate-900 rounded-xl shadow-inner">x</div>';
     const out = findDesignMdViolations(html, sampleDesignMd());
     expect(out.some((v) => v.kind === "color" && v.found === "bg-blue-500")).toBe(true);
     expect(out.some((v) => v.kind === "color" && v.found === "text-slate-900")).toBe(true);
     expect(out.some((v) => v.kind === "radius" && v.found === "rounded-xl")).toBe(true);
+    expect(out.some((v) => v.kind === "shadow" && v.found === "shadow-inner")).toBe(true);
+  });
+
+  // ── #243: radius / shadow alias allowance is envelope-conditional ──
+  //
+  // A DESIGN.md key of the same name is necessary but NOT sufficient.
+  // `prototypingCertify` hands each html straight to
+  // `findDesignMdViolations` without separately checking the mandated
+  // `tailwind.config.theme.extend.*` envelope, so granting the
+  // allowance on the DESIGN.md key alone would certify a prototype that
+  // actually renders Tailwind's defaults.
+
+  const ENVELOPE = [
+    "<script>",
+    "  tailwind.config = { theme: { extend: {",
+    '    borderRadius: { "sm": "0.25rem", "md": "0.5rem", "lg": "0.75rem", "full": "9999px" },',
+    '    boxShadow: { "sm": "0 1px 2px rgba(15,23,42,0.05)", "md": "0 4px 6px rgba(15,23,42,0.08)", "lg": "0 12px 24px rgba(15,23,42,0.10)" }',
+    "  } } };",
+    "</script>",
+  ].join("\n");
+
+  it("rounded-full / shadow-lg are compliant when the envelope re-binds them", () => {
+    const html = `${ENVELOPE}<div class="rounded-full shadow-lg">x</div>`;
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    expect(out.some((v) => v.found === "rounded-full")).toBe(false);
+    expect(out.some((v) => v.found === "shadow-lg")).toBe(false);
+  });
+
+  it("a borderRadius map outside tailwind.config does not grant the allowance", () => {
+    // `borderRadius` is an ordinary identifier, so an app-level settings
+    // literal names it just as readily as the envelope does. Reading it as a
+    // re-binding would certify a prototype that still renders Tailwind's
+    // default `rounded-md` — the scanner must key on the `tailwind.config`
+    // assignment, not on the section name appearing anywhere in the document.
+    const decoy = [
+      "<script>",
+      '  const themePreview = { borderRadius: { "md": "0.5rem" } };',
+      '  const shadowPreview = { boxShadow: { "lg": "0 12px 24px rgba(15,23,42,0.10)" } };',
+      "</script>",
+    ].join("\n");
+    const out = findDesignMdViolations(
+      `${decoy}<div class="rounded-md shadow-lg">x</div>`,
+      sampleDesignMd(),
+    );
+    expect(out.some((v) => v.kind === "radius" && v.found === "rounded-md")).toBe(true);
     expect(out.some((v) => v.kind === "shadow" && v.found === "shadow-lg")).toBe(true);
+  });
+
+  it("an unquoted hyphenated key is not read as a re-binding", () => {
+    // `foo-bar: "…"` is not a valid object literal, so the browser never
+    // applies it. Accepting it would grant an allowance the render does not
+    // honour. Here the envelope binds `md` through an unquoted hyphenated key,
+    // which must not count.
+    const invalidKey = [
+      "<script>",
+      "  tailwind.config = { theme: { extend: {",
+      '    borderRadius: { rounded-md: "0.5rem" }',
+      "  } } };",
+      "</script>",
+    ].join("\n");
+    const out = findDesignMdViolations(
+      `${invalidKey}<div class="rounded-md">x</div>`,
+      sampleDesignMd(),
+    );
+    expect(out.some((v) => v.kind === "radius" && v.found === "rounded-md")).toBe(true);
+  });
+
+  it("an alias the envelope omits is still flagged even with the envelope present", () => {
+    // `borderRadius` binds sm/md/lg but not `full`.
+    const partial = [
+      "<script>",
+      "  tailwind.config = { theme: { extend: {",
+      '    borderRadius: { "sm": "0.25rem", "md": "0.5rem", "lg": "0.75rem" }',
+      "  } } };",
+      "</script>",
+    ].join("\n");
+    const out = findDesignMdViolations(
+      `${partial}<div class="rounded-md rounded-full">x</div>`,
+      sampleDesignMd(),
+    );
+    expect(out.some((v) => v.found === "rounded-md")).toBe(false);
+    expect(out.some((v) => v.kind === "radius" && v.found === "rounded-full")).toBe(true);
+  });
+
+  it("an alias the envelope binds to a non-DESIGN.md value is flagged", () => {
+    const wrong = [
+      "<script>",
+      "  tailwind.config = { theme: { extend: {",
+      '    borderRadius: { "md": "0.375rem" }',
+      "  } } };",
+      "</script>",
+    ].join("\n");
+    const out = findDesignMdViolations(`${wrong}<div class="rounded-md">x</div>`, sampleDesignMd());
+    expect(out.some((v) => v.kind === "radius" && v.found === "rounded-md")).toBe(true);
+  });
+
+  it("a later re-assignment that drops the binding re-flags the alias", () => {
+    const overwritten = `${ENVELOPE}\n<script>tailwind.config = { theme: { extend: { borderRadius: { "sm": "0.25rem" } } } };</script>`;
+    const out = findDesignMdViolations(
+      `${overwritten}<div class="rounded-sm rounded-md">x</div>`,
+      sampleDesignMd(),
+    );
+    expect(out.some((v) => v.found === "rounded-sm")).toBe(false);
+    expect(out.some((v) => v.kind === "radius" && v.found === "rounded-md")).toBe(true);
+  });
+
+  it("drop-shadow aliases stay drift even with the envelope (theme.dropShadow is never injected)", () => {
+    const html = `${ENVELOPE}<div class="drop-shadow-lg drop-shadow-sm">x</div>`;
+    const out = findDesignMdViolations(html, sampleDesignMd());
+    const founds = out.filter((v) => v.kind === "shadow").map((v) => v.found);
+    expect(founds).toContain("drop-shadow-lg");
+    expect(founds).toContain("drop-shadow-sm");
+  });
+
+  it("drop-shadow arbitrary values are judged by literal, like every other arbitrary utility", () => {
+    // The arbitrary form carries its own literal and never consults
+    // `theme.dropShadow`, so a DESIGN.md shadow token renders verbatim.
+    const token = findDesignMdViolations(
+      '<div class="drop-shadow-[0_1px_2px_rgba(15,23,42,0.05)]">x</div>',
+      sampleDesignMd(),
+    );
+    expect(token).toEqual([]);
+    const drift = findDesignMdViolations(
+      '<div class="drop-shadow-[0_9px_9px_rgba(0,0,0,0.9)]">x</div>',
+      sampleDesignMd(),
+    );
+    expect(drift.some((v) => v.kind === "shadow")).toBe(true);
   });
 
   it("border-t-blue-500 / border-x-emerald-700 (sided color prefix + palette+scale) are flagged", () => {

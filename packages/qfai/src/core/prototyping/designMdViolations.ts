@@ -899,11 +899,28 @@ const TAILWIND_PALETTE_SCALES: ReadonlySet<string> = new Set([
   "950",
 ]);
 
-// Tailwind built-in scale aliases for radius / shadow utilities. These
-// resolve to Tailwind's own scale (e.g. `rounded-md` → `0.375rem`,
-// `shadow-lg` → a fixed multi-stop drop shadow), not DESIGN.md tokens.
-// Bare `rounded` / `shadow` (no suffix) are also Tailwind defaults and
-// matched separately below. codex AHzR7.
+// Tailwind built-in scale aliases for radius / shadow utilities.
+//
+// An alias in this set resolves to Tailwind's own scale (e.g.
+// `rounded-xl`, `shadow-inner`) UNLESS `DESIGN.md` declares a
+// `visual.radius` / `visual.shadow` key of the same name. The mandated
+// envelope in `generator-prompt.md` injects those keys into
+// `tailwind.config.theme.extend.{borderRadius,boxShadow}`, and
+// `theme.extend` overrides the built-in entry of the same name — so
+// once the envelope has run, `rounded-md` cannot resolve to anything
+// other than the DESIGN.md token. `scanTailwindUtility` therefore
+// consults `dm` before flagging; this set is the candidate surface,
+// not the verdict.
+//
+// The distinction matters because the DESIGN.md schema fixes the legal
+// key names (`RADIUS_KEYS = sm|md|lg|full`, `SHADOW_KEYS = sm|md|lg`),
+// which are a strict subset of this list. Flagging the set
+// unconditionally left no Tailwind utility class able to reference a
+// DESIGN.md radius or shadow token at all.
+//
+// Bare `rounded` / `shadow` (no suffix) resolve to Tailwind's `DEFAULT`
+// theme key, which the DESIGN.md schema cannot declare, so they remain
+// unconditional drift and are matched separately below. codex AHzR7.
 const TAILWIND_RADIUS_SCALE_ALIASES: ReadonlySet<string> = new Set([
   "none",
   "sm",
@@ -1116,15 +1133,152 @@ function scanTailwindArbitrary(html: string, dm: DesignMd, out: DesignMdViolatio
 // State / responsive prefixes (`hover:`, `md:`, `dark:`,
 // `group-hover:`) are stripped before the utility lookup so
 // `hover:bg-blue-500` is detected.
+
+/**
+ * Read one `tailwind.config.theme.extend.<section>` map out of the html
+ * envelope, as `alias -> literal value`.
+ *
+ * Only the LAST assignment of the section is read. A later script that
+ * re-assigns `tailwind.config` replaces the section wholesale, so a key
+ * present in an earlier block but absent from the last one is no longer
+ * bound at render time; merging the blocks would credit the iter with a
+ * binding the browser never applies. A section the html never assigns
+ * yields an empty map, which is the conservative answer: no alias is
+ * treated as re-bound and the pre-existing "Tailwind default" verdict
+ * stands.
+ *
+ * Deliberately a text scan, not an evaluator: the envelope is inert
+ * markup at this point and must never be executed to be validated.
+ * Anything the scan cannot read (computed keys, spread syntax, a value
+ * built at runtime) simply does not register as a re-binding, which
+ * fails toward flagging rather than toward silent approval.
+ */
+function readThemeExtendMap(html: string, section: string): Map<string, string> {
+  const out = new Map<string, string>();
+  // Scope to the `tailwind.config` assignment first. `borderRadius` and
+  // `boxShadow` are ordinary identifiers, so an unrelated object elsewhere in
+  // the document (an app-level settings literal, an inline data blob) would
+  // otherwise register as a re-binding and grant `rounded-md` / `shadow-lg` an
+  // allowance while the browser still renders Tailwind's defaults — a silent
+  // approval of exactly the drift this scanner exists to catch.
+  const config = readTailwindConfigBlock(html);
+  if (config === null) return out;
+  const sectionRe = new RegExp(`\\b${section}\\s*:\\s*\\{`, "g");
+  let lastBlock: string | null = null;
+  for (const match of config.matchAll(sectionRe)) {
+    const openIndex = match.index + match[0].length - 1;
+    const block = extractBraceBlock(config, openIndex);
+    if (block !== null) lastBlock = block;
+  }
+  if (lastBlock === null) return out;
+  for (const entry of lastBlock.matchAll(THEME_ENTRY_RE)) {
+    const key = entry[1] ?? entry[2] ?? entry[3];
+    const value = entry[4] ?? entry[5];
+    if (key !== undefined && value !== undefined) {
+      out.set(key.toLowerCase(), value.trim());
+    }
+  }
+  return out;
+}
+
+// `"md": "0.5rem"`, `'md': '0.5rem'`, `md: "0.5rem"`. Only string
+// values are read — a nested object or an identifier reference is not a
+// literal re-binding this scanner can vouch for.
+//
+// The unquoted-key alternative is a JavaScript identifier, so it excludes `-`:
+// `foo-bar: "…"` does not parse as an object literal, and the browser would
+// never apply it, so treating it as a re-binding would grant an allowance the
+// render never honours. A key that needs a hyphen has to be quoted, which the
+// first two alternatives already cover.
+//
+// Excluding `-` from the identifier is not enough on its own: without the
+// lookbehind the scan would simply start one character later and read
+// `rounded-md: "0.5rem"` as a binding of `md`, reinstating the allowance
+// through the very syntax being rejected. The guard anchors the identifier to
+// a real token start.
+const THEME_ENTRY_RE =
+  /(?:"([^"]+)"|'([^']+)'|(?<![-\w$])([A-Za-z_$][\w$]*))\s*:\s*(?:"([^"]*)"|'([^']*)')/g;
+
+// `tailwind.config = {` — the assignment the mandated envelope performs.
+const TAILWIND_CONFIG_ASSIGN_RE = /\btailwind\s*\.\s*config\s*=\s*\{/g;
+
+/**
+ * Body of the LAST `tailwind.config = {...}` assignment, or null when the
+ * document makes none. Last wins for the same reason `readThemeExtendMap`
+ * takes the last section block: a later assignment replaces the earlier one at
+ * render time.
+ */
+function readTailwindConfigBlock(html: string): string | null {
+  let lastBlock: string | null = null;
+  for (const match of html.matchAll(TAILWIND_CONFIG_ASSIGN_RE)) {
+    const openIndex = match.index + match[0].length - 1;
+    const block = extractBraceBlock(html, openIndex);
+    if (block !== null) lastBlock = block;
+  }
+  return lastBlock;
+}
+
+/** Body of the `{...}` starting at `openIndex`, or null when unbalanced. */
+function extractBraceBlock(text: string, openIndex: number): string | null {
+  let depth = 0;
+  for (let i = openIndex; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === "{") {
+      depth += 1;
+    } else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return text.slice(openIndex + 1, i);
+    }
+  }
+  return null;
+}
+
+/**
+ * Alias names the html re-binds to the DESIGN.md token of the same
+ * name. Value equality is required, not just key presence: an envelope
+ * that maps `md` to something other than `visual.radius.md` renders a
+ * value DESIGN.md never declared, which is exactly the drift this
+ * scanner exists to catch.
+ */
+function reboundAliasNames(
+  tokens: Record<string, string>,
+  rebinds: Map<string, string>,
+): ReadonlySet<string> {
+  const allowed = new Set<string>();
+  for (const [key, value] of Object.entries(tokens)) {
+    const lowerKey = key.toLowerCase();
+    if (rebinds.get(lowerKey) === value) {
+      allowed.add(lowerKey);
+    }
+  }
+  return allowed;
+}
+
 function scanTailwindUtility(html: string, dm: DesignMd, out: DesignMdViolation[]): void {
-  // Pre-collect rendered token sets so the rare case of a DESIGN.md
-  // token whose VALUE happens to coincide with a Tailwind default is
-  // still flagged: Tailwind's CDN cannot read DESIGN.md, so the
-  // *class* identifier never references a DESIGN.md token. The
-  // contract is name-anchored, not value-anchored. We therefore do
-  // NOT cross-check against DESIGN.md values here — drift is the
-  // class shape itself.
-  void dm;
+  // The contract is name-anchored: drift is the class shape, not the
+  // value it happens to render to. But the name space is shared. The
+  // mandated `tailwind.config.theme.extend.{borderRadius,boxShadow}`
+  // injection re-binds exactly the alias names DESIGN.md declares, so
+  // for radius / shadow the class identifier DOES reference a
+  // DESIGN.md token whenever the alias has actually been re-bound.
+  //
+  // "Actually" is the operative word: DESIGN.md declaring a key `md`
+  // says nothing about what THIS html does. An iter whose envelope is
+  // missing, whose `borderRadius` map omits `md`, or which re-binds
+  // `md` to some other value renders Tailwind's default for
+  // `rounded-md` — a non-compliant prototype that certify would pass
+  // if the allowance were granted on the DESIGN.md key alone
+  // (`prototypingCertify` feeds each html straight to
+  // `findDesignMdViolations` and does not separately verify the
+  // envelope). So the allowance is granted per class name only when
+  // this html re-binds that name to that DESIGN.md token value.
+  //
+  // Color utilities are NOT treated this way: `bg-blue-500` names a
+  // Tailwind palette entry, and `theme.extend.colors` adds names
+  // rather than re-binding the built-in palette scale, so a
+  // `<palette>-<scale>` class is drift regardless of DESIGN.md.
+  const radiusKeys = reboundAliasNames(dm.visual.radius, readThemeExtendMap(html, "borderRadius"));
+  const shadowKeys = reboundAliasNames(dm.visual.shadow, readThemeExtendMap(html, "boxShadow"));
 
   for (const classMatch of html.matchAll(CLASS_ATTR_RE)) {
     const classes = classMatch[1] ?? classMatch[2] ?? "";
@@ -1163,16 +1317,27 @@ function scanTailwindUtility(html: string, dm: DesignMd, out: DesignMdViolation[
         }
       }
 
-      // Radius / shadow scale alias: `<prefix>-<alias>`.
+      // Radius / shadow scale alias: `<prefix>-<alias>`. Naming a
+      // DESIGN.md key is necessary but not sufficient: `radiusKeys` /
+      // `shadowKeys` hold only the aliases THIS document's
+      // `tailwind.config` re-binds AND binds to the matching DESIGN.md
+      // value. An alias with no key at all (`rounded-xl`,
+      // `shadow-inner`, …), one the envelope omits, and one the envelope
+      // binds to some other value are all drift.
       const aliasMatch = /^([a-z][a-z-]*)-([a-z0-9]+)$/.exec(cls);
       if (aliasMatch) {
         const prefix = aliasMatch[1] ?? "";
         const suffix = aliasMatch[2] ?? "";
         if (TAILWIND_RADIUS_PREFIXES.has(prefix) && TAILWIND_RADIUS_SCALE_ALIASES.has(suffix)) {
+          if (radiusKeys.has(suffix)) continue;
           out.push({ kind: "radius", found: cls });
           continue;
         }
         if (TAILWIND_SHADOW_PREFIXES.has(prefix) && TAILWIND_SHADOW_SCALE_ALIASES.has(suffix)) {
+          // `drop-shadow-*` resolves through `theme.dropShadow`, which
+          // the mandated envelope does not inject, so it stays drift
+          // even when the alias matches a `visual.shadow` key.
+          if (prefix === "shadow" && shadowKeys.has(suffix)) continue;
           out.push({ kind: "shadow", found: cls });
           continue;
         }
