@@ -1,7 +1,7 @@
 # Checkpoint Verification
 
 "Checkpoint verification" is the whole-repository regression check run at a checkpoint boundary. It
-is what item 11 of the 11-point gate refers to and the only thing it refers to.
+is what item 12 of the 12-point gate refers to and the only thing it refers to.
 
 ## Checkpoint boundary
 
