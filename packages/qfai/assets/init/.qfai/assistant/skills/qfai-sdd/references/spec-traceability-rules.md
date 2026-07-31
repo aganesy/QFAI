@@ -88,8 +88,23 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   `QFAI-ATDD-112` until the scanner supports the per-level routing described as
   a target state in `catalog/test-layers.md`.
 - If `06_Test-Cases.md` has no test-case classification column, every TC is treated as a coverage target.
-- `Status=exception` requires a non-empty DR-ID.
-- `Status` in `green`, `refactor`, or `done` requires an existing Test file resolved from project root.
+- `Status=exception` requires a non-empty DR-ID. An `exception` row is not a
+  dead end: a Drift Protocol sweep may reset it to `todo` like any other status
+  when the rerun changed the obligation it was raised against.
+- `Status` in `green`, `refactor`, or `done` requires an existing Test file
+  resolved from project root. The upstream reset does not relax this: a swept
+  row returns to `todo`, where no file is required, and writes its test in the
+  following `red` phase.
+- `DR-ID` carries the approval that authorised an upstream reset, not only
+  `Status = exception`. A row reset by a Drift Protocol sweep records the
+  approved `CR-*` / `DR-*` ID there and **retains it through `red`, `green`,
+  `refactor` and `done`** — the ledger is the audit trail for why a completed
+  row was reopened.
+- `Layer` must be consistent with `Test file`: an `Integration` row may not
+  point into `tests/e2e/**` or `tests/api/**`, and vice versa.
+- More than one `TDD-*` row MAY reference the same `TC-*` — a TC split across
+  several test modules is legitimate. `TDD-ID` uniqueness is the only
+  identity constraint.
 - `TDD-ID` must match `TDD-NNNN` and be unique within the spec.
 - Missing `tdd/test-list.md` is a warning; missing DR-ID/Evidence columns is an error.
 

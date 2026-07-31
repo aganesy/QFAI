@@ -34,7 +34,16 @@ Any exception beyond this list requires explicit user approval.
    - approved actions (owner skill rerun plan)
 3. Wait for explicit user approval.
 4. Rerun the owner skill for the upstream artifact.
-5. Resume downstream work only after upstream artifacts are updated.
+5. **Sweep the downstream ledgers.** Identify every `tdd/test-list.md` row the
+   rerun invalidated — its `TC-Refs` / `US-Refs` / `CON-API-Refs` obligation
+   changed or disappeared — and apply the upstream reset transition
+   (any status -> `todo`), recording the approved CR/DR ID in `DR-ID`. The
+   sweep covers in-flight rows too: a `red` row whose obligation changed, and
+   an `exception` row whose anomaly the rerun resolved or superseded, reset the
+   same way. A row whose obligation was deleted outright is removed, not reset.
+6. Resume downstream work only after upstream artifacts are updated **and** the
+   sweep has run. Resuming with a stale `done` row is resuming on a ledger that
+   asserts something known to be false.
 
 ## Reviewer-originated obligations
 
