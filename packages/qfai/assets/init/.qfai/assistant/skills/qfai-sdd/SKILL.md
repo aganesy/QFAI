@@ -125,6 +125,12 @@ Stage minimum roles:
 - `orchestrator` integrates outputs and presents for confirmation; never drafts the primary artifact and never self-approves.
 - `completion-reviewer` is delegated independently. Required field: `Status (PASS/REVISE/PENDING)`; `PENDING` marks an unrun gate and never counts as `PASS`.
 
+Author↔reviewer separation (MUST): drafting roles and reviewing roles above are routed from one
+list, but no sub-agent may review an artifact it drafted or edited in this run. `independent` is
+defined normatively in
+`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`,
+and every reviewer response must carry its `Authored/edited under review:` attestation.
+
 Reviewer routing is fixed by `.qfai/assistant/manifest/agent-routing.yml` and `.qfai/assistant/manifest/review-profiles.yml`.
 
 ### Reviewer Gate (MUST)
