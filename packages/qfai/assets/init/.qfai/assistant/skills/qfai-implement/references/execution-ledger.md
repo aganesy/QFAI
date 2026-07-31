@@ -5,16 +5,16 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single r
 
 ## Required columns
 
-| Column    | Description                                                                                                                                                                                                                |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                                                                                                                                                        |
-| TC-Refs   | References to test cases from `06_Test-Cases.md`                                                                                                                                                                           |
-| Layer     | Test layer (Unit, Integration, etc.)                                                                                                                                                                                       |
-| Test file | Path to the test file                                                                                                                                                                                                      |
-| Selector  | Test selector(s) for targeted execution — one entry, a comma-separated list, or a glob pattern                                                                                                                             |
-| Status    | Current lifecycle status                                                                                                                                                                                                   |
+| Column    | Description                                                                                                                                                                                                                 |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                                                                                                                                                         |
+| TC-Refs   | References to test cases from `06_Test-Cases.md`                                                                                                                                                                            |
+| Layer     | Test layer (Unit, Integration, etc.)                                                                                                                                                                                        |
+| Test file | Path to the test file                                                                                                                                                                                                       |
+| Selector  | Test selector(s) for targeted execution — one entry, a comma-separated list, or a glob pattern                                                                                                                              |
+| Status    | Current lifecycle status                                                                                                                                                                                                    |
 | DR-ID     | Decision Record / Change Request IDs, comma-separated: a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses; blank otherwise |
-| Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                                                                                                                                                       |
+| Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                                                                                                                                                        |
 
 ## Selector granularity (MUST)
 
