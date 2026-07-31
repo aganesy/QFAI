@@ -11,8 +11,8 @@ This is the **authoring** artifact — one self-contained file with one
 client-side route per declared screen, written by the generator. It is
 a distinct tree from the **capture** artifacts at
 `.qfai/evidence/prototyping/iter-<final>/<screenId>.{html,png}`, which
-`qfai prototyping iterate --capture` fans out one pair per declared
-screen. Handoff mirrors the authoring artifact; `qfai prototyping
+`npx qfai prototyping iterate --capture` fans out one pair per declared
+screen. Handoff mirrors the authoring artifact; `npx qfai prototyping
 certify` gates on the capture artifacts and never opens the
 `prototypes/` tree. Both must exist before handoff can complete: see
 "Output layout" in `references/generator-prompt.md`.
