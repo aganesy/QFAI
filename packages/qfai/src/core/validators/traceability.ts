@@ -6,7 +6,12 @@ import { resolvePath } from "../config.js";
 import { extractIds } from "../ids.js";
 import { parseScenarioDocument, type ScenarioNode } from "../scenarioModel.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
-import { collectScTestReferences } from "../traceability.js";
+import { collectFilesByGlobs } from "../fs.js";
+import {
+  collectScTestReferences,
+  DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+  normalizeGlobs,
+} from "../traceability.js";
 import type { Issue } from "../types.js";
 import { collectV1421LayerRefs, isV1421LayeredEntry } from "./layerCoverage.js";
 import { collectMarkdownItems, collectScenarioItems, issue } from "./utils.js";
@@ -43,6 +48,14 @@ export async function validateTraceability(
   const layeredEntries = entries.filter(
     (entry) => entry.layout === "layered" && entry.layeredStyle === "v1416",
   );
+
+  // Diagnose the test-glob configuration for every layout, before the v1416 filter below.
+  // A v1417/v1421 project never reaches `validateLayeredScCodeReferences`, so keeping the
+  // diagnosis there meant the one class of project that most needs it — a modern layout with
+  // `scMustHaveTest: true` and globs matching nothing — got a clean `--fail-on error` run.
+  if (options.includeCodeReferences) {
+    issues.push(...(await validateTestFileGlobsConfiguration(root, config, entries)));
+  }
 
   if (layeredEntries.length === 0) {
     return issues;
@@ -692,6 +705,120 @@ function validateLayeredHeuristics(entry: SpecEntry, data: LayeredEdgeData): Iss
   return issues;
 }
 
+/**
+ * Reports `validation.traceability.testFileGlobs` that cannot do their job.
+ *
+ * This is a configuration diagnosis, not a coverage finding, so it is layout-independent: it
+ * runs for v1416, v1417 and v1421 spec packs alike. Two states are reported under
+ * `scMustHaveTest: true`, because in both of them the SC→test gate is on but inert:
+ *
+ * - unset (`[]`) — nothing is scanned at all. Reported as a `warning`: the project may simply
+ *   not have configured QFAI yet, and a fresh `qfai init` ships this value empty on purpose.
+ * - configured but matching zero files — the operator believes the gate is running. Reported as
+ *   an `error`, so an otherwise clean `--fail-on error` run cannot absorb it.
+ *
+ * Silent when `scMustHaveTest` is off (the gate is deliberately disabled) or when the project
+ * has no spec pack at all (nothing to trace yet).
+ */
+/** Message half of a caught scan error, without leaking a stack trace into a finding. */
+function formatScanError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function validateTestFileGlobsConfiguration(
+  root: string,
+  config: QfaiConfig,
+  entries: SpecEntry[],
+): Promise<Issue[]> {
+  if (!config.validation.traceability.scMustHaveTest || entries.length === 0) {
+    return [];
+  }
+
+  // Normalize before the emptiness test, and scan with the same array. Testing
+  // the raw array made `["  "]` a "0 files matched" error: `normalizeGlobs`
+  // drops blank entries, so the scan ran with nothing and the gate was in fact
+  // unset. The two must agree on what "unset" means.
+  const globs = normalizeGlobs(config.validation.traceability.testFileGlobs);
+  const configPath = path.join(root, "qfai.config.yaml");
+  const fix =
+    "/qfai-configure を実行し、validation.traceability.testFileGlobs を実際のテストパスに合わせて設定してください。";
+
+  if (globs.length === 0) {
+    return [
+      issue(
+        "QFAI-TRACE-124",
+        "validation.traceability.testFileGlobs が未設定のため、scMustHaveTest: true でも SC のコード参照は一切検査されていません。" +
+          "リポジトリの実テストレイアウトに合わせて設定してください (/qfai-configure)。",
+        "warning",
+        configPath,
+        "traceability.layered.testFileGlobsUnset",
+        undefined,
+        "canonical",
+        fix,
+      ),
+    ];
+  }
+
+  let scan: Awaited<ReturnType<typeof collectFilesByGlobs>>;
+  try {
+    scan = await collectFilesByGlobs(root, {
+      globs,
+      ignore: Array.from(
+        new Set([
+          ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+          ...normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
+        ]),
+      ),
+      // This check only asks "did anything match at all", so it stops at the
+      // first hit rather than walking the whole tree a second time — the real
+      // scan already happens in `collectScTestReferences` /
+      // `validateLayeredScCodeReferences`. At DEFAULT_GLOB_FILE_LIMIT this
+      // duplicated the full traversal on every `validate` run.
+      limit: 1,
+    });
+  } catch (error) {
+    // A scan that throws — an invalid pattern (`[" "]` is valid YAML but makes
+    // fast-glob throw) or a filesystem error — means the gate could not run at
+    // all. Swallowing it returned "no finding", which reads as "configuration
+    // fine" and let `--fail-on error` pass over a gate that never executed.
+    // `doctor.ts` already reports this class as `error`; validate now agrees.
+    return [
+      issue(
+        "QFAI-TRACE-124",
+        `validation.traceability.testFileGlobs の走査に失敗しました ` +
+          `(globs: ${globs.join(", ")}): ${formatScanError(error)}。` +
+          `パターンが不正か、ファイルシステムエラーです。SC のコード参照検査は実行されていません。`,
+        "error",
+        configPath,
+        "traceability.layered.testFileGlobsScanFailed",
+        globs,
+        "canonical",
+        fix,
+      ),
+    ];
+  }
+
+  if (scan.files.length > 0) {
+    return [];
+  }
+
+  return [
+    issue(
+      "QFAI-TRACE-124",
+      `validation.traceability.testFileGlobs が 1 ファイルにも一致しませんでした ` +
+        `(globs: ${globs.join(", ")})。設定が実際のテストレイアウトと一致していないため、` +
+        `SC のコード参照検査 (QFAI-TRACE-117) はすべて未参照として報告されます。` +
+        `/qfai-configure で調整してください。`,
+      "error",
+      configPath,
+      "traceability.layered.testFileGlobsNoMatch",
+      globs,
+      "canonical",
+      fix,
+    ),
+  ];
+}
+
 async function validateLayeredScCodeReferences(
   root: string,
   config: QfaiConfig,
@@ -700,6 +827,9 @@ async function validateLayeredScCodeReferences(
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const globs = config.validation.traceability.testFileGlobs;
+
+  // Unset globs are diagnosed by `validateTestFileGlobsConfiguration`, which runs for every
+  // spec layout. Nothing left to check here.
   if (globs.length === 0) {
     return issues;
   }
@@ -710,6 +840,7 @@ async function validateLayeredScCodeReferences(
     config.validation.traceability.testFileExcludeGlobs,
   );
   const refs = refsResult.refs;
+
   const missing = Array.from(scIds).filter((id) => !refs.has(id));
   if (missing.length > 0) {
     issues.push(

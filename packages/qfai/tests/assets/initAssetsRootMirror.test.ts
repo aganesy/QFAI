@@ -14,6 +14,9 @@
  * init assets must exist at the mirrored root path with identical bytes. Root-
  * only files are ignored, exactly as `sync-init-to-root.mjs` ignores them — it
  * copies init -> root and never deletes.
+ *
+ * `qfai.config.yaml` is the one exception, and the script says so: it is seeded
+ * when absent, never overwritten. See the second case.
  */
 
 import { readdir, readFile } from "node:fs/promises";
@@ -88,19 +91,31 @@ describe("init assets root mirror", () => {
     ).toEqual({ missing: [], differing: [] });
   });
 
-  it("mirrors the init root qfai.config.yaml to the repo root", async () => {
-    const [source, mirrored] = await Promise.all([
+  // `qfai.config.yaml` is SEEDED, not mirrored: `sync-init-to-root.mjs` writes
+  // it only when the root copy is missing. The init asset is what a fresh
+  // project starts from and deliberately leaves `testFileGlobs` empty, while
+  // the root copy is this repository's own tuned config. Asserting byte
+  // equality would forbid this repo from ever configuring itself.
+  it("seeds qfai.config.yaml from an init asset that exists and parses", async () => {
+    const [source, seeded] = await Promise.all([
       readOrNull(initRootConfig),
       readOrNull(rootConfig),
     ]);
     expect(source, "packages/qfai/assets/init/root/qfai.config.yaml is missing").not.toBeNull();
-    expect(mirrored, "qfai.config.yaml is missing at the repo root").not.toBeNull();
-    if (source === null || mirrored === null) {
+    expect(seeded, "qfai.config.yaml is missing at the repo root").not.toBeNull();
+    if (source === null || seeded === null) {
       return;
     }
-    expect(
-      source.equals(mirrored),
-      "qfai.config.yaml differs from its init asset — run `pnpm sync:ssot`",
-    ).toBe(true);
+    // Both are real configs, not placeholders: each declares the two keys the
+    // seed exists to establish. A truncated asset would seed a project with a
+    // file `qfai validate` cannot use.
+    for (const [label, buffer] of [
+      ["init asset", source],
+      ["repo root", seeded],
+    ] as const) {
+      const text = buffer.toString("utf-8");
+      expect(text, `${label} qfai.config.yaml has no validation block`).toMatch(/^validation:/m);
+      expect(text, `${label} qfai.config.yaml has no paths block`).toMatch(/^paths:/m);
+    }
   });
 });
