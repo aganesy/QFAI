@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { parse as parseYaml } from "yaml";
+
 import type { QfaiConfig } from "./config.js";
 import { resolvePath } from "./config.js";
 import { extractDeclaredContractIds } from "./contractsDecl.js";
@@ -68,7 +70,21 @@ export type AtddCodeTraceabilityResult = {
   contractsApiRoot: string;
   specUsIds: Map<string, Set<string>>;
   specTcIds: Map<string, Set<string>>;
+  /**
+   * Every declared `CON-API-*`, active and deferred alike. This is the public
+   * meaning the field has always had — adding `x-qfai-status: planned` defers
+   * the test obligation, it does not un-declare the contract, so an external
+   * consumer using this set for "is this ID declared?" must keep seeing it.
+   */
   apiContractIds: Set<string>;
+  /** The subset that carries the `QFAI-ATDD-113` obligation. */
+  activeApiContractIds: Set<string>;
+  /**
+   * `CON-API-*` IDs excluded from the `QFAI-ATDD-113` obligation because their
+   * contract declares `x-qfai-status: planned`. Reported as `info` so the
+   * deferral stays visible instead of silently shrinking the gate.
+   */
+  deferredApiContractIds: Set<string>;
   refs: {
     us: AtddSpecRefs;
     tc: AtddSpecRefs;
@@ -91,10 +107,15 @@ export async function evaluateAtddCodeTraceability(
   const contractsRoot = resolvePath(root, config, "contractsDir");
   const contractsApiRoot = path.join(contractsRoot, "api");
 
-  const [specRefs, apiContractIds] = await Promise.all([
+  const [specRefs, collectedApiContracts] = await Promise.all([
     collectSpecRefs(specsRoot),
     collectApiContractIds(contractsApiRoot),
   ]);
+  // `active` drives the missing-coverage gate; `declared` (active ∪ deferred)
+  // drives the "is this ID known?" check.
+  const activeApiContractIds = collectedApiContracts.active;
+  const deferredApiContractIds = collectedApiContracts.deferred;
+  const declaredApiContractIds = new Set([...activeApiContractIds, ...deferredApiContractIds]);
 
   const testsRoot = resolvePath(root, config, "testsDir");
   const e2eRoot = path.join(testsRoot, "e2e");
@@ -166,7 +187,11 @@ export async function evaluateAtddCodeTraceability(
     }
 
     for (const contractId of apiAnnotations) {
-      const known = apiContractIds.has(contractId);
+      // Declared = active ∪ deferred. `x-qfai-status: planned` defers the
+      // API-test *obligation*; it does not un-declare the contract, so writing
+      // the test ahead of the slice must not become a `QFAI-ATDD-103` unknown
+      // reference.
+      const known = declaredApiContractIds.has(contractId);
       if (!known) {
         pushUnknown(unknown, unknownDedup, file, `QFAI:${contractId}`, "conApi");
         continue;
@@ -180,7 +205,7 @@ export async function evaluateAtddCodeTraceability(
   const missing = buildMissingRefs({
     specUsIds,
     specTcIds,
-    apiContractIds,
+    apiContractIds: activeApiContractIds,
     usRefs,
     tcRefs,
     apiRefs,
@@ -191,7 +216,9 @@ export async function evaluateAtddCodeTraceability(
     contractsApiRoot,
     specUsIds,
     specTcIds,
-    apiContractIds,
+    apiContractIds: declaredApiContractIds,
+    activeApiContractIds,
+    deferredApiContractIds,
     refs: {
       us: usRefs,
       tc: tcRefs,
@@ -245,22 +272,103 @@ async function collectSpecRefs(specsRoot: string): Promise<{
   return { us, tc };
 }
 
-async function collectApiContractIds(apiRoot: string): Promise<Set<string>> {
+export const PLANNED_CONTRACT_KEY = "x-qfai-status";
+const PLANNED_CONTRACT_VALUE = "planned";
+
+/**
+ * Fallback marker for a document that does not parse: an unindented
+ * `x-qfai-status: planned`, optionally as a comment. Column 0 is required, so
+ * the marker cannot be mistaken for one nested under an operation.
+ */
+/** Quote a value for literal use inside a RegExp source. */
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Both interpolations are escaped. They are plain identifiers today, so this
+// changes nothing now; it keeps a future key containing `.` or `-`-in-a-class
+// from silently turning into a pattern that matches more than the literal.
+const PLANNED_CONTRACT_RE = new RegExp(
+  `^(?:#[ \\t]*)?["']?${escapeRegExp(PLANNED_CONTRACT_KEY)}["']?[ \\t]*:[ \\t]*["']?${escapeRegExp(
+    PLANNED_CONTRACT_VALUE,
+  )}["']?[ \\t]*$`,
+  "im",
+);
+
+/**
+ * True when the contract declares itself not yet implemented.
+ *
+ * `/qfai-sdd` authors contracts in Phase 0 (Contracts-first) but slices them in
+ * Phase 2, so between the second contract and the last slice every declared
+ * `CON-API-*` would otherwise be a `QFAI-ATDD-113` error. The marker makes the
+ * deferral explicit and reviewable in the contract itself.
+ *
+ * The marker is only honoured at the **document root**. A text scan that
+ * accepted any indentation would let an `x-qfai-status: planned` on a single
+ * OpenAPI operation defer the whole file, silently dropping the API-test
+ * obligation for every other `CON-API-*` it declares. The document is therefore
+ * parsed (YAML is a superset of JSON, so both contract formats go through the
+ * same path) and only a top-level key counts. An unparseable document falls
+ * back to a column-0 text match, which cannot see a nested key either.
+ */
+export function isPlannedApiContract(text: string): boolean {
+  // The overwhelmingly common contract does not carry the marker at all, and
+  // this runs once per contract file during collection. A substring test skips
+  // the parse for those: the key must appear literally somewhere for any of the
+  // paths below to return true, so a miss here is a definitive `false`.
+  if (!text.includes(PLANNED_CONTRACT_KEY)) {
+    return false;
+  }
+
+  let parsed: unknown;
+  try {
+    // `maxAliasCount: 0` disables alias expansion. Contracts are repository
+    // files, but they are also the one input a PR author fully controls, and
+    // an alias bomb (`*a` referenced repeatedly through nested anchors) turns a
+    // small document into an out-of-memory CI failure. No contract format needs
+    // aliases; a document that uses them is rejected and falls through to the
+    // column-0 text match below.
+    parsed = parseYaml(text, { maxAliasCount: 0 });
+  } catch {
+    // Malformed contract: other validators report the syntax error. Here the
+    // conservative reading is the column-0 marker only.
+    return PLANNED_CONTRACT_RE.test(text);
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return PLANNED_CONTRACT_RE.test(text);
+  }
+  if (!(PLANNED_CONTRACT_KEY in parsed)) {
+    // A commented-out marker survives parsing as nothing at all, so still allow
+    // the column-0 comment form.
+    return PLANNED_CONTRACT_RE.test(text);
+  }
+  const status: unknown = Reflect.get(parsed, PLANNED_CONTRACT_KEY);
+  return typeof status === "string" && status.trim().toLowerCase() === PLANNED_CONTRACT_VALUE;
+}
+
+type CollectedApiContracts = {
+  active: Set<string>;
+  deferred: Set<string>;
+};
+
+async function collectApiContractIds(apiRoot: string): Promise<CollectedApiContracts> {
   const files = await collectApiContractFiles(apiRoot);
-  const ids = new Set<string>();
+  const active = new Set<string>();
+  const deferred = new Set<string>();
 
   for (const file of files) {
     const text = await readSafe(file);
+    const planned = isPlannedApiContract(text);
     const declared = extractDeclaredContractIds(text);
     for (const id of declared) {
       const normalized = id.toUpperCase();
       if (API_CONTRACT_ID_RE.test(normalized)) {
-        ids.add(normalized);
+        (planned ? deferred : active).add(normalized);
       }
     }
   }
 
-  return ids;
+  return { active, deferred };
 }
 
 function collectShortIds(text: string, prefix: "US" | "TC"): Set<string> {

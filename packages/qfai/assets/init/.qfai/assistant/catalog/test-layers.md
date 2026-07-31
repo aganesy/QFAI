@@ -82,6 +82,21 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
 - API obligations:
   - Every declared `CON-API-*` must be referenced at least once from `tests/api/**`.
   - Use `QFAI:CON-API-XXXX` annotations.
+  - **Deferral.** `/qfai-sdd` authors contracts in Phase 0 (Contracts-first) and
+    slices them in Phase 2, so a contract legitimately exists before its slice
+    ships. A contract that declares `x-qfai-status: planned` is excluded from
+    the `QFAI-ATDD-113` obligation and reported as `QFAI-ATDD-114` (`info`)
+    instead. Remove the marker when the slice is implemented — leaving it in
+    place on a shipped slice is a review finding, not a tool finding.
+    - The marker counts only at the **document root**. The same key nested under
+      an operation defers nothing: one path must not be able to drop the
+      API-test obligation for every other `CON-API-*` the file declares.
+    - Deferral removes the test obligation, not the declaration. A deferred
+      `CON-API-*` stays a known ID, so writing its API test ahead of the slice
+      is fine and never raises `QFAI-ATDD-103`.
+    - Deferred IDs are recorded in `report/atdd-traceability/summary.{json,md}`
+      under `deferred.conApi`, so an empty `missing.conApi` can be told apart
+      from a project where every contract is still planned.
 - Forbidden references:
   - `tests/api/**` must not include `QFAI:SPEC-XXXX:TC-YYYY`.
   - `tests/e2e/**` must not include `QFAI:SPEC-XXXX:TC-YYYY`.
