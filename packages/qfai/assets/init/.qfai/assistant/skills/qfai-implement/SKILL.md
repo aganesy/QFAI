@@ -102,8 +102,18 @@ The eight required columns, the allowed transitions and the exception rules are 
 1. Read `test-list.md` and select the first item with `Status = todo`.
 2. Transition status to `red`.
 3. Write a **failing test** based on the TC-Refs specification.
-4. Run the test and **watch it fail** — confirm the test actually fails for the expected reason.
+4. Run the test and **watch it fail** — confirm the test actually fails for the expected reason. When
+   the row's `Selector` holds several entries, observe each entry's failure separately; a single
+   aggregate run is not a valid RED observation.
 5. If the test unexpectedly passes, transition to `exception` and record the anomaly.
+
+> **RED observation is only as good as the selector's granularity.** A single test function can fail
+> only once, so if one selector entry carries an entire obligation matrix, "the expected reason" is
+> whichever assert happens to execute first — every assertion after it is unobserved on every RED
+> run, and a non-deterministic assertion placed early silently disables everything below it. A TDD
+> row whose selector accumulates unrelated boundaries therefore **invalidates its own RED
+> observation**. Split the row per `#selector-granularity-must` before continuing; do not proceed to
+> Green.
 
 ### Phase: Green (Make It Pass)
 
