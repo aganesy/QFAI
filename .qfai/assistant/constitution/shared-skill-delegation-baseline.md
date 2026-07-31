@@ -71,11 +71,16 @@ Applies to `unavailable`, and to `saturated` once the retry budget is exhausted.
 
 Every major artifact in the stage should include this table schema:
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | ---------------------------- |
-| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE/PENDING          |
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 1    | <role>           | <instance id>  | <task>     | <refs>       | <refs>        | PASS/REVISE/PENDING          |
 
 - `Output (refs)` should point to in-file anchors or relative evidence paths.
+- `Agent instance` is a run-stable identifier for the sub-agent that actually performed the step
+  (platform-supplied id where available, otherwise `<role>#<n>` assigned in order of first use).
+  It exists so an author→reviewer collision is detectable after the fact from the evidence alone;
+  the same instance appearing in an authoring step and in a review step over the same artifact is
+  a reviewer-independence violation.
 - `PENDING` records a gate that could not be run — the only honest status for the exhausted-budget
   branch below, which mandates it. It is never a substitute for `PASS`: DONE stays blocked while
   any row is `PENDING`, and the stage stays resumable. A skill that allows only `PASS`/`REVISE`
@@ -84,6 +89,26 @@ Every major artifact in the stage should include this table schema:
 ## Reviewer Gate Baseline
 
 - Final completion gate must be delegated to an independent reviewer.
+
+### Definition: independent reviewer (NORMATIVE)
+
+An **independent reviewer** is a sub-agent that did **not** author or edit any artifact under
+review in this run.
+
+- The protected invariant is independence from authorship, not reviewer instance identity.
+  An agent that produced or modified none of the artifacts under review is independent even if
+  it filled another role earlier in the run; an agent that drafted or edited one of them is not
+  independent, however it is routed.
+- Independence is judged per review target, over the whole run — not per phase. Authoring in an
+  earlier phase disqualifies the agent from reviewing that artifact in a later one.
+- Role name alone never establishes independence. Routing dispatches by role; independence is a
+  separate constraint the routed agent must satisfy and attest to.
+- A reviewer that discovers it authored or edited a review target MUST stop, declare the
+  conflict, and hand the same evidence set to a non-participating reviewer. It MUST NOT return
+  `PASS` on an artifact it authored.
+- This definition governs every skill. Skill-local wording (e.g. `qfai-configure`'s "a reviewer
+  who did not modify the config") is an instance of it, not a competing rule.
+
 - Reviewers must verify Drift Protocol enforcement.
 - Reviewers must verify test-layer policy enforcement when relevant.
 - Do not treat test volume ratios or floors as hard gates unless the skill explicitly says so.
@@ -145,6 +170,7 @@ Quality bar:
 
 ```text
 Result: PASS | REVISE
+Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
 Findings:
 - <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|none>
 Required fixes:
@@ -155,8 +181,12 @@ Evidence checked:
 - <refs>
 ```
 
-`Result: REVISE` is legal only when at least one finding is `Severity: blocking`.
-A response whose findings are all advisory returns `Result: PASS` with the proposals attached.
+- `Authored/edited under review` is REQUIRED. A response omitting it is not a valid review verdict.
+- Anything other than `none` is a declared independence conflict: the verdict cannot be `PASS`,
+  and the review must be handed to a non-participating reviewer (see
+  `Definition: independent reviewer`).
+- `Result: REVISE` is legal only when at least one finding is `Severity: blocking`. A response
+  whose findings are all advisory returns `Result: PASS` with the proposals attached.
 
 ### Verdict vocabulary
 
