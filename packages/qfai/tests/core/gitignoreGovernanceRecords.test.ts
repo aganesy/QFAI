@@ -10,7 +10,7 @@ import {
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
-  QFAI_GITIGNORE_REQUIRED_ENTRIES,
+  QFAI_GITIGNORE_RECOMMENDED_ENTRIES,
 } from "../../src/core/gitignore.js";
 import { validateReviewArtifacts } from "../../src/core/validators/reviewArtifacts.js";
 
@@ -43,7 +43,7 @@ describe("the managed block keeps governance records tracked", () => {
   it("does not make the negations a validation requirement", () => {
     // An existing project's .gitignore predates them and must not start failing.
     for (const negation of QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) {
-      expect(QFAI_GITIGNORE_REQUIRED_ENTRIES).not.toContain(negation);
+      expect(QFAI_GITIGNORE_RECOMMENDED_ENTRIES).not.toContain(negation);
     }
   });
 

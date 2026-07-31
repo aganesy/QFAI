@@ -597,7 +597,7 @@ async function ensureRootGitignoreEntries(
   }
 
   // The governance negations are checked here but deliberately NOT in
-  // `QFAI_GITIGNORE_REQUIRED_ENTRIES`: a project that removed them must not
+  // `QFAI_GITIGNORE_RECOMMENDED_ENTRIES`: a project that removed them must not
   // start failing validation, yet a project that never had them must still
   // receive them on the next `qfai init`. Without this term the early return
   // fires for every pre-existing managed block and the negations only ever

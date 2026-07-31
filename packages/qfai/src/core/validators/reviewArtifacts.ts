@@ -4,7 +4,7 @@ import path from "node:path";
 import { isEnoent } from "../fs/errno.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
-import { QFAI_GITIGNORE_MARKER, QFAI_GITIGNORE_REQUIRED_ENTRIES } from "../gitignore.js";
+import { QFAI_GITIGNORE_MARKER, QFAI_GITIGNORE_RECOMMENDED_ENTRIES } from "../gitignore.js";
 
 const REVIEW_PACK_DIR_RE = /^review-(\d{17})$/i;
 const REVIEWER_FILE_RE = /^R\d+_.+\.md$/i;
@@ -28,7 +28,12 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
     // legitimately want tracked, and failing validation for tracking your own
     // audit trail is the wrong answer.
     hasQfaiGitignore = content.includes(QFAI_GITIGNORE_MARKER);
-    missingRecommendedEntries = QFAI_GITIGNORE_REQUIRED_ENTRIES.filter(
+    // Searched across the WHOLE file, not just the managed block: an entry the
+    // project ignores from its own section satisfies the recommendation just as
+    // well, and reporting it as missing would push the author to duplicate a
+    // rule they already have. The finding text says ".gitignore" rather than
+    // "the managed block" for the same reason.
+    missingRecommendedEntries = QFAI_GITIGNORE_RECOMMENDED_ENTRIES.filter(
       (entry) => !content.includes(entry),
     );
   } catch (err: unknown) {
@@ -70,7 +75,7 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
     issues.push(
       issue(
         "QFAI-REVIEW-008",
-        `ルート .gitignore の QFAI 管理ブロックに推奨エントリがありません: ${missingRecommendedEntries.join(", ")}`,
+        `ルート .gitignore に推奨エントリがありません: ${missingRecommendedEntries.join(", ")}`,
         "info",
         rootGitignorePath,
         "reviewArtifacts.gitignoreRecommended",
