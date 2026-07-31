@@ -35,6 +35,7 @@ import {
 } from "../prototyping/iteration.js";
 
 import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
+import { SAFE_SCREEN_ID_PATTERN } from "./uiEvidenceArtifacts.js";
 
 const PROTO_JSON_REL = PROTOTYPING_JSON_REL;
 const MIN_PROSE_CRITIQUE_WORDS = 200;
@@ -414,20 +415,64 @@ function countWords(value: string): number {
 }
 
 /**
- * Screen-id casing validator.
+ * Canonical screen-contract id shape, as shipped by
+ * `qfai-discussion/templates/uiux/40_screen_contracts.md` (`SCR-001`) and as
+ * produced by `contracts/screenContracts.ts#slugifyScreenId`.
+ */
+const CANONICAL_SCREEN_ID_PATTERN = /^[A-Z]{2,4}-\d{2,4}$/u;
+
+/**
+ * True when the id is either the canonical `SCR-001` contract form, or
+ * path-safe and free of hyphens.
  *
- * Scans every `<contractsDir>/ui/*.yaml` declared in the consumer
- * project and emits `QFAI-PROT-010` for any `screens[].id` value that
- * contains a hyphen. The accepted convention is underscore casing
- * (snake_case), which lets the iterate path mirror the screen id into
- * `.qfai/evidence/prototyping/screenshots/<id>.png` and
- * `html/<id>.html` without re-casing — keeping the evidence aggregate
- * dirs consistent end-to-end with the UI contract surface.
+ * Derived from `SAFE_SCREEN_ID_PATTERN` rather than re-encoded, so the two
+ * cannot drift: an id this accepts is always one the evidence-path constraints
+ * accept. The one deliberate narrowing is the hyphen. `SAFE_SCREEN_ID_PATTERN`
+ * permits it because a hyphen is path-safe, which is all that validator needs;
+ * here a bare `home-page` would be ambiguous against the canonical
+ * `<PREFIX>-<number>` shape, so a hyphenated id is accepted only when it really
+ * is that canonical form.
  *
- * Validation is per-file but emits one issue per offending screen id
- * so the operator gets a fan-out list of the exact entries that need
- * to be renamed. Empty / non-string ids are ignored here (they are
- * caught by `validateScreenContractSchema` instead).
+ * Accepted:   `SCR-001`, `home_page`, `Main.Screen`, `checkout2`
+ * Reported:   `home-page`, `Main Screen`, `a/b`, `_leading`
+ */
+function isAcceptedScreenId(id: string): boolean {
+  if (CANONICAL_SCREEN_ID_PATTERN.test(id)) {
+    return true;
+  }
+  return SAFE_SCREEN_ID_PATTERN.test(id) && !id.includes("-");
+}
+
+/**
+ * Screen-id shape validator.
+ *
+ * Scans every `<contractsDir>/ui/*.yaml` declared in the consumer project and
+ * emits `QFAI-PROT-010` for a `screens[].id` that is neither the canonical
+ * `SCR-001` form nor a path-safe hyphen-free identifier (`SAFE_SCREEN_ID_PATTERN`
+ * without the hyphen — see `isAcceptedScreenId`). Case is not part of the test:
+ * `Main.Screen` and `main_screen` are equally accepted.
+ *
+ * The name still says "casing" because that is what the check used to be. The
+ * issue source `prototypingEvidence.screenIdCasing` is what consumers grep,
+ * filter and waive on, so it is left alone and the behaviour is stated here
+ * instead. The rule code did move — `QFAI-PROT-008` -> `QFAI-PROT-010` — because
+ * `prototyping/specIdLinkage.ts` also emits `QFAI-PROT-008`, and one code owned
+ * by two modules cannot be grepped, filtered or waived apart at all.
+ *
+ * This was previously a blanket hyphen ban demanding underscore casing — a
+ * convention that appears in no shipped document, that the shipped screen
+ * contract template violates by prescribing `SCR-001`, that `slugifyScreenId`
+ * violates by emitting hyphens, and that `SAFE_SCREEN_ID_PATTERN` (the
+ * canonical screen-id pattern used by the evidence validator in this same
+ * profile) explicitly permits. Following qfai's own template guaranteed a
+ * blocking failure with no config switch and no migration command.
+ *
+ * The severity is `warning`, not `error`: no re-casing migration exists, and a
+ * project cannot rename frozen contract IDs by hand across a spec pack.
+ *
+ * Validation is per-file but emits one issue per offending screen id so the
+ * operator gets a fan-out list of the exact entries. Empty / non-string ids are
+ * ignored here (they are caught by `validateScreenContractSchema` instead).
  */
 export async function validateScreenIdCasing(root: string, contractsDir: string): Promise<Issue[]> {
   const fg = (await import("fast-glob")).default;
@@ -462,16 +507,13 @@ export async function validateScreenIdCasing(root: string, contractsDir: string)
       if (typeof idRaw !== "string") continue;
       const id = idRaw.trim();
       if (id.length === 0) continue;
-      if (id.includes("-")) {
+      if (!isAcceptedScreenId(id)) {
         const rel = path.relative(root, filePath).replace(/\\/g, "/");
         issues.push(
           issue(
-            // Renamed from QFAI-PROT-008: that code is owned by
-            // `prototyping/specIdLinkage.ts`, and sharing it made the two
-            // unrelated checks impossible to grep, filter or waive apart.
             "QFAI-PROT-010",
-            `screens[].id "${id}" uses hyphen casing; underscore casing is required (e.g. "${id.replace(/-/g, "_")}"). Underscore casing keeps iter-NN/<id>.png and the evidence aggregate dirs consistent.`,
-            "error",
+            `screens[].id "${id}" is neither the canonical \`SCR-001\` form nor a path-safe hyphen-free identifier (letters, digits, \`.\` and \`_\`, starting with a letter or digit). Use the shape shipped in \`40_screen_contracts.md\`, or replace the hyphens, so \`iter-NN/<id>.png\` and the evidence aggregate dirs stay consistent.`,
+            "warning",
             rel,
             "prototypingEvidence.screenIdCasing",
           ),
