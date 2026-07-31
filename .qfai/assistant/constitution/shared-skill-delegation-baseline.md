@@ -46,6 +46,24 @@ Every major artifact in the stage should include this table schema:
 - Do not declare DONE until all routed blocking reviewers return `PASS`.
 - Every reviewer returning `FAIL` or `REVISE` must include a concrete fix proposal.
 
+### Finding provenance (MUST)
+
+- Every finding must declare a severity (`blocking` or `advisory`) and a `Traces to:` value.
+- `Traces to:` names what the finding enforces. Legal values:
+  - an upstream obligation — an `AC-*`, `BR-*`, `TC-*`, `CON-*` ID, or a named
+    constitution/catalog rule;
+  - `defect:correctness`, `defect:security`, or `defect:code-quality` — a defect demonstrable from
+    the changed artifacts themselves, cited together with the evidence that demonstrates it. See
+    `drift-protocol.md#defect-or-new-scope-decide-this-first`. A reviewer who can show the
+    deliverable is wrong on its own terms does not need an `AC-*` to say so;
+  - `none` — reviewer-originated scope, i.e. a new product obligation upstream never asked for.
+- A finding whose `Traces to:` is `none` MUST be recorded as `advisory`. It cannot be `blocking`,
+  and it cannot gate `DONE`.
+- An advisory finding is routed to the Change Request / Open Question path defined in
+  `drift-protocol.md#reviewer-originated-obligations`, not to the implementer.
+- Only `blocking` findings — those citing an upstream obligation or a defect class — force
+  `REVISE`.
+
 ## Work order template
 
 ```text
@@ -70,12 +88,17 @@ Quality bar:
 ```text
 Result: PASS | REVISE
 Findings:
-- <issue>
+- <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|none>
 Required fixes:
-- <action>
+- <action>   # blocking findings only
+Advisory / Change Request proposals:
+- <proposal>  # findings with `Traces to: none`; not a DONE gate
 Evidence checked:
 - <refs>
 ```
+
+`Result: REVISE` is legal only when at least one finding is `Severity: blocking`.
+A response whose findings are all advisory returns `Result: PASS` with the proposals attached.
 
 ### Verdict vocabulary
 

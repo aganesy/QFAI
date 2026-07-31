@@ -4,7 +4,13 @@
 
 - scope: `discussion-YYYYMMDDhhmmssSSS`
 - layer: `discussion`
-- review-pack: `review-YYYYMMDDhhmmssSSS`
+- review-pack: `assigned per review cycle` — see `.qfai/review/`
+
+<!-- Do NOT record a single review-pack id here. `references/review-cycle-playbook.md`
+     requires a new review pack per cycle, so one discussion pack is reviewed by N packs.
+     The authoritative pointer for a given cycle is that pack's own
+     `.qfai/review/review-<id>/review_request.md#Scope`, which names the directory that
+     contains it. -->
 
 ## Target Files
 
