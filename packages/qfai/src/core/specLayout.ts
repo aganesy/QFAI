@@ -1,4 +1,4 @@
-import { access, readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "./fs/errno.js";
@@ -164,8 +164,12 @@ export async function collectSpecEntries(specsRoot: string): Promise<SpecEntry[]
       );
       const hasLayeredBase =
         normalizedFileNames.has("01_spec.md") && normalizedFileNames.has("02_user-stories.md");
+      // All four probes are case-exact. Filename casing is what distinguishes
+      // v1417 from v1421, so mixing a case-insensitive probe for
+      // `05_Examples.md` with case-exact probes for the other three made the
+      // style verdict depend on *which* file happened to be mis-cased.
       const hasLayeredV1421Markers =
-        normalizedFileNames.has("05_examples.md") ||
+        fileNames.has("05_Examples.md") ||
         fileNames.has("03_Acceptance-Criteria.md") ||
         fileNames.has("04_Business-Rules.md") ||
         fileNames.has("06_Test-Cases.md");
@@ -247,6 +251,7 @@ export async function collectMissingRequiredFiles(
   if (entry.layout !== "spec-pack") {
     return [];
   }
+  const listings = new Map<string, Set<string>>();
   const missing: RequiredSpecPackFile[] = [];
   for (const fileName of REQUIRED_SPEC_PACK_FILES) {
     const target = entry.requiredFiles[fileName];
@@ -254,7 +259,7 @@ export async function collectMissingRequiredFiles(
       missing.push(fileName);
       continue;
     }
-    if (!(await exists(target))) {
+    if (!(await existsCaseExact(target, listings))) {
       missing.push(fileName);
     }
   }
@@ -265,6 +270,7 @@ export async function collectMissingLayeredRequiredFiles(entry: SpecEntry): Prom
   if (entry.layout !== "layered") {
     return [];
   }
+  const listings = new Map<string, Set<string>>();
   const missing: string[] = [];
   for (const fileName of entry.requiredLayeredFileNames) {
     const target = entry.requiredLayeredFiles[fileName];
@@ -272,7 +278,7 @@ export async function collectMissingLayeredRequiredFiles(entry: SpecEntry): Prom
       missing.push(fileName);
       continue;
     }
-    if (!(await exists(target))) {
+    if (!(await existsCaseExact(target, listings))) {
       missing.push(fileName);
     }
   }
@@ -285,6 +291,7 @@ export async function collectMissingLayeredSharedRequiredFiles(
   if (entry.layout !== "layered") {
     return [];
   }
+  const listings = new Map<string, Set<string>>();
   const missing: string[] = [];
   for (const fileName of entry.requiredSharedFileNames) {
     const target = entry.requiredSharedFiles[fileName];
@@ -292,7 +299,7 @@ export async function collectMissingLayeredSharedRequiredFiles(
       missing.push(fileName);
       continue;
     }
-    if (!(await exists(target))) {
+    if (!(await existsCaseExact(target, listings))) {
       missing.push(fileName);
     }
   }
@@ -642,10 +649,77 @@ function normalizeRequiredFileNames(
   return normalized;
 }
 
-async function exists(target: string): Promise<boolean> {
+/**
+ * Case-exact existence probe for required-file gates.
+ *
+ * `fs.access` performs no normalization of its own, so case folding is
+ * delegated to the host filesystem: NTFS and APFS resolve a mis-cased path,
+ * ext4 does not. Because `REQUIRED_LAYERED_*_V1417` and `_V1421` differ from
+ * each other *only* by letter case for several entries, filename casing is
+ * load-bearing here, and a single mis-cased character used to flip the verdict
+ * of the completion gate depending on which machine ran it — `error=0` on a
+ * developer's Windows box, `E_SPEC_MISSING_FILESET` on Linux CI.
+ *
+ * Resolving required names against the `readdir` listing instead makes the
+ * result identical on every platform (matching the stricter, case-sensitive
+ * behaviour), so a mis-cased required file is reported everywhere.
+ *
+ * The listing is still an existence probe, not just a name probe: symlink
+ * entries are resolved (see `listExistingNames`) so a required name backed by
+ * a broken link stays missing, as it was under `access()`.
+ *
+ * The `listings` map memoizes one `readdir` per directory across a single
+ * collection pass.
+ */
+async function existsCaseExact(
+  target: string,
+  listings: Map<string, Set<string>>,
+): Promise<boolean> {
+  const dir = path.dirname(target);
+  let names = listings.get(dir);
+  if (!names) {
+    names = await listExistingNames(dir);
+    listings.set(dir, names);
+  }
+  return names.has(path.basename(target));
+}
+
+async function listExistingNames(dir: string): Promise<Set<string>> {
+  const names = new Set<string>();
   try {
-    await access(target);
-    return true;
+    const items = await readdir(dir, { withFileTypes: true });
+    for (const item of items) {
+      if (item.isSymbolicLink()) {
+        // A `Dirent` describes the LINK, not its target: a dangling symlink and
+        // a symlink to a directory both report `isDirectory() === false`, so
+        // taking the name at face value would count a required file that cannot
+        // be read. The previous `access()` probe followed the link and failed,
+        // and the gate must keep failing — otherwise a layout whose validators
+        // early-return without opening the file (v1417) passes the completion
+        // gate with a required file that has no content behind it. Resolve the
+        // link and keep only those that land on a regular file.
+        if (!(await resolvesToFile(path.join(dir, item.name)))) {
+          continue;
+        }
+      } else if (!item.isFile()) {
+        // Directories are the obvious case, but FIFOs, sockets and device
+        // nodes are not directories either, so testing `!isDirectory()` would
+        // admit them as satisfying a required file. The gate requires a
+        // regular file the downstream validators can actually open.
+        continue;
+      }
+      names.add(item.name);
+    }
+  } catch {
+    // Unreadable or missing directory yields an empty listing, which reports
+    // every required file as missing — same as the previous access() probe.
+  }
+  return names;
+}
+
+async function resolvesToFile(target: string): Promise<boolean> {
+  try {
+    return (await stat(target)).isFile();
   } catch {
     return false;
   }
