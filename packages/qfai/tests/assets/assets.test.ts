@@ -375,6 +375,36 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(handoffTemplate).not.toContain("mustNotCopy");
   });
 
+  it("keeps the per-screen skeleton shape from breaking handoff", async () => {
+    // `--emit-skeletons` writes only `<screenId>.html`, never an
+    // `index.html`, while handoff.md copies `iter-NN/index.html` into
+    // `.qfai/prototypes/final/`. Presenting the per-screen shape as an
+    // exclusive alternative left an accepted iteration with nothing for
+    // `/qfai-implement` to read.
+    for (const tree of [templateQfaiDir, path.join(repoRoot, ".qfai")]) {
+      const generatorRef = await readFile(
+        path.join(
+          tree,
+          "assistant",
+          "skills",
+          "qfai-prototyping",
+          "references",
+          "generator-prompt.md",
+        ),
+        "utf-8",
+      );
+      expect(generatorRef).toContain("Opt-in **seed aid**, not an alternative output shape");
+      expect(generatorRef).toContain("Neither writes an `index.html`.");
+      expect(generatorRef).toContain("An accepted iteration must still carry `iter-NN/index.html`");
+      expect(generatorRef).toContain("before the loop converges");
+      // Whitespace-tolerant: the phrase spans a line break today, and a reflow
+      // of the surrounding paragraph would otherwise break this assertion
+      // without the meaning having changed.
+      expect(generatorRef).toMatch(/cycle 1 would otherwise\s+accept it as it stands/);
+      expect(generatorRef).not.toContain("mutually exclusive with the single-file envelope");
+    }
+  });
+
   it("keeps qfai-prototyping SKILL.md concise enough for agent execution", async () => {
     const skillPath = path.join(
       templateQfaiDir,
