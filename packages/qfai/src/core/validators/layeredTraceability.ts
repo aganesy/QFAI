@@ -40,6 +40,17 @@ const AC_ID_RE = /^AC-\d{4}$/;
 const BR_OR_AC_ID_RE = /^(?:BR|AC)-\d{4}$/;
 const EX_ID_RE = /^EX-\d{4}$/;
 const LAYER_ID_RE = /\b(?:OBJ|INIT|CAP|FLOW|US|AC|BR|EX|TC)-\d{4}\b/gi;
+// Spec-local IDs only. Discussion-layer IDs are `D`-prefixed (`DUS-001`,
+// `DAC-001-01`, `DTC-1`, `DSC-001`) and are deliberately NOT matched — they
+// are the provenance carriers that `02_User-stories.md`'s `Source:` field and
+// `03_Acceptance-Criteria.md`'s `# Source:` comment keep legal in shared files.
+// The `D` closes the word boundary, so no `D`-prefixed form can match.
+// The AC provenance lives in that comment inside the required Gherkin block, not
+// in the AC Catalog: the catalog is a human-facing index and deliberately has no
+// `Source` column, so the two can never disagree.
+// The optional second group matches the composite spec-local form
+// (`AC-0001-0001`) as one token, so a violation is reported as the ID an author
+// would recognise rather than as its truncated four-digit prefix.
 const POLICIES_DOWNSTREAM_V1421_RE = /\b(?:US|AC|BR|EX|TC)-\d{4}(?:-\d{4})?\b/gi;
 
 const LAYER_ORDER = {
@@ -352,7 +363,7 @@ async function validatePoliciesScopeForV1421(policiesDir: string): Promise<Issue
     issues.push(
       issue(
         "TRACE_SHARED_SCOPE_VIOLATION",
-        `_policies で US/AC/BR/EX/TC の定義・参照は禁止です: ${refs.join(", ")}`,
+        `_policies で spec ローカルの US/AC/BR/EX/TC ID（4桁）の定義・参照は禁止です: ${refs.join(", ")}`,
         "error",
         filePath,
         "layeredTraceability.sharedScope",
