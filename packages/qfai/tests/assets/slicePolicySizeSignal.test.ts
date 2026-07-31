@@ -1,9 +1,14 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-const repoRoot = path.resolve(process.cwd(), "..", "..");
+// Anchored to this file, not to `process.cwd()`. A runner launched from the
+// repo root resolves `../..` to the directory ABOVE the repo, and every read
+// below then fails on a path unrelated to what is being asserted.
+// tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const TEMPLATES = [
   "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/_policies/11_Slice-Policy.md",
   ".qfai/assistant/skills/qfai-sdd/templates/specs/_policies/11_Slice-Policy.md",
@@ -20,13 +25,22 @@ const TRIAGE_REFERENCES = [
  */
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
 
-/** Returns the `## APPEND vs CREATE algorithm` body. */
+const ALGORITHM_HEADING = "## APPEND vs CREATE algorithm";
+
+/**
+ * Returns the `## APPEND vs CREATE algorithm` body — the text after the
+ * heading line, up to the next `## `.
+ *
+ * The heading itself is excluded. Slicing from `start + 1` instead used to
+ * leave a truncated `# APPEND vs CREATE algorithm` at the front of the
+ * "body", which is neither the heading nor part of the body.
+ */
 function algorithm(content: string): string {
-  const start = content.indexOf("## APPEND vs CREATE algorithm");
+  const start = content.indexOf(ALGORITHM_HEADING);
   if (start === -1) {
     return "";
   }
-  const rest = content.slice(start + 1);
+  const rest = content.slice(start + ALGORITHM_HEADING.length);
   const next = rest.indexOf("\n## ");
   return next === -1 ? rest : rest.slice(0, next);
 }
@@ -37,8 +51,12 @@ describe("11_Slice-Policy.md treats item counts as a signal, not a SPLIT trigger
       const section = algorithm(await readFile(path.join(repoRoot, relativePath), "utf-8"));
       expect(section).not.toBe("");
 
-      expect(section).not.toContain("exceeds the AC/TC\n   thresholds → **SPLIT**");
-      expect(section).not.toContain("Upgrade to **SPLIT**");
+      // Negative checks run on the unwrapped text: pinning the exact
+      // `\n   ` soft-wrap meant the banned rule could come back at a
+      // different column and this guard would not notice.
+      const flat = unwrap(section);
+      expect(flat).not.toContain("exceeds the AC/TC thresholds → **SPLIT**");
+      expect(flat).not.toContain("Upgrade to **SPLIT**");
       expect(section).toContain("size signal, not an operation");
       expect(section).toContain("capability-ownership review");
     });

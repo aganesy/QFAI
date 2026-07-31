@@ -310,15 +310,26 @@ export function bestSubjectMatch(
  * MODIFY/REMOVE in support of the primary change.
  */
 /**
- * The `size signal: ...` note for a MERGE row, or `undefined` when no target
+ * The `size signal: ...` note for any row, or `undefined` when no target
  * breaches a threshold.
  *
- * A MERGE row targets several specs at once, so the note names every breaching
- * target. The operation is unchanged — MERGE and its approval stand — exactly
- * as a breach on an APPEND target leaves APPEND in place; the breach only asks
- * for a capability-ownership review of the merged owner.
+ * One formatter for every operation. The breach detail — which specs, which
+ * counts, which thresholds — is identical whatever the row does; only the
+ * clause naming what the operation does next differs, and that is `standsClause`.
+ * Three call sites building this string by hand is how the IDs, the thresholds
+ * or the `QFAI-SPLIT-102/104` citation drift out of one of them.
+ *
+ * The operation is never changed by a breach: MERGE, APPEND and UPDATE:REMOVE
+ * all stand, and the note only asks for a capability-ownership review. A
+ * count-driven SPLIT of a single-capability spec has no legal end state —
+ * `validateSpecSplitByCapability` raises `QFAI-SPLIT-102` / `QFAI-SPLIT-104` at
+ * `error` — so only that review can propose one.
  */
-function mergeSizeSignal(targets: SpecSummary[], thresholds: TriageThresholds): string | undefined {
+function sizeSignal(
+  targets: readonly SpecSummary[],
+  thresholds: TriageThresholds,
+  standsClause: string,
+): string | undefined {
   const breached = targets.filter(
     (target) => target.acCount > thresholds.ac || target.tcCount > thresholds.tc,
   );
@@ -332,12 +343,23 @@ function mergeSizeSignal(targets: SpecSummary[], thresholds: TriageThresholds): 
         `tc=${target.tcCount} (threshold ${thresholds.tc})`,
     )
     .join(" / ");
-  return (
-    `size signal: ${details}. MERGE stands; start a capability-ownership review on the ` +
-    `merged owner — SPLIT only if it owns more than one CAP-NNNN (QFAI-SPLIT-102/104), ` +
-    `otherwise record the reasoned non-split`
-  );
+  return `size signal: ${details}. ${standsClause} (QFAI-SPLIT-102/104)`;
 }
+
+/** What a MERGE row does next after a breach. */
+const MERGE_STANDS =
+  "MERGE stands; start a capability-ownership review on the merged owner — " +
+  "SPLIT only if it owns more than one CAP-NNNN, otherwise record the reasoned non-split";
+
+/** What a single-target removal row does next after a breach. */
+const REMOVE_STANDS =
+  "Removal proceeds as UPDATE:REMOVE; start a capability-ownership review separately — " +
+  "SPLIT only if the spec owns more than one CAP-NNNN";
+
+/** What a single-target additive row does next after a breach. */
+const APPEND_STANDS =
+  "APPEND stands; start a capability-ownership review separately — " +
+  "SPLIT only if the spec owns more than one CAP-NNNN";
 
 export function classifyTriage(input: TriageInput): TriageRow[] {
   const thresholds = input.thresholds ?? DEFAULT_TRIAGE_THRESHOLDS;
@@ -354,7 +376,7 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
         const notes = [
           "removal-intent across multiple capability-matched specs; consolidate before REMOVE",
         ];
-        const breach = mergeSizeSignal(capabilityMatches, thresholds);
+        const breach = sizeSignal(capabilityMatches, thresholds, MERGE_STANDS);
         if (breach) {
           notes.push(breach);
         }
@@ -375,21 +397,22 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
         // illegal — `validateSpecSplitByCapability` raises QFAI-SPLIT-102/104
         // at `error` — so the breach starts a capability-ownership review
         // instead.
-        const tooLarge = target.acCount > thresholds.ac || target.tcCount > thresholds.tc;
+        // `notes`, like the multi-target MERGE path above: the removal-intent
+        // note comes first and the size signal is appended. Building the
+        // rationale from the breach alone dropped the `removal-intent` keyword
+        // from single-target rows, so the same REQ read differently depending
+        // on how many specs matched it.
+        const notes = ["removal-intent on the capability-matched spec"];
+        const breach = sizeSignal([target], thresholds, REMOVE_STANDS);
+        if (breach) {
+          notes.push(breach);
+        }
         rows.push({
           source: req.id,
           subject: req.subject,
           existingSpec: target.specId,
           op: { update: "REMOVE" },
-          ...(tooLarge
-            ? {
-                rationale:
-                  `size signal: ${target.specId} has ac=${target.acCount} (threshold ${thresholds.ac}), ` +
-                  `tc=${target.tcCount} (threshold ${thresholds.tc}). Removal proceeds as UPDATE:REMOVE; ` +
-                  `start a capability-ownership review separately — SPLIT only if the spec owns more ` +
-                  `than one CAP-NNNN (QFAI-SPLIT-102/104)`,
-              }
-            : {}),
+          rationale: notes.join("; "),
         });
       } else {
         // No active spec absorbed the removal-shaped REQ. DELETE
@@ -419,7 +442,7 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
       // MERGE targets are evaluated against the thresholds too. Without this
       // the size signal the policy promises was simply absent whenever the
       // selected operation was MERGE.
-      const breach = mergeSizeSignal(capabilityMatches, thresholds);
+      const breach = sizeSignal(capabilityMatches, thresholds, MERGE_STANDS);
       rows.push({
         source: req.id,
         subject: req.subject,
@@ -439,7 +462,6 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
       // legal end state. SPLIT is reserved for `capabilityMatches.length > 1`,
       // which is handled by the MERGE/`> 1` branch above and by an explicit
       // capability-ownership review.
-      const tooLarge = primary.acCount > thresholds.ac || primary.tcCount > thresholds.tc;
       const isFallback = capabilityMatches.length === 0;
       const row: TriageRow = {
         source: req.id,
@@ -453,13 +475,9 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
           `subject-overlap fallback to ${primary.specId}; verify impact cascade before persisting`,
         );
       }
-      if (tooLarge) {
-        notes.push(
-          `size signal: ${primary.specId} has ac=${primary.acCount} (threshold ${thresholds.ac}), ` +
-            `tc=${primary.tcCount} (threshold ${thresholds.tc}). Start a capability-ownership ` +
-            `review: SPLIT only if the spec owns more than one CAP-NNNN (QFAI-SPLIT-102/104), ` +
-            `otherwise record the reasoned non-split`,
-        );
+      const breach = sizeSignal([primary], thresholds, APPEND_STANDS);
+      if (breach) {
+        notes.push(breach);
       }
       if (notes.length > 0) {
         row.rationale = notes.join("; ");
