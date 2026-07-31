@@ -1257,8 +1257,15 @@ const LEGACY_SAMPLE_BODY_PHRASE = "Acme Ledger is a calm, confident financial co
  *      leaves the comment in place.
  *   2. Legacy content fingerprint — samples seeded before the marker
  *      existed, which `qfai init` will never overwrite.
+ *
+ * `text` is `unknown` rather than `string` because this is re-exported from
+ * `core/index.ts` and so is reachable from untyped JavaScript, where a caller
+ * can hand over the result of a read that failed or a value that was never a
+ * file body. The guard below is what makes that safe; typing the parameter
+ * `string` would have made it dead code that only looked defensive. Internal
+ * callers pass a string and are unaffected.
  */
-export function isUnreplacedDesignMdSample(text: string): boolean {
+export function isUnreplacedDesignMdSample(text: unknown): boolean {
   if (typeof text !== "string") return false;
   if (text.includes(DESIGN_MD_SAMPLE_MARKER)) return true;
   return LEGACY_SAMPLE_BRAND_NAME_RE.test(text) && text.includes(LEGACY_SAMPLE_BODY_PHRASE);

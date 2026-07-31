@@ -1222,4 +1222,14 @@ describe("isUnreplacedDesignMdSample", () => {
   it("does not flag an unrelated authored DESIGN.md", () => {
     expect(isUnreplacedDesignMdSample(VALID_SAMPLE)).toBe(false);
   });
+
+  it("returns false for a non-string input instead of throwing", () => {
+    // Re-exported from `core/index.ts`, so an untyped JavaScript consumer can
+    // reach this with the result of a read that failed or a value that was
+    // never a file body. Answering false — "this is not a shipped sample" —
+    // keeps the caller on its normal path rather than crashing it.
+    for (const value of [undefined, null, 42, {}, [], Buffer.from("x")]) {
+      expect(isUnreplacedDesignMdSample(value)).toBe(false);
+    }
+  });
 });
