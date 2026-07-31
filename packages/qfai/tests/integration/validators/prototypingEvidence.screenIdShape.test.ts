@@ -61,3 +61,30 @@ describe("validateScreenIdCasing accepts the shipped contract shape", () => {
     });
   });
 });
+
+// The acceptance set is derived from SAFE_SCREEN_ID_PATTERN minus the hyphen,
+// so the two must stay in lockstep. Pinning the boundary keeps a later edit to
+// either one from silently widening or narrowing this check.
+describe("screen id acceptance boundary", () => {
+  const accepted = ["SCR-001", "SCRN-0001", "home_page", "Main.Screen", "checkout2"];
+  // `SCREEN-0001` is reported on purpose: the canonical prefix is 2-4 letters,
+  // so a 6-letter prefix is not the contract form, and the hyphen then makes it
+  // not a plain identifier either.
+  const reported = ["SCREEN-0001", "home-page", "Main Screen", "a/b", "_leading", "-leading"];
+
+  for (const id of accepted) {
+    it(`accepts ${id}`, async () => {
+      await withUiContract([id], (issues) => {
+        expect(issues.filter((entry) => entry.code === "QFAI-PROT-008")).toEqual([]);
+      });
+    });
+  }
+
+  for (const id of reported) {
+    it(`reports ${id}`, async () => {
+      await withUiContract([id], (issues) => {
+        expect(issues.some((entry) => entry.code === "QFAI-PROT-008")).toBe(true);
+      });
+    });
+  }
+});

@@ -35,6 +35,7 @@ import {
 } from "../prototyping/iteration.js";
 
 import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
+import { SAFE_SCREEN_ID_PATTERN } from "./uiEvidenceArtifacts.js";
 
 const PROTO_JSON_REL = PROTOTYPING_JSON_REL;
 const MIN_PROSE_CRITIQUE_WORDS = 200;
@@ -421,15 +422,25 @@ function countWords(value: string): number {
 const CANONICAL_SCREEN_ID_PATTERN = /^[A-Z]{2,4}-\d{2,4}$/u;
 
 /**
- * True when the id is either the canonical `SCR-001` contract form or a
- * hyphen-free identifier. Anything else — `home-page`, `Main Screen`, `a/b` —
- * is reported.
+ * True when the id is either the canonical `SCR-001` contract form, or
+ * path-safe and free of hyphens.
+ *
+ * Derived from `SAFE_SCREEN_ID_PATTERN` rather than re-encoded, so the two
+ * cannot drift: an id this accepts is always one the evidence-path constraints
+ * accept. The one deliberate narrowing is the hyphen. `SAFE_SCREEN_ID_PATTERN`
+ * permits it because a hyphen is path-safe, which is all that validator needs;
+ * here a bare `home-page` would be ambiguous against the canonical
+ * `<PREFIX>-<number>` shape, so a hyphenated id is accepted only when it really
+ * is that canonical form.
+ *
+ * Accepted:   `SCR-001`, `home_page`, `Main.Screen`, `checkout2`
+ * Reported:   `home-page`, `Main Screen`, `a/b`, `_leading`
  */
 function isAcceptedScreenId(id: string): boolean {
   if (CANONICAL_SCREEN_ID_PATTERN.test(id)) {
     return true;
   }
-  return /^[A-Za-z0-9][A-Za-z0-9._]*$/u.test(id);
+  return SAFE_SCREEN_ID_PATTERN.test(id) && !id.includes("-");
 }
 
 /**
@@ -437,7 +448,15 @@ function isAcceptedScreenId(id: string): boolean {
  *
  * Scans every `<contractsDir>/ui/*.yaml` declared in the consumer project and
  * emits `QFAI-PROT-008` for a `screens[].id` that is neither the canonical
- * `SCR-001` form nor an underscore-cased identifier.
+ * `SCR-001` form nor a path-safe hyphen-free identifier (`SAFE_SCREEN_ID_PATTERN`
+ * without the hyphen — see `isAcceptedScreenId`). Case is not part of the test:
+ * `Main.Screen` and `main_screen` are equally accepted.
+ *
+ * The name still says "casing" because that is what the check used to be, and
+ * the rule code `QFAI-PROT-008` plus the issue source
+ * `prototypingEvidence.screenIdCasing` are the strings consumers grep, filter
+ * and waive on. Renaming them silently retires every existing waiver, so the
+ * name is left alone and the behaviour is stated here instead.
  *
  * This was previously a blanket hyphen ban demanding underscore casing — a
  * convention that appears in no shipped document, that the shipped screen
@@ -492,7 +511,7 @@ export async function validateScreenIdCasing(root: string, contractsDir: string)
         issues.push(
           issue(
             "QFAI-PROT-008",
-            `screens[].id "${id}" is neither the canonical \`SCR-001\` form nor an underscore-cased identifier. Use the shape shipped in \`40_screen_contracts.md\`, or snake_case, so \`iter-NN/<id>.png\` and the evidence aggregate dirs stay consistent.`,
+            `screens[].id "${id}" is neither the canonical \`SCR-001\` form nor a path-safe hyphen-free identifier (letters, digits, \`.\` and \`_\`, starting with a letter or digit). Use the shape shipped in \`40_screen_contracts.md\`, or replace the hyphens, so \`iter-NN/<id>.png\` and the evidence aggregate dirs stay consistent.`,
             "warning",
             rel,
             "prototypingEvidence.screenIdCasing",
