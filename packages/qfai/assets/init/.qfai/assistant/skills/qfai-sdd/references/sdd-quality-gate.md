@@ -31,8 +31,11 @@ Use this file for the full quality gate checklist behind `/qfai-sdd`.
 
 ## Validation Checks
 
-- `qfai validate --profile sdd --fail-on error --format github | tee .qfai/report/validate.log`
+- `qfai validate --profile sdd --fail-on error --format github`
 - `error=0`
+- `<paths.outDir>/validate.log` (`.qfai/report/validate.log` by default) — written automatically by the
+  command above (no `tee` redirect); its `run_log:` line points at the `run-*/` directory of that run.
+  A project that changed `paths.outDir` in `qfai.config.yaml` finds both under its configured directory
 - `.qfai/report/specs-coverage/spec-*.md` reviewed
 - Density-smell warnings triaged
 
