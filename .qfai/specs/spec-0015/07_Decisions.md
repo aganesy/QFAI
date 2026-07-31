@@ -21,7 +21,7 @@
 
 ### DR-0015-0004 → DR-0270 (reference): Envelope-deviation audit trigger taxonomy (2026-05-27)
 
-- Reference: `_policies/08_Decisions.md` DR-0270 (OQ-0162 resolved). Fixed four-context declared taxonomy (skill-envelope / architectural-decision / rejected-option re-adoption / scope-expansion); writes `.qfai/evidence/decisions/<ISO8601-ts>.json` `{question, answer, scope, operatorIdentity, timestamp, envelopeContractClause}`; git-ignored. Realized here as AC-0015-0016 / BR-0015-0011.
+- Reference: `_policies/08_Decisions.md` DR-0270 (OQ-0162 resolved). Fixed four-context declared taxonomy (skill-envelope / architectural-decision / rejected-option re-adoption / scope-expansion); writes `.qfai/evidence/decisions/<ISO8601-ts>.json` `{question, answer, scope, operatorIdentity, timestamp, envelopeContractClause}`; tracked in version control (governance record; negated in the managed `.gitignore` block). Realized here as AC-0015-0016 / BR-0015-0011.
 - Source REQ: REQ-0158.
 
 ### DR-0015-0005 → DR-0271 (reference): `qfai audit log` CLI shape (2026-05-27)

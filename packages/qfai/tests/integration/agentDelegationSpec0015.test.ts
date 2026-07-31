@@ -24,6 +24,7 @@
 import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 
 import { parseAgentFrontmatter } from "../../src/core/agentFrontmatter.js";
 
@@ -70,16 +71,6 @@ const AGENT_VALIDATOR = path.resolve(
   "core",
   "validators",
   "agentDefinition.ts",
-);
-
-const REVIEW_GATE_VALIDATOR = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "src",
-  "core",
-  "validators",
-  "reviewGate.ts",
 );
 
 const SHARED_DELEGATION_BASELINE = path.resolve(
@@ -134,6 +125,20 @@ const LIVE_QFAI_IMPLEMENT_SKILL = path.resolve(
 
 async function readAsset(filePath: string) {
   return readFile(filePath, "utf-8");
+}
+
+type ReviewGateRules = {
+  quality_gates?: { defaults?: Array<{ id?: string; role?: string }> };
+  optional_review_modes?: { supported?: string[] };
+};
+
+async function readReviewGateRules(): Promise<ReviewGateRules> {
+  const raw = await readFile(path.join(CATALOG_DIR, "review-gate.rules.yml"), "utf-8");
+  const parsed: unknown = parseYaml(raw);
+  if (typeof parsed !== "object" || parsed === null) {
+    throw new Error("review-gate.rules.yml did not parse to a mapping");
+  }
+  return parsed;
 }
 
 function getSection(content: string, heading: string) {
@@ -197,18 +202,24 @@ describe("TC-0015-0003: Orchestrator No Direct Generation", () => {
 
 // TC-0015-0004: Devils-Advocate Concrete Alternative
 describe("TC-0015-0004: Devils-Advocate Concrete Alternative", () => {
-  it("review-gate validator exists", async () => {
-    const content = await readFile(REVIEW_GATE_VALIDATOR, "utf-8");
-    expect(content).toMatch(/review|gate/i);
+  it("review-gate rules declare the reviewer gate defaults and optional review modes", async () => {
+    // Asserted against the parsed document, not the raw text: a substring
+    // check passes on a key that only appears in a comment, and breaks on a
+    // reflow that changes nothing semantically.
+    const rules = await readReviewGateRules();
+    expect(Object.keys(rules)).toEqual(expect.arrayContaining(["quality_gates"]));
+    expect(rules.quality_gates?.defaults?.map((entry) => entry.id)).toContain(
+      "completion-reviewer",
+    );
+    expect(rules.optional_review_modes?.supported).toBeInstanceOf(Array);
   });
 });
 
 // TC-0015-0005: Devils-Advocate 3-FAIL Demotion
 describe("TC-0015-0005: Devils-Advocate 3-FAIL Demotion", () => {
   it("review-gate rules support devils-advocate review mode", async () => {
-    const rulesPath = path.join(CATALOG_DIR, "review-gate.rules.yml");
-    const content = await readFile(rulesPath, "utf-8");
-    expect(content).toContain("devils-advocate");
+    const rules = await readReviewGateRules();
+    expect(rules.optional_review_modes?.supported).toContain("devils-advocate");
   });
 });
 

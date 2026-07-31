@@ -158,7 +158,7 @@
 - AC-Refs: AC-0015-0016
 - Type: boundary
 - Level: unit
-- Verify that an `AskUserQuestion` naming none of the four contexts writes no decision record, and that `.qfai/evidence/decisions/` is git-ignored by default.
+- Verify that an `AskUserQuestion` naming none of the four contexts writes no decision record, and that `.qfai/evidence/decisions/` is tracked (negated in the managed `.gitignore` block after `.qfai/evidence/*`).
 
 ## TC-0015-0024: Non-conforming handoff write emits R-HANDOFF-SCHEMA-DRIFT
 

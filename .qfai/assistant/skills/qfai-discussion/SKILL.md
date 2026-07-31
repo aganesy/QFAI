@@ -73,6 +73,10 @@ For UI-bearing targets, follow `references/design-dna-intake.md` while authoring
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
+The full completion logic, including the UI-bearing blocking conditions, is in
+`references/discussion-completion-matrix.md`. It must stay consistent with the canonical
+sidecar family declared above and with `templates/uiux/00_index.md#Forbidden Legacy Files`.
+
 Before declaring completion, you MUST:
 
 - verify all 15 mandatory output files exist and are populated;
