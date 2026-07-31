@@ -221,16 +221,25 @@ When the target spec is UI-bearing, Phase 0 MUST freeze the brand SSOT:
    missing, stop and ask the user to run `/qfai-discussion` (which
    emits the draft) or to author it manually using the sample at
    `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`.
-2. Call `parseDesignMd(text)`. If the result is `{ error: ParseError }`,
+2. Call `isUnreplacedDesignMdSample(text)`. If it returns `true`, the file
+   is still a qfai sample brand and MUST NOT be frozen: stop and ask the
+   user to author this product's own brand SSOT, deleting the
+   `QFAI-SAMPLE-DESIGN-MD` marker comment if present (samples from
+   releases older than the marker are recognised by content instead).
+   `qfai init` seeds the sample into the project root and never overwrites
+   it, so step 1's missing-file check cannot catch this — an unreplaced
+   sample parses and validates by construction, and freezing it binds
+   `/qfai-prototyping` and the reviewer lock rule to a fictional brand.
+3. Call `parseDesignMd(text)`. If the result is `{ error: ParseError }`,
    stop and report `path` / `code` / `message` for the parse error.
    Otherwise the result is `{ data: DesignMd; body: string }`; pass
    `data` to `validateDesignMd(data)`. If that issue list is
    non-empty, stop and report each issue. Both functions, together with
    `hashDesignMd` and the `DesignMd` / `ParseError` / `ParseResult` /
    `ValidationIssue` types, are re-exported from the public `qfai`
-   package entry (`import { parseDesignMd, validateDesignMd, hashDesignMd } from "qfai"`).
-3. Call `hashDesignMd(text)` to compute sha256 over the raw bytes.
-4. Write `.qfai/contracts/design/DESIGN.md.lock.yaml` from the
+   package entry (`import { parseDesignMd, validateDesignMd, hashDesignMd, isUnreplacedDesignMdSample } from "qfai"`).
+4. Call `hashDesignMd(text)` to compute sha256 over the raw bytes.
+5. Write `.qfai/contracts/design/DESIGN.md.lock.yaml` from the
    template at
    `templates/contracts/design-md-lock.sample.yaml` with these fields:
    - `designMdPath: "DESIGN.md"`
@@ -238,7 +247,7 @@ When the target spec is UI-bearing, Phase 0 MUST freeze the brand SSOT:
    - `frozenAt: <UTC ISO-8601>`
    - `schemaTokens.colors`, `fontFamilies`, `radii`, `shadows`
      enumerated per the sample.
-5. Record the freeze in `_policies/05_Contracts.md` under the Contract
+6. Record the freeze in `_policies/05_Contracts.md` under the Contract
    Index. The lock yaml plus root `DESIGN.md` are the only brand
    contract; per-aspect brand yaml contracts have been removed.
 
