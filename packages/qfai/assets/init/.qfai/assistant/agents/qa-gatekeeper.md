@@ -26,16 +26,18 @@ In addition to traceability-based coverage (US/TC/CON-API existence), verify the
 - Check that each US/TC has test cases for at minimum: normal path AND error/failure path.
 - Flag any US/TC that has only normal-path test cases as a coverage gap.
 - Reference: `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`
-- This check is a review signal (not a hard gate that blocks validation), but unjustified gaps MUST be documented as findings.
+- Which verdict applies depends on the review cycle, per the scope note below: on an **SDD** cycle this check is a review signal (not a hard gate that blocks validation); from the **ATDD** cycle onward a missing matrix — or one whose ❌ cells are unjustified — is a FAIL. Either way, unjustified gaps MUST be documented as findings.
 
 ### Scope of this check
 
 The Coverage Depth Matrix is an **ATDD-stage artifact**: it is defined in
-`skills/qfai-atdd/references/test-case-depth-checklist.md`, listed as an ATDD Mandatory Output,
+`.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`, listed as an ATDD
+Mandatory Output,
 and written into `.qfai/evidence/atdd-<spec-id>.md`. `qfai-sdd` neither defines its layout nor
 ships a section for it, so:
 
-- Apply this check from the **ATDD review cycle onward**, where `skills/qfai-atdd/SKILL.md` lists
+- Apply this check from the **ATDD review cycle onward**, where
+  `.qfai/assistant/skills/qfai-atdd/SKILL.md` lists
   the matrix under both Mandatory Outputs and Not-done criteria. A missing matrix is a FAIL there,
   and so is one whose ❌ cells are unjustified.
 - Do NOT evaluate it against an SDD spec pack that has no tests yet. On an SDD review cycle,
