@@ -56,13 +56,36 @@ const baselinePath = path.join(
   "shared-skill-delegation-baseline.md",
 );
 
-/** GitHub heading slug: lowercase, drop punctuation, spaces to hyphens. */
+/**
+ * Simplified GitHub heading slug: lowercase, drop punctuation, spaces to
+ * hyphens. It covers the ASCII headings the baseline uses and does not model
+ * GitHub's Unicode normalization or emoji handling.
+ */
 function slugify(heading: string): string {
   return heading
     .toLowerCase()
     .replace(/[^\w\s-]/g, "")
     .trim()
     .replace(/\s+/g, "-");
+}
+
+/**
+ * Anchor set for a document, including GitHub's duplicate disambiguation: the
+ * first heading with a given slug keeps it and each later repeat gets a `-1`,
+ * `-2`, … suffix in document order. Without that, a baseline that grew a second
+ * heading slugging the same as an earlier one would make this test call a
+ * working link broken.
+ */
+function headingSlugs(markdown: string): Set<string> {
+  const occurrences = new Map<string, number>();
+  const slugs = new Set<string>();
+  for (const match of markdown.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)) {
+    const base = slugify(match[1] ?? "");
+    const seen = occurrences.get(base) ?? 0;
+    occurrences.set(base, seen + 1);
+    slugs.add(seen === 0 ? base : `${base}-${seen}`);
+  }
+  return slugs;
 }
 
 describe("web-research inherits the shared delegation baseline", () => {
@@ -89,9 +112,7 @@ describe("web-research inherits the shared delegation baseline", () => {
 
   it("links only to anchors that exist in the shipped baseline", async () => {
     const [content, baseline] = await Promise.all([readSkill(), readFile(baselinePath, "utf-8")]);
-    const slugs = new Set(
-      Array.from(baseline.matchAll(/^#{1,6}\s+(.+?)\s*$/gm), (m) => slugify(m[1] ?? "")),
-    );
+    const slugs = headingSlugs(baseline);
     const linked = Array.from(
       content.matchAll(/shared-skill-delegation-baseline\.md#([\w-]+)/g),
       (m) => m[1] ?? "",
