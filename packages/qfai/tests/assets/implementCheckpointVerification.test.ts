@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
+
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
 /** Shipped surface plus its root mirror. */
@@ -147,7 +149,7 @@ describe("qfai-implement checkpoint verification contract", () => {
   it("keeps the skill body inside its progressive-disclosure budget", async () => {
     for (const dir of SKILL_DIRS) {
       const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
-      expect(skill.split(/\r?\n/).length).toBeLessThanOrEqual(400);
+      expect(skill.split(/\r?\n/).length).toBeLessThanOrEqual(SKILL_MD_MAX_LINES);
     }
   });
 });
