@@ -156,19 +156,13 @@ an unconverged iter-09.
 
 ### Continuing or resetting a converged loop
 
-Only `stopReason: "axes-exceptional"` + `acceptedIterationIndex` seals a loop;
-`iterate --cycle N` then refuses with exit `2` past the accepted index, writing
-nothing. `license-verify-fail` / `input-error` do NOT seal — fix the cause and
-re-run the same cycle. `max-iterations` does not seal either, but the recorded
-iter-09 still stops every `--cycle N >= 1` at exit `65`, so its only recovery is
-the cycle-0 reset — which is also the reset for a sealed loop, alongside
-`certify`: `--cycle 0 --target-url <url> --force` (`--force` required — the
-converged `iter-00` exists and is backed up first).
-
-Re-running the accepted cycle is not refused by the seal guard, but the
-convergence gate reports the stop (exit `64`) and writes nothing, so
-it is a state read, not a rerun.
-Details: `references/iteration-loop.md#sealed-loop`.
+Only `stopReason: "axes-exceptional"` + `acceptedIterationIndex` seals a loop; `iterate --cycle N`
+then refuses with exit `2` past the accepted index, writing nothing. `license-verify-fail` /
+`input-error` do NOT seal — fix the cause and re-run the same cycle.
+`max-iterations` does not seal either, but iter-09 still stops every `--cycle N >= 1` at exit `65`.
+Recovery for both is the cycle-0 reset; re-running the accepted cycle is reported by the convergence
+gate (exit `64`) and writes nothing, so it is a state read, not a rerun. The reset command, the
+`--force` requirement and the `certify` alternative are in `references/iteration-loop.md#sealed-loop`.
 
 ## Evaluator Inputs (Mandatory)
 
