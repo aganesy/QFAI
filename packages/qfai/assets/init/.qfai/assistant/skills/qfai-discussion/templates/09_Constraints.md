@@ -1,6 +1,6 @@
 # 09 Constraints
 
-<!-- UX-INTENT: If UI-bearing, see uiux/20_design_eval_invariant.md for accessibility constraints (invariant layer) -->
+<!-- UX-INTENT: If UI-bearing, see root DESIGN.md (top-level `accessibility`) and uiux/40_screen_contracts.md for accessibility constraints -->
 
 ## Technical Constraints
 
