@@ -426,6 +426,48 @@ export async function runPrototypingCertify(
           `  - ${m.screenId} (expected ${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/${m.screenId}.html)`,
         );
       }
+      // Name the authoring artifact explicitly. The paths above are
+      // CAPTURE OUTPUT, not what the generator authors — an operator
+      // whose `.qfai/prototypes/iter-NN/index.html` is complete
+      // otherwise reads this as "my prototype is missing screens",
+      // when the real cause is that the capture step never ran or
+      // could not reach those routes.
+      error(
+        `  These are capture outputs, not authored files. The generator writes ` +
+          `.qfai/prototypes/${acceptedIterDir}/index.html; ` +
+          "`qfai prototyping iterate --capture` is what fans that out to one " +
+          `${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/<screenId>.html per declared screen.`,
+      );
+      // Recovery must be reachable. Re-invoking the accepted cycle with
+      // `--capture` is NOT: the iteration is already recorded, so
+      // `evaluateCycleGteOneGate` rejects it with "expected --cycle
+      // <iterations.length>" before capture runs, and cycle 0 refuses an
+      // existing iter-00 without `--force`. There is no capture-only
+      // entry point today, so the two routes below are the ones an
+      // operator can actually execute.
+      error(
+        "  Recovery: first make each missing screen's contract route reachable from the " +
+          "capture target (the built-in --auto-serve server is a static file server and 404s " +
+          "path routes; use hash routes or point --target-url at a server with SPA fallback). " +
+          "Then re-run the loop from cycle 0. Re-invoking the accepted cycle with --capture " +
+          "will not work: that iteration is already recorded in prototyping.json#iterations, " +
+          "so iterate exits first on the expected-next-cycle gate. If a listed screen is no " +
+          "longer part of the product, delete it from .qfai/contracts/ui/ AND still re-run the " +
+          "loop from cycle 0 — deleting alone is not a shortcut past this gate. certify " +
+          "recomputes the declared-screen set from the contracts on every run, so a bare " +
+          "deletion silently drops that screen's HTML and per-spec review.json checks while " +
+          "the already-recorded validate.json, verify.json and reviewerGate results — produced " +
+          "against the old scope — are re-used as they are, sealing a certificate whose " +
+          "evidence never covered the screen you were experimenting on.",
+      );
+      error(
+        "  The cycle-0 re-run is DESTRUCTIVE, and --force does not make it safe: it renames " +
+          "only iter-00 to iter-00.backup-<ISO>. Everything else in " +
+          `${PROTOTYPING_EVIDENCE_REL}/ is then reset — iter-01 and up are deleted outright, ` +
+          "and prototyping.json#iterations / #reviewerGate are cleared. Copy the whole " +
+          `${PROTOTYPING_EVIDENCE_REL}/ directory somewhere safe first if the earlier ` +
+          "iterations still matter.",
+      );
       return 2;
     }
   }
