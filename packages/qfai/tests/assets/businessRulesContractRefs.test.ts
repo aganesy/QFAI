@@ -1,20 +1,43 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-const repoRoot = path.resolve(process.cwd(), "..", "..");
+// Anchored to this file, not to `process.cwd()`: Vitest may be launched from
+// the workspace root, from `packages/qfai`, or by an IDE with its own CWD, and
+// the reads below must resolve the same way in all three.
+// tests/assets/<this file> -> packages/qfai -> packages -> repo root
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const TEMPLATE = "assistant/skills/qfai-sdd/templates/specs/spec/04_Business-Rules.md";
 const RULES = "assistant/skills/qfai-sdd/references/spec-traceability-rules.md";
 
-/** Splits a markdown table row into trimmed cells. */
+/**
+ * Splits a markdown table row into trimmed cells.
+ *
+ * Strips the delimiter pipes by pattern rather than by `slice(1, -1)`, so a row
+ * written with a doubled edge pipe (`|| a | b |`) still yields `["a", "b"]`
+ * instead of a phantom leading empty cell that would fail the header-order
+ * assertion for a reason having nothing to do with the columns.
+ */
 function cells(row: string): string[] {
   return row
+    .trim()
+    .replace(/^\|+/, "")
+    .replace(/\|+$/, "")
     .split("|")
-    .slice(1, -1)
     .map((cell) => cell.trim());
+}
+
+/** The first data row of a Rule Table — the first whose BR-ID cell is a BR id. */
+function firstRuleRow(rows: readonly string[]): string {
+  const row = rows.find((candidate) => /^BR-\d{4}$/.test(cells(candidate)[0] ?? ""));
+  if (row === undefined) {
+    throw new Error("the Rule Table has no BR-NNNN data row");
+  }
+  return row;
 }
 
 /**
@@ -43,7 +66,12 @@ describe("04_Business-Rules.md gives contract references a typed column", () => 
 
       // The sample row must demonstrate the column, not leave a bare
       // placeholder, and only with a kind the toolchain actually recognises.
-      expect(cells(rows[2])[header.indexOf("Contract-Refs")]).toMatch(/^CON-(?:API|DB|UI)-\d{4}$/);
+      // Selected by its BR-ID rather than by position: `rows[2]` assumed
+      // exactly one header and one separator row above the sample, so an added
+      // alignment row or a second example would have moved it silently.
+      expect(cells(firstRuleRow(rows))[header.indexOf("Contract-Refs")]).toMatch(
+        /^CON-(?:API|DB|UI)-\d{4}$/,
+      );
     });
 
     it(`${tree}: only offers the contract kinds the toolchain recognises`, async () => {
