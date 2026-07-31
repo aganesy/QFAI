@@ -4,7 +4,13 @@
 
 - scope: `discussion-YYYYMMDDhhmmssSSS`
 - layer: `discussion`
-- review-pack: `review-YYYYMMDDhhmmssSSS`
+- review-pack: `assigned per review cycle` — see `.qfai/review/`
+
+<!-- Do NOT record a single review-pack id here. `references/review-cycle-playbook.md`
+     requires a new review pack per cycle, so one discussion pack is reviewed by N packs.
+     The authoritative pointer for a given cycle is that pack's own
+     `.qfai/review/review-<id>/review_request.md#Scope`, which names the directory that
+     contains it. -->
 
 ## Target Files
 
@@ -35,11 +41,12 @@
   - Acceptance criteria are consistent with flows/state transitions
   - Security/operations risks are reflected in diagrams where relevant
 - Mermaid diagrams use ` ```mermaid ` fences only
-- Root `DESIGN.md` completeness and differentiation clarity (when UI-bearing)
-- Reference pool freshness and translation quality into `DESIGN.md` (when UI-bearing)
+- Root `DESIGN.md` completeness and differentiation clarity — it parses, and its `# Brand Philosophy` body carries do/don't, brand signals, and exploration references framed as **deviate-from** inputs (when UI-bearing)
+- Reference pool freshness and translation quality into `DESIGN.md`, and Trend Scan freshness and evidence traceability at `04_Sources.md#Trend Scan` (when UI-bearing)
+- Canonical `uiux/` family complete — `00_index.md`, `40_screen_contracts.md`, `50_review_input_bundle.md` — with no forbidden legacy sidecar (when UI-bearing)
 - Evaluator scoring covers all four canonical UX axes — information architecture / navigation flow / usability / functionality, fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` (when UI-bearing)
 - Evaluator critique skepticism and blandness rejection quality applied against the four axes (when UI-bearing)
-- Best-of-history handling and winner selection consistency (when UI-bearing)
+- Planner-first discipline — exploration directions stay unranked, no single visual winner was selected (`qfai-discussion/SKILL.md`), and latest-iteration handling matches the one-lineage / no-best-of-history rule in `qfai-prototyping/SKILL.md` (when UI-bearing)
 - Screen contract sufficiency and strong schema completeness (when UI-bearing)
 - Generic fallback risk — ensure no unreviewed generic/placeholder UI remains (when UI-bearing)
 - OQ register exit condition (open count = 0)
@@ -51,14 +58,14 @@
 
 - Brand SSOT: verify root `DESIGN.md` defines `brand`, `audience`, and `visual.*` tokens, and that `# Brand Philosophy` body documents product intent, must-preserve interactions, brand signals, and differentiation targets
 - Evaluator axes: confirm reviewers will score against the four canonical UX axes (information architecture / navigation flow / usability / functionality) — these are fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` and no longer authored as sidecar files
-- History handling: verify `uiux/50_review_input_bundle.md` documents best-of-history comparison instead of latest-only preference
+- History handling: verify `uiux/50_review_input_bundle.md` matches the one-lineage rule in `qfai-prototyping/SKILL.md` — no parallel candidates, no best-of-history, the latest iteration is accepted
 
 ## Sidecar Artifact Review Scope
 
 <!-- Required for UI-bearing packs. Reviews root DESIGN.md + uiux/ sidecar artifacts. -->
 
 - Verify root `DESIGN.md` is specific enough to support divergent exploration (front-matter populated, `# Brand Philosophy` body written, do/don't and reference notes framed as deviate-from inputs)
-- Verify `uiux/50_review_input_bundle.md` preserves best-of-history handling
+- Verify `uiux/50_review_input_bundle.md` states the one-lineage handling (latest iteration accepted, no best-of-history)
 - Verify screen contracts use nested strong schema with all 4 required states (default/loading/empty/error) and treat `uiux/40_screen_contracts.md` as the state SSOT
 
 ## Required Reviewers
@@ -67,7 +74,7 @@
 - Always run reviewers listed in `profiles.<routing_profile>.always_required` in `review-profiles.yml`.
 - Add `architecture-reviewer` only when architecture-affecting decisions exist.
 - Add `product-surface-reviewer` only when the pack is UI-bearing.
-- Allowed verdicts: `PASS`, `FAIL`.
+- Allowed in-flight verdicts: `PASS`, `REVISE`. `REVISE` is what starts the fix-and-rerun cycle; it serializes to `status: "FAIL"` when the pack's `summary.json` is written (see `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#verdict-vocabulary`).
 
 ## RCP Rules (Mandatory)
 

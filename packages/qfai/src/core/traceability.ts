@@ -241,7 +241,12 @@ function toSortedArray(values: Iterable<string>): string[] {
   return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
 }
 
-function normalizeGlobs(globs: string[]): string[] {
+/**
+ * Trim and drop empty entries. Exported so a caller that scans with
+ * `collectFilesByGlobs` directly normalises its globs exactly the way
+ * `collectScTestReferences` does, instead of reporting on a different file set.
+ */
+export function normalizeGlobs(globs: string[]): string[] {
   return globs.map((glob) => glob.trim()).filter((glob) => glob.length > 0);
 }
 
