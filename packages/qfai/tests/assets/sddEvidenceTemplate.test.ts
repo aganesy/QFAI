@@ -41,15 +41,30 @@ describe("sdd evidence template", () => {
   });
 
   it("runs the same command the skill body and the quality gate mandate", async () => {
-    const [skill] = await readShipped(SKILL_REL);
-    const [gate] = await readShipped(GATE_REL);
-    const [template] = await readShipped(TEMPLATE_REL);
+    const [skills, gates, templates] = await Promise.all([
+      readShipped(SKILL_REL),
+      readShipped(GATE_REL),
+      readShipped(TEMPLATE_REL),
+    ]);
+    const expectedCommand = `qfai validate --profile sdd --fail-on error --format github ${VALIDATE_LOG_REDIRECT}`;
 
-    for (const source of [skill, gate, template]) {
-      expect(source).toBeDefined();
-      expect(source).toContain(
-        `qfai validate --profile sdd --fail-on error --format github ${VALIDATE_LOG_REDIRECT}`,
-      );
-    }
+    // Indexed against ASSISTANT_ROOTS so BOTH halves are asserted. Destructuring
+    // the first element checked only the shipped tree and left `.qfai/assistant`
+    // — the half an author is most likely to forget — free to drift, which is
+    // the guardrail this file exists to provide.
+    ASSISTANT_ROOTS.forEach((root, index) => {
+      const label = path.relative(repoRoot, root).replace(/\\/g, "/");
+      const files: ReadonlyArray<readonly [string, string | undefined]> = [
+        [SKILL_REL, skills[index]],
+        [GATE_REL, gates[index]],
+        [TEMPLATE_REL, templates[index]],
+      ];
+      for (const [relative, source] of files) {
+        expect(source, `${label}/${relative} was not read`).toBeDefined();
+        expect(source, `${label}/${relative} does not mandate the validate command`).toContain(
+          expectedCommand,
+        );
+      }
+    });
   });
 });
