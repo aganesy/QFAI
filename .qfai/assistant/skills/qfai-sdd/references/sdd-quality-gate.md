@@ -33,7 +33,14 @@ Use this file for the full quality gate checklist behind `/qfai-sdd`.
 
 ## Traceability Checks
 
-- `US -> AC -> BR -> EX -> TC` edges exist.
+- `US -> AC -> BR -> EX -> TC` edges exist. Check this against `.qfai/report/run-*/traceability.json`,
+  which is built from the parsed spec pack on every run, clean or failing. Table-layout specs
+  (`05_Examples.md` + `06_Test-Cases.md`) carry `BR_TO_AC`, `EX_TO_BR`, `TC_TO_AC` and `TC_TO_EX`
+  edges; the older `Examples.feature` layouts carry `AC_TO_US`, `BR_TO_AC` and either
+  `EX_TO_BR` / `TC_TO_EX` or `SC_TO_AC` / `CASE_TO_SC`. `EX_TO_AC` also appears: in v1417 an
+  `EX` may hang off an `AC` directly rather than off a `BR`, and the graph builder emits both
+  edge kinds — it is a normal edge type, not an unknown one. An empty `edges` array on a spec
+  pack that has specs is a finding, not a tool limitation.
 - `05_Examples.md` includes `EX-ID` and `BR-Ref`.
 - `06_Test-Cases.md` includes `TC-ID`, `EX-Ref`, `AC-Refs`, and `Type`.
 - Error or boundary coverage is present, not only normal-path coverage.
