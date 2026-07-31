@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { FORBIDDEN_LEGACY_PATTERNS } from "../../src/core/validators/uix/threeLayer.js";
+
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateBase = path.join(
   repoRoot,
@@ -17,6 +19,28 @@ const templateBase = path.join(
 );
 const skillPath = path.join(templateBase, "SKILL.md");
 const uiuxTemplateDir = path.join(templateBase, "templates", "uiux");
+
+// `FORBIDDEN_LEGACY_PATTERNS` is a regex list, so it cannot be searched for in
+// prose; these are the concrete filenames that stand in for it. The coverage
+// case below fails if the validator grows a pattern with no representative
+// here, which is what previously let the sweep fall behind the SSOT.
+const FORBIDDEN_SIDECAR_NAMES = [
+  "10_implementation_strategy.md",
+  "11_design_taste_interview.md",
+  "12_design_system.md",
+  "20_design_eval_invariant.md",
+  "30_option_comparison.md",
+  "31_selected_anchor_screen.md",
+  "33_exploration_rubric.md",
+  "34_evaluator_calibration.md",
+  "40_contracts.md",
+  "50_review_bundle.md",
+  "60_critique_loop.md",
+];
+
+// Prose shorthand the templates used to carry for the retired 20–24 family.
+// Not a filename, so it is deliberately outside the coverage check.
+const FORBIDDEN_RANGE_MENTIONS = ["uiux/20-24"];
 
 describe("discussion skill template integration", () => {
   it("uiux template directory が screen-level sidecars を持つ", async () => {
@@ -36,19 +60,25 @@ describe("discussion skill template integration", () => {
     expect(content).toMatch(/50_review_input_bundle\.md/);
   });
 
+  it("forbidden sidecar 名の一覧が validator の SSOT を網羅している", () => {
+    // Ties the list above to the validator: a pattern added to
+    // FORBIDDEN_LEGACY_PATTERNS without a representative filename here would
+    // otherwise leave the sweep below blind to that whole family.
+    for (const pattern of FORBIDDEN_LEGACY_PATTERNS) {
+      expect(
+        FORBIDDEN_SIDECAR_NAMES.some((name) => pattern.test(name)),
+        `no representative filename covers ${pattern}`,
+      ).toBe(true);
+    }
+  });
+
   // The shipped skill must not tell an agent to produce a sidecar that
   // `validators/uix/threeLayer.ts#FORBIDDEN_LEGACY_PATTERNS` rejects.
   // Following such guidance creates the file and then fails validation,
   // so a stale instruction anywhere in the tree is a live trap — the
   // sweep therefore covers references/ and templates/, not just SKILL.md.
   it("配布 skill が forbidden legacy sidecar の生成を指示していない", async () => {
-    const forbiddenMentions = [
-      "10_implementation_strategy.md",
-      "11_design_taste_interview.md",
-      "30_option_comparison.md",
-      "31_selected_anchor_screen.md",
-      "uiux/20-24",
-    ];
+    const forbiddenMentions = [...FORBIDDEN_SIDECAR_NAMES, ...FORBIDDEN_RANGE_MENTIONS];
     // Three files name them on purpose: `00_index.md` is the
     // forbidden-legacy manifest, `ui_ux_best_practices.md` carries the
     // explicit "do NOT create" warning, and `ui-bearing-playbook.md`
