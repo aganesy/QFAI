@@ -64,7 +64,7 @@
 
 - EX-Ref: EX-0015-0005
 - AC-Refs: AC-0015-0012
-- Verify failed first delegation stops the stage, does not simulate or self-execute, and reports remediation details.
+- Verify a failed first delegation is classified, that an `unavailable` classification stops the stage and reports remediation details including the failure class, that a `saturated` classification retries the identical delegation with the stage held open, and that neither class simulates or self-executes.
 
 ## TC-0015-0012: Capability Probe First Real Delegation Contract
 
@@ -158,7 +158,7 @@
 - AC-Refs: AC-0015-0016
 - Type: boundary
 - Level: unit
-- Verify that an `AskUserQuestion` naming none of the four contexts writes no decision record, and that `.qfai/evidence/decisions/` is git-ignored by default.
+- Verify that an `AskUserQuestion` naming none of the four contexts writes no decision record, and that `.qfai/evidence/decisions/` is tracked (negated in the managed `.gitignore` block after `.qfai/evidence/*`).
 
 ## TC-0015-0024: Non-conforming handoff write emits R-HANDOFF-SCHEMA-DRIFT
 

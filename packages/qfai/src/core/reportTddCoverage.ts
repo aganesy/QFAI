@@ -13,7 +13,7 @@ import path from "node:path";
 
 import type { ReportTddCoverage, ReportTddCoverageSpec } from "./report.js";
 import type { SpecEntry } from "./specLayout.js";
-import { parseFirstMarkdownTable } from "./specPackParsers.js";
+import { parseFirstMarkdownTable, resolveTestCaseTable } from "./specPackParsers.js";
 import {
   isCoverageTargetLevel,
   TDD_DONE_STATUSES,
@@ -35,11 +35,14 @@ export async function collectTddCoverage(
       continue;
     }
 
-    const tcTable = parseFirstMarkdownTable(tcContent);
-    if (!tcTable) continue;
+    // Section-scoped, mirroring `tddList.collectTestCaseIds`: reading the
+    // first table in document order let an explanatory table above the
+    // `## Test Case Table` heading hijack the TC set.
+    const tcResolution = resolveTestCaseTable(tcContent);
+    if (!tcResolution.table) continue;
+    const tcTable = tcResolution.table;
     const tcHeaders = tcTable.headers.map((h) => h.trim());
     const tcIdIdx = tcHeaders.indexOf("TC-ID");
-    if (tcIdIdx < 0) continue;
     const levelIdx = tcHeaders.indexOf("Level");
 
     const unitComponentTcIds = new Set<string>();

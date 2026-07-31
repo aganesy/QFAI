@@ -40,17 +40,18 @@ QFAI Skill Body (SSOT)
 
 Every major research artifact SHOULD include a `## Work Orders Summary` table:
 
-| Step | Role (sub-agent) | Task title                 | Input (refs)          | Output (refs)     | Status (PASS/REVISE) |
-| ---- | ---------------- | -------------------------- | --------------------- | ----------------- | -------------------- |
-| 1    | Researcher       | Discover candidate sources | User request + config | Candidate list    | PASS/REVISE          |
-| 2    | Analyst          | Prepare research notes     | Candidate URLs        | Research notes    | PASS/REVISE          |
-| 3    | Reviewer         | Review evidence and claims | Notes + sources       | Approval decision | PASS/REVISE          |
+| Step | Role (sub-agent) | Task title                 | Input (refs)          | Output (refs)     | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------------------- | --------------------- | ----------------- | ---------------------------- |
+| 1    | Researcher       | Discover candidate sources | User request + config | Candidate list    | PASS/REVISE                  |
+| 2    | Analyst          | Prepare research notes     | Candidate URLs        | Research notes    | PASS/REVISE                  |
+| 3    | Reviewer         | Review evidence and claims | Notes + sources       | Approval decision | PASS/REVISE                  |
 
 ### Reviewer Gate (MUST)
 
 - Final completion gate MUST be performed by an independent Reviewer.
 - Reviewer checks the Drift Protocol, verifies alignment with `test-layers.md`, and treats ratios as signals, not gates.
 - Reviewer returns only `PASS` or `REVISE` with a concrete fix proposal when returning `REVISE`.
+- A gate that could not be run at all is recorded as `PENDING` in the Work Orders Summary. `PENDING` never counts as `PASS`.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
