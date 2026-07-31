@@ -147,6 +147,10 @@ Reviewer routing is fixed by `.qfai/assistant/manifest/agent-routing.yml` and `.
 - Without argument: target all capabilities in `_policies/03_Capabilities.md`.
 - Run Contracts-first and Outline once per batch.
 - Delegate Slice in parallel per spec.
+- Parallel delegation here is bound by the stage-independent Concurrency rules in
+  `.qfai/assistant/constitution/workflow.md#concurrency-stage-independent-mandatory`:
+  worktree separation, or the declared degraded mode, plus mandatory commit
+  scoping (`git add <paths>`; never `git add -A` / `git add .` / `git commit -a`).
 - Validate gate and Review gate run once at batch tail after all target specs are integrated.
 
 ## Work Orders Summary

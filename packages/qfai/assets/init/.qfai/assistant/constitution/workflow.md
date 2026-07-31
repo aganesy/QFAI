@@ -73,11 +73,43 @@ Implementation stage:
 - `/qfai-implement` orchestrates the full TDD micro-cycle (Red/Green/Refactor) one test at a time using `test-list.md` as the execution ledger.
 - Each item requires watch it fail (RED observation confirmed), watch it pass (GREEN observation confirmed), and fresh evidence (command+result pairs, not status-only).
 - Completion requires independent spec review and code quality review gates — both must PASS before an item is marked done.
-- Parallel execution is allowed only for independent slices with no shared state; worktree separation is required.
+- Parallel execution is allowed only for independent slices with no shared state.
 
 Legacy note:
 
 - The three legacy TDD skills were abolished. Use `/qfai-implement` instead.
+
+### Concurrency (stage-independent, mandatory)
+
+This subsection binds **every** stage that delegates in parallel, including
+`/qfai-sdd` no-argument batch runs and `/qfai-implement` slice execution. It is
+a real heading so `workflow.md#concurrency-stage-independent-mandatory` resolves
+from the skills and baselines that cite it.
+
+- Worktree separation is required whenever two or more delegated agents write
+  files concurrently. One agent per worktree; no shared index.
+- If worktree separation is not available, parallel delegation degrades to
+  "one agent commits at a time; the others hand back an unstaged diff to the
+  orchestrator". State which of the two modes is in force in the stage
+  evidence.
+- Commit scoping is mandatory in both modes and binds **every** committer —
+  delegated agent and orchestrator alike. Stage only the paths belonging to the
+  task being committed (`git add <paths>`). `git add -A`, `git add .` and
+  `git commit -a` are forbidden while any parallel stage is in flight.
+  - In **degraded / shared-index** mode the damage is immediate: the siblings
+    share one index, so a sweeping stage commits their in-flight files into an
+    unrelated commit and misattributes work in the audit trail the Drift
+    Protocol depends on.
+  - Under **worktree separation** there is no shared index, so no sibling file
+    can be swept in. The ban still holds: a sweeping stage commits whatever
+    else is loose in that agent's own worktree — build output, scratch files, a
+    half-finished edit outside the work order — so the commit still stops
+    matching its declared deliverables, which is what the audit trail reads.
+- Degraded mode makes this the **orchestrator's** obligation above all, since
+  it is the one holding the commit: it commits one handed-back diff at a time,
+  staging that agent's declared deliverable paths only, and never blanket-stages
+  the shared worktree. A diff whose paths it cannot enumerate is not
+  committable — ask the agent for its path list first.
 
 ### Stage 0 — Steering refresh contract (mandatory)
 
