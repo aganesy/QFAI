@@ -1,7 +1,6 @@
 import { parseScenarioDocument } from "./scenarioModel.js";
 import { extractIdsByKind } from "./specPackIds.js";
 import type { SpecPackIdKind } from "./specPackIds.js";
-import { LAYER_TAGS } from "./testStrategyTags.js";
 
 const FEATURE_LINE_RE = /^\s*Feature:/gm;
 const EX_ID_RE = /^EX-\d+$/;
@@ -66,6 +65,17 @@ export function parseExamplesFeature(text: string, filePath: string): ParsedExam
   return { scenarios, errors };
 }
 
+/**
+ * Extracts the allowed `layer-*` tag set from the shipped test-layer policy.
+ *
+ * The shipped `catalog/test-layers.md` states its layers as headings
+ * (`### L3 Integration`), not as `layer-*` tokens, so a token-only scan
+ * returned nothing and the caller fell back to the built-in set — silencing
+ * the read without restoring enforcement. Both forms are parsed.
+ *
+ * Returns an EMPTY set when neither form is present, so the caller can report
+ * an unparseable policy instead of silently widening the allowed set.
+ */
 export function resolveAllowedLayerTagsFromPolicy(policyText: string): Set<string> {
   const extracted = new Set<string>();
   for (const match of policyText.matchAll(/@?(layer-[a-z0-9-]+)/gi)) {
@@ -75,11 +85,15 @@ export function resolveAllowedLayerTagsFromPolicy(policyText: string): Set<strin
     }
   }
 
-  if (extracted.size > 0) {
-    return extracted;
+  // `### L3 Integration` / `### L1 Unit` heading form.
+  for (const match of policyText.matchAll(/^#{1,6}\s*L\d\s+([A-Za-z0-9][A-Za-z0-9 -]*)$/gim)) {
+    const word = (match[1] ?? "").trim().toLowerCase().replace(/\s+/g, "-");
+    if (word.length > 0) {
+      extracted.add(`layer-${word}`);
+    }
   }
 
-  return new Set(Array.from(LAYER_TAGS));
+  return extracted;
 }
 
 /**
