@@ -67,15 +67,27 @@ the SSOT for brand identity. There is no preserve / adapt / copy split.
 
 ## Cert
 
-Order is load-bearing: `npx qfai prototyping certify` requires
-`.qfai/output/validate.json` (with `counts.error === 0`) and
-`.qfai/output/verify.json` (with `status === "PASS"`) to be present
-on disk before it will seal the certificate. Run the gates in this
-order, every time:
+Order is load-bearing: `npx qfai prototyping certify` requires the configured
+validate report (with `counts.error === 0`) and `.qfai/report/verify.json`
+(with `status === "PASS"`) to be present on disk before it will seal the
+certificate.
 
-1. `npx qfai validate --profile prototyping --fail-on error` — writes
-   `.qfai/output/validate.json`.
-2. `/qfai-verify` — writes `.qfai/output/verify.json` with
+The two reads are not the same shape. The **validate** report is read from
+whatever `output.validateJsonPath` names — one location, no fallback. Only
+**`verify.json`** is canonical-first: it falls back to the legacy
+`.qfai/output/verify.json` and prints a migration note when it does. That
+fallback fires only when the canonical file is **absent** — a canonical file
+that exists but is unparseable, non-object, or unreadable aborts certify with a
+non-zero exit instead, so a leftover legacy `status: "PASS"` can never certify a
+run whose real gate result was never readable. A canonical file that is missing
+in both locations is reported as missing, not as a failing status.
+
+Run the gates in this order, every time:
+
+1. `npx qfai validate --profile prototyping --fail-on error` — writes the path
+   configured at `output.validateJsonPath` (default
+   `.qfai/report/validate.json`), not a fixed `.qfai/output/` literal.
+2. `/qfai-verify` — writes `.qfai/report/verify.json` with
    `status: "PASS"` and `scope: "prototyping"`. Certify accepts no
    other scope: `atdd` / `implement` / `full` are refused by the
    option-B phase-isolation contract, and a `full` run at this point

@@ -147,7 +147,7 @@ Use the shared schema.
 - Reviewer checks:
   - required roles were delegated;
   - validate evidence exists: `npx qfai validate --profile verify --fail-on error` completed with `error=0` — for a `scope: "prototyping"` run this is `npx qfai validate --profile prototyping --fail-on error` instead, per the prototyping carve-out in "Verify Scope Rule". Requiring the `verify` profile here would reinstate the circular gate: it fails `QFAI-ATDD-111/112/113`, so no reviewer could return PASS before `/qfai-atdd` has run;
-  - per-iter evidence (screenshot + HTML + review.json) exists under `.qfai/evidence/prototyping/iter-NN/`, and the recorded final iteration in `.qfai/evidence/prototyping/prototyping.json#iterations[]` has both screenshot and HTML on disk. The completion-certificate is NOT a verify-gate input — `npx qfai prototyping certify` runs AFTER `/qfai-verify` (it requires a passing `verify.json`). Cert digest validation belongs to `certify --check`, run during the prototyping handoff or after edits to brand assets, not here;
+  - per-iter evidence (screenshot + HTML + review.json) exists under `.qfai/evidence/prototyping/iter-NN/`, and the recorded final iteration in `.qfai/evidence/prototyping/prototyping.json#iterations[]` has both screenshot and HTML on disk. The completion-certificate is NOT a verify-gate input — `npx qfai prototyping certify` runs AFTER `/qfai-verify` (it requires a passing `verify.json`, which `/qfai-verify` writes to the canonical `.qfai/report/verify.json`). Cert digest validation belongs to `certify --check`, run during the prototyping handoff or after edits to brand assets, not here;
   - Drift Protocol enforced;
   - test-layer policy enforced against `test-layers.md`.
   - gate counts and ratios are signals, not gates.
