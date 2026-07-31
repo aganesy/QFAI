@@ -148,6 +148,28 @@ describe("collectApiStateEnums — local $ref resolution", () => {
       "y",
     ]);
   });
+
+  it("collects a shared schema object under every field that points at it", () => {
+    // A YAML anchor reused by a second field (`state: &s {...}` then
+    // `status: *s`) parses to ONE object both fields reference. Guarding the
+    // walk on the node alone made that a one-shot: the second field was
+    // skipped and its domain never reached the reconciliation, so
+    // QFAI-CONTRACT-040 could not fire on it at all.
+    const shared = { enum: ["open", "closed"] };
+    const doc = { properties: { state: shared, status: shared } };
+    const found = collectApiStateEnums(doc);
+    expect(Array.from(found.get("state")?.values ?? []).sort()).toEqual(["closed", "open"]);
+    expect(Array.from(found.get("status")?.values ?? []).sort()).toEqual(["closed", "open"]);
+  });
+
+  it("still terminates when a shared object participates in a cycle", () => {
+    const node: Record<string, unknown> = { enum: ["a"] };
+    node.status = node;
+    expect(() => collectApiStateEnums({ properties: { status: node } })).not.toThrow();
+    expect(Array.from(collectApiStateEnums({ properties: { status: node } }).keys())).toContain(
+      "status",
+    );
+  });
 });
 
 describe("collectSqlEnumDomains — named enum type usage", () => {
@@ -183,6 +205,35 @@ describe("collectSqlEnumDomains — named enum type usage", () => {
     const domains = collectSqlEnumDomains(sql);
     expect(domains.get("status")).toEqual(["pending", "paid"]);
     expect(domains.get("delivery_status")).toEqual(["pending", "paid"]);
+  });
+
+  it("ignores a commented-out domain", () => {
+    // The DB contract template ships full-line `-- QFAI-CONTRACT-ID:` headers,
+    // so raw-text scanning carries comment content into the extractor and
+    // QFAI-CONTRACT-040 can fire on a domain nobody declared.
+    const sql = [
+      "-- QFAI-CONTRACT-ID: db-0001",
+      "-- CREATE TYPE legacy_status AS ENUM ('ghost');",
+      "/* CHECK (status IN ('phantom')) */",
+      "CREATE TABLE orders (",
+      "  status text CHECK (status IN ('pending', 'paid'))",
+      ");",
+    ].join("\n");
+    const domains = collectSqlEnumDomains(sql);
+    expect(domains.get("status")).toEqual(["pending", "paid"]);
+    expect(domains.has("legacy_status")).toBe(false);
+  });
+
+  it("does not treat a comment marker inside a string literal as a comment", () => {
+    const sql = "CREATE TABLE t (status text CHECK (status IN ('a--b', 'c')));";
+    expect(collectSqlEnumDomains(sql).get("status")).toEqual(["a--b", "c"]);
+  });
+
+  it("reads a quote-escaped enum value as one value", () => {
+    // `''` is SQL's escaped quote. Splitting on a bare `'` turned `don''t`
+    // into fragments and dropped the rest of the list.
+    const sql = "CREATE TYPE mood AS ENUM ('don''t', 'ok'); CREATE TABLE t (status mood);";
+    expect(collectSqlEnumDomains(sql).get("status")).toEqual(["don't", "ok"]);
   });
 
   it("does not invent a column domain when no named type is declared", () => {

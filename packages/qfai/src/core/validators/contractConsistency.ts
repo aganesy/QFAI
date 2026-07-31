@@ -77,7 +77,7 @@ async function validateApiFileAgainstDb(
     issues.push(
       issue(
         "QFAI-CONTRACT-040",
-        `API 契約が要求する ${api.fieldName} の値が、対になる DB 契約で表現できません: ` +
+        `API 契約が要求する ${api.fieldName} の値が、同名フィールドを宣言する DB 契約で表現できません: ` +
           `${unrepresentable.join(", ")} (DB 側の許容値: ${Array.from(db.values).sort().join(", ")}; ` +
           `DB 契約: ${dbFileList.join(", ")})`,
         "warning",
@@ -85,8 +85,9 @@ async function validateApiFileAgainstDb(
         "contracts.crossContract.stateDomain",
         [api.fieldName, ...unrepresentable],
         "canonical",
-        "API 契約が要求する terminal state / status enum ごとに、対になる DB 契約へ表現可能な値を追加するか、" +
-          "API 側の terminal semantics を訂正してください。",
+        "API 契約が要求する terminal state / status enum ごとに、同名フィールドを宣言する DB 契約へ表現可能な値を" +
+          "追加するか、API 側の terminal semantics を訂正してください。照合は明示的なペア宣言ではなく、" +
+          "正規化後のフィールド名が一致する DB 契約群のドメインに対して行われます。",
       ),
     );
   }
@@ -104,24 +105,44 @@ type ApiStateEnum = {
  */
 export function collectApiStateEnums(doc: unknown): Map<string, ApiStateEnum> {
   const found = new Map<string, ApiStateEnum>();
-  walk(doc, null, found, new Set(), doc);
+  walk(doc, null, found, new Map(), doc);
   return found;
 }
+
+/**
+ * Recursion guard for {@link walk}: the property keys each node has already
+ * been visited under.
+ *
+ * Keying on the node alone made a shared object a one-shot: a YAML anchor
+ * (`state: &s {enum: [...]}` reused as `*s` for `status`) parses to ONE object
+ * that both fields point at, so the second field was skipped entirely and its
+ * domain never reached the reconciliation — `QFAI-CONTRACT-040` silently missed
+ * the contradiction it exists to find. Keying on the (node, key) pair lets the
+ * shared node contribute under every field name that reaches it while still
+ * terminating on cycles, because a cycle necessarily revisits a pair.
+ */
+type WalkVisits = Map<object, Set<string>>;
 
 function walk(
   node: unknown,
   key: string | null,
   out: Map<string, ApiStateEnum>,
-  seen: Set<object>,
+  seen: WalkVisits,
   root: unknown,
 ): void {
   if (!node || typeof node !== "object") {
     return;
   }
-  if (seen.has(node)) {
-    return;
+  const visitKey = key ?? "";
+  const visitedKeys = seen.get(node);
+  if (visitedKeys) {
+    if (visitedKeys.has(visitKey)) {
+      return;
+    }
+    visitedKeys.add(visitKey);
+  } else {
+    seen.set(node, new Set([visitKey]));
   }
-  seen.add(node);
 
   if (Array.isArray(node)) {
     for (const item of node) {
@@ -284,7 +305,8 @@ async function collectDbStateDomains(dbFiles: string[]): Promise<Map<string, DbD
  * Extracts `name -> allowed values` from the SQL forms a DB contract uses to bound a domain.
  * Values are lower-cased; comparison is case-insensitive on both sides.
  */
-export function collectSqlEnumDomains(text: string): Map<string, string[]> {
+export function collectSqlEnumDomains(rawText: string): Map<string, string[]> {
+  const text = stripSqlComments(rawText);
   const domains = new Map<string, string[]>();
   const patterns = [CHECK_IN_PATTERN, CREATE_TYPE_ENUM_PATTERN, INLINE_ENUM_PATTERN];
   const namedTypes = new Map<string, { name: string; literals: string[] }>();
@@ -379,11 +401,78 @@ function resolveNamedTypeColumns(
 
 function readSqlStringLiterals(list: string): string[] {
   const values: string[] = [];
-  for (const match of list.matchAll(/'([^']*)'/g)) {
-    const value = match[1];
+  // `''` is SQL's escape for a literal quote, so a value may contain quote
+  // pairs: `ENUM ('don''t', 'ok')` is two values, not four fragments. Matching
+  // `'([^']*)'` split `don''t` into `don` + `t` and dropped the rest of the
+  // list, which both invents values the contract never declared and loses ones
+  // it did — false positives and false negatives from the same bug.
+  for (const match of list.matchAll(/'((?:[^']|'')*)'/g)) {
+    const value = match[1]?.replace(/''/g, "'");
     if (value && !values.includes(value.toLowerCase())) {
       values.push(value.toLowerCase());
     }
   }
   return values;
+}
+
+/**
+ * Blank out SQL comments so a commented-out `CHECK (...)` or
+ * `CREATE TYPE ... AS ENUM` cannot be read as a live domain.
+ *
+ * The DB contract template itself ships full-line `-- QFAI-CONTRACT-ID: ...`
+ * headers, so scanning raw text means every contract carries comment content
+ * into the domain extractor and `QFAI-CONTRACT-040` can fire on a domain
+ * nobody declared.
+ *
+ * Comments are replaced with spaces rather than removed so byte offsets stay
+ * aligned with the input — the caller runs several independent regex passes
+ * over the same text and their captures must agree.
+ *
+ * A comment marker inside a string literal is not a comment (`'a--b'` is a
+ * value), so the scan tracks quoting, including the `''` escape.
+ */
+export function stripSqlComments(text: string): string {
+  const out = text.split("");
+  let index = 0;
+  let inString = false;
+  while (index < text.length) {
+    const ch = text[index];
+    if (inString) {
+      if (ch === "'") {
+        // A doubled quote is an escaped quote, not the end of the literal.
+        if (text[index + 1] === "'") {
+          index += 2;
+          continue;
+        }
+        inString = false;
+      }
+      index += 1;
+      continue;
+    }
+    if (ch === "'") {
+      inString = true;
+      index += 1;
+      continue;
+    }
+    if (ch === "-" && text[index + 1] === "-") {
+      while (index < text.length && text[index] !== "\n") {
+        out[index] = " ";
+        index += 1;
+      }
+      continue;
+    }
+    if (ch === "/" && text[index + 1] === "*") {
+      const end = text.indexOf("*/", index + 2);
+      const stop = end === -1 ? text.length : end + 2;
+      for (let i = index; i < stop; i += 1) {
+        if (out[i] !== "\n") {
+          out[i] = " ";
+        }
+      }
+      index = stop;
+      continue;
+    }
+    index += 1;
+  }
+  return out.join("");
 }

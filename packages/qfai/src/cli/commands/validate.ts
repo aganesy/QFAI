@@ -748,7 +748,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
   "QFAI-CONTRACT-040":
-    "Every state/status value an API contract mandates must have a representable counterpart in the paired DB contract's domain (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM).",
+    "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM). Pairing is by normalized field name, not by an explicit pair declaration.",
 };
 
 function resolveIssueTarget(issue: Issue): string {
