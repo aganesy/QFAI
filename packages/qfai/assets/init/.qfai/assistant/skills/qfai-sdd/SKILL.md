@@ -114,7 +114,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ### Delegation Failure (Hard Stop)
 
-- Do not simulate roles. If the first required delegation fails, stop the stage and report remediation.
+- Do not simulate roles. Classify the failure per the baseline taxonomy first: `unavailable` stops the stage with a remediation report; `saturated` uses the bounded retry branch and keeps the stage open.
 
 Stage minimum roles:
 
@@ -123,7 +123,7 @@ Stage minimum roles:
 - `test-design-analyst` drafts traceability, examples, and test-design.
 - `product-experience-architect` is added when the target is UI-bearing.
 - `orchestrator` integrates outputs and presents for confirmation; never drafts the primary artifact and never self-approves.
-- `completion-reviewer` is delegated independently. Required field: `Status (PASS/REVISE)`.
+- `completion-reviewer` is delegated independently. Required field: `Status (PASS/REVISE/PENDING)`; `PENDING` marks an unrun gate and never counts as `PASS`.
 
 Reviewer routing is fixed by `.qfai/assistant/manifest/agent-routing.yml` and `.qfai/assistant/manifest/review-profiles.yml`.
 

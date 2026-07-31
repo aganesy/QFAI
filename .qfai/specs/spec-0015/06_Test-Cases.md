@@ -64,7 +64,7 @@
 
 - EX-Ref: EX-0015-0005
 - AC-Refs: AC-0015-0012
-- Verify failed first delegation stops the stage, does not simulate or self-execute, and reports remediation details.
+- Verify a failed first delegation is classified, that an `unavailable` classification stops the stage and reports remediation details including the failure class, that a `saturated` classification retries the identical delegation with the stage held open, and that neither class simulates or self-executes.
 
 ## TC-0015-0012: Capability Probe First Real Delegation Contract
 

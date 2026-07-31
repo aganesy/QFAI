@@ -46,7 +46,7 @@ Given a skill stage starts, when the first required delegation is attempted, the
 
 ## AC-0015-0012: Delegation Failure Hard Stop
 
-Given the first required delegation fails, when the orchestrator handles the failure, then the stage stops immediately, no simulated or self-executed fallback is used, and the user receives failure reason, attempted role/task, remediation guidance, and retry condition.
+Given the first required delegation fails, when the orchestrator handles the failure, then it classifies the failure as `unavailable` or `saturated` and no simulated or self-executed fallback is used in either class. An `unavailable` failure stops the stage immediately and the user receives failure reason, failure class, attempted role/task, remediation guidance, and retry condition. A `saturated` failure holds the stage open for a bounded retry of the identical delegation and falls through to the same hard-stop report once the retry budget is exhausted.
 
 ## AC-0015-0013: Reviewer-Gate emits `R-CERTIFY-VERIFY-CIRCULAR` on prototyping-phase certify/verify cycle
 
