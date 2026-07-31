@@ -4,9 +4,12 @@
 
 ## Technical Constraints
 
-| ID   | Constraint | Rationale | Impact |
-| ---- | ---------- | --------- | ------ |
-| TC-1 | TBD        | TBD       | TBD    |
+> IDs use the `DTC-` prefix. Bare `TC-NNNN` is the spec-layer Test Case ID and must not
+> be used for a technical constraint.
+
+| ID    | Constraint | Rationale | Impact |
+| ----- | ---------- | --------- | ------ |
+| DTC-1 | TBD        | TBD       | TBD    |
 
 ## Operational Constraints
 
