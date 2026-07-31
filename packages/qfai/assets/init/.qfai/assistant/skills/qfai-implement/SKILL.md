@@ -195,7 +195,7 @@ All agent-to-agent transitions follow these contracts:
 
 The two roles answer different questions and are ordered, not concurrent:
 
-- `delivery-planner` answers _is this item's scope sufficient to be the whole of its `TC-_` obligation\*.
+- `delivery-planner` answers _is this item's scope sufficient to be the whole of its `TC-*` obligation_.
 - `qa-gatekeeper` answers _did the test fail (or pass) for the expected reason_.
 
 Precedence rules:
