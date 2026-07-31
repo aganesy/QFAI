@@ -24,7 +24,32 @@ const VALID_STATUSES = new Set(["todo", "red", "green", "refactor", "done", "exc
 
 const TEST_FILE_CHECK_STATUSES = new Set(["green", "refactor", "done"]);
 
+/**
+ * Test directories a `Layer` value implies. `null` means the layer has no
+ * mandated directory, so no consistency claim is made about it.
+ */
+const LAYER_TEST_DIRS: Record<string, string | null> = {
+  unit: null,
+  component: null,
+  integration: "tests/integration/",
+  api: "tests/api/",
+  e2e: "tests/e2e/",
+};
+
 const TDD_ID_FORMAT = /^TDD-\d{4}$/;
+
+/**
+ * True when `testFile` is placed under the repo-root `dir`.
+ *
+ * A substring test matched anywhere in the path, so `src/tests/e2e/foo.test.ts`
+ * and `mytests/e2e/foo.test.ts` both read as `tests/e2e/` and produced a
+ * TDDLIST_LAYER_PATH_MISMATCH warning against a file that is not in the
+ * mandated directory at all. Anchoring at the start, after stripping a leading
+ * `./`, keeps the claim to real directory placement.
+ */
+function isUnderTestDir(testFile: string, dir: string): boolean {
+  return testFile.replace(/^\.\//, "").startsWith(dir);
+}
 
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
 
@@ -299,6 +324,37 @@ async function validateSpecTddList(
             "error",
             relPath,
             "tddList.testFileExists",
+          ),
+        );
+      }
+    }
+  }
+
+  // Phase 2 – Check 9b: Layer <-> Test file consistency.
+  //
+  // `Layer` was a required column whose value was never read, so a `Unit` row
+  // pointing at `tests/integration/**` was an invisible state.
+  const layerIndex = normalizedHeaders.indexOf("Layer");
+  if (layerIndex >= 0 && testFileIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const row = table.rows[rowIdx];
+      if (!row) continue;
+      const layer = (row[layerIndex] ?? "").trim().toLowerCase();
+      const testFile = (row[testFileIndex] ?? "").trim().replace(/\\/g, "/");
+      const expectedDir = LAYER_TEST_DIRS[layer];
+      if (!expectedDir || testFile.length === 0) continue;
+
+      const actualDir = Object.entries(LAYER_TEST_DIRS).find(
+        ([, dir]) => dir !== null && isUnderTestDir(testFile, dir),
+      );
+      if (actualDir && actualDir[1] !== expectedDir) {
+        issues.push(
+          issue(
+            "TDDLIST_LAYER_PATH_MISMATCH",
+            `Layer "${(row[layerIndex] ?? "").trim()}" for spec-${specNumber} (row ${rowIdx + 1}) does not match Test file "${testFile}" (expected a path under ${expectedDir})`,
+            "warning",
+            relPath,
+            "tddList.layerPathConsistency",
           ),
         );
       }
