@@ -4,6 +4,7 @@ import path from "node:path";
 import type { FailOn, OutputFormat } from "../../core/config.js";
 import { loadConfig } from "../../core/config.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
+import { normalizeSpecId } from "../../core/specScope.js";
 import { buildCiProfileIssue, createProfileGuardResult } from "../../core/phasePolicy.js";
 import { toRelativePath } from "../../core/paths.js";
 import type { Issue, ValidationProfile, ValidationResult } from "../../core/types.js";
@@ -24,6 +25,12 @@ export type ValidateOptions = {
   format?: OutputFormat;
   profile?: ValidationProfile;
   platform?: string;
+  /**
+   * Restrict the run to the named specs (`--spec`, repeatable). Repo-level
+   * findings are always kept; findings owned by an out-of-scope spec and that
+   * spec's `specs-coverage` report write are dropped.
+   */
+  specIds?: readonly string[];
   /**
    * Override the tool version observed by the legacy-path deprecation
    * gate. Tests use this to simulate the post-sunset world (>= 1.10.0)
@@ -91,6 +98,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
     : await validateProject(root, configResult, {
         ...(options.profile ? { profile: options.profile } : {}),
         ...(options.platform ? { platform: options.platform } : {}),
+        ...(options.specIds && options.specIds.length > 0 ? { specIds: options.specIds } : {}),
       });
   // Resolve effective tool version for the legacy-path sunset gate.
   // Test callers override; production reads the same package.json#version
@@ -105,6 +113,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   // the stale path on this very run.
   const configuredValidateJsonPath = configResult.config.output.validateJsonPath;
   const configTargetsLegacyPath = configTargetsLegacyValidateJsonPath(configuredValidateJsonPath);
+  const scopedSpecIds = options.specIds ?? [];
   // Post-sunset, only emit the deprecation finding when there is
   // observable evidence (config or on-disk file) that a consumer still
   // depends on the legacy path. Otherwise every clean validate run on
@@ -114,7 +123,16 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const legacyOnDisk = !legacyWriteEnabled
     ? await pathExists(path.join(root, LEGACY_VALIDATE_JSON_REL))
     : false;
-  const emitDeprecationIssue = legacyWriteEnabled || legacyOnDisk || configTargetsLegacyPath;
+  // A scoped run writes no shared report at all, so the PRE-sunset writer-side
+  // notice would describe a deprecated write that never happens — and fail an
+  // otherwise-clean slice gate under `--strict` / `--fail-on warning`. That is
+  // the only part a scope may suppress. Post-sunset the finding is evidence of
+  // a legacy path this project still depends on (config or stale file), and
+  // suppressing it would let `--spec` alone walk past the migration gate with
+  // exit 0.
+  const emitDeprecationIssue = legacyWriteEnabled
+    ? scopedSpecIds.length === 0
+    : legacyOnDisk || configTargetsLegacyPath;
   // Post-sunset, refuse to write to the configured legacy path. This is
   // the migration gate: the legacy SSOT is dead, the config must be
   // updated. Pre-sunset writes proceed normally (writer-side warning).
@@ -150,40 +168,112 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   });
   const runLogPath = toRelativePath(root, runLog.reportDir);
 
+  // A `--spec` run is one worker's view of one slice, so it writes its own
+  // report rather than the shared one. Resolve it BEFORE the GitHub summary:
+  // pointing that summary at the shared `validate.json` named a file this run
+  // never wrote — either missing, or a stale repo-wide report from another run
+  // — so the findings dropped by the annotation cap were unreachable.
+  const scopedReportRel =
+    scopedSpecIds.length > 0 ? scopedReportPath(configuredValidateJsonPath, scopedSpecIds) : null;
+
   const format = options.format ?? "text";
   if (format === "text") {
     emitText(normalized);
     emitTextRunLog(runLogPath);
   }
   if (format === "github") {
-    const jsonPath = resolveJsonPath(root, configResult.config.output.validateJsonPath);
+    const jsonPath = resolveJsonPath(
+      root,
+      scopedReportRel ?? configResult.config.output.validateJsonPath,
+    );
     emitGitHubOutput(normalized, root, jsonPath, {
       failOn,
       willFail,
       runLogPath,
     });
   }
-  // Always-latest report + profile-suffixed report.
-  // Post-sunset, refuse to write to the configured legacy path: the
-  // migration gate must direct the operator to update their config
-  // instead of silently producing a stale-named file. The accompanying
-  // deprecation issue (severity=error) already carries the actionable
-  // text; here we just skip the physical write.
-  if (!refuseConfiguredLegacyWrite) {
-    await emitJson(normalized, root, configuredValidateJsonPath);
-    const profileLabel = normalized.profile ?? options.profile ?? "full";
-    const profileSuffixedRel = profileSuffixedReportPath(configuredValidateJsonPath, profileLabel);
-    await emitJson(normalized, root, profileSuffixedRel);
-  }
-  // Legacy path — written only during the deprecation window AND only
-  // if the configured path is NOT already the legacy path (avoid
-  // double-write to the same file when the operator's config still
-  // points there pre-sunset).
-  if (legacyWriteEnabled && !configTargetsLegacyPath) {
-    await emitJson(normalized, root, LEGACY_VALIDATE_JSON_REL);
+  if (scopedSpecIds.length > 0) {
+    // Writing a scoped result to the shared `validate.json` /
+    // `validate-<profile>.json` / legacy path would let parallel Slice workers
+    // race on the same files, leaving the last finisher's single spec looking
+    // like a repo-wide PASS to every downstream reader.
+    //
+    // The migration gate applies here too. `scopedReportPath` derives its
+    // directory from `output.validateJsonPath`, so a config still pointing at
+    // the legacy SSOT would put `validate.spec-0003.json` inside the
+    // deprecated directory — new files appearing under a path the gate exists
+    // to retire, which reads as "still fine to write here".
+    if (scopedReportRel !== null && !refuseConfiguredLegacyWrite) {
+      await emitJson(normalized, root, scopedReportRel);
+    }
+  } else {
+    // Always-latest report + profile-suffixed report.
+    // Post-sunset, refuse to write to the configured legacy path: the
+    // migration gate must direct the operator to update their config
+    // instead of silently producing a stale-named file. The accompanying
+    // deprecation issue (severity=error) already carries the actionable
+    // text; here we just skip the physical write.
+    if (!refuseConfiguredLegacyWrite) {
+      await emitJson(normalized, root, configuredValidateJsonPath);
+      const profileLabel = normalized.profile ?? options.profile ?? "full";
+      const profileSuffixedRel = profileSuffixedReportPath(
+        configuredValidateJsonPath,
+        profileLabel,
+      );
+      await emitJson(normalized, root, profileSuffixedRel);
+    }
+    // Legacy path — written only during the deprecation window AND only
+    // if the configured path is NOT already the legacy path (avoid
+    // double-write to the same file when the operator's config still
+    // points there pre-sunset).
+    if (legacyWriteEnabled && !configTargetsLegacyPath) {
+      await emitJson(normalized, root, LEGACY_VALIDATE_JSON_REL);
+    }
   }
 
   return willFail ? 1 : 0;
+}
+
+/**
+ * Report path for a `--spec`-scoped run: `<dir>/<base>.spec-0003+0004.json`,
+ * or `null` when the scope is not writable.
+ *
+ * Derived from the configured path so a custom `output.validateJsonPath` still
+ * lands next to its siblings, and deterministic in the spec ids so re-running
+ * the same worker overwrites only its own file.
+ *
+ * `null` when ANY value is unnormalizable. Two reasons, both load-bearing:
+ * raw user input must never reach a filename (`--spec x/../../../outside`
+ * escapes the report directory once `path.resolve` runs); and dropping the bad
+ * value would make `--spec 0003 --spec nope` — a run that fails with
+ * `QFAI-SCOPE-001` — write the SAME file as a healthy `--spec 0003`, so
+ * whichever finished last decided whether that slice looked like a PASS. The
+ * run's exit code, stdout and run-log still carry the failure.
+ */
+export function scopedReportPath(
+  configuredPath: string,
+  specIds: readonly string[],
+): string | null {
+  const normalizedIds: string[] = [];
+  for (const id of specIds) {
+    const normalizedId = normalizeSpecId(id);
+    if (normalizedId === null) {
+      return null;
+    }
+    normalizedIds.push(normalizedId);
+  }
+  if (normalizedIds.length === 0) {
+    return null;
+  }
+  const normalized = configuredPath.replace(/\\/g, "/");
+  const slash = normalized.lastIndexOf("/");
+  const dir = slash === -1 ? "" : normalized.slice(0, slash + 1);
+  const base = slash === -1 ? normalized : normalized.slice(slash + 1);
+  const dot = base.lastIndexOf(".");
+  const stem = dot === -1 ? base : base.slice(0, dot);
+  const ext = dot === -1 ? "" : base.slice(dot);
+  const suffix = Array.from(new Set(normalizedIds)).sort().join("+");
+  return `${dir}${stem}.spec-${suffix}${ext}`;
 }
 
 /**
@@ -526,6 +616,8 @@ function resolveJsonPath(root: string, jsonPath: string): string {
 const GITHUB_ANNOTATION_LIMIT = 100;
 
 const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
+  "QFAI-SCOPE-001": "Every `--spec` value resolves to a 1-4 digit spec number.",
+  "QFAI-SCOPE-002": "Every `--spec` value names a spec directory that exists.",
   E_SPEC_MISSING_FILESET: "Spec Pack required files (01..18) are complete.",
   E_LEDGER_MISSING_COLUMN:
     "Traceability Ledger has all required columns: trace_id,obj_id,init_id,cap_id,flow_id,us_id,ac_id,ex_ids,tc_ids.",

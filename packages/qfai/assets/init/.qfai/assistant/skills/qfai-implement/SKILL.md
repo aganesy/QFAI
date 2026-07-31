@@ -134,7 +134,10 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 1. After processing all items, update `test-list.md` with final statuses.
 2. If all items are `done`, report "All items complete".
-3. If some items are `exception`, report them with their DR-IDs.
+3. If some items are `exception`, report them as **blocking output**, not as an
+   informational list: for each, the `TDD-ID`, the `DR-ID`, and whether that DR
+   is a user-approved accepted-risk waiver. Completion cannot be declared while
+   any `exception` row lacks such a waiver.
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -324,6 +327,10 @@ Completion MUST NOT be declared when any of the following are true:
 - Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned FAIL
 - `.qfai/evidence/implement-<spec-id>.md` does not exist, or does not record both reviewer verdicts for the item (this is the single blocking statement about the evidence file; its absence of _verdicts_ is never blocking before items 7-8)
 - Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
+- Items with `exception` status still exist, **unless** the row's `DR-ID` names
+  a Decision Record explicitly recorded as a **user-approved accepted-risk
+  waiver** (a `TDDLIST-001` entry in `.qfai/waivers.yml`). An `exception` whose
+  DR only describes the anomaly is a parked defect, not a completed item.
 - Parallel slices were used but integration verify has not been run post-merge
 - A checkpoint boundary was reached (see `#checkpoint-verification`) but the verification command set was not executed, or any command in it exited non-zero
 - `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-001`). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID.
