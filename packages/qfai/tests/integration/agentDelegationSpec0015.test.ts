@@ -476,7 +476,11 @@ describe("delegation failure taxonomy is actionable", () => {
     }
     for (const skillId of SKILLS_WITH_STATUS_VOCABULARY) {
       const content = await readAsset(shippedSkill(skillId));
-      expect(content).not.toContain("Status (PASS/REVISE)`");
+      // The closing `)` is what separates the retired schema from the current
+      // one, so the complete token catches it in both carriers the skills use:
+      // the code span `Status (PASS/REVISE)` and the bare Work Orders table
+      // header `| ... | Status (PASS/REVISE) |`.
+      expect(content).not.toContain("Status (PASS/REVISE)");
       expect(content).toContain("Status (PASS/REVISE/PENDING)");
     }
   });
