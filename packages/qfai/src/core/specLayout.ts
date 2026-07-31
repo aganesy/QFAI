@@ -689,18 +689,23 @@ async function listExistingNames(dir: string): Promise<Set<string>> {
   try {
     const items = await readdir(dir, { withFileTypes: true });
     for (const item of items) {
-      if (item.isDirectory()) {
-        continue;
-      }
-      // A `Dirent` describes the LINK, not its target: a dangling symlink and
-      // a symlink to a directory both report `isDirectory() === false`, so
-      // taking the name at face value would count a required file that cannot
-      // be read. The previous `access()` probe followed the link and failed,
-      // and the gate must keep failing — otherwise a layout whose validators
-      // early-return without opening the file (v1417) passes the completion
-      // gate with a required file that has no content behind it. Resolve the
-      // link and keep only those that land on a regular file.
-      if (item.isSymbolicLink() && !(await resolvesToFile(path.join(dir, item.name)))) {
+      if (item.isSymbolicLink()) {
+        // A `Dirent` describes the LINK, not its target: a dangling symlink and
+        // a symlink to a directory both report `isDirectory() === false`, so
+        // taking the name at face value would count a required file that cannot
+        // be read. The previous `access()` probe followed the link and failed,
+        // and the gate must keep failing — otherwise a layout whose validators
+        // early-return without opening the file (v1417) passes the completion
+        // gate with a required file that has no content behind it. Resolve the
+        // link and keep only those that land on a regular file.
+        if (!(await resolvesToFile(path.join(dir, item.name)))) {
+          continue;
+        }
+      } else if (!item.isFile()) {
+        // Directories are the obvious case, but FIFOs, sockets and device
+        // nodes are not directories either, so testing `!isDirectory()` would
+        // admit them as satisfying a required file. The gate requires a
+        // regular file the downstream validators can actually open.
         continue;
       }
       names.add(item.name);

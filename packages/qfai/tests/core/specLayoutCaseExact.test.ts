@@ -78,9 +78,35 @@ async function missingFor(specsRoot: string): Promise<string[]> {
   const entries = await collectSpecEntries(specsRoot);
   expect(entries).toHaveLength(1);
   const entry = entries[0];
-  if (entry === undefined) return [];
+  if (entry === undefined) {
+    // Returning [] here would let a broken seed pass every caller's
+    // `toEqual([])` assertion and hide the real failure. Throw instead, which
+    // also narrows the type for the lines below.
+    throw new Error(`expected exactly one spec entry under ${specsRoot}`);
+  }
   expect(entry.layout).toBe("layered");
   return collectMissingLayeredRequiredFiles(entry);
+}
+
+/**
+ * Create a symlink, reporting whether the platform allowed it.
+ *
+ * Windows without Developer Mode or elevated rights rejects symlink creation
+ * with EPERM. That is the only failure this suite may skip on — anything else
+ * (a bad path, a full disk, a missing parent) is a real defect that must not be
+ * swallowed into a silent pass on the Linux CI job.
+ */
+async function trySymlink(target: string, linkPath: string): Promise<boolean> {
+  try {
+    await symlink(target, linkPath);
+    return true;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (process.platform === "win32" && (code === "EPERM" || code === "EACCES")) {
+      return false;
+    }
+    throw error;
+  }
 }
 
 describe("specLayout required-file resolution", () => {
@@ -102,12 +128,9 @@ describe("specLayout required-file resolution", () => {
   it("reports a required file that is a dangling symlink as missing", async () => {
     const specsRoot = await seedSpec({ omit: "07_Decisions.md" });
     const linkPath = path.join(specsRoot, "spec-0001", "07_Decisions.md");
-    try {
-      await symlink(path.join(specsRoot, "spec-0001", "does-not-exist.md"), linkPath);
-    } catch {
-      // Windows without developer mode / elevated rights cannot create
-      // symlinks. The behaviour is platform-independent, so skipping here
-      // still leaves it covered by the Linux CI job.
+    // The behaviour is platform-independent, so skipping on a Windows host
+    // that forbids symlinks still leaves it covered by the Linux CI job.
+    if (!(await trySymlink(path.join(specsRoot, "spec-0001", "does-not-exist.md"), linkPath))) {
       return;
     }
     expect(await missingFor(specsRoot)).toEqual(["07_Decisions.md"]);
@@ -116,9 +139,7 @@ describe("specLayout required-file resolution", () => {
   it("accepts a required file that is a symlink to a real file", async () => {
     const specsRoot = await seedSpec({ omit: "07_Decisions.md", extra: "07_Decisions.source.md" });
     const linkPath = path.join(specsRoot, "spec-0001", "07_Decisions.md");
-    try {
-      await symlink(path.join(specsRoot, "spec-0001", "07_Decisions.source.md"), linkPath);
-    } catch {
+    if (!(await trySymlink(path.join(specsRoot, "spec-0001", "07_Decisions.source.md"), linkPath))) {
       return;
     }
     expect(await missingFor(specsRoot)).toEqual([]);
