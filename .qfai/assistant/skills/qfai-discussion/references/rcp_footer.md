@@ -31,8 +31,11 @@
 
 ## Validate Hard Gate（必須）
 
-- 各 review cycle で `qfai validate --profile discussion --fail-on error --format github` を実行していること
-- `.qfai/report/validate.log` が存在し、最新の成果物に対応していること
+- 各 review cycle で `npx qfai validate --profile discussion --fail-on error --format github` を実行していること
+- `<paths.outDir>/validate.log`（既定 `.qfai/report/validate.log`）が存在し、最新の成果物に対応していること
+  - このファイルは `npx qfai validate` が実行のたびに自動で書き出す。`| tee` などのシェルリダイレクトは不要（PowerShell では動作しないため使用しない）
+  - `<paths.outDir>` は `qfai.config.yaml` の `paths.outDir`。既定以外に変更したプロジェクトでは `<paths.outDir>/validate.log` と `<paths.outDir>/run-*/` を見ること
+  - 最新性は `validate.log` の `run_log:` 行が最新の `run-*/` を指しているかで確認する
 
 ---
 

@@ -3412,3 +3412,162 @@ describe("runPrototypingIterate cycle >= 1 — drift gates run before shouldStop
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Sealed-loop guard (#246). Only the converged state seals a loop. The
+// retryable terminal stop reasons — `license-verify-fail` and `input-error` —
+// name a condition the operator is told to fix and re-run on the same cycle,
+// and refusing those made the retry impossible: `acceptedIterationIndex` keeps
+// its prior value, so the re-run of the very same cycle was rejected before the
+// verifier ran. (`max-iterations` is terminal but not retryable that way — it
+// means the 10-cycle budget is spent, and the recovery is a cycle-0 reset.)
+// ---------------------------------------------------------------------------
+describe("runPrototypingIterate sealed-loop guard", () => {
+  async function seedSealedLoop(root: string, stopReason: string): Promise<void> {
+    await seedMinimalProject(root);
+    await seedRawPrototypingJson(root, {
+      specsCovered: ["0001"],
+      frozenSpecsCovered: ["0001"],
+      frozenSurfaceUnion: ["0001"],
+      designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
+      iterations: [{ index: 0 }, { index: 1 }],
+      acceptedIterationIndex: 1,
+      stopReason,
+    });
+  }
+
+  async function refusalMessages(root: string, cycle: number): Promise<string[]> {
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      await runPrototypingIterate({ root, cycle, targetUrl: "http://localhost:4173" });
+      return errorSpy.mock.calls.map((call) => String(call[0]));
+    } finally {
+      errorSpy.mockRestore();
+      infoSpy.mockRestore();
+      warnSpy.mockRestore();
+    }
+  }
+
+  it("refuses a cycle past the accepted index on a converged loop", async () => {
+    const root = await newTempDir();
+    await seedSealedLoop(root, "axes-exceptional");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({
+        root,
+        cycle: 2,
+        targetUrl: "http://localhost:4173",
+      });
+      expect(exit).toBe(2);
+      expect(errorSpy.mock.calls.map((call) => String(call[0])).join("\n")).toContain(
+        "refusing --cycle 2",
+      );
+    } finally {
+      errorSpy.mockRestore();
+    }
+
+    // Nothing written: no iter-02 debris for certify to trip over.
+    const evidenceDirs = await readdir(path.join(root, ".qfai/evidence/prototyping"));
+    expect(evidenceDirs).not.toContain("iter-02");
+  });
+
+  it("lets a license-verify failure be fixed and the same cycle retried", async () => {
+    const root = await newTempDir();
+    await seedSealedLoop(root, "license-verify-fail");
+
+    const messages = await refusalMessages(root, 2);
+    expect(messages.join("\n")).not.toContain("refusing --cycle");
+  });
+
+  it.each(["input-error", "max-iterations"])(
+    "does not treat stopReason=%s as sealed",
+    async (stopReason) => {
+      const root = await newTempDir();
+      await seedSealedLoop(root, stopReason);
+
+      const messages = await refusalMessages(root, 2);
+      expect(messages.join("\n")).not.toContain("refusing --cycle");
+    },
+  );
+
+  it("still allows the cycle-0 reset when the accepted index is corrupt", async () => {
+    // A pre-format or corrupted record carrying `-1` made `0 > -1` true, so the
+    // guard refused the one command documented to repair the loop.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedRawPrototypingJson(root, {
+      specsCovered: ["0001"],
+      frozenSpecsCovered: ["0001"],
+      frozenSurfaceUnion: ["0001"],
+      designMd: { path: "DESIGN.md", sha256: hashDesignMd(CANONICAL_DESIGN_MD) },
+      iterations: [{ index: 0 }],
+      acceptedIterationIndex: -1,
+      stopReason: "axes-exceptional",
+    });
+
+    const messages = (await refusalMessages(root, 0)).join("\n");
+    expect(messages).not.toContain("refusing --cycle");
+    // A cycle >= 1 is likewise not sealed by a record with nothing accepted.
+    expect((await refusalMessages(root, 1)).join("\n")).not.toContain("refusing --cycle");
+  });
+
+  it("exempts cycle 0 on a normally sealed loop too", async () => {
+    const root = await newTempDir();
+    await seedSealedLoop(root, "axes-exceptional");
+
+    expect((await refusalMessages(root, 0)).join("\n")).not.toContain("refusing --cycle");
+  });
+
+  it("names --force in the reset hint and no internal symbol", async () => {
+    const root = await newTempDir();
+    await seedSealedLoop(root, "axes-exceptional");
+
+    const messages = (await refusalMessages(root, 2)).join("\n");
+    expect(messages).toContain("--cycle 0 --target-url <url> --force");
+    // A converged loop always has an iter-00, so the destructive-rerun gate
+    // would reject the reset without the flag.
+    expect(messages).toContain("cycle-0 destructive-rerun gate");
+    // Distributed diagnostics must not leak implementation identifiers.
+    expect(messages).not.toContain("findStaleIterDirs");
+  });
+});
+
+// The shipped guidance has to describe the path the gates actually leave open.
+// It claimed a same-cycle retry after `max-iterations` and a rerun of the
+// accepted cycle; both pass the sealed-loop guard and then stop at
+// `shouldStop()` with exit 65 / 64, so neither could be followed.
+describe("the shipped sealed-loop guidance matches the gates", () => {
+  const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
+  const repoRootDir = path.resolve(process.cwd(), "..", "..");
+  const readShipped = (tree: string, relative: string): Promise<string> =>
+    readFile(path.join(repoRootDir, tree, "assistant/skills/qfai-prototyping", relative), "utf-8");
+
+  it.each(trees)("%s: does not promise a same-cycle retry after max-iterations", async (tree) => {
+    const skill = await readShipped(tree, "SKILL.md");
+    expect(skill).toContain("`max-iterations` does not seal either");
+    expect(skill).toContain("exit `65`");
+    expect(skill).not.toContain(
+      "`license-verify-fail` / `input-error` / `max-iterations` do NOT seal",
+    );
+
+    const reference = await readShipped(tree, "references/iteration-loop.md");
+    expect(reference).toContain("`max-iterations` does not seal the loop either");
+    expect(reference).toContain("every `--cycle N >= 1` exits");
+  });
+
+  it.each(trees)("%s: calls the accepted-cycle rerun a state read, not a rerun", async (tree) => {
+    const skill = await readShipped(tree, "SKILL.md");
+    expect(skill).toContain("it is a state read, not a rerun");
+    expect(skill).not.toContain("Re-running the accepted cycle is permitted.");
+
+    const reference = await readShipped(tree, "references/iteration-loop.md");
+    expect(reference).toContain("is not refused by the sealed-loop guard");
+    expect(reference).toContain("exits `64` without assigning paths");
+    expect(reference).not.toContain("is also permitted — that is a redo of recorded work");
+  });
+});
