@@ -6,7 +6,7 @@ import { resolvePath } from "../config.js";
 import { extractIds } from "../ids.js";
 import { parseScenarioDocument, type ScenarioNode } from "../scenarioModel.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
-import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
+import { collectFilesByGlobs } from "../fs.js";
 import {
   collectScTestReferences,
   DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
@@ -451,7 +451,11 @@ async function validateTestFileGlobsConfiguration(
     return [];
   }
 
-  const globs = config.validation.traceability.testFileGlobs;
+  // Normalize before the emptiness test, and scan with the same array. Testing
+  // the raw array made `["  "]` a "0 files matched" error: `normalizeGlobs`
+  // drops blank entries, so the scan ran with nothing and the gate was in fact
+  // unset. The two must agree on what "unset" means.
+  const globs = normalizeGlobs(config.validation.traceability.testFileGlobs);
   const configPath = path.join(root, "qfai.config.yaml");
   const fix =
     "/qfai-configure を実行し、validation.traceability.testFileGlobs を実際のテストパスに合わせて設定してください。";
@@ -475,14 +479,19 @@ async function validateTestFileGlobsConfiguration(
   let scan: Awaited<ReturnType<typeof collectFilesByGlobs>>;
   try {
     scan = await collectFilesByGlobs(root, {
-      globs: normalizeGlobs(globs),
+      globs,
       ignore: Array.from(
         new Set([
           ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
           ...normalizeGlobs(config.validation.traceability.testFileExcludeGlobs),
         ]),
       ),
-      limit: DEFAULT_GLOB_FILE_LIMIT,
+      // This check only asks "did anything match at all", so it stops at the
+      // first hit rather than walking the whole tree a second time — the real
+      // scan already happens in `collectScTestReferences` /
+      // `validateLayeredScCodeReferences`. At DEFAULT_GLOB_FILE_LIMIT this
+      // duplicated the full traversal on every `validate` run.
+      limit: 1,
     });
   } catch (error) {
     // A scan that throws — an invalid pattern (`[" "]` is valid YAML but makes
