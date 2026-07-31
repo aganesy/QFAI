@@ -179,7 +179,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 
 ## Critical Constraints
 
-1. Use only skill-local templates under `.qfai/assistant/skills/qfai-sdd/templates/contracts`, `templates/report`, and `templates/specs`.
+1. Use only skill-local templates under `.qfai/assistant/skills/qfai-sdd/templates/contracts`, `templates/report`, `templates/specs`, and `templates/evidence`.
 2. Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
 3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`. UI-bearing targets MUST also validate the consuming-project root `DESIGN.md` and freeze its sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml` (see Phase 0 DESIGN.md Freeze below).
 4. `_policies/05_Contracts.md` must include a Contract Index aligned with `.qfai/contracts/**`.
@@ -260,7 +260,14 @@ Run the full checklist from `references/sdd-quality-gate.md`. The gate also cove
 
 ## Evidence
 
-Create `.qfai/evidence/sdd-<spec-id>.md` with: Objective, Inputs reviewed, Preflight summary path, Triage decisions (op + approver per row), Open questions, Decisions made, Work performed, Commands executed, Validate evidence paths, Work Orders Summary, Gaps / Open risks, Final status.
+Create `.qfai/evidence/sdd-<spec-id>.md` from `templates/evidence/sdd-spec.md`. That template is the
+canonical layout for this artifact — copy it, keep every `##` heading in order, and fill it in.
+
+Required sections, in order (the template is authoritative if the two ever disagree): Objective,
+Inputs reviewed, Preflight summary path, Triage decisions (op + approver per row), Open questions,
+Decisions made, Work performed, Commands executed, Validate evidence paths, Work Orders Summary,
+Gaps / Open risks, Final status. Work Orders Summary uses the fixed 6-column schema from
+`shared-skill-delegation-baseline.md`; its `Status` and `Final status` accept only `PASS` or `REVISE`.
 
 ## Done Declaration
 
