@@ -159,7 +159,12 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 - Unknown references (`US/TC/CON-API` not declared) must be treated as errors.
 - Floors/ratios are planning signals only, not gates.
 - Legacy `scenario.feature` or coverage ledgers may exist but are not mandatory inputs for completion.
-- Evidence file is required under `.qfai/evidence/` and must not be committed.
+- Evidence file is required under `.qfai/evidence/`. Stage evidence is
+  **regenerable** and is not committed. **Governance records are different**:
+  Change Requests (`.qfai/decisions/CR-*.md`) and durable decision records
+  (`.qfai/evidence/decisions/*.json`) carry user approval, are not
+  regenerable, and stay in version control — the managed `.gitignore` block
+  negates them for that reason.
 
 ## Completion Contract (Shared)
 

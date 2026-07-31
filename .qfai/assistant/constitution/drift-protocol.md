@@ -115,6 +115,16 @@ is a defect.
   Completing against an obligation that is known to be under revision would ship a knowingly
   inconsistent SSOT.
 
+### Which evidence is committed
+
+- **Regenerable** — stage evidence (`.qfai/evidence/<stage>-<spec-id>.md`),
+  run logs, reports. Reproducible by rerunning the owner skill; not committed.
+- **Governance record** — Change Requests (`.qfai/decisions/CR-*.md`) and
+  durable decision records (`.qfai/evidence/decisions/*.json`). They carry
+  user approval and cannot be regenerated, so they are committed. The managed
+  `.gitignore` block written by `qfai init` negates them after the ignore
+  lines for exactly this reason.
+
 ## Non-negotiable constraints
 
 - Downstream skills must not patch upstream SSOT directly.
