@@ -551,11 +551,18 @@ export const THIN_COVERAGE_SIGNAL_EXPECTATION =
   "Artifacts covered by exactly 1 downstream case are review signals, not gate failures; triage each one in the specs-coverage report.";
 
 /**
- * Collapses a sorted ID list into contiguous runs on its trailing numeric
- * segment, so `BR-0003-0001 … BR-0003-0016` prints as one range instead of
- * sixteen identically-shaped lines.
+ * Collapses an ID list into contiguous runs on its trailing numeric segment,
+ * so `BR-0003-0001 … BR-0003-0016` prints as one range instead of sixteen
+ * identically-shaped lines.
+ *
+ * The run detection needs the ids in order, and this is exported, so it sorts
+ * a copy rather than documenting the requirement and trusting every caller to
+ * have met it: an unsorted argument produced silently wrong output — runs
+ * broken into fragments — rather than an error anyone would notice. The input
+ * array is not mutated.
  */
-export function collapseIdRuns(ids: string[]): string[] {
+export function collapseIdRuns(unorderedIds: readonly string[]): string[] {
+  const ids = [...unorderedIds].sort((a, b) => a.localeCompare(b));
   const runs: string[] = [];
   let runStart: string | undefined;
   let runEnd: string | undefined;
@@ -616,7 +623,10 @@ function buildSignalRows(
     return [];
   }
 
-  const noun = thin.length === 1 ? prefix : `${prefix} entries`;
+  // Both forms carry the noun: the singular used to read "1 AC covered by …",
+  // which drops the thing being counted and reads as a truncation next to the
+  // plural "2 AC entries covered by …".
+  const noun = thin.length === 1 ? `${prefix} entry` : `${prefix} entries`;
   return [
     `${THIN_COVERAGE_SIGNAL_CODE} (warning): ${thin.length} ${noun} covered by exactly 1 ${target} — ${collapseIdRuns(thin).join(", ")}`,
   ];

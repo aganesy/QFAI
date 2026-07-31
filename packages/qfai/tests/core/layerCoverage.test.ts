@@ -534,6 +534,19 @@ describe("collapseIdRuns", () => {
   it("returns an empty list for no IDs", () => {
     expect(collapseIdRuns([])).toEqual([]);
   });
+
+  it("orders the input itself rather than trusting the caller", () => {
+    // The run detection needs the ids in order, and this is exported. An
+    // unsorted argument used to produce silently wrong output — the run broken
+    // into fragments — rather than anything a caller would notice.
+    expect(collapseIdRuns(["AC-0003", "AC-0001", "AC-0002"])).toEqual(["AC-0001..AC-0003"]);
+  });
+
+  it("does not mutate the caller's array", () => {
+    const ids = ["AC-0003", "AC-0001"];
+    collapseIdRuns(ids);
+    expect(ids).toEqual(["AC-0003", "AC-0001"]);
+  });
 });
 
 describe("specs-coverage Signals section", () => {
@@ -560,6 +573,9 @@ describe("specs-coverage Signals section", () => {
       );
       // The old `AC signal: AC-0001 -> 1 TC` shape carried no code and no action.
       expect(report).not.toContain("signal: AC-0001 ->");
+      // The singular carries the noun too: "1 AC covered by …" drops the thing
+      // being counted and reads as a truncation beside the plural.
+      expect(report).not.toMatch(/\d+ (?:AC|BR|EX) covered by exactly/);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -605,7 +621,13 @@ describe("specs-coverage Signals section", () => {
       expect(issues.some((entry) => entry.code === "QFAI-COV-201")).toBe(true);
 
       const report = await readFile(reportPathFor(root, "0001"), "utf-8");
-      const signals = report.slice(report.indexOf("## Signals"));
+      // Assert the section exists before slicing: `indexOf` returns -1 when it
+      // does not, `slice(-1)` yields the last character, and the two
+      // `not.toContain` checks below would then pass without ever seeing the
+      // Signals section.
+      const signalsIndex = report.indexOf("## Signals");
+      expect(signalsIndex, "the report must carry a ## Signals section").toBeGreaterThanOrEqual(0);
+      const signals = report.slice(signalsIndex);
       expect(signals).not.toContain("AC-0002");
       expect(signals).not.toContain("EX-0002");
     } finally {
