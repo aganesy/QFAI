@@ -106,10 +106,26 @@ const RULE_CELL_OUTLIER_FACTOR = 3;
  * Referential integrity is trivially satisfied by a single oversized node: a
  * `Rule` cell holding nine independent rule families passes every hop of
  * `US -> AC -> BR -> EX -> TC` and only surfaces once it has been projected
- * 1:1 into one enormous test module. The threshold is relative to the file's
- * own mean so a project that legitimately writes long rules everywhere is not
- * given a house style it did not ask for.
+ * 1:1 into one enormous test module.
+ *
+ * A row is flagged when it is BOTH at least `RULE_CELL_MIN_LENGTH` characters
+ * AND at least `RULE_CELL_OUTLIER_FACTOR` times the mean of the OTHER rows in
+ * the same file — its siblings, never including itself. Relative to siblings so
+ * a project that legitimately writes long rules everywhere is not given a house
+ * style it did not ask for; excluding the candidate so one huge cell cannot
+ * inflate the baseline past itself. Files with fewer than three qualifying `BR`
+ * rows are skipped, since a sibling mean over one row is not a baseline.
  */
+/** Header cell as compared: backticks and surrounding whitespace dropped, lowercased. */
+function normalizeHeader(header: string): string {
+  return header
+    .trim()
+    .replace(/^`+|`+$/g, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
 function checkRuleCellOutliers(brText: string, businessRulesPath: string): Issue[] {
   if (brText.length === 0) {
     return [];
@@ -117,9 +133,13 @@ function checkRuleCellOutliers(brText: string, businessRulesPath: string): Issue
 
   const rows: Array<{ id: string; length: number }> = [];
   for (const table of parseAllMarkdownTables(brText)) {
-    const headers = table.headers.map((header) => header.trim());
-    const idIndex = headers.indexOf("BR-ID");
-    const ruleIndex = headers.indexOf("Rule");
+    // Headers are hand-authored, so match on the normalized form: strip
+    // wrapping backticks (`` `BR-ID` ``), collapse inner whitespace, compare
+    // case-insensitively. Anything stricter silently skips a table a human
+    // reads as correct, and a skipped table is a check that never runs.
+    const headers = table.headers.map(normalizeHeader);
+    const idIndex = headers.indexOf("br-id");
+    const ruleIndex = headers.indexOf("rule");
     if (idIndex < 0 || ruleIndex < 0) {
       continue;
     }
@@ -155,11 +175,18 @@ function checkRuleCellOutliers(brText: string, businessRulesPath: string): Issue
     return [];
   }
 
-  const refs = outliers.map((row) => row.id);
+  // One `BR-ID` can appear in more than one table, so the same id can be
+  // flagged twice. Report it once, in id order, so the finding is stable
+  // between runs and a downstream consumer keying on `refs` sees no repeats.
+  const seen = new Set<string>();
+  const uniqueOutliers = outliers
+    .filter((row) => (seen.has(row.id) ? false : (seen.add(row.id), true)))
+    .sort((a, b) => a.id.localeCompare(b.id));
+  const refs = uniqueOutliers.map((row) => row.id);
   return [
     issue(
       "QFAI-DENSITY-005",
-      `Rule セルが同一ファイルの他 BR 平均の ${RULE_CELL_OUTLIER_FACTOR} 倍以上です: ${outliers
+      `Rule セルが同一ファイルの他 BR 平均の ${RULE_CELL_OUTLIER_FACTOR} 倍以上です: ${uniqueOutliers
         .map((row) => `${row.id} (${row.length})`)
         .join(", ")}`,
       "warning",

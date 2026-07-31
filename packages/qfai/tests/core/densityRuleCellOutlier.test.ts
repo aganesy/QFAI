@@ -102,6 +102,56 @@ describe("QFAI-DENSITY-005 rule-cell outlier", () => {
     );
   });
 
+  // Headers are hand-authored. A strict `indexOf("BR-ID")` skipped a table a
+  // human reads as correct, and a skipped table is a check that silently never
+  // runs on that file.
+  it("accepts backticked, cased and padded header spellings", async () => {
+    await withSpec(
+      [
+        "# 04 Business Rules",
+        "",
+        "| `BR-ID` |  Title | AC-Refs |  `rule`  | Notes | NFR-Refs |",
+        "| ------- | ----- | ------- | ---- | ----- | -------- |",
+        `| BR-0001 | a | AC-0001 | ${rule(50)} | - | - |`,
+        `| BR-0002 | b | AC-0001 | ${rule(50)} | - | - |`,
+        `| BR-0003 | c | AC-0001 | ${rule(3000)} | - | - |`,
+        "",
+      ].join("\n"),
+      (issues) => {
+        const finding = issues.find((entry) => entry.code === "QFAI-DENSITY-005");
+        expect(finding?.refs).toEqual(["BR-0003"]);
+      },
+    );
+  });
+
+  // The same BR can be written into more than one table in a file. Reporting it
+  // once keeps `refs` stable for anything keying on it downstream.
+  it("reports a BR-ID once even when it is an outlier in two tables", async () => {
+    await withSpec(
+      [
+        "# 04 Business Rules",
+        "",
+        ...HEADER,
+        `| BR-0002 | b | AC-0001 | ${rule(50)} | - | - |`,
+        `| BR-0003 | c | AC-0001 | ${rule(50)} | - | - |`,
+        `| BR-0001 | a | AC-0001 | ${rule(3000)} | - | - |`,
+        "",
+        "## Restated",
+        "",
+        ...HEADER,
+        `| BR-0004 | d | AC-0001 | ${rule(50)} | - | - |`,
+        `| BR-0005 | e | AC-0001 | ${rule(50)} | - | - |`,
+        `| BR-0001 | a | AC-0001 | ${rule(3000)} | - | - |`,
+        "",
+      ].join("\n"),
+      (issues) => {
+        const finding = issues.find((entry) => entry.code === "QFAI-DENSITY-005");
+        expect(finding?.refs).toEqual(["BR-0001"]);
+        expect(finding?.message.match(/BR-0001/g)).toHaveLength(1);
+      },
+    );
+  });
+
   it("ignores a table without BR-ID and Rule columns", async () => {
     await withSpec(
       [
