@@ -5,16 +5,16 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single r
 
 ## Required columns
 
-| Column    | Description                                                                                                                                                               |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                                                                                                       |
-| TC-Refs   | References to test cases from `06_Test-Cases.md`                                                                                                                          |
-| Layer     | Test layer (Unit, Integration, etc.)                                                                                                                                      |
-| Test file | Path to the test file                                                                                                                                                     |
-| Selector  | Test selector/description for targeted execution                                                                                                                          |
-| Status    | Current lifecycle status                                                                                                                                                  |
+| Column    | Description                                                                                                                                                                |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                                                                                                        |
+| TC-Refs   | References to test cases from `06_Test-Cases.md`                                                                                                                           |
+| Layer     | Test layer (Unit, Integration, etc.)                                                                                                                                       |
+| Test file | Path to the test file                                                                                                                                                      |
+| Selector  | Test selector/description for targeted execution                                                                                                                           |
+| Status    | Current lifecycle status                                                                                                                                                   |
 | DR-ID     | Decision Record / Change Request ID: required for `exception` rows and for a row reopened by an upstream reset, retained through the row's later statuses; blank otherwise |
-| Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                                                                                                      |
+| Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                                                                                                       |
 
 ## Status Lifecycle
 

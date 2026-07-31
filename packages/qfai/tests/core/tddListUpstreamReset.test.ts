@@ -198,11 +198,7 @@ describe("the DR-ID column definition covers the reset row", () => {
       // reference under the progressive-disclosure budget (#414); SKILL.md now
       // carries a summary and points here, so the rules are asserted here.
       const skill = await readFile(
-        path.join(
-          repoRoot,
-          tree,
-          "assistant/skills/qfai-implement/references/execution-ledger.md",
-        ),
+        path.join(repoRoot, tree, "assistant/skills/qfai-implement/references/execution-ledger.md"),
         "utf-8",
       );
       // The old wording let an agent blank the approval ID on the next
@@ -224,11 +220,7 @@ describe("the DR-ID column definition covers the reset row", () => {
       // reference under the progressive-disclosure budget (#414); SKILL.md now
       // carries a summary and points here, so the rules are asserted here.
       const skill = await readFile(
-        path.join(
-          repoRoot,
-          tree,
-          "assistant/skills/qfai-implement/references/execution-ledger.md",
-        ),
+        path.join(repoRoot, tree, "assistant/skills/qfai-implement/references/execution-ledger.md"),
         "utf-8",
       );
       expect(skill).toContain(
