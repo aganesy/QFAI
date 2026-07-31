@@ -23,10 +23,13 @@ const TC_ID_RE = /^TC-\d{4}(?:-\d{4})?$/;
 const API_CONTRACT_ID_RE = /^CON-API-\d+$/;
 /**
  * Extension set used when the project declares no
- * `validation.traceability.testFileGlobs`. It is a fallback, not the rule: a
- * Python / Go / Java / Ruby / Rust repository matched zero files under it, so
- * `QFAI-ATDD-111/112/113` reported 100% of obligations uncovered no matter how
- * many correctly annotated tests existed.
+ * `validation.traceability.testFileGlobs`. It is a fallback, not the rule: its
+ * code extensions are all JavaScript/TypeScript, so a Python / Go / Java /
+ * Ruby / Rust repository matched none of its executable test files under it.
+ * (`feature` / `md` / `markdown` still match, but those are annotation
+ * carriers, not test code — a repo with no Gherkin or markdown ledger matches
+ * nothing at all.) `QFAI-ATDD-111/112/113` therefore reported obligations as
+ * uncovered no matter how many correctly annotated tests existed.
  */
 const DEFAULT_TEST_FILE_GLOB = "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}";
 
@@ -318,8 +321,11 @@ export function deriveAtddFilePattern(testFileGlobs: readonly string[]): string 
   for (const ext of STRUCTURAL_ANNOTATION_EXTENSIONS) {
     extensions.add(ext);
   }
+  // Always the brace form: the loop above unions in
+  // STRUCTURAL_ANNOTATION_EXTENSIONS, three entries, so a non-empty set can
+  // never have one member and a `**/*.<ext>` branch would be dead code.
   const sorted = Array.from(extensions).sort();
-  return sorted.length === 1 ? `**/*.${sorted[0]}` : `**/*.{${sorted.join(",")}}`;
+  return `**/*.{${sorted.join(",")}}`;
 }
 
 function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string): string[] {
