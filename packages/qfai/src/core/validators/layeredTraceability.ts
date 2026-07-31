@@ -38,8 +38,11 @@ const EX_ID_RE = /^EX-\d{4}$/;
 const LAYER_ID_RE = /\b(?:OBJ|INIT|CAP|FLOW|US|AC|BR|EX|TC)-\d{4}\b/gi;
 // Spec-local IDs only: exactly four digits. Discussion-layer IDs are `D`-prefixed
 // (`DUS-001`, `DAC-001-01`, `DTC-1`, `DSC-001`) and are deliberately NOT matched — they
-// are the provenance carriers that `02_User-stories.md`'s `Source:` field and the
-// `03_Acceptance-Criteria.md` `Source` column keep legal in shared files.
+// are the provenance carriers that `02_User-stories.md`'s `Source:` field and
+// `03_Acceptance-Criteria.md`'s `# Source:` comment keep legal in shared files.
+// The AC provenance lives in that comment inside the required Gherkin block, not
+// in the AC Catalog: the catalog is a human-facing index and deliberately has no
+// `Source` column, so the two can never disagree.
 const POLICIES_DOWNSTREAM_V1421_RE = /\b(?:US|AC|BR|EX|TC)-\d{4}\b/gi;
 
 const LAYER_ORDER = {
