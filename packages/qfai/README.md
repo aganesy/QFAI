@@ -33,6 +33,28 @@ The agent reads the repository, produces the required artifacts, and iterates un
   `index.html`, or `interaction.json`.
 - Calibration SSOT is the calibration pack referenced by `calibrationRef.packPath`.
 
+## Installation
+
+qfai is published on npm as **`qfai`**. Install it as a dev dependency:
+
+```bash
+npm i -D qfai
+# or: pnpm add -D qfai / yarn add -D qfai
+```
+
+Let the package manager write the `devDependencies` entry. Do not hand-pin a version
+here: `package.json#version` in the published package is the only version source, and a
+number copied from prose goes stale on the next release.
+
+> **Do not install from the GitHub repository.** A git specifier such as
+> `"qfai": "github:aganesy/QFAI"` maps the dependency key `qfai` to the private monorepo
+> root — the manifest `name` is irrelevant, so it lands in `node_modules/qfai` regardless.
+> That root ships no `bin` and no built `dist`, so nothing would be runnable or
+> importable. Under npm or yarn a `preinstall` guard refuses the install with an
+> explanatory error rather than completing silently; under pnpm — or any package manager
+> that reports no user agent — it is not caught, so the mistake is yours to avoid. Use the
+> npm package, or run it without installing via `npx qfai@latest <command>`.
+
 ## Quick start
 
 > **Windows users:** `qfai init` creates symlinks internally.
