@@ -316,6 +316,17 @@ export async function runPrototypingCertify(
         `Move it to ${VERIFY_JSON_REL}; the legacy location will stop being read.`,
     );
   }
+  // A missing file is not a failing verify. Without this branch the run fell
+  // through to the `status must be PASS` message below, which sends the
+  // operator to look at a status in a file that does not exist.
+  if (verifyRead.source === "missing") {
+    error(
+      `qfai prototyping certify: ${VERIFY_JSON_REL} is missing ` +
+        `(${VERIFY_JSON_LEGACY_REL} was not there either). ` +
+        "Run `/qfai-verify` with the prototyping scope to produce it, then re-run certify.",
+    );
+    return 2;
+  }
   const verifyStatus = extractString(verifyRead.json, "status");
   if (verifyStatus !== "PASS") {
     error(

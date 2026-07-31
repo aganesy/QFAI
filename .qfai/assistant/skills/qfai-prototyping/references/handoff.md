@@ -60,13 +60,19 @@ the SSOT for brand identity. There is no preserve / adapt / copy split.
 Order is load-bearing: `qfai prototyping certify` requires the configured
 validate report (with `counts.error === 0`) and `.qfai/report/verify.json`
 (with `status === "PASS"`) to be present on disk before it will seal the
-certificate. Both reads are canonical-first: `verify.json` falls back to the
-legacy `.qfai/output/verify.json` and prints a migration note when it does. The
+certificate.
+
+The two reads are not the same shape. The **validate** report is read from
+whatever `output.validateJsonPath` names — one location, no fallback. Only
+**`verify.json`** is canonical-first: it falls back to the legacy
+`.qfai/output/verify.json` and prints a migration note when it does. That
 fallback fires only when the canonical file is **absent** — a canonical file
 that exists but is unparseable, non-object, or unreadable aborts certify with a
 non-zero exit instead, so a leftover legacy `status: "PASS"` can never certify a
-run whose real gate result was never readable. Run the gates in this order,
-every time:
+run whose real gate result was never readable. A canonical file that is missing
+in both locations is reported as missing, not as a failing status.
+
+Run the gates in this order, every time:
 
 1. `qfai validate --profile prototyping --fail-on error` — writes the path
    configured at `output.validateJsonPath` (default

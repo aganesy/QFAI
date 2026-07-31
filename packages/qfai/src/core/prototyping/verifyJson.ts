@@ -25,8 +25,11 @@ export type VerifyJsonRead = {
   /**
    * Project-root relative path actually read. The canonical path when nothing
    * exists; the offending path when `source` is `unreadable`.
+   *
+   * Narrowed to the two known locations so a caller cannot be handed — and a
+   * test cannot assert — a path this reader never looks at.
    */
-  rel: string;
+  rel: typeof VERIFY_JSON_REL | typeof VERIFY_JSON_LEGACY_REL;
   /** Parsed JSON object, or `null` when `missing` or `unreadable`. */
   json: Record<string, unknown> | null;
   /** Why the file at `rel` is unusable; `null` for every other source. */
