@@ -161,10 +161,12 @@ ops), `Rationale` (recommended for every row).
   (APPEND / MODIFY / REMOVE).
 - `QFAI-TRIAGE-005` (error): approval-required Operation has no
   `Approved By` value.
-- `QFAI-TRIAGE-007` (error): `SPLIT` / `MERGE` / `SUPERSEDE` row whose
-  `Subject` names a `US/AC/BR/EX/TC` ID. These operations are spec-scoped;
-  item decomposition is `UPDATE:MODIFY` + `UPDATE:APPEND`. `QFAI-TRIAGE-003`
-  is a membership check on the Operation label and provably cannot catch this.
+- `QFAI-TRIAGE-007` (error): `SPLIT` / `MERGE` / `SUPERSEDE` / `DELETE` row
+  whose `Subject` names a `US/AC/BR/EX/TC` ID as the operation's object. All
+  four are spec-scoped: item decomposition is `UPDATE:MODIFY` +
+  `UPDATE:APPEND`, and deleting one item is `UPDATE:REMOVE`.
+  `QFAI-TRIAGE-003` is a membership check on the Operation label and provably
+  cannot catch this.
 - `QFAI-TRIAGE-006` (error): CREATE row without a `CAP-NNNN` reference
   in the Rationale column, or referencing a CAP that is not registered
   in `_policies/03_Capabilities.md`. This is the structural gate that

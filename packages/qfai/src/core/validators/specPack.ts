@@ -388,15 +388,18 @@ function citationSpans(subject: string): Array<[number, number]> {
  */
 function findOperationObjectItemIds(subject: string): string[] {
   const spans = citationSpans(subject);
-  const ids: string[] = [];
+  // First-seen order, deduplicated: an ID written twice unbracketed is one
+  // offending ID, and listing it twice repeats it in both the message and
+  // `refs` without telling the reader anything new.
+  const ids = new Set<string>();
   for (const match of subject.matchAll(buildItemIdPattern())) {
     const index = match.index;
     const cited = spans.some(([start, end]) => index >= start && index < end);
     if (!cited) {
-      ids.push(match[0]);
+      ids.add(match[0]);
     }
   }
-  return ids;
+  return Array.from(ids);
 }
 
 const TRIAGE_TOP_LEVEL_LABELS = new Set<string>([...TRIAGE_TOP_LEVEL_OPS, "UPDATE"]);

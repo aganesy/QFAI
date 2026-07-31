@@ -27,7 +27,7 @@ const delta = (...rows: string[]): string =>
 const codes = (text: string): string[] =>
   validateTriageSection(text, DELTA_PATH).map((entry) => entry.code);
 
-describe("QFAI-TRIAGE-007 keeps SPLIT/MERGE/SUPERSEDE/DELETE spec-scoped", () => {
+describe("QFAI-TRIAGE-007: what counts as the operation's object", () => {
   it("rejects DELETE whose Subject names an item", () => {
     const issues = validateTriageSection(
       delta("| REQ-0001 | delete BR-0006-0004 | spec-0006 | DELETE | - | user@host | obsolete |"),
@@ -48,16 +48,36 @@ describe("QFAI-TRIAGE-007 keeps SPLIT/MERGE/SUPERSEDE/DELETE spec-scoped", () =>
     ).not.toContain("QFAI-TRIAGE-007");
   });
 
-  it("matches item IDs with the shared variable-digit semantics", () => {
-    // `specPackIds.ts` accepts `BR-1` and `TC-12345` as valid IDs, so a
-    // 4-digit-only matcher would let these rows past the gate.
-    for (const subject of ["split BR-1", "merge TC-12345", "supersede AC-12-345"]) {
-      const issues = validateTriageSection(
-        delta(`| REQ-0001 | ${subject} | spec-0006 | SPLIT | - | u@h | - |`),
-        DELTA_PATH,
-      );
-      expect(issues.map((entry) => entry.code)).toContain("QFAI-TRIAGE-007");
+  // `specPackIds.ts` accepts `BR-1` and `TC-12345` as valid IDs, so a
+  // 4-digit-only matcher would let these rows past the gate. The Operation is
+  // parameterized with the Subject: pinning it to `SPLIT` while the subject
+  // said "merge" / "supersede" left `MERGE` and `SUPERSEDE` unexercised.
+  for (const { verb, operation } of [
+    { verb: "split", operation: "SPLIT" },
+    { verb: "merge", operation: "MERGE" },
+    { verb: "supersede", operation: "SUPERSEDE" },
+    { verb: "delete", operation: "DELETE" },
+  ]) {
+    for (const id of ["BR-1", "TC-12345", "AC-12-345"]) {
+      it(`matches ${id} under ${operation} with the shared variable-digit semantics`, () => {
+        const issues = validateTriageSection(
+          delta(`| REQ-0001 | ${verb} ${id} | spec-0006 | ${operation} | - | u@h | - |`),
+          DELTA_PATH,
+        );
+        expect(issues.map((entry) => entry.code)).toContain("QFAI-TRIAGE-007");
+      });
     }
+  }
+
+  // One ID written twice unbracketed is one offending ID.
+  it("reports a repeated item ID once", () => {
+    const issues = validateTriageSection(
+      delta("| REQ-0001 | split BR-0006-0004 and BR-0006-0004 | spec-0006 | SPLIT | - | u@h | - |"),
+      DELTA_PATH,
+    );
+    const finding = issues.find((entry) => entry.code === "QFAI-TRIAGE-007");
+    expect(finding?.refs).toEqual(["BR-0006-0004"]);
+    expect(finding?.message.match(/BR-0006-0004/g)).toHaveLength(1);
   });
 
   it("still fires when the item is the object and the spec is only its location", () => {
@@ -148,7 +168,7 @@ describe("QFAI-TRIAGE-007 keeps SPLIT/MERGE/SUPERSEDE/DELETE spec-scoped", () =>
   });
 });
 
-describe("QFAI-TRIAGE-007 keeps SPLIT/MERGE/SUPERSEDE spec-scoped", () => {
+describe("QFAI-TRIAGE-007: which Operations are spec-scoped", () => {
   it("rejects SPLIT whose Subject names a business rule", () => {
     const issues = validateTriageSection(
       delta("| REQ-0001 | split BR-0006-0004 | spec-0006 | SPLIT | - | user@host | too coarse |"),
