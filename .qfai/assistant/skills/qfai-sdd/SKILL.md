@@ -212,6 +212,11 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 
 - Shared `_policies/01..11` files
 - Target `spec-*/01..10` files (with valid `Status:` bullet)
+- `spec-*/16_Traceability-ledger.md` when the spec's `BR-*` / `AC-*` are linked to implementation
+  files (optional artifact; create or refresh it in the same change as the BR/AC it links, from
+  `templates/specs/spec/16_Traceability-ledger.md`). Without it `QFAI-TRACE-002` is emitted and the
+  BR/AC ↔ implementation integrity check (`QFAI-TRACE-001`) is skipped for that spec. See
+  `references/spec-traceability-rules.md#traceability-ledger-16_traceability-ledgermd`.
 - Triage section in every changed `09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec)
 - Updated contracts under `.qfai/contracts/**`; UI-bearing targets normalize design/ui contracts
 - `.qfai/report/preflight_summary.md`

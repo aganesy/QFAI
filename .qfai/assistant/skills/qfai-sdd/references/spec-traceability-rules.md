@@ -168,6 +168,32 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - `TDD-ID` must match `TDD-NNNN` and be unique within the spec.
 - Missing `tdd/test-list.md` is a warning; missing DR-ID/Evidence columns is an error.
 
+## Traceability Ledger (`16_Traceability-ledger.md`)
+
+Optional per-spec artifact linking `BR-*` / `AC-*` to the implementation file that realizes them.
+Template: `templates/specs/spec/16_Traceability-ledger.md`.
+
+- It is **optional**. Without it `npx qfai validate` emits `QFAI-TRACE-002` (`warning`) and skips the
+  implementation-integrity check; the spec is still valid.
+- With it, `QFAI-TRACE-001` (`error`) fires when a spec's `03_Acceptance-Criteria.md` or
+  `04_Business-Rules.md` changed on the branch but a linked implementation file did not.
+- Schema for the **layered** layout — the first Markdown table is the one read; header needs ≥3
+  columns, one named `Implementation File`:
+
+  | BR/AC   | Implementation File | Test File |
+  | ------- | ------------------- | --------- |
+  | AC-0001 | src/…               | tests/…   |
+
+  First cell must be a `BR-NNNN` / `AC-NNNN` ID; second cell one repo-root-relative path (no globs,
+  no `./`). One row per BR/AC ↔ file pair. Extra trailing columns are ignored.
+
+- The legacy **spec-pack** layout uses the same filename with a different schema
+  (`trace_id, obj_id, init_id, cap_id, flow_id, us_id, ac_id, ex_ids, tc_ids`, checked by
+  `QFAI-LEDGER-001`). That check runs only on spec-pack layouts — the two schemas never apply to the
+  same file. Do not merge them.
+- Authored and refreshed by `/qfai-sdd` in the same change as the BR/AC it links. It is upstream
+  SSOT; downstream skills must not edit it.
+
 ## Depth Expectations
 
 - `BR` captures decision-level rules.
