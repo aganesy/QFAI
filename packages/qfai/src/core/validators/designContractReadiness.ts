@@ -5,9 +5,10 @@ import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
-import { hashDesignMd, parseDesignMd } from "../design/designMd.js";
+import { hashDesignMd, isUnreplacedDesignMdSample, parseDesignMd } from "../design/designMd.js";
 import type { DesignMd } from "../design/designMd.js";
 import { DESIGN_MD_SHA_HEX_RE, readDesignMdLockSha } from "../design/designMdLock.js";
+import { resolveAllUiBearingSpecs } from "../prototyping/specResolution.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -75,12 +76,28 @@ async function validateDesignContractReadinessForStage(
     "**/*.yaml",
   );
   const uiContracts = await fg(uiPattern, { absolute: true });
-  if (uiContracts.length === 0) {
-    return [];
+  const hasUiContracts = uiContracts.length > 0;
+  // The project is UI-bearing as soon as a spec says so — `contracts/ui`
+  // yaml is a later artifact, and Phase 0 freezes DESIGN.md in between.
+  // Reuse `resolveAllUiBearingSpecs` rather than re-deriving the rule, so a
+  // project cannot be UI-bearing for prototyping and non-UI for this gate.
+  const uiBearing = hasUiContracts || (await hasUiBearingSpec(root, config));
+
+  // The unreplaced-sample gate runs BEFORE the UI-contract gate below.
+  // Every other check in this validator presupposes design contracts that
+  // only exist once prototyping has started, but the sample gate has to
+  // fire earlier than that: `qfai init` seeds the sample DESIGN.md on day
+  // one, UI contracts are only authored later in SDD, and `/qfai-sdd`
+  // Phase 0 freezes the file's sha256 in between. Gated behind
+  // `uiContracts.length === 0` the gate could only ever report a freeze
+  // that already happened.
+  const sampleIssues = await validateRootDesignMdSample(root, uiBearing);
+  if (!hasUiContracts) {
+    return sampleIssues;
   }
 
   const designDir = path.join(root, config.paths.contractsDir, "design");
-  const issues: Issue[] = [];
+  const issues: Issue[] = [...sampleIssues];
 
   const rootResult = await validateRootDesignMdAndLock(root, designDir);
   issues.push(...rootResult.issues);
@@ -114,6 +131,78 @@ async function validateDesignContractReadinessForStage(
     issues.push(...(await validateNoPrematurePrototypingContracts(root, config)));
   }
   return issues;
+}
+
+/**
+ * True when any spec declares itself UI-bearing, by the same rule the
+ * prototyping resolver uses: the `surface_type: ui-bearing` frontmatter
+ * marker, with a matching UI contract as the fallback.
+ *
+ * A scan failure degrades to `false` rather than propagating: this only picks
+ * the severity of one finding, and crashing `qfai validate` over an unreadable
+ * spec directory would be a worse outcome than reporting DCON-034 as a warning.
+ */
+async function hasUiBearingSpec(root: string, config: QfaiConfig): Promise<boolean> {
+  try {
+    return (await resolveAllUiBearingSpecs(root, config)).length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Identity gate for root DESIGN.md (QFAI-DCON-034).
+ *
+ * DCON-030..033 are all content-agnostic: they verify that DESIGN.md
+ * exists, parses and has not changed since the freeze — never that it was
+ * authored by this project. `qfai init` seeds the shipped sample brand
+ * into the project root, so an unreplaced sample satisfies every one of
+ * them, gets sha256-frozen as the project's brand contract, and from then
+ * on `/qfai-prototyping` enforces a fictional identity while swapping in
+ * the real brand breaks the lock until it is refrozen.
+ *
+ * Severity scales with how far the project has committed to a brand
+ * contract:
+ *   - UI-bearing -> `error`. The project is on the path that runs Phase 0
+ *     and freezes this file. UI-bearing is decided by the same rule the
+ *     prototyping resolver uses — a `surface_type: ui-bearing` spec OR a
+ *     `contracts/ui` yaml — not by the contracts alone, because the spec
+ *     marker exists at Phase 0 while the contracts do not, and a gate that
+ *     only fires after the contracts land can only report a freeze that
+ *     already happened.
+ *   - otherwise -> `warning`. Every `qfai init` seeds the sample,
+ *     including into projects that never ship a UI and never freeze
+ *     anything; turning that into a hard failure would break projects
+ *     that never opted into the design surface at all. The warning still
+ *     surfaces the condition from `qfai validate` on day one, which is
+ *     what the shipped sample's own instructions promise.
+ *
+ * A missing DESIGN.md is not this gate's business (DCON-030 owns it, and
+ * only for UI-bearing projects), so an unreadable file is silently
+ * skipped.
+ */
+async function validateRootDesignMdSample(root: string, uiBearing: boolean): Promise<Issue[]> {
+  let designMdText: string;
+  try {
+    designMdText = await readFile(path.join(root, ROOT_DESIGN_MD_REL), "utf-8");
+  } catch {
+    return [];
+  }
+  if (!isUnreplacedDesignMdSample(designMdText)) {
+    return [];
+  }
+  return [
+    issue(
+      "QFAI-DCON-034",
+      "Root DESIGN.md is still the qfai sample brand (unreplaced `qfai init` seed).",
+      uiBearing ? "error" : "warning",
+      ROOT_DESIGN_MD_REL,
+      "designContractReadiness.rootDesignMdSample",
+      undefined,
+      "canonical",
+      "Replace root DESIGN.md with this product's brand SSOT (run /qfai-discussion, which emits the draft, or author it from `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`) and delete the sample marker comment if present. Do this BEFORE /qfai-sdd Phase 0 freezes its sha256.",
+    ),
+  ];
 }
 
 type RootDesignMdResult = {

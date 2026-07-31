@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "./config.js";
@@ -93,10 +93,125 @@ export async function writeValidateRunLog(input: {
   await writeJson(path.join(reportDir, "traceability.json"), traceabilityJson);
   await writeFile(path.join(reportDir, "summary.md"), `${summaryMd}\n`, "utf-8");
 
+  // Validate Hard Gate evidence. Written on every run so it can never go stale:
+  // it always points at the newest run-log directory. Previously this file only
+  // existed as a side effect of `| tee`, which the Hard Gate command line itself
+  // omits (and which is not portable to PowerShell).
+  await writeLatestValidateLog(outDir, runId, () =>
+    buildValidateLog({
+      runId,
+      startedAt: input.startedAt.toISOString(),
+      status,
+      relativeReportDir,
+      command: runJson.command,
+      errorCount: input.result.counts.error,
+      warningCount: input.result.counts.warning,
+      summaryMd,
+    }),
+  );
+
   return {
     runId,
     reportDir,
   };
+}
+
+const RUN_ID_LINE_RE = /^-\s*run_id:\s*(run-\d{17})\s*$/m;
+const RUN_DIR_RE = /^run-\d{17}$/;
+
+/**
+ * Write the shared `validate.log` only when this run is the newest one on disk.
+ *
+ * Two validates on the same root race here. Run-log directory names come from
+ * the run's START time, so a long run A started before a short run B finishes
+ * after it — and an unconditional write would leave `validate.log` pointing at
+ * A's older `run-*` directory while B's newer one sits beside it. The freshness
+ * rule the shipped Hard Gate documents ("`run_log:` names the newest `run-*`")
+ * would then fail on a repository where nothing is actually wrong.
+ *
+ * Run ids are `run-<17-digit local timestamp>`, so lexical order is
+ * chronological order and both comparisons need no parsing.
+ *
+ * The decision is keyed on the `run-*` DIRECTORY listing rather than on
+ * `validate.log` alone. A run's directory is created by `allocateRunReportDir`
+ * at the START of the run, whereas the log is written at the END, so the
+ * directory of a newer concurrent run is already visible during the window in
+ * which an older run would otherwise clobber the pointer. Reading `validate.log`
+ * remains as a second guard for the case where the newer run's directory was
+ * pruned after it wrote.
+ *
+ * This is still not mutual exclusion: an older run that lists the directory
+ * before a newer run has been allocated, and writes after that newer run has
+ * finished, can leave a stale pointer. That window is now bounded by the gap
+ * between this listing and the write below rather than by the whole duration of
+ * the older run, which is what made the original ordering easy to lose. Closing
+ * it entirely needs a lock file, whose stale-entry recovery after a crashed run
+ * costs more than the residual risk.
+ *
+ * An unreadable or unparseable existing file is treated as "no newer run", so a
+ * truncated or hand-edited log self-heals on the next validate.
+ */
+async function writeLatestValidateLog(
+  outDir: string,
+  runId: string,
+  buildContents: () => string,
+): Promise<void> {
+  if (await hasNewerRunDir(outDir, runId)) {
+    return;
+  }
+  const filePath = path.join(outDir, "validate.log");
+  let existingRunId: string | null = null;
+  try {
+    existingRunId = RUN_ID_LINE_RE.exec(await readFile(filePath, "utf-8"))?.[1] ?? null;
+  } catch {
+    existingRunId = null;
+  }
+  if (existingRunId !== null && existingRunId > runId) {
+    return;
+  }
+  await writeFile(filePath, `${buildContents()}\n`, "utf-8");
+}
+
+/** True when `outDir` already holds a `run-*` directory strictly newer than `runId`. */
+async function hasNewerRunDir(outDir: string, runId: string): Promise<boolean> {
+  try {
+    const entries = await readdir(outDir, { withFileTypes: true });
+    return entries.some(
+      (entry) => entry.isDirectory() && RUN_DIR_RE.test(entry.name) && entry.name > runId,
+    );
+  } catch {
+    // An unreadable outDir cannot prove a newer run exists; fall through to the
+    // validate.log guard rather than skipping the write and losing evidence.
+    return false;
+  }
+}
+
+function buildValidateLog(input: {
+  runId: string;
+  startedAt: string;
+  status: RunLogResultStatus;
+  relativeReportDir: string;
+  command: string;
+  errorCount: number;
+  warningCount: number;
+  summaryMd: string;
+}): string {
+  const lines: string[] = [];
+  lines.push("# qfai validate log");
+  lines.push("");
+  lines.push("This file is written by every `qfai validate` run and always points at the newest");
+  lines.push("run-log directory. Do not edit it by hand; do not pipe stdout into it.");
+  lines.push("");
+  lines.push(`- run_id: ${input.runId}`);
+  lines.push(`- started_at: ${input.startedAt}`);
+  lines.push(`- command: ${input.command}`);
+  lines.push(`- status: ${input.status}`);
+  lines.push(`- errors: ${input.errorCount}`);
+  lines.push(`- warnings: ${input.warningCount}`);
+  lines.push(`- run_log: ${input.relativeReportDir}`);
+  lines.push("");
+  lines.push(input.summaryMd);
+  return lines.join("\n");
 }
 
 async function writeJson(filePath: string, value: unknown): Promise<void> {

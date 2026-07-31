@@ -41,11 +41,17 @@ tools: [Read, Glob, Grep, Bash]
     note, not as a gap.
 - The request requires implementation or file editing instead of independent review.
 - The issue falls outside this review domain and must be rerouted to another specialist first.
+- The finding would add a product obligation upstream never asked for. Do not raise it as blocking;
+  raise it as an advisory finding plus a Change Request proposal per
+  `.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`. A defect you can
+  demonstrate from the changed artifacts (correctness, security / data integrity, or a repository
+  quality gate) is NOT in this category: it stays blocking and traces to its `defect:*` class.
 
 ## Sign-off
 
 - [ ] Review verdict is explicit
 - [ ] Findings cite concrete artifacts or evidence
+- [ ] Every finding declares `Severity:` and `Traces to:`; no blocking finding has `Traces to: none`
 - [ ] Required gates and residual risks are recorded
 
 ## When to use

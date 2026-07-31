@@ -142,11 +142,14 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 This skill delegates through the centralized routing policy in `.qfai/assistant/manifest/agent-routing.yml`.
 
 - `delivery-planner`
-  - reads `test-list.md`, selects the next pending item, enforces Red-Green-Refactor ordering, and is the sole authority for parallel dispatch decisions
+  - reads `test-list.md`, selects the next pending item, and is the sole authority for **item selection and item scope** — whether this row's selector is a sufficient slice of its `TC-*` obligation
+  - enforces Red-Green-Refactor **ordering** (which phase may run next), not the RED/GREEN observation itself
+  - is the sole authority for parallel dispatch decisions
 - `frontend-engineer` / `backend-engineer`
   - implement the selected item only, write the failing test first, write minimal passing code, and refactor without unrelated changes
 - `qa-gatekeeper`
-  - is the sole authority for validating RED/GREEN observation evidence and completion gate evidence
+  - is the sole authority for validating **RED/GREEN observation evidence** — did the test fail (or pass) for the expected reason — and completion gate evidence
+  - does not adjudicate item scope; a scope objection is `delivery-planner`'s call
 - `implementation-reviewer`
   - reviews code quality, maintainability, backend correctness, and hidden coupling
 - `completion-reviewer`
@@ -165,6 +168,20 @@ All agent-to-agent transitions follow these contracts:
 5. `product-surface-reviewer` is added when the item affects UI behavior or rendered output.
 6. Only after all routed blocking reviewers pass may the item transition to `done`.
 
+#### Precedence between `delivery-planner` and `qa-gatekeeper`
+
+The two roles answer different questions and are ordered, not concurrent:
+
+- `delivery-planner` answers _is this item's scope sufficient to be the whole of its `TC-*` obligation_.
+- `qa-gatekeeper` answers _did the test fail (or pass) for the expected reason_.
+
+Precedence rules:
+
+- A `delivery-planner` REVISE on item scope MUST be resolved **before** RED evidence is submitted to `qa-gatekeeper` (step 2). Do not run step 2 while a scope REVISE is open.
+- Once `qa-gatekeeper` PASSes the observation for a RED round, item scope MUST NOT be re-litigated for that round. A newly discovered scope gap opens a **new** `test-list.md` row rather than reopening the passed one.
+- If a scope objection nonetheless arrives after step 3, it is treated as a new-row request; the existing PASS stands and is not discarded.
+- Neither role may overrule the other inside the other's domain: a `qa-gatekeeper` PASS never widens item scope, and a `delivery-planner` verdict never substitutes for RED/GREEN observation evidence.
+
 ### Capability Probe (MUST)
 
 - No additional overrides.
@@ -172,11 +189,11 @@ All agent-to-agent transitions follow these contracts:
 ### Delegation Failure (Hard Stop)
 
 - No additional overrides.
-- Do not simulate roles. If the first required delegation fails, stop the stage and report remediation.
+- Do not simulate roles. Classify the failure per the baseline taxonomy first: `unavailable` stops the stage with a remediation report; `saturated` uses the bounded retry branch and keeps the stage open.
 
 ## Work Orders Summary
 
-Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response `Result: PASS | REVISE`).
+Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer response `Result: PASS | REVISE`).
 
 ### Reviewer Gate (MUST)
 
@@ -185,6 +202,31 @@ Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response 
 - Reviewer checks Drift Protocol compliance and alignment with `.qfai/assistant/catalog/test-layers.md`.
 - Test volume floors/ratios are not gates; they are signals.
 - Do not declare DONE until Reviewer returns `PASS`; otherwise apply `REVISE`.
+
+#### Blocking vs advisory findings
+
+Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
+
+- A **blocking** finding cites either an upstream obligation (`AC-*`, `BR-*`, `TC-*`, `CON-*`, or
+  a named constitution/catalog rule) or a defect class (`defect:correctness`, `defect:security`,
+  `defect:code-quality`) in its `Traces to:` field. A defect demonstrable from the changed code —
+  an unhandled rejection, a missing validation on trusted input, a leak, a broken contract the
+  code itself declares — is blocking without needing an `AC-*`. Only blocking findings force
+  `REVISE` and only blocking findings hold the item out of `done`.
+- An **advisory** finding is one whose `Traces to:` is `none` — a new product obligation upstream
+  never asked for. It MUST NOT be implemented as production code or pinned as a test assertion.
+  Route it per `drift-protocol.md#reviewer-originated-obligations`: record it in the reviewer
+  response under `Advisory / Change Request proposals`. Do **not** edit `08_Open-questions.md`
+  here — it is upstream SSOT under the Drift Protocol and creating spec artifacts is a non-goal of
+  this skill; the owner phase (`/qfai-sdd`) records and adjudicates it.
+- A new advisory that does not change an already-approved obligation leaves the item free to reach
+  `done`. One that **does** change an approved obligation takes the Change Request path, and
+  `drift-protocol.md#when-drift-is-detected` applies: STOP, and no `done` for items depending on
+  the obligation under dispute until approval and the owner rerun.
+- `Do not declare DONE until Reviewer returns PASS` is never waived: the Reviewer verdict is
+  required on every item, including one whose review produced only advisories. What **blocking**
+  findings change is the verdict itself — only they force `REVISE` and hold `done`. An
+  advisory-only review returns `PASS`, and that `PASS` is still what releases `done`.
 
 ## Parallelization Policy
 
@@ -243,6 +285,15 @@ Refactor commands and results) is written **before** items 7-8, because it is th
 reviewers audit. The verdict fields are appended **after** items 7-8. A phase-authored evidence file
 whose only gap is the verdict fields is NOT a blocking finding at review time — see
 `Per-item evidence contract`.
+
+### Review artifact layout (MUST)
+
+Gate items 7-9 are evidence-bearing: reviewer verdicts must be written to a review pack, not left in
+conversation. There is exactly **one** `.qfai/review/**` layout — `review-<17-digit-timestamp>/`
+holding `review_request.md`, `R01_<reviewer-id>.md` (at least one) and `summary.json`. Do not nest
+`<scope>/<layer>/attempt-NN/` directories: packs written there are invisible to `qfai validate`.
+Each review round creates a new pack. Full schema and the `REVISE` -> `status: "FAIL"` mapping:
+`references/review-artifact-layout.md`.
 
 ### Spec completion conditions
 
