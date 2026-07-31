@@ -1,6 +1,6 @@
 import { access, readFile } from "node:fs/promises";
 
-import type { Issue, IssueCategory, IssueSeverity } from "../types.js";
+import type { Issue, IssueCategory, IssueLocation, IssueSeverity } from "../types.js";
 
 export type MarkdownPrefix = "US" | "AC" | "BR" | "TC";
 
@@ -27,6 +27,7 @@ export function issue(
     dl_id?: string;
     /** Other files this finding implicates when `file` is a representative. */
     relatedFiles?: string[];
+    loc?: IssueLocation;
   },
 ): Issue {
   const issue: Issue = {
@@ -52,6 +53,9 @@ export function issue(
   }
   if (details?.relatedFiles && details.relatedFiles.length > 0) {
     issue.relatedFiles = details.relatedFiles;
+  }
+  if (details?.loc) {
+    issue.loc = details.loc;
   }
   return issue;
 }

@@ -10,7 +10,7 @@
  *   - DCON-019 premature prototyping contract (sdd stage)
  */
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -22,6 +22,7 @@ import {
   validatePrototypingDesignContractReadiness,
   validateSddDesignContractReadiness,
 } from "../../../src/core/validators/designContractReadiness.js";
+import { getInitAssetsDir } from "../../../src/shared/assets.js";
 
 const tempDirs: string[] = [];
 
@@ -1266,5 +1267,105 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
     const dcon013 = issues.filter((i) => i.code === "QFAI-DCON-013");
     expect(dcon013.length).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// QFAI-DCON-034 — unreplaced sample DESIGN.md.
+//
+// The sample gate has to fire BEFORE the UI-contract gate: `qfai init`
+// seeds the sample on day one, `contracts/ui/**` is authored later in SDD,
+// and Phase 0 freezes the file's sha256 in between.
+// ---------------------------------------------------------------------------
+
+describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-034)", () => {
+  async function readShippedSample(): Promise<string> {
+    return readFile(path.join(getInitAssetsDir(), "root", "DESIGN.md"), "utf-8");
+  }
+
+  it("reports DCON-034 before any UI contract exists (fresh init)", async () => {
+    const root = await newTempDir();
+    await writeFile(path.join(root, "DESIGN.md"), await readShippedSample(), "utf-8");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const dcon034 = issues.filter((i) => i.code === "QFAI-DCON-034");
+    expect(dcon034).toHaveLength(1);
+    expect(dcon034[0]?.file).toBe("DESIGN.md");
+    // Warning, not error: every `qfai init` seeds this file, including
+    // into projects that never ship a UI and never reach Phase 0.
+    expect(dcon034[0]?.severity).toBe("warning");
+  });
+
+  it("escalates DCON-034 to error once the project is UI-bearing", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await writeFile(path.join(root, "DESIGN.md"), await readShippedSample(), "utf-8");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const dcon034 = issues.filter((i) => i.code === "QFAI-DCON-034");
+    expect(dcon034).toHaveLength(1);
+    expect(dcon034[0]?.severity).toBe("error");
+  });
+
+  it("escalates on a `surface_type: ui-bearing` spec before any UI contract exists", async () => {
+    // This is the Phase 0 moment the gate exists for: the spec already
+    // declares the project UI-bearing, `contracts/ui` yaml has not been
+    // authored yet, and the freeze is about to happen. Keying severity on the
+    // contracts alone would leave it a warning here and pass `--fail-on error`.
+    const root = await newTempDir();
+    await mkdir(path.join(root, ".qfai/specs/spec-0001"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0001/01_Spec.md"),
+      "---\nsurface_type: ui-bearing\n---\n\n# 01 Spec\n\n- Spec: spec-0001\n",
+      "utf-8",
+    );
+    await writeFile(path.join(root, "DESIGN.md"), await readShippedSample(), "utf-8");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const dcon034 = issues.filter((i) => i.code === "QFAI-DCON-034");
+    expect(dcon034).toHaveLength(1);
+    expect(dcon034[0]?.severity).toBe("error");
+  });
+
+  it("stays a warning when no spec declares itself UI-bearing", async () => {
+    const root = await newTempDir();
+    await mkdir(path.join(root, ".qfai/specs/spec-0001"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/specs/spec-0001/01_Spec.md"),
+      "# 01 Spec\n\n- Spec: spec-0001\n",
+      "utf-8",
+    );
+    await writeFile(path.join(root, "DESIGN.md"), await readShippedSample(), "utf-8");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.find((i) => i.code === "QFAI-DCON-034")?.severity).toBe("warning");
+  });
+
+  it("reports DCON-034 for a marker-less legacy sample seeded by an older init", async () => {
+    const root = await newTempDir();
+    const legacy = (await readShippedSample()).replace(
+      /<!-- QFAI-SAMPLE-DESIGN-MD:[\s\S]*?-->\n\n/,
+      "",
+    );
+    await writeFile(path.join(root, "DESIGN.md"), legacy, "utf-8");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-034");
+  });
+
+  it("stays silent for an authored DESIGN.md with no UI contracts", async () => {
+    const root = await newTempDir();
+    await writeFile(path.join(root, "DESIGN.md"), VALID_DESIGN_MD, "utf-8");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues).toEqual([]);
+  });
+
+  it("stays silent when root DESIGN.md is absent and no UI contracts exist", async () => {
+    const root = await newTempDir();
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues).toEqual([]);
+  });
+
+  it("reports DCON-034 from the prototyping stage as well", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await writeFile(path.join(root, "DESIGN.md"), await readShippedSample(), "utf-8");
+    const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-034");
   });
 });
