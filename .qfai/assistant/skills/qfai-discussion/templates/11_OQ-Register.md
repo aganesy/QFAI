@@ -1,6 +1,6 @@
 # 11 OQ Register
 
-<!-- UX-INTENT: If UI-bearing, track design direction OQs from uiux/30_option_comparison.md and uiux/31_selected_anchor_screen.md -->
+<!-- UX-INTENT: If UI-bearing, track design direction OQs against root DESIGN.md and uiux/40_screen_contracts.md -->
 
 ## OQ Table
 

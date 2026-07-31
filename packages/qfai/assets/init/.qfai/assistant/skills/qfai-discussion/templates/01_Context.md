@@ -1,6 +1,6 @@
 # 01 Context
 
-<!-- UX-INTENT: If UI-bearing, see uiux/10_implementation_strategy.md for implementation strategy context -->
+<!-- UX-INTENT: If UI-bearing, see root DESIGN.md for brand intent and product context -->
 
 ## UI-bearing Classification
 

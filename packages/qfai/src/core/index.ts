@@ -38,6 +38,8 @@ export {
   parseDesignMd,
   validateDesignMd,
   hashDesignMd,
+  isUnreplacedDesignMdSample,
+  DESIGN_MD_SAMPLE_MARKER,
   ARCHETYPES,
   COLOR_KEYS,
   FONT_KEYS,
