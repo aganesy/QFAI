@@ -15,27 +15,71 @@ Skill files should reference this baseline and only add role-, stage-, or gate-s
 
 1. Attempt the first required delegation at stage start using the platform's native delegation mechanism.
 2. Treat that first real delegation attempt as the capability check. Do not gate execution on preflight availability questions or synthetic probe-only checks.
-3. If the delegation fails, stop the stage immediately. Do not simulate roles and do not continue with self-execution.
+3. If the delegation fails, classify the failure first (see `Delegation Failure Taxonomy`), then apply the response for that class. Never simulate roles and never continue with self-execution, whatever the class.
+
+### Delegation Failure Taxonomy (MUST)
+
+Every delegation failure belongs to exactly one of two classes.
+
+| Class         | Meaning                                                                                                                                                                                                     | Sanctioned response                       |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `unavailable` | The host has no usable delegation mechanism, the role is unknown, or the failure is a configuration / tooling / quota gap only the user can close — including a limit that waiting cannot clear.            | Hard stop.                                |
+| `saturated`   | The host can delegate but is momentarily out of budget — `agent thread limit reached`, concurrency cap, queue full, rate limit, busy pool. The identical call would succeed later with no change by anyone. | Bounded wait-and-retry on the same stage. |
+
+- Classify from the raw failure reason, and classify `saturated` only when the reason states or
+  plainly implies that the identical call would succeed later **with no change by anyone**: a queue
+  or pool that is currently full, a rate limit with a retry window, a concurrency cap that is
+  momentarily reached, an explicit "try again later".
+- A limit or quota that only a user can lift is `unavailable`, not `saturated` — a configured
+  concurrency cap of 0, a maximum delegation depth, an input-size limit, an exhausted account
+  quota or plan. Waiting cannot clear those, so the retry loop would burn 30/60/120 seconds and
+  then report "no user action needed" about a condition that needs exactly that.
+- When retryability is not explicit, default to `unavailable`. The two classes are not
+  symmetric: mis-classifying as `unavailable` costs one unnecessary stop the user can act on,
+  while mis-classifying as `saturated` hides an actionable failure behind a pointless wait.
+- `saturated` never authorises self-execution of a primary artifact or of a blocking review, and never authorises discarding stage progress.
+- When the `saturated` retry budget is exhausted, fall through to the hard stop and report the class as `saturated (retry budget exhausted)`.
+
+### Delegation Failure — `saturated` (Bounded Retry)
+
+- Retry the identical delegation with backoff: 30s, then 60s, then 120s. Attempt cap: 3 retries per work order.
+- Do not re-scope, re-plan, or re-route the work order between retries — same role, same task.
+- The stage stays open and resumable across the wait; completed work orders keep their `PASS` status.
+- Report on entering the retry loop and on its outcome:
+  - `Delegation deferred: <raw reason or concise summary>`
+  - `Failure class: saturated`
+  - `Attempted role: <role>`
+  - `Attempted task: <task title>`
+  - `Retry condition: retry after <N> seconds / when a delegation slot frees`
+  - `Attempts used: <n>/3`
+  - `Stage state: held open and resumable — no stage progress discarded`
 
 ### Delegation Failure (Hard Stop)
 
+Applies to `unavailable`, and to `saturated` once the retry budget is exhausted.
+
 - Report all of:
   - `Delegation failure: <raw reason or concise summary>`
+  - `Failure class: unavailable | saturated (retry budget exhausted)`
   - `Attempted role: <role>`
   - `Attempted task: <task title>`
   - `Why stopped: QFAI requires real sub-agent delegation in this environment.`
-  - `User action needed: <settings or tooling changes required>`
+  - `User action needed: <settings or tooling changes required — or "none; wait for a delegation slot to free" when the class is saturated>`
   - `Retry condition: rerun after the required delegation succeeds`
 
 ## Work Orders Summary
 
 Every major artifact in the stage should include this table schema:
 
-| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE) |
-| ---- | ---------------- | ---------- | ------------ | ------------- | -------------------- |
-| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE          |
+| Step | Role (sub-agent) | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 1    | <role>           | <task>     | <refs>       | <refs>        | PASS/REVISE/PENDING          |
 
 - `Output (refs)` should point to in-file anchors or relative evidence paths.
+- `PENDING` records a gate that could not be run — the only honest status for the exhausted-budget
+  branch below, which mandates it. It is never a substitute for `PASS`: DONE stays blocked while
+  any row is `PENDING`, and the stage stays resumable. A skill that allows only `PASS`/`REVISE`
+  would force an agent on that path to either break the schema or mislabel an unrun gate.
 
 ## Reviewer Gate Baseline
 
@@ -63,6 +107,20 @@ Every major artifact in the stage should include this table schema:
   `drift-protocol.md#reviewer-originated-obligations`, not to the implementer.
 - Only `blocking` findings — those citing an upstream obligation or a defect class — force
   `REVISE`.
+
+### Reviewer budget exhausted
+
+A blocking review that cannot be delegated because the agent budget is spent is a `saturated`
+failure, not a licence to skip the gate or to self-review.
+
+- First apply the `saturated` bounded retry. A freed slot is the preferred outcome.
+- If retries are exhausted, a reviewer role MAY be reused sequentially with a cleared context,
+  provided the reviewer did not author or edit any artifact under review in this run. The
+  protected invariant is independence from authorship, not reviewer instance identity.
+- Record the reuse in the Work Orders Summary (`Task title` prefixed `re-review (sequential reuse)`).
+- If even sequential reuse is impossible, hard stop with the review gate recorded as `PENDING`
+  rather than `PASS`. `PENDING` is not `PASS`; DONE stays blocked and the stage stays resumable.
+- Never record a waived or self-performed review as `PASS`.
 
 ## Work order template
 

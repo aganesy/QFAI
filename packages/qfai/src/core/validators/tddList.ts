@@ -4,7 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
-import { parseFirstMarkdownTable } from "../specPackParsers.js";
+import { parseFirstMarkdownTable, resolveTestCaseTable } from "../specPackParsers.js";
 import { isCoverageTargetLevel, splitTcRefs, resolveParentTcId } from "../tddHelpers.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
@@ -52,6 +52,9 @@ function isUnderTestDir(testFile: string, dir: string): boolean {
 }
 
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
+
+/** Per-spec file that owns the Test Case Table, and the target of its findings. */
+const TEST_CASES_FILE_NAME = "06_Test-Cases.md";
 
 export async function validateTddList(root: string, config: QfaiConfig): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
@@ -165,7 +168,33 @@ async function validateSpecTddList(
 
   // Check 5: TC reference existence
   const tcRefsIndex = normalizedHeaders.indexOf("TC-Refs");
-  const { knownTcIds, unitComponentTcIds } = await collectTestCaseIds(specDir);
+  const { knownTcIds, unitComponentTcIds, unresolved } = await collectTestCaseIds(specDir);
+  if (unresolved) {
+    // Both TC checks below are no-ops without a resolved table. Say so, so a
+    // silent skip is distinguishable from a pass.
+    //
+    // The finding points at `06_Test-Cases.md`, not at the ledger: that is the
+    // file to edit, and `file` is what GitHub annotations, report hotspots and
+    // `scope.paths` waivers key on. Blaming `tdd/test-list.md` would send all
+    // three at a document that is not the problem.
+    const testCasesRelPath = path
+      .relative(root, path.join(specDir, TEST_CASES_FILE_NAME))
+      .replace(/\\/g, "/");
+    issues.push(
+      issue(
+        "TDDLIST_TC_TABLE_UNRESOLVED",
+        unresolved === "no-table"
+          ? `Could not resolve the Test Case Table in ${TEST_CASES_FILE_NAME} for spec-${specNumber}: no Markdown table was found under the \`## Test Case Table\` section (a table elsewhere in the file is not used); TC coverage checks skipped`
+          : `No \`TC-ID\` column found in the Test Case Table of ${TEST_CASES_FILE_NAME} for spec-${specNumber}; TC coverage checks skipped`,
+        "warning",
+        testCasesRelPath,
+        "tddList.testCaseTableResolvable",
+        undefined,
+        "change",
+        `${TEST_CASES_FILE_NAME} の \`## Test Case Table\` セクションに \`TC-ID\` 列を持つ表を記載してください。`,
+      ),
+    );
+  }
   if (tcRefsIndex >= 0) {
     if (knownTcIds.size > 0) {
       for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
@@ -395,11 +424,20 @@ async function validateSpecTddList(
   return issues;
 }
 
-type TestCaseIds = { knownTcIds: Set<string>; unitComponentTcIds: Set<string> };
+type TestCaseIds = {
+  knownTcIds: Set<string>;
+  unitComponentTcIds: Set<string>;
+  /**
+   * Set when no `TC-ID`-bearing table could be located. Both TC checks go
+   * silent in that case, so the caller reports the miss rather than letting
+   * "nothing found" read as "everything covered".
+   */
+  unresolved?: "no-table" | "no-tc-id-column";
+};
 
 async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   const empty: TestCaseIds = { knownTcIds: new Set(), unitComponentTcIds: new Set() };
-  const testCasesPath = path.join(specDir, "06_Test-Cases.md");
+  const testCasesPath = path.join(specDir, TEST_CASES_FILE_NAME);
   if (!(await exists(testCasesPath))) return empty;
   let content: string;
   try {
@@ -407,11 +445,16 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   } catch {
     return empty;
   }
-  const table = parseFirstMarkdownTable(content);
-  if (!table) return empty;
+  // Scoped to the `## Test Case Table` section the template names, with a
+  // header-match fallback for older specs. Reading the first table in
+  // document order let an explanatory table above the heading hijack the set.
+  const resolution = resolveTestCaseTable(content);
+  if (!resolution.table) {
+    return { ...empty, unresolved: resolution.reason };
+  }
+  const table = resolution.table;
   const headers = table.headers.map((h) => h.trim());
   const tcIdIndex = headers.indexOf("TC-ID");
-  if (tcIdIndex < 0) return empty;
   const levelIndex = headers.indexOf("Level");
 
   const knownTcIds = new Set<string>();
