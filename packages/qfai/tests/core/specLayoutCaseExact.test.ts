@@ -139,7 +139,9 @@ describe("specLayout required-file resolution", () => {
   it("accepts a required file that is a symlink to a real file", async () => {
     const specsRoot = await seedSpec({ omit: "07_Decisions.md", extra: "07_Decisions.source.md" });
     const linkPath = path.join(specsRoot, "spec-0001", "07_Decisions.md");
-    if (!(await trySymlink(path.join(specsRoot, "spec-0001", "07_Decisions.source.md"), linkPath))) {
+    if (
+      !(await trySymlink(path.join(specsRoot, "spec-0001", "07_Decisions.source.md"), linkPath))
+    ) {
       return;
     }
     expect(await missingFor(specsRoot)).toEqual([]);
