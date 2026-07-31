@@ -7,6 +7,10 @@ import { normalizeValidationResult } from "../../core/normalize.js";
 import { buildCiProfileIssue, createProfileGuardResult } from "../../core/phasePolicy.js";
 import { toRelativePath } from "../../core/paths.js";
 import type { Issue, ValidationProfile, ValidationResult } from "../../core/types.js";
+import {
+  THIN_COVERAGE_SIGNAL_CODE,
+  THIN_COVERAGE_SIGNAL_EXPECTATION,
+} from "../../core/validators/layerCoverage.js";
 import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolVersion } from "../../core/version.js";
@@ -541,8 +545,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-COV-204": "Every BR row must include at least one AC reference in `AC-Refs`.",
   "QFAI-COV-205": "Every EX row must include at least one BR reference in `BR-Ref`.",
   "QFAI-COV-206": "Every TC row must include at least one reference in `AC-Refs` or `EX-Ref`.",
-  "QFAI-COV-207":
-    "EX rows that reference multiple BR IDs should be reviewed as density-smell signals.",
+  [THIN_COVERAGE_SIGNAL_CODE]: THIN_COVERAGE_SIGNAL_EXPECTATION,
   "QFAI-ATDD-101":
     "US annotations in test code must reference existing IDs in specs (`QFAI:SPEC-XXXX:US-YYYY`).",
   "QFAI-ATDD-102":
@@ -747,6 +750,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-BREAK-009": "triggerResult=true requires non-empty breakthrough.json.branchRefs evidence.",
   "QFAI-CONTRACT-030":
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
+  "QFAI-CONTRACT-040":
+    "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM). Pairing is by normalized field name, not by an explicit pair declaration.",
 };
 
 function resolveIssueTarget(issue: Issue): string {
@@ -762,7 +767,12 @@ function resolveIssueTarget(issue: Issue): string {
   return "(project)";
 }
 
-function resolveIssueExpected(issue: Issue): string {
+/**
+ * Human-readable "expected state" a report prints for an issue code. Exported so
+ * the catalog entry for a code can be asserted against the single definition the
+ * emitting validator uses, instead of drifting from it silently.
+ */
+export function resolveIssueExpected(issue: Issue): string {
   return ISSUE_EXPECTED_BY_CODE[issue.code] ?? issue.rule ?? "Rule compliance";
 }
 

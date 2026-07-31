@@ -81,7 +81,7 @@
 - AC-Refs: AC-0015-0016
 - Per DR-0270, the audit-log write triggers on a fixed four-context declared taxonomy — when an `AskUserQuestion` template names "skill envelope", "architectural decision", "rejected-option re-adoption", or "scope expansion" (option C pinned; NOT a per-call boolean flag, NOT a question-text regex heuristic).
 - On trigger, the skill body MUST write `.qfai/evidence/decisions/<ISO8601-ts>.json` containing `{question, answer, scope, operatorIdentity, timestamp, envelopeContractClause}`.
-- `.qfai/evidence/decisions/` MUST be git-ignored by default (mirrors `.qfai/evidence/prototyping/`).
+- `.qfai/evidence/decisions/` MUST be **tracked** in version control: the managed `.gitignore` block negates it after `.qfai/evidence/*` (`QFAI_GITIGNORE_GOVERNANCE_NEGATIONS`). It is a governance record carrying operator approval, not regenerable stage evidence like `.qfai/evidence/prototyping/`.
 - An `AskUserQuestion` that names none of the four contexts MUST NOT write a record.
 
 ## BR-0015-0012: Cross-skill handoff schema SSOT-sync Pair IV

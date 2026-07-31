@@ -74,7 +74,7 @@ Given the first required delegation fails, when the orchestrator handles the fai
 - US-Refs: US-0015-0010
 - Given an `AskUserQuestion` whose template names one of the four envelope-deviation contexts (skill-envelope / architectural-decision / rejected-option re-adoption / scope-expansion),
 - When the skill body resolves the answer,
-- Then it MUST write `.qfai/evidence/decisions/<ISO8601-ts>.json` shaped `{question, answer, scope, operatorIdentity, timestamp, envelopeContractClause}` per DR-0270; `.qfai/evidence/decisions/` MUST be git-ignored by default (mirrors `.qfai/evidence/prototyping/`). An `AskUserQuestion` that names none of the four contexts MUST NOT write a record (no fail-open false-positive).
+- Then it MUST write `.qfai/evidence/decisions/<ISO8601-ts>.json` shaped `{question, answer, scope, operatorIdentity, timestamp, envelopeContractClause}` per DR-0270; `.qfai/evidence/decisions/` MUST be **tracked** in version control (the managed `.gitignore` block negates it after `.qfai/evidence/*`), because a decision record carries operator approval and cannot be regenerated — unlike the regenerable `.qfai/evidence/prototyping/`. An `AskUserQuestion` that names none of the four contexts MUST NOT write a record (no fail-open false-positive).
 
 ## AC-0015-0017: Cross-skill handoff schema is the single canonical writer/reader
 
