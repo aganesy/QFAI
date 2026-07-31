@@ -245,6 +245,60 @@ describe("qfai prototyping certify (generate)", () => {
     expect(exit).toBe(2);
   });
 
+  // A missing file is not a failing verify. Without its own branch the run
+  // reached the `status must be PASS` message, sending the operator to inspect
+  // a status in a file that is not there.
+  it("reports verify.json as missing rather than as a failing status", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root);
+    // Clear both locations the reader looks at.
+    for (const rel of [".qfai/report/verify.json", ".qfai/output/verify.json"]) {
+      await rm(path.join(root, rel), { force: true });
+    }
+
+    const logger = await import("../../src/cli/lib/logger.js");
+    const errors: string[] = [];
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation((...args: unknown[]) => {
+      errors.push(args.map(String).join(" "));
+    });
+    let exit: number;
+    try {
+      exit = await runPrototypingCertify({ root, check: false });
+    } finally {
+      errorSpy.mockRestore();
+    }
+    expect(exit).toBe(2);
+
+    const joined = errors.join("\n");
+    expect(joined).toContain("verify.json is missing");
+    expect(joined).toContain("/qfai-verify");
+    expect(joined).not.toContain("status must be PASS");
+  });
+
+  it("exits 2 on a broken canonical verify.json instead of certifying from the legacy one", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // `seedAllGatesPass` leaves a passing legacy `.qfai/output/verify.json`.
+    await seedAllGatesPass(root);
+    // A corrupt canonical file must NOT be treated as absent: falling back
+    // would certify from the stale legacy PASS while the real gate result was
+    // never readable.
+    await writeFile(path.join(root, ".qfai/report/verify.json"), "{ not json", "utf-8");
+
+    const logger = await import("../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+      const logged = errorSpy.mock.calls.map((call) => String(call[0])).join("\n");
+      expect(logged).toContain(".qfai/report/verify.json exists but is not a usable verify result");
+      expect(logged).toContain("invalid JSON");
+      expect(logged).not.toContain("read .qfai/output/verify.json (legacy)");
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it("exits 2 when prototyping.json#iterations[] is empty (and identifies the empty-iterations branch in the error log)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: true });
