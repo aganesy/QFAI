@@ -22,7 +22,7 @@
   - Acceptance criteria are consistent with flows/state transitions
   - Security/operations risks are reflected in diagrams where relevant
 - Mermaid diagrams use ` ```mermaid ` fences only (no ` ```text ` or language-less fences)
-- Root `DESIGN.md` parses and its `# Brand Philosophy` body carries do/don't, brand signals, and deviate-from references (when UI-bearing)
+- Root `DESIGN.md` parses and its `# Brand Philosophy` body carries do/don't, brand signals, and exploration references framed as **deviate-from** inputs (when UI-bearing)
 - Trend freshness and evidence traceability (when UI-bearing)
 - Canonical `uiux/` family is complete — `00_index.md`, `40_screen_contracts.md`, `50_review_input_bundle.md` — with no forbidden legacy sidecar (when UI-bearing)
 - Exploration directions stay unranked: no single visual winner is selected and the design system is not finalized here (when UI-bearing)
