@@ -21,6 +21,75 @@ const V1421_REFS = {
   ex: /\bEX-\d{4}(?:-\d{4})?\b/gi,
 } as const;
 
+// QFAI-PLAN-002 (`plan.howOnly.status`): keep progress tracking out of
+// `10_Plan.md`.
+//
+// NOTE: bare-word matching is intentionally absent. The pre-fix pattern
+// was `/\b(?:status|progress|todo|remaining|done|wip)\b|進捗|残作業|状態/i`
+// tested against whole heading text, so it also rejected unavoidable
+// How-content headings — "HTTP Status Mapping", "Status Code Handling",
+// "Response Status Construction", "Definition of Done", 「状態遷移」,
+// 「状態機械」 — and `状態` has no word boundary, so ANY heading
+// containing that ordinary noun failed. There is no config key, waiver
+// list or per-rule severity override, so the only remedy was renaming a
+// heading to mean the same thing in different words.
+//
+// Match operational SHAPES instead, exactly as the sibling rule
+// `validateStatusInSpecs` does (see the equivalent NOTE in
+// `statusInSpecs.ts`, where the bare word `status` is likewise excluded
+// on purpose):
+//   - a heading used as an operational field  -> `Status: …`, 「進捗:」
+//   - a heading that IS a progress label      -> `Progress`, `TODO`, 「進捗」
+//
+// A heading that merely CONTAINS one of these words is now allowed.
+// Progress tracking is still caught, because progress tracking names
+// itself; domain vocabulary that happens to collide no longer is.
+//
+// The label sets below are shared by both shapes on purpose. A composite label
+// is no less operational when it carries a value: `## Current Status: Complete`
+// is the same finding as `## Current Status`, and listing it only under the
+// whole-heading (`\s*$`-anchored) shape let the valued form through.
+const PLAN_STATUS_LABELS_EN =
+  "progress(?:\\s*tracking)?|todo|to\\s*do|wip|work\\s*in\\s*progress|" +
+  "remaining(?:\\s*(?:work|tasks?|items?))?|current\\s*status|implementation\\s*status|" +
+  "status\\s*tracking";
+const PLAN_STATUS_LABELS_JA =
+  "進捗状況|進捗管理|進捗|残作業|残タスク|作業状況|実装状態|対応状況|ステータス";
+// Bare field names that read as operational only in the `field: value` shape.
+// `## Status` / `## Done` alone stay allowed — `統合ステータス` style domain
+// headings and "Definition of Done" are the reason the bare word was dropped.
+const PLAN_STATUS_FIELD_ONLY_EN = "status|done";
+
+const PLAN_STATUS_HEADING_PATTERNS = [
+  // Operational field promoted to a heading: `<field>: <value>`.
+  new RegExp(`^(?:${PLAN_STATUS_LABELS_EN}|${PLAN_STATUS_FIELD_ONLY_EN})\\s*[:：]`, "i"),
+  new RegExp(`^(?:${PLAN_STATUS_LABELS_JA})\\s*[:：]`),
+  // Whole heading IS a progress label (no surrounding domain words).
+  new RegExp(`^(?:${PLAN_STATUS_LABELS_EN})\\s*$`, "i"),
+  new RegExp(`^(?:${PLAN_STATUS_LABELS_JA})\\s*$`),
+] as const;
+
+/**
+ * Strips markdown decoration so a label is matched by what it says, not by how
+ * it is dressed. `extractHeadings` returns the raw inline text, so a valid ATX
+ * closing sequence (`## TODO ##`) and inline emphasis (`## **TODO**`) both
+ * survive into the heading and defeated the anchored label patterns above —
+ * decoration alone was enough to smuggle a forbidden heading through.
+ *
+ * `*`, `` ` `` and `~` are stripped wherever they occur, not only at the edges:
+ * they carry no meaning inside a heading label, and pair-matching them would
+ * miss the asymmetric decoration (`## **TODO`) that a heading can still be
+ * smuggled through. `_` is different — it is ordinary inside an identifier
+ * (`snake_case handling`), so only leading and trailing runs are removed.
+ */
+function normalizeHeadingText(heading: string): string {
+  return heading
+    .replace(/\s+#+\s*$/, "")
+    .replace(/[*`~]/g, "")
+    .replace(/^_+|_+$/g, "")
+    .trim();
+}
+
 type CoverageRow = {
   id: string;
   count: number;
@@ -114,31 +183,38 @@ async function validatePlanArtifacts(specsRoot: string, entries: SpecEntry[]): P
     }
 
     const text = await readSafe(entry.planPath);
-    const headings = extractHeadings(text);
+    // Match on the decoration-stripped form, report the heading as authored so
+    // the author can find the line.
+    const headings = extractHeadings(text).map((raw) => ({
+      raw,
+      normalized: normalizeHeadingText(raw),
+    }));
 
     const forbiddenHeadingGroups = [
       {
         code: "QFAI-PLAN-002",
         rule: "plan.howOnly.status",
-        pattern: /\b(?:status|progress|todo|remaining|done|wip)\b|進捗|残作業|状態/i,
+        patterns: PLAN_STATUS_HEADING_PATTERNS,
         message: "10_Plan.md に状態管理系の見出しは記載できません（How専用）。",
       },
       {
         code: "QFAI-PLAN-003",
         rule: "plan.howOnly.history",
-        pattern: /\b(?:changelog|history|updated\s*at|update\s*history)\b|改訂履歴|更新履歴/i,
+        patterns: [/\b(?:changelog|history|updated\s*at|update\s*history)\b|改訂履歴|更新履歴/i],
         message: "10_Plan.md に更新履歴系の見出しは記載できません（How専用）。",
       },
       {
         code: "QFAI-PLAN-004",
         rule: "plan.howOnly.release",
-        pattern: /\b(?:release\s*candidate|go\s*\/?\s*no\s*\/?\s*go|rc)\b|リリース可否/i,
+        patterns: [/\b(?:release\s*candidate|go\s*\/?\s*no\s*\/?\s*go|rc)\b|リリース可否/i],
         message: "10_Plan.md に RC/Go-NoGo 判定の見出しは記載できません（How専用）。",
       },
     ] as const;
 
     for (const group of forbiddenHeadingGroups) {
-      const matched = headings.filter((heading) => group.pattern.test(heading));
+      const matched = headings
+        .filter((heading) => group.patterns.some((pattern) => pattern.test(heading.normalized)))
+        .map((heading) => heading.raw);
       if (matched.length === 0) {
         continue;
       }
