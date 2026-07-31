@@ -114,7 +114,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ### Delegation Failure (Hard Stop)
 
-- Do not simulate roles. If the first required delegation fails, stop the stage and report remediation.
+- Do not simulate roles. Classify the failure per the baseline taxonomy first: `unavailable` stops the stage with a remediation report; `saturated` uses the bounded retry branch and keeps the stage open.
 
 Stage minimum roles:
 
@@ -123,7 +123,7 @@ Stage minimum roles:
 - `test-design-analyst` drafts traceability, examples, and test-design.
 - `product-experience-architect` is added when the target is UI-bearing.
 - `orchestrator` integrates outputs and presents for confirmation; never drafts the primary artifact and never self-approves.
-- `completion-reviewer` is delegated independently. Required field: `Status (PASS/REVISE)`.
+- `completion-reviewer` is delegated independently. Required field: `Status (PASS/REVISE/PENDING)`; `PENDING` marks an unrun gate and never counts as `PASS`.
 
 Author↔reviewer separation (MUST): drafting roles and reviewing roles above are routed from one
 list, but no sub-agent may review an artifact it drafted or edited in this run. `independent` is
@@ -189,17 +189,18 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 2. Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
 3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`. UI-bearing targets MUST also validate the consuming-project root `DESIGN.md` and freeze its sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml` (see Phase 0 DESIGN.md Freeze below).
 4. `_policies/05_Contracts.md` must include a Contract Index aligned with `.qfai/contracts/**`.
+   - Phase 0 must also reconcile paired contracts against each other, not only validate each file: every terminal state, status enum value, and error code an API contract mandates must be representable in the paired DB contract. See `references/contract-artifact-rules.md#cross-contract-reconciliation-must`. The reviewer gate checks the pairing before sign-off.
 5. `_policies/04_Business-Flow.md` must be Markdown with Mermaid `flowchart` or `sequenceDiagram`.
 6. `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
 7. `06_Test-Cases.md` must include `TC-ID`, `EX-Ref`, `AC-Refs`, and `Type`, with normal-path plus error/boundary coverage.
-8. Stop only when `qfai validate --profile sdd --fail-on error --format github | tee .qfai/report/validate.log` exits with `error=0`.
+8. Stop only when `qfai validate --profile sdd --fail-on error --format github` exits with `error=0`.
 
 ## Required Process
 
 1. Stage 0: Preflight (stop on blockers).
 2. Stage 1: Triage (classify + approve + persist Triage table).
 3. Write `.qfai/report/preflight_summary.md`.
-4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase, and freeze root `DESIGN.md` per the Phase 0 DESIGN.md Freeze step below).
+4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase, and freeze root `DESIGN.md` per the Phase 0 DESIGN.md Freeze step below). Close Phase 0 with the cross-contract reconciliation step in `references/contract-artifact-rules.md#cross-contract-reconciliation-must`.
 5. Phase 1: Outline (`_policies/01..11`).
 6. Phase 2: Slice (per spec, gate each).
 7. Phase 3: Plan finalize (after at least one slice gate passes).
@@ -226,16 +227,25 @@ When the target spec is UI-bearing, Phase 0 MUST freeze the brand SSOT:
    missing, stop and ask the user to run `/qfai-discussion` (which
    emits the draft) or to author it manually using the sample at
    `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`.
-2. Call `parseDesignMd(text)`. If the result is `{ error: ParseError }`,
+2. Call `isUnreplacedDesignMdSample(text)`. If it returns `true`, the file
+   is still a qfai sample brand and MUST NOT be frozen: stop and ask the
+   user to author this product's own brand SSOT, deleting the
+   `QFAI-SAMPLE-DESIGN-MD` marker comment if present (samples from
+   releases older than the marker are recognised by content instead).
+   `qfai init` seeds the sample into the project root and never overwrites
+   it, so step 1's missing-file check cannot catch this — an unreplaced
+   sample parses and validates by construction, and freezing it binds
+   `/qfai-prototyping` and the reviewer lock rule to a fictional brand.
+3. Call `parseDesignMd(text)`. If the result is `{ error: ParseError }`,
    stop and report `path` / `code` / `message` for the parse error.
    Otherwise the result is `{ data: DesignMd; body: string }`; pass
    `data` to `validateDesignMd(data)`. If that issue list is
    non-empty, stop and report each issue. Both functions, together with
    `hashDesignMd` and the `DesignMd` / `ParseError` / `ParseResult` /
    `ValidationIssue` types, are re-exported from the public `qfai`
-   package entry (`import { parseDesignMd, validateDesignMd, hashDesignMd } from "qfai"`).
-3. Call `hashDesignMd(text)` to compute sha256 over the raw bytes.
-4. Write `.qfai/contracts/design/DESIGN.md.lock.yaml` from the
+   package entry (`import { parseDesignMd, validateDesignMd, hashDesignMd, isUnreplacedDesignMdSample } from "qfai"`).
+4. Call `hashDesignMd(text)` to compute sha256 over the raw bytes.
+5. Write `.qfai/contracts/design/DESIGN.md.lock.yaml` from the
    template at
    `templates/contracts/design-md-lock.sample.yaml` with these fields:
    - `designMdPath: "DESIGN.md"`
@@ -243,7 +253,7 @@ When the target spec is UI-bearing, Phase 0 MUST freeze the brand SSOT:
    - `frozenAt: <UTC ISO-8601>`
    - `schemaTokens.colors`, `fontFamilies`, `radii`, `shadows`
      enumerated per the sample.
-5. Record the freeze in `_policies/05_Contracts.md` under the Contract
+6. Record the freeze in `_policies/05_Contracts.md` under the Contract
    Index. The lock yaml plus root `DESIGN.md` are the only brand
    contract; per-aspect brand yaml contracts have been removed.
 

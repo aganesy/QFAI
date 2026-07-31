@@ -48,11 +48,11 @@ Use the shared schema from `shared-skill-delegation-baseline.md` — including t
 collision cannot be detected from the evidence afterwards. Typical pipeline
 steps:
 
-| Step | Role (sub-agent) | Agent instance  | Task title                 | Input (refs)          | Output (refs)     | Status (PASS/REVISE) |
-| ---- | ---------------- | --------------- | -------------------------- | --------------------- | ----------------- | -------------------- |
-| 1    | Researcher       | `<instance id>` | Discover candidate sources | User request + config | Candidate list    | PASS/REVISE          |
-| 2    | Analyst          | `<instance id>` | Prepare research notes     | Candidate URLs        | Research notes    | PASS/REVISE          |
-| 3    | Reviewer         | `<instance id>` | Review evidence and claims | Notes + sources       | Approval decision | PASS/REVISE          |
+| Step | Role (sub-agent) | Agent instance  | Task title                 | Input (refs)          | Output (refs)     | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | --------------- | -------------------------- | --------------------- | ----------------- | ---------------------------- |
+| 1    | Researcher       | `<instance id>` | Discover candidate sources | User request + config | Candidate list    | PASS/REVISE                  |
+| 2    | Analyst          | `<instance id>` | Prepare research notes     | Candidate URLs        | Research notes    | PASS/REVISE                  |
+| 3    | Reviewer         | `<instance id>` | Review evidence and claims | Notes + sources       | Approval decision | PASS/REVISE                  |
 
 ### Reviewer Gate (MUST)
 
@@ -68,6 +68,7 @@ steps:
   not a valid verdict; anything other than `none` cannot be a `PASS`.
 - Reviewer checks the Drift Protocol, verifies alignment with `test-layers.md`, and treats ratios as signals, not gates.
 - Reviewer returns only `PASS` or `REVISE` with a concrete fix proposal when returning `REVISE`.
+- A gate that could not be run at all is recorded as `PENDING` in the Work Orders Summary. `PENDING` never counts as `PASS`.
 
 ## CRITICAL CONSTRAINTS (Read First)
 
