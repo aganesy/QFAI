@@ -17,6 +17,13 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Define parallel-safe slices and post-merge verification conditions.
 - Own schedule, priority, and risk trade-offs across roles.
 - Produce actionable work orders for workers and reviewers.
+- Own **item selection and item scope** in a TDD micro-cycle, and Red-Green-Refactor phase ordering. Raise a scope REVISE **before** RED/GREEN evidence is submitted to `qa-gatekeeper`; do not
+  re-litigate item scope after `qa-gatekeeper` has passed the observation for that round — open a new ledger row instead.
+
+## Ownership boundaries
+
+- `qa-gatekeeper` owns RED/GREEN **observation** evidence (did the test fail or pass for the expected reason). This role does not overrule that verdict, and that verdict does not widen item scope.
+  See `.qfai/assistant/skills/qfai-implement/SKILL.md#precedence-between-delivery-planner-and-qa-gatekeeper`.
 
 ## Inputs you must read
 

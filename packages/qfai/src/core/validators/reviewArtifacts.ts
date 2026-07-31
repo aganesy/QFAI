@@ -4,7 +4,7 @@ import path from "node:path";
 import { isEnoent } from "../fs/errno.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
-import { QFAI_GITIGNORE_MARKER, QFAI_GITIGNORE_REQUIRED_ENTRIES } from "../gitignore.js";
+import { QFAI_GITIGNORE_MARKER, QFAI_GITIGNORE_RECOMMENDED_ENTRIES } from "../gitignore.js";
 
 const REVIEW_PACK_DIR_RE = /^review-(\d{17})$/i;
 const REVIEWER_FILE_RE = /^R\d+_.+\.md$/i;
@@ -19,11 +19,23 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
 
   const rootGitignorePath = path.join(root, ".gitignore");
   let hasQfaiGitignore = false;
+  let missingRecommendedEntries: string[] = [];
   try {
     const content = await readFile(rootGitignorePath, "utf-8");
-    hasQfaiGitignore =
-      content.includes(QFAI_GITIGNORE_MARKER) &&
-      QFAI_GITIGNORE_REQUIRED_ENTRIES.every((entry) => content.includes(entry));
+    // The marker is the requirement. Which paths a project chooses to ignore
+    // is the project's call: `.qfai/evidence/**`, `.qfai/review/**` and
+    // `.qfai/discussion/**` hold governance records that a project may
+    // legitimately want tracked, and failing validation for tracking your own
+    // audit trail is the wrong answer.
+    hasQfaiGitignore = content.includes(QFAI_GITIGNORE_MARKER);
+    // Searched across the WHOLE file, not just the managed block: an entry the
+    // project ignores from its own section satisfies the recommendation just as
+    // well, and reporting it as missing would push the author to duplicate a
+    // rule they already have. The finding text says ".gitignore" rather than
+    // "the managed block" for the same reason.
+    missingRecommendedEntries = QFAI_GITIGNORE_RECOMMENDED_ENTRIES.filter(
+      (entry) => !content.includes(entry),
+    );
   } catch (err: unknown) {
     if (!isEnoent(err)) {
       throw err;
@@ -57,6 +69,21 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
         ),
       );
     }
+  }
+
+  if (hasQfaiGitignore && missingRecommendedEntries.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-REVIEW-008",
+        `ルート .gitignore に推奨エントリがありません: ${missingRecommendedEntries.join(", ")}`,
+        "info",
+        rootGitignorePath,
+        "reviewArtifacts.gitignoreRecommended",
+        [...missingRecommendedEntries],
+        "change",
+        "意図的に追跡している場合は対応不要です。`qfai init` を再実行しても、削除したエントリは復活しません（管理ブロックの鮮度判定は governance negation の有無と順序だけを見ます）。既定に戻す場合はエントリを手動で追加してください。",
+      ),
+    );
   }
 
   const reviewPackDirs = await listReviewPackDirs(reviewRoot);

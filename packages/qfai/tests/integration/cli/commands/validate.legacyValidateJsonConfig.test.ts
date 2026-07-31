@@ -146,6 +146,30 @@ describe("config validateJsonPath = legacy literal — post-sunset", () => {
     expect(stdout).toContain("output.validateJsonPath");
     expect(stdout).toContain(".qfai/report/validate.json");
   });
+
+  it("AT sunset (1.10.0): a --spec-scoped run is refused too, not just the shared write", async () => {
+    // `scopedReportPath` derives its directory from `output.validateJsonPath`,
+    // so a scoped run against a legacy-configured project would write
+    // `.qfai/output/validate.spec-0001.json` — a NEW file under the very
+    // directory the migration gate exists to retire, which reads to an
+    // operator as "still fine to write here".
+    await seedLegacyConfig(root);
+
+    const exit = await runValidate({
+      root,
+      strict: false,
+      profile: "prototyping",
+      toolVersionOverride: "1.10.0",
+      format: "text",
+      specIds: ["spec-0001"],
+    });
+    expect(exit).toBe(1);
+
+    const legacyDir = path.join(root, ".qfai/output");
+    const scoped = path.join(legacyDir, "validate.spec-0001.json");
+    expect(await pathExists(scoped)).toBe(false);
+    expect(await pathExists(path.join(legacyDir, "validate.json"))).toBe(false);
+  });
 });
 
 describe("config validateJsonPath = canonical (non-legacy)", () => {
