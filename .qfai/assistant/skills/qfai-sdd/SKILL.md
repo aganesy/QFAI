@@ -202,7 +202,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 3. Write `.qfai/report/preflight_summary.md`.
 4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase, and freeze root `DESIGN.md` per the Phase 0 DESIGN.md Freeze step below). Close Phase 0 with the cross-contract reconciliation step in `references/contract-artifact-rules.md#cross-contract-reconciliation-must`.
 5. Phase 1: Outline (`_policies/01..11`).
-6. Phase 2: Slice (per spec, gate each).
+6. Phase 2: Slice (per spec, gate each with `npx qfai validate --profile sdd --fail-on error --spec <spec-id>` so a parallel worker gates on its own spec only and does not import a sibling agent's in-flight failures). A `--spec` run writes `<report>/validate.spec-<id>.json` and never the shared `validate.json` / `validate-<profile>.json`, so parallel workers cannot race on one file; an unknown or unparseable `--spec` value fails the run (`QFAI-SCOPE-001` / `QFAI-SCOPE-002`) instead of silently widening to the whole repo.
 7. Phase 3: Plan finalize (after at least one slice gate passes).
 8. Phase 4: Delta update.
 9. Run validate; fix source-layer artifacts and rerun until `error=0`.
