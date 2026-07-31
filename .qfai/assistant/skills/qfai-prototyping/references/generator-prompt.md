@@ -180,6 +180,77 @@ The generator MUST express every styled surface as one of:
   entry in `designMdViolations[]`. Fix the value once and the finding clears —
   do not expect the count to track the number of places it appears.
 
+## Output layout — two trees, two shapes
+
+There are two directory trees and they are NOT interchangeable. The
+generator writes to exactly one of them.
+
+| Tree                                  | Shape                                                    | Written by                           | Read by                                         |
+| ------------------------------------- | -------------------------------------------------------- | ------------------------------------ | ----------------------------------------------- |
+| `.qfai/prototypes/iter-NN/`           | one `index.html`                                         | **the generator** (you)              | `--auto-serve`, the operator, `/qfai-implement` |
+| `.qfai/evidence/prototyping/iter-NN/` | `<screenId>.html` + `.png`, one pair per declared screen | `qfai prototyping iterate --capture` | `qfai prototyping certify`, the reviewer        |
+
+**The generator never writes the evidence tree.** The `--capture` step
+performs the fan-out: it drives a browser to each declared screen's
+contract `route`, and writes one HTML snapshot plus one screenshot per
+screen into `.qfai/evidence/prototyping/iter-NN/`. `certify` reads only
+that tree and hard-fails with "missing HTML for N declared screen(s)"
+when a declared screen has no snapshot there.
+
+### N declared screens, one file
+
+A spec declaring N screens is satisfied by **one** `index.html`
+containing N client-side routes — not N files. Each declared screen
+must be reachable at its own contract `route`, so the capture step can
+navigate to it and snapshot it independently. This is what "all
+declared spec screens reachable" above means operationally.
+
+**Which routing shapes the capture step can actually reach.** Capture
+navigates to `new URL(<contract route>, <target url>)` and treats any
+HTTP status >= 400 as a failed screen, writing no evidence. What the
+target server does with that URL therefore decides the routing shape:
+
+- `--auto-serve` starts the built-in static file server. It resolves
+  every non-root URL to a real file under the served directory and
+  returns 404 when there is none — it has no SPA fallback. With it,
+  declare **hash routes** (`/#/settings`): the browser never sends the
+  fragment, so the server always serves `index.html` and the shell
+  routes client-side.
+- **Path routes** (`/settings`) and any `history.pushState` shell need
+  a server that rewrites unknown paths to `index.html`. Run one
+  yourself and pass `--target-url`; they will 404 under `--auto-serve`.
+- Per-screen files (`--emit-skeletons`, below) are a third option, but
+  only if the contract `route` names the file: `--emit-skeletons` writes
+  `<screenId>.html`, and the static server resolves a URL to a literal
+  path — it does not append `.html`, so a `/settings` route 404s while
+  `/settings.html` serves. `htmlSourceCopy` does not help here: it runs
+  after the capture has already navigated successfully, so it cannot
+  rescue a route the server could not resolve.
+
+Pick the routing shape to match the server you will capture against,
+and keep the contract `route` values consistent with it.
+
+Opt-in **seed aid**, not an alternative output shape:
+`qfai prototyping iterate --emit-skeletons` (cycle 0 only) writes one
+placeholder `.qfai/prototypes/iter-00/<screenId>.html` per declared
+screen, and the `htmlSourceCopy` capture option likewise operates on
+per-screen files. Neither writes an `index.html`.
+
+An accepted iteration must still carry `iter-NN/index.html`: Handoff
+below copies it to `.qfai/prototypes/final/index.html`, and without it
+`/qfai-implement` has nothing to read. So consolidate the skeletons into
+the single-file envelope before the loop converges — including when a
+cycle-0 skeleton set scores well enough that cycle 1 would otherwise
+accept it as it stands. If you keep the per-screen files because your
+capture routing needs them, author `index.html` alongside them so the
+accepted iteration carries both.
+
+### Handoff
+
+`.qfai/prototypes/final/index.html` is a copy of the accepted
+`iter-NN/index.html` and is the deliverable `/qfai-implement` reads.
+It is not a certify input; certify never opens the `prototypes/` tree.
+
 ## Cycle 0 (seed)
 
 Produce one self-contained `iter-00/index.html` that satisfies the spec
