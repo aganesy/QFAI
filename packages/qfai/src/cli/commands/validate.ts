@@ -193,7 +193,13 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
     // `validate-<profile>.json` / legacy path would let parallel Slice workers
     // race on the same files, leaving the last finisher's single spec looking
     // like a repo-wide PASS to every downstream reader.
-    if (scopedReportRel !== null) {
+    //
+    // The migration gate applies here too. `scopedReportPath` derives its
+    // directory from `output.validateJsonPath`, so a config still pointing at
+    // the legacy SSOT would put `validate.spec-0003.json` inside the
+    // deprecated directory — new files appearing under a path the gate exists
+    // to retire, which reads as "still fine to write here".
+    if (scopedReportRel !== null && !refuseConfiguredLegacyWrite) {
       await emitJson(normalized, root, scopedReportRel);
     }
   } else {

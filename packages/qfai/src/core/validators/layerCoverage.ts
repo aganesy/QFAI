@@ -44,7 +44,15 @@ export type LayerCoverageOptions = {
    * `specs-coverage/spec-NNNN.md` reports are (re)written. A `--spec`-limited
    * run must not dirty a sibling spec's report.
    */
-  specScope?: SpecScope;
+  /**
+   * Explicitly `| undefined` so callers can pass the value through as-is under
+   * `exactOptionalPropertyTypes`. Without it, a caller holding a possibly-
+   * undefined scope had to spread conditionally, and the natural way to write
+   * that check — `specScope ? … : {}` — reads as if an EMPTY scope were also
+   * being skipped. It is not: an empty `Set` is truthy, and `isSpecInScope`
+   * already treats `undefined` as "everything is in scope".
+   */
+  specScope?: SpecScope | undefined;
 };
 
 export async function validateLayerCoverage(

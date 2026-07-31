@@ -280,7 +280,7 @@ async function runSddValidators(
     ...(await validateSpecSplitByCapability(root, config)),
     ...(await validateLayeredTraceability(root, config)),
     ...(await validateOrphanProhibition(root, config)),
-    ...(await validateLayerCoverage(root, config, { ...(specScope ? { specScope } : {}) })),
+    ...(await validateLayerCoverage(root, config, { specScope })),
     ...(await validateContractReferences(root, config)),
     ...(await validateSddDesignContractReadiness(root, config, {
       enforceNoPrematurePrototypingContracts,
