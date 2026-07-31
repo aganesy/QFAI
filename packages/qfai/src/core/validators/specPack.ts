@@ -1697,30 +1697,68 @@ async function loadExistingRequiredTexts(
   return texts;
 }
 
+/**
+ * Resolves the test-layer policy canonical-first, then legacy.
+ *
+ * `qfai init` ships the file at `assistant/catalog/test-layers.md`, but this
+ * resolver read only `assistant/steering/test-layers.md` and created no
+ * `steering/` directory — so on a freshly initialized project the read always
+ * threw, `QFAI-SPACK-090` fired as an un-clearable warning on every run, and
+ * the catch branch silently substituted the full built-in `LAYER_TAGS` set.
+ * The file 11 shipped agents and 7 shipped skills name as the layer SSOT was
+ * never actually read. The bug was masked in qfai's own repo, which carries
+ * byte-identical copies at both paths.
+ */
 async function loadLayerPolicy(root: string, config: QfaiConfig): Promise<LayerPolicyResult> {
   const skillsDir = resolvePath(root, config, "skillsDir");
   const assistantRoot = path.dirname(skillsDir);
-  const policyPath = path.join(assistantRoot, "steering", "test-layers.md");
-  try {
-    const policyText = await readFile(policyPath, "utf-8");
-    return {
-      tags: resolveAllowedLayerTagsFromPolicy(policyText),
-      issues: [],
-    };
-  } catch {
-    return {
-      tags: new Set(Array.from(LAYER_TAGS)),
-      issues: [
-        issue(
-          "QFAI-SPACK-090",
-          "test-layer policy が見つからないため既定の layer タグ集合を使用します。",
-          "warning",
-          policyPath,
-          "specPack.layerPolicy",
-        ),
-      ],
-    };
+  const canonicalPath = path.join(assistantRoot, "catalog", "test-layers.md");
+  const legacyPath = path.join(assistantRoot, "steering", "test-layers.md");
+
+  for (const policyPath of [canonicalPath, legacyPath]) {
+    let policyText: string;
+    try {
+      policyText = await readFile(policyPath, "utf-8");
+    } catch {
+      continue;
+    }
+    const tags = resolveAllowedLayerTagsFromPolicy(policyText);
+    if (tags.size === 0) {
+      // A silent widen is indistinguishable from a pass, so say so.
+      return {
+        tags: new Set(Array.from(LAYER_TAGS)),
+        issues: [
+          issue(
+            "QFAI-SPACK-090",
+            "test-layer policy を読み取れましたが layer タグを抽出できませんでした。既定の layer タグ集合を使用します。",
+            "error",
+            policyPath,
+            "specPack.layerPolicy",
+            undefined,
+            "change",
+            "`catalog/test-layers.md` の `## Layer definitions` 見出し（例: `### L3 Integration`）または `layer-*` タグを確認してください。",
+          ),
+        ],
+      };
+    }
+    return { tags, issues: [] };
   }
+
+  return {
+    tags: new Set(Array.from(LAYER_TAGS)),
+    issues: [
+      issue(
+        "QFAI-SPACK-090",
+        "test-layer policy が見つからないため既定の layer タグ集合を使用します。",
+        "error",
+        canonicalPath,
+        "specPack.layerPolicy",
+        undefined,
+        "change",
+        "`qfai init` を再実行して `catalog/test-layers.md` を配置してください。",
+      ),
+    ],
+  };
 }
 
 function validateLedgerId(
