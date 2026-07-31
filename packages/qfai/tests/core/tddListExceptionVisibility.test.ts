@@ -62,6 +62,39 @@ describe("parked exception rows are visible in CI", () => {
     );
   });
 
+  it("keys dl_id per row even when two rows share one DR-ID", async () => {
+    // A DR-ID is not row-unique: several parked rows can cite the same decision
+    // record. Falling back to it let one `match.dl_ids` entry suppress every row
+    // carrying that DR — the over-suppression `dl_id` exists to prevent.
+    await withLedger(
+      [
+        "|          | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-1   | anomaly  |",
+        "|          | TC-0002 | Unit  | tests/b.test.ts | case b   | exception | DR-1   | anomaly  |",
+      ],
+      (issues) => {
+        const dlIds = parked(issues).map((entry) => entry.dl_id);
+        expect(dlIds).toHaveLength(2);
+        expect(new Set(dlIds).size).toBe(2);
+        expect(dlIds).not.toContain("DR-1");
+      },
+    );
+  });
+
+  it("does not call a row-position fallback a TDD-ID", async () => {
+    // "list the TDD-ID (row 3)" would send the operator looking for an id the
+    // row does not have.
+    await withLedger(
+      [
+        "|          | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-1   | anomaly  |",
+      ],
+      (issues) => {
+        const action = parked(issues)[0]?.suggested_action ?? "";
+        expect(action).toContain("row identifier");
+        expect(action).not.toMatch(/TDD-ID\s*[（(]?row /);
+      },
+    );
+  });
+
   it("says nothing about non-exception rows", async () => {
     await withLedger(
       [

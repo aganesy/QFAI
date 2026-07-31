@@ -5,6 +5,7 @@ import { parse as parseYaml } from "yaml";
 
 import { toRelativePath } from "./paths.js";
 import { escapeRegExp } from "./regex.js";
+import { EXCEPTION_PARKED_RULE_ID } from "./ruleIds.js";
 import type {
   Issue,
   IssueSeverity,
@@ -31,7 +32,7 @@ const RULE_ID_RE = /^[A-Z]+-\d{3}$/;
  * waiver must also name the row(s) in `match.dl_ids` — the only per-finding key
  * {@link matchesWaiver} compares.
  */
-const ROW_SCOPED_RULES = new Set<string>(["TDDLIST-001"]);
+const ROW_SCOPED_RULES = new Set<string>([EXCEPTION_PARKED_RULE_ID]);
 
 type ParsedWaiver = ValidationWaiverEntry & {
   pathMatchers: RegExp[];
