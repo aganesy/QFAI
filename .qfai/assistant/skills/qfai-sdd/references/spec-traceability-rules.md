@@ -131,6 +131,13 @@ ID reference direction (the value of `Refs:` columns) must be lower-to-upper onl
   Gherkin block in `03_Acceptance-Criteria.md`. The optional `AC Catalog` table carries no
   `Source` column, so there is no second copy to drift.
 
+### Item granularity
+
+Depth expectations answer how many layers; item granularity answers how big one
+item may be. It is defined in
+`.qfai/assistant/constitution/requirements-decomposition.md#item-granularity-acbrextc`
+and signalled by `QFAI-DENSITY-005`.
+
 ## TDD Execution Ledger
 
 Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.

@@ -631,6 +631,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   E_OQ_STATUS_UNPARSEABLE: "Each OQ entry has a valid status (open|resolved|deferred).",
   E_DELTA_MISSING_REQUIRED:
     "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
+  "QFAI-DENSITY-005":
+    "A `Rule` cell at least 400 chars AND at least 3x the mean of the other `BR` rows in the same file is a granularity signal (warning). Files with fewer than 3 `BR-ID`/`Rule` rows are not checked.",
   "QFAI-COV-201": "Every AC must be referenced by at least one TC (`AC-Refs`).",
   "QFAI-COV-202": "Every BR must be referenced by at least one EX (`BR-Ref`).",
   "QFAI-COV-203": "Every EX must be referenced by at least one TC (`EX-Ref`).",
