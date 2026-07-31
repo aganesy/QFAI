@@ -92,10 +92,20 @@ forms caught:
 
 - Inline `border-radius: 12px` / `border-radius: 0.5rem`.
 - Tailwind arbitrary `rounded-[13px]`, `rounded-[0.5rem]`.
-- Tailwind scale aliases (`rounded`, `rounded-sm`, `rounded-md`,
-  `rounded-lg`, `rounded-xl`, `rounded-2xl`, `rounded-3xl`,
-  `rounded-full`, `rounded-none`) — all resolve to Tailwind defaults,
-  not `DESIGN.md` tokens.
+- Tailwind scale aliases with **no** `DESIGN.md.visual.radius` key of
+  the same name: bare `rounded` (Tailwind's `DEFAULT`), `rounded-xl`,
+  `rounded-2xl`, `rounded-3xl`, `rounded-none`. These resolve to
+  Tailwind defaults, not `DESIGN.md` tokens.
+- `rounded-sm` / `rounded-md` / `rounded-lg` / `rounded-full` are
+  **allowed only in an iter whose own envelope re-binds that name**.
+  The schema's `visual.radius` keys are exactly `sm|md|lg|full`, and
+  the mandatory `theme.extend.borderRadius` injection re-binds those
+  four names to the `DESIGN.md` tokens — but the gate verifies that in
+  the iter's html rather than assuming it. An iter that omits the
+  envelope, drops a key from the `borderRadius` map, or binds it to a
+  different value renders Tailwind's default, and the alias is flagged
+  exactly as before. Same for the side/corner prefixes
+  (`rounded-t-md`, `rounded-tl-lg`, …).
 
 ### 4. box-shadow literal ban (including rgba color slot)
 
@@ -105,9 +115,23 @@ Authored forms caught:
 
 - Inline `box-shadow: 0 1px 2px rgba(15,23,42,0.05)`.
 - Tailwind arbitrary `shadow-[0_4px_6px_rgba(0,0,0,0.1)]`.
-- Tailwind scale aliases (`shadow`, `shadow-sm`, `shadow-md`,
-  `shadow-lg`, `shadow-xl`, `shadow-2xl`, `shadow-inner`,
-  `shadow-none`, `drop-shadow-*`).
+- Tailwind scale aliases with **no** `DESIGN.md.visual.shadow` key of
+  the same name: bare `shadow` (Tailwind's `DEFAULT`), `shadow-xl`,
+  `shadow-2xl`, `shadow-inner`, `shadow-none`.
+- Every `drop-shadow-<alias>` form, including `drop-shadow-sm|md|lg` —
+  the alias resolves through `theme.dropShadow`, which the mandatory
+  envelope does not inject, so it renders a Tailwind default no matter
+  what `visual.shadow` declares. The arbitrary form
+  `drop-shadow-[...]` carries its own literal and is judged like any
+  other arbitrary value: compliant when the literal is one of the
+  `visual.shadow` tokens, drift otherwise.
+- `shadow-sm` / `shadow-md` / `shadow-lg` are **allowed only in an iter
+  whose own envelope re-binds that name**. The schema's `visual.shadow`
+  keys are exactly `sm|md|lg`, and the mandatory
+  `theme.extend.boxShadow` injection re-binds those three names to the
+  `DESIGN.md` tokens — but the gate verifies that in the iter's html
+  rather than assuming it, so an iter with a missing, incomplete, or
+  overwritten `boxShadow` map still has its aliases flagged.
 
 ### Safelisted CSS-wide keywords
 
@@ -151,6 +175,10 @@ The generator MUST express every styled surface as one of:
 - One self-contained HTML file; embedded CSS / JS minimal.
 - All declared spec screens reachable; loading / empty / error /
   success states representable.
+- The compliance gate reports **one finding per distinct offending value**, not
+  one per occurrence: a single drifting token repeated across N screens is one
+  entry in `designMdViolations[]`. Fix the value once and the finding clears —
+  do not expect the count to track the number of places it appears.
 
 ## Output layout — two trees, two shapes
 

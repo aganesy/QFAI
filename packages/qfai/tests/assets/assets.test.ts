@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { runInit } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
+import { SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
@@ -86,7 +87,11 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "### Delegation Failure (Hard Stop)",
       "Do not simulate roles",
       "## Work Orders Summary",
-      "Status (PASS/REVISE)",
+      // #248 review: the reviewer-budget branch mandates recording an
+      // un-runnable gate as `PENDING`, so the status vocabulary each skill
+      // declares has to admit it. `PASS/REVISE` is now a prefix of the
+      // required value rather than the whole of it.
+      "Status (PASS/REVISE/PENDING)",
       "### Reviewer Gate (MUST)",
       "Reviewer",
       "PASS",
@@ -122,7 +127,11 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const requiredHardStopPayload = [
       "Attempt the first required delegation at stage start using the platform's native delegation mechanism.",
       "Treat that first real delegation attempt as the capability check. Do not gate execution on preflight availability questions or synthetic probe-only checks.",
-      "If the delegation fails, stop the stage immediately. Do not simulate roles and do not continue with self-execution.",
+      // #248 splits delegation failure into unavailable vs saturated, so the
+      // response is class-dependent; the invariant that survives is that a
+      // failure is never answered by simulating roles or self-executing.
+      "If the delegation fails, classify the failure first",
+      "Never simulate roles and never continue with self-execution",
       "Delegation failure:",
       "Attempted role:",
       "Attempted task:",
@@ -406,10 +415,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
     const content = await readFile(skillPath, "utf-8");
 
-    // The cap allows room for the trailing project_memory: block AND
-    // the `## Default Autopilot Policy` 3-bucket section required by
-    // the SKILL.md governance contract (R-AUTOPILOT-POLICY-MISSING).
-    expect(content.split(/\r?\n/).length).toBeLessThanOrEqual(240);
+    // Same ceiling as every other skill; the trailing `project_memory:` block
+    // and the mandatory `## Default Autopilot Policy` section fit inside it.
+    expect(content.split(/\r?\n/).length).toBeLessThanOrEqual(SKILL_MD_MAX_LINES);
   });
 
   it("ensures ui contract guidance defines mockable prototype and copy-ready example", async () => {
@@ -1355,21 +1363,17 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   });
 
   it("keeps canonical SKILL.md files compact enough for progressive disclosure", async () => {
-    // Each budget includes headroom for the mandatory
-    // `## Default Autopilot Policy` section (~25 lines) required by
-    // the SKILL.md governance contract.
-    const targets = [
-      ["qfai-sdd", 360],
-      ["qfai-discussion", 400],
-      ["qfai-prototyping", 350],
-      ["qfai-implement", 400],
-    ] as const;
+    // One ceiling for every skill (see SKILL_MD_MAX_LINES). The per-skill
+    // numbers this replaced disagreed with each other about the same file and
+    // had to be raised one at a time; the ceiling is a backstop, and the design
+    // rule is that detail lives in the skill's references/ topic files.
+    const skillIds = ["qfai-sdd", "qfai-discussion", "qfai-prototyping", "qfai-implement"] as const;
 
-    for (const [skillId, maxLines] of targets) {
+    for (const skillId of skillIds) {
       const skillPath = path.join(templateQfaiDir, "assistant", "skills", skillId, "SKILL.md");
       const content = await readFile(skillPath, "utf-8");
       const lineCount = content.split(/\r?\n/).length;
-      expect(lineCount).toBeLessThanOrEqual(maxLines);
+      expect(lineCount, `${skillId}/SKILL.md`).toBeLessThanOrEqual(SKILL_MD_MAX_LINES);
     }
   });
 
