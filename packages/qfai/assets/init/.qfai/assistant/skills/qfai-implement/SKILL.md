@@ -121,9 +121,9 @@ The eight required columns, the allowed transitions and the exception rules are 
 1. Read `test-list.md`. **Rework first**: if any row is at `review-fix`, select the first such row and resume its rework (`references/round-evidence.md`) before any `todo` row — one left by an interrupted session is otherwise never picked up. Otherwise select the first row with `Status = todo`.
 2. Transition status to `red` — **only for a `todo` row**. A `review-fix` row **stays at `review-fix`** for the whole rework: it runs steps 3-5 and the Green phase in place, and `review-fix -> red` is not an allowed transition.
 3. Write a **failing test** from the row's obligation column, selected by `Layer`: `TC-Refs` for `Unit` / `Component` / `Integration`, `US-Refs` for `E2E`, `CON-API-Refs` for `API`. An `E2E` or `API` row's test is authored by `/qfai-atdd` (Non-goals); this skill only drives that row's status and evidence once the acceptance test exists, and stops with a handoff note if it does not.
-4. Run the test and **watch it fail** — confirm the test actually fails for the expected reason. When
-   the row's `Selector` holds several entries, observe each entry's failure separately; a single
-   aggregate run is not a valid RED observation.
+4. Run the test and **watch it fail** for the expected reason, observing each `Selector` entry
+   separately (a single aggregate run is not a valid RED observation). Submit that run to
+   `qa-gatekeeper` and obtain confirmation **before** any production code exists — routing phase `red`.
 5. If the test unexpectedly passes, classify **why** before doing anything else. An obligation
    already satisfied by a sibling row is **not an anomaly** and does **not** go to `exception`;
    anything else transitions to `exception` and records the anomaly. Never weaken a correct test
@@ -139,7 +139,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 ### Phase: Green (Make It Pass)
 
 1. Write the **minimum production code** to make the failing test pass. On the _RED not observable_ path there is none to write — the `Satisfied-by` row already implements the predicate — so go straight to step 2.
-2. Run the test and **watch it pass**.
+2. Run the test and **watch it pass**, and submit that run to `qa-gatekeeper` for the GREEN confirmation — routing phase `build`, which is blocking for the same reason `red` is.
 3. Transition status to `green` — **only for a row that entered from `todo`**. A `review-fix` row stays at `review-fix` here too; `review-fix -> green` is not an allowed transition and must not be written to the ledger.
 4. If the test still fails after implementation, investigate and fix. Do not skip to refactor.
 
@@ -192,7 +192,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ### Formal Sub-agent Roster
 
-This skill delegates through the centralized routing policy in `.qfai/assistant/manifest/agent-routing.yml`.
+This skill delegates through the centralized routing policy in `.qfai/assistant/manifest/agent-routing.yml`. Its `red`, `build`, `test` and `review` phases carry `iteration: per-ledger-item` — they run once **per row**, not once per invocation, which is what puts `qa-gatekeeper` in a phase where a RED state still exists to observe.
 
 - `delivery-planner`
   - reads `test-list.md`, selects the next pending item, and is the sole authority for **item selection and item scope** — whether this row's selector is a sufficient slice of its `TC-*` obligation
@@ -201,7 +201,7 @@ This skill delegates through the centralized routing policy in `.qfai/assistant/
 - `frontend-engineer` / `backend-engineer`
   - implement the selected item only, write the failing test first, write minimal passing code, and refactor without unrelated changes
 - `qa-gatekeeper`
-  - is the sole authority for validating **RED/GREEN observation evidence** — did the test fail (or pass) for the expected reason — and completion gate evidence
+  - is the sole authority for validating **RED/GREEN observation evidence** — did the test fail (or pass) for the expected reason — and completion gate evidence. Routed per row in `red` (before production code) and `build` (after), not only in `review`
   - does not adjudicate item scope; a scope objection is `delivery-planner`'s call
 - `implementation-reviewer`
   - reviews code quality, maintainability, backend correctness, and hidden coupling
@@ -226,8 +226,8 @@ table, the group-formation transitions and the queue-advance steps: `references/
 All agent-to-agent transitions follow these contracts:
 
 1. `delivery-planner` selects the next item and assigns it to the appropriate implementation agent.
-2. Implementation agent submits RED/GREEN execution evidence to `qa-gatekeeper`.
-3. `qa-gatekeeper` confirms or rejects the RED/GREEN observation.
+2. Implementation agent submits the RED run to `qa-gatekeeper` **while no production code exists** (routing phase `red`), then the GREEN run after it (routing phase `build`). One combined post-hoc submission is not a substitute: RED is unrecoverable once Green begins, so it leaves nothing but the implementer's own account of a destroyed state — the self-attestation this gate exists to prevent.
+3. `qa-gatekeeper` confirms or rejects each observation. A RED rejection stops the row before Green; it does not wait for the `review` phase.
 4. After the item reaches `refactor`, implementation agent submits it to `completion-reviewer` for spec alignment and to `implementation-reviewer` for code quality review. Review is requested from `refactor`, never from `green`, so a `REVISE` always lands on the one status with an outbound `review-fix` edge.
 5. `product-surface-reviewer` is added when the item affects UI behavior or rendered output.
 6. Only after every required reviewer passes may the item transition to `done`. "Required" is wider than `blocking_agents`: `implementation-reviewer` is mandatory and its `REVISE` blocks `done` independently of that list, and `product-surface-reviewer` joins for UI-affecting items. The authority for an item transition is `#item-completion-checklist-12-point-gate`, not the routing list, which governs phase progression (`references/volume-policy.md#routing-is-unchanged`).

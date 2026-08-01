@@ -27,7 +27,24 @@ type RoutingPhase = {
   conditional_agents?: unknown;
   blocking_agents?: unknown;
   parallel_groups?: unknown;
+  iteration?: unknown;
 };
+
+/**
+ * How often a routing phase runs.
+ *
+ * The schema had no iteration concept at all, so every phase list read as one
+ * pass over the whole invocation. That is wrong for `qfai-implement`, which
+ * drives the TDD micro-cycle one ledger row at a time: collapsing its phases
+ * into a single pass left `qa-gatekeeper` no slot in which a RED state still
+ * exists to be observed.
+ *
+ * The key is optional and `per-invocation` is the default, so manifests that
+ * predate it keep their meaning. What is validated is the *value*: a typo like
+ * `per-item` would otherwise be read as "no iteration declared" and silently
+ * restore the collapsed reading it was added to fix.
+ */
+const ROUTING_ITERATIONS = new Set(["per-invocation", "per-ledger-item"]);
 
 /**
  * Resolve a manifest YAML file by checking the new canonical layer first
@@ -291,6 +308,20 @@ async function validateRouting(
           continue;
         }
         const phaseObj = phase as RoutingPhase;
+        if (phaseObj.iteration !== undefined) {
+          const declared = phaseObj.iteration;
+          if (typeof declared !== "string" || !ROUTING_ITERATIONS.has(declared)) {
+            issues.push(
+              issue(
+                "QFAI-AGENT-013",
+                `${formatSkillLabel(routeObj.skill, routeIndex)} phase[${phaseIndex}] declares iteration ${JSON.stringify(declared)}; allowed: ${[...ROUTING_ITERATIONS].sort().join(", ")}`,
+                "error",
+                rel,
+                "agentDefinition.routingIteration",
+              ),
+            );
+          }
+        }
         validateAgentRefs(
           rel,
           phaseObj.mandatory_agents,
