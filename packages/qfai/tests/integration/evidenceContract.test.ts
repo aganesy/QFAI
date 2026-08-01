@@ -14,10 +14,23 @@ const implementSkillPath = path.join(
   "SKILL.md",
 );
 
+// #224 moved the per-round field list into
+// `references/round-evidence.md` (progressive disclosure: SKILL.md has a
+// 400-line budget). The contract is still shipped, so these obligations read
+// the skill and its reference together.
+const roundEvidencePath = path.join(
+  path.dirname(implementSkillPath),
+  "references",
+  "round-evidence.md",
+);
+
 let content: string | undefined;
 
 async function loadContent(): Promise<string> {
-  content ??= await readFile(implementSkillPath, "utf-8");
+  content ??= [
+    await readFile(implementSkillPath, "utf-8"),
+    await readFile(roundEvidencePath, "utf-8"),
+  ].join("\n");
   return content;
 }
 

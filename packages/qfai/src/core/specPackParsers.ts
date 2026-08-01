@@ -1,7 +1,6 @@
 import { parseScenarioDocument } from "./scenarioModel.js";
 import { extractIdsByKind } from "./specPackIds.js";
 import type { SpecPackIdKind } from "./specPackIds.js";
-import { LAYER_TAGS } from "./testStrategyTags.js";
 
 const FEATURE_LINE_RE = /^\s*Feature:/gm;
 const EX_ID_RE = /^EX-\d+$/;
@@ -66,6 +65,17 @@ export function parseExamplesFeature(text: string, filePath: string): ParsedExam
   return { scenarios, errors };
 }
 
+/**
+ * Extracts the allowed `layer-*` tag set from the shipped test-layer policy.
+ *
+ * The shipped `catalog/test-layers.md` states its layers as headings
+ * (`### L3 Integration`), not as `layer-*` tokens, so a token-only scan
+ * returned nothing and the caller fell back to the built-in set — silencing
+ * the read without restoring enforcement. Both forms are parsed.
+ *
+ * Returns an EMPTY set when neither form is present, so the caller can report
+ * an unparseable policy instead of silently widening the allowed set.
+ */
 export function resolveAllowedLayerTagsFromPolicy(policyText: string): Set<string> {
   const extracted = new Set<string>();
   for (const match of policyText.matchAll(/@?(layer-[a-z0-9-]+)/gi)) {
@@ -75,11 +85,201 @@ export function resolveAllowedLayerTagsFromPolicy(policyText: string): Set<strin
     }
   }
 
-  if (extracted.size > 0) {
-    return extracted;
+  // `### L3 Integration` / `### L1 Unit` heading form.
+  for (const match of policyText.matchAll(/^#{1,6}\s*L\d\s+([A-Za-z0-9][A-Za-z0-9 -]*)$/gim)) {
+    const word = (match[1] ?? "").trim().toLowerCase().replace(/\s+/g, "-");
+    if (word.length > 0) {
+      extracted.add(`layer-${word}`);
+    }
   }
 
-  return new Set(Array.from(LAYER_TAGS));
+  return extracted;
+}
+
+/**
+ * Outcome of locating the test-case table inside `06_Test-Cases.md`.
+ *
+ * `source` records how the table was found so callers can tell a
+ * template-conformant spec (`section`) from an older one that only has a
+ * matching header row somewhere in the document (`header-match`).
+ */
+export type TestCaseTableResolution =
+  | { table: MarkdownTable; source: "section" | "header-match" }
+  | { table: null; reason: "no-table" | "no-tc-id-column" };
+
+/**
+ * Matches the template heading `## Test Case Table (required)` and its bare
+ * `## Test Case Table` form — and nothing else.
+ *
+ * The suffix is limited to a single parenthesised qualifier (so a translated
+ * `(必須)` still matches) and the heading must then end. A trailing word makes
+ * it a different section: `## Test Case Table Format` / `## Test Case Table
+ * Notes` document the format, and treating one of those as the named section
+ * hands the validators an illustration table — or, when it holds no `TC-ID`
+ * table at all, produces an `unresolved` result even though the real table is
+ * right there in the document.
+ */
+const TEST_CASE_TABLE_HEADING = /^ {0,3}(#{1,6})\s*test\s*case\s*table\s*(?:\([^)]*\))?\s*$/i;
+
+/** Any ATX heading, with the 0-3 leading spaces CommonMark permits. */
+const ANY_HEADING = /^ {0,3}(#{1,6})\s+\S/;
+
+/** A fenced code block delimiter, per CommonMark (0-3 leading spaces). */
+const FENCE_LINE = /^ {0,3}(`{3,}|~{3,})/;
+
+/**
+ * Removes the HTML-comment regions of a single line.
+ *
+ * Returns the visible remainder plus whether a comment is still open at the end
+ * of the line, so the caller can carry the state across lines.
+ */
+function maskLineComments(line: string, inComment: boolean): { text: string; open: boolean } {
+  let visible = "";
+  let index = 0;
+  let open = inComment;
+
+  while (index < line.length) {
+    if (open) {
+      const close = line.indexOf("-->", index);
+      if (close === -1) {
+        return { text: visible, open: true };
+      }
+      index = close + 3;
+      open = false;
+      continue;
+    }
+    const start = line.indexOf("<!--", index);
+    if (start === -1) {
+      visible += line.slice(index);
+      break;
+    }
+    visible += line.slice(index, start);
+    index = start + 4;
+    open = true;
+  }
+  return { text: visible, open };
+}
+
+/**
+ * Blanks the regions of `06_Test-Cases.md` that are not the spec, preserving
+ * line count: fenced code blocks and HTML comments.
+ *
+ * `06_Test-Cases.md` often documents its own format in a fenced sample or a
+ * commented-out block. Without this, an illustrative `## Test Case Table` plus
+ * `TC-ID` table inside one is selected as the named section and its example IDs
+ * are handed to the validators and the report — and for a heading-less legacy
+ * document it flips a previously correct resolution into a wrong one, because
+ * the hidden sample outranks the real table.
+ *
+ * Fence state wins over comment state: `<!--` inside a fenced sample is sample
+ * text, not a comment opener, so an unclosed one cannot swallow the rest of the
+ * document. Comments are stripped before the fence check on a line, so a fence
+ * marker that only appears inside a comment does not open a block either.
+ */
+function maskNonSpecRegions(text: string): string {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  let open: { marker: string; length: number } | null = null;
+  let inComment = false;
+
+  return lines
+    .map((line) => {
+      if (open !== null) {
+        const closing = FENCE_LINE.exec(line)?.[1];
+        if (closing && closing.charAt(0) === open.marker && closing.length >= open.length) {
+          open = null;
+        }
+        return "";
+      }
+
+      const masked = maskLineComments(line, inComment);
+      inComment = masked.open;
+
+      const fence = FENCE_LINE.exec(masked.text)?.[1];
+      if (fence) {
+        open = { marker: fence.charAt(0), length: fence.length };
+        return "";
+      }
+      return masked.text;
+    })
+    .join("\n");
+}
+
+const TC_ID_HEADER = "TC-ID";
+
+function hasTcIdColumn(table: MarkdownTable): boolean {
+  return table.headers.some((header) => header.trim() === TC_ID_HEADER);
+}
+
+/**
+ * Returns the body of the `## Test Case Table` section, or `null` when the
+ * document has no such heading. The section ends at the next heading of the
+ * same or a higher level.
+ */
+function extractTestCaseTableSection(text: string): string | null {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const start = lines.findIndex((line) => TEST_CASE_TABLE_HEADING.test(line));
+  if (start === -1) {
+    return null;
+  }
+  const level = (TEST_CASE_TABLE_HEADING.exec(lines[start] ?? "")?.[1] ?? "#").length;
+
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    const match = ANY_HEADING.exec(lines[index] ?? "");
+    if (match && (match[1] ?? "").length <= level) {
+      end = index;
+      break;
+    }
+  }
+  return lines.slice(start + 1, end).join("\n");
+}
+
+/**
+ * Resolves the test-case table of `06_Test-Cases.md`.
+ *
+ * The template names the section `## Test Case Table (required)`, but the
+ * previous implementation read `parseFirstMarkdownTable` — literally the first
+ * table in document order — so any explanatory table placed above the heading
+ * hijacked TC extraction.
+ *
+ * Resolution is section-first and the legacy fallback is **mutually
+ * exclusive** with it:
+ *
+ * - The `## Test Case Table` heading exists -> only that section is searched.
+ *   If its table has no `TC-ID` column, that is a typed failure, not a licence
+ *   to adopt an Appendix table: a mistyped column in the real table would
+ *   otherwise be masked by an explanatory table further down, silently
+ *   producing unknown/coverage findings keyed on illustration IDs.
+ * - The heading does not exist -> the first `TC-ID`-bearing table anywhere in
+ *   the document, so specs written before the heading existed keep working.
+ *
+ * Either way, "no table found" is reported rather than being allowed to read
+ * as "all TCs covered".
+ */
+export function resolveTestCaseTable(rawText: string): TestCaseTableResolution {
+  // Illustrative headings and tables inside fenced samples or HTML comments
+  // are not the spec.
+  const text = maskNonSpecRegions(rawText);
+  const section = extractTestCaseTableSection(text);
+  if (section !== null) {
+    const sectionTables = parseAllMarkdownTables(section);
+    const sectionTable = sectionTables.find(hasTcIdColumn);
+    if (sectionTable) {
+      return { table: sectionTable, source: "section" };
+    }
+    return {
+      table: null,
+      reason: sectionTables.length === 0 ? "no-table" : "no-tc-id-column",
+    };
+  }
+
+  const allTables = parseAllMarkdownTables(text);
+  const fallback = allTables.find(hasTcIdColumn);
+  if (fallback) {
+    return { table: fallback, source: "header-match" };
+  }
+
+  return { table: null, reason: allTables.length === 0 ? "no-table" : "no-tc-id-column" };
 }
 
 export function parseFirstMarkdownTable(text: string): MarkdownTable | null {
@@ -170,11 +370,24 @@ export function splitMarkdownRow(line: string): string[] {
   return cells;
 }
 
-function looksLikeTableRow(line: string): boolean {
+/**
+ * The exact line shape {@link parseAllMarkdownTables} treats as a table row.
+ *
+ * Exported so callers that must agree with the parser about "is this line part
+ * of a table" reuse this predicate instead of re-deriving a regex. A stricter
+ * private copy silently disagrees with the parser on the shapes GFM allows.
+ */
+export function looksLikeTableRow(line: string): boolean {
   return /^\s*\|/.test(line);
 }
 
-function isTableSeparator(line: string): boolean {
+/**
+ * The exact line shape {@link parseAllMarkdownTables} accepts as the separator
+ * row. Notably it does **not** require a trailing `|`: `| --- | ---` is a valid
+ * GFM separator and this parser accepts it. Exported for the same reason as
+ * {@link looksLikeTableRow}.
+ */
+export function isTableSeparator(line: string): boolean {
   if (!looksLikeTableRow(line)) {
     return false;
   }

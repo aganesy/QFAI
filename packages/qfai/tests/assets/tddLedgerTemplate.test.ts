@@ -90,19 +90,26 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
     });
 
     it(`${tree}: an empty ledger is only "nothing to do" when 06_Test-Cases.md agrees`, async () => {
+      // The rule is stated in SKILL.md; the procedure behind it lives in the
+      // reference, where the progressive-disclosure split (#414) put it.
       const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
       expect(skill).toContain(
         "**An empty ledger is a fault only when `06_Test-Cases.md` disagrees.**",
       );
-      expect(skill).toContain("read `06_Test-Cases.md` and");
-      expect(skill).toContain("run the recovery above instead of exiting");
+      expect(skill).toContain("references/ledger-preconditions.md");
+
+      const preconditions = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
+      );
+      expect(preconditions).toContain("read `06_Test-Cases.md` and");
+      expect(preconditions).toContain("Run the recovery above instead of exiting");
     });
 
     it(`${tree}: the coverage-target test matches the validator, not a level allowlist`, async () => {
-      const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
-      const preconditions = skill.slice(
-        skill.indexOf("## Preconditions"),
-        skill.indexOf("## Spec Auto-Discovery Protocol"),
+      const preconditions = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
       );
       // `isCoverageTargetLevel` excludes only these four; everything else —
       // including `unit`, `component` and any unrecognised value — is a target,
@@ -145,26 +152,28 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
 
     it(`${tree}: qfai-implement names the producer and the recovery command`, async () => {
       const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
-      const preconditions = skill.slice(
-        skill.indexOf("## Preconditions"),
-        skill.indexOf("## Spec Auto-Discovery Protocol"),
+      // SKILL.md still names the producer and forbids inventing rows — those
+      // bind the agent before it opens anything else.
+      expect(skill).toContain("**Producer**");
+      expect(skill).toContain("do **not** invent rows that no TC backs");
+
+      const preconditions = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
       );
-      expect(preconditions).toContain("**Producer**");
-      expect(preconditions).toContain("rerun `/qfai-sdd <spec-id>`");
-      expect(preconditions).toContain("do **not** invent rows that no TC backs");
+      expect(preconditions).toContain("Rerun `/qfai-sdd <spec-id>`");
     });
 
     it(`${tree}: an empty ledger is not routed into recovery`, async () => {
-      const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
-      const preconditions = skill.slice(
-        skill.indexOf("## Preconditions"),
-        skill.indexOf("## Spec Auto-Discovery Protocol"),
+      const preconditions = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
       );
-      expect(preconditions).toContain("**Recovery when it is missing**");
+      expect(preconditions).toContain("## Recovery when it is missing");
       expect(preconditions).toContain(
-        "**An empty ledger is a fault only when `06_Test-Cases.md` disagrees.**",
+        "## An empty ledger is a fault only when `06_Test-Cases.md` disagrees",
       );
-      expect(preconditions).toContain('report "nothing to do" and exit');
+      expect(preconditions).toContain('Report\n  "nothing to do" and exit');
     });
 
     it(`${tree}: a spec seeded from the template passes validateTddList`, async () => {

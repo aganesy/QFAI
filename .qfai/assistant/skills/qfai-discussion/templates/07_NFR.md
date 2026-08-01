@@ -1,6 +1,6 @@
 # 07 NFR (Non-Functional Requirements)
 
-<!-- UX-INTENT: If UI-bearing, see uiux/20_design_eval_invariant.md for usability measurement targets -->
+<!-- UX-INTENT: If UI-bearing, see uiux/40_screen_contracts.md for usability measurement targets -->
 
 ## Requirements Table
 
