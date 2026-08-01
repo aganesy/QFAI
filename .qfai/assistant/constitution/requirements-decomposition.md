@@ -64,3 +64,40 @@ This document is the decision rule SSOT for AI and humans when answering:
 - Managing release status flags in specs.
 - Keeping full requirement prose in `.qfai/discussion/`.
 - Treating diagrams as mandatory at require stage.
+
+## Item granularity (AC/BR/EX/TC)
+
+Directory-level slicing answers "which spec does this belong to". It does not
+answer "how big is one item". Referential integrity is trivially satisfied by a
+single oversized node — one BR can carry nine independent rule families and
+still pass every hop of `US -> AC -> BR -> EX -> TC` — so item granularity
+needs its own rule.
+
+- **AC** — one acceptance criterion is one observable outcome a reviewer can
+  agree or disagree with in isolation.
+- **BR** — one business rule is one independently falsifiable rule. Deletion
+  test: if removing half the `Rule` text leaves a complete rule behind, split.
+- **EX** — one example is one concrete input/expected pair for one BR.
+- **TC** — one test case is one verification of one AC or EX. `06_Test-Cases.md`
+  already requires at least two TCs per AC; the reciprocal signal is a BR whose
+  fan-out is 1 while its `Rule` cell is a size outlier against its siblings.
+
+### Worked split
+
+Too coarse:
+
+| BR-ID   | Rule                                                                                                                                                                                                                        |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BR-0001 | An order is accepted when the customer is verified, the stock is reserved, the payment authorisation succeeds, and the delivery address is inside the service area; otherwise it is rejected with the first failing reason. |
+
+Each clause is independently falsifiable, so it is four rules:
+
+| BR-ID   | Rule                                                     |
+| ------- | -------------------------------------------------------- |
+| BR-0001 | An unverified customer's order is rejected.              |
+| BR-0002 | An order whose stock cannot be reserved is rejected.     |
+| BR-0003 | An order whose payment authorisation fails is rejected.  |
+| BR-0004 | An order addressed outside the service area is rejected. |
+
+Rejection _ordering_ is a fifth rule if the order is observable, and belongs in
+its own BR rather than as a trailing clause on the others.

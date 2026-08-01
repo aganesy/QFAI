@@ -25,6 +25,7 @@ const read = (tree: string, rel: string): Promise<string> =>
 
 const SKILL = "assistant/skills/qfai-implement/SKILL.md";
 const REFERENCE = "assistant/skills/qfai-implement/references/red-not-observable.md";
+const FINAL_CHECKLIST = "assistant/skills/qfai-implement/references/final-checklist.md";
 
 describe("an unobservable RED has a non-anomalous outcome", () => {
   for (const tree of QFAI_TREES) {
@@ -83,10 +84,13 @@ describe("an unobservable RED has a non-anomalous outcome", () => {
       // These are the surfaces an agent re-reads at the end of a run. Left
       // absolute, they force either an unclosable item or a fabricated RED.
       const skill = await read(tree, SKILL);
-      // An `indexOf` miss returns -1 and `slice` then succeeds on a different
-      // range, so a renamed heading would make the assertions below vacuous
-      // instead of failing.
-      const checklist = between(skill, "## FINAL CHECKLIST", "## Completion Checklist");
+      // main moved the checklist body into `references/final-checklist.md`
+      // under the progressive-disclosure budget (#414); SKILL.md now points at
+      // it, so the boxes are asserted where they are actually ticked.
+      const pointer = between(skill, "## FINAL CHECKLIST", "## Completion Checklist");
+      expect(pointer).toContain("`references/final-checklist.md`");
+
+      const checklist = await read(tree, FINAL_CHECKLIST);
       expect(checklist).toContain("_RED not observable_");
       expect(checklist).not.toContain("- [ ] Red phase: test was written and confirmed to fail.");
       expect(checklist).not.toContain(

@@ -18,8 +18,16 @@ Concretely, before persisting any Triage row:
    and `04_Business-Rules.md`. The classifier output is a _proposal_; the
    final decision must be informed by reading the candidate spec body.
 2. Pick the spec whose scope most closely absorbs the new requirement.
-3. Append a new BR/AC/EX/TC there. If the spec is over the size threshold,
-   propose **SPLIT**, never CREATE-as-shortcut.
+3. Append a new BR/AC/EX/TC there. Never CREATE-as-shortcut. A spec over the
+   size threshold is a **signal, not an operation**: record the breach in the
+   row's `Rationale` — for a MERGE row, every breaching target — and start a
+   capability-ownership review. Propose **SPLIT** only if that review shows the
+   spec genuinely owns more than one `CAP-NNNN`; if it owns exactly one, the
+   operation already selected is unchanged (MERGE stays MERGE, APPEND stays
+   APPEND) and the reasoned non-split is recorded. A count-driven SPLIT of a
+   single-capability spec is illegal — `validateSpecSplitByCapability` raises
+   `QFAI-SPLIT-102` / `QFAI-SPLIT-104` at `error`, so it has no legal end
+   state. See `_policies/11_Slice-Policy.md` step 4.
 4. Only when no active spec's scope can absorb the requirement, AND the
    underlying capability is itself new, propose **CREATE**. Add the new
    `CAP-NNNN` to `_policies/03_Capabilities.md` _first_, then cite it in
@@ -37,13 +45,52 @@ shares the most subject tokens. CREATE is emitted only when there is
 | Operation | Sub-op | When to choose                                                                                                                                                                                                                                                                                                                                          | Approval |
 | --------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | CREATE    | -      | New subject; no active spec owns the capability                                                                                                                                                                                                                                                                                                         | Required |
-| UPDATE    | APPEND | Add new US/AC/BR/EX/TC to an active spec (no semantic change)                                                                                                                                                                                                                                                                                           | -        |
-| UPDATE    | MODIFY | Change the meaning of an existing US/AC/BR/EX/TC                                                                                                                                                                                                                                                                                                        | -        |
+| UPDATE    | APPEND | Add new US/AC/BR/EX/TC to an active spec (no semantic change). Item-level only. With UPDATE:MODIFY this is also how an item is decomposed into N siblings — see Operation scope below                                                                                                                                                                   | -        |
+| UPDATE    | MODIFY | Change the meaning of an existing US/AC/BR/EX/TC. Item-level only                                                                                                                                                                                                                                                                                       | -        |
 | UPDATE    | REMOVE | Delete an existing US/AC/BR/EX/TC (cuts downstream refs)                                                                                                                                                                                                                                                                                                | Required |
-| DELETE    | -      | Subject was removed from the product; the spec itself goes away                                                                                                                                                                                                                                                                                         | Required |
-| SPLIT     | -      | One spec carries >1 capability; split into N specs                                                                                                                                                                                                                                                                                                      | Required |
-| MERGE     | -      | Multiple specs converge on one capability; collapse them                                                                                                                                                                                                                                                                                                | Required |
+| DELETE    | -      | Subject was removed from the product; the spec itself goes away. **Spec-scoped only** — deleting one item is UPDATE:REMOVE (QFAI-TRIAGE-007)                                                                                                                                                                                                            | Required |
+| SPLIT     | -      | One spec carries >1 capability; split into N specs. **Spec-scoped only** — never use it to split an item (QFAI-TRIAGE-007)                                                                                                                                                                                                                              | Required |
+| MERGE     | -      | Multiple specs converge on one capability; collapse them. **Spec-scoped only** (QFAI-TRIAGE-007)                                                                                                                                                                                                                                                        | Required |
 | SUPERSEDE | -      | Responsibilities move to a new spec; flip status, keep history. Also covers single-spec **RENAME** (subject change at the same ID is normally UPDATE:MODIFY; if the spec ID itself must change while scope stays the same — i.e. **RENUMBER** — emit SUPERSEDE: create the new ID, mark the old as superseded). MERGE handles multi-spec consolidation. | Required |
+
+### Operation scope (spec-level vs item-level)
+
+`SPLIT`, `MERGE`, `SUPERSEDE` and `DELETE` operate on a **whole spec
+directory**. `UPDATE:APPEND / MODIFY / REMOVE` operate on **items inside one
+spec**. There is no operation for decomposing one `US/AC/BR/EX/TC` into N
+siblings within the same spec — that is encoded as `UPDATE:MODIFY` (narrow the
+original) plus one `UPDATE:APPEND` row per new sibling.
+
+Do not reach for `SPLIT` to mean "split this business rule": `SPLIT` asserts
+that the spec itself must become N specs, which
+`validateSpecSplitByCapability` then enforces as one `CAP-NNNN` per spec.
+Likewise do not reach for `DELETE` to remove one item — that is
+`UPDATE:REMOVE`.
+
+`QFAI-TRIAGE-007` (error) rejects a `SPLIT` / `MERGE` / `SUPERSEDE` / `DELETE`
+row whose `Subject` names an item ID **as the operation's object**. The object
+is decided structurally, by **brackets, not by word order**: an item ID inside
+`(...)` / `（...）` / `[...]` / `【...】` is a citation, and any item ID outside
+brackets is what the operation acts on.
+
+- `delete BR-0006-0004 from spec-0006` -> bare item: rejected. Co-occurring
+  with a spec name is not an exemption.
+- `in spec-0006, delete BR-0006-0004` -> bare item: rejected. Naming the spec
+  first does not help — there it is only the item's location, which is why word
+  order cannot decide the object.
+- `split spec-0006 (motivated by BR-0006-0004)` -> item bracketed: accepted.
+- `separate CAP-0003 (driven by BR-0006-0004)` -> item bracketed: accepted.
+
+So a genuinely spec-level row names only its `spec-NNNN` / `CAP-NNNN` target
+outside brackets and puts the motivating item inside them. Item IDs are matched
+with the shared digit semantics of `specPackIds.ts`, so `BR-1` and `TC-12345`
+are caught alongside the canonical 4-digit form.
+
+Because `UPDATE:MODIFY` and `UPDATE:APPEND` are approval-free by operation
+type, an item decomposition carries no approval-required row. Record the
+conservation statement — which obligations existed before, which exist after,
+and that none were added or dropped — in the `Rationale` column of the
+`UPDATE:MODIFY` row so a reviewer can check it.
 
 ## Inputs
 
@@ -122,6 +169,12 @@ ops), `Rationale` (recommended for every row).
   (APPEND / MODIFY / REMOVE).
 - `QFAI-TRIAGE-005` (error): approval-required Operation has no
   `Approved By` value.
+- `QFAI-TRIAGE-007` (error): `SPLIT` / `MERGE` / `SUPERSEDE` / `DELETE` row
+  whose `Subject` names a `US/AC/BR/EX/TC` ID as the operation's object. All
+  four are spec-scoped: item decomposition is `UPDATE:MODIFY` +
+  `UPDATE:APPEND`, and deleting one item is `UPDATE:REMOVE`.
+  `QFAI-TRIAGE-003` is a membership check on the Operation label and provably
+  cannot catch this.
 - `QFAI-TRIAGE-006` (error): CREATE row without a `CAP-NNNN` reference
   in the Rationale column, or referencing a CAP that is not registered
   in `_policies/03_Capabilities.md`. This is the structural gate that
