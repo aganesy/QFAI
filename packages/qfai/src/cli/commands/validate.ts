@@ -802,12 +802,17 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "CON-API annotations in test code must reference declared API contracts (`QFAI:CON-API-XXXX`).",
   "QFAI-ATDD-111":
     "Every US must be referenced at least once from tests/e2e/**. Scoped to user-facing specs when any spec declares a surface type; project-wide otherwise.",
-  "QFAI-ATDD-112": "Every TC must be referenced at least once from tests/integration/**.",
+  "QFAI-ATDD-112":
+    "Every TC must be referenced at least once from the test directory its declared Level routes to (default tests/integration/**).",
   "QFAI-ATDD-113": "Every declared CON-API must be referenced at least once from tests/api/**.",
   "QFAI-ATDD-114":
     "CON-API contracts declaring `x-qfai-status: planned` are deferred from the API-test obligation.",
-  "QFAI-ATDD-121": "tests/api/** must not include TC annotations (`QFAI:SPEC-XXXX:TC-YYYY`).",
-  "QFAI-ATDD-122": "tests/e2e/** must not include TC annotations (`QFAI:SPEC-XXXX:TC-YYYY`).",
+  "QFAI-ATDD-121":
+    "tests/api/** must not include TC annotations for a TC whose declared Level is not API.",
+  "QFAI-ATDD-122":
+    "tests/e2e/** must not include TC annotations for a TC whose declared Level is not E2E.",
+  "QFAI-ATDD-123":
+    "tests/integration/** must not include TC annotations for a TC whose declared Level is not Integration.",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
   "QFAI-DPACK-001":
