@@ -58,7 +58,13 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.usToE2e",
         result.missing.us,
         "change",
-        "tests/e2e/** に `QFAI:SPEC-XXXX:US-YYYY` 注釈を追加し、全 US を少なくとも1回参照してください。",
+        // Conditional wording: scoping is opt-in. When no spec declares a
+        // surface type the obligation stays project-wide, so an unconditional
+        // "user-facing specs only" would be wrong for exactly the projects
+        // that have not opted in — while the unscoped reading must not become
+        // "annotate every US in the repository", which is the annotation-only
+        // E2E tree `catalog/test-layers.md` forbids.
+        "tests/e2e/** に `QFAI:SPEC-XXXX:US-YYYY` 注釈を追加し、上記の US を少なくとも1回参照してください。surface typing を宣言している場合、対象は user-facing surface の spec のみです。どの spec も宣言していない場合は全 spec が対象のままです（`.qfai/assistant/catalog/test-layers.md#atdd-annotation-hard-gate`）。",
       ),
     );
   }
