@@ -232,6 +232,15 @@ export { EXCEPTION_PARKED_RULE_ID };
  */
 export const UNKNOWN_LEVEL_RULE_ID = "TDDLIST-002";
 
+/**
+ * Waiver rule id for `TDDLIST_EVIDENCE_STATUS_ONLY`.
+ *
+ * The finding is a warning because pre-existing ledgers predate the check;
+ * a project that has audited its legacy rows silences them with a waiver rather
+ * than by rewriting evidence it can no longer reproduce.
+ */
+export const EVIDENCE_STATUS_ONLY_RULE_ID = "TDDLIST-004";
+
 /** Per-spec file that owns the Test Case Table, and the target of its findings. */
 const TEST_CASES_FILE_NAME = "06_Test-Cases.md";
 
@@ -804,9 +813,22 @@ async function validateSpecTddList(
           issue(
             "TDDLIST_EVIDENCE_STATUS_ONLY",
             `Evidence for spec-${specNumber} ${rowLabel} states a verdict with no command (Status=${status}): "${evidence}". Status-only evidence is invalid — both the command and its result are required`,
-            "error",
+            // `warning`, not `error`, and waivable.
+            //
+            // The hard rule says "MUST be rejected", and an error is what that
+            // deserves — but every ledger written before this check existed
+            // carries prose verdicts, and turning them into build failures on
+            // upgrade is a migration, not a gate. qfai's own repository has 99
+            // such rows. `TDDLIST_EVIDENCE_EMPTY` stays at `error` because an
+            // empty cell is unambiguous and was the observed failure; a prose
+            // verdict at least asserts something a reviewer can read.
+            //
+            // The rule id is the waivable `^[A-Z]+-\d{3}$` shape, so a project
+            // that has audited its legacy rows can silence them per path
+            // instead of being stuck between a false gate and a rewrite.
+            "warning",
             relPath,
-            "tddList.evidenceCommand",
+            EVIDENCE_STATUS_ONLY_RULE_ID,
             undefined,
             "change",
             `"Status: PASS" のような判定だけの記述は無効です。実行したコマンドを併記してください（例: \`npx vitest run tests/foo.test.ts\` → 3 passed）。`,

@@ -56,12 +56,17 @@ assert a cycle has run:
 | Finding                        | Fires when                                                          | Severity |
 | ------------------------------ | ------------------------------------------------------------------- | -------- |
 | `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`)             | error    |
-| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command | error    |
+| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command | warning  |
 
 A command is recognised by shape, not from a list of known runners, so the rule
 holds on any stack: a program name followed by an argument carrying a flag, a
 path, a selector or an assignment. Backticked commands and the common runners
 are accepted directly.
+
+`TDDLIST_EVIDENCE_STATUS_ONLY` is a warning, waivable under `TDDLIST-004`: a
+ledger written before the check exists carries prose verdicts, and failing a
+build on them is a migration rather than a gate. An empty cell is unambiguous,
+so `TDDLIST_EVIDENCE_EMPTY` stays at `error`.
 
 Rows at `todo`, `red` and `exception` are not checked — the first two have
 nothing to show yet, and a parked row records its reason in `DR-ID`, which

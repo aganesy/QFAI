@@ -145,7 +145,9 @@ describe("TDDLIST_EVIDENCE_EMPTY", () => {
 });
 
 describe("TDDLIST_EVIDENCE_STATUS_ONLY", () => {
-  // `SKILL.md` names this shape verbatim.
+  // `SKILL.md` names this shape verbatim. Reported at `warning`: see the rule
+  // comment — ledgers written before the check exist in the wild, and this
+  // repository itself carries 99 such rows.
   for (const evidence of [
     "Status: PASS",
     "PASS",
