@@ -23,6 +23,26 @@ const REQUIRED_COLUMNS = [
 
 const VALID_STATUSES = new Set(["todo", "red", "green", "refactor", "done", "exception"]);
 
+/**
+ * The `Layer` values the shipped ledger schema declares
+ * (`qfai-implement/SKILL.md` "Execution Ledger: test-list.md").
+ *
+ * The skill picks a row's obligation column by `Layer`, so a value outside this
+ * set leaves it with no rule to follow.
+ */
+const VALID_LAYERS = new Set(["unit", "component", "integration", "api", "e2e"]);
+
+/**
+ * Layers that cannot host a `TC-*` obligation.
+ *
+ * `test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and
+ * `tests/api/**`, so those rows record their obligation in `US-Refs` /
+ * `CON-API-Refs`. This is the mirror of the `US-Refs`-on-a-Unit-row check.
+ */
+const TC_FORBIDDEN_LAYERS = new Set(["api", "e2e"]);
+
+const TC_ID_TOKEN = /^TC-\d{4}(-\d{4})?$/;
+
 const TEST_FILE_CHECK_STATUSES = new Set(["green", "refactor", "done"]);
 
 /**
@@ -253,7 +273,7 @@ async function validateSpecTddList(
           const normalized = ref.toUpperCase();
           const parent = resolveParentTcId(normalized) ?? normalized;
           if (
-            /^TC-\d{4}(-\d{4})?$/.test(normalized) &&
+            TC_ID_TOKEN.test(normalized) &&
             !knownTcIds.has(normalized) &&
             !knownTcIds.has(parent)
           ) {
@@ -269,6 +289,96 @@ async function validateSpecTddList(
           }
         }
       }
+    }
+  }
+
+  const layerIndex = normalizedHeaders.indexOf("Layer");
+
+  // Check 5a: the `Layer` enum, on every row.
+  //
+  // Read independently of any reference column: the obligation checks below
+  // skip a row whose reference cell is empty or `-`, so `Layer = System` or a
+  // plain typo used to pass and left `/qfai-implement` with no rule for which
+  // obligation column that row owns. Warning, not error: `Layer` predates the
+  // declared enum and existing ledgers carry project-specific names — an error
+  // would break them on upgrade without a migration.
+  if (layerIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const rawLayer = (table.rows[rowIdx]?.[layerIndex] ?? "").trim();
+      // An empty cell carries no claim; the required-column check owns that gap.
+      if (rawLayer.length === 0 || rawLayer === "-") continue;
+      if (VALID_LAYERS.has(rawLayer.toLowerCase())) continue;
+      issues.push(
+        issue(
+          "TDDLIST_UNKNOWN_LAYER",
+          `Unknown Layer "${rawLayer}" in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Legal values: Unit, Component, Integration, API, E2E`,
+          "warning",
+          relPath,
+          "tddList.layerEnum",
+          [rawLayer],
+          "change",
+          "Layer を Unit / Component / Integration / API / E2E のいずれかに直してください。行が担う obligation 列は Layer から決まります（TC-Refs: Unit/Component/Integration、US-Refs: E2E、CON-API-Refs: API）。",
+        ),
+      );
+    }
+  }
+
+  // Check 5b: optional obligation columns.
+  //
+  // `test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and
+  // `tests/api/**`, so an E2E or API row has no legal `TC-Refs` value and its
+  // obligation has nowhere to live in the eight-column schema. `US-Refs` and
+  // `CON-API-Refs` are the optional homes for those; when present their tokens
+  // must be well-formed, otherwise an all-`done` ledger silently misreports.
+  issues.push(
+    ...validateObligationColumn(table, normalizedHeaders, {
+      column: "US-Refs",
+      pattern: /^US-\d{4}(?:-\d{4})?$/,
+      expected: "US-NNNN",
+      layer: "e2e",
+      relPath,
+      specNumber,
+      rule: "tddList.usRefsFormat",
+    }),
+  );
+  issues.push(
+    ...validateObligationColumn(table, normalizedHeaders, {
+      column: "CON-API-Refs",
+      pattern: /^CON-API-\d+$/,
+      expected: "CON-API-NNNN",
+      layer: "api",
+      relPath,
+      specNumber,
+      rule: "tddList.conApiRefsFormat",
+    }),
+  );
+
+  // Check 5c: the reverse direction — a `TC-*` obligation on a layer that
+  // cannot host it. Only `US-Refs` / `CON-API-Refs` were bound to their layer,
+  // so `Layer = E2E` with `TC-Refs = TC-0001` still validated clean AND, worse,
+  // Check 10 below counted it, letting a forbidden placement mark a
+  // coverage-target TC as covered.
+  if (tcRefsIndex >= 0 && layerIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const rawLayer = (table.rows[rowIdx]?.[layerIndex] ?? "").trim();
+      if (!TC_FORBIDDEN_LAYERS.has(rawLayer.toLowerCase())) continue;
+      const tcRefsCell = (table.rows[rowIdx]?.[tcRefsIndex] ?? "").trim();
+      const tcTokens = splitTcRefs(tcRefsCell).filter((token) =>
+        TC_ID_TOKEN.test(token.toUpperCase()),
+      );
+      if (tcTokens.length === 0) continue;
+      issues.push(
+        issue(
+          "TDDLIST_OBLIGATION_LAYER_MISMATCH",
+          `TC-Refs is not legal on a Layer=${rawLayer.toUpperCase()} row, but spec-${specNumber} (row ${rowIdx + 1}) references ${tcTokens.join(", ")}`,
+          "error",
+          relPath,
+          "tddList.tcRefsLayer",
+          ["TC-Refs", rawLayer],
+          "change",
+          `Set Layer to UNIT / COMPONENT / INTEGRATION for this row, or move the obligation to the column its Layer owns (US-Refs for E2E, CON-API-Refs for API) and put \`-\` in TC-Refs.`,
+        ),
+      );
     }
   }
 
@@ -461,8 +571,8 @@ async function validateSpecTddList(
   // Phase 2 – Check 9b: Layer <-> Test file consistency.
   //
   // `Layer` was a required column whose value was never read, so a `Unit` row
-  // pointing at `tests/integration/**` was an invisible state.
-  const layerIndex = normalizedHeaders.indexOf("Layer");
+  // pointing at `tests/integration/**` was an invisible state. `layerIndex` is
+  // resolved once above, for the enum check.
   if (layerIndex >= 0 && testFileIndex >= 0) {
     for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
       const row = table.rows[rowIdx];
@@ -494,6 +604,13 @@ async function validateSpecTddList(
     if (unitComponentTcIds.size > 0) {
       const coveredTcIds = new Set<string>();
       for (const row of table.rows) {
+        // A `TC-*` sitting on an E2E/API row is a forbidden placement
+        // (Check 5c). Counting it here would let that single illegal row clear
+        // the coverage obligation for a unit/component TC.
+        if (layerIndex >= 0) {
+          const rowLayer = (row[layerIndex] ?? "").trim().toLowerCase();
+          if (TC_FORBIDDEN_LAYERS.has(rowLayer)) continue;
+        }
         const tcRefsCell = (row[tcRefsIndex] ?? "").trim();
         if (tcRefsCell.length === 0) continue;
         const refs = splitTcRefs(tcRefsCell);
@@ -533,6 +650,82 @@ type TestCaseIds = {
    */
   unresolved?: "no-table" | "no-tc-id-column";
 };
+
+type ObligationColumnSpec = {
+  column: string;
+  pattern: RegExp;
+  expected: string;
+  /** Lower-cased `Layer` value this obligation column is legal on. */
+  layer: string;
+  relPath: string;
+  specNumber: string;
+  rule: string;
+};
+
+/**
+ * Validates an optional obligation column: token shape AND the row `Layer` the
+ * obligation is legal on.
+ *
+ * Absent column, empty cell and `-` are all fine — the column is optional and
+ * only rows carrying that obligation fill it. Checking the shape alone let a
+ * `Layer = Unit` row claim a `US-*` obligation, which the ATDD gates route to
+ * `tests/e2e/**`: the ledger would record a layer-scoped obligation the
+ * completion gate reads at the wrong layer.
+ */
+function validateObligationColumn(
+  table: { rows: string[][] },
+  headers: string[],
+  spec: ObligationColumnSpec,
+): Issue[] {
+  const index = headers.indexOf(spec.column);
+  if (index < 0) {
+    return [];
+  }
+  const layerIndex = headers.indexOf("Layer");
+
+  const issues: Issue[] = [];
+  for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx += 1) {
+    const cell = (table.rows[rowIdx]?.[index] ?? "").trim();
+    if (cell.length === 0 || cell === "-") {
+      continue;
+    }
+    for (const token of cell.split(/[,;\s]+/).filter((value) => value.length > 0)) {
+      if (spec.pattern.test(token.toUpperCase())) {
+        continue;
+      }
+      issues.push(
+        issue(
+          "TDDLIST_INVALID_OBLIGATION_REF",
+          `Invalid ${spec.column} value "${token}" in tdd/test-list.md for spec-${spec.specNumber} (row ${rowIdx + 1}). Expected format: ${spec.expected}`,
+          "error",
+          spec.relPath,
+          spec.rule,
+        ),
+      );
+    }
+
+    if (layerIndex < 0) {
+      continue;
+    }
+    const rawLayer = (table.rows[rowIdx]?.[layerIndex] ?? "").trim();
+    if (rawLayer.toLowerCase() === spec.layer) {
+      continue;
+    }
+    issues.push(
+      issue(
+        "TDDLIST_OBLIGATION_LAYER_MISMATCH",
+        `${spec.column} is only legal on a Layer=${spec.layer.toUpperCase()} row, but spec-${spec.specNumber} (row ${rowIdx + 1}) declares Layer="${rawLayer}"`,
+        "error",
+        spec.relPath,
+        `${spec.rule}Layer`,
+        [spec.column, rawLayer],
+        "change",
+        `Set Layer to ${spec.layer.toUpperCase()} for this row, or move the obligation to the column its Layer owns (TC-Refs for Unit/Component/Integration, US-Refs for E2E, CON-API-Refs for API).`,
+      ),
+    );
+  }
+  return issues;
+}
 
 async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   const empty: TestCaseIds = { knownTcIds: new Set(), unitComponentTcIds: new Set() };

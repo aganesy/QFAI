@@ -143,6 +143,14 @@ and signalled by `QFAI-DENSITY-005`.
 Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
 
 - Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
+- Optional columns: `US-Refs`, `CON-API-Refs` — the E2E and API obligations a
+  row implements. Required when the row carries one, since `TC-*` annotations
+  are forbidden in `tests/e2e/**` and `tests/api/**`.
+- TC coverage reads **`TC-*` tokens only**. `US-*` and `CON-API-*` IDs are
+  explicitly inert to it — recording one does not raise or lower TC coverage.
+- Legal `Layer` values: `Unit`, `Component`, `Integration`, `API`, `E2E`.
+  Legal obligation kinds per layer: `TC-*` on Unit / Component / Integration,
+  `US-*` on E2E, `CON-API-*` on API.
 - `Selector` may hold one entry, a comma-separated list, or a glob pattern. It is not limited to a single test function.
 - `TC-Refs` is many-to-many with `TDD-ID`: one `TC-*` may be decomposed across several TDD rows, and each of those rows carries that `TC-*`.
 - A matrix-shaped `TC-*` (many rejection reasons, a status-code matrix, several independent state transitions) MUST be split across multiple TDD rows before RED begins — one falsifying oracle per row, one row per independently observable boundary. Do not accumulate unrelated boundaries behind a single selector; doing so invalidates the RED observation, because only the first failing assert is ever observed.

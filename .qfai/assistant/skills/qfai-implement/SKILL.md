@@ -84,7 +84,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 ## Non-goals
 
 - Writing spec artifacts (use `/qfai-sdd`).
-- Writing acceptance tests (use `/qfai-atdd`).
+- Writing acceptance tests (use `/qfai-atdd`). `Layer = E2E` / `Layer = API` ledger rows are tracked here but their tests are authored there.
 - Running validation gates (use `/qfai-verify`).
 - Parallel execution across multiple **specs** simultaneously. (Item-level
   parallelism _within_ one spec is a separate question, governed by
@@ -109,7 +109,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 1. Read `test-list.md` and select the first item with `Status = todo`.
 2. Transition status to `red`.
-3. Write a **failing test** based on the TC-Refs specification.
+3. Write a **failing test** from the row's obligation column, selected by `Layer`: `TC-Refs` for `Unit` / `Component` / `Integration`, `US-Refs` for `E2E`, `CON-API-Refs` for `API`. An `E2E` or `API` row's test is authored by `/qfai-atdd` (Non-goals); this skill only drives that row's status and evidence once the acceptance test exists, and stops with a handoff note if it does not.
 4. Run the test and **watch it fail** — confirm the test actually fails for the expected reason. When
    the row's `Selector` holds several entries, observe each entry's failure separately; a single
    aggregate run is not a valid RED observation.
@@ -345,6 +345,10 @@ Each review round creates a new pack. Full schema and the `REVISE` -> `status: "
 The skill may declare "this spec's implementation is complete" only when:
 
 - All TC-\* from `06_Test-Cases.md` with applicable layer are present in `test-list.md`
+- Every `US-*` the spec declares has a `Layer = E2E` row whose `US-Refs` names it,
+  and every declared `CON-API-*` has a `Layer = API` row whose `CON-API-Refs`
+  names it. Without these rows an all-`done` ledger can sit alongside a
+  `QFAI-ATDD-111` / `QFAI-ATDD-113` hard gate at 0%
 - Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain
 - Checkpoint verification passed at the spec-level boundary (see `#checkpoint-verification`)
@@ -400,7 +404,7 @@ parts with different write points; the fields are the same, the sequencing is no
 **Phase-authored (written before the reviewer gate, items 7-8):**
 
 - `TDD-ID` — the item identifier
-- `TC-ref` — reference to the test case(s)
+- `TC-ref` — reference to the test case(s). On a `Layer = E2E` row read `US-ref` (the row's `US-Refs`) instead, and on a `Layer = API` row read `CON-API-ref` (the row's `CON-API-Refs`): exactly one obligation reference is required, the one the row's `Layer` selects
 - `RED command` — the exact command executed to observe failure
 - `RED result` — the failure output (result completeness is best-effort; truncated output is acceptable)
 - `GREEN command` — the exact command executed to observe success

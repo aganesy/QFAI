@@ -8,13 +8,44 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single r
 | Column    | Description                                                                                                                                                                                                                 |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                                                                                                                                                         |
-| TC-Refs   | References to test cases from `06_Test-Cases.md`                                                                                                                                                                            |
-| Layer     | Test layer (Unit, Integration, etc.)                                                                                                                                                                                        |
+| TC-Refs   | References to test cases from `06_Test-Cases.md`. Belongs on `Layer = Unit` / `Component` / `Integration` rows                                                                                                              |
+| Layer     | Test layer. Legal values: `Unit`, `Component`, `Integration`, `API`, `E2E`                                                                                                                                                  |
 | Test file | Path to the test file                                                                                                                                                                                                       |
 | Selector  | Test selector(s) for targeted execution — one entry, a comma-separated list, or a glob pattern                                                                                                                              |
 | Status    | Current lifecycle status                                                                                                                                                                                                    |
 | DR-ID     | Decision Record / Change Request IDs, comma-separated: a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses; blank otherwise |
 | Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                                                                                                                                                        |
+
+## Obligation columns (optional, required by layer)
+
+A row's obligation lives in the column its `Layer` selects. `TC-Refs` is the one
+every row has; the other two are optional columns that become required when the
+row's layer cannot host a `TC-*`.
+
+| Column       | Description                                                                       |
+| ------------ | --------------------------------------------------------------------------------- |
+| US-Refs      | `US-*` obligations this row implements. Legal **only** on `Layer = E2E` rows      |
+| CON-API-Refs | `CON-API-*` obligations this row implements. Legal **only** on `Layer = API` rows |
+
+`test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and `tests/api/**`,
+so an E2E or API row has no legal `TC-Refs` value. Those rows carry `-` in
+`TC-Refs` and record their obligation in `US-Refs` / `CON-API-Refs` instead.
+
+The binding is enforced in both directions: a `TC-*` on an E2E/API row raises
+`TDDLIST_OBLIGATION_LAYER_MISMATCH` and is **not** counted towards TC coverage,
+so a forbidden placement cannot close a coverage-target TC.
+`TDDLIST_OBLIGATION_LAYER_MISMATCH` likewise rejects a `US-Refs` /
+`CON-API-Refs` value on a layer that does not own it.
+
+A `Layer` outside the legal values raises `TDDLIST_UNKNOWN_LAYER` (warning) —
+without a legal `Layer` the row has no obligation column. Coverage counting
+excludes `API` and `E2E` specifically rather than allowlisting the other three,
+so a mistyped layer keeps counting and is reported by that warning, which names
+the real cause; an allowlist would instead drop the row silently and resurface
+as a coverage error about a TC the author did cover.
+
+Coverage measurement is otherwise unaffected: it reads `TC-*` tokens only, so
+non-TC obligation IDs are inert to it by design.
 
 ## Selector granularity (MUST)
 
