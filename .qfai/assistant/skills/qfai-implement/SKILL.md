@@ -31,6 +31,17 @@ QFAI Skill Body (SSOT)
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+## Preconditions
+
+- **`.qfai/specs/<spec-id>/tdd/test-list.md` must exist and contain the eight
+  required columns.** It is the ledger every step of this skill reads.
+- **Producer**: `/qfai-sdd` Phase 2b seeds it. Do **not** proceed with an absent
+  ledger and do **not** invent rows that no TC backs.
+- **An empty ledger is a fault only when `06_Test-Cases.md` disagrees.** Never read a header-only
+  table as "nothing to do" on its own. The recovery procedure and the coverage-target test that
+  separates a truthfully empty ledger from an incomplete one are in
+  `references/ledger-preconditions.md`; read it before exiting on an empty ledger.
+
 ## Spec Auto-Discovery Protocol
 
 When no explicit argument is given, detect the candidate specs. Execution is constrained to one spec at a time. Auto-discovery MAY present several specs as a queue to be processed sequentially (see Volume Policy > Multi-spec queue); this protocol does NOT enable multi-spec parallel execution.
@@ -259,26 +270,14 @@ Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer r
 
 Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
 
-- A **blocking** finding cites either an upstream obligation (`AC-*`, `BR-*`, `TC-*`, `CON-*`, or
-  a named constitution/catalog rule) or a defect class (`defect:correctness`, `defect:security`,
-  `defect:code-quality`) in its `Traces to:` field. A defect demonstrable from the changed code —
-  an unhandled rejection, a missing validation on trusted input, a leak, a broken contract the
-  code itself declares — is blocking without needing an `AC-*`. Only blocking findings force
-  `REVISE` and only blocking findings hold the item out of `done`.
-- An **advisory** finding is one whose `Traces to:` is `none` — a new product obligation upstream
-  never asked for. It MUST NOT be implemented as production code or pinned as a test assertion.
-  Route it per `drift-protocol.md#reviewer-originated-obligations`: record it in the reviewer
-  response under `Advisory / Change Request proposals`. Do **not** edit `08_Open-questions.md`
-  here — it is upstream SSOT under the Drift Protocol and creating spec artifacts is a non-goal of
-  this skill; the owner phase (`/qfai-sdd`) records and adjudicates it.
-- A new advisory that does not change an already-approved obligation leaves the item free to reach
-  `done`. One that **does** change an approved obligation takes the Change Request path, and
-  `drift-protocol.md#when-drift-is-detected` applies: STOP, and no `done` for items depending on
-  the obligation under dispute until approval and the owner rerun.
-- `Do not declare DONE until Reviewer returns PASS` is never waived: the Reviewer verdict is
-  required on every item, including one whose review produced only advisories. What **blocking**
-  findings change is the verdict itself — only they force `REVISE` and hold `done`. An
-  advisory-only review returns `PASS`, and that `PASS` is still what releases `done`.
+- Only **blocking** findings force `REVISE` and hold an item out of `done`. An **advisory**
+  finding (`Traces to: none`) MUST NOT be implemented as production code or pinned as a test
+  assertion; route it per `drift-protocol.md#reviewer-originated-obligations`.
+- Do **not** edit `08_Open-questions.md` here — it is upstream SSOT under the Drift Protocol and
+  creating spec artifacts is a non-goal of this skill; the owner phase (`/qfai-sdd`) records and
+  adjudicates it.
+- What each class cites, when an advisory takes the Change Request path, and why an advisory-only
+  review still returns `PASS`: `references/finding-classification.md`.
 
 ## Parallelization Policy
 

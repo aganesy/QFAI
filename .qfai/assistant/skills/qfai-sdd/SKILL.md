@@ -37,6 +37,7 @@ QFAI Skill Body (SSOT)
 ```
 Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
                   -> Phase 1 Outline -> Phase 2 Slice (per spec)
+                  -> Phase 2b Seed tdd/test-list.md (per spec)
                   -> Phase 3 Plan finalize -> Phase 4 Delta update
 ```
 
@@ -207,10 +208,17 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase, and freeze root `DESIGN.md` per the Phase 0 DESIGN.md Freeze step below). Close Phase 0 with the cross-contract reconciliation step in `references/contract-artifact-rules.md#cross-contract-reconciliation-must`.
 5. Phase 1: Outline (`_policies/01..11`).
 6. Phase 2: Slice (per spec, gate each with `npx qfai validate --profile sdd --fail-on error --spec <spec-id>` so a parallel worker gates on its own spec only and does not import a sibling agent's in-flight failures). A `--spec` run writes `<report>/validate.spec-<id>.json` and never the shared `validate.json` / `validate-<profile>.json`, so parallel workers cannot race on one file; an unknown or unparseable `--spec` value fails the run (`QFAI-SCOPE-001` / `QFAI-SCOPE-002`) instead of silently widening to the whole repo.
-7. Phase 3: Plan finalize (after at least one slice gate passes).
-8. Phase 4: Delta update.
-9. Run validate; fix source-layer artifacts and rerun until `error=0`.
-10. Triage density-smell warnings in `.qfai/report/specs-coverage/spec-*.md`.
+7. Phase 2b: Seed each target spec's `tdd/test-list.md` from `06_Test-Cases.md`
+   — one row per coverage-target TC, `Status = todo`; copy
+   `templates/specs/spec/tdd/test-list.md` when absent. Without it
+   `/qfai-implement` starts with zero selectable items. **Seeding is a delta,
+   not a regeneration, in both directions**: unchanged rows keep their state,
+   new TCs append at `todo`, and changed / removed TCs are reset or retired
+   under the upstream-reset rule (`references/sdd-phase-checklists.md`).
+8. Phase 3: Plan finalize (after at least one slice gate passes).
+9. Phase 4: Delta update.
+10. Run validate; fix source-layer artifacts and rerun until `error=0`.
+11. Triage density-smell warnings in `.qfai/report/specs-coverage/spec-*.md`.
 
 ## Mandatory Outputs
 
@@ -327,6 +335,7 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 
 project_memory:
 
-- Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
+- Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
+- Phase 2b seeds each target spec's tdd/test-list.md from 06_Test-Cases.md (one row per coverage-target TC, Status = todo) and is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence.
 - Append-first is the Stage 1 default: UPDATE on an active spec whose subject tokens overlap; CREATE only when there is zero overlap AND the REQ adds a new CAP-NNNN, registered before the CREATE row.
 - Phase 0 DESIGN.md Freeze is mandatory for UI-bearing targets; .qfai/contracts/design/DESIGN.md.lock.yaml is the brand-lock SSOT.
