@@ -57,9 +57,9 @@ per-worker schema isolation, not by a blanket deny.
   Satisfy it either by a **disjoint write set** (each item owns different
   ports/paths/keys) or by **per-worker isolation** (ephemeral port 0, a
   `mkdtemp` directory per worker, a namespaced cache/queue prefix). A resource
-  neither disjoint nor isolated is a DENY: `constitution/workflow.md`
-  (Implementation stage) requires no shared state, and the collision would
-  appear at run time as a flaky RED/GREEN rather than at adjudication.
+  neither disjoint nor isolated is a DENY: `constitution/workflow.md#concurrency-stage-independent-mandatory`
+  requires no shared state, and the collision would appear at run time as a
+  flaky RED/GREEN rather than at adjudication.
 
 - No sequential dependency: item B does not consume item A's output.
 - A post-merge integration verify plan exists.
@@ -72,7 +72,7 @@ is a DENY, because the independence claim then has no concrete evidence.
 ## Isolation requirement (worktree separation)
 
 Adjudicated separately from the "all must be true" list above, and **not
-waivable**. Per `constitution/workflow.md` (Implementation stage),
+waivable**. Per `constitution/workflow.md#concurrency-stage-independent-mandatory`,
 worktree separation is required for parallel execution, so
 `delivery-planner` has two outcomes, not three:
 
@@ -95,7 +95,7 @@ list covers those, and it is evaluated whether or not worktrees are in force.
 qfai does not provision worktrees itself, so in practice this exception stays
 unreachable until the operator (or the orchestrator, explicitly) creates one
 worktree per worker. That is the intended outcome: serial execution is the
-correct behaviour when isolation cannot be guaranteed, and an unreachable
+correct behavior when isolation cannot be guaranteed, and an unreachable
 exception is preferable to a documented way around an upstream SSOT rule.
 
 ## Deny conditions (any one blocks parallel dispatch)

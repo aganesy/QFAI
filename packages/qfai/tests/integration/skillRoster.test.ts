@@ -59,8 +59,11 @@ describe("sub-agent roster completeness and handoff contracts", () => {
 
     expect(content).toMatch(/Orchestrator MUST NOT write test or production code directly/i);
     expect(content).toMatch(/delivery-planner[\s\S]*?sole authority[\s\S]*?parallel dispatch/i);
+    // "routed blocking reviewers" was narrower than the real gate:
+    // `blocking_agents` omits `implementation-reviewer`, whose REVISE still
+    // blocks `done`. The wording now says "every required reviewer".
     expect(content).toMatch(
-      /Only after all routed blocking reviewers pass may the item transition to `done`/i,
+      /Only after every required reviewer passes may the item transition to `done`/i,
     );
   });
 
@@ -80,8 +83,11 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     expect(content).toMatch(
       /product-surface-reviewer[\s\S]*?added when the item affects UI behavior/i,
     );
+    // "routed blocking reviewers" was narrower than the real gate:
+    // `blocking_agents` omits `implementation-reviewer`, whose REVISE still
+    // blocks `done`. The wording now says "every required reviewer".
     expect(content).toMatch(
-      /Only after all routed blocking reviewers pass may the item transition to `done`/i,
+      /Only after every required reviewer passes may the item transition to `done`/i,
     );
   });
 });

@@ -20,10 +20,13 @@
 
 ## Success Criteria
 
+> IDs use the `DSC-` prefix. Bare `SC-NNNN-NNNN` is reserved for the traceability
+> scenario tag (`QFAI:SC-...`) and must not be used for a success criterion.
+
 | Criterion | Measurement | Target  | Priority |
 | --------- | ----------- | ------- | -------- |
-| SC-001    | <metric>    | <value> | must     |
-| SC-002    | <metric>    | <value> | should   |
+| DSC-001   | <metric>    | <value> | must     |
+| DSC-002   | <metric>    | <value> | should   |
 
 ## Assumptions
 

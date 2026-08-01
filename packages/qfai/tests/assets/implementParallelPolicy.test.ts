@@ -1,9 +1,14 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-const repoRoot = path.resolve(process.cwd(), "..", "..");
+// Anchored to this file, not to `process.cwd()`. A runner launched from the
+// repo root resolves `../..` to the directory ABOVE the repo, and every read
+// below then fails on a path unrelated to what is being asserted.
+// tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const read = (tree: string, rel: string): Promise<string> =>
@@ -102,7 +107,12 @@ describe("qfai-implement states one parallelization policy", () => {
       }
       expect(section).toContain("**disjoint write set**");
       expect(section).toContain("**per-worker isolation**");
-      expect(section).toContain("`constitution/workflow.md` (Implementation stage) requires no");
+      // Cited by anchor, not by stage name: the rule lives in the
+      // stage-independent Concurrency subsection, so an anchor is both checkable
+      // and correct about where it applies.
+      expect(section).toContain(
+        "`constitution/workflow.md#concurrency-stage-independent-mandatory` requires no",
+      );
       expect(section).toContain("Worktree separation is also **not sufficient on its own**");
       // And the deny list must name the same collisions.
       expect(section).toContain("bind the same fixed port, write the same out-of-worktree path");
