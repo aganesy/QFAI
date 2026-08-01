@@ -71,10 +71,10 @@ const STRICT_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
   THEMA: /\bTHEMA-\d{3}\b/g,
   ADR: /\bADR-\d{4}\b/g,
   // Two legal shapes, layered the same way the rest of the ID space is: a
-  // policy-level record (`DR-0270`, declared in `_policies/08_Decisions.md`)
-  // and a spec-scoped one (`DR-0015-0005`, declared in the spec's
-  // `07_Decisions.md`). Both forms are already in use in real ledgers, so the
-  // format follows the practice rather than replacing it.
+  // policy-level record declared in `_policies/08_Decisions.md`, and a
+  // spec-scoped one declared in that spec's `07_Decisions.md`. Both forms are
+  // already in use in real ledgers, so the format follows the practice rather
+  // than replacing it.
   DR: /\bDR-\d{4}(?:-\d{4})?\b/g,
 };
 

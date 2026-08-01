@@ -159,9 +159,9 @@ function toPosixRel(value: string): string {
  * Every `DR-*` declared for this spec: its own `07_Decisions.md` plus the
  * shared `_policies/08_Decisions.md`.
  *
- * Both files are read, not one: `DR-0270` is a policy-level decision cited from
- * a spec ledger, and resolving only against the spec-local file would report
- * every such citation as unresolved.
+ * Both files are read, not one: a policy-level decision is cited from spec
+ * ledgers, and resolving only against the spec-local file would report every
+ * such citation as unresolved.
  */
 async function collectDeclaredDrIds(specDir: string, specsRoot: string): Promise<Set<string>> {
   const declared = new Set<string>();
