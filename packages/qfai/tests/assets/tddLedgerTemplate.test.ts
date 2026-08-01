@@ -111,16 +111,21 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         tree,
         "assistant/skills/qfai-implement/references/ledger-preconditions.md",
       );
-      // `isCoverageTargetLevel` excludes only these four; everything else —
-      // including `unit`, `component` and any unrecognised value — is a target,
-      // and a `06_Test-Cases.md` with no `Level` column makes every TC one.
-      // Guidance naming a narrower allowlist makes a header-only ledger look
-      // truthful and skips the whole implementation.
+      // `isCoverageTargetLevel` excludes only the non-coverage layers;
+      // everything else — including `unit`, `component` and any unrecognised
+      // value — is a target, and a `06_Test-Cases.md` with no `Level` column
+      // makes every TC one. Guidance naming a narrower allowlist makes a
+      // header-only ledger look truthful and skips the whole implementation.
+      //
+      // Compared case-insensitively: the set is normalised to lower case for
+      // matching, while the doc quotes the spelling the shipped
+      // `06_Test-Cases.md` template uses (`L3`, not `l3`).
+      const flatPreconditions = preconditions.toLowerCase();
       for (const layer of NON_COVERAGE_LAYERS) {
         expect(isCoverageTargetLevel(layer)).toBe(false);
-        expect(preconditions).toContain(`\`${layer}\``);
+        expect(flatPreconditions).toContain(`\`${layer}\``);
       }
-      for (const target of ["unit", "component", "l1", "l2", "l3", ""]) {
+      for (const target of ["unit", "component", "l1", "l2", ""]) {
         expect(isCoverageTargetLevel(target)).toBe(true);
       }
       expect(preconditions).toMatch(/no `Level` column/);

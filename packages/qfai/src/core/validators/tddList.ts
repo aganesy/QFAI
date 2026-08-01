@@ -6,7 +6,14 @@ import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { parseFirstMarkdownTable, resolveTestCaseTable } from "../specPackParsers.js";
 import { EXCEPTION_PARKED_RULE_ID } from "../ruleIds.js";
-import { isCoverageTargetLevel, splitTcRefs, resolveParentTcId } from "../tddHelpers.js";
+import {
+  classifyCoverageLevel,
+  isCoverageTargetLevel,
+  splitTcRefs,
+  resolveParentTcId,
+  UNIT_COMPONENT_LAYERS,
+  NON_COVERAGE_LAYERS,
+} from "../tddHelpers.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
 
@@ -134,8 +141,42 @@ const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
  */
 export { EXCEPTION_PARKED_RULE_ID };
 
+/**
+ * Waiver rule id for `TDDLIST_UNKNOWN_LEVEL`.
+ *
+ * A project may deliberately ship a Level vocabulary QFAI does not know.
+ * `.qfai/waivers.yml` is the mechanism for that, and `waivers.ts#resolveRuleId`
+ * only resolves `^[A-Z]+-\d{3}$` (or a `QFAI-<RULE>` code) — a dotted rule name
+ * would have left the warning permanently unsuppressible.
+ */
+export const UNKNOWN_LEVEL_RULE_ID = "TDDLIST-002";
+
 /** Per-spec file that owns the Test Case Table, and the target of its findings. */
 const TEST_CASES_FILE_NAME = "06_Test-Cases.md";
+
+/** Repo-relative, posix-slashed path used for the `file` field of an issue. */
+function toRelPath(root: string, filePath: string): string {
+  return path.relative(root, filePath).replace(/\\/g, "/");
+}
+
+/**
+ * The accepted `Level` vocabulary, in the spelling the shipped
+ * `06_Test-Cases.md` template actually uses.
+ *
+ * The internal sets are normalized to lower case for matching, so rendering
+ * them directly told the reader to write `l1` while the template writes `L1`.
+ * Codes are upper-cased and the two groups stay labelled, because "accepted"
+ * alone does not say which values make a TC a mandatory ledger row.
+ */
+function canonicalLevel(level: string): string {
+  return /^l\d+$/.test(level) ? level.toUpperCase() : level;
+}
+
+function acceptedLevelVocabulary(): string {
+  const render = (levels: Iterable<string>): string =>
+    [...levels].map(canonicalLevel).sort().join(", ");
+  return `coverage targets: ${render(UNIT_COMPONENT_LAYERS)}; non-coverage: ${render(NON_COVERAGE_LAYERS)}`;
+}
 
 export async function validateTddList(root: string, config: QfaiConfig): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
@@ -156,7 +197,7 @@ async function validateSpecTddList(
   specNumber: string,
 ): Promise<Issue[]> {
   const filePath = path.join(specDir, TDD_LIST_REL_PATH);
-  const relPath = path.relative(root, filePath).replace(/\\/g, "/");
+  const relPath = toRelPath(root, filePath);
   const issues: Issue[] = [];
 
   // Check 1: File existence
@@ -249,7 +290,32 @@ async function validateSpecTddList(
 
   // Check 5: TC reference existence
   const tcRefsIndex = normalizedHeaders.indexOf("TC-Refs");
-  const { knownTcIds, unitComponentTcIds, unresolved } = await collectTestCaseIds(specDir);
+  const { knownTcIds, unitComponentTcIds, unrecognizedLevels, unresolved } =
+    await collectTestCaseIds(specDir);
+  // The offending `Level` cell lives in 06_Test-Cases.md, not in the ledger
+  // this validator is otherwise reading. Reporting `relPath` here pointed
+  // the CLI, the JSON `file` field and any `scope.paths` waiver at a file
+  // that cannot be edited to clear the finding.
+  const testCasesRelPath = toRelPath(root, path.join(specDir, TEST_CASES_FILE_NAME));
+  if (unrecognizedLevels.size > 0) {
+    issues.push(
+      issue(
+        "TDDLIST_UNKNOWN_LEVEL",
+        `Unrecognized Level value(s) in ${TEST_CASES_FILE_NAME} for spec-${specNumber}: ${[...unrecognizedLevels].sort().join(", ")}. Accepted — ${acceptedLevelVocabulary()}. Unrecognized values are treated as coverage targets, so every such TC becomes a mandatory ledger row`,
+        "warning",
+        testCasesRelPath,
+        // Rule id, not a dotted path: `waivers.ts#resolveRuleId` accepts only
+        // `^[A-Z]+-\d{3}$` (or a `QFAI-<RULE>` code), so a dotted name would
+        // make the finding permanently unwaivable — and a project that
+        // deliberately uses its own Level vocabulary has no other way to
+        // silence it.
+        UNKNOWN_LEVEL_RULE_ID,
+        [...unrecognizedLevels].sort(),
+        "change",
+        `独自の Level 語彙を意図的に使用している場合は \`.qfai/waivers.yml\` に rule: ${UNKNOWN_LEVEL_RULE_ID} の waiver（id / reason / expires / evidence / scope.paths が必須）を登録してください。`,
+      ),
+    );
+  }
   if (unresolved) {
     // Both TC checks below are no-ops without a resolved table. Say so, so a
     // silent skip is distinguishable from a pass.
@@ -258,9 +324,6 @@ async function validateSpecTddList(
     // file to edit, and `file` is what GitHub annotations, report hotspots and
     // `scope.paths` waivers key on. Blaming `tdd/test-list.md` would send all
     // three at a document that is not the problem.
-    const testCasesRelPath = path
-      .relative(root, path.join(specDir, TEST_CASES_FILE_NAME))
-      .replace(/\\/g, "/");
     issues.push(
       issue(
         "TDDLIST_TC_TABLE_UNRESOLVED",
@@ -658,6 +721,8 @@ async function validateSpecTddList(
 type TestCaseIds = {
   knownTcIds: Set<string>;
   unitComponentTcIds: Set<string>;
+  /** `Level` values that match neither vocabulary; reported so a mismatch is visible. */
+  unrecognizedLevels: Set<string>;
   /**
    * Set when no `TC-ID`-bearing table could be located. Both TC checks go
    * silent in that case, so the caller reports the miss rather than letting
@@ -743,39 +808,46 @@ function validateObligationColumn(
 }
 
 async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
-  const empty: TestCaseIds = { knownTcIds: new Set(), unitComponentTcIds: new Set() };
+  // One instance of each Set for the whole function: the early returns hand
+  // back the same (still empty) object the happy path fills, so there is no
+  // second `unrecognizedLevels` that could diverge from this one.
+  const knownTcIds = new Set<string>();
+  const unitComponentTcIds = new Set<string>();
+  const unrecognizedLevels = new Set<string>();
+  const collected: TestCaseIds = { knownTcIds, unitComponentTcIds, unrecognizedLevels };
   const testCasesPath = path.join(specDir, TEST_CASES_FILE_NAME);
-  if (!(await exists(testCasesPath))) return empty;
+  if (!(await exists(testCasesPath))) return collected;
   let content: string;
   try {
     content = await readFile(testCasesPath, "utf-8");
   } catch {
-    return empty;
+    return collected;
   }
   // Scoped to the `## Test Case Table` section the template names, with a
   // header-match fallback for older specs. Reading the first table in
   // document order let an explanatory table above the heading hijack the set.
   const resolution = resolveTestCaseTable(content);
   if (!resolution.table) {
-    return { ...empty, unresolved: resolution.reason };
+    return { ...collected, unresolved: resolution.reason };
   }
   const table = resolution.table;
   const headers = table.headers.map((h) => h.trim());
   const tcIdIndex = headers.indexOf("TC-ID");
   const levelIndex = headers.indexOf("Level");
 
-  const knownTcIds = new Set<string>();
-  const unitComponentTcIds = new Set<string>();
   for (const row of table.rows) {
     const tcId = (row[tcIdIndex] ?? "").trim().toUpperCase();
     if (tcId.length === 0) continue;
     knownTcIds.add(tcId);
     if (levelIndex >= 0) {
       const level = (row[levelIndex] ?? "").trim().toLowerCase();
+      if (classifyCoverageLevel(level) === "unrecognized") {
+        unrecognizedLevels.add((row[levelIndex] ?? "").trim());
+      }
       if (!isCoverageTargetLevel(level)) continue;
     }
     // Reaches here when: (a) Level is a coverage target, or (b) Level column is absent (fallback: all TCs)
     unitComponentTcIds.add(tcId);
   }
-  return { knownTcIds, unitComponentTcIds };
+  return collected;
 }
