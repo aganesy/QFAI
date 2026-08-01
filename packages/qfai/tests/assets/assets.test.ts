@@ -161,7 +161,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "fix skill-owned artifacts and code/test defects autonomously",
       "rerun the same failing gate after each fix batch",
       "do not weaken profiles, lower `--fail-on`, waive errors, invent evidence, or skip required reviewers",
-      "stop only for destructive changes, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures",
+      // #231 added a second stop condition (reviewer round count), so the
+      // list is no longer exhaustive and "only" was dropped.
+      "stop for destructive changes, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures",
       "cause, attempted fixes, remaining blocker, user action, and retry gate",
     ];
 

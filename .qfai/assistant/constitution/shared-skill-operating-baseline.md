@@ -114,14 +114,15 @@ Rules:
 
 ## Gate Failure Autorepair Protocol
 
-When validate, doctor, test, lint, typecheck, build, capture, or report gates fail:
+When validate, doctor, test, lint, typecheck, build, capture, or report gates fail — **or when a blocking reviewer returns `REVISE`** (the in-flight verdict; `status: "FAIL"` is only what a review pack's `summary.json` serializes — see `shared-skill-delegation-baseline.md#verdict-vocabulary`):
 
 - inspect exit code, logs, `validate.json`, and cited files before reporting;
 - classify each finding as skill-owned artifact, upstream spec/contract, code/test defect, environment/tooling, or user decision;
 - fix skill-owned artifacts and code/test defects autonomously when the fix is local and non-destructive;
 - rerun the same failing gate after each fix batch;
 - do not weaken profiles, lower `--fail-on`, waive errors, invent evidence, or skip required reviewers;
-- stop only for destructive changes, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures.
+- stop for destructive changes, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures;
+- stop on **round count** as well as on lack of progress: a reviewer gate that would enter its third round escalates to the user, even when every round has made progress. See `shared-skill-delegation-baseline.md#round-budget-must`.
 
 When stopping, report: cause, attempted fixes, remaining blocker, user action, and retry gate.
 
