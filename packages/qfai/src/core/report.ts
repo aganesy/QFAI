@@ -185,6 +185,8 @@ export type ReportTddCoverageSpec = {
   doneCount: number;
   exceptionCount: number;
   openCount: number;
+  /** Open rows that cannot be started, reported apart from "not started yet". */
+  blockedCount: number;
   missingTcRefs: string[];
   exceptionRows: Array<{ tddId: string; drId: string }>;
 };
@@ -1168,7 +1170,7 @@ export function formatReportMarkdown(
       lines.push("");
       lines.push(`- coverage-target TCs: ${spec.unitComponentTotal}`);
       lines.push(
-        `- done: ${spec.doneCount} / exception: ${spec.exceptionCount} / open: ${spec.openCount}`,
+        `- done: ${spec.doneCount} / exception: ${spec.exceptionCount} / open: ${spec.openCount} (blocked: ${spec.blockedCount})`,
       );
       if (spec.missingTcRefs.length > 0) {
         lines.push(`- missing TC refs (add to test-list.md): ${spec.missingTcRefs.join(", ")}`);

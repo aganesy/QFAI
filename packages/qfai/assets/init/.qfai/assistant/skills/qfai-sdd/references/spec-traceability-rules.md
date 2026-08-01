@@ -143,7 +143,12 @@ and signalled by `QFAI-DENSITY-005`.
 Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
 
 - Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
-- Optional columns: `US-Refs`, `CON-API-Refs` — the E2E and API obligations a
+- Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`. `Blocked-By` names what a
+  `blocked` row is waiting on and is required on those rows.
+- Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,
+  `done`, `exception`. `blocked` is completion-prohibiting and is never selected by
+  Phase Red.
+- Optional columns detail: `US-Refs`, `CON-API-Refs` — the E2E and API obligations a
   row implements. Required when the row carries one, since `TC-*` annotations
   are forbidden in `tests/e2e/**` and `tests/api/**`.
 - TC coverage reads **`TC-*` tokens only**. `US-*` and `CON-API-*` IDs are

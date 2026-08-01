@@ -64,6 +64,7 @@ export async function collectTddCoverage(
         doneCount: 0,
         exceptionCount: 0,
         openCount: 0,
+        blockedCount: 0,
         missingTcRefs: [],
         exceptionRows: [],
       });
@@ -81,6 +82,7 @@ export async function collectTddCoverage(
         doneCount: 0,
         exceptionCount: 0,
         openCount: unitComponentTcIds.size,
+        blockedCount: 0,
         missingTcRefs: Array.from(unitComponentTcIds).sort(),
         exceptionRows: [],
       });
@@ -95,6 +97,7 @@ export async function collectTddCoverage(
         doneCount: 0,
         exceptionCount: 0,
         openCount: unitComponentTcIds.size,
+        blockedCount: 0,
         missingTcRefs: Array.from(unitComponentTcIds).sort(),
         exceptionRows: [],
       });
@@ -118,6 +121,10 @@ export async function collectTddCoverage(
     const rowsPerTc = new Map<string, number>();
     const doneRowsPerTc = new Map<string, number>();
     const exceptionRowsPerTc = new Map<string, number>();
+    // Counted apart from `open`: "not started" and "cannot start" are
+    // different facts, and folding them together is what made a blocked row
+    // indistinguishable from an unstarted one on every planning pass.
+    const blockedRowsPerTc = new Map<string, number>();
     const bump = (counts: Map<string, number>, tc: string): void => {
       counts.set(tc, (counts.get(tc) ?? 0) + 1);
     };
@@ -145,6 +152,9 @@ export async function collectTddCoverage(
       if (TDD_DONE_STATUSES.has(status)) {
         for (const tc of rowRefs) bump(doneRowsPerTc, tc);
       }
+      if (status === "blocked") {
+        for (const tc of rowRefs) bump(blockedRowsPerTc, tc);
+      }
       if (status === "exception") {
         for (const tc of rowRefs) bump(exceptionRowsPerTc, tc);
         exceptionRows.push({
@@ -167,6 +177,15 @@ export async function collectTddCoverage(
       }
     }
 
+    // A TC is blocked when a row of it cannot start and the TC is not already
+    // resolved. It stays inside `open` arithmetic — blocked work is still
+    // unfinished work and still prohibits completion — but is reported apart.
+    const blockedTcIds = new Set(
+      Array.from(blockedRowsPerTc.keys()).filter(
+        (tc) => !doneTcIds.has(tc) && !exceptionTcIds.has(tc),
+      ),
+    );
+
     const missingTcRefs = Array.from(unitComponentTcIds)
       .filter((id) => !coveredTcIds.has(id))
       .sort();
@@ -186,6 +205,7 @@ export async function collectTddCoverage(
       doneCount,
       exceptionCount,
       openCount: Math.max(0, openCount),
+      blockedCount: Array.from(unitComponentTcIds).filter((id) => blockedTcIds.has(id)).length,
       missingTcRefs,
       exceptionRows,
     });

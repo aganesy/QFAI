@@ -32,8 +32,16 @@ const REQUIRED_COLUMNS = [
 // reviewer's REVISE. Without it a REVISE landed on `refactor`, whose only
 // outbound edge is `done`, and agents wrote invented state names into the
 // free-text Evidence column.
+// `blocked` is "cannot be started", which the vocabulary had no value for. The
+// only honest encoding was `todo` — exactly the status Phase Red selects next
+// and exactly the one that prohibits completion, so the determination was never
+// persisted and got re-derived, and disagreed about, on every planning pass.
+// `exception` cannot absorb it: that is scoped to an anomaly, demands a DR-ID at
+// `error`, and satisfies spec completion — so a blocked row filed there would
+// silently close the obligation.
 const VALID_STATUSES = new Set([
   "todo",
+  "blocked",
   "red",
   "green",
   "refactor",
@@ -41,6 +49,9 @@ const VALID_STATUSES = new Set([
   "done",
   "exception",
 ]);
+
+/** The column naming what a `blocked` row is waiting on. Optional; required on `blocked`. */
+const BLOCKED_BY_COLUMN = "Blocked-By";
 
 /**
  * The `Layer` values the shipped ledger schema declares
@@ -557,6 +568,36 @@ async function validateSpecTddList(
           "change",
           `承認済みの accepted risk である場合は \`.qfai/waivers.yml\` に rule: ${EXCEPTION_PARKED_RULE_ID} の waiver（id / reason / expires / evidence / scope.paths / match.dl_ids が必須）を登録してください。match.dl_ids には対象行の ${rowKeyLabel} だけを列挙します。作業を再開する場合は \`exception -> todo\` で戻してください。`,
           { dl_id: rowKey },
+        ),
+      );
+    }
+  }
+
+  // Phase 2 – Check 8a: a blocked row must name its blocker.
+  //
+  // Without this the new status would be a second unfalsifiable state: "cannot
+  // start" with no record of what it is waiting on is the same re-derivation
+  // problem `todo` already had, one word further along.
+  const blockedByIndex = normalizedHeaders.indexOf(BLOCKED_BY_COLUMN);
+  if (statusIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const row = table.rows[rowIdx];
+      if (!row) continue;
+      if ((row[statusIndex] ?? "").trim().toLowerCase() !== "blocked") continue;
+      const blockedBy = blockedByIndex >= 0 ? (row[blockedByIndex] ?? "").trim() : "";
+      if (blockedBy.length > 0 && blockedBy !== "-") continue;
+      issues.push(
+        issue(
+          "TDDLIST_BLOCKED_MISSING_REF",
+          blockedByIndex < 0
+            ? `Status=blocked in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}) but the ledger has no ${BLOCKED_BY_COLUMN} column. Add it and name the blocker`
+            : `Status=blocked but ${BLOCKED_BY_COLUMN} is empty in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Name the blocker`,
+          "error",
+          relPath,
+          "tddList.blockedBy",
+          undefined,
+          "change",
+          `${BLOCKED_BY_COLUMN} 列に停止要因を記載してください: Change Request ID（\`CR-YYYYMMDD-NNNN\`）、行番号付きの契約パス（\`.qfai/contracts/db/CON-DB-0005.sql:2715\`）、または他 spec の行（\`spec-0006:TDD-0034\`）。`,
         ),
       );
     }
