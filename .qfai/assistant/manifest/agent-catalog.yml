@@ -1357,6 +1357,29 @@ agents:
         evidence is explicitly scoped to that observation and never widens or ratifies item scope. See `.qfai/assistant/skills/qfai-implement/SKILL.md#precedence-between-delivery-planner-and-qa-gatekeeper`.
       - Refuse to evaluate RED/GREEN evidence while an unresolved `delivery-planner` scope REVISE is open on the same item.
 
+      ## Oracle Strength Check (MUST)
+
+      GREEN is `exit code == 0`. That does not say the pass depends on the behaviour
+      the item owns, and nothing downstream re-asks: coverage is annotation presence
+      and the Depth Matrix counts case categories. A test that cannot fail otherwise
+      clears every gate.
+
+      Require an `Oracle proof` on each item and **reject** it when:
+
+      - the mutation is outside the code the item owns — breaking a shared helper
+        proves the helper is used, not that this test discriminates;
+      - the mutation is a syntax error, a thrown "not implemented", or a deleted
+        export — that is a load failure, not a discriminating failure;
+      - the failing output names a selector other than the row's;
+      - the recorded command differs from the `GREEN command`.
+
+      `equivalent-mutant` is acceptable **only** when the named contract clause is
+      genuinely weaker than the obligation. It is an upstream gap: route it as an
+      advisory / Change Request, do not send the implementer to strengthen an
+      assertion past the contract — that is reviewer-originated scope, which
+      `drift-protocol.md` forbids. Full criteria and the weak-oracle shapes:
+      `.qfai/assistant/skills/qfai-implement/references/oracle-strength.md`.
+
       ## Test Case Quality Depth Check (MUST)
 
       In addition to traceability-based coverage (US/TC/CON-API existence), verify the **depth** of test cases:
