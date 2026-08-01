@@ -4,6 +4,21 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
 
 ## Layer definitions
 
+### L1 Unit
+
+- Scope: pure decision logic — a single module's inputs and return values, with
+  no port collaboration and no real infrastructure.
+- Goal: verify `TC-*` obligations whose oracle observes inputs and outputs only.
+- Location rule: `tests/unit/**`.
+
+### L2 Component
+
+- Scope: collaboration with a port through a fixture adapter (fake / in-memory),
+  with no real infrastructure.
+- Goal: verify `TC-*` obligations whose oracle observes the interaction with a
+  port rather than infrastructure state.
+- Location rule: `tests/component/**`.
+
 ### L3 Integration
 
 - Scope: real infrastructure integration (for example DB/queue/filesystem) within service boundaries.
@@ -24,6 +39,8 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
 
 ## TestKind resolution (single source)
 
+- `tests/unit/**` -> Unit
+- `tests/component/**` -> Component
 - `tests/e2e/**` -> E2E
 - `tests/api/**` -> API
 - `tests/integration/**` -> Integration
@@ -31,7 +48,9 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
 ## Annotation schema (code-side)
 
 - Smallest trace unit is ID.
-- Multiple IDs per test file are allowed.
+- Multiple IDs per test file are allowed — but this is a trace rule, not
+  licence to aggregate a whole spec into one module. See Test-file granularity
+  below.
 - AC annotations are optional (indirect coverage through TC is acceptable).
 - Allowed forms:
   - `QFAI:SPEC-0001:US-0001`
@@ -59,35 +78,140 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
   - Do not create an E2E tree whose only purpose is to receive annotations.
     That is the "convert all obligations into E2E" anti-pattern below.
   - Use `QFAI:SPEC-XXXX:US-YYYY` annotations.
-
-- Integration obligations:
-  - Every `TC-*` in specs must be referenced at least once from `tests/integration/**`.
+- Integration obligations (enforced today):
+  - Every `TC-*` in specs must be referenced at least once from
+    `tests/integration/**`, whatever its declared `Level`. This is what
+    `QFAI-ATDD-112` checks.
   - Use `QFAI:SPEC-XXXX:TC-YYYY` annotations.
+  - `tests/api/**` and `tests/e2e/**` must not carry `TC-*` annotations
+    (`QFAI-ATDD-121` / `QFAI-ATDD-122`), so an L4 obligation is discharged as a
+    `CON-API-*` reference, never as a `TC-*` one.
+
+- Per-level routing (target state — **not enforced, do not follow yet**):
+  - The intended end state is one required location per declared `Level`:
+    L1 -> `tests/unit/**`, L2 -> `tests/component/**`,
+    L3 -> `tests/integration/**`. L4 stays `CON-API-*` in `tests/api/**` and
+    L5 stays `US-*` in `tests/e2e/**`.
+  - **This is not live.** `buildAtddTestGlobs` scans only
+    `tests/{e2e,api,integration}`, so an annotation placed in `tests/unit/**`
+    or `tests/component/**` is invisible to the scanner and `QFAI-ATDD-112`
+    still reports the TC as uncovered. Until the scanner and `QFAI-ATDD-112`
+    resolve per-TC, keep discharging every `TC-*` in `tests/integration/**`.
 - API obligations:
   - Every declared `CON-API-*` must be referenced at least once from `tests/api/**`.
   - Use `QFAI:CON-API-XXXX` annotations.
+  - **Deferral.** `/qfai-sdd` authors contracts in Phase 0 (Contracts-first) and
+    slices them in Phase 2, so a contract legitimately exists before its slice
+    ships. A contract that declares `x-qfai-status: planned` is excluded from
+    the `QFAI-ATDD-113` obligation and reported as `QFAI-ATDD-114` (`info`)
+    instead. Remove the marker when the slice is implemented — leaving it in
+    place on a shipped slice is a review finding, not a tool finding.
+    - The marker counts only at the **document root**. The same key nested under
+      an operation defers nothing: one path must not be able to drop the
+      API-test obligation for every other `CON-API-*` the file declares.
+    - Deferral removes the test obligation, not the declaration. A deferred
+      `CON-API-*` stays a known ID, so writing its API test ahead of the slice
+      is fine and never raises `QFAI-ATDD-103`.
+    - Deferred IDs are recorded in `report/atdd-traceability/summary.{json,md}`
+      under `deferred.conApi`, so an empty `missing.conApi` can be told apart
+      from a project where every contract is still planned.
 - Forbidden references:
   - `tests/api/**` must not include `QFAI:SPEC-XXXX:TC-YYYY`.
   - `tests/e2e/**` must not include `QFAI:SPEC-XXXX:TC-YYYY`.
 - Unknown references (`US/TC/CON-API` not declared) are errors.
+- A `TC-*` annotation outside the directory its `Level` routes to is a
+  misplacement, whichever directory it lands in — including the two new
+  locations `tests/unit/**` and `tests/component/**`.
 - AC annotations are not required in code; AC coverage is treated as indirect through TC coverage.
 - `QFAI:CON-API-*` in `tests/e2e/**` is not forbidden, but contract guarantee belongs to API tests.
 
+## Test-file granularity
+
+- Default: **one test module per `TC-*`**. A TDD ledger row's `Test file`
+  names that module.
+- Grouping several `TC-*` into one module is allowed when they verify the same
+  BR and the module stays reviewable in one pass. Above that, split by BR, then
+  by AC.
+- A single `Test file` value shared by every row of a spec is an anti-pattern:
+  it makes the per-item "relevant test suite" indistinguishable from the whole
+  spec suite, and it puts the whole spec's test code in front of every
+  in-context reviewer gate.
+- `qfai-sdd` should emit a per-item `Test file` value, not a per-spec one.
+
 ## Volume policy
 
-- Floors and ratios are signals, not completion gates.
+- Floors and ratios are signals, not completion gates. This is the only
+  statement in this section: no volume observation blocks completion, and none
+  triggers a Change Request.
 - Completion gate is validation pass with no errors:
-  - `qfai validate --fail-on error`
+  - `npx qfai validate --fail-on error`
 
-If a volume signal is unmet:
+If an observed layer distribution looks wrong:
 
-1. STOP auto-adjustment.
-2. Raise a Change Request with 3 options and recommendation.
-3. Wait for explicit user approval.
-4. Update upstream artifacts via owner-phase rerun when required.
+1. Do not auto-adjust the distribution to make it look better.
+2. Record the observed distribution and the rationale for it in the running
+   stage's evidence file under `.qfai/evidence/` — for example
+   `.qfai/evidence/atdd-<spec-id>.md` or
+   `.qfai/evidence/implement-<spec-id>.md`.
+3. Continue. The stage is not blocked.
+
+The record goes to evidence, not into the spec, on purpose.
+`constitution/drift-protocol.md` lists `*_delta.md` and the per-spec Open
+Questions file among the upstream SSOT a downstream stage must not edit without
+explicit user approval, and whitelists `.qfai/evidence/**` append/update as an
+allowed exception. Pointing this step at the spec would send ATDD and implement
+straight back into the STOP-and-wait state the policy exists to avoid.
+
+The owner phase (`/qfai-sdd`) is the one that may carry the note into the
+spec's own Open Questions file on a later run: `08_Open-questions.md` in a
+layered spec, `15_Open-questions.md` in a spec pack.
+(`09_Open-questions.md` is the shared `_policies` file, not a per-spec one.)
+
+A Change Request is reserved for `constitution/drift-protocol.md`-class events
+— an actual conflict with an upstream SSOT decision. A volume observation is not
+one, and it stays non-blocking either way. What differs is how much of it is
+measurable:
+
+- **No configured guardrail.** qfai ships no default floor, ratio or threshold,
+  and no validator emits a volume rule, so "unmet" is a judgement call with no
+  tool-checkable meaning. Record the observation and the reasoning.
+- **A configured guardrail.** When a project sets
+  `validation.testStrategy.maxE2eScenarioRatio` or `maxE2eScenarioCount` to a
+  non-null value, `report.ts` measures it and reports `ratioExceeded` /
+  `countExceeded` with a warning. That is the project's own stated limit, not a
+  subjective read: record the configured value, the measured value and the
+  report warning in the evidence, so the breach is auditable rather than
+  paraphrased.
+
+  **What it counts is narrow.** These two knobs measure **Gherkin scenarios
+  parsed out of each spec's Examples file**, bucketed by their `@layer-*` tags.
+  They never inspect `<testsDir>/e2e/**` or any other code test. A project that
+  writes no Gherkin — the normal shape for a layered project whose E2E lives in
+  code — measures zero scenarios, so the guardrail stays silent however many
+  code E2E tests exist. Treat them as a guardrail over the **scenario**
+  distribution, not over the real test-layer distribution: when they are silent,
+  the observation is the judgement call above, and the evidence entry must say
+  how the distribution was counted so it is not read as a tool measurement.
+
+Either way completion is not blocked and no Change Request is raised: a
+user-blocking Change Request against a project's own tuning knob cannot conclude
+anything actionable.
 
 ## Anti-patterns
 
 - Do not treat `scenario.feature` or a coverage ledger as mandatory completion input.
 - Do not convert all obligations into E2E.
 - Do not inflate tests only to satisfy floor numbers.
+- Do not over-concentrate obligations into a single layer, module, or selector. Collapsing a matrix-shaped `TC-*` into one integration module — or into one test function behind one `test-list.md` selector — is the same failure mode as converting everything into E2E, and it additionally destroys the RED observation: a test function fails once, so only the first failing assert is ever observed. Split per independently observable boundary (see `qfai-implement/references/execution-ledger.md#selector-granularity-must`).
+- Do not re-label an existing obligation's declared layer to change how a
+  distribution reads. Re-labelling is the cheapest way to clear a signal and
+  the one that destroys the most information; the layer of an obligation is
+  determined by what it verifies, never by how the totals look.
+
+### Concentration signals (non-gating)
+
+Treat these as review signals in the same class as volume floors — worth a finding, never a hard gate:
+
+- one test module holding a disproportionate share of a spec's `assert` statements
+- a very low `test_` functions per file ratio in a module that carries many obligations
+- a single selector whose recorded runtime grows monotonically across RED rounds

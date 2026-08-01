@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { parse as parseYaml } from "yaml";
+
 import type { QfaiConfig } from "./config.js";
 import { resolvePath } from "./config.js";
 import { extractDeclaredContractIds } from "./contractsDecl.js";
@@ -22,7 +24,17 @@ const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
 const US_ID_RE = /^US-\d{4}(?:-\d{4})?$/;
 const TC_ID_RE = /^TC-\d{4}(?:-\d{4})?$/;
 const API_CONTRACT_ID_RE = /^CON-API-\d+$/;
-const TEST_FILE_GLOB = "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}";
+/**
+ * Extension set used when the project declares no
+ * `validation.traceability.testFileGlobs`. It is a fallback, not the rule: its
+ * code extensions are all JavaScript/TypeScript, so a Python / Go / Java /
+ * Ruby / Rust repository matched none of its executable test files under it.
+ * (`feature` / `md` / `markdown` still match, but those are annotation
+ * carriers, not test code — a repo with no Gherkin or markdown ledger matches
+ * nothing at all.) `QFAI-ATDD-111/112/113` therefore reported obligations as
+ * uncovered no matter how many correctly annotated tests existed.
+ */
+const DEFAULT_TEST_FILE_GLOB = "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}";
 
 export type AtddTestKind = "e2e" | "api" | "integration";
 
@@ -59,7 +71,21 @@ export type AtddCodeTraceabilityResult = {
   contractsApiRoot: string;
   specUsIds: Map<string, Set<string>>;
   specTcIds: Map<string, Set<string>>;
+  /**
+   * Every declared `CON-API-*`, active and deferred alike. This is the public
+   * meaning the field has always had — adding `x-qfai-status: planned` defers
+   * the test obligation, it does not un-declare the contract, so an external
+   * consumer using this set for "is this ID declared?" must keep seeing it.
+   */
   apiContractIds: Set<string>;
+  /** The subset that carries the `QFAI-ATDD-113` obligation. */
+  activeApiContractIds: Set<string>;
+  /**
+   * `CON-API-*` IDs excluded from the `QFAI-ATDD-113` obligation because their
+   * contract declares `x-qfai-status: planned`. Reported as `info` so the
+   * deferral stays visible instead of silently shrinking the gate.
+   */
+  deferredApiContractIds: Set<string>;
   refs: {
     us: AtddSpecRefs;
     tc: AtddSpecRefs;
@@ -82,10 +108,15 @@ export async function evaluateAtddCodeTraceability(
   const contractsRoot = resolvePath(root, config, "contractsDir");
   const contractsApiRoot = path.join(contractsRoot, "api");
 
-  const [specRefs, apiContractIds] = await Promise.all([
+  const [specRefs, collectedApiContracts] = await Promise.all([
     collectSpecRefs(specsRoot),
     collectApiContractIds(contractsApiRoot),
   ]);
+  // `active` drives the missing-coverage gate; `declared` (active ∪ deferred)
+  // drives the "is this ID known?" check.
+  const activeApiContractIds = collectedApiContracts.active;
+  const deferredApiContractIds = collectedApiContracts.deferred;
+  const declaredApiContractIds = new Set([...activeApiContractIds, ...deferredApiContractIds]);
 
   // `QFAI-ATDD-111` (US -> tests/e2e/**) is scoped by surface type, reusing the
   // resolution `/qfai-prototyping` already performs. A spec that declares no
@@ -103,7 +134,11 @@ export async function evaluateAtddCodeTraceability(
   const apiRoot = path.join(testsRoot, "api");
   const integrationRoot = path.join(testsRoot, "integration");
 
-  const scanGlobs = buildAtddTestGlobs(root, testsRoot);
+  const scanGlobs = buildAtddTestGlobs(
+    root,
+    testsRoot,
+    deriveAtddFilePattern(config.validation.traceability.testFileGlobs),
+  );
   const scanResult = await collectTestFiles(root, scanGlobs);
 
   const usRefs: AtddSpecRefs = new Map<string, Map<string, Set<string>>>();
@@ -164,7 +199,11 @@ export async function evaluateAtddCodeTraceability(
     }
 
     for (const contractId of apiAnnotations) {
-      const known = apiContractIds.has(contractId);
+      // Declared = active ∪ deferred. `x-qfai-status: planned` defers the
+      // API-test *obligation*; it does not un-declare the contract, so writing
+      // the test ahead of the slice must not become a `QFAI-ATDD-103` unknown
+      // reference.
+      const known = declaredApiContractIds.has(contractId);
       if (!known) {
         pushUnknown(unknown, unknownDedup, file, `QFAI:${contractId}`, "conApi");
         continue;
@@ -179,7 +218,7 @@ export async function evaluateAtddCodeTraceability(
     specUsIds,
     usObligationScope: uiBearingSpecs,
     specTcIds,
-    apiContractIds,
+    apiContractIds: activeApiContractIds,
     usRefs,
     tcRefs,
     apiRefs,
@@ -190,7 +229,9 @@ export async function evaluateAtddCodeTraceability(
     contractsApiRoot,
     specUsIds,
     specTcIds,
-    apiContractIds,
+    apiContractIds: declaredApiContractIds,
+    activeApiContractIds,
+    deferredApiContractIds,
     refs: {
       us: usRefs,
       tc: tcRefs,
@@ -244,22 +285,103 @@ async function collectSpecRefs(specsRoot: string): Promise<{
   return { us, tc };
 }
 
-async function collectApiContractIds(apiRoot: string): Promise<Set<string>> {
+export const PLANNED_CONTRACT_KEY = "x-qfai-status";
+const PLANNED_CONTRACT_VALUE = "planned";
+
+/**
+ * Fallback marker for a document that does not parse: an unindented
+ * `x-qfai-status: planned`, optionally as a comment. Column 0 is required, so
+ * the marker cannot be mistaken for one nested under an operation.
+ */
+/** Quote a value for literal use inside a RegExp source. */
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Both interpolations are escaped. They are plain identifiers today, so this
+// changes nothing now; it keeps a future key containing `.` or `-`-in-a-class
+// from silently turning into a pattern that matches more than the literal.
+const PLANNED_CONTRACT_RE = new RegExp(
+  `^(?:#[ \\t]*)?["']?${escapeRegExp(PLANNED_CONTRACT_KEY)}["']?[ \\t]*:[ \\t]*["']?${escapeRegExp(
+    PLANNED_CONTRACT_VALUE,
+  )}["']?[ \\t]*$`,
+  "im",
+);
+
+/**
+ * True when the contract declares itself not yet implemented.
+ *
+ * `/qfai-sdd` authors contracts in Phase 0 (Contracts-first) but slices them in
+ * Phase 2, so between the second contract and the last slice every declared
+ * `CON-API-*` would otherwise be a `QFAI-ATDD-113` error. The marker makes the
+ * deferral explicit and reviewable in the contract itself.
+ *
+ * The marker is only honoured at the **document root**. A text scan that
+ * accepted any indentation would let an `x-qfai-status: planned` on a single
+ * OpenAPI operation defer the whole file, silently dropping the API-test
+ * obligation for every other `CON-API-*` it declares. The document is therefore
+ * parsed (YAML is a superset of JSON, so both contract formats go through the
+ * same path) and only a top-level key counts. An unparseable document falls
+ * back to a column-0 text match, which cannot see a nested key either.
+ */
+export function isPlannedApiContract(text: string): boolean {
+  // The overwhelmingly common contract does not carry the marker at all, and
+  // this runs once per contract file during collection. A substring test skips
+  // the parse for those: the key must appear literally somewhere for any of the
+  // paths below to return true, so a miss here is a definitive `false`.
+  if (!text.includes(PLANNED_CONTRACT_KEY)) {
+    return false;
+  }
+
+  let parsed: unknown;
+  try {
+    // `maxAliasCount: 0` disables alias expansion. Contracts are repository
+    // files, but they are also the one input a PR author fully controls, and
+    // an alias bomb (`*a` referenced repeatedly through nested anchors) turns a
+    // small document into an out-of-memory CI failure. No contract format needs
+    // aliases; a document that uses them is rejected and falls through to the
+    // column-0 text match below.
+    parsed = parseYaml(text, { maxAliasCount: 0 });
+  } catch {
+    // Malformed contract: other validators report the syntax error. Here the
+    // conservative reading is the column-0 marker only.
+    return PLANNED_CONTRACT_RE.test(text);
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return PLANNED_CONTRACT_RE.test(text);
+  }
+  if (!(PLANNED_CONTRACT_KEY in parsed)) {
+    // A commented-out marker survives parsing as nothing at all, so still allow
+    // the column-0 comment form.
+    return PLANNED_CONTRACT_RE.test(text);
+  }
+  const status: unknown = Reflect.get(parsed, PLANNED_CONTRACT_KEY);
+  return typeof status === "string" && status.trim().toLowerCase() === PLANNED_CONTRACT_VALUE;
+}
+
+type CollectedApiContracts = {
+  active: Set<string>;
+  deferred: Set<string>;
+};
+
+async function collectApiContractIds(apiRoot: string): Promise<CollectedApiContracts> {
   const files = await collectApiContractFiles(apiRoot);
-  const ids = new Set<string>();
+  const active = new Set<string>();
+  const deferred = new Set<string>();
 
   for (const file of files) {
     const text = await readSafe(file);
+    const planned = isPlannedApiContract(text);
     const declared = extractDeclaredContractIds(text);
     for (const id of declared) {
       const normalized = id.toUpperCase();
       if (API_CONTRACT_ID_RE.test(normalized)) {
-        ids.add(normalized);
+        (planned ? deferred : active).add(normalized);
       }
     }
   }
 
-  return ids;
+  return { active, deferred };
 }
 
 /**
@@ -317,7 +439,55 @@ function collectShortIds(text: string, prefix: "US" | "TC"): Set<string> {
   return ids;
 }
 
-function buildAtddTestGlobs(root: string, testsRoot: string): string[] {
+/**
+ * Extensions the ATDD scan must always read, whatever the project configures.
+ *
+ * `validation.traceability.testFileGlobs` describes executable test *code*, but
+ * annotations also legitimately live in Gherkin features and in markdown
+ * traceability files (this repository carries its own `US-*` annotations in
+ * `tests/e2e/qfai-traceability.md`). These are annotation carriers, not code,
+ * so they are unioned in rather than replaced.
+ */
+const STRUCTURAL_ANNOTATION_EXTENSIONS = ["feature", "md", "markdown"] as const;
+
+/**
+ * Derives the per-layer file pattern from the project's configured
+ * `testFileGlobs`, so a non-JS repository is scanned with its own extensions.
+ *
+ * Configured globs describe whole paths (`tests/**\/*.py`); the ATDD scan needs
+ * a pattern to append under `tests/{e2e,api,integration}/`. The extension set is
+ * therefore lifted out of them, unioned with the structural annotation carriers
+ * above, and recombined. When no extension can be recovered, the JS/TS default
+ * is used.
+ */
+export function deriveAtddFilePattern(testFileGlobs: readonly string[]): string {
+  const extensions = new Set<string>();
+  for (const glob of testFileGlobs) {
+    for (const match of glob.matchAll(/\.\{([^}]+)\}$/g)) {
+      for (const ext of (match[1] ?? "").split(",")) {
+        const trimmed = ext.trim();
+        if (trimmed.length > 0) extensions.add(trimmed);
+      }
+    }
+    const single = /\.([A-Za-z0-9]+)$/.exec(glob);
+    if (single?.[1]) {
+      extensions.add(single[1]);
+    }
+  }
+  if (extensions.size === 0) {
+    return DEFAULT_TEST_FILE_GLOB;
+  }
+  for (const ext of STRUCTURAL_ANNOTATION_EXTENSIONS) {
+    extensions.add(ext);
+  }
+  // Always the brace form: the loop above unions in
+  // STRUCTURAL_ANNOTATION_EXTENSIONS, three entries, so a non-empty set can
+  // never have one member and a `**/*.<ext>` branch would be dead code.
+  const sorted = Array.from(extensions).sort();
+  return `**/*.{${sorted.join(",")}}`;
+}
+
+function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string): string[] {
   const relativeTestsRoot = path.relative(root, testsRoot);
   const isInsideRoot =
     relativeTestsRoot.length === 0 ||
@@ -327,9 +497,9 @@ function buildAtddTestGlobs(root: string, testsRoot: string): string[] {
     : toPosixPath(testsRoot);
   const normalizedBase = base.replace(/\/+$/, "");
   return [
-    `${normalizedBase}/e2e/${TEST_FILE_GLOB}`,
-    `${normalizedBase}/api/${TEST_FILE_GLOB}`,
-    `${normalizedBase}/integration/${TEST_FILE_GLOB}`,
+    `${normalizedBase}/e2e/${filePattern}`,
+    `${normalizedBase}/api/${filePattern}`,
+    `${normalizedBase}/integration/${filePattern}`,
   ];
 }
 
