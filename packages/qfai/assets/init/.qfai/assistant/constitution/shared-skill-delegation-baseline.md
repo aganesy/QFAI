@@ -73,6 +73,15 @@ Every major artifact in the stage should include this table schema:
     Such a finding escalates immediately (see the severity floor below) and
     still does not start a round 3. The review returns `PASS` or escalates
     again.
+  - **One 2b per artifact, total.** The verification review is free of budget,
+    not unbounded: a second escalation on the same artifact MUST NOT be
+    answered with another _apply a named fix_ + 2b cycle. Without this cap the
+    two rules compose into a loop — 2b costs nothing, and escalating again is
+    always allowed — so the gate has no guaranteed end. At the second
+    escalation the user is offered only _accept as Open Question_ or _drop the
+    item from scope_ (subject to the severity floor below); if the floor
+    withholds both, the artifact does not reach DONE and the stage stops with
+    the finding recorded.
   - **Severity floor on the exit.** _Accept as Open Question_ is NOT available
     for a finding that names a concrete security defect, data loss or
     corruption, or a correctness defect that would break a released contract.
