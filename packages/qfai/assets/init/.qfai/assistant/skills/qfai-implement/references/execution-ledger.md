@@ -14,7 +14,7 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single r
 | Selector  | Test selector(s) for targeted execution — one entry, a comma-separated list, or a glob pattern                                                                                                                              |
 | Status    | Current lifecycle status                                                                                                                                                                                                    |
 | DR-ID     | Decision Record / Change Request IDs, comma-separated: a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses; blank otherwise |
-| Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                                                                                                                                                        |
+| Evidence  | The RED/GREEN outcome in one word each, plus an anchor into `.qfai/evidence/implement-<spec-id>.md` for this TDD-ID. **Not** the commands and output themselves — see "Evidence cell contract" below                        |
 
 ## Obligation columns (optional, required by layer)
 
@@ -46,6 +46,50 @@ as a coverage error about a TC the author did cover.
 
 Coverage measurement is otherwise unaffected: it reads `TC-*` tokens only, so
 non-TC obligation IDs are inert to it by design.
+
+## Evidence cell contract
+
+The `Evidence` cell is a **pointer**, not the payload.
+
+`.qfai/evidence/implement-<spec-id>.md` is the single home for the per-item
+evidence contract — the RED/GREEN commands, their output, and the reviewer
+verdicts. The ledger cell records the outcome and says where to read the proof:
+
+```
+RED fail / GREEN pass — evidence at `.qfai/evidence/implement-spec-0001.md#tdd-0027`
+```
+
+### Why it cannot hold the payload
+
+A GFM table row is **one physical line**, and `splitMarkdownRow` ends a cell at
+every unescaped `|`. Pasting a command and its output into the cell has two
+failure modes, both silent:
+
+- a newline ends the row — `parseAllMarkdownTables` stops the table at the first
+  line that does not start with `|`, so every row below it disappears from the
+  ledger the validators read;
+- a bare `|` — a shell pipe, a table in the output, a regex alternation — splits
+  the row into extra cells and misaligns every column after `Evidence`.
+
+The column description used to read "RED/GREEN command+result pairs proving the
+TDD cycle", so following it literally corrupted the evidence or destroyed the
+ledger. None of the Evidence hard rules change: they now bind the evidence file,
+which can hold what they ask for.
+
+### Evidence cell encoding
+
+When a cell must contain either character, encode it with
+`specPackParsers.ts#escapeTableCell` — the exported encoder the parser inverts.
+Exactly two rules:
+
+| Input          | Written as     |
+| -------------- | -------------- |
+| `\|`           | `\\\|`         |
+| CR / LF / CRLF | a single space |
+
+A literal `\` is **not** escaped: the parser passes it through unchanged, so
+doubling it would corrupt Windows paths and regex literals while keeping the
+column count valid — a corruption no validator can see.
 
 ## Selector granularity (MUST)
 

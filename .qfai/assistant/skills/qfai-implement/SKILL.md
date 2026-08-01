@@ -322,7 +322,7 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 7. `completion-reviewer` returned PASS (spec / completion review gate)
 8. `implementation-reviewer` returned PASS (code quality review gate)
 9. UI-affecting items have prototype parity PASS from `product-surface-reviewer`
-10. `test-list.md` Status and Evidence columns are updated with fresh evidence
+10. `test-list.md` Status is current and its Evidence cell's anchor resolves to a fresh per-item entry in `.qfai/evidence/implement-<spec-id>.md` (the cell is a pointer, not the payload — `references/execution-ledger.md#evidence-cell-contract`)
 11. `.qfai/evidence/implement-<spec-id>.md` is appended with both reviewer verdicts after items 7-8 returned PASS
 12. Checkpoint verification passed (see `#checkpoint-verification`). The **full** suite is required here only when the item sits on a checkpoint boundary; a row between boundaries satisfies this with the narrow relevant suite from Phase: Refactor step 2, which is also what items 6, 7 and 8 are evaluated against.
 
@@ -386,6 +386,7 @@ Required sections:
 
 - Objective
 - Items processed (TDD-ID, TC-Refs, final status)
+- **Per item, one `### TDD-NNNN` section** carrying the contract below — the single home for the RED/GREEN commands and output. The ledger's `Evidence` cell anchors here and holds only the one-word outcomes, because a GFM cell cannot hold a newline or a bare `|` (`references/execution-ledger.md#evidence-cell-contract`)
 - Test results summary
 - Exception items (if any) with DR-IDs
 - Commands executed
