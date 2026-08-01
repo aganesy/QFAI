@@ -17,7 +17,7 @@ Upstream artifacts include, at minimum:
 
 One file inside `.qfai/specs/**` is carved out of that last line:
 `<spec-id>/tdd/test-list.md`, and only its `Status` / `DR-ID` / `Evidence`
-cells. See `#allowed-exceptions`. Its **rows** — which obligations exist and
+cells. See `#allowed-exceptions-minimal-whitelist`. Its **rows** — which obligations exist and
 what each covers — remain upstream.
 
 ## Allowed exceptions (minimal whitelist)
