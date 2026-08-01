@@ -132,6 +132,26 @@ When transitioning to `exception`:
 - A retained `CR-*` does not satisfy this: it records the approved reopen, not the anomaly. Add the `DR-*` alongside it (`DR-NNNN, CR-YYYYMMDD-NNNN`).
 - If the DR-ID column is empty, or holds `CR-*` references only, emit error: `"exception status requires DR-ID in DR-ID column"`.
 
+### Where the Decision Record is written
+
+Write it to `.qfai/decisions/DR-YYYYMMDD-NNNN-<slug>.md`, beside the Change
+Requests. Do **not** write `07_Decisions.md` or `09_delta.md`.
+
+Those two are upstream SSOT (`constitution/drift-protocol.md#core-rule`) and
+this skill carries `[DRIFT-PROTOCOL:MANDATORY]`, so a downstream write to either
+is a protocol violation — while the `exception` transition itself is an ordinary
+inline step of Phase Red that `TDDLIST_EXCEPTION_MISSING_DR` blocks at `error`
+without a `DR-*`. `.qfai/decisions/` is the one home that satisfies both: the
+protocol whitelists **creating** a record there
+(`drift-protocol.md#allowed-exceptions`), and the managed `.gitignore` block
+already tracks it as a governance record.
+
+The upstream cross-reference is a separate, later write. If the anomaly turns
+out to change an approved obligation, that is drift: raise a Change Request per
+`drift-protocol.md#when-drift-is-detected`, and the owner skill's rerun is what
+records the reference in `07_Decisions.md` / `09_delta.md`. Parking the row does
+not require that to have happened.
+
 ### Parked items and the `TDDLIST-001` waiver
 
 Every `exception` row raises `TDDLIST_EXCEPTION_PARKED` (warning, rule
