@@ -34,7 +34,12 @@ run passed `npx qfai validate --profile sdd --fail-on error`. It now has a struc
 | ------------------- | ----------------------------------------------------------------------------- | -------- |
 | `QFAI-CONTRACT-021` | an unterminated string, comment or dollar-quoted body, or unbalanced `(`      | error    |
 | `QFAI-DB-002`       | one file creates the same object twice — only the last definition is in force | error    |
-| `QFAI-DB-001`       | a dangerous statement (`DROP TABLE`, `TRUNCATE`, …)                           | warning  |
+
+`QFAI-DB-002` covers tables, views, indexes, functions, procedures, types and
+domains. **Triggers are excluded**: a trigger name is unique per table, not per
+schema, so two same-named triggers on different tables are correct SQL and
+reporting them would be a false positive on valid input.
+| `QFAI-DB-001` | a dangerous statement (`DROP TABLE`, `TRUNCATE`, …) | warning |
 
 The statement splitter honours SQL quoting, so a `;` inside a literal, a
 comment, a `$$ … $$` body or parentheses does not end a statement.

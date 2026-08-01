@@ -11,7 +11,12 @@ import {
   collectDbContractFiles,
   collectUiContractFiles,
 } from "../discovery.js";
-import { collectCreatedObjects, findRedefinitions, parseSqlContract } from "../sqlContract.js";
+import {
+  collectCreatedObjects,
+  findRedefinitions,
+  parseSqlContract,
+  type SqlParseError,
+} from "../sqlContract.js";
 import type { Issue } from "../types.js";
 import { validateContractConsistency } from "./contractConsistency.js";
 import { issue } from "./utils.js";
@@ -138,6 +143,14 @@ async function validateContractFile(file: string, kind: ContractKind): Promise<I
   return issues;
 }
 
+/** Japanese phrasing for each structural failure, so the message is one language. */
+const SQL_PARSE_ERROR_JA: Record<SqlParseError["kind"], string> = {
+  "unterminated-string": "文字列リテラル（または引用識別子）が閉じられていません",
+  "unterminated-comment": "ブロックコメント /* が閉じられていません",
+  "unterminated-dollar-quote": "ドル引用符で開かれた本体が閉じられていません",
+  "unbalanced-parens": "閉じられていない括弧があります",
+};
+
 /**
  * The structural lane for `.sql` contracts.
  *
@@ -146,7 +159,7 @@ async function validateContractFile(file: string, kind: ContractKind): Promise<I
  * it defines. It does not type-check a query or resolve a column, and the
  * shipped catalog note says so, so the gate's promise stays honest.
  */
-export function validateSqlStructure(text: string, file: string): Issue[] {
+function validateSqlStructure(text: string, file: string): Issue[] {
   const issues: Issue[] = [];
   const { statements, errors } = parseSqlContract(text);
 
@@ -156,7 +169,7 @@ export function validateSqlStructure(text: string, file: string): Issue[] {
         // Same rule id the UI/API lane uses for "this contract does not parse",
         // because it is the same claim about the same class of artifact.
         "QFAI-CONTRACT-021",
-        `DB 契約ファイルの解析に失敗しました (${error.line} 行目): ${error.detail}`,
+        `DB 契約ファイルの解析に失敗しました (${error.line} 行目): ${SQL_PARSE_ERROR_JA[error.kind]}`,
         "error",
         file,
         "contracts.parse",

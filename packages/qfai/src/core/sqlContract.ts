@@ -120,6 +120,12 @@ export function parseSqlContract(text: string): SqlParseResult {
           detail: "block comment opened with /* is never closed",
         });
       }
+      // A comment separates tokens. Dropping it outright joined them, so
+      // `CREATE/*x*/TABLE t (…)` became `CREATETABLE` and stopped matching
+      // `CREATE_RE` — a valid statement that silently left the redefinition
+      // scan. Newlines are preserved one-for-one so reported lines stay true.
+      const spannedLines = line - openedAt;
+      current += spannedLines > 0 ? "\n".repeat(spannedLines) : " ";
       continue;
     }
 
@@ -227,7 +233,11 @@ function countNewlines(value: string): number {
 const CREATABLE_KINDS = [
   "FUNCTION",
   "PROCEDURE",
-  "TRIGGER",
+  // TRIGGER is deliberately absent. In PostgreSQL a trigger name is unique per
+  // TABLE, not per schema, so two same-named triggers on different tables are
+  // correct SQL. Keying on the name alone would report them — a false positive
+  // on valid input, which is worse than the miss. Re-add it only together with
+  // the `ON <table>` clause in the key.
   "VIEW",
   "MATERIALIZED VIEW",
   "TABLE",
@@ -316,7 +326,12 @@ export function findRedefinitions(created: CreatedObject[]): Redefinition[] {
   const byKey = new Map<string, CreatedObject[]>();
   for (const object of created) {
     const key = `${object.kind}|${object.name}|${object.signature}`;
-    byKey.set(key, [...(byKey.get(key) ?? []), object]);
+    const bucket = byKey.get(key);
+    if (bucket) {
+      bucket.push(object);
+    } else {
+      byKey.set(key, [object]);
+    }
   }
   const redefined: Redefinition[] = [];
   for (const objects of byKey.values()) {

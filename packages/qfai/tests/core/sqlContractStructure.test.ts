@@ -136,6 +136,31 @@ describe("QFAI-DB-002 — same-name redefinition inside one file", () => {
     expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
   });
 
+  // A PostgreSQL trigger name is unique per TABLE, not per schema, so two
+  // same-named triggers on different tables are correct SQL. Keying on the name
+  // alone would report them — a false positive on valid input.
+  it("does not report same-named triggers on different tables", () => {
+    const { statements } = parseSqlContract(
+      `CREATE TRIGGER touch BEFORE UPDATE ON a FOR EACH ROW EXECUTE FUNCTION f();\n` +
+        `CREATE TRIGGER touch BEFORE UPDATE ON b FOR EACH ROW EXECUTE FUNCTION f();\n`,
+    );
+    expect(findRedefinitions(collectCreatedObjects(statements))).toEqual([]);
+  });
+
+  // A comment separates tokens. Dropping it outright joined them, so this
+  // statement became `CREATETABLE` and left the redefinition scan entirely.
+  it("still sees a CREATE whose keywords are split by a block comment", () => {
+    const { statements } = parseSqlContract(
+      `CREATE/* note */TABLE t (a int);\nCREATE TABLE t (b int);\n`,
+    );
+    expect(findRedefinitions(collectCreatedObjects(statements))).toHaveLength(1);
+  });
+
+  it("keeps line numbers true across a multi-line comment", () => {
+    const { statements } = parseSqlContract(`/* one\ntwo\nthree */\nCREATE TABLE t (a int);\n`);
+    expect(statements[0]?.line).toBe(4);
+  });
+
   it("does not confuse two kinds sharing a name", () => {
     // A table and an index may legitimately share a name in some dialects; they
     // are different objects either way.
