@@ -28,21 +28,37 @@ const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const flat = (s: string): string => s.replace(/\s+/g, " ");
 
-async function roleCard(tree: string, agent: string): Promise<string> {
-  return flat(
-    await readFile(path.join(repoRoot, tree, "assistant", "agents", `${agent}.md`), "utf-8"),
-  );
+// Memoised per tree+agent: every `it` below reads the same two cards, and the
+// catalog is a ~2000-line YAML parse each time.
+const roleCardCache = new Map<string, Promise<string>>();
+
+function roleCard(tree: string, agent: string): Promise<string> {
+  const key = `${tree}|${agent}`;
+  const cached = roleCardCache.get(key);
+  if (cached) return cached;
+  const pending = readFile(
+    path.join(repoRoot, tree, "assistant", "agents", `${agent}.md`),
+    "utf-8",
+  ).then(flat);
+  roleCardCache.set(key, pending);
+  return pending;
 }
+
+const catalogCache = new Map<string, Promise<Record<string, unknown>>>();
 
 async function catalogEntry(
   tree: string,
   agent: string,
 ): Promise<{ instructions: string; tags: string[] }> {
-  const raw = await readFile(
-    path.join(repoRoot, tree, "assistant", "manifest", "agent-catalog.yml"),
-    "utf-8",
-  );
-  const parsed = parseYaml(raw) as {
+  let pending = catalogCache.get(tree);
+  if (!pending) {
+    pending = readFile(
+      path.join(repoRoot, tree, "assistant", "manifest", "agent-catalog.yml"),
+      "utf-8",
+    ).then((raw) => parseYaml(raw) as Record<string, unknown>);
+    catalogCache.set(tree, pending);
+  }
+  const parsed = (await pending) as {
     agents?: Array<{
       id?: string;
       developer_instructions?: string;

@@ -59,7 +59,7 @@ already satisfied by a sibling row, so the correct test passes first run. Then
 require `Satisfied-by`, `Falsifiability command` and `Falsifiability result`
 instead — never both forms, never neither. See
 `.qfai/assistant/skills/qfai-implement/references/red-not-observable.md` and
-`.../references/red-admissibility.md`.
+`.qfai/assistant/skills/qfai-implement/references/red-admissibility.md`.
 
 Verdict scope: a PASS covers the observation for that round and nothing else. It
 does not ratify item scope and does not clear the completion gate.
