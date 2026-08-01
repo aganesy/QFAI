@@ -78,6 +78,7 @@ This document is the SSOT for ATDD test-layer semantics and completion gates.
   - Do not create an E2E tree whose only purpose is to receive annotations.
     That is the "convert all obligations into E2E" anti-pattern below.
   - Use `QFAI:SPEC-XXXX:US-YYYY` annotations.
+
 - Integration obligations (enforced today):
   - Every `TC-*` in specs must be referenced at least once from
     `tests/integration/**`, whatever its declared `Level`. This is what
