@@ -23,6 +23,28 @@ Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes 
 - Breaking changes require delta notes.
 - `_policies/05_Contracts.md` is the contract index; it must align with `.qfai/contracts/**` and must not become behavior SSOT.
 
+## What validation checks in a `.sql` contract
+
+Scope is **apply-ability, not semantic correctness**. `.sql` used to be the only
+contract kind the validator never parsed — the "this contract does not parse" check
+guarding UI and API files was unreachable for it — so a DB contract that cannot
+run passed `npx qfai validate --profile sdd --fail-on error`. It now has a structural lane:
+
+| Finding             | Fires when                                                                    | Severity |
+| ------------------- | ----------------------------------------------------------------------------- | -------- |
+| `QFAI-CONTRACT-021` | an unterminated string, comment or dollar-quoted body, or unbalanced `(`      | error    |
+| `QFAI-DB-002`       | one file creates the same object twice — only the last definition is in force | error    |
+| `QFAI-DB-001`       | a dangerous statement (`DROP TABLE`, `TRUNCATE`, …)                           | warning  |
+
+The statement splitter honours SQL quoting, so a `;` inside a literal, a
+comment, a `$$ … $$` body or parentheses does not end a statement.
+
+**Not checked**: nothing here type-checks a query, resolves a column, or
+verifies the schema against the API contract. A green run means the file could
+be handed to a database and does not contradict itself about what it defines —
+it does not mean the schema is right. Cross-contract agreement remains the
+authoring obligation below.
+
 ## Cross-contract Reconciliation (MUST)
 
 Contracts are validated per file; agreement _between_ contracts is an authoring obligation.

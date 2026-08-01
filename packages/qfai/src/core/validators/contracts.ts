@@ -11,6 +11,7 @@ import {
   collectDbContractFiles,
   collectUiContractFiles,
 } from "../discovery.js";
+import { collectCreatedObjects, findRedefinitions, parseSqlContract } from "../sqlContract.js";
 import type { Issue } from "../types.js";
 import { validateContractConsistency } from "./contractConsistency.js";
 import { issue } from "./utils.js";
@@ -100,6 +101,12 @@ async function validateContractFile(file: string, kind: ContractKind): Promise<I
 
   if (kind === "DB") {
     issues.push(...lintSql(text, file));
+    // A `.sql` contract used to return here, which is what made it the only
+    // contract kind qfai never parsed — the `QFAI-CONTRACT-021` block below is
+    // unreachable from this branch. DB gets its own structural lane instead of
+    // no lane at all: the executable contract kind is now held to the same
+    // "does it parse" bar as the declarative ones.
+    issues.push(...validateSqlStructure(text, file));
     return issues;
   }
 
@@ -124,6 +131,53 @@ async function validateContractFile(file: string, kind: ContractKind): Promise<I
         "error",
         file,
         "contracts.parse",
+      ),
+    );
+  }
+
+  return issues;
+}
+
+/**
+ * The structural lane for `.sql` contracts.
+ *
+ * Scope is **apply-ability, not semantic correctness**: whether the file could
+ * be handed to a database at all, and whether it contradicts itself about what
+ * it defines. It does not type-check a query or resolve a column, and the
+ * shipped catalog note says so, so the gate's promise stays honest.
+ */
+export function validateSqlStructure(text: string, file: string): Issue[] {
+  const issues: Issue[] = [];
+  const { statements, errors } = parseSqlContract(text);
+
+  for (const error of errors) {
+    issues.push(
+      issue(
+        // Same rule id the UI/API lane uses for "this contract does not parse",
+        // because it is the same claim about the same class of artifact.
+        "QFAI-CONTRACT-021",
+        `DB 契約ファイルの解析に失敗しました (${error.line} 行目): ${error.detail}`,
+        "error",
+        file,
+        "contracts.parse",
+        undefined,
+        "change",
+        "未終端の文字列 / コメント / ドル引用符、または閉じられていない括弧を修正してください。",
+      ),
+    );
+  }
+
+  for (const redefinition of findRedefinitions(collectCreatedObjects(statements))) {
+    issues.push(
+      issue(
+        "QFAI-DB-002",
+        `${redefinition.kind} "${redefinition.name}" は同一ファイル内で ${redefinition.lines.length} 回定義されています (${redefinition.lines.join(", ")} 行目)。最後の定義だけが有効になるため、それ以前の定義は適用後の契約と食い違います`,
+        "error",
+        file,
+        "contracts.db.redefinition",
+        [redefinition.name],
+        "change",
+        "重複した CREATE を1つに統合するか、意図的に別オブジェクトである場合は名前を分けてください。",
       ),
     );
   }
