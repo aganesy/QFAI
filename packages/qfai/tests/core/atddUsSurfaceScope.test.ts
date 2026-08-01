@@ -52,7 +52,9 @@ describe("QFAI-ATDD-111 is scoped by surface type", () => {
       ]);
 
       const refs = missingUsRefs(await validateAtddCodeTraceability(root, defaultConfig));
-      expect(refs.some((ref) => ref.includes("0001"))).toBe(true);
+      // Spec-qualified: a bare "0001" also matches `US-0001`, which both specs
+      // carry, so the positive check could pass on the wrong spec's ref.
+      expect(refs.some((ref) => ref.includes("SPEC-0001"))).toBe(true);
       expect(refs.some((ref) => ref.includes("SPEC-0002"))).toBe(false);
     });
   });
@@ -125,7 +127,15 @@ describe("QFAI-ATDD-111 is scoped by surface type", () => {
       // "全 US" would send the operator to annotate the exempted non-UI specs
       // too, re-introducing the annotation-only E2E tree this scope prevents.
       expect(finding?.suggested_action ?? "").not.toContain("全 US");
-      expect(finding?.suggested_action ?? "").toContain("user-facing surface を宣言した spec のみ");
+      // Conditional, because the scoping is opt-in: an unconditional
+      // "user-facing specs only" is wrong for a project where no spec declares
+      // a surface, which is exactly where the obligation stays project-wide.
+      expect(finding?.suggested_action ?? "").toContain(
+        "surface typing を宣言している場合、対象は user-facing surface の spec のみです",
+      );
+      expect(finding?.suggested_action ?? "").toContain(
+        "どの spec も宣言していない場合は全 spec が対象のままです",
+      );
     });
   });
 

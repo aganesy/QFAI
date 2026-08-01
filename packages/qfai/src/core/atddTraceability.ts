@@ -286,7 +286,16 @@ async function resolveUiBearingScope(
   try {
     const uiBearing = await resolveSurfaceUnion(root, config);
     return uiBearing.length === 0 ? null : new Set(uiBearing);
-  } catch {
+  } catch (error) {
+    // `null` is also the "no spec declared a surface" path, so a swallowed
+    // failure here is indistinguishable from a project that simply never opted
+    // in — and the only visible effect is that the gate stayed project-wide.
+    // Named on stderr so the reason is recoverable; the return value is
+    // unchanged, keeping the gate at its stricter setting either way.
+    process.stderr.write(
+      `qfai: surface-type resolution failed; QFAI-ATDD-111 stays project-wide ` +
+        `(${error instanceof Error ? error.message : String(error)})\n`,
+    );
     return null;
   }
 }

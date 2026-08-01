@@ -550,7 +550,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-ATDD-103":
     "CON-API annotations in test code must reference declared API contracts (`QFAI:CON-API-XXXX`).",
   "QFAI-ATDD-111":
-    "Every US in a user-facing spec must be referenced at least once from tests/e2e/**.",
+    "Every US must be referenced at least once from tests/e2e/**. Scoped to user-facing specs when any spec declares a surface type; project-wide otherwise.",
   "QFAI-ATDD-112": "Every TC must be referenced at least once from tests/integration/**.",
   "QFAI-ATDD-113": "Every declared CON-API must be referenced at least once from tests/api/**.",
   "QFAI-ATDD-121": "tests/api/** must not include TC annotations (`QFAI:SPEC-XXXX:TC-YYYY`).",
