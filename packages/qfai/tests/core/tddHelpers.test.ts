@@ -94,7 +94,8 @@ describe("isCoverageTargetLevel", () => {
   });
 
   it("still conservatively includes a genuinely unrecognized value", () => {
-    expect(isCoverageTargetLevel("smoke")).toBe(true);  });
+    expect(isCoverageTargetLevel("smoke")).toBe(true);
+  });
 
   it("treats empty string as coverage target", () => {
     expect(isCoverageTargetLevel("")).toBe(true);
