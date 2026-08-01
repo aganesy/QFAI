@@ -47,6 +47,30 @@ as a coverage error about a TC the author did cover.
 Coverage measurement is otherwise unaffected: it reads `TC-*` tokens only, so
 non-TC obligation IDs are inert to it by design.
 
+## Evidence cell rules (enforced)
+
+`Evidence` is checked as content, not only as a header name. On a row whose
+`Status` is `green`, `refactor`, `review-fix` or `done` — the statuses that
+assert a cycle has run:
+
+| Finding                        | Fires when                                                          | Severity |
+| ------------------------------ | ------------------------------------------------------------------- | -------- |
+| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`)             | error    |
+| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command | error    |
+
+A command is recognised by shape, not from a list of known runners, so the rule
+holds on any stack: a program name followed by an argument carrying a flag, a
+path, a selector or an assignment. Backticked commands and the common runners
+are accepted directly.
+
+Rows at `todo`, `red` and `exception` are not checked — the first two have
+nothing to show yet, and a parked row records its reason in `DR-ID`, which
+`TDDLIST_EXCEPTION_MISSING_DR` gates.
+
+Freshness is **not** gated: the ledger records no run identity, so no validator
+can distinguish a fresh command+result pair from a copied one. That rule stays
+with the routed reviewer (`qfai-implement/SKILL.md` "Evidence hard rules").
+
 ## Selector granularity (MUST)
 
 `Selector` is **not** restricted to a single test function: a row may own several entries, written

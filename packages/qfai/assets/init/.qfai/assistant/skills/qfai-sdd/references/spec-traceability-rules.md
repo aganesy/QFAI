@@ -182,6 +182,10 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   identity constraint.
 - `TDD-ID` must match `TDD-NNNN` and be unique within the spec.
 - Missing `tdd/test-list.md` is a warning; missing DR-ID/Evidence columns is an error.
+- The `Evidence` **cell** is checked too, not only the header: on a row at
+  `green` / `refactor` / `review-fix` / `done`, an empty-or-dash cell is
+  `TDDLIST_EVIDENCE_EMPTY` and a verdict with no command is
+  `TDDLIST_EVIDENCE_STATUS_ONLY`, both at `error`.
 
 ## Traceability Ledger (`16_Traceability-ledger.md`)
 
