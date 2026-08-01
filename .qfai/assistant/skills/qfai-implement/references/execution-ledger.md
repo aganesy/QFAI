@@ -80,12 +80,16 @@ which can hold what they ask for.
 
 When a cell must contain either character, encode it with
 `specPackParsers.ts#escapeTableCell` — the exported encoder the parser inverts.
+The left column is the character **in the value you want the cell to hold**;
+the right column is what is **written into the row**. Both are shown as HTML
+entities, because a literal pipe in this table would split its own row.
+
 Exactly two rules:
 
-| Input          | Written as     |
-| -------------- | -------------- |
-| `\|`           | `\\\|`         |
-| CR / LF / CRLF | a single space |
+| Character in the value | Written into the cell |
+| ---------------------- | --------------------- |
+| a pipe (&#124;)        | &#92;&#124;           |
+| CR / LF / CRLF         | a single space        |
 
 A literal `\` is **not** escaped: the parser passes it through unchanged, so
 doubling it would corrupt Windows paths and regex literals while keeping the

@@ -56,6 +56,10 @@ describe.each(TREES)("%s", (tree) => {
     expect(ledger).toContain("Evidence cell encoding");
     expect(ledger).toContain("specPackParsers.ts#escapeTableCell");
     expect(ledger).toContain("CR / LF / CRLF | a single space");
+    // The direction must be value -> cell, not cell -> value: an inverted table
+    // teaches the reader to add a backslash that the parser then strips.
+    expect(ledger).toContain("the character **in the value you want the cell to hold**");
+    expect(ledger).toContain("| a pipe (&#124;) | &#92;&#124; |");
   });
 
   it("restates the completion gate against the anchor, not the cell", async () => {
