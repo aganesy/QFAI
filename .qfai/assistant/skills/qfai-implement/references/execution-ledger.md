@@ -143,7 +143,7 @@ is a protocol violation — while the `exception` transition itself is an ordina
 inline step of Phase Red that `TDDLIST_EXCEPTION_MISSING_DR` blocks at `error`
 without a `DR-*`. `.qfai/decisions/` is the one home that satisfies both: the
 protocol whitelists **creating** a record there
-(`drift-protocol.md#allowed-exceptions`), and the managed `.gitignore` block
+(`drift-protocol.md#allowed-exceptions-minimal-whitelist`), and the managed `.gitignore` block
 already tracks it as a governance record.
 
 The upstream cross-reference is a separate, later write. If the anomaly turns
