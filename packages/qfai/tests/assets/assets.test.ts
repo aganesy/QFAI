@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import { runInit } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
-import { SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
+import { countLines, LINE_BUDGET_EXEMPT, SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
@@ -1364,18 +1364,52 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
   });
 
-  it("keeps canonical SKILL.md files compact enough for progressive disclosure", async () => {
-    // One ceiling for every skill (see SKILL_MD_MAX_LINES). The per-skill
+  it("keeps every shipped assistant asset inside the line ceiling", async () => {
+    // One ceiling for every file (see SKILL_MD_MAX_LINES). The per-skill
     // numbers this replaced disagreed with each other about the same file and
     // had to be raised one at a time; the ceiling is a backstop, and the design
     // rule is that detail lives in the skill's references/ topic files.
-    const skillIds = ["qfai-sdd", "qfai-discussion", "qfai-prototyping", "qfai-implement"] as const;
+    //
+    // Globbed, not a hardcoded skill list: the previous version named four
+    // skill IDs and only checked SKILL.md, so `qfai-verify/SKILL.md` reached
+    // 596 lines without failing anything, and no reference/template file was
+    // covered at all — which is where a thin SKILL.md moves its bulk.
+    const assetFiles = await fg(["assistant/**/*.{md,yml,yaml}"], {
+      cwd: templateQfaiDir,
+      absolute: false,
+    });
+    expect(assetFiles.length, "no shipped assets matched — the glob is wrong").toBeGreaterThan(50);
 
-    for (const skillId of skillIds) {
-      const skillPath = path.join(templateQfaiDir, "assistant", "skills", skillId, "SKILL.md");
-      const content = await readFile(skillPath, "utf-8");
-      const lineCount = content.split(/\r?\n/).length;
-      expect(lineCount, `${skillId}/SKILL.md`).toBeLessThanOrEqual(SKILL_MD_MAX_LINES);
+    const oversized: string[] = [];
+    for (const relativePath of assetFiles.sort()) {
+      if (LINE_BUDGET_EXEMPT.has(relativePath)) {
+        continue;
+      }
+      const content = await readFile(path.join(templateQfaiDir, relativePath), "utf-8");
+      const lineCount = countLines(content);
+      if (lineCount > SKILL_MD_MAX_LINES) {
+        oversized.push(`${relativePath} (${lineCount})`);
+      }
+    }
+
+    // Reported together: fixing them one failure at a time hides how much of
+    // the surface is over budget.
+    expect(oversized, `over ${SKILL_MD_MAX_LINES} lines — move a topic into references/`).toEqual(
+      [],
+    );
+  });
+
+  it("justifies every line-budget exemption and keeps it live", async () => {
+    // An exemption that no longer matches a shipped file is a stale licence:
+    // it would silently cover a future file that happens to take the path.
+    for (const [relativePath, reason] of LINE_BUDGET_EXEMPT) {
+      expect(
+        existsSync(path.join(templateQfaiDir, relativePath)),
+        `exempt path does not exist: ${relativePath}`,
+      ).toBe(true);
+      expect(reason.length, `exemption for ${relativePath} has no stated reason`).toBeGreaterThan(
+        40,
+      );
     }
   });
 

@@ -66,52 +66,15 @@ When unsure, read inputs in this order:
 
 ## Verify Output Contract — `.qfai/output/verify.json`
 
-`/qfai-verify` MUST write `.qfai/output/verify.json` at the end of the run. This file is the machine-readable verdict; `.qfai/evidence/verify-<spec-id>.md` remains the human-readable evidence and does not replace it. Two independent readers consume it — `npx qfai prototyping certify` and the `R-CERTIFY-VERIFY-CIRCULAR` validator. Only `certify` fails closed: it refuses to seal a certificate when the file is missing, unparseable, or not `status: "PASS"` with `scope: "prototyping"`. The validator is advisory in the other direction — a missing, unparseable, scope-less or unknown-scope `verify.json` produces no finding (`reviewerGate.ts#detectCertifyVerifyCircular`), because its job is to catch a _wrong-phase_ verdict, not to demand that one exist. So an absent `verify.json` will not fail `npx qfai validate`; it will stop `certify`.
+`/qfai-verify` MUST write `.qfai/output/verify.json` at the end of the run: it is
+the machine-readable verdict, and `.qfai/evidence/verify-<spec-id>.md` does not
+replace it. `status` is `"PASS"` only when every gate in scope passed, and
+`scope` names the stage this run actually covered — never a stage you did not
+run.
 
-Canonical path: `.qfai/output/verify.json` (NOT `.qfai/evidence/`). Create the `.qfai/output/` directory if absent.
-
-| Field        | Type             | Required | Meaning                                                                                                                                                                                                                                    |
-| ------------ | ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `status`     | string           | yes      | `"PASS"` when every gate in scope passed; `"FAIL"` otherwise. Only `"PASS"` satisfies a downstream gate.                                                                                                                                   |
-| `scope`      | string           | yes\*    | Which stage's gate set this run covers. See the enum below. \*Required on every new run. `certify` still accepts a file written before this field existed, so a reader MUST treat absence as "legacy file", never as a licence to omit it. |
-| `specId`     | string           | no       | The spec this run targeted, when scoped to one (e.g. `"spec-0001"`).                                                                                                                                                                       |
-| `recordedAt` | ISO-8601 string  | no       | When the run completed.                                                                                                                                                                                                                    |
-| `summary`    | string           | no       | One or two sentences an operator can read without opening the evidence markdown.                                                                                                                                                           |
-| `gates`      | array of objects | no       | Per-gate results: `{ name, status, command }`. Advisory; no reader gates on it today.                                                                                                                                                      |
-
-`status` is a closed two-value enum: `"PASS"` / `"FAIL"`. There is no `"WARN"` — a run with only `warning` / `info` findings is `"PASS"` (waivers apply to those severities only). Any `error` finding makes it `"FAIL"`.
-
-`scope` is a closed enum. Write the one that matches the stage you were invoked for:
-
-| `scope`       | Written by                                                                          | validate profile                                | Accepted by                                                                                          |
-| ------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `prototyping` | Work Order H of `/qfai-prototyping`, before `certify`                               | `npx qfai validate --profile prototyping`       | `npx qfai prototyping certify` — this is the ONLY value it accepts                                   |
-| `atdd`        | after `/qfai-atdd`, checking ATDD obligations only                                  | `npx qfai validate --profile atdd`              | rejected by prototyping certify; `R-CERTIFY-VERIFY-CIRCULAR` when a prototyping loop is still active |
-| `full`        | any whole-repository run, including the one after `/qfai-atdd` or `/qfai-implement` | `npx qfai validate --profile verify` (= `full`) | same as `atdd`                                                                                       |
-
-There is no `implement` value: the enum is closed at these three, and a run after
-`/qfai-implement` is recorded as `full`. (`reviewerGate.ts` still recognises a
-legacy `implement` string so an old file is not silently treated as
-prototyping-scoped, but nothing accepts it as a verdict — do not write it.)
-
-Minimal conforming example for the prototyping gate:
-
-```json
-{
-  "status": "PASS",
-  "scope": "prototyping",
-  "specId": "spec-0001",
-  "recordedAt": "2026-01-31T09:12:44Z",
-  "summary": "Prototyping gates passed: validate --profile prototyping error=0, per-iter evidence present for all declared screens, reviewer gate PASS."
-}
-```
-
-Rules:
-
-- Never write `"status": "PASS"` without the command outputs that justify it. A `FAIL` verdict is a legitimate output — the gate downstream is supposed to stop.
-- Never write a `scope` you did not actually run. Writing `"prototyping"` after a `full` run is a false verdict, not a workaround — and the reverse is just as wrong: a `--profile verify` run is `scope: "full"`, not `scope: "atdd"`, because `atdd` means the ATDD gate set only (see `_policies/06_Glossary.md`, `verify.json#scope`).
-- `scope` is marked `yes\*` in the table above for exactly one reason: `certify` tolerates its absence in a file written before the field existed. That is a read-side allowance for legacy artifacts, not a write-side option — a new run that omits it is producing a malformed `verify.json`, and no reader should be built assuming the field may be missing.
-- Do not add a `version` / `schemaVersion` field. No reader validates one, and a second version series in a distributed artifact is exactly what the distributed-surface rule forbids: the npm package version is the only version this surface has.
+The field table, the closed `scope` enum, the conforming example and the rules
+on what must never be written are in `references/verify-output-contract.md`.
+Read it before writing the file.
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -225,28 +188,15 @@ Run quality gates and produce evidence that the change is correct and safe.
 
 ## Non‑Negotiable Principles (QFAI Articles)
 
-These principles are inspired by “constitution / articles” patterns used by other agent frameworks, but tailored to QFAI.
+Seven articles bind every run: spec is authoritative over code, traceability is
+mandatory, evidence beats confidence, scope stays minimal but gaps stay visible,
+outputs are runnable, and only truly blocking questions reach the user.
 
-1. **SDD First (Specification is the source of truth)**  
-   If there is a conflict between code and spec, treat the spec as authoritative and either (a) fix code or (b) raise an explicit Open Question to change the spec.
+Quality gates are the decision mechanism — tests, lint, typecheck, build and
+pack verification, whatever the repo defines. Fix until PASS.
 
-2. **Traceability is mandatory**  
-   Every meaningful change must be traceable: **Require → Spec → Scenario → Tests → Code → Verification evidence**.
-
-3. **Evidence over confidence**  
-   Prefer observable proof (logs, commands, file diffs, test results). If you cannot verify, say so and record it.
-
-4. **Minimize scope, but never hide gaps**  
-   Keep changes minimal, but do not “paper over” missing decisions. If something blocks correctness, stop and ask.
-
-5. **Quality gates are the decision mechanism**  
-   Use tests/lint/typecheck/build/pack verification (whatever the repo defines) as the primary guardrail. Fix until PASS.
-
-6. **Make it runnable**  
-   Outputs must be executable in terminal/CI. Provide copy‑paste commands.
-
-7. **User time is expensive**  
-   Ask only the questions that are truly blocking. Everything else: make reasonable assumptions and label them clearly.
+The articles are stated in full, with what each one forbids, in
+`references/articles.md`.
 
 ## README Rule
 
@@ -311,26 +261,12 @@ Every 5 major actions, pause and restate:
 
 ## Step 0 — Load Context (always)
 
-1. Read relevant **project steering** (if present):
-   - `.qfai/assistant/catalog/structure.md`
-   - `.qfai/assistant/catalog/tech.md`
-   - `.qfai/assistant/catalog/product.md`
-   - any additional files under `.qfai/assistant/{manifest,catalog}/`
+Read the project steering, the constitution, the artifacts for the current work
+item, and the repo's own conventions before anything else. The file-by-file
+reading list is in `references/context-load.md`.
 
-2. Read **project constitution / instructions** (if present):
-   - `.qfai/assistant/constitution/constitution.md`
-   - `.qfai/assistant/constitution/workflow.md` (or equivalent)
-
-3. Read existing artifacts for the current work item (if present):
-   - `.qfai/specs/spec-*/`
-   - `.qfai/contracts/`
-   - `.qfai/evidence/`
-
-Do not use discussion-pack artifacts as verification inputs. Verify reads normalized specs, contracts, and evidence only.
-
-4. Inspect repo conventions:
-   - package manager (pnpm/npm/yarn), test runner, lint/typecheck scripts, CI definitions
-   - existing test patterns (unit/integration/e2e)
+Do not use discussion-pack artifacts as verification inputs. Verify reads
+normalized specs, contracts, and evidence only.
 
 ## Step 0 — Project Analysis (mandatory)
 
@@ -445,56 +381,15 @@ Output this format:
 
 ## Evidence (MANDATORY)
 
-Create and update: `.qfai/evidence/verify-<spec-id>.md`
-
-Evidence must include:
+Create and update `.qfai/evidence/verify-<spec-id>.md`. Evidence must include:
 
 - command list + pass/fail + next actions
 
-### Required sections
+Never a status-only claim.
 
-- Objective
-- Inputs reviewed (files/paths)
-- Decisions made (with rationale)
-- Work performed (what changed, where)
-- Commands executed + key outputs
-- Gaps / Open risks (must be explicit; "none" is acceptable if justified)
-- Final status (PASS/FAIL) + who confirmed
-
-### Template
-
-```md
-# Verify Evidence: <spec-id>
-
-## Objective
-
-## Inputs reviewed (files/paths)
-
-## Decisions made (with rationale)
-
-## Work performed (what changed, where)
-
-## Commands executed + key outputs
-
-- command:
-- result:
-
-## QFAI gates
-
-- command:
-- result:
-
-## Repo gates
-
-- command:
-- result:
-
-## Next actions (if any)
-
-## Gaps / Open risks
-
-## Final status (PASS/FAIL) + who confirmed
-```
+The required section list and the copy/paste skeleton are in
+`templates/verify-evidence.md`. Every section is required; "none" with a
+justification is an acceptable value, deleting the heading is not.
 
 ## Completion Criteria (Final Gate)
 
