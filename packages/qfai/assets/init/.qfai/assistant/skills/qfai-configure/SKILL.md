@@ -52,7 +52,7 @@ When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/constitution/*`
 - P2: `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`
-- P3: `.qfai/specs/<spec-id>/09_delta.md` (Decision Records; if no spec yet, state "not applicable")
+- P3: `.qfai/specs/<spec-id>/07_Decisions.md` + `.qfai/specs/_policies/08_Decisions.md` (Decision Records, `DR-*`; if no spec yet, state "not applicable")
 - P4: other artifacts (01_Spec.md, contracts, evidence, optional legacy `scenario.feature` / coverage ledgers)
 
 ## Sub-agent Delegation (MANDATORY)
