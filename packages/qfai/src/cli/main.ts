@@ -44,6 +44,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.profile ? { profile: options.profile } : {}),
           ...(options.failOn !== undefined ? { failOn: options.failOn } : {}),
           ...(options.platform ? { platform: options.platform } : {}),
+          ...(options.validateSpecIds.length > 0 ? { specIds: options.validateSpecIds } : {}),
         });
       }
       return;
@@ -337,6 +338,8 @@ Options:
   --clean                       doctor: TTL 超過 review pack を _archive/ へ退避 (--dry-run 併用可)
   --autoremediate               doctor: install + clean + config-fill をまとめて実行
   --spec <id>                   atdd scaffold: 対象 spec (例: spec-0006)
+  --spec <id>                   validate: 対象 spec に限定 (複数指定可; 例: --spec 0003 --spec spec-0004)
+                                 指定 spec 外の spec-owned findings と specs-coverage レポート出力を除外する
   -h, --help      ヘルプ表示
 `;
 }

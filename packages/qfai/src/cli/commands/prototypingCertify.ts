@@ -37,6 +37,11 @@ import { isEnoent } from "../../core/fs/errno.js";
 import { resolvePrototypingIterationViews } from "../../core/prototyping/modeRead.js";
 import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
 import {
+  readVerifyJson,
+  VERIFY_JSON_LEGACY_REL,
+  VERIFY_JSON_REL,
+} from "../../core/prototyping/verifyJson.js";
+import {
   buildCompletionCertificate,
   checkCompletionCertificate,
   COMPLETION_CERTIFICATE_REL_PATH,
@@ -289,12 +294,43 @@ export async function runPrototypingCertify(
     return 2;
   }
 
-  const verifyJsonPath = path.join(options.root, ".qfai/output/verify.json");
-  const verifyJson = await loadJson(verifyJsonPath);
-  const verifyStatus = extractString(verifyJson, "status");
+  // Canonical `.qfai/report/verify.json` first, legacy `.qfai/output/` as a
+  // fallback — the same shape `validate.json` and the saas-package gates
+  // signal already use in this file.
+  const verifyRead = await readVerifyJson(options.root);
+  if (verifyRead.source === "unreadable") {
+    // A gate file that exists but cannot be parsed is a broken gate, not an
+    // absent one. Certifying from the other location here would mean issuing a
+    // certificate off a stale result while the real one was never readable.
+    error(
+      `qfai prototyping certify: ${verifyRead.rel} exists but is not a usable verify ` +
+        `result (${verifyRead.error ?? "unknown error"}). Fix or remove the file and ` +
+        "re-run `/qfai-verify`; certify does not fall back to another location while " +
+        "this one is broken.",
+    );
+    return 2;
+  }
+  if (verifyRead.source === "legacy") {
+    error(
+      `qfai prototyping certify: read ${VERIFY_JSON_LEGACY_REL} (legacy). ` +
+        `Move it to ${VERIFY_JSON_REL}; the legacy location will stop being read.`,
+    );
+  }
+  // A missing file is not a failing verify. Without this branch the run fell
+  // through to the `status must be PASS` message below, which sends the
+  // operator to look at a status in a file that does not exist.
+  if (verifyRead.source === "missing") {
+    error(
+      `qfai prototyping certify: ${VERIFY_JSON_REL} is missing ` +
+        `(${VERIFY_JSON_LEGACY_REL} was not there either). ` +
+        "Run `/qfai-verify` with the prototyping scope to produce it, then re-run certify.",
+    );
+    return 2;
+  }
+  const verifyStatus = extractString(verifyRead.json, "status");
   if (verifyStatus !== "PASS") {
     error(
-      "qfai prototyping certify: verify.json status must be PASS " +
+      `qfai prototyping certify: ${verifyRead.rel} status must be PASS ` +
         "(run `/qfai-verify` and ensure it reports PASS).",
     );
     return 2;
@@ -310,10 +346,10 @@ export async function runPrototypingCertify(
   // (R-CERTIFY-VERIFY-CIRCULAR); this CLI-side gate keeps the certify
   // command self-contained instead of relying on a downstream validate
   // pass to surface the same condition.
-  const verifyScope = extractString(verifyJson, "scope");
+  const verifyScope = extractString(verifyRead.json, "scope");
   if (verifyScope !== undefined && verifyScope !== "prototyping") {
     error(
-      `qfai prototyping certify: verify.json scope is "${verifyScope}" but the ` +
+      `qfai prototyping certify: ${verifyRead.rel} scope is "${verifyScope}" but the ` +
         'prototyping certify gate accepts only scope="prototyping". ' +
         "Re-run `/qfai-verify` with the prototyping scope before certification " +
         "(ATDD / implement / full scopes are forbidden by the option-B phase-isolation contract).",
@@ -426,6 +462,48 @@ export async function runPrototypingCertify(
           `  - ${m.screenId} (expected ${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/${m.screenId}.html)`,
         );
       }
+      // Name the authoring artifact explicitly. The paths above are
+      // CAPTURE OUTPUT, not what the generator authors — an operator
+      // whose `.qfai/prototypes/iter-NN/index.html` is complete
+      // otherwise reads this as "my prototype is missing screens",
+      // when the real cause is that the capture step never ran or
+      // could not reach those routes.
+      error(
+        `  These are capture outputs, not authored files. The generator writes ` +
+          `.qfai/prototypes/${acceptedIterDir}/index.html; ` +
+          "`qfai prototyping iterate --capture` is what fans that out to one " +
+          `${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/<screenId>.html per declared screen.`,
+      );
+      // Recovery must be reachable. Re-invoking the accepted cycle with
+      // `--capture` is NOT: the iteration is already recorded, so
+      // `evaluateCycleGteOneGate` rejects it with "expected --cycle
+      // <iterations.length>" before capture runs, and cycle 0 refuses an
+      // existing iter-00 without `--force`. There is no capture-only
+      // entry point today, so the two routes below are the ones an
+      // operator can actually execute.
+      error(
+        "  Recovery: first make each missing screen's contract route reachable from the " +
+          "capture target (the built-in --auto-serve server is a static file server and 404s " +
+          "path routes; use hash routes or point --target-url at a server with SPA fallback). " +
+          "Then re-run the loop from cycle 0. Re-invoking the accepted cycle with --capture " +
+          "will not work: that iteration is already recorded in prototyping.json#iterations, " +
+          "so iterate exits first on the expected-next-cycle gate. If a listed screen is no " +
+          "longer part of the product, delete it from .qfai/contracts/ui/ AND still re-run the " +
+          "loop from cycle 0 — deleting alone is not a shortcut past this gate. certify " +
+          "recomputes the declared-screen set from the contracts on every run, so a bare " +
+          "deletion silently drops that screen's HTML and per-spec review.json checks while " +
+          "the already-recorded validate.json, verify.json and reviewerGate results — produced " +
+          "against the old scope — are re-used as they are, sealing a certificate whose " +
+          "evidence never covered the screen you were experimenting on.",
+      );
+      error(
+        "  The cycle-0 re-run is DESTRUCTIVE, and --force does not make it safe: it renames " +
+          "only iter-00 to iter-00.backup-<ISO>. Everything else in " +
+          `${PROTOTYPING_EVIDENCE_REL}/ is then reset — iter-01 and up are deleted outright, ` +
+          "and prototyping.json#iterations / #reviewerGate are cleared. Copy the whole " +
+          `${PROTOTYPING_EVIDENCE_REL}/ directory somewhere safe first if the earlier ` +
+          "iterations still matter.",
+      );
       return 2;
     }
   }

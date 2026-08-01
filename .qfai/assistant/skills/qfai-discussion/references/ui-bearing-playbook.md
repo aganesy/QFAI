@@ -39,7 +39,7 @@ the screen-level UX inputs:
 
 Trend Scan is **not** a sidecar file. Trend Scan lives at
 `04_Sources.md#Trend Scan` (part of the core 15-file discussion pack).
-The legacy `uiux/20_trend_scan.md` template was removed; `uiux/20_design_eval_invariant.md`
-is a different axis family (design evaluation invariant criteria) and does
-not own Trend Scan content. UI-bearing completion checks read Trend Scan
-from `04_Sources.md`.
+The legacy `uiux/20_trend_scan.md` template and the whole `uiux/20-24`
+design-evaluation family were removed; evaluation axes are now global
+constants and are not authored as discussion sidecars. UI-bearing
+completion checks read Trend Scan from `04_Sources.md`.

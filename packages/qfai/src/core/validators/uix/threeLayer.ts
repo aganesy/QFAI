@@ -48,7 +48,15 @@ const CANONICAL_REQUIRED_SIDECAR_FILES = [
   "50_review_input_bundle.md",
 ] as const;
 
-const FORBIDDEN_LEGACY_PATTERNS = [
+/**
+ * Sidecar filenames `qfai validate` rejects under `uiux/`.
+ *
+ * Exported so the shipped-template sweep in
+ * `tests/integration/discussionSkillTemplateIntegration.test.ts` can check its
+ * representative filenames against this list rather than keeping a second,
+ * hand-maintained copy that silently falls behind.
+ */
+export const FORBIDDEN_LEGACY_PATTERNS = [
   /^30_.*comparison.*\.md$/i,
   /^31_.*anchor.*\.md$/i,
   // 33_exploration_rubric.md / 34_evaluator_calibration.md were retired
