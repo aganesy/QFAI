@@ -9,6 +9,13 @@
  * Level values that ARE TDD coverage targets, in every spelling the shipped
  * artifacts use. `06_Test-Cases.md` writes `L1`…`L5`; the ledger schema and
  * the layer catalog write words. Both must classify identically.
+ *
+ * **Membership is lower-case only.** The artifacts write `L1` and `Unit`, but
+ * the entries here are the normalized forms, so a caller MUST apply
+ * `.trim().toLowerCase()` before `has()` — `UNIT_COMPONENT_LAYERS.has("L1")` is
+ * `false`. Use {@link classifyCoverageLevel} or {@link isCoverageTargetLevel},
+ * which normalize for you; reach for the raw set only to enumerate the
+ * vocabulary.
  */
 export const UNIT_COMPONENT_LAYERS = new Set(["unit", "component", "l1", "l2"]);
 
@@ -21,6 +28,9 @@ export const UNIT_COMPONENT_LAYERS = new Set(["unit", "component", "l1", "l2"]);
  * `Level: L4` TC is unknown here, so `--profile full` counted it as a TDD
  * obligation and raised `TDDLIST_TC_NOT_COVERED` even when the TC carried its
  * correct `tests/api/**` annotation.
+ *
+ * **Membership is lower-case only**, on the same terms as
+ * {@link UNIT_COMPONENT_LAYERS}: `NON_COVERAGE_LAYERS.has("L3")` is `false`.
  */
 export const NON_COVERAGE_LAYERS = new Set([
   "integration",

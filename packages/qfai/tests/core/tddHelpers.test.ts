@@ -93,6 +93,15 @@ describe("isCoverageTargetLevel", () => {
     }
   });
 
+  it("excludes the word spelling the crosswalk pairs with each of L3-L5", () => {
+    // The crosswalk's other column: `tdd/test-list.md#Layer` writes the word,
+    // and both spellings must classify identically or the same layer is a
+    // coverage target in one artifact and not the other.
+    for (const level of ["integration", "api", "e2e"]) {
+      expect(isCoverageTargetLevel(level)).toBe(false);
+    }
+  });
+
   it("still conservatively includes a genuinely unrecognized value", () => {
     expect(isCoverageTargetLevel("smoke")).toBe(true);
   });
