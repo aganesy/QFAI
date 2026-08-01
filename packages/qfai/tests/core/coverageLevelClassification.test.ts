@@ -73,8 +73,9 @@ describe("TDDLIST_TC_NOT_COVERED respects the shipped Level vocabulary", () => {
       ]),
       (issues) => {
         const missing = issues.filter((entry) => entry.code === "TDDLIST_TC_NOT_COVERED");
-        expect(missing.flatMap((entry) => entry.message)).not.toContain("TC-0002");
-        expect(missing).toHaveLength(0);
+        // No finding at all is the claim; naming TC-0002 in the failure output
+        // is what makes a regression readable.
+        expect(missing.map((entry) => entry.message)).toEqual([]);
       },
     );
   });
@@ -99,7 +100,15 @@ describe("TDDLIST_TC_NOT_COVERED respects the shipped Level vocabulary", () => {
         const finding = issues.find((entry) => entry.code === "TDDLIST_UNKNOWN_LEVEL");
         expect(finding?.severity).toBe("warning");
         expect(finding?.refs).toEqual(["smoke"]);
-        expect(finding?.message).toContain("Accepted:");
+        // The accepted vocabulary is rendered in the spelling the shipped
+        // template uses (`L1`, not the lowercased internal `l1`) and is split
+        // into the two groups, since "accepted" alone does not say which
+        // values make a TC a mandatory ledger row.
+        expect(finding?.message).toContain("Accepted — coverage targets: L1, L2, component, unit;");
+        expect(finding?.message).toContain(
+          "non-coverage: L3, L4, L5, acceptance, api, e2e, integration, system",
+        );
+        expect(finding?.message).not.toMatch(/\bl1\b/);
       },
     );
   });

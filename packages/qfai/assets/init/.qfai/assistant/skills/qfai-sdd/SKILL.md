@@ -37,6 +37,7 @@ QFAI Skill Body (SSOT)
 ```
 Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
                   -> Phase 1 Outline -> Phase 2 Slice (per spec)
+                  -> Phase 2b Seed tdd/test-list.md (per spec)
                   -> Phase 3 Plan finalize -> Phase 4 Delta update
 ```
 
@@ -114,7 +115,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ### Delegation Failure (Hard Stop)
 
-- Do not simulate roles. If the first required delegation fails, stop the stage and report remediation.
+- Do not simulate roles. Classify the failure per the baseline taxonomy first: `unavailable` stops the stage with a remediation report; `saturated` uses the bounded retry branch and keeps the stage open.
 
 Stage minimum roles:
 
@@ -123,7 +124,13 @@ Stage minimum roles:
 - `test-design-analyst` drafts traceability, examples, and test-design.
 - `product-experience-architect` is added when the target is UI-bearing.
 - `orchestrator` integrates outputs and presents for confirmation; never drafts the primary artifact and never self-approves.
-- `completion-reviewer` is delegated independently. Required field: `Status (PASS/REVISE)`.
+- `completion-reviewer` is delegated independently. Required field: `Status (PASS/REVISE/PENDING)`; `PENDING` marks an unrun gate and never counts as `PASS`.
+
+Author↔reviewer separation (MUST): drafting roles and reviewing roles above are routed from one
+list, but no sub-agent may review an artifact it drafted or edited in this run. `independent` is
+defined normatively in
+`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#definition-independent-reviewer-normative`,
+and every reviewer response must carry its `Authored/edited under review:` attestation.
 
 Reviewer routing is fixed by `.qfai/assistant/manifest/agent-routing.yml` and `.qfai/assistant/manifest/review-profiles.yml`.
 
@@ -141,6 +148,10 @@ Reviewer routing is fixed by `.qfai/assistant/manifest/agent-routing.yml` and `.
 - Without argument: target all capabilities in `_policies/03_Capabilities.md`.
 - Run Contracts-first and Outline once per batch.
 - Delegate Slice in parallel per spec.
+- Parallel delegation here is bound by the stage-independent Concurrency rules in
+  `.qfai/assistant/constitution/workflow.md#concurrency-stage-independent-mandatory`:
+  worktree separation, or the declared degraded mode, plus mandatory commit
+  scoping (`git add <paths>`; never `git add -A` / `git add .` / `git commit -a`).
 - Validate gate and Review gate run once at batch tail after all target specs are integrated.
 
 ## Work Orders Summary
@@ -151,7 +162,7 @@ Per-spec evidence at `.qfai/evidence/sdd-<spec-id>.md` is mandatory and MUST inc
 
 - Follow `references/review-cycle-playbook.md`.
 - Footer SSOT: `references/rcp_footer.md`.
-- Allowed reviewer verdicts: `PASS` and `FAIL`.
+- Allowed in-flight reviewer verdicts: `PASS` and `REVISE` (`REVISE` serializes to `status: "FAIL"` in the pack summary).
 
 ## Workflow Convention
 
@@ -179,32 +190,45 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 
 ## Critical Constraints
 
-1. Use only skill-local templates under `.qfai/assistant/skills/qfai-sdd/templates/contracts`, `templates/report`, and `templates/specs`.
+1. Use only skill-local templates under `.qfai/assistant/skills/qfai-sdd/templates/contracts`, `templates/report`, `templates/specs`, and `templates/evidence`.
 2. Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
 3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`. UI-bearing targets MUST also validate the consuming-project root `DESIGN.md` and freeze its sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml` (see Phase 0 DESIGN.md Freeze below).
 4. `_policies/05_Contracts.md` must include a Contract Index aligned with `.qfai/contracts/**`.
+   - Phase 0 must also reconcile paired contracts against each other, not only validate each file: every terminal state, status enum value, and error code an API contract mandates must be representable in the paired DB contract. See `references/contract-artifact-rules.md#cross-contract-reconciliation-must`. The reviewer gate checks the pairing before sign-off.
 5. `_policies/04_Business-Flow.md` must be Markdown with Mermaid `flowchart` or `sequenceDiagram`.
 6. `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
 7. `06_Test-Cases.md` must include `TC-ID`, `EX-Ref`, `AC-Refs`, and `Type`, with normal-path plus error/boundary coverage.
-8. Stop only when `qfai validate --profile sdd --fail-on error --format github | tee .qfai/report/validate.log` exits with `error=0`.
+8. Stop only when `npx qfai validate --profile sdd --fail-on error --format github` exits with `error=0`.
 
 ## Required Process
 
 1. Stage 0: Preflight (stop on blockers).
 2. Stage 1: Triage (classify + approve + persist Triage table).
 3. Write `.qfai/report/preflight_summary.md`.
-4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase, and freeze root `DESIGN.md` per the Phase 0 DESIGN.md Freeze step below).
+4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase, and freeze root `DESIGN.md` per the Phase 0 DESIGN.md Freeze step below). Close Phase 0 with the cross-contract reconciliation step in `references/contract-artifact-rules.md#cross-contract-reconciliation-must`.
 5. Phase 1: Outline (`_policies/01..11`).
-6. Phase 2: Slice (per spec, gate each).
-7. Phase 3: Plan finalize (after at least one slice gate passes).
-8. Phase 4: Delta update.
-9. Run validate; fix source-layer artifacts and rerun until `error=0`.
-10. Triage density-smell warnings in `.qfai/report/specs-coverage/spec-*.md`.
+6. Phase 2: Slice (per spec, gate each with `npx qfai validate --profile sdd --fail-on error --spec <spec-id>` so a parallel worker gates on its own spec only and does not import a sibling agent's in-flight failures). A `--spec` run writes `<report>/validate.spec-<id>.json` and never the shared `validate.json` / `validate-<profile>.json`, so parallel workers cannot race on one file; an unknown or unparseable `--spec` value fails the run (`QFAI-SCOPE-001` / `QFAI-SCOPE-002`) instead of silently widening to the whole repo.
+7. Phase 2b: Seed each target spec's `tdd/test-list.md` from `06_Test-Cases.md`
+   — one row per coverage-target TC, `Status = todo`; copy
+   `templates/specs/spec/tdd/test-list.md` when absent. Without it
+   `/qfai-implement` starts with zero selectable items. **Seeding is a delta,
+   not a regeneration, in both directions**: unchanged rows keep their state,
+   new TCs append at `todo`, and changed / removed TCs are reset or retired
+   under the upstream-reset rule (`references/sdd-phase-checklists.md`).
+8. Phase 3: Plan finalize (after at least one slice gate passes).
+9. Phase 4: Delta update.
+10. Run validate; fix source-layer artifacts and rerun until `error=0`.
+11. Triage density-smell warnings in `.qfai/report/specs-coverage/spec-*.md`.
 
 ## Mandatory Outputs
 
 - Shared `_policies/01..11` files
 - Target `spec-*/01..10` files (with valid `Status:` bullet)
+- `spec-*/16_Traceability-ledger.md` when the spec's `BR-*` / `AC-*` are linked to implementation
+  files (optional artifact; create or refresh it in the same change as the BR/AC it links, from
+  `templates/specs/spec/16_Traceability-ledger.md`). Without it `QFAI-TRACE-002` is emitted and the
+  BR/AC ↔ implementation integrity check (`QFAI-TRACE-001`) is skipped for that spec. See
+  `references/spec-traceability-rules.md#traceability-ledger-16_traceability-ledgermd`.
 - Triage section in every changed `09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec)
 - Updated contracts under `.qfai/contracts/**`; UI-bearing targets normalize design/ui contracts
 - `.qfai/report/preflight_summary.md`
@@ -220,16 +244,25 @@ When the target spec is UI-bearing, Phase 0 MUST freeze the brand SSOT:
    missing, stop and ask the user to run `/qfai-discussion` (which
    emits the draft) or to author it manually using the sample at
    `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`.
-2. Call `parseDesignMd(text)`. If the result is `{ error: ParseError }`,
+2. Call `isUnreplacedDesignMdSample(text)`. If it returns `true`, the file
+   is still a qfai sample brand and MUST NOT be frozen: stop and ask the
+   user to author this product's own brand SSOT, deleting the
+   `QFAI-SAMPLE-DESIGN-MD` marker comment if present (samples from
+   releases older than the marker are recognised by content instead).
+   `npx qfai init` seeds the sample into the project root and never overwrites
+   it, so step 1's missing-file check cannot catch this — an unreplaced
+   sample parses and validates by construction, and freezing it binds
+   `/qfai-prototyping` and the reviewer lock rule to a fictional brand.
+3. Call `parseDesignMd(text)`. If the result is `{ error: ParseError }`,
    stop and report `path` / `code` / `message` for the parse error.
    Otherwise the result is `{ data: DesignMd; body: string }`; pass
    `data` to `validateDesignMd(data)`. If that issue list is
    non-empty, stop and report each issue. Both functions, together with
    `hashDesignMd` and the `DesignMd` / `ParseError` / `ParseResult` /
    `ValidationIssue` types, are re-exported from the public `qfai`
-   package entry (`import { parseDesignMd, validateDesignMd, hashDesignMd } from "qfai"`).
-3. Call `hashDesignMd(text)` to compute sha256 over the raw bytes.
-4. Write `.qfai/contracts/design/DESIGN.md.lock.yaml` from the
+   package entry (`import { parseDesignMd, validateDesignMd, hashDesignMd, isUnreplacedDesignMdSample } from "qfai"`).
+4. Call `hashDesignMd(text)` to compute sha256 over the raw bytes.
+5. Write `.qfai/contracts/design/DESIGN.md.lock.yaml` from the
    template at
    `templates/contracts/design-md-lock.sample.yaml` with these fields:
    - `designMdPath: "DESIGN.md"`
@@ -237,7 +270,7 @@ When the target spec is UI-bearing, Phase 0 MUST freeze the brand SSOT:
    - `frozenAt: <UTC ISO-8601>`
    - `schemaTokens.colors`, `fontFamilies`, `radii`, `shadows`
      enumerated per the sample.
-5. Record the freeze in `_policies/05_Contracts.md` under the Contract
+6. Record the freeze in `_policies/05_Contracts.md` under the Contract
    Index. The lock yaml plus root `DESIGN.md` are the only brand
    contract; per-aspect brand yaml contracts have been removed.
 
@@ -250,7 +283,14 @@ Run the full checklist from `references/sdd-quality-gate.md`. The gate also cove
 
 ## Evidence
 
-Create `.qfai/evidence/sdd-<spec-id>.md` with: Objective, Inputs reviewed, Preflight summary path, Triage decisions (op + approver per row), Open questions, Decisions made, Work performed, Commands executed, Validate evidence paths, Work Orders Summary, Gaps / Open risks, Final status.
+Create `.qfai/evidence/sdd-<spec-id>.md` from `templates/evidence/sdd-spec.md`. That template is the
+canonical layout for this artifact — copy it, keep every `##` heading in order, and fill it in.
+
+Required sections, in order (the template is authoritative if the two ever disagree): Objective,
+Inputs reviewed, Preflight summary path, Triage decisions (op + approver per row), Open questions,
+Decisions made, Work performed, Commands executed, Validate evidence paths, Work Orders Summary,
+Gaps / Open risks, Final status. Work Orders Summary uses the fixed 6-column schema from
+`shared-skill-delegation-baseline.md`; its `Status` and `Final status` accept only `PASS` or `REVISE`.
 
 ## Done Declaration
 
@@ -295,6 +335,7 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 
 project_memory:
 
-- Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
+- Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
+- Phase 2b seeds each target spec's tdd/test-list.md from 06_Test-Cases.md (one row per coverage-target TC, Status = todo) and is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence.
 - Append-first is the Stage 1 default: UPDATE on an active spec whose subject tokens overlap; CREATE only when there is zero overlap AND the REQ adds a new CAP-NNNN, registered before the CREATE row.
 - Phase 0 DESIGN.md Freeze is mandatory for UI-bearing targets; .qfai/contracts/design/DESIGN.md.lock.yaml is the brand-lock SSOT.

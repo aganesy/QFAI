@@ -70,7 +70,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 ### Delegation Failure (Hard Stop)
 
 - No additional overrides.
-- Do not simulate roles. If the first required delegation fails, stop the stage and report remediation.
+- Do not simulate roles. Classify the failure per the baseline taxonomy first: `unavailable` stops the stage with a remediation report; `saturated` uses the bounded retry branch and keeps the stage open.
 
 ### Work Orders Summary (MANDATORY evidence)
 
@@ -88,7 +88,7 @@ Use the shared schema.
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - Reviewer checks:
   - required roles were delegated;
-  - doctor evidence exists: `qfai doctor --fail-on error` completed without failing checks;
+  - doctor evidence exists: `npx qfai doctor --fail-on error` completed without failing checks;
   - Drift Protocol enforced;
   - test-layer policy enforced against `.qfai/assistant/catalog/test-layers.md`;
   - tool-count heuristics are signals, not gates.
@@ -106,7 +106,7 @@ Use the shared template.
 
 Use the shared template.
 
-- Required field: `Status (PASS/REVISE)`.
+- Required field: `Status (PASS/REVISE/PENDING)`. `PENDING` marks a gate that could not be run (see the baseline's reviewer-budget branch); it never counts as `PASS`.
 
 ## Stage 0 — Steering completion refresh (mandatory)
 
@@ -144,6 +144,10 @@ Note: /qfai-sdd includes a preflight step that bootstraps missing config/steerin
 
 - `qfai.config.yaml` is updated with a **minimal diff** focused on traceability globs.
 - `validation.traceability.testFileGlobs` reflects the real test layout.
+  - `npx qfai init` ships this empty on purpose. Detect the stack before setting it — `pyproject.toml` / `setup.cfg` (Python), `go.mod` (Go), `pom.xml` / `build.gradle` (JVM), `Cargo.toml` (Rust), `package.json` (JS/TS), `Gemfile` (Ruby), `composer.json` (PHP) — and derive globs from the test paths that actually exist, not from the language's convention alone.
+  - Cross-check against the test paths the spec ledgers declare (`.qfai/specs/*/tdd/test-list.md`, `06_Test-Cases.md`). Globs that do not cover the declared paths leave the traceability gate reporting success while covering nothing.
+  - The evidence file MUST show at least one matched file per declared test layer (unit / integration / api / e2e / component as applicable). A layer with zero matched files is a blocking gap, not a note.
+  - `npx qfai validate` emits `QFAI-TRACE-124` while the globs are unset or match zero files; the run is not done until it is gone.
 - `validation.traceability.testFileExcludeGlobs` is added only when needed.
 - If strict spec sections are explicitly requested, `validation.require.specSections` is updated with a minimal, evidence-based list.
 - A validation checklist with evidence (sample matched files) is produced.

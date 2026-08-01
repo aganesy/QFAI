@@ -5,6 +5,7 @@ import { parse as parseYaml } from "yaml";
 
 import { toRelativePath } from "./paths.js";
 import { escapeRegExp } from "./regex.js";
+import { EXCEPTION_PARKED_RULE_ID } from "./ruleIds.js";
 import type {
   Issue,
   IssueSeverity,
@@ -21,6 +22,17 @@ const WAIVER_FILE = path.join(".qfai", "waivers.yml");
 const UNSUPPORTED_WAIVER_FILE = path.join(".qfai", "waivers.yaml");
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const RULE_ID_RE = /^[A-Z]+-\d{3}$/;
+
+/**
+ * Rules whose findings are per-row, not per-file.
+ *
+ * Every row of one `tdd/test-list.md` produces `TDDLIST-001` with the same rule
+ * and the same `file`, so a waiver matched on `rule` + `scope.paths` alone
+ * suppresses the unapproved rows next to the approved one. For these rules the
+ * waiver must also name the row(s) in `match.dl_ids` — the only per-finding key
+ * {@link matchesWaiver} compares.
+ */
+const ROW_SCOPED_RULES = new Set<string>([EXCEPTION_PARKED_RULE_ID]);
 
 type ParsedWaiver = ValidationWaiverEntry & {
   pathMatchers: RegExp[];
@@ -390,6 +402,23 @@ async function loadWaivers(
     };
 
     let blocked = false;
+
+    if (ROW_SCOPED_RULES.has(ruleId) && (match.dl_ids?.length ?? 0) === 0) {
+      blocked = true;
+      validationIssues.push(
+        issue(
+          "QFAI-WAIVER-005",
+          `${label}: rule '${ruleId}' は行単位の findings です。scope.paths だけでは同じファイルの未承認行まで抑制されるため、match.dl_ids に承認済みの行 ID を列挙してください。この実行では適用されません。`,
+          "warning",
+          waiverPath,
+          "WAIVER-005",
+          [id, ruleId],
+          "change",
+          "承認された行の ID（例: TDD-0001）だけを match.dl_ids に列挙してください。",
+        ),
+      );
+    }
+
     const ruleSeverity = ruleSeverityIndex.get(ruleId);
     if (!ruleSeverity) {
       blocked = true;
@@ -873,6 +902,10 @@ const STATIC_RULE_SEVERITY: Record<string, IssueSeverity> = {
   "DELTA-003": "error",
   "SCOPE-001": "warning",
   "SCOPE-002": "info",
+  // TDDLIST_EXCEPTION_PARKED. Registered statically so a project can pre-record
+  // an accepted-risk waiver without QFAI-WAIVER-003 calling the rule unknown on
+  // the runs where no item is currently parked.
+  "TDDLIST-001": "warning",
   // TDDLIST_UNKNOWN_LEVEL. Registered statically so a project using its own
   // Level vocabulary can pre-record the waiver without QFAI-WAIVER-004 calling
   // the rule unknown on runs where every Level is recognized.
@@ -881,6 +914,7 @@ const STATIC_RULE_SEVERITY: Record<string, IssueSeverity> = {
   "WAIVER-002": "error",
   "WAIVER-003": "warning",
   "WAIVER-004": "warning",
+  "WAIVER-005": "warning",
   "VFY-001": "error",
   "VFY-002": "error",
   "VFY-003": "error",

@@ -91,7 +91,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 ### Delegation Failure (Hard Stop)
 
 - No additional overrides.
-- Do not simulate roles. If the first required delegation fails, stop the stage and report remediation.
+- Do not simulate roles. Classify the failure per the baseline taxonomy first: `unavailable` stops the stage with a remediation report; `saturated` uses the bounded retry branch and keeps the stage open.
 
 ## Work Orders Summary
 
@@ -113,7 +113,7 @@ Use the shared schema.
 - ATDD-specific reviewer checks:
   - coverage obligations met: E2E covers `US`, Integration covers `TC`, API covers `CON-API`;
   - Coverage Depth Matrix is reviewed and no unjustified `X` cells remain;
-  - validation evidence exists and `qfai validate --profile atdd --fail-on error` passes;
+  - validation evidence exists and `npx qfai validate --profile atdd --fail-on error` passes;
   - Drift Protocol is enforced;
   - test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`;
   - coverage floors and ratios are signals, not gates;
@@ -133,7 +133,7 @@ Use the shared template.
 
 Use the shared template.
 
-- Required field: `Status (PASS/REVISE)`.
+- Required field: `Status (PASS/REVISE/PENDING)`. `PENDING` marks a gate that could not be run (see the baseline's reviewer-budget branch); it never counts as `PASS`.
 
 ## Stage 0 — Steering completion refresh (mandatory)
 
@@ -148,7 +148,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 - Do NOT declare completion based on unit/component tests.
 - `10_Plan.md` is the primary How SSOT for execution phases.
 - If `10_Plan.md` is missing, stop and run owner planning flow before proceeding.
-- Completion gate is validation with zero errors (`qfai validate --profile atdd --fail-on error`).
+- Completion gate is validation with zero errors (`npx qfai validate --profile atdd --fail-on error`).
 - Coverage obligations are mandatory:
   - `tests/e2e/**` must cover all required `US-*`.
   - `tests/integration/**` must cover all required `TC-*`.
@@ -159,7 +159,12 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 - Unknown references (`US/TC/CON-API` not declared) must be treated as errors.
 - Floors/ratios are planning signals only, not gates.
 - Legacy `scenario.feature` or coverage ledgers may exist but are not mandatory inputs for completion.
-- Evidence file is required under `.qfai/evidence/` and must not be committed.
+- Evidence file is required under `.qfai/evidence/`. Stage evidence is
+  **regenerable** and is not committed. **Governance records are different**:
+  Change Requests (`.qfai/decisions/CR-*.md`) and durable decision records
+  (`.qfai/evidence/decisions/*.json`) carry user approval, are not
+  regenerable, and stay in version control — the managed `.gitignore` block
+  negates them for that reason.
 
 ## Completion Contract (Shared)
 
@@ -222,7 +227,7 @@ Notes:
 - All required `US` are covered by E2E tests.
 - All required `TC` are covered by integration tests.
 - All required `CON-API` are covered by API tests.
-- Validation passes: `qfai validate --profile atdd --fail-on error`.
+- Validation passes: `npx qfai validate --profile atdd --fail-on error`.
 - Repository quality gates (format/lint/type/tests/pack) pass with evidence.
 - Evidence file exists and includes work orders + reviewer notes.
 - Completion is approved by a reviewer who did not implement tests.
@@ -321,7 +326,7 @@ Before declaring completion:
 2. Run:
 
    ```bash
-   qfai validate --profile atdd --fail-on error
+   npx qfai validate --profile atdd --fail-on error
    ```
 
 3. Run repository standard gates:

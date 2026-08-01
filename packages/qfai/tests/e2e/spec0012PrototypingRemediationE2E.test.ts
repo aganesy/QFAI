@@ -430,7 +430,7 @@ describe("US-0012-0130: underscore screen-id mirrored to evidence end-to-end", (
     );
     const issues = await validateScreenIdCasing(rootReject, ".qfai/contracts");
     expect(issues.length).toBeGreaterThanOrEqual(1);
-    expect(issues[0]?.code).toBe("QFAI-PROT-008");
+    expect(issues[0]?.code).toBe("QFAI-PROT-010");
 
     // (b) --capture mirrors underscore id end-to-end
     const root = await p2TempDir();
