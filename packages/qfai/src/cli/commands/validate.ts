@@ -466,7 +466,7 @@ function buildPartialProfileNotice(
       message:
         `profile="${profile}" was blocked by the CI profile guard, so NO validator ran and ` +
         "NO hard gate was evaluated — including this profile's own. This report carries the " +
-        "guard finding only; it is not a validation result. Run " +
+        "guard finding and this notice, nothing else; it is not a validation result. Run " +
         "`qfai validate --fail-on error` (full profile) instead.",
       rule: "validate.partialProfileCoverage",
     };
