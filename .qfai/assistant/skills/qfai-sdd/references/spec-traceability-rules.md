@@ -4,7 +4,7 @@ Use this file when working on traceability-heavy parts of `/qfai-sdd`.
 
 ## Required Layered Layout
 
-`qfai validate` treats specs as a layered package:
+`npx qfai validate` treats specs as a layered package:
 
 - Shared policies: `.qfai/specs/_policies/**`
 - Capability specs: `.qfai/specs/spec-*/**`
@@ -72,21 +72,142 @@ ID reference direction (the value of `Refs:` columns) must be lower-to-upper onl
   - `US-0001` -> Parent: `CAP-0001`
   - `AC-0001` -> defined in `03_Acceptance-Criteria.md`
   - `BR-0001` -> `AC-Refs` in `04_Business-Rules.md`
+  - `BR-0001` -> `Contract-Refs` in `04_Business-Rules.md` (comma-separated
+    `CON-*` IDs; `-` when the rule binds no contract). Contract IDs recorded
+    only in `Notes` are untraced.
   - `EX-0001` -> `BR-Ref` in `05_Examples.md`
   - `TC-0001` -> `EX-Ref` and `AC-Refs` in `06_Test-Cases.md`
-- `_policies/**` must not contain lower-layer IDs (`US/AC/BR/EX/TC`) or per-spec references.
+- `_policies/**` must not **define or own** lower-layer items. Concretely: no
+  traceability edge in `_policies/**` may name a lower-layer ID — no `Parent:`,
+  `Refs:`, `AC-Refs`, `BR-Ref` or `EX-Ref` value, and no heading that declares a
+  `US/AC/BR/EX/TC` item.
+- **How this is enforced today is broader than that intent.** `QFAI-LAYER-100`
+  and `TRACE_SHARED_SCOPE_VIOLATION` are a token scan: they match any
+  `US/AC/BR/EX/TC-NNNN` anywhere in a `_policies/**` file, not only in an
+  ownership or definition position. Outside the Triage carve-out below, a plain
+  prose citation is therefore reported too. Treat the ownership/definition rule
+  as the _intent_ and the token scan as the _current mechanism_; when you need
+  to name a lower-layer item in `_policies/**`, put it in the Triage table rows,
+  which is the one place the scan skips.
+- _Citing_ a lower-layer ID or a `spec-NNNN` inside the **Triage table rows** of
+  `_policies/10_delta.md` is explicitly allowed. `sdd-triage.md` requires
+  cross-spec and policy-only Triage rows to be persisted there, and
+  `QFAI-TRIAGE-002` makes `Existing Spec` (a `spec-NNNN` value) a required
+  column — so the `Existing Spec`, `Approved By` and `Rationale` cells must be
+  able to name what actually changed, verbatim. `QFAI-LAYER-100` and
+  `TRACE_SHARED_SCOPE_VIOLATION` skip those rows for this reason.
+- The carve-out is exactly that narrow, so it cannot be used as an escape
+  hatch:
+  - **file** — `_policies/10_delta.md` only. A `## Triage` heading anywhere
+    else under `_policies/**` (`11_Slice-Policy.md`, `01_Objective.md`, ...)
+    gets no exemption.
+  - **heading** — the canonical `## Triage` H2 only, matching what
+    `QFAI-TRIAGE-001..007` validate. `# Triage`, `### Triage` and
+    `## Triage notes` are not exempt.
+  - **line shape** — markdown table rows only. A heading that declares an item
+    (`### AC-0001-0001`) or a traceability edge (`- Parent: US-0001-0001`)
+    inside the Triage section is still a violation, because it defines or owns
+    rather than cites.
+  - **table identity** — the mandated Triage table only. A second table under
+    `## Triage` is exempt only when its header carries the full canonical
+    column set (`Source`, `Subject`, `Existing Spec`, `Operation`, `Sub-op`,
+    `Approved By`, `Rationale`); order may differ, since the Triage validators
+    resolve columns by name. A table reusing only one or two of those names
+    earns no exemption.
+  - **column** — within an exempt table, only cells under a canonical column
+    are skipped. An author-added column (`Parent`, `Refs`, ...) keeps its cells
+    visible to the scan.
+- Discussion-layer IDs (`DUS-001`, `DAC-001-01`, `DTC-1`, `DSC-001`) are a different
+  namespace and are explicitly allowed in `_policies/**` and in `Source` fields. They are
+  how provenance back to the discussion pack stays machine-checkable; do not rewrite them
+  into prose to satisfy the rule above.
+- A `Source` value is always the pair `<pack-id>#<discussion-id>`, e.g.
+  `discussion-20260415101112123#DUS-001`. The pack half is not optional: pack IDs are the
+  only thing that makes a discussion ID unique, because every pack restarts its numbering at
+  `DUS-001` / `DAC-001-01`. A spec that two packs have updated therefore carries two `Source`
+  values that differ only in the pack half.
+- `Source` is recorded once per item, in the required artifact: the `- Source:` line of each
+  `## US-NNNN` block in `02_User-stories.md`, and the `# Source:` comment inside each AC's
+  Gherkin block in `03_Acceptance-Criteria.md`. The optional `AC Catalog` table carries no
+  `Source` column, so there is no second copy to drift.
+
+### Item granularity
+
+Depth expectations answer how many layers; item granularity answers how big one
+item may be. It is defined in
+`.qfai/assistant/constitution/requirements-decomposition.md#item-granularity-acbrextc`
+and signalled by `QFAI-DENSITY-005`.
 
 ## TDD Execution Ledger
 
 Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
 
 - Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
-- Coverage is measured as unit/component TC references from `06_Test-Cases.md` appearing in TC-Refs.
+- Optional columns: `US-Refs`, `CON-API-Refs` — the E2E and API obligations a
+  row implements. Required when the row carries one, since `TC-*` annotations
+  are forbidden in `tests/e2e/**` and `tests/api/**`.
+- TC coverage reads **`TC-*` tokens only**. `US-*` and `CON-API-*` IDs are
+  explicitly inert to it — recording one does not raise or lower TC coverage.
+- Legal `Layer` values: `Unit`, `Component`, `Integration`, `API`, `E2E`.
+  Legal obligation kinds per layer: `TC-*` on Unit / Component / Integration,
+  `US-*` on E2E, `CON-API-*` on API.
+- `Selector` may hold one entry, a comma-separated list, or a glob pattern. It is not limited to a single test function.
+- `TC-Refs` is many-to-many with `TDD-ID`: one `TC-*` may be decomposed across several TDD rows, and each of those rows carries that `TC-*`.
+- A matrix-shaped `TC-*` (many rejection reasons, a status-code matrix, several independent state transitions) MUST be split across multiple TDD rows before RED begins — one falsifying oracle per row, one row per independently observable boundary. Do not accumulate unrelated boundaries behind a single selector; doing so invalidates the RED observation, because only the first failing assert is ever observed.
+- Coverage is measured as unit/component TC references from `06_Test-Cases.md`
+  appearing in TC-Refs. That measures which TCs need a `tdd/test-list.md` row;
+  it says nothing about where the test file lives. Every `TC-*` — including
+  unit/component ones — is still discharged in `tests/integration/**` for
+  `QFAI-ATDD-112` until the scanner supports the per-level routing described as
+  a target state in `catalog/test-layers.md`.
 - If `06_Test-Cases.md` has no test-case classification column, every TC is treated as a coverage target.
-- `Status=exception` requires a non-empty DR-ID.
-- `Status` in `green`, `refactor`, or `done` requires an existing Test file resolved from project root.
+- `Status=exception` requires a non-empty DR-ID. An `exception` row is not a
+  dead end: a Drift Protocol sweep may reset it to `todo` like any other status
+  when the rerun changed the obligation it was raised against.
+- `Status` in `green`, `refactor`, or `done` requires an existing Test file
+  resolved from project root. The upstream reset does not relax this: a swept
+  row returns to `todo`, where no file is required, and writes its test in the
+  following `red` phase.
+- `DR-ID` carries Decision Record (`DR-*`) **and** Change Request (`CR-*`)
+  references, so it carries the approval that authorised an upstream reset, not
+  only `Status = exception`. A row reset by a Drift Protocol sweep records the
+  approved `CR-*` / `DR-*` ID there and **retains it through `red`, `green`,
+  `refactor` and `done`** — the ledger is the audit trail for why a completed
+  row was reopened. Change Requests live at
+  `.qfai/decisions/CR-YYYYMMDD-NNNN-<slug>.md` (`CR-\d{8}-\d{4}`).
+- `Layer` must be consistent with `Test file`: an `Integration` row may not
+  point into `tests/e2e/**` or `tests/api/**`, and vice versa.
+- More than one `TDD-*` row MAY reference the same `TC-*` — a TC split across
+  several test modules is legitimate. `TDD-ID` uniqueness is the only
+  identity constraint.
 - `TDD-ID` must match `TDD-NNNN` and be unique within the spec.
 - Missing `tdd/test-list.md` is a warning; missing DR-ID/Evidence columns is an error.
+
+## Traceability Ledger (`16_Traceability-ledger.md`)
+
+Optional per-spec artifact linking `BR-*` / `AC-*` to the implementation file that realizes them.
+Template: `templates/specs/spec/16_Traceability-ledger.md`.
+
+- It is **optional**. Without it `npx qfai validate` emits `QFAI-TRACE-002` (`warning`) and skips the
+  implementation-integrity check; the spec is still valid.
+- With it, `QFAI-TRACE-001` (`error`) fires when a spec's `03_Acceptance-Criteria.md` or
+  `04_Business-Rules.md` changed on the branch but a linked implementation file did not.
+- Schema for the **layered** layout — the first Markdown table is the one read; header needs ≥3
+  columns, one named `Implementation File`:
+
+  | BR/AC   | Implementation File | Test File |
+  | ------- | ------------------- | --------- |
+  | AC-0001 | src/…               | tests/…   |
+
+  First cell must be a `BR-NNNN` / `AC-NNNN` ID; second cell one repo-root-relative path (no globs,
+  no `./`). One row per BR/AC ↔ file pair. Extra trailing columns are ignored.
+
+- The legacy **spec-pack** layout uses the same filename with a different schema
+  (`trace_id, obj_id, init_id, cap_id, flow_id, us_id, ac_id, ex_ids, tc_ids`, checked by
+  `QFAI-LEDGER-001`). That check runs only on spec-pack layouts — the two schemas never apply to the
+  same file. Do not merge them.
+- Authored and refreshed by `/qfai-sdd` in the same change as the BR/AC it links. It is upstream
+  SSOT; downstream skills must not edit it.
 
 ## Depth Expectations
 

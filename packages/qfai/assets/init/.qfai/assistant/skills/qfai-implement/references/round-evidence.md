@@ -17,6 +17,18 @@ reviewer `REVISE` that requires new production behaviour adds a round.
   `REVISE` plus the finding, and which rework path it took). Absent on round 1
   when no review has run yet.
 
+## What opens a round
+
+Round 1 is the original RED/GREEN cycle. Each blocking reviewer `REVISE` that
+requires new production behaviour adds a round. A `REVISE` that needs none
+(naming, duplication, comments) opens no round and is verified by a refreshed
+`Refactor verify` pair instead. Rounds are numbered and repeatable, not appended
+as free prose.
+
+Every field in a round block carries the `Round N:` prefix — `Round N: RED
+command` / `Round N: RED result` / `Round N: GREEN command` / `Round N: GREEN
+result` / `Round N: reviewer verdict`.
+
 ## Single-round items
 
 A single-round item satisfies the contract with `Round 1: ...` and no

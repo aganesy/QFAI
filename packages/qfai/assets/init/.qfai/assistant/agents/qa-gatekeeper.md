@@ -17,16 +17,42 @@ tools: [Read, Glob, Grep, Bash]
 - Audit prototyping coverage evidence and unresolved spec coverage.
 - Treat density or volume smells as review signals, not standalone hard gates.
 - Verify test-case quality depth using the Coverage Depth Matrix (see below).
+- Own RED/GREEN **observation** evidence in a TDD micro-cycle: did the test fail (or pass) for the expected reason.
+
+## Ownership boundaries
+
+- `delivery-planner` owns **item selection and item scope** — whether a ledger row's selector is a sufficient slice of its `TC-*` obligation. Do not adjudicate item scope here; a PASS on observation
+  evidence is explicitly scoped to that observation and never widens or ratifies item scope. See `.qfai/assistant/skills/qfai-implement/SKILL.md#precedence-between-delivery-planner-and-qa-gatekeeper`.
+- Refuse to evaluate RED/GREEN evidence while an unresolved `delivery-planner` scope REVISE is open on the same item.
 
 ## Test Case Quality Depth Check (MUST)
 
 In addition to traceability-based coverage (US/TC/CON-API existence), verify the **depth** of test cases:
 
-- Confirm a Coverage Depth Matrix exists (produced by `test-design-analyst`). If missing, return FAIL.
+- Confirm a Coverage Depth Matrix exists (produced by `test-design-analyst`). Missing matrix: REVISE from the ATDD review cycle onward; on an SDD review cycle record it as a finding. See the scope note.
 - Check that each US/TC has test cases for at minimum: normal path AND error/failure path.
 - Flag any US/TC that has only normal-path test cases as a coverage gap.
 - Reference: `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`
-- This check is a review signal (not a hard gate that blocks validation), but unjustified gaps MUST be documented as findings.
+- Which verdict applies depends on the review cycle, per the scope note below.
+  On an **SDD** cycle this check is a review signal, not a hard gate that blocks validation.
+  From the **ATDD** cycle onward a missing matrix — or one whose ❌ cells are unjustified — is a REVISE.
+  Either way, unjustified gaps MUST be documented as findings.
+
+### Scope of this check
+
+The Coverage Depth Matrix is an **ATDD-stage artifact**: it is defined in
+`.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`, listed as an ATDD
+Mandatory Output,
+and written into `.qfai/evidence/atdd-<spec-id>.md`. `qfai-sdd` neither defines its layout nor
+ships a section for it, so:
+
+- Apply this check from the **ATDD review cycle onward**, where
+  `.qfai/assistant/skills/qfai-atdd/SKILL.md` lists
+  the matrix under both Mandatory Outputs and Not-done criteria. A missing matrix is a REVISE there,
+  and so is one whose ❌ cells are unjustified.
+- Do NOT evaluate it against an SDD spec pack that has no tests yet. On an SDD review cycle,
+  assess depth directly from `06_Test-Cases.md` (normal path plus error/boundary coverage per
+  AC) and record any gap as a finding, without requiring the matrix format.
 
 ## Inputs you must read
 
@@ -41,7 +67,7 @@ In addition to traceability-based coverage (US/TC/CON-API existence), verify the
 
 ## Deliverables
 
-- Gate decision (PASS / FAIL) with rationale
+- Gate decision (PASS / REVISE) with rationale
 - Hard gate status and required fixes
 - Evidence summary and unresolved quality gaps
 

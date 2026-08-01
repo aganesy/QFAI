@@ -67,22 +67,49 @@ approval before any spec edits begin.
 
 ## APPEND vs CREATE algorithm
 
-For each incoming REQ/NFR, apply in order (append-first):
+Steps 1-3, 5 and 6 select the operation; the **first** one that matches wins.
+Step 4 is **not** an alternative branch — it is a recording obligation that
+always runs afterwards, on whichever spec the selected operation targets. Do not
+stop at step 2.
 
 1. Resolve the REQ's capability from `_policies/03_Capabilities.md`.
-2. If a single active spec already owns that capability and its
-   `acCount <= 30 && tcCount <= 50` → **UPDATE:APPEND**.
+2. If a single active spec already owns that capability → **UPDATE:APPEND**.
+   Item counts do not change this answer. Continue to step 4: an oversized
+   owner still needs its `Rationale` entry and its capability-ownership review.
 3. If multiple active specs share the capability → **MERGE**.
-4. If a single active spec owns the capability but exceeds the AC/TC
-   thresholds → **SPLIT**.
+4. **Always evaluate, whatever step 2/3/5 decided.** If any spec the selected
+   operation targets exceeds the AC/TC thresholds (`acCount > 30` or
+   `tcCount > 50`), that is a **size signal, not an operation**. A MERGE row
+   targets several specs, so check them all. Record every breach in the Triage
+   row's `Rationale` and start a **capability-ownership review**:
+   - the spec genuinely owns more than one `CAP-NNNN` → **SPLIT** (approval
+     required, see below);
+   - the spec owns exactly one capability → **the operation selected in steps
+     1-3/5 is unchanged** — MERGE stays MERGE with its approval, APPEND stays
+     APPEND. This step never rewrites the operation; it only records the
+     reasoned non-split, because there is nothing to split into.
+
+   > A count-driven SPLIT of a single-capability spec is **illegal**.
+   > `validateSpecSplitByCapability` hard-enforces one `CAP-NNNN` per spec
+   > with sequential directory names, so it raises `QFAI-SPLIT-102` and
+   > `QFAI-SPLIT-104` at `error` severity. The SPLIT trigger is capability
+   > ownership (line 64 of this file, and `sdd-triage.md`), never a count.
+
+   > An **obligation-conserving re-granulation** — the same obligations
+   > expressed as finer cells, zero added and zero removed — never triggers
+   > SPLIT, whatever it does to `acCount` / `tcCount`. To claim it, state in
+   > the `Rationale` which obligations existed before, which exist after, and
+   > that the sets are equal.
+
 5. If no active spec owns the capability **but at least one active
    spec's title / scope / capability shares any subject token with the
    REQ** → **UPDATE:APPEND on the closest spec** (subject-overlap
-   fallback). Upgrade to **SPLIT** if that spec exceeds the AC/TC
-   thresholds. Subject tokens follow `src/core/sddTriage.ts::tokenize`
-   normalization (STOP_TOKEN drop, length ≥ 2, Unicode `\p{L}\p{N}`),
-   so "the new flag"-style subjects collapse to zero tokens and skip to
-   step 6 — author REQ subjects with meaningful nouns.
+   fallback). A threshold breach on that spec is again a size signal
+   recorded in `Rationale`, not an upgrade to SPLIT. Subject tokens follow
+   `src/core/sddTriage.ts::tokenize` normalization (STOP_TOKEN drop,
+   length ≥ 2, Unicode `\p{L}\p{N}`), so "the new flag"-style subjects
+   collapse to zero tokens and skip to step 6 — author REQ subjects with
+   meaningful nouns.
 6. Only when **no active spec shares any token** with the REQ AND the
    underlying capability is genuinely new → **CREATE**. Add the new
    `CAP-NNNN` to `_policies/03_Capabilities.md` _first_, then cite it

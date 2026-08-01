@@ -1,53 +1,64 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
 
-const repoRoot = path.resolve(process.cwd(), "..", "..");
-const SKILLS = [
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md",
-  ".qfai/assistant/skills/qfai-implement/SKILL.md",
+// Anchored to this file, not to `process.cwd()`: from the repo root `../..`
+// resolves above the repo and every read below fails on an unrelated path.
+// tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+const SKILL_DIRS = [
+  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement",
+  ".qfai/assistant/skills/qfai-implement",
 ];
 
+/** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
+const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
+const read = (dir: string, rel: string): Promise<string> =>
+  readFile(path.join(repoRoot, dir, rel), "utf-8");
+
 describe("a reviewer REVISE has a legal state and an evidence slot", () => {
-  for (const relativePath of SKILLS) {
+  for (const relativePath of SKILL_DIRS) {
+    // The ledger schema and its transitions live in
+    // `references/execution-ledger.md` under the progressive-disclosure budget
+    // (#414); SKILL.md keeps the process steps and a pointer.
     it(`${relativePath}: review-fix is a status with both edges`, async () => {
-      const skill = await readFile(path.join(repoRoot, relativePath), "utf-8");
-      expect(skill).toContain(
+      const ledger = await read(relativePath, "references/execution-ledger.md");
+      expect(ledger).toContain(
         "Valid status values: `todo`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`.",
       );
-      expect(skill).toContain("`refactor` -> `review-fix` (a blocking reviewer returned `REVISE`)");
-      expect(skill).toContain(
+      expect(ledger).toContain(
+        "`refactor` -> `review-fix` (a blocking reviewer returned `REVISE`)",
+      );
+      expect(ledger).toContain(
         "`review-fix` -> `refactor` (rework complete; re-submit to the reviewer)",
       );
     });
 
     it(`${relativePath}: rework is explicitly not a backward transition`, async () => {
-      const skill = await readFile(path.join(repoRoot, relativePath), "utf-8");
-      expect(skill).toContain("**Reviewer rework is not a backward transition.**");
-      expect(skill).toContain("without any of those\nruns counting as a backward transition");
+      const ledger = await read(relativePath, "references/execution-ledger.md");
+      expect(ledger).toContain("### Reviewer rework is not a backward transition");
+      expect(flat(ledger)).toContain("without any of those runs counting as a backward transition");
     });
 
     it(`${relativePath}: review-fix blocks completion`, async () => {
-      const skill = await readFile(path.join(repoRoot, relativePath), "utf-8");
+      const skill = await read(relativePath, "SKILL.md");
       expect(skill).toContain(
         "- Items with `todo`, `red`, `green`, `refactor`, or `review-fix` status still exist",
       );
     });
 
     it(`${relativePath}: the evidence contract is a repeatable round shape`, async () => {
-      const skill = await readFile(path.join(repoRoot, relativePath), "utf-8");
-      expect(skill).toContain("one **round block** per RED/GREEN cycle");
+      const skill = await read(relativePath, "SKILL.md");
+      expect(flat(skill)).toContain("Each RED/GREEN cycle is one **round block**");
       expect(skill).toContain("references/round-evidence.md");
 
-      const reference = await readFile(
-        path.join(repoRoot, path.dirname(relativePath), "references", "round-evidence.md"),
-        "utf-8",
-      );
+      const reference = await read(relativePath, "references/round-evidence.md");
       for (const field of [
         "`Round N: RED command`",
         "`Round N: GREEN result`",
@@ -59,7 +70,7 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
     });
 
     it(`${relativePath}: review is requested from refactor, so REVISE has a legal edge`, async () => {
-      const skill = await readFile(path.join(repoRoot, relativePath), "utf-8");
+      const skill = await read(relativePath, "SKILL.md");
       // "After GREEN" left a REVISE landing on `green`, which has no
       // `review-fix` edge and cannot go backwards.
       expect(skill).not.toContain("After GREEN, implementation agent submits");
@@ -68,38 +79,32 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
     });
 
     it(`${relativePath}: an interrupted review-fix item is resumed before new work`, async () => {
-      const skill = await readFile(path.join(repoRoot, relativePath), "utf-8");
+      const skill = await read(relativePath, "SKILL.md");
       expect(skill).toContain("**Rework first**: if any row is at `review-fix`");
       expect(skill).toContain("otherwise never picked up");
 
-      const reference = await readFile(
-        path.join(repoRoot, path.dirname(relativePath), "references", "round-evidence.md"),
-        "utf-8",
-      );
+      const reference = await read(relativePath, "references/round-evidence.md");
       expect(reference).toContain("## Resuming a `review-fix` item");
       expect(reference).toContain("selected **before** any `todo` row");
     });
 
     it(`${relativePath}: rework never writes an illegal review-fix -> red hop`, async () => {
-      const skill = await readFile(path.join(repoRoot, relativePath), "utf-8");
+      const skill = await read(relativePath, "SKILL.md");
       // Phase Red step 2 would otherwise demand `review-fix -> red`, which the
       // allowed-transition list does not contain.
       expect(skill).toContain("**only for a `todo` row**");
       expect(skill).toContain("A `review-fix` row **stays at `review-fix`** for the whole rework");
       expect(skill).toContain("`review-fix -> red` is not an allowed transition");
 
-      const reference = await readFile(
-        path.join(repoRoot, path.dirname(relativePath), "references", "round-evidence.md"),
-        "utf-8",
-      );
+      const reference = await read(relativePath, "references/round-evidence.md");
       expect(reference).toContain("**The row's `Status` stays `review-fix` throughout.**");
-      expect(reference).toContain(
-        "`review-fix -> refactor` is the only status change the\nrework produces",
+      expect(flat(reference)).toContain(
+        "`review-fix -> refactor` is the only status change the rework produces",
       );
     });
 
     it(`${relativePath}: the Green phase keeps a review-fix row at review-fix`, async () => {
-      const skill = await readFile(path.join(repoRoot, relativePath), "utf-8");
+      const skill = await read(relativePath, "SKILL.md");
       // An unconditional "Transition status to `green`" would write the
       // prohibited `review-fix -> green` for every rework row.
       expect(skill).toContain(
@@ -110,14 +115,16 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
     });
 
     it(`${relativePath}: a behaviour-preserving REVISE has a stated path`, async () => {
-      const skill = await readFile(path.join(repoRoot, relativePath), "utf-8");
-      expect(skill).toContain(
-        "A `REVISE` that needs none (naming,\nduplication, comments) opens no round and is verified by a refreshed\n`Refactor verify` pair instead.",
+      // SKILL.md carries the pointer only; both rework paths are stated in the
+      // reference, so the two-path rule is asserted there.
+      const skill = await read(relativePath, "SKILL.md");
+      expect(flat(skill)).toContain(
+        "the two rework paths and the full field list are in `references/round-evidence.md`",
       );
 
-      const reference = await readFile(
-        path.join(repoRoot, path.dirname(relativePath), "references", "round-evidence.md"),
-        "utf-8",
+      const reference = await read(relativePath, "references/round-evidence.md");
+      expect(flat(reference)).toContain(
+        "A `REVISE` that needs none (naming, duplication, comments) opens no round and is verified by a refreshed `Refactor verify` pair instead.",
       );
       expect(reference).toContain("## A `REVISE` that needs no new production behaviour");
       expect(reference).toContain("**No round is opened.**");
@@ -130,10 +137,7 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
     it(`${relativePath}: rework is re-submitted to every reviewer it could invalidate`, async () => {
       // A PASS from the other blocking reviewer was given on the pre-rework
       // artifact, so it cannot satisfy "all routed blocking reviewers PASS".
-      const reference = await readFile(
-        path.join(repoRoot, path.dirname(relativePath), "references", "round-evidence.md"),
-        "utf-8",
-      );
+      const reference = await read(relativePath, "references/round-evidence.md");
       expect(reference).toContain("## Who the rework goes back to");
       expect(reference).toContain(
         "**every routed blocking reviewer\nwhose verdict the rework could invalidate**",
