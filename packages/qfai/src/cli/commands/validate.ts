@@ -7,6 +7,7 @@ import { normalizeValidationResult } from "../../core/normalize.js";
 import { normalizeSpecId } from "../../core/specScope.js";
 import { buildCiProfileIssue, createProfileGuardResult } from "../../core/phasePolicy.js";
 import { toRelativePath } from "../../core/paths.js";
+import { saasPackageSkippedGateFamilies } from "../../core/saasPackage/skippedGates.js";
 import type { Issue, ValidationProfile, ValidationResult } from "../../core/types.js";
 import {
   THIN_COVERAGE_SIGNAL_CODE,
@@ -153,6 +154,12 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       }
     : rawResult;
   const normalized = normalizeValidationResult(root, result);
+  const partialProfileNotice = buildPartialProfileNotice(normalized.profile, blockedByProfileGuard);
+  if (partialProfileNotice) {
+    normalized.issues.push(partialProfileNotice);
+    normalized.counts = recountIssues(normalized.counts, partialProfileNotice);
+  }
+
   warnIfTruncated(normalized.traceability.testFiles, "validate");
 
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
@@ -451,6 +458,139 @@ function buildDeprecationIssue(args: {
   };
 }
 
+/**
+ * Validator groups the `full` profile runs, with the finding-code families
+ * each one produces.
+ *
+ * The keys mirror the composition in `core/validate.ts#runFullValidators`
+ * one-for-one, so "what a partial profile did not evaluate" can be derived as
+ * `full groups - profile groups` instead of being restated per profile. The
+ * earlier hand-written per-profile lists named only the three headline
+ * families and therefore claimed, for example, that `--profile tdd` had
+ * evaluated repository hygiene (`QFAI-HYG-*`) when `runTddValidators` never
+ * calls it.
+ */
+const GATE_GROUP_FAMILIES = {
+  hygiene: ["QFAI-HYG-*"],
+  "skills-integrity": ["QFAI-SKILLS-*"],
+  "assistant-assets": ["QFAI-ASSETS-*"],
+  discussion: ["QFAI-DPACK-*", "QFAI-VIS-*", "QFAI-RESEARCH-*", "UIX-VAL-*"],
+  sdd: [
+    "QFAI-SPACK-*",
+    "QFAI-COV-*",
+    "QFAI-ID-*",
+    "QFAI-LAYER-*",
+    "QFAI-ORPHAN-*",
+    "QFAI-CONTRACT-*",
+    "QFAI-NAV-*",
+    "QFAI-MMD-*",
+    "E_*",
+    "R-*",
+  ],
+  "review-artifacts": ["QFAI-REVIEW-*"],
+  prototyping: ["QFAI-PROT-*", "QFAI-CRIT-*", "QFAI-FID-*", "QFAI-UIE-*", "QFAI-DCON-*"],
+  "prototyping-skill": ["UIX-VAL-SKILL-*"],
+  "atdd-traceability": ["QFAI-ATDD-*"],
+  "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
+  tdd: ["TDDLIST_*", "QFAI-TEST-001", "QFAI-TRACE-*"],
+} as const satisfies Record<string, readonly string[]>;
+
+type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
+
+const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
+
+/**
+ * Groups each profile actually runs, mirroring
+ * `core/validate.ts#runProfileValidators`. Exhaustive over `ValidationProfile`
+ * so a new profile cannot be added without deciding what it evaluates.
+ */
+const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
+  full: ALL_GATE_GROUPS,
+  verify: ALL_GATE_GROUPS,
+  discussion: ["discussion"],
+  sdd: ["sdd"],
+  prototyping: ["prototyping"],
+  atdd: ["atdd-traceability", "atdd-scaffold"],
+  // `runTddValidators` also calls `validateAtddCodeTraceability`, but not the
+  // scaffold-placeholder gate that completes the atdd group.
+  tdd: ["tdd", "atdd-traceability"],
+  "saas-package": ["prototyping"],
+};
+
+function isKnownProfile(profile: string): profile is ValidationProfile {
+  return Object.prototype.hasOwnProperty.call(PROFILE_GATE_GROUPS, profile);
+}
+
+/** Deduped, order-preserving families for the groups a profile does not run. */
+function unevaluatedFamilies(profile: string): string[] {
+  if (!isKnownProfile(profile)) {
+    return [];
+  }
+  const evaluated = new Set<GateGroup>(PROFILE_GATE_GROUPS[profile]);
+  const families: string[] = [];
+  const push = (family: string): void => {
+    if (!families.includes(family)) families.push(family);
+  };
+  for (const group of Object.keys(GATE_GROUP_FAMILIES) as GateGroup[]) {
+    if (evaluated.has(group)) continue;
+    for (const family of GATE_GROUP_FAMILIES[group]) push(family);
+  }
+  if (profile === "saas-package") {
+    // Keep the skip-set SSOT wired in: a gate added to
+    // `SAAS_PACKAGE_SKIPPED_GATES` must reach the notice even if it belongs to
+    // a group the profile otherwise runs.
+    for (const family of saasPackageSkippedGateFamilies()) push(family);
+  }
+  return families;
+}
+
+/**
+ * Notice describing what a run did NOT evaluate.
+ *
+ * A PASS on a partial profile is not layered coverage, and every profile
+ * writes the shared always-latest `validate.json` — so the omission has to be
+ * visible in the artifact, not only in the operator's head.
+ *
+ * When the CI profile guard blocked the run, no validator executed at all;
+ * the normal per-profile wording would then imply the requested profile's own
+ * gates had been observed, so that case gets its own message.
+ */
+function buildPartialProfileNotice(
+  profile: string | undefined,
+  blockedByProfileGuard: boolean,
+): Issue | null {
+  if (!profile) {
+    return null;
+  }
+  if (blockedByProfileGuard) {
+    return {
+      code: "QFAI-PROFILE-001",
+      severity: "info",
+      category: "canonical",
+      message:
+        `profile="${profile}" was blocked by the CI profile guard, so NO validator ran and ` +
+        "NO hard gate was evaluated — including this profile's own. This report carries the " +
+        "guard finding and this notice, nothing else; it is not a validation result. Run " +
+        "`qfai validate --fail-on error` (full profile) instead.",
+      rule: "validate.partialProfileCoverage",
+    };
+  }
+  const unevaluated = unevaluatedFamilies(profile);
+  if (unevaluated.length === 0) {
+    return null;
+  }
+  return {
+    code: "QFAI-PROFILE-001",
+    severity: "info",
+    category: "canonical",
+    message:
+      `profile="${profile}" is a partial profile. Hard gates NOT evaluated in this run: ` +
+      `${unevaluated.join(", ")}. A PASS here is not full-scan coverage — run ` +
+      "`qfai validate --fail-on error` (full profile) before declaring completion.",
+    rule: "validate.partialProfileCoverage",
+  };
+}
+
 function recountIssues(
   counts: ValidationResult["counts"],
   added: Issue,
@@ -641,6 +781,8 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   E_OQ_STATUS_UNPARSEABLE: "Each OQ entry has a valid status (open|resolved|deferred).",
   E_DELTA_MISSING_REQUIRED:
     "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
+  "QFAI-PROFILE-001":
+    "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
   "QFAI-TRIAGE-007":
     "SPLIT / MERGE / SUPERSEDE / DELETE are spec-scoped; item decomposition is UPDATE:MODIFY + UPDATE:APPEND and item removal is UPDATE:REMOVE.",
   "QFAI-DENSITY-005":
