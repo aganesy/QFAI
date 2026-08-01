@@ -17,8 +17,17 @@ const tcTable = (level: string): string =>
     "",
   ].join("\n");
 
+type TestKind = "integration" | "api" | "e2e";
+
+/**
+ * `annotationIn` accepts several directories so a migration state — the correct
+ * annotation added, the old one not yet removed — can be set up as it actually
+ * occurs. With one directory the leftover-annotation case also tripped the
+ * missing-coverage rule, so it could not show that the leftover is reported
+ * *while coverage is satisfied*.
+ */
 async function withProject(
-  opts: { testCases: string; annotationIn: "integration" | "api" | "e2e" },
+  opts: { testCases: string; annotationIn: TestKind | TestKind[] },
   assertion: (issues: Awaited<ReturnType<typeof validateAtddCodeTraceability>>) => void,
 ): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tc-routing-"));
@@ -29,9 +38,12 @@ async function withProject(
     await writeFile(path.join(specDir, "02_User-stories.md"), "# 02 US\n", "utf-8");
     await writeFile(path.join(specDir, "06_Test-Cases.md"), opts.testCases, "utf-8");
 
-    const testDir = path.join(root, "tests", opts.annotationIn);
-    await mkdir(testDir, { recursive: true });
-    await writeFile(path.join(testDir, "a.test.ts"), "/* QFAI:SPEC-0001:TC-0001 */\n", "utf-8");
+    const kinds = Array.isArray(opts.annotationIn) ? opts.annotationIn : [opts.annotationIn];
+    for (const kind of kinds) {
+      const testDir = path.join(root, "tests", kind);
+      await mkdir(testDir, { recursive: true });
+      await writeFile(path.join(testDir, "a.test.ts"), "/* QFAI:SPEC-0001:TC-0001 */\n", "utf-8");
+    }
 
     assertion(await validateAtddCodeTraceability(root, defaultConfig));
   } finally {
@@ -145,13 +157,21 @@ describe("the TC obligation routes by declared Level", () => {
   it("forbids an L4 TC left behind in tests/integration", async () => {
     // A migration that adds the correct tests/api/** annotation and leaves the
     // old integration one behind used to validate clean, contradicting the
-    // shipped "exactly one directory" rule.
-    await withProject({ testCases: tcTable("L4"), annotationIn: "integration" }, (issues) => {
-      const finding = issues.find((entry) => entry.code === "QFAI-ATDD-123");
-      expect(finding?.severity).toBe("error");
-      expect(finding?.message).toContain("SPEC-0001:TC-0001");
-      expect(finding?.suggested_action).toContain("tests/integration/**");
-    });
+    // shipped "exactly one directory" rule. Both annotations exist here, so
+    // coverage is satisfied and QFAI-ATDD-123 is the only thing left to fire —
+    // with the integration annotation alone the missing-coverage rule would
+    // fire too, and the leftover would not be shown to be independently
+    // reported.
+    await withProject(
+      { testCases: tcTable("L4"), annotationIn: ["api", "integration"] },
+      (issues) => {
+        expect(codes(issues)).not.toContain("QFAI-ATDD-112");
+        const finding = issues.find((entry) => entry.code === "QFAI-ATDD-123");
+        expect(finding?.severity).toBe("error");
+        expect(finding?.message).toContain("SPEC-0001:TC-0001");
+        expect(finding?.suggested_action).toContain("tests/integration/**");
+      },
+    );
   });
 
   it("says nothing about an L3 TC annotated in tests/integration", async () => {

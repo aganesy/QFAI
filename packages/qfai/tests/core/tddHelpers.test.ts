@@ -70,8 +70,19 @@ describe("isCoverageTargetLevel", () => {
     expect(isCoverageTargetLevel("acceptance")).toBe(false);
   });
 
-  it("conservatively includes unknown values like L2", () => {
+  it("recognizes the L1/L2 codes the 06_Test-Cases.md template ships", () => {
+    expect(isCoverageTargetLevel("L1")).toBe(true);
     expect(isCoverageTargetLevel("L2")).toBe(true);
+  });
+
+  it("excludes L3-L5, which the template maps to non-unit layers", () => {
+    expect(isCoverageTargetLevel("L3")).toBe(false);
+    expect(isCoverageTargetLevel("L4")).toBe(false);
+    expect(isCoverageTargetLevel("L5")).toBe(false);
+  });
+
+  it("excludes api", () => {
+    expect(isCoverageTargetLevel("api")).toBe(false);
   });
 
   it("excludes the ATDD-routed spellings so --profile full agrees with the TC routing", () => {
@@ -81,6 +92,9 @@ describe("isCoverageTargetLevel", () => {
       expect(isCoverageTargetLevel(level)).toBe(false);
     }
   });
+
+  it("still conservatively includes a genuinely unrecognized value", () => {
+    expect(isCoverageTargetLevel("smoke")).toBe(true);  });
 
   it("treats empty string as coverage target", () => {
     expect(isCoverageTargetLevel("")).toBe(true);

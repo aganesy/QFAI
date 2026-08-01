@@ -28,7 +28,12 @@ export interface TriageRequirement {
 export interface TriageInput {
   reqs: TriageRequirement[];
   summaries: SpecSummary[];
-  /** Spec size thresholds beyond which APPEND is upgraded to SPLIT. */
+  /**
+   * Spec size thresholds. A breach is a *signal* recorded in the row's
+   * `rationale`, asking for a capability-ownership review; it never changes
+   * the classified operation, and in particular never upgrades APPEND to
+   * SPLIT (see {@link classifyTriage}).
+   */
   thresholds?: TriageThresholds;
 }
 
@@ -199,10 +204,10 @@ interface SubjectCandidate {
  *    capability-exact-match branch in `classifyTriage` short-circuits
  *    before this fallback runs whenever the REQ carries a capability,
  *    so the divergence only appears for capability-less REQs that
- *    still token-overlap with both specs. The size-threshold escalation
- *    (`tooLarge` -> SPLIT) absorbs the worst case; the agent driving
- *    Stage 1 is also expected to verify the proposed primary spec
- *    against the impact cascade before persisting.
+ *    still token-overlap with both specs. A size-threshold breach is only
+ *    a `size signal: ...` rationale note (it never escalates to SPLIT), so
+ *    the agent driving Stage 1 is expected to verify the proposed primary
+ *    spec against the impact cascade before persisting.
  * 3. Lexicographically smaller `specId` wins. This keeps the result
  *    deterministic for any input order, provided the comparator below
  *    is fed a stable iteration. `bestSubjectMatch` snapshots the input
@@ -279,22 +284,83 @@ export function bestSubjectMatch(
  *    - otherwise UPDATE:REMOVE on a capability-matched spec, or on the
  *      closest subject-overlap match. Falls through to DELETE only when
  *      no active spec can absorb the removal.
- * 2. capability matches multiple active specs -> MERGE.
- * 3. capability matches a single active spec -> APPEND, escalating to
- *    SPLIT when AC/TC thresholds are exceeded.
+ * 2. capability matches multiple active specs -> MERGE. A breached AC/TC
+ *    threshold on any target is reported on the row and never changes the
+ *    operation.
+ * 3. capability matches a single active spec -> APPEND. A breached AC/TC
+ *    threshold is reported on the row and never changes the operation.
  * 4. capability does not match (or is absent) but subject tokens overlap
  *    an active spec's title/capability/scope -> APPEND on the closest
- *    spec, with a fallback rationale prompting cascade verification.
- *    SPLIT applies if the closest spec exceeds size thresholds.
+ *    spec, with a fallback rationale prompting cascade verification. A
+ *    breached threshold on that spec is likewise only a rationale note.
  * 5. No subject overlap with any active spec -> CREATE candidate. The
  *    caller MUST add the new CAP to `_policies/03_Capabilities.md` and
  *    cite it in the Rationale column (validator: QFAI-TRIAGE-006).
+ *
+ * This classifier never emits SPLIT. SPLIT asserts one spec must become N
+ * specs, and `validateSpecSplitByCapability` hard-enforces one `CAP-NNNN`
+ * per spec, so a count-driven SPLIT of a single-capability spec raises
+ * `QFAI-SPLIT-102` / `QFAI-SPLIT-104` at `error` and has no legal end
+ * state. Size breaches surface as a `size signal: ...` rationale that asks
+ * for a capability-ownership review; only that review can propose SPLIT.
  *
  * The classifier output is a *proposal*. The agent driving Stage 1 Triage
  * is expected to read the candidate spec's scope/AC/BR before persisting
  * the table, and to add cascade rows for any other specs that need
  * MODIFY/REMOVE in support of the primary change.
  */
+/**
+ * The `size signal: ...` note for any row, or `undefined` when no target
+ * breaches a threshold.
+ *
+ * One formatter for every operation. The breach detail — which specs, which
+ * counts, which thresholds — is identical whatever the row does; only the
+ * clause naming what the operation does next differs, and that is `standsClause`.
+ * Three call sites building this string by hand is how the IDs, the thresholds
+ * or the `QFAI-SPLIT-102/104` citation drift out of one of them.
+ *
+ * The operation is never changed by a breach: MERGE, APPEND and UPDATE:REMOVE
+ * all stand, and the note only asks for a capability-ownership review. A
+ * count-driven SPLIT of a single-capability spec has no legal end state —
+ * `validateSpecSplitByCapability` raises `QFAI-SPLIT-102` / `QFAI-SPLIT-104` at
+ * `error` — so only that review can propose one.
+ */
+function sizeSignal(
+  targets: readonly SpecSummary[],
+  thresholds: TriageThresholds,
+  standsClause: string,
+): string | undefined {
+  const breached = targets.filter(
+    (target) => target.acCount > thresholds.ac || target.tcCount > thresholds.tc,
+  );
+  if (breached.length === 0) {
+    return undefined;
+  }
+  const details = breached
+    .map(
+      (target) =>
+        `${target.specId} has ac=${target.acCount} (threshold ${thresholds.ac}), ` +
+        `tc=${target.tcCount} (threshold ${thresholds.tc})`,
+    )
+    .join(" / ");
+  return `size signal: ${details}. ${standsClause} (QFAI-SPLIT-102/104)`;
+}
+
+/** What a MERGE row does next after a breach. */
+const MERGE_STANDS =
+  "MERGE stands; start a capability-ownership review on the merged owner — " +
+  "SPLIT only if it owns more than one CAP-NNNN, otherwise record the reasoned non-split";
+
+/** What a single-target removal row does next after a breach. */
+const REMOVE_STANDS =
+  "Removal proceeds as UPDATE:REMOVE; start a capability-ownership review separately — " +
+  "SPLIT only if the spec owns more than one CAP-NNNN";
+
+/** What a single-target additive row does next after a breach. */
+const APPEND_STANDS =
+  "APPEND stands; start a capability-ownership review separately — " +
+  "SPLIT only if the spec owns more than one CAP-NNNN";
+
 export function classifyTriage(input: TriageInput): TriageRow[] {
   const thresholds = input.thresholds ?? DEFAULT_TRIAGE_THRESHOLDS;
   const active = input.summaries.filter((s) => s.status === "active");
@@ -307,36 +373,46 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
 
     if (req.removalHint) {
       if (capabilityMatches.length > 1) {
+        const notes = [
+          "removal-intent across multiple capability-matched specs; consolidate before REMOVE",
+        ];
+        const breach = sizeSignal(capabilityMatches, thresholds, MERGE_STANDS);
+        if (breach) {
+          notes.push(breach);
+        }
         rows.push({
           source: req.id,
           subject: req.subject,
           existingSpec: capabilityMatches.map((m) => m.specId).join("+"),
           op: "MERGE",
-          rationale:
-            "removal-intent across multiple capability-matched specs; consolidate before REMOVE",
+          rationale: notes.join("; "),
         });
         continue;
       }
       const target = capabilityMatches[0] ?? bestSubjectMatch(req.subject, active);
       if (target) {
-        // Symmetry with the additive path (PR #206 review #3): when the
-        // target spec already exceeds AC/TC thresholds, propose SPLIT
-        // before REMOVE so that traceability is preserved across the
-        // resulting child specs. Without this escalation the additive
-        // and removal branches diverged on size handling, which
-        // contradicts the append-first principle.
-        const tooLarge = target.acCount > thresholds.ac || target.tcCount > thresholds.tc;
+        // Symmetry with the additive path (PR #206 review #3): the size
+        // breach is reported on the row, but it no longer decides the
+        // operation. A count-driven SPLIT of a single-capability spec is
+        // illegal — `validateSpecSplitByCapability` raises QFAI-SPLIT-102/104
+        // at `error` — so the breach starts a capability-ownership review
+        // instead.
+        // `notes`, like the multi-target MERGE path above: the removal-intent
+        // note comes first and the size signal is appended. Building the
+        // rationale from the breach alone dropped the `removal-intent` keyword
+        // from single-target rows, so the same REQ read differently depending
+        // on how many specs matched it.
+        const notes = ["removal-intent on the capability-matched spec"];
+        const breach = sizeSignal([target], thresholds, REMOVE_STANDS);
+        if (breach) {
+          notes.push(breach);
+        }
         rows.push({
           source: req.id,
           subject: req.subject,
           existingSpec: target.specId,
-          op: tooLarge ? "SPLIT" : { update: "REMOVE" },
-          ...(tooLarge
-            ? {
-                rationale:
-                  "removal targets a spec exceeding size thresholds; SPLIT before REMOVE to preserve traceability",
-              }
-            : {}),
+          op: { update: "REMOVE" },
+          rationale: notes.join("; "),
         });
       } else {
         // No active spec absorbed the removal-shaped REQ. DELETE
@@ -362,27 +438,49 @@ export function classifyTriage(input: TriageInput): TriageRow[] {
     }
 
     if (capabilityMatches.length > 1) {
+      // Step 4 of the Slice Policy runs after step 3, not instead of it: the
+      // MERGE targets are evaluated against the thresholds too. Without this
+      // the size signal the policy promises was simply absent whenever the
+      // selected operation was MERGE.
+      const breach = sizeSignal(capabilityMatches, thresholds, MERGE_STANDS);
       rows.push({
         source: req.id,
         subject: req.subject,
         existingSpec: capabilityMatches.map((m) => m.specId).join("+"),
         op: "MERGE",
+        ...(breach ? { rationale: breach } : {}),
       });
       continue;
     }
 
     const primary = capabilityMatches[0] ?? bestSubjectMatch(req.subject, active);
     if (primary) {
-      const tooLarge = primary.acCount > thresholds.ac || primary.tcCount > thresholds.tc;
+      // A size breach is a SIGNAL, not the operation decision. SPLIT asserts
+      // the spec must become N specs, and `validateSpecSplitByCapability`
+      // hard-enforces one CAP-NNNN per spec — so splitting a single-capability
+      // spec on a count alone raises QFAI-SPLIT-102/104 at `error` and has no
+      // legal end state. SPLIT is reserved for `capabilityMatches.length > 1`,
+      // which is handled by the MERGE/`> 1` branch above and by an explicit
+      // capability-ownership review.
       const isFallback = capabilityMatches.length === 0;
       const row: TriageRow = {
         source: req.id,
         subject: req.subject,
         existingSpec: primary.specId,
-        op: tooLarge ? "SPLIT" : { update: "APPEND" },
+        op: { update: "APPEND" },
       };
+      const notes: string[] = [];
       if (isFallback) {
-        row.rationale = `subject-overlap fallback to ${primary.specId}; verify impact cascade before persisting`;
+        notes.push(
+          `subject-overlap fallback to ${primary.specId}; verify impact cascade before persisting`,
+        );
+      }
+      const breach = sizeSignal([primary], thresholds, APPEND_STANDS);
+      if (breach) {
+        notes.push(breach);
+      }
+      if (notes.length > 0) {
+        row.rationale = notes.join("; ");
       }
       rows.push(row);
       continue;

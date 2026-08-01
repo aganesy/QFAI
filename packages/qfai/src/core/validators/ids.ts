@@ -65,6 +65,13 @@ export async function validateDefinedIds(root: string, config: QfaiConfig): Prom
         "error",
         sorted[0],
         "id.duplicate",
+        undefined,
+        "canonical",
+        undefined,
+        // `file` is only the lexicographically first definer. Every definer is
+        // party to the duplicate, so `--spec` scoping must be able to see them
+        // all — otherwise scoping to the later spec hides its own violation.
+        { relatedFiles: sorted.slice(1) },
       ),
     );
   }

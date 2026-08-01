@@ -21,6 +21,15 @@ type AtddTraceabilitySummary = {
   };
   /** Missing TC ref -> the test directory its declared `Level` routes to. */
   missingTcHomes: Record<string, string>;
+  /**
+   * `CON-API-*` IDs whose contract declares `x-qfai-status: planned`, so they
+   * are outside the `QFAI-ATDD-113` obligation. Persisted because
+   * `missing.conApi: []` alone cannot tell "every contract is covered" apart
+   * from "every contract is deferred" — the audit artifact has to answer that.
+   */
+  deferred: {
+    conApi: string[];
+  };
   unknown: Array<{ file: string; token: string }>;
   forbidden: {
     tcInApi: Array<{ file: string; ids: string[] }>;
@@ -56,7 +65,13 @@ export async function validateAtddCodeTraceability(
         "atddCodeTraceability.coverage.usToE2e",
         result.missing.us,
         "change",
-        "tests/e2e/** に `QFAI:SPEC-XXXX:US-YYYY` 注釈を追加し、全 US を少なくとも1回参照してください。",
+        // Conditional wording: scoping is opt-in. When no spec declares a
+        // surface type the obligation stays project-wide, so an unconditional
+        // "user-facing specs only" would be wrong for exactly the projects
+        // that have not opted in — while the unscoped reading must not become
+        // "annotate every US in the repository", which is the annotation-only
+        // E2E tree `catalog/test-layers.md` forbids.
+        "tests/e2e/** に `QFAI:SPEC-XXXX:US-YYYY` 注釈を追加し、上記の US を少なくとも1回参照してください。surface typing を宣言している場合、対象は user-facing surface の spec のみです。どの spec も宣言していない場合は全 spec が対象のままです（`.qfai/assistant/catalog/test-layers.md#atdd-annotation-hard-gate`）。",
       ),
     );
   }
@@ -73,6 +88,24 @@ export async function validateAtddCodeTraceability(
         result.missing.tc,
         "change",
         buildMissingTcFix(grouped, dirs),
+      ),
+    );
+  }
+
+  if (result.deferredApiContractIds.size > 0) {
+    const deferred = Array.from(result.deferredApiContractIds).sort((left, right) =>
+      left.localeCompare(right),
+    );
+    issues.push(
+      issue(
+        "QFAI-ATDD-114",
+        `CON-API の API テスト義務を \`x-qfai-status: planned\` で延期しています: ${deferred.join(", ")}`,
+        "info",
+        result.contractsApiRoot,
+        "atddCodeTraceability.coverage.conApiDeferred",
+        deferred,
+        "canonical",
+        "スライス実装時に `x-qfai-status` を planned 以外へ戻し、tests/api/** で参照してください。",
       ),
     );
   }
@@ -275,11 +308,21 @@ async function writeAtddTraceabilityReport(
   const outputDir = path.join(resolvePath(root, config, "outDir"), "atdd-traceability");
   await mkdir(outputDir, { recursive: true });
 
+  // Hoisted out of the `missing.tc` map below: the directory table depends only
+  // on the configured testsDir, so rebuilding it per missing ref was pure
+  // repetition.
+  const testKindDirs = atddTestKindDirs(config.paths.testsDir);
+
   const summary: AtddTraceabilitySummary = {
     missing: {
       us: result.missing.us,
       tc: result.missing.tc,
       conApi: result.missing.conApi,
+    },
+    deferred: {
+      conApi: Array.from(result.deferredApiContractIds).sort((left, right) =>
+        left.localeCompare(right),
+      ),
     },
     unknown: result.unknown.map((entry) => ({
       file: entry.file,
@@ -288,7 +331,7 @@ async function writeAtddTraceabilityReport(
     missingTcHomes: Object.fromEntries(
       result.missing.tc.map((ref) => [
         ref,
-        atddTestKindDirs(config.paths.testsDir)[result.missingTcHomes.get(ref) ?? "integration"],
+        testKindDirs[result.missingTcHomes.get(ref) ?? "integration"],
       ]),
     ),
     forbidden: {
@@ -331,6 +374,11 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
   );
   lines.push("- CON-API -> API");
   lines.push(...toList(summary.missing.conApi));
+  lines.push("");
+  lines.push("## Deferred Coverage");
+  lines.push("");
+  lines.push("- CON-API (`x-qfai-status: planned`, outside QFAI-ATDD-113)");
+  lines.push(...toList(summary.deferred.conApi));
   lines.push("");
   lines.push("## Unknown References");
   lines.push("");

@@ -54,10 +54,17 @@ describe("E2E: evidence contract hardening", () => {
 // QFAI:SPEC-0011:US-0011-0004
 describe("E2E: parallel dispatch rules", () => {
   it("SKILL.md defines allow/deny conditions and delivery-planner authority", async () => {
-    const content = await readFile(implementSkillPath, "utf-8");
+    // #232: full conditions live in references/parallelization-policy.md.
+    const content = [
+      await readFile(implementSkillPath, "utf-8"),
+      await readFile(
+        path.join(path.dirname(implementSkillPath), "references", "parallelization-policy.md"),
+        "utf-8",
+      ),
+    ].join("\n");
     expect(content).toMatch(/allow.*condition/i);
     expect(content).toMatch(/deny.*condition/i);
-    expect(content).toMatch(/delivery-planner.*sole.*authorit/i);
+    expect(content).toMatch(/delivery-planner[\s\S]*?sole.*authorit/i);
     expect(content).toMatch(/integration.*verify/i);
     expect(content).toMatch(/worktree.*separation/i);
   });

@@ -24,15 +24,21 @@
   - `architecture-reviewer`
   - `product-surface-reviewer`
   - `qa-gatekeeper`
-- 各レビューは `PASS` / `FAIL` を返す
-- `FAIL` が出たら、失敗 reviewer と修正影響を受ける reviewer のみ再実行する
+- 各レビューは `PASS` / `REVISE` を返す（in-flight のレビュアー応答の語彙。SSOT は
+  `.qfai/assistant/constitution/shared-skill-delegation-baseline.md` の `## Reviewer response template`）
+- `REVISE` は review pack の `summary.json` を書き出す際に `status: "FAIL"` へ対応付けられる（同ファイルの
+  `### Verdict vocabulary` を参照）。第3の判定値を作らないこと
+- `REVISE` が出たら、失敗 reviewer と修正影響を受ける reviewer のみ再実行する
 
 ---
 
 ## Validate Hard Gate（必須）
 
-- 各 review cycle で `qfai validate --profile sdd --fail-on error --format github` を実行していること
-- `.qfai/report/validate.log` が存在し、最新の成果物に対応していること
+- 各 review cycle で `npx qfai validate --profile sdd --fail-on error --format github` を実行していること
+- `<paths.outDir>/validate.log`（既定 `.qfai/report/validate.log`）が存在し、最新の成果物に対応していること
+  - このファイルは `npx qfai validate` が実行のたびに自動で書き出す。`| tee` などのシェルリダイレクトは不要（PowerShell では動作しないため使用しない）
+  - `<paths.outDir>` は `qfai.config.yaml` の `paths.outDir`。既定以外に変更したプロジェクトでは `<paths.outDir>/validate.log` と `<paths.outDir>/run-*/` を見ること
+  - 最新性は `validate.log` の `run_log:` 行が最新の `run-*/` を指しているかで確認する
 
 ---
 
