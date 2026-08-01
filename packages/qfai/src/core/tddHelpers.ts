@@ -5,26 +5,61 @@
  * classification in a single source of truth.
  */
 
-export const UNIT_COMPONENT_LAYERS = new Set(["unit", "component"]);
+/**
+ * Level values that ARE TDD coverage targets, in every spelling the shipped
+ * artifacts use. `06_Test-Cases.md` writes `L1`…`L5`; the ledger schema and
+ * the layer catalog write words. Both must classify identically.
+ */
+export const UNIT_COMPONENT_LAYERS = new Set(["unit", "component", "l1", "l2"]);
 
 /**
  * Layers explicitly excluded from TDD coverage targets.
  * Unknown Level values are conservatively included to avoid silent false negatives.
+ *
+ * The `l3` / `l4` / `l5` / `api` spellings are the same ATDD vocabulary the
+ * TC-layer routing in `atddTraceability.ts` accepts. Without them a
+ * `Level: L4` TC is unknown here, so `--profile full` counted it as a TDD
+ * obligation and raised `TDDLIST_TC_NOT_COVERED` even when the TC carried its
+ * correct `tests/api/**` annotation.
  */
-export const NON_COVERAGE_LAYERS = new Set(["integration", "e2e", "system", "acceptance"]);
+export const NON_COVERAGE_LAYERS = new Set([
+  "integration",
+  "e2e",
+  "system",
+  "acceptance",
+  "api",
+  "l3",
+  "l4",
+  "l5",
+]);
+
+export type LevelClassification = "coverage-target" | "non-coverage" | "unrecognized";
 
 /**
+ * Classifies a `Level` cell against the known vocabulary.
+ *
+ * Previously the check was exclusion-only against a word set the shipped
+ * template never produces (`L1`…`L5` matched nothing), so the documented
+ * "unit/component only" filter excluded no test case at all and
+ * `TDDLIST_TC_NOT_COVERED` demanded a ledger row for every TC. Classifying
+ * positively means an unrecognized value is *visible* rather than silently
+ * becoming a coverage target.
+ */
+export function classifyCoverageLevel(level: string): LevelClassification {
+  const normalized = level.trim().toLowerCase();
+  if (normalized.length === 0) return "coverage-target";
+  if (UNIT_COMPONENT_LAYERS.has(normalized)) return "coverage-target";
+  if (NON_COVERAGE_LAYERS.has(normalized)) return "non-coverage";
+  return "unrecognized";
+}
+/**
  * Determine whether a Level value should be treated as a coverage target.
- * - Known unit/component → true
- * - Known non-coverage (integration/e2e/system/acceptance) → false
- * - Unknown/unrecognized → true (conservative: avoids silent coverage gaps)
- * - Empty → true (treated same as missing)
+ * An unrecognized value still returns `true` (conservative: avoids silent
+ * coverage gaps) — callers that can report it should use
+ * `classifyCoverageLevel` and surface the `unrecognized` case.
  */
 export function isCoverageTargetLevel(level: string): boolean {
-  const normalized = level.trim().toLowerCase();
-  if (normalized.length === 0) return true;
-  if (NON_COVERAGE_LAYERS.has(normalized)) return false;
-  return true;
+  return classifyCoverageLevel(level) !== "non-coverage";
 }
 
 export const TDD_DONE_STATUSES = new Set(["done", "green", "refactor"]);

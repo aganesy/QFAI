@@ -26,6 +26,13 @@ const DELEGATION_BASELINE = path.join(
   "shared-skill-delegation-baseline.md",
 );
 const IMPLEMENT_SKILL = path.join(assistantDir, "skills", "qfai-implement", "SKILL.md");
+const FINDING_CLASSIFICATION = path.join(
+  assistantDir,
+  "skills",
+  "qfai-implement",
+  "references",
+  "finding-classification.md",
+);
 const REVIEWER_AGENTS = [
   path.join(assistantDir, "agents", "completion-reviewer.md"),
   path.join(assistantDir, "agents", "implementation-reviewer.md"),
@@ -100,7 +107,8 @@ describe("reviewer finding provenance", () => {
     // Write/Edit must be told not to touch it.
     expect(drift).toMatch(/does \*\*not\*\* write it into\s*\n?\s*`08_Open-questions\.md`/);
     expect(skill).toMatch(/Do \*\*not\*\* edit `08_Open-questions\.md`/);
-    expect(skill).toMatch(/owner phase \(`\/qfai-sdd`\) records and adjudicates/);
+    // Wrap-tolerant: the sentence is the rule, its wrap column is not.
+    expect(skill).toMatch(/owner phase \(`\/qfai-sdd`\) records and\s*\n?\s*adjudicates/);
   });
 
   it("keeps the reviewer agent cards aligned with the defect exemption", async () => {
@@ -111,10 +119,13 @@ describe("reviewer finding provenance", () => {
   });
 
   it("links only to anchors that exist in the target document", async () => {
-    const [drift, baseline, skill] = await Promise.all([
+    const [drift, baseline, skill, classification] = await Promise.all([
       readFile(DRIFT_PROTOCOL, "utf-8"),
       readFile(DELEGATION_BASELINE, "utf-8"),
       readFile(IMPLEMENT_SKILL, "utf-8"),
+      // Most of the skill's cross-document links moved here with the
+      // classification detail; without it they would go unchecked.
+      readFile(FINDING_CLASSIFICATION, "utf-8"),
     ]);
     const slugsByDoc = new Map<string, Set<string>>([
       ["drift-protocol.md", headingSlugs(drift)],
@@ -124,6 +135,7 @@ describe("reviewer finding provenance", () => {
       drift,
       baseline,
       skill,
+      classification,
       ...(await Promise.all(REVIEWER_AGENTS.map((f) => readFile(f, "utf-8")))),
     ];
     const broken: string[] = [];

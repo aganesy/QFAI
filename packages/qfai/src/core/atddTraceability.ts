@@ -14,6 +14,7 @@ import {
 } from "./fs.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { resolveSurfaceUnion } from "./prototyping/specResolution.js";
+import { parseAllMarkdownTables } from "./specPackParsers.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { collectMarkdownItems, uniqueMatches } from "./validators/utils.js";
 
@@ -23,6 +24,12 @@ const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
 
 const US_ID_RE = /^US-\d{4}(?:-\d{4})?$/;
 const TC_ID_RE = /^TC-\d{4}(?:-\d{4})?$/;
+/** Heading form of a test case, e.g. `## TC-0001-0002: title`. */
+const TC_HEADING_RE = /^##\s+(TC-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
+/** `- Level: L4` meta line inside a heading-form test case block. */
+const LEVEL_META_LINE_RE = /^[-*]\s+Level\s*[:：]\s*(.+?)\s*$/i;
+/** Parses a `SPEC-0001:TC-0002` ref produced by `formatTcRef`. */
+const MISSING_TC_REF_RE = /^SPEC-(\d{4}):TC-(\d{4}(?:-\d{4})?)$/;
 const API_CONTRACT_ID_RE = /^CON-API-\d+$/;
 /**
  * Extension set used when the project declares no
@@ -95,10 +102,50 @@ export type AtddCodeTraceabilityResult = {
   forbidden: {
     tcInApi: AtddForbiddenRef[];
     tcInE2e: AtddForbiddenRef[];
+    /** TC annotated under integration although its declared Level routes elsewhere. */
+    tcInIntegration: AtddForbiddenRef[];
   };
   missing: AtddTraceabilityMissing;
+  /**
+   * Formatted missing TC ref -> the test kind its declared `Level` routes to.
+   * Lets the CLI phrase `QFAI-ATDD-112` (message, `suggested_action`, report)
+   * per declared layer instead of naming `tests/integration/**` for every TC.
+   */
+  missingTcHomes: Map<string, AtddTestKind>;
   scan: AtddTraceabilityScan;
 };
+
+/** Test directory each `AtddTestKind` owns, for user-facing messages. */
+export const ATDD_TEST_KIND_DIRS: Record<AtddTestKind, string> = {
+  integration: "tests/integration/**",
+  api: "tests/api/**",
+  e2e: "tests/e2e/**",
+};
+
+/**
+ * The same map rendered against the project's configured `paths.testsDir`.
+ *
+ * The scan already follows `testsDir`, so a project that renamed it to e.g.
+ * `spec-tests` would otherwise be told by `QFAI-ATDD-112` to annotate
+ * `tests/api/**` — a directory the scan never reads, leaving the finding
+ * unclearable. A root-level layout (`testsDir: "."`) is the same trap in the
+ * other direction: the scan reads `api/**` at the repository root, so the
+ * `tests/` segment must be dropped rather than kept.
+ * {@link ATDD_TEST_KIND_DIRS} stays as the default-shaped fallback for callers
+ * with no config in hand.
+ */
+export function atddTestKindDirs(testsDirRelative: string): Record<AtddTestKind, string> {
+  const base = toPosixPath(testsDirRelative).replace(/\/+$/, "");
+  if (base === "tests") {
+    return ATDD_TEST_KIND_DIRS;
+  }
+  const prefix = base.length === 0 || base === "." ? "" : `${base}/`;
+  return {
+    integration: `${prefix}integration/**`,
+    api: `${prefix}api/**`,
+    e2e: `${prefix}e2e/**`,
+  };
+}
 
 export async function evaluateAtddCodeTraceability(
   root: string,
@@ -150,9 +197,11 @@ export async function evaluateAtddCodeTraceability(
 
   const forbiddenTcInApi = new Map<string, Set<string>>();
   const forbiddenTcInE2e = new Map<string, Set<string>>();
+  const forbiddenTcInIntegration = new Map<string, Set<string>>();
 
   const specUsIds = specRefs.us;
   const specTcIds = specRefs.tc;
+  const tcLevels = specRefs.tcLevels;
 
   for (const file of scanResult.files) {
     const kind = resolveTestKind(file, {
@@ -187,14 +236,26 @@ export async function evaluateAtddCodeTraceability(
       if (!known) {
         pushUnknown(unknown, unknownDedup, file, token, "tc");
       }
-      if (kind === "integration" && known) {
+      const homeKind = resolveTcHomeKind(tcLevels, ref.spec, `TC-${ref.id}`);
+      if (kind === homeKind && known) {
         recordSpecRef(tcRefs, ref.spec, `TC-${ref.id}`, file);
       }
-      if (kind === "api") {
+      // Only flag a placement that is NOT the TC's declared home. Reporting an
+      // annotation as forbidden while also declining to count it produced two
+      // errors from one correct action.
+      if (kind === "api" && homeKind !== "api") {
         recordForbidden(forbiddenTcInApi, file, formatTcRef(ref.spec, ref.id));
       }
-      if (kind === "e2e") {
+      if (kind === "e2e" && homeKind !== "e2e") {
         recordForbidden(forbiddenTcInE2e, file, formatTcRef(ref.spec, ref.id));
+      }
+      // Symmetry: a TC whose declared home is api/e2e is equally misplaced when
+      // it is (still) annotated under integration. Without this, a migration
+      // that added the correct `tests/api/**` annotation and left the old
+      // `tests/integration/**` one behind validated clean, contradicting the
+      // shipped rule that a TC annotation belongs to exactly one directory.
+      if (kind === "integration" && homeKind !== "integration") {
+        recordForbidden(forbiddenTcInIntegration, file, formatTcRef(ref.spec, ref.id));
       }
     }
 
@@ -223,6 +284,7 @@ export async function evaluateAtddCodeTraceability(
     tcRefs,
     apiRefs,
   });
+  const missingTcHomes = buildMissingTcHomes(missing.tc, tcLevels);
 
   return {
     specsRoot,
@@ -241,8 +303,10 @@ export async function evaluateAtddCodeTraceability(
     forbidden: {
       tcInApi: toForbiddenList(forbiddenTcInApi),
       tcInE2e: toForbiddenList(forbiddenTcInE2e),
+      tcInIntegration: toForbiddenList(forbiddenTcInIntegration),
     },
     missing,
+    missingTcHomes,
     scan: {
       globs: scanGlobs,
       matchedFileCount: scanResult.matchedFileCount,
@@ -260,10 +324,13 @@ type SpecScopedRef = {
 async function collectSpecRefs(specsRoot: string): Promise<{
   us: Map<string, Set<string>>;
   tc: Map<string, Set<string>>;
+  /** `spec -> TC-ID -> declared Level`, lower-cased. Absent when no Level column. */
+  tcLevels: Map<string, Map<string, string>>;
 }> {
   const entries = await collectSpecEntries(specsRoot);
   const us = new Map<string, Set<string>>();
   const tc = new Map<string, Set<string>>();
+  const tcLevels = new Map<string, Map<string, string>>();
 
   for (const entry of entries) {
     const [usText, tcText] = await Promise.all([
@@ -280,9 +347,145 @@ async function collectSpecRefs(specsRoot: string): Promise<{
     if (tcIds.size > 0) {
       tc.set(entry.specNumber, tcIds);
     }
+
+    const levels = collectTcLevels(tcText);
+    if (levels.size > 0) {
+      tcLevels.set(entry.specNumber, levels);
+    }
   }
 
-  return { us, tc };
+  return { us, tc, tcLevels };
+}
+
+/**
+ * Reads the declared `Level` of every TC in `06_Test-Cases.md` so the TC
+ * obligation can be routed by declared layer instead of being hard-pinned to
+ * `tests/integration/**`.
+ *
+ * Both shipped shapes are read, matching `parseTestCases` in
+ * `core/atdd/scaffold.ts`: the heading form (`## TC-NNNN` plus `- Level: L4`
+ * meta lines) and the table form. Heading form wins on duplicates; within the
+ * table form the first declaration wins. Every `TC-ID` table is scanned, not
+ * just the first — a spec may split its catalogue across several tables, and
+ * only scanning the first silently dropped the later tables' layers.
+ */
+function collectTcLevels(tcText: string): Map<string, string> {
+  const levels = new Map<string, string>();
+  for (const [id, level] of collectHeadingTcLevels(tcText)) {
+    levels.set(id, level);
+  }
+  for (const [id, level] of collectTableTcLevels(tcText)) {
+    if (!levels.has(id)) {
+      levels.set(id, level);
+    }
+  }
+  return levels;
+}
+
+function collectTableTcLevels(tcText: string): Array<[string, string]> {
+  const pairs: Array<[string, string]> = [];
+  for (const table of parseAllMarkdownTables(tcText)) {
+    // Header matching is case-insensitive, like the heading-form `- Level:`
+    // parser and every `Level` *value* comparison downstream. A case-sensitive
+    // match made a table headed `level` fall through to the integration
+    // default silently, which is the failure mode this routing exists to end.
+    const headers = table.headers.map((header: string) => header.trim().toLowerCase());
+    const idIndex = headers.indexOf("tc-id");
+    const levelIndex = headers.indexOf("level");
+    if (idIndex < 0 || levelIndex < 0) {
+      continue;
+    }
+    for (const row of table.rows) {
+      const id = (row[idIndex] ?? "").trim().toUpperCase();
+      const level = (row[levelIndex] ?? "").trim().toLowerCase();
+      if (id.length > 0 && level.length > 0) {
+        pairs.push([id, level]);
+      }
+    }
+  }
+  return pairs;
+}
+
+function collectHeadingTcLevels(tcText: string): Array<[string, string]> {
+  const pairs: Array<[string, string]> = [];
+  let currentId: string | null = null;
+
+  for (const rawLine of tcText.replace(/\r\n/g, "\n").split("\n")) {
+    const line = rawLine.trim();
+    const heading = TC_HEADING_RE.exec(line);
+    if (heading?.[1] !== undefined) {
+      currentId = heading[1].toUpperCase();
+      continue;
+    }
+    if (line.startsWith("#")) {
+      // Any other heading closes the current TC block.
+      currentId = null;
+      continue;
+    }
+    if (currentId === null) {
+      continue;
+    }
+    const level = LEVEL_META_LINE_RE.exec(line)?.[1]?.trim().toLowerCase();
+    if (level !== undefined && level.length > 0) {
+      // First `- Level:` line of the block wins.
+      pairs.push([currentId, level]);
+      currentId = null;
+    }
+  }
+
+  return pairs;
+}
+
+/** Test directory a declared `Level` routes its TC obligation to. */
+const LEVEL_TO_TEST_KIND: Record<string, AtddTestKind | undefined> = {
+  l3: "integration",
+  integration: "integration",
+  l4: "api",
+  api: "api",
+  l5: "e2e",
+  e2e: "e2e",
+};
+
+/**
+ * Where a TC's annotation legally lives.
+ *
+ * Defaults to `integration` — the historical hard-coded answer — so a spec
+ * with no `Level` column behaves exactly as before. A TC that declares an
+ * API-level obligation routes to `tests/api/**`, which was previously both
+ * uncounted and reported as forbidden: two errors from one correct placement.
+ */
+function resolveTcHomeKind(
+  tcLevels: Map<string, Map<string, string>>,
+  spec: string,
+  tcId: string,
+): AtddTestKind {
+  const level = tcLevels.get(spec)?.get(tcId.toUpperCase());
+  if (level === undefined) {
+    return "integration";
+  }
+  return LEVEL_TO_TEST_KIND[level] ?? "integration";
+}
+
+/**
+ * Resolves the home kind of every missing TC so `QFAI-ATDD-112` can name the
+ * directory the TC's declared `Level` actually routes to.
+ */
+function buildMissingTcHomes(
+  missingTc: string[],
+  tcLevels: Map<string, Map<string, string>>,
+): Map<string, AtddTestKind> {
+  const homes = new Map<string, AtddTestKind>();
+  for (const ref of missingTc) {
+    const parsed = MISSING_TC_REF_RE.exec(ref);
+    const spec = parsed?.[1];
+    const id = parsed?.[2];
+    if (spec === undefined || id === undefined) {
+      homes.set(ref, "integration");
+      continue;
+    }
+    homes.set(ref, resolveTcHomeKind(tcLevels, spec, `TC-${id}`));
+  }
+  return homes;
 }
 
 export const PLANNED_CONTRACT_KEY = "x-qfai-status";
