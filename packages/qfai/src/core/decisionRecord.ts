@@ -17,8 +17,10 @@
  * stable substring containment so e.g. "rejected-option re-adoption"
  * resolves to the `rejected-option` context.
  *
- * The decisions directory is git-ignored by default (mirrors
- * `.qfai/evidence/prototyping/`); ship-time init keeps that contract.
+ * A decision record carries the operator's approval and cannot be
+ * regenerated, so — unlike the regenerable stage evidence beside it —
+ * `.qfai/evidence/decisions/` is re-included by the managed `.gitignore`
+ * block `qfai init` writes (`QFAI_GITIGNORE_GOVERNANCE_NEGATIONS`).
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";

@@ -1,5 +1,5 @@
 {
-  "name": "qfai",
+  "name": "qfai-monorepo",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -12,6 +12,7 @@
     "node": ">=20.19.0"
   },
   "scripts": {
+    "preinstall": "node ./scripts/check-not-a-dependency.mjs",
     "build": "pnpm -C packages/qfai build",
     "sync:ssot": "node ./scripts/sync-init-to-root.mjs",
     "ci:gate": "pnpm sync:ssot && git diff --exit-code .qfai/ qfai.config.yaml && pnpm format:check && pnpm lint && pnpm lint:md && pnpm check-types && node ./scripts/check-bidi.mjs && node ./scripts/check-instructions-size.mjs && node ./scripts/check-build-warnings.mjs && pnpm -C packages/qfai test && pnpm verify:pack",

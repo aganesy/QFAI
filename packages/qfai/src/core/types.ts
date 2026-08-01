@@ -18,6 +18,12 @@ export type Issue = {
   suppressed?: boolean;
   suggested_action?: string;
   file?: string;
+  /**
+   * Every other file this finding implicates, when `file` is only a
+   * representative (a duplicate ID is defined in N files but reported once).
+   * `--spec` scoping keeps the finding if any of these is in scope.
+   */
+  relatedFiles?: string[];
   refs?: string[];
   rule?: string;
   loc?: IssueLocation;

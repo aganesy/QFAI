@@ -8,10 +8,17 @@
 /**
  * Layers that are TDD coverage targets.
  *
- * Both spellings of each layer are accepted — the code form used by
+ * Both spellings of each layer are covered — the code form used by
  * `06_Test-Cases.md#Level` and the word form used by `tdd/test-list.md#Layer`.
  * The pairing is the crosswalk in `catalog/test-layers.md`; this set and
  * {@link NON_COVERAGE_LAYERS} MUST stay in step with that table.
+ *
+ * **Membership is lower-case only.** The artifacts write `L1` and `Unit`, but
+ * the entries here are the normalized forms, so a caller MUST apply
+ * `.trim().toLowerCase()` before `has()` — `UNIT_COMPONENT_LAYERS.has("L1")` is
+ * `false`. Use {@link classifyCoverageLevel} or {@link isCoverageTargetLevel},
+ * which normalize for you; reach for the raw set only to enumerate the
+ * vocabulary.
  */
 export const UNIT_COMPONENT_LAYERS = new Set(["unit", "l1", "component", "l2"]);
 
@@ -23,6 +30,9 @@ export const UNIT_COMPONENT_LAYERS = new Set(["unit", "l1", "component", "l2"]);
  * a spec that writes the mandated code form (`L3`) would otherwise be an
  * unknown value here, be counted as a TDD coverage target, and raise
  * `TDDLIST_TC_NOT_COVERED` for a row the layer policy says is not owed.
+ *
+ * **Membership is lower-case only**, on the same terms as
+ * {@link UNIT_COMPONENT_LAYERS}: `NON_COVERAGE_LAYERS.has("L3")` is `false`.
  */
 export const NON_COVERAGE_LAYERS = new Set([
   "integration",

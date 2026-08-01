@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -10,7 +11,12 @@ import {
 } from "../../src/core/tddHelpers.js";
 import { LAYER_TAGS } from "../../src/core/testStrategyTags.js";
 
-const repoRoot = path.resolve(process.cwd(), "..", "..");
+// Anchored to this file, not to `process.cwd()`: vitest runs this suite from
+// `packages/qfai`, but a runner launched at the monorepo root would resolve
+// `../..` to the directory ABOVE the repo and every read below would fail on a
+// path unrelated to what is being asserted.
+// tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const read = (tree: string, rel: string): Promise<string> =>
@@ -23,9 +29,19 @@ const cells = (row: string): string[] =>
     .slice(1, -1)
     .map((cell) => cell.trim());
 
+const CROSSWALK_HEADING = "## Layer vocabulary crosswalk (normative)";
+const NEXT_HEADING = "## Layer definitions";
+
 function crosswalkRows(content: string): string[][] {
-  const start = content.indexOf("## Layer vocabulary crosswalk (normative)");
-  const section = content.slice(start, content.indexOf("## Layer definitions"));
+  // Both markers are asserted before slicing: an `indexOf` miss returns -1, and
+  // `slice(-1, …)` / `slice(…, -1)` would then silently yield a different
+  // region — a renamed heading would surface as a confusing row count instead
+  // of naming the section that moved.
+  const start = content.indexOf(CROSSWALK_HEADING);
+  const end = content.indexOf(NEXT_HEADING);
+  expect(start, `heading not found: ${CROSSWALK_HEADING}`).toBeGreaterThan(-1);
+  expect(end, `heading not found or out of order: ${NEXT_HEADING}`).toBeGreaterThan(start);
+  const section = content.slice(start, end);
   return section
     .split(/\r?\n/)
     .filter((line) => line.trim().startsWith("|"))
