@@ -58,7 +58,7 @@ and examples: `selector-granularity.md`.
 
 ## Status Lifecycle
 
-Valid status values: `todo`, `red`, `green`, `refactor`, `done`, `exception`.
+Valid status values: `todo`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`.
 
 Allowed transitions:
 
@@ -66,6 +66,8 @@ Allowed transitions:
 - `red` -> `green` (make the test pass with minimal code)
 - `green` -> `refactor` (improve code quality while keeping tests green)
 - `refactor` -> `done` (item complete)
+- `refactor` -> `review-fix` (a blocking reviewer returned `REVISE`)
+- `review-fix` -> `refactor` (rework complete; re-submit to the reviewer)
 - Any active status -> `exception` (anomaly detected; record DR-ID in DR-ID column)
 - `red` | `green` | `refactor` | `done` | `exception` -> `todo` — **upstream
   reset**, the only legal reopen, available from every status a row can hold.
@@ -103,6 +105,19 @@ its cycle again from `todo`.
 The one exception is an approved Change Request reset — the only sanctioned
 backward transition. Preconditions and the reset procedure:
 `references/change-request-reset.md`.
+
+### Reviewer rework is not a backward transition
+
+A blocking reviewer's `REVISE` moves the item `refactor -> review-fix`. While at
+`review-fix` the item MAY re-enter the RED/GREEN cycle as many times as the
+rework needs — write the new failing test, watch it fail, make it pass — without
+any of those runs counting as a backward transition. The row's status does not
+change during that cycle: `review-fix -> red` and `review-fix -> green` are not
+allowed transitions. When the rework is done the item returns to `refactor` and
+is re-submitted.
+
+`review-fix` is not a completion state and appears in the completion-prohibition
+list. Round-by-round evidence rules: `round-evidence.md`.
 
 ## Exception Handling
 

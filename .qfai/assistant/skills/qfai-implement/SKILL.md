@@ -107,8 +107,8 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 ### Phase: Red (Write Failing Test)
 
-1. Read `test-list.md` and select the first item with `Status = todo`.
-2. Transition status to `red`.
+1. Read `test-list.md`. **Rework first**: if any row is at `review-fix`, select the first such row and resume its rework (`references/round-evidence.md`) before any `todo` row — one left by an interrupted session is otherwise never picked up. Otherwise select the first row with `Status = todo`.
+2. Transition status to `red` — **only for a `todo` row**. A `review-fix` row **stays at `review-fix`** for the whole rework: it runs steps 3-5 and the Green phase in place, and `review-fix -> red` is not an allowed transition.
 3. Write a **failing test** from the row's obligation column, selected by `Layer`: `TC-Refs` for `Unit` / `Component` / `Integration`, `US-Refs` for `E2E`, `CON-API-Refs` for `API`. An `E2E` or `API` row's test is authored by `/qfai-atdd` (Non-goals); this skill only drives that row's status and evidence once the acceptance test exists, and stops with a handoff note if it does not.
 4. Run the test and **watch it fail** — confirm the test actually fails for the expected reason. When
    the row's `Selector` holds several entries, observe each entry's failure separately; a single
@@ -127,7 +127,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 1. Write the **minimum production code** to make the failing test pass.
 2. Run the test and **watch it pass**.
-3. Transition status to `green`.
+3. Transition status to `green` — **only for a row that entered from `todo`**. A `review-fix` row stays at `review-fix` here too; `review-fix -> green` is not an allowed transition and must not be written to the ledger.
 4. If the test still fails after implementation, investigate and fix. Do not skip to refactor.
 
 ### Phase: Refactor
@@ -215,7 +215,7 @@ All agent-to-agent transitions follow these contracts:
 1. `delivery-planner` selects the next item and assigns it to the appropriate implementation agent.
 2. Implementation agent submits RED/GREEN execution evidence to `qa-gatekeeper`.
 3. `qa-gatekeeper` confirms or rejects the RED/GREEN observation.
-4. After GREEN, implementation agent submits the item to `completion-reviewer` for spec alignment and to `implementation-reviewer` for code quality review.
+4. After the item reaches `refactor`, implementation agent submits it to `completion-reviewer` for spec alignment and to `implementation-reviewer` for code quality review. Review is requested from `refactor`, never from `green`, so a `REVISE` always lands on the one status with an outbound `review-fix` edge.
 5. `product-surface-reviewer` is added when the item affects UI behavior or rendered output.
 6. Only after every required reviewer passes may the item transition to `done`. "Required" is wider than `blocking_agents`: `implementation-reviewer` is mandatory and its `REVISE` blocks `done` independently of that list, and `product-surface-reviewer` joins for UI-affecting items. The authority for an item transition is `#item-completion-checklist-12-point-gate`, not the routing list, which governs phase progression (`references/volume-policy.md#routing-is-unchanged`).
 7. For T1 rows the submitted unit in steps 2-4 is the coherent group, not the row; every required reviewer still runs, once per group. T2/T3 rows submit alone.
@@ -375,7 +375,7 @@ Completion MUST NOT be declared when any of the following are true:
 - No GREEN fresh evidence exists for the item
 - Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned REVISE
 - `.qfai/evidence/implement-<spec-id>.md` does not exist, or does not record both reviewer verdicts for the item (this is the single blocking statement about the evidence file; its absence of _verdicts_ is never blocking before items 7-8)
-- Items with `todo`, `red`, `green`, or `refactor` status still exist (for spec-level completion)
+- Items with `todo`, `red`, `green`, `refactor`, or `review-fix` status still exist (for spec-level completion)
 - Items with `exception` status still exist, **unless** the row's `DR-ID` names
   a Decision Record explicitly recorded as a **user-approved accepted-risk
   waiver** (a `TDDLIST-001` entry in `.qfai/waivers.yml`). An `exception` whose
@@ -409,8 +409,9 @@ parts with different write points; the fields are the same, the sequencing is no
 - `RED result` — the failure output (result completeness is best-effort; truncated output is acceptable)
 - `GREEN command` — the exact command executed to observe success
 - `GREEN result` — the success output
-- `Refactor verify command` — the exact command re-executed after refactor
-- `Refactor verify result` — the output confirming GREEN is maintained
+- Each RED/GREEN cycle is one **round block** and every field above carries a `Round N:` prefix; numbering, the two rework paths and the full field list are in `references/round-evidence.md`
+- `Refactor verify command` — the exact command re-executed after refactor. Written once for the item as a whole, so it takes no `Round N:` prefix
+- `Refactor verify result` — the output confirming GREEN is maintained (likewise once per item)
 
 These exist _for_ the reviewers: they are the evidence items 7-8 audit. They MUST be present when a
 review is requested.

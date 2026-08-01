@@ -21,7 +21,19 @@ const REQUIRED_COLUMNS = [
   "Evidence",
 ];
 
-const VALID_STATUSES = new Set(["todo", "red", "green", "refactor", "done", "exception"]);
+// `review-fix` is the state an item holds while reworking a blocking
+// reviewer's REVISE. Without it a REVISE landed on `refactor`, whose only
+// outbound edge is `done`, and agents wrote invented state names into the
+// free-text Evidence column.
+const VALID_STATUSES = new Set([
+  "todo",
+  "red",
+  "green",
+  "refactor",
+  "review-fix",
+  "done",
+  "exception",
+]);
 
 /**
  * The `Layer` values the shipped ledger schema declares
@@ -43,7 +55,10 @@ const TC_FORBIDDEN_LAYERS = new Set(["api", "e2e"]);
 
 const TC_ID_TOKEN = /^TC-\d{4}(-\d{4})?$/;
 
-const TEST_FILE_CHECK_STATUSES = new Set(["green", "refactor", "done"]);
+// `review-fix` is reached from `refactor`, so the item's test file already
+// exists; a rework row whose Test file is blank or deleted is an incomplete
+// ledger, not a valid intermediate state.
+const TEST_FILE_CHECK_STATUSES = new Set(["green", "refactor", "review-fix", "done"]);
 
 /**
  * Test directories a `Layer` value implies. `null` means the layer has no
