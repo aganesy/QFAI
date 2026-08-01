@@ -28,7 +28,11 @@ for the natural RED and let the row proceed to `green` and `done`:
 3. Revert the mutation and confirm the test passes again. That run is the row's
    GREEN evidence.
 4. A mutation-testing result covering the same predicate is an acceptable
-   substitute for steps 2-3.
+   substitute for the **falsifiability demonstration** — step 2 and the revert
+   half of step 3 — with the report standing in for `Falsifiability command` /
+   `Falsifiability result`. It does **not** substitute for GREEN: the row still
+   records a `GREEN command` / `GREEN result` from a run with the predicate
+   intact, either the original passing run or an explicit re-run.
 
 ## Effect on the gates
 

@@ -1,9 +1,23 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-const repoRoot = path.resolve(process.cwd(), "..", "..");
+// Anchored to this file, not to `process.cwd()`. A runner launched from the
+// repo root resolves `../..` to the directory ABOVE the repo, and every read
+// below then fails on a path unrelated to what is being asserted.
+// tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+
+/** Slice between two markers, asserting both are present and ordered first. */
+function between(content: string, from: string, to: string): string {
+  const start = content.indexOf(from);
+  const end = content.indexOf(to);
+  expect(start, `marker not found: ${from}`).toBeGreaterThan(-1);
+  expect(end, `marker not found or out of order: ${to}`).toBeGreaterThan(start);
+  return content.slice(start, end);
+}
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const read = (tree: string, rel: string): Promise<string> =>
@@ -69,17 +83,19 @@ describe("an unobservable RED has a non-anomalous outcome", () => {
       // These are the surfaces an agent re-reads at the end of a run. Left
       // absolute, they force either an unclosable item or a fabricated RED.
       const skill = await read(tree, SKILL);
-      const checklist = skill.slice(
-        skill.indexOf("## FINAL CHECKLIST"),
-        skill.indexOf("## Completion Checklist"),
-      );
+      // An `indexOf` miss returns -1 and `slice` then succeeds on a different
+      // range, so a renamed heading would make the assertions below vacuous
+      // instead of failing.
+      const checklist = between(skill, "## FINAL CHECKLIST", "## Completion Checklist");
       expect(checklist).toContain("_RED not observable_");
       expect(checklist).not.toContain("- [ ] Red phase: test was written and confirmed to fail.");
       expect(checklist).not.toContain(
         "- [ ] Green phase: minimal code was written and test confirmed to pass.",
       );
 
-      const memory = skill.slice(skill.indexOf("project_memory:"));
+      const memoryStart = skill.indexOf("project_memory:");
+      expect(memoryStart, "SKILL.md has no `project_memory:`").toBeGreaterThan(-1);
+      const memory = skill.slice(memoryStart);
       expect(memory).toContain("_RED not observable_");
       expect(memory).not.toContain(
         "Fresh RED + GREEN command/result evidence is mandatory per item; status-only",
@@ -97,9 +113,12 @@ describe("an unobservable RED has a non-anomalous outcome", () => {
 
     it(`${tree}: the evidence contract states the two forms are exclusive`, async () => {
       const skill = await read(tree, SKILL);
-      expect(skill).toContain("**Exclusive alternative**");
-      expect(skill).toContain(
-        "Exactly one of the two forms must be present —\n    never both, never neither",
+      expect(skill).toContain("**Exclusive alternative to the RED pair**");
+      // Wrap-tolerant: the sentence is the obligation, the column it breaks at
+      // is not. Pinning the exact `\n    ` failed on a reflow that changed
+      // nothing about the rule.
+      expect(skill.replace(/\s*\n\s*/g, " ")).toContain(
+        "Exactly one of the two forms must be present — never both, never neither",
       );
 
       const reference = await read(tree, REFERENCE);

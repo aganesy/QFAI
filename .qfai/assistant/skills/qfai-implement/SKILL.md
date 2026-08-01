@@ -306,10 +306,10 @@ Each TDD item MUST have fresh evidence containing at minimum:
 - `TC-ref` — reference to the test case(s)
 - `RED command` — the exact command executed to observe failure
 - `RED result` — the failure output (result completeness is best-effort; truncated output is acceptable)
-  - **Exclusive alternative**: a row on the _RED not observable_ path carries
-    `Satisfied-by`, `Falsifiability command` and `Falsifiability result` in
-    place of the RED pair. Exactly one of the two forms must be present —
-    never both, never neither (`references/red-not-observable.md`).
+- **Exclusive alternative to the RED pair**: a row on the _RED not observable_ path carries
+  `Satisfied-by`, `Falsifiability command` and `Falsifiability result` in place of the two
+  RED fields above. Exactly one of the two forms must be present — never both, never
+  neither (`references/red-not-observable.md`).
 - `GREEN command` — the exact command executed to observe success
 - `GREEN result` — the success output
 - `Refactor verify command` — the exact command re-executed after refactor
