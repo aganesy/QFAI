@@ -1,5 +1,5 @@
 /**
- * `Evidence` is a required ledger column whose cell nothing read.
+ * `Evidence` is a required ledger column, but nothing ever read a cell of it.
  *
  * `qfai-implement` states four MUST-level "Evidence hard rules" over it and
  * makes fresh evidence item 10 of the completion gate, but the string
@@ -155,6 +155,15 @@ describe("TDDLIST_EVIDENCE_STATUS_ONLY", () => {
     "should pass",
     "all tests green",
     "OK",
+    // The arrow form: a verdict with a result and still no command. A
+    // `-[^\s]` flag branch matched `->`, so this read as command-shaped and
+    // slipped past the gate — which is what the branch was tightened for.
+    "Status: PASS -> 3 passed",
+    "RED -> GREEN, all good",
+    // Backquoting the whole verdict sentence. The inline-code acceptor takes a
+    // span with whitespace in it, so a multi-word verdict must not be able to
+    // launder itself into a command by adding backticks.
+    "`Status: PASS`",
   ]) {
     it(`errors on "${evidence}"`, async () => {
       await withProject(async (root) => {

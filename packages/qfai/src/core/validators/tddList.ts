@@ -108,25 +108,19 @@ const EVIDENCE_VERDICT_WORD =
  * give the Evidence gate the same stack blindness. What a command looks like in
  * every stack is a program name followed by an argument that is not prose — a
  * flag, a path, a selector, a filename or an assignment. So the match is: a
- * bare word token, whitespace, then a token containing at least one of
- * `-` (leading) `/` `\` `.` `:` `=` `*`.
+ * bare word token, whitespace, then either a real flag (`-q`, `--filter`) or a
+ * token containing one of `/` `\` `.` `:` `=` `*`.
+ *
+ * The flag branch is `--?[A-Za-z]`, not `-\S`. The looser form matched an arrow:
+ * `Status: PASS -> 3 passed` read as command-shaped and slipped past this gate
+ * with no command in it at all — the exact evasion the gate exists to catch.
  *
  * `go test ./...`, `pytest -q tests/test_a.py::test_b`, `cargo test --lib`,
  * `mvn -Dtest=Foo test` and `vitest run tests/foo.test.ts` all match on some
  * adjacent pair; `Status: PASS` and `looks good` match on none.
  */
 const EVIDENCE_COMMAND_SHAPE =
-  /(?:^|[\s`([{>$|&;])[A-Za-z_][\w.+-]*\s+(?:-[^\s]|[^\s]*[/\\.:=*][^\s])/;
-
-/**
- * An inline code span holding more than one word.
- *
- * The ledger is Markdown and a recorded command is conventionally backticked,
- * so this accepts the shape authors actually write. The whitespace requirement
- * is what keeps it from accepting a backticked verdict: `` `npm test` `` is a
- * command, `` `PASS` `` is the very thing the rule rejects.
- */
-const EVIDENCE_INLINE_COMMAND = /`[^`\n]*\s[^`\n]*`/;
+  /(?:^|[\s`([{>$|&;])[A-Za-z_][\w.+-]*\s+(?:--?[A-Za-z][\w-]*|[^\s]*[/\\.:=*][^\s])/;
 
 /**
  * Widely used test runners, as an **additional** acceptor.
@@ -139,13 +133,17 @@ const EVIDENCE_INLINE_COMMAND = /`[^`\n]*\s[^`\n]*`/;
 const EVIDENCE_KNOWN_RUNNER =
   /(?:^|[\s`([{>$|&;])(?:npm|pnpm|yarn|bun|npx|deno|node|vitest|jest|mocha|ava|karma|playwright|cypress|pytest|tox|nox|unittest|go|cargo|dotnet|mvn|gradle|make|rake|bundle|rspec|minitest|phpunit|pest|ctest|swift|flutter|dart|mix|sbt|stack|qfai)\b/i;
 
-/** True when the cell shows a command was actually run, not merely asserted. */
+/**
+ * True when the cell shows a command was actually run, not merely asserted.
+ *
+ * Backticks are deliberately NOT an acceptor of their own. A ```Status: PASS```
+ * span holds whitespace, so a "backticked span with more than one word"
+ * acceptor let the exact verdict this rule rejects launder itself into a
+ * command. Only the runner list and the structural shape decide, and both read
+ * through backticks unchanged.
+ */
 function hasCommandShape(evidence: string): boolean {
-  return (
-    EVIDENCE_INLINE_COMMAND.test(evidence) ||
-    EVIDENCE_KNOWN_RUNNER.test(evidence) ||
-    EVIDENCE_COMMAND_SHAPE.test(evidence)
-  );
+  return EVIDENCE_KNOWN_RUNNER.test(evidence) || EVIDENCE_COMMAND_SHAPE.test(evidence);
 }
 
 /**

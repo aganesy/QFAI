@@ -55,7 +55,7 @@ assert a cycle has run:
 
 | Finding                        | Fires when                                                          | Severity |
 | ------------------------------ | ------------------------------------------------------------------- | -------- |
-| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`)             | error    |
+| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)   | error    |
 | `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command | warning  |
 
 A command is recognised by shape, not from a list of known runners, so the rule
