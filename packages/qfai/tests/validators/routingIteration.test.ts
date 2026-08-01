@@ -41,18 +41,27 @@ async function runWith(iteration: string | undefined): Promise<string[]> {
   try {
     await writeFile(path.join(manifest, "agent-catalog.yml"), CATALOG, "utf-8");
     await writeFile(path.join(manifest, "review-profiles.yml"), PROFILES, "utf-8");
+    // Built before interpolation, not inline: a conditional expression carrying
+    // its own indentation and newline inside a YAML template is one edit away
+    // from producing a document that parses as something else.
+    const phaseLines = [
+      "      - id: only",
+      ...(iteration === undefined ? [] : [`        iteration: ${iteration}`]),
+      "        mandatory_agents: [qa-gatekeeper]",
+      "        conditional_agents: []",
+      "        parallel_groups: []",
+      "        blocking_agents: [qa-gatekeeper]",
+    ];
     await writeFile(
       path.join(manifest, "agent-routing.yml"),
-      `routing:
-  - skill: demo-skill
-    phases:
-      - id: only
-${iteration === undefined ? "" : `        iteration: ${iteration}\n`}        mandatory_agents: [qa-gatekeeper]
-        conditional_agents: []
-        parallel_groups: []
-        blocking_agents: [qa-gatekeeper]
-    review_profile: default
-`,
+      [
+        "routing:",
+        "  - skill: demo-skill",
+        "    phases:",
+        ...phaseLines,
+        "    review_profile: default",
+        "",
+      ].join("\n"),
       "utf-8",
     );
     const issues = await validateAgentDefinition(root, defaultConfig);

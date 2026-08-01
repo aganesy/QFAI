@@ -64,8 +64,14 @@ describe.each(ROUTING_FILES)("%s — qfai-implement routing", (rel) => {
 
   it("orders `red` before `build`, or the RED phase observes nothing", async () => {
     const ids = (await implementPhases(rel)).map((p) => p.id);
-    expect(ids.indexOf("red")).toBeGreaterThanOrEqual(0);
-    expect(ids.indexOf("red")).toBeLessThan(ids.indexOf("build"));
+    // Both asserted present before comparing. A missing `build` makes
+    // `indexOf` return -1, so the comparison would fail with "0 is not less
+    // than -1" instead of naming the phase that disappeared.
+    const red = ids.indexOf("red");
+    const build = ids.indexOf("build");
+    expect(red, "no `red` phase").toBeGreaterThanOrEqual(0);
+    expect(build, "no `build` phase").toBeGreaterThanOrEqual(0);
+    expect(red).toBeLessThan(build);
   });
 
   it("makes qa-gatekeeper blocking in `build` for the GREEN observation", async () => {
