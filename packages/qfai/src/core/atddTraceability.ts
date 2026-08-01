@@ -300,7 +300,7 @@ export async function evaluateAtddCodeTraceability(
         continue;
       }
       if (kind === "api") {
-        recordApiRef(apiRefs, contractId, file);
+        recordContractRef(apiRefs, contractId, file);
       }
     }
 
@@ -316,7 +316,7 @@ export async function evaluateAtddCodeTraceability(
       // annotation from `tests/e2e/**` would let an end-to-end assertion that
       // never touches the schema close the obligation.
       if (kind === "integration") {
-        recordApiRef(dbRefs, contractId, file);
+        recordContractRef(dbRefs, contractId, file);
       }
     }
   }
@@ -615,12 +615,17 @@ export function isPlannedApiContract(text: string): boolean {
   return typeof status === "string" && status.trim().toLowerCase() === PLANNED_CONTRACT_VALUE;
 }
 
-type CollectedApiContracts = {
+/**
+ * A contract kind's declared IDs, split by whether they still carry the
+ * coverage obligation. Shared by the API and DB collectors: the shape is the
+ * same and duplicating it would let the two drift.
+ */
+type CollectedContractIds = {
   active: Set<string>;
   deferred: Set<string>;
 };
 
-async function collectApiContractIds(apiRoot: string): Promise<CollectedApiContracts> {
+async function collectApiContractIds(apiRoot: string): Promise<CollectedContractIds> {
   const files = await collectApiContractFiles(apiRoot);
   const active = new Set<string>();
   const deferred = new Set<string>();
@@ -655,7 +660,7 @@ const PLANNED_DB_CONTRACT_RE = new RegExp(
   "im",
 );
 
-async function collectDbContractIds(dbRoot: string): Promise<CollectedApiContracts> {
+async function collectDbContractIds(dbRoot: string): Promise<CollectedContractIds> {
   const files = await collectDbContractFiles(dbRoot);
   const active = new Set<string>();
   const deferred = new Set<string>();
@@ -878,7 +883,8 @@ function recordSpecRef(refs: AtddSpecRefs, specNumber: string, id: string, file:
   refs.set(specNumber, bySpec);
 }
 
-function recordApiRef(refs: Map<string, Set<string>>, id: string, file: string): void {
+/** Records `id -> file` for any contract kind; not API-specific. */
+function recordContractRef(refs: Map<string, Set<string>>, id: string, file: string): void {
   const files = refs.get(id) ?? new Set<string>();
   files.add(path.normalize(file));
   refs.set(id, files);
