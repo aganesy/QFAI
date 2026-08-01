@@ -52,10 +52,10 @@ Skill-specific examples:
 
 ## CRITICAL CONSTRAINTS (Read First)
 
-- This skill processes **one test at a time** from `test-list.md`: at most one row is in `red` or `green` at any moment. A T1 row parked in `refactor` waiting for its review group (see Volume Policy) does not violate this.
+- This skill processes **one test at a time** from `test-list.md`: at most one row is in `red` or `green` at any moment, except under an item-level parallel dispatch authorized by `## Parallelization Policy` below. A T1 row parked in `refactor` waiting for its review group (see Volume Policy) does not violate this.
 - Each item goes through the full TDD micro-cycle: write a **failing test** first, then make it pass, then refactor.
 - The execution ledger is located at `.qfai/specs/<spec-id>/tdd/test-list.md`.
-- Items are processed **serially** by default. Parallel processing is allowed only when items target independent SUT slices with no shared state.
+- Items are processed **serially** by default. Item-level parallel processing inside one spec is allowed only under `## Parallelization Policy` below — both its technical gate and its consent gate must hold, and user approval cannot override a technical DENY. Cross-spec parallelism is never allowed.
 - Status transitions follow a strict forward-only lifecycle: `todo` -> `red` -> `green` -> `refactor` -> `done`. The single re-entry is `refactor` -> `red` after a `qa-gatekeeper` `REVISE` on the row's RED/GREEN evidence.
 - The `exception` status can be reached from any active status when an anomaly is detected.
 - Backward transitions are prohibited (e.g., `green` -> `red` is not allowed). The only exception is an approved Change Request reset (see Status Lifecycle).
@@ -86,7 +86,9 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 - Writing spec artifacts (use `/qfai-sdd`).
 - Writing acceptance tests (use `/qfai-atdd`).
 - Running validation gates (use `/qfai-verify`).
-- Parallel execution across multiple specs simultaneously.
+- Parallel execution across multiple **specs** simultaneously. (Item-level
+  parallelism _within_ one spec is a separate question, governed by
+  `## Parallelization Policy` below.)
 
 ## Execution Ledger: test-list.md
 
@@ -280,27 +282,20 @@ Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
 
 ## Parallelization Policy
 
-- **Default**: Serial execution. Items are processed one test at a time in `test-list.md` order.
-- **Exception**: When items target completely independent SUT modules with no shared state, parallel processing may be used with explicit user approval.
-- Serial execution ensures that each test is written and verified in isolation before moving to the next.
-- `delivery-planner` is the sole authority for authorizing parallel dispatch.
-
-### Allow conditions (all must be true)
-
-- Independent SUT (no shared source files under test)
-- Independent test files (no shared test files or fixtures)
-- No shared state (no shared database, global variable, singleton, or DI container)
-- No sequential dependency (Slice B does not depend on Slice A output)
-- Worktree or branch separation is available
-- Post-merge integration verify plan exists
-
-### Deny conditions (any one blocks parallel dispatch)
-
-- Same behavior Red/Green/Refactor cycle across slices
-- Same public API surface modified by multiple slices
-- Shared fixture, shared mock, shared DI container, shared global setup
-- Sequential dependency: "A must finish before B has meaning"
-- Independence claim cannot be explained with concrete file/module evidence
+- **Cross-spec parallelism is barred.** One spec per invocation, always. This
+  is the Non-goal above and it is not approvable.
+- **Item-level parallelism inside one spec** may be authorized. Two gates apply
+  and **both must hold**: a technical gate adjudicated by `delivery-planner`
+  (the sole authority), and explicit user approval. **User approval cannot
+  override a technical DENY.**
+- **Default**: Serial execution, one test at a time in `test-list.md` order.
+- The allow/deny conditions are stated as **concurrent write conflicts** —
+  including one item writing a module another item's test or implementation
+  reads — not as the existence of shared things, and authorized parallel runs
+  use the coordinated mode in which the orchestrator owns every `test-list.md`
+  write. Full rules: `references/parallelization-policy.md`.
+- `parallel_groups: []` in `agent-routing.yml` describes **role fan-out within
+  a phase**, not item dispatch.
 
 ### Post-parallel integration verify
 
@@ -494,6 +489,6 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 
 project_memory:
 
-- One TDD item at a time from test-list.md; status lifecycle is forward-only (todo → red → green → refactor → done) with one recorded re-entry, refactor → red on a qa-gatekeeper REVISE of the row's RED/GREEN evidence; exception requires DR-ID.
+- One TDD item at a time from test-list.md by default; item-level parallelism inside one spec only when the Parallelization Policy technical gate and user consent both pass; status lifecycle is forward-only (todo → red → green → refactor → done) with one recorded re-entry, refactor → red on a qa-gatekeeper REVISE of the row's RED/GREEN evidence; exception requires DR-ID.
 - Fresh RED + GREEN command/result evidence is mandatory per item; status-only evidence (e.g. "Status: PASS") is rejected.
 - UI-affecting items require product-surface-reviewer prototype-parity PASS before the item can transition to done.
