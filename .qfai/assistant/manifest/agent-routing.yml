@@ -48,6 +48,10 @@ routing:
         rerun_policy: changed-scope-dependents
     review_profile: default
 
+  # `parallel_groups` describes ROLE FAN-OUT within a phase, not item
+  # dispatch. An empty list means no roles run concurrently; it says
+  # nothing about item-level parallelism, which `qfai-implement/SKILL.md`
+  # `## Parallelization Policy` governs.
   - skill: qfai-implement
     phases:
       - id: plan
