@@ -50,11 +50,16 @@ describe("qfai-sdd's template whitelist covers what the skill ships", () => {
       expect(shipped.length, "qfai-sdd ships no template directories").toBeGreaterThan(0);
       expect(shipped).toContain("evidence");
 
-      const skill = await read(tree, SKILL);
-      const constraint = flat(skill).slice(
-        flat(skill).indexOf("1. Use only templates under"),
-        flat(skill).indexOf("2. Always write"),
-      );
+      const skill = flat(await read(tree, SKILL));
+      // Bounds are searched on number-independent wording and asserted before
+      // slicing. An `indexOf` miss returns -1, so `slice(-1, -1)` yields an
+      // empty string and the enumeration check below would pass vacuously —
+      // the test would go green on exactly the drift it exists to catch.
+      const start = skill.indexOf("Use only templates under");
+      const end = skill.indexOf("Always write `.qfai/report/preflight_summary.md`");
+      expect(start, "Constraint 1's opening wording moved").toBeGreaterThanOrEqual(0);
+      expect(end, "the constraint after Constraint 1 moved").toBeGreaterThan(start);
+      const constraint = skill.slice(start, end);
       // A per-directory enumeration inside the constraint is what drifts, so
       // the constraint must not name individual subdirectories at all.
       for (const name of shipped) {
@@ -78,11 +83,9 @@ describe("qfai-sdd's template whitelist covers what the skill ships", () => {
       // not cover. Left unstated, it read as a licence to browse other skills.
       const skill = await read(tree, SKILL);
       expect(flat(skill)).toContain(
-        "The one template outside this skill that `/qfai-sdd` may point a user at is `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`",
+        "Named cross-skill exception: `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`",
       );
-      expect(flat(skill)).toContain(
-        "that is a named exception, not a licence to read other skills",
-      );
+      expect(flat(skill)).toContain("It is an exception, not a licence to read other skills");
       // The reference the exception exists for must still be there.
       expect(skill).toContain(
         "`.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`",

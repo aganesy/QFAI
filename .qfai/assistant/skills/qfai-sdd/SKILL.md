@@ -190,7 +190,9 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 
 ## Critical Constraints
 
-1. Use only templates under `.qfai/assistant/skills/qfai-sdd/templates/` — the whole directory, not an enumerated subset, so a template directory is covered on the day it ships. The one template outside this skill that `/qfai-sdd` may point a user at is `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample` (Phase 0 DESIGN.md Freeze); that is a named exception, not a licence to read other skills' templates. Never invent a layout for an artifact a template already covers.
+1. Use only templates under `.qfai/assistant/skills/qfai-sdd/templates/` — the whole directory, not an enumerated subset, so a new template directory is covered on the day it ships.
+   - Named cross-skill exception: `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample` (Phase 0 DESIGN.md Freeze). It is an exception, not a licence to read other skills' templates.
+   - Never invent a layout for an artifact a template already covers.
 2. Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
 3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`. UI-bearing targets MUST also validate the consuming-project root `DESIGN.md` and freeze its sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml` (see Phase 0 DESIGN.md Freeze below).
 4. `_policies/05_Contracts.md` must include a Contract Index aligned with `.qfai/contracts/**`.
