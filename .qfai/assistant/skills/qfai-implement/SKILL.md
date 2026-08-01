@@ -124,19 +124,21 @@ The eight required columns, the allowed transitions and the exception rules are 
 4. Run the test and **watch it fail** — confirm the test actually fails for the expected reason. When
    the row's `Selector` holds several entries, observe each entry's failure separately; a single
    aggregate run is not a valid RED observation.
-5. If the test unexpectedly passes, transition to `exception` and record the anomaly.
-
-> **RED observation is only as good as the selector's granularity.** A single test function can fail
-> only once, so if one selector entry carries an entire obligation matrix, "the expected reason" is
-> whichever assert happens to execute first — every assertion after it is unobserved on every RED
-> run, and a non-deterministic assertion placed early silently disables everything below it. A TDD
-> row whose selector accumulates unrelated boundaries therefore **invalidates its own RED
-> observation**. Split the row per `#selector-granularity-must` before continuing; do not proceed to
-> Green.
+5. If the test unexpectedly passes, classify **why** before doing anything else. An obligation
+   already satisfied by a sibling row is **not an anomaly** and does **not** go to `exception`;
+   anything else transitions to `exception` and records the anomaly. Never weaken a correct test
+   until it fails in order to manufacture a RED. See `references/red-not-observable.md`.
+   > **RED observation is only as good as the selector's granularity.** A single test function can fail
+   > only once, so if one selector entry carries an entire obligation matrix, "the expected reason" is
+   > whichever assert happens to execute first — every assertion after it is unobserved on every RED
+   > run, and a non-deterministic assertion placed early silently disables everything below it. A TDD
+   > row whose selector accumulates unrelated boundaries therefore **invalidates its own RED
+   > observation**. Split the row per `#selector-granularity-must` before continuing; do not proceed to
+   > Green.
 
 ### Phase: Green (Make It Pass)
 
-1. Write the **minimum production code** to make the failing test pass.
+1. Write the **minimum production code** to make the failing test pass. On the _RED not observable_ path there is none to write — the `Satisfied-by` row already implements the predicate — so go straight to step 2.
 2. Run the test and **watch it pass**.
 3. Transition status to `green` — **only for a row that entered from `todo`**. A `review-fix` row stays at `review-fix` here too; `review-fix -> green` is not an allowed transition and must not be written to the ledger.
 4. If the test still fails after implementation, investigate and fix. Do not skip to refactor.
@@ -312,9 +314,9 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-fai
 An item in `test-list.md` may transition to `done` only when ALL of the following are satisfied. For T1 rows, items 3, 5, 7 and 8 are satisfied by the confirmation covering the row's coherent group; they are never waived.
 
 1. Corresponding `TDD-ID` has been selected and is in progress
-2. A failing test was added first (test-first)
-3. RED was observed — `qa-gatekeeper` confirmed the test failed for the expected reason (watch it fail)
-4. Minimal production code was written to make the test pass
+2. A failing test was added first (test-first) — **or**, on the _RED not observable_ path, the correct test was added first and proven falsifiable by mutation instead of by a natural failure
+3. RED was observed — `qa-gatekeeper` confirmed the test failed for the expected reason (watch it fail), **or** the row carries falsifiability evidence per _RED not observable_
+4. Minimal production code was written to make the test pass — **waived** on the _RED not observable_ path, where the `Satisfied-by` row already implements the predicate; do not manufacture a change to satisfy this item
 5. GREEN was observed — `qa-gatekeeper` confirmed the test passes after implementation (watch it pass)
 6. Refactor was performed and GREEN was re-confirmed after refactor
 7. `completion-reviewer` returned PASS (spec / completion review gate)
@@ -343,34 +345,27 @@ Each review round creates a new pack. Full schema and the `REVISE` -> `status: "
 
 The skill may declare "this spec's implementation is complete" only when:
 
-- All TC-\* from `06_Test-Cases.md` with applicable layer are present in `test-list.md`
+- All TC-\* from `06_Test-Cases.md` with applicable layer are present in `test-list.md`. "Applicable layer" is decided by `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`
 - Every `US-*` the spec declares has a `Layer = E2E` row whose `US-Refs` names it,
   and every declared `CON-API-*` has a `Layer = API` row whose `CON-API-Refs`
   names it. Without these rows an all-`done` ledger can sit alongside a
-  `QFAI-ATDD-111` / `QFAI-ATDD-113` hard gate at 0%
-- Each item reached `done` or valid `exception` (with DR-ID)
+  `QFAI-ATDD-111` / `QFAI-ATDD-113` hard gate at 0%- Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain
 - Checkpoint verification passed at the spec-level boundary (see `#checkpoint-verification`)
-- No unresolved Change Request or waiver dependency exists. The gate covers only
-  the `.qfai/decisions/CR-*.md` **in scope for this spec** — `Impact scope` names
-  this spec or a shared policy it depends on, or this spec's artifacts reference
-  it; a CR confined to another spec never blocks this one. An in-scope CR
-  is **resolved** only when every condition below holds; a CR failing any one of
-  them — a half-filled record included — is **unresolved** and blocks completion:
-  - `Status` is `approved`, `rejected` or `superseded` (never `open`);
-  - `Approved by` / `Approved at` are populated, plus `Approved option` when
-    `Status` is `approved` and `Superseded by` when it is `superseded`;
-  - `Resolution` records what was actually done; and
-  - when `Status` is `approved`, `Applied at` is populated — approval alone
-    does not release the gate. It is set only after the owner-skill rerun in
-    "Approved actions" completed and upstream artifacts are updated, which is
-    when `constitution/drift-protocol.md` resumes downstream work
+- No unresolved Change Request or waiver dependency exists. The gate covers only the
+  `.qfai/decisions/CR-*.md` **in scope for this spec**; a CR confined to another spec never blocks
+  this one. An in-scope CR is **resolved** only when every condition in
+  `references/change-request-reset.md#when-an-in-scope-cr-counts-as-resolved` holds — `Status` is
+  `approved`, `rejected` or `superseded` (never `open`), the approval fields are populated,
+  `Resolution` records what was done, and when `Status` is `approved`, `Applied at` is populated —
+  approval alone does not release the gate. A CR failing any one of them, a half-filled record
+  included, is **unresolved** and blocks completion.
 
 ### Completion prohibition conditions
 
 Completion MUST NOT be declared when any of the following are true:
 
-- No RED fresh evidence exists for the item
+- No RED fresh evidence exists for the item, and no falsifiability evidence replaces it
 - No GREEN fresh evidence exists for the item
 - Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned REVISE
 - `.qfai/evidence/implement-<spec-id>.md` does not exist, or does not record both reviewer verdicts for the item (this is the single blocking statement about the evidence file; its absence of _verdicts_ is never blocking before items 7-8)
@@ -406,6 +401,10 @@ parts with different write points; the fields are the same, the sequencing is no
 - `TC-ref` — reference to the test case(s). On a `Layer = E2E` row read `US-ref` (the row's `US-Refs`) instead, and on a `Layer = API` row read `CON-API-ref` (the row's `CON-API-Refs`): exactly one obligation reference is required, the one the row's `Layer` selects
 - `RED command` — the exact command executed to observe failure
 - `RED result` — the failure output (result completeness is best-effort; truncated output is acceptable)
+- **Exclusive alternative to the RED pair**: a row on the _RED not observable_ path carries
+  `Satisfied-by`, `Falsifiability command` and `Falsifiability result` in place of the two
+  RED fields above. Exactly one of the two forms must be present — never both, never
+  neither (`references/red-not-observable.md`).
 - `GREEN command` — the exact command executed to observe success
 - `GREEN result` — the success output
 - Each RED/GREEN cycle is one **round block** and every field above carries a `Round N:` prefix; numbering, the two rework paths and the full field list are in `references/round-evidence.md`
@@ -494,5 +493,5 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 project_memory:
 
 - One TDD item at a time from test-list.md by default; item-level parallelism inside one spec only when the Parallelization Policy technical gate and user consent both pass; status lifecycle is forward-only (todo → red → green → refactor → done) with one recorded re-entry, refactor → red on a qa-gatekeeper REVISE of the row's RED/GREEN evidence; exception requires DR-ID.
-- Fresh RED + GREEN command/result evidence is mandatory per item; status-only evidence (e.g. "Status: PASS") is rejected.
+- Fresh RED + GREEN command/result evidence is mandatory per item, except on the _RED not observable_ path where `Satisfied-by` + falsifiability command/result replace the RED pair (exclusive alternative, never both); status-only evidence (e.g. "Status: PASS") is rejected.
 - UI-affecting items require product-surface-reviewer prototype-parity PASS before the item can transition to done.

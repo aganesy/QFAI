@@ -70,15 +70,25 @@ describe("isCoverageTargetLevel", () => {
     expect(isCoverageTargetLevel("acceptance")).toBe(false);
   });
 
-  it("includes the code spelling of the unit and component layers", () => {
+  it("recognizes the L1/L2 codes the 06_Test-Cases.md template ships", () => {
     expect(isCoverageTargetLevel("L1")).toBe(true);
     expect(isCoverageTargetLevel("L2")).toBe(true);
   });
 
-  it("excludes the code spelling the crosswalk mandates for L3-L5", () => {
-    // `06_Test-Cases.md#Level` must carry the code form; without these the
-    // code form was an unknown value and became a TDD coverage target.
-    for (const level of ["L3", "L4", "L5"]) {
+  it("excludes L3-L5, which the template maps to non-unit layers", () => {
+    expect(isCoverageTargetLevel("L3")).toBe(false);
+    expect(isCoverageTargetLevel("L4")).toBe(false);
+    expect(isCoverageTargetLevel("L5")).toBe(false);
+  });
+
+  it("excludes api", () => {
+    expect(isCoverageTargetLevel("api")).toBe(false);
+  });
+
+  it("excludes the ATDD-routed spellings so --profile full agrees with the TC routing", () => {
+    // A `Level: L4` TC carrying its correct tests/api/** annotation must not
+    // also be demanded as a TDD obligation (TDDLIST_TC_NOT_COVERED).
+    for (const level of ["L3", "L4", "L5", "api"]) {
       expect(isCoverageTargetLevel(level)).toBe(false);
     }
   });
@@ -92,8 +102,8 @@ describe("isCoverageTargetLevel", () => {
     }
   });
 
-  it("conservatively includes a genuinely unknown value", () => {
-    expect(isCoverageTargetLevel("L9")).toBe(true);
+  it("still conservatively includes a genuinely unrecognized value", () => {
+    expect(isCoverageTargetLevel("smoke")).toBe(true);
   });
 
   it("treats empty string as coverage target", () => {

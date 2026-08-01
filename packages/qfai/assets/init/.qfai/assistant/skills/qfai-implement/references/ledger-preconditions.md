@@ -32,9 +32,9 @@ coverage-target TC, judged exactly as the validator judges it
 ### What counts as a coverage target
 
 A TC is a target **unless** its `Level` names a non-coverage layer. Both
-spellings of the crosswalk count: the words `integration` / `e2e` / `system` /
-`acceptance` / `api`, and the codes `L3` / `L4` / `L5` that `06_Test-Cases.md`
-mandates. Matching is case-insensitive.
+spellings the shipped artifacts use count: the words `integration` / `e2e` /
+`system` / `acceptance` / `api`, and the codes `L3` / `L4` / `L5` that
+`06_Test-Cases.md` writes. Matching is case-insensitive.
 
 That is an exclusion list, not an allowlist:
 

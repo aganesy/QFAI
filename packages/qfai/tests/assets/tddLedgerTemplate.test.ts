@@ -117,8 +117,9 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       // makes every TC one. Guidance naming a narrower allowlist makes a
       // header-only ledger look truthful and skips the whole implementation.
       //
-      // Compared case-insensitively: the set holds the normalized (lower-case)
-      // forms, while the doc quotes the spelling the artifacts write (`L3`).
+      // Compared case-insensitively: the set is normalised to lower case for
+      // matching, while the doc quotes the spelling the shipped
+      // `06_Test-Cases.md` template uses (`L3`, not `l3`).
       const flatPreconditions = preconditions.toLowerCase();
       for (const layer of NON_COVERAGE_LAYERS) {
         expect(isCoverageTargetLevel(layer)).toBe(false);

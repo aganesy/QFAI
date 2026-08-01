@@ -111,7 +111,7 @@ Use the shared schema.
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - Final completion gate MUST be delegated to an independent `completion-reviewer`.
 - ATDD-specific reviewer checks:
-  - coverage obligations met: E2E covers `US`, Integration covers `TC`, API covers `CON-API`;
+  - coverage obligations met: E2E covers `US`, API covers `CON-API`, and every `TC` is covered from the directory its declared `Level` routes to;
   - Coverage Depth Matrix is reviewed and no unjustified `X` cells remain;
   - validation evidence exists and `npx qfai validate --profile atdd --fail-on error` passes;
   - Drift Protocol is enforced;
@@ -151,11 +151,16 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 - Completion gate is validation with zero errors (`npx qfai validate --profile atdd --fail-on error`).
 - Coverage obligations are mandatory:
   - `tests/e2e/**` must cover all required `US-*`.
-  - `tests/integration/**` must cover all required `TC-*`.
+  - Every `TC-*` must be covered from the directory its declared `Level` routes
+    to: `L3`/`Integration` -> `tests/integration/**`, `L4`/`API` ->
+    `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`. A TC with no declared `Level`
+    routes to `tests/integration/**`.
   - `tests/api/**` must cover all required `CON-API-*`.
-- Forbidden references:
-  - `tests/api/**` must not contain `QFAI:SPEC-XXXX:TC-YYYY`.
-  - `tests/e2e/**` must not contain `QFAI:SPEC-XXXX:TC-YYYY`.
+- Forbidden references (a TC annotation outside its declared home):
+  - `tests/api/**` must not contain `QFAI:SPEC-XXXX:TC-YYYY` unless that TC
+    declares `Level` `L4`/`API`.
+  - `tests/e2e/**` must not contain `QFAI:SPEC-XXXX:TC-YYYY` unless that TC
+    declares `Level` `L5`/`E2E`.
 - Unknown references (`US/TC/CON-API` not declared) must be treated as errors.
 - Floors/ratios are planning signals only, not gates.
 - Legacy `scenario.feature` or coverage ledgers may exist but are not mandatory inputs for completion.
@@ -213,19 +218,32 @@ Turn specs/contracts obligations (`US` / `TC` / `CON-API`) into runnable accepta
 
 Every generated ATDD test MUST include QFAI annotations by layer:
 
-- `tests/e2e/**`: `QFAI:SPEC-XXXX:US-YYYY`
-- `tests/integration/**`: `QFAI:SPEC-XXXX:TC-YYYY`
-- `tests/api/**`: `QFAI:CON-API-XXXX`
+- `tests/e2e/**`: `QFAI:SPEC-XXXX:US-YYYY` (plus `QFAI:SPEC-XXXX:TC-YYYY` for a
+  TC that declares `Level` `L5`/`E2E`)
+- `tests/integration/**`: `QFAI:SPEC-XXXX:TC-YYYY` (TCs declaring `L3`/
+  `Integration`, and TCs with no declared `Level`)
+- `tests/api/**`: `QFAI:CON-API-XXXX` (plus `QFAI:SPEC-XXXX:TC-YYYY` for a TC
+  that declares `Level` `L4`/`API`)
 
 Notes:
 
+- A TC's annotation belongs in exactly one directory — the one its declared
+  `Level` routes to. Placing it elsewhere is both uncovered (`QFAI-ATDD-112`)
+  and forbidden (`QFAI-ATDD-121` / `QFAI-ATDD-122` / `QFAI-ATDD-123`). The rule
+  is symmetric: an annotation left behind in `tests/integration/**` after the
+  TC moved to `L4`/`L5` is rejected by `QFAI-ATDD-123` just as an early one in
+  `tests/api/**` is rejected by `QFAI-ATDD-121`.
 - AC annotations are optional in code.
 - `QFAI:CON-API-*` in E2E is not forbidden, but contract guarantee belongs to API tests.
 
 ## Success Criteria (Definition of Done)
 
 - All required `US` are covered by E2E tests.
-- All required `TC` are covered by integration tests.
+- All required `TC` are covered from the directory their declared `Level` routes
+  to (`L3`/`Integration` -> `tests/integration/**`, `L4`/`API` ->
+  `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`, no declared `Level` ->
+  `tests/integration/**`). Duplicating a TC into a second layer is a
+  not-done condition, not extra credit.
 - All required `CON-API` are covered by API tests.
 - Validation passes: `npx qfai validate --profile atdd --fail-on error`.
 - Repository quality gates (format/lint/type/tests/pack) pass with evidence.
@@ -309,7 +327,7 @@ Template:
 ## Stage Gates (Do not skip)
 
 - P0: Plan and obligations checklist prepared.
-- P1: Layer assignment validated.
+- P1: Layer assignment validated against `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`.
 - P2: E2E implementation completed.
 - P3: API implementation completed.
 - P4: Integration implementation completed.
@@ -402,6 +420,6 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 
 project_memory:
 
-- Coverage obligations stay layer-pinned: tests/e2e/** must cover all required US; tests/integration/** all required TC; tests/api/\*\* all required CON-API.
-- Forbidden references guard the test-layer policy: tests/api/** must not carry QFAI:SPEC-XXXX:TC-YYYY annotations; tests/e2e/** likewise.
+- Coverage obligations stay layer-pinned for US and CON-API: tests/e2e/** must cover all required US; tests/api/\*\* all required CON-API. Each TC is covered from the directory its declared Level routes to (L3/Integration -> tests/integration/**, L4/API -> tests/api/\*\*, L5/E2E -> tests/e2e/\*\*; no declared Level -> tests/integration/\*\*).
+- Forbidden references guard the test-layer policy: a TC annotation outside its declared home is rejected — tests/api/** must not carry QFAI:SPEC-XXXX:TC-YYYY unless that TC declares L4/API, and tests/e2e/** likewise unless it declares L5/E2E.
 - Floor / ratio signals are planning hints, never gates; legacy scenario.feature / coverage ledger files remain optional inputs.

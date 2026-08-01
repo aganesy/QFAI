@@ -80,6 +80,99 @@ Rules:
 - Goal: verify `US-*` obligations from specs.
 - Location rule: `tests/e2e/**`.
 
+## Layer derivation procedure (normative)
+
+Deciding a `TC-*`'s layer is a per-TC judgement, not a constant. Use the
+falsifying-oracle rule:
+
+1. **Find the oracle.** Identify the single assertion whose removal would let a
+   wrong implementation pass. That assertion, not the test's setup, is what the
+   TC verifies.
+2. **Restrict it to the parent BR's obligations.** Anything the oracle observes
+   that the parent business rule does not own is incidental and does not raise
+   the layer.
+3. **Read the layer off what the oracle observes:**
+   - inputs and return values only → **L1 Unit**
+   - collaboration with a port through a fixture adapter (no real
+     infrastructure) → **L2 Component**
+   - real infrastructure state — DB rows, queue messages, files → **L3 Integration**
+   - values at the service boundary — status codes, response bodies, auth and
+     error contracts → **L4 API**
+   - a full-system journey across UI/API/data → **L5 E2E**
+
+### Worked examples
+
+| Oracle asserts                                                                | Layer          |
+| ----------------------------------------------------------------------------- | -------------- |
+| `price(order) === 1250` for a given input                                     | L1 Unit        |
+| the repository port was called with the normalized key, via a fixture adapter | L2 Component   |
+| the row is present in the database after commit                               | L3 Integration |
+| `POST /orders` returns `422` with `code: "OUT_OF_AREA"`                       | L4 API         |
+| a user can register, order, and see the order in their history                | L5 E2E         |
+
+### Obligation spanning more than one layer
+
+**Split the row.** One TC = one oracle = one layer. If an obligation is
+observable at two layers, it is two obligations: write one TC per oracle and
+give each its own `Level`.
+
+- A multi-valued `Level` cell (`L3/L5`) is **illegal**. Nothing consumes it and
+  no validator can route it.
+- If splitting is genuinely impossible, escalate through the Drift Protocol
+  rather than inventing a combined value.
+
+### Direction of authority (anti-pattern)
+
+The test driver follows the declared layer. **The layer is never inferred from
+how a test happens to be driven.** A unit-level obligation — one whose oracle,
+after step 2, observes only inputs and return values — exercised through an
+HTTP client is still L1 badly implemented; it is not an L4 test.
+
+**Step 2 outranks step 3.** Restriction to the parent BR's obligations runs
+first, so a transport the parent BR does not own is incidental and never
+raises the layer. A BR that owns only the price calculation, asserted as
+`response.body.price` over HTTP, reads as L1: the price is the BR-owned value,
+the response envelope is the incidental transport. Step 3's "response bodies →
+L4" applies only when the service-boundary values are themselves what the
+parent BR owns. Inverting this is what collapses a designed pyramid into an
+all-integration suite.
+
+### Annotation routing is by ID type, not by `Level`
+
+The derived `Level` records which oracle owns the obligation. It does **not**
+move the traceability annotation. The [ATDD annotation hard gate](#atdd-annotation-hard-gate)
+routes by obligation ID: `US-*` is answered from `tests/e2e/**`
+(`QFAI-ATDD-111`), `TC-*` from `tests/integration/**` (`QFAI-ATDD-112`), and
+`CON-API-*` from `tests/api/**` (`QFAI-ATDD-113`); a `TC-*` reference inside
+`tests/api/**` or `tests/e2e/**` is rejected outright (`QFAI-ATDD-121` /
+`QFAI-ATDD-122`). Two consequences bind every `TC-*` row:
+
+- **A `TC-*` row's `Level` stays within L1–L3.** L4's goal is `CON-API-*` and
+  L5's goal is `US-*` (see the layer definitions above), so an oracle that
+  derives to L4 or L5 means the obligation is misfiled, not that the TC is an
+  L4/L5 test. Re-file it as `CON-API-*` or `US-*`.
+  **Re-filing is an upstream change, never a bare row deletion.** By step 2 the
+  derivation reaches L4/L5 only when the parent `BR-*` itself owns the
+  service-boundary contract or the journey, so the `TC-*` row is removed only
+  together with the `EX-*` it verifies and the `BR-*`/`AC-*` that EX
+  concretizes. Dropping the row alone leaves the parent EX with no `EX-Ref`
+  and `npx qfai validate --profile sdd --fail-on error` reports `QFAI-COV-203`
+  (and `QFAI-COV-201` when that TC was the AC's only cover); dropping the EX
+  but keeping its BR reports `QFAI-COV-202`. Move the whole chain in one
+  change through the Drift Protocol so `04_Business-Rules.md`,
+  `05_Examples.md`, `06_Test-Cases.md` and the contract stay consistent. If the
+  parent BR keeps a spec-side obligation, split the row instead: keep a `TC-*`
+  for the part the BR owns — by step 2 that part derives to L1–L3 — and re-file
+  only the boundary assertion as `CON-API-*` / `US-*`.
+- **An L1/L2 `Level` does not relax `QFAI-ATDD-112`, and the gate does not
+  change the `Level`.** The two are independent: the `Level` records what the
+  oracle observes and is derived before any test exists, while the
+  `QFAI:SPEC-XXXX:TC-YYYY` annotation is still owed to `tests/integration/**`.
+  Never rewrite a derived L1/L2 to L3 because no integration trace exists yet —
+  that would make the recorded oracle depend on implementation order and hide
+  the unit/component work `/qfai-implement` selects. The missing annotation is
+  an open ATDD obligation to satisfy, not evidence that the `Level` was wrong.
+
 ## TestKind resolution (single source)
 
 - `tests/unit/**` -> Unit
@@ -123,10 +216,11 @@ Rules:
   - Use `QFAI:SPEC-XXXX:US-YYYY` annotations.
 
 - Integration obligations (enforced today):
-  - Every `TC-*` in specs must be referenced at least once from
-    `tests/integration/**`, whatever its declared `Level`. This is what
-    `QFAI-ATDD-112` checks.
-  - Use `QFAI:SPEC-XXXX:TC-YYYY` annotations.
+  - Every `TC-*` in specs must be referenced at least once from the directory
+    its declared `Level` routes to: L3/Integration -> `tests/integration/**`,
+    L4/API -> `tests/api/**`, L5/E2E -> `tests/e2e/**`. A TC with no declared
+    `Level` defaults to `tests/integration/**`. This is what `QFAI-ATDD-112`
+    checks. - Use `QFAI:SPEC-XXXX:TC-YYYY` annotations.
   - `tests/api/**` and `tests/e2e/**` must not carry `TC-*` annotations
     (`QFAI-ATDD-121` / `QFAI-ATDD-122`), so an L4 obligation is discharged as a
     `CON-API-*` reference, never as a `TC-*` one.
@@ -160,8 +254,20 @@ Rules:
       under `deferred.conApi`, so an empty `missing.conApi` can be told apart
       from a project where every contract is still planned.
 - Forbidden references:
-  - `tests/api/**` must not include `QFAI:SPEC-XXXX:TC-YYYY`.
-  - `tests/e2e/**` must not include `QFAI:SPEC-XXXX:TC-YYYY`.
+  - `tests/api/**` must not include `QFAI:SPEC-XXXX:TC-YYYY` **for a TC whose
+    declared `Level` is not L4/API**. A TC that declares an API-level
+    obligation belongs in `tests/api/**`, and its annotation there counts as
+    coverage. The rule exists to stop obligations drifting into the wrong
+    layer, not to make the correct layer unusable.
+  - `tests/e2e/**` must not include `QFAI:SPEC-XXXX:TC-YYYY` **for a TC whose
+    declared `Level` is not L5/E2E**. Same reason as above: the routing rule
+    and the forbidden rule must agree, or the layer the routing selects
+    becomes unusable.
+  - `tests/integration/**` must not include `QFAI:SPEC-XXXX:TC-YYYY` **for a TC
+    whose declared `Level` is not L3/Integration** (`QFAI-ATDD-123`). The rule
+    is symmetric so "exactly one directory" holds in both directions: an
+    annotation left behind here after the TC moved to L4/L5 is as wrong as one
+    filed early into `tests/api/**`.
 - Unknown references (`US/TC/CON-API` not declared) are errors.
 - A `TC-*` annotation outside the directory its `Level` routes to is a
   misplacement, whichever directory it lands in — including the two new

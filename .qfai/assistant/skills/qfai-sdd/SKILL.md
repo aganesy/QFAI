@@ -139,7 +139,7 @@ Reviewer routing is fixed by `.qfai/assistant/manifest/agent-routing.yml` and `.
 - Default: `completion-reviewer`.
 - Conditional: `architecture-reviewer` (structural / contract / CLI), `product-surface-reviewer` (UI-bearing), `qa-gatekeeper` (validate / coverage / runtime / prototyping evidence affected).
 - Drift Protocol compliance is mandatory; reviewers MUST verify no rejected option was reintroduced and no drift from prior decisions.
-- Test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`; layer pinning is enforced (US→E2E, TC→Integration, CON-API→API).
+- Test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`; annotation routing is enforced by `.qfai/assistant/catalog/test-layers.md#annotation-routing-is-by-id-type-not-by-level`, which owns the US / TC / CON-API mapping. A `TC-*`'s `Level` is **not** a constant: derive it per TC with `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`, keeping the row inside L1–L3 and defaulting to Integration only when the derivation is genuinely indeterminate. A missing `tests/integration/**` trace never rewrites a derived `Level`.
 - Coverage floors / ratios are planning signals, not gates; reviewers must not block on them.
 - Do not declare DONE until all routed blocking reviewers return `PASS`.
 
@@ -197,7 +197,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    - Phase 0 must also reconcile paired contracts against each other, not only validate each file: every terminal state, status enum value, and error code an API contract mandates must be representable in the paired DB contract. See `references/contract-artifact-rules.md#cross-contract-reconciliation-must`. The reviewer gate checks the pairing before sign-off.
 5. `_policies/04_Business-Flow.md` must be Markdown with Mermaid `flowchart` or `sequenceDiagram`.
 6. `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
-7. `06_Test-Cases.md` must include `TC-ID`, `EX-Ref`, `AC-Refs`, and `Type`, with normal-path plus error/boundary coverage.
+7. `06_Test-Cases.md` must include `TC-ID`, `Level`, `EX-Ref`, `AC-Refs`, and `Type`, with normal-path plus error/boundary coverage. `Level` gates `TDDLIST_TC_NOT_COVERED` at `error`, so it is required, not optional.
 8. Stop only when `npx qfai validate --profile sdd --fail-on error --format github` exits with `error=0`.
 
 ## Required Process

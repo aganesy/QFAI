@@ -42,7 +42,7 @@ Use this file for the full quality gate checklist behind `/qfai-sdd`.
   edge kinds — it is a normal edge type, not an unknown one. An empty `edges` array on a spec
   pack that has specs is a finding, not a tool limitation.
 - `05_Examples.md` includes `EX-ID` and `BR-Ref`.
-- `06_Test-Cases.md` includes `TC-ID`, `EX-Ref`, `AC-Refs`, and `Type`.
+- `06_Test-Cases.md` includes `TC-ID`, `Level`, `EX-Ref`, `AC-Refs`, and `Type`. `Level` holds exactly one code from `.qfai/assistant/catalog/test-layers.md#layer-definitions`, which defines all five (`L1`-`L5`); the template's list is a reading aid pointing back at it.
 - Error or boundary coverage is present, not only normal-path coverage.
 
 ## Validation Checks
