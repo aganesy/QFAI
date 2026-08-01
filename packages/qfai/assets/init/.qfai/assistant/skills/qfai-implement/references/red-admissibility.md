@@ -46,8 +46,14 @@ would be met vacuously for every such row.
 ## Step 3a: create the seam first
 
 Before running the test, create the **minimal seam** the test imports: the
-module, export, class or function signature, with no behaviour — a body that
-returns nothing, or throws a not-implemented error the test does not assert on.
+module, export, class or function signature, with **no behaviour** — a no-op
+body, or one returning a placeholder value.
+
+Do **not** make the seam throw. An unasserted exception fails the run before any
+assertion executes, which is the same non-observation as a load error: it shows
+the seam is unfinished, not that the assertions discriminate. The one exception
+is a test whose oracle _is_ an expected-exception check — there the throw is what
+the assertion inspects, and the row records `expected-error`.
 
 This is not production code and does not satisfy Phase Green's step 1: it
 implements no predicate. Its only job is to make the module load, so that the

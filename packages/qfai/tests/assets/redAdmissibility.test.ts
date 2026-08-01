@@ -57,6 +57,16 @@ describe.each(TREES)("%s", (tree) => {
     );
   });
 
+  it("does not let the seam throw, which would be the same non-observation", async () => {
+    // An unasserted exception fails the run before any assertion executes, so
+    // it shows the seam is unfinished — not that the assertions discriminate.
+    // The seam telling the author to throw would have contradicted the
+    // criterion in the same file.
+    const doc = await read(tree, ADMISSIBILITY);
+    expect(doc).toContain("Do **not** make the seam throw");
+    expect(doc).toContain("a test whose oracle _is_ an expected-exception check");
+  });
+
   it("makes the admissible form reachable under the skill's own ordering", async () => {
     // Without a seam step, a new-symbol row can only ever produce a load error
     // at Red time, so the gate is vacuous exactly where it matters most.
@@ -70,6 +80,9 @@ describe.each(TREES)("%s", (tree) => {
   it("carries the criterion in Phase Red, not only in the reference", async () => {
     const skill = await read(tree, SKILL);
     expect(skill).toContain("is a **missing seam**, not a RED");
+    // An expected-exception check is admissible too; step 4 must not read as
+    // assertion-only, or a correct exception test is judged a missing seam.
+    expect(skill).toContain("an assertion — or an expected-exception check — inside this row");
     expect(skill).not.toContain(
       "Run the test and **watch it fail** — confirm the test actually fails for the expected reason",
     );
@@ -100,7 +113,7 @@ describe.each(TREES)("%s", (tree) => {
 
   it("mirrors it into the constitution, which restated the obligation with no criterion", async () => {
     const workflow = await read(tree, WORKFLOW);
-    expect(workflow).toContain("A RED is admissible only when an assertion inside the row's own");
+    expect(workflow).toContain("A RED is admissible only when an assertion — or an");
     expect(workflow).toContain("red-admissibility.md");
   });
 

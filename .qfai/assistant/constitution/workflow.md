@@ -73,9 +73,10 @@ Implementation stage:
 - `/qfai-implement` orchestrates the full TDD micro-cycle (Red/Green/Refactor) one test at a time using `test-list.md` as the execution ledger.
 - Each item requires watch it fail (RED observation confirmed), watch it pass
   (GREEN observation confirmed), and fresh evidence (command+result pairs, not
-  status-only). A RED is admissible only when an assertion inside the row's own
-  `Selector` raised the failure; a collection, import, syntax or fixture error
-  is a missing seam, not a RED
+  status-only). A RED is admissible only when an assertion — or an
+  expected-exception check — inside the row's own `Selector` raised the failure;
+  a collection, import, syntax or fixture error, or an unasserted throw, is a
+  missing seam, not a RED
   (`skills/qfai-implement/references/red-admissibility.md`).
   - **Exception — RED not observable.** When the obligation is already satisfied
     by a sibling row, the RED cannot be observed. The row then carries

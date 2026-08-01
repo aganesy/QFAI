@@ -122,7 +122,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 2. Transition status to `red` — **only for a `todo` row**. A `review-fix` row **stays at `review-fix`** for the whole rework: it runs steps 3-5 and the Green phase in place, and `review-fix -> red` is not an allowed transition.
 3. Write a **failing test** from the row's obligation column, selected by `Layer`: `TC-Refs` for `Unit` / `Component` / `Integration`, `US-Refs` for `E2E`, `CON-API-Refs` for `API`. An `E2E` or `API` row's test is authored by `/qfai-atdd` (Non-goals); this skill only drives that row's status and evidence once the acceptance test exists, and stops with a handoff note if it does not.
    3a. Create the **minimal seam** the test imports — module, export or signature with no behaviour — so the test module loads. This is not Phase Green's production code: it implements no predicate. Without it, the first failure of any new-symbol row is a resolution error by construction.
-4. Run the test and **watch it fail**. Admissible only when an assertion inside this row's `Selector` raised the failure and its message names the predicate the row owns; a collection / import / syntax / fixture error is a **missing seam**, not a RED (`references/red-admissibility.md`). Observe each `Selector` entry's failure separately; one aggregate run is not a valid RED observation.
+4. Run the test and **watch it fail**. Admissible only when an assertion — or an expected-exception check — inside this row's `Selector` raised the failure and its message names the predicate the row owns; a collection / import / syntax / fixture error, or an unasserted throw, is a **missing seam**, not a RED (`references/red-admissibility.md`). Observe each `Selector` entry's failure separately; one aggregate run is not a valid RED observation.
 5. If the test unexpectedly passes, classify **why** before doing anything else. An obligation
    already satisfied by a sibling row is **not an anomaly** and does **not** go to `exception`;
    anything else transitions to `exception` and records the anomaly. Never weaken a correct test
@@ -314,7 +314,7 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 
 1. Corresponding `TDD-ID` has been selected and is in progress
 2. A failing test was added first (test-first) — **or**, on the _RED not observable_ path, the correct test was added first and proven falsifiable by mutation instead of by a natural failure
-3. RED was observed — `qa-gatekeeper` confirmed an **admissible** failure: an assertion inside the row's `Selector`, not a load or fixture error (`references/red-admissibility.md`), **or** the row carries falsifiability evidence per _RED not observable_
+3. RED was observed — `qa-gatekeeper` confirmed an **admissible** failure: an assertion or expected-exception check inside the row's `Selector`, not a load or fixture error (`references/red-admissibility.md`), **or** the row carries falsifiability evidence per _RED not observable_
 4. Minimal production code was written to make the test pass — **waived** on the _RED not observable_ path, where the `Satisfied-by` row already implements the predicate; do not manufacture a change to satisfy this item
 5. GREEN was observed — `qa-gatekeeper` confirmed the test passes after implementation (watch it pass)
 6. Refactor was performed and GREEN was re-confirmed after refactor
