@@ -31,9 +31,12 @@
 ## EX-0011-0005: Parallel Dispatch Denied
 
 - BR-Ref: BR-0011-0001
-- Given two items sharing the same fixture/mock
+- Given two items that both write the same shared fixture/mock file, or that
+  mutate the same fixture instance
 - When delivery-planner evaluates
-- Then parallel dispatch is denied (shared fixture violates independence)
+- Then parallel dispatch is denied (the concurrent write violates independence)
+- And the mere existence of a shared read-only fixture module, which neither
+  item writes and each consumes as-is, is not a deny on its own
 
 ## EX-0011-0006: Coverage Placeholder for BR-0011-0004
 

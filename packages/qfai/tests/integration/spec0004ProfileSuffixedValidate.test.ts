@@ -124,7 +124,35 @@ describe("TC-0004-0056: always-latest validate.json#profile reflects most-recent
 });
 
 describe("TC-0004-0057: legacy .qfai/output/validate.json path retained under deprecation window", () => {
-  it("legacy path is written and D-DEPRECATED-PATH warning body literally contains `sunset: 1.10.0`", async () => {
+  it("legacy path is written on every pre-sunset run, including the first on a clean checkout", async () => {
+    // BR-0004-0026: the compatibility write runs for the whole window and is
+    // NOT gated on evidence. A consumer reading `.qfai/output/` from a fresh
+    // clone has left no evidence to find, so withholding the write would break
+    // it before the announced sunset (#238 review).
+    await runValidate({
+      root,
+      strict: false,
+      profile: "prototyping",
+      toolVersionOverride: "1.9.1",
+    });
+    const legacy = path.join(root, ".qfai/output/validate.json");
+    expect(await pathExists(legacy)).toBe(true);
+
+    const body = JSON.parse(await readFile(legacy, "utf-8")) as { issues?: unknown };
+    expect(body.issues).toBeDefined();
+  });
+
+  it("D-DEPRECATED-PATH warning body literally contains `sunset: 1.10.0` for a legacy-pointing consumer", async () => {
+    // AC-0004-0032's Given: "a downstream project that still reads from the
+    // legacy path". The config naming the legacy literal is that evidence —
+    // pre-sunset the file's mere presence is not, because the tool deposits it
+    // itself on every run.
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      ["output:", "  validateJsonPath: .qfai/output/validate.json", ""].join("\n"),
+      "utf-8",
+    );
+
     await runValidate({
       root,
       strict: false,

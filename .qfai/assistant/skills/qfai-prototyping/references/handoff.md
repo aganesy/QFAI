@@ -4,8 +4,18 @@
 
 `.qfai/prototypes/iter-<final>/index.html` — the final accepted
 iteration HTML. The "final" iter is whichever iteration was the latest
-when `qfai prototyping iterate` returned exit 64 (convergence) or 65
+when `npx qfai prototyping iterate` returned exit 64 (convergence) or 65
 (max-iterations).
+
+This is the **authoring** artifact — one self-contained file with one
+client-side route per declared screen, written by the generator. It is
+a distinct tree from the **capture** artifacts at
+`.qfai/evidence/prototyping/iter-<final>/<screenId>.{html,png}`, which
+`npx qfai prototyping iterate --capture` fans out one pair per declared
+screen. Handoff mirrors the authoring artifact; `npx qfai prototyping
+certify` gates on the capture artifacts and never opens the
+`prototypes/` tree. Both must exist before handoff can complete: see
+"Output layout" in `references/generator-prompt.md`.
 
 `DESIGN.md` (root) and `.qfai/contracts/design/DESIGN.md.lock.yaml`
 remain the brand SSOT through handoff.
@@ -57,16 +67,35 @@ the SSOT for brand identity. There is no preserve / adapt / copy split.
 
 ## Cert
 
-Order is load-bearing: `qfai prototyping certify` requires
-`.qfai/output/validate.json` (with `counts.error === 0`) and
-`.qfai/output/verify.json` (with `status === "PASS"`) to be present
-on disk before it will seal the certificate. Run the gates in this
-order, every time:
+Order is load-bearing: `npx qfai prototyping certify` requires the configured
+validate report (with `counts.error === 0`) and `.qfai/report/verify.json`
+(with `status === "PASS"`) to be present on disk before it will seal the
+certificate.
 
-1. `qfai validate --profile prototyping --fail-on error` — writes
-   `.qfai/output/validate.json`.
-2. `/qfai-verify` — writes `.qfai/output/verify.json`.
-3. `qfai prototyping certify` — produces
+The two reads are not the same shape. The **validate** report is read from
+whatever `output.validateJsonPath` names — one location, no fallback. Only
+**`verify.json`** is canonical-first: it falls back to the legacy
+`.qfai/output/verify.json` and prints a migration note when it does. That
+fallback fires only when the canonical file is **absent** — a canonical file
+that exists but is unparseable, non-object, or unreadable aborts certify with a
+non-zero exit instead, so a leftover legacy `status: "PASS"` can never certify a
+run whose real gate result was never readable. A canonical file that is missing
+in both locations is reported as missing, not as a failing status.
+
+Run the gates in this order, every time:
+
+1. `npx qfai validate --profile prototyping --fail-on error` — writes the path
+   configured at `output.validateJsonPath` (default
+   `.qfai/report/validate.json`), not a fixed `.qfai/output/` literal.
+2. `/qfai-verify` — writes `.qfai/report/verify.json` with
+   `status: "PASS"` and `scope: "prototyping"`. Certify accepts no
+   other scope: `atdd` / `implement` / `full` are refused by the
+   option-B phase-isolation contract, and a `full` run at this point
+   necessarily fails the stage-5 ATDD traceability rules
+   (`QFAI-ATDD-111/112/113`). The field list and the `scope` enum are
+   specified under "Verify Output Contract" in
+   `.qfai/assistant/skills/qfai-verify/SKILL.md`.
+3. `npx qfai prototyping certify` — produces
    `.qfai/evidence/prototyping/completion-certificate.json`. The
    certificate includes `designMdPath` + `designMdSha256` for the
    locked brand identity. Use `certify --check` to verify digests

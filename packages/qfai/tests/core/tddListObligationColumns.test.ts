@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -282,19 +283,26 @@ describe("the Layer enum is checked on every row", () => {
   });
 });
 
-const repoRoot = path.resolve(process.cwd(), "..", "..");
+// Anchored to this file, not to `process.cwd()`: from the repo root `../..`
+// resolves above the repo and every read below fails on an unrelated path.
+// tests/core/<this file> -> tests -> packages/qfai -> packages -> repo root
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
+// The ledger schema moved out of SKILL.md under the progressive-disclosure
+// budget (#414); the body keeps a summary and a pointer.
+const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
 
 describe("the shipped ledger schema documents all eight required columns", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: the required-columns table is not split by the optional section`, async () => {
-      const skill = await readFile(
-        path.join(repoRoot, tree, "assistant/skills/qfai-implement/SKILL.md"),
-        "utf-8",
+      const ledger = await readFile(path.join(repoRoot, tree, LEDGER), "utf-8");
+      const start = ledger.indexOf("## Required columns");
+      const optional = ledger.indexOf("## Obligation columns (optional, required by layer)");
+      expect(start, "execution-ledger.md has no `## Required columns`").toBeGreaterThan(-1);
+      expect(optional, "execution-ledger.md has no obligation-columns section").toBeGreaterThan(
+        start,
       );
-      const start = skill.indexOf("## Execution Ledger: test-list.md");
-      const optional = skill.indexOf("Optional columns, required when the row carries");
-      const required = skill.slice(start, optional);
+      const required = ledger.slice(start, optional);
       // Inserting the optional section mid-table ended the rendered table at
       // `Layer` and orphaned the last five rows as plain text.
       for (const column of [
@@ -309,7 +317,7 @@ describe("the shipped ledger schema documents all eight required columns", () =>
       ]) {
         expect(required).toContain(column);
       }
-      expect(skill.indexOf("| US-Refs ")).toBeGreaterThan(optional);
+      expect(ledger.indexOf("| US-Refs ")).toBeGreaterThan(optional);
     });
 
     it(`${tree}: the Red phase and the evidence contract branch by Layer`, async () => {

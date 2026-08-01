@@ -80,7 +80,7 @@ describe("classifyTriage", () => {
     expect(rows[0]?.rationale).toMatch(/subject-overlap fallback/);
   });
 
-  it("upgrades fallback to SPLIT when the closest spec exceeds AC threshold", () => {
+  it("keeps a fallback on an oversized spec as UPDATE:APPEND with a size signal", () => {
     const rows = classifyTriage({
       reqs: [{ id: "REQ-0001c", subject: "extend packaging command", capability: undefined }],
       summaries: [
@@ -93,8 +93,10 @@ describe("classifyTriage", () => {
         }),
       ],
     });
-    expect(rows[0]?.op).toBe("SPLIT");
+    expect(rows[0]?.op).toEqual({ update: "APPEND" });
     expect(rows[0]?.existingSpec).toBe("spec-0002");
+    expect(rows[0]?.rationale).toMatch(/size signal/);
+    expect(rows[0]?.rationale).toMatch(/QFAI-SPLIT-102/);
   });
 
   it("classifies REQs matching a single small spec as UPDATE:APPEND", () => {
@@ -122,9 +124,42 @@ describe("classifyTriage", () => {
     });
     expect(rows[0]?.op).toBe("MERGE");
     expect(rows[0]?.existingSpec).toBe("spec-0001+spec-0002");
+    // No breach, no note.
+    expect(rows[0]?.rationale).toBeUndefined();
   });
 
-  it("upgrades to SPLIT when the matching spec exceeds AC threshold", () => {
+  it("records the size signal on a MERGE row, naming every breaching target", () => {
+    // Step 4 of the Slice Policy runs after step 3, not instead of it. The
+    // MERGE branch returned before the thresholds were evaluated, so the
+    // signal the policy promises was simply absent for every MERGE row.
+    const rows = classifyTriage({
+      reqs: [{ id: "REQ-0031", subject: "consolidation", capability: "CAP-0001" }],
+      summaries: [
+        makeSummary({
+          specId: "spec-0001",
+          capability: "CAP-0001",
+          acCount: DEFAULT_TRIAGE_THRESHOLDS.ac + 1,
+        }),
+        makeSummary({ specId: "spec-0002", capability: "CAP-0001" }),
+        makeSummary({
+          specId: "spec-0003",
+          capability: "CAP-0001",
+          tcCount: DEFAULT_TRIAGE_THRESHOLDS.tc + 1,
+        }),
+      ],
+    });
+    // The operation is untouched — the breach never rewrites MERGE to APPEND.
+    expect(rows[0]?.op).toBe("MERGE");
+    expect(rows[0]?.rationale).toMatch(/size signal/);
+    expect(rows[0]?.rationale).toContain("spec-0001 has ac=31");
+    expect(rows[0]?.rationale).toContain("spec-0003 has ac=0");
+    // The target that is within both thresholds is not named.
+    expect(rows[0]?.rationale).not.toContain("spec-0002");
+    expect(rows[0]?.rationale).toContain("MERGE stands");
+    expect(rows[0]?.rationale).toContain("QFAI-SPLIT-102/104");
+  });
+
+  it("keeps an AC-threshold breach as UPDATE:APPEND with a size signal", () => {
     const rows = classifyTriage({
       reqs: [{ id: "REQ-0004", subject: "extend large spec", capability: "CAP-0001" }],
       summaries: [
@@ -135,10 +170,13 @@ describe("classifyTriage", () => {
         }),
       ],
     });
-    expect(rows[0]?.op).toBe("SPLIT");
+    // A count breach is a signal, not the operation. SPLIT on a
+    // single-capability spec would raise QFAI-SPLIT-102/104 at `error`.
+    expect(rows[0]?.op).toEqual({ update: "APPEND" });
+    expect(rows[0]?.rationale).toMatch(/size signal/);
   });
 
-  it("upgrades to SPLIT when the matching spec exceeds TC threshold", () => {
+  it("keeps a TC-threshold breach as UPDATE:APPEND with a size signal", () => {
     const rows = classifyTriage({
       reqs: [{ id: "REQ-0005", subject: "extend large spec", capability: "CAP-0001" }],
       summaries: [
@@ -149,7 +187,41 @@ describe("classifyTriage", () => {
         }),
       ],
     });
-    expect(rows[0]?.op).toBe("SPLIT");
+    expect(rows[0]?.op).toEqual({ update: "APPEND" });
+    expect(rows[0]?.rationale).toMatch(/size signal/);
+  });
+
+  it("never emits SPLIT, whatever the counts or the branch taken", () => {
+    const oversized = {
+      acCount: DEFAULT_TRIAGE_THRESHOLDS.ac + 1,
+      tcCount: DEFAULT_TRIAGE_THRESHOLDS.tc + 1,
+    };
+    const rows = classifyTriage({
+      reqs: [
+        // capability match on an oversized spec
+        { id: "REQ-0101", subject: "extend alpha", capability: "CAP-0001" },
+        // subject-overlap fallback onto an oversized spec
+        { id: "REQ-0102", subject: "beta tweak" },
+        // removal hint against an oversized spec
+        { id: "REQ-0103", subject: "extend alpha", capability: "CAP-0001", removalHint: true },
+        // no overlap at all -> CREATE
+        { id: "REQ-0104", subject: "unrelated zeta subject", capability: "CAP-0099" },
+      ],
+      summaries: [
+        makeSummary({ specId: "spec-0001", capability: "CAP-0001", title: "alpha", ...oversized }),
+        makeSummary({
+          specId: "spec-0002",
+          capability: "CAP-0002",
+          title: "beta",
+          scopeIn: ["beta"],
+          ...oversized,
+        }),
+      ],
+    });
+    expect(rows).toHaveLength(4);
+    for (const row of rows) {
+      expect(topLevelOp(row.op)).not.toBe("SPLIT");
+    }
   });
 
   it("respects custom thresholds", () => {
@@ -158,7 +230,8 @@ describe("classifyTriage", () => {
       summaries: [makeSummary({ specId: "spec-0001", capability: "CAP-0001", acCount: 5 })],
       thresholds: { ac: 3, tc: 100 },
     });
-    expect(rows[0]?.op).toBe("SPLIT");
+    expect(rows[0]?.op).toEqual({ update: "APPEND" });
+    expect(rows[0]?.rationale).toMatch(/threshold 3/);
   });
 
   it("classifies removal hints as UPDATE:REMOVE", () => {
@@ -196,6 +269,32 @@ describe("classifyTriage", () => {
     expect(rows[0]?.rationale).toMatch(/removal-intent/);
   });
 
+  it("records the size signal on a removal-intent MERGE too", () => {
+    const rows = classifyTriage({
+      reqs: [
+        {
+          id: "REQ-0032",
+          subject: "retire",
+          capability: "CAP-0001",
+          removalHint: true,
+        },
+      ],
+      summaries: [
+        makeSummary({
+          specId: "spec-0001",
+          capability: "CAP-0001",
+          acCount: DEFAULT_TRIAGE_THRESHOLDS.ac + 1,
+        }),
+        makeSummary({ specId: "spec-0002", capability: "CAP-0001" }),
+      ],
+    });
+    expect(rows[0]?.op).toBe("MERGE");
+    // The existing removal-intent note is kept, the signal is appended.
+    expect(rows[0]?.rationale).toMatch(/removal-intent/);
+    expect(rows[0]?.rationale).toMatch(/size signal/);
+    expect(rows[0]?.rationale).toContain("spec-0001 has ac=31");
+  });
+
   it("ignores non-active specs when looking up matches", () => {
     const rows = classifyTriage({
       reqs: [{ id: "REQ-0008", subject: "extend", capability: "CAP-0001" }],
@@ -215,7 +314,7 @@ describe("classifyTriage", () => {
     expect(rows[0]?.op).toBe("CREATE");
   });
 
-  it("escalates removal hint to SPLIT when the target spec exceeds AC threshold", () => {
+  it("keeps an oversized removal hint as UPDATE:REMOVE with a size signal (AC)", () => {
     // PR #206 review #3: removalHint path should mirror the additive
     // size-threshold escalation. Without this the additive and removal
     // branches diverge on size handling.
@@ -236,12 +335,13 @@ describe("classifyTriage", () => {
         }),
       ],
     });
-    expect(rows[0]?.op).toBe("SPLIT");
+    expect(rows[0]?.op).toEqual({ update: "REMOVE" });
     expect(rows[0]?.existingSpec).toBe("spec-0001");
-    expect(rows[0]?.rationale).toMatch(/SPLIT before REMOVE/);
+    expect(rows[0]?.rationale).toMatch(/size signal/);
+    expect(rows[0]?.rationale).toMatch(/QFAI-SPLIT-102/);
   });
 
-  it("escalates removal hint to SPLIT when the target spec exceeds TC threshold", () => {
+  it("keeps an oversized removal hint as UPDATE:REMOVE with a size signal (TC)", () => {
     const rows = classifyTriage({
       reqs: [
         {
@@ -259,8 +359,8 @@ describe("classifyTriage", () => {
         }),
       ],
     });
-    expect(rows[0]?.op).toBe("SPLIT");
-    expect(rows[0]?.rationale).toMatch(/SPLIT before REMOVE/);
+    expect(rows[0]?.op).toEqual({ update: "REMOVE" });
+    expect(rows[0]?.rationale).toMatch(/size signal/);
   });
 
   it("keeps removal hint as UPDATE:REMOVE when the target spec is within thresholds", () => {
