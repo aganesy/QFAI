@@ -173,10 +173,11 @@ routes by obligation ID: `US-*` is answered from `tests/e2e/**`
   - Use `QFAI:SPEC-XXXX:US-YYYY` annotations.
 
 - Integration obligations (enforced today):
-  - Every `TC-*` in specs must be referenced at least once from
-    `tests/integration/**`, whatever its declared `Level`. This is what
-    `QFAI-ATDD-112` checks.
-  - Use `QFAI:SPEC-XXXX:TC-YYYY` annotations.
+  - Every `TC-*` in specs must be referenced at least once from the directory
+    its declared `Level` routes to: L3/Integration -> `tests/integration/**`,
+    L4/API -> `tests/api/**`, L5/E2E -> `tests/e2e/**`. A TC with no declared
+    `Level` defaults to `tests/integration/**`. This is what `QFAI-ATDD-112`
+    checks. - Use `QFAI:SPEC-XXXX:TC-YYYY` annotations.
   - `tests/api/**` and `tests/e2e/**` must not carry `TC-*` annotations
     (`QFAI-ATDD-121` / `QFAI-ATDD-122`), so an L4 obligation is discharged as a
     `CON-API-*` reference, never as a `TC-*` one.
@@ -210,8 +211,20 @@ routes by obligation ID: `US-*` is answered from `tests/e2e/**`
       under `deferred.conApi`, so an empty `missing.conApi` can be told apart
       from a project where every contract is still planned.
 - Forbidden references:
-  - `tests/api/**` must not include `QFAI:SPEC-XXXX:TC-YYYY`.
-  - `tests/e2e/**` must not include `QFAI:SPEC-XXXX:TC-YYYY`.
+  - `tests/api/**` must not include `QFAI:SPEC-XXXX:TC-YYYY` **for a TC whose
+    declared `Level` is not L4/API**. A TC that declares an API-level
+    obligation belongs in `tests/api/**`, and its annotation there counts as
+    coverage. The rule exists to stop obligations drifting into the wrong
+    layer, not to make the correct layer unusable.
+  - `tests/e2e/**` must not include `QFAI:SPEC-XXXX:TC-YYYY` **for a TC whose
+    declared `Level` is not L5/E2E**. Same reason as above: the routing rule
+    and the forbidden rule must agree, or the layer the routing selects
+    becomes unusable.
+  - `tests/integration/**` must not include `QFAI:SPEC-XXXX:TC-YYYY` **for a TC
+    whose declared `Level` is not L3/Integration** (`QFAI-ATDD-123`). The rule
+    is symmetric so "exactly one directory" holds in both directions: an
+    annotation left behind here after the TC moved to L4/L5 is as wrong as one
+    filed early into `tests/api/**`.
 - Unknown references (`US/TC/CON-API` not declared) are errors.
 - A `TC-*` annotation outside the directory its `Level` routes to is a
   misplacement, whichever directory it lands in — including the two new

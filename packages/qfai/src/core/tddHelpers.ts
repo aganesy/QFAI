@@ -15,6 +15,12 @@ export const UNIT_COMPONENT_LAYERS = new Set(["unit", "component", "l1", "l2"]);
 /**
  * Layers explicitly excluded from TDD coverage targets.
  * Unknown Level values are conservatively included to avoid silent false negatives.
+ *
+ * The `l3` / `l4` / `l5` / `api` spellings are the same ATDD vocabulary the
+ * TC-layer routing in `atddTraceability.ts` accepts. Without them a
+ * `Level: L4` TC is unknown here, so `--profile full` counted it as a TDD
+ * obligation and raised `TDDLIST_TC_NOT_COVERED` even when the TC carried its
+ * correct `tests/api/**` annotation.
  */
 export const NON_COVERAGE_LAYERS = new Set([
   "integration",
@@ -46,7 +52,6 @@ export function classifyCoverageLevel(level: string): LevelClassification {
   if (NON_COVERAGE_LAYERS.has(normalized)) return "non-coverage";
   return "unrecognized";
 }
-
 /**
  * Determine whether a Level value should be treated as a coverage target.
  * An unrecognized value still returns `true` (conservative: avoids silent
