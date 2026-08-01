@@ -3,7 +3,7 @@
 Prototyping evidence files MUST include a `taskFidelity` section so the
 `QFAI-CRIT-009` gate passes. Below is the required keyword set and
 the canonical markdown shape consumed by the validator and the
-`qfai prototyping iterate --capture` template emitter.
+`npx qfai prototyping iterate --capture` template emitter.
 
 ## Required keywords
 

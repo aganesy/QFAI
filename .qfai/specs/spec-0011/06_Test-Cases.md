@@ -28,7 +28,9 @@
 
 - EX-Ref: EX-0011-0005
 - AC-Refs: AC-0011-0005
-- Verify that shared fixtures/mocks block parallel dispatch.
+- Verify that writing the same shared fixture/mock file, or mutating the same
+  fixture instance, blocks parallel dispatch, while a read-only shared fixture
+  module does not.
 
 ## TC-0011-0006: 10-Point Gate Enforcement
 

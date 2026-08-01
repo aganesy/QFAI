@@ -40,6 +40,15 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 - Ensure `01_Spec.md` remains the execution Primary SSOT.
 - Stop if slice gate fails.
 
+## Phase 2b: Seed `tdd/test-list.md`
+
+- Copy `templates/specs/spec/tdd/test-list.md` when `<spec-id>/tdd/test-list.md` does not exist.
+- Add one row per coverage-target TC from `06_Test-Cases.md`, `Status = todo`.
+- Delta only: an unchanged TC's row keeps its `TDD-ID`, `Status`, `Test file`, `Selector`, `DR-ID` and `Evidence`.
+- Reconcile changed and removed TCs: return a changed TC's row to `todo` under the upstream-reset rule (driving `CR-*` / `DR-*` in `DR-ID`), and retire the row of a TC deleted upstream or no longer a coverage target. Never leave a stale `done` row nor a selectable row for a TC that no longer exists.
+- Keep the ledger table the first markdown table in the file.
+- An empty table is a valid outcome when the spec declares no coverage-target TC.
+
 ## Phase 3: Plan finalize
 
 - Create or update `<spec-id>/10_Plan.md`.

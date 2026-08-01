@@ -16,8 +16,9 @@
 
 ### Level column values
 
-The layer this test case verifies; exactly one code per cell. L3-L5 are defined
-in `.qfai/assistant/catalog/test-layers.md`; L1 and L2 are described here.
+The layer this test case verifies; exactly one code per cell. All five codes are
+defined in `.qfai/assistant/catalog/test-layers.md`, which is the single source;
+the summaries below are a reading aid, not a second definition.
 
 - `L1` — Unit. The oracle observes inputs and return values only.
 - `L2` — Component. The oracle observes collaboration with a port through a
