@@ -18,9 +18,11 @@
 
 - AC-Refs: AC-0015-0012
 
-- If the first required delegation fails, stop immediately.
-- Do not simulate roles and do not continue with self-execution.
-- Report: attempted role, attempted task, failure summary, why the stage stopped, required user remediation, and retry condition.
+- If the first required delegation fails, classify it before responding. Classify `saturated` only when the identical call would succeed later with no change by anyone; a limit or quota only a user can lift, and any reason whose retryability is not explicit, is `unavailable`.
+- If the class is `unavailable`, stop immediately.
+- If the class is `saturated`, retry the identical delegation with bounded backoff and keep the stage open and resumable; on exhausting the retry budget, stop as above and report the class as `saturated (retry budget exhausted)`.
+- Do not simulate roles and do not continue with self-execution, in either class.
+- Report: attempted role, attempted task, failure summary, failure class, why the stage stopped, required user remediation, and retry condition.
 
 ## BR-0015-0004: Devils-Advocate Gate
 
@@ -81,7 +83,7 @@
 - AC-Refs: AC-0015-0016
 - Per DR-0270, the audit-log write triggers on a fixed four-context declared taxonomy — when an `AskUserQuestion` template names "skill envelope", "architectural decision", "rejected-option re-adoption", or "scope expansion" (option C pinned; NOT a per-call boolean flag, NOT a question-text regex heuristic).
 - On trigger, the skill body MUST write `.qfai/evidence/decisions/<ISO8601-ts>.json` containing `{question, answer, scope, operatorIdentity, timestamp, envelopeContractClause}`.
-- `.qfai/evidence/decisions/` MUST be git-ignored by default (mirrors `.qfai/evidence/prototyping/`).
+- `.qfai/evidence/decisions/` MUST be **tracked** in version control: the managed `.gitignore` block negates it after `.qfai/evidence/*` (`QFAI_GITIGNORE_GOVERNANCE_NEGATIONS`). It is a governance record carrying operator approval, not regenerable stage evidence like `.qfai/evidence/prototyping/`.
 - An `AskUserQuestion` that names none of the four contexts MUST NOT write a record.
 
 ## BR-0015-0012: Cross-skill handoff schema SSOT-sync Pair IV

@@ -245,6 +245,60 @@ describe("qfai prototyping certify (generate)", () => {
     expect(exit).toBe(2);
   });
 
+  // A missing file is not a failing verify. Without its own branch the run
+  // reached the `status must be PASS` message, sending the operator to inspect
+  // a status in a file that is not there.
+  it("reports verify.json as missing rather than as a failing status", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root);
+    // Clear both locations the reader looks at.
+    for (const rel of [".qfai/report/verify.json", ".qfai/output/verify.json"]) {
+      await rm(path.join(root, rel), { force: true });
+    }
+
+    const logger = await import("../../src/cli/lib/logger.js");
+    const errors: string[] = [];
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation((...args: unknown[]) => {
+      errors.push(args.map(String).join(" "));
+    });
+    let exit: number;
+    try {
+      exit = await runPrototypingCertify({ root, check: false });
+    } finally {
+      errorSpy.mockRestore();
+    }
+    expect(exit).toBe(2);
+
+    const joined = errors.join("\n");
+    expect(joined).toContain("verify.json is missing");
+    expect(joined).toContain("/qfai-verify");
+    expect(joined).not.toContain("status must be PASS");
+  });
+
+  it("exits 2 on a broken canonical verify.json instead of certifying from the legacy one", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    // `seedAllGatesPass` leaves a passing legacy `.qfai/output/verify.json`.
+    await seedAllGatesPass(root);
+    // A corrupt canonical file must NOT be treated as absent: falling back
+    // would certify from the stale legacy PASS while the real gate result was
+    // never readable.
+    await writeFile(path.join(root, ".qfai/report/verify.json"), "{ not json", "utf-8");
+
+    const logger = await import("../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+      const logged = errorSpy.mock.calls.map((call) => String(call[0])).join("\n");
+      expect(logged).toContain(".qfai/report/verify.json exists but is not a usable verify result");
+      expect(logged).toContain("invalid JSON");
+      expect(logged).not.toContain("read .qfai/output/verify.json (legacy)");
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it("exits 2 when prototyping.json#iterations[] is empty (and identifies the empty-iterations branch in the error log)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { specMarker: true });
@@ -432,6 +486,58 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
       "utf-8",
     );
     expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+  });
+
+  // The recovery hint has to name a route an operator can actually take.
+  // "Re-run the accepted cycle with --capture" was not one: the iteration is
+  // already in prototyping.json#iterations, so iterate exits on the
+  // expected-next-cycle gate before capture runs.
+  it("points the missing-HTML failure at a reachable recovery path", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root, { specMarker: true });
+    await seedAllGatesPass(root);
+    await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/main.yaml"),
+      'screens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
+      "utf-8",
+    );
+
+    const logger = await import("../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingCertify({ root, check: false })).toBe(2);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      const recovery = messages.find((m) => m.includes("Recovery:"));
+      expect(recovery).toBeDefined();
+      expect(recovery).toContain("re-run the loop from cycle 0");
+      expect(recovery).toContain("expected-next-cycle gate");
+      expect(recovery).toContain(".qfai/contracts/ui/");
+
+      // --force is not a backup of the loop: it renames iter-00 only, and the
+      // reset then deletes iter-01+ and clears iterations / reviewerGate.
+      const destructive = messages.find((m) => m.includes("DESTRUCTIVE"));
+      expect(destructive).toBeDefined();
+      expect(destructive).toContain("renames only iter-00");
+      expect(destructive).toContain("iter-01 and up are deleted outright");
+      expect(destructive).toContain("Copy the whole");
+      // The unreachable instruction must not come back.
+      expect(messages.some((m) => m.includes("Re-run the accepted cycle with --capture"))).toBe(
+        false,
+      );
+
+      // Retiring a screen must not read as a way around the gate: certify
+      // recomputes the declared-screen set per run, so a bare contract
+      // deletion would drop that screen's HTML / review.json checks while
+      // re-using validate.json, verify.json and reviewerGate from the old
+      // scope.
+      expect(recovery).toContain("AND still re-run the loop from cycle 0");
+      expect(recovery).toContain("deleting alone is not a shortcut past this gate");
+      expect(recovery).toContain("recomputes the declared-screen set from the contracts");
+      expect(recovery).toContain("are re-used as they are");
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 
   it("exits 2 when accepted iter has only an older screen file's name (anchored to accepted iter)", async () => {

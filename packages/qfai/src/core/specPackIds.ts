@@ -69,6 +69,34 @@ const EXACT_ID_PATTERNS: Record<SpecPackIdKind, RegExp> = {
   TRACE: /^TR-\d+$/,
 };
 
+/**
+ * ID kinds whose unit is an item **inside** one spec directory, as opposed to
+ * the spec-level kinds (`CAP`, `OBJ`, ...). Shared so callers cannot drift from
+ * this list.
+ */
+export const SPEC_ITEM_ID_KINDS = [
+  "US",
+  "AC",
+  "BR",
+  "EX",
+  "TC",
+] as const satisfies readonly SpecPackIdKind[];
+
+/**
+ * A fresh matcher for item IDs in free text, including the composite
+ * `BR-0001-0002` form that `extractIdsByKind` would report as bare `BR-0001`.
+ *
+ * The digit run is `\d+`, matching `STRICT_ID_PATTERNS` above: canonical IDs
+ * are 4-digit, but `BR-1` and `TC-12345` are accepted as valid IDs elsewhere,
+ * so a `\d{4}` matcher here would silently miss them.
+ *
+ * Built per call rather than shared as a module-level `/g` instance, which
+ * would carry `lastIndex` between calls and alternate between firing and not.
+ */
+export function buildItemIdPattern(): RegExp {
+  return new RegExp(`\\b(?:${SPEC_ITEM_ID_KINDS.join("|")})-\\d+(?:-\\d+)?\\b`, "g");
+}
+
 export function extractIdsByKind(text: string, kind: SpecPackIdKind): string[] {
   return unique(text.match(STRICT_ID_PATTERNS[kind]) ?? []);
 }

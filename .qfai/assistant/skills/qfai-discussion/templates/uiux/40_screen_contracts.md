@@ -40,5 +40,6 @@ Draft interaction contracts for key screens using the strong screen contract sch
 
 ## Cross-references
 
-- Selected anchor: `31_selected_anchor_screen.md`
-- Option comparison: `30_option_comparison.md`
+- Brand SSOT (product intent, brand signals, anti-goals): root `DESIGN.md`
+- Sidecar manifest: `00_index.md`
+- Review handoff: `50_review_input_bundle.md`

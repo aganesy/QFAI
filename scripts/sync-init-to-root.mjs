@@ -4,8 +4,19 @@
  * sync-init-to-root.mjs
  *
  * Mirrors packages/qfai/assets/init/ → repo root.
- *   - .qfai/** from packages/qfai/assets/init/.qfai/
- *   - qfai.config.yaml from packages/qfai/assets/init/root/qfai.config.yaml
+ *   - .qfai/** from packages/qfai/assets/init/.qfai/  (byte-identical mirror)
+ *   - qfai.config.yaml                                (seed only — see below)
+ *
+ * `qfai.config.yaml` is seeded, not mirrored. The init asset is the config a
+ * *fresh* project starts from, and it deliberately leaves project-specific
+ * settings unset — `validation.traceability.testFileGlobs` is empty there so a
+ * non-TypeScript project cannot inherit a glob list that matches nothing and
+ * silently disables the SC→test gate. The repo root copy is this repository's
+ * own live configuration, which does have real TypeScript globs and must keep
+ * them: the CI dogfooding step runs `validate --profile tdd --root .`, and
+ * QFAI-TEST-001 (and the SC scan) no-op when `testFileGlobs` is empty.
+ * Overwriting the live config from the template would therefore switch off a
+ * gate this repository relies on. The file is copied only when it is missing.
  *
  * Usage:
  *   node scripts/sync-init-to-root.mjs          # sync and report
@@ -61,9 +72,9 @@ if (CHECK_ONLY) {
       driftCount++;
     }
   }
-  // Check config
-  if (!existsSync(TARGET_CFG) || !filesMatch(INIT_ROOT_CFG, TARGET_CFG)) {
-    console.error("DRIFT: qfai.config.yaml");
+  // Check config (seed-only: only its absence is drift, not its contents)
+  if (!existsSync(TARGET_CFG)) {
+    console.error("DRIFT: qfai.config.yaml (missing)");
     driftCount++;
   }
   if (driftCount > 0) {
@@ -82,9 +93,10 @@ for (const rel of initFiles) {
   cpSync(src, dst, { force: true, recursive: true });
 }
 
-// Sync root config
-if (existsSync(INIT_ROOT_CFG)) {
-  cpSync(INIT_ROOT_CFG, TARGET_CFG, { force: true });
+// Seed the root config only when absent; never overwrite the live one.
+if (existsSync(INIT_ROOT_CFG) && !existsSync(TARGET_CFG)) {
+  cpSync(INIT_ROOT_CFG, TARGET_CFG, { force: false });
+  console.log("Seeded qfai.config.yaml from init assets.");
 }
 
 console.log(`Synced ${initFiles.length} files from init assets to root.`);
