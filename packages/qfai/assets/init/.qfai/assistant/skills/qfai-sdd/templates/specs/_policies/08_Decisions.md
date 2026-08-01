@@ -14,7 +14,7 @@ Cross-spec Decision Records. A `DR-*` cited from any spec's `tdd/test-list.md`
 
 <!-- One `### DR-NNNN` block per decision. Copy the sample below. -->
 
-### DR-0000: one-line title
+### DR-NNNN: one-line title
 
 - Status: proposed | accepted | superseded | rejected
 - Context: what forced the decision — the constraint, conflict or anomaly

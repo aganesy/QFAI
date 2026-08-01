@@ -20,7 +20,7 @@ raises `TDDLIST_EXCEPTION_UNRESOLVED_DR`.
 
 <!-- One `### DR-NNNN-MMMM` block per decision. Copy the sample below. -->
 
-### DR-0000-0001: one-line title
+### DR-NNNN-MMMM: one-line title
 
 - Status: proposed | accepted | superseded | rejected
 - Context: what forced the decision — the constraint, conflict or anomaly

@@ -34,7 +34,7 @@ agents:
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/{manifest,catalog}/\*\*
       - .qfai/assistant/catalog/test-layers.md (SSOT for hard coverage obligations)
-      - .qfai/specs/spec-\*/07_Decisions.md and .qfai/specs/_policies/08_Decisions.md (Decision Records, DR-*; check rejected)
+      - .qfai/specs/spec-\*/07_Decisions.md and .qfai/specs/\_policies/08_Decisions.md (Decision Records, DR-\*; check rejected)
       - Prompt-specific artifacts (traceability, validation evidence, optional legacy scenario/ledger artifacts)
 
       ## Deliverables (MANDATORY)
