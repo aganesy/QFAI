@@ -126,7 +126,7 @@ The eight required columns, the allowed transitions and the exception rules are 
    aggregate run is not a valid RED observation.
 5. If the test unexpectedly passes, classify **why** before doing anything else. An obligation
    already satisfied by a sibling row is **not an anomaly** and does **not** go to `exception`;
-   anything else transitions to `exception` and records the anomaly as `.qfai/decisions/DR-*.md` — never in
+   anything else transitions to `exception` and records the anomaly as `.qfai/decisions/DR-<id>-<slug>.md` — never in
    `07_Decisions.md` / `09_delta.md`, which are upstream SSOT this skill may not patch. Never weaken a correct
    test until it fails in order to manufacture a RED. See `references/red-not-observable.md`.
    > **RED observation is only as good as the selector's granularity.** A single test function can fail

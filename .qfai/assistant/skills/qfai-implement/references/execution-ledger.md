@@ -134,8 +134,9 @@ When transitioning to `exception`:
 
 ### Where the Decision Record is written
 
-Write it to `.qfai/decisions/DR-YYYYMMDD-NNNN-<slug>.md`, beside the Change
-Requests. Do **not** write `07_Decisions.md` or `09_delta.md`.
+Write it to `.qfai/decisions/DR-<id>-<slug>.md`, beside the Change
+Requests, using the same `DR-*` ID scheme those files declare. Do **not** write
+`07_Decisions.md` or `09_delta.md`.
 
 Those two are upstream SSOT (`constitution/drift-protocol.md#core-rule`) and
 this skill carries `[DRIFT-PROTOCOL:MANDATORY]`, so a downstream write to either

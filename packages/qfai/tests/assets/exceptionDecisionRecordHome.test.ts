@@ -27,7 +27,7 @@ import { QFAI_GITIGNORE_GOVERNANCE_NEGATIONS } from "../../src/core/gitignore.js
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
-const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
+const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const DRIFT = "assistant/constitution/drift-protocol.md";
 const SKILL = "assistant/skills/qfai-implement/SKILL.md";
 const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
@@ -38,21 +38,19 @@ async function read(tree: string, rel: string): Promise<string> {
   return flat(await readFile(path.join(repoRoot, tree, rel), "utf-8"));
 }
 
-describe.each(TREES)("%s", (tree) => {
+describe.each(QFAI_TREES)("%s", (tree) => {
   it("whitelists creating the Decision Record the exception transition needs", async () => {
     const drift = await read(tree, DRIFT);
-    const whitelist = drift.slice(
-      drift.indexOf("## Allowed exceptions"),
-      drift.indexOf("## When drift is detected"),
-    );
-    // Slice bounds are asserted, not assumed: an indexOf miss returns -1 and
-    // would silently search the whole document.
-    expect(drift.indexOf("## Allowed exceptions")).toBeGreaterThanOrEqual(0);
-    expect(drift.indexOf("## When drift is detected")).toBeGreaterThan(
-      drift.indexOf("## Allowed exceptions"),
-    );
+    // Bounds are resolved and asserted BEFORE slicing: an `indexOf` miss
+    // returns -1, and `slice(-1, …)` would quietly search a different region
+    // than the one this case is about.
+    const start = drift.indexOf("## Allowed exceptions");
+    const end = drift.indexOf("## When drift is detected");
+    expect(start, "the whitelist heading moved").toBeGreaterThanOrEqual(0);
+    expect(end, "the section after the whitelist moved").toBeGreaterThan(start);
+    const whitelist = drift.slice(start, end);
     expect(whitelist).toContain("`.qfai/decisions/`");
-    expect(whitelist).toContain("DR-YYYYMMDD-NNNN-<slug>.md");
+    expect(whitelist).toContain("DR-<id>-<slug>.md");
   });
 
   it("keeps the carve-out to creation, not to patching upstream", async () => {
@@ -75,14 +73,14 @@ describe.each(TREES)("%s", (tree) => {
 
   it("tells the ledger writer where the DR goes and where it does not", async () => {
     const ledger = await read(tree, LEDGER);
-    expect(ledger).toContain("`.qfai/decisions/DR-YYYYMMDD-NNNN-<slug>.md`");
+    expect(ledger).toContain("`.qfai/decisions/DR-<id>-<slug>.md`");
     expect(ledger).toContain("Do **not** write `07_Decisions.md` or `09_delta.md`");
   });
 
   it("says it in Phase Red too, where the transition is ordered", async () => {
     // A reader who follows the numbered steps never opens the reference file.
     const skill = await read(tree, SKILL);
-    expect(skill).toContain("records the anomaly as `.qfai/decisions/DR-*.md`");
+    expect(skill).toContain("records the anomaly as `.qfai/decisions/DR-<id>-<slug>.md`");
   });
 });
 
