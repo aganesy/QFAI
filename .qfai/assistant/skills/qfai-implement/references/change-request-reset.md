@@ -64,6 +64,26 @@ satisfy the `exception` requirement on its own: add the `DR-*` alongside it
 - Resetting rows before approval. A CR at `Status: open` authorises nothing.
 - Resetting rows the CR's "Approved actions" did not name.
 
+## When an in-scope CR counts as resolved
+
+The spec completion gate covers only the `.qfai/decisions/CR-*.md` **in scope for
+this spec**: `Impact scope` names this spec or a shared policy it depends on, or
+this spec's artifacts reference it. A CR confined to another spec never blocks
+this one.
+
+An in-scope CR is **resolved** only when every one of these holds. A CR failing
+any single one — a half-filled record included — is **unresolved** and blocks
+completion:
+
+- `Status` is `approved`, `rejected` or `superseded` (never `open`);
+- `Approved by` / `Approved at` are populated, plus `Approved option` when
+  `Status` is `approved` and `Superseded by` when it is `superseded`;
+- `Resolution` records what was actually done; and
+- when `Status` is `approved`, `Applied at` is populated — approval alone does
+  not release the gate. It is set only after the owner-skill rerun in "Approved
+  actions" completed and upstream artifacts are updated, which is when
+  `constitution/drift-protocol.md` resumes downstream work.
+
 ## Ordering against the drift protocol
 
 `.qfai/assistant/constitution/drift-protocol.md` resumes downstream work only

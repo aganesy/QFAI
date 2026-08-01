@@ -14,6 +14,9 @@ const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
 
+/** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
+const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
+
 const TEMPLATE = "assistant/skills/qfai-sdd/templates/change-request.md";
 
 describe("a Change Request is a defined artifact", () => {
@@ -43,8 +46,18 @@ describe("a Change Request is a defined artifact", () => {
       const drift = await read(tree, "assistant/constitution/drift-protocol.md");
       expect(drift).toContain("fill `Resolution` and set `Applied at`");
 
+      // The gate cites the condition from SKILL.md; the condition itself is
+      // stated in the reference under the progressive-disclosure split (#414).
       const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
-      expect(skill).toContain("`Applied at` is populated — approval alone");
+      expect(flat(skill)).toContain("`Applied at` is populated — approval alone");
+
+      const reference = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/change-request-reset.md",
+      );
+      expect(flat(reference)).toContain(
+        "when `Status` is `approved`, `Applied at` is populated — approval alone does not release the gate",
+      );
     });
 
     it(`${tree}: the approved CR reset is a stated exception to forward-only status`, async () => {
@@ -162,7 +175,16 @@ describe("a Change Request is a defined artifact", () => {
     it(`${tree}: the completion gate covers only CRs in scope for this spec`, async () => {
       const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
       expect(skill).toContain("**in scope for this spec**");
-      expect(skill).toContain("a CR confined to another spec never blocks this one");
+      expect(flat(skill)).toContain("a CR confined to another spec never blocks this one");
+
+      // What "in scope" means is defined once, in the reference.
+      const reference = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/change-request-reset.md",
+      );
+      expect(flat(reference)).toContain(
+        "`Impact scope` names this spec or a shared policy it depends on, or this spec's artifacts reference it",
+      );
     });
 
     it(`${tree}: the CR reference lands upstream only after approval`, async () => {
@@ -221,10 +243,26 @@ describe("a Change Request is a defined artifact", () => {
     it(`${tree}: "unresolved" has one definition at the completion gate`, async () => {
       const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
       // A single positive definition of "resolved": everything else is
-      // unresolved, so a half-filled record cannot slip through.
-      expect(skill).toContain("is **resolved** only when every condition below");
-      expect(skill).toContain("**unresolved** and blocks completion");
-      expect(skill).toContain("`Status` is `approved`, `rejected` or `superseded` (never `open`)");
+      // unresolved, so a half-filled record cannot slip through. The gate cites
+      // it from SKILL.md; the conditions themselves live in the reference under
+      // the progressive-disclosure split (#414).
+      expect(skill).toContain(
+        "`references/change-request-reset.md#when-an-in-scope-cr-counts-as-resolved`",
+      );
+      expect(flat(skill)).toContain("**unresolved** and blocks completion");
+      expect(flat(skill)).toContain(
+        "`Status` is `approved`, `rejected` or `superseded` (never `open`)",
+      );
+
+      const reference = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/change-request-reset.md",
+      );
+      expect(reference).toContain("## When an in-scope CR counts as resolved");
+      expect(flat(reference)).toContain("is **resolved** only when every one of these holds");
+      expect(flat(reference)).toContain(
+        "`Status` is `approved`, `rejected` or `superseded` (never `open`)",
+      );
     });
   }
 });

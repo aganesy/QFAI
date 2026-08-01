@@ -5,8 +5,11 @@ cannot be ticked is a reason not to declare completion, not a note to carry forw
 
 - [ ] CRITICAL CONSTRAINTS were followed.
 - [ ] Each item was processed one test at a time, or inside an item-level parallel dispatch authorized by `SKILL.md#parallelization-policy`.
-- [ ] Red phase: test was written and confirmed to fail.
-- [ ] Green phase: minimal code was written and test confirmed to pass.
+- [ ] Red phase: test was written and confirmed to fail — or, on the _RED not observable_ path,
+      the correct test was written first and the falsifiability trio replaces the natural RED
+      (`red-not-observable.md`).
+- [ ] Green phase: minimal code was written and test confirmed to pass — waived on the _RED not
+      observable_ path, where the `Satisfied-by` row already implements the predicate.
 - [ ] Refactor phase: code improved with tests still passing.
 - [ ] `test-list.md` statuses are accurate.
 - [ ] No backward transitions occurred.
