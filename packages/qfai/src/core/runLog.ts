@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "./config.js";
@@ -6,6 +6,13 @@ import { resolvePath } from "./config.js";
 import { findLatestPack } from "./packLocator.js";
 import { toRelativePath } from "./paths.js";
 import type { Issue, ValidationResult } from "./types.js";
+import {
+  buildLayeredTraceabilityGraph,
+  qualifyId,
+  specNumberForPath,
+  type TraceabilityGraph,
+  type TraceabilityGraphEdge,
+} from "./validators/traceability.js";
 
 type RunLogResultStatus = "pass" | "fail";
 
@@ -78,7 +85,17 @@ export async function writeValidateRunLog(input: {
     warnings,
   };
 
-  const traceabilityJson = buildTraceabilityJson(root, input.result.issues);
+  // The graph comes from the parsed spec pack, not from the issue list, so a clean run still
+  // produces real traceability evidence. A pack that cannot be walked degrades to the
+  // issue-derived nodes rather than failing the run log.
+  let graph: TraceabilityGraph = { nodes: [], edges: [] };
+  try {
+    graph = await buildLayeredTraceabilityGraph(root, input.config);
+  } catch {
+    // Keep the empty graph declared above and fall through to the
+    // issue-derived nodes. Reassigning it here said the same thing twice.
+  }
+  const traceabilityJson = buildTraceabilityJson(root, input.result.issues, graph);
   const summaryMd = buildSummaryMarkdown({
     runId,
     startedAt: input.startedAt.toISOString(),
@@ -93,10 +110,125 @@ export async function writeValidateRunLog(input: {
   await writeJson(path.join(reportDir, "traceability.json"), traceabilityJson);
   await writeFile(path.join(reportDir, "summary.md"), `${summaryMd}\n`, "utf-8");
 
+  // Validate Hard Gate evidence. Written on every run so it can never go stale:
+  // it always points at the newest run-log directory. Previously this file only
+  // existed as a side effect of `| tee`, which the Hard Gate command line itself
+  // omits (and which is not portable to PowerShell).
+  await writeLatestValidateLog(outDir, runId, () =>
+    buildValidateLog({
+      runId,
+      startedAt: input.startedAt.toISOString(),
+      status,
+      relativeReportDir,
+      command: runJson.command,
+      errorCount: input.result.counts.error,
+      warningCount: input.result.counts.warning,
+      summaryMd,
+    }),
+  );
+
   return {
     runId,
     reportDir,
   };
+}
+
+const RUN_ID_LINE_RE = /^-\s*run_id:\s*(run-\d{17})\s*$/m;
+const RUN_DIR_RE = /^run-\d{17}$/;
+
+/**
+ * Write the shared `validate.log` only when this run is the newest one on disk.
+ *
+ * Two validates on the same root race here. Run-log directory names come from
+ * the run's START time, so a long run A started before a short run B finishes
+ * after it — and an unconditional write would leave `validate.log` pointing at
+ * A's older `run-*` directory while B's newer one sits beside it. The freshness
+ * rule the shipped Hard Gate documents ("`run_log:` names the newest `run-*`")
+ * would then fail on a repository where nothing is actually wrong.
+ *
+ * Run ids are `run-<17-digit local timestamp>`, so lexical order is
+ * chronological order and both comparisons need no parsing.
+ *
+ * The decision is keyed on the `run-*` DIRECTORY listing rather than on
+ * `validate.log` alone. A run's directory is created by `allocateRunReportDir`
+ * at the START of the run, whereas the log is written at the END, so the
+ * directory of a newer concurrent run is already visible during the window in
+ * which an older run would otherwise clobber the pointer. Reading `validate.log`
+ * remains as a second guard for the case where the newer run's directory was
+ * pruned after it wrote.
+ *
+ * This is still not mutual exclusion: an older run that lists the directory
+ * before a newer run has been allocated, and writes after that newer run has
+ * finished, can leave a stale pointer. That window is now bounded by the gap
+ * between this listing and the write below rather than by the whole duration of
+ * the older run, which is what made the original ordering easy to lose. Closing
+ * it entirely needs a lock file, whose stale-entry recovery after a crashed run
+ * costs more than the residual risk.
+ *
+ * An unreadable or unparseable existing file is treated as "no newer run", so a
+ * truncated or hand-edited log self-heals on the next validate.
+ */
+async function writeLatestValidateLog(
+  outDir: string,
+  runId: string,
+  buildContents: () => string,
+): Promise<void> {
+  if (await hasNewerRunDir(outDir, runId)) {
+    return;
+  }
+  const filePath = path.join(outDir, "validate.log");
+  let existingRunId: string | null = null;
+  try {
+    existingRunId = RUN_ID_LINE_RE.exec(await readFile(filePath, "utf-8"))?.[1] ?? null;
+  } catch {
+    existingRunId = null;
+  }
+  if (existingRunId !== null && existingRunId > runId) {
+    return;
+  }
+  await writeFile(filePath, `${buildContents()}\n`, "utf-8");
+}
+
+/** True when `outDir` already holds a `run-*` directory strictly newer than `runId`. */
+async function hasNewerRunDir(outDir: string, runId: string): Promise<boolean> {
+  try {
+    const entries = await readdir(outDir, { withFileTypes: true });
+    return entries.some(
+      (entry) => entry.isDirectory() && RUN_DIR_RE.test(entry.name) && entry.name > runId,
+    );
+  } catch {
+    // An unreadable outDir cannot prove a newer run exists; fall through to the
+    // validate.log guard rather than skipping the write and losing evidence.
+    return false;
+  }
+}
+
+function buildValidateLog(input: {
+  runId: string;
+  startedAt: string;
+  status: RunLogResultStatus;
+  relativeReportDir: string;
+  command: string;
+  errorCount: number;
+  warningCount: number;
+  summaryMd: string;
+}): string {
+  const lines: string[] = [];
+  lines.push("# qfai validate log");
+  lines.push("");
+  lines.push("This file is written by every `qfai validate` run and always points at the newest");
+  lines.push("run-log directory. Do not edit it by hand; do not pipe stdout into it.");
+  lines.push("");
+  lines.push(`- run_id: ${input.runId}`);
+  lines.push(`- started_at: ${input.startedAt}`);
+  lines.push(`- command: ${input.command}`);
+  lines.push(`- status: ${input.status}`);
+  lines.push(`- errors: ${input.errorCount}`);
+  lines.push(`- warnings: ${input.warningCount}`);
+  lines.push(`- run_log: ${input.relativeReportDir}`);
+  lines.push("");
+  lines.push(input.summaryMd);
+  return lines.join("\n");
 }
 
 async function writeJson(filePath: string, value: unknown): Promise<void> {
@@ -135,30 +267,57 @@ function toRunLogIssues(
     });
 }
 
+/**
+ * `\b` after `\d{4}` matched happily before the `-` of a composite spec-local ID, so
+ * `US-0006-0001` was silently rewritten to `US-0006` and the node dedup then collapsed every
+ * requirement in a spec onto one node named after the spec. `{1,2}` accepts both the short and
+ * composite forms; `SC` and `CASE` were missing from the prefix list entirely.
+ */
+const TRACEABILITY_ID_REGEX = /\b(OBJ|INIT|CAP|FLOW|US|AC|BR|EX|TC|SC|CASE)(?:-\d{4}){1,2}\b/g;
+
 function buildTraceabilityJson(
   root: string,
   issues: Issue[],
+  graph: TraceabilityGraph,
 ): {
   schema_version: number;
   nodes: TraceabilityNode[];
-  edges: Array<{ from: string; to: string; type: string }>;
+  edges: TraceabilityGraphEdge[];
   stats: Record<string, number>;
 } {
-  const idRegex = /\b(OBJ|INIT|CAP|FLOW|US|AC|BR|EX|TC)-\d{4}\b/g;
+  const idRegex = new RegExp(TRACEABILITY_ID_REGEX.source, TRACEABILITY_ID_REGEX.flags);
   const nodes = new Map<string, TraceabilityNode>();
 
+  // Spec-pack nodes first: they are the authoritative set and carry their defining file.
+  for (const node of graph.nodes) {
+    const entry: TraceabilityNode = { id: node.id, layer: node.layer };
+    if (node.path) {
+      entry.path = node.path;
+    }
+    nodes.set(node.id, entry);
+  }
+
+  // Findings can still contribute IDs the spec-pack walk did not reach (non-layered layouts,
+  // policy-level IDs such as OBJ / INIT / CAP / FLOW).
   for (const issue of issues) {
     if (!issue.refs || issue.refs.length === 0) {
       continue;
     }
+    // The graph namespaces file-local short IDs as `spec-NNNN/AC-0001`, so a
+    // raw `AC-0001` from a finding lands beside — not on — the node the edges
+    // point at, and two specs' findings then merge onto one unqualified node.
+    // Repo-level findings (`_policies/**`, config) have no owning spec and stay
+    // unqualified, which is what the graph does for them too.
+    const specNumber = specNumberForPath(issue.file);
     for (const ref of issue.refs) {
-      const match = idRegex.exec(ref);
       idRegex.lastIndex = 0;
-      const id = match?.[0];
+      const match = idRegex.exec(ref);
+      const rawId = match?.[0];
       const layer = match?.[1];
-      if (!id || !layer) {
+      if (!rawId || !layer) {
         continue;
       }
+      const id = specNumber === null ? rawId : qualifyId(specNumber, rawId);
       if (nodes.has(id)) {
         continue;
       }
@@ -176,7 +335,7 @@ function buildTraceabilityJson(
   return {
     schema_version: 1,
     nodes: Array.from(nodes.values()).sort((a, b) => a.id.localeCompare(b.id)),
-    edges: [],
+    edges: graph.edges,
     stats: {
       downstream_violations: issues.filter((issue) => issue.code === "TRACE_DOWNSTREAM_REF").length,
       shared_scope_violations: issues.filter(

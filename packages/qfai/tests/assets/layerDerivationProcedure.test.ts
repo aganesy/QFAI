@@ -9,6 +9,20 @@ const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
 
+/**
+ * Collapses every whitespace run to one space.
+ *
+ * The rule is the sentence; the column prettier happens to wrap it at is not.
+ * Encoding the wrap (`"let a\n   wrong implementation"`) made a reflow — which
+ * changes no meaning — read as a policy regression.
+ */
+const flat = (s: string): string => s.replace(/\s+/g, " ");
+
+/** Wrap-tolerant `toContain`: both sides are flattened before comparison. */
+function expectPhrase(content: string, phrase: string): void {
+  expect(flat(content)).toContain(flat(phrase));
+}
+
 const ANCHOR = "test-layers.md#layer-derivation-procedure-normative";
 
 describe("deriving a TC's layer is a published procedure", () => {
@@ -16,7 +30,7 @@ describe("deriving a TC's layer is a published procedure", () => {
     it(`${tree}: the SSOT states the rule and one example per layer`, async () => {
       const catalog = await read(tree, "assistant/catalog/test-layers.md");
       expect(catalog).toContain("## Layer derivation procedure (normative)");
-      expect(catalog).toContain("whose removal would let a\n   wrong implementation pass");
+      expectPhrase(catalog, "whose removal would let a wrong implementation pass");
       for (const layer of ["L1 Unit", "L2 Component", "L3 Integration", "L4 API", "L5 E2E"]) {
         expect(catalog).toContain(layer);
       }
@@ -32,8 +46,9 @@ describe("deriving a TC's layer is a published procedure", () => {
 
     it(`${tree}: the direction of authority is stated as an anti-pattern`, async () => {
       const catalog = await read(tree, "assistant/catalog/test-layers.md");
-      expect(catalog).toContain(
-        "**The layer is never inferred from\nhow a test happens to be driven.**",
+      expectPhrase(
+        catalog,
+        "**The layer is never inferred from how a test happens to be driven.**",
       );
     });
 
@@ -56,8 +71,9 @@ describe("deriving a TC's layer is a published procedure", () => {
         expect(catalog).toContain(code);
       }
       expect(catalog).toContain("**A `TC-*` row's `Level` stays within L1–L3.**");
-      expect(catalog).toContain(
-        "**An L1/L2 `Level` does not relax `QFAI-ATDD-112`, and the gate does not\n  change the `Level`.**",
+      expectPhrase(
+        catalog,
+        "**An L1/L2 `Level` does not relax `QFAI-ATDD-112`, and the gate does not change the `Level`.**",
       );
       // The derived Level records the oracle; it must not depend on whether an
       // integration test happens to exist yet.
@@ -74,7 +90,7 @@ describe("deriving a TC's layer is a published procedure", () => {
       for (const code of ["QFAI-COV-201", "QFAI-COV-202", "QFAI-COV-203"]) {
         expect(catalog).toContain(code);
       }
-      expect(catalog).toContain("Move the whole chain in one\n  change through the Drift Protocol");
+      expectPhrase(catalog, "Move the whole chain in one change through the Drift Protocol");
       expect(catalog).toContain("split the row instead");
     });
 
@@ -86,14 +102,17 @@ describe("deriving a TC's layer is a published procedure", () => {
 
     it(`${tree}: the Level is per-TC while the annotation routing stays enforced`, async () => {
       const sdd = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
-      expect(sdd).toContain(
-        "annotation routing is enforced by obligation ID (US→E2E, TC→Integration, CON-API→API)",
+      // The routing table is cited, not restated. Inlining `TC→Integration`
+      // republished the per-TC pin this PR withdraws, and it would have to be
+      // re-edited in two places every time the catalog's routing changes.
+      expectPhrase(
+        sdd,
+        "annotation routing is enforced by `.qfai/assistant/catalog/test-layers.md#annotation-routing-is-by-id-type-not-by-level`",
       );
-      expect(sdd).toContain("a `TC-*`'s `Level` is **not** a constant");
-      expect(sdd).toContain("keeping the row inside L1–L3");
-      expect(sdd).toContain(
-        "A missing `tests/integration/**` trace never rewrites a derived `Level`.",
-      );
+      expect(sdd).not.toContain("TC→Integration");
+      expectPhrase(sdd, "`TC-*`'s `Level` is **not** a constant");
+      expectPhrase(sdd, "keeping the row inside L1–L3");
+      expectPhrase(sdd, "A missing `tests/integration/**` trace never rewrites a derived `Level`.");
     });
 
     it(`${tree}: the TC template points authors at the procedure`, async () => {

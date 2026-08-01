@@ -73,6 +73,10 @@ For UI-bearing targets, follow `references/design-dna-intake.md` while authoring
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
+The full completion logic, including the UI-bearing blocking conditions, is in
+`references/discussion-completion-matrix.md`. It must stay consistent with the canonical
+sidecar family declared above and with `templates/uiux/00_index.md#Forbidden Legacy Files`.
+
 Before declaring completion, you MUST:
 
 - verify all 15 mandatory output files exist and are populated;
@@ -80,7 +84,7 @@ Before declaring completion, you MUST:
 - ensure every deferred item has full metadata in `13_Deferred.md`;
 - ensure `02_Inception-Deck.md` and `03_Story-Workshop.md` include Mermaid diagrams;
 - ensure the UI-bearing sidecar family is complete and the root `DESIGN.md` draft exists at the consuming-project root and parses as valid front-matter;
-- run `qfai validate --profile discussion --fail-on error` and fix discussion-owned findings;
+- run `npx qfai validate --profile discussion --fail-on error` and fix discussion-owned findings;
 - avoid selecting a single visual winner in discussion artifacts.
 
 ### Reviewer Gate (MUST)
@@ -92,7 +96,7 @@ Reviewer checks must confirm:
 - discussion stayed planner-first and did not choose a single visual winner;
 - Drift Protocol is enforced; review policy is checked against `.qfai/assistant/catalog/test-layers.md`;
 - planning and coverage heuristics are signals, not gates;
-- review findings end with `Status (PASS/REVISE)` and Reviewer result is explicit as `PASS` or `REVISE`.
+- review findings end with `Status (PASS/REVISE/PENDING)` and Reviewer result is explicit as `PASS` or `REVISE` (`PENDING` marks a gate that could not be run and never counts as `PASS`).
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -109,11 +113,11 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 ### Delegation Failure (Hard Stop)
 
 - No additional overrides.
-- Do not simulate roles. If the first required delegation fails, stop the stage and report remediation.
+- Do not simulate roles. Classify the failure per the baseline taxonomy first: `unavailable` stops the stage with a remediation report; `saturated` uses the bounded retry branch and keeps the stage open.
 
 ## Work Orders Summary
 
-Use the shared schema (per-row `Status (PASS/REVISE)` column, reviewer response `Result: PASS | REVISE`).
+Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer response `Result: PASS | REVISE`).
 
 ## Completion Message & Next Actions (MUST)
 

@@ -1,11 +1,17 @@
-import { mkdtemp, mkdir, rm, unlink, writeFile } from "node:fs/promises";
+import { access, mkdtemp, mkdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { resolveIssueExpected } from "../../src/cli/commands/validate.js";
 import { defaultConfig } from "../../src/core/config.js";
-import { validateLayerCoverage } from "../../src/core/validators/layerCoverage.js";
+import {
+  THIN_COVERAGE_SIGNAL_CODE,
+  THIN_COVERAGE_SIGNAL_EXPECTATION,
+  collapseIdRuns,
+  validateLayerCoverage,
+} from "../../src/core/validators/layerCoverage.js";
 
 describe("validateLayerCoverage", () => {
   it("emits error when a US has no AC child", async () => {
@@ -503,3 +509,198 @@ async function seedV1421Spec(root: string, specNumber: string, capId: string): P
     "utf-8",
   );
 }
+
+describe("collapseIdRuns", () => {
+  it("collapses a contiguous numeric run into a range", () => {
+    expect(collapseIdRuns(["BR-0003-0001", "BR-0003-0002", "BR-0003-0003"])).toEqual([
+      "BR-0003-0001..BR-0003-0003",
+    ]);
+  });
+
+  it("keeps a lone ID as-is and splits on a gap", () => {
+    expect(collapseIdRuns(["AC-0001", "AC-0002", "AC-0009"])).toEqual([
+      "AC-0001..AC-0002",
+      "AC-0009",
+    ]);
+  });
+
+  it("does not merge across differing stems", () => {
+    expect(collapseIdRuns(["BR-0001-0002", "BR-0002-0003"])).toEqual([
+      "BR-0001-0002",
+      "BR-0002-0003",
+    ]);
+  });
+
+  it("returns an empty list for no IDs", () => {
+    expect(collapseIdRuns([])).toEqual([]);
+  });
+
+  it("orders the input itself rather than trusting the caller", () => {
+    // The run detection needs the ids in order, and this is exported. An
+    // unsorted argument used to produce silently wrong output — the run broken
+    // into fragments — rather than anything a caller would notice.
+    expect(collapseIdRuns(["AC-0003", "AC-0001", "AC-0002"])).toEqual(["AC-0001..AC-0003"]);
+  });
+
+  it("does not mutate the caller's array", () => {
+    const ids = ["AC-0003", "AC-0001"];
+    collapseIdRuns(ids);
+    expect(ids).toEqual(["AC-0003", "AC-0001"]);
+  });
+});
+
+describe("specs-coverage Signals section", () => {
+  const reportPathFor = (root: string, specNumber: string): string =>
+    path.join(root, ".qfai", "report", "specs-coverage", `spec-${specNumber}.md`);
+
+  it("collapses thin coverage into one coded, ranged row per layer", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-signals-"));
+    try {
+      await seedPolicies(root, ["CAP-0001"]);
+      await seedV1421Spec(root, "0001", "CAP-0001");
+
+      await validateLayerCoverage(root, defaultConfig);
+      const report = await readFile(reportPathFor(root, "0001"), "utf-8");
+
+      expect(report).toContain(
+        "QFAI-COV-207 (warning): 2 AC entries covered by exactly 1 TC — AC-0001..AC-0002",
+      );
+      expect(report).toContain(
+        "QFAI-COV-207 (warning): 2 BR entries covered by exactly 1 EX — BR-0001..BR-0002",
+      );
+      expect(report).toContain(
+        "QFAI-COV-207 (warning): 2 EX entries covered by exactly 1 TC — EX-0001..EX-0002",
+      );
+      // The old `AC signal: AC-0001 -> 1 TC` shape carried no code and no action.
+      expect(report).not.toContain("signal: AC-0001 ->");
+      // The singular carries the noun too: "1 AC covered by …" drops the thing
+      // being counted and reads as a truncation beside the plural.
+      expect(report).not.toMatch(/\d+ (?:AC|BR|EX) covered by exactly/);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("states the severity and the expected triage action", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-signals-"));
+    try {
+      await seedPolicies(root, ["CAP-0001"]);
+      await seedV1421Spec(root, "0001", "CAP-0001");
+
+      await validateLayerCoverage(root, defaultConfig);
+      const report = await readFile(reportPathFor(root, "0001"), "utf-8");
+
+      expect(report).toContain("is a **warning**, not a gate");
+      expect(report).toContain("already `QFAI-COV-201/202/203` errors");
+      expect(report).toContain("add a second case, merge the artifact into a sibling");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("omits uncovered artifacts, which are already hard errors", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-signals-"));
+    try {
+      await seedPolicies(root, ["CAP-0001"]);
+      await seedV1421Spec(root, "0001", "CAP-0001");
+
+      await writeFile(
+        path.join(root, ".qfai", "specs", "spec-0001", "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "| TC-ID   | Level | AC-Refs | EX-Ref  | Steps  | Expected   | Notes   |",
+          "| ------- | ----- | ------- | ------- | ------ | ---------- | ------- |",
+          "| TC-0001 | L2    | AC-0001 | EX-0001 | step-1 | expected-1 | note-1  |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validateLayerCoverage(root, defaultConfig);
+      expect(issues.some((entry) => entry.code === "QFAI-COV-201")).toBe(true);
+
+      const report = await readFile(reportPathFor(root, "0001"), "utf-8");
+      // Assert the section exists before slicing: `indexOf` returns -1 when it
+      // does not, `slice(-1)` yields the last character, and the two
+      // `not.toContain` checks below would then pass without ever seeing the
+      // Signals section.
+      const signalsIndex = report.indexOf("## Signals");
+      expect(signalsIndex, "the report must carry a ## Signals section").toBeGreaterThanOrEqual(0);
+      const signals = report.slice(signalsIndex);
+      expect(signals).not.toContain("AC-0002");
+      expect(signals).not.toContain("EX-0002");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // The code previously meant "an EX references multiple BR IDs"; that emission
+  // was removed, and the validate issue catalog still carried the stale wording.
+  // Both surfaces now read the same exported constant, so they cannot disagree
+  // about what a reader is being asked to triage.
+  it("shares one definition of the signal code with the validate issue catalog", () => {
+    expect(THIN_COVERAGE_SIGNAL_CODE).toBe("QFAI-COV-207");
+    expect(THIN_COVERAGE_SIGNAL_EXPECTATION).toContain("exactly 1 downstream case");
+    // The retired meaning ("an EX references multiple BR IDs") must not survive.
+    expect(THIN_COVERAGE_SIGNAL_EXPECTATION).not.toContain("BR");
+
+    const expected = resolveIssueExpected({
+      code: THIN_COVERAGE_SIGNAL_CODE,
+      severity: "warning",
+      category: "change",
+      message: "thin coverage",
+    });
+    expect(expected).toBe(THIN_COVERAGE_SIGNAL_EXPECTATION);
+  });
+});
+
+describe("validateLayerCoverage spec scope", () => {
+  const exists = async (target: string): Promise<boolean> => {
+    try {
+      await access(target);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  it("validates and reports only the scoped specs", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cov-scope-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"]);
+      await seedV1421Spec(root, "0003", "CAP-0001");
+      await seedV1421Spec(root, "0004", "CAP-0002");
+
+      // spec-0004 is broken: AC-0002 loses its only TC.
+      await writeFile(
+        path.join(root, ".qfai", "specs", "spec-0004", "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "| TC-ID   | Level | AC-Refs | EX-Ref  | Steps  | Expected   | Notes   |",
+          "| ------- | ----- | ------- | ------- | ------ | ---------- | ------- |",
+          "| TC-0001 | L2    | AC-0001 | EX-0001 | step-1 | expected-1 | note-1  |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const scoped = await validateLayerCoverage(root, defaultConfig, {
+        specScope: new Set(["0003"]),
+      });
+      expect(scoped.some((entry) => entry.code === "QFAI-COV-201")).toBe(false);
+
+      const coverageRoot = path.join(root, ".qfai", "report", "specs-coverage");
+      expect(await exists(path.join(coverageRoot, "spec-0003.md"))).toBe(true);
+      // A --spec-limited run must not dirty a sibling spec's report.
+      expect(await exists(path.join(coverageRoot, "spec-0004.md"))).toBe(false);
+
+      const unscoped = await validateLayerCoverage(root, defaultConfig);
+      expect(unscoped.some((entry) => entry.code === "QFAI-COV-201")).toBe(true);
+      expect(await exists(path.join(coverageRoot, "spec-0004.md"))).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});

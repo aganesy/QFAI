@@ -33,6 +33,28 @@ The agent reads the repository, produces the required artifacts, and iterates un
   `index.html`, or `interaction.json`.
 - Calibration SSOT is the calibration pack referenced by `calibrationRef.packPath`.
 
+## Installation
+
+qfai is published on npm as **`qfai`**. Install it as a dev dependency:
+
+```bash
+npm i -D qfai
+# or: pnpm add -D qfai / yarn add -D qfai
+```
+
+Let the package manager write the `devDependencies` entry. Do not hand-pin a version
+here: `package.json#version` in the published package is the only version source, and a
+number copied from prose goes stale on the next release.
+
+> **Do not install from the GitHub repository.** A git specifier such as
+> `"qfai": "github:aganesy/QFAI"` maps the dependency key `qfai` to the private monorepo
+> root — the manifest `name` is irrelevant, so it lands in `node_modules/qfai` regardless.
+> That root ships no `bin` and no built `dist`, so nothing would be runnable or
+> importable. Under npm or yarn a `preinstall` guard refuses the install with an
+> explanatory error rather than completing silently; under pnpm — or any package manager
+> that reports no user agent — it is not caught, so the mistake is yours to avoid. Use the
+> npm package, or run it without installing via `npx qfai@latest <command>`.
+
 ## Quick start
 
 > **Windows users:** `qfai init` creates symlinks internally.
@@ -220,7 +242,10 @@ Operational notes.
 - Skills should delegate work to multiple role-based sub-agents (Planner, Architect, Contract Designer, QA, Code Reviewer, etc.) to emulate a real delivery flow.
 - Change classification (Primary/Tags) is required in `09_delta.md` and recommended in PRs. See `.qfai/assistant/constitution/change-classification.md`.
 - Verification planning is recorded in `09_delta.md` (`Verification -> Plan`) and validated in CI (`VFY-*` rules).
-- Review gate policies (required/optional layers and reviewers) are defined in `.qfai/assistant/catalog/review-gate.rules.yml`.
+- Review gate policies (required/optional layers, default reviewers, optional
+  review modes) are documented in `.qfai/assistant/catalog/review-gate.rules.yml`.
+  This catalog is reference material for agents; it is not machine-enforced.
+- Review pack structure — `.qfai/review/review-<YYYYMMDDhhmmssSSS>/{review_request.md,R01_*.md,summary.json}` — is the one layout enforced by validation (`QFAI-REVIEW-*`).
 - Agent taxonomy and invocation SSOT are defined in `.qfai/assistant/manifest/agent-catalog.yml`, `.qfai/assistant/manifest/agent-routing.yml`, and `.qfai/assistant/manifest/review-profiles.yml`.
 
 ## Configuration
