@@ -145,7 +145,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 ### Phase: Refactor
 
-1. Improve code quality (naming, structure, duplication removal) while keeping all tests green.
+1. Improve code quality (naming, structure, duplication removal) while keeping all tests green. **Before editing a production file**, check whether another spec's `tdd/test-list.md` names it in `Test file`; if so the edit is cross-spec — record it in this item's evidence and re-run `completion-reviewer` against that spec's obligations too (`references/cross-spec-ownership.md`).
 2. Run the **relevant test suite** to confirm nothing broke. "Relevant" means the
    smallest selector that covers the module you touched **plus its reverse
    dependency closure** — walk the production import graph backwards, not just the
@@ -369,6 +369,7 @@ Completion MUST NOT be declared when any of the following are true:
 - No GREEN fresh evidence exists for the item
 - Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned REVISE
 - `.qfai/evidence/implement-<spec-id>.md` does not exist, or does not record both reviewer verdicts for the item (this is the single blocking statement about the evidence file; its absence of _verdicts_ is never blocking before items 7-8)
+- A `## Cross-spec obligations` entry in this spec's evidence file is still open — the change it names has not landed, or the blocked spec's obligation is still untested. A clean completion here would certify an obligation this run knowingly left unmet (`references/cross-spec-ownership.md`)
 - Items with `todo`, `red`, `green`, `refactor`, or `review-fix` status still exist (for spec-level completion)
 - Items with `exception` status still exist, **unless** the row's `DR-ID` names
   a Decision Record explicitly recorded as a **user-approved accepted-risk
@@ -388,6 +389,7 @@ Required sections:
 - Items processed (TDD-ID, TC-Refs, final status)
 - Test results summary
 - Exception items (if any) with DR-IDs
+- `## Cross-spec obligations` (if any): per affected spec, the TDD-ID that forced the change, the blocked spec and its TDD-IDs, the file, the change required, the obligation left unverified, and the resolution (`re-reviewed` or a `CR-*`). Fields and the rule: `references/cross-spec-ownership.md`
 - Commands executed
 
 ### Per-item evidence contract (fresh evidence required)

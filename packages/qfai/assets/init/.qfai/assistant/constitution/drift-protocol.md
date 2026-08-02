@@ -14,6 +14,14 @@ Upstream artifacts include, at minimum:
 - Legacy spec-pack SSOT files when present: `spec.md`, `delta.md`, `plan.md`, `traceability-matrix.md`, `scenario.feature`, `case-catalogue.md`, and numbered pack files (for example `01_Spec.md`..`18_delta.md`)
 - contracts and schema decisions owned by earlier phases
 - outputs of discussion/sdd/review stages
+- **test or production artifacts another spec's completed implement run
+  certifies** — a file named in another `tdd/test-list.md`'s `Test file` column
+  on a `done` row. Changing one is not forbidden (the codebase is not
+  partitioned and duplication removal is mandated), but it must be recorded and
+  re-reviewed per
+  `skills/qfai-implement/references/cross-spec-ownership.md`. It becomes drift
+  in the full sense — STOP, Change Request, owner rerun — when the other spec's
+  obligation no longer holds rather than merely moving.
 
 ## Allowed exceptions (minimal whitelist)
 
