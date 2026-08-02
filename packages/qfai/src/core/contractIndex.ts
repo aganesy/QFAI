@@ -9,11 +9,18 @@ import {
   collectUiContractFiles,
   collectThemaContractFiles,
 } from "./discovery.js";
-import { extractDeclaredContractIds } from "./contractsDecl.js";
+import { extractDeclaredContractIds, extractDeclaredDependencies } from "./contractsDecl.js";
 
 export type ContractIndex = {
   ids: Set<string>;
   idToFiles: Map<string, Set<string>>;
+  /**
+   * Declared apply-order dependencies, per contract id.
+   *
+   * The index modelled only `id -> files`, so the composition a multi-file
+   * schema is forced into by `QFAI-CONTRACT-011` was unrepresentable.
+   */
+  idToDependencies: Map<string, Set<string>>;
   files: { ui: string[]; thema: string[]; api: string[]; db: string[] };
 };
 
@@ -33,6 +40,7 @@ export async function buildContractIndex(root: string, config: QfaiConfig): Prom
   const index: ContractIndex = {
     ids: new Set<string>(),
     idToFiles: new Map<string, Set<string>>(),
+    idToDependencies: new Map<string, Set<string>>(),
     files: { ui: uiFiles, thema: themaFiles, api: apiFiles, db: dbFiles },
   };
 
@@ -47,8 +55,19 @@ export async function buildContractIndex(root: string, config: QfaiConfig): Prom
 async function indexContractFiles(files: string[], index: ContractIndex): Promise<void> {
   for (const file of files) {
     const text = await readFile(file, "utf-8");
+    // One file declares one id (`QFAI-CONTRACT-011`), so its dependency list
+    // belongs to that id without ambiguity.
+    const dependencies = extractDeclaredDependencies(text);
     extractDeclaredContractIds(text).forEach((id) => {
       record(index, id, file);
+      if (dependencies.length === 0) return;
+      const known = index.idToDependencies.get(id) ?? new Set<string>();
+      for (const dependency of dependencies) {
+        // A self-reference is a typo, not a dependency, and would make every
+        // graph trivially cyclic.
+        if (dependency !== id.toUpperCase()) known.add(dependency);
+      }
+      index.idToDependencies.set(id, known);
     });
   }
 }
