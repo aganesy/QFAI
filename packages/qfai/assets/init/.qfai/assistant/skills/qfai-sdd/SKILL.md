@@ -220,6 +220,10 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 10. Run validate; fix source-layer artifacts and rerun until `error=0`.
 11. Triage density-smell warnings in `.qfai/report/specs-coverage/spec-*.md`.
 
+## Work-log entries
+
+Write a `.qfai/steering/<id>.md` entry when this stage hits one of the conditions in the `kind` trigger table of `.qfai/assistant/catalog/worklog-entry.schema.md` — `blocker`, `handoff`, `consultation-needed` and `decision` are the ones this stage reaches most. `npx qfai validate` polices the surface but nothing else asks for an entry, so an unwritten one is simply lost.
+
 ## Mandatory Outputs
 
 - Shared `_policies/01..11` files
