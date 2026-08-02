@@ -120,7 +120,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 
 ## CRITICAL CONSTRAINTS (Read First)
 
-- Only update `qfai.config.yaml`, `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`, and `.qfai/evidence/configure-<run-id>.md` unless explicitly asked.
+- Only update `qfai.config.yaml`, `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`, `.qfai/assistant/constitution/quality.md` (gate capabilities only — never the surrounding rules), and `.qfai/evidence/configure-<run-id>.md` unless explicitly asked.
 - You MUST produce the required evidence file: `.qfai/evidence/configure-<run-id>.md`.
   - `.qfai/evidence/` is intentionally NOT tracked by Git (it ships with a local `.gitignore`).
   - Do NOT commit evidence files; summarize key outcomes in the PR description instead.
@@ -308,7 +308,7 @@ Every 5 major actions, pause and restate:
 
 ## Constraints
 
-- Only update `qfai.config.yaml`, `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`, and `.qfai/evidence/configure-<run-id>.md` unless explicitly asked.
+- Only update `qfai.config.yaml`, `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`, `.qfai/assistant/constitution/quality.md` (gate capabilities only — never the surrounding rules), and `.qfai/evidence/configure-<run-id>.md` unless explicitly asked.
 - Do **not** modify tests or source code.
 - Avoid overly broad globs (e.g., `**/*`).
 - Exclude generated/output directories (`node_modules`, `.git`, `.qfai`, `dist`, `build`, `coverage`, `.next`, `out`, etc.).
@@ -325,6 +325,10 @@ Every 5 major actions, pause and restate:
 2. Read **project constitution / instructions** (if present):
    - `.qfai/assistant/constitution/constitution.md`
    - `.qfai/assistant/constitution/workflow.md` (or equivalent)
+   - `.qfai/assistant/constitution/quality.md` — the gate capability list. This
+     skill is its owner: reconcile it against the toolchain detected in step 3,
+     and record the discovered commands in `catalog/tech.md`. It had no reader
+     and no owner, so a stale statement there survived every configure pass.
 
 3. Inspect repo conventions:
    - package manager (pnpm/npm/yarn), test runner, lint/typecheck scripts, CI definitions
