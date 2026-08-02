@@ -16,6 +16,32 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single r
 | DR-ID     | Decision Record / Change Request IDs, comma-separated: a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses; blank otherwise |
 | Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                                                                                                                                                        |
 
+## Declared seam column (optional, required for parallel dispatch)
+
+| Column        | Description                                                                                |
+| ------------- | ------------------------------------------------------------------------------------------ |
+| Owning module | The production module this row will write, as a repo-relative path or a dotted module path |
+
+`Owning module` is a **declaration, not an observation**, and that is the whole
+point: it exists before the code does.
+
+The parallel-dispatch gate asks whether two items write the same source module.
+Under RED-first the production module does not exist when `delivery-planner`
+has to answer, and the only path-valued required column is `Test file` — two
+items trivially have independent test files and land on the same production
+module. So the planner had nothing to evaluate against, and
+`parallelization-policy.md`'s "cannot be explained with concrete file/module
+evidence" asked for exactly what test-first withholds.
+
+- Fill it at ledger-authoring time (`/qfai-sdd` Phase 2b) from the TC's parent
+  `BR`, which already names the behaviour's home.
+- One module per row. A row that would honestly need two is a row that should
+  be split — that is the same signal `selector-granularity.md` describes.
+- `-` is legal and means "not declared". A row carrying `-` is **not eligible
+  for parallel dispatch**; it may still be executed serially.
+- It is a claim the row is later measured against, not a lock. See
+  `parallelization-policy.md#seam-reconciliation-after-a-parallel-run`.
+
 ## Obligation columns (optional, required by layer)
 
 A row's obligation lives in the column its `Layer` selects. `TC-Refs` is the one

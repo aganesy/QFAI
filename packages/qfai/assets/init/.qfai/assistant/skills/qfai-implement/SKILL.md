@@ -294,13 +294,14 @@ Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
   including one item writing a module another item's test or implementation
   reads — not as the existence of shared things, and authorized parallel runs
   use the coordinated mode in which the orchestrator owns every `test-list.md`
-  write. Full rules: `references/parallelization-policy.md`.
+  write. Under RED-first the source modules do not exist when `delivery-planner` must judge, so the conditions are evaluated over each row's declared `Owning module` (`references/execution-ledger.md`); a ledger without that column supports parallel dispatch only for seams that already exist. Full rules: `references/parallelization-policy.md`.
 - `parallel_groups: []` in `agent-routing.yml` describes **role fan-out within
   a phase**, not item dispatch.
 
 ### Post-parallel integration verify
 
 - After parallel slices complete and merge, run integration verify on the merged result
+- Then reconcile the seams: diff each slice's touched `src/` paths against its declared `Owning module` and report undeclared or overlapping paths as a deny-condition breach — **independently of whether the merged suite is green** (`references/parallelization-policy.md#seam-reconciliation-after-a-parallel-run`)
 - If integration verify fails, flag all slices for re-examination and roll back the merge
 - If integration verify passes, state transitions back to `delivery-planner` for sequential flow
 
