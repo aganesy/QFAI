@@ -23,7 +23,10 @@ async function newTempDir(): Promise<string> {
 }
 
 async function createUiBearingPack(root: string): Promise<void> {
-  await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: web\n", "utf-8");
+  // `01_Context.md` is the file a discussion pack actually has. The fixture
+  // used to write `01_Spec.md`, mirroring the admission probe's own mistake,
+  // so it agreed with the bug instead of exercising the behaviour.
+  await writeFile(path.join(root, "01_Context.md"), "# Context\n\n- surface: web\n", "utf-8");
   await mkdir(path.join(root, "uiux"), { recursive: true });
 }
 
@@ -84,14 +87,14 @@ describe("TC-0014-0018: canonical UIX in verify path", () => {
     expect(validateSrc).not.toMatch(/runLegacyUixCompatibilityValidators|runAllUixValidators/);
   });
 
-  it("runCanonicalUixValidators does not resolve discussion packs implicitly from repo root", async () => {
+  it("runCanonicalUixValidators reaches the latest pack from a repo root", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, ".qfai", "discussion", "discussion-20260101000000000", "uiux"), {
       recursive: true,
     });
     await writeFile(
-      path.join(root, ".qfai", "discussion", "discussion-20260101000000000", "01_Spec.md"),
-      "# Spec\n\n- surface: web\n",
+      path.join(root, ".qfai", "discussion", "discussion-20260101000000000", "01_Context.md"),
+      "# Context\n\n- surface: web\n",
       "utf-8",
     );
     await writeFile(
@@ -107,8 +110,11 @@ describe("TC-0014-0018: canonical UIX in verify path", () => {
       "utf-8",
     );
 
+    // `12_design_system.md` is a forbidden legacy sidecar. This assertion used
+    // to be `toEqual([])`: it pinned the inertness of all eight validators
+    // rather than the rule they exist to enforce.
     const issues = await runCanonicalUixValidators(root, defaultConfig);
-    expect(issues).toEqual([]);
+    expect(issues.find((issue) => issue.code === "UIX-VAL-3LAYER-FORBIDDEN-FILE")).toBeDefined();
   });
 });
 
