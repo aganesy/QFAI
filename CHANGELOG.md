@@ -15,6 +15,31 @@
   under rule id `TDDLIST-002` so a project that deliberately uses its own Level
   vocabulary can suppress or downgrade it through `.qfai/waivers.yml`.
 
+### Fixed
+
+- A waiver's `rule:` now accepts the `code` a finding actually publishes. The
+  grammar was `^[A-Z]+-\d{3}$`, which matched none of the identifiers
+  `qfai validate` prints: copying `QFAI-ATDD-112` out of `validate.json` — the
+  only spelling the CLI, the JSON report and the GitHub annotations ever show —
+  failed with a hard `QFAI-WAIVER-001` whose remediation text named
+  `COMPAT-003`, a rule no validator emits. The form the engine did key on
+  (`ATDD-112`) appeared in no shipped artifact, and 46 emitted codes —
+  every `TDDLIST_*`, `W-*`, `E_*` and `R-*` rule, plus `D-DEPRECATED-PATH`,
+  `D-SCAFFOLD-PLACEHOLDER` and `QFAI-CFG-LINK-00x` — matched neither branch and
+  were unwaivable by construction. `rule:` now takes any code shape the package
+  emits (`QFAI-ATDD-112`, `TDDLIST_UNKNOWN_LEVEL`, `E_TC_ORPHAN`,
+  `D-SCAFFOLD-PLACEHOLDER`); the `QFAI-`-stripped form still resolves, so
+  existing waiver files keep applying unchanged. A well-formed but unknown rule
+  is now reported as `QFAI-WAIVER-004` (warning) rather than `QFAI-WAIVER-001`
+  (error). `suppressed.byRule` is keyed by the spelling the waiver used.
+- The shipped `.qfai/waivers.yml` example named `COMPAT-003`, which no validator
+  emits; it now shows `TDDLIST_UNKNOWN_LEVEL`, a real waivable warning.
+  `STATIC_RULE_SEVERITY` no longer pre-declares the never-emitted `COMPAT-*`,
+  `CTYPE-*`, `DELTA-*` and `VFY-*` families, its remaining entries carry every
+  spelling a waiver may use, and a severity actually observed in the run now
+  outranks the static declaration instead of the reverse. `README.md` and
+  `qfai-verify/SKILL.md` state which spelling to write.
+
 ### Changed
 
 - The TDD coverage-level filter now recognizes the `L1`…`L5` codes the shipped

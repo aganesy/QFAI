@@ -149,6 +149,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 - You MUST run the mandatory checks listed below and record outcomes.
 - In CI, you MUST keep QFAI validation on full-scan mode (`npx qfai validate --profile verify --fail-on error` or default `npx qfai validate --fail-on error`). Do NOT use partial profiles. This has no exception: `phasePolicy.ts` rejects every narrow profile (`discussion` / `prototyping` / `atdd`) under `CI=true` or `GITHUB_ACTIONS=true` with `QFAI-VALIDATE-017`. The prototyping carve-out below is a local, pre-`certify` run — it cannot be, and must not be wired as, a CI job.
 - Waivers are only for `warning` / `info` findings. If a waiver attempts to suppress an `error`, treat it as a failure and fix the root cause.
+- A waiver's `rule:` is the finding's `code`, copied verbatim from `.qfai/report/validate.json` — `QFAI-ATDD-112`, `TDDLIST_UNKNOWN_LEVEL`, `E_TC_ORPHAN`. Do not strip the `QFAI-` prefix; the stripped form is a back-compat alias only.
 - You MUST stop and escalate if any gate fails without an actionable fix list.
 - Completion must be approved by a reviewer who did not run the gates.
 

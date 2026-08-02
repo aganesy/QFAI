@@ -1,13 +1,19 @@
 version: 1
 waivers: []
-# Example:
+# Write `rule:` exactly as the finding's `code` appears in
+# `.qfai/report/validate.json` and in the CLI output — `QFAI-ATDD-112`,
+# `TDDLIST_UNKNOWN_LEVEL`, `E_TC_ORPHAN`. Do not strip the `QFAI-` prefix; the
+# stripped form is kept working only for older waiver files.
+#
+# Waivers apply to `warning` and `info` findings only. A waiver aimed at an
+# `error` is a configuration error and fails the run.
+#
+# Example — a project that deliberately ships its own `Level` vocabulary:
 # - id: WVR-20260207-01
-#   rule: COMPAT-003
+#   rule: TDDLIST_UNKNOWN_LEVEL
 #   scope:
 #     paths: [".qfai/specs/spec-0001/**"]
-#   match:
-#     dl_ids: ["DL-20260207-01"]
-#   reason: "Legacy acceptance tests are being migrated; suppress until migration completes."
+#   reason: "Level vocabulary is owned by this project; migration tracked in DL-20260207-01."
 #   expires: "2026-03-01"
 #   evidence: "delta.md#DL-20260207-01"
 #   owner: "team-foo"

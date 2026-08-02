@@ -5,7 +5,12 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { parseFirstMarkdownTable, resolveTestCaseTable } from "../specPackParsers.js";
-import { EXCEPTION_PARKED_RULE_ID } from "../ruleIds.js";
+import {
+  EXCEPTION_PARKED_CODE,
+  EXCEPTION_PARKED_RULE_ID,
+  UNKNOWN_LEVEL_CODE,
+  UNKNOWN_LEVEL_RULE_ID,
+} from "../ruleIds.js";
 import {
   classifyCoverageLevel,
   isCoverageTargetLevel,
@@ -128,28 +133,20 @@ function isChangeRequestRefsOnly(drId: string): boolean {
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
 
 /**
- * Waiver rule id for `TDDLIST_EXCEPTION_PARKED`.
+ * Waiver rule ids for `TDDLIST_EXCEPTION_PARKED` / `TDDLIST_UNKNOWN_LEVEL`.
  *
  * A parked item that carries a user-approved accepted risk is a legitimate
- * end state, but the ledger row alone cannot prove the DR-ID was approved.
- * `.qfai/waivers.yml` is the approval artifact QFAI already has (it requires
- * `id`/`reason`/`expires`/`evidence` and expires), so the finding is emitted
- * under a rule id `waivers.ts#resolveRuleId` accepts.
+ * end state, but the ledger row alone cannot prove the DR-ID was approved; and a
+ * project may deliberately ship a Level vocabulary QFAI does not know.
+ * `.qfai/waivers.yml` is the approval artifact QFAI already has for both (it
+ * requires `id`/`reason`/`expires`/`evidence` and expires), so each finding
+ * carries a `rule` that `waivers.ts#resolveRuleKeys` accepts — as does its
+ * `code`, which is what an operator should actually write.
  *
  * Re-exported from `core/ruleIds.ts`, which `waivers.ts` also reads, so the two
  * cannot drift apart on a rename.
  */
-export { EXCEPTION_PARKED_RULE_ID };
-
-/**
- * Waiver rule id for `TDDLIST_UNKNOWN_LEVEL`.
- *
- * A project may deliberately ship a Level vocabulary QFAI does not know.
- * `.qfai/waivers.yml` is the mechanism for that, and `waivers.ts#resolveRuleId`
- * only resolves `^[A-Z]+-\d{3}$` (or a `QFAI-<RULE>` code) — a dotted rule name
- * would have left the warning permanently unsuppressible.
- */
-export const UNKNOWN_LEVEL_RULE_ID = "TDDLIST-002";
+export { EXCEPTION_PARKED_RULE_ID, UNKNOWN_LEVEL_RULE_ID };
 
 /** Per-spec file that owns the Test Case Table, and the target of its findings. */
 const TEST_CASES_FILE_NAME = "06_Test-Cases.md";
@@ -304,15 +301,12 @@ async function validateSpecTddList(
         `Unrecognized Level value(s) in ${TEST_CASES_FILE_NAME} for spec-${specNumber}: ${[...unrecognizedLevels].sort().join(", ")}. Accepted — ${acceptedLevelVocabulary()}. Unrecognized values are treated as coverage targets, so every such TC becomes a mandatory ledger row`,
         "warning",
         testCasesRelPath,
-        // Rule id, not a dotted path: `waivers.ts#resolveRuleId` accepts only
-        // `^[A-Z]+-\d{3}$` (or a `QFAI-<RULE>` code), so a dotted name would
-        // make the finding permanently unwaivable — and a project that
-        // deliberately uses its own Level vocabulary has no other way to
-        // silence it.
+        // Rule id, not a dotted path: kept as a back-compat waiver key for
+        // files written before `resolveRuleKeys` accepted the code itself.
         UNKNOWN_LEVEL_RULE_ID,
         [...unrecognizedLevels].sort(),
         "change",
-        `独自の Level 語彙を意図的に使用している場合は \`.qfai/waivers.yml\` に rule: ${UNKNOWN_LEVEL_RULE_ID} の waiver（id / reason / expires / evidence / scope.paths が必須）を登録してください。`,
+        `独自の Level 語彙を意図的に使用している場合は \`.qfai/waivers.yml\` に rule: ${UNKNOWN_LEVEL_CODE} の waiver（id / reason / expires / evidence / scope.paths が必須）を登録してください。`,
       ),
     );
   }
@@ -546,16 +540,15 @@ async function validateSpecTddList(
       issues.push(
         issue(
           "TDDLIST_EXCEPTION_PARKED",
-          `TDD item "${rowKey}" in spec-${specNumber} is parked at Status=exception${hasDrId ? ` (DR-ID ${drId})` : ""}. Resolve it (\`exception -> todo\`), or record the accepted risk as a \`${EXCEPTION_PARKED_RULE_ID}\` waiver in \`.qfai/waivers.yml\` naming this row in \`match.dl_ids\``,
+          `TDD item "${rowKey}" in spec-${specNumber} is parked at Status=exception${hasDrId ? ` (DR-ID ${drId})` : ""}. Resolve it (\`exception -> todo\`), or record the accepted risk as a \`${EXCEPTION_PARKED_CODE}\` waiver in \`.qfai/waivers.yml\` naming this row in \`match.dl_ids\``,
           "warning",
           relPath,
-          // Rule id, not a dotted path: `waivers.ts#resolveRuleId` only accepts
-          // `^[A-Z]+-\d{3}$`, so a dotted name could never be waived and the
-          // accepted-risk case the message points at had no way to clear.
+          // Rule id, not a dotted path: kept as a back-compat waiver key for
+          // files written before `resolveRuleKeys` accepted the code itself.
           EXCEPTION_PARKED_RULE_ID,
           hasDrId ? [drId] : undefined,
           "change",
-          `承認済みの accepted risk である場合は \`.qfai/waivers.yml\` に rule: ${EXCEPTION_PARKED_RULE_ID} の waiver（id / reason / expires / evidence / scope.paths / match.dl_ids が必須）を登録してください。match.dl_ids には対象行の ${rowKeyLabel} だけを列挙します。作業を再開する場合は \`exception -> todo\` で戻してください。`,
+          `承認済みの accepted risk である場合は \`.qfai/waivers.yml\` に rule: ${EXCEPTION_PARKED_CODE} の waiver（id / reason / expires / evidence / scope.paths / match.dl_ids が必須）を登録してください。match.dl_ids には対象行の ${rowKeyLabel} だけを列挙します。作業を再開する場合は \`exception -> todo\` で戻してください。`,
           { dl_id: rowKey },
         ),
       );

@@ -385,7 +385,10 @@ describe("applyWaivers", () => {
           "version: 1",
           "waivers:",
           "  - id: WVR-20260208-07",
-          "    rule: COMPAT-0003",
+          // A dotted validator path — the `rule` field of a finding, which is
+          // never a waiver key. `COMPAT-0003` would no longer qualify: it is
+          // well-formed under the widened grammar, merely unknown.
+          "    rule: specPack.layerPolicy",
           "    scope:",
           '      paths: [".qfai/specs/**"]',
           '    reason: "malformed rule id"',
@@ -399,6 +402,195 @@ describe("applyWaivers", () => {
       const result = await applyWaivers(root, findings);
 
       expect(result.issues.some((item) => item.code === "QFAI-WAIVER-001")).toBe(true);
+      expect(result.waivers.active).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // Regression: issue #398. `RULE_ID_RE` accepted none of the identifiers
+  // `qfai validate` prints, so copying a code out of `validate.json` — the only
+  // spelling an operator ever sees — was a hard `QFAI-WAIVER-001`.
+  it("accepts the finding's own code as the waiver rule", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-08",
+          "    rule: QFAI-SPACK-090",
+          "    scope:",
+          '      paths: [".qfai/specs/spec-0001/**"]',
+          '    reason: "layer policy exception approved in DL-20260208-01"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const findings: Issue[] = [
+        buildIssue({
+          code: "QFAI-SPACK-090",
+          // A dotted validator path, as the real emitter sets — so the code is
+          // the only key the waiver can name.
+          rule: "specPack.layerPolicy",
+          file: path.join(root, ".qfai", "specs", "spec-0001", "delta.md"),
+        }),
+      ];
+      const result = await applyWaivers(root, findings);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-001")).toBe(false);
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
+      expect(result.waivers.active).toHaveLength(1);
+      expect(result.issues.find((item) => item.code === "QFAI-SPACK-090")?.suppressed).toBe(true);
+      expect(result.waivers.suppressed.byRule["QFAI-SPACK-090"]).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // The 46 codes that matched neither branch of the old `resolveRuleId` and so
+  // were unwaivable by construction.
+  it.each([
+    ["TDDLIST_INVALID_STATUS", "tddList.status"],
+    ["E_TC_ORPHAN", "spec.testCases"],
+    ["D-SCAFFOLD-PLACEHOLDER", "distributedSurface.scaffold"],
+    ["QFAI-CFG-LINK-001", "config.link"],
+  ])("waives %s, which no rule-id branch could resolve", async (code, rule) => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-09",
+          `    rule: ${code}`,
+          "    scope:",
+          '      paths: [".qfai/specs/spec-0001/**"]',
+          '    reason: "reviewed and accepted"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const findings: Issue[] = [
+        buildIssue({
+          code,
+          rule,
+          file: path.join(root, ".qfai", "specs", "spec-0001", "delta.md"),
+        }),
+      ];
+      const result = await applyWaivers(root, findings);
+
+      expect(result.waivers.active).toHaveLength(1);
+      expect(result.issues.find((item) => item.code === code)?.suppressed).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // Back-compat: waiver files written against the old grammar keep applying.
+  it("still accepts the QFAI-stripped rule id", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-10",
+          "    rule: SPACK-090",
+          "    scope:",
+          '      paths: [".qfai/specs/spec-0001/**"]',
+          '    reason: "written before the grammar widened"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const findings: Issue[] = [
+        buildIssue({
+          code: "QFAI-SPACK-090",
+          rule: "specPack.layerPolicy",
+          file: path.join(root, ".qfai", "specs", "spec-0001", "delta.md"),
+        }),
+      ];
+      const result = await applyWaivers(root, findings);
+
+      expect(result.waivers.active).toHaveLength(1);
+      expect(result.issues.find((item) => item.code === "QFAI-SPACK-090")?.suppressed).toBe(true);
+      expect(result.waivers.suppressed.byRule["SPACK-090"]).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a well-formed but unemitted rule as WAIVER-004, not WAIVER-001", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-11",
+          "    rule: QFAI-NOSUCH-999",
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "rule does not exist"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-001")).toBe(false);
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(true);
+      expect(result.waivers.active).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // The code spelling is the one operators are told to write, so it must carry
+  // the same `match.dl_ids` requirement as the rule-id spelling.
+  it("requires match.dl_ids for a row-scoped rule named by its code", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-12",
+          "    rule: TDDLIST_EXCEPTION_PARKED",
+          "    scope:",
+          '      paths: [".qfai/specs/spec-0001/**"]',
+          '    reason: "accepted risk"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const findings: Issue[] = [
+        buildIssue({
+          code: "TDDLIST_EXCEPTION_PARKED",
+          rule: "TDDLIST-001",
+          dlId: "TDD-0001",
+          file: path.join(root, ".qfai", "specs", "spec-0001", "tdd", "test-list.md"),
+        }),
+      ];
+      const result = await applyWaivers(root, findings);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-005")).toBe(true);
       expect(result.waivers.active).toHaveLength(0);
     } finally {
       await rm(root, { recursive: true, force: true });
