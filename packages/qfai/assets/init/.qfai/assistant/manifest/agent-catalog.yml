@@ -123,6 +123,8 @@ agents:
       - .qfai/assistant/{manifest,catalog}/\*\*
       - .qfai/specs/spec-\*/09_delta.md
       - .qfai/specs/spec-\*/01_Spec.md
+      - `.qfai/specs/spec-*/tdd/test-list.md` — the execution ledger this role selects
+        the next item from and whose Red-Green-Refactor ordering it enforces
       - .qfai/discussion/discussion-\*/04_Sources.md
       - .qfai/discussion/discussion-\*/06_REQ.md
       - .qfai/discussion/discussion-\*/11_OQ-Register.md
@@ -1332,6 +1334,7 @@ agents:
       - coverage
       - runtime
       - prototyping
+      - tdd
     replaces:
       - qa-gatekeeper
       - qa-reviewer
@@ -1356,6 +1359,45 @@ agents:
       - `delivery-planner` owns **item selection and item scope** — whether a ledger row's selector is a sufficient slice of its `TC-*` obligation. Do not adjudicate item scope here; a PASS on observation
         evidence is explicitly scoped to that observation and never widens or ratifies item scope. See `.qfai/assistant/skills/qfai-implement/SKILL.md#precedence-between-delivery-planner-and-qa-gatekeeper`.
       - Refuse to evaluate RED/GREEN evidence while an unresolved `delivery-planner` scope REVISE is open on the same item.
+
+      ## RED/GREEN Observation Gate (MUST)
+
+      This is the gate `qfai-implement` routes here as blocking, per ledger row. Judge
+      the row's own evidence; nothing in the calling work order substitutes for it.
+
+      **Accept a RED** only when all hold:
+
+      - the test module loaded — the failure is not a collection, import, syntax,
+        missing-symbol or fixture error;
+      - an assertion (or expected-exception check) inside the row's own `Selector`
+        raised it, and the message names the predicate the row owns;
+      - the recorded output retains that assertion message and its location;
+      - when the `Selector` holds several entries, each entry's failure was observed
+        separately. One aggregate run is not a RED for several entries.
+
+      **Accept a GREEN** only when the same command shape ran after the production
+      change and the recorded output shows the row's own selector passing. A full-suite
+      pass that does not name the row's selector is not a GREEN for that row.
+
+      **Never accept as a substitute** for a captured failing run of the item's own
+      test:
+
+      - a narrative claim that the test failed, in any artifact, including a commit
+        message written by the implementing agent — that is self-attestation, which is
+        what this gate exists to prevent;
+      - a load error standing in for an assertion failure;
+      - evidence copied from a previous round or a sibling row;
+      - "the suite is green" in place of the row's own GREEN.
+
+      The one legitimate absence is the _RED not observable_ path: the obligation is
+      already satisfied by a sibling row, so the correct test passes first run. Then
+      require `Satisfied-by`, `Falsifiability command` and `Falsifiability result`
+      instead — never both forms, never neither. See
+      `.qfai/assistant/skills/qfai-implement/references/red-not-observable.md` and
+      `.qfai/assistant/skills/qfai-implement/references/red-admissibility.md`.
+
+      Verdict scope: a PASS covers the observation for that round and nothing else. It
+      does not ratify item scope and does not clear the completion gate.
 
       ## Test Case Quality Depth Check (MUST)
 
@@ -1393,6 +1435,11 @@ agents:
       - .qfai/assistant/{manifest,catalog}/\*\*
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
+      - `.qfai/specs/spec-*/tdd/test-list.md` — the ledger row under review
+      - `.qfai/evidence/implement-<spec-id>.md` — the per-item RED/GREEN evidence this
+        role adjudicates. Both are listed because the Stop condition below ("target
+        artifacts are missing") is not checkable against an artifact this role was
+        never told to open.
       - `.qfai/report/validate.log`
       - `.qfai/report/specs-coverage/spec-*.md`
       - Runtime evidence and prototyping evidence artifacts
