@@ -65,6 +65,7 @@ import {
   validateSddDesignContractReadiness,
   validatePrototypingSkillContent,
   runCanonicalUixValidators,
+  validateSpecRequiredFilesCatalog,
   validateTraceabilityIntegrity,
   validateUiEvidenceArtifacts,
   validateTestTodoStubs,
@@ -275,6 +276,9 @@ async function runSddValidators(
   return [
     ...(await validateMermaidEnforcement(root)),
     ...(await validateSpecPacks(root, config)),
+    // The catalog wins over the in-code required-file sets, so a divergence
+    // silently changes which files are mandatory. Report it.
+    ...(await validateSpecRequiredFilesCatalog(root, config)),
     ...(await validateStatusInSpecs(root, config)),
     ...(await validateDensityHints(root, config)),
     ...(await validateSpecSplitByCapability(root, config)),

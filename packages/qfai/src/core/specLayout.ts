@@ -68,6 +68,20 @@ export const REQUIRED_LAYERED_SHARED_FILES_V1417 = [
   "10_delta.md",
 ] as const;
 
+/**
+ * The per-spec required set.
+ *
+ * MUST stay byte-identical to `spec_dir` in
+ * `assets/init/.qfai/assistant/catalog/spec_required_files.json`, which
+ * `qfai init` copies into every project and which
+ * `resolveLayeredRequiredFileSets` prefers over these constants. When the two
+ * disagreed, which registry applied depended on whether a project had run
+ * `qfai init` — see `tests/assets/specRequiredFilesParity.test.ts`.
+ *
+ * `10_Plan.md` is required: `spec-traceability-rules.md` lists it among the
+ * per-spec files and `sdd-quality-gate.md` gates on it. It was in the catalog
+ * and missing here, so a project that never ran init did not have to produce it.
+ */
 export const REQUIRED_LAYERED_SPEC_FILES_V1421 = [
   "01_Spec.md",
   "02_User-stories.md",
@@ -78,8 +92,18 @@ export const REQUIRED_LAYERED_SPEC_FILES_V1421 = [
   "07_Decisions.md",
   "08_Open-questions.md",
   "09_delta.md",
+  "10_Plan.md",
 ] as const;
 
+/**
+ * The `_policies` required set. Same parity obligation as
+ * {@link REQUIRED_LAYERED_SPEC_FILES_V1421}.
+ *
+ * `11_Slice-Policy.md` was here and missing from the catalog, so as shipped
+ * `E_SPEC_MISSING_FILESET` could never fire for it — the one `_policies` file
+ * `workflow.md` makes a precondition for every CREATE / UPDATE / DELETE
+ * decision.
+ */
 export const REQUIRED_LAYERED_SHARED_FILES_V1421 = [
   "01_Objective.md",
   "02_Initiative.md",
