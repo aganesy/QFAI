@@ -34,7 +34,7 @@ import {
   parseFirstMarkdownTable,
   parseIdsFromText,
   parseTestCaseIds,
-  resolveAllowedLayerTagsFromPolicy,
+  resolveTestCaseTable,
 } from "../specPackParsers.js";
 import { parseSpec, SPEC_STATUS_VALUES, type ParsedSpec } from "../parse/spec.js";
 import {
@@ -44,7 +44,7 @@ import {
   type TriageTopLevelOp,
   type TriageUpdateSubOp,
 } from "../sddTriage.js";
-import { LAYER_TAGS } from "../testStrategyTags.js";
+import { loadLayerPolicy } from "../layerPolicy.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -94,11 +94,6 @@ type SpecDefinitions = {
   tcIds: Set<string>;
 };
 
-type LayerPolicyResult = {
-  tags: Set<string>;
-  issues: Issue[];
-};
-
 export async function validateSpecPacks(root: string, config: QfaiConfig): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
@@ -122,7 +117,7 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
 
   for (const entry of entries) {
     if (entry.layout === "layered") {
-      issues.push(...(await validateLayeredSpecEntry(entry)));
+      issues.push(...(await validateLayeredSpecEntry(entry, layerPolicy.tags)));
     } else if (entry.layout === "spec-pack") {
       issues.push(...(await validateSpecPackEntry(entry, layerPolicy.tags)));
       issues.push(...(await validateTraceabilityLedger(entry, contractIndex.ids)));
@@ -955,7 +950,10 @@ async function validateSpecPackEntry(
   return issues;
 }
 
-async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
+async function validateLayeredSpecEntry(
+  entry: SpecEntry,
+  allowedLayerTags: Set<string>,
+): Promise<Issue[]> {
   const issues: Issue[] = [];
   const missingFiles = await collectMissingLayeredRequiredFiles(entry);
   const requiredFilesHint =
@@ -1075,16 +1073,24 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
     ...validateLayeredIdFormat(
       entry.examplesPath,
       examplesText,
-      ["SPEC", "SC", "AC"],
-      `${layeredFileNames.examples} の ID を \`@SPEC-0001\` / \`@SC-0001-0001\` / \`AC-0001-0001\` 形式へ修正してください。`,
+      // v1421 writes `EX-*` against a `BR-Ref`. The Gherkin vocabulary
+      // (`SPEC` / `SC`) belongs to the v1416/v1417 `.feature` layouts and never
+      // matched anything in this file, so the bottom of the chain had no format
+      // gate at all.
+      entry.layeredStyle === "v1421" ? ["BR", "EX"] : ["SPEC", "SC", "AC"],
+      entry.layeredStyle === "v1421"
+        ? `${layeredFileNames.examples} の ID を \`EX-0001-0001\` / \`BR-0001-0001\` 形式へ修正してください。`
+        : `${layeredFileNames.examples} の ID を \`@SPEC-0001\` / \`@SC-0001-0001\` / \`AC-0001-0001\` 形式へ修正してください。`,
     ),
   );
   issues.push(
     ...validateLayeredIdFormat(
       entry.testCasesPath,
       testCasesText,
-      ["CASE", "SC"],
-      `${layeredFileNames.testCases} の ID を \`CASE-0001-0001\` と \`SC-0001-0001\` 参照形式へ修正してください。`,
+      entry.layeredStyle === "v1421" ? ["AC", "EX", "TC"] : ["CASE", "SC"],
+      entry.layeredStyle === "v1421"
+        ? `${layeredFileNames.testCases} の ID を \`TC-0001-0001\` / \`EX-0001-0001\` / \`AC-0001-0001\` 形式へ修正してください。`
+        : `${layeredFileNames.testCases} の ID を \`CASE-0001-0001\` と \`SC-0001-0001\` 参照形式へ修正してください。`,
     ),
   );
 
@@ -1113,18 +1119,88 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
     ),
   );
   issues.push(
-    ...validateLayeredNamespace(entry, entry.examplesPath, extractIds(examplesText, "SC"), "SC"),
+    // v1421 writes `EX-*` / `TC-*`; `SC` / `CASE` are the Gherkin-era kinds and
+    // match nothing in a v1421 file, so the namespace rule had no reachable
+    // input for the bottom two layers.
+    ...(entry.layeredStyle === "v1421"
+      ? validateLayeredNamespace(entry, entry.examplesPath, extractIds(examplesText, "EX"), "EX")
+      : validateLayeredNamespace(entry, entry.examplesPath, extractIds(examplesText, "SC"), "SC")),
   );
   issues.push(
-    ...validateLayeredNamespace(
-      entry,
-      entry.testCasesPath,
-      extractIds(testCasesText, "CASE"),
-      "CASE",
-    ),
+    ...(entry.layeredStyle === "v1421"
+      ? validateLayeredNamespace(entry, entry.testCasesPath, extractIds(testCasesText, "TC"), "TC")
+      : validateLayeredNamespace(
+          entry,
+          entry.testCasesPath,
+          extractIds(testCasesText, "CASE"),
+          "CASE",
+        )),
   );
 
+  issues.push(...validateLayeredLevelPolicy(entry, testCasesText, allowedLayerTags));
+
   return issues;
+}
+
+/**
+ * Holds the layered layout's `Level` column to the shipped test-layer policy.
+ *
+ * This is the consumer `layerPolicy` did not have. `validateSpecPackEntry` fed
+ * the policy set to `QFAI-EX-005`, but that runs only on the legacy `spec-pack`
+ * layout; the layered branch — the one `qfai init` and `/qfai-sdd` produce —
+ * took no tag argument, so on every modern project the policy file was read,
+ * reported on, and then ignored.
+ *
+ * `warning`, not `error`: `TDDLIST_UNKNOWN_LEVEL` already reports an
+ * unrecognised `Level` against the coverage vocabulary, and this is the second,
+ * narrower claim — the value is outside the *policy* the project ships. Raising
+ * it to `error` would fail projects whose policy file is simply older than
+ * their specs, which is a migration, not a gate.
+ */
+function validateLayeredLevelPolicy(
+  entry: SpecEntry,
+  testCasesText: string,
+  allowedLayerTags: Set<string>,
+): Issue[] {
+  const resolution = resolveTestCaseTable(testCasesText);
+  if (!resolution.table) {
+    return [];
+  }
+  const headers = resolution.table.headers.map((header: string) => header.trim());
+  const levelIndex = headers.indexOf("Level");
+  if (levelIndex < 0) {
+    return [];
+  }
+  // `layer-integration` -> `integration`; the `Level` column writes `L3` or the
+  // word, so both spellings are accepted.
+  const allowedWords = new Set(Array.from(allowedLayerTags, (tag) => tag.replace(/^layer-/, "")));
+  const offenders = new Set<string>();
+  for (const row of resolution.table.rows) {
+    const raw = (row[levelIndex] ?? "").trim();
+    if (raw.length === 0 || raw === "-") continue;
+    const normalized = raw.toLowerCase();
+    // `L1`..`L5` are positional codes, not layer names; they are checked by
+    // `TDDLIST_UNKNOWN_LEVEL` and are out of scope for a *policy* claim.
+    if (/^l\d+$/.test(normalized)) continue;
+    if (allowedWords.has(normalized)) continue;
+    offenders.add(raw);
+  }
+  if (offenders.size === 0) {
+    return [];
+  }
+  const sorted = Array.from(offenders).sort();
+  return [
+    issue(
+      "QFAI-EX-105",
+      `06_Test-Cases.md の Level が test-layer policy 外です: ${sorted.join(", ")}。policy が許可する層: ${Array.from(allowedWords).sort().join(", ")}`,
+      "warning",
+      entry.testCasesPath,
+      "specPack.layeredLevelPolicy",
+      sorted,
+      "change",
+      "`catalog/test-layers.md` が宣言する層のいずれか、または `L1`..`L5` の位置コードに直してください。",
+    ),
+  ];
 }
 
 type LayeredIdFileNames = {
@@ -1187,7 +1263,7 @@ function validateLayeredNamespace(
   entry: SpecEntry,
   filePath: string,
   ids: string[],
-  prefix: "US" | "AC" | "BR" | "SC" | "CASE",
+  prefix: "US" | "AC" | "BR" | "EX" | "TC" | "SC" | "CASE",
 ): Issue[] {
   const expectedPrefix = `${prefix}-${entry.specNumber}-`;
   const mismatched = ids.filter((id) => !id.startsWith(expectedPrefix));
@@ -1852,70 +1928,6 @@ async function loadExistingRequiredTexts(
     texts[fileName] = await readSafe(fullPath);
   }
   return texts;
-}
-
-/**
- * Resolves the test-layer policy canonical-first, then legacy.
- *
- * `qfai init` ships the file at `assistant/catalog/test-layers.md`, but this
- * resolver read only `assistant/steering/test-layers.md` and created no
- * `steering/` directory — so on a freshly initialized project the read always
- * threw, `QFAI-SPACK-090` fired as an un-clearable warning on every run, and
- * the catch branch silently substituted the full built-in `LAYER_TAGS` set.
- * The file 11 shipped agents and 7 shipped skills name as the layer SSOT was
- * never actually read. The bug was masked in qfai's own repo, which carries
- * byte-identical copies at both paths.
- */
-async function loadLayerPolicy(root: string, config: QfaiConfig): Promise<LayerPolicyResult> {
-  const skillsDir = resolvePath(root, config, "skillsDir");
-  const assistantRoot = path.dirname(skillsDir);
-  const canonicalPath = path.join(assistantRoot, "catalog", "test-layers.md");
-  const legacyPath = path.join(assistantRoot, "steering", "test-layers.md");
-
-  for (const policyPath of [canonicalPath, legacyPath]) {
-    let policyText: string;
-    try {
-      policyText = await readFile(policyPath, "utf-8");
-    } catch {
-      continue;
-    }
-    const tags = resolveAllowedLayerTagsFromPolicy(policyText);
-    if (tags.size === 0) {
-      // A silent widen is indistinguishable from a pass, so say so.
-      return {
-        tags: new Set(Array.from(LAYER_TAGS)),
-        issues: [
-          issue(
-            "QFAI-SPACK-090",
-            "test-layer policy を読み取れましたが layer タグを抽出できませんでした。既定の layer タグ集合を使用します。",
-            "error",
-            policyPath,
-            "specPack.layerPolicy",
-            undefined,
-            "change",
-            "`catalog/test-layers.md` の `## Layer definitions` 見出し（例: `### L3 Integration`）または `layer-*` タグを確認してください。",
-          ),
-        ],
-      };
-    }
-    return { tags, issues: [] };
-  }
-
-  return {
-    tags: new Set(Array.from(LAYER_TAGS)),
-    issues: [
-      issue(
-        "QFAI-SPACK-090",
-        "test-layer policy が見つからないため既定の layer タグ集合を使用します。",
-        "error",
-        canonicalPath,
-        "specPack.layerPolicy",
-        undefined,
-        "change",
-        "`qfai init` を再実行して `catalog/test-layers.md` を配置してください。",
-      ),
-    ],
-  };
 }
 
 function validateLedgerId(
