@@ -1352,7 +1352,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       readFile(workflowPath, "utf-8"),
     ]);
 
-    expect(skill).toContain('argument-hint: "[<spec-id-or-name>] [--auto]"');
+    // #373 added the contract-scoped target the Drift Protocol's rerun step
+    // names; the two existing modes are unchanged.
+    expect(skill).toContain('argument-hint: "[<spec-id-or-name>] [--contract <CON-ID>] [--auto]"');
     expect(skill).toContain("## Arguments and Target Selection (Mandatory)");
     expect(skill).toContain(
       "Without argument (`/qfai-sdd`): target all capabilities listed in `_policies/03_Capabilities.md`.",

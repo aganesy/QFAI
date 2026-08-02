@@ -143,6 +143,10 @@ and signalled by `QFAI-DENSITY-005`.
 Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
 
 - Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
+- `Evidence` is a **pointer**: the one-word RED/GREEN outcome plus an anchor into
+  `.qfai/evidence/implement-<spec-id>.md`. A GFM cell is one physical line and ends at
+  every unescaped `|`, so it cannot hold command output. Encoding rules and the cell
+  contract: `qfai-implement/references/execution-ledger.md#evidence-cell-contract`.
 - Optional columns: `US-Refs`, `CON-API-Refs` — the E2E and API obligations a
   row implements. Required when the row carries one, since `TC-*` annotations
   are forbidden in `tests/e2e/**` and `tests/api/**`.
