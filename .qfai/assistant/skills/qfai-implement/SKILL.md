@@ -301,7 +301,7 @@ Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
 ### Post-parallel integration verify
 
 - After parallel slices complete and merge, run integration verify on the merged result
-- If integration verify fails, flag all slices for re-examination and roll back the merge
+- If integration verify fails, re-run it once with no intervening change before acting. A failure that does **not** reproduce is an `environment/tooling` finding (`shared-skill-operating-baseline.md#nondeterministic-gates`), reported with every run — not a rollback trigger. Only a **reproducible** failure flags all slices for re-examination and rolls back the merge; discarding correct work on a single contended-resource failure is the more likely outcome otherwise
 - If integration verify passes, state transitions back to `delivery-planner` for sequential flow
 
 ## Completion Contract (Shared)
@@ -433,6 +433,7 @@ the completion gate (see `Completion prohibition conditions`).
 - Both command and result are required; "should pass" or "looks good" alone is not acceptable
 - Stale evidence from a previous run MUST NOT be reused to claim completion for a new cycle
 - Empty evidence entries are rejected: minimum evidence per TDD item must be met
+- **Selective reporting of repeated runs of the same gate is invalid.** When a gate was run more than once, report every run in order — a clean rerun after a red one is an `environment/tooling` finding, not a pass (`.qfai/assistant/constitution/shared-skill-operating-baseline.md#nondeterministic-gates`)
 
 ## Checkpoint Verification
 

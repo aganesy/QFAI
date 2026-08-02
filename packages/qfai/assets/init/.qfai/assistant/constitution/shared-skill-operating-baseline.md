@@ -119,12 +119,50 @@ When validate, doctor, test, lint, typecheck, build, capture, or report gates fa
 - inspect exit code, logs, `validate.json`, and cited files before reporting;
 - classify each finding as skill-owned artifact, upstream spec/contract, code/test defect, environment/tooling, or user decision;
 - fix skill-owned artifacts and code/test defects autonomously when the fix is local and non-destructive;
-- rerun the same failing gate after each fix batch;
+- rerun the same failing gate after each fix batch, **and once with no intervening change** when the failure looks nondeterministic — see `#nondeterministic-gates` below. The confirmation rerun is bounded at one: after it the finding is classified, not re-rolled;
 - do not weaken profiles, lower `--fail-on`, waive errors, invent evidence, or skip required reviewers;
 - stop for destructive changes, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures;
 - stop on **round count** as well as on lack of progress: a reviewer gate that would enter its third round escalates to the user, even when every round has made progress. See `shared-skill-delegation-baseline.md#round-budget-must`.
 
 When stopping, report: cause, attempted fixes, remaining blocker, user action, and retry gate.
+
+### Nondeterministic gates
+
+A gate whose answer varies on identical inputs is a finding in its own right,
+not a run to discard. The protocol classifies it as `environment/tooling`; what
+follows is what that class obliges.
+
+**When a gate fails and a rerun with no intervening change passes**, all of the
+following are REQUIRED. A clean rerun on its own is not evidence for that gate.
+
+- **Record it as an `environment/tooling` finding.** Not as a pass, and not as
+  a code/test defect — nothing was fixed between the two runs.
+- **Disclose every run.** Report the results of all runs of that gate, in order,
+  with their commands. Reporting only the run that passed is
+  [selective reporting](#selective-reporting-is-invented-evidence) and is
+  forbidden: the evidence rules are satisfied by a clean run's command and
+  output, so nothing else stops it.
+- **Re-run the failing selectors in isolation** and report that result too. A
+  selector that passes alone and fails in the suite is the signature of shared
+  state, not of a defect in that test.
+- **Name the suspected cause**, concretely: a contended port, a shared database
+  or schema, an `os.tmpdir()` path, an un-namespaced cache or queue, ordering
+  between workers. "Flaky" is not a cause.
+
+Do not fix the flake by rerunning until green, and do not fix it by weakening
+the test. Either the shared resource is isolated per worker or the run is
+serialised — both are real changes with a real cost, which is the point.
+
+A gate reported this way has **not passed**. It is a blocker with a named cause,
+and it goes in the stop report like any other.
+
+#### Selective reporting is invented evidence
+
+Reporting the clean run and omitting the red ones satisfies every existing
+evidence rule — a real command, a real result, freshly obtained — and still
+misrepresents what happened. Which of N runs is reported is itself part of the
+evidence, so omitting runs of the same gate is on the same footing as inventing
+one.
 
 ## Completion Contract (Shared)
 
