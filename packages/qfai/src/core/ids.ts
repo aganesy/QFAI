@@ -94,7 +94,15 @@ const LOOSE_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
   DR: new RegExp(`\\bDR-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
 };
 
-export function extractIds(text: string, prefix: IdPrefix): string[] {
+/**
+ * Every strict-format match for `prefix`.
+ *
+ * Takes {@link IdFormatPrefix}, not {@link IdPrefix}: `ADR` and `DR` have a
+ * declared format but are not spec-pack items, and a caller asking for one
+ * should not have to assert its way past the type. `extractAllIds` still walks
+ * {@link ID_PREFIXES} only, so the decomposition layers are unchanged.
+ */
+export function extractIds(text: string, prefix: IdFormatPrefix): string[] {
   const pattern = STRICT_ID_PATTERNS[prefix];
   const matches = text.match(pattern);
   return unique(matches ?? []);

@@ -79,10 +79,7 @@ describe("the DR-ID has a declared format", () => {
   it("registers DR in the ID registry", () => {
     // Absent before: `ids.ts` knew `ADR` and eleven spec-item prefixes, and no
     // `DR`, so nothing could even say what a well-formed DR-ID looks like.
-    expect(extractIds("see DR-0270 and DR-0015-0005", "DR" as never)).toEqual([
-      "DR-0270",
-      "DR-0015-0005",
-    ]);
+    expect(extractIds("see DR-0270 and DR-0015-0005", "DR")).toEqual(["DR-0270", "DR-0015-0005"]);
   });
 
   for (const drId of ["DR-0270", "DR-0015-0005"]) {
@@ -96,7 +93,9 @@ describe("the DR-ID has a declared format", () => {
     });
   }
 
-  for (const drId of ["DR-27", "DR-0015-5", "DR_0015"]) {
+  // `DR-ABCD` / `DR-foo` are the invented tokens the format exists to surface;
+  // a narrower "DR followed by a digit" shape let them through unreported.
+  for (const drId of ["DR-27", "DR-0015-5", "DR_0015", "DR-ABCD", "DR-foo"]) {
     it(`reports the malformed ${drId}`, async () => {
       expect(await codes({ drId })).toContain("TDDLIST_EXCEPTION_INVALID_DR");
     });

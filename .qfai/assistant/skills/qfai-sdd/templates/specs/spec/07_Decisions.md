@@ -6,8 +6,10 @@ against this file, so an entry here is what makes that citation checkable.
 
 ## ID scheme
 
-- **Spec-scoped**: `DR-NNNN-MMMM`, where `NNNN` is this spec's number. Use this
-  form for a decision that binds only this spec.
+- **Spec-scoped**: `DR-NNNN-MMMM`. Use this form for a decision that binds only
+  this spec. Setting `NNNN` to the spec's own number is the recommended
+  convention and keeps the id self-locating, but validation checks the shape,
+  not the match — do not read a passing run as confirmation of the pairing.
 - **Policy-level**: `DR-NNNN`, declared in `_policies/08_Decisions.md` instead.
   Cite it from here rather than re-declaring it; an ID declared twice has two
   owners.

@@ -141,8 +141,16 @@ const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
  */
 const DR_ID_FORMAT = /^DR-\d{4}(?:-\d{4})?$/;
 
-/** Anything that opens with `DR`, so a malformed id is reported, not ignored. */
-const DR_ID_SHAPED = /^DR[-_]?\d/i;
+/**
+ * Anything presenting itself as a DR id, so a malformed one is reported rather
+ * than ignored.
+ *
+ * `^DR[-_]?\d` was too narrow: `DR-ABCD` and `DR-foo` are exactly the invented
+ * tokens the format exists to surface, and they slipped through the non-empty
+ * check unreported. A separator or a digit after `DR` is enough to claim the
+ * prefix; whether the rest is well formed is what `DR_ID_FORMAT` decides.
+ */
+const DR_ID_SHAPED = /^DR[-_\d]/i;
 
 /** Files a `DR-*` may be declared in, relative to the spec dir / specs root. */
 const DR_DECLARATION_FILES = ["07_Decisions.md"];

@@ -63,7 +63,7 @@ describe("parked exception rows are visible in CI", () => {
     await withLedger(
       [
         "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-0001-0001   | anomaly  |",
-        "| TDD-0002 | TC-0002 | Unit  | tests/b.test.ts | case b   | exception | DR-2   | anomaly  |",
+        "| TDD-0002 | TC-0002 | Unit  | tests/b.test.ts | case b   | exception | DR-0001-0002   | anomaly  |",
       ],
       (issues) => {
         expect(parked(issues)).toHaveLength(2);
@@ -194,7 +194,7 @@ describe("an approved accepted risk can clear the parked warning", () => {
           `    rule: ${EXCEPTION_PARKED_RULE_ID}`,
           "    reason: accepted risk approved by the operator (DR-0001-0001)",
           "    expires: 2099-12-31",
-          "    evidence: .qfai/specs/spec-0001/09_delta.md#DR-0001-0001",
+          "    evidence: .qfai/specs/spec-0001/07_Decisions.md#DR-0001-0001",
           "    action: suppress",
           ...(dlIds
             ? ["    match:", "      dl_ids:", ...dlIds.map((dlId) => `        - "${dlId}"`)]
@@ -238,7 +238,7 @@ describe("an approved accepted risk can clear the parked warning", () => {
     await withWaivedLedger(
       [
         "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-0001-0001   | accepted |",
-        "| TDD-0002 | TC-0002 | Unit  | tests/b.test.ts | case b   | exception | DR-2   | anomaly  |",
+        "| TDD-0002 | TC-0002 | Unit  | tests/b.test.ts | case b   | exception | DR-0001-0002   | anomaly  |",
       ],
       ["TDD-0001"],
       (issues) => {
@@ -258,7 +258,7 @@ describe("an approved accepted risk can clear the parked warning", () => {
     await withWaivedLedger(
       [
         "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-0001-0001   | accepted |",
-        "| TDD-0002 | TC-0002 | Unit  | tests/b.test.ts | case b   | exception | DR-2   | anomaly  |",
+        "| TDD-0002 | TC-0002 | Unit  | tests/b.test.ts | case b   | exception | DR-0001-0002   | anomaly  |",
       ],
       null,
       (issues) => {
