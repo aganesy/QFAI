@@ -198,6 +198,8 @@ export type ReportTddCoverageSpec = {
   specNumber: string;
   unitComponentTotal: number;
   doneCount: number;
+  /** Has a passing test, has not cleared its blocking reviewers / checkpoint. */
+  inReviewCount: number;
   exceptionCount: number;
   openCount: number;
   missingTcRefs: string[];
@@ -1191,7 +1193,7 @@ export function formatReportMarkdown(
       lines.push("");
       lines.push(`- coverage-target TCs: ${spec.unitComponentTotal}`);
       lines.push(
-        `- done: ${spec.doneCount} / exception: ${spec.exceptionCount} / open: ${spec.openCount}`,
+        `- done: ${spec.doneCount} / in-review: ${spec.inReviewCount} / exception: ${spec.exceptionCount} / open: ${spec.openCount}`,
       );
       if (spec.missingTcRefs.length > 0) {
         lines.push(`- missing TC refs (add to test-list.md): ${spec.missingTcRefs.join(", ")}`);
