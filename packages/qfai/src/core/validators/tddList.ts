@@ -151,6 +151,82 @@ export { EXCEPTION_PARKED_RULE_ID };
  */
 export const UNKNOWN_LEVEL_RULE_ID = "TDDLIST-002";
 
+/**
+ * Waiver rule id for `TDDLIST_STALE_STATUS`.
+ *
+ * A project that declares test paths and selectors before implementing them
+ * would see this on every not-yet-started row, which is a legitimate workflow.
+ * The waiver is the escape hatch, so the id must be resolvable by
+ * `waivers.ts#resolveRuleId`.
+ */
+export const STALE_STATUS_RULE_ID = "TDDLIST-005";
+
+/** Waiver rule id for `TDDLIST_SELECTOR_UNRESOLVED`. */
+export const SELECTOR_UNRESOLVED_RULE_ID = "TDDLIST-006";
+
+/**
+ * Read a ledger row's `Test file` cell, or `null` when it names nothing this
+ * validator may read.
+ *
+ * Mirrors Check 9's path handling — relative, inside the project root — but
+ * reports nothing: Check 9 already owns the diagnostics for a completion-
+ * claiming row, and a `todo` row with an absent test file is the normal case.
+ */
+async function readTestFileContent(root: string, testFile: string): Promise<string | null> {
+  if (testFile.length === 0) {
+    return null;
+  }
+  const normalized = testFile.replace(/\\/g, "/");
+  if (path.isAbsolute(normalized) || path.win32.isAbsolute(normalized)) {
+    return null;
+  }
+  const resolved = path.resolve(root, normalized);
+  const relative = path.relative(root, resolved);
+  if (relative === ".." || relative.startsWith(".." + path.sep)) {
+    return null;
+  }
+  try {
+    if (!(await stat(resolved)).isFile()) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+  const content = await readSafe(resolved);
+  return content.length > 0 ? content : null;
+}
+
+/**
+ * Whether a ledger `Selector` names something present in the test file.
+ *
+ * Selectors are written in whatever the project's runner accepts —
+ * `tests/x_test.py::TestA::test_b`, `describe > renders header`,
+ * `"renders the header"` — so this is a containment check, not a parse. Two
+ * chances to match, in order of strength:
+ *
+ * 1. the selector text after any `path::` prefix appears verbatim;
+ * 2. its last identifier-shaped token appears.
+ *
+ * Deliberately lenient. Both consumers treat a match as evidence *for* the
+ * test's presence, so a false negative costs a warning that a false positive
+ * would silently swallow.
+ */
+function selectorResolves(selector: string, content: string): boolean {
+  const trimmed = selector.replace(/^[`"']+|[`"']+$/g, "").trim();
+  if (trimmed.length === 0) {
+    return false;
+  }
+  const withoutPath = trimmed.includes("::")
+    ? trimmed.split("::").slice(1).join("::").trim() || trimmed
+    : trimmed;
+  if (withoutPath.length >= 3 && content.includes(withoutPath)) {
+    return true;
+  }
+  const tokens = withoutPath.match(/[A-Za-z_][A-Za-z0-9_]{2,}/g);
+  const last = tokens?.[tokens.length - 1];
+  return last !== undefined && content.includes(last);
+}
+
 /** Per-spec file that owns the Test Case Table, and the target of its findings. */
 const TEST_CASES_FILE_NAME = "06_Test-Cases.md";
 
@@ -643,6 +719,78 @@ async function validateSpecTddList(
           ),
         );
       }
+    }
+  }
+
+  // Phase 2 – Check 9c: the ledger under-reporting.
+  //
+  // Check 9 only ever looks at rows that *claim* completion, so "row says
+  // `done` but the test file is missing" was an error while "the test exists
+  // and the row still says `todo`" was invisible. The second direction is the
+  // one that actually occurs, because work lands from parallel worktrees and
+  // the ledger is updated by hand afterwards. A stale `todo` and a genuinely
+  // not-started row are then indistinguishable to every downstream consumer,
+  // including the completion gate that reads the ledger.
+  //
+  // The selector is what makes this trustworthy: a test file typically hosts
+  // many rows, so file existence alone would fire on any row whose neighbours
+  // have landed. Requiring the row's own selector to resolve inside that file
+  // means the named test is really there.
+  const selectorIndex = normalizedHeaders.indexOf("Selector");
+  if (statusIndex >= 0 && testFileIndex >= 0 && selectorIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const row = table.rows[rowIdx];
+      if (!row) continue;
+      if ((row[statusIndex] ?? "").trim().toLowerCase() !== "todo") continue;
+      const content = await readTestFileContent(root, (row[testFileIndex] ?? "").trim());
+      if (content === null) continue;
+      const selector = (row[selectorIndex] ?? "").trim();
+      if (!selectorResolves(selector, content)) continue;
+      issues.push(
+        issue(
+          "TDDLIST_STALE_STATUS",
+          `Test file exists and its selector "${selector}" resolves, but Status=todo for spec-${specNumber} (row ${rowIdx + 1}). The ledger may be stale; reconcile it before completion`,
+          "warning",
+          relPath,
+          "tddList.staleStatus",
+          undefined,
+          "canonical",
+          `Set this row to the status the repository actually supports, or clear the Test file / Selector if the test does not belong to it. A project that declares test paths and selectors before implementing them registers a \`.qfai/waivers.yml\` waiver with rule: ${STALE_STATUS_RULE_ID}.`,
+        ),
+      );
+    }
+  }
+
+  // Phase 2 – Check 9d: `Selector` is a required column, so it has to be read.
+  //
+  // It was required and never read by any code in the package — a required
+  // column whose value nothing consumes is a false assurance. For rows that
+  // claim completion Check 9 has already established the file exists; this
+  // establishes the named test is in it, which is also what makes Check 9c
+  // above trustworthy.
+  if (statusIndex >= 0 && testFileIndex >= 0 && selectorIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const row = table.rows[rowIdx];
+      if (!row) continue;
+      const status = (row[statusIndex] ?? "").trim().toLowerCase();
+      if (!TEST_FILE_CHECK_STATUSES.has(status)) continue;
+      const selector = (row[selectorIndex] ?? "").trim();
+      if (selector.length === 0) continue;
+      const content = await readTestFileContent(root, (row[testFileIndex] ?? "").trim());
+      if (content === null) continue;
+      if (selectorResolves(selector, content)) continue;
+      issues.push(
+        issue(
+          "TDDLIST_SELECTOR_UNRESOLVED",
+          `Selector "${selector}" was not found in its Test file for spec-${specNumber} (row ${rowIdx + 1}, Status=${status})`,
+          "warning",
+          relPath,
+          "tddList.selectorResolves",
+          undefined,
+          "canonical",
+          `The row claims a completed test the file does not appear to contain — the test was renamed, moved, or the Selector is stale. Update the Selector, or register a \`.qfai/waivers.yml\` waiver with rule: ${SELECTOR_UNRESOLVED_RULE_ID} when the selector is written in a form this check cannot resolve.`,
+        ),
+      );
     }
   }
 

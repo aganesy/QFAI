@@ -168,6 +168,20 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   resolved from project root. The upstream reset does not relax this: a swept
   row returns to `todo`, where no file is required, and writes its test in the
   following `red` phase.
+- **The converse also holds.** A `todo` row whose Test file exists _and_ whose
+  `Selector` resolves inside it is a stale ledger row, not a not-started one
+  (`TDDLIST_STALE_STATUS`, `warning`). Stated in one direction only, the rule
+  could catch the ledger over-reporting and never under-reporting — and
+  under-reporting is what actually happens, because work lands from parallel
+  worktrees and the ledger is reconciled by hand afterwards. A stale `todo` and
+  a genuinely not-started row are indistinguishable to every downstream
+  consumer, including the completion gate that reads the ledger. A project that
+  declares test paths and selectors up front waives `TDDLIST-005`.
+- `Selector` is read, not merely required: on a row claiming completion it must
+  resolve inside the named Test file (`TDDLIST_SELECTOR_UNRESOLVED`, `warning`).
+  Resolution is a containment check over the selector text and its last
+  identifier token, not a runner-specific parse; waive `TDDLIST-006` for a
+  selector form it cannot resolve.
 - `DR-ID` carries Decision Record (`DR-*`) **and** Change Request (`CR-*`)
   references, so it carries the approval that authorised an upstream reset, not
   only `Status = exception`. A row reset by a Drift Protocol sweep records the
