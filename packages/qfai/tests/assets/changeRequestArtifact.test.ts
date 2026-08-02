@@ -195,8 +195,11 @@ describe("a Change Request is a defined artifact", () => {
         "Creating this file is the only write this step makes: `09_delta.md`\n   and `07_Decisions.md` are upstream SSOT",
       );
       expect(drift).toContain("written there by the owner skill in step 4, never before approval");
-      expect(drift).toContain(
-        "4. Rerun the owner skill for the upstream artifact. That rerun is what records\n   the CR reference in `09_delta.md` / `07_Decisions.md`.",
+      // #373 made step 4 name the invocation and the rerun mode. The claim this
+      // case pins — the reference lands upstream only via that rerun — is
+      // unchanged, so it is asserted flattened: the wrap column is not the rule.
+      expect(drift.replace(/\s+/g, " ")).toContain(
+        "That rerun is what records the CR reference in `09_delta.md` / `07_Decisions.md`.",
       );
       const step2 = drift.slice(drift.indexOf("2. Create a Change Request"), drift.indexOf("3. "));
       expect(step2).not.toContain("Reference it from `09_delta.md`");

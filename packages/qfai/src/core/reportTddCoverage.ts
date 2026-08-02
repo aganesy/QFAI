@@ -17,6 +17,7 @@ import { parseFirstMarkdownTable, resolveTestCaseTable } from "./specPackParsers
 import {
   isCoverageTargetLevel,
   TDD_DONE_STATUSES,
+  TDD_IN_REVIEW_STATUSES,
   splitTcRefs,
   resolveParentTcId,
 } from "./tddHelpers.js";
@@ -62,6 +63,7 @@ export async function collectTddCoverage(
         specNumber: entry.specNumber,
         unitComponentTotal: 0,
         doneCount: 0,
+        inReviewCount: 0,
         exceptionCount: 0,
         openCount: 0,
         missingTcRefs: [],
@@ -79,6 +81,7 @@ export async function collectTddCoverage(
         specNumber: entry.specNumber,
         unitComponentTotal: unitComponentTcIds.size,
         doneCount: 0,
+        inReviewCount: 0,
         exceptionCount: 0,
         openCount: unitComponentTcIds.size,
         missingTcRefs: Array.from(unitComponentTcIds).sort(),
@@ -93,6 +96,7 @@ export async function collectTddCoverage(
         specNumber: entry.specNumber,
         unitComponentTotal: unitComponentTcIds.size,
         doneCount: 0,
+        inReviewCount: 0,
         exceptionCount: 0,
         openCount: unitComponentTcIds.size,
         missingTcRefs: Array.from(unitComponentTcIds).sort(),
@@ -117,6 +121,7 @@ export async function collectTddCoverage(
     // TC instead makes partial progress visible as unresolved.
     const rowsPerTc = new Map<string, number>();
     const doneRowsPerTc = new Map<string, number>();
+    const inReviewRowsPerTc = new Map<string, number>();
     const exceptionRowsPerTc = new Map<string, number>();
     const bump = (counts: Map<string, number>, tc: string): void => {
       counts.set(tc, (counts.get(tc) ?? 0) + 1);
@@ -145,6 +150,9 @@ export async function collectTddCoverage(
       if (TDD_DONE_STATUSES.has(status)) {
         for (const tc of rowRefs) bump(doneRowsPerTc, tc);
       }
+      if (TDD_IN_REVIEW_STATUSES.has(status)) {
+        for (const tc of rowRefs) bump(inReviewRowsPerTc, tc);
+      }
       if (status === "exception") {
         for (const tc of rowRefs) bump(exceptionRowsPerTc, tc);
         exceptionRows.push({
@@ -155,35 +163,46 @@ export async function collectTddCoverage(
     }
 
     const doneTcIds = new Set<string>();
+    const inReviewTcIds = new Set<string>();
     const exceptionTcIds = new Set<string>();
     for (const [tc, total] of rowsPerTc) {
       const done = doneRowsPerTc.get(tc) ?? 0;
+      const inReview = inReviewRowsPerTc.get(tc) ?? 0;
       const exception = exceptionRowsPerTc.get(tc) ?? 0;
       if (done === total) {
         doneTcIds.add(tc);
       } else if (exception > 0 && done + exception === total) {
         // Every row is accounted for and at least one carries a DR-ID waiver.
         exceptionTcIds.add(tc);
+      } else if (inReview > 0 && done + exception + inReview === total) {
+        // Every row has a passing test; at least one has not cleared its gates.
+        inReviewTcIds.add(tc);
       }
     }
 
     const missingTcRefs = Array.from(unitComponentTcIds)
       .filter((id) => !coveredTcIds.has(id))
       .sort();
-    // Use union of done and exception to avoid double-counting overlapping TCs
-    const resolvedTcIds = new Set([...doneTcIds, ...exceptionTcIds]);
+    // Union of the three accounted-for buckets, to avoid double-counting
+    // overlapping TCs. The buckets are mutually exclusive by construction
+    // above, so `open` is what remains.
+    const accountedTcIds = new Set([...doneTcIds, ...exceptionTcIds, ...inReviewTcIds]);
     const doneCount = Array.from(unitComponentTcIds).filter((id) => doneTcIds.has(id)).length;
     const exceptionCount = Array.from(unitComponentTcIds).filter(
       (id) => exceptionTcIds.has(id) && !doneTcIds.has(id),
     ).length;
+    const inReviewCount = Array.from(unitComponentTcIds).filter(
+      (id) => inReviewTcIds.has(id) && !doneTcIds.has(id) && !exceptionTcIds.has(id),
+    ).length;
     const openCount =
       unitComponentTcIds.size -
-      Array.from(unitComponentTcIds).filter((id) => resolvedTcIds.has(id)).length;
+      Array.from(unitComponentTcIds).filter((id) => accountedTcIds.has(id)).length;
 
     specs.push({
       specNumber: entry.specNumber,
       unitComponentTotal: unitComponentTcIds.size,
       doneCount,
+      inReviewCount,
       exceptionCount,
       openCount: Math.max(0, openCount),
       missingTcRefs,
