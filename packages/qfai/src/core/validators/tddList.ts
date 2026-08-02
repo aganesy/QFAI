@@ -128,6 +128,66 @@ function isChangeRequestRefsOnly(drId: string): boolean {
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
 
 /**
+ * The declared shape of a Decision Record id.
+ *
+ * `DR-ID` was a hard, `error`-severity precondition for `exception` with no
+ * referent anywhere in the toolkit: no ID class, no row schema in either
+ * shipped Decisions template, and no validator that resolved the reference. Any
+ * non-empty string satisfied the gate, so the one thing a parked row was
+ * required to carry was the one thing nothing could check.
+ *
+ * Kept in step with `ids.ts#STRICT_ID_PATTERNS.DR` — anchored here because this
+ * validates one cell rather than scanning prose.
+ */
+const DR_ID_FORMAT = /^DR-\d{4}(?:-\d{4})?$/;
+
+/**
+ * Anything presenting itself as a DR id, so a malformed one is reported rather
+ * than ignored.
+ *
+ * `^DR[-_]?\d` was too narrow: `DR-ABCD` and `DR-foo` are exactly the invented
+ * tokens the format exists to surface, and they slipped through the non-empty
+ * check unreported. A separator or a digit after `DR` is enough to claim the
+ * prefix; whether the rest is well formed is what `DR_ID_FORMAT` decides.
+ */
+const DR_ID_SHAPED = /^DR[-_\d]/i;
+
+/** Files a `DR-*` may be declared in, relative to the spec dir / specs root. */
+const DR_DECLARATION_FILES = ["07_Decisions.md"];
+const DR_POLICY_DECLARATION_FILE = path.join("_policies", "08_Decisions.md");
+
+/** Waiver rule id for `TDDLIST_EXCEPTION_UNRESOLVED_DR`. */
+export const UNRESOLVED_DR_RULE_ID = "TDDLIST-003";
+
+function toPosixRel(value: string): string {
+  return value.replace(/\\/g, "/");
+}
+
+/**
+ * Every `DR-*` declared for this spec: its own `07_Decisions.md` plus the
+ * shared `_policies/08_Decisions.md`.
+ *
+ * Both files are read, not one: a policy-level decision is cited from spec
+ * ledgers, and resolving only against the spec-local file would report every
+ * such citation as unresolved.
+ */
+async function collectDeclaredDrIds(specDir: string, specsRoot: string): Promise<Set<string>> {
+  const declared = new Set<string>();
+  const files = [
+    ...DR_DECLARATION_FILES.map((name) => path.join(specDir, name)),
+    path.join(specsRoot, DR_POLICY_DECLARATION_FILE),
+  ];
+  for (const file of files) {
+    if (!(await exists(file))) continue;
+    const text = await readSafe(file);
+    for (const match of text.matchAll(/\bDR-\d{4}(?:-\d{4})?\b/g)) {
+      declared.add(match[0].toUpperCase());
+    }
+  }
+  return declared;
+}
+
+/**
  * Waiver rule id for `TDDLIST_EXCEPTION_PARKED`.
  *
  * A parked item that carries a user-approved accepted risk is a legitimate
@@ -260,7 +320,7 @@ export async function validateTddList(root: string, config: QfaiConfig): Promise
   const issues: Issue[] = [];
 
   for (const entry of entries) {
-    const specIssues = await validateSpecTddList(root, entry.dir, entry.specNumber);
+    const specIssues = await validateSpecTddList(root, entry.dir, entry.specNumber, specsRoot);
     issues.push(...specIssues);
   }
 
@@ -271,6 +331,7 @@ async function validateSpecTddList(
   root: string,
   specDir: string,
   specNumber: string,
+  specsRoot: string,
 ): Promise<Issue[]> {
   const filePath = path.join(specDir, TDD_LIST_REL_PATH);
   const relPath = toRelPath(root, filePath);
@@ -638,7 +699,8 @@ async function validateSpecTddList(
     }
   }
 
-  // Phase 2 – Check 8: Exception rows must have DR-ID
+  // Phase 2 – Check 8: Exception rows must have a DR-ID that resolves
+  const declaredDrIds = await collectDeclaredDrIds(specDir, specsRoot);
   if (statusIndex >= 0 && drIdIndex >= 0) {
     for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
       const row = table.rows[rowIdx];
@@ -652,10 +714,60 @@ async function validateSpecTddList(
         issues.push(
           issue(
             "TDDLIST_EXCEPTION_MISSING_DR",
-            `Status=exception but ${reason} in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Add a DR-ID reference`,
+            `Status=exception but ${reason} in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Add a DR-ID reference in the form DR-NNNN or DR-NNNN-NNNN, declared in 07_Decisions.md (spec-scoped) or _policies/08_Decisions.md (policy-level)`,
             "error",
             relPath,
             "tddList.exceptionDrId",
+          ),
+        );
+        continue;
+      }
+
+      // "Non-empty" was the whole check, so a token the operator invented
+      // satisfied the one thing a parked row is required to carry. These two
+      // findings give the reference a referent — at `warning`, because ledgers
+      // written before the format existed must not start failing CI on upgrade.
+      const drTokens = drId
+        .split(/[,;\s]+/)
+        .map((token) => token.trim())
+        .filter((token) => token.length > 0 && !CHANGE_REQUEST_REF.test(token));
+
+      const malformed = drTokens.filter(
+        (token) => DR_ID_SHAPED.test(token) && !DR_ID_FORMAT.test(token.toUpperCase()),
+      );
+      if (malformed.length > 0) {
+        issues.push(
+          issue(
+            "TDDLIST_EXCEPTION_INVALID_DR",
+            `Malformed DR-ID ${malformed.join(", ")} in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Expected DR-NNNN (policy-level) or DR-NNNN-NNNN (spec-scoped)`,
+            "warning",
+            relPath,
+            "tddList.exceptionDrFormat",
+            malformed,
+            "change",
+            `DR-ID を DR-NNNN もしくは DR-NNNN-NNNN の形式に直してください。宣言先は spec の 07_Decisions.md、または _policies/08_Decisions.md です。`,
+          ),
+        );
+      }
+
+      const wellFormed = drTokens
+        .map((token) => token.toUpperCase())
+        .filter((token) => DR_ID_FORMAT.test(token));
+      const unresolved = wellFormed.filter((token) => !declaredDrIds.has(token));
+      if (unresolved.length > 0) {
+        issues.push(
+          issue(
+            "TDDLIST_EXCEPTION_UNRESOLVED_DR",
+            `DR-ID ${unresolved.join(", ")} in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}) is declared in no Decisions file. Searched ${DR_DECLARATION_FILES.join(", ")} and ${toPosixRel(DR_POLICY_DECLARATION_FILE)}`,
+            "warning",
+            relPath,
+            // Rule id, not a dotted path: `waivers.ts#resolveRuleId` accepts
+            // only `^[A-Z]+-\d{3}$`, and a project keeping its decision records
+            // somewhere qfai does not read needs a way to silence this.
+            UNRESOLVED_DR_RULE_ID,
+            unresolved,
+            "change",
+            `該当の Decision Record を spec の 07_Decisions.md（または _policies/08_Decisions.md）に記載してください。別の場所で管理している場合は \`.qfai/waivers.yml\` に rule: ${UNRESOLVED_DR_RULE_ID} の waiver を登録してください。`,
           ),
         );
       }
