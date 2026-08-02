@@ -1075,16 +1075,24 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
     ...validateLayeredIdFormat(
       entry.examplesPath,
       examplesText,
-      ["SPEC", "SC", "AC"],
-      `${layeredFileNames.examples} の ID を \`@SPEC-0001\` / \`@SC-0001-0001\` / \`AC-0001-0001\` 形式へ修正してください。`,
+      // v1421 writes `EX-*` against a `BR-Ref`. The Gherkin vocabulary
+      // (`SPEC` / `SC`) belongs to the v1416/v1417 `.feature` layouts and never
+      // matched anything in this file, so the bottom of the chain had no format
+      // gate at all.
+      entry.layeredStyle === "v1421" ? ["BR", "EX"] : ["SPEC", "SC", "AC"],
+      entry.layeredStyle === "v1421"
+        ? `${layeredFileNames.examples} の ID を \`EX-0001-0001\` / \`BR-0001-0001\` 形式へ修正してください。`
+        : `${layeredFileNames.examples} の ID を \`@SPEC-0001\` / \`@SC-0001-0001\` / \`AC-0001-0001\` 形式へ修正してください。`,
     ),
   );
   issues.push(
     ...validateLayeredIdFormat(
       entry.testCasesPath,
       testCasesText,
-      ["CASE", "SC"],
-      `${layeredFileNames.testCases} の ID を \`CASE-0001-0001\` と \`SC-0001-0001\` 参照形式へ修正してください。`,
+      entry.layeredStyle === "v1421" ? ["AC", "EX", "TC"] : ["CASE", "SC"],
+      entry.layeredStyle === "v1421"
+        ? `${layeredFileNames.testCases} の ID を \`TC-0001-0001\` / \`EX-0001-0001\` / \`AC-0001-0001\` 形式へ修正してください。`
+        : `${layeredFileNames.testCases} の ID を \`CASE-0001-0001\` と \`SC-0001-0001\` 参照形式へ修正してください。`,
     ),
   );
 
@@ -1113,15 +1121,22 @@ async function validateLayeredSpecEntry(entry: SpecEntry): Promise<Issue[]> {
     ),
   );
   issues.push(
-    ...validateLayeredNamespace(entry, entry.examplesPath, extractIds(examplesText, "SC"), "SC"),
+    // v1421 writes `EX-*` / `TC-*`; `SC` / `CASE` are the Gherkin-era kinds and
+    // match nothing in a v1421 file, so the namespace rule had no reachable
+    // input for the bottom two layers.
+    ...(entry.layeredStyle === "v1421"
+      ? validateLayeredNamespace(entry, entry.examplesPath, extractIds(examplesText, "EX"), "EX")
+      : validateLayeredNamespace(entry, entry.examplesPath, extractIds(examplesText, "SC"), "SC")),
   );
   issues.push(
-    ...validateLayeredNamespace(
-      entry,
-      entry.testCasesPath,
-      extractIds(testCasesText, "CASE"),
-      "CASE",
-    ),
+    ...(entry.layeredStyle === "v1421"
+      ? validateLayeredNamespace(entry, entry.testCasesPath, extractIds(testCasesText, "TC"), "TC")
+      : validateLayeredNamespace(
+          entry,
+          entry.testCasesPath,
+          extractIds(testCasesText, "CASE"),
+          "CASE",
+        )),
   );
 
   return issues;
@@ -1187,7 +1202,7 @@ function validateLayeredNamespace(
   entry: SpecEntry,
   filePath: string,
   ids: string[],
-  prefix: "US" | "AC" | "BR" | "SC" | "CASE",
+  prefix: "US" | "AC" | "BR" | "EX" | "TC" | "SC" | "CASE",
 ): Issue[] {
   const expectedPrefix = `${prefix}-${entry.specNumber}-`;
   const mismatched = ids.filter((id) => !id.startsWith(expectedPrefix));

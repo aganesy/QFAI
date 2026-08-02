@@ -5,6 +5,8 @@ export type IdPrefix =
   | "BR"
   | "SC"
   | "AC"
+  | "EX"
+  | "TC"
   | "CASE"
   | "UI"
   | "API"
@@ -19,6 +21,13 @@ export const ID_PREFIXES: IdPrefix[] = [
   "BR",
   "SC",
   "AC",
+  // The bottom two layers of `US -> AC -> BR -> EX -> TC`. Absent until now,
+  // so `E_ID_INVALID_FORMAT` could not fire on a malformed `TC-1` and
+  // `QFAI-SPACK-101` could not fire on a cross-spec `TC-0007-0001` pasted into
+  // another spec — while the v1421 templates `qfai init` ships write exactly
+  // these two kinds.
+  "EX",
+  "TC",
   "CASE",
   "UI",
   "API",
@@ -51,6 +60,8 @@ const STRICT_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
   BR: /\bBR-\d{4}-\d{4}\b/g,
   SC: /\bSC-\d{4}-\d{4}\b/g,
   AC: /\bAC-\d{4}-\d{4}\b/g,
+  EX: /\bEX-\d{4}-\d{4}\b/g,
+  TC: /\bTC-\d{4}-\d{4}\b/g,
   CASE: /\bCASE-\d{4}-\d{4}\b/g,
   UI: /\bUI-\d{4}\b/g,
   API: /\bAPI-\d{4}\b/g,
@@ -66,6 +77,8 @@ const LOOSE_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
   BR: new RegExp(`\\bBR-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
   SC: new RegExp(`\\bSC-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
   AC: new RegExp(`\\bAC-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  EX: new RegExp(`\\bEX-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  TC: new RegExp(`\\bTC-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
   CASE: new RegExp(`\\bCASE-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
   UI: new RegExp(`\\bUI-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
   API: new RegExp(`\\bAPI-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
