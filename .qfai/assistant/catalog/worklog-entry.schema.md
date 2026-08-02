@@ -1,7 +1,7 @@
 # Work-log Entry Schema Contract
 
 - Contract scope: frontmatter and body schema for `.qfai/steering/*.md` entries
-- Owning spec: `spec-0004` (validate) + `spec-0011` (implement; primary writer) + `spec-0015` (Reviewer-Gate consumer)
+- Owners: the validate stage (schema enforcement), the implement stage (primary writer) and the Reviewer-Gate stage (consumer)
 - Used-by: All implementation/review-phase skills, `npx qfai validate`, Reviewer subagents
 - SSOT modules:
   - `packages/qfai/src/core/worklog/parseEntry.ts` (pure parser: `string → Result<Entry, SchemaError>`)
@@ -162,4 +162,4 @@ The body is consulted by Reviewer Gate when emitting `R-WORKLOG-DRIFT`; the stru
 
 ## Distributed-surface obligations
 
-The seeded `_templates/entry.md` (and any sample entry shipped via `assets/init/`) MUST pass `packages/qfai/scripts/check-no-internal-version-leakage.sh` — no `spec-NNNN` for N ≥ 10, no `vN.M[.P]`, no `CAP-0010+`, no `DEC-NNNN-NNNN`, no `DR-NNNN`, no `OQ-NNNN-NNNN`, no `QFAI-PROT2-NNN`, no `schemaVersion`.
+The seeded `_templates/entry.md`, and any sample entry shipped via `assets/init/`, MUST carry no internal spec ids, version markers or trace ids. The authoritative list of forbidden shapes is the scanner itself; entries use placeholder ids and dates only.
