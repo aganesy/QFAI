@@ -49,6 +49,15 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 - Keep the ledger table the first markdown table in the file.
 - An empty table is a valid outcome when the spec declares no coverage-target TC.
 
+## Phase 2c: Obligation reconciliation
+
+- For every `BR` / `AC` this run produced, name the contract under `.qfai/contracts/**` that realizes it.
+- Resolve every persisted attribute the obligation names to a column, field or enum member in that contract.
+- When the attribute lives in another relation, state the join that reaches it. No join reaching it means the obligation is unrealizable, however valid both contracts are.
+- Fix the contract or the obligation in this phase — both are owned by `/qfai-sdd`, and a mismatch carried downstream reaches an implementer who can fix neither.
+- Record the outcome per obligation, not per spec.
+- Full rule: `contract-artifact-rules.md#obligation-reconciliation-must--phase-2c`.
+
 ## Phase 3: Plan finalize
 
 - Create or update `<spec-id>/10_Plan.md`.
