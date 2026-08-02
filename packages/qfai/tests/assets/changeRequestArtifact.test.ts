@@ -209,10 +209,14 @@ describe("a Change Request is a defined artifact", () => {
       );
     });
 
-    it(`${tree}: the template carries the six contents the protocol mandates`, async () => {
+    it(`${tree}: the template carries the contents the protocol mandates`, async () => {
       const template = await read(tree, TEMPLATE);
       for (const heading of [
-        "## Context (what conflicts)",
+        // "Context (what conflicts)" lost its parenthetical in #378: a defect
+        // -drift CR conflicts with nothing external, so the heading had to
+        // stop presuming a conflict of intent.
+        "## Context",
+        "## Reproduction",
         "## Proposed change",
         "## Options (at least 3) and recommendation",
         "## Impact scope",
