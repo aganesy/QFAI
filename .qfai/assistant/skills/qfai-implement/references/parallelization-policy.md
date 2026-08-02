@@ -124,3 +124,29 @@ When parallel dispatch is authorized, the ledger has one writer:
   **complete** evidence block to the row, not by the worker writing it. A block
   missing any contract field does not satisfy item 10: the orchestrator obtains
   the missing fields first, and the row stays out of `done` until it has them.
+
+## Ledger ownership
+
+`.qfai/specs/<spec-id>/tdd/test-list.md` has exactly one writer: the
+**orchestrator**, in the **trunk**.
+
+This is not a style preference. Delegation is mandatory and the orchestrator may
+not write code, so the only role that ever observes RED/GREEN is the
+implementation agent — and the ledger it would have to write lives _inside_ the
+tree that worktree separation copies. N workers would each hold a private copy of
+the one table that is the completion gate, and merging them is a text merge of
+the artifact the gate reads.
+
+So:
+
+- Parallel workers **MUST NOT** edit `.qfai/specs/<spec-id>/tdd/**`. Their
+  worktree copy is read-only for the duration of the slice.
+- Each worker returns, per item it processed: `TDD-ID`, final `Status`, and the
+  `Evidence` payload in the per-item evidence contract's form.
+- The orchestrator writes those rows into the trunk ledger during
+  `#post-parallel-integration-verify`, before the verify runs.
+- A merged item whose row is still `todo` fails that verify. Silence there is
+  indistinguishable from work that was never done.
+
+In serial mode the same rule holds with no merge step: the implementation agent
+returns Status + Evidence, the orchestrator writes them.

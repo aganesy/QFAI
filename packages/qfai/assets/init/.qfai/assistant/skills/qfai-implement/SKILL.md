@@ -188,7 +188,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 - Orchestrator MUST NOT write test or production code directly; delegate every TDD phase to the routed implementation agents.
 - Additional implement-specific overrides:
   - read `test-list.md`, determine the next pending item, and delegate each TDD phase;
-  - update `test-list.md` status after each phase completes.
+  - update `test-list.md` **Status and Evidence** after each phase completes, copying the delegated agent's RED/GREEN command+result verbatim. Gate item 10 requires both columns, and the orchestrator is the only role permitted to write this file (`references/parallelization-policy.md#ledger-ownership`).
 
 ### Formal Sub-agent Roster
 
@@ -226,7 +226,7 @@ table, the group-formation transitions and the queue-advance steps: `references/
 All agent-to-agent transitions follow these contracts:
 
 1. `delivery-planner` selects the next item and assigns it to the appropriate implementation agent.
-2. Implementation agent submits RED/GREEN execution evidence to `qa-gatekeeper`.
+2. Implementation agent submits RED/GREEN execution evidence to `qa-gatekeeper`, **and returns it to the orchestrator in the per-item evidence contract's form** so it can be written to the ledger. The implementation agent never writes `test-list.md` itself.
 3. `qa-gatekeeper` confirms or rejects the RED/GREEN observation.
 4. After the item reaches `refactor`, implementation agent submits it to `completion-reviewer` for spec alignment and to `implementation-reviewer` for code quality review. Review is requested from `refactor`, never from `green`, so a `REVISE` always lands on the one status with an outbound `review-fix` edge.
 5. `product-surface-reviewer` is added when the item affects UI behavior or rendered output.
@@ -300,6 +300,7 @@ Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
 
 ### Post-parallel integration verify
 
+- **Reconcile the ledger first.** Under worktree separation each worker holds a private copy of `test-list.md`, so the merged trunk carries none of their transitions. Write Status + Evidence for every merged item from the worker reports **before** integration verify, and fail the verify if any merged item's row is still `todo` — an unreconciled ledger reports finished work as unstarted (`references/parallelization-policy.md#ledger-ownership`).
 - After parallel slices complete and merge, run integration verify on the merged result
 - If integration verify fails, flag all slices for re-examination and roll back the merge
 - If integration verify passes, state transitions back to `delivery-planner` for sequential flow

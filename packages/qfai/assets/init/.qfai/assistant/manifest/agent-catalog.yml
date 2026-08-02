@@ -497,6 +497,7 @@ agents:
       - Frontend implementation summary
       - Changed files and affected flows
       - Local verification notes
+      - TDD ledger Status + Evidence entry for each item processed, returned to the orchestrator (which owns the `test-list.md` write; do not edit that file directly)
       - Evidence summary for `.qfai/evidence/`
       - Notes on how simplicity, necessity, and reuse were preserved in the chosen implementation
 
@@ -568,6 +569,7 @@ agents:
       - Backend implementation summary
       - Changed files and affected contracts
       - Local verification notes
+      - TDD ledger Status + Evidence entry for each item processed, returned to the orchestrator (which owns the `test-list.md` write; do not edit that file directly)
       - Evidence summary for `.qfai/evidence/`
       - Notes on invariants, validation, and why added abstractions/configuration are necessary now
 
@@ -640,6 +642,7 @@ agents:
       - Acceptance test plan and implemented coverage
       - Mapping from US / TC / CON-API to test assets
       - Execution proof and evidence summary
+      - TDD ledger Status + Evidence entry for each item processed, returned to the orchestrator (which owns the `test-list.md` write; do not edit that file directly)
       - Gaps and follow-up actions
 
       ## Stop conditions
