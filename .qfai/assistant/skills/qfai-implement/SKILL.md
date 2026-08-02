@@ -125,8 +125,9 @@ The eight required columns, the allowed transitions and the exception rules are 
 4. Run the test and **watch it fail**. Admissible only when an assertion — or an expected-exception check — inside this row's `Selector` raised the failure and its message names the predicate the row owns; a collection / import / syntax / fixture error, or an unasserted throw, is a **missing seam**, not a RED (`references/red-admissibility.md`). Observe each `Selector` entry's failure separately; one aggregate run is not a valid RED observation.
 5. If the test unexpectedly passes, classify **why** before doing anything else. An obligation
    already satisfied by a sibling row is **not an anomaly** and does **not** go to `exception`;
-   anything else transitions to `exception` and records the anomaly. Never weaken a correct test
-   until it fails in order to manufacture a RED. See `references/red-not-observable.md`.
+   anything else transitions to `exception` and records the anomaly as `.qfai/decisions/DR-<id>-<slug>.md` — never in
+   `07_Decisions.md` / `09_delta.md`, which are upstream SSOT this skill may not patch. Never weaken a correct
+   test until it fails in order to manufacture a RED. See `references/red-not-observable.md`.
    > **RED observation is only as good as the selector's granularity.** A single test function can fail
    > only once, so if one selector entry carries an entire obligation matrix, "the expected reason" is
    > whichever assert happens to execute first — every assertion after it is unobserved on every RED
@@ -321,7 +322,7 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 7. `completion-reviewer` returned PASS (spec / completion review gate)
 8. `implementation-reviewer` returned PASS (code quality review gate)
 9. UI-affecting items have prototype parity PASS from `product-surface-reviewer`
-10. `test-list.md` Status and Evidence columns are updated with fresh evidence
+10. `test-list.md` Status is current and its Evidence cell's anchor resolves to a fresh per-item entry in `.qfai/evidence/implement-<spec-id>.md` (the cell is a pointer, not the payload — `references/execution-ledger.md#evidence-cell-contract`)
 11. `.qfai/evidence/implement-<spec-id>.md` is appended with both reviewer verdicts after items 7-8 returned PASS
 12. Checkpoint verification passed (see `#checkpoint-verification`). The **full** suite is required here only when the item sits on a checkpoint boundary; a row between boundaries satisfies this with the narrow relevant suite from Phase: Refactor step 2, which is also what items 6, 7 and 8 are evaluated against.
 
@@ -385,6 +386,7 @@ Required sections:
 
 - Objective
 - Items processed (TDD-ID, TC-Refs, final status)
+- **Per item, one `### TDD-NNNN` section** carrying the contract below — the single home for the RED/GREEN commands and output. The ledger's `Evidence` cell anchors here and holds only the one-word outcomes, because a GFM cell cannot hold a newline or a bare `|` (`references/execution-ledger.md#evidence-cell-contract`)
 - Test results summary
 - Exception items (if any) with DR-IDs
 - Commands executed
