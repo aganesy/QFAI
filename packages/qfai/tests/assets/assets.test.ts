@@ -1415,9 +1415,16 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
   it("ensures v1.4.36 layered spec templates exist for sdd", async () => {
     const expected = [
+      // #394 added the four _policies templates and spec/10_Plan.md that were
+      // Mandatory Outputs with no shipped skeleton. Coverage against the
+      // required-file registry is pinned in sddTemplateCoverage.test.ts.
+      "_policies/01_Objective.md",
+      "_policies/02_Initiative.md",
       "_policies/03_Capabilities.md",
       "_policies/04_Business-Flow.md",
       "_policies/05_Contracts.md",
+      "_policies/06_Glossary.md",
+      "_policies/07_Constraints.md",
       "_policies/08_Decisions.md",
       "_policies/09_Open-questions.md",
       "_policies/10_delta.md",
@@ -1431,6 +1438,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "spec/07_Decisions.md",
       "spec/08_Open-questions.md",
       "spec/09_delta.md",
+      "spec/10_Plan.md",
       // The TDD execution ledger `/qfai-implement` selects from (#223).
       "spec/tdd/test-list.md",
       // The traceability ledger QFAI-TRACE-001 requires (#271).
