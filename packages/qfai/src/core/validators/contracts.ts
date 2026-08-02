@@ -4,7 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { parseStructuredContract } from "../contracts.js";
-import { buildContractIndex } from "../contractIndex.js";
+import { buildContractIndex, type ContractIndex } from "../contractIndex.js";
 import { extractDeclaredContractIds, stripContractDeclarationLines } from "../contractsDecl.js";
 import {
   collectApiContractFiles,
@@ -92,6 +92,7 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
 
   const contractIndex = await buildContractIndex(root, config);
   issues.push(...validateDuplicateContractIds(contractIndex.idToFiles));
+  issues.push(...validateDependencyRefs(contractIndex));
 
   issues.push(...(await validateContractConsistency(apiFiles, dbFiles)));
 
@@ -258,6 +259,39 @@ function validateDeclaredContractIds(ids: string[], file: string, kind: Contract
   }
 
   return [];
+}
+
+/**
+ * Every declared apply-order dependency must name a contract that exists.
+ *
+ * `QFAI-CONTRACT-011` forces any schema larger than one table into N
+ * cross-referencing files, and nothing checked that the references between them
+ * resolve. Getting the set wrong is silent: the wrong subset still applies
+ * cleanly and the tests still pass, against a schema missing the tables under
+ * test. This is the cheap half of that — a dangling id is always wrong.
+ */
+function validateDependencyRefs(index: ContractIndex): Issue[] {
+  const issues: Issue[] = [];
+  for (const [id, dependencies] of index.idToDependencies) {
+    const missing = Array.from(dependencies)
+      .filter((dependency) => !index.ids.has(dependency))
+      .sort();
+    if (missing.length === 0) continue;
+    const file = Array.from(index.idToFiles.get(id) ?? [])[0] ?? id;
+    issues.push(
+      issue(
+        "QFAI-CONTRACT-014",
+        `${id} が宣言している依存先の契約が存在しません: ${missing.join(", ")}`,
+        "error",
+        file,
+        "contracts.dependencyRefs",
+        missing,
+        "change",
+        "`Depends on:` / `x-qfai-depends-on` に記載した契約 ID を実在するものに直すか、該当契約を追加してください。",
+      ),
+    );
+  }
+  return issues;
 }
 
 function validateDuplicateContractIds(idToFiles: Map<string, Set<string>>): Issue[] {
