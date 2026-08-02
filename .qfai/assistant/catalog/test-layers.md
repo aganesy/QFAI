@@ -45,6 +45,19 @@ Rules:
   `#NON_COVERAGE_LAYERS`) accept both the code and the word form for the same
   layer; they MUST stay in step with this table.
 
+## How this file is consumed
+
+The layer set below is read by `core/layerPolicy.ts` and is the SSOT for two
+checks: `QFAI-EX-005` on the legacy spec-pack layout, and `QFAI-EX-105` on the
+layered layout `npx qfai init` produces. Until both consumed it, the file was
+read, reported on, and then ignored on every modern project.
+
+- A file that yields no layers raises `QFAI-SPACK-090` (error) rather than
+  silently widening to the built-in set.
+- A declared set that disagrees with the built-in set raises `QFAI-SPACK-091`
+  (warning). Without it the two could drift in either direction and this file
+  would not be an SSOT.
+
 ## Layer definitions
 
 ### L1 Unit
