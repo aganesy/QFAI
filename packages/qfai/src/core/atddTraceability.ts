@@ -6,7 +6,7 @@ import { parse as parseYaml } from "yaml";
 import type { QfaiConfig } from "./config.js";
 import { resolvePath } from "./config.js";
 import { extractDeclaredContractIds } from "./contractsDecl.js";
-import { collectApiContractFiles } from "./discovery.js";
+import { collectApiContractFiles, collectDbContractFiles } from "./discovery.js";
 import {
   collectFilesByGlobs,
   DEFAULT_GLOB_FILE_LIMIT,
@@ -21,6 +21,15 @@ import { collectMarkdownItems, uniqueMatches } from "./validators/utils.js";
 const US_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):US-(\d{4}(?:-\d{4})?)\b/g;
 const TC_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):TC-(\d{4}(?:-\d{4})?)\b/g;
 const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
+/**
+ * `CON-DB-*` annotation, the DB peer of the API form above.
+ *
+ * `CON-DB-*` was a first-class authored contract kind with no downstream test
+ * obligation: no annotation form, no coverage rule, and — because
+ * `AtddUnknownRefKind` had no DB member — not even an unknown-reference report.
+ * A `QFAI:CON-DB-0002` written into a test was silently invisible.
+ */
+const DB_TEST_ANNOTATION_RE = /\bQFAI:CON-DB-(\d+)\b/g;
 
 const US_ID_RE = /^US-\d{4}(?:-\d{4})?$/;
 const TC_ID_RE = /^TC-\d{4}(?:-\d{4})?$/;
@@ -31,6 +40,7 @@ const LEVEL_META_LINE_RE = /^[-*]\s+Level\s*[:：]\s*(.+?)\s*$/i;
 /** Parses a `SPEC-0001:TC-0002` ref produced by `formatTcRef`. */
 const MISSING_TC_REF_RE = /^SPEC-(\d{4}):TC-(\d{4}(?:-\d{4})?)$/;
 const API_CONTRACT_ID_RE = /^CON-API-\d+$/;
+const DB_CONTRACT_ID_RE = /^CON-DB-\d+$/;
 /**
  * Extension set used when the project declares no
  * `validation.traceability.testFileGlobs`. It is a fallback, not the rule: its
@@ -45,7 +55,7 @@ const DEFAULT_TEST_FILE_GLOB = "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,m
 
 export type AtddTestKind = "e2e" | "api" | "integration";
 
-export type AtddUnknownRefKind = "us" | "tc" | "conApi";
+export type AtddUnknownRefKind = "us" | "tc" | "conApi" | "conDb";
 
 export type AtddUnknownRef = {
   file: string;
@@ -71,6 +81,7 @@ export type AtddTraceabilityMissing = {
   us: string[];
   tc: string[];
   conApi: string[];
+  conDb: string[];
 };
 
 export type AtddCodeTraceabilityResult = {
@@ -93,10 +104,23 @@ export type AtddCodeTraceabilityResult = {
    * deferral stays visible instead of silently shrinking the gate.
    */
   deferredApiContractIds: Set<string>;
+  contractsDbRoot: string;
+  /** Every declared `CON-DB-*`, active and deferred alike. */
+  dbContractIds: Set<string>;
+  /** The subset that carries the `QFAI-ATDD-115` obligation. */
+  activeDbContractIds: Set<string>;
+  /** `CON-DB-*` deferred by `-- x-qfai-status: planned`; reported at `info`. */
+  deferredDbContractIds: Set<string>;
   refs: {
     us: AtddSpecRefs;
     tc: AtddSpecRefs;
     api: Map<string, Set<string>>;
+    /**
+     * `CON-DB-*` references found in integration tests. L3 Integration is the
+     * layer whose declared scope is real-infrastructure integration including
+     * the database, so it is the one that can actually exercise a DB contract.
+     */
+    db: Map<string, Set<string>>;
   };
   unknown: AtddUnknownRef[];
   forbidden: {
@@ -154,11 +178,16 @@ export async function evaluateAtddCodeTraceability(
   const specsRoot = resolvePath(root, config, "specsDir");
   const contractsRoot = resolvePath(root, config, "contractsDir");
   const contractsApiRoot = path.join(contractsRoot, "api");
+  const contractsDbRoot = path.join(contractsRoot, "db");
 
-  const [specRefs, collectedApiContracts] = await Promise.all([
+  const [specRefs, collectedApiContracts, collectedDbContracts] = await Promise.all([
     collectSpecRefs(specsRoot),
     collectApiContractIds(contractsApiRoot),
+    collectDbContractIds(contractsDbRoot),
   ]);
+  const activeDbContractIds = collectedDbContracts.active;
+  const deferredDbContractIds = collectedDbContracts.deferred;
+  const declaredDbContractIds = new Set([...activeDbContractIds, ...deferredDbContractIds]);
   // `active` drives the missing-coverage gate; `declared` (active ∪ deferred)
   // drives the "is this ID known?" check.
   const activeApiContractIds = collectedApiContracts.active;
@@ -191,6 +220,7 @@ export async function evaluateAtddCodeTraceability(
   const usRefs: AtddSpecRefs = new Map<string, Map<string, Set<string>>>();
   const tcRefs: AtddSpecRefs = new Map<string, Map<string, Set<string>>>();
   const apiRefs = new Map<string, Set<string>>();
+  const dbRefs = new Map<string, Set<string>>();
 
   const unknown: AtddUnknownRef[] = [];
   const unknownDedup = new Set<string>();
@@ -270,7 +300,23 @@ export async function evaluateAtddCodeTraceability(
         continue;
       }
       if (kind === "api") {
-        recordApiRef(apiRefs, contractId, file);
+        recordContractRef(apiRefs, contractId, file);
+      }
+    }
+
+    for (const contractId of extractDbContractAnnotations(text)) {
+      // Declared = active ∪ deferred, for the same reason as CON-API: a
+      // deferral suspends the obligation, it does not un-declare the contract.
+      if (!declaredDbContractIds.has(contractId)) {
+        pushUnknown(unknown, unknownDedup, file, `QFAI:${contractId}`, "conDb");
+        continue;
+      }
+      // Only an integration test counts. A DB contract is exercised against
+      // real infrastructure, which is L3's declared scope; counting a `CON-DB`
+      // annotation from `tests/e2e/**` would let an end-to-end assertion that
+      // never touches the schema close the obligation.
+      if (kind === "integration") {
+        recordContractRef(dbRefs, contractId, file);
       }
     }
   }
@@ -280,9 +326,11 @@ export async function evaluateAtddCodeTraceability(
     usObligationScope: uiBearingSpecs,
     specTcIds,
     apiContractIds: activeApiContractIds,
+    dbContractIds: activeDbContractIds,
     usRefs,
     tcRefs,
     apiRefs,
+    dbRefs,
   });
   const missingTcHomes = buildMissingTcHomes(missing.tc, tcLevels);
 
@@ -294,10 +342,15 @@ export async function evaluateAtddCodeTraceability(
     apiContractIds: declaredApiContractIds,
     activeApiContractIds,
     deferredApiContractIds,
+    contractsDbRoot,
+    dbContractIds: declaredDbContractIds,
+    activeDbContractIds,
+    deferredDbContractIds,
     refs: {
       us: usRefs,
       tc: tcRefs,
       api: apiRefs,
+      db: dbRefs,
     },
     unknown: unknown.sort(compareUnknownRef),
     forbidden: {
@@ -562,12 +615,17 @@ export function isPlannedApiContract(text: string): boolean {
   return typeof status === "string" && status.trim().toLowerCase() === PLANNED_CONTRACT_VALUE;
 }
 
-type CollectedApiContracts = {
+/**
+ * A contract kind's declared IDs, split by whether they still carry the
+ * coverage obligation. Shared by the API and DB collectors: the shape is the
+ * same and duplicating it would let the two drift.
+ */
+type CollectedContractIds = {
   active: Set<string>;
   deferred: Set<string>;
 };
 
-async function collectApiContractIds(apiRoot: string): Promise<CollectedApiContracts> {
+async function collectApiContractIds(apiRoot: string): Promise<CollectedContractIds> {
   const files = await collectApiContractFiles(apiRoot);
   const active = new Set<string>();
   const deferred = new Set<string>();
@@ -579,6 +637,40 @@ async function collectApiContractIds(apiRoot: string): Promise<CollectedApiContr
     for (const id of declared) {
       const normalized = id.toUpperCase();
       if (API_CONTRACT_ID_RE.test(normalized)) {
+        (planned ? deferred : active).add(normalized);
+      }
+    }
+  }
+
+  return { active, deferred };
+}
+
+/**
+ * The `x-qfai-status: planned` deferral in SQL comment form.
+ *
+ * A DB contract is `.sql`, so the YAML-parse path `isPlannedApiContract` uses
+ * cannot apply. The marker is matched on its own comment line only: accepting
+ * it mid-statement would let a stray mention inside a `CREATE TABLE` body defer
+ * every `CON-DB-*` the file declares.
+ */
+const PLANNED_DB_CONTRACT_RE = new RegExp(
+  `^[ \\t]*--[ \\t]*${escapeRegExp(PLANNED_CONTRACT_KEY)}[ \\t]*:[ \\t]*${escapeRegExp(
+    PLANNED_CONTRACT_VALUE,
+  )}[ \\t]*$`,
+  "im",
+);
+
+async function collectDbContractIds(dbRoot: string): Promise<CollectedContractIds> {
+  const files = await collectDbContractFiles(dbRoot);
+  const active = new Set<string>();
+  const deferred = new Set<string>();
+
+  for (const file of files) {
+    const text = await readSafe(file);
+    const planned = PLANNED_DB_CONTRACT_RE.test(text);
+    for (const id of extractDeclaredContractIds(text)) {
+      const normalized = id.toUpperCase();
+      if (DB_CONTRACT_ID_RE.test(normalized)) {
         (planned ? deferred : active).add(normalized);
       }
     }
@@ -771,6 +863,18 @@ function extractApiContractAnnotations(text: string): string[] {
   return Array.from(ids).sort((left, right) => left.localeCompare(right));
 }
 
+function extractDbContractAnnotations(text: string): string[] {
+  const ids = new Set<string>();
+  for (const match of text.matchAll(cloneGlobal(DB_TEST_ANNOTATION_RE))) {
+    const short = match[1];
+    if (!short) {
+      continue;
+    }
+    ids.add(`CON-DB-${short}`);
+  }
+  return Array.from(ids).sort((left, right) => left.localeCompare(right));
+}
+
 function recordSpecRef(refs: AtddSpecRefs, specNumber: string, id: string, file: string): void {
   const bySpec = refs.get(specNumber) ?? new Map<string, Set<string>>();
   const files = bySpec.get(id) ?? new Set<string>();
@@ -779,7 +883,8 @@ function recordSpecRef(refs: AtddSpecRefs, specNumber: string, id: string, file:
   refs.set(specNumber, bySpec);
 }
 
-function recordApiRef(refs: Map<string, Set<string>>, id: string, file: string): void {
+/** Records `id -> file` for any contract kind; not API-specific. */
+function recordContractRef(refs: Map<string, Set<string>>, id: string, file: string): void {
   const files = refs.get(id) ?? new Set<string>();
   files.add(path.normalize(file));
   refs.set(id, files);
@@ -820,9 +925,11 @@ function buildMissingRefs(input: {
   usObligationScope: ReadonlySet<string> | null;
   specTcIds: Map<string, Set<string>>;
   apiContractIds: Set<string>;
+  dbContractIds: Set<string>;
   usRefs: AtddSpecRefs;
   tcRefs: AtddSpecRefs;
   apiRefs: Map<string, Set<string>>;
+  dbRefs: Map<string, Set<string>>;
 }): AtddTraceabilityMissing {
   const missingUs: string[] = [];
   for (const [spec, ids] of input.specUsIds.entries()) {
@@ -854,10 +961,16 @@ function buildMissingRefs(input: {
     return !matchedFiles || matchedFiles.size === 0;
   });
 
+  const missingConDb = sortStrings(input.dbContractIds).filter((id) => {
+    const matchedFiles = input.dbRefs.get(id);
+    return !matchedFiles || matchedFiles.size === 0;
+  });
+
   return {
     us: missingUs.sort((left, right) => left.localeCompare(right)),
     tc: missingTc.sort((left, right) => left.localeCompare(right)),
     conApi: missingConApi.sort((left, right) => left.localeCompare(right)),
+    conDb: missingConDb.sort((left, right) => left.localeCompare(right)),
   };
 }
 
