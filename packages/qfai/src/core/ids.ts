@@ -12,7 +12,20 @@ export type IdPrefix =
   | "API"
   | "DB"
   | "THEMA";
-export type IdFormatPrefix = IdPrefix | "ADR";
+/**
+ * Prefixes with a declared format but no membership in {@link ID_PREFIXES}.
+ *
+ * `DR` joins `ADR` here rather than in `ID_PREFIXES` because a Decision Record
+ * is not a spec-pack item: `extractAllIds` walks the layers a spec decomposes
+ * into, and sweeping `DR-*` into that walk would make every citation of a
+ * decision look like an undeclared spec item to the traceability rules.
+ *
+ * What was missing is the *format*. `qfai-implement` makes a non-empty `DR-ID`
+ * the hard precondition for the `exception` status and `tddList.ts` enforces it
+ * at `error`, but no ID class existed — so any non-empty string satisfied the
+ * gate, including a token the operator invented on the spot.
+ */
+export type IdFormatPrefix = IdPrefix | "ADR" | "DR";
 
 export const ID_PREFIXES: IdPrefix[] = [
   "CAP",
@@ -68,6 +81,12 @@ const STRICT_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
   DB: /\bDB-\d{4}\b/g,
   THEMA: /\bTHEMA-\d{3}\b/g,
   ADR: /\bADR-\d{4}\b/g,
+  // Two legal shapes, layered the same way the rest of the ID space is: a
+  // policy-level record declared in `_policies/08_Decisions.md`, and a
+  // spec-scoped one declared in that spec's `07_Decisions.md`. Both forms are
+  // already in use in real ledgers, so the format follows the practice rather
+  // than replacing it.
+  DR: /\bDR-\d{4}(?:-\d{4})?\b/g,
 };
 
 const LOOSE_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
@@ -85,9 +104,18 @@ const LOOSE_ID_PATTERNS: Record<IdFormatPrefix, RegExp> = {
   DB: new RegExp(`\\bDB-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
   THEMA: new RegExp(`\\bTHEMA-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
   ADR: new RegExp(`\\bADR-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
+  DR: new RegExp(`\\bDR-${DIGIT_AHEAD}[A-Za-z0-9_-]+\\b`, "gi"),
 };
 
-export function extractIds(text: string, prefix: IdPrefix): string[] {
+/**
+ * Every strict-format match for `prefix`.
+ *
+ * Takes {@link IdFormatPrefix}, not {@link IdPrefix}: `ADR` and `DR` have a
+ * declared format but are not spec-pack items, and a caller asking for one
+ * should not have to assert its way past the type. `extractAllIds` still walks
+ * {@link ID_PREFIXES} only, so the decomposition layers are unchanged.
+ */
+export function extractIds(text: string, prefix: IdFormatPrefix): string[] {
   const pattern = STRICT_ID_PATTERNS[prefix];
   const matches = text.match(pattern);
   return unique(matches ?? []);
