@@ -322,7 +322,7 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 7. `completion-reviewer` returned PASS (spec / completion review gate)
 8. `implementation-reviewer` returned PASS (code quality review gate)
 9. UI-affecting items have prototype parity PASS from `product-surface-reviewer`
-10. `test-list.md` Status and Evidence columns are updated with fresh evidence
+10. `test-list.md` Status and Evidence columns are updated with fresh evidence, and the item's four sub-agent observations (items 3, 5, 7, 8) all name the **same** revision (`references/evidence-revision.md`)
 11. `.qfai/evidence/implement-<spec-id>.md` is appended with both reviewer verdicts after items 7-8 returned PASS
 12. Checkpoint verification passed (see `#checkpoint-verification`). The **full** suite is required here only when the item sits on a checkpoint boundary; a row between boundaries satisfies this with the narrow relevant suite from Phase: Refactor step 2, which is also what items 6, 7 and 8 are evaluated against.
 
@@ -399,6 +399,7 @@ parts with different write points; the fields are the same, the sequencing is no
 
 - `TDD-ID` — the item identifier
 - `TC-ref` — reference to the test case(s). On a `Layer = E2E` row read `US-ref` (the row's `US-Refs`) instead, and on a `Layer = API` row read `CON-API-ref` (the row's `CON-API-Refs`): exactly one obligation reference is required, the one the row's `Layer` selects
+- `Revision` — the state the observation was made against: `git rev-parse HEAD`, or `working-tree+<porcelain digest>` for an uncommitted tree. One per round block, and one for the refactor-verify pair (`references/evidence-revision.md`)
 - `RED command` — the exact command executed to observe failure
 - `RED result` — the failure output (result completeness is best-effort; truncated output is acceptable)
 - **Exclusive alternative to the RED pair**: a row on the _RED not observable_ path carries
@@ -416,8 +417,8 @@ review is requested.
 
 **Gate-completed (appended after items 7-8 return PASS):**
 
-- `Spec review` — completion-reviewer result (PASS or REVISE)
-- `Code quality review` — implementation-reviewer result (PASS or REVISE)
+- `Spec review` — completion-reviewer result (PASS or REVISE) with its `Reviewed revision`
+- `Code quality review` — implementation-reviewer result (PASS or REVISE) with its `Reviewed revision`
 - `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE)
 - `Checkpoint verification command` — the exact command set executed at the checkpoint boundary
 - `Checkpoint verification result` — the outcome of that command set (PASS only when every command exits 0)
@@ -431,7 +432,7 @@ the completion gate (see `Completion prohibition conditions`).
 
 - Status-only evidence (e.g., "Status: PASS" with no command) is invalid and MUST be rejected
 - Both command and result are required; "should pass" or "looks good" alone is not acceptable
-- Stale evidence from a previous run MUST NOT be reused to claim completion for a new cycle
+- Stale evidence from a previous run MUST NOT be reused to claim completion for a new cycle. **Stale is mechanical**: evidence whose named `Revision` differs from the revision the item finally landed at (`references/evidence-revision.md`)
 - Empty evidence entries are rejected: minimum evidence per TDD item must be met
 
 ## Checkpoint Verification
