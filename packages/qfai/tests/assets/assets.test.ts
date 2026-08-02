@@ -163,8 +163,13 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "do not weaken profiles, lower `--fail-on`, waive errors, invent evidence, or skip required reviewers",
       // #231 added a second stop condition (reviewer round count), so the
       // list is no longer exhaustive and "only" was dropped.
-      "stop for destructive changes, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures",
-      "cause, attempted fixes, remaining blocker, user action, and retry gate",
+      // #381 inserted `**any upstream spec/contract finding**` into the stop
+      // list so it is closed over the five-class classification; the routing
+      // itself is pinned in `gateFailureClassRouting.test.ts`.
+      "stop for destructive changes, **any upstream spec/contract finding**, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures",
+      // #381 appended the work counts: an agent that can report "21 complete,
+      // 5 blocked" has a credible alternative to repairing upstream.
+      "cause, attempted fixes, remaining blocker, user action, retry gate, and **the work counts",
     ];
 
     for (const phrase of requiredPhrases) {
@@ -1347,7 +1352,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       readFile(workflowPath, "utf-8"),
     ]);
 
-    expect(skill).toContain('argument-hint: "[<spec-id-or-name>] [--auto]"');
+    // #373 added the contract-scoped target the Drift Protocol's rerun step
+    // names; the two existing modes are unchanged.
+    expect(skill).toContain('argument-hint: "[<spec-id-or-name>] [--contract <CON-ID>] [--auto]"');
     expect(skill).toContain("## Arguments and Target Selection (Mandatory)");
     expect(skill).toContain(
       "Without argument (`/qfai-sdd`): target all capabilities listed in `_policies/03_Capabilities.md`.",
