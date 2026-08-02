@@ -19,8 +19,41 @@ Upstream artifacts include, at minimum:
 
 - `.qfai/evidence/**` append/update
 - progress status updates only when the project workflow explicitly allows downstream updates
+- **creating** a governance record under `.qfai/decisions/` — a Change Request
+  (`CR-YYYYMMDD-NNNN-<slug>.md`, per `#when-drift-is-detected` step 2) or an
+  anomaly Decision Record (`DR-<id>-<slug>.md`, where `<id>` follows the
+  Decision Record ID scheme in the spec's `07_Decisions.md`)
 
 Any exception beyond this list requires explicit user approval.
+
+### Why the Decision Record is on this list
+
+A downstream stage cannot always avoid needing one. `qfai-implement` Phase Red
+orders an anomalous row to `exception` as an inline step, and that status is
+invalid without a `DR-*` in the `DR-ID` column — enforced at `error` by
+`TDDLIST_EXCEPTION_MISSING_DR`. Every upstream home for a Decision Record
+(`07_Decisions.md`, `09_delta.md`) is on the `#core-rule` list above, and neither
+of the first two whitelist entries covers minting one: a Decision Record is not
+an `.qfai/evidence/**` write and not a progress status update.
+
+Without this entry the only compliant route to executing an inline Phase Red
+step was STOP -> Change Request -> user approval -> owner-skill rerun. That made
+the framework's single escape hatch for a blocked item reachable only through
+the approval loop the block is waiting on, so the first anomaly in any project
+either halted the stage or produced a rule-violating ledger row.
+
+The carve-out is exactly as narrow as that need:
+
+- **create only.** `.qfai/decisions/` is not upstream SSOT and no owner phase
+  writes it, so creating a file there patches nothing. Editing an already-
+  approved record is not covered.
+- **the record only, never the reference.** The `07_Decisions.md` /
+  `09_delta.md` entry that cites the DR stays an owner-skill write, exactly as
+  step 2 already says for a Change Request. A compliant `exception` row needs
+  the record and the `DR-ID` cell, not the upstream cross-reference.
+- **not an approval.** Creating the record does not decide the anomaly. A parked
+  row still carries `TDDLIST_EXCEPTION_PARKED` until the risk is accepted
+  through the `TDDLIST-001` waiver, which is a separate, user-owned artifact.
 
 ## When drift is detected
 
