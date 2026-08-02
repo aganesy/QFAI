@@ -20,8 +20,56 @@ Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes 
 - `api/`, `db/`, and `ui/` contracts must declare `QFAI-CONTRACT-ID` at the top.
 - Use prefixes `CON-API-*`, `CON-DB-*`, and `CON-UI-*`.
 - `design/` files do not require `QFAI-CONTRACT-ID`, but they are execution-time SSOT for UI-bearing work.
+- **Declare apply-order dependencies.** `QFAI-CONTRACT-011` makes a second
+  `QFAI-CONTRACT-ID` in one file a hard `error`, so any schema larger than one
+  table necessarily becomes N cross-referencing files. State the resulting
+  composition rather than leaving every consumer to reconstruct it from the DDL:
+  - `db/`: a comment line `-- Depends on: CON-DB-0002, CON-DB-0003` (or `-`)
+  - `api/` / `ui/`: `x-qfai-depends-on: [CON-API-0002]`, flow or block form
+  - Mirror the same list in `_policies/05_Contracts.md`'s `Depends On` column.
+  - **Apply order only.** A reference resolved at run time — a deferred foreign
+    key, an endpoint another calls during a request — is not an apply-order
+    dependency and must not be listed. The apply graph is acyclic by
+    construction; the runtime graph legitimately is not, and conflating them
+    makes the declaration unusable for ordering.
+  - `QFAI-CONTRACT-014` (error) reports a declared dependency naming a contract
+    that does not exist. Getting the set wrong is otherwise silent: the wrong
+    subset still applies cleanly and the tests still pass, against a schema
+    missing the tables under test.
+- **Target schema is the applier's, not the contract's.** A `db/` contract
+  declares unqualified object names and is applied into whatever schema the
+  runner selects (`SET search_path`, `USE`, the connection's default). Do not
+  hard-code a schema qualifier: a contract that names one cannot be applied into
+  a per-test or per-tenant schema, which is what the integration layer needs.
 - Breaking changes require delta notes.
 - `_policies/05_Contracts.md` is the contract index; it must align with `.qfai/contracts/**` and must not become behavior SSOT.
+
+## What validation checks in a `.sql` contract
+
+Scope is **apply-ability, not semantic correctness**. `.sql` used to be the only
+contract kind the validator never parsed — the "this contract does not parse" check
+guarding UI and API files was unreachable for it — so a DB contract that cannot
+run passed `npx qfai validate --profile sdd --fail-on error`. It now has a structural lane:
+
+| Finding             | Fires when                                                                    | Severity |
+| ------------------- | ----------------------------------------------------------------------------- | -------- |
+| `QFAI-CONTRACT-021` | an unterminated string, comment or dollar-quoted body, or unbalanced `(`      | error    |
+| `QFAI-DB-002`       | one file creates the same object twice — only the last definition is in force | error    |
+
+`QFAI-DB-002` covers tables, views, indexes, functions, procedures, types and
+domains. **Triggers are excluded**: a trigger name is unique per table, not per
+schema, so two same-named triggers on different tables are correct SQL and
+reporting them would be a false positive on valid input.
+| `QFAI-DB-001` | a dangerous statement (`DROP TABLE`, `TRUNCATE`, …) | warning |
+
+The statement splitter honours SQL quoting, so a `;` inside a literal, a
+comment, a `$$ … $$` body or parentheses does not end a statement.
+
+**Not checked**: nothing here type-checks a query, resolves a column, or
+verifies the schema against the API contract. A green run means the file could
+be handed to a database and does not contradict itself about what it defines —
+it does not mean the schema is right. Cross-contract agreement remains the
+authoring obligation below.
 
 ## Cross-contract Reconciliation (MUST)
 

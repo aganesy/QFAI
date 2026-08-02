@@ -1,3 +1,4 @@
+import { escapeTableCell } from "./specPackParsers.js";
 import type { SpecSummary } from "./specSummary.js";
 
 export const TRIAGE_TOP_LEVEL_OPS = ["CREATE", "DELETE", "SPLIT", "MERGE", "SUPERSEDE"] as const;
@@ -549,9 +550,11 @@ export const TRIAGE_TABLE_HEADER = [
  * `describe("escapeTableCell ↔ splitMarkdownRow round-trip identity")`
  * — extend them when adding any new escape/un-escape rule.
  */
-function escapeTableCell(value: string): string {
-  return value.replace(/\|/g, "\\|").replace(/\r\n|\r|\n/g, " ");
-}
+// Re-exported, not redefined: a second copy of the encoder is the drift the
+// pair invariant above exists to prevent. The implementation now lives beside
+// its decoder in `specPackParsers.ts` and is public, so ledger writers and the
+// Triage renderer share one encoder.
+export { escapeTableCell };
 
 /**
  * Render a triage section as a markdown table block. Designed to be appended
