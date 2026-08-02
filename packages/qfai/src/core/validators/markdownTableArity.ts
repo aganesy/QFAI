@@ -21,7 +21,6 @@
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
-import { resolvePath } from "../config.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
 import { isTableSeparator, looksLikeTableRow, splitMarkdownRow } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
