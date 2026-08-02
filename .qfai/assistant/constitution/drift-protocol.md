@@ -42,8 +42,30 @@ Any exception beyond this list requires explicit user approval.
    - decision needed from user
    - approved actions (owner skill rerun plan)
 3. Wait for explicit user approval, then set `Status` and the approval fields.
-4. Rerun the owner skill for the upstream artifact. That rerun is what records
-   the CR reference in `09_delta.md` / `07_Decisions.md`.
+4. Rerun the owner skill for the upstream artifact, **naming the invocation and
+   the mode** the CR approved. That rerun is what records the CR reference in
+   `09_delta.md` / `07_Decisions.md`.
+
+   Invocation by artifact class:
+
+   | Upstream artifact    | Invocation                      |
+   | -------------------- | ------------------------------- |
+   | `spec-*/**` files    | `/qfai-sdd <spec-id>`           |
+   | `_policies/**`       | `/qfai-sdd` (no argument)       |
+   | `.qfai/contracts/**` | `/qfai-sdd --contract <CON-ID>` |
+
+   Mode — the CR's "approved actions" field MUST name one:
+   - **`confirm-only`** — re-read the artifact and confirm it already satisfies
+     the approved change. Writes nothing but the CR reference. Use when the
+     change was already applied by hand under approval, or when the CR only
+     re-scopes something the artifact already says.
+   - **`re-derive`** — regenerate the artifact from its inputs. May rewrite any
+     part of it, and sweeps the downstream ledgers in step 5.
+
+   Without a named mode neither the author nor the approver can state what the
+   rerun executes or what it costs, and "rerun the owner skill" is the whole
+   plan.
+
 5. **Sweep the downstream ledgers.** Identify every `tdd/test-list.md` row the
    rerun invalidated — its `TC-Refs` / `US-Refs` / `CON-API-Refs` obligation
    changed or disappeared — and apply the upstream reset transition
