@@ -13,6 +13,7 @@ import {
 } from "../discovery.js";
 import type { Issue } from "../types.js";
 import { validateContractConsistency } from "./contractConsistency.js";
+import { validateDbContractExecutability } from "./dbContractExecutability.js";
 import { issue } from "./utils.js";
 
 const SQL_DANGEROUS_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
@@ -88,6 +89,7 @@ export async function validateContracts(root: string, config: QfaiConfig): Promi
   issues.push(...validateDuplicateContractIds(contractIndex.idToFiles));
 
   issues.push(...(await validateContractConsistency(apiFiles, dbFiles)));
+  issues.push(...(await validateDbContractExecutability(root, dbFiles)));
 
   return issues;
 }
