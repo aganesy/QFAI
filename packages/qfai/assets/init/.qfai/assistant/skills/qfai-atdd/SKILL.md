@@ -56,7 +56,7 @@ When unsure, read inputs in this order:
   - `.qfai/contracts/api/**` (CON-API)
   - `.qfai/contracts/db/**` (CON-DB)
   - `.qfai/contracts/ui/**` and `.qfai/contracts/design/**` when the target spec is UI-bearing
-- P5: `.qfai/specs/<spec-id>/09_delta.md` (Decision Records; if no spec yet, state "not applicable")
+- P5: `.qfai/specs/<spec-id>/07_Decisions.md` + `.qfai/specs/_policies/08_Decisions.md` (Decision Records, `DR-*`; if no spec yet, state "not applicable")
 - P6: legacy artifacts (optional only)
   - `.qfai/specs/<spec-id>/scenario.feature`
   - coverage ledger files
