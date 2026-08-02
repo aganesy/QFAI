@@ -15,8 +15,8 @@
 | DB-001   | order_drafts | CON-DB-0001 | `.qfai/contracts/db/db-0001-<slug>.sql` | draft persistence |
 -->
 
-| Short ID | Entity | Declared ID | File | Purpose |
-| -------- | ------ | ----------- | ---- | ------- |
+| Short ID | Entity | Declared ID | File | Depends On | Purpose |
+| -------- | ------ | ----------- | ---- | ---------- | ------- |
 
 ### API Contracts
 
@@ -26,8 +26,8 @@
 | API-001  | /api/orders | CON-API-0001 | `.qfai/contracts/api/api-0001-<slug>.yaml` | create draft |
 -->
 
-| Short ID | Router | Declared ID | File | Purpose |
-| -------- | ------ | ----------- | ---- | ------- |
+| Short ID | Router | Declared ID | File | Depends On | Purpose |
+| -------- | ------ | ----------- | ---- | ---------- | ------- |
 
 ### UI Contracts
 
@@ -37,10 +37,20 @@
 | UI-001   | order-create | CON-UI-0001 | `.qfai/contracts/ui/ui-0001-<slug>.yaml` | draft input form |
 -->
 
-| Short ID | Screen | Declared ID | File | Purpose |
-| -------- | ------ | ----------- | ---- | ------- |
+| Short ID | Screen | Declared ID | File | Depends On | Purpose |
+| -------- | ------ | ----------- | ---- | ---------- | ------- |
 
 ## Mapping Rules
+
+- `Depends On` lists the contracts that must be applied **before** this one, as
+  `CON-*` ids, or `-` when none. It mirrors the `-- Depends on:` line in a
+  `.sql` contract and the `x-qfai-depends-on` key in a `.yaml` one.
+- A runtime reference is not an apply-order dependency. `QFAI-CONTRACT-011`
+  forces a multi-table schema into N files, so this column is the only place the
+  resulting composition is stated; without it every consumer reconstructs the
+  apply graph by reading the DDL, and getting it wrong is silent.
+- `QFAI-CONTRACT-014` errors on a declared dependency that names no existing
+  contract.
 
 - If no contracts are needed, keep each table and state `0 items` explicitly.
 - `<slug>` must be kebab-case from entity/router/screen.

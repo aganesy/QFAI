@@ -31,6 +31,8 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - .qfai/assistant/{manifest,catalog}/\*\*
 - .qfai/specs/spec-\*/09_delta.md
 - .qfai/specs/spec-\*/01_Spec.md
+- `.qfai/specs/spec-*/tdd/test-list.md` — the execution ledger this role selects
+  the next item from and whose Red-Green-Refactor ordering it enforces
 - .qfai/discussion/discussion-\*/04_Sources.md
 - .qfai/discussion/discussion-\*/06_REQ.md
 - .qfai/discussion/discussion-\*/11_OQ-Register.md

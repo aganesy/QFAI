@@ -265,10 +265,12 @@ Role: <sub-agent role>
 Goal: <what to decide/produce>
 Inputs (refs):
 - <file/section>
+- constitution/drift-protocol.md#core-rule  <!-- the protected set, in front of the agent -->
 Constraints:
 - must: enforce Drift Protocol
 - must: follow applicable test-layer or validation policy
-- must_not: patch upstream artifacts directly when owner rerun is required
+- must_not: patch upstream artifacts directly; every upstream change requires
+  STOP + Change Request + owner rerun per constitution/drift-protocol.md
 Output format:
 - <headings / bullet schema>
 Quality bar:
