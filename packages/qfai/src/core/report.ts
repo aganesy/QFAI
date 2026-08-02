@@ -15,6 +15,7 @@ import { ID_PREFIXES, extractAllIds, extractIds, type IdPrefix } from "./ids.js"
 import { normalizeValidationResult } from "./normalize.js";
 import { parseSpec } from "./parse/spec.js";
 import { parseScenarioDocument } from "./scenarioModel.js";
+import { parseFirstMarkdownTable } from "./specPackParsers.js";
 import { classifyLayer, classifySize } from "./testStrategyTags.js";
 import { toRelativePath } from "./paths.js";
 import { PROTOTYPING_JSON_REL } from "./prototyping/paths.js";
@@ -97,6 +98,20 @@ export type ReportTraceability = {
 export type ReportTestStrategy = {
   totalScenarios: number;
   limit: number;
+  /**
+   * Where the layer buckets came from.
+   *
+   * `scenario-tags` is the Gherkin `@layer-*` path, which only exists for the
+   * legacy `scenario.feature` layout. On the v1421 layered layout
+   * `examplesPath` is the **Markdown** `05_Examples.md`, so the parse failed,
+   * the error was swallowed by `continue`, and every bucket printed 0 — while
+   * the toolkit mandates layer routing and gates completion on it.
+   * `ledger-layer` is the `Layer` column of `tdd/test-list.md`, which is the
+   * artifact the shipped templates actually produce.
+   */
+  layerSource: "scenario-tags" | "ledger-layer" | "none";
+  /** Scenario files that failed to parse; reported instead of silently zeroed. */
+  unparsedScenarioFiles: string[];
   layer: Record<"unit" | "component" | "integration" | "api" | "e2e" | "none" | "unknown", number>;
   size: Record<"s" | "m" | "l" | "none" | "unknown", number>;
   missing: {
@@ -354,6 +369,7 @@ export async function createReportData(
     resolvedRoot,
     config,
     REPORT_TEST_STRATEGY_SAMPLE_LIMIT,
+    specsRoot,
   );
   const {
     api: apiFiles,
@@ -1096,6 +1112,13 @@ export function formatReportMarkdown(
   lines.push(
     `- unit: ${data.testStrategy.layer.unit} / component: ${data.testStrategy.layer.component} / integration: ${data.testStrategy.layer.integration} / api: ${data.testStrategy.layer.api} / e2e: ${data.testStrategy.layer.e2e} / none: ${data.testStrategy.layer.none} / unknown: ${data.testStrategy.layer.unknown}`,
   );
+  lines.push("");
+  lines.push(`- source: ${describeLayerSource(data.testStrategy.layerSource)}`);
+  if (data.testStrategy.unparsedScenarioFiles.length > 0) {
+    lines.push(
+      `- unparsed scenario files (excluded from the counts above): ${data.testStrategy.unparsedScenarioFiles.join(", ")}`,
+    );
+  }
   lines.push("");
 
   lines.push("### Size distribution");
@@ -1990,11 +2013,85 @@ async function countScenarios(scenarioFiles: string[]): Promise<number> {
   return total;
 }
 
+/** Human-readable provenance for the layer buckets, printed under them. */
+function describeLayerSource(source: ReportTestStrategy["layerSource"]): string {
+  switch (source) {
+    case "scenario-tags":
+      return "Gherkin `@layer-*` scenario tags";
+    case "ledger-layer":
+      return "`Layer` column of `tdd/test-list.md`";
+    default:
+      // Zeros with no source named read as "no tests at any layer", which is a
+      // different claim from "nothing could be read".
+      return "none — no Gherkin `@layer-*` tags and no readable `Layer` column";
+  }
+}
+
+/**
+ * Layer buckets read from every spec's `tdd/test-list.md` `Layer` column.
+ *
+ * `Layer` is a hard-required column — `qfai validate` refuses a ledger without
+ * the header — and until now no code in the package resolved its index or read
+ * a cell for reporting. The one layer surface qfai ships was computed from
+ * Gherkin `@layer-*` tags in `entry.examplesPath`, which on the v1421 layered
+ * layout is the Markdown `05_Examples.md`; the parse failed and every bucket
+ * printed 0.
+ */
+async function collectLedgerLayerCounts(specsRoot: string): Promise<{
+  total: number;
+  counts: Record<"unit" | "component" | "integration" | "api" | "e2e" | "none" | "unknown", number>;
+}> {
+  const counts = {
+    unit: 0,
+    component: 0,
+    integration: 0,
+    api: 0,
+    e2e: 0,
+    none: 0,
+    unknown: 0,
+  };
+  let total = 0;
+
+  for (const entry of await collectSpecEntries(specsRoot)) {
+    const ledgerPath = path.join(entry.dir, "tdd", "test-list.md");
+    let text: string;
+    try {
+      text = await readFile(ledgerPath, "utf-8");
+    } catch {
+      continue;
+    }
+    const table = parseFirstMarkdownTable(text);
+    if (!table) continue;
+    const layerIndex = table.headers.map((header: string) => header.trim()).indexOf("Layer");
+    if (layerIndex < 0) continue;
+    for (const row of table.rows) {
+      const raw = (row[layerIndex] ?? "").trim();
+      total += 1;
+      if (raw.length === 0 || raw === "-") {
+        counts.none += 1;
+        continue;
+      }
+      const normalized = raw.toLowerCase();
+      if (normalized in counts && normalized !== "none" && normalized !== "unknown") {
+        counts[normalized as keyof typeof counts] += 1;
+      } else {
+        // A value outside the declared vocabulary. `TDDLIST_UNKNOWN_LAYER`
+        // already reports it; here it must not be silently dropped from the
+        // total, or the distribution would understate the ledger.
+        counts.unknown += 1;
+      }
+    }
+  }
+
+  return { total, counts };
+}
+
 async function collectTestStrategy(
   scenarioFiles: string[],
   root: string,
   config: ConfigLoadResult["config"],
   limit: number,
+  specsRoot: string,
 ): Promise<ReportTestStrategy> {
   const layerCounts = {
     unit: 0,
@@ -2014,6 +2111,7 @@ async function collectTestStrategy(
   };
   const missingLayer: string[] = [];
   const missingSize: string[] = [];
+  const unparsedScenarioFiles: string[] = [];
   let totalScenarios = 0;
   let e2eCount = 0;
 
@@ -2021,6 +2119,9 @@ async function collectTestStrategy(
     const text = await readFile(file, "utf-8");
     const { document, errors } = parseScenarioDocument(text, file);
     if (!document || errors.length > 0) {
+      // Recorded, not swallowed. A `continue` here is why the distribution
+      // reported zeros rather than "there was nothing to read".
+      unparsedScenarioFiles.push(toRelativePath(root, file));
       continue;
     }
 
@@ -2045,6 +2146,21 @@ async function collectTestStrategy(
     }
   }
 
+  // Fall back to the ledger when the Gherkin path yielded nothing. `Layer` is a
+  // hard-required column of every `tdd/test-list.md`, so on the layered layout
+  // it is the only place a layer can actually be read from.
+  let layerSource: ReportTestStrategy["layerSource"] =
+    totalScenarios > 0 ? "scenario-tags" : "none";
+  if (totalScenarios === 0) {
+    const fromLedger = await collectLedgerLayerCounts(specsRoot);
+    if (fromLedger.total > 0) {
+      layerSource = "ledger-layer";
+      for (const [bucket, count] of Object.entries(fromLedger.counts)) {
+        layerCounts[bucket as keyof typeof layerCounts] += count;
+      }
+    }
+  }
+
   const layerSamples = missingLayer.slice(0, limit);
   const sizeSamples = missingSize.slice(0, limit);
   const ratio = totalScenarios === 0 ? 0 : e2eCount / totalScenarios;
@@ -2054,6 +2170,8 @@ async function collectTestStrategy(
   return {
     totalScenarios,
     limit,
+    layerSource,
+    unparsedScenarioFiles,
     layer: layerCounts,
     size: sizeCounts,
     missing: {
