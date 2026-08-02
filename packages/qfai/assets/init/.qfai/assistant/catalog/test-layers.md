@@ -35,7 +35,8 @@ Rules:
   obligation by its ID, not by its `Level`: `US-*` is answered from
   `<testsDir>/e2e/**` (`QFAI-ATDD-111`), `TC-*` from
   `<testsDir>/integration/**` (`QFAI-ATDD-112`) and `CON-API-*` from
-  `<testsDir>/api/**` (`QFAI-ATDD-113`), while a `TC-*` reference inside
+  `<testsDir>/api/**` (`QFAI-ATDD-113`) and `CON-DB-*` from
+  `<testsDir>/integration/**` (`QFAI-ATDD-115`), while a `TC-*` reference inside
   `<testsDir>/api/**` or `<testsDir>/e2e/**` is rejected outright
   (`QFAI-ATDD-121` / `QFAI-ATDD-122`). L4's goal is `CON-API-*` and L5's is
   `US-*` (see the layer definitions below), so an oracle that lands at L4 or L5
@@ -44,6 +45,19 @@ Rules:
 - The two code-side word lists (`tddHelpers.ts#UNIT_COMPONENT_LAYERS` /
   `#NON_COVERAGE_LAYERS`) accept both the code and the word form for the same
   layer; they MUST stay in step with this table.
+
+## How this file is consumed
+
+The layer set below is read by `core/layerPolicy.ts` and is the SSOT for two
+checks: `QFAI-EX-005` on the legacy spec-pack layout, and `QFAI-EX-105` on the
+layered layout `npx qfai init` produces. Until both consumed it, the file was
+read, reported on, and then ignored on every modern project.
+
+- A file that yields no layers raises `QFAI-SPACK-090` (error) rather than
+  silently widening to the built-in set.
+- A declared set that disagrees with the built-in set raises `QFAI-SPACK-091`
+  (warning). Without it the two could drift in either direction and this file
+  would not be an SSOT.
 
 ## Layer definitions
 
@@ -192,6 +206,7 @@ routes by obligation ID: `US-*` is answered from `tests/e2e/**`
   - `QFAI:SPEC-0001:US-0001`
   - `QFAI:SPEC-0001:TC-0001`
   - `QFAI:CON-API-0001`
+  - `QFAI:CON-DB-0001`
 
 ## ATDD annotation hard gate
 
@@ -224,6 +239,14 @@ routes by obligation ID: `US-*` is answered from `tests/e2e/**`
   - `tests/api/**` and `tests/e2e/**` must not carry `TC-*` annotations
     (`QFAI-ATDD-121` / `QFAI-ATDD-122`), so an L4 obligation is discharged as a
     `CON-API-*` reference, never as a `TC-*` one.
+  - Every declared `CON-DB-*` must be referenced at least once from
+    `tests/integration/**` (`QFAI-ATDD-115`). Use `QFAI:CON-DB-XXXX`
+    annotations. L3 owns this because a DB contract is only exercised against
+    real infrastructure, which is L3's declared scope; a `CON-DB` reference
+    from `tests/e2e/**` is not counted, or an end-to-end assertion that never
+    touches the schema could close the obligation. A contract outside the
+    current slice defers with a `-- x-qfai-status: planned` comment line,
+    reported at `info` by `QFAI-ATDD-116` so the deferral stays visible.
 
 - Per-level routing (target state — **not enforced, do not follow yet**):
   - The intended end state is one required location per declared `Level`:
