@@ -185,3 +185,13 @@ routing:
         blocking_agents: [qa-gatekeeper, completion-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: runtime-heavy
+
+# `rerun_policy` vocabulary (validated by `QFAI-AGENT-013`):
+#
+# - `failed-agents-only`        re-run only the agents that did not return PASS
+# - `changed-scope-dependents`  re-run every agent whose inputs the change
+#                               touched, including ones that passed
+#
+# The key was previously on all 23 phases, defined nowhere and read by nothing,
+# so a typo in it was invisible. `constitution/drift-protocol.md` step 4 uses the
+# same vocabulary when a Change Request names its rerun mode.
