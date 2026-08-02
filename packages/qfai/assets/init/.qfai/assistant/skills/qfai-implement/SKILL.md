@@ -17,7 +17,7 @@ roles:
     completion-reviewer,
     product-surface-reviewer,
   ]
-routing-profile: runtime-heavy
+routing-profile: implementation-heavy
 mode: approval-gated
 ---
 
