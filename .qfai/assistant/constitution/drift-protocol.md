@@ -15,6 +15,14 @@ Upstream artifacts include, at minimum:
 - contracts and schema decisions owned by earlier phases
 - outputs of discussion/sdd/review stages
 
+**Every artifact in this list requires an owner rerun by definition.** There is
+no downstream test for "is an owner rerun required here?" — being on this list
+is the answer, and the rerun is a _consequence_ of the artifact being upstream
+SSOT, never a precondition for the prohibition. A downstream phase that finds
+itself weighing whether the owner needs to be involved has already left its
+lane: it cannot see who owns the artifact, and working that out in the observed
+case required reading the agent roster and reasoning backwards from it.
+
 ## Allowed exceptions (minimal whitelist)
 
 - `.qfai/evidence/**` append/update
