@@ -301,7 +301,7 @@ Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
 ### Post-parallel integration verify
 
 - After parallel slices complete and merge, run integration verify on the merged result
-- If integration verify fails, flag all slices for re-examination and roll back the merge
+- If integration verify fails, **classify before acting** per `shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`, attributing the failure to one slice, to the merge resolution, or to code outside every slice. Remedies by class: `references/parallelization-policy.md#failed-integration-verify`. Unconditional rollback is not one of them — the protocol classifies this as a local, non-destructive defect to fix and re-run, and reserves stopping for destructive changes.
 - If integration verify passes, state transitions back to `delivery-planner` for sequential flow
 
 ## Completion Contract (Shared)
