@@ -125,6 +125,21 @@ export async function validateAtddCodeTraceability(
     );
   }
 
+  if (result.skippedTestFiles.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-ATDD-105",
+        `走査対象の3ディレクトリ外にあるテストファイルは coverage に数えられません: ${result.skippedTestFiles.slice(0, 10).join(", ")}${result.skippedTestFiles.length > 10 ? ` (他 ${result.skippedTestFiles.length - 10} 件)` : ""}`,
+        "info",
+        result.specsRoot,
+        "atddCodeTraceability.scan.skipped",
+        result.skippedTestFiles.slice(0, 10),
+        "canonical",
+        `${dirs.integration} / ${dirs.api} / ${dirs.e2e} のいずれかに移動してください。注釈が正しくても、この3つの外にあるファイルはどのカバレッジ規則にも数えられません。`,
+      ),
+    );
+  }
+
   for (const forbidden of result.forbidden.tcInApi) {
     issues.push(
       issue(

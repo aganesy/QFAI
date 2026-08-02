@@ -214,6 +214,18 @@ Turn specs/contracts obligations (`US` / `TC` / `CON-API`) into runnable accepta
 | API         |      #CON |  API_s | API contracts |       |
 | Integration |       #TC |  INT_s | test cases    |       |
 
+## Scaffolding
+
+`npx qfai atdd scaffold --spec <spec-id>` bulk-emits one placeholder test per
+coverage-target `TC-*`, each carrying its `QFAI:SPEC-XXXX:TC-YYYY` annotation.
+Skeletons land in `tests/integration/<spec-id>/` — the directory
+`QFAI-ATDD-112` scans — so a filled-in skeleton counts as coverage. It is
+idempotent: existing files are left untouched.
+
+A skeleton left in placeholder shape across repeated validate runs escalates
+(`qfai.config.yaml#atdd.scaffoldEscalateCycles`), so scaffolding is a start, not
+a discharge of the obligation.
+
 ## Annotation obligations (mandatory)
 
 Every generated ATDD test MUST include QFAI annotations by layer:

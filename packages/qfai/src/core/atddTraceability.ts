@@ -112,6 +112,8 @@ export type AtddCodeTraceabilityResult = {
    * per declared layer instead of naming `tests/integration/**` for every TC.
    */
   missingTcHomes: Map<string, AtddTestKind>;
+  /** Test files outside the scanned roots; surfaced instead of dropped. */
+  skippedTestFiles: string[];
   scan: AtddTraceabilityScan;
 };
 
@@ -192,6 +194,7 @@ export async function evaluateAtddCodeTraceability(
   const tcRefs: AtddSpecRefs = new Map<string, Map<string, Set<string>>>();
   const apiRefs = new Map<string, Set<string>>();
 
+  const skippedTestFiles: string[] = [];
   const unknown: AtddUnknownRef[] = [];
   const unknownDedup = new Set<string>();
 
@@ -210,6 +213,11 @@ export async function evaluateAtddCodeTraceability(
       integrationRoot,
     });
     if (!kind) {
+      // Recorded, not dropped. A correctly annotated test outside the three
+      // scanned roots contributes nothing to coverage and used to vanish with
+      // no diagnostic — which is how `qfai atdd scaffold` could write files
+      // that every gate then reported as zero coverage.
+      skippedTestFiles.push(toPosixPath(path.relative(root, file)));
       continue;
     }
 
@@ -275,6 +283,13 @@ export async function evaluateAtddCodeTraceability(
     }
   }
 
+  // Test files that carry a QFAI annotation but sit outside the three scanned
+  // roots. They contribute nothing to coverage and used to vanish without a
+  // diagnostic — which is how `qfai atdd scaffold` could write files that every
+  // gate then reported as zero coverage. Probed separately because the main
+  // scan is glob-scoped to the three roots and never sees them.
+  skippedTestFiles.push(...(await collectUncountedTestFiles(root, testsRoot)));
+
   const missing = buildMissingRefs({
     specUsIds,
     usObligationScope: uiBearingSpecs,
@@ -307,6 +322,7 @@ export async function evaluateAtddCodeTraceability(
     },
     missing,
     missingTcHomes,
+    skippedTestFiles: skippedTestFiles.sort(),
     scan: {
       globs: scanGlobs,
       matchedFileCount: scanResult.matchedFileCount,
@@ -314,6 +330,44 @@ export async function evaluateAtddCodeTraceability(
       limit: scanResult.limit,
     },
   };
+}
+
+/**
+ * Annotated test files under `testsDir` that no scanned root owns.
+ *
+ * Deliberately scoped to the directories qfai itself has written to, rather
+ * than walking the whole tree: the point is to surface output the toolkit
+ * produced and then ignored, not to audit a project's own layout.
+ */
+const UNCOUNTED_TEST_DIRS = ["atdd"];
+
+/** Any QFAI test annotation, in any of its forms. */
+const ANY_QFAI_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:(?:US|TC)-|CON-(?:API|DB)-)/;
+
+async function collectUncountedTestFiles(root: string, testsRoot: string): Promise<string[]> {
+  const patterns = UNCOUNTED_TEST_DIRS.map(
+    (dir) =>
+      `${toPosixPath(path.join(testsRoot, dir)).replace(/\/+$/, "")}/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}`,
+  );
+  let files: string[];
+  try {
+    const collected = await collectFilesByGlobs(root, {
+      globs: patterns,
+      ignore: DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
+      limit: DEFAULT_GLOB_FILE_LIMIT,
+    });
+    files = collected.files;
+  } catch {
+    // A probe that only annotates the scan must not be able to fail it.
+    return [];
+  }
+  const annotated: string[] = [];
+  for (const file of files) {
+    if (ANY_QFAI_ANNOTATION.test(await readSafe(file))) {
+      annotated.push(toPosixPath(path.relative(root, file)));
+    }
+  }
+  return annotated.sort();
 }
 
 type SpecScopedRef = {
