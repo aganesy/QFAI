@@ -35,6 +35,7 @@ Do not proceed without a declared Change Type.
 - Read and enforce `.qfai/assistant/constitution/drift-protocol.md`.
 - Downstream phases must not edit upstream SSOT artifacts without explicit user approval.
 - If drift is required, STOP and raise a Change Request (3 options + recommendation), then wait for approval and rerun the owner skill.
+- The STOP is scoped: it halts the affected upstream artifact and every downstream item that depends on it, which the Change Request enumerates. Unaffected items continue, and more than one Change Request may be open at once — see `drift-protocol.md#multiple-open-change-requests`.
 
 ## Test-layer policy (Mandatory)
 
