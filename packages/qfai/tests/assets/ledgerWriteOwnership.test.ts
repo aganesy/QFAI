@@ -38,7 +38,12 @@ describe.each(QFAI_TREES)("%s", (tree) => {
   it("writes both columns the gate reads, not just Status", async () => {
     const skill = await read(tree, SKILL);
     expect(skill).toContain("update `test-list.md` **Status and Evidence** after each phase");
-    expect(skill).toContain("copying the delegated agent's RED/GREEN command+result verbatim");
+    // The payload goes to the evidence file; the cell takes the outcome and
+    // the anchor. Asserting the old "verbatim into the cell" wording pinned an
+    // instruction that corrupts the ledger gate item 10 reads (#464).
+    expect(skill).toContain(
+      "recording the delegated agent's one-word RED/GREEN outcome plus the anchor",
+    );
     // The old instruction is what left `Evidence` unowned.
     expect(skill).not.toContain("update `test-list.md` status after each phase completes.");
   });

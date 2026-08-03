@@ -182,7 +182,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 - Orchestrator MUST NOT write test or production code directly; delegate every TDD phase to the routed implementation agents.
 - Additional implement-specific overrides:
   - read `test-list.md`, determine the next pending item, and delegate each TDD phase;
-  - update `test-list.md` **Status and Evidence** after each phase completes, copying the delegated agent's RED/GREEN command+result verbatim. Gate item 10 requires both columns, the protocol permits both, and the orchestrator is the only role permitted to write this file (`references/parallelization-policy.md#ledger-ownership`).
+  - update `test-list.md` **Status and Evidence** after each phase completes, recording the delegated agent's one-word RED/GREEN outcome plus the anchor into `.qfai/evidence/implement-<spec-id>.md`, and that agent's command+result verbatim in the evidence file itself — a GFM cell cannot hold either a newline or a bare `|` (`references/execution-ledger.md#evidence-cell-contract`). Gate item 10 requires both columns, the protocol permits both, and the orchestrator is the only role permitted to write this file (`references/parallelization-policy.md#ledger-ownership`).
 
 ### Formal Sub-agent Roster
 
