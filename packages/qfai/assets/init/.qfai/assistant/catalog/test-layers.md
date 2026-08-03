@@ -59,6 +59,13 @@ read, reported on, and then ignored on every modern project.
   (warning). Without it the two could drift in either direction and this file
   would not be an SSOT.
 
+## Scaffolded tests
+
+`npx qfai atdd scaffold` writes skeletons to `<testsDir>/integration/<spec-id>/`.
+There is deliberately no `<testsDir>/atdd/**` row below: a fourth root would
+need a rule for which layer such a file belongs to, and qfai has none. The
+writer targets a declared layer instead.
+
 ## Layer definitions
 
 ### L1 Unit
@@ -388,3 +395,23 @@ Treat these as review signals in the same class as volume floors — worth a fin
 - one test module holding a disproportionate share of a spec's `assert` statements
 - a very low `test_` functions per file ratio in a module that carries many obligations
 - a single selector whose recorded runtime grows monotonically across RED rounds
+
+## Test stub detection (QFAI-TEST-001 / QFAI-TEST-002)
+
+`QFAI-TEST-001` (error) reports the silent-placeholder construct of each
+supported stack:
+
+| Extensions           | Construct                                                           |
+| -------------------- | ------------------------------------------------------------------- |
+| `.ts` / `.js` family | `it.todo(` / `test.todo(` / `describe.todo(`                        |
+| `.py`                | `pytest.skip(`, `@pytest.mark.skip/skipif/xfail`, `@unittest.skip*` |
+| `.go`                | `t.Skip*(`                                                          |
+| `.java` / `.kt`      | `@Disabled` / `@Ignore`                                             |
+| `.rs`                | `#[ignore]`                                                         |
+| `.rb`                | a line starting `skip` / `pending`                                  |
+| `.cs`                | `[Ignore` / `Skip = "`                                              |
+
+`QFAI-TEST-002` (info) names any extension the scan opened that has no dialect.
+Without it a clean run on an unsupported stack is indistinguishable from a
+checked one — the detector used to be JS-only while file selection was
+stack-agnostic, so every other stack got a clean result that meant nothing.

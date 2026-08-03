@@ -1,6 +1,4 @@
-import { DEFAULT_GLOB_FILE_LIMIT } from "./fs.js";
-import type { Issue, ValidationProfile, ValidationResult } from "./types.js";
-import { resolveToolVersion } from "./version.js";
+import type { Issue, ValidationProfile } from "./types.js";
 
 export function isCiEnvironment(env: NodeJS.ProcessEnv = process.env): boolean {
   return env.CI === "true" || env.GITHUB_ACTIONS === "true";
@@ -24,7 +22,14 @@ export function isCiEnvironment(env: NodeJS.ProcessEnv = process.env): boolean {
 // alongside the existing `full` validate step against the sandbox
 // (`--root tmp/pack/sandbox/out`), broad coverage is preserved.
 //
-// Narrow phase profiles (discussion / prototyping / atdd) remain rejected.
+// A profile outside this set is REPORTED, not blocked. It used to be a hard
+// `error` that replaced the entire run — and `qfai-atdd`, `qfai-discussion`
+// and `qfai-prototyping` each name one of those profiles as their **only**
+// completion gate, with no CI-legal fallback documented. Every one of the three
+// became uncompletable the moment it ran anywhere that exports `CI=true`, which
+// is GitHub Actions, most hosted agent runners, and many devcontainers. A guard
+// against accidental narrowing must not make a deliberate stage gate
+// unreachable.
 const CI_ALLOWED_PROFILES = new Set<ValidationProfile>(["full", "verify", "tdd", "sdd"]);
 
 export function buildCiProfileIssue(
@@ -34,55 +39,20 @@ export function buildCiProfileIssue(
   if (profile === undefined || CI_ALLOWED_PROFILES.has(profile) || !isCiEnvironment(env)) {
     return null;
   }
+  // Generated from the allowlist so the operator-facing strings cannot drift
+  // from the code. They named three profiles while the set held four.
+  const allowed = [...CI_ALLOWED_PROFILES].join(" / ");
   return {
     code: "QFAI-VALIDATE-017",
-    severity: "error",
+    severity: "warning",
     category: "change",
     message:
-      "CI では部分 validation profile は使用できません。full/verify/tdd profile を使用してください。",
+      `CI で full-scan ではない profile "${profile}" を実行しています。stage gate としては有効ですが、` +
+      `完了宣言の根拠にはなりません（full-scan は ${allowed}）。`,
     rule: "VALIDATE-017",
     suggested_action:
-      "CI では --profile full / --profile verify / --profile tdd（または --profile 指定なし）のいずれかで実行してください。",
-  };
-}
-
-export async function createProfileGuardResult(
-  profile: ValidationProfile,
-  blockedIssue: Issue,
-): Promise<ValidationResult> {
-  const toolVersion = await resolveToolVersion();
-  return {
-    toolVersion,
-    profile,
-    issues: [blockedIssue],
-    counts: {
-      info: 0,
-      warning: 0,
-      error: 1,
-    },
-    traceability: {
-      sc: {
-        total: 0,
-        covered: 0,
-        missing: 0,
-        missingIds: [],
-        refs: {},
-      },
-      testFiles: {
-        globs: [],
-        excludeGlobs: [],
-        matchedFileCount: 0,
-        truncated: false,
-        limit: DEFAULT_GLOB_FILE_LIMIT,
-      },
-    },
-    waivers: {
-      active: [],
-      suppressed: {
-        total: 0,
-        byWaiver: {},
-        byRule: {},
-      },
-    },
+      `stage gate としての実行であればそのままで構いません。完了を宣言する前に ` +
+      `--profile full（または --profile 指定なし）で full-scan を実行してください。CI で full-scan と` +
+      `みなされる profile: ${allowed}。`,
   };
 }

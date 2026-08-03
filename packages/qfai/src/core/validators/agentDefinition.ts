@@ -27,7 +27,39 @@ type RoutingPhase = {
   conditional_agents?: unknown;
   blocking_agents?: unknown;
   parallel_groups?: unknown;
+  iteration?: unknown;
+  rerun_policy?: unknown;
 };
+
+/**
+ * How often a routing phase runs.
+ *
+ * The schema had no iteration concept at all, so every phase list read as one
+ * pass over the whole invocation. That is wrong for `qfai-implement`, which
+ * drives the TDD micro-cycle one ledger row at a time: collapsing its phases
+ * into a single pass left `qa-gatekeeper` no slot in which a RED state still
+ * exists to be observed.
+ *
+ * The key is optional and `per-invocation` is the default, so manifests that
+ * predate it keep their meaning. What is validated is the *value*: a typo like
+ * `per-item` would otherwise be read as "no iteration declared" and silently
+ * restore the collapsed reading it was added to fix.
+ */
+const ROUTING_ITERATIONS = new Set(["per-invocation", "per-ledger-item"]);
+
+/**
+ * What a phase re-runs when it is entered a second time.
+ *
+ * The key was on all 23 routed phases, defined nowhere, read by nothing, and
+ * absent from this type — so a typo in it was invisible and the two values in
+ * use were folklore. It is validated rather than deleted because the Drift
+ * Protocol's rerun step needs exactly this vocabulary.
+ *
+ * - `failed-agents-only` — re-run only the agents that did not return PASS.
+ * - `changed-scope-dependents` — re-run every agent whose inputs the change
+ *   touched, including ones that passed.
+ */
+const RERUN_POLICIES = new Set(["failed-agents-only", "changed-scope-dependents"]);
 
 /**
  * Resolve a manifest YAML file by checking the new canonical layer first
@@ -291,6 +323,34 @@ async function validateRouting(
           continue;
         }
         const phaseObj = phase as RoutingPhase;
+        if (phaseObj.iteration !== undefined) {
+          const declared = phaseObj.iteration;
+          if (typeof declared !== "string" || !ROUTING_ITERATIONS.has(declared)) {
+            issues.push(
+              issue(
+                "QFAI-AGENT-013",
+                `${formatSkillLabel(routeObj.skill, routeIndex)} phase[${phaseIndex}] declares iteration ${JSON.stringify(declared)}; allowed: ${[...ROUTING_ITERATIONS].sort().join(", ")}`,
+                "error",
+                rel,
+                "agentDefinition.routingIteration",
+              ),
+            );
+          }
+        }
+        if (phaseObj.rerun_policy !== undefined) {
+          const declared = phaseObj.rerun_policy;
+          if (typeof declared !== "string" || !RERUN_POLICIES.has(declared)) {
+            issues.push(
+              issue(
+                "QFAI-AGENT-013",
+                `${formatSkillLabel(routeObj.skill, routeIndex)} phase[${phaseIndex}] declares rerun_policy ${JSON.stringify(declared)}; allowed: ${[...RERUN_POLICIES].sort().join(", ")}`,
+                "error",
+                rel,
+                "agentDefinition.rerunPolicy",
+              ),
+            );
+          }
+        }
         validateAgentRefs(
           rel,
           phaseObj.mandatory_agents,

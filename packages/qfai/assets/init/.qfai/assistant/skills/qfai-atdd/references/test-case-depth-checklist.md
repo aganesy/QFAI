@@ -56,6 +56,22 @@ When multiple conditions interact:
 - [ ] Every BR-\* referenced in 04_Business-Rules.md has at least one positive and one negative test case.
 - [ ] Conditional business rules have test cases for each branch.
 
+## 8. Oracle Strength (オラクル強度)
+
+The seven sections above count **case categories**. This one asks whether each
+case's assertion can fail. A test that cannot fail satisfies every category.
+
+- [ ] No assertion uses truthiness where the boundary's own value is available
+      (`toBeTruthy()` on a result whose expected value is in hand).
+- [ ] No assertion compares a stored value against the same helper the fixture
+      wrote it with — that holds for every implementation, including a wrong one.
+- [ ] No loop asserts over a collection that is empty by construction.
+- [ ] No assertion observes a field the transport discards or a log the harness
+      swallows.
+- [ ] No assertion merely verifies a mock was called with what the test passed it.
+- [ ] Each case has a named production mutation that makes it fail, or a recorded
+      `equivalent-mutant` with the weaker contract clause named.
+
 ---
 
 ## Coverage Depth Matrix (テンプレート)
@@ -63,14 +79,17 @@ When multiple conditions interact:
 Reviewers and test-design-analysts MUST produce this matrix for each spec under review.
 Mark each cell: ✅ covered, ⚠️ partial, ❌ missing.
 
-| US/TC ID | Normal path | Error path | Boundary values | Special values | State transitions | Combinatorial | Status |
-| -------- | ----------- | ---------- | --------------- | -------------- | ----------------- | ------------- | ------ |
-| US-0001  | ✅/⚠️/❌    | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌          | ✅/⚠️/❌      | —      |
-| TC-0001  | ✅/⚠️/❌    | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌          | ✅/⚠️/❌      | —      |
+| US/TC ID | Normal path | Error path | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status |
+| -------- | ----------- | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
+| US-0001  | ✅/⚠️/❌    | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌          | ✅/⚠️/❌      | ✅/⚠️/❌        | —      |
+| TC-0001  | ✅/⚠️/❌    | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌          | ✅/⚠️/❌      | ✅/⚠️/❌        | —      |
 
 ### Evaluation criteria
 
 - **PASS**: All cells are ✅ or ⚠️ with documented rationale for partial coverage.
+- **Oracle strength is not waivable by category coverage.** A row whose six
+  category cells are ✅ and whose Oracle strength cell is ❌ is a REVISE: it has
+  cases in every category and no evidence that any of them can fail.
 - **REVISE**: Any cell is ❌ without an explicit justification (e.g., Decision Record).
 
 ### Usage

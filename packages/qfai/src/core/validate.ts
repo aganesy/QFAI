@@ -65,6 +65,7 @@ import {
   validateSddDesignContractReadiness,
   validatePrototypingSkillContent,
   runCanonicalUixValidators,
+  validateMarkdownTableArity,
   validateTraceabilityIntegrity,
   validateUiEvidenceArtifacts,
   validateTestTodoStubs,
@@ -275,6 +276,9 @@ async function runSddValidators(
   return [
     ...(await validateMermaidEnforcement(root)),
     ...(await validateSpecPacks(root, config)),
+    // One central arity check for every spec-pack table. Without it a stray
+    // pipe silently shifts the columns every other validator reads.
+    ...(await validateMarkdownTableArity(root, config)),
     ...(await validateStatusInSpecs(root, config)),
     ...(await validateDensityHints(root, config)),
     ...(await validateSpecSplitByCapability(root, config)),
