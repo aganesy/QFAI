@@ -40,54 +40,68 @@ jobs:
     outputs:
       version: ${{ steps.pin.outputs.version }}
       tag: ${{ steps.pin.outputs.tag }}
+      sha: ${{ steps.pin.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref_name }}
-          # `git merge-base` below needs main's history, not a shallow tip.
+          # Not the input: the repository default, so nothing the dispatcher
+          # controls decides what code is checked out before it is validated.
+          # The tag is resolved through `refs/tags/` below and everything
+          # afterwards runs against the SHA that resolution produced.
           fetch-depth: 0
       - name: Resolve and check the version the tag claims
         id: pin
+        env:
+          # Through the environment, never through `${{ }}` inside `run`. A
+          # dispatcher-supplied value spliced into the script can close a quote
+          # and run its own commands — including forging this step's outputs so
+          # gate and publish proceed against a ref nothing validated.
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           set -euo pipefail
-          tag="${{ inputs.tag || github.ref_name }}"
-          case "$tag" in
+          case "$RELEASE_TAG" in
             v[0-9]*.[0-9]*.[0-9]*) ;;
-            *) echo "::error::'${tag}' is not a vX.Y.Z release tag"; exit 1 ;;
+            *) echo "::error::'$RELEASE_TAG' is not a vX.Y.Z release tag"; exit 1 ;;
           esac
-          version="${tag#v}"
+          version="${RELEASE_TAG#v}"
 
-          pkg="$(node -p "require('./packages/qfai/package.json').version")"
+          # Fully qualified, so a branch that happens to share the tag's name
+          # cannot stand in for it. `^{commit}` dereferences an annotated tag.
+          git fetch --no-tags origin "+refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
+          if ! sha="$(git rev-parse --verify --quiet "refs/tags/${RELEASE_TAG}^{commit}")"; then
+            echo "::error::refs/tags/${RELEASE_TAG} does not exist"
+            exit 1
+          fi
+
+          pkg="$(git show "${sha}:packages/qfai/package.json" | node -p "JSON.parse(require('fs').readFileSync(0,'utf-8')).version")"
           if [ "$version" != "$pkg" ]; then
-            echo "::error::tag ${tag} does not match packages/qfai/package.json#version ${pkg}"
+            echo "::error::tag $RELEASE_TAG does not match packages/qfai/package.json#version $pkg"
             exit 1
           fi
 
           # Literal prefix match, not a regex: as a basic regular expression the
           # dots in `1.10.0` match any character, so a `## [1x10x0]` heading
-          # would satisfy `grep` here and then break the awk extraction that
+          # would satisfy the check here and then break the awk extraction that
           # builds the release notes — publishing while the GitHub Release
-          # silently fails. `index($0, h) == 1` is the same comparison the notes
-          # step makes, so the two cannot disagree.
-          if ! awk -v h="## [${version}] - " 'index($0, h) == 1 { found = 1 } END { exit !found }' CHANGELOG.md; then
+          # silently fails. `index($0, h) == 1` is the comparison the notes step
+          # makes, so the two cannot disagree.
+          if ! git show "${sha}:CHANGELOG.md" | awk -v h="## [${version}] - " 'index($0, h) == 1 { found = 1 } END { exit !found }'; then
             echo "::error::CHANGELOG.md has no released heading for ${version} (expected '## [${version}] - YYYY-MM-DD')"
             exit 1
           fi
 
-          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
-          echo "version=${version}" >> "$GITHUB_OUTPUT"
-        shell: bash
-      - name: Require the tagged commit to be on main
-        # A tag can be pushed onto any commit, including one on an unmerged
-        # branch. Without this, code that never passed branch protection or
-        # review could reach npm just by being tagged.
-        run: |
-          set -euo pipefail
+          # A tag can be pushed onto any commit, including one on an unmerged
+          # branch. Without this, code that never passed branch protection or
+          # review could reach npm just by being tagged.
           git fetch --no-tags origin main
-          if ! git merge-base --is-ancestor HEAD origin/main; then
-            echo "::error::${{ steps.pin.outputs.tag }} points at a commit that is not an ancestor of origin/main"
+          if ! git merge-base --is-ancestor "$sha" origin/main; then
+            echo "::error::$RELEASE_TAG points at a commit that is not an ancestor of origin/main"
             exit 1
           fi
+
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
         shell: bash
 
   # ── 2. The gate main is held to, re-run on the tagged tree ───────
@@ -98,7 +112,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.verify.outputs.tag }}
+          ref: ${{ needs.verify.outputs.sha }}
           fetch-depth: 0
       - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
         run: corepack enable
@@ -138,26 +152,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.verify.outputs.tag }}
+          ref: ${{ needs.verify.outputs.sha }}
       - name: Extract this version's CHANGELOG section
+        env:
+          RELEASE_VERSION: ${{ needs.verify.outputs.version }}
         run: |
           set -euo pipefail
           mkdir -p tmp
           # From this version's heading to the next `## [` heading, exclusive.
-          awk -v h="## [${{ needs.verify.outputs.version }}] - " '
+          awk -v h="## [${RELEASE_VERSION}] - " '
             index($0, h) == 1 { inside = 1; next }
             inside && /^## \[/ { exit }
             inside { print }
           ' CHANGELOG.md > tmp/release-notes.md
           if [ ! -s tmp/release-notes.md ]; then
-            echo "::error::no CHANGELOG body for ${{ needs.verify.outputs.version }}"
+            echo "::error::no CHANGELOG body for ${RELEASE_VERSION}"
             exit 1
           fi
         shell: bash
       - name: Create the release
-        run: gh release create "${{ needs.verify.outputs.tag }}" --title "qfai ${{ needs.verify.outputs.version }}" --notes-file tmp/release-notes.md
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.verify.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.verify.outputs.version }}
+        run: gh release create "$RELEASE_TAG" --title "qfai $RELEASE_VERSION" --notes-file tmp/release-notes.md
         shell: bash
 
   # ── 4. npm publish, only on an explicit manual dispatch ──────────
@@ -176,7 +194,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.verify.outputs.tag }}
+          ref: ${{ needs.verify.outputs.sha }}
       - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
         run: corepack enable
         shell: bash
@@ -193,11 +211,12 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
-            echo "::error::NPM_TOKEN is not configured; cannot publish ${{ needs.verify.outputs.version }}"
+            echo "::error::NPM_TOKEN is not configured; cannot publish ${RELEASE_VERSION}"
             exit 1
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          RELEASE_VERSION: ${{ needs.verify.outputs.version }}
         shell: bash
       - name: Build the publishable tree
         run: pnpm -C packages/qfai build
