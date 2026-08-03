@@ -33,10 +33,8 @@ QFAI Skill Body (SSOT)
 
 ## Preconditions
 
-- **`.qfai/specs/<spec-id>/tdd/test-list.md` must exist and contain the eight
-  required columns.** It is the ledger every step of this skill reads.
-- **Producer**: `/qfai-sdd` Phase 2b seeds it. Do **not** proceed with an absent
-  ledger and do **not** invent rows that no TC backs.
+- **`.qfai/specs/<spec-id>/tdd/test-list.md` must exist and contain the eight required columns.** It is the ledger every step of this skill reads.
+- **Producer**: `/qfai-sdd` Phase 2b seeds it. Do **not** proceed with an absent ledger and do **not** invent rows that no TC backs.
 - **An empty ledger is a fault only when `06_Test-Cases.md` disagrees.** Never read a header-only
   table as "nothing to do" on its own. The recovery procedure and the coverage-target test that
   separates a truthfully empty ledger from an incomplete one are in
@@ -317,7 +315,7 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 2. A failing test was added first (test-first) — **or**, on the _RED not observable_ path, the correct test was added first and proven falsifiable by mutation instead of by a natural failure
 3. RED was observed — `qa-gatekeeper` confirmed an **admissible** failure: an assertion or expected-exception check inside the row's `Selector`, not a load or fixture error (`references/red-admissibility.md`), **or** the row carries falsifiability evidence per _RED not observable_
 4. Minimal production code was written to make the test pass — **waived** on the _RED not observable_ path, where the `Satisfied-by` row already implements the predicate; do not manufacture a change to satisfy this item
-5. GREEN was observed — `qa-gatekeeper` confirmed the test passes after implementation (watch it pass)
+5. GREEN was observed — `qa-gatekeeper` confirmed the test passes after implementation (watch it pass) **and** that the pass depends on this item's behaviour: `Oracle proof` records a production mutation that made the test fail again, or `equivalent-mutant` naming the weaker contract clause (`references/oracle-strength.md`). Exit code 0 alone does not distinguish a discriminating test from one that cannot fail
 6. Refactor was performed and GREEN was re-confirmed after refactor
 7. `completion-reviewer` returned PASS (spec / completion review gate)
 8. `implementation-reviewer` returned PASS (code quality review gate)
@@ -412,6 +410,7 @@ parts with different write points; the fields are the same, the sequencing is no
 - Each RED/GREEN cycle is one **round block** and every field above carries a `Round N:` prefix; numbering, the two rework paths and the full field list are in `references/round-evidence.md`
 - `Refactor verify command` — the exact command re-executed after refactor. Written once for the item as a whole, so it takes no `Round N:` prefix
 - `Refactor verify result` — the output confirming GREEN is maintained (likewise once per item)
+- `Oracle proof` — the smallest production change that makes this item's test fail again, its command and its failing output, reverted immediately; or `equivalent-mutant` naming the contract clause weaker than the obligation. A row on the _RED not observable_ path satisfies this with its falsifiability fields (`references/oracle-strength.md`)
 
 These exist _for_ the reviewers: they are the evidence items 7-8 audit. They MUST be present when a
 review is requested.
