@@ -1,0 +1,159 @@
+name: Release
+
+# Tag-driven. Pushing `vX.Y.Z` is the release action; nothing here fires on a
+# branch push, so a merge to main never publishes on its own.
+#
+# The tag is a claim about a commit, and this workflow's first job is to refuse
+# to act on a false one: the tag name, `packages/qfai/package.json#version` and
+# the `CHANGELOG.md` heading must agree before anything is published. A mismatch
+# is how a release goes out as the wrong version, and it is silent afterwards.
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+env:
+  NODE_LTS: "20.19"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # ── 1. The tag says what this is; check that the tree agrees ──────
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.pin.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve the version the tag claims
+        id: pin
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          version="${tag#v}"
+          pkg="$(node -p "require('./packages/qfai/package.json').version")"
+          if [ "$version" != "$pkg" ]; then
+            echo "::error::tag ${tag} does not match packages/qfai/package.json#version ${pkg}"
+            exit 1
+          fi
+          if ! grep -q "^## \[${version}\] - " CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no released heading for ${version} (expected '## [${version}] - YYYY-MM-DD')"
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+  # ── 2. The same gate `main` runs, re-run against the tagged tree ──
+  # A tag can point at any commit, including one that never passed CI, so this
+  # does not trust the merge run — it re-runs the full gate on what is about to
+  # ship.
+  gate:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
+        run: corepack enable
+        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_LTS }}
+          cache: pnpm
+      - name: Re-shim pnpm against toolcache Node
+        run: corepack prepare pnpm@9.12.3 --activate
+        shell: bash
+      - run: pnpm install --frozen-lockfile
+      - name: Run the release gate
+        # `ci:gate` is the same aggregate `main` is held to: SSOT sync, format,
+        # lint, types, package tests and the pack verification.
+        run: pnpm ci:gate
+        env:
+          # The branch-name version pin is a PR-time guard; on a tag there is no
+          # branch to read, and `verify` above has already checked the stronger
+          # claim (tag == package.json == CHANGELOG).
+          VERSION_PIN_SKIP: "1"
+
+  # ── 3. Publish to npm ────────────────────────────────────────────
+  # Requires the `NPM_TOKEN` secret. Without it the job fails loudly rather
+  # than skipping: a release that silently does not publish looks identical to
+  # one that did.
+  publish:
+    needs: [verify, gate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    permissions:
+      contents: read
+      id-token: write # npm provenance
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
+        run: corepack enable
+        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_LTS }}
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org"
+      - name: Re-shim pnpm against toolcache Node
+        run: corepack prepare pnpm@9.12.3 --activate
+        shell: bash
+      - run: pnpm install --frozen-lockfile
+      - name: Require the publish credential
+        run: |
+          set -euo pipefail
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::error::NPM_TOKEN is not configured; cannot publish ${{ needs.verify.outputs.version }}"
+            exit 1
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        shell: bash
+      - name: Build the publishable tree
+        run: pnpm -C packages/qfai build
+      - name: Publish
+        # `--provenance` ties the tarball to this workflow run. `--no-git-checks`
+        # because pnpm otherwise refuses to publish from a detached tag checkout.
+        run: pnpm -C packages/qfai publish --access public --provenance --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # ── 4. GitHub Release, with this version's CHANGELOG section ─────
+  github-release:
+    needs: [verify, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # create the release
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract this version's CHANGELOG section
+        id: notes
+        run: |
+          set -euo pipefail
+          version="${{ needs.verify.outputs.version }}"
+          # From this version's heading to the next `## [` heading, exclusive.
+          awk -v v="## [${version}] - " '
+            index($0, v) == 1 { inside = 1; next }
+            inside && /^## \[/ { exit }
+            inside { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "::error::no CHANGELOG body for ${version}"
+            exit 1
+          fi
+        shell: bash
+      - name: Create the release
+        run: gh release create "${GITHUB_REF_NAME}" --title "qfai ${{ needs.verify.outputs.version }}" --notes-file release-notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash

@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-08-03
+
 ### Added
 
 - `TDDLIST_UNKNOWN_LEVEL` (warning): `tdd/test-list.md` validation now reports
