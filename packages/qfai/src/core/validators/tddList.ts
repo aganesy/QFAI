@@ -32,8 +32,16 @@ const REQUIRED_COLUMNS = [
 // reviewer's REVISE. Without it a REVISE landed on `refactor`, whose only
 // outbound edge is `done`, and agents wrote invented state names into the
 // free-text Evidence column.
+// `blocked` is "cannot be started", which the vocabulary had no value for. The
+// only honest encoding was `todo` — exactly the status Phase Red selects next
+// and exactly the one that prohibits completion, so the determination was never
+// persisted and got re-derived, and disagreed about, on every planning pass.
+// `exception` cannot absorb it: that is scoped to an anomaly, demands a DR-ID at
+// `error`, and satisfies spec completion — so a blocked row filed there would
+// silently close the obligation.
 const VALID_STATUSES = new Set([
   "todo",
+  "blocked",
   "red",
   "green",
   "refactor",
@@ -41,6 +49,9 @@ const VALID_STATUSES = new Set([
   "done",
   "exception",
 ]);
+
+/** The column naming what a `blocked` row is waiting on. Optional; required on `blocked`. */
+const BLOCKED_BY_COLUMN = "Blocked-By";
 
 /**
  * The `Layer` values the shipped ledger schema declares
@@ -66,6 +77,85 @@ const TC_ID_TOKEN = /^TC-\d{4}(-\d{4})?$/;
 // exists; a rework row whose Test file is blank or deleted is an incomplete
 // ledger, not a valid intermediate state.
 const TEST_FILE_CHECK_STATUSES = new Set(["green", "refactor", "review-fix", "done"]);
+
+/**
+ * Statuses whose row has already run a TDD cycle, so its `Evidence` cell is
+ * owed the command+result pair that cycle produced.
+ *
+ * Deliberately the same set as `TEST_FILE_CHECK_STATUSES` but a separate
+ * constant: the two rules answer different questions ("is there a test file"
+ * vs "is there proof it ran"), and binding them to one name would make a later
+ * change to either silently move the other.
+ *
+ * `todo` and `red` are excluded because a row can legitimately sit there with
+ * nothing to show yet; `exception` is excluded because a parked row records its
+ * reason in `DR-ID`, which `TDDLIST_EXCEPTION_MISSING_DR` already gates.
+ */
+const EVIDENCE_CHECK_STATUSES = new Set(["green", "refactor", "review-fix", "done"]);
+
+/**
+ * An `Evidence` cell carrying no content: empty, or nothing but dash
+ * placeholders (ASCII hyphen, en dash, em dash).
+ *
+ * This is `qfai-implement/SKILL.md` "Empty evidence entries are rejected" in
+ * machine form. A ledger of `Evidence: -` rows was the observed failure.
+ */
+const EVIDENCE_PLACEHOLDER = /^[-–—\s]*$/;
+
+/**
+ * A verdict claim with no execution behind it — the `Status: PASS` shape
+ * `SKILL.md` names verbatim, plus the "should pass" / "looks good" phrasings
+ * the next bullet rejects.
+ */
+const EVIDENCE_VERDICT_WORD =
+  /\b(pass(?:ed|es|ing)?|fail(?:ed|s|ing)?|ok|ng|green|red|success(?:ful)?|looks good|should pass|all good)\b/i;
+
+/**
+ * A command invocation, recognised **structurally** rather than from a list of
+ * known runners.
+ *
+ * A runner allowlist (`npm` / `pytest` / `cargo` …) is exactly what makes
+ * `QFAI-TEST-001` fire on JS/TS and nothing else; repeating that here would
+ * give the Evidence gate the same stack blindness. What a command looks like in
+ * every stack is a program name followed by an argument that is not prose — a
+ * flag, a path, a selector, a filename or an assignment. So the match is: a
+ * bare word token, whitespace, then either a real flag (`-q`, `--filter`) or a
+ * token containing one of `/` `\` `.` `:` `=` `*`.
+ *
+ * The flag branch is `--?[A-Za-z]`, not `-\S`. The looser form matched an arrow:
+ * `Status: PASS -> 3 passed` read as command-shaped and slipped past this gate
+ * with no command in it at all — the exact evasion the gate exists to catch.
+ *
+ * `go test ./...`, `pytest -q tests/test_a.py::test_b`, `cargo test --lib`,
+ * `mvn -Dtest=Foo test` and `vitest run tests/foo.test.ts` all match on some
+ * adjacent pair; `Status: PASS` and `looks good` match on none.
+ */
+const EVIDENCE_COMMAND_SHAPE =
+  /(?:^|[\s`([{>$|&;])[A-Za-z_][\w.+-]*\s+(?:--?[A-Za-z][\w-]*|[^\s]*[/\\.:=*][^\s])/;
+
+/**
+ * Widely used test runners, as an **additional** acceptor.
+ *
+ * This list can only make the gate accept more, never reject more, so it
+ * cannot reintroduce stack bias: an unlisted runner still passes through
+ * `EVIDENCE_COMMAND_SHAPE`. It exists because argument-less invocations such as
+ * `npm test` carry no structural marker and would otherwise read as prose.
+ */
+const EVIDENCE_KNOWN_RUNNER =
+  /(?:^|[\s`([{>$|&;])(?:npm|pnpm|yarn|bun|npx|deno|node|vitest|jest|mocha|ava|karma|playwright|cypress|pytest|tox|nox|unittest|go|cargo|dotnet|mvn|gradle|make|rake|bundle|rspec|minitest|phpunit|pest|ctest|swift|flutter|dart|mix|sbt|stack|qfai)\b/i;
+
+/**
+ * True when the cell shows a command was actually run, not merely asserted.
+ *
+ * Backticks are deliberately NOT an acceptor of their own. A ```Status: PASS```
+ * span holds whitespace, so a "backticked span with more than one word"
+ * acceptor let the exact verdict this rule rejects launder itself into a
+ * command. Only the runner list and the structural shape decide, and both read
+ * through backticks unchanged.
+ */
+function hasCommandShape(evidence: string): boolean {
+  return EVIDENCE_KNOWN_RUNNER.test(evidence) || EVIDENCE_COMMAND_SHAPE.test(evidence);
+}
 
 /**
  * Test directories a `Layer` value implies. `null` means the layer has no
@@ -128,6 +218,66 @@ function isChangeRequestRefsOnly(drId: string): boolean {
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
 
 /**
+ * The declared shape of a Decision Record id.
+ *
+ * `DR-ID` was a hard, `error`-severity precondition for `exception` with no
+ * referent anywhere in the toolkit: no ID class, no row schema in either
+ * shipped Decisions template, and no validator that resolved the reference. Any
+ * non-empty string satisfied the gate, so the one thing a parked row was
+ * required to carry was the one thing nothing could check.
+ *
+ * Kept in step with `ids.ts#STRICT_ID_PATTERNS.DR` — anchored here because this
+ * validates one cell rather than scanning prose.
+ */
+const DR_ID_FORMAT = /^DR-\d{4}(?:-\d{4})?$/;
+
+/**
+ * Anything presenting itself as a DR id, so a malformed one is reported rather
+ * than ignored.
+ *
+ * `^DR[-_]?\d` was too narrow: `DR-ABCD` and `DR-foo` are exactly the invented
+ * tokens the format exists to surface, and they slipped through the non-empty
+ * check unreported. A separator or a digit after `DR` is enough to claim the
+ * prefix; whether the rest is well formed is what `DR_ID_FORMAT` decides.
+ */
+const DR_ID_SHAPED = /^DR[-_\d]/i;
+
+/** Files a `DR-*` may be declared in, relative to the spec dir / specs root. */
+const DR_DECLARATION_FILES = ["07_Decisions.md"];
+const DR_POLICY_DECLARATION_FILE = path.join("_policies", "08_Decisions.md");
+
+/** Waiver rule id for `TDDLIST_EXCEPTION_UNRESOLVED_DR`. */
+export const UNRESOLVED_DR_RULE_ID = "TDDLIST-003";
+
+function toPosixRel(value: string): string {
+  return value.replace(/\\/g, "/");
+}
+
+/**
+ * Every `DR-*` declared for this spec: its own `07_Decisions.md` plus the
+ * shared `_policies/08_Decisions.md`.
+ *
+ * Both files are read, not one: a policy-level decision is cited from spec
+ * ledgers, and resolving only against the spec-local file would report every
+ * such citation as unresolved.
+ */
+async function collectDeclaredDrIds(specDir: string, specsRoot: string): Promise<Set<string>> {
+  const declared = new Set<string>();
+  const files = [
+    ...DR_DECLARATION_FILES.map((name) => path.join(specDir, name)),
+    path.join(specsRoot, DR_POLICY_DECLARATION_FILE),
+  ];
+  for (const file of files) {
+    if (!(await exists(file))) continue;
+    const text = await readSafe(file);
+    for (const match of text.matchAll(/\bDR-\d{4}(?:-\d{4})?\b/g)) {
+      declared.add(match[0].toUpperCase());
+    }
+  }
+  return declared;
+}
+
+/**
  * Waiver rule id for `TDDLIST_EXCEPTION_PARKED`.
  *
  * A parked item that carries a user-approved accepted risk is a legitimate
@@ -150,6 +300,91 @@ export { EXCEPTION_PARKED_RULE_ID };
  * would have left the warning permanently unsuppressible.
  */
 export const UNKNOWN_LEVEL_RULE_ID = "TDDLIST-002";
+
+/**
+ * Waiver rule id for `TDDLIST_EVIDENCE_STATUS_ONLY`.
+ *
+ * The finding is a warning because pre-existing ledgers predate the check;
+ * a project that has audited its legacy rows silences them with a waiver rather
+ * than by rewriting evidence it can no longer reproduce.
+ */
+export const EVIDENCE_STATUS_ONLY_RULE_ID = "TDDLIST-004";
+
+/**
+ * Waiver rule id for `TDDLIST_STALE_STATUS`.
+ *
+ * A project that declares test paths and selectors before implementing them
+ * would see this on every not-yet-started row, which is a legitimate workflow.
+ * The waiver is the escape hatch, so the id must be resolvable by
+ * `waivers.ts#resolveRuleId`.
+ */
+export const STALE_STATUS_RULE_ID = "TDDLIST-005";
+
+/** Waiver rule id for `TDDLIST_SELECTOR_UNRESOLVED`. */
+export const SELECTOR_UNRESOLVED_RULE_ID = "TDDLIST-006";
+
+/**
+ * Read a ledger row's `Test file` cell, or `null` when it names nothing this
+ * validator may read.
+ *
+ * Mirrors Check 9's path handling — relative, inside the project root — but
+ * reports nothing: Check 9 already owns the diagnostics for a completion-
+ * claiming row, and a `todo` row with an absent test file is the normal case.
+ */
+async function readTestFileContent(root: string, testFile: string): Promise<string | null> {
+  if (testFile.length === 0) {
+    return null;
+  }
+  const normalized = testFile.replace(/\\/g, "/");
+  if (path.isAbsolute(normalized) || path.win32.isAbsolute(normalized)) {
+    return null;
+  }
+  const resolved = path.resolve(root, normalized);
+  const relative = path.relative(root, resolved);
+  if (relative === ".." || relative.startsWith(".." + path.sep)) {
+    return null;
+  }
+  try {
+    if (!(await stat(resolved)).isFile()) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+  const content = await readSafe(resolved);
+  return content.length > 0 ? content : null;
+}
+
+/**
+ * Whether a ledger `Selector` names something present in the test file.
+ *
+ * Selectors are written in whatever the project's runner accepts —
+ * `tests/x_test.py::TestA::test_b`, `describe > renders header`,
+ * `"renders the header"` — so this is a containment check, not a parse. Two
+ * chances to match, in order of strength:
+ *
+ * 1. the selector text after any `path::` prefix appears verbatim;
+ * 2. its last identifier-shaped token appears.
+ *
+ * Deliberately lenient. Both consumers treat a match as evidence *for* the
+ * test's presence, so a false negative costs a warning that a false positive
+ * would silently swallow.
+ */
+function selectorResolves(selector: string, content: string): boolean {
+  const trimmed = selector.replace(/^[`"']+|[`"']+$/g, "").trim();
+  if (trimmed.length === 0) {
+    return false;
+  }
+  const withoutPath = trimmed.includes("::")
+    ? trimmed.split("::").slice(1).join("::").trim() || trimmed
+    : trimmed;
+  if (withoutPath.length >= 3 && content.includes(withoutPath)) {
+    return true;
+  }
+  const tokens = withoutPath.match(/[A-Za-z_][A-Za-z0-9_]{2,}/g);
+  const last = tokens?.[tokens.length - 1];
+  return last !== undefined && content.includes(last);
+}
 
 /** Per-spec file that owns the Test Case Table, and the target of its findings. */
 const TEST_CASES_FILE_NAME = "06_Test-Cases.md";
@@ -184,7 +419,7 @@ export async function validateTddList(root: string, config: QfaiConfig): Promise
   const issues: Issue[] = [];
 
   for (const entry of entries) {
-    const specIssues = await validateSpecTddList(root, entry.dir, entry.specNumber);
+    const specIssues = await validateSpecTddList(root, entry.dir, entry.specNumber, specsRoot);
     issues.push(...specIssues);
   }
 
@@ -195,6 +430,7 @@ async function validateSpecTddList(
   root: string,
   specDir: string,
   specNumber: string,
+  specsRoot: string,
 ): Promise<Issue[]> {
   const filePath = path.join(specDir, TDD_LIST_REL_PATH);
   const relPath = toRelPath(root, filePath);
@@ -562,7 +798,38 @@ async function validateSpecTddList(
     }
   }
 
-  // Phase 2 – Check 8: Exception rows must have DR-ID
+  // Phase 2 – Check 8a: a blocked row must name its blocker.
+  //
+  // Without this the new status would be a second unfalsifiable state: "cannot
+  // start" with no record of what it is waiting on is the same re-derivation
+  // problem `todo` already had, one word further along.
+  const blockedByIndex = normalizedHeaders.indexOf(BLOCKED_BY_COLUMN);
+  if (statusIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const row = table.rows[rowIdx];
+      if (!row) continue;
+      if ((row[statusIndex] ?? "").trim().toLowerCase() !== "blocked") continue;
+      const blockedBy = blockedByIndex >= 0 ? (row[blockedByIndex] ?? "").trim() : "";
+      if (blockedBy.length > 0 && blockedBy !== "-") continue;
+      issues.push(
+        issue(
+          "TDDLIST_BLOCKED_MISSING_REF",
+          blockedByIndex < 0
+            ? `Status=blocked in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}) but the ledger has no ${BLOCKED_BY_COLUMN} column. Add it and name the blocker`
+            : `Status=blocked but ${BLOCKED_BY_COLUMN} is empty in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Name the blocker`,
+          "error",
+          relPath,
+          "tddList.blockedBy",
+          undefined,
+          "change",
+          `${BLOCKED_BY_COLUMN} 列に停止要因を記載してください: Change Request ID（\`CR-YYYYMMDD-NNNN\`）、行番号付きの契約パス（\`.qfai/contracts/db/CON-DB-0005.sql:2715\`）、または他 spec の行（\`spec-0006:TDD-0034\`）。`,
+        ),
+      );
+    }
+  }
+
+  // Phase 2 – Check 8: Exception rows must have a DR-ID that resolves
+  const declaredDrIds = await collectDeclaredDrIds(specDir, specsRoot);
   if (statusIndex >= 0 && drIdIndex >= 0) {
     for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
       const row = table.rows[rowIdx];
@@ -576,10 +843,60 @@ async function validateSpecTddList(
         issues.push(
           issue(
             "TDDLIST_EXCEPTION_MISSING_DR",
-            `Status=exception but ${reason} in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Add a DR-ID reference`,
+            `Status=exception but ${reason} in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Add a DR-ID reference in the form DR-NNNN or DR-NNNN-NNNN, declared in 07_Decisions.md (spec-scoped) or _policies/08_Decisions.md (policy-level)`,
             "error",
             relPath,
             "tddList.exceptionDrId",
+          ),
+        );
+        continue;
+      }
+
+      // "Non-empty" was the whole check, so a token the operator invented
+      // satisfied the one thing a parked row is required to carry. These two
+      // findings give the reference a referent — at `warning`, because ledgers
+      // written before the format existed must not start failing CI on upgrade.
+      const drTokens = drId
+        .split(/[,;\s]+/)
+        .map((token) => token.trim())
+        .filter((token) => token.length > 0 && !CHANGE_REQUEST_REF.test(token));
+
+      const malformed = drTokens.filter(
+        (token) => DR_ID_SHAPED.test(token) && !DR_ID_FORMAT.test(token.toUpperCase()),
+      );
+      if (malformed.length > 0) {
+        issues.push(
+          issue(
+            "TDDLIST_EXCEPTION_INVALID_DR",
+            `Malformed DR-ID ${malformed.join(", ")} in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Expected DR-NNNN (policy-level) or DR-NNNN-NNNN (spec-scoped)`,
+            "warning",
+            relPath,
+            "tddList.exceptionDrFormat",
+            malformed,
+            "change",
+            `DR-ID を DR-NNNN もしくは DR-NNNN-NNNN の形式に直してください。宣言先は spec の 07_Decisions.md、または _policies/08_Decisions.md です。`,
+          ),
+        );
+      }
+
+      const wellFormed = drTokens
+        .map((token) => token.toUpperCase())
+        .filter((token) => DR_ID_FORMAT.test(token));
+      const unresolved = wellFormed.filter((token) => !declaredDrIds.has(token));
+      if (unresolved.length > 0) {
+        issues.push(
+          issue(
+            "TDDLIST_EXCEPTION_UNRESOLVED_DR",
+            `DR-ID ${unresolved.join(", ")} in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}) is declared in no Decisions file. Searched ${DR_DECLARATION_FILES.join(", ")} and ${toPosixRel(DR_POLICY_DECLARATION_FILE)}`,
+            "warning",
+            relPath,
+            // Rule id, not a dotted path: `waivers.ts#resolveRuleId` accepts
+            // only `^[A-Z]+-\d{3}$`, and a project keeping its decision records
+            // somewhere qfai does not read needs a way to silence this.
+            UNRESOLVED_DR_RULE_ID,
+            unresolved,
+            "change",
+            `該当の Decision Record を spec の 07_Decisions.md（または _policies/08_Decisions.md）に記載してください。別の場所で管理している場合は \`.qfai/waivers.yml\` に rule: ${UNRESOLVED_DR_RULE_ID} の waiver を登録してください。`,
           ),
         );
       }
@@ -646,6 +963,78 @@ async function validateSpecTddList(
     }
   }
 
+  // Phase 2 – Check 9c: the ledger under-reporting.
+  //
+  // Check 9 only ever looks at rows that *claim* completion, so "row says
+  // `done` but the test file is missing" was an error while "the test exists
+  // and the row still says `todo`" was invisible. The second direction is the
+  // one that actually occurs, because work lands from parallel worktrees and
+  // the ledger is updated by hand afterwards. A stale `todo` and a genuinely
+  // not-started row are then indistinguishable to every downstream consumer,
+  // including the completion gate that reads the ledger.
+  //
+  // The selector is what makes this trustworthy: a test file typically hosts
+  // many rows, so file existence alone would fire on any row whose neighbours
+  // have landed. Requiring the row's own selector to resolve inside that file
+  // means the named test is really there.
+  const selectorIndex = normalizedHeaders.indexOf("Selector");
+  if (statusIndex >= 0 && testFileIndex >= 0 && selectorIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const row = table.rows[rowIdx];
+      if (!row) continue;
+      if ((row[statusIndex] ?? "").trim().toLowerCase() !== "todo") continue;
+      const content = await readTestFileContent(root, (row[testFileIndex] ?? "").trim());
+      if (content === null) continue;
+      const selector = (row[selectorIndex] ?? "").trim();
+      if (!selectorResolves(selector, content)) continue;
+      issues.push(
+        issue(
+          "TDDLIST_STALE_STATUS",
+          `Test file exists and its selector "${selector}" resolves, but Status=todo for spec-${specNumber} (row ${rowIdx + 1}). The ledger may be stale; reconcile it before completion`,
+          "warning",
+          relPath,
+          "tddList.staleStatus",
+          undefined,
+          "canonical",
+          `Set this row to the status the repository actually supports, or clear the Test file / Selector if the test does not belong to it. A project that declares test paths and selectors before implementing them registers a \`.qfai/waivers.yml\` waiver with rule: ${STALE_STATUS_RULE_ID}.`,
+        ),
+      );
+    }
+  }
+
+  // Phase 2 – Check 9d: `Selector` is a required column, so it has to be read.
+  //
+  // It was required and never read by any code in the package — a required
+  // column whose value nothing consumes is a false assurance. For rows that
+  // claim completion Check 9 has already established the file exists; this
+  // establishes the named test is in it, which is also what makes Check 9c
+  // above trustworthy.
+  if (statusIndex >= 0 && testFileIndex >= 0 && selectorIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const row = table.rows[rowIdx];
+      if (!row) continue;
+      const status = (row[statusIndex] ?? "").trim().toLowerCase();
+      if (!TEST_FILE_CHECK_STATUSES.has(status)) continue;
+      const selector = (row[selectorIndex] ?? "").trim();
+      if (selector.length === 0) continue;
+      const content = await readTestFileContent(root, (row[testFileIndex] ?? "").trim());
+      if (content === null) continue;
+      if (selectorResolves(selector, content)) continue;
+      issues.push(
+        issue(
+          "TDDLIST_SELECTOR_UNRESOLVED",
+          `Selector "${selector}" was not found in its Test file for spec-${specNumber} (row ${rowIdx + 1}, Status=${status})`,
+          "warning",
+          relPath,
+          "tddList.selectorResolves",
+          undefined,
+          "canonical",
+          `The row claims a completed test the file does not appear to contain — the test was renamed, moved, or the Selector is stale. Update the Selector, or register a \`.qfai/waivers.yml\` waiver with rule: ${SELECTOR_UNRESOLVED_RULE_ID} when the selector is written in a form this check cannot resolve.`,
+        ),
+      );
+    }
+  }
+
   // Phase 2 – Check 9b: Layer <-> Test file consistency.
   //
   // `Layer` was a required column whose value was never read, so a `Unit` row
@@ -671,6 +1060,77 @@ async function validateSpecTddList(
             "warning",
             relPath,
             "tddList.layerPathConsistency",
+          ),
+        );
+      }
+    }
+  }
+
+  // Phase 2 – Check 9c: Evidence content on rows that have run a cycle.
+  //
+  // `Evidence` was a required column whose *cell* nothing read: the string
+  // "Evidence" reached only the required-column header check, so a ledger whose
+  // every row said `-` passed `--profile tdd --fail-on error` with `error: 0` —
+  // the one machine gate `qfai-implement`'s FINAL CHECKLIST names. That made
+  // `error: 0` an actively misleading signal for the two SKILL.md hard rules
+  // encoded below, which until now only a human reading the prose could apply.
+  const evidenceIndex = normalizedHeaders.indexOf("Evidence");
+  if (statusIndex >= 0 && evidenceIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const row = table.rows[rowIdx];
+      if (!row) continue;
+      const status = (row[statusIndex] ?? "").trim().toLowerCase();
+      if (!EVIDENCE_CHECK_STATUSES.has(status)) continue;
+      const evidence = (row[evidenceIndex] ?? "").trim();
+      const rowLabel =
+        tddIdIndex >= 0 && (row[tddIdIndex] ?? "").trim().length > 0
+          ? `${(row[tddIdIndex] ?? "").trim()} (row ${rowIdx + 1})`
+          : `row ${rowIdx + 1}`;
+
+      if (EVIDENCE_PLACEHOLDER.test(evidence)) {
+        issues.push(
+          issue(
+            "TDDLIST_EVIDENCE_EMPTY",
+            `Evidence is empty for spec-${specNumber} ${rowLabel}, Status=${status}. A row past RED owes the command and its result ("Empty evidence entries are rejected", qfai-implement Evidence hard rules)`,
+            "error",
+            relPath,
+            "tddList.evidencePresent",
+            undefined,
+            "change",
+            `Evidence 列に実際に実行したコマンドとその結果を記録してください（例: \`npx vitest run tests/foo.test.ts\` → 3 passed）。まだ実行していない場合は Status を todo / red に戻してください。`,
+          ),
+        );
+        continue;
+      }
+
+      // Only a cell that *claims a verdict* can be status-only evidence. A cell
+      // holding some other note without a command is under-specified, but
+      // calling it "status-only" would be wrong and erroring on it would reject
+      // ledger content the hard rules never described.
+      if (EVIDENCE_VERDICT_WORD.test(evidence) && !hasCommandShape(evidence)) {
+        issues.push(
+          issue(
+            "TDDLIST_EVIDENCE_STATUS_ONLY",
+            `Evidence for spec-${specNumber} ${rowLabel} states a verdict with no command (Status=${status}): "${evidence}". Status-only evidence is invalid — both the command and its result are required`,
+            // `warning`, not `error`, and waivable.
+            //
+            // The hard rule says "MUST be rejected", and an error is what that
+            // deserves — but every ledger written before this check existed
+            // carries prose verdicts, and turning them into build failures on
+            // upgrade is a migration, not a gate. qfai's own repository has 99
+            // such rows. `TDDLIST_EVIDENCE_EMPTY` stays at `error` because an
+            // empty cell is unambiguous and was the observed failure; a prose
+            // verdict at least asserts something a reviewer can read.
+            //
+            // The rule id is the waivable `^[A-Z]+-\d{3}$` shape, so a project
+            // that has audited its legacy rows can silence them per path
+            // instead of being stuck between a false gate and a rewrite.
+            "warning",
+            relPath,
+            EVIDENCE_STATUS_ONLY_RULE_ID,
+            undefined,
+            "change",
+            `"Status: PASS" のような判定だけの記述は無効です。実行したコマンドを併記してください（例: \`npx vitest run tests/foo.test.ts\` → 3 passed）。`,
           ),
         );
       }

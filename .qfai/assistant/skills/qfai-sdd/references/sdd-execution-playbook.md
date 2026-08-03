@@ -10,8 +10,9 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 4. **Phase 1 - Outline**
 5. **Phase 2 - Slice** (per spec)
 6. **Phase 2b - Seed `tdd/test-list.md`** (per spec)
-7. **Phase 3 - Plan finalize** (per spec)
-8. **Phase 4 - Delta update** (per spec)
+7. **Phase 2c - Obligation reconciliation** (per spec)
+8. **Phase 3 - Plan finalize** (per spec)
+9. **Phase 4 - Delta update** (per spec)
 
 ## Stage 0: Preflight
 

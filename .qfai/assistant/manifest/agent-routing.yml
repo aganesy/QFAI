@@ -52,34 +52,66 @@ routing:
   # dispatch. An empty list means no roles run concurrently; it says
   # nothing about item-level parallelism, which `qfai-implement/SKILL.md`
   # `## Parallelization Policy` governs.
+  # `iteration` says how often a phase runs. `qfai-implement` drives the TDD
+  # micro-cycle one ledger row at a time, so `red`, `build` and `test` run once
+  # per row. Without this key the whole phase list read as a single pass over
+  # the batch, and the only slot `qa-gatekeeper` had was the terminal `review`
+  # phase — by which point production code exists and the RED state the
+  # gatekeeper is supposed to observe has been destroyed. The gate could then
+  # adjudicate nothing but the implementer's own written account, which is the
+  # self-attestation it exists to prevent.
   - skill: qfai-implement
     phases:
       - id: plan
+        iteration: per-invocation
         mandatory_agents: [delivery-planner, test-design-analyst]
         conditional_agents: []
         parallel_groups: []
         blocking_agents: [delivery-planner]
         rerun_policy: failed-agents-only
+      # The failing test exists and no production code does. This is the only
+      # window in which "watch it fail" is a first-hand observation, so the
+      # gatekeeper is mandatory AND blocking here: RED must be confirmed before
+      # the row is allowed to proceed to `build`.
+      - id: red
+        iteration: per-ledger-item
+        mandatory_agents: [qa-gatekeeper]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [qa-gatekeeper]
+        rerun_policy: failed-agents-only
       - id: build
-        mandatory_agents: []
+        iteration: per-ledger-item
+        mandatory_agents: [qa-gatekeeper]
         conditional_agents: [frontend-engineer, backend-engineer]
         parallel_groups:
           - [frontend-engineer, backend-engineer]
-        blocking_agents: []
+        blocking_agents: [qa-gatekeeper]
         rerun_policy: changed-scope-dependents
       - id: test
+        iteration: per-ledger-item
         mandatory_agents: []
         conditional_agents: [acceptance-test-engineer, qa-strategist]
         parallel_groups: []
         blocking_agents: []
         rerun_policy: changed-scope-dependents
+      # Still per-item: the reviewers judge one row (or one T1 coherent group),
+      # never the whole ledger at once. `qa-gatekeeper` stays listed because the
+      # completion gate re-reads its verdicts here; its RED/GREEN observations
+      # were already made in `red` and `build`.
       - id: review
+        iteration: per-ledger-item
         mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
         conditional_agents: [product-surface-reviewer]
         parallel_groups: []
-        blocking_agents: [qa-gatekeeper, completion-reviewer]
+        # `implementation-reviewer` is blocking, not advisory: it is item 8 of the
+        # unconditional 11-point gate in qfai-implement/SKILL.md, and every DONE
+        # rule in the skill and in shared-skill-delegation-baseline.md is phrased
+        # over *blocking* reviewers. Listing it as mandatory-only let an item
+        # reach `done` with the code-quality reviewer sitting at REVISE.
+        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
         rerun_policy: changed-scope-dependents
-    review_profile: runtime-heavy
+    review_profile: implementation-heavy
 
   - skill: qfai-atdd
     phases:
@@ -180,3 +212,13 @@ routing:
         blocking_agents: [qa-gatekeeper, completion-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: runtime-heavy
+
+# `rerun_policy` vocabulary (validated by `QFAI-AGENT-013`):
+#
+# - `failed-agents-only`        re-run only the agents that did not return PASS
+# - `changed-scope-dependents`  re-run every agent whose inputs the change
+#                               touched, including ones that passed
+#
+# The key was previously on all 23 phases, defined nowhere and read by nothing,
+# so a typo in it was invisible. `constitution/drift-protocol.md` step 4 uses the
+# same vocabulary when a Change Request names its rerun mode.

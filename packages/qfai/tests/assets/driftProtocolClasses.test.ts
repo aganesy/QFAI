@@ -79,7 +79,11 @@ describe("drift protocol distinguishes intent drift from defect drift", () => {
       // The ownership boundary is the whole point of the protocol; a severity
       // axis that softened it would be a regression, not a fix.
       expect(drift).toContain("Downstream skills must not patch upstream SSOT directly.");
-      expect(drift).toContain("1. STOP downstream editing immediately.");
+      // Step 1 still opens with the STOP. Its *scope* was narrowed to the
+      // affected artifact and its dependents (#444), which is why this asserts
+      // the opening rather than the whole sentence — what matters here is that
+      // a drift class cannot skip the halt.
+      expect(drift).toContain("1. STOP downstream editing");
     });
 
     it(`${tree}: the CR template carries Class and a Reproduction section`, async () => {

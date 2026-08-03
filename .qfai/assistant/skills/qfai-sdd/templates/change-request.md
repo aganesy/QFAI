@@ -70,6 +70,26 @@ was fabricated.
 | 2   | `<option>` | `<cost>` | `<risk>` | ✅          |
 | 3   | `<option>` | `<cost>` | `<risk>` |             |
 
+## Blocked downstream items
+
+<!--
+The set STOP covers for THIS Change Request
+(`constitution/drift-protocol.md#when-drift-is-detected`, step 1). Enumerate it
+— an item not listed here is not blocked by this CR and continues. The halt is
+not repository-wide, and this section is what makes that checkable.
+
+Also state what this CR does NOT block when it would otherwise be assumed, and
+name any other open CR whose blocked set overlaps: the effective halt is the
+union of the open CRs' blocked sets.
+-->
+
+| Item                       | Kind                               | Why it depends on the artifact |
+| -------------------------- | ---------------------------------- | ------------------------------ |
+| `<spec-NNNN / TDD-NNNN />` | `spec` / `ledger-row` / `contract` | `<TC-Refs names …>`            |
+
+- Not blocked by this CR: `<items a reader would expect to be blocked, and why they are not>`
+- Overlapping open CRs: `<CR-ID, …>` or `none`
+
 ## Impact scope
 
 - Specs: `<spec-NNNN, ...>`
