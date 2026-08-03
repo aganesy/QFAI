@@ -15,6 +15,11 @@ Upstream artifacts include, at minimum:
 - contracts and schema decisions owned by earlier phases
 - outputs of discussion/sdd/review stages
 
+One file inside `.qfai/specs/**` is carved out of that last line:
+`<spec-id>/tdd/test-list.md`, and only its `Status` / `DR-ID` / `Evidence`
+cells. See `#allowed-exceptions-minimal-whitelist`. Its **rows** — which obligations exist and
+what each covers — remain upstream.
+
 **Every artifact in this list requires an owner rerun by definition.** There is
 no downstream test for "is an owner rerun required here?" — being on this list
 is the answer, and the rerun is a _consequence_ of the artifact being upstream
@@ -26,13 +31,47 @@ case required reading the agent roster and reasoning backwards from it.
 ## Allowed exceptions (minimal whitelist)
 
 - `.qfai/evidence/**` append/update
-- progress status updates only when the project workflow explicitly allows downstream updates
+- `.qfai/specs/<spec-id>/tdd/test-list.md` — the `Status`, `DR-ID` and
+  `Evidence` cells only, append/update by `/qfai-implement`. Every other column
+  of that file, and every other file under `.qfai/specs/**`, stays upstream
+  SSOT: adding, removing or re-scoping a row is an upstream change and takes the
+  `#when-drift-is-detected` path.
 - **creating** a governance record under `.qfai/decisions/` — a Change Request
   (`CR-YYYYMMDD-NNNN-<slug>.md`, per `#when-drift-is-detected` step 2) or an
   anomaly Decision Record (`DR-<id>-<slug>.md`, where `<id>` follows the
   Decision Record ID scheme in the spec's `07_Decisions.md`)
 
 Any exception beyond this list requires explicit user approval.
+
+### Why the execution ledger is named here
+
+`/qfai-implement` must write `tdd/test-list.md` after every phase transition,
+and the file lives inside `.qfai/specs/**`. The protocol never classified it in
+either direction, but `#core-rule`'s list is explicitly open-ended ("at minimum")
+and sweeps in "outputs of discussion/sdd/review stages" — and the ledger's schema
+is documented in `skills/qfai-sdd/references/spec-traceability-rules.md`, an
+SDD-stage reference. On the natural reading the ledger _is_ an sdd-stage output,
+so "Downstream skills must not patch upstream SSOT directly" applied to it.
+
+The bullet that used to sit here — "progress status updates only when the project
+workflow explicitly allows downstream updates" — could not rescue that, for two
+reasons:
+
+- **The condition had no referent.** `progress status`, `project workflow` and
+  `downstream update` each occurred exactly once in the whole shipped tree: that
+  line itself. Nothing defined what the project workflow is, where such a
+  permission is recorded, or what the default is, so in a freshly initialized project the
+  condition could never be satisfied.
+- **It was too narrow even if it had.** It covered "progress status", while
+  `qfai-implement`'s completion gate item 10 additionally requires the `Evidence`
+  column, and the skill's own hard rules forbid the substitute
+  ("status-only evidence … MUST be rejected"). The content declared mandatory and
+  non-substitutable was precisely the content no rule authorised anyone to
+  persist.
+
+So an agent obeying the protocol could not satisfy gate item 10, and an agent
+satisfying it was in drift. The entry above names the file and the three cells
+unconditionally, which is what removes the choice.
 
 ### Why the Decision Record is on this list
 
@@ -42,7 +81,7 @@ invalid without a `DR-*` in the `DR-ID` column — enforced at `error` by
 `TDDLIST_EXCEPTION_MISSING_DR`. Every upstream home for a Decision Record
 (`07_Decisions.md`, `09_delta.md`) is on the `#core-rule` list above, and neither
 of the first two whitelist entries covers minting one: a Decision Record is not
-an `.qfai/evidence/**` write and not a progress status update.
+an `.qfai/evidence/**` write and not a ledger-cell update.
 
 Without this entry the only compliant route to executing an inline Phase Red
 step was STOP -> Change Request -> user approval -> owner-skill rerun. That made

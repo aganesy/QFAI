@@ -143,6 +143,10 @@ and signalled by `QFAI-DENSITY-005`.
 Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
 
 - Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
+- **Ownership split.** `/qfai-sdd` owns the rows — which obligations exist and what each
+  covers. `/qfai-implement` owns the `Status`, `DR-ID` and `Evidence` cells and nothing else.
+  This is the one carve-out in `constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`; adding,
+  removing or re-scoping a row is an upstream change and takes the Change Request path.
 - `Evidence` is a **pointer**: the one-word RED/GREEN outcome plus an anchor into
   `.qfai/evidence/implement-<spec-id>.md`. A GFM cell is one physical line and ends at
   every unescaped `|`, so it cannot hold command output. Encoding rules and the cell
