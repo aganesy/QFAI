@@ -6,6 +6,26 @@
 
 ## [1.10.0] - 2026-08-03
 
+### Changed
+
+- **Every sunset pinned to 1.10.0 is now enforced, not just documented.**
+  Sunsets were declared in prose beside the code they governed, and each site
+  decided separately whether to act: `prototyping.execution.browserTool:
+"playwright-cli"` was documented as "at sunset only `playwright` is
+  accepted" while the config loader accepted it unconditionally, the
+  `D-DEPRECATED-PROBE` doctor check hard-coded `warning`, and `QFAI-AUD-001`
+  hard-coded `info`. Shipping this version would have made all three notices
+  false. `core/sunset.ts` now holds the single comparator and the sunset SSOT,
+  and each site reads its severity from it:
+  - `browserTool: "playwright-cli"` is refused by `loadConfig`, which falls
+    back to the `playwright` default so a run that ignores the issue still
+    targets a supported launcher. Only projects that set the value explicitly
+    are affected.
+  - `D-DEPRECATED-PROBE` reports `error`. The `sunset: 1.10.0` substring
+    remains part of the wire contract.
+  - `QFAI-AUD-001` on a UI contract authored before the `primary_tasks` slot
+    reports `error`. Add the slot during the next `/qfai-sdd` cycle.
+
 ### Removed
 
 - `.qfai/assistant/steering/` — the legacy pre-recut assistant layout reached

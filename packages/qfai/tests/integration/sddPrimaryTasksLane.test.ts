@@ -135,21 +135,20 @@ describe("TC-0013-0027: QFAI-AUD-001 aligned lane passes when primary_tasks is n
   // slot (key-absent) emit QFAI-AUD-001 at severity=info under a one-minor
   // release deprecation window (sunset: qfai 1.10.0). Key-empty (slot
   // authored but `primary_tasks: []`) remains severity=error.
-  it("legacy slot-less contracts emit QFAI-AUD-001 at severity=info (deprecation window)", async () => {
+  it("legacy slot-less contracts emit QFAI-AUD-001 at severity=error (past sunset)", async () => {
     await withWorkspace({ uiContract: uiContractWithoutPrimaryTasksKey() }, async (root) => {
       const issues = await validateDesignAudit(root, defaultConfig);
       const audit001 = issues.filter((issue) => issue.code === "QFAI-AUD-001");
       expect(audit001.length).toBeGreaterThan(0);
 
-      // Key-absent must NOT block: no error-severity emission.
-      const audit001Errors = audit001.filter((issue) => issue.severity === "error");
-      expect(audit001Errors).toEqual([]);
+      // The window closed at `SUNSETS.legacyPrimaryTasksSlot`. Key-absent was
+      // `info` while it was open; past the sunset it blocks, which is what the
+      // message promised all along.
+      expect(audit001.filter((issue) => issue.severity === "info")).toEqual([]);
 
-      // Key-absent must surface as severity=info under the deprecation
-      // window, with a message that explains the sunset and remediation.
-      const info = audit001.find((issue) => issue.severity === "info");
-      expect(info, "expected severity=info QFAI-AUD-001 for legacy contract").toBeDefined();
-      const message = info?.message ?? "";
+      const blocked = audit001.find((issue) => issue.severity === "error");
+      expect(blocked, "expected severity=error QFAI-AUD-001 for legacy contract").toBeDefined();
+      const message = blocked?.message ?? "";
       expect(message).toMatch(/legacy/i);
       expect(message).toMatch(/1\.10\.0/);
     });
