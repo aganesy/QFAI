@@ -127,6 +127,21 @@ export async function validateAtddCodeTraceability(
     );
   }
 
+  if (result.skippedTestFiles.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-ATDD-105",
+        `走査対象の3ディレクトリ外にあるテストファイルは coverage に数えられません: ${result.skippedTestFiles.slice(0, 10).join(", ")}${result.skippedTestFiles.length > 10 ? ` (他 ${result.skippedTestFiles.length - 10} 件)` : ""}`,
+        "info",
+        result.specsRoot,
+        "atddCodeTraceability.scan.skipped",
+        result.skippedTestFiles.slice(0, 10),
+        "canonical",
+        `${dirs.integration} / ${dirs.api} / ${dirs.e2e} のいずれかに移動してください。注釈が正しくても、この3つの外にあるファイルはどのカバレッジ規則にも数えられません。`,
+      ),
+    );
+  }
+
   // `CON-DB-*` is a first-class authored contract kind that nothing downstream
   // had to touch: no annotation form, no read-set entry, no coverage rule, and
   // no unknown-reference report either. These two findings are the DB peers of

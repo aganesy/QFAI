@@ -35,6 +35,7 @@ Do not proceed without a declared Change Type.
 - Read and enforce `.qfai/assistant/constitution/drift-protocol.md`.
 - Downstream phases must not edit upstream SSOT artifacts without explicit user approval.
 - If drift is required, STOP and raise a Change Request (3 options + recommendation), then wait for approval and rerun the owner skill.
+- The STOP is scoped: it halts the affected upstream artifact and every downstream item that depends on it, which the Change Request enumerates. Unaffected items continue, and more than one Change Request may be open at once — see `drift-protocol.md#multiple-open-change-requests`.
 
 ## Test-layer policy (Mandatory)
 
@@ -52,7 +53,8 @@ Do not proceed without a declared Change Type.
 3. Specification (SDD): unified preflight + `_policies` / `spec-*/01..10`
 4. Prototyping (optional): contract-aligned implementation skeleton
 5. Acceptance tests (ATDD): runnable E2E/API/Integration tests derived from specs/contracts obligations (`US` / `TC` / `CON-API`)
-6. Verify: run quality gates and provide evidence
+6. Implementation (TDD): `/qfai-implement` drives the Red/Green/Refactor micro-cycle one `test-list.md` row at a time
+7. Verify: run quality gates and provide evidence
 
 Stage 3 (`/qfai-sdd`) target policy:
 
@@ -124,7 +126,7 @@ from the skills and baselines that cite it.
 
 ### Stage 0 — Steering refresh contract (mandatory)
 
-At the beginning of each stage (`qfai-discussion`, `qfai-sdd`, `qfai-prototyping`, `qfai-atdd`, `qfai-verify`):
+At the beginning of each stage (`qfai-discussion`, `qfai-sdd`, `qfai-prototyping`, `qfai-atdd`, `qfai-implement`, `qfai-verify`):
 
 1. Check these steering files:
    - `.qfai/assistant/catalog/manifest.md`

@@ -26,6 +26,14 @@ row's layer cannot host a `TC-*`.
 | ------------ | --------------------------------------------------------------------------------- |
 | US-Refs      | `US-*` obligations this row implements. Legal **only** on `Layer = E2E` rows      |
 | CON-API-Refs | `CON-API-*` obligations this row implements. Legal **only** on `Layer = API` rows |
+| Blocked-By   | What a `blocked` row is waiting on. Required on `blocked` rows, blank otherwise   |
+
+`Blocked-By` takes a Change Request ID (`CR-YYYYMMDD-NNNN`), a contract path
+with line (`.qfai/contracts/db/CON-DB-0005.sql:2715`), or a cross-spec row
+(`spec-0006:TDD-0034`). `DR-ID` is **not** widened to carry it: that column is
+what distinguishes a parked `exception` from a row that never started, and
+overloading it would merge the two states the `blocked` status exists to
+separate.
 
 `test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and `tests/api/**`,
 so an E2E or API row has no legal `TC-Refs` value. Those rows carry `-` in
@@ -95,6 +103,39 @@ A literal `\` is **not** escaped: the parser passes it through unchanged, so
 doubling it would corrupt Windows paths and regex literals while keeping the
 column count valid — a corruption no validator can see.
 
+## Evidence cell rules (enforced)
+
+`Evidence` is checked as content, not only as a header name. On a row whose
+`Status` is `green`, `refactor`, `review-fix` or `done` — the statuses that
+assert a cycle has run:
+
+| Finding                        | Fires when                                                          | Severity |
+| ------------------------------ | ------------------------------------------------------------------- | -------- |
+| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)   | error    |
+| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command | warning  |
+
+A command is recognised by shape, not from a list of known runners, so the rule
+holds on any stack: a program name followed by an argument carrying a flag, a
+path, a selector or an assignment. Backticked commands and the common runners
+are accepted directly.
+
+`TDDLIST_EVIDENCE_STATUS_ONLY` is a warning, waivable under `TDDLIST-004`: a
+ledger written before the check exists carries prose verdicts, and failing a
+build on them is a migration rather than a gate. An empty cell is unambiguous,
+so `TDDLIST_EVIDENCE_EMPTY` stays at `error`.
+
+Rows at `todo`, `red` and `exception` are not checked — the first two have
+nothing to show yet, and a parked row records its reason in `DR-ID`, which
+`TDDLIST_EXCEPTION_MISSING_DR` gates.
+
+Freshness is **not** gated: the ledger records no run identity, so no validator
+can distinguish a fresh command+result pair from a copied one. That rule stays
+with the routed reviewer (`qfai-implement/SKILL.md` "Evidence hard rules").
+
+A pointer cell satisfies these rules: the `evidence at <path>` form carries a
+path, which is one of the command shapes the gate accepts. The rules reject a
+bare verdict, not a pointer.
+
 ## Selector granularity (MUST)
 
 `Selector` is **not** restricted to a single test function: a row may own several entries, written
@@ -106,10 +147,15 @@ and examples: `selector-granularity.md`.
 
 ## Status Lifecycle
 
-Valid status values: `todo`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`.
+Valid status values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`.
 
 Allowed transitions:
 
+- `todo` -> `blocked` (the row cannot be started: an upstream defect, an
+  unresolved Change Request, or an unfinished row in another spec). Name the
+  blocker in `Blocked-By`; `TDDLIST_BLOCKED_MISSING_REF` errors without it.
+- `blocked` -> `todo` (the blocker cleared). This is a **resumption, not a
+  backward transition**: the row never started, so nothing is being undone.
 - `todo` -> `red` (write a failing test)
 - `red` -> `green` (make the test pass with minimal code)
 - `green` -> `refactor` (improve code quality while keeping tests green)
@@ -166,6 +212,21 @@ is re-submitted.
 
 `review-fix` is not a completion state and appears in the completion-prohibition
 list. Round-by-round evidence rules: `round-evidence.md`.
+
+## Blocked rows
+
+`blocked` means **cannot be started**, not "not started yet" and not "anomaly".
+
+- It is **completion-prohibiting**, exactly like `todo`. A spec must not close
+  over an unimplemented obligation, and naming the blocker does not discharge it.
+- It is **not** selectable. Phase Red picks the first `todo` row and skips
+  `blocked` ones, so the loop head stops re-issuing rows that cannot proceed.
+- It is **not** `exception`. `exception` is scoped to an anomaly, requires a
+  `DR-*`, and satisfies spec completion — filing a blocked row there would
+  silently close the obligation.
+- `npx qfai report` counts it inside `open` but prints it separately
+  (`open: N (blocked: M)`), so "not started" and "cannot start" are readable
+  apart without changing what completion means.
 
 ## Exception Handling
 

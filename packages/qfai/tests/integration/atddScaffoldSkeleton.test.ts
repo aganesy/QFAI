@@ -71,7 +71,7 @@ describe("atdd scaffold — per-TC skeleton emission", () => {
     expect(code).toBe(0);
     expect(errors).toEqual([]);
 
-    const outDir = path.join(root, "tests", "atdd", specId);
+    const outDir = path.join(root, "tests", "integration", specId);
     const file1 = path.join(outDir, "TC-0001-0001.test.ts");
     const file2 = path.join(outDir, "TC-0001-0002.test.ts");
 
@@ -111,7 +111,7 @@ describe("atdd scaffold — per-TC skeleton emission", () => {
     const code1 = await runAtddScaffold({ root, specId, write: () => {}, writeErr: () => {} });
     expect(code1).toBe(0);
 
-    const filledPath = path.join(root, "tests", "atdd", specId, "TC-0001-0001.test.ts");
+    const filledPath = path.join(root, "tests", "integration", specId, "TC-0001-0001.test.ts");
     const filledBody = [
       'import { describe, it, expect } from "vitest";',
       "",
@@ -137,7 +137,7 @@ describe("atdd scaffold — per-TC skeleton emission", () => {
     expect(filledMtimeAfter).toBe(filledMtimeBefore);
 
     // The other skeleton (still placeholder) is also left as-is.
-    const otherPath = path.join(root, "tests", "atdd", specId, "TC-0001-0002.test.ts");
+    const otherPath = path.join(root, "tests", "integration", specId, "TC-0001-0002.test.ts");
     const otherBody = await readFile(otherPath, "utf-8");
     expect(otherBody).toContain("QFAI-SCAFFOLD-PLACEHOLDER");
   });
@@ -178,7 +178,7 @@ describe("atdd scaffold — per-TC skeleton emission", () => {
     expect(code).toBe(0);
     expect(errors).toEqual([]);
 
-    const outDir = path.join(root, "tests", "atdd", specId);
+    const outDir = path.join(root, "tests", "integration", specId);
     const body50 = await readFile(path.join(outDir, "TC-0001-0050.test.ts"), "utf-8");
     const body51 = await readFile(path.join(outDir, "TC-0001-0051.test.ts"), "utf-8");
 
@@ -221,7 +221,7 @@ describe("atdd scaffold — per-TC skeleton emission", () => {
     expect(code).toBe(0);
     expect(errors).toEqual([]);
 
-    const outDir = path.join(root, "tests", "atdd", specId);
+    const outDir = path.join(root, "tests", "integration", specId);
     const body100 = await readFile(path.join(outDir, "TC-0001-0100.test.ts"), "utf-8");
     const body101 = await readFile(path.join(outDir, "TC-0001-0101.test.ts"), "utf-8");
 
@@ -272,7 +272,7 @@ describe("atdd scaffold — per-TC skeleton emission", () => {
     expect(code).toBe(0);
     expect(errors).toEqual([]);
 
-    const outDir = path.join(root, "tests", "atdd", specId);
+    const outDir = path.join(root, "tests", "integration", specId);
     const body300 = await readFile(path.join(outDir, "TC-0001-0300.test.ts"), "utf-8");
     const body301 = await readFile(path.join(outDir, "TC-0001-0301.test.ts"), "utf-8");
 
@@ -312,7 +312,7 @@ describe("atdd scaffold — per-TC skeleton emission", () => {
     });
     expect(code).toBe(0);
 
-    const outDir = path.join(root, "tests", "atdd", specId);
+    const outDir = path.join(root, "tests", "integration", specId);
     const body = await readFile(path.join(outDir, "TC-0001-0200.test.ts"), "utf-8");
 
     // Heading-form values WIN — table-form AC-/EX- refs and the
@@ -351,8 +351,14 @@ describe("atdd scaffold — per-TC skeleton emission", () => {
 
     // The scaffolded file MUST land under `spec-tests/atdd/...`,
     // not under the hard-coded default `tests/atdd/...`.
-    const reroutedPath = path.join(root, "spec-tests", "atdd", specId, "TC-0001-0001.test.ts");
-    const defaultPath = path.join(root, "tests", "atdd", specId, "TC-0001-0001.test.ts");
+    const reroutedPath = path.join(
+      root,
+      "spec-tests",
+      "integration",
+      specId,
+      "TC-0001-0001.test.ts",
+    );
+    const defaultPath = path.join(root, "tests", "integration", specId, "TC-0001-0001.test.ts");
     await expect(stat(reroutedPath)).resolves.toBeDefined();
     await expect(stat(defaultPath)).rejects.toThrow();
   });
