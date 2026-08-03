@@ -18,6 +18,7 @@ type AtddTraceabilitySummary = {
     us: string[];
     tc: string[];
     conApi: string[];
+    conDb: string[];
   };
   /** Missing TC ref -> the test directory its declared `Level` routes to. */
   missingTcHomes: Record<string, string>;
@@ -29,6 +30,7 @@ type AtddTraceabilitySummary = {
    */
   deferred: {
     conApi: string[];
+    conDb: string[];
   };
   unknown: Array<{ file: string; token: string }>;
   forbidden: {
@@ -136,6 +138,45 @@ export async function validateAtddCodeTraceability(
         result.skippedTestFiles.slice(0, 10),
         "canonical",
         `${dirs.integration} / ${dirs.api} / ${dirs.e2e} のいずれかに移動してください。注釈が正しくても、この3つの外にあるファイルはどのカバレッジ規則にも数えられません。`,
+      ),
+    );
+  }
+
+  // `CON-DB-*` is a first-class authored contract kind that nothing downstream
+  // had to touch: no annotation form, no read-set entry, no coverage rule, and
+  // no unknown-reference report either. These two findings are the DB peers of
+  // QFAI-ATDD-113 / -114. Integration is the layer that owns them: a DB
+  // contract is exercised against real infrastructure, which is L3's declared
+  // scope.
+  if (result.deferredDbContractIds.size > 0) {
+    const deferred = Array.from(result.deferredDbContractIds).sort((left, right) =>
+      left.localeCompare(right),
+    );
+    issues.push(
+      issue(
+        "QFAI-ATDD-116",
+        `CON-DB の Integration テスト義務を \`-- x-qfai-status: planned\` で延期しています: ${deferred.join(", ")}`,
+        "info",
+        result.contractsDbRoot,
+        "atddCodeTraceability.coverage.conDbDeferred",
+        deferred,
+        "canonical",
+        `スライス実装時に \`-- x-qfai-status: planned\` を外し、${dirs.integration} で参照してください。`,
+      ),
+    );
+  }
+
+  if (result.missing.conDb.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-ATDD-115",
+        `Integration テストで参照されていない CON-DB があります: ${result.missing.conDb.join(", ")}`,
+        "error",
+        result.contractsDbRoot,
+        "atddCodeTraceability.coverage.conDbToIntegrationTests",
+        result.missing.conDb,
+        "change",
+        `${dirs.integration} に \`QFAI:CON-DB-XXXX\` 注釈を追加し、\`.qfai/contracts/db\` の宣言済み CON-DB を全件参照してください。まだスライスに含まれない契約は \`-- x-qfai-status: planned\` で延期できます。`,
       ),
     );
   }
@@ -296,6 +337,18 @@ function buildUnknownIssues(unknown: AtddUnknownRef[]): Issue[] {
           "spec 側に TC を定義するか、テスト注釈を正しい ID へ修正してください。",
         );
       }
+      if (entry.kind === "conDb") {
+        return issue(
+          "QFAI-ATDD-104",
+          `未定義の CON-DB 参照を検出しました: ${refs.join(", ")}`,
+          "error",
+          entry.file,
+          "atddCodeTraceability.unknown.conDb",
+          refs,
+          "change",
+          "contracts/db に CON-DB を宣言するか、テスト注釈を正しい ID へ修正してください。",
+        );
+      }
       return issue(
         "QFAI-ATDD-103",
         `未定義の CON-API 参照を検出しました: ${refs.join(", ")}`,
@@ -333,9 +386,13 @@ async function writeAtddTraceabilityReport(
       us: result.missing.us,
       tc: result.missing.tc,
       conApi: result.missing.conApi,
+      conDb: result.missing.conDb,
     },
     deferred: {
       conApi: Array.from(result.deferredApiContractIds).sort((left, right) =>
+        left.localeCompare(right),
+      ),
+      conDb: Array.from(result.deferredDbContractIds).sort((left, right) =>
         left.localeCompare(right),
       ),
     },
@@ -389,11 +446,15 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
   );
   lines.push("- CON-API -> API");
   lines.push(...toList(summary.missing.conApi));
+  lines.push("- CON-DB -> Integration");
+  lines.push(...toList(summary.missing.conDb));
   lines.push("");
   lines.push("## Deferred Coverage");
   lines.push("");
   lines.push("- CON-API (`x-qfai-status: planned`, outside QFAI-ATDD-113)");
   lines.push(...toList(summary.deferred.conApi));
+  lines.push("- CON-DB (`-- x-qfai-status: planned`, outside QFAI-ATDD-115)");
+  lines.push(...toList(summary.deferred.conDb));
   lines.push("");
   lines.push("## Unknown References");
   lines.push("");

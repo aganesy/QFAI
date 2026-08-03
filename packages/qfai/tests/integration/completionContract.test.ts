@@ -70,7 +70,11 @@ describe("item completion checklist end-to-end enforcement", () => {
     expect(c).toMatch(
       /prototype parity.*product-surface-reviewer|product-surface-reviewer.*prototype parity/i,
     );
-    expect(c).toMatch(/test-list\.md.*updated|Status.*Evidence.*updated/i);
+    // The gate item was restated against the Evidence *anchor* (#358): the cell
+    // is a pointer, because a GFM cell cannot hold a command's output.
+    expect(c).toMatch(
+      /test-list\.md.*updated|Status.*Evidence.*updated|Evidence cell's anchor resolves to a fresh per-item entry/i,
+    );
     // The gate point #251 added: the verdict half of the evidence file is
     // appended only after both reviewers have returned PASS.
     expect(c).toMatch(

@@ -1,8 +1,10 @@
 /**
  * Shared constants and helpers for TDD list processing.
- * Used by both the tddList validator and the report generator
- * to keep TC-Refs parsing, parent-ID resolution, and layer/status
- * classification in a single source of truth.
+ *
+ * The layer constants and the TC-Refs / parent-ID helpers are shared by the
+ * `tddList` validator and the report generator, which is what keeps their
+ * classification identical. The status sets below are the report generator's
+ * alone — the validator owns its own `VALID_STATUSES` and does not read them.
  */
 
 /**
@@ -72,7 +74,27 @@ export function isCoverageTargetLevel(level: string): boolean {
   return classifyCoverageLevel(level) !== "non-coverage";
 }
 
-export const TDD_DONE_STATUSES = new Set(["done", "green", "refactor"]);
+/**
+ * The only status that means an item is finished.
+ *
+ * This used to include `green` and `refactor`, so `qfai report` counted rows
+ * toward `done:` that `qfai-implement` names as grounds for *refusing* to
+ * declare completion. A `green` or `refactor` row has by construction not
+ * cleared its blocking reviewers or checkpoint verification — exactly the
+ * checks that separate "a test passes" from "this item is done". The bias was
+ * one-directional (never pessimistic) and unbounded, since the discount equals
+ * the number of `green` + `refactor` rows, which the report did not print.
+ */
+export const TDD_DONE_STATUSES = new Set(["done"]);
+
+/**
+ * Has a passing test, has not finished its gates.
+ *
+ * Kept as its own bucket rather than folded into either neighbour: "the test
+ * passes" is real progress worth reporting, and conflating it with `done` is
+ * what made the headline unusable.
+ */
+export const TDD_IN_REVIEW_STATUSES = new Set(["green", "refactor", "review-fix"]);
 
 /**
  * Split a TC-Refs cell value into individual TC reference strings.
