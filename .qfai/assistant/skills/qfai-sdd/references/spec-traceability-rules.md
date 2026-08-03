@@ -148,6 +148,14 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,
   `done`, `exception`. `blocked` is completion-prohibiting and is never selected by
   Phase Red.
+- **Ownership split.** `/qfai-sdd` owns the rows — which obligations exist and what each
+  covers. `/qfai-implement` owns the `Status`, `DR-ID` and `Evidence` cells and nothing else.
+  This is the one carve-out in `constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`; adding,
+  removing or re-scoping a row is an upstream change and takes the Change Request path.
+- `Evidence` is a **pointer**: the one-word RED/GREEN outcome plus an anchor into
+  `.qfai/evidence/implement-<spec-id>.md`. A GFM cell is one physical line and ends at
+  every unescaped `|`, so it cannot hold command output. Encoding rules and the cell
+  contract: `qfai-implement/references/execution-ledger.md#evidence-cell-contract`.
 - Optional columns detail: `US-Refs`, `CON-API-Refs` — the E2E and API obligations a
   row implements. Required when the row carries one, since `TC-*` annotations
   are forbidden in `tests/e2e/**` and `tests/api/**`.
@@ -173,6 +181,20 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   resolved from project root. The upstream reset does not relax this: a swept
   row returns to `todo`, where no file is required, and writes its test in the
   following `red` phase.
+- **The converse also holds.** A `todo` row whose Test file exists _and_ whose
+  `Selector` resolves inside it is a stale ledger row, not a not-started one
+  (`TDDLIST_STALE_STATUS`, `warning`). Stated in one direction only, the rule
+  could catch the ledger over-reporting and never under-reporting — and
+  under-reporting is what actually happens, because work lands from parallel
+  worktrees and the ledger is reconciled by hand afterwards. A stale `todo` and
+  a genuinely not-started row are indistinguishable to every downstream
+  consumer, including the completion gate that reads the ledger. A project that
+  declares test paths and selectors up front waives `TDDLIST-005`.
+- `Selector` is read, not merely required: on a row claiming completion it must
+  resolve inside the named Test file (`TDDLIST_SELECTOR_UNRESOLVED`, `warning`).
+  Resolution is a containment check over the selector text and its last
+  identifier token, not a runner-specific parse; waive `TDDLIST-006` for a
+  selector form it cannot resolve.
 - `DR-ID` carries Decision Record (`DR-*`) **and** Change Request (`CR-*`)
   references, so it carries the approval that authorised an upstream reset, not
   only `Status = exception`. A row reset by a Drift Protocol sweep records the
@@ -187,6 +209,10 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   identity constraint.
 - `TDD-ID` must match `TDD-NNNN` and be unique within the spec.
 - Missing `tdd/test-list.md` is a warning; missing DR-ID/Evidence columns is an error.
+- The `Evidence` **cell** is checked too, not only the header: on a row at
+  `green` / `refactor` / `review-fix` / `done`, an empty-or-dash cell is
+  `TDDLIST_EVIDENCE_EMPTY` and a verdict with no command is
+  `TDDLIST_EVIDENCE_STATUS_ONLY`, both at `error`.
 
 ## Traceability Ledger (`16_Traceability-ledger.md`)
 

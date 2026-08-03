@@ -4,7 +4,7 @@ import path from "node:path";
 import { loadConfig, resolvePath } from "../../core/config.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
-import { buildCiProfileIssue, createProfileGuardResult } from "../../core/phasePolicy.js";
+import { buildCiProfileIssue } from "../../core/phasePolicy.js";
 import { createReportData, formatReportJson, formatReportMarkdown } from "../../core/report.js";
 import { writeSpecPackReports } from "../../core/specPackReport.js";
 import type { ValidationProfile, ValidationResult } from "../../core/types.js";
@@ -26,20 +26,25 @@ export async function runReport(options: ReportOptions): Promise<void> {
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
   let validation: ValidationResult;
-  let blockedByProfileGuard = false;
+  let ranNarrowProfileInCi = false;
   if (options.runValidate) {
     if (options.inputPath) {
       warn("report: --run-validate が指定されたため --in は無視します。");
     }
-    const blockedIssue = buildCiProfileIssue(options.profile);
-    const result = blockedIssue
-      ? await createProfileGuardResult(options.profile ?? "full", blockedIssue)
-      : await validateProject(
-          root,
-          configResult,
-          options.profile ? { profile: options.profile } : {},
-        );
-    blockedByProfileGuard = blockedIssue !== null;
+    const ciProfileIssue = buildCiProfileIssue(options.profile);
+    const validated = await validateProject(
+      root,
+      configResult,
+      options.profile ? { profile: options.profile } : {},
+    );
+    const result = ciProfileIssue
+      ? {
+          ...validated,
+          issues: [...validated.issues, ciProfileIssue],
+          counts: { ...validated.counts, warning: validated.counts.warning + 1 },
+        }
+      : validated;
+    ranNarrowProfileInCi = ciProfileIssue !== null;
     const normalized = normalizeValidationResult(root, result);
     await writeValidationResult(root, configResult.config.output.validateJsonPath, normalized);
     validation = normalized;
@@ -88,11 +93,13 @@ export async function runReport(options: ReportOptions): Promise<void> {
   await writeFile(outPath, `${output}\n`, "utf-8");
   await writeSpecPackReports(root, configResult.config);
 
-  if (blockedByProfileGuard) {
-    error(
-      "report: CI では部分 validation profile を使用できません。--profile full / --profile verify / --profile tdd（または --profile 指定なし）で再実行してください。",
+  if (ranNarrowProfileInCi) {
+    // Reported, not fatal: the run happened and its findings are real. Exiting
+    // non-zero here made every stage gate that names a narrow profile
+    // unreachable in CI.
+    warn(
+      "report: CI で full-scan ではない profile を実行しました。stage gate としては有効ですが、完了宣言の前に --profile full（または --profile 指定なし）で full-scan を実行してください。",
     );
-    process.exitCode = 1;
   }
   info(
     `report: info=${validation.counts.info} warning=${validation.counts.warning} error=${validation.counts.error}`,
