@@ -44,6 +44,13 @@ Use this file for the full quality gate checklist behind `/qfai-sdd`.
 - `05_Examples.md` includes `EX-ID` and `BR-Ref`.
 - `06_Test-Cases.md` includes `TC-ID`, `Level`, `EX-Ref`, `AC-Refs`, and `Type`. `Level` holds exactly one code from `.qfai/assistant/catalog/test-layers.md#layer-definitions`, which defines all five (`L1`-`L5`); the template's list is a reading aid pointing back at it.
 - Error or boundary coverage is present, not only normal-path coverage.
+- **The chain does not terminate at `TC`.** Every `BR` / `AC` names the contract that realizes it,
+  and every persisted attribute it names resolves to a column, field or enum member in that
+  contract — directly or by a stated join. Phase 0 authors contracts before these obligations
+  exist, so an obligation the contract cannot express passes every other check on this page: the
+  SQL is valid, the `US -> AC -> BR -> EX -> TC` edges are complete, `npx qfai validate` is clean.
+  Driving the declared path succeeds, so execution-based checking does not find it either. See
+  `references/contract-artifact-rules.md#obligation-reconciliation-must--phase-2c`.
 
 ## Validation Checks
 

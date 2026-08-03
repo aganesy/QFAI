@@ -322,10 +322,35 @@ export function parseAllMarkdownTables(text: string): MarkdownTable[] {
 }
 
 /**
+ * Encode one value for a GFM table cell — the inverse of
+ * {@link splitMarkdownRow}, and the only correct way to put author-supplied
+ * text into a table.
+ *
+ * It lives here, beside its decoder, and is exported. It used to be a private
+ * function in `sddTriage.ts` whose sole caller was the Triage renderer, so a
+ * skill that instructs an author to write command output into a ledger cell had
+ * no encoder to point at — and a grep of the entire shipped
+ * `.qfai/assistant/` tree for `escape`, `backslash` or `vertical bar` returned
+ * nothing. Two ways to break a table, no published rule for either.
+ *
+ * Exactly two rules, matching the decoder below:
+ *
+ * - `|` → `\|`, the only escape `splitMarkdownRow` un-escapes.
+ * - CR / LF / CRLF → a single space. A newline has no representation in a GFM
+ *   cell at all, so it is flattened rather than left to truncate the row.
+ *
+ * A literal backslash is deliberately NOT pre-escaped — see the round-trip
+ * contract on {@link splitMarkdownRow}.
+ */
+export function escapeTableCell(value: string): string {
+  return value.replace(/\|/g, "\\|").replace(/\r\n|\r|\n/g, " ");
+}
+
+/**
  * Split a GFM markdown table row into trimmed cell strings.
  *
  * Symmetric pair: this function is the un-escape half of a contract
- * paired with `escapeTableCell` (`packages/qfai/src/core/sddTriage.ts`).
+ * paired with {@link escapeTableCell} above.
  * The renderer-side encode rule and the parser-side decode rule below
  * MUST stay in lock-step. Specifically:
  *
