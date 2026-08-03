@@ -104,8 +104,8 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 ## Execution Ledger: test-list.md
 
 The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single record of what this
-skill has done and may still do. Status values are `todo`, `red`, `green`, `refactor`, `done`,
-`exception`; the lifecycle is forward-only and an `exception` requires a DR-ID.
+skill has done and may still do. Status values are `todo`, `blocked`, `red`, `green`, `refactor`, `done`, `exception`;
+the lifecycle is forward-only, an `exception` requires a DR-ID, and a `blocked` row requires a `Blocked-By` and is never selected.
 
 The eight required columns, the allowed transitions and the exception rules are in
 `references/execution-ledger.md`. Read it before writing to the ledger.
@@ -118,7 +118,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 ### Phase: Red (Write Failing Test)
 
-1. Read `test-list.md`. **Rework first**: if any row is at `review-fix`, select the first such row and resume its rework (`references/round-evidence.md`) before any `todo` row — one left by an interrupted session is otherwise never picked up. Otherwise select the first row with `Status = todo`.
+1. Read `test-list.md`. **Rework first**: if any row is at `review-fix`, select the first such row and resume its rework (`references/round-evidence.md`) before any `todo` row — one left by an interrupted session is otherwise never picked up. Otherwise select the first row with `Status = todo`, skipping any `blocked` row — it cannot be started, and re-issuing it is what made the determination get re-derived every pass (`references/execution-ledger.md#blocked-rows`).
 2. Transition status to `red` — **only for a `todo` row**. A `review-fix` row **stays at `review-fix`** for the whole rework: it runs steps 3-5 and the Green phase in place, and `review-fix -> red` is not an allowed transition.
 3. Write a **failing test** from the row's obligation column, selected by `Layer`: `TC-Refs` for `Unit` / `Component` / `Integration`, `US-Refs` for `E2E`, `CON-API-Refs` for `API`. An `E2E` or `API` row's test is authored by `/qfai-atdd` (Non-goals); this skill only drives that row's status and evidence once the acceptance test exists, and stops with a handoff note if it does not.
    3a. Create the **minimal seam** the test imports — module, export or signature with no behaviour — so the test module loads. This is not Phase Green's production code: it implements no predicate. Without it, the first failure of any new-symbol row is a resolution error by construction.

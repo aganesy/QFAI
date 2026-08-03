@@ -26,6 +26,14 @@ row's layer cannot host a `TC-*`.
 | ------------ | --------------------------------------------------------------------------------- |
 | US-Refs      | `US-*` obligations this row implements. Legal **only** on `Layer = E2E` rows      |
 | CON-API-Refs | `CON-API-*` obligations this row implements. Legal **only** on `Layer = API` rows |
+| Blocked-By   | What a `blocked` row is waiting on. Required on `blocked` rows, blank otherwise   |
+
+`Blocked-By` takes a Change Request ID (`CR-YYYYMMDD-NNNN`), a contract path
+with line (`.qfai/contracts/db/CON-DB-0005.sql:2715`), or a cross-spec row
+(`spec-0006:TDD-0034`). `DR-ID` is **not** widened to carry it: that column is
+what distinguishes a parked `exception` from a row that never started, and
+overloading it would merge the two states the `blocked` status exists to
+separate.
 
 `test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and `tests/api/**`,
 so an E2E or API row has no legal `TC-Refs` value. Those rows carry `-` in
@@ -139,10 +147,15 @@ and examples: `selector-granularity.md`.
 
 ## Status Lifecycle
 
-Valid status values: `todo`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`.
+Valid status values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`.
 
 Allowed transitions:
 
+- `todo` -> `blocked` (the row cannot be started: an upstream defect, an
+  unresolved Change Request, or an unfinished row in another spec). Name the
+  blocker in `Blocked-By`; `TDDLIST_BLOCKED_MISSING_REF` errors without it.
+- `blocked` -> `todo` (the blocker cleared). This is a **resumption, not a
+  backward transition**: the row never started, so nothing is being undone.
 - `todo` -> `red` (write a failing test)
 - `red` -> `green` (make the test pass with minimal code)
 - `green` -> `refactor` (improve code quality while keeping tests green)
@@ -199,6 +212,21 @@ is re-submitted.
 
 `review-fix` is not a completion state and appears in the completion-prohibition
 list. Round-by-round evidence rules: `round-evidence.md`.
+
+## Blocked rows
+
+`blocked` means **cannot be started**, not "not started yet" and not "anomaly".
+
+- It is **completion-prohibiting**, exactly like `todo`. A spec must not close
+  over an unimplemented obligation, and naming the blocker does not discharge it.
+- It is **not** selectable. Phase Red picks the first `todo` row and skips
+  `blocked` ones, so the loop head stops re-issuing rows that cannot proceed.
+- It is **not** `exception`. `exception` is scoped to an anomaly, requires a
+  `DR-*`, and satisfies spec completion — filing a blocked row there would
+  silently close the obligation.
+- `npx qfai report` counts it inside `open` but prints it separately
+  (`open: N (blocked: M)`), so "not started" and "cannot start" are readable
+  apart without changing what completion means.
 
 ## Exception Handling
 

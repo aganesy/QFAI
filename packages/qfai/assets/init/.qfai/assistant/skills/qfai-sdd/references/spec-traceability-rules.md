@@ -143,6 +143,11 @@ and signalled by `QFAI-DENSITY-005`.
 Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
 
 - Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
+- Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`. `Blocked-By` names what a
+  `blocked` row is waiting on and is required on those rows.
+- Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,
+  `done`, `exception`. `blocked` is completion-prohibiting and is never selected by
+  Phase Red.
 - **Ownership split.** `/qfai-sdd` owns the rows — which obligations exist and what each
   covers. `/qfai-implement` owns the `Status`, `DR-ID` and `Evidence` cells and nothing else.
   This is the one carve-out in `constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`; adding,
@@ -151,7 +156,7 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   `.qfai/evidence/implement-<spec-id>.md`. A GFM cell is one physical line and ends at
   every unescaped `|`, so it cannot hold command output. Encoding rules and the cell
   contract: `qfai-implement/references/execution-ledger.md#evidence-cell-contract`.
-- Optional columns: `US-Refs`, `CON-API-Refs` — the E2E and API obligations a
+- Optional columns detail: `US-Refs`, `CON-API-Refs` — the E2E and API obligations a
   row implements. Required when the row carries one, since `TC-*` annotations
   are forbidden in `tests/e2e/**` and `tests/api/**`.
 - TC coverage reads **`TC-*` tokens only**. `US-*` and `CON-API-*` IDs are
