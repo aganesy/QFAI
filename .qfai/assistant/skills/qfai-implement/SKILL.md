@@ -98,8 +98,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 ## Execution Ledger: test-list.md
 
-The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single record of what this
-skill has done and may still do. Status values are `todo`, `blocked`, `red`, `green`, `refactor`, `done`, `exception`;
+The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single record of what this skill has done and may still do. Status values are `todo`, `blocked`, `red`, `green`, `refactor`, `done`, `exception`;
 the lifecycle is forward-only, an `exception` requires a DR-ID, and a `blocked` row requires a `Blocked-By` and is never selected.
 
 The eight required columns, the allowed transitions and the exception rules are in `references/execution-ledger.md`. Read it before writing to the ledger.
@@ -298,7 +297,7 @@ Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
 - **Reconcile the ledger first.** Under worktree separation each worker holds a private copy of `test-list.md`, so the merged trunk carries none of their transitions. Write Status + Evidence for every merged item from the worker reports **before** integration verify, and fail the verify if any merged item's row is still `todo` — an unreconciled ledger reports finished work as unstarted (`references/parallelization-policy.md#ledger-ownership`).
 - After parallel slices complete and merge, run integration verify on the merged result
 - Then reconcile the seams: diff each slice's touched `src/` paths against its declared `Owning module` and report undeclared or overlapping paths as a deny-condition breach — **independently of whether the merged suite is green** (`references/parallelization-policy.md#seam-reconciliation-after-a-parallel-run`)
-- If integration verify fails, **classify before acting** per `shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`, attributing the failure to one slice, to the merge resolution, or to code outside every slice. Remedies by class: `references/parallelization-policy.md#failed-integration-verify`. Unconditional rollback is not one of them — the protocol classifies this as a local, non-destructive defect to fix and re-run, and reserves stopping for destructive changes.
+- If integration verify fails, re-run it once with no intervening change before acting. A failure that does **not** reproduce is an `environment/tooling` finding (`shared-skill-operating-baseline.md#nondeterministic-gates`), reported with every run — not a rollback trigger. For a reproducible failure, **classify before acting** per `shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`, attributing it to one slice, to the merge resolution, or to code outside every slice. Remedies by class: `references/parallelization-policy.md#failed-integration-verify`. Unconditional rollback is not one of them — the protocol classifies this as a local, non-destructive defect to fix and re-run, and reserves stopping for destructive changes. Only a **reproducible** failure flags all slices for re-examination and rolls back the merge, and only where the classification calls for it
 - If integration verify passes, state transitions back to `delivery-planner` for sequential flow
 
 ## Completion Contract (Shared)
@@ -435,6 +434,7 @@ the completion gate (see `Completion prohibition conditions`).
 - Status-only evidence (e.g., "Status: PASS" with no command) is invalid and MUST be rejected; both command and result are required, and "should pass" or "looks good" alone is not acceptable — `TDDLIST_EVIDENCE_STATUS_ONLY` (warning, waivable as `TDDLIST-004`: ledgers predating the check carry prose verdicts)
 - Empty evidence entries are rejected: minimum evidence per TDD item must be met — `TDDLIST_EVIDENCE_EMPTY` (error)
 - Stale evidence from a previous run MUST NOT be reused to claim completion for a new cycle. **Stale is mechanical**: evidence whose named `Revision` differs from the revision the item finally landed at (`references/evidence-revision.md`). **Reviewer obligation, not a machine gate** — why, and the full rules: `references/execution-ledger.md`.
+- **Selective reporting of repeated runs of the same gate is invalid.** When a gate was run more than once, report every run in order — a clean rerun after a red one is an `environment/tooling` finding, not a pass (`.qfai/assistant/constitution/shared-skill-operating-baseline.md#nondeterministic-gates`)
 
 ## Checkpoint Verification
 
