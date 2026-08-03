@@ -77,9 +77,14 @@ routing:
         mandatory_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
         conditional_agents: [product-surface-reviewer]
         parallel_groups: []
-        blocking_agents: [qa-gatekeeper, completion-reviewer]
+        # `implementation-reviewer` is blocking, not advisory: it is item 8 of the
+        # unconditional 11-point gate in qfai-implement/SKILL.md, and every DONE
+        # rule in the skill and in shared-skill-delegation-baseline.md is phrased
+        # over *blocking* reviewers. Listing it as mandatory-only let an item
+        # reach `done` with the code-quality reviewer sitting at REVISE.
+        blocking_agents: [implementation-reviewer, qa-gatekeeper, completion-reviewer]
         rerun_policy: changed-scope-dependents
-    review_profile: runtime-heavy
+    review_profile: implementation-heavy
 
   - skill: qfai-atdd
     phases:
@@ -180,3 +185,13 @@ routing:
         blocking_agents: [qa-gatekeeper, completion-reviewer]
         rerun_policy: changed-scope-dependents
     review_profile: runtime-heavy
+
+# `rerun_policy` vocabulary (validated by `QFAI-AGENT-013`):
+#
+# - `failed-agents-only`        re-run only the agents that did not return PASS
+# - `changed-scope-dependents`  re-run every agent whose inputs the change
+#                               touched, including ones that passed
+#
+# The key was previously on all 23 phases, defined nowhere and read by nothing,
+# so a typo in it was invisible. `constitution/drift-protocol.md` step 4 uses the
+# same vocabulary when a Change Request names its rerun mode.

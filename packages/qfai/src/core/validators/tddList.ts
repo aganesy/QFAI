@@ -207,6 +207,66 @@ function isChangeRequestRefsOnly(drId: string): boolean {
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
 
 /**
+ * The declared shape of a Decision Record id.
+ *
+ * `DR-ID` was a hard, `error`-severity precondition for `exception` with no
+ * referent anywhere in the toolkit: no ID class, no row schema in either
+ * shipped Decisions template, and no validator that resolved the reference. Any
+ * non-empty string satisfied the gate, so the one thing a parked row was
+ * required to carry was the one thing nothing could check.
+ *
+ * Kept in step with `ids.ts#STRICT_ID_PATTERNS.DR` — anchored here because this
+ * validates one cell rather than scanning prose.
+ */
+const DR_ID_FORMAT = /^DR-\d{4}(?:-\d{4})?$/;
+
+/**
+ * Anything presenting itself as a DR id, so a malformed one is reported rather
+ * than ignored.
+ *
+ * `^DR[-_]?\d` was too narrow: `DR-ABCD` and `DR-foo` are exactly the invented
+ * tokens the format exists to surface, and they slipped through the non-empty
+ * check unreported. A separator or a digit after `DR` is enough to claim the
+ * prefix; whether the rest is well formed is what `DR_ID_FORMAT` decides.
+ */
+const DR_ID_SHAPED = /^DR[-_\d]/i;
+
+/** Files a `DR-*` may be declared in, relative to the spec dir / specs root. */
+const DR_DECLARATION_FILES = ["07_Decisions.md"];
+const DR_POLICY_DECLARATION_FILE = path.join("_policies", "08_Decisions.md");
+
+/** Waiver rule id for `TDDLIST_EXCEPTION_UNRESOLVED_DR`. */
+export const UNRESOLVED_DR_RULE_ID = "TDDLIST-003";
+
+function toPosixRel(value: string): string {
+  return value.replace(/\\/g, "/");
+}
+
+/**
+ * Every `DR-*` declared for this spec: its own `07_Decisions.md` plus the
+ * shared `_policies/08_Decisions.md`.
+ *
+ * Both files are read, not one: a policy-level decision is cited from spec
+ * ledgers, and resolving only against the spec-local file would report every
+ * such citation as unresolved.
+ */
+async function collectDeclaredDrIds(specDir: string, specsRoot: string): Promise<Set<string>> {
+  const declared = new Set<string>();
+  const files = [
+    ...DR_DECLARATION_FILES.map((name) => path.join(specDir, name)),
+    path.join(specsRoot, DR_POLICY_DECLARATION_FILE),
+  ];
+  for (const file of files) {
+    if (!(await exists(file))) continue;
+    const text = await readSafe(file);
+    for (const match of text.matchAll(/\bDR-\d{4}(?:-\d{4})?\b/g)) {
+      declared.add(match[0].toUpperCase());
+    }
+  }
+  return declared;
+}
+
+/**
  * Waiver rule id for `TDDLIST_EXCEPTION_PARKED`.
  *
  * A parked item that carries a user-approved accepted risk is a legitimate
@@ -238,6 +298,82 @@ export const UNKNOWN_LEVEL_RULE_ID = "TDDLIST-002";
  * than by rewriting evidence it can no longer reproduce.
  */
 export const EVIDENCE_STATUS_ONLY_RULE_ID = "TDDLIST-004";
+
+/**
+ * Waiver rule id for `TDDLIST_STALE_STATUS`.
+ *
+ * A project that declares test paths and selectors before implementing them
+ * would see this on every not-yet-started row, which is a legitimate workflow.
+ * The waiver is the escape hatch, so the id must be resolvable by
+ * `waivers.ts#resolveRuleId`.
+ */
+export const STALE_STATUS_RULE_ID = "TDDLIST-005";
+
+/** Waiver rule id for `TDDLIST_SELECTOR_UNRESOLVED`. */
+export const SELECTOR_UNRESOLVED_RULE_ID = "TDDLIST-006";
+
+/**
+ * Read a ledger row's `Test file` cell, or `null` when it names nothing this
+ * validator may read.
+ *
+ * Mirrors Check 9's path handling — relative, inside the project root — but
+ * reports nothing: Check 9 already owns the diagnostics for a completion-
+ * claiming row, and a `todo` row with an absent test file is the normal case.
+ */
+async function readTestFileContent(root: string, testFile: string): Promise<string | null> {
+  if (testFile.length === 0) {
+    return null;
+  }
+  const normalized = testFile.replace(/\\/g, "/");
+  if (path.isAbsolute(normalized) || path.win32.isAbsolute(normalized)) {
+    return null;
+  }
+  const resolved = path.resolve(root, normalized);
+  const relative = path.relative(root, resolved);
+  if (relative === ".." || relative.startsWith(".." + path.sep)) {
+    return null;
+  }
+  try {
+    if (!(await stat(resolved)).isFile()) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+  const content = await readSafe(resolved);
+  return content.length > 0 ? content : null;
+}
+
+/**
+ * Whether a ledger `Selector` names something present in the test file.
+ *
+ * Selectors are written in whatever the project's runner accepts —
+ * `tests/x_test.py::TestA::test_b`, `describe > renders header`,
+ * `"renders the header"` — so this is a containment check, not a parse. Two
+ * chances to match, in order of strength:
+ *
+ * 1. the selector text after any `path::` prefix appears verbatim;
+ * 2. its last identifier-shaped token appears.
+ *
+ * Deliberately lenient. Both consumers treat a match as evidence *for* the
+ * test's presence, so a false negative costs a warning that a false positive
+ * would silently swallow.
+ */
+function selectorResolves(selector: string, content: string): boolean {
+  const trimmed = selector.replace(/^[`"']+|[`"']+$/g, "").trim();
+  if (trimmed.length === 0) {
+    return false;
+  }
+  const withoutPath = trimmed.includes("::")
+    ? trimmed.split("::").slice(1).join("::").trim() || trimmed
+    : trimmed;
+  if (withoutPath.length >= 3 && content.includes(withoutPath)) {
+    return true;
+  }
+  const tokens = withoutPath.match(/[A-Za-z_][A-Za-z0-9_]{2,}/g);
+  const last = tokens?.[tokens.length - 1];
+  return last !== undefined && content.includes(last);
+}
 
 /** Per-spec file that owns the Test Case Table, and the target of its findings. */
 const TEST_CASES_FILE_NAME = "06_Test-Cases.md";
@@ -272,7 +408,7 @@ export async function validateTddList(root: string, config: QfaiConfig): Promise
   const issues: Issue[] = [];
 
   for (const entry of entries) {
-    const specIssues = await validateSpecTddList(root, entry.dir, entry.specNumber);
+    const specIssues = await validateSpecTddList(root, entry.dir, entry.specNumber, specsRoot);
     issues.push(...specIssues);
   }
 
@@ -283,6 +419,7 @@ async function validateSpecTddList(
   root: string,
   specDir: string,
   specNumber: string,
+  specsRoot: string,
 ): Promise<Issue[]> {
   const filePath = path.join(specDir, TDD_LIST_REL_PATH);
   const relPath = toRelPath(root, filePath);
@@ -650,7 +787,8 @@ async function validateSpecTddList(
     }
   }
 
-  // Phase 2 – Check 8: Exception rows must have DR-ID
+  // Phase 2 – Check 8: Exception rows must have a DR-ID that resolves
+  const declaredDrIds = await collectDeclaredDrIds(specDir, specsRoot);
   if (statusIndex >= 0 && drIdIndex >= 0) {
     for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
       const row = table.rows[rowIdx];
@@ -664,10 +802,60 @@ async function validateSpecTddList(
         issues.push(
           issue(
             "TDDLIST_EXCEPTION_MISSING_DR",
-            `Status=exception but ${reason} in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Add a DR-ID reference`,
+            `Status=exception but ${reason} in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Add a DR-ID reference in the form DR-NNNN or DR-NNNN-NNNN, declared in 07_Decisions.md (spec-scoped) or _policies/08_Decisions.md (policy-level)`,
             "error",
             relPath,
             "tddList.exceptionDrId",
+          ),
+        );
+        continue;
+      }
+
+      // "Non-empty" was the whole check, so a token the operator invented
+      // satisfied the one thing a parked row is required to carry. These two
+      // findings give the reference a referent — at `warning`, because ledgers
+      // written before the format existed must not start failing CI on upgrade.
+      const drTokens = drId
+        .split(/[,;\s]+/)
+        .map((token) => token.trim())
+        .filter((token) => token.length > 0 && !CHANGE_REQUEST_REF.test(token));
+
+      const malformed = drTokens.filter(
+        (token) => DR_ID_SHAPED.test(token) && !DR_ID_FORMAT.test(token.toUpperCase()),
+      );
+      if (malformed.length > 0) {
+        issues.push(
+          issue(
+            "TDDLIST_EXCEPTION_INVALID_DR",
+            `Malformed DR-ID ${malformed.join(", ")} in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Expected DR-NNNN (policy-level) or DR-NNNN-NNNN (spec-scoped)`,
+            "warning",
+            relPath,
+            "tddList.exceptionDrFormat",
+            malformed,
+            "change",
+            `DR-ID を DR-NNNN もしくは DR-NNNN-NNNN の形式に直してください。宣言先は spec の 07_Decisions.md、または _policies/08_Decisions.md です。`,
+          ),
+        );
+      }
+
+      const wellFormed = drTokens
+        .map((token) => token.toUpperCase())
+        .filter((token) => DR_ID_FORMAT.test(token));
+      const unresolved = wellFormed.filter((token) => !declaredDrIds.has(token));
+      if (unresolved.length > 0) {
+        issues.push(
+          issue(
+            "TDDLIST_EXCEPTION_UNRESOLVED_DR",
+            `DR-ID ${unresolved.join(", ")} in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}) is declared in no Decisions file. Searched ${DR_DECLARATION_FILES.join(", ")} and ${toPosixRel(DR_POLICY_DECLARATION_FILE)}`,
+            "warning",
+            relPath,
+            // Rule id, not a dotted path: `waivers.ts#resolveRuleId` accepts
+            // only `^[A-Z]+-\d{3}$`, and a project keeping its decision records
+            // somewhere qfai does not read needs a way to silence this.
+            UNRESOLVED_DR_RULE_ID,
+            unresolved,
+            "change",
+            `該当の Decision Record を spec の 07_Decisions.md（または _policies/08_Decisions.md）に記載してください。別の場所で管理している場合は \`.qfai/waivers.yml\` に rule: ${UNRESOLVED_DR_RULE_ID} の waiver を登録してください。`,
           ),
         );
       }
@@ -731,6 +919,78 @@ async function validateSpecTddList(
           ),
         );
       }
+    }
+  }
+
+  // Phase 2 – Check 9c: the ledger under-reporting.
+  //
+  // Check 9 only ever looks at rows that *claim* completion, so "row says
+  // `done` but the test file is missing" was an error while "the test exists
+  // and the row still says `todo`" was invisible. The second direction is the
+  // one that actually occurs, because work lands from parallel worktrees and
+  // the ledger is updated by hand afterwards. A stale `todo` and a genuinely
+  // not-started row are then indistinguishable to every downstream consumer,
+  // including the completion gate that reads the ledger.
+  //
+  // The selector is what makes this trustworthy: a test file typically hosts
+  // many rows, so file existence alone would fire on any row whose neighbours
+  // have landed. Requiring the row's own selector to resolve inside that file
+  // means the named test is really there.
+  const selectorIndex = normalizedHeaders.indexOf("Selector");
+  if (statusIndex >= 0 && testFileIndex >= 0 && selectorIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const row = table.rows[rowIdx];
+      if (!row) continue;
+      if ((row[statusIndex] ?? "").trim().toLowerCase() !== "todo") continue;
+      const content = await readTestFileContent(root, (row[testFileIndex] ?? "").trim());
+      if (content === null) continue;
+      const selector = (row[selectorIndex] ?? "").trim();
+      if (!selectorResolves(selector, content)) continue;
+      issues.push(
+        issue(
+          "TDDLIST_STALE_STATUS",
+          `Test file exists and its selector "${selector}" resolves, but Status=todo for spec-${specNumber} (row ${rowIdx + 1}). The ledger may be stale; reconcile it before completion`,
+          "warning",
+          relPath,
+          "tddList.staleStatus",
+          undefined,
+          "canonical",
+          `Set this row to the status the repository actually supports, or clear the Test file / Selector if the test does not belong to it. A project that declares test paths and selectors before implementing them registers a \`.qfai/waivers.yml\` waiver with rule: ${STALE_STATUS_RULE_ID}.`,
+        ),
+      );
+    }
+  }
+
+  // Phase 2 – Check 9d: `Selector` is a required column, so it has to be read.
+  //
+  // It was required and never read by any code in the package — a required
+  // column whose value nothing consumes is a false assurance. For rows that
+  // claim completion Check 9 has already established the file exists; this
+  // establishes the named test is in it, which is also what makes Check 9c
+  // above trustworthy.
+  if (statusIndex >= 0 && testFileIndex >= 0 && selectorIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const row = table.rows[rowIdx];
+      if (!row) continue;
+      const status = (row[statusIndex] ?? "").trim().toLowerCase();
+      if (!TEST_FILE_CHECK_STATUSES.has(status)) continue;
+      const selector = (row[selectorIndex] ?? "").trim();
+      if (selector.length === 0) continue;
+      const content = await readTestFileContent(root, (row[testFileIndex] ?? "").trim());
+      if (content === null) continue;
+      if (selectorResolves(selector, content)) continue;
+      issues.push(
+        issue(
+          "TDDLIST_SELECTOR_UNRESOLVED",
+          `Selector "${selector}" was not found in its Test file for spec-${specNumber} (row ${rowIdx + 1}, Status=${status})`,
+          "warning",
+          relPath,
+          "tddList.selectorResolves",
+          undefined,
+          "canonical",
+          `The row claims a completed test the file does not appear to contain — the test was renamed, moved, or the Selector is stale. Update the Selector, or register a \`.qfai/waivers.yml\` waiver with rule: ${SELECTOR_UNRESOLVED_RULE_ID} when the selector is written in a form this check cannot resolve.`,
+        ),
+      );
     }
   }
 

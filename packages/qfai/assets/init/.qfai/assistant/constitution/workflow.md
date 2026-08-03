@@ -35,6 +35,7 @@ Do not proceed without a declared Change Type.
 - Read and enforce `.qfai/assistant/constitution/drift-protocol.md`.
 - Downstream phases must not edit upstream SSOT artifacts without explicit user approval.
 - If drift is required, STOP and raise a Change Request (3 options + recommendation), then wait for approval and rerun the owner skill.
+- The STOP is scoped: it halts the affected upstream artifact and every downstream item that depends on it, which the Change Request enumerates. Unaffected items continue, and more than one Change Request may be open at once — see `drift-protocol.md#multiple-open-change-requests`.
 
 ## Test-layer policy (Mandatory)
 
@@ -73,7 +74,11 @@ Implementation stage:
 - `/qfai-implement` orchestrates the full TDD micro-cycle (Red/Green/Refactor) one test at a time using `test-list.md` as the execution ledger.
 - Each item requires watch it fail (RED observation confirmed), watch it pass
   (GREEN observation confirmed), and fresh evidence (command+result pairs, not
-  status-only).
+  status-only). A RED is admissible only when an assertion — or an
+  expected-exception check — inside the row's own `Selector` raised the failure;
+  a collection, import, syntax or fixture error, or an unasserted throw, is a
+  missing seam, not a RED
+  (`skills/qfai-implement/references/red-admissibility.md`).
   - **Exception — RED not observable.** When the obligation is already satisfied
     by a sibling row, the RED cannot be observed. The row then carries
     falsifiability evidence in place of the RED pair; see
