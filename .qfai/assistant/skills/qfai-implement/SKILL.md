@@ -17,7 +17,7 @@ roles:
     completion-reviewer,
     product-surface-reviewer,
   ]
-routing-profile: runtime-heavy
+routing-profile: implementation-heavy
 mode: approval-gated
 ---
 
@@ -33,13 +33,10 @@ QFAI Skill Body (SSOT)
 
 ## Preconditions
 
-- **`.qfai/specs/<spec-id>/tdd/test-list.md` must exist and contain the eight
-  required columns.** It is the ledger every step of this skill reads.
-- **Producer**: `/qfai-sdd` Phase 2b seeds it. Do **not** proceed with an absent
-  ledger and do **not** invent rows that no TC backs.
-- **An empty ledger is a fault only when `06_Test-Cases.md` disagrees.** Never read a header-only
-  table as "nothing to do" on its own. The recovery procedure and the coverage-target test that
-  separates a truthfully empty ledger from an incomplete one are in
+- **`.qfai/specs/<spec-id>/tdd/test-list.md` must exist and contain the eight required columns.** It is the ledger every step of this skill reads.
+- **Producer**: `/qfai-sdd` Phase 2b seeds it. Do **not** proceed with an absent ledger and do **not** invent rows that no TC backs.
+- **An empty ledger is a fault only when `06_Test-Cases.md` disagrees.** Never read a header-only table as "nothing to do" on its own.
+  The recovery procedure and the coverage-target test that separates a truthfully empty ledger from an incomplete one are in
   `references/ledger-preconditions.md`; read it before exiting on an empty ledger.
 
 ## Spec Auto-Discovery Protocol
@@ -76,8 +73,7 @@ Skill-specific examples:
   **spec-level checkpoint boundary** may still be owed — an interrupted run, or a re-run of an
   already-terminal ledger, leaves it unrecorded. Before reporting "nothing to do" and exiting,
   confirm fresh spec-level checkpoint verification evidence exists for this ledger state; run the
-  per-spec verification first when it is missing or stale. See
-  `references/checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`. Only
+  per-spec verification first when it is missing or stale. See `references/checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`. Only
   then report "nothing to do" for that spec, then advance to the next spec of a confirmed queue; exit when the queue is empty (Volume Policy > Advancing the queue).
 
 ## Goal
@@ -94,40 +90,39 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 ## Non-goals
 
-- Writing spec artifacts (use `/qfai-sdd`).
+- Writing spec artifacts other than this skill's own `tdd/test-list.md` ledger (use `/qfai-sdd`). The ledger's `Status` / `DR-ID` / `Evidence` cells are the one carve-out the Drift Protocol grants (`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`); its rows are still upstream.
 - Writing acceptance tests (use `/qfai-atdd`). `Layer = E2E` / `Layer = API` ledger rows are tracked here but their tests are authored there.
 - Running validation gates (use `/qfai-verify`).
-- Parallel execution across multiple **specs** simultaneously. (Item-level
-  parallelism _within_ one spec is a separate question, governed by
+- Parallel execution across multiple **specs** simultaneously. (Item-level parallelism _within_ one spec is a separate question, governed by
   `## Parallelization Policy` below.)
 
 ## Execution Ledger: test-list.md
 
 The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single record of what this
-skill has done and may still do. Status values are `todo`, `red`, `green`, `refactor`, `done`,
-`exception`; the lifecycle is forward-only and an `exception` requires a DR-ID.
+skill has done and may still do. Status values are `todo`, `blocked`, `red`, `green`, `refactor`, `done`, `exception`;
+the lifecycle is forward-only, an `exception` requires a DR-ID, and a `blocked` row requires a `Blocked-By` and is never selected.
 
-The eight required columns, the allowed transitions and the exception rules are in
-`references/execution-ledger.md`. Read it before writing to the ledger.
+The eight required columns, the allowed transitions and the exception rules are in `references/execution-ledger.md`. Read it before writing to the ledger.
 
 ## Required Process
 
-### Phase: Preflight (Change Request reset) — MANDATORY, runs first
+### Phase: Stage 0 + Preflight — MANDATORY, runs first
 
-1. Enumerate the in-scope `.qfai/decisions/CR-*.md` and apply every approved reset per `references/change-request-reset.md` **before** any other ledger judgement — including the all-`done` "nothing to do" exit, which an approved reset invalidates.
+1. Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`, `#format-ssot-mandatory` and `#delta-rejected-guard-mandatory`, then read `catalog/tech.md` + `catalog/structure.md` and take every Test / Lint / Typecheck / Build command below from `tech.md#standard-commands-copy-paste` rather than inventing one. Refresh both files when the repository contradicts them; do not continue on stale steering. This stage was bound by neither inheritance route while being the one that creates production source trees.
+2. Enumerate the in-scope `.qfai/decisions/CR-*.md` and apply every approved reset per `references/change-request-reset.md` **before** any other ledger judgement — including the all-`done` "nothing to do" exit, which an approved reset invalidates.
 
 ### Phase: Red (Write Failing Test)
 
-1. Read `test-list.md`. **Rework first**: if any row is at `review-fix`, select the first such row and resume its rework (`references/round-evidence.md`) before any `todo` row — one left by an interrupted session is otherwise never picked up. Otherwise select the first row with `Status = todo`.
+1. Read `test-list.md`. **Rework first**: if any row is at `review-fix`, select the first such row and resume its rework (`references/round-evidence.md`) before any `todo` row — one left by an interrupted session is otherwise never picked up. Otherwise select the first row with `Status = todo`, skipping any `blocked` row — it cannot be started, and re-issuing it is what made the determination get re-derived every pass (`references/execution-ledger.md#blocked-rows`).
 2. Transition status to `red` — **only for a `todo` row**. A `review-fix` row **stays at `review-fix`** for the whole rework: it runs steps 3-5 and the Green phase in place, and `review-fix -> red` is not an allowed transition.
 3. Write a **failing test** from the row's obligation column, selected by `Layer`: `TC-Refs` for `Unit` / `Component` / `Integration`, `US-Refs` for `E2E`, `CON-API-Refs` for `API`. An `E2E` or `API` row's test is authored by `/qfai-atdd` (Non-goals); this skill only drives that row's status and evidence once the acceptance test exists, and stops with a handoff note if it does not.
-4. Run the test and **watch it fail** — confirm the test actually fails for the expected reason. When
-   the row's `Selector` holds several entries, observe each entry's failure separately; a single
-   aggregate run is not a valid RED observation.
+   3a. Create the **minimal seam** the test imports — module, export or signature with no behaviour — so the test module loads. This is not Phase Green's production code: it implements no predicate. Without it, the first failure of any new-symbol row is a resolution error by construction.
+4. Run the test and **watch it fail**. Admissible only when an assertion — or an expected-exception check — inside this row's `Selector` raised the failure and its message names the predicate the row owns; a collection / import / syntax / fixture error, or an unasserted throw, is a **missing seam**, not a RED (`references/red-admissibility.md`). Observe each `Selector` entry's failure separately; one aggregate run is not a valid RED observation. Submit that run to `qa-gatekeeper` and obtain confirmation **before** any production code exists — routing phase `red`.
 5. If the test unexpectedly passes, classify **why** before doing anything else. An obligation
    already satisfied by a sibling row is **not an anomaly** and does **not** go to `exception`;
-   anything else transitions to `exception` and records the anomaly. Never weaken a correct test
-   until it fails in order to manufacture a RED. See `references/red-not-observable.md`.
+   anything else transitions to `exception` and records the anomaly as `.qfai/decisions/DR-<id>-<slug>.md` — never in
+   `07_Decisions.md` / `09_delta.md`, which are upstream SSOT this skill may not patch. Never weaken a correct
+   test until it fails in order to manufacture a RED. See `references/red-not-observable.md`.
    > **RED observation is only as good as the selector's granularity.** A single test function can fail
    > only once, so if one selector entry carries an entire obligation matrix, "the expected reason" is
    > whichever assert happens to execute first — every assertion after it is unobserved on every RED
@@ -139,13 +134,13 @@ The eight required columns, the allowed transitions and the exception rules are 
 ### Phase: Green (Make It Pass)
 
 1. Write the **minimum production code** to make the failing test pass. On the _RED not observable_ path there is none to write — the `Satisfied-by` row already implements the predicate — so go straight to step 2.
-2. Run the test and **watch it pass**.
+2. Run the test and **watch it pass**, and submit that run to `qa-gatekeeper` for the GREEN confirmation — routing phase `build`, which is blocking for the same reason `red` is.
 3. Transition status to `green` — **only for a row that entered from `todo`**. A `review-fix` row stays at `review-fix` here too; `review-fix -> green` is not an allowed transition and must not be written to the ledger.
 4. If the test still fails after implementation, investigate and fix. Do not skip to refactor.
 
 ### Phase: Refactor
 
-1. Improve code quality (naming, structure, duplication removal) while keeping all tests green.
+1. Improve code quality (naming, structure, duplication removal) while keeping all tests green. **Before editing a production file**, check whether another spec's `tdd/test-list.md` names it in `Test file`; if so the edit is cross-spec — record it in this item's evidence and re-run `completion-reviewer` against that spec's obligations too (`references/cross-spec-ownership.md`).
 2. Run the **relevant test suite** to confirm nothing broke. "Relevant" means the
    smallest selector that covers the module you touched **plus its reverse
    dependency closure** — walk the production import graph backwards, not just the
@@ -169,7 +164,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 ### Completion
 
-1. After processing all items, update `test-list.md` with final statuses.
+1. After processing all items, update `test-list.md` with final Status, DR-ID and Evidence values — the three cells the Drift Protocol carve-out covers, and the ones gate item 10 reads.
 2. If all items are `done`, report "All items complete".
 3. If some items are `exception`, report them as **blocking output**, not as an
    informational list: for each, the `TDD-ID`, the `DR-ID`, and whether that DR
@@ -188,11 +183,11 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 - Orchestrator MUST NOT write test or production code directly; delegate every TDD phase to the routed implementation agents.
 - Additional implement-specific overrides:
   - read `test-list.md`, determine the next pending item, and delegate each TDD phase;
-  - update `test-list.md` status after each phase completes.
+  - update `test-list.md` **Status and Evidence** after each phase completes, copying the delegated agent's RED/GREEN command+result verbatim. Gate item 10 requires both columns, the protocol permits both, and the orchestrator is the only role permitted to write this file (`references/parallelization-policy.md#ledger-ownership`).
 
 ### Formal Sub-agent Roster
 
-This skill delegates through the centralized routing policy in `.qfai/assistant/manifest/agent-routing.yml`.
+This skill delegates through the centralized routing policy in `.qfai/assistant/manifest/agent-routing.yml`. Its `red`, `build`, `test` and `review` phases carry `iteration: per-ledger-item` — they run once **per row**, not once per invocation, which is what puts `qa-gatekeeper` in a phase where a RED state still exists to observe.
 
 - `delivery-planner`
   - reads `test-list.md`, selects the next pending item, and is the sole authority for **item selection and item scope** — whether this row's selector is a sufficient slice of its `TC-*` obligation
@@ -201,7 +196,7 @@ This skill delegates through the centralized routing policy in `.qfai/assistant/
 - `frontend-engineer` / `backend-engineer`
   - implement the selected item only, write the failing test first, write minimal passing code, and refactor without unrelated changes
 - `qa-gatekeeper`
-  - is the sole authority for validating **RED/GREEN observation evidence** — did the test fail (or pass) for the expected reason — and completion gate evidence
+  - is the sole authority for validating **RED/GREEN observation evidence** — did the test fail (or pass) for the expected reason — and completion gate evidence. Routed per row in `red` (before production code) and `build` (after), not only in `review`
   - does not adjudicate item scope; a scope objection is `delivery-planner`'s call
 - `implementation-reviewer`
   - reviews code quality, maintainability, backend correctness, and hidden coupling
@@ -226,8 +221,8 @@ table, the group-formation transitions and the queue-advance steps: `references/
 All agent-to-agent transitions follow these contracts:
 
 1. `delivery-planner` selects the next item and assigns it to the appropriate implementation agent.
-2. Implementation agent submits RED/GREEN execution evidence to `qa-gatekeeper`.
-3. `qa-gatekeeper` confirms or rejects the RED/GREEN observation.
+2. Implementation agent submits the RED run to `qa-gatekeeper` **while no production code exists** (routing phase `red`), then the GREEN run after it (routing phase `build`). One combined post-hoc submission is not a substitute: RED is unrecoverable once Green begins, so it leaves nothing but the implementer's own account of a destroyed state — the self-attestation this gate exists to prevent. It **returns it to the orchestrator in the per-item evidence contract's form** so it can be written to the ledger. The implementation agent never writes `test-list.md` itself.
+3. `qa-gatekeeper` confirms or rejects each observation. A RED rejection stops the row before Green; it does not wait for the `review` phase.
 4. After the item reaches `refactor`, implementation agent submits it to `completion-reviewer` for spec alignment and to `implementation-reviewer` for code quality review. Review is requested from `refactor`, never from `green`, so a `REVISE` always lands on the one status with an outbound `review-fix` edge.
 5. `product-surface-reviewer` is added when the item affects UI behavior or rendered output.
 6. Only after every required reviewer passes may the item transition to `done`. "Required" is wider than `blocking_agents`: `implementation-reviewer` is mandatory and its `REVISE` blocks `done` independently of that list, and `product-surface-reviewer` joins for UI-affecting items. The authority for an item transition is `#item-completion-checklist-12-point-gate`, not the routing list, which governs phase progression (`references/volume-policy.md#routing-is-unchanged`).
@@ -300,9 +295,10 @@ Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
 
 ### Post-parallel integration verify
 
+- **Reconcile the ledger first.** Under worktree separation each worker holds a private copy of `test-list.md`, so the merged trunk carries none of their transitions. Write Status + Evidence for every merged item from the worker reports **before** integration verify, and fail the verify if any merged item's row is still `todo` — an unreconciled ledger reports finished work as unstarted (`references/parallelization-policy.md#ledger-ownership`).
 - After parallel slices complete and merge, run integration verify on the merged result
 - Then reconcile the seams: diff each slice's touched `src/` paths against its declared `Owning module` and report undeclared or overlapping paths as a deny-condition breach — **independently of whether the merged suite is green** (`references/parallelization-policy.md#seam-reconciliation-after-a-parallel-run`)
-- If integration verify fails, flag all slices for re-examination and roll back the merge
+- If integration verify fails, **classify before acting** per `shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`, attributing the failure to one slice, to the merge resolution, or to code outside every slice. Remedies by class: `references/parallelization-policy.md#failed-integration-verify`. Unconditional rollback is not one of them — the protocol classifies this as a local, non-destructive defect to fix and re-run, and reserves stopping for destructive changes.
 - If integration verify passes, state transitions back to `delivery-planner` for sequential flow
 
 ## Completion Contract (Shared)
@@ -316,14 +312,14 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 
 1. Corresponding `TDD-ID` has been selected and is in progress
 2. A failing test was added first (test-first) — **or**, on the _RED not observable_ path, the correct test was added first and proven falsifiable by mutation instead of by a natural failure
-3. RED was observed — `qa-gatekeeper` confirmed the test failed for the expected reason (watch it fail), **or** the row carries falsifiability evidence per _RED not observable_
+3. RED was observed — `qa-gatekeeper` confirmed an **admissible** failure: an assertion or expected-exception check inside the row's `Selector`, not a load or fixture error (`references/red-admissibility.md`), **or** the row carries falsifiability evidence per _RED not observable_
 4. Minimal production code was written to make the test pass — **waived** on the _RED not observable_ path, where the `Satisfied-by` row already implements the predicate; do not manufacture a change to satisfy this item
-5. GREEN was observed — `qa-gatekeeper` confirmed the test passes after implementation (watch it pass)
+5. GREEN was observed — `qa-gatekeeper` confirmed the test passes after implementation (watch it pass) **and** that the pass depends on this item's behaviour: `Oracle proof` records a production mutation that made the test fail again, or `equivalent-mutant` naming the weaker contract clause (`references/oracle-strength.md`). Exit code 0 alone does not distinguish a discriminating test from one that cannot fail
 6. Refactor was performed and GREEN was re-confirmed after refactor
 7. `completion-reviewer` returned PASS (spec / completion review gate)
 8. `implementation-reviewer` returned PASS (code quality review gate)
 9. UI-affecting items have prototype parity PASS from `product-surface-reviewer`
-10. `test-list.md` Status and Evidence columns are updated with fresh evidence
+10. `test-list.md` Status is current and its Evidence cell's anchor resolves to a fresh per-item entry in `.qfai/evidence/implement-<spec-id>.md` (the cell is a pointer, not the payload — `references/execution-ledger.md#evidence-cell-contract`), and the item's four sub-agent observations (items 3, 5, 7, 8) all name the **same** revision (`references/evidence-revision.md`)
 11. `.qfai/evidence/implement-<spec-id>.md` is appended with both reviewer verdicts after items 7-8 returned PASS
 12. Checkpoint verification passed (see `#checkpoint-verification`). The **full** suite is required here only when the item sits on a checkpoint boundary; a row between boundaries satisfies this with the narrow relevant suite from Phase: Refactor step 2, which is also what items 6, 7 and 8 are evaluated against.
 
@@ -370,6 +366,7 @@ Completion MUST NOT be declared when any of the following are true:
 - No GREEN fresh evidence exists for the item
 - Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned REVISE
 - `.qfai/evidence/implement-<spec-id>.md` does not exist, or does not record both reviewer verdicts for the item (this is the single blocking statement about the evidence file; its absence of _verdicts_ is never blocking before items 7-8)
+- A `## Cross-spec obligations` entry in this spec's evidence file is still open — the change it names has not landed, or the blocked spec's obligation is still untested. A clean completion here would certify an obligation this run knowingly left unmet (`references/cross-spec-ownership.md`)
 - Items with `todo`, `red`, `green`, `refactor`, or `review-fix` status still exist (for spec-level completion)
 - Items with `exception` status still exist, **unless** the row's `DR-ID` names
   a Decision Record explicitly recorded as a **user-approved accepted-risk
@@ -387,8 +384,10 @@ Required sections:
 
 - Objective
 - Items processed (TDD-ID, TC-Refs, final status)
+- **Per item, one `### TDD-NNNN` section** carrying the contract below — the single home for the RED/GREEN commands and output. The ledger's `Evidence` cell anchors here and holds only the one-word outcomes, because a GFM cell cannot hold a newline or a bare `|` (`references/execution-ledger.md#evidence-cell-contract`)
 - Test results summary
 - Exception items (if any) with DR-IDs
+- `## Cross-spec obligations` (if any): per affected spec, the TDD-ID that forced the change, the blocked spec and its TDD-IDs, the file, the change required, the obligation left unverified, and the resolution (`re-reviewed` or a `CR-*`). Fields and the rule: `references/cross-spec-ownership.md`
 - Commands executed
 
 ### Per-item evidence contract (fresh evidence required)
@@ -400,8 +399,10 @@ parts with different write points; the fields are the same, the sequencing is no
 
 - `TDD-ID` — the item identifier
 - `TC-ref` — reference to the test case(s). On a `Layer = E2E` row read `US-ref` (the row's `US-Refs`) instead, and on a `Layer = API` row read `CON-API-ref` (the row's `CON-API-Refs`): exactly one obligation reference is required, the one the row's `Layer` selects
+- `Revision` — the state the observation was made against: `git rev-parse HEAD`, or `working-tree+<porcelain digest>` for an uncommitted tree. One per round block, and one for the refactor-verify pair (`references/evidence-revision.md`)
 - `RED command` — the exact command executed to observe failure
-- `RED result` — the failure output (result completeness is best-effort; truncated output is acceptable)
+- `RED result` — the failure output. Truncation is acceptable for the stack tail, never for the assertion message and its location: that is what demonstrates admissibility
+- `RED failure mode` — `assertion` | `expected-error` | `falsifiability`. There is no admissible value for a load error (`references/red-admissibility.md`)
 - **Exclusive alternative to the RED pair**: a row on the _RED not observable_ path carries
   `Satisfied-by`, `Falsifiability command` and `Falsifiability result` in place of the two
   RED fields above. Exactly one of the two forms must be present — never both, never
@@ -411,14 +412,15 @@ parts with different write points; the fields are the same, the sequencing is no
 - Each RED/GREEN cycle is one **round block** and every field above carries a `Round N:` prefix; numbering, the two rework paths and the full field list are in `references/round-evidence.md`
 - `Refactor verify command` — the exact command re-executed after refactor. Written once for the item as a whole, so it takes no `Round N:` prefix
 - `Refactor verify result` — the output confirming GREEN is maintained (likewise once per item)
+- `Oracle proof` — the smallest production change that makes this item's test fail again, its command and its failing output, reverted immediately; or `equivalent-mutant` naming the contract clause weaker than the obligation. A row on the _RED not observable_ path satisfies this with its falsifiability fields (`references/oracle-strength.md`)
 
 These exist _for_ the reviewers: they are the evidence items 7-8 audit. They MUST be present when a
 review is requested.
 
 **Gate-completed (appended after items 7-8 return PASS):**
 
-- `Spec review` — completion-reviewer result (PASS or REVISE)
-- `Code quality review` — implementation-reviewer result (PASS or REVISE)
+- `Spec review` — completion-reviewer result (PASS or REVISE) with its `Reviewed revision`
+- `Code quality review` — implementation-reviewer result (PASS or REVISE) with its `Reviewed revision`
 - `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE)
 - `Checkpoint verification command` — the exact command set executed at the checkpoint boundary
 - `Checkpoint verification result` — the outcome of that command set (PASS only when every command exits 0)
@@ -430,10 +432,9 @@ the completion gate (see `Completion prohibition conditions`).
 
 ### Evidence hard rules
 
-- Status-only evidence (e.g., "Status: PASS" with no command) is invalid and MUST be rejected
-- Both command and result are required; "should pass" or "looks good" alone is not acceptable
-- Stale evidence from a previous run MUST NOT be reused to claim completion for a new cycle
-- Empty evidence entries are rejected: minimum evidence per TDD item must be met
+- Status-only evidence (e.g., "Status: PASS" with no command) is invalid and MUST be rejected; both command and result are required, and "should pass" or "looks good" alone is not acceptable — `TDDLIST_EVIDENCE_STATUS_ONLY` (warning, waivable as `TDDLIST-004`: ledgers predating the check carry prose verdicts)
+- Empty evidence entries are rejected: minimum evidence per TDD item must be met — `TDDLIST_EVIDENCE_EMPTY` (error)
+- Stale evidence from a previous run MUST NOT be reused to claim completion for a new cycle. **Stale is mechanical**: evidence whose named `Revision` differs from the revision the item finally landed at (`references/evidence-revision.md`). **Reviewer obligation, not a machine gate** — why, and the full rules: `references/execution-ledger.md`.
 
 ## Checkpoint Verification
 

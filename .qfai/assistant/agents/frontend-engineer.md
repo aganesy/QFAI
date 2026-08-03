@@ -34,6 +34,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Frontend implementation summary
 - Changed files and affected flows
 - Local verification notes
+- TDD ledger Status + Evidence entry for each item processed, returned to the orchestrator (which owns the `test-list.md` write; do not edit that file directly)
 - Evidence summary for `.qfai/evidence/`
 - Notes on how simplicity, necessity, and reuse were preserved in the chosen implementation
 
