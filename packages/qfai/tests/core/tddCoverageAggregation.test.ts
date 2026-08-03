@@ -77,11 +77,25 @@ describe("TDD coverage resolution across duplicate TC rows", () => {
     const spec = await coverageFor(
       tddTable([
         { id: "TDD-0001", tcRefs: "TC-0001-0001", status: "done" },
-        { id: "TDD-0002", tcRefs: "TC-0001-0001", status: "refactor" },
+        { id: "TDD-0002", tcRefs: "TC-0001-0001", status: "done" },
       ]),
     );
 
     expect(spec.doneCount).toBe(1);
+    expect(spec.openCount).toBe(0);
+  });
+
+  it("reports a still-in-review row as in-review, not done (#386)", async () => {
+    // `refactor` used to count toward `done`, so this printed `done: 1`.
+    const spec = await coverageFor(
+      tddTable([
+        { id: "TDD-0001", tcRefs: "TC-0001-0001", status: "done" },
+        { id: "TDD-0002", tcRefs: "TC-0001-0001", status: "refactor" },
+      ]),
+    );
+
+    expect(spec.doneCount).toBe(0);
+    expect(spec.inReviewCount).toBe(1);
     expect(spec.openCount).toBe(0);
   });
 
@@ -108,7 +122,7 @@ describe("TDD coverage resolution across duplicate TC rows", () => {
 
   it("still resolves a single-row TC", async () => {
     const spec = await coverageFor(
-      tddTable([{ id: "TDD-0001", tcRefs: "TC-0001-0001", status: "green" }]),
+      tddTable([{ id: "TDD-0001", tcRefs: "TC-0001-0001", status: "done" }]),
     );
 
     expect(spec.doneCount).toBe(1);

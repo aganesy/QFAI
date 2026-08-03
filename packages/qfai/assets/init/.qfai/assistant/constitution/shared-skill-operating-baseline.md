@@ -119,12 +119,17 @@ When validate, doctor, test, lint, typecheck, build, capture, or report gates fa
 - inspect exit code, logs, `validate.json`, and cited files before reporting;
 - classify each finding as skill-owned artifact, upstream spec/contract, code/test defect, environment/tooling, or user decision;
 - fix skill-owned artifacts and code/test defects autonomously when the fix is local and non-destructive;
+- **upstream spec/contract findings: never repair.** STOP and follow `.qfai/assistant/constitution/drift-protocol.md` (Change Request + owner-skill rerun) — **even when the fix looks local and non-destructive, and even when it is one token and obviously correct**. "Local and non-destructive" is a permission for the two classes above it; it is not a test that upstream artifacts can pass. Ownership, not size, decides;
+- environment/tooling findings: repair the environment when it is yours to repair (install a missing dev dependency, regenerate a lockfile, create a scratch directory). Stop for anything needing credentials, network access you do not have, or a change to CI configuration or the host machine;
+- user decision findings: never decide by default. Record the question, state the option you would take and why, and stop — a decision taken silently to keep a gate green is the same failure as repairing upstream, one layer up;
 - rerun the same failing gate after each fix batch, **and once with no intervening change** when the failure looks nondeterministic — see `#nondeterministic-gates` below. The confirmation rerun is bounded at one: after it the finding is classified, not re-rolled;
 - do not weaken profiles, lower `--fail-on`, waive errors, invent evidence, or skip required reviewers;
-- stop for destructive changes, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures;
+- stop for destructive changes, **any upstream spec/contract finding**, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures — the stop list is closed over the classification above, so every class the agent is told to use has a defined next action;
 - stop on **round count** as well as on lack of progress: a reviewer gate that would enter its third round escalates to the user, even when every round has made progress. See `shared-skill-delegation-baseline.md#round-budget-must`.
 
-When stopping, report: cause, attempted fixes, remaining blocker, user action, and retry gate.
+When stopping, report: cause, attempted fixes, remaining blocker, user action, retry gate, and **the work counts — how many items are complete, how many are blocked, and by which finding**.
+
+The counts are not decoration. Restating the ownership rule does not change the incentive that breaks it: an agent facing "repair five upstream defects or report most of the batch as blocked" reaches for the repair because the alternative reads as failure. `26 items: 21 complete, 5 blocked on CON-DB-0007` is a report of work done, and it is what makes STOP a credible answer rather than a surrender. Blocked is a status, not a verdict on the run.
 
 ### Nondeterministic gates
 

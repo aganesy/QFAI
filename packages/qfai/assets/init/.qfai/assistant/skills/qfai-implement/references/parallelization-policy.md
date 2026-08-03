@@ -35,6 +35,12 @@ things. A read-only fixture module or a DI container that every item constructs
 independently does not veto the policy; a shared database is resolved by
 per-worker schema isolation, not by a blanket deny.
 
+- **Every concurrently dispatched row declares an `Owning module`**, and no two
+  of them declare the same one. This is the operational form of the next
+  bullet: under RED-first the source module does not exist yet, so the only
+  thing that can be compared before dispatch is what each row _declares_ it
+  will write (`execution-ledger.md#declared-seam-column-optional-required-for-parallel-dispatch`).
+  A row carrying `-` in that column is not eligible for parallel dispatch.
 - No two concurrently dispatched items **write** the same source module.
 - No two concurrently dispatched items **write** the same test module.
 - No item **writes** a module that another concurrently dispatched item's test
@@ -101,14 +107,45 @@ exception is preferable to a documented way around an upstream SSOT rule.
 ## Deny conditions (any one blocks parallel dispatch)
 
 - Two concurrently dispatched items share the same behavior's Red/Green/Refactor cycle.
-- Two concurrently dispatched items modify the same public API surface.
+- Two concurrently dispatched items declare the same `Owning module`, or either
+  of them declares none.
+- Two concurrently dispatched items modify the same public API surface. Before
+  RED this is evaluated over the declared seams; the surface itself does not
+  exist yet.
 - Two concurrently dispatched items write the same shared fixture, shared mock,
   or shared global setup **file**. (A shared fixture module that neither item
   writes and each consumes read-only is not a deny — see the allow conditions.)
 - Two concurrently dispatched items bind the same fixed port, write the same
   out-of-worktree path, or share an un-namespaced external cache/queue.
 - Sequential dependency: "A must finish before B has meaning".
-- The independence claim cannot be explained with concrete file/module evidence.
+- The independence claim cannot be explained with concrete file/module
+  evidence. Before RED that evidence is the rows' declared `Owning module`
+  values — not the source tree, which does not yet contain the modules under
+  discussion. **If the ledger carries no `Owning module` column, the allow
+  conditions cannot be evaluated at all**, and parallel dispatch is permitted
+  only for slices whose seams already exist in the repository. "The test files
+  differ" is not an independence claim.
+
+## Seam reconciliation (after a parallel run)
+
+The post-merge integration verify detects a broken build. It does not detect
+two slices deciding the same thing twice under two names in one module, which
+is the outcome the deny conditions exist to prevent — and that outcome can
+leave the suite green.
+
+So after the slices merge, and **independently of whether the merged suite
+passes**:
+
+1. For each slice, list the `src/` paths it actually touched
+   (`git diff --name-only <base>..<slice-head> -- <source root>`).
+2. Compare that list against the slice's declared `Owning module`.
+3. Report every touched path that no slice declared, and every path touched by
+   more than one slice, as a **deny-condition breach**. It is a breach whether
+   or not anything broke: the gate was passed on a claim that turned out to be
+   false, so the next authorization is being made on the same basis.
+4. A breach does not automatically roll back a green merge. It does require the
+   overlapping modules to be re-read for duplicated behaviour, and the finding
+   to be recorded before `delivery-planner` authorizes another parallel run.
 
 ## Coordinated parallel mode (ledger ownership)
 
@@ -124,3 +161,75 @@ When parallel dispatch is authorized, the ledger has one writer:
   **complete** evidence block to the row, not by the worker writing it. A block
   missing any contract field does not satisfy item 10: the orchestrator obtains
   the missing fields first, and the row stays out of `done` until it has them.
+
+## Ledger ownership
+
+`.qfai/specs/<spec-id>/tdd/test-list.md` has exactly one writer: the
+**orchestrator**, in the **trunk**.
+
+This is not a style preference. Delegation is mandatory and the orchestrator may
+not write code, so the only role that ever observes RED/GREEN is the
+implementation agent — and the ledger it would have to write lives _inside_ the
+tree that worktree separation copies. N workers would each hold a private copy of
+the one table that is the completion gate, and merging them is a text merge of
+the artifact the gate reads.
+
+So:
+
+- Parallel workers **MUST NOT** edit `.qfai/specs/<spec-id>/tdd/**`. Their
+  worktree copy is read-only for the duration of the slice.
+- Each worker returns, per item it processed: `TDD-ID`, final `Status`, and the
+  `Evidence` payload in the per-item evidence contract's form.
+- The orchestrator writes those rows into the trunk ledger during
+  `#post-parallel-integration-verify`, before the verify runs.
+- A merged item whose row is still `todo` fails that verify. Silence there is
+  indistinguishable from work that was never done.
+
+In serial mode the same rule holds with no merge step: the implementation agent
+returns Status + Evidence, the orchestrator writes them.
+
+## Failed integration verify
+
+The old rule was one unconditional destructive branch — "flag all slices for
+re-examination and roll back the merge" — with no step attributing the failure to
+anything. That contradicts the Gate Failure Autorepair Protocol the skill
+imports twenty lines later, which classifies this class as a local,
+non-destructive code/test defect to fix and re-run, and reserves stopping for
+_destructive_ changes. It also contradicts the forward-only lifecycle, and never
+said what happened to the rolled-back items' statuses.
+
+Classify first, then apply the matching remedy.
+
+### 1. Defect outside every merged slice
+
+A stale fixture, a stale composition helper, a shared factory none of the slices
+declared. **Fix locally and re-run integration verify. Do not roll back.**
+
+The fix lands outside every slice's declared write boundary, so it is the
+**orchestrator's** to make — no slice owns it, and returning it to a worker would
+route it to an agent whose boundary excludes the file. Record it in the stage
+evidence as an integration fix, not as a slice's work.
+
+### 2. Defect inside one slice
+
+Return **that slice's items only**. The other slices keep their state and their
+merged code; re-examining them would discard work the verify did not fault.
+Rows go to `review-fix`, which is the status that exists for rework and has an
+outbound edge back to `refactor`.
+
+### 3. The union itself is inadmissible
+
+Only when the slices are individually correct and jointly wrong — a genuine
+interaction the merge exposed — flag all slices and roll back the merge.
+
+This is the **one sanctioned backward move** in this skill besides an approved
+Change Request reset. It is a _merge_ rollback, not a status rollback: the rows
+return to `review-fix`, not to `todo`, so the forward-only lifecycle is
+unbroken and the RED/GREEN evidence each row already earned is retained. A row
+that must genuinely restart needs the upstream-reset rule and its recorded
+approval, exactly as elsewhere.
+
+### Round budget
+
+Repeating any of the three without progress escalates to the user on the third
+round, per the autorepair protocol. "Roll back and retry" is not a loop.
