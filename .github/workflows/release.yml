@@ -1,58 +1,96 @@
 name: Release
 
-# Tag-driven. Pushing `vX.Y.Z` is the release action; nothing here fires on a
-# branch push, so a merge to main never publishes on its own.
+# Two triggers, deliberately carrying different authority.
 #
-# The tag is a claim about a commit, and this workflow's first job is to refuse
-# to act on a false one: the tag name, `packages/qfai/package.json#version` and
-# the `CHANGELOG.md` heading must agree before anything is published. A mismatch
-# is how a release goes out as the wrong version, and it is silent afterwards.
+#   push tag vX.Y.Z  -> verify + gate + GitHub Release.  Publishes nothing.
+#   workflow_dispatch -> verify + gate + npm publish, for a tag that already exists.
+#
+# `RELEASE.md` treats tag creation and `npm publish（必要な場合）` as separate
+# steps, and the repo rules require an explicit instruction for each. A single
+# tag-triggered pipeline would collapse both into one irreversible push:
+# approving a tag would approve a publish nobody asked for. Naming an
+# environment does not fix that — an environment without required reviewers
+# gates nothing — so the split is in the trigger, not in a setting.
 on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to publish to npm (e.g. v1.10.0)"
+        required: true
+        type: string
 
 env:
   NODE_LTS: "20.19"
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  # ── 1. The tag says what this is; check that the tree agrees ──────
+  # ── 1. The tag is a claim; check that the tree agrees ─────────────
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
       version: ${{ steps.pin.outputs.version }}
+      tag: ${{ steps.pin.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
-      - name: Resolve the version the tag claims
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          # `git merge-base` below needs main's history, not a shallow tip.
+          fetch-depth: 0
+      - name: Resolve and check the version the tag claims
         id: pin
         run: |
           set -euo pipefail
-          tag="${GITHUB_REF_NAME}"
+          tag="${{ inputs.tag || github.ref_name }}"
+          case "$tag" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "::error::'${tag}' is not a vX.Y.Z release tag"; exit 1 ;;
+          esac
           version="${tag#v}"
+
           pkg="$(node -p "require('./packages/qfai/package.json').version")"
           if [ "$version" != "$pkg" ]; then
             echo "::error::tag ${tag} does not match packages/qfai/package.json#version ${pkg}"
             exit 1
           fi
-          if ! grep -q "^## \[${version}\] - " CHANGELOG.md; then
+
+          # Literal prefix match, not a regex: as a basic regular expression the
+          # dots in `1.10.0` match any character, so a `## [1x10x0]` heading
+          # would satisfy `grep` here and then break the awk extraction that
+          # builds the release notes — publishing while the GitHub Release
+          # silently fails. `index($0, h) == 1` is the same comparison the notes
+          # step makes, so the two cannot disagree.
+          if ! awk -v h="## [${version}] - " 'index($0, h) == 1 { found = 1 } END { exit !found }' CHANGELOG.md; then
             echo "::error::CHANGELOG.md has no released heading for ${version} (expected '## [${version}] - YYYY-MM-DD')"
             exit 1
           fi
+
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
         shell: bash
+      - name: Require the tagged commit to be on main
+        # A tag can be pushed onto any commit, including one on an unmerged
+        # branch. Without this, code that never passed branch protection or
+        # review could reach npm just by being tagged.
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "::error::${{ steps.pin.outputs.tag }} points at a commit that is not an ancestor of origin/main"
+            exit 1
+          fi
+        shell: bash
 
-  # ── 2. The same gate `main` runs, re-run against the tagged tree ──
-  # A tag can point at any commit, including one that never passed CI, so this
-  # does not trust the merge run — it re-runs the full gate on what is about to
-  # ship.
+  # ── 2. The gate main is held to, re-run on the tagged tree ───────
   gate:
     needs: verify
     runs-on: ubuntu-latest
@@ -60,6 +98,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ needs.verify.outputs.tag }}
           fetch-depth: 0
       - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
         run: corepack enable
@@ -73,20 +112,59 @@ jobs:
         shell: bash
       - run: pnpm install --frozen-lockfile
       - name: Run the release gate
-        # `ci:gate` is the same aggregate `main` is held to: SSOT sync, format,
-        # lint, types, package tests and the pack verification.
+        # The same aggregate `main` is held to: SSOT sync, format, lint, types,
+        # package tests and pack verification.
         run: pnpm ci:gate
         env:
-          # The branch-name version pin is a PR-time guard; on a tag there is no
-          # branch to read, and `verify` above has already checked the stronger
-          # claim (tag == package.json == CHANGELOG).
+          # The branch-name pin is a PR-time guard; a tag has no branch to read,
+          # and `verify` already checked the stronger claim
+          # (tag == package.json == CHANGELOG).
           VERSION_PIN_SKIP: "1"
+      - name: Sanity grep — no internal spec IDs or version markers leak (post-build)
+        # `ci:gate` builds but does not re-run this; CI runs it after the build
+        # because some identifiers only appear in `dist/`. Without it here, a
+        # leak that is invisible in source reaches an irreversible publish.
+        run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh
+        shell: bash
 
-  # ── 3. Publish to npm ────────────────────────────────────────────
-  # Requires the `NPM_TOKEN` secret. Without it the job fails loudly rather
-  # than skipping: a release that silently does not publish looks identical to
-  # one that did.
+  # ── 3. GitHub Release, on the tag push ───────────────────────────
+  github-release:
+    if: github.event_name == 'push'
+    needs: [verify, gate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.tag }}
+      - name: Extract this version's CHANGELOG section
+        run: |
+          set -euo pipefail
+          # From this version's heading to the next `## [` heading, exclusive.
+          awk -v h="## [${{ needs.verify.outputs.version }}] - " '
+            index($0, h) == 1 { inside = 1; next }
+            inside && /^## \[/ { exit }
+            inside { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "::error::no CHANGELOG body for ${{ needs.verify.outputs.version }}"
+            exit 1
+          fi
+        shell: bash
+      - name: Create the release
+        run: gh release create "${{ needs.verify.outputs.tag }}" --title "qfai ${{ needs.verify.outputs.version }}" --notes-file release-notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+
+  # ── 4. npm publish, only on an explicit manual dispatch ──────────
+  # Never runs on a tag push. Requires an `NPM_TOKEN` secret and fails loudly
+  # without it: a release that silently does not publish looks identical to one
+  # that did.
   publish:
+    if: github.event_name == 'workflow_dispatch'
     needs: [verify, gate]
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -96,6 +174,8 @@ jobs:
       id-token: write # npm provenance
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.tag }}
       - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
         run: corepack enable
         shell: bash
@@ -120,40 +200,14 @@ jobs:
         shell: bash
       - name: Build the publishable tree
         run: pnpm -C packages/qfai build
+      - name: Sanity grep — no internal spec IDs or version markers leak (post-build)
+        # Re-run against the tree that is about to be packed. The `gate` job
+        # checked a different checkout; this one is what ships.
+        run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh
+        shell: bash
       - name: Publish
         # `--provenance` ties the tarball to this workflow run. `--no-git-checks`
         # because pnpm otherwise refuses to publish from a detached tag checkout.
         run: pnpm -C packages/qfai publish --access public --provenance --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  # ── 4. GitHub Release, with this version's CHANGELOG section ─────
-  github-release:
-    needs: [verify, publish]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write # create the release
-    steps:
-      - uses: actions/checkout@v4
-      - name: Extract this version's CHANGELOG section
-        id: notes
-        run: |
-          set -euo pipefail
-          version="${{ needs.verify.outputs.version }}"
-          # From this version's heading to the next `## [` heading, exclusive.
-          awk -v v="## [${version}] - " '
-            index($0, v) == 1 { inside = 1; next }
-            inside && /^## \[/ { exit }
-            inside { print }
-          ' CHANGELOG.md > release-notes.md
-          if [ ! -s release-notes.md ]; then
-            echo "::error::no CHANGELOG body for ${version}"
-            exit 1
-          fi
-        shell: bash
-      - name: Create the release
-        run: gh release create "${GITHUB_REF_NAME}" --title "qfai ${{ needs.verify.outputs.version }}" --notes-file release-notes.md
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
