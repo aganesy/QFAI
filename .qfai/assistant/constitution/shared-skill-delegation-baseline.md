@@ -283,6 +283,7 @@ Quality bar:
 ```text
 Round: 1 | 2 | 2b
 Result: PASS | REVISE
+Reviewed revision: <git rev> | working-tree+<porcelain digest>
 Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
 Findings:
 - <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|none>
@@ -297,6 +298,14 @@ Evidence checked:
 `Round` is required — the round budget above is counted from it. `2b` is the
 post-escalation verification review of a user-named fix.
 
+- `Reviewed revision` is REQUIRED. It names the state the verdict describes — a `git rev-parse HEAD`
+  value, or `working-tree+<digest of git status --porcelain>` when the tree is uncommitted. Without
+  it a verdict cannot be re-checked, cannot be invalidated by a later commit, and cannot be told
+  apart from a stale one, so "stale evidence MUST NOT be reused" has nothing to compare against.
+  Reviewers are dispatched against the integrated tree by design, so the tree is legitimately
+  allowed to move under them: an honest, independent verdict on a tree that no longer exists is the
+  normal failure this field addresses. If the tree changed mid-review, say so and name the revision
+  the ruling is pinned to.
 - `Authored/edited under review` is REQUIRED. A response omitting it is not a valid review verdict.
 - Anything other than `none` is a declared independence conflict: the verdict cannot be `PASS`,
   and the review must be handed to a non-participating reviewer (see

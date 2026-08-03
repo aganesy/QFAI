@@ -22,6 +22,21 @@ Use this file for the full quality gate checklist behind `/qfai-sdd`.
 - UPDATE rows carry a Sub-op of APPEND / MODIFY / REMOVE.
 - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE and UPDATE:REMOVE rows record an `Approved By` value.
 
+## Contract Checks
+
+Phase 0 is a mandatory output of this skill, so its own artifacts belong on this page.
+
+- Every `api/`, `db/` and `ui/` contract declares a unique, correctly-prefixed `QFAI-CONTRACT-ID`.
+- Every `db/` contract has been **applied to a scratch database**, and every declared write path
+  **driven at least twice** — the second traversal is what exercises head-advance and
+  expected-version guards. Applying cleanly is the floor, not the gate: a contract that applies
+  without error still fails at runtime, because the failure is a resolution error inside a PL/pgSQL
+  body rather than a syntax error.
+- The command and result are recorded in `.qfai/evidence/sdd-<spec-id>.md`; `QFAI-CONTRACT-031`
+  (`warning`) reports a `db/` contract with no such record.
+- `QFAI-DB-001` dangerous-SQL warnings are resolved or explicitly triaged.
+- Full rule: `references/contract-artifact-rules.md#executability-must`.
+
 ## Cross-contract Checks
 
 - Every terminal state, status enum value, and error code an API contract mandates has a

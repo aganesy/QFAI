@@ -152,7 +152,10 @@ describe("a Change Request is a defined artifact", () => {
       // so without a preflight an approved reset would never be reached.
       const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
       expect(skill).toContain(
-        "### Phase: Preflight (Change Request reset) — MANDATORY, runs first",
+        // #371 folded the Stage-0 steering refresh into the same first phase,
+        // so the heading names both. The preflight is still first and still
+        // mandatory, which is what this case is about.
+        "### Phase: Stage 0 + Preflight — MANDATORY, runs first",
       );
       // The all-terminal exit bullet also carries the spec-level checkpoint
       // obligation added by #304, so assert the preflight clause rather than
@@ -212,10 +215,14 @@ describe("a Change Request is a defined artifact", () => {
       );
     });
 
-    it(`${tree}: the template carries the six contents the protocol mandates`, async () => {
+    it(`${tree}: the template carries the contents the protocol mandates`, async () => {
       const template = await read(tree, TEMPLATE);
       for (const heading of [
-        "## Context (what conflicts)",
+        // "Context (what conflicts)" lost its parenthetical in #378: a defect
+        // -drift CR conflicts with nothing external, so the heading had to
+        // stop presuming a conflict of intent.
+        "## Context",
+        "## Reproduction",
         "## Proposed change",
         "## Options (at least 3) and recommendation",
         "## Impact scope",

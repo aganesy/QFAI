@@ -91,6 +91,37 @@ Contracts are validated per file; agreement _between_ contracts is an authoring 
 is a partial check: error codes, response-status sets, and non-enum domains are still reconciled by
 the author and the reviewer gate.
 
+## Executability (MUST)
+
+A contract this file calls "downstream execution truth" has to have been
+executed. Everything else qfai asserts about a `db/` contract — one
+correctly-prefixed unique ID, four dangerous-SQL patterns at `warning` — is
+satisfied by a file that cannot run.
+
+- **Apply every `db/` contract to a scratch database.** Applying cleanly is the
+  floor, not the gate: contracts that apply without a single error still fail at
+  runtime, because the failure is a resolution error inside a PL/pgSQL body,
+  not a syntax error.
+- **Drive every declared write path at least twice.** The second traversal is
+  what exercises head-advance and expected-version guards; a single pass proves
+  the first insert and nothing after it. Defects that appear only on traversal
+  two are a normal share of the total, not an exotic case.
+- **Record it** in `.qfai/evidence/sdd-<spec-id>.md` as a line of the form:
+
+  ```
+  - Executability: CON-DB-NNNN — applied to scratch DB; every declared write path driven twice; <command> / <result>
+  ```
+
+  `QFAI-CONTRACT-031` (`warning`) reports a `db/` contract with no such line. It
+  is a **presence check**: it does not execute SQL and makes no claim about
+  correctness. Neither a syntax-level parse nor a structural comparison would
+  have caught the observed defects, so a cheap record of "this was actually
+  driven" is what the omission needs.
+
+The cost of skipping this is not paid in Phase 0. It is paid inside a TDD
+micro-cycle, by an implementer who is forbidden from fixing the contract and has
+to stop the batch.
+
 ## Obligation Reconciliation (MUST) — Phase 2c
 
 Cross-contract reconciliation above compares contracts to each other. This
@@ -138,6 +169,9 @@ obligation against the contract finds it.
 - Contract IDs exist and are unique.
 - Specs reference only existing contract IDs.
 - Design contracts are sufficient for prototyping, ATDD, and implementation without discussion-pack fallback.
+- Every `db/` contract has been applied to a scratch database and every declared write path driven
+  **at least twice**, with the command and result recorded in `.qfai/evidence/sdd-<spec-id>.md`
+  (`QFAI-CONTRACT-031`).
 - Every API-mandated terminal state / status value / error code is representable in the paired DB contract.
 - Every `BR` / `AC` names a realizing contract, and every persisted attribute it names resolves to a
   column, field or enum member there — reachable directly or by a stated join (Phase 2c).

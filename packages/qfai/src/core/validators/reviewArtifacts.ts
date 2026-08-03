@@ -219,11 +219,40 @@ async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
     validateV1Roster(parsed, violations);
   }
 
+  // `revision` addresses the state the verdicts describe. A verdict that names
+  // no revision cannot be re-checked, cannot be invalidated by a later commit,
+  // and cannot be distinguished from a stale one — which is what made
+  // "Stale evidence ... MUST NOT be reused" unenforceable. It is optional in
+  // the schema (existing packs predate it) but reported when absent, and a
+  // present-but-malformed value is an error like any other field.
+  const revision = parsed.revision;
+  if (revision !== undefined && !readString(revision)) {
+    violations.push("`revision` は非空文字列が必須です（省略は可）");
+  }
+
+  const missingRevision =
+    revision === undefined
+      ? [
+          issue(
+            "QFAI-REVIEW-009",
+            "summary.json に `revision` がありません。判定がどの状態に対するものか特定できず、後続コミットによる無効化もできません。",
+            "warning",
+            summaryPath,
+            "reviewArtifacts.summaryRevision",
+            undefined,
+            "canonical",
+            "レビュー対象の状態を `revision` に記録してください（git rev、または未コミット時は `working-tree+<porcelain digest>`）。" +
+              "`.qfai/assistant/skills/qfai-implement/references/evidence-revision.md` を参照。",
+          ),
+        ]
+      : [];
+
   if (violations.length === 0) {
-    return [];
+    return missingRevision;
   }
 
   return [
+    ...missingRevision,
     issue(
       "QFAI-REVIEW-007",
       `summary.json の最小スキーマを満たしていません: ${violations.join(" / ")}`,
