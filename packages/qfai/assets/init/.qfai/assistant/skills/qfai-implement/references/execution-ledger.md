@@ -14,7 +14,33 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single r
 | Selector  | Test selector(s) for targeted execution — one entry, a comma-separated list, or a glob pattern                                                                                                                              |
 | Status    | Current lifecycle status                                                                                                                                                                                                    |
 | DR-ID     | Decision Record / Change Request IDs, comma-separated: a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses; blank otherwise |
-| Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                                                                                                                                                        |
+| Evidence  | The RED/GREEN outcome in one word each, plus an anchor into `.qfai/evidence/implement-<spec-id>.md` for this TDD-ID. **Not** the commands and output themselves — see "Evidence cell contract" below                        |
+
+## Declared seam column (optional, required for parallel dispatch)
+
+| Column        | Description                                                                                |
+| ------------- | ------------------------------------------------------------------------------------------ |
+| Owning module | The production module this row will write, as a repo-relative path or a dotted module path |
+
+`Owning module` is a **declaration, not an observation**, and that is the whole
+point: it exists before the code does.
+
+The parallel-dispatch gate asks whether two items write the same source module.
+Under RED-first the production module does not exist when `delivery-planner`
+has to answer, and the only path-valued required column is `Test file` — two
+items trivially have independent test files and land on the same production
+module. So the planner had nothing to evaluate against, and
+`parallelization-policy.md`'s "cannot be explained with concrete file/module
+evidence" asked for exactly what test-first withholds.
+
+- Fill it at ledger-authoring time (`/qfai-sdd` Phase 2b) from the TC's parent
+  `BR`, which already names the behaviour's home.
+- One module per row. A row that would honestly need two is a row that should
+  be split — that is the same signal `selector-granularity.md` describes.
+- `-` is legal and means "not declared". A row carrying `-` is **not eligible
+  for parallel dispatch**; it may still be executed serially.
+- It is a claim the row is later measured against, not a lock. See
+  `parallelization-policy.md#seam-reconciliation-after-a-parallel-run`.
 
 ## Obligation columns (optional, required by layer)
 
@@ -26,6 +52,14 @@ row's layer cannot host a `TC-*`.
 | ------------ | --------------------------------------------------------------------------------- |
 | US-Refs      | `US-*` obligations this row implements. Legal **only** on `Layer = E2E` rows      |
 | CON-API-Refs | `CON-API-*` obligations this row implements. Legal **only** on `Layer = API` rows |
+| Blocked-By   | What a `blocked` row is waiting on. Required on `blocked` rows, blank otherwise   |
+
+`Blocked-By` takes a Change Request ID (`CR-YYYYMMDD-NNNN`), a contract path
+with line (`.qfai/contracts/db/CON-DB-0005.sql:2715`), or a cross-spec row
+(`spec-0006:TDD-0034`). `DR-ID` is **not** widened to carry it: that column is
+what distinguishes a parked `exception` from a row that never started, and
+overloading it would merge the two states the `blocked` status exists to
+separate.
 
 `test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and `tests/api/**`,
 so an E2E or API row has no legal `TC-Refs` value. Those rows carry `-` in
@@ -47,6 +81,87 @@ as a coverage error about a TC the author did cover.
 Coverage measurement is otherwise unaffected: it reads `TC-*` tokens only, so
 non-TC obligation IDs are inert to it by design.
 
+## Evidence cell contract
+
+The `Evidence` cell is a **pointer**, not the payload.
+
+`.qfai/evidence/implement-<spec-id>.md` is the single home for the per-item
+evidence contract — the RED/GREEN commands, their output, and the reviewer
+verdicts. The ledger cell records the outcome and says where to read the proof:
+
+```
+RED fail / GREEN pass — evidence at `.qfai/evidence/implement-spec-0001.md#tdd-0027`
+```
+
+### Why it cannot hold the payload
+
+A GFM table row is **one physical line**, and `splitMarkdownRow` ends a cell at
+every unescaped `|`. Pasting a command and its output into the cell has two
+failure modes, both silent:
+
+- a newline ends the row — `parseAllMarkdownTables` stops the table at the first
+  line that does not start with `|`, so every row below it disappears from the
+  ledger the validators read;
+- a bare `|` — a shell pipe, a table in the output, a regex alternation — splits
+  the row into extra cells and misaligns every column after `Evidence`.
+
+The column description used to read "RED/GREEN command+result pairs proving the
+TDD cycle", so following it literally corrupted the evidence or destroyed the
+ledger. None of the Evidence hard rules change: they now bind the evidence file,
+which can hold what they ask for.
+
+### Evidence cell encoding
+
+When a cell must contain either character, encode it with
+`specPackParsers.ts#escapeTableCell` — the exported encoder the parser inverts.
+The left column is the character **in the value you want the cell to hold**;
+the right column is what is **written into the row**. Both are shown as HTML
+entities, because a literal pipe in this table would split its own row.
+
+Exactly two rules:
+
+| Character in the value | Written into the cell |
+| ---------------------- | --------------------- |
+| a pipe (&#124;)        | &#92;&#124;           |
+| CR / LF / CRLF         | a single space        |
+
+A literal `\` is **not** escaped: the parser passes it through unchanged, so
+doubling it would corrupt Windows paths and regex literals while keeping the
+column count valid — a corruption no validator can see.
+
+## Evidence cell rules (enforced)
+
+`Evidence` is checked as content, not only as a header name. On a row whose
+`Status` is `green`, `refactor`, `review-fix` or `done` — the statuses that
+assert a cycle has run:
+
+| Finding                        | Fires when                                                          | Severity |
+| ------------------------------ | ------------------------------------------------------------------- | -------- |
+| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)   | error    |
+| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command | warning  |
+
+A command is recognised by shape, not from a list of known runners, so the rule
+holds on any stack: a program name followed by an argument carrying a flag, a
+path, a selector or an assignment. Backticked commands and the common runners
+are accepted directly.
+
+`TDDLIST_EVIDENCE_STATUS_ONLY` is a warning, waivable under `TDDLIST-004`: a
+ledger written before the check exists carries prose verdicts, and failing a
+build on them is a migration rather than a gate. An empty cell is unambiguous,
+so `TDDLIST_EVIDENCE_EMPTY` stays at `error`.
+
+Rows at `todo`, `red` and `exception` are not checked — the first two have
+nothing to show yet, and a parked row records its reason in `DR-ID`, which
+`TDDLIST_EXCEPTION_MISSING_DR` gates.
+
+Freshness is **not** gated: the ledger records no run identity, so no validator
+can distinguish a fresh command+result pair from a copied one. That rule stays
+with the routed reviewer (`qfai-implement/SKILL.md` "Evidence hard rules").
+
+A pointer cell satisfies these rules: the `evidence at <path>` form carries a
+path, which is one of the command shapes the gate accepts. The rules reject a
+bare verdict, not a pointer.
+
 ## Selector granularity (MUST)
 
 `Selector` is **not** restricted to a single test function: a row may own several entries, written
@@ -58,10 +173,15 @@ and examples: `selector-granularity.md`.
 
 ## Status Lifecycle
 
-Valid status values: `todo`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`.
+Valid status values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`.
 
 Allowed transitions:
 
+- `todo` -> `blocked` (the row cannot be started: an upstream defect, an
+  unresolved Change Request, or an unfinished row in another spec). Name the
+  blocker in `Blocked-By`; `TDDLIST_BLOCKED_MISSING_REF` errors without it.
+- `blocked` -> `todo` (the blocker cleared). This is a **resumption, not a
+  backward transition**: the row never started, so nothing is being undone.
 - `todo` -> `red` (write a failing test)
 - `red` -> `green` (make the test pass with minimal code)
 - `green` -> `refactor` (improve code quality while keeping tests green)
@@ -119,6 +239,21 @@ is re-submitted.
 `review-fix` is not a completion state and appears in the completion-prohibition
 list. Round-by-round evidence rules: `round-evidence.md`.
 
+## Blocked rows
+
+`blocked` means **cannot be started**, not "not started yet" and not "anomaly".
+
+- It is **completion-prohibiting**, exactly like `todo`. A spec must not close
+  over an unimplemented obligation, and naming the blocker does not discharge it.
+- It is **not** selectable. Phase Red picks the first `todo` row and skips
+  `blocked` ones, so the loop head stops re-issuing rows that cannot proceed.
+- It is **not** `exception`. `exception` is scoped to an anomaly, requires a
+  `DR-*`, and satisfies spec completion — filing a blocked row there would
+  silently close the obligation.
+- `npx qfai report` counts it inside `open` but prints it separately
+  (`open: N (blocked: M)`), so "not started" and "cannot start" are readable
+  apart without changing what completion means.
+
 ## Exception Handling
 
 `exception` means **anomaly, work paused** — not "accepted risk, closed". The
@@ -131,6 +266,27 @@ When transitioning to `exception`:
 - A DR-ID (Decision Record ID) must be recorded in the DR-ID column.
 - A retained `CR-*` does not satisfy this: it records the approved reopen, not the anomaly. Add the `DR-*` alongside it (`DR-NNNN, CR-YYYYMMDD-NNNN`).
 - If the DR-ID column is empty, or holds `CR-*` references only, emit error: `"exception status requires DR-ID in DR-ID column"`.
+
+### Where the Decision Record is written
+
+Write it to `.qfai/decisions/DR-<id>-<slug>.md`, beside the Change
+Requests, using the same `DR-*` ID scheme those files declare. Do **not** write
+`07_Decisions.md` or `09_delta.md`.
+
+Those two are upstream SSOT (`constitution/drift-protocol.md#core-rule`) and
+this skill carries `[DRIFT-PROTOCOL:MANDATORY]`, so a downstream write to either
+is a protocol violation — while the `exception` transition itself is an ordinary
+inline step of Phase Red that `TDDLIST_EXCEPTION_MISSING_DR` blocks at `error`
+without a `DR-*`. `.qfai/decisions/` is the one home that satisfies both: the
+protocol whitelists **creating** a record there
+(`drift-protocol.md#allowed-exceptions-minimal-whitelist`), and the managed `.gitignore` block
+already tracks it as a governance record.
+
+The upstream cross-reference is a separate, later write. If the anomaly turns
+out to change an approved obligation, that is drift: raise a Change Request per
+`drift-protocol.md#when-drift-is-detected`, and the owner skill's rerun is what
+records the reference in `07_Decisions.md` / `09_delta.md`. Parking the row does
+not require that to have happened.
 
 ### Parked items and the `TDDLIST-001` waiver
 

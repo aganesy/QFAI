@@ -54,8 +54,9 @@ When unsure, read inputs in this order:
   - `.qfai/specs/<spec-id>/05_Examples.md` (EX)
   - `.qfai/specs/<spec-id>/06_Test-Cases.md` (TC)
   - `.qfai/contracts/api/**` (CON-API)
+  - `.qfai/contracts/db/**` (CON-DB)
   - `.qfai/contracts/ui/**` and `.qfai/contracts/design/**` when the target spec is UI-bearing
-- P5: `.qfai/specs/<spec-id>/09_delta.md` (Decision Records; if no spec yet, state "not applicable")
+- P5: `.qfai/specs/<spec-id>/07_Decisions.md` + `.qfai/specs/_policies/08_Decisions.md` (Decision Records, `DR-*`; if no spec yet, state "not applicable")
 - P6: legacy artifacts (optional only)
   - `.qfai/specs/<spec-id>/scenario.feature`
   - coverage ledger files
@@ -178,7 +179,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-fai
 
 ## Goal
 
-Turn specs/contracts obligations (`US` / `TC` / `CON-API`) into runnable acceptance tests in this repository.
+Turn specs/contracts obligations (`US` / `TC` / `CON-API` / `CON-DB`) into runnable acceptance tests in this repository.
 
 ## Scope (ATDD only)
 
@@ -214,6 +215,18 @@ Turn specs/contracts obligations (`US` / `TC` / `CON-API`) into runnable accepta
 | API         |      #CON |  API_s | API contracts |       |
 | Integration |       #TC |  INT_s | test cases    |       |
 
+## Scaffolding
+
+`npx qfai atdd scaffold --spec <spec-id>` bulk-emits one placeholder test per
+coverage-target `TC-*`, each carrying its `QFAI:SPEC-XXXX:TC-YYYY` annotation.
+Skeletons land in `tests/integration/<spec-id>/` — the directory
+`QFAI-ATDD-112` scans — so a filled-in skeleton counts as coverage. It is
+idempotent: existing files are left untouched.
+
+A skeleton left in placeholder shape across repeated validate runs escalates
+(`qfai.config.yaml#atdd.scaffoldEscalateCycles`), so scaffolding is a start, not
+a discharge of the obligation.
+
 ## Annotation obligations (mandatory)
 
 Every generated ATDD test MUST include QFAI annotations by layer:
@@ -224,6 +237,8 @@ Every generated ATDD test MUST include QFAI annotations by layer:
   `Integration`, and TCs with no declared `Level`)
 - `tests/api/**`: `QFAI:CON-API-XXXX` (plus `QFAI:SPEC-XXXX:TC-YYYY` for a TC
   that declares `Level` `L4`/`API`)
+- `tests/integration/**` also carries `QFAI:CON-DB-XXXX` for every declared DB
+  contract the slice exercises
 
 Notes:
 
@@ -245,6 +260,8 @@ Notes:
   `tests/integration/**`). Duplicating a TC into a second layer is a
   not-done condition, not extra credit.
 - All required `CON-API` are covered by API tests.
+- All required `CON-DB` are covered by integration tests (`QFAI-ATDD-115`); a contract
+  outside the current slice is deferred with `-- x-qfai-status: planned`, not left uncovered.
 - Validation passes: `npx qfai validate --profile atdd --fail-on error`.
 - Repository quality gates (format/lint/type/tests/pack) pass with evidence.
 - Evidence file exists and includes work orders + reviewer notes.

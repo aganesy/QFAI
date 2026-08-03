@@ -30,7 +30,7 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
     it(`${relativePath}: review-fix is a status with both edges`, async () => {
       const ledger = await read(relativePath, "references/execution-ledger.md");
       expect(ledger).toContain(
-        "Valid status values: `todo`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`.",
+        "Valid status values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`.",
       );
       expect(ledger).toContain(
         "`refactor` -> `review-fix` (a blocking reviewer returned `REVISE`)",

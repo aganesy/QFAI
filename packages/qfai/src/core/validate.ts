@@ -66,7 +66,9 @@ import {
   validatePrototypingSkillContent,
   runCanonicalUixValidators,
   validateSpecRequiredFilesCatalog,
+  validateMarkdownTableArity,
   validateTraceabilityIntegrity,
+  validateUpstreamSsotGuard,
   validateUiEvidenceArtifacts,
   validateTestTodoStubs,
   validateWorklogSurface,
@@ -279,6 +281,9 @@ async function runSddValidators(
     // The catalog wins over the in-code required-file sets, so a divergence
     // silently changes which files are mandatory. Report it.
     ...(await validateSpecRequiredFilesCatalog(root, config)),
+    // One central arity check for every spec-pack table. Without it a stray
+    // pipe silently shifts the columns every other validator reads.
+    ...(await validateMarkdownTableArity(root, config)),
     ...(await validateStatusInSpecs(root, config)),
     ...(await validateDensityHints(root, config)),
     ...(await validateSpecSplitByCapability(root, config)),
@@ -386,6 +391,12 @@ async function runTddValidators(
   // `full` already runs the ATDD profile, so it opts out here to avoid
   // emitting every QFAI-ATDD-* finding twice.
   includeAtddCodeTraceability = true,
+  // The upstream-ownership guard binds the *downstream* stage. `full` is a
+  // repo-wide audit that also covers the SDD profile — the owner of these
+  // files — so it opts out rather than flagging every legitimate spec edit.
+  includeUpstreamGuard = true,
+  // `full` runs the sdd profile, which already calls `validateContracts`.
+  includeContracts = true,
 ): Promise<Issue[]> {
   return [
     ...(await validateTddList(root, config)),
@@ -400,6 +411,16 @@ async function runTddValidators(
       ? await validateTraceability(root, config, { includeCodeReferences: true })
       : []),
     ...(await validateTraceabilityIntegrity(root, config)),
+    // The drift protocol names `--profile tdd` as the downstream completion
+    // gate, so the downstream-only ownership rule is enforced here and nowhere
+    // else: `/qfai-sdd` owns these files and edits them legitimately.
+    ...(includeUpstreamGuard ? await validateUpstreamSsotGuard(root, config) : []),
+    // The implementation stage executes against the contracts; its gate should
+    // cover them. `--profile tdd` is what `qfai-implement` names as its
+    // completion gate, and it ran no contract check at all — so a DB contract
+    // that cannot be applied was invisible to the only profile the stage runs.
+    // `full` opts out below because `runSddValidators` already includes it.
+    ...(includeContracts ? await validateContracts(root, config) : []),
   ];
 }
 
@@ -418,7 +439,7 @@ async function runFullValidators(
     ...(await validateReviewArtifacts(root)),
     ...(await runPrototypingValidators(root, config, platformOption)),
     ...(await runAtddValidators(root, config)),
-    ...(await runTddValidators(root, config, false, false)),
+    ...(await runTddValidators(root, config, false, false, false, false)),
     ...(await validatePrototypingSkill(root, config)),
   ];
 }
