@@ -1,16 +1,24 @@
 name: Release
 
-# Two triggers, deliberately carrying different authority.
+# Two triggers, one pipeline.
 #
-#   push tag vX.Y.Z  -> verify + gate + GitHub Release.  Publishes nothing.
-#   workflow_dispatch -> verify + gate + npm publish, for a tag that already exists.
+#   push tag vX.Y.Z   -> verify + gate + GitHub Release + npm publish
+#   workflow_dispatch -> verify + gate + npm publish, for a tag that already exists
 #
 # `RELEASE.md` treats tag creation and `npm publish（必要な場合）` as separate
-# steps, and the repo rules require an explicit instruction for each. A single
-# tag-triggered pipeline would collapse both into one irreversible push:
-# approving a tag would approve a publish nobody asked for. Naming an
-# environment does not fix that — an environment without required reviewers
-# gates nothing — so the split is in the trigger, not in a setting.
+# steps, and the repo rules require an explicit instruction for each. That
+# separation is now enforced by the `release` **environment** rather than by
+# withholding the trigger: the publish job cannot start until a required
+# reviewer approves the deployment, so pushing a tag proposes a publish instead
+# of performing one.
+#
+# That only holds if the environment is configured. An environment with no
+# protection rules gates nothing and a tag push would publish unattended, so
+# the job refuses to run against an unprotected one — see "Require an approved
+# environment" below. Setup: docs/RELEASE-PUBLISH-SETUP.md.
+#
+# `workflow_dispatch` stays for re-publishing a tag that already exists (a
+# failed upload, a token rotated mid-release) without cutting a new tag.
 on:
   push:
     tags:
@@ -183,7 +191,6 @@ jobs:
   # without it: a release that silently does not publish looks identical to one
   # that did.
   publish:
-    if: github.event_name == 'workflow_dispatch'
     needs: [verify, gate]
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -218,7 +225,44 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           RELEASE_VERSION: ${{ needs.verify.outputs.version }}
         shell: bash
+      - name: Require an approved environment
+        # The `environment:` key above is what makes a tag push *propose* a
+        # publish rather than perform one — but only when the environment
+        # carries required reviewers. GitHub silently allows an unprotected
+        # environment, which would turn every tag push into an unattended
+        # irreversible upload. Refuse rather than assume.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rules="$(gh api "repos/${GITHUB_REPOSITORY}/environments/release" \
+            --jq '[.protection_rules[]?.type] | join(",")' 2>/dev/null || echo "")"
+          case "$rules" in
+            *required_reviewers*) echo "release environment requires reviewers: $rules" ;;
+            *)
+              echo "::error::the 'release' environment has no required reviewers (rules: ${rules:-none}). A tag push would publish unattended. See docs/RELEASE-PUBLISH-SETUP.md."
+              exit 1
+              ;;
+          esac
+        shell: bash
+      - name: Skip if this version is already on npm
+        # Re-running a release — a rotated token, a retried upload — must not
+        # fail on `EPUBLISHCONFLICT`. npm refuses to overwrite a version, so a
+        # version already present means this job's work is done.
+        id: published
+        env:
+          RELEASE_VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          if npm view "qfai@${RELEASE_VERSION}" version >/dev/null 2>&1; then
+            echo "qfai@${RELEASE_VERSION} is already published; nothing to do"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
       - name: Pack the tarball that will ship
+        if: steps.published.outputs.skip != 'true'
         # `prepack` runs `npm run build`, so packing is what produces the
         # final `dist/`. Checking a tree built in a separate step and then
         # letting `publish` re-run `prepack` would inspect one artifact and
@@ -229,6 +273,7 @@ jobs:
           pnpm -C packages/qfai pack --pack-destination "$PWD/tmp"
         shell: bash
       - name: Sanity grep — no internal spec IDs or version markers leak (packed tarball)
+        if: steps.published.outputs.skip != 'true'
         # Unpacked and scanned, so what is inspected is byte-for-byte what npm
         # receives — including files only `prepack` produces.
         env:
@@ -246,6 +291,7 @@ jobs:
             bash packages/qfai/scripts/check-no-internal-version-leakage.sh
         shell: bash
       - name: Publish the inspected tarball
+        if: steps.published.outputs.skip != 'true'
         # The tarball itself, so nothing is rebuilt between the check and the
         # upload. `--provenance` ties it to this workflow run.
         env:
