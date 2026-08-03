@@ -110,6 +110,33 @@ The carve-out is exactly as narrow as that need:
   row still carries `TDDLIST_EXCEPTION_PARKED` until the risk is accepted
   through the `TDDLIST-001` waiver, which is a separate, user-owned artifact.
 
+## Drift classes
+
+Drift is one of two things, and the class decides what the Change Request must
+carry. It does **not** decide whether a Change Request is needed: both classes
+STOP, both raise a CR, both wait for approval, both are applied by the owner
+skill. The ownership boundary in `#core-rule` is identical for both.
+
+- **Intent drift** — the upstream artifact states something downstream
+  disagrees with. There is a real decision to make, the upstream artifact is
+  internally consistent, and reasonable alternatives exist.
+- **Defect drift** — the upstream artifact is internally inconsistent,
+  unreachable, or contradicts its own declared behaviour, **demonstrated by a
+  reproduction**. A `.sql` contract that raises `AmbiguousColumnError` on its
+  own declared code path conflicts with nothing: it contradicts only itself.
+
+Defect drift is claimed by evidence, not by assertion. A CR that declares
+`Class: defect` without a reproduction — a command plus its verbatim output, or
+the two artifact excerpts that contradict each other — is an intent-drift CR
+that skipped its options, and must be treated as incomplete. "This is obviously
+wrong" is not a reproduction; neither is "the fix is trivial". Cost is not a
+classifier: a large intent change stays intent drift, and a one-token defect
+stays defect drift.
+
+Where exactly one correct fix exists, inventing a second and a third option to
+satisfy a template produces a worse record, not a safer one — the operator then
+ratifies a comparison the author knew was fabricated.
+
 ## When drift is detected
 
 1. STOP downstream editing **of the affected upstream artifact and of every
@@ -130,9 +157,15 @@ The carve-out is exactly as narrow as that need:
    and `07_Decisions.md` are upstream SSOT, so the reference to this CR is
    written there by the owner skill in step 4, never before approval.
    Contents:
-   - context (what conflicts)
+   - class (`intent` / `defect`) — see `#drift-classes`
+   - context — for intent drift, what conflicts; for defect drift, what the
+     artifact declares and how it breaks that declaration
+   - reproduction (command + verbatim output, or the two contradicting
+     excerpts) — **required for defect drift**, omit for intent drift
    - proposed change
-   - options (at least 3) and recommendation
+   - options (at least 3) and recommendation — **intent drift only**; for
+     defect drift record the single correct fix instead. Do not manufacture
+     alternatives for a change that has one correct answer
    - blocked downstream items — the enumerated set the halt in step 1 covers
      (spec IDs, `TDD-ID` ledger rows, contract paths). This is what makes the
      halt checkable: a reviewer can ask whether an item that kept moving is on
@@ -141,6 +174,10 @@ The carve-out is exactly as narrow as that need:
    - decision needed from user
    - approved actions (owner skill rerun plan)
 3. Wait for explicit user approval, then set `Status` and the approval fields.
+   A defect-drift CR has no option set, so `Approved option` stays `-`; what is
+   approved is the single correct fix under `## Proposed change`. The wait
+   itself is not waived — the operator is ratifying the classification as much
+   as the fix.
 4. Rerun the owner skill for the upstream artifact, **naming the invocation and
    the mode** the CR approved. That rerun is what records the CR reference in
    `09_delta.md` / `07_Decisions.md`.
