@@ -18,7 +18,13 @@ name: Release
 # environment" below. Setup: docs/RELEASE-PUBLISH-SETUP.md.
 #
 # `workflow_dispatch` stays for re-publishing a tag that already exists (a
-# failed upload, a token rotated mid-release) without cutting a new tag.
+# failed upload, an approval that lapsed) without cutting a new tag.
+#
+# Publishing authenticates by **trusted publishing** (OIDC): the job exchanges a
+# short-lived GitHub identity token for a registry credential. There is no
+# `NPM_TOKEN` to store, leak, or rotate. npm binds that exchange to this
+# repository AND to this workflow's filename, so `release.yml` cannot be renamed
+# without re-registering the trusted publisher on npmjs.com.
 on:
   push:
     tags:
@@ -32,6 +38,10 @@ on:
 
 env:
   NODE_LTS: "20.19"
+  # Trusted publishing needs npm >= 11.5.1, which needs Node >= 22.14.0. Only
+  # the publish job runs on it: the gate must keep running on the version the
+  # package supports (`engines.node`), or it would stop testing what ships.
+  NODE_PUBLISH: "22.14"
 
 concurrency:
   group: release-${{ inputs.tag || github.ref_name }}
@@ -186,10 +196,14 @@ jobs:
         run: gh release create "$RELEASE_TAG" --title "qfai $RELEASE_VERSION" --notes-file tmp/release-notes.md
         shell: bash
 
-  # ── 4. npm publish, only on an explicit manual dispatch ──────────
-  # Never runs on a tag push. Requires an `NPM_TOKEN` secret and fails loudly
-  # without it: a release that silently does not publish looks identical to one
-  # that did.
+  # ── 4. npm publish, on either trigger, behind an approval ────────
+  # Authenticates by OIDC — no stored credential. Two things must be true
+  # before it can upload, and it fails loudly rather than skipping when either
+  # is missing, because a release that silently does not publish looks
+  # identical to one that did:
+  #   - npmjs.com lists this repository + `release.yml` as a trusted publisher;
+  #   - the `release` environment carries a required reviewer, which is what
+  #     keeps tagging and publishing separate decisions.
   publish:
     needs: [verify, gate]
     runs-on: ubuntu-latest
@@ -207,23 +221,29 @@ jobs:
         shell: bash
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_LTS }}
+          node-version: ${{ env.NODE_PUBLISH }}
           cache: pnpm
           registry-url: "https://registry.npmjs.org"
       - name: Re-shim pnpm against toolcache Node
         run: corepack prepare pnpm@9.12.3 --activate
         shell: bash
       - run: pnpm install --frozen-lockfile
-      - name: Require the publish credential
+      - name: Require an npm that can do trusted publishing
+        # `actions/setup-node` ships whatever npm the Node build carries, which
+        # is older than 11.5.1 on every current LTS line. Without this the
+        # publish fails at the OIDC exchange with an authentication error that
+        # says nothing about the version.
         run: |
           set -euo pipefail
-          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
-            echo "::error::NPM_TOKEN is not configured; cannot publish ${RELEASE_VERSION}"
+          npm install -g npm@latest
+          have="$(npm --version)"
+          need="11.5.1"
+          lowest="$(printf '%s\n%s\n' "$have" "$need" | sort -V | head -1)"
+          if [ "$lowest" != "$need" ]; then
+            echo "::error::npm $have is below $need, the minimum for trusted publishing"
             exit 1
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          RELEASE_VERSION: ${{ needs.verify.outputs.version }}
+          echo "npm $have"
         shell: bash
       - name: Require an approved environment
         # The `environment:` key above is what makes a tag push *propose* a
@@ -293,9 +313,15 @@ jobs:
       - name: Publish the inspected tarball
         if: steps.published.outputs.skip != 'true'
         # The tarball itself, so nothing is rebuilt between the check and the
-        # upload. `--provenance` ties it to this workflow run.
+        # upload — `prepack` runs during pack, and publishing the directory
+        # would re-run it after the leakage scan.
+        #
+        # No `NODE_AUTH_TOKEN`: the OIDC exchange is what authenticates, using
+        # the `id-token: write` permission above. `--provenance` is passed
+        # explicitly rather than relying on the documented default, because the
+        # attestation is the point of publishing this way and a silent default
+        # change would remove it without failing anything.
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           RELEASE_VERSION: ${{ needs.verify.outputs.version }}
         run: npm publish "tmp/qfai-${RELEASE_VERSION}.tgz" --access public --provenance
         shell: bash
