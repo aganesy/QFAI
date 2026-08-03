@@ -65,6 +65,7 @@ import {
   validateSddDesignContractReadiness,
   validatePrototypingSkillContent,
   runCanonicalUixValidators,
+  validateSpecRequiredFilesCatalog,
   validateMarkdownTableArity,
   validateTraceabilityIntegrity,
   validateUpstreamSsotGuard,
@@ -277,6 +278,9 @@ async function runSddValidators(
   return [
     ...(await validateMermaidEnforcement(root)),
     ...(await validateSpecPacks(root, config)),
+    // The catalog wins over the in-code required-file sets, so a divergence
+    // silently changes which files are mandatory. Report it.
+    ...(await validateSpecRequiredFilesCatalog(root, config)),
     // One central arity check for every spec-pack table. Without it a stray
     // pipe silently shifts the columns every other validator reads.
     ...(await validateMarkdownTableArity(root, config)),
