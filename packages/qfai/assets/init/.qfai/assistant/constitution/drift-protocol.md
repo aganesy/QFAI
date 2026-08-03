@@ -14,17 +14,139 @@ Upstream artifacts include, at minimum:
 - Legacy spec-pack SSOT files when present: `spec.md`, `delta.md`, `plan.md`, `traceability-matrix.md`, `scenario.feature`, `case-catalogue.md`, and numbered pack files (for example `01_Spec.md`..`18_delta.md`)
 - contracts and schema decisions owned by earlier phases
 - outputs of discussion/sdd/review stages
+- **test or production artifacts another spec's completed implement run
+  certifies** — a file named in another `tdd/test-list.md`'s `Test file` column
+  on a `done` row. Changing one is not forbidden (the codebase is not
+  partitioned and duplication removal is mandated), but it must be recorded and
+  re-reviewed per
+  `skills/qfai-implement/references/cross-spec-ownership.md`. It becomes drift
+  in the full sense — STOP, Change Request, owner rerun — when the other spec's
+  obligation no longer holds rather than merely moving.
+
+One file inside `.qfai/specs/**` is carved out of that last line:
+`<spec-id>/tdd/test-list.md`, and only its `Status` / `DR-ID` / `Evidence`
+cells. See `#allowed-exceptions-minimal-whitelist`. Its **rows** — which obligations exist and
+what each covers — remain upstream.
+
+**Every artifact in this list requires an owner rerun by definition.** There is
+no downstream test for "is an owner rerun required here?" — being on this list
+is the answer, and the rerun is a _consequence_ of the artifact being upstream
+SSOT, never a precondition for the prohibition. A downstream phase that finds
+itself weighing whether the owner needs to be involved has already left its
+lane: it cannot see who owns the artifact, and working that out in the observed
+case required reading the agent roster and reasoning backwards from it.
 
 ## Allowed exceptions (minimal whitelist)
 
 - `.qfai/evidence/**` append/update
-- progress status updates only when the project workflow explicitly allows downstream updates
+- `.qfai/specs/<spec-id>/tdd/test-list.md` — the `Status`, `DR-ID` and
+  `Evidence` cells only, append/update by `/qfai-implement`. Every other column
+  of that file, and every other file under `.qfai/specs/**`, stays upstream
+  SSOT: adding, removing or re-scoping a row is an upstream change and takes the
+  `#when-drift-is-detected` path.
+- **creating** a governance record under `.qfai/decisions/` — a Change Request
+  (`CR-YYYYMMDD-NNNN-<slug>.md`, per `#when-drift-is-detected` step 2) or an
+  anomaly Decision Record (`DR-<id>-<slug>.md`, where `<id>` follows the
+  Decision Record ID scheme in the spec's `07_Decisions.md`)
 
 Any exception beyond this list requires explicit user approval.
 
+### Why the execution ledger is named here
+
+`/qfai-implement` must write `tdd/test-list.md` after every phase transition,
+and the file lives inside `.qfai/specs/**`. The protocol never classified it in
+either direction, but `#core-rule`'s list is explicitly open-ended ("at minimum")
+and sweeps in "outputs of discussion/sdd/review stages" — and the ledger's schema
+is documented in `skills/qfai-sdd/references/spec-traceability-rules.md`, an
+SDD-stage reference. On the natural reading the ledger _is_ an sdd-stage output,
+so "Downstream skills must not patch upstream SSOT directly" applied to it.
+
+The bullet that used to sit here — "progress status updates only when the project
+workflow explicitly allows downstream updates" — could not rescue that, for two
+reasons:
+
+- **The condition had no referent.** `progress status`, `project workflow` and
+  `downstream update` each occurred exactly once in the whole shipped tree: that
+  line itself. Nothing defined what the project workflow is, where such a
+  permission is recorded, or what the default is, so in a freshly initialized project the
+  condition could never be satisfied.
+- **It was too narrow even if it had.** It covered "progress status", while
+  `qfai-implement`'s completion gate item 10 additionally requires the `Evidence`
+  column, and the skill's own hard rules forbid the substitute
+  ("status-only evidence … MUST be rejected"). The content declared mandatory and
+  non-substitutable was precisely the content no rule authorised anyone to
+  persist.
+
+So an agent obeying the protocol could not satisfy gate item 10, and an agent
+satisfying it was in drift. The entry above names the file and the three cells
+unconditionally, which is what removes the choice.
+
+### Why the Decision Record is on this list
+
+A downstream stage cannot always avoid needing one. `qfai-implement` Phase Red
+orders an anomalous row to `exception` as an inline step, and that status is
+invalid without a `DR-*` in the `DR-ID` column — enforced at `error` by
+`TDDLIST_EXCEPTION_MISSING_DR`. Every upstream home for a Decision Record
+(`07_Decisions.md`, `09_delta.md`) is on the `#core-rule` list above, and neither
+of the first two whitelist entries covers minting one: a Decision Record is not
+an `.qfai/evidence/**` write and not a ledger-cell update.
+
+Without this entry the only compliant route to executing an inline Phase Red
+step was STOP -> Change Request -> user approval -> owner-skill rerun. That made
+the framework's single escape hatch for a blocked item reachable only through
+the approval loop the block is waiting on, so the first anomaly in any project
+either halted the stage or produced a rule-violating ledger row.
+
+The carve-out is exactly as narrow as that need:
+
+- **create only.** `.qfai/decisions/` is not upstream SSOT and no owner phase
+  writes it, so creating a file there patches nothing. Editing an already-
+  approved record is not covered.
+- **the record only, never the reference.** The `07_Decisions.md` /
+  `09_delta.md` entry that cites the DR stays an owner-skill write, exactly as
+  step 2 already says for a Change Request. A compliant `exception` row needs
+  the record and the `DR-ID` cell, not the upstream cross-reference.
+- **not an approval.** Creating the record does not decide the anomaly. A parked
+  row still carries `TDDLIST_EXCEPTION_PARKED` until the risk is accepted
+  through the `TDDLIST-001` waiver, which is a separate, user-owned artifact.
+
+## Drift classes
+
+Drift is one of two things, and the class decides what the Change Request must
+carry. It does **not** decide whether a Change Request is needed: both classes
+STOP, both raise a CR, both wait for approval, both are applied by the owner
+skill. The ownership boundary in `#core-rule` is identical for both.
+
+- **Intent drift** — the upstream artifact states something downstream
+  disagrees with. There is a real decision to make, the upstream artifact is
+  internally consistent, and reasonable alternatives exist.
+- **Defect drift** — the upstream artifact is internally inconsistent,
+  unreachable, or contradicts its own declared behaviour, **demonstrated by a
+  reproduction**. A `.sql` contract that raises `AmbiguousColumnError` on its
+  own declared code path conflicts with nothing: it contradicts only itself.
+
+Defect drift is claimed by evidence, not by assertion. A CR that declares
+`Class: defect` without a reproduction — a command plus its verbatim output, or
+the two artifact excerpts that contradict each other — is an intent-drift CR
+that skipped its options, and must be treated as incomplete. "This is obviously
+wrong" is not a reproduction; neither is "the fix is trivial". Cost is not a
+classifier: a large intent change stays intent drift, and a one-token defect
+stays defect drift.
+
+Where exactly one correct fix exists, inventing a second and a third option to
+satisfy a template produces a worse record, not a safer one — the operator then
+ratifies a comparison the author knew was fabricated.
+
 ## When drift is detected
 
-1. STOP downstream editing immediately.
+1. STOP downstream editing **of the affected upstream artifact and of every
+   downstream item that depends on it**. Unaffected items continue. A dependent
+   item is one whose `TC-Refs` / `US-Refs` / `CON-API-Refs` names an obligation
+   the CR would change, or whose implementation reads the artifact under
+   dispute; when the dependency is arguable, it is dependent. The halt is not
+   repository-wide: one defective contract does not stop specs that never
+   reference it. What it does stop is `done` — a dependent item may not be
+   completed against an obligation known to be under revision.
 2. Create a Change Request as a file at
    `.qfai/decisions/CR-YYYYMMDD-NNNN-<slug>.md`, from
    `.qfai/assistant/skills/qfai-sdd/templates/change-request.md`. The ID
@@ -35,15 +157,51 @@ Any exception beyond this list requires explicit user approval.
    and `07_Decisions.md` are upstream SSOT, so the reference to this CR is
    written there by the owner skill in step 4, never before approval.
    Contents:
-   - context (what conflicts)
+   - class (`intent` / `defect`) — see `#drift-classes`
+   - context — for intent drift, what conflicts; for defect drift, what the
+     artifact declares and how it breaks that declaration
+   - reproduction (command + verbatim output, or the two contradicting
+     excerpts) — **required for defect drift**, omit for intent drift
    - proposed change
-   - options (at least 3) and recommendation
+   - options (at least 3) and recommendation — **intent drift only**; for
+     defect drift record the single correct fix instead. Do not manufacture
+     alternatives for a change that has one correct answer
+   - blocked downstream items — the enumerated set the halt in step 1 covers
+     (spec IDs, `TDD-ID` ledger rows, contract paths). This is what makes the
+     halt checkable: a reviewer can ask whether an item that kept moving is on
+     the list, and an item not on the list is not blocked by this CR
    - impact scope (spec/plan/tests/contracts/schema)
    - decision needed from user
    - approved actions (owner skill rerun plan)
 3. Wait for explicit user approval, then set `Status` and the approval fields.
-4. Rerun the owner skill for the upstream artifact. That rerun is what records
-   the CR reference in `09_delta.md` / `07_Decisions.md`.
+   A defect-drift CR has no option set, so `Approved option` stays `-`; what is
+   approved is the single correct fix under `## Proposed change`. The wait
+   itself is not waived — the operator is ratifying the classification as much
+   as the fix.
+4. Rerun the owner skill for the upstream artifact, **naming the invocation and
+   the mode** the CR approved. That rerun is what records the CR reference in
+   `09_delta.md` / `07_Decisions.md`.
+
+   Invocation by artifact class:
+
+   | Upstream artifact    | Invocation                      |
+   | -------------------- | ------------------------------- |
+   | `spec-*/**` files    | `/qfai-sdd <spec-id>`           |
+   | `_policies/**`       | `/qfai-sdd` (no argument)       |
+   | `.qfai/contracts/**` | `/qfai-sdd --contract <CON-ID>` |
+
+   Mode — the CR's "approved actions" field MUST name one:
+   - **`confirm-only`** — re-read the artifact and confirm it already satisfies
+     the approved change. Writes nothing but the CR reference. Use when the
+     change was already applied by hand under approval, or when the CR only
+     re-scopes something the artifact already says.
+   - **`re-derive`** — regenerate the artifact from its inputs. May rewrite any
+     part of it, and sweeps the downstream ledgers in step 5.
+
+   Without a named mode neither the author nor the approver can state what the
+   rerun executes or what it costs, and "rerun the owner skill" is the whole
+   plan.
+
 5. **Sweep the downstream ledgers.** Identify every `tdd/test-list.md` row the
    rerun invalidated — its `TC-Refs` / `US-Refs` / `CON-API-Refs` obligation
    changed or disappeared — and apply the upstream reset transition
@@ -52,12 +210,33 @@ Any exception beyond this list requires explicit user approval.
    sweep covers in-flight rows too: a `red` row whose obligation changed, and
    an `exception` row whose anomaly the rerun resolved or superseded, reset the
    same way. A row whose obligation was deleted outright is removed, not reset.
-6. Resume downstream work only after upstream artifacts are updated **and** the
-   sweep has run. Resuming with a stale `done` row is resuming on a ledger that
-   asserts something known to be false.
+6. Resume the **blocked set of this CR** only after upstream artifacts are
+   updated **and** the sweep has run. Resuming with a stale `done` row is
+   resuming on a ledger that asserts something known to be false. Resume is
+   per-CR: an item on two blocked sets resumes when both release, and an item
+   on neither never stopped.
 7. Record the outcome in the CR: fill `Resolution` and set `Applied at`.
    Approval alone does not release the downstream gate — `qfai-implement`
    treats an `approved` CR without `Applied at` as unresolved.
+
+### Multiple open Change Requests
+
+More than one Change Request may be open at once. They are **independent**
+unless they name the same upstream artifact.
+
+- A defect found while a CR is open is raised as **its own CR**, not folded
+  into the open one. Folding it in would silently widen an approval the
+  operator already gave, and the blocked set the operator approved would no
+  longer be the blocked set in force.
+- Two CRs naming the same upstream artifact are **ordered**: the second states
+  which one it assumes has landed, because the owner-skill rerun for the first
+  changes the text the second is written against. If the first is rejected, the
+  second is restated or superseded, never applied as written.
+- The effective halt is the **union** of the open CRs' blocked sets. Nothing
+  else is halted, however many CRs are open.
+- Open CRs accumulating is itself a project risk: report the count and their
+  ages alongside the blockers, rather than letting a queue of unanswered
+  decisions read as normal.
 
 ## Reviewer-originated obligations
 
@@ -150,4 +329,8 @@ approved` that **names the changed path** silences it; an `open` CR does not,
   because an open CR authorises nothing. The check does not run in the `sdd`
   profile: `/qfai-sdd` owns these files.
 - Downstream reviewers must not originate binding obligations that upstream SSOT does not contain.
-- If approval is not available, stay in STOP state and report blockers.
+- If approval is not available, stay in STOP state **for that CR's blocked set**
+  and report blockers. Work outside every open CR's blocked set proceeds; an
+  unanswered decision is not a reason to stop what it does not touch. Report
+  each open CR with its age and its blocked set, so an unanswered CR surfaces as
+  a standing blocker rather than aging out of view.
