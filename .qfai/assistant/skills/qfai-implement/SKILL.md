@@ -17,7 +17,7 @@ roles:
     completion-reviewer,
     product-surface-reviewer,
   ]
-routing-profile: runtime-heavy
+routing-profile: implementation-heavy
 mode: approval-gated
 ---
 
@@ -121,13 +121,13 @@ The eight required columns, the allowed transitions and the exception rules are 
 1. Read `test-list.md`. **Rework first**: if any row is at `review-fix`, select the first such row and resume its rework (`references/round-evidence.md`) before any `todo` row — one left by an interrupted session is otherwise never picked up. Otherwise select the first row with `Status = todo`.
 2. Transition status to `red` — **only for a `todo` row**. A `review-fix` row **stays at `review-fix`** for the whole rework: it runs steps 3-5 and the Green phase in place, and `review-fix -> red` is not an allowed transition.
 3. Write a **failing test** from the row's obligation column, selected by `Layer`: `TC-Refs` for `Unit` / `Component` / `Integration`, `US-Refs` for `E2E`, `CON-API-Refs` for `API`. An `E2E` or `API` row's test is authored by `/qfai-atdd` (Non-goals); this skill only drives that row's status and evidence once the acceptance test exists, and stops with a handoff note if it does not.
-4. Run the test and **watch it fail** for the expected reason, observing each `Selector` entry
-   separately (a single aggregate run is not a valid RED observation). Submit that run to
-   `qa-gatekeeper` and obtain confirmation **before** any production code exists — routing phase `red`.
+   3a. Create the **minimal seam** the test imports — module, export or signature with no behaviour — so the test module loads. This is not Phase Green's production code: it implements no predicate. Without it, the first failure of any new-symbol row is a resolution error by construction.
+4. Run the test and **watch it fail**. Admissible only when an assertion — or an expected-exception check — inside this row's `Selector` raised the failure and its message names the predicate the row owns; a collection / import / syntax / fixture error, or an unasserted throw, is a **missing seam**, not a RED (`references/red-admissibility.md`). Observe each `Selector` entry's failure separately; one aggregate run is not a valid RED observation. Submit that run to `qa-gatekeeper` and obtain confirmation **before** any production code exists — routing phase `red`.
 5. If the test unexpectedly passes, classify **why** before doing anything else. An obligation
    already satisfied by a sibling row is **not an anomaly** and does **not** go to `exception`;
-   anything else transitions to `exception` and records the anomaly. Never weaken a correct test
-   until it fails in order to manufacture a RED. See `references/red-not-observable.md`.
+   anything else transitions to `exception` and records the anomaly as `.qfai/decisions/DR-<id>-<slug>.md` — never in
+   `07_Decisions.md` / `09_delta.md`, which are upstream SSOT this skill may not patch. Never weaken a correct
+   test until it fails in order to manufacture a RED. See `references/red-not-observable.md`.
    > **RED observation is only as good as the selector's granularity.** A single test function can fail
    > only once, so if one selector entry carries an entire obligation matrix, "the expected reason" is
    > whichever assert happens to execute first — every assertion after it is unobserved on every RED
@@ -301,7 +301,7 @@ Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
 ### Post-parallel integration verify
 
 - After parallel slices complete and merge, run integration verify on the merged result
-- If integration verify fails, flag all slices for re-examination and roll back the merge
+- If integration verify fails, **classify before acting** per `shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`, attributing the failure to one slice, to the merge resolution, or to code outside every slice. Remedies by class: `references/parallelization-policy.md#failed-integration-verify`. Unconditional rollback is not one of them — the protocol classifies this as a local, non-destructive defect to fix and re-run, and reserves stopping for destructive changes.
 - If integration verify passes, state transitions back to `delivery-planner` for sequential flow
 
 ## Completion Contract (Shared)
@@ -315,14 +315,14 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 
 1. Corresponding `TDD-ID` has been selected and is in progress
 2. A failing test was added first (test-first) — **or**, on the _RED not observable_ path, the correct test was added first and proven falsifiable by mutation instead of by a natural failure
-3. RED was observed — `qa-gatekeeper` confirmed the test failed for the expected reason (watch it fail), **or** the row carries falsifiability evidence per _RED not observable_
+3. RED was observed — `qa-gatekeeper` confirmed an **admissible** failure: an assertion or expected-exception check inside the row's `Selector`, not a load or fixture error (`references/red-admissibility.md`), **or** the row carries falsifiability evidence per _RED not observable_
 4. Minimal production code was written to make the test pass — **waived** on the _RED not observable_ path, where the `Satisfied-by` row already implements the predicate; do not manufacture a change to satisfy this item
 5. GREEN was observed — `qa-gatekeeper` confirmed the test passes after implementation (watch it pass)
 6. Refactor was performed and GREEN was re-confirmed after refactor
 7. `completion-reviewer` returned PASS (spec / completion review gate)
 8. `implementation-reviewer` returned PASS (code quality review gate)
 9. UI-affecting items have prototype parity PASS from `product-surface-reviewer`
-10. `test-list.md` Status and Evidence columns are updated with fresh evidence
+10. `test-list.md` Status is current and its Evidence cell's anchor resolves to a fresh per-item entry in `.qfai/evidence/implement-<spec-id>.md` (the cell is a pointer, not the payload — `references/execution-ledger.md#evidence-cell-contract`)
 11. `.qfai/evidence/implement-<spec-id>.md` is appended with both reviewer verdicts after items 7-8 returned PASS
 12. Checkpoint verification passed (see `#checkpoint-verification`). The **full** suite is required here only when the item sits on a checkpoint boundary; a row between boundaries satisfies this with the narrow relevant suite from Phase: Refactor step 2, which is also what items 6, 7 and 8 are evaluated against.
 
@@ -386,6 +386,7 @@ Required sections:
 
 - Objective
 - Items processed (TDD-ID, TC-Refs, final status)
+- **Per item, one `### TDD-NNNN` section** carrying the contract below — the single home for the RED/GREEN commands and output. The ledger's `Evidence` cell anchors here and holds only the one-word outcomes, because a GFM cell cannot hold a newline or a bare `|` (`references/execution-ledger.md#evidence-cell-contract`)
 - Test results summary
 - Exception items (if any) with DR-IDs
 - Commands executed
@@ -400,7 +401,8 @@ parts with different write points; the fields are the same, the sequencing is no
 - `TDD-ID` — the item identifier
 - `TC-ref` — reference to the test case(s). On a `Layer = E2E` row read `US-ref` (the row's `US-Refs`) instead, and on a `Layer = API` row read `CON-API-ref` (the row's `CON-API-Refs`): exactly one obligation reference is required, the one the row's `Layer` selects
 - `RED command` — the exact command executed to observe failure
-- `RED result` — the failure output (result completeness is best-effort; truncated output is acceptable)
+- `RED result` — the failure output. Truncation is acceptable for the stack tail, never for the assertion message and its location: that is what demonstrates admissibility
+- `RED failure mode` — `assertion` | `expected-error` | `falsifiability`. There is no admissible value for a load error (`references/red-admissibility.md`)
 - **Exclusive alternative to the RED pair**: a row on the _RED not observable_ path carries
   `Satisfied-by`, `Falsifiability command` and `Falsifiability result` in place of the two
   RED fields above. Exactly one of the two forms must be present — never both, never
@@ -429,10 +431,10 @@ the completion gate (see `Completion prohibition conditions`).
 
 ### Evidence hard rules
 
-- Status-only evidence (e.g., "Status: PASS" with no command) is invalid and MUST be rejected
-- Both command and result are required; "should pass" or "looks good" alone is not acceptable
-- Stale evidence from a previous run MUST NOT be reused to claim completion for a new cycle
-- Empty evidence entries are rejected: minimum evidence per TDD item must be met
+- Status-only evidence (e.g., "Status: PASS" with no command) is invalid and MUST be rejected; both command and result are required, and "should pass" or "looks good" alone is not acceptable — `TDDLIST_EVIDENCE_STATUS_ONLY` (warning, waivable as `TDDLIST-004`: ledgers predating the check carry prose verdicts)
+- Empty evidence entries are rejected: minimum evidence per TDD item must be met — `TDDLIST_EVIDENCE_EMPTY` (error)
+- Stale evidence from a previous run MUST NOT be reused to claim completion for a new cycle.
+  **Reviewer obligation, not a machine gate** — why, and the full rules: `references/execution-ledger.md`.
 
 ## Checkpoint Verification
 

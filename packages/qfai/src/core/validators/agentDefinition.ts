@@ -28,6 +28,7 @@ type RoutingPhase = {
   blocking_agents?: unknown;
   parallel_groups?: unknown;
   iteration?: unknown;
+  rerun_policy?: unknown;
 };
 
 /**
@@ -45,6 +46,20 @@ type RoutingPhase = {
  * restore the collapsed reading it was added to fix.
  */
 const ROUTING_ITERATIONS = new Set(["per-invocation", "per-ledger-item"]);
+
+/**
+ * What a phase re-runs when it is entered a second time.
+ *
+ * The key was on all 23 routed phases, defined nowhere, read by nothing, and
+ * absent from this type — so a typo in it was invisible and the two values in
+ * use were folklore. It is validated rather than deleted because the Drift
+ * Protocol's rerun step needs exactly this vocabulary.
+ *
+ * - `failed-agents-only` — re-run only the agents that did not return PASS.
+ * - `changed-scope-dependents` — re-run every agent whose inputs the change
+ *   touched, including ones that passed.
+ */
+const RERUN_POLICIES = new Set(["failed-agents-only", "changed-scope-dependents"]);
 
 /**
  * Resolve a manifest YAML file by checking the new canonical layer first
@@ -318,6 +333,20 @@ async function validateRouting(
                 "error",
                 rel,
                 "agentDefinition.routingIteration",
+              ),
+            );
+          }
+        }
+        if (phaseObj.rerun_policy !== undefined) {
+          const declared = phaseObj.rerun_policy;
+          if (typeof declared !== "string" || !RERUN_POLICIES.has(declared)) {
+            issues.push(
+              issue(
+                "QFAI-AGENT-013",
+                `${formatSkillLabel(routeObj.skill, routeIndex)} phase[${phaseIndex}] declares rerun_policy ${JSON.stringify(declared)}; allowed: ${[...RERUN_POLICIES].sort().join(", ")}`,
+                "error",
+                rel,
+                "agentDefinition.rerunPolicy",
               ),
             );
           }
