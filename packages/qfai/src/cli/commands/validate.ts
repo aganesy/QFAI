@@ -5,7 +5,7 @@ import type { FailOn, OutputFormat } from "../../core/config.js";
 import { loadConfig } from "../../core/config.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import { normalizeSpecId } from "../../core/specScope.js";
-import { buildCiProfileIssue, createProfileGuardResult } from "../../core/phasePolicy.js";
+import { buildCiProfileIssue } from "../../core/phasePolicy.js";
 import { toRelativePath } from "../../core/paths.js";
 import { saasPackageSkippedGateFamilies } from "../../core/saasPackage/skippedGates.js";
 import type { Issue, ValidationProfile, ValidationResult } from "../../core/types.js";
@@ -92,15 +92,22 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const startedAt = new Date();
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
-  const blockedIssue = buildCiProfileIssue(options.profile);
-  const blockedByProfileGuard = blockedIssue !== null;
-  const rawResult = blockedIssue
-    ? await createProfileGuardResult(options.profile ?? "full", blockedIssue)
-    : await validateProject(root, configResult, {
-        ...(options.profile ? { profile: options.profile } : {}),
-        ...(options.platform ? { platform: options.platform } : {}),
-        ...(options.specIds && options.specIds.length > 0 ? { specIds: options.specIds } : {}),
-      });
+  // The CI narrow-profile finding is appended to a real run, not substituted
+  // for one. Replacing the run made every stage gate that names a narrow
+  // profile unreachable in CI.
+  const ciProfileIssue = buildCiProfileIssue(options.profile);
+  const validated = await validateProject(root, configResult, {
+    ...(options.profile ? { profile: options.profile } : {}),
+    ...(options.platform ? { platform: options.platform } : {}),
+    ...(options.specIds && options.specIds.length > 0 ? { specIds: options.specIds } : {}),
+  });
+  const rawResult = ciProfileIssue
+    ? {
+        ...validated,
+        issues: [...validated.issues, ciProfileIssue],
+        counts: { ...validated.counts, warning: validated.counts.warning + 1 },
+      }
+    : validated;
   // Resolve effective tool version for the legacy-path sunset gate.
   // Test callers override; production reads the same package.json#version
   // the rest of the toolchain uses (so the source-of-truth is single).
@@ -154,7 +161,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       }
     : rawResult;
   const normalized = normalizeValidationResult(root, result);
-  const partialProfileNotice = buildPartialProfileNotice(normalized.profile, blockedByProfileGuard);
+  const partialProfileNotice = buildPartialProfileNotice(normalized.profile);
   if (partialProfileNotice) {
     normalized.issues.push(partialProfileNotice);
     normalized.counts = recountIssues(normalized.counts, partialProfileNotice);
@@ -163,7 +170,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   warnIfTruncated(normalized.traceability.testFiles, "validate");
 
   const failOn = resolveFailOn(options, configResult.config.validation.failOn);
-  const willFail = blockedByProfileGuard || shouldFail(normalized, failOn);
+  const willFail = shouldFail(normalized, failOn);
 
   const runLog = await writeValidateRunLog({
     root,
@@ -555,26 +562,12 @@ function unevaluatedFamilies(profile: string): string[] {
  * the normal per-profile wording would then imply the requested profile's own
  * gates had been observed, so that case gets its own message.
  */
-function buildPartialProfileNotice(
-  profile: string | undefined,
-  blockedByProfileGuard: boolean,
-): Issue | null {
+function buildPartialProfileNotice(profile: string | undefined): Issue | null {
   if (!profile) {
     return null;
   }
-  if (blockedByProfileGuard) {
-    return {
-      code: "QFAI-PROFILE-001",
-      severity: "info",
-      category: "canonical",
-      message:
-        `profile="${profile}" was blocked by the CI profile guard, so NO validator ran and ` +
-        "NO hard gate was evaluated — including this profile's own. This report carries the " +
-        "guard finding and this notice, nothing else; it is not a validation result. Run " +
-        "`qfai validate --fail-on error` (full profile) instead.",
-      rule: "validate.partialProfileCoverage",
-    };
-  }
+  // There is no "blocked" branch any more: a narrow profile in CI runs its own
+  // validators, so the ordinary partial-profile wording is accurate.
   const unevaluated = unevaluatedFamilies(profile);
   if (unevaluated.length === 0) {
     return null;

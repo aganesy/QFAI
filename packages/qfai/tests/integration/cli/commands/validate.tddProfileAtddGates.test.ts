@@ -150,18 +150,22 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     });
   });
 
-  it("says nothing ran when the CI profile guard blocked the run", async () => {
+  it("runs the narrow profile in CI and reports it (#397)", async () => {
     await withCiEnv(true, async () => {
       await withProject(async (root) => {
         await runValidate({ root, strict: false, profile: "atdd" });
         const all = await findings(root);
+
+        // The CI notice is still emitted — an accidental narrowing stays
+        // visible — but the profile's own validators ran, so the ordinary
+        // partial-profile wording is now the accurate one.
         expect(all.map((entry) => entry.code)).toContain("QFAI-VALIDATE-017");
+        expect(all.find((entry) => entry.code === "QFAI-VALIDATE-017")?.severity).toBe("warning");
+
         const notice = all.find((entry) => entry.code === "QFAI-PROFILE-001");
-        expect(notice?.message).toContain("was blocked by the CI profile guard");
-        expect(notice?.message).toContain("NO hard gate was evaluated");
-        // The partial-profile wording would imply atdd's own gates ran.
-        expect(notice?.message).not.toContain("is a partial profile");
-        expect(notice?.message).not.toContain("QFAI-ATDD-*");
+        expect(notice?.message).toContain('profile="atdd" is a partial profile');
+        expect(notice?.message).not.toContain("was blocked by the CI profile guard");
+        expect(notice?.message).not.toContain("NO hard gate was evaluated");
       });
     });
   });
