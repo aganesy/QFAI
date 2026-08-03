@@ -35,9 +35,8 @@ QFAI Skill Body (SSOT)
 
 - **`.qfai/specs/<spec-id>/tdd/test-list.md` must exist and contain the eight required columns.** It is the ledger every step of this skill reads.
 - **Producer**: `/qfai-sdd` Phase 2b seeds it. Do **not** proceed with an absent ledger and do **not** invent rows that no TC backs.
-- **An empty ledger is a fault only when `06_Test-Cases.md` disagrees.** Never read a header-only
-  table as "nothing to do" on its own. The recovery procedure and the coverage-target test that
-  separates a truthfully empty ledger from an incomplete one are in
+- **An empty ledger is a fault only when `06_Test-Cases.md` disagrees.** Never read a header-only table as "nothing to do" on its own.
+  The recovery procedure and the coverage-target test that separates a truthfully empty ledger from an incomplete one are in
   `references/ledger-preconditions.md`; read it before exiting on an empty ledger.
 
 ## Spec Auto-Discovery Protocol
@@ -74,8 +73,7 @@ Skill-specific examples:
   **spec-level checkpoint boundary** may still be owed — an interrupted run, or a re-run of an
   already-terminal ledger, leaves it unrecorded. Before reporting "nothing to do" and exiting,
   confirm fresh spec-level checkpoint verification evidence exists for this ledger state; run the
-  per-spec verification first when it is missing or stale. See
-  `references/checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`. Only
+  per-spec verification first when it is missing or stale. See `references/checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`. Only
   then report "nothing to do" for that spec, then advance to the next spec of a confirmed queue; exit when the queue is empty (Volume Policy > Advancing the queue).
 
 ## Goal
@@ -143,7 +141,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 ### Phase: Refactor
 
-1. Improve code quality (naming, structure, duplication removal) while keeping all tests green.
+1. Improve code quality (naming, structure, duplication removal) while keeping all tests green. **Before editing a production file**, check whether another spec's `tdd/test-list.md` names it in `Test file`; if so the edit is cross-spec — record it in this item's evidence and re-run `completion-reviewer` against that spec's obligations too (`references/cross-spec-ownership.md`).
 2. Run the **relevant test suite** to confirm nothing broke. "Relevant" means the
    smallest selector that covers the module you touched **plus its reverse
    dependency closure** — walk the production import graph backwards, not just the
@@ -368,6 +366,7 @@ Completion MUST NOT be declared when any of the following are true:
 - No GREEN fresh evidence exists for the item
 - Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned REVISE
 - `.qfai/evidence/implement-<spec-id>.md` does not exist, or does not record both reviewer verdicts for the item (this is the single blocking statement about the evidence file; its absence of _verdicts_ is never blocking before items 7-8)
+- A `## Cross-spec obligations` entry in this spec's evidence file is still open — the change it names has not landed, or the blocked spec's obligation is still untested. A clean completion here would certify an obligation this run knowingly left unmet (`references/cross-spec-ownership.md`)
 - Items with `todo`, `red`, `green`, `refactor`, or `review-fix` status still exist (for spec-level completion)
 - Items with `exception` status still exist, **unless** the row's `DR-ID` names
   a Decision Record explicitly recorded as a **user-approved accepted-risk
@@ -388,6 +387,7 @@ Required sections:
 - **Per item, one `### TDD-NNNN` section** carrying the contract below — the single home for the RED/GREEN commands and output. The ledger's `Evidence` cell anchors here and holds only the one-word outcomes, because a GFM cell cannot hold a newline or a bare `|` (`references/execution-ledger.md#evidence-cell-contract`)
 - Test results summary
 - Exception items (if any) with DR-IDs
+- `## Cross-spec obligations` (if any): per affected spec, the TDD-ID that forced the change, the blocked spec and its TDD-IDs, the file, the change required, the obligation left unverified, and the resolution (`re-reviewed` or a `CR-*`). Fields and the rule: `references/cross-spec-ownership.md`
 - Commands executed
 
 ### Per-item evidence contract (fresh evidence required)
