@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { loadConfig } from "../../src/core/config.js";
+import { SUNSETS } from "../../src/core/sunset.js";
 
 describe("baseBranch config", () => {
   it("loads baseBranch from config YAML", async () => {
@@ -167,7 +168,7 @@ describe("spec-0012 prototyping.execution config", () => {
   });
 
   // spec-0012 — browserTool: playwright-cli accepted
-  it("accepts browserTool: playwright-cli without issues (REQ-0002)", async () => {
+  it("rejects browserTool: playwright-cli past its sunset (REQ-0002)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-browsertool-"));
     try {
       await writeFile(
@@ -176,9 +177,14 @@ describe("spec-0012 prototyping.execution config", () => {
         "utf-8",
       );
 
+      // The deprecation window closed at `SUNSETS.playwrightCli`, which the
+      // shipped version is now past. `browserTool` falls back to the supported
+      // default rather than carrying a value the launcher no longer accepts.
       const { config, issues } = await loadConfig(root);
-      expect(issues).toEqual([]);
-      expect(config.prototyping?.execution?.browserTool).toBe("playwright-cli");
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.message).toContain("playwright-cli");
+      expect(issues[0]?.message).toContain(SUNSETS.playwrightCli);
+      expect(config.prototyping?.execution?.browserTool).toBe("playwright");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

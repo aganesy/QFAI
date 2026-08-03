@@ -6,6 +6,7 @@ import { loadConfig } from "../../core/config.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import { normalizeSpecId } from "../../core/specScope.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
+import { SUNSETS, isAtOrPastSunset } from "../../core/sunset.js";
 import { toRelativePath } from "../../core/paths.js";
 import { saasPackageSkippedGateFamilies } from "../../core/saasPackage/skippedGates.js";
 import type { Issue, ValidationProfile, ValidationResult } from "../../core/types.js";
@@ -52,7 +53,7 @@ export type ValidateOptions = {
  * by `.agents/rules/distributed-surface.md` exception (npm version is
  * canonical), because it tracks the next minor of the pinned branch.
  */
-const LEGACY_VALIDATE_JSON_SUNSET = "1.10.0";
+const LEGACY_VALIDATE_JSON_SUNSET = SUNSETS.legacyValidateJson;
 const LEGACY_VALIDATE_JSON_REL = ".qfai/output/validate.json";
 
 async function pathExists(p: string): Promise<boolean> {
@@ -327,83 +328,6 @@ export function profileSuffixedReportPath(configured: string, profile: string): 
  */
 export function legacyValidateJsonSeverity(currentVersion: string): "warning" | "error" {
   return isAtOrPastSunset(currentVersion, LEGACY_VALIDATE_JSON_SUNSET) ? "error" : "warning";
-}
-
-type FullSemver = {
-  major: number;
-  minor: number;
-  patch: number;
-  /**
-   * Raw prerelease tag (everything after the first `-`, before any
-   * `+build` metadata). `undefined` denotes a clean GA release.
-   * Per the semver spec, a clean release sorts AFTER any prerelease
-   * sharing the same `major.minor.patch`.
-   */
-  prerelease: string | undefined;
-};
-
-/**
- * Strict full-semver parser: `MAJOR.MINOR.PATCH[-PRERELEASE][+BUILD]`.
- * Returns `null` for inputs that do not match — callers treat that as
- * "be conservative" (i.e. pre-sunset / warning mode).
- *
- * Scope note: this is a **presence-only check**, not a full §9 / §11
- * validator. The prerelease group `([0-9A-Za-z.-]+)` does NOT enforce
- * SemVer §9 ("numeric identifiers MUST NOT include leading zeros"),
- * so inputs like `1.10.0-01` parse with `prerelease="01"`. That is
- * intentional: the legacy-path sunset gate only reads `prerelease ===
- * undefined` to distinguish GA vs prerelease, never the prerelease
- * contents themselves. If this helper grows into a general SemVer
- * comparator (e.g. via the prerelease ordering follow-up below), the
- * regex must be tightened to reject leading-zero numeric identifiers.
- *
- * Build metadata (`+...`) is dropped per semver §10 (ignored for
- * precedence). Prerelease tag is retained but only its presence is
- * needed for the at-or-past-sunset decision below.
- */
-function parseFullSemver(value: string): FullSemver | null {
-  const m = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/.exec(value);
-  if (!m) return null;
-  const majorRaw = m[1];
-  const minorRaw = m[2];
-  const patchRaw = m[3];
-  if (majorRaw === undefined || minorRaw === undefined || patchRaw === undefined) return null;
-  return {
-    major: Number(majorRaw),
-    minor: Number(minorRaw),
-    patch: Number(patchRaw),
-    prerelease: m[4],
-  };
-}
-
-/**
- * Returns `true` iff `currentVersion` is at or past the sunset.
- *
- * GA-only sunset assumption: this comparator presumes the sunset
- * literal is a clean GA release (no prerelease tag). When the sunset
- * is `1.10.0`, a current prerelease at the same triple
- * (`1.10.0-beta.1`) sorts BEFORE the GA (semver §11) and is therefore
- * pre-sunset. We deliberately do NOT call `comparePrerelease(cur, sun)`
- * here because `sun.prerelease` is always `undefined` in production
- * (the SSOT is the clean `LEGACY_VALIDATE_JSON_SUNSET` literal). If a
- * future migration ever pins sunset to a prerelease tag itself, this
- * helper needs an additional prerelease-vs-prerelease comparator step.
- *
- * Conservative default: if either version fails to parse, we treat
- * the current version as pre-sunset (warning mode) — the legacy file
- * keeps being written and operators are not surprised by an
- * unparseable-version-induced escalation.
- */
-function isAtOrPastSunset(currentVersion: string, sunsetVersion: string): boolean {
-  const cur = parseFullSemver(currentVersion);
-  const sun = parseFullSemver(sunsetVersion);
-  if (cur === null || sun === null) return false;
-  if (cur.major !== sun.major) return cur.major > sun.major;
-  if (cur.minor !== sun.minor) return cur.minor > sun.minor;
-  if (cur.patch !== sun.patch) return cur.patch > sun.patch;
-  // major.minor.patch tied: a clean GA (no prerelease) is at-sunset;
-  // any prerelease at the same triple is still pre-sunset.
-  return cur.prerelease === undefined;
 }
 
 /**

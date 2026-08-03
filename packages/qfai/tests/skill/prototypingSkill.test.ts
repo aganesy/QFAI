@@ -49,7 +49,7 @@ const VALID_SKILL_CONTENT = [
   "",
   "### Step 2-B — Verify Environment Preconditions",
   "Run qfai prototyping preflight --target-url <url> or qfai doctor --profile prototyping.",
-  "Prefer npx --no-install playwright-cli whenever PATH reachability is not guaranteed.",
+  "Prefer npx --no-install playwright whenever PATH reachability is not guaranteed.",
   "",
   "## Evaluator Inputs (Mandatory)",
   "screenshots, HTML snapshots, axisDefs, previousScore, designSystemChecklist",
@@ -113,16 +113,39 @@ describe("prototyping skill validator", () => {
     expect(hasPreflightGuidance(VALID_SKILL_CONTENT)).toBe(true);
   });
 
-  it("documents Playwright CLI fallback guidance", () => {
+  it("documents a safe Playwright invocation path", () => {
     expect(hasPlaywrightCliFallback(VALID_SKILL_CONTENT)).toBe(true);
   });
 
-  it("rejects unsafe bare npx playwright-cli fallback guidance", () => {
-    const invalid = VALID_SKILL_CONTENT.replace(
-      "npx --no-install playwright-cli",
-      "npx playwright-cli",
-    );
+  it("rejects unsafe bare npx playwright guidance", () => {
+    // What the rule guards is the --no-install shape: a bare `npx playwright`
+    // reaches the network and can install a package mid-run.
+    const invalid = VALID_SKILL_CONTENT.replace("npx --no-install playwright", "npx playwright");
     expect(hasPlaywrightCliFallback(invalid)).toBe(false);
+  });
+
+  it.each(["playwright-does-not-exist", "playwright-wrapper", "playwrightx"])(
+    "rejects %s, which only starts with the launcher name",
+    (impostor) => {
+      // A substring test accepted any command whose name merely begins with
+      // `playwright`, so a skill could satisfy the rule while documenting a
+      // launcher that does not exist. The match is anchored at the end of the
+      // name.
+      const invalid = VALID_SKILL_CONTENT.split("npx --no-install playwright").join(
+        `npx --no-install ${impostor}`,
+      );
+      expect(hasPlaywrightCliFallback(invalid)).toBe(false);
+    },
+  );
+
+  it.each([
+    "npx --no-install playwright",
+    "npx --no-install playwright-cli",
+    "node_modules/.bin/playwright",
+  ])("accepts %s", (form) => {
+    // `playwright-cli` stays accepted: a project that has not migrated its
+    // docs still documents a real, non-installing launcher.
+    expect(hasPlaywrightCliFallback(`Run \`${form} --version\` first.`)).toBe(true);
   });
 
   it("flags banned phrases when v1.x mode wording is reintroduced", () => {

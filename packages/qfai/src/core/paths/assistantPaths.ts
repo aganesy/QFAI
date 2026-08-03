@@ -1,5 +1,7 @@
 import path from "node:path";
 
+import { SUNSETS } from "../sunset.js";
+
 /**
  * SSOT for the 4-layer assistant-tree path segments.
  * Hard-coded `.qfai/assistant/<layer>/` literals elsewhere in
@@ -22,18 +24,19 @@ export const PROJECT_STEERING_TEMPLATES_SUBDIR = "_templates" as const;
 export const MIGRATIONS_SUBDIR = "migrations" as const;
 
 /**
- * Pinned sunset for the legacy `.qfai/assistant/steering/` layout.
- * SSOT shared by `qfai init` (sunset text in the migration memo and
- * the D-DEPRECATED-PATH info line) AND by the
- * `assistantTreeMigration` validator (severity escalation past the
- * cutoff). Keeping these two surfaces in sync via a single constant
- * prevents the migration helper from advertising one cutoff while
- * the validator enforces a different one.
+ * Sunset label for the legacy `.qfai/assistant/steering/` layout.
+ *
+ * Derived from `SUNSETS.legacyAssistantSteering` rather than pinned here. The
+ * pin used to live in this module as `{ major, minor }`, which put it outside
+ * `isAtOrPastSunset` — it could not parse that shape — so three separate
+ * hand-rolled comparators grew around it, in `assistantTreeMigration`,
+ * `skillDocReferences` and `init`. Two of them ignored the patch and
+ * prerelease fields and so disagreed with every other deprecation about
+ * `1.10.0-rc.1`. Deriving the label removes the possibility of drift instead of
+ * asking three call sites to stay in step.
  */
-export const LEGACY_STEERING_SUNSET = { major: 1, minor: 10 } as const;
-
 export function legacyAssistantSteeringSunsetLabel(): string {
-  return `${LEGACY_STEERING_SUNSET.major}.${LEGACY_STEERING_SUNSET.minor}.0`;
+  return SUNSETS.legacyAssistantSteering;
 }
 
 export function isAssistantLayer(value: string): value is AssistantLayer {

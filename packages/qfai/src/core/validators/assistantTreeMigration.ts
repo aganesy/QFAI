@@ -11,37 +11,20 @@ import {
   joinLegacyAssistantInstructions,
   joinLegacyAssistantSteering,
   isAssistantLayer,
-  LEGACY_STEERING_SUNSET,
   legacyAssistantSteeringSunsetLabel,
 } from "../paths/assistantPaths.js";
+import { SUNSETS, deprecationSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
 import { resolveToolVersion } from "../version.js";
 import { exists, issue } from "./utils.js";
 
 /**
  * The validator compares the running tool version's major.minor against
- * LEGACY_STEERING_SUNSET (imported from assistantPaths.ts):
+ * SUNSETS.legacyAssistantSteering (core/sunset.ts):
  *   - if current < sunset: emit warning (compatibility window)
  *   - if current >= sunset: emit error (post-sunset, cutoff enforced)
  * so legacy paths cannot survive past the announced cutoff release.
  */
-function parseSemver(value: string): { major: number; minor: number; patch: number } | null {
-  const match = /^(\d+)\.(\d+)\.(\d+)/.exec(value);
-  if (!match) return null;
-  return {
-    major: Number(match[1]),
-    minor: Number(match[2]),
-    patch: Number(match[3]),
-  };
-}
-
-function legacyDeprecationSeverity(current: string): "warning" | "error" {
-  const parsed = parseSemver(current);
-  if (!parsed) return "warning";
-  if (parsed.major < LEGACY_STEERING_SUNSET.major) return "warning";
-  if (parsed.major > LEGACY_STEERING_SUNSET.major) return "error";
-  return parsed.minor < LEGACY_STEERING_SUNSET.minor ? "warning" : "error";
-}
 
 export async function validateAssistantTreeMigration(
   root: string,
@@ -93,11 +76,11 @@ export async function validateAssistantTreeMigration(
   // 2. D-DEPRECATED-PATH — pre-recut legacy layers (.qfai/assistant/
   // steering/ AND .qfai/assistant/instructions/) are read-compatible
   // for the current minor window only; severity escalates to error
-  // from LEGACY_STEERING_SUNSET onwards. Both surfaces fire symmetric
+  // from SUNSETS.legacyAssistantSteering onwards. Both surfaces fire symmetric
   // findings per qfai-init.md contract line 50.
   const current = await resolveToolVersion();
   const sunset = legacyAssistantSteeringSunsetLabel();
-  const severity = legacyDeprecationSeverity(current);
+  const severity = deprecationSeverity(current, SUNSETS.legacyAssistantSteering);
   for (const legacySurface of [
     {
       dir: joinLegacyAssistantSteering(root),

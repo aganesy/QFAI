@@ -4,6 +4,87 @@
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-08-03
+
+### Changed
+
+- **Correction to the 1.9.2 deprecation notice.** That release announced four
+  deprecations escalating "from warning to error" at 1.10.0. An audit against the
+  code found the notice was accurate for one of them. `surface_type`-absent specs
+  (`D-SURFACE-TYPE-MISSING`) did emit a warning and now escalate as promised. The
+  pre-mutation-log iterate emit was already `error` under
+  `R-EVIDENCE-MUTATION-UNLOGGED`, so no window ever applied to it. But
+  `D-HANDOFF-LEGACY-FORMAT` and string-only `primary_tasks` **emitted nothing at
+  all** during the 1.9.x window — the code that would have warned was never built.
+  Escalating those two now would hand consumers a zero-length window, which is what
+  REQ-0169 — the requirement the constraint cites as its own justification — exists
+  to prevent. Both are re-pinned to 1.11.0 in `_policies/07_Constraints.md` and will
+  emit a warning first.
+- **`D-SURFACE-TYPE-MISSING` escalates to error.** A spec with a UI contract
+  companion but no `surface_type` marker is excluded from the UI-bearing set, so its
+  screens are skipped downstream — silently, while the finding said to "treat it as
+  priority-2 cleanup rather than blocking". Affects projects with marker-less
+  UI-bearing specs; run `/qfai-sdd`, which populates the field. Alongside it,
+  `detection/surfaceType.ts` narrowed its companion match from `.ya?ml` to `.yaml`,
+  matching `prototyping/specResolution.ts` — otherwise a stray `.yml` would now
+  hard-fail as a companion nothing else recognises.
+- **`prototyping certify` reports the legacy `prototyping.json` shape.** A record
+  with `fullHarness.runId` instead of a top-level `runId` was accepted in silence,
+  sealing a completion certificate with no operator signal while the migration memo
+  said the shape was rejected. It now emits `D-DEPRECATED-SCHEMA` at the
+  version-computed severity and still seals — the acceptance path stays, per OC-60.
+- **A sunset can no longer be announced without being enforced.**
+  `tests/core/sunsetLedger.test.ts` fails when a `SUNSETS` key has no consumer, when
+  a constraint row names a finding code no source emits, or when a file parses a
+  version next to a sunset instead of calling the shared comparator. The previous
+  guard compared `isAtOrPastSunset` against `deprecationSeverity` — a tautology over
+  the latter's own body — and iterated existing keys, while every gap found in this
+  release was a missing one.
+- **The legacy assistant-tree sunset joined that sweep.** `LEGACY_STEERING_SUNSET`
+  was a fourth, separately-shaped SSOT (`{ major, minor }`) that `isAtOrPastSunset`
+  could not parse, so three hand-rolled comparators had grown around it — in
+  `assistantTreeMigration`, `skillDocReferences` and `init`. Two ignored the patch
+  and prerelease fields, so they disagreed with every other deprecation about
+  `1.10.0-rc.1`. The pin is now `SUNSETS.legacyAssistantSteering` and the label
+  derives from it. `qfai init` reported the layout as "read-compatible for the
+  current minor release only" with no version input at all, and wrote that same
+  sentence into a commit-immutable migration memo — false at 1.10.0, and
+  contradicted by `qfai validate` calling the identical layout an error. Both now
+  compute their wording, and post-sunset the init line goes to stderr at error
+  severity. **The readers are deliberately unchanged**: `qfai-validate.md` puts
+  reader removal in the minor _after_ the sunset, and `qfai init
+--upgrade-assistant-tree` has to keep reading the legacy tree to migrate it.
+  `init` still exits 0, so no bootstrap script breaks; `qfai validate` remains the
+  surface that fails the build.
+- **Every sunset pinned to 1.10.0 is now enforced, not just documented.**
+  Sunsets were declared in prose beside the code they governed, and each site
+  decided separately whether to act: `prototyping.execution.browserTool:
+"playwright-cli"` was documented as "at sunset only `playwright` is
+  accepted" while the config loader accepted it unconditionally, the
+  `D-DEPRECATED-PROBE` doctor check hard-coded `warning`, and `QFAI-AUD-001`
+  hard-coded `info`. Shipping this version would have made all three notices
+  false. `core/sunset.ts` now holds the single comparator and the sunset SSOT,
+  and each site reads its severity from it:
+  - `browserTool: "playwright-cli"` is refused by `loadConfig`, which falls
+    back to the `playwright` default so a run that ignores the issue still
+    targets a supported launcher. Only projects that set the value explicitly
+    are affected.
+  - `D-DEPRECATED-PROBE` reports `error`. The `sunset: 1.10.0` substring
+    remains part of the wire contract.
+  - `QFAI-AUD-001` on a UI contract authored before the `primary_tasks` slot
+    reports `error`. Add the slot during the next `/qfai-sdd` cycle.
+
+### Removed
+
+- `.qfai/assistant/steering/` — the legacy pre-recut assistant layout reached
+  the sunset pinned in `assistantPaths.ts#LEGACY_STEERING_SUNSET`, so
+  `D-DEPRECATED-PATH` escalates from `warning` to `error` at this version.
+  All eleven files already had canonical homes under
+  `.qfai/assistant/manifest/` and `.qfai/assistant/catalog/`, and
+  `qfai init` has not shipped the directory since v1.9.0 — only this
+  repository still carried the copy. A project upgrading from an older tree
+  runs `qfai init --upgrade-assistant-tree` to migrate.
+
 ### Added
 
 - `TDDLIST_UNKNOWN_LEVEL` (warning): `tdd/test-list.md` validation now reports

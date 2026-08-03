@@ -13,6 +13,7 @@
  * full minor release.
  */
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -41,14 +42,25 @@ describe("sync-init-to-root --check", () => {
     expect(status).toBe(0);
   });
 
-  it("reports the known-stale residue rather than hiding it", () => {
-    // The point of the fix: the legacy tree is visible on every run. It does
-    // not fail the gate — removing it is a separate change (#212 / #387) — but
-    // it can no longer be invisible.
+  it("no longer carries the legacy steering residue", () => {
+    // This test used to assert the residue was *reported*. It is now gone:
+    // `.qfai/assistant/steering/` reached the sunset pinned in
+    // `sunset.ts#SUNSETS.legacyAssistantSteering` (1.10.0), which is what made
+    // `assistantTreeMigration` escalate `D-DEPRECATED-PATH` to `error`.
     const { output } = runCheck();
 
-    expect(output).toContain("KNOWN-STALE: .qfai/assistant/steering/test-layers.md");
-    expect(output).toContain("legacy pre-recut assistant layout");
+    expect(output).not.toContain("KNOWN-STALE: .qfai/assistant/steering/");
+    expect(existsSync(path.join(repoRoot, ".qfai", "assistant", "steering"))).toBe(false);
+  });
+
+  it("keeps the known-stale reporting mechanism for the next residue", async () => {
+    // The map is empty, not deleted. Removing the mechanism along with its last
+    // entry would put the next stale path back where `steering/` was — present,
+    // uncounted and unreported.
+    const source = await readFile(SCRIPT, "utf-8");
+
+    expect(source).toContain("const KNOWN_STALE = new Map([]);");
+    expect(source).toContain("KNOWN-STALE: .qfai/");
   });
 
   it("counts an unknown stale path as drift", async () => {

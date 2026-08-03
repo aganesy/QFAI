@@ -43,4 +43,4 @@ prototyping:
     packPath: .qfai/evidence/calibration.yaml
   execution:
     targetUrl: null
-    browserTool: playwright-cli
+    browserTool: playwright

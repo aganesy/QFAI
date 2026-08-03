@@ -240,8 +240,10 @@ describe("US-0012-0123: countWords CJK 800-1500 + EN 200-500 (Intl.Segmenter + O
   });
 });
 
-describe("US-0012-0124: browserTool playwright primary + playwright-cli deprecation window", () => {
-  it("loadConfig accepts both `playwright` and `playwright-cli` values during the deprecation window", async () => {
+describe("US-0012-0124: browserTool playwright primary + playwright-cli past its sunset", () => {
+  // The deprecation window closed at `SUNSETS.playwrightCli`. `playwright`
+  // still loads; `playwright-cli` is now refused and falls back to the default.
+  it("loadConfig keeps `playwright` and refuses `playwright-cli`", async () => {
     const rootA = await p2TempDir();
     await seedPhase2Project(rootA, "playwright");
     const a = await loadConfig(rootA);
@@ -250,14 +252,11 @@ describe("US-0012-0124: browserTool playwright primary + playwright-cli deprecat
     const rootB = await p2TempDir();
     await seedPhase2Project(rootB, "playwright-cli");
     const b = await loadConfig(rootB);
-    expect(b.config.prototyping?.execution?.browserTool).toBe("playwright-cli");
-    // Loader stays silent on the deprecated-but-accepted value;
-    // D-DEPRECATED-PROBE emission lives on the doctor side.
-    expect(
-      [...a.issues, ...b.issues].filter(
-        (i) => i.severity === "error" && /browserTool/.test(i.message),
-      ),
-    ).toEqual([]);
+    // Refused, and the default stands in — a run that ignores the issue goes
+    // to the supported launcher rather than a half-configured one.
+    expect(b.config.prototyping?.execution?.browserTool).toBe("playwright");
+    expect(a.issues.filter((i) => /browserTool/.test(i.message))).toEqual([]);
+    expect(b.issues.filter((i) => /browserTool/.test(i.message))).toHaveLength(1);
   });
 });
 

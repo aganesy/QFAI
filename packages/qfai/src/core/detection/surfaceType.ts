@@ -358,7 +358,12 @@ export async function hasUiCompanionForSpec(
   } catch {
     return false;
   }
-  const anchored = new RegExp(`^(?:${specId}|spec-${specId}|ui-${specId}(?:-[^.]+)?)\\.ya?ml$`);
+  // `.yaml` only, matching `prototyping/specResolution.ts#hasUiContractForSpec`.
+  // This accepted `.yml` while that one did not, so a stray `0007.yml` counted
+  // as a UI companion here and as nothing anywhere else. Harmless while
+  // `D-SURFACE-TYPE-MISSING` was a warning; now that it blocks, the mismatch
+  // would hard-fail a build over a file the rest of the toolchain ignores.
+  const anchored = new RegExp(`^(?:${specId}|spec-${specId}|ui-${specId}(?:-[^.]+)?)\\.yaml$`);
   return entries.some((entry) => entry.isFile && anchored.test(entry.name));
 }
 

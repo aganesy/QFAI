@@ -2,6 +2,8 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { SUNSETS, deprecationSeverity } from "../sunset.js";
+import { resolveToolVersion } from "../version.js";
 import {
   readUiContractScreenContracts,
   type CanonicalScreenContract,
@@ -187,6 +189,7 @@ function checkContractsHierarchy(
   contractsContent: string,
   auditConfig: DesignAuditConfig,
   file: string,
+  toolVersion: string,
 ): DesignFinding[] {
   const findings: DesignFinding[] = [];
   const screens = parseScreenBlocks(contractsContent);
@@ -207,12 +210,15 @@ function checkContractsHierarchy(
         });
       } else {
         // key-absent: legacy contract predates the primary_tasks slot.
-        // Emit severity=info under the deprecation window (sunset 1.10.0).
+        // `info` inside the deprecation window, `error` from the sunset on.
+        // The message has always named a sunset; until now the severity was a
+        // hard-coded `info`, so reaching that version changed nothing and the
+        // notice expired without effect.
         findings.push({
           ruleId: "QFAI-AUD-001",
           dimension: "visualHierarchy",
           severityTier: 3,
-          severityOverride: "info",
+          severityOverride: deprecationSeverity(toolVersion, SUNSETS.legacyPrimaryTasksSlot),
           message: `[QFAI-AUD-001] ${file}: screen '${screen.screenId}' uses a legacy UI contract that predates the primary_tasks slot; add the slot during your next \`/qfai-sdd\` cycle (sunset: qfai 1.10.0)`,
           why: "Legacy contracts authored before the primary_tasks lane lack the slot; this is a deprecation-window signal, not a violation",
           evidence: [file, screen.screenId, "QFAI-AUD-001"],
@@ -257,6 +263,7 @@ function bandFindingFor(
 function checkContractHierarchyFromScreens(
   screens: CanonicalScreenContract[],
   _auditConfig: DesignAuditConfig,
+  toolVersion: string,
 ): DesignFinding[] {
   const findings: DesignFinding[] = [];
   for (const screen of screens) {
@@ -290,12 +297,15 @@ function checkContractHierarchyFromScreens(
         });
       } else {
         // key-absent: legacy contract predates the primary_tasks slot.
-        // Emit severity=info under the deprecation window (sunset 1.10.0).
+        // `info` inside the deprecation window, `error` from the sunset on.
+        // The message has always named a sunset; until now the severity was a
+        // hard-coded `info`, so reaching that version changed nothing and the
+        // notice expired without effect.
         findings.push({
           ruleId: "QFAI-AUD-001",
           dimension: "visualHierarchy",
           severityTier: 3,
-          severityOverride: "info",
+          severityOverride: deprecationSeverity(toolVersion, SUNSETS.legacyPrimaryTasksSlot),
           message: `[QFAI-AUD-001] ${filePath}: screen '${screen.screenId}' uses a legacy UI contract that predates the primary_tasks slot; add the slot during your next \`/qfai-sdd\` cycle (sunset: qfai 1.10.0)`,
           why: "Legacy contracts authored before the primary_tasks lane lack the slot; this is a deprecation-window signal, not a violation",
           evidence: [filePath, screen.screenId, "QFAI-AUD-001"],
@@ -453,6 +463,7 @@ export function deduplicateFindings(issues: Issue[], maxPerRule: number): Issue[
 // ---------------------------------------------------------------------------
 
 export async function validateDesignAudit(root: string, config: QfaiConfig): Promise<Issue[]> {
+  const toolVersion = await resolveToolVersion();
   const auditConfig = resolveAuditConfig(config);
   if (!auditConfig.enabled) return [];
 
@@ -474,10 +485,17 @@ export async function validateDesignAudit(root: string, config: QfaiConfig): Pro
   const findings: DesignFinding[] = [];
 
   if (uiContractScreens.length > 0) {
-    findings.push(...checkContractHierarchyFromScreens(uiContractScreens, auditConfig));
+    findings.push(
+      ...checkContractHierarchyFromScreens(uiContractScreens, auditConfig, toolVersion),
+    );
   } else if (contractsContent) {
     findings.push(
-      ...checkContractsHierarchy(contractsContent, auditConfig, "uiux/40_screen_contracts.md"),
+      ...checkContractsHierarchy(
+        contractsContent,
+        auditConfig,
+        "uiux/40_screen_contracts.md",
+        toolVersion,
+      ),
     );
   }
 

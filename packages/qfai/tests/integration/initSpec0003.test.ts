@@ -234,7 +234,7 @@ describe("TC-0003-0024: migration memo authoring", () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toContain("buildMigrationMemo");
     expect(content).toContain("joinMigrationMemo");
-    // Sunset version is sourced from the pinned LEGACY_STEERING_SUNSET
+    // Sunset version is sourced from SUNSETS.legacyAssistantSteering
     // SSOT in assistantPaths.ts (shared with the validator's severity
     // escalation point), NOT from a release-relative computation.
     expect(content).toContain("legacyAssistantSteeringSunsetLabel");

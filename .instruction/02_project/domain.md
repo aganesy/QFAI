@@ -20,7 +20,7 @@ QFAI は「要件 → 仕様 → 契約 → 検証/レポート」の流れを�
 - `.qfai/contracts/`: UI/API/DB 契約（`UI-xxxx` / `API-xxxx` / `DB-xxxx`）
 - `.qfai/assistant/prompts/`: AI プロンプト資産（SSOT）
 - `.qfai/assistant/instructions/`: 非交渉ルール/標準ワークフロー
-- `.qfai/assistant/steering/`: プロジェクト固有情報
+- `.qfai/assistant/catalog/`: プロジェクト固有情報
 - `.qfai/report/`: `validate.json` と report の出力先
 - `qfai.config.yaml`: パス/検証ルール/出力設定
 

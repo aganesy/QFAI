@@ -2,6 +2,7 @@ import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { parseAgentFrontmatter } from "./agentFrontmatter.js";
+import { SUNSETS, deprecationSeverity } from "./sunset.js";
 import {
   defaultConfig,
   findConfigRoot,
@@ -152,11 +153,19 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       details: { configPath: toRelativePath(root, resolvedConfigPath) },
     });
   } else {
+    // Pinning every config issue to `warning` made `doctor --fail-on error`
+    // exit 0 on a config the loader had rejected — a value past its sunset
+    // reads as "normalized with defaults" rather than as the blocking fault
+    // `qfai-doctor.md` says it is. The check now carries the worst severity
+    // the loader actually reported.
+    const configHasError = issues.some((issue) => issue.severity === "error");
     addCheck(checks, {
       id: "config.load",
-      severity: "warning",
+      severity: configHasError ? "error" : "warning",
       title: "Config load",
-      message: `Loaded with ${issues.length} issue(s) (normalized with defaults when needed)`,
+      message: configHasError
+        ? `Loaded with ${issues.length} issue(s), including ${issues.filter((i) => i.severity === "error").length} that must be fixed`
+        : `Loaded with ${issues.length} issue(s) (normalized with defaults when needed)`,
       details: {
         configPath: toRelativePath(root, resolvedConfigPath),
         issues,
@@ -994,7 +1003,7 @@ async function buildPrototypingRolesCheck(root: string): Promise<DoctorCheck> {
   };
 }
 
-const PLAYWRIGHT_SUNSET = "1.10.0";
+const PLAYWRIGHT_SUNSET = SUNSETS.playwrightCli;
 const PLAYWRIGHT_INSTALL_HINT = "npm i -D playwright";
 
 async function buildPlaywrightLauncherChecks(root: string): Promise<DoctorCheck[]> {
@@ -1007,7 +1016,13 @@ async function buildPlaywrightLauncherChecks(root: string): Promise<DoctorCheck[
   };
 
   if (resolution.status === "resolved" && resolution.resolved) {
-    return buildResolvedChecks(root, resolution.resolved, lookedInRelative, probeOrder);
+    return buildResolvedChecks(
+      root,
+      resolution.resolved,
+      lookedInRelative,
+      probeOrder,
+      await resolveToolVersion(),
+    );
   }
   if (resolution.status === "not_runnable") {
     return [buildNotRunnableCheck(root, resolution.attempts, lookedInRelative, probeOrder)];
@@ -1026,6 +1041,7 @@ function buildResolvedChecks(
   resolved: PlaywrightLauncherResolution["attempts"][number],
   lookedInRelative: LauncherLookedIn,
   probeOrder: string[],
+  toolVersion: string,
 ): DoctorCheck[] {
   const checks: DoctorCheck[] = [
     {
@@ -1051,8 +1067,12 @@ function buildResolvedChecks(
     // flagged as warning. The literal `sunset: 1.10.0` substring is part of
     // the public wire contract.
     checks.push({
+      // The window is what makes this a warning; past the sunset the probe is
+      // reporting a launcher the config layer now rejects, so leaving it at
+      // `warning` would have doctor call "fine" what `loadConfig` calls an
+      // error.
       id: "D-DEPRECATED-PROBE",
-      severity: "warning",
+      severity: deprecationSeverity(toolVersion, PLAYWRIGHT_SUNSET),
       title: "Deprecated playwright-cli probe",
       message: `playwright-cli probe is deprecated (sunset: ${PLAYWRIGHT_SUNSET}); install playwright as the primary launcher (${PLAYWRIGHT_INSTALL_HINT})`,
       details: {

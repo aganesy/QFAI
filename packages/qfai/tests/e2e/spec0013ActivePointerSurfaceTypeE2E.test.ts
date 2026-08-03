@@ -25,6 +25,8 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { SUNSETS, deprecationSeverity } from "../../src/core/sunset.js";
+import { resolveToolVersion } from "../../src/core/version.js";
 import { populateSurfaceTypeIfUiCompanion } from "../../src/core/detection/surfaceType.js";
 import {
   resolveActiveDiscussionPack,
@@ -124,7 +126,14 @@ describe("spec-0013 US-0013-0013 surface_type auto-populate", () => {
     const issues = await validateSurfaceTypeDrift(root, defaultConfig);
     const drift = issues.find((issue) => issue.code === "D-SURFACE-TYPE-MISSING");
     expect(drift, "expected D-SURFACE-TYPE-MISSING warning").toBeDefined();
-    expect(drift?.severity).toBe("warning");
+    // Version-computed, not a literal. This asserted `"warning"` while the
+    // finding's own remediation text promised escalation "in a future minor
+    // release", so it kept passing through the release that was supposed to
+    // change it. Comparing against `deprecationSeverity` breaks if the
+    // validator hard-codes again, and holds on both sides of the sunset.
+    expect(drift?.severity).toBe(
+      deprecationSeverity(await resolveToolVersion(), SUNSETS.surfaceTypeMissing),
+    );
   });
 });
 

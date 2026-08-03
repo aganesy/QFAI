@@ -170,11 +170,31 @@ export function hasPreflightGuidance(content: string): boolean {
   );
 }
 
+/**
+ * Whether the skill documents a launcher invocation that cannot silently
+ * install a package.
+ *
+ * The rule used to require the `playwright-cli` spelling specifically, which
+ * became self-contradictory once that launcher reached its sunset: the skill
+ * could no longer recommend `playwright-cli`, and this check then failed the
+ * skill for saying so. What it actually guards is the `--no-install` /
+ * `node_modules/.bin` shape — a bare `npx playwright` reaches the network.
+ *
+ * The `playwright` spellings are prefixes of the `playwright-cli` ones, so a
+ * project still documenting the legacy launcher continues to pass.
+ */
 export function hasPlaywrightCliFallback(content: string): boolean {
-  const lower = content.toLowerCase();
-  return (
-    lower.includes("npx --no-install playwright-cli") ||
-    lower.includes("node_modules/.bin/playwright-cli")
+  // Anchored at the end of the launcher name. A substring test accepted
+  // `playwright-does-not-exist` and `playwright-wrapper` — any command whose
+  // name merely starts with `playwright` — so a skill could satisfy the rule
+  // while documenting no working launcher at all. Widening the search from
+  // `playwright-cli` to `playwright` is what made that reachable.
+  //
+  // `playwright-cli` still matches: it is listed explicitly, so a project that
+  // has not migrated its docs keeps passing.
+  const LAUNCHER = String.raw`playwright(?:-cli)?(?![\w-])`;
+  return new RegExp(String.raw`(?:npx\s+--no-install\s+|node_modules/\.bin/)${LAUNCHER}`, "i").test(
+    content,
   );
 }
 
@@ -355,9 +375,9 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     issues.push(
       skillIssue(
         "UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK",
-        "Prototyping skill must document a safe Playwright CLI invocation path such as npx --no-install playwright-cli.",
+        "Prototyping skill must document a safe Playwright invocation path such as npx --no-install playwright.",
         "error",
-        "npx --no-install playwright-cli または node_modules/.bin/playwright-cli の経路を明記してください。",
+        "npx --no-install playwright または node_modules/.bin/playwright の経路を明記してください。",
       ),
     );
   }

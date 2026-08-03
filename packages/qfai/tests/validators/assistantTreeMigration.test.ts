@@ -13,6 +13,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { validateAssistantTreeMigration } from "../../src/core/validators/assistantTreeMigration.js";
+import { SUNSETS, deprecationSeverity } from "../../src/core/sunset.js";
+import { resolveToolVersion } from "../../src/core/version.js";
 import { loadConfig } from "../../src/core/config.js";
 
 async function newRoot(prefix: string): Promise<string> {
@@ -102,13 +104,14 @@ describe("assistantTreeMigration validator", () => {
 
   // TC-0004-0022 (severity escalation): legacy steering/ still present at or past sunset minor escalates to error
   it("TC-0004-0022 (severity): D-DEPRECATED-PATH severity is computed from the running tool version vs pinned sunset", async () => {
-    // We don't have an easy way to override resolveToolVersion at runtime
-    // here, so we test the pure helpers directly. legacyDeprecationSeverity
-    // returns "warning" while running on v1.9.x and "error" from v1.10.0+.
+    // This used to assert `["warning","error"]).toContain(severity)` and then
+    // branch on whichever came back — it passed under every possible answer,
+    // including a hard-coded one, so it could not catch a severity regression.
+    // Comparing against `deprecationSeverity` makes it falsifiable while
+    // staying version-agnostic: it breaks the moment the validator stops
+    // computing the severity. The boundary itself is covered by
+    // `tests/core/sunsetEnforcement.test.ts`.
     const mod = await import("../../src/core/validators/assistantTreeMigration.js");
-    // The helpers are not re-exported; instead we assert the validator's
-    // behavior indirectly by checking the sunset label format and that
-    // the severity field exists on the emitted issue.
     const root = await newRoot("treemig-severity");
     try {
       await seed4LayerTree(root);
@@ -119,16 +122,16 @@ describe("assistantTreeMigration validator", () => {
       const issues = await mod.validateAssistantTreeMigration(root, await getConfig(root));
       const sunsetIssues = issues.filter((i) => i.code === "D-DEPRECATED-PATH");
       expect(sunsetIssues.length).toBe(1);
-      const severity = sunsetIssues[0]?.severity;
-      // On v1.9.x the severity is "warning"; on v1.10.x+ it becomes "error".
-      expect(["warning", "error"]).toContain(severity);
+      const expected = deprecationSeverity(
+        await resolveToolVersion(),
+        SUNSETS.legacyAssistantSteering,
+      );
+      expect(sunsetIssues[0]?.severity).toBe(expected);
       // The headline shape MUST change with severity so reviewers know which
       // mode fired.
-      if (severity === "error") {
-        expect(sunsetIssues[0]?.message).toMatch(/past the announced sunset/);
-      } else {
-        expect(sunsetIssues[0]?.message).toMatch(/read-compatible only/);
-      }
+      expect(sunsetIssues[0]?.message).toMatch(
+        expected === "error" ? /past the announced sunset/ : /read-compatible only/,
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }

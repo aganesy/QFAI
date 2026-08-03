@@ -4,6 +4,8 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import type { Issue } from "./types.js";
+import { SUNSETS, isAtOrPastSunset } from "./sunset.js";
+import { resolveToolVersion } from "./version.js";
 import { isEnoent } from "./fs/errno.js";
 import { normalizeRenderViewports, type RenderEvidenceConfig } from "./uiux/renderEvidenceTypes.js";
 
@@ -90,8 +92,10 @@ export type QfaiPrototypingExecutionConfig = {
    *
    * Accepted values during the deprecation window:
    *   - `"playwright"` (primary, post-1.9.x default).
-   *   - `"playwright-cli"` (deprecated; sunset 1.10.0). When chosen,
-   *     the doctor probe emits `D-DEPRECATED-PROBE` (severity warning).
+   *   - `"playwright-cli"` (deprecated; sunset `SUNSETS.playwrightCli`).
+   *     Inside the window the doctor probe emits `D-DEPRECATED-PROBE` at
+   *     `warning`; from the sunset onwards `normalizePrototypingExecution`
+   *     rejects the value and the probe reports `error`.
    *
    * At sunset only `"playwright"` is accepted.
    */
@@ -245,6 +249,7 @@ export async function findConfigRoot(startDir: string): Promise<ConfigSearchResu
 export async function loadConfig(root: string): Promise<ConfigLoadResult> {
   const configPath = getConfigPath(root);
   const issues: Issue[] = [];
+  const toolVersion = await resolveToolVersion();
 
   let parsed: unknown;
   try {
@@ -258,7 +263,7 @@ export async function loadConfig(root: string): Promise<ConfigLoadResult> {
     return { config: defaultConfig, issues, configPath };
   }
 
-  const normalized = normalizeConfig(parsed, configPath, issues);
+  const normalized = normalizeConfig(parsed, configPath, issues, toolVersion);
   return { config: normalized, issues, configPath };
 }
 
@@ -266,14 +271,19 @@ export function resolvePath(root: string, config: QfaiConfig, key: ConfigPathKey
   return path.resolve(root, config.paths[key]);
 }
 
-function normalizeConfig(raw: unknown, configPath: string, issues: Issue[]): QfaiConfig {
+function normalizeConfig(
+  raw: unknown,
+  configPath: string,
+  issues: Issue[],
+  toolVersion: string,
+): QfaiConfig {
   if (!isRecord(raw)) {
     issues.push(configIssue(configPath, "設定ファイルの形式が不正です。"));
     return defaultConfig;
   }
 
   const uiux = normalizeUiux(raw.uiux, configPath, issues);
-  const prototyping = normalizePrototyping(raw.prototyping, configPath, issues);
+  const prototyping = normalizePrototyping(raw.prototyping, configPath, issues, toolVersion);
   const review = normalizeReview(raw.review, configPath, issues);
   const atdd = normalizeAtdd(raw.atdd, configPath, issues);
   const base: QfaiConfig = {
@@ -521,6 +531,7 @@ function normalizePrototyping(
   raw: unknown,
   configPath: string,
   issues: Issue[],
+  toolVersion: string,
 ): QfaiPrototypingConfig | undefined {
   if (raw === undefined || raw === null) {
     return undefined;
@@ -531,7 +542,7 @@ function normalizePrototyping(
   }
 
   const calibration = normalizePrototypingCalibration(raw.calibration, configPath, issues);
-  const execution = normalizePrototypingExecution(raw.execution, configPath, issues);
+  const execution = normalizePrototypingExecution(raw.execution, configPath, issues, toolVersion);
   const primarySpecId = normalizePrimarySpecId(raw.primarySpecId, configPath, issues);
   const mode = normalizePrototypingMode(raw.mode, configPath, issues);
   if (!calibration && !execution && primarySpecId === undefined && mode === undefined) {
@@ -626,6 +637,7 @@ function normalizePrototypingExecution(
   raw: unknown,
   configPath: string,
   issues: Issue[],
+  toolVersion: string,
 ): NonNullable<QfaiPrototypingConfig["execution"]> | undefined {
   const base = defaultConfig.prototyping?.execution;
   if (raw === undefined || raw === null) {
@@ -660,6 +672,23 @@ function normalizePrototypingExecution(
           configPath,
           `prototyping.execution.browserTool は "playwright" または "playwright-cli" のみ有効です。` +
             ` 受け取った値: ${JSON.stringify(browserToolRaw)}`,
+        ),
+      );
+    } else if (
+      browserToolRaw === "playwright-cli" &&
+      isAtOrPastSunset(toolVersion, SUNSETS.playwrightCli)
+    ) {
+      // The deprecation window has closed. The type doc has said "at sunset
+      // only `playwright` is accepted" since the window opened, but nothing
+      // here enforced it — so the notice would have expired with no effect.
+      // `browserTool` keeps its `playwright` default, so a run that ignores
+      // the issue proceeds against the supported launcher rather than a
+      // half-configured one.
+      issues.push(
+        configIssue(
+          configPath,
+          `prototyping.execution.browserTool: "playwright-cli" は qfai ${SUNSETS.playwrightCli} で廃止されました。` +
+            ` "playwright" を指定し、\`npm i -D playwright\` でインストールしてください。`,
         ),
       );
     } else {

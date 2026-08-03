@@ -142,7 +142,7 @@ describe("TC-0006-0013: playwright probe order documented and observable", () =>
 });
 
 describe("TC-0006-0014: playwright-cli triggers D-DEPRECATED-PROBE with sunset 1.10.0", () => {
-  it("emits a warning finding whose body literally contains `sunset: 1.10.0`", async () => {
+  it("emits an error finding whose body literally contains `sunset: 1.10.0`", async () => {
     const root = await newTempDir("tc14");
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     await seedLocalPlaywrightCli(root);
@@ -156,7 +156,10 @@ describe("TC-0006-0014: playwright-cli triggers D-DEPRECATED-PROBE with sunset 1
       const data = await readDoctorJson(root);
       const deprecated = findFinding(data, (c) => c.id === "D-DEPRECATED-PROBE");
       expect(deprecated, "expected D-DEPRECATED-PROBE finding").toBeDefined();
-      expect(deprecated?.severity).toBe("warning");
+      // `warning` inside the deprecation window, `error` from the sunset on.
+      // The literal `sunset: 1.10.0` substring stays part of the wire contract
+      // either way.
+      expect(deprecated?.severity).toBe("error");
       const body = `${deprecated?.message ?? ""}\n${JSON.stringify(deprecated?.details ?? {})}`;
       expect(body).toContain("sunset: 1.10.0");
     } finally {

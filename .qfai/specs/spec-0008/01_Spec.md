@@ -37,7 +37,7 @@
 
 ## Applicable Policy
 
-- Policy: Drift Protocol mandatory, test-layer policy from `steering/test-layers.md`
+- Policy: Drift Protocol mandatory, test-layer policy from `catalog/test-layers.md`
 - Volume floors/ratios are planning signals, not gates
 
 ## Evidence Summary

@@ -1,15 +1,15 @@
 /**
  * `browserTool` config accepts `"playwright"` + `"playwright-cli"`.
  *
- * During the deprecation window the `prototyping.execution.browserTool`
- * config field MUST accept both values:
- *   - `"playwright"` (primary): no `D-DEPRECATED-PROBE` warning.
- *   - `"playwright-cli"` (deprecated): accepted, but the doctor probe
- *     surfaces `D-DEPRECATED-PROBE` (severity warning) with the
- *     `sunset: 1.10.0` substring on its message.
+ * Past its sunset the `prototyping.execution.browserTool` config field
+ * accepts one value:
+ *   - `"playwright"` (primary): loads, no `D-DEPRECATED-PROBE` finding.
+ *   - `"playwright-cli"`: refused by the loader, which falls back to the
+ *     `playwright` default; the doctor probe reports `D-DEPRECATED-PROBE`
+ *     at `error` with the `sunset: 1.10.0` substring on its message.
  *
- * Integration scope: config loader + probe-order pin. Sunset behaviour
- * (rejection at qfai 1.10.0) is out of scope here.
+ * Integration scope: config loader + probe-order pin. The window-side
+ * behaviour is a unit concern now — see `tests/core/sunsetEnforcement`.
  */
 
 // QFAI:SPEC-0012:TC-0012-0439
@@ -74,17 +74,15 @@ describe("browserTool config — `playwright` primary path", () => {
 });
 
 describe("browserTool config — `playwright-cli` deprecation-window path", () => {
-  it("accepts browserTool: playwright-cli during the deprecation window", async () => {
+  it("refuses browserTool: playwright-cli past its sunset", async () => {
     const root = await newTempDir();
     await writeConfigWithBrowserTool(root, "playwright-cli");
     const { config, issues } = await loadConfig(root);
-    expect(config.prototyping?.execution?.browserTool).toBe("playwright-cli");
-    // Loader does not raise an error; doctor probe surfaces
-    // D-DEPRECATED-PROBE separately. Loader's own surface should
-    // remain silent on the accepted-but-deprecated value (deprecation
-    // emit lives on the doctor side, per playwrightLauncher.ts).
-    expect(issues.filter((i) => i.severity === "error" && /browserTool/.test(i.message))).toEqual(
-      [],
-    );
+    // Refused past the sunset; the supported default stands in so a run that
+    // ignores the issue does not proceed against a launcher qfai dropped.
+    expect(config.prototyping?.execution?.browserTool).toBe("playwright");
+    const raised = issues.filter((i) => /browserTool/.test(i.message));
+    expect(raised).toHaveLength(1);
+    expect(raised[0]?.message).toContain("playwright-cli");
   });
 });
