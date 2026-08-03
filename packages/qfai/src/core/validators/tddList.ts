@@ -828,7 +828,6 @@ async function validateSpecTddList(
     }
   }
 
-
   // Phase 2 – Check 8: Exception rows must have a DR-ID that resolves
   const declaredDrIds = await collectDeclaredDrIds(specDir, specsRoot);
   if (statusIndex >= 0 && drIdIndex >= 0) {
