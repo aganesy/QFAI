@@ -218,16 +218,38 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           RELEASE_VERSION: ${{ needs.verify.outputs.version }}
         shell: bash
-      - name: Build the publishable tree
-        run: pnpm -C packages/qfai build
-      - name: Sanity grep — no internal spec IDs or version markers leak (post-build)
-        # Re-run against the tree that is about to be packed. The `gate` job
-        # checked a different checkout; this one is what ships.
-        run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh
+      - name: Pack the tarball that will ship
+        # `prepack` runs `npm run build`, so packing is what produces the
+        # final `dist/`. Checking a tree built in a separate step and then
+        # letting `publish` re-run `prepack` would inspect one artifact and
+        # ship another.
+        run: |
+          set -euo pipefail
+          mkdir -p tmp
+          pnpm -C packages/qfai pack --pack-destination "$PWD/tmp"
         shell: bash
-      - name: Publish
-        # `--provenance` ties the tarball to this workflow run. `--no-git-checks`
-        # because pnpm otherwise refuses to publish from a detached tag checkout.
-        run: pnpm -C packages/qfai publish --access public --provenance --no-git-checks
+      - name: Sanity grep — no internal spec IDs or version markers leak (packed tarball)
+        # Unpacked and scanned, so what is inspected is byte-for-byte what npm
+        # receives — including files only `prepack` produces.
+        env:
+          RELEASE_VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          tarball="tmp/qfai-${RELEASE_VERSION}.tgz"
+          if [ ! -f "$tarball" ]; then
+            echo "::error::expected $tarball; pack produced: $(ls tmp)"
+            exit 1
+          fi
+          rm -rf tmp/packed && mkdir -p tmp/packed
+          tar -xzf "$tarball" -C tmp/packed
+          QFAI_LEAKAGE_SCAN_ROOT="$PWD/tmp/packed/package" \
+            bash packages/qfai/scripts/check-no-internal-version-leakage.sh
+        shell: bash
+      - name: Publish the inspected tarball
+        # The tarball itself, so nothing is rebuilt between the check and the
+        # upload. `--provenance` ties it to this workflow run.
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          RELEASE_VERSION: ${{ needs.verify.outputs.version }}
+        run: npm publish "tmp/qfai-${RELEASE_VERSION}.tgz" --access public --provenance
+        shell: bash

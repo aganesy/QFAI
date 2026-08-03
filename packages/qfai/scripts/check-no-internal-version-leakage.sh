@@ -5,7 +5,12 @@
 # the only canonical version.
 set -euo pipefail
 
-if [[ -d "packages/qfai" ]]; then
+# An explicit root lets the release workflow scan an unpacked tarball — what
+# npm actually receives — rather than a dist/ that `prepack` rebuilds between
+# the check and the upload.
+if [[ -n "${QFAI_LEAKAGE_SCAN_ROOT:-}" ]]; then
+  ROOT="$QFAI_LEAKAGE_SCAN_ROOT"
+elif [[ -d "packages/qfai" ]]; then
   ROOT="packages/qfai"
 elif [[ -f "../qfai/package.json" ]]; then
   ROOT="../qfai"

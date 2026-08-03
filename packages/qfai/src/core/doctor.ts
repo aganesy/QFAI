@@ -153,11 +153,19 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       details: { configPath: toRelativePath(root, resolvedConfigPath) },
     });
   } else {
+    // Pinning every config issue to `warning` made `doctor --fail-on error`
+    // exit 0 on a config the loader had rejected — a value past its sunset
+    // reads as "normalized with defaults" rather than as the blocking fault
+    // `qfai-doctor.md` says it is. The check now carries the worst severity
+    // the loader actually reported.
+    const configHasError = issues.some((issue) => issue.severity === "error");
     addCheck(checks, {
       id: "config.load",
-      severity: "warning",
+      severity: configHasError ? "error" : "warning",
       title: "Config load",
-      message: `Loaded with ${issues.length} issue(s) (normalized with defaults when needed)`,
+      message: configHasError
+        ? `Loaded with ${issues.length} issue(s), including ${issues.filter((i) => i.severity === "error").length} that must be fixed`
+        : `Loaded with ${issues.length} issue(s) (normalized with defaults when needed)`,
       details: {
         configPath: toRelativePath(root, resolvedConfigPath),
         issues,
