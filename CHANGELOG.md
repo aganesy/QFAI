@@ -6,6 +6,17 @@
 
 ## [1.10.0] - 2026-08-03
 
+### Removed
+
+- `.qfai/assistant/steering/` — the legacy pre-recut assistant layout reached
+  the sunset pinned in `assistantPaths.ts#LEGACY_STEERING_SUNSET`, so
+  `D-DEPRECATED-PATH` escalates from `warning` to `error` at this version.
+  All eleven files already had canonical homes under
+  `.qfai/assistant/manifest/` and `.qfai/assistant/catalog/`, and
+  `qfai init` has not shipped the directory since v1.9.0 — only this
+  repository still carried the copy. A project upgrading from an older tree
+  runs `qfai init --upgrade-assistant-tree` to migrate.
+
 ### Added
 
 - `TDDLIST_UNKNOWN_LEVEL` (warning): `tdd/test-list.md` validation now reports

@@ -80,13 +80,7 @@ const RUNTIME_ONLY_BASENAMES = new Set([".gitkeep"]);
  *
  * A stale path NOT on this list fails, so the residue cannot grow.
  */
-const KNOWN_STALE = new Map([
-  [
-    "assistant/steering/",
-    "legacy pre-recut assistant layout; removal is #212, and " +
-      "scripts/check-review-profile-consistency.mjs still reads it (#387)",
-  ],
-]);
+const KNOWN_STALE = new Map([]);
 
 function isRuntimeOnly(rel) {
   if (RUNTIME_ONLY_FILES.has(rel)) return true;
