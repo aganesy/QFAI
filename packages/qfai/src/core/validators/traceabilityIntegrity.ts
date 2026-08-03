@@ -1,9 +1,9 @@
-import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { getChangedFilesAgainstBase } from "../gitChanges.js";
 import { parseFirstMarkdownTable, type MarkdownTable } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -68,25 +68,6 @@ function parseLedger(table: MarkdownTable | null): LedgerEntry[] {
   return entries;
 }
 
-function getChangedFiles(root: string, baseBranch: string): Set<string> {
-  try {
-    const output = execFileSync("git", ["diff", "--name-only", `${baseBranch}..HEAD`], {
-      cwd: root,
-      encoding: "utf-8",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-    return new Set(
-      output
-        .split("\n")
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0)
-        .map(normalizePath),
-    );
-  } catch {
-    return new Set();
-  }
-}
-
 function findChangedSpecDirs(changedFiles: Set<string>, specsRelDir: string): Set<string> {
   const specDirs = new Set<string>();
   for (const file of changedFiles) {
@@ -116,7 +97,7 @@ export async function validateTraceabilityIntegrity(
   const issues: Issue[] = [];
   const baseBranch = config.baseBranch ?? "origin/main";
 
-  const changedFiles = getChangedFiles(root, baseBranch);
+  const changedFiles = getChangedFilesAgainstBase(root, baseBranch);
   if (changedFiles.size === 0) {
     return issues;
   }

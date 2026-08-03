@@ -58,6 +58,7 @@ export { validateScreenContractSchema } from "./uix/screenContract.js";
 export { runCanonicalUixValidators } from "./uix/canonical.js";
 export { validateMarkdownTableArity } from "./markdownTableArity.js";
 export { validateTraceabilityIntegrity } from "./traceabilityIntegrity.js";
+export { validateUpstreamSsotGuard } from "./upstreamSsotGuard.js";
 export { validatePrototypingSkillContent } from "./skill/prototypingSkill.js";
 export { validateTestTodoStubs } from "./testTodoStubs.js";
 export { validateWorklogSurface } from "./worklogSurface.js";
