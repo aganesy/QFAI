@@ -186,7 +186,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 - Orchestrator MUST NOT write test or production code directly; delegate every TDD phase to the routed implementation agents.
 - Additional implement-specific overrides:
   - read `test-list.md`, determine the next pending item, and delegate each TDD phase;
-  - update `test-list.md` Status and Evidence after each phase completes (gate item 10 requires both; the protocol permits both).
+  - update `test-list.md` **Status and Evidence** after each phase completes, copying the delegated agent's RED/GREEN command+result verbatim. Gate item 10 requires both columns, the protocol permits both, and the orchestrator is the only role permitted to write this file (`references/parallelization-policy.md#ledger-ownership`).
 
 ### Formal Sub-agent Roster
 
@@ -224,7 +224,7 @@ table, the group-formation transitions and the queue-advance steps: `references/
 All agent-to-agent transitions follow these contracts:
 
 1. `delivery-planner` selects the next item and assigns it to the appropriate implementation agent.
-2. Implementation agent submits the RED run to `qa-gatekeeper` **while no production code exists** (routing phase `red`), then the GREEN run after it (routing phase `build`). One combined post-hoc submission is not a substitute: RED is unrecoverable once Green begins, so it leaves nothing but the implementer's own account of a destroyed state — the self-attestation this gate exists to prevent.
+2. Implementation agent submits the RED run to `qa-gatekeeper` **while no production code exists** (routing phase `red`), then the GREEN run after it (routing phase `build`). One combined post-hoc submission is not a substitute: RED is unrecoverable once Green begins, so it leaves nothing but the implementer's own account of a destroyed state — the self-attestation this gate exists to prevent. It **returns it to the orchestrator in the per-item evidence contract's form** so it can be written to the ledger. The implementation agent never writes `test-list.md` itself.
 3. `qa-gatekeeper` confirms or rejects each observation. A RED rejection stops the row before Green; it does not wait for the `review` phase.
 4. After the item reaches `refactor`, implementation agent submits it to `completion-reviewer` for spec alignment and to `implementation-reviewer` for code quality review. Review is requested from `refactor`, never from `green`, so a `REVISE` always lands on the one status with an outbound `review-fix` edge.
 5. `product-surface-reviewer` is added when the item affects UI behavior or rendered output.
@@ -298,6 +298,7 @@ Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
 
 ### Post-parallel integration verify
 
+- **Reconcile the ledger first.** Under worktree separation each worker holds a private copy of `test-list.md`, so the merged trunk carries none of their transitions. Write Status + Evidence for every merged item from the worker reports **before** integration verify, and fail the verify if any merged item's row is still `todo` — an unreconciled ledger reports finished work as unstarted (`references/parallelization-policy.md#ledger-ownership`).
 - After parallel slices complete and merge, run integration verify on the merged result
 - If integration verify fails, **classify before acting** per `shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`, attributing the failure to one slice, to the merge resolution, or to code outside every slice. Remedies by class: `references/parallelization-policy.md#failed-integration-verify`. Unconditional rollback is not one of them — the protocol classifies this as a local, non-destructive defect to fix and re-run, and reserves stopping for destructive changes.
 - If integration verify passes, state transitions back to `delivery-planner` for sequential flow

@@ -83,7 +83,12 @@ describe.each(TREES)("%s", (tree) => {
 
   it("matches the write instructions to what the gate actually reads", async () => {
     const skill = await read(tree, SKILL);
-    expect(skill).toContain("update `test-list.md` Status and Evidence after each phase completes");
+    // The emphasis is `ledgerWriteOwnership.test.ts`'s, which asserts the same
+    // sentence bolded. What matters here is that the instruction names both
+    // columns and fires per phase, so the assertion tracks the shipped spelling.
+    expect(skill).toContain(
+      "update `test-list.md` **Status and Evidence** after each phase completes",
+    );
     expect(skill).toContain("final Status, DR-ID and Evidence values");
   });
 

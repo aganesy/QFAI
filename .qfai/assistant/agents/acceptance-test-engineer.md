@@ -32,6 +32,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Acceptance test plan and implemented coverage
 - Mapping from US / TC / CON-API to test assets
 - Execution proof and evidence summary
+- TDD ledger Status + Evidence entry for each item processed, returned to the orchestrator (which owns the `test-list.md` write; do not edit that file directly)
 - Gaps and follow-up actions
 
 ## Stop conditions
