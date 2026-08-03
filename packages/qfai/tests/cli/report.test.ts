@@ -126,7 +126,7 @@ describe("report", { timeout: 15000 }, () => {
     }
   });
 
-  it("fails run-validate with partial profile in CI", async () => {
+  it("reports a narrow profile in CI without failing the run (#397)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     const previousCi = process.env.CI;
@@ -154,7 +154,10 @@ describe("report", { timeout: 15000 }, () => {
       const validation = JSON.parse(validationRaw) as {
         issues?: Array<{ code?: string }>;
       };
-      expect(process.exitCode).toBe(1);
+      // The finding is appended to a real run. Exiting non-zero here made
+      // every stage gate that names a narrow profile unreachable in CI, and
+      // `qfai-discussion` names exactly this one as its only gate.
+      expect(process.exitCode).not.toBe(1);
       expect((validation.issues ?? []).some((item) => item.code === "QFAI-VALIDATE-017")).toBe(
         true,
       );

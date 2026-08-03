@@ -139,7 +139,9 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(skill).toContain("zero selectable items");
       // The fixed order block and project_memory are what an agent follows.
       expect(skill).toContain("-> Phase 2b Seed tdd/test-list.md (per spec)");
-      expect(skill).toContain("Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 3");
+      // #383 inserted Phase 2c between the seeding phase and Plan finalize; this
+      // assertion is about Phase 2b keeping its slot after Phase 2 Slice.
+      expect(skill).toContain("Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 2c");
 
       const playbook = await read(
         tree,
