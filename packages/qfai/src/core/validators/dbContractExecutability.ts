@@ -29,7 +29,7 @@ import { issue, readSafe } from "./utils.js";
  */
 const EVIDENCE_REL_DIR = ".qfai/evidence";
 
-/** Waivable as `CONTRACT-031` — `waivers.ts#resolveRuleId` strips the `QFAI-`. */
+/** Waivable as `QFAI-CONTRACT-031`; `CONTRACT-031` also resolves (`waivers.ts#resolveRuleKeys`). */
 export const DB_CONTRACT_EXECUTABILITY_RULE_ID = "QFAI-CONTRACT-031";
 
 /**

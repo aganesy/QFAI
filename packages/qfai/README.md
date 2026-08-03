@@ -368,6 +368,11 @@ Recommended baseline.
 
 Waiver policy.
 
+- A waiver's `rule:` is the finding's `code`, copied verbatim from
+  `.qfai/report/validate.json` — `QFAI-ATDD-112`, `TDDLIST_UNKNOWN_LEVEL`,
+  `E_TC_ORPHAN`. Do not strip the `QFAI-` prefix; the stripped form
+  (`ATDD-112`) is kept working only for waiver files written against older
+  releases.
 - Use waivers only for `warning` / `info` findings (false positives).
 - Waivers that target `error` findings are invalid and fail validation (`QFAI-WAIVER-002`).
 - Expired waivers are reported as warnings (`QFAI-WAIVER-003`) and must be renewed or removed with evidence.

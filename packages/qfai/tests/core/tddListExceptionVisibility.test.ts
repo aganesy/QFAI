@@ -69,7 +69,9 @@ describe("parked exception rows are visible in CI", () => {
         expect(parked(issues)).toHaveLength(2);
         expect(parked(issues)[0]?.severity).toBe("warning");
         expect(parked(issues)[0]?.message).toContain("TDD-0001");
-        expect(parked(issues)[0]?.message).toContain("`TDDLIST-001` waiver");
+        // The code, not the rule id: that is the spelling `validate.json` and
+        // the CLI print, so it is the one an operator can copy (issue #398).
+        expect(parked(issues)[0]?.message).toContain("`TDDLIST_EXCEPTION_PARKED` waiver");
         expect(parked(issues)[0]?.message).toContain("(DR-ID DR-0001-0001)");
         expect(parked(issues)[0]?.refs).toEqual(["DR-0001-0001"]);
         // `dl_id` is the only per-finding key `matchesWaiver` compares, so the
@@ -143,7 +145,7 @@ describe("parked exception rows are visible in CI", () => {
       (issues) => {
         const finding = parked(issues)[0];
         expect(finding?.rule).toBe(EXCEPTION_PARKED_RULE_ID);
-        // `waivers.ts#resolveRuleId` only accepts this shape; a dotted rule
+        // `waivers.ts#resolveRuleKeys` resolves this shape and the code; a dotted rule
         // name made an approved accepted risk permanently unwaivable.
         expect(finding?.rule).toMatch(/^[A-Z]+-\d{3}$/);
         expect(finding?.suggested_action).toContain(".qfai/waivers.yml");

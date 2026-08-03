@@ -826,7 +826,10 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const waiversTemplate = await readFile(waiversTemplatePath, "utf-8");
     expect(waiversTemplate).toContain("version: 1");
     expect(waiversTemplate).toContain("waivers: []");
-    expect(waiversTemplate).toContain("rule: COMPAT-003");
+    // The worked example must name a rule some validator actually emits, in the
+    // spelling `validate.json` prints. `COMPAT-003` was neither (issue #398).
+    expect(waiversTemplate).toContain("rule: TDDLIST_UNKNOWN_LEVEL");
+    expect(waiversTemplate).not.toContain("COMPAT-");
     expect(waiversTemplate).toContain("expires:");
     expect(waiversTemplate).toContain("evidence:");
   });

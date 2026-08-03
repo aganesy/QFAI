@@ -26,7 +26,7 @@ import {
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
-/** Waivable as `SPACK-095` — `waivers.ts#resolveRuleId` strips the `QFAI-`. */
+/** Waivable as `QFAI-SPACK-095`; `SPACK-095` also resolves (`waivers.ts#resolveRuleKeys`). */
 export const REQUIRED_FILES_DIVERGENCE_RULE_ID = "QFAI-SPACK-095";
 
 const CATALOG_REL = path.join("assistant", "catalog", "spec_required_files.json");

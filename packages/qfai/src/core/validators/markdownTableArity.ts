@@ -26,7 +26,7 @@ import { isTableSeparator, looksLikeTableRow, splitMarkdownRow } from "../specPa
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
-/** Waivable as `TABLE-001` — `waivers.ts#resolveRuleId` strips the `QFAI-`. */
+/** Waivable as `QFAI-TABLE-001`; `TABLE-001` also resolves (`waivers.ts#resolveRuleKeys`). */
 export const TABLE_ARITY_RULE_ID = "QFAI-TABLE-001";
 
 export type TableArityMismatch = {

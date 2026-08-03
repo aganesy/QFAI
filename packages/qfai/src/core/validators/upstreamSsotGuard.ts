@@ -26,7 +26,7 @@ import { getChangedFilesAgainstBase } from "../gitChanges.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-/** Waivable as `DRIFT-001` — `waivers.ts#resolveRuleId` strips the `QFAI-`. */
+/** Waivable as `QFAI-DRIFT-001`; `DRIFT-001` also resolves (`waivers.ts#resolveRuleKeys`). */
 export const UPSTREAM_SSOT_EDIT_RULE_ID = "QFAI-DRIFT-001";
 
 /** Where the protocol pins Change Request files. */

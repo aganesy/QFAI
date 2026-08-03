@@ -134,7 +134,7 @@ export async function validateTestTodoStubs(root: string, config: QfaiConfig): P
       const lineNumber = i + 1;
       for (const match of line.matchAll(dialect.pattern)) {
         const matchedKind = dialect.label ? dialect.label(match) : match[0].trim();
-        // Code follows the QFAI-<RULE-###> convention so waivers.ts:resolveRuleId
+        // Code follows the QFAI-<RULE-###> convention so waivers.ts:resolveRuleKeys
         // (^QFAI-([A-Z]+-\d{3})$) can match it; project-scoped waivers depend on
         // this. file is kept as the bare repo path so emitGitHub / waiver path
         // matchers (matchFindingPath in waivers.ts) work correctly; the line

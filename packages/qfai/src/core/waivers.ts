@@ -5,7 +5,12 @@ import { parse as parseYaml } from "yaml";
 
 import { toRelativePath } from "./paths.js";
 import { escapeRegExp } from "./regex.js";
-import { EXCEPTION_PARKED_RULE_ID } from "./ruleIds.js";
+import {
+  EXCEPTION_PARKED_CODE,
+  EXCEPTION_PARKED_RULE_ID,
+  UNKNOWN_LEVEL_CODE,
+  UNKNOWN_LEVEL_RULE_ID,
+} from "./ruleIds.js";
 import type {
   Issue,
   IssueSeverity,
@@ -21,18 +26,36 @@ import { issue } from "./validators/utils.js";
 const WAIVER_FILE = path.join(".qfai", "waivers.yml");
 const UNSUPPORTED_WAIVER_FILE = path.join(".qfai", "waivers.yaml");
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const RULE_ID_RE = /^[A-Z]+-\d{3}$/;
+/**
+ * The shape a waiver's `rule:` may take.
+ *
+ * This used to be `/^[A-Z]+-\d{3}$/`, which accepts **none** of the identifiers
+ * `qfai validate` publishes. An operator copying `QFAI-ATDD-112` out of
+ * `validate.json` — the only spelling the CLI, the JSON report and the GitHub
+ * annotations ever print — got a hard `QFAI-WAIVER-001`, and the form the engine
+ * actually keyed on (`ATDD-112`, the capture group inside `resolveRuleKeys`)
+ * appeared in no shipped artifact.
+ *
+ * It now accepts every code shape the package emits: `QFAI-ATDD-112`,
+ * `TDDLIST_INVALID_STATUS`, `E_TC_ORPHAN`, `D-SCAFFOLD-PLACEHOLDER`, and the
+ * legacy stripped `ATDD-112`.
+ */
+const RULE_ID_RE = /^[A-Z][A-Z0-9]*(?:[-_][A-Z0-9]+)*$/;
 
 /**
  * Rules whose findings are per-row, not per-file.
  *
- * Every row of one `tdd/test-list.md` produces `TDDLIST-001` with the same rule
- * and the same `file`, so a waiver matched on `rule` + `scope.paths` alone
- * suppresses the unapproved rows next to the approved one. For these rules the
- * waiver must also name the row(s) in `match.dl_ids` — the only per-finding key
- * {@link matchesWaiver} compares.
+ * Every row of one `tdd/test-list.md` produces `TDDLIST_EXCEPTION_PARKED` with
+ * the same rule and the same `file`, so a waiver matched on `rule` +
+ * `scope.paths` alone suppresses the unapproved rows next to the approved one.
+ * For these rules the waiver must also name the row(s) in `match.dl_ids` — the
+ * only per-finding key {@link matchesWaiver} compares.
+ *
+ * Both spellings {@link resolveRuleKeys} accepts are listed. Holding only the
+ * rule id would let the code spelling — the one operators are told to write —
+ * skip the `match.dl_ids` requirement entirely.
  */
-const ROW_SCOPED_RULES = new Set<string>([EXCEPTION_PARKED_RULE_ID]);
+const ROW_SCOPED_RULES = new Set<string>([EXCEPTION_PARKED_CODE, EXCEPTION_PARKED_RULE_ID]);
 
 type ParsedWaiver = ValidationWaiverEntry & {
   pathMatchers: RegExp[];
@@ -262,7 +285,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: rule は 'COMPAT-003' のような形式（^[A-Z]+-\\d{3}$）で指定してください。`,
+          `${label}: rule には findings が報告する code をそのまま指定してください（例: 'QFAI-ATDD-112'、'TDDLIST_UNKNOWN_LEVEL'）。許容形式: ^[A-Z][A-Z0-9]*([-_][A-Z0-9]+)*$`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -500,15 +523,15 @@ function applyWaiversToFindings(
   const out: Issue[] = [];
 
   for (const finding of findings) {
-    const ruleId = resolveRuleId(finding);
-    if (!ruleId) {
+    const ruleKeys = resolveRuleKeys(finding);
+    if (ruleKeys.length === 0) {
       out.push(finding);
       continue;
     }
 
     const waiver = waivers.find(
       (candidate) =>
-        candidate.rule === ruleId &&
+        ruleKeys.includes(candidate.rule) &&
         matchesWaiver(root, finding, candidate.match, candidate.pathMatchers, candidate.severity),
     );
     if (!waiver) {
@@ -518,7 +541,9 @@ function applyWaiversToFindings(
 
     if (waiver.action === "suppress") {
       suppressedByWaiver[waiver.id] = (suppressedByWaiver[waiver.id] ?? 0) + 1;
-      suppressedByRule[ruleId] = (suppressedByRule[ruleId] ?? 0) + 1;
+      // Count under the waiver's own spelling, so the report reads back the
+      // key the operator wrote rather than an alias they never chose.
+      suppressedByRule[waiver.rule] = (suppressedByRule[waiver.rule] ?? 0) + 1;
       out.push({ ...finding, suppressed: true });
       continue;
     }
@@ -754,29 +779,59 @@ function normalizeRuleId(value: unknown): string {
   return value.trim().toUpperCase();
 }
 
-function resolveRuleId(finding: Issue): string | null {
-  const fromRule = normalizeRuleId(finding.rule);
-  if (fromRule && RULE_ID_RE.test(fromRule)) {
-    return fromRule;
-  }
-  const match = finding.code.match(/^QFAI-([A-Z]+-\d{3})$/);
-  return match?.[1] ?? null;
+/**
+ * Every key a waiver may use to name this finding, most canonical first.
+ *
+ * The primary key is `finding.code` verbatim — the only spelling an operator
+ * ever sees. The `QFAI-`-stripped form stays as a back-compat alias so waiver
+ * files written against the old grammar keep working, and a rule-shaped
+ * `finding.rule` remains accepted for the validators that set one.
+ *
+ * Returning a list rather than one key is what makes both spellings work at
+ * once; the previous single-key form had to pick, and it picked the one nothing
+ * prints.
+ */
+function resolveRuleKeys(finding: Issue): string[] {
+  const keys: string[] = [];
+  const push = (value: string | null | undefined): void => {
+    if (value && RULE_ID_RE.test(value) && !keys.includes(value)) {
+      keys.push(value);
+    }
+  };
+  push(finding.code);
+  push(finding.code.match(/^QFAI-([A-Z]+-\d{3})$/)?.[1]);
+  push(normalizeRuleId(finding.rule));
+  return keys;
 }
 
+/**
+ * Severity per waiver key: what this run observed, falling back to what the
+ * package declares.
+ *
+ * Observed beats declared. A static entry only says the rule exists so a waiver
+ * for it does not read as unknown on the runs where it stays quiet; letting that
+ * declaration outrank a finding actually in hand would judge the waiver against
+ * a severity this run never produced.
+ */
 function buildRuleSeverityIndex(findings: Issue[]): Map<string, IssueSeverity> {
   const map = new Map<string, IssueSeverity>();
-  for (const [ruleId, severity] of Object.entries(STATIC_RULE_SEVERITY)) {
-    map.set(ruleId, severity);
+
+  // Register every alias: a waiver written against one spelling must not read
+  // as an unknown rule because the index only holds the other.
+  for (const finding of findings) {
+    for (const ruleId of resolveRuleKeys(finding)) {
+      const current = map.get(ruleId);
+      if (!current || severityRank(finding.severity) > severityRank(current)) {
+        map.set(ruleId, finding.severity);
+      }
+    }
   }
 
-  for (const finding of findings) {
-    const ruleId = resolveRuleId(finding);
-    if (!ruleId) {
-      continue;
-    }
-    const current = map.get(ruleId);
-    if (!current || severityRank(finding.severity) > severityRank(current)) {
-      map.set(ruleId, finding.severity);
+  for (const entry of STATIC_RULE_SEVERITY) {
+    for (const ruleId of entry.keys) {
+      if (!map.has(ruleId)) {
+        map.set(ruleId, entry.severity);
+      }
     }
   }
 
@@ -888,38 +943,41 @@ async function exists(targetPath: string): Promise<boolean> {
   }
 }
 
-const STATIC_RULE_SEVERITY: Record<string, IssueSeverity> = {
-  "COMPAT-001": "error",
-  "COMPAT-002": "error",
-  "COMPAT-003": "warning",
-  "COMPAT-004": "warning",
-  "COMPAT-005": "warning",
-  "CTYPE-001": "error",
-  "CTYPE-002": "warning",
-  "CTYPE-003": "error",
-  "DELTA-001": "error",
-  "DELTA-002": "error",
-  "DELTA-003": "error",
-  "SCOPE-001": "warning",
-  "SCOPE-002": "info",
-  // TDDLIST_EXCEPTION_PARKED. Registered statically so a project can pre-record
-  // an accepted-risk waiver without QFAI-WAIVER-003 calling the rule unknown on
-  // the runs where no item is currently parked.
-  "TDDLIST-001": "warning",
-  // TDDLIST_UNKNOWN_LEVEL. Registered statically so a project using its own
-  // Level vocabulary can pre-record the waiver without QFAI-WAIVER-004 calling
-  // the rule unknown on runs where every Level is recognized.
-  "TDDLIST-002": "warning",
-  "WAIVER-001": "error",
-  "WAIVER-002": "error",
-  "WAIVER-003": "warning",
-  "WAIVER-004": "warning",
-  "WAIVER-005": "warning",
-  "VFY-001": "error",
-  "VFY-002": "error",
-  "VFY-003": "error",
-  "VFY-004": "error",
-  "VFY-005": "error",
-  "VFY-006": "warning",
-  "VFY-007": "warning",
-};
+/**
+ * Rules a waiver may name before any run has produced one.
+ *
+ * Each entry lists **every** spelling `resolveRuleKeys` would yield had the rule
+ * actually fired, so a waiver does not read as an unknown rule on the quiet runs
+ * merely because it was written with the code the CLI prints rather than the
+ * stripped rule id. Severities match the emitters — a static entry that
+ * understates severity would let `QFAI-WAIVER-002` pass a waiver it must block.
+ *
+ * Deliberately small: an entry here is a promise the rule exists. `COMPAT-*`,
+ * `DELTA-*`, `VFY-*` and `CTYPE-*` were listed and are emitted by nothing under
+ * `src/`, so they told an operator a rule was real and waivable when it could
+ * never fire — while the codes that do fire were rejected outright by the
+ * grammar above.
+ */
+const STATIC_RULE_SEVERITY: ReadonlyArray<{
+  readonly keys: readonly string[];
+  readonly severity: IssueSeverity;
+}> = [
+  // Both emitted at `error` by core/validate.ts; registered so a waiver aimed at
+  // them is refused as an error-severity target rather than as an unknown rule.
+  { keys: ["QFAI-SCOPE-001", "SCOPE-001"], severity: "error" },
+  { keys: ["QFAI-SCOPE-002", "SCOPE-002"], severity: "error" },
+  // Registered so a project can pre-record an accepted-risk waiver without
+  // QFAI-WAIVER-004 calling the rule unknown on the runs where no item is
+  // currently parked.
+  { keys: [EXCEPTION_PARKED_CODE, EXCEPTION_PARKED_RULE_ID], severity: "warning" },
+  // Registered so a project using its own Level vocabulary can pre-record the
+  // waiver without QFAI-WAIVER-004 calling the rule unknown on the runs where
+  // every Level is recognized.
+  { keys: [UNKNOWN_LEVEL_CODE, UNKNOWN_LEVEL_RULE_ID], severity: "warning" },
+  // This module's own findings, emitted on every run that parses a waiver file.
+  { keys: ["QFAI-WAIVER-001", "WAIVER-001"], severity: "error" },
+  { keys: ["QFAI-WAIVER-002", "WAIVER-002"], severity: "error" },
+  { keys: ["QFAI-WAIVER-003", "WAIVER-003"], severity: "warning" },
+  { keys: ["QFAI-WAIVER-004", "WAIVER-004"], severity: "warning" },
+  { keys: ["QFAI-WAIVER-005", "WAIVER-005"], severity: "warning" },
+];
