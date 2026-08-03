@@ -15,7 +15,7 @@ name: Release
 # That only holds if the environment is configured. An environment with no
 # protection rules gates nothing and a tag push would publish unattended, so
 # the job refuses to run against an unprotected one — see "Require an approved
-# environment" below. Setup: docs/RELEASE-PUBLISH-SETUP.md.
+# environment" below.
 #
 # `workflow_dispatch` stays for re-publishing a tag that already exists (a
 # failed upload, an approval that lapsed) without cutting a new tag.
@@ -260,7 +260,7 @@ jobs:
           case "$rules" in
             *required_reviewers*) echo "release environment requires reviewers: $rules" ;;
             *)
-              echo "::error::the 'release' environment has no required reviewers (rules: ${rules:-none}). A tag push would publish unattended. See docs/RELEASE-PUBLISH-SETUP.md."
+              echo "::error::the 'release' environment has no required reviewers (rules: ${rules:-none}). A tag push would publish unattended. Add a required reviewer to the release environment before publishing."
               exit 1
               ;;
           esac
