@@ -28,6 +28,13 @@ export const SUNSETS = {
   legacyPrimaryTasksSlot: "1.10.0",
   /** Pre-recut `.qfai/assistant/{steering,instructions}/` (the CHG-003 layer recut). */
   legacyAssistantSteering: "1.10.0",
+  /** Specs with a UI contract companion but no `surface_type` (`D-SURFACE-TYPE-MISSING`). */
+  surfaceTypeMissing: "1.10.0",
+  /**
+   * A `prototyping.json` carrying `fullHarness.runId` instead of a top-level
+   * `runId` (`D-DEPRECATED-SCHEMA`).
+   */
+  legacyPrototypingJsonShape: "1.10.0",
 } as const;
 
 type FullSemver = {

@@ -75,6 +75,7 @@ import {
   readFrozenSpecsCovered,
 } from "../../core/prototyping/specsCovered.js";
 import { SAAS_PACKAGE_SKIPPED_GATES } from "../../core/saasPackage/skippedGates.js";
+import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
 import { resolveToolVersion } from "../../core/version.js";
 import { error, info, warn } from "../lib/logger.js";
 import { profileSuffixedReportPath } from "./validate.js";
@@ -188,9 +189,13 @@ const ROOT_DESIGN_MD_REL = "DESIGN.md";
  */
 const CANONICAL_SPEC_ID = /^(?:spec-)?\d{4}$/u;
 
+/** Legacy `prototyping.json` shape (OC-60). Named so the code is greppable. */
+const DEPRECATED_SCHEMA_CODE = "D-DEPRECATED-SCHEMA" as const;
+
 export async function runPrototypingCertify(
   options: RunPrototypingCertifyOptions,
 ): Promise<number> {
+  const toolVersion = await resolveToolVersion();
   if (options.check) {
     const result = await checkCompletionCertificate(options.root);
     if (result.ok) {
@@ -228,12 +233,32 @@ export async function runPrototypingCertify(
     return 2;
   }
 
-  // Accept the new top-level `runId` (written by `iterate` at cycle 0)
-  // and fall back to the legacy `fullHarness.runId` shape for projects
-  // whose prototyping.json predates the UX-loop schema rewrite.
-  const runId =
-    extractString(protoJson, "runId") ??
-    extractString(extractRecord(protoJson, "fullHarness"), "runId");
+  // Accept the new top-level `runId` (written by `iterate` at cycle 0) and
+  // fall back to the legacy `fullHarness.runId` shape for projects whose
+  // prototyping.json predates the UX-loop schema rewrite.
+  //
+  // The fallback used to be silent. A hybrid record — modern `iterations[]`,
+  // legacy `fullHarness.runId` — sealed a completion certificate with
+  // `counts.error === 0` and no operator signal at all, while the migration
+  // memo told the same operator the shape was rejected from 1.10.0. Reporting
+  // it follows the legacy `verify.json` branch below: say so at the severity
+  // the version implies, and still seal. Refusing outright would delete the
+  // acceptance path, which OC-60 forbids inside the window and which the
+  // sunset does not ask for either — the constraint escalates the finding.
+  const canonicalRunId = extractString(protoJson, "runId");
+  const legacyRunId = extractString(extractRecord(protoJson, "fullHarness"), "runId");
+  const runId = canonicalRunId ?? legacyRunId;
+  if (!canonicalRunId && legacyRunId) {
+    const line =
+      `qfai prototyping certify: ${DEPRECATED_SCHEMA_CODE} prototyping.json carries the legacy ` +
+      `\`fullHarness.runId\` shape instead of a top-level \`runId\`; sunset: v${SUNSETS.legacyPrototypingJsonShape}. ` +
+      `Re-run \`qfai prototyping iterate --cycle 0\` to write the current shape.`;
+    if (deprecationSeverity(toolVersion, SUNSETS.legacyPrototypingJsonShape) === "error") {
+      error(line);
+    } else {
+      warn(line);
+    }
+  }
   if (!runId) {
     error(
       "qfai prototyping certify: prototyping.json#runId is required " +
@@ -880,7 +905,6 @@ export async function runPrototypingCertify(
     return 2;
   }
 
-  const toolVersion = await resolveToolVersion();
   const designMdRecord: CompletionCertificateDesignMd = {
     path: ROOT_DESIGN_MD_REL,
     sha256: frozenSha,

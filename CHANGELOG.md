@@ -8,6 +8,38 @@
 
 ### Changed
 
+- **Correction to the 1.9.2 deprecation notice.** That release announced four
+  deprecations escalating "from warning to error" at 1.10.0. An audit against the
+  code found the notice was accurate for one of them. `surface_type`-absent specs
+  (`D-SURFACE-TYPE-MISSING`) did emit a warning and now escalate as promised. The
+  pre-mutation-log iterate emit was already `error` under
+  `R-EVIDENCE-MUTATION-UNLOGGED`, so no window ever applied to it. But
+  `D-HANDOFF-LEGACY-FORMAT` and string-only `primary_tasks` **emitted nothing at
+  all** during the 1.9.x window — the code that would have warned was never built.
+  Escalating those two now would hand consumers a zero-length window, which is what
+  REQ-0169 — the requirement the constraint cites as its own justification — exists
+  to prevent. Both are re-pinned to 1.11.0 in `_policies/07_Constraints.md` and will
+  emit a warning first.
+- **`D-SURFACE-TYPE-MISSING` escalates to error.** A spec with a UI contract
+  companion but no `surface_type` marker is excluded from the UI-bearing set, so its
+  screens are skipped downstream — silently, while the finding said to "treat it as
+  priority-2 cleanup rather than blocking". Affects projects with marker-less
+  UI-bearing specs; run `/qfai-sdd`, which populates the field. Alongside it,
+  `detection/surfaceType.ts` narrowed its companion match from `.ya?ml` to `.yaml`,
+  matching `prototyping/specResolution.ts` — otherwise a stray `.yml` would now
+  hard-fail as a companion nothing else recognises.
+- **`prototyping certify` reports the legacy `prototyping.json` shape.** A record
+  with `fullHarness.runId` instead of a top-level `runId` was accepted in silence,
+  sealing a completion certificate with no operator signal while the migration memo
+  said the shape was rejected. It now emits `D-DEPRECATED-SCHEMA` at the
+  version-computed severity and still seals — the acceptance path stays, per OC-60.
+- **A sunset can no longer be announced without being enforced.**
+  `tests/core/sunsetLedger.test.ts` fails when a `SUNSETS` key has no consumer, when
+  a constraint row names a finding code no source emits, or when a file parses a
+  version next to a sunset instead of calling the shared comparator. The previous
+  guard compared `isAtOrPastSunset` against `deprecationSeverity` — a tautology over
+  the latter's own body — and iterated existing keys, while every gap found in this
+  release was a missing one.
 - **The legacy assistant-tree sunset joined that sweep.** `LEGACY_STEERING_SUNSET`
   was a fourth, separately-shaped SSOT (`{ major, minor }`) that `isAtOrPastSunset`
   could not parse, so three hand-rolled comparators had grown around it — in
