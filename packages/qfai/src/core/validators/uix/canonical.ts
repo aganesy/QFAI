@@ -1,13 +1,14 @@
 /**
  * Canonical UIX aggregate validator.
  *
- * This validator now runs only when the validation target is a direct
- * discussion pack root. Repo-root downstream validation is contract-first
- * and must not resolve the latest discussion pack implicitly.
+ * Runs the eight canonical UIX checks against the discussion pack under
+ * validation — resolved from a repo root, or taken directly when the target is
+ * already a pack root.
  */
 import path from "node:path";
 
-import type { QfaiConfig } from "../../config.js";
+import { resolvePath, type QfaiConfig } from "../../config.js";
+import { findLatestPack } from "../../packLocator.js";
 import type { Issue } from "../../types.js";
 import { readSafe } from "../utils.js";
 
@@ -32,8 +33,13 @@ export async function runCanonicalUixValidators(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
-  const directSpec = await readSafe(path.join(root, "01_Spec.md"));
-  if (!directSpec) {
+  // The admission probe used to be `<root>/01_Spec.md`, and both call sites
+  // pass the repo root. `01_Spec.md` is a *spec* file that no discussion pack
+  // contains — a pack has `01_Context.md`, which is what everything behind this
+  // gate then reads. So all eight validators were inert on every documented
+  // invocation, including `qfai validate --profile discussion --fail-on error`.
+  const packRoots = await resolvePackRoots(root, config);
+  if (packRoots.length === 0) {
     return [];
   }
 
@@ -54,8 +60,33 @@ export async function runCanonicalUixValidators(
     validateOqClosure,
   ];
 
-  const results = await Promise.all(validators.map((v) => v(root, config)));
-  const issues = results.flat();
+  const perPack = await Promise.all(
+    packRoots.map(async (packRoot) => {
+      const results = await Promise.all(validators.map((v) => v(packRoot, config)));
+      return results.flat();
+    }),
+  );
 
-  return issues;
+  return perPack.flat();
+}
+
+/**
+ * The pack directories the canonical validators run against.
+ *
+ * Two shapes are accepted, because both call sites and the direct-invocation
+ * path are real:
+ *
+ * - a **repo root** — resolve the latest pack under `paths.discussionDir`, the
+ *   same resolution `validateDiscussionPackReadiness` performs two lines above
+ *   the call site;
+ * - a **pack root** — probe `01_Context.md`, which is the file a pack actually
+ *   has and the one `surfaceType.ts` and the rest of the family read. The old
+ *   probe named `01_Spec.md`, so this path never matched either.
+ */
+async function resolvePackRoots(root: string, config: QfaiConfig): Promise<string[]> {
+  if (await readSafe(path.join(root, "01_Context.md"))) {
+    return [root];
+  }
+  const latest = await findLatestPack(resolvePath(root, config, "discussionDir"), "discussion");
+  return latest ? [latest.path] : [];
 }

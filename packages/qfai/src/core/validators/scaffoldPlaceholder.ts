@@ -101,15 +101,22 @@ export async function validateScaffoldPlaceholder(
   // subdirectory is fixed by the scaffold contract; only the
   // parent is configurable.
   const testsDir = resolvePath(root, config, "testsDir");
-  const atddDir = path.join(testsDir, "atdd");
+  // The scaffold writes to `<testsDir>/integration/` so its output is visible
+  // to `QFAI-ATDD-112`. `atdd/` is still scanned: projects scaffolded before
+  // that change have skeletons there, and dropping the directory would stop
+  // reporting placeholders that are still on disk.
+  const scaffoldDirs = [path.join(testsDir, "integration"), path.join(testsDir, "atdd")];
   const threshold = resolveEscalateThreshold(config.atdd?.scaffoldEscalateCycles);
   // Glob for any test extension the project uses. fast-glob
   // returns absolute paths when the pattern is absolute.
-  const globPattern = path.posix.join(
-    atddDir.replace(/\\/g, "/"),
-    "**/*.test.{ts,tsx,mts,js,mjs,jsx,cts,cjs}",
+  const globPatterns = scaffoldDirs.map((dir) =>
+    path.posix.join(dir.replace(/\\/g, "/"), "**/*.test.{ts,tsx,mts,js,mjs,jsx,cts,cjs}"),
   );
-  const files = await fg(globPattern, { dot: false, absolute: true });
+  // De-duplicated: an unusual `testsDir` could make two patterns resolve to the
+  // same file, and counting it twice would double one skeleton's escalation.
+  const files = Array.from(
+    new Set((await fg(globPatterns, { dot: false, absolute: true })).map((f) => path.resolve(f))),
+  );
   // Track every (spec, TC) we observed as placeholder this pass so we
   // can reset stale counters at the end.
   const observedKeys = new Set<string>();
@@ -135,7 +142,9 @@ export async function validateScaffoldPlaceholder(
       new Set(matches.map((m) => m[1]).filter((id): id is string => typeof id === "string")),
     );
     const relPath = path.relative(root, file).replace(/\\/g, "/");
-    const specId = extractSpecIdFromScaffoldPath(atddDir, file);
+    // Resolved against whichever scaffold root actually contains the file.
+    const owningDir = scaffoldDirs.find((dir) => path.resolve(file).startsWith(path.resolve(dir)));
+    const specId = owningDir ? extractSpecIdFromScaffoldPath(owningDir, file) : null;
     // Advance the validate-only escalation counter PER (spec, TC) —
     // not per file — so a spec-NNNN/TC-NNNN-NNNN that appears in two
     // scaffold files (split assertions) still escalates after the

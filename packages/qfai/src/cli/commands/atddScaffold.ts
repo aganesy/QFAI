@@ -3,7 +3,9 @@
  *
  * For each TC entry in the target spec's Test-Cases catalogue, the
  * command writes a placeholder test file under
- * `<root>/tests/atdd/<specId>/<TC-ID>.test.ts`. Existing files are
+ * `<root>/tests/integration/<specId>/<TC-ID>.test.ts` — the directory
+ * `QFAI-ATDD-112` scans, so a scaffolded test counts as coverage once its
+ * assertions are filled in. Existing files are
  * preserved untouched (idempotent). When a skeleton remains in its
  * placeholder shape across N runs (default 3, configurable via
  * `qfai.config.yaml#atdd.scaffoldEscalateCycles`), the command emits an
