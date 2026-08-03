@@ -7,8 +7,9 @@
  * `D-DEPRECATED-PROBE` doctor check hard-coded `warning`, and `QFAI-AUD-001`
  * hard-coded `info`. Shipping 1.10.0 would have made all three notices false.
  *
- * These tests bind the declaration to the comparator, so a future sunset
- * cannot be announced without being enforced.
+ * These tests exercise the comparator. Binding a declaration to its ENFORCEMENT
+ * is a different check and lives in `sunsetLedger.test.ts` — see the scope note
+ * on the last case here for why this file cannot do it.
  */
 import { describe, expect, it } from "vitest";
 
@@ -53,10 +54,18 @@ describe("the shipped package is past every sunset it declares", () => {
       const { version } = await import("../../package.json", { with: { type: "json" } }).then(
         (m) => m.default as { version: string },
       );
-      // Not an assertion that the version is past the sunset — a sunset pinned
-      // to a future release is legitimate. What must hold is that the decision
-      // is computed from the version rather than frozen in a literal, which is
-      // exactly what a `deprecationSeverity` call proves.
+      // Honest scope note: this is a smoke check over the comparator, NOT the
+      // regression guard the file header once claimed. The assertion below is a
+      // tautology — `deprecationSeverity` is defined as
+      // `isAtOrPastSunset(...) ? "error" : "warning"` — and iterating existing
+      // keys cannot see the failure mode that actually occurred five times in
+      // this release: a key, or a whole deprecation, that no call site reads.
+      //
+      // `tests/core/sunsetLedger.test.ts` is the guard for that. It asserts
+      // every `SUNSETS` key has a consumer outside `sunset.ts`, that every
+      // finding code named by a sunset-bearing constraint row is emitted
+      // somewhere in `src/`, and that no file parses a version next to a sunset
+      // instead of calling this comparator.
       expect(typeof deprecationSeverity(version, sunset)).toBe("string");
       expect(isAtOrPastSunset(version, sunset)).toBe(
         deprecationSeverity(version, sunset) === "error",

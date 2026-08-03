@@ -59,7 +59,7 @@ Execution agents read this file first, then access child files (02-08) for detai
 ## Applicable Policy
 
 - Drift Protocol: Upstream artifact edits require user-approved Change Request
-- Test-layer policy: `.qfai/assistant/steering/test-layers.md`
+- Test-layer policy: `.qfai/assistant/catalog/test-layers.md`
 
 ## Evidence Summary
 
