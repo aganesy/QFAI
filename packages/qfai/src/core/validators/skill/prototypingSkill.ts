@@ -184,9 +184,17 @@ export function hasPreflightGuidance(content: string): boolean {
  * project still documenting the legacy launcher continues to pass.
  */
 export function hasPlaywrightCliFallback(content: string): boolean {
-  const lower = content.toLowerCase();
-  return (
-    lower.includes("npx --no-install playwright") || lower.includes("node_modules/.bin/playwright")
+  // Anchored at the end of the launcher name. A substring test accepted
+  // `playwright-does-not-exist` and `playwright-wrapper` — any command whose
+  // name merely starts with `playwright` — so a skill could satisfy the rule
+  // while documenting no working launcher at all. Widening the search from
+  // `playwright-cli` to `playwright` is what made that reachable.
+  //
+  // `playwright-cli` still matches: it is listed explicitly, so a project that
+  // has not migrated its docs keeps passing.
+  const LAUNCHER = String.raw`playwright(?:-cli)?(?![\w-])`;
+  return new RegExp(String.raw`(?:npx\s+--no-install\s+|node_modules/\.bin/)${LAUNCHER}`, "i").test(
+    content,
   );
 }
 
