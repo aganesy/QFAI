@@ -963,6 +963,40 @@ async function validateSpecTddList(
     }
   }
 
+  // Phase 2 – Check 9e: the declared seam.
+  //
+  // `Owning module` is how `delivery-planner` can answer "do these two items
+  // write the same source module?" before RED-first has created either module.
+  // It is a declaration, so the only thing checkable here is that a filled cell
+  // names one module — a list would leave the gate comparing sets again, and a
+  // row that honestly owns two modules is a row that should be split.
+  const owningModuleIndex = normalizedHeaders.indexOf("Owning module");
+  if (owningModuleIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx += 1) {
+      const cell = (table.rows[rowIdx]?.[owningModuleIndex] ?? "").trim();
+      if (cell.length === 0 || cell === "-") {
+        continue;
+      }
+      if (!/[,;]|\s/.test(cell)) {
+        continue;
+      }
+      issues.push(
+        issue(
+          "TDDLIST_OWNING_MODULE_NOT_SINGULAR",
+          `Owning module must name exactly one module, but spec-${specNumber} (row ${rowIdx + 1}) declares "${cell}"`,
+          "error",
+          relPath,
+          "tddList.owningModule",
+          undefined,
+          "canonical",
+          "Declare one repo-relative path or dotted module path, or `-` when the seam is not declared. " +
+            "A row that genuinely owns two modules is a row to split (`references/selector-granularity.md`); " +
+            "a list would put the parallel-dispatch gate back to comparing sets it cannot evaluate before RED.",
+        ),
+      );
+    }
+  }
+
   // Phase 2 – Check 9c: the ledger under-reporting.
   //
   // Check 9 only ever looks at rows that *claim* completion, so "row says

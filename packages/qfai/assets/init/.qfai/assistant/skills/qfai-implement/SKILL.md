@@ -93,8 +93,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 - Writing spec artifacts other than this skill's own `tdd/test-list.md` ledger (use `/qfai-sdd`). The ledger's `Status` / `DR-ID` / `Evidence` cells are the one carve-out the Drift Protocol grants (`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`); its rows are still upstream.
 - Writing acceptance tests (use `/qfai-atdd`). `Layer = E2E` / `Layer = API` ledger rows are tracked here but their tests are authored there.
 - Running validation gates (use `/qfai-verify`).
-- Parallel execution across multiple **specs** simultaneously. (Item-level
-  parallelism _within_ one spec is a separate question, governed by
+- Parallel execution across multiple **specs** simultaneously. (Item-level parallelism _within_ one spec is a separate question, governed by
   `## Parallelization Policy` below.)
 
 ## Execution Ledger: test-list.md
@@ -290,7 +289,7 @@ Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
   including one item writing a module another item's test or implementation
   reads — not as the existence of shared things, and authorized parallel runs
   use the coordinated mode in which the orchestrator owns every `test-list.md`
-  write. Full rules: `references/parallelization-policy.md`.
+  write. Under RED-first the source modules do not exist when `delivery-planner` must judge, so the conditions are evaluated over each row's declared `Owning module` (`references/execution-ledger.md`); a ledger without that column supports parallel dispatch only for seams that already exist. Full rules: `references/parallelization-policy.md`.
 - `parallel_groups: []` in `agent-routing.yml` describes **role fan-out within
   a phase**, not item dispatch.
 
@@ -298,6 +297,7 @@ Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
 
 - **Reconcile the ledger first.** Under worktree separation each worker holds a private copy of `test-list.md`, so the merged trunk carries none of their transitions. Write Status + Evidence for every merged item from the worker reports **before** integration verify, and fail the verify if any merged item's row is still `todo` — an unreconciled ledger reports finished work as unstarted (`references/parallelization-policy.md#ledger-ownership`).
 - After parallel slices complete and merge, run integration verify on the merged result
+- Then reconcile the seams: diff each slice's touched `src/` paths against its declared `Owning module` and report undeclared or overlapping paths as a deny-condition breach — **independently of whether the merged suite is green** (`references/parallelization-policy.md#seam-reconciliation-after-a-parallel-run`)
 - If integration verify fails, **classify before acting** per `shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`, attributing the failure to one slice, to the merge resolution, or to code outside every slice. Remedies by class: `references/parallelization-policy.md#failed-integration-verify`. Unconditional rollback is not one of them — the protocol classifies this as a local, non-destructive defect to fix and re-run, and reserves stopping for destructive changes.
 - If integration verify passes, state transitions back to `delivery-planner` for sequential flow
 

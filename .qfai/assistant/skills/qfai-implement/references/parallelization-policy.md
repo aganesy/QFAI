@@ -35,6 +35,12 @@ things. A read-only fixture module or a DI container that every item constructs
 independently does not veto the policy; a shared database is resolved by
 per-worker schema isolation, not by a blanket deny.
 
+- **Every concurrently dispatched row declares an `Owning module`**, and no two
+  of them declare the same one. This is the operational form of the next
+  bullet: under RED-first the source module does not exist yet, so the only
+  thing that can be compared before dispatch is what each row _declares_ it
+  will write (`execution-ledger.md#declared-seam-column-optional-required-for-parallel-dispatch`).
+  A row carrying `-` in that column is not eligible for parallel dispatch.
 - No two concurrently dispatched items **write** the same source module.
 - No two concurrently dispatched items **write** the same test module.
 - No item **writes** a module that another concurrently dispatched item's test
@@ -101,14 +107,45 @@ exception is preferable to a documented way around an upstream SSOT rule.
 ## Deny conditions (any one blocks parallel dispatch)
 
 - Two concurrently dispatched items share the same behavior's Red/Green/Refactor cycle.
-- Two concurrently dispatched items modify the same public API surface.
+- Two concurrently dispatched items declare the same `Owning module`, or either
+  of them declares none.
+- Two concurrently dispatched items modify the same public API surface. Before
+  RED this is evaluated over the declared seams; the surface itself does not
+  exist yet.
 - Two concurrently dispatched items write the same shared fixture, shared mock,
   or shared global setup **file**. (A shared fixture module that neither item
   writes and each consumes read-only is not a deny — see the allow conditions.)
 - Two concurrently dispatched items bind the same fixed port, write the same
   out-of-worktree path, or share an un-namespaced external cache/queue.
 - Sequential dependency: "A must finish before B has meaning".
-- The independence claim cannot be explained with concrete file/module evidence.
+- The independence claim cannot be explained with concrete file/module
+  evidence. Before RED that evidence is the rows' declared `Owning module`
+  values — not the source tree, which does not yet contain the modules under
+  discussion. **If the ledger carries no `Owning module` column, the allow
+  conditions cannot be evaluated at all**, and parallel dispatch is permitted
+  only for slices whose seams already exist in the repository. "The test files
+  differ" is not an independence claim.
+
+## Seam reconciliation (after a parallel run)
+
+The post-merge integration verify detects a broken build. It does not detect
+two slices deciding the same thing twice under two names in one module, which
+is the outcome the deny conditions exist to prevent — and that outcome can
+leave the suite green.
+
+So after the slices merge, and **independently of whether the merged suite
+passes**:
+
+1. For each slice, list the `src/` paths it actually touched
+   (`git diff --name-only <base>..<slice-head> -- <source root>`).
+2. Compare that list against the slice's declared `Owning module`.
+3. Report every touched path that no slice declared, and every path touched by
+   more than one slice, as a **deny-condition breach**. It is a breach whether
+   or not anything broke: the gate was passed on a claim that turned out to be
+   false, so the next authorization is being made on the same basis.
+4. A breach does not automatically roll back a green merge. It does require the
+   overlapping modules to be re-read for duplicated behaviour, and the finding
+   to be recorded before `delivery-planner` authorizes another parallel run.
 
 ## Coordinated parallel mode (ledger ownership)
 
