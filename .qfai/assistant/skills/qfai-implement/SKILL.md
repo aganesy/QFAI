@@ -431,10 +431,10 @@ the completion gate (see `Completion prohibition conditions`).
 
 ### Evidence hard rules
 
-- Status-only evidence (e.g., "Status: PASS" with no command) is invalid and MUST be rejected
-- Both command and result are required; "should pass" or "looks good" alone is not acceptable
-- Stale evidence from a previous run MUST NOT be reused to claim completion for a new cycle
-- Empty evidence entries are rejected: minimum evidence per TDD item must be met
+- Status-only evidence (e.g., "Status: PASS" with no command) is invalid and MUST be rejected; both command and result are required, and "should pass" or "looks good" alone is not acceptable — `TDDLIST_EVIDENCE_STATUS_ONLY` (warning, waivable as `TDDLIST-004`: ledgers predating the check carry prose verdicts)
+- Empty evidence entries are rejected: minimum evidence per TDD item must be met — `TDDLIST_EVIDENCE_EMPTY` (error)
+- Stale evidence from a previous run MUST NOT be reused to claim completion for a new cycle.
+  **Reviewer obligation, not a machine gate** — why, and the full rules: `references/execution-ledger.md`.
 
 ## Checkpoint Verification
 

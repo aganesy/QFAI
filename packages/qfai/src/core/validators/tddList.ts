@@ -68,6 +68,85 @@ const TC_ID_TOKEN = /^TC-\d{4}(-\d{4})?$/;
 const TEST_FILE_CHECK_STATUSES = new Set(["green", "refactor", "review-fix", "done"]);
 
 /**
+ * Statuses whose row has already run a TDD cycle, so its `Evidence` cell is
+ * owed the command+result pair that cycle produced.
+ *
+ * Deliberately the same set as `TEST_FILE_CHECK_STATUSES` but a separate
+ * constant: the two rules answer different questions ("is there a test file"
+ * vs "is there proof it ran"), and binding them to one name would make a later
+ * change to either silently move the other.
+ *
+ * `todo` and `red` are excluded because a row can legitimately sit there with
+ * nothing to show yet; `exception` is excluded because a parked row records its
+ * reason in `DR-ID`, which `TDDLIST_EXCEPTION_MISSING_DR` already gates.
+ */
+const EVIDENCE_CHECK_STATUSES = new Set(["green", "refactor", "review-fix", "done"]);
+
+/**
+ * An `Evidence` cell carrying no content: empty, or nothing but dash
+ * placeholders (ASCII hyphen, en dash, em dash).
+ *
+ * This is `qfai-implement/SKILL.md` "Empty evidence entries are rejected" in
+ * machine form. A ledger of `Evidence: -` rows was the observed failure.
+ */
+const EVIDENCE_PLACEHOLDER = /^[-–—\s]*$/;
+
+/**
+ * A verdict claim with no execution behind it — the `Status: PASS` shape
+ * `SKILL.md` names verbatim, plus the "should pass" / "looks good" phrasings
+ * the next bullet rejects.
+ */
+const EVIDENCE_VERDICT_WORD =
+  /\b(pass(?:ed|es|ing)?|fail(?:ed|s|ing)?|ok|ng|green|red|success(?:ful)?|looks good|should pass|all good)\b/i;
+
+/**
+ * A command invocation, recognised **structurally** rather than from a list of
+ * known runners.
+ *
+ * A runner allowlist (`npm` / `pytest` / `cargo` …) is exactly what makes
+ * `QFAI-TEST-001` fire on JS/TS and nothing else; repeating that here would
+ * give the Evidence gate the same stack blindness. What a command looks like in
+ * every stack is a program name followed by an argument that is not prose — a
+ * flag, a path, a selector, a filename or an assignment. So the match is: a
+ * bare word token, whitespace, then either a real flag (`-q`, `--filter`) or a
+ * token containing one of `/` `\` `.` `:` `=` `*`.
+ *
+ * The flag branch is `--?[A-Za-z]`, not `-\S`. The looser form matched an arrow:
+ * `Status: PASS -> 3 passed` read as command-shaped and slipped past this gate
+ * with no command in it at all — the exact evasion the gate exists to catch.
+ *
+ * `go test ./...`, `pytest -q tests/test_a.py::test_b`, `cargo test --lib`,
+ * `mvn -Dtest=Foo test` and `vitest run tests/foo.test.ts` all match on some
+ * adjacent pair; `Status: PASS` and `looks good` match on none.
+ */
+const EVIDENCE_COMMAND_SHAPE =
+  /(?:^|[\s`([{>$|&;])[A-Za-z_][\w.+-]*\s+(?:--?[A-Za-z][\w-]*|[^\s]*[/\\.:=*][^\s])/;
+
+/**
+ * Widely used test runners, as an **additional** acceptor.
+ *
+ * This list can only make the gate accept more, never reject more, so it
+ * cannot reintroduce stack bias: an unlisted runner still passes through
+ * `EVIDENCE_COMMAND_SHAPE`. It exists because argument-less invocations such as
+ * `npm test` carry no structural marker and would otherwise read as prose.
+ */
+const EVIDENCE_KNOWN_RUNNER =
+  /(?:^|[\s`([{>$|&;])(?:npm|pnpm|yarn|bun|npx|deno|node|vitest|jest|mocha|ava|karma|playwright|cypress|pytest|tox|nox|unittest|go|cargo|dotnet|mvn|gradle|make|rake|bundle|rspec|minitest|phpunit|pest|ctest|swift|flutter|dart|mix|sbt|stack|qfai)\b/i;
+
+/**
+ * True when the cell shows a command was actually run, not merely asserted.
+ *
+ * Backticks are deliberately NOT an acceptor of their own. A ```Status: PASS```
+ * span holds whitespace, so a "backticked span with more than one word"
+ * acceptor let the exact verdict this rule rejects launder itself into a
+ * command. Only the runner list and the structural shape decide, and both read
+ * through backticks unchanged.
+ */
+function hasCommandShape(evidence: string): boolean {
+  return EVIDENCE_KNOWN_RUNNER.test(evidence) || EVIDENCE_COMMAND_SHAPE.test(evidence);
+}
+
+/**
  * Test directories a `Layer` value implies. `null` means the layer has no
  * mandated directory, so no consistency claim is made about it.
  */
@@ -210,6 +289,15 @@ export { EXCEPTION_PARKED_RULE_ID };
  * would have left the warning permanently unsuppressible.
  */
 export const UNKNOWN_LEVEL_RULE_ID = "TDDLIST-002";
+
+/**
+ * Waiver rule id for `TDDLIST_EVIDENCE_STATUS_ONLY`.
+ *
+ * The finding is a warning because pre-existing ledgers predate the check;
+ * a project that has audited its legacy rows silences them with a waiver rather
+ * than by rewriting evidence it can no longer reproduce.
+ */
+export const EVIDENCE_STATUS_ONLY_RULE_ID = "TDDLIST-004";
 
 /**
  * Waiver rule id for `TDDLIST_STALE_STATUS`.
@@ -931,6 +1019,77 @@ async function validateSpecTddList(
             "warning",
             relPath,
             "tddList.layerPathConsistency",
+          ),
+        );
+      }
+    }
+  }
+
+  // Phase 2 – Check 9c: Evidence content on rows that have run a cycle.
+  //
+  // `Evidence` was a required column whose *cell* nothing read: the string
+  // "Evidence" reached only the required-column header check, so a ledger whose
+  // every row said `-` passed `--profile tdd --fail-on error` with `error: 0` —
+  // the one machine gate `qfai-implement`'s FINAL CHECKLIST names. That made
+  // `error: 0` an actively misleading signal for the two SKILL.md hard rules
+  // encoded below, which until now only a human reading the prose could apply.
+  const evidenceIndex = normalizedHeaders.indexOf("Evidence");
+  if (statusIndex >= 0 && evidenceIndex >= 0) {
+    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
+      const row = table.rows[rowIdx];
+      if (!row) continue;
+      const status = (row[statusIndex] ?? "").trim().toLowerCase();
+      if (!EVIDENCE_CHECK_STATUSES.has(status)) continue;
+      const evidence = (row[evidenceIndex] ?? "").trim();
+      const rowLabel =
+        tddIdIndex >= 0 && (row[tddIdIndex] ?? "").trim().length > 0
+          ? `${(row[tddIdIndex] ?? "").trim()} (row ${rowIdx + 1})`
+          : `row ${rowIdx + 1}`;
+
+      if (EVIDENCE_PLACEHOLDER.test(evidence)) {
+        issues.push(
+          issue(
+            "TDDLIST_EVIDENCE_EMPTY",
+            `Evidence is empty for spec-${specNumber} ${rowLabel}, Status=${status}. A row past RED owes the command and its result ("Empty evidence entries are rejected", qfai-implement Evidence hard rules)`,
+            "error",
+            relPath,
+            "tddList.evidencePresent",
+            undefined,
+            "change",
+            `Evidence 列に実際に実行したコマンドとその結果を記録してください（例: \`npx vitest run tests/foo.test.ts\` → 3 passed）。まだ実行していない場合は Status を todo / red に戻してください。`,
+          ),
+        );
+        continue;
+      }
+
+      // Only a cell that *claims a verdict* can be status-only evidence. A cell
+      // holding some other note without a command is under-specified, but
+      // calling it "status-only" would be wrong and erroring on it would reject
+      // ledger content the hard rules never described.
+      if (EVIDENCE_VERDICT_WORD.test(evidence) && !hasCommandShape(evidence)) {
+        issues.push(
+          issue(
+            "TDDLIST_EVIDENCE_STATUS_ONLY",
+            `Evidence for spec-${specNumber} ${rowLabel} states a verdict with no command (Status=${status}): "${evidence}". Status-only evidence is invalid — both the command and its result are required`,
+            // `warning`, not `error`, and waivable.
+            //
+            // The hard rule says "MUST be rejected", and an error is what that
+            // deserves — but every ledger written before this check existed
+            // carries prose verdicts, and turning them into build failures on
+            // upgrade is a migration, not a gate. qfai's own repository has 99
+            // such rows. `TDDLIST_EVIDENCE_EMPTY` stays at `error` because an
+            // empty cell is unambiguous and was the observed failure; a prose
+            // verdict at least asserts something a reviewer can read.
+            //
+            // The rule id is the waivable `^[A-Z]+-\d{3}$` shape, so a project
+            // that has audited its legacy rows can silence them per path
+            // instead of being stuck between a false gate and a rewrite.
+            "warning",
+            relPath,
+            EVIDENCE_STATUS_ONLY_RULE_ID,
+            undefined,
+            "change",
+            `"Status: PASS" のような判定だけの記述は無効です。実行したコマンドを併記してください（例: \`npx vitest run tests/foo.test.ts\` → 3 passed）。`,
           ),
         );
       }

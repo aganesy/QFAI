@@ -95,6 +95,39 @@ A literal `\` is **not** escaped: the parser passes it through unchanged, so
 doubling it would corrupt Windows paths and regex literals while keeping the
 column count valid — a corruption no validator can see.
 
+## Evidence cell rules (enforced)
+
+`Evidence` is checked as content, not only as a header name. On a row whose
+`Status` is `green`, `refactor`, `review-fix` or `done` — the statuses that
+assert a cycle has run:
+
+| Finding                        | Fires when                                                          | Severity |
+| ------------------------------ | ------------------------------------------------------------------- | -------- |
+| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)   | error    |
+| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command | warning  |
+
+A command is recognised by shape, not from a list of known runners, so the rule
+holds on any stack: a program name followed by an argument carrying a flag, a
+path, a selector or an assignment. Backticked commands and the common runners
+are accepted directly.
+
+`TDDLIST_EVIDENCE_STATUS_ONLY` is a warning, waivable under `TDDLIST-004`: a
+ledger written before the check exists carries prose verdicts, and failing a
+build on them is a migration rather than a gate. An empty cell is unambiguous,
+so `TDDLIST_EVIDENCE_EMPTY` stays at `error`.
+
+Rows at `todo`, `red` and `exception` are not checked — the first two have
+nothing to show yet, and a parked row records its reason in `DR-ID`, which
+`TDDLIST_EXCEPTION_MISSING_DR` gates.
+
+Freshness is **not** gated: the ledger records no run identity, so no validator
+can distinguish a fresh command+result pair from a copied one. That rule stays
+with the routed reviewer (`qfai-implement/SKILL.md` "Evidence hard rules").
+
+A pointer cell satisfies these rules: the `evidence at <path>` form carries a
+path, which is one of the command shapes the gate accepts. The rules reject a
+bare verdict, not a pointer.
+
 ## Selector granularity (MUST)
 
 `Selector` is **not** restricted to a single test function: a row may own several entries, written
