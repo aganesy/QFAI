@@ -464,7 +464,8 @@ Typical customizations.
 │   │       ├── structure.md
 │   │       ├── tech.md
 │   │       ├── test-layers.md
-│   │       └── ui-definition-protocol.md
+│   │       ├── ui-definition-protocol.md
+│   │       └── worklog-entry.schema.md
 │   └── waivers.yml
 └── qfai.config.yaml
 ```
@@ -472,6 +473,21 @@ Typical customizations.
 `qfai init` does not seed `.qfai` workflow artifacts such as specs, discussions,
 contracts, evidence, reports, reviews, placeholder spec directories, or artifact
 README files. Those files are created later by QFAI skills when real work exists.
+
+### AI work-log surface (`.qfai/steering/`)
+
+`qfai init` also creates `.qfai/steering/`, the per-project work-log surface for
+AI coding agents, with a `README.md` and `_templates/entry.md`. Each entry is a
+markdown file with YAML frontmatter, and `npx qfai validate` polices the surface in
+the `sdd` and full profiles via `W-WORKLOG-SCHEMA`, `W-WORKLOG-BROKEN-LINK`,
+`W-WORKLOG-STALE`, `W-PENDING-PROMOTION` and `R-HANDOFF-INCOMPLETE`.
+
+The frontmatter contract and the **per-kind write trigger** — which `kind` an
+agent writes when — are in the seeded
+`.qfai/assistant/catalog/worklog-entry.schema.md`.
+
+Note that `.qfai/steering/` (the work-log surface) is a different directory from
+the legacy `.qfai/assistant/steering/` (the pre-recut assistant path).
 
 Integration wrappers are also generated for immediate use:
 

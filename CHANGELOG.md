@@ -31,7 +31,11 @@
   `D-SCAFFOLD-PLACEHOLDER`); the `QFAI-`-stripped form still resolves, so
   existing waiver files keep applying unchanged. A well-formed but unknown rule
   is now reported as `QFAI-WAIVER-004` (warning) rather than `QFAI-WAIVER-001`
-  (error). `suppressed.byRule` is keyed by the spelling the waiver used.
+  (error). `suppressed.byRule` is keyed by the spelling the waiver used. This
+  also makes the newer `TDDLIST_*` findings waivable for the first time —
+  `qfai-implement/SKILL.md` and `references/execution-ledger.md` already
+  instruct operators to waive `TDDLIST_EVIDENCE_STATUS_ONLY` under
+  `TDDLIST-004`, which the old grammar made impossible.
 - The shipped `.qfai/waivers.yml` example named `COMPAT-003`, which no validator
   emits; it now shows `TDDLIST_UNKNOWN_LEVEL`, a real waivable warning.
   `STATIC_RULE_SEVERITY` no longer pre-declares the never-emitted `COMPAT-*`,

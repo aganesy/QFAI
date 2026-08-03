@@ -458,6 +458,12 @@ describe("applyWaivers", () => {
     ["E_TC_ORPHAN", "spec.testCases"],
     ["D-SCAFFOLD-PLACEHOLDER", "distributedSurface.scaffold"],
     ["QFAI-CFG-LINK-001", "config.link"],
+    // Findings added after this fix was written. `qfai-implement/SKILL.md` and
+    // `references/execution-ledger.md` tell an operator these are waivable, so
+    // the grammar has to keep accepting the shape they are published under.
+    ["TDDLIST_EVIDENCE_STATUS_ONLY", "tddList.evidence"],
+    ["TDDLIST_BLOCKED_MISSING_REF", "tddList.blockedBy"],
+    ["TDDLIST_EXCEPTION_UNRESOLVED_DR", "tddList.exceptionDr"],
   ])("waives %s, which no rule-id branch could resolve", async (code, rule) => {
     const root = await createRoot();
     try {

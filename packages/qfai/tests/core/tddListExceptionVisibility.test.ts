@@ -62,8 +62,8 @@ describe("parked exception rows are visible in CI", () => {
   it("warns once per exception row, naming the TDD-ID", async () => {
     await withLedger(
       [
-        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-1   | anomaly  |",
-        "| TDD-0002 | TC-0002 | Unit  | tests/b.test.ts | case b   | exception | DR-2   | anomaly  |",
+        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-0001-0001   | anomaly  |",
+        "| TDD-0002 | TC-0002 | Unit  | tests/b.test.ts | case b   | exception | DR-0001-0002   | anomaly  |",
       ],
       (issues) => {
         expect(parked(issues)).toHaveLength(2);
@@ -72,8 +72,8 @@ describe("parked exception rows are visible in CI", () => {
         // The code, not the rule id: that is the spelling `validate.json` and
         // the CLI print, so it is the one an operator can copy (issue #398).
         expect(parked(issues)[0]?.message).toContain("`TDDLIST_EXCEPTION_PARKED` waiver");
-        expect(parked(issues)[0]?.message).toContain("(DR-ID DR-1)");
-        expect(parked(issues)[0]?.refs).toEqual(["DR-1"]);
+        expect(parked(issues)[0]?.message).toContain("(DR-ID DR-0001-0001)");
+        expect(parked(issues)[0]?.refs).toEqual(["DR-0001-0001"]);
         // `dl_id` is the only per-finding key `matchesWaiver` compares, so the
         // row identity has to land there for a per-row waiver to be possible.
         expect(parked(issues).map((entry) => entry.dl_id)).toEqual(["TDD-0001", "TDD-0002"]);
@@ -87,14 +87,14 @@ describe("parked exception rows are visible in CI", () => {
     // carrying that DR — the over-suppression `dl_id` exists to prevent.
     await withLedger(
       [
-        "|          | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-1   | anomaly  |",
-        "|          | TC-0002 | Unit  | tests/b.test.ts | case b   | exception | DR-1   | anomaly  |",
+        "|          | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-0001-0001   | anomaly  |",
+        "|          | TC-0002 | Unit  | tests/b.test.ts | case b   | exception | DR-0001-0001   | anomaly  |",
       ],
       (issues) => {
         const dlIds = parked(issues).map((entry) => entry.dl_id);
         expect(dlIds).toHaveLength(2);
         expect(new Set(dlIds).size).toBe(2);
-        expect(dlIds).not.toContain("DR-1");
+        expect(dlIds).not.toContain("DR-0001-0001");
       },
     );
   });
@@ -104,7 +104,7 @@ describe("parked exception rows are visible in CI", () => {
     // row does not have.
     await withLedger(
       [
-        "|          | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-1   | anomaly  |",
+        "|          | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-0001-0001   | anomaly  |",
       ],
       (issues) => {
         const action = parked(issues)[0]?.suggested_action ?? "";
@@ -140,12 +140,12 @@ describe("parked exception rows are visible in CI", () => {
   it("is emitted under a rule id the waiver mechanism accepts", async () => {
     await withLedger(
       [
-        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-1   | anomaly  |",
+        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-0001-0001   | anomaly  |",
       ],
       (issues) => {
         const finding = parked(issues)[0];
         expect(finding?.rule).toBe(EXCEPTION_PARKED_RULE_ID);
-        // `waivers.ts#resolveRuleId` only accepts this shape; a dotted rule
+        // `waivers.ts#resolveRuleKeys` resolves this shape and the code; a dotted rule
         // name made an approved accepted risk permanently unwaivable.
         expect(finding?.rule).toMatch(/^[A-Z]+-\d{3}$/);
         expect(finding?.suggested_action).toContain(".qfai/waivers.yml");
@@ -173,6 +173,15 @@ describe("an approved accepted risk can clear the parked warning", () => {
       // "no un-suppressed warning remains" assertions below fail for a reason
       // that has nothing to do with waiving the parked row.
       await writeFile(path.join(specDir, "06_Test-Cases.md"), TEST_CASE_TABLE, "utf-8");
+      // Declares the DR the parked rows cite. Without it the rows raise
+      // TDDLIST_EXCEPTION_UNRESOLVED_DR — correct, but another unrelated
+      // warning that would break the "no un-suppressed warning remains"
+      // assertions for a reason that is not about waiving the parked row.
+      await writeFile(
+        path.join(specDir, "07_Decisions.md"),
+        "# 07 Decisions\n\n### DR-0001-0001: accepted risk\n",
+        "utf-8",
+      );
       await writeFile(
         path.join(specDir, "tdd", "test-list.md"),
         [HEADERS, SEP, ...rows].join("\n"),
@@ -185,9 +194,9 @@ describe("an approved accepted risk can clear the parked warning", () => {
           "waivers:",
           "  - id: WV-0001",
           `    rule: ${EXCEPTION_PARKED_RULE_ID}`,
-          "    reason: accepted risk approved by the operator (DR-1)",
+          "    reason: accepted risk approved by the operator (DR-0001-0001)",
           "    expires: 2099-12-31",
-          "    evidence: .qfai/specs/spec-0001/09_delta.md#DR-1",
+          "    evidence: .qfai/specs/spec-0001/07_Decisions.md#DR-0001-0001",
           "    action: suppress",
           ...(dlIds
             ? ["    match:", "      dl_ids:", ...dlIds.map((dlId) => `        - "${dlId}"`)]
@@ -209,7 +218,7 @@ describe("an approved accepted risk can clear the parked warning", () => {
   it("suppresses the finding through a TDDLIST-001 waiver naming the row", async () => {
     await withWaivedLedger(
       [
-        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-1   | anomaly  |",
+        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-0001-0001   | anomaly  |",
       ],
       ["TDD-0001"],
       (issues) => {
@@ -230,8 +239,8 @@ describe("an approved accepted risk can clear the parked warning", () => {
     // approved and `--fail-on warning` went green.
     await withWaivedLedger(
       [
-        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-1   | accepted |",
-        "| TDD-0002 | TC-0002 | Unit  | tests/b.test.ts | case b   | exception | DR-2   | anomaly  |",
+        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-0001-0001   | accepted |",
+        "| TDD-0002 | TC-0002 | Unit  | tests/b.test.ts | case b   | exception | DR-0001-0002   | anomaly  |",
       ],
       ["TDD-0001"],
       (issues) => {
@@ -250,8 +259,8 @@ describe("an approved accepted risk can clear the parked warning", () => {
   it("refuses a path-only waiver with QFAI-WAIVER-005", async () => {
     await withWaivedLedger(
       [
-        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-1   | accepted |",
-        "| TDD-0002 | TC-0002 | Unit  | tests/b.test.ts | case b   | exception | DR-2   | anomaly  |",
+        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-0001-0001   | accepted |",
+        "| TDD-0002 | TC-0002 | Unit  | tests/b.test.ts | case b   | exception | DR-0001-0002   | anomaly  |",
       ],
       null,
       (issues) => {

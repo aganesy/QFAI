@@ -2,7 +2,7 @@
 name: qfai-sdd
 title: QFAI SDD Unified (Triage/Outline/Slice/Plan/Delta)
 description: "Triage incoming requirements against existing specs, then create or update layered SDD artifacts (_policies + spec-*) in one workflow."
-argument-hint: "[<spec-id-or-name>] [--auto]"
+argument-hint: "[<spec-id-or-name>] [--contract <CON-ID>] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
   [
@@ -38,6 +38,7 @@ QFAI Skill Body (SSOT)
 Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
                   -> Phase 1 Outline -> Phase 2 Slice (per spec)
                   -> Phase 2b Seed tdd/test-list.md (per spec)
+                  -> Phase 2c Obligation reconciliation (per spec)
                   -> Phase 3 Plan finalize -> Phase 4 Delta update
 ```
 
@@ -186,11 +187,14 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 
 - With argument (`/qfai-sdd <spec-id-or-name> [--auto]`): update only the matched single spec target.
 - Without argument (`/qfai-sdd`): target all capabilities listed in `_policies/03_Capabilities.md`.
+- Contract-scoped (`/qfai-sdd --contract <CON-ID>`): run Stage 0 + Phase 0 (Contracts-first) + Phase 4 (Delta update) only, against the named contract and the specs that reference it. This is the invocation `constitution/drift-protocol.md#when-drift-is-detected` step 4 names for a contract-class upstream artifact; without it, a contract-only Change Request had no rerun narrower than the whole spec.
 - Reordering capability-to-spec mapping is a Change Request decision and must not be done implicitly.
 
 ## Critical Constraints
 
-1. Use only skill-local templates under `.qfai/assistant/skills/qfai-sdd/templates/contracts`, `templates/report`, `templates/specs`, and `templates/evidence`.
+1. Use only templates under `.qfai/assistant/skills/qfai-sdd/templates/` — the whole directory, not an enumerated subset, so a new template directory is covered on the day it ships.
+   - Named cross-skill exception: `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample` (Phase 0 DESIGN.md Freeze). It is an exception, not a licence to read other skills' templates.
+   - Never invent a layout for an artifact a template already covers.
 2. Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
 3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`. UI-bearing targets MUST also validate the consuming-project root `DESIGN.md` and freeze its sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml` (see Phase 0 DESIGN.md Freeze below).
 4. `_policies/05_Contracts.md` must include a Contract Index aligned with `.qfai/contracts/**`.
@@ -215,10 +219,23 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    not a regeneration, in both directions**: unchanged rows keep their state,
    new TCs append at `todo`, and changed / removed TCs are reset or retired
    under the upstream-reset rule (`references/sdd-phase-checklists.md`).
-8. Phase 3: Plan finalize (after at least one slice gate passes).
-9. Phase 4: Delta update.
-10. Run validate; fix source-layer artifacts and rerun until `error=0`.
-11. Triage density-smell warnings in `.qfai/report/specs-coverage/spec-*.md`.
+8. Phase 2c: Obligation reconciliation (per spec). Re-read `.qfai/contracts/**`
+   against the `BR` / `AC` Phase 2 produced: name the realizing contract for
+   each, and resolve every persisted attribute it names to a column, field or
+   enum member there — directly or by a stated join. Phase 0 froze the contracts
+   before these obligations existed, so this is the only step that checks they
+   are realizable. See
+   `references/contract-artifact-rules.md#obligation-reconciliation-must--phase-2c`.
+   Fix the contract or the obligation here; both are owned by this skill, and a
+   mismatch carried downstream reaches an implementer who can fix neither.
+9. Phase 3: Plan finalize (after at least one slice gate passes).
+10. Phase 4: Delta update.
+11. Run validate; fix source-layer artifacts and rerun until `error=0`.
+12. Triage density-smell warnings in `.qfai/report/specs-coverage/spec-*.md`.
+
+## Work-log entries
+
+Write a `.qfai/steering/<id>.md` entry when this stage hits one of the conditions in the `kind` trigger table of `.qfai/assistant/catalog/worklog-entry.schema.md` — `blocker`, `handoff`, `consultation-needed` and `decision` are the ones this stage reaches most. `npx qfai validate` polices the surface but nothing else asks for an entry, so an unwritten one is simply lost.
 
 ## Mandatory Outputs
 
@@ -310,7 +327,8 @@ When this skill completes, provide a final user-facing message enumerating next 
 - Proceed (recommended): `/qfai-prototyping`.
 - Test-first path: `/qfai-atdd`.
 - Spec pack needs correction: rerun `/qfai-sdd` and regenerate evidence.
-- Confirm contracts referenced by `_policies/05_Contracts.md` exist under `.qfai/contracts/**`.
+- Confirm contracts referenced by `_policies/05_Contracts.md` exist under `.qfai/contracts/**`,
+  and that Phase 2c reconciled every `BR` / `AC` against them — existence is not realizability.
 
 ## Default Autopilot Policy
 
@@ -335,7 +353,8 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 
 project_memory:
 
-- Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
+- Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 2c Obligation reconciliation → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
+- Phase 2c reconciles contracts against the BR/AC written after them: Contracts-first freezes the contract before its obligations exist, and Phase 2c is the only step that checks they are realizable.
 - Phase 2b seeds each target spec's tdd/test-list.md from 06_Test-Cases.md (one row per coverage-target TC, Status = todo) and is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence.
 - Append-first is the Stage 1 default: UPDATE on an active spec whose subject tokens overlap; CREATE only when there is zero overlap AND the REQ adds a new CAP-NNNN, registered before the CREATE row.
 - Phase 0 DESIGN.md Freeze is mandatory for UI-bearing targets; .qfai/contracts/design/DESIGN.md.lock.yaml is the brand-lock SSOT.

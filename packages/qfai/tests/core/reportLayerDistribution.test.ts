@@ -1,0 +1,122 @@
+/**
+ * `### Layer distribution` printed 0 in every bucket.
+ *
+ * `Layer` is a hard-required column of `tdd/test-list.md` — validation refuses a
+ * ledger without the header — but the one layer surface qfai ships was computed
+ * from Gherkin `@layer-*` scenario tags in `entry.examplesPath`, which on the
+ * v1421 layered layout is the **Markdown** `05_Examples.md`. The Gherkin parse
+ * failed, the error was swallowed by `continue`, and every bucket reported zero
+ * — while the toolkit mandates layer routing and gates completion on it.
+ *
+ * Zeros with no source named are the worst form of this: they read as "no tests
+ * at any layer", which is a different claim from "nothing could be read".
+ */
+
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+import { describe, expect, it } from "vitest";
+
+import { createReportData, formatReportMarkdown } from "../../src/core/report.js";
+
+const LEDGER = `# TDD Execution Ledger
+
+| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |
+| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |
+| TDD-0001 | TC-0001 | Unit | tests/unit/a.test.ts | a | done | - | ok |
+| TDD-0002 | TC-0002 | Unit | tests/unit/b.test.ts | b | todo | - | - |
+| TDD-0003 | TC-0003 | Integration | tests/integration/c.test.ts | c | todo | - | - |
+| TDD-0004 | - | E2E | tests/e2e/d.test.ts | d | todo | - | - |
+| TDD-0005 | TC-0005 | System | tests/unit/e.test.ts | e | todo | - | - |
+| TDD-0006 | TC-0006 | - | tests/unit/f.test.ts | f | todo | - | - |
+`;
+
+async function withProject<T>(
+  fn: (root: string) => Promise<T>,
+  opts: { ledger?: string; examples?: string } = {},
+): Promise<T> {
+  const root = path.join(
+    os.tmpdir(),
+    `qfai-layerdist-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  );
+  const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+  await mkdir(path.join(specDir, "tdd"), { recursive: true });
+  try {
+    for (const [name, body] of [
+      ["01_Spec.md", "# Spec\n"],
+      ["02_User-stories.md", "# US\n"],
+      ["03_Acceptance-Criteria.md", "# AC\n"],
+      ["05_Examples.md", opts.examples ?? "# 05 Examples\n\n| EX-ID | BR-Ref |\n| --- | --- |\n"],
+      ["06_Test-Cases.md", "# TC\n"],
+    ] as const) {
+      await writeFile(path.join(specDir, name), body, "utf-8");
+    }
+    if (opts.ledger !== undefined) {
+      await writeFile(path.join(specDir, "tdd", "test-list.md"), opts.ledger, "utf-8");
+    }
+    return await fn(root);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+describe("the layer distribution reads the artifact the templates produce", () => {
+  it("counts the ledger's Layer column when no Gherkin scenario parses", async () => {
+    await withProject(
+      async (root) => {
+        const data = await createReportData(root);
+        const report = { testStrategy: data.testStrategy, markdown: formatReportMarkdown(data) };
+        expect(report.testStrategy.layerSource).toBe("ledger-layer");
+        expect(report.testStrategy.layer.unit).toBe(2);
+        expect(report.testStrategy.layer.integration).toBe(1);
+        expect(report.testStrategy.layer.e2e).toBe(1);
+      },
+      { ledger: LEDGER },
+    );
+  });
+
+  it("buckets an empty cell as `none`, not as nothing", async () => {
+    await withProject(
+      async (root) => {
+        const data = await createReportData(root);
+        const report = { testStrategy: data.testStrategy, markdown: formatReportMarkdown(data) };
+        expect(report.testStrategy.layer.none).toBe(1);
+      },
+      { ledger: LEDGER },
+    );
+  });
+
+  it("buckets a value outside the vocabulary as `unknown`", async () => {
+    // Dropping it would understate the ledger; `TDDLIST_UNKNOWN_LAYER` already
+    // reports the value itself.
+    await withProject(
+      async (root) => {
+        const data = await createReportData(root);
+        const report = { testStrategy: data.testStrategy, markdown: formatReportMarkdown(data) };
+        expect(report.testStrategy.layer.unknown).toBe(1);
+      },
+      { ledger: LEDGER },
+    );
+  });
+
+  it("names the source it used", async () => {
+    await withProject(
+      async (root) => {
+        const data = await createReportData(root);
+        const report = { testStrategy: data.testStrategy, markdown: formatReportMarkdown(data) };
+        expect(report.markdown).toContain("- source: `Layer` column of `tdd/test-list.md`");
+      },
+      { ledger: LEDGER },
+    );
+  });
+
+  it("says so when nothing could be read, instead of reporting zeros silently", async () => {
+    await withProject(async (root) => {
+      const data = await createReportData(root);
+      const report = { testStrategy: data.testStrategy, markdown: formatReportMarkdown(data) };
+      expect(report.testStrategy.layerSource).toBe("none");
+      expect(report.markdown).toContain("no readable `Layer` column");
+    });
+  });
+});

@@ -163,8 +163,13 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "do not weaken profiles, lower `--fail-on`, waive errors, invent evidence, or skip required reviewers",
       // #231 added a second stop condition (reviewer round count), so the
       // list is no longer exhaustive and "only" was dropped.
-      "stop for destructive changes, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures",
-      "cause, attempted fixes, remaining blocker, user action, and retry gate",
+      // #381 inserted `**any upstream spec/contract finding**` into the stop
+      // list so it is closed over the five-class classification; the routing
+      // itself is pinned in `gateFailureClassRouting.test.ts`.
+      "stop for destructive changes, **any upstream spec/contract finding**, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures",
+      // #381 appended the work counts: an agent that can report "21 complete,
+      // 5 blocked" has a credible alternative to repairing upstream.
+      "cause, attempted fixes, remaining blocker, user action, retry gate, and **the work counts",
     ];
 
     for (const phrase of requiredPhrases) {
@@ -1350,7 +1355,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       readFile(workflowPath, "utf-8"),
     ]);
 
-    expect(skill).toContain('argument-hint: "[<spec-id-or-name>] [--auto]"');
+    // #373 added the contract-scoped target the Drift Protocol's rerun step
+    // names; the two existing modes are unchanged.
+    expect(skill).toContain('argument-hint: "[<spec-id-or-name>] [--contract <CON-ID>] [--auto]"');
     expect(skill).toContain("## Arguments and Target Selection (Mandatory)");
     expect(skill).toContain(
       "Without argument (`/qfai-sdd`): target all capabilities listed in `_policies/03_Capabilities.md`.",
@@ -1418,9 +1425,16 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
   it("ensures v1.4.36 layered spec templates exist for sdd", async () => {
     const expected = [
+      // #394 added the four _policies templates and spec/10_Plan.md that were
+      // Mandatory Outputs with no shipped skeleton. Coverage against the
+      // required-file registry is pinned in sddTemplateCoverage.test.ts.
+      "_policies/01_Objective.md",
+      "_policies/02_Initiative.md",
       "_policies/03_Capabilities.md",
       "_policies/04_Business-Flow.md",
       "_policies/05_Contracts.md",
+      "_policies/06_Glossary.md",
+      "_policies/07_Constraints.md",
       "_policies/08_Decisions.md",
       "_policies/09_Open-questions.md",
       "_policies/10_delta.md",
@@ -1434,6 +1448,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       "spec/07_Decisions.md",
       "spec/08_Open-questions.md",
       "spec/09_delta.md",
+      "spec/10_Plan.md",
       // The TDD execution ledger `/qfai-implement` selects from (#223).
       "spec/tdd/test-list.md",
       // The traceability ledger QFAI-TRACE-001 requires (#271).

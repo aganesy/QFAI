@@ -131,7 +131,7 @@ describe("TDDLIST_TC_NOT_COVERED respects the shipped Level vocabulary", () => {
       (issues) => {
         const finding = issues.find((entry) => entry.code === "TDDLIST_UNKNOWN_LEVEL");
         expect(finding?.rule).toBe(UNKNOWN_LEVEL_RULE_ID);
-        // `waivers.ts#resolveRuleId` accepts only this shape; a dotted rule
+        // `waivers.ts#resolveRuleKeys` resolves this shape and the code; a dotted rule
         // name left a project with its own Level vocabulary no way to waive.
         expect(finding?.rule).toMatch(/^[A-Z]+-\d{3}$/);
         expect(finding?.suggested_action).toContain(".qfai/waivers.yml");
