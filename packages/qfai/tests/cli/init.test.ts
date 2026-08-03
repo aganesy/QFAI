@@ -20,6 +20,7 @@ import { describe, expect, it } from "vitest";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { runInit } from "../../src/cli/commands/init.js";
 import { copyTemplateTree } from "../../src/cli/lib/fs.js";
+import { captureStderr } from "../helpers/stderr.js";
 import { captureStdout } from "../helpers/stdout.js";
 import {
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
@@ -1675,26 +1676,112 @@ describe("qfai init", { timeout: 60000 }, () => {
   });
 
   // QFAI:SPEC-0003:TC-0003-0026 (TDD-0026): legacy backward-compat + sunset warning
-  it("TC-0003-0026 (TDD-0026): qfai init (no flag) on a project with legacy steering/ retains it and prints D-DEPRECATED-PATH with sunset: v1.10.0", async () => {
+  //
+  // Split across the sunset. The original case pinned its `When` to v1.9.0, so
+  // the pre-sunset half preserves its intent verbatim; the post-sunset half is
+  // what the same run does now that the window named in the message has closed.
+  // Both halves keep the retention assertion — `init` must never delete user
+  // content in the default flow, on either side of a deprecation.
+  async function withLegacySteering(
+    run: (root: string) => Promise<void>,
+  ): Promise<{ root: string; legacyFile: string }> {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0026-"));
-    try {
-      // Pre-seed legacy layout
-      const legacy = path.join(root, ".qfai", "assistant", "steering");
-      await mkdir(legacy, { recursive: true });
-      await writeFile(path.join(legacy, "test-layers.md"), "legacy content\n", "utf-8");
+    const legacy = path.join(root, ".qfai", "assistant", "steering");
+    await mkdir(legacy, { recursive: true });
+    await writeFile(path.join(legacy, "test-layers.md"), "legacy content\n", "utf-8");
+    await run(root);
+    return { root, legacyFile: path.join(legacy, "test-layers.md") };
+  }
 
-      const stdout = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+  it("TC-0003-0026 (TDD-0026): inside the window, qfai init retains legacy steering/ and reports it on stdout", async () => {
+    let root = "";
+    try {
+      const stdout: string[] = [];
+      const captured = await captureStdout(async () => {
+        const r = await withLegacySteering(async (dir) => {
+          await runInit({
+            dir,
+            force: false,
+            dryRun: false,
+            yes: true,
+            toolVersionOverride: "1.9.0",
+          });
+        });
+        root = r.root;
+        stdout.push(r.legacyFile);
       });
 
-      // Legacy directory is retained (NOT deleted).
-      const legacyAfter = await readFile(path.join(legacy, "test-layers.md"), "utf-8");
-      expect(legacyAfter).toBe("legacy content\n");
-      // Warning is emitted with the literal sunset version.
-      expect(stdout).toMatch(/D-DEPRECATED-PATH/);
-      expect(stdout).toMatch(/sunset: v1\.10\.0/);
+      expect(await readFile(stdout[0] ?? "", "utf-8")).toBe("legacy content\n");
+      expect(captured).toMatch(/D-DEPRECATED-PATH/);
+      expect(captured).toMatch(/sunset: v1\.10\.0/);
+      expect(captured).toMatch(/read-compatible for the current minor release only/);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      if (root) await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("TC-0003-0026 (TDD-0026): past the sunset, qfai init still retains legacy steering/ but reports it as an error", async () => {
+    let root = "";
+    let legacyFile = "";
+    try {
+      const text = await captureStderr(async () => {
+        const r = await withLegacySteering(async (dir) => {
+          await runInit({
+            dir,
+            force: false,
+            dryRun: false,
+            yes: true,
+            toolVersionOverride: "1.10.0",
+          });
+        });
+        root = r.root;
+        legacyFile = r.legacyFile;
+      });
+
+      // Retention is unchanged: escalating the report must not start deleting.
+      expect(await readFile(legacyFile, "utf-8")).toBe("legacy content\n");
+
+      expect(text).toMatch(/D-DEPRECATED-PATH/);
+      expect(text).toMatch(/sunset: v1\.10\.0/);
+      expect(text).toMatch(/past the announced sunset/);
+      // The remediation command survives the escalation — an error the operator
+      // cannot act on is worse than the warning it replaced.
+      expect(text).toContain("qfai init --upgrade-assistant-tree");
+      expect(text).not.toMatch(/read-compatible/);
+    } finally {
+      if (root) await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("TC-0003-0023: --upgrade-assistant-tree still migrates past the sunset", async () => {
+    // The regression guard for the hard constraint: the migration path must
+    // keep READING the legacy tree, because it is the command the error tells
+    // operators to run. Closing the window by refusing legacy presence in
+    // `runInit` would break exactly this.
+    let root = "";
+    try {
+      const r = await withLegacySteering(async (dir) => {
+        await captureStdout(async () => {
+          await runInit({
+            dir,
+            force: false,
+            dryRun: false,
+            yes: true,
+            upgradeAssistantTree: true,
+            toolVersionOverride: "1.10.0",
+          });
+        });
+      });
+      root = r.root;
+
+      const migrated = await readFile(
+        path.join(root, ".qfai", "assistant", "catalog", "test-layers.md"),
+        "utf-8",
+      );
+      expect(migrated).toBe("legacy content\n");
+      expect(await readFile(r.legacyFile, "utf-8")).toBe("legacy content\n");
+    } finally {
+      if (root) await rm(root, { recursive: true, force: true });
     }
   });
 });

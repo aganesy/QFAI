@@ -269,7 +269,7 @@ describe("skillDocReferences validator", () => {
 
   // TC-0004-0024 (severity-helper): unit-level pre/post/boundary mode
   it("TC-0004-0024 (severity-helper): brokenRefSeverity returns warning pre-sunset, error at-or-past sunset", () => {
-    // sunset is 1.10.0 (LEGACY_STEERING_SUNSET)
+    // sunset is 1.10.0 (SUNSETS.legacyAssistantSteering)
     expect(brokenRefSeverity("1.9.0")).toBe("warning");
     expect(brokenRefSeverity("1.9.99")).toBe("warning");
     // boundary: sunset minor exactly

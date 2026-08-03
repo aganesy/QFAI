@@ -26,6 +26,8 @@ export const SUNSETS = {
   playwrightCli: "1.10.0",
   /** UI contracts authored before the `primary_tasks` slot (`QFAI-AUD-001`). */
   legacyPrimaryTasksSlot: "1.10.0",
+  /** Pre-recut `.qfai/assistant/{steering,instructions}/` (the CHG-003 layer recut). */
+  legacyAssistantSteering: "1.10.0",
 } as const;
 
 type FullSemver = {

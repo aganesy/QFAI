@@ -45,7 +45,7 @@ describe("sync-init-to-root --check", () => {
   it("no longer carries the legacy steering residue", () => {
     // This test used to assert the residue was *reported*. It is now gone:
     // `.qfai/assistant/steering/` reached the sunset pinned in
-    // `assistantPaths.ts#LEGACY_STEERING_SUNSET` (1.10.0), which is what made
+    // `sunset.ts#SUNSETS.legacyAssistantSteering` (1.10.0), which is what made
     // `assistantTreeMigration` escalate `D-DEPRECATED-PATH` to `error`.
     const { output } = runCheck();
 

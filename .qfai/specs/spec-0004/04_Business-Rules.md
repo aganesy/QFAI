@@ -117,7 +117,7 @@
 ## BR-0004-0021: sunset minor named in deprecation warning
 
 - AC-Refs: AC-0004-0022
-- `D-DEPRECATED-PATH` warning 本文には sunset minor version (例: `v1.10.0`) が文字列リテラルで含まれる。曖昧表現 (例: "次の release") は使用禁止。sunset SSOT は `assistantPaths.ts#LEGACY_LAYOUT_SUNSET = "v1.10.0"`。
+- `D-DEPRECATED-PATH` warning 本文には sunset minor version (例: `v1.10.0`) が文字列リテラルで含まれる。曖昧表現 (例: "次の release") は使用禁止。sunset SSOT は `core/sunset.ts#SUNSETS.legacyAssistantSteering = "1.10.0"`。
 
 ## BR-0004-0022: project_memory block required per skill
 

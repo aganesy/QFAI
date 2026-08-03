@@ -8,6 +8,22 @@
 
 ### Changed
 
+- **The legacy assistant-tree sunset joined that sweep.** `LEGACY_STEERING_SUNSET`
+  was a fourth, separately-shaped SSOT (`{ major, minor }`) that `isAtOrPastSunset`
+  could not parse, so three hand-rolled comparators had grown around it — in
+  `assistantTreeMigration`, `skillDocReferences` and `init`. Two ignored the patch
+  and prerelease fields, so they disagreed with every other deprecation about
+  `1.10.0-rc.1`. The pin is now `SUNSETS.legacyAssistantSteering` and the label
+  derives from it. `qfai init` reported the layout as "read-compatible for the
+  current minor release only" with no version input at all, and wrote that same
+  sentence into a commit-immutable migration memo — false at 1.10.0, and
+  contradicted by `qfai validate` calling the identical layout an error. Both now
+  compute their wording, and post-sunset the init line goes to stderr at error
+  severity. **The readers are deliberately unchanged**: `qfai-validate.md` puts
+  reader removal in the minor _after_ the sunset, and `qfai init
+--upgrade-assistant-tree` has to keep reading the legacy tree to migrate it.
+  `init` still exits 0, so no bootstrap script breaks; `qfai validate` remains the
+  surface that fails the build.
 - **Every sunset pinned to 1.10.0 is now enforced, not just documented.**
   Sunsets were declared in prose beside the code they governed, and each site
   decided separately whether to act: `prototyping.execution.browserTool:

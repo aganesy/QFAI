@@ -5,27 +5,25 @@ import path from "node:path";
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
 import { resolveToolVersion } from "../version.js";
-import { LEGACY_STEERING_SUNSET } from "../paths/assistantPaths.js";
+import { legacyAssistantSteeringSunsetLabel } from "../paths/assistantPaths.js";
+import { SUNSETS, deprecationSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
 /**
  * Severity escalates to `error` once the running tool reaches or passes
- * the LEGACY_STEERING_SUNSET minor. SSOT shared with the
+ * the SUNSETS.legacyAssistantSteering version. SSOT shared with the
  * assistantTreeMigration validator so both surfaces flip at the same
  * cutoff. Per qfai-validate.md contract: "warning (during window) /
  * error (after sunset)".
  */
+/**
+ * Kept as a named export because the contract test drives it directly; the body
+ * is now the shared comparator, which — unlike the version this replaced —
+ * reads the patch and prerelease fields.
+ */
 export function brokenRefSeverity(version: string): "warning" | "error" {
-  const m = /^(\d+)\.(\d+)\.(\d+)/.exec(version);
-  if (!m) return "warning";
-  const major = Number.parseInt(m[1] ?? "0", 10);
-  const minor = Number.parseInt(m[2] ?? "0", 10);
-  if (major > LEGACY_STEERING_SUNSET.major) return "error";
-  if (major === LEGACY_STEERING_SUNSET.major && minor >= LEGACY_STEERING_SUNSET.minor) {
-    return "error";
-  }
-  return "warning";
+  return deprecationSeverity(version, SUNSETS.legacyAssistantSteering);
 }
 
 // Paths that are legacy / non-canonical after the assistant-layer recut.
@@ -107,15 +105,15 @@ export async function validateSkillDocReferences(
     // User-defined non-qfai-* skills under .qfai/assistant/skills/ are
     // intentionally NOT flagged so consumers can author their own
     // SKILL.md without colliding with QFAI's path-migration finding.
-    // Severity escalates from warning to error at LEGACY_STEERING_SUNSET
+    // Severity escalates from warning to error at SUNSETS.legacyAssistantSteering
     // (matches qfai-validate.md contract).
     if (QFAI_SKILL_ID_RE.test(skillId)) {
       for (const ref of NON_CANONICAL_REFS) {
         if (ref.pattern.test(body)) {
           const headline =
             refSeverity === "error"
-              ? `${skillId}/SKILL.md references a non-canonical path (post-recut) past the announced sunset (v${LEGACY_STEERING_SUNSET.major}.${LEGACY_STEERING_SUNSET.minor}.0). Migrate the reference to fix.`
-              : `${skillId}/SKILL.md references a non-canonical path (post-recut). Read-compatible only for the current minor release; sunset: v${LEGACY_STEERING_SUNSET.major}.${LEGACY_STEERING_SUNSET.minor}.0.`;
+              ? `${skillId}/SKILL.md references a non-canonical path (post-recut) past the announced sunset (v${legacyAssistantSteeringSunsetLabel()}). Migrate the reference to fix.`
+              : `${skillId}/SKILL.md references a non-canonical path (post-recut). Read-compatible only for the current minor release; sunset: v${legacyAssistantSteeringSunsetLabel()}.`;
           issues.push(
             issue(
               "W-SKILL-DOC-BROKEN-REF",
