@@ -49,7 +49,7 @@ const VALID_SKILL_CONTENT = [
   "",
   "### Step 2-B — Verify Environment Preconditions",
   "Run qfai prototyping preflight --target-url <url> or qfai doctor --profile prototyping.",
-  "Prefer npx --no-install playwright-cli whenever PATH reachability is not guaranteed.",
+  "Prefer npx --no-install playwright whenever PATH reachability is not guaranteed.",
   "",
   "## Evaluator Inputs (Mandatory)",
   "screenshots, HTML snapshots, axisDefs, previousScore, designSystemChecklist",
@@ -113,15 +113,14 @@ describe("prototyping skill validator", () => {
     expect(hasPreflightGuidance(VALID_SKILL_CONTENT)).toBe(true);
   });
 
-  it("documents Playwright CLI fallback guidance", () => {
+  it("documents a safe Playwright invocation path", () => {
     expect(hasPlaywrightCliFallback(VALID_SKILL_CONTENT)).toBe(true);
   });
 
-  it("rejects unsafe bare npx playwright-cli fallback guidance", () => {
-    const invalid = VALID_SKILL_CONTENT.replace(
-      "npx --no-install playwright-cli",
-      "npx playwright-cli",
-    );
+  it("rejects unsafe bare npx playwright guidance", () => {
+    // What the rule guards is the --no-install shape: a bare `npx playwright`
+    // reaches the network and can install a package mid-run.
+    const invalid = VALID_SKILL_CONTENT.replace("npx --no-install playwright", "npx playwright");
     expect(hasPlaywrightCliFallback(invalid)).toBe(false);
   });
 
