@@ -437,13 +437,25 @@ export async function emitSkeleton(
  * configured tree and `qfai validate --profile atdd|full` never saw
  * them (codex r3338447140).
  */
+/** The layer directory a scaffolded `TC-*` skeleton belongs in. */
+export const SCAFFOLD_LAYER_DIR = "integration";
+
 export function scaffoldDestPath(
   root: string,
   specId: string,
   tcId: string,
   testsDir: string = "tests",
 ): string {
-  return path.resolve(root, testsDir, "atdd", specId, `${tcId}.test.ts`);
+  // `<testsDir>/integration/`, not `<testsDir>/atdd/`.
+  //
+  // The scaffold is the only command qfai ships that PRODUCES ATDD test files,
+  // and `QFAI-ATDD-112` — the `error`-severity gate that consumes them — scans
+  // exactly `{e2e,api,integration}`. Writing to `atdd/` made the documented
+  // happy path (scaffold -> fill in -> validate) report 100% of the spec's
+  // `TC-*` as uncovered, with no diagnostic saying why. `integration` is the
+  // directory `catalog/test-layers.md` and `qfai-atdd/SKILL.md` already assign
+  // to `TC-*`, so the writer now agrees with the gate rather than the reverse.
+  return path.resolve(root, testsDir, SCAFFOLD_LAYER_DIR, specId, `${tcId}.test.ts`);
 }
 
 /**

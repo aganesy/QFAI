@@ -59,6 +59,13 @@ read, reported on, and then ignored on every modern project.
   (warning). Without it the two could drift in either direction and this file
   would not be an SSOT.
 
+## Scaffolded tests
+
+`npx qfai atdd scaffold` writes skeletons to `<testsDir>/integration/<spec-id>/`.
+There is deliberately no `<testsDir>/atdd/**` row below: a fourth root would
+need a rule for which layer such a file belongs to, and qfai has none. The
+writer targets a declared layer instead.
+
 ## Layer definitions
 
 ### L1 Unit
