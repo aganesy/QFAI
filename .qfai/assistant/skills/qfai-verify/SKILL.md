@@ -285,7 +285,7 @@ If analysis cannot be performed, clearly state what could not be verified and pr
 
 ## Step 0.5 — Steering Bootstrap / Refresh (mandatory when incomplete)
 
-QFAI expects `assistant/steering/` to contain **project‑specific facts** so all subsequent design/test/implementation fits this repository.
+QFAI expects `assistant/catalog/` to contain **project‑specific facts** so all subsequent design/test/implementation fits this repository.
 
 ### What to do
 

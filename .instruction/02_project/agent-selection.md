@@ -13,10 +13,10 @@ version: 2.0.0
 
 # エージェント選択ガイド（QFAI Toolkit）
 
-QFAI のサブエージェントは、**agent-catalog + agent-routing + review-profiles** を SSOT とする（SSOT 実体パス: `.qfai/assistant/steering/agent-catalog.md`, `.qfai/assistant/steering/agent-routing.yml`, `.qfai/assistant/steering/review-profiles.md`）。  
+QFAI のサブエージェントは、**agent-catalog + agent-routing + review-profiles** を SSOT とする（SSOT 実体パス: `.qfai/assistant/manifest/agent-catalog.yml`, `.qfai/assistant/manifest/agent-routing.yml`, `.qfai/assistant/manifest/review-profiles.yml`）。  
 選定は「成果物の種類」と「phase の役割」で行い、skill 本文の直感では決めない。
 
-> **SSOT と本ファイルの関係**: 本ファイルは steering SSOT の要約・ナビゲーションガイドであり、選定ルールの正本は上記 steering ファイルである。ドリフトが疑われる場合は steering 側を優先し、本ファイルを更新すること。本ファイルを単独で編集して steering 側を更新しない運用は禁止。
+> **SSOT と本ファイルの関係**: 本ファイルは manifest SSOT の要約・ナビゲーションガイドであり、選定ルールの正本は上記 manifest ファイルである。ドリフトが疑われる場合は manifest 側を優先し、本ファイルを更新すること。本ファイルを単独で編集して manifest 側を更新しない運用は禁止。
 
 ## 中核原則
 

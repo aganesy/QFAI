@@ -142,19 +142,20 @@ jobs:
       - name: Extract this version's CHANGELOG section
         run: |
           set -euo pipefail
+          mkdir -p tmp
           # From this version's heading to the next `## [` heading, exclusive.
           awk -v h="## [${{ needs.verify.outputs.version }}] - " '
             index($0, h) == 1 { inside = 1; next }
             inside && /^## \[/ { exit }
             inside { print }
-          ' CHANGELOG.md > release-notes.md
-          if [ ! -s release-notes.md ]; then
+          ' CHANGELOG.md > tmp/release-notes.md
+          if [ ! -s tmp/release-notes.md ]; then
             echo "::error::no CHANGELOG body for ${{ needs.verify.outputs.version }}"
             exit 1
           fi
         shell: bash
       - name: Create the release
-        run: gh release create "${{ needs.verify.outputs.tag }}" --title "qfai ${{ needs.verify.outputs.version }}" --notes-file release-notes.md
+        run: gh release create "${{ needs.verify.outputs.tag }}" --title "qfai ${{ needs.verify.outputs.version }}" --notes-file tmp/release-notes.md
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
