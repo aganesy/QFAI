@@ -150,3 +150,49 @@ So:
 
 In serial mode the same rule holds with no merge step: the implementation agent
 returns Status + Evidence, the orchestrator writes them.
+
+## Failed integration verify
+
+The old rule was one unconditional destructive branch — "flag all slices for
+re-examination and roll back the merge" — with no step attributing the failure to
+anything. That contradicts the Gate Failure Autorepair Protocol the skill
+imports twenty lines later, which classifies this class as a local,
+non-destructive code/test defect to fix and re-run, and reserves stopping for
+_destructive_ changes. It also contradicts the forward-only lifecycle, and never
+said what happened to the rolled-back items' statuses.
+
+Classify first, then apply the matching remedy.
+
+### 1. Defect outside every merged slice
+
+A stale fixture, a stale composition helper, a shared factory none of the slices
+declared. **Fix locally and re-run integration verify. Do not roll back.**
+
+The fix lands outside every slice's declared write boundary, so it is the
+**orchestrator's** to make — no slice owns it, and returning it to a worker would
+route it to an agent whose boundary excludes the file. Record it in the stage
+evidence as an integration fix, not as a slice's work.
+
+### 2. Defect inside one slice
+
+Return **that slice's items only**. The other slices keep their state and their
+merged code; re-examining them would discard work the verify did not fault.
+Rows go to `review-fix`, which is the status that exists for rework and has an
+outbound edge back to `refactor`.
+
+### 3. The union itself is inadmissible
+
+Only when the slices are individually correct and jointly wrong — a genuine
+interaction the merge exposed — flag all slices and roll back the merge.
+
+This is the **one sanctioned backward move** in this skill besides an approved
+Change Request reset. It is a _merge_ rollback, not a status rollback: the rows
+return to `review-fix`, not to `todo`, so the forward-only lifecycle is
+unbroken and the RED/GREEN evidence each row already earned is retained. A row
+that must genuinely restart needs the upstream-reset rule and its recorded
+approval, exactly as elsewhere.
+
+### Round budget
+
+Repeating any of the three without progress escalates to the user on the third
+round, per the autorepair protocol. "Roll back and retry" is not a loop.

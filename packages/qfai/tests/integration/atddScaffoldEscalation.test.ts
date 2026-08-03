@@ -109,7 +109,7 @@ describe("atdd scaffold — idempotency + 3-cycle escalation", () => {
     await runAtddScaffold({ root, specId, write: () => {}, writeErr: () => {} });
 
     // Replace the placeholder with a "real" test body (no placeholder marker).
-    const filePath = path.join(root, "tests", "atdd", specId, "TC-0001-0001.test.ts");
+    const filePath = path.join(root, "tests", "integration", specId, "TC-0001-0001.test.ts");
     const realBody = [
       'import { describe, it, expect } from "vitest";',
       "// QFAI:SPEC-0001:TC-0001-0001",

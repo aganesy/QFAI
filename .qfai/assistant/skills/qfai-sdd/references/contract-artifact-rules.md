@@ -20,6 +20,27 @@ Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes 
 - `api/`, `db/`, and `ui/` contracts must declare `QFAI-CONTRACT-ID` at the top.
 - Use prefixes `CON-API-*`, `CON-DB-*`, and `CON-UI-*`.
 - `design/` files do not require `QFAI-CONTRACT-ID`, but they are execution-time SSOT for UI-bearing work.
+- **Declare apply-order dependencies.** `QFAI-CONTRACT-011` makes a second
+  `QFAI-CONTRACT-ID` in one file a hard `error`, so any schema larger than one
+  table necessarily becomes N cross-referencing files. State the resulting
+  composition rather than leaving every consumer to reconstruct it from the DDL:
+  - `db/`: a comment line `-- Depends on: CON-DB-0002, CON-DB-0003` (or `-`)
+  - `api/` / `ui/`: `x-qfai-depends-on: [CON-API-0002]`, flow or block form
+  - Mirror the same list in `_policies/05_Contracts.md`'s `Depends On` column.
+  - **Apply order only.** A reference resolved at run time — a deferred foreign
+    key, an endpoint another calls during a request — is not an apply-order
+    dependency and must not be listed. The apply graph is acyclic by
+    construction; the runtime graph legitimately is not, and conflating them
+    makes the declaration unusable for ordering.
+  - `QFAI-CONTRACT-014` (error) reports a declared dependency naming a contract
+    that does not exist. Getting the set wrong is otherwise silent: the wrong
+    subset still applies cleanly and the tests still pass, against a schema
+    missing the tables under test.
+- **Target schema is the applier's, not the contract's.** A `db/` contract
+  declares unqualified object names and is applied into whatever schema the
+  runner selects (`SET search_path`, `USE`, the connection's default). Do not
+  hard-code a schema qualifier: a contract that names one cannot be applied into
+  a per-test or per-tenant schema, which is what the integration layer needs.
 - Breaking changes require delta notes.
 - `_policies/05_Contracts.md` is the contract index; it must align with `.qfai/contracts/**` and must not become behavior SSOT.
 
@@ -70,10 +91,54 @@ Contracts are validated per file; agreement _between_ contracts is an authoring 
 is a partial check: error codes, response-status sets, and non-enum domains are still reconciled by
 the author and the reviewer gate.
 
+## Obligation Reconciliation (MUST) — Phase 2c
+
+Cross-contract reconciliation above compares contracts to each other. This
+compares contracts to the **obligations written after them**.
+
+Phase 0 authors contracts. `BR` / `AC` / `TC` are written in Phase 2. The
+contract is therefore frozen before the obligations that must ride on it exist,
+and "Contracts-first" is only defensible if something later checks that the
+obligations are realizable. That check is this one, and it runs in **Phase 2c**,
+after Phase 2b and before Phase 3 Plan finalize — early enough that a contract
+change still flows into the plan and the delta.
+
+For every `BR` / `AC` produced in Phase 2:
+
+- **Name the contract that realizes it.** An obligation whose realizing
+  contract cannot be named is not reconciled; it is unowned.
+- **Resolve every persisted attribute the obligation names to a concrete column,
+  field or enum member in that contract.** "Attribute" means anything the
+  obligation requires the system to store, distinguish or report on — an axis of
+  attribution, a status the obligation branches on, a value it aggregates by.
+- **Reachability counts, not adjacency.** When the attribute lives in a
+  different relation, state the join that reaches it. If no join reaches it, the
+  obligation is unrealizable however valid both contracts are.
+- **Vocabulary mixing is the usual cause, and it does not look like a typo.**
+  An obligation that mixes the vocabulary of two contracts designed for
+  different purposes — an operational ledger and an evidentiary one — reads
+  perfectly and cannot be satisfied by either. Two internally valid, mutually
+  consistent contracts is exactly the state in which this defect survives.
+- Record the outcome per obligation, not per spec: which contract, which
+  columns/fields, and the join when one is needed.
+
+**A failure here is resolved in the contract or in the obligation, in this
+phase.** Both are owned by `/qfai-sdd`, so amending either is not drift — but
+carrying the mismatch downstream is, because the implementer who eventually
+meets it cannot fix either side.
+
+Execution-based checking does not substitute for this. An obligation whose
+attributes are missing produces a declared path that **succeeds** when driven:
+the query returns rows, the endpoint answers, the suite is green. Failure
+surfaces defects; this class is concealed by success, and only a reading of the
+obligation against the contract finds it.
+
 ## Checklist
 
 - Contract IDs exist and are unique.
 - Specs reference only existing contract IDs.
 - Design contracts are sufficient for prototyping, ATDD, and implementation without discussion-pack fallback.
 - Every API-mandated terminal state / status value / error code is representable in the paired DB contract.
+- Every `BR` / `AC` names a realizing contract, and every persisted attribute it names resolves to a
+  column, field or enum member there — reachable directly or by a stated join (Phase 2c).
 - `QFAI-CONTRACT-040` findings are resolved or explicitly triaged, not carried forward.
