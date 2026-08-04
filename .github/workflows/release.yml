@@ -337,9 +337,15 @@ jobs:
         shell: bash
       - name: Publish the inspected tarball
         if: steps.published.outputs.skip != 'true'
-        # The tarball itself, so nothing is rebuilt between the check and the
-        # upload — `prepack` runs during pack, and publishing the directory
-        # would re-run it after the leakage scan.
+        # The directory the scan just read, not the .tgz. Same bytes either
+        # way — it is the tarball unpacked — but npm's directory code path is
+        # the one every documented trusted-publishing example takes, and
+        # publishing the .tgz never reached the OIDC exchange.
+        #
+        # `--ignore-scripts` is what keeps the guarantee the .tgz gave: the
+        # published package.json still declares `prepack: npm run build`, and
+        # without this npm would re-run it here — after the leakage scan, and
+        # in a tree with no source to build.
         #
         # No `NODE_AUTH_TOKEN`: the OIDC exchange is what authenticates, using
         # the `id-token: write` permission above. `--provenance` is passed
@@ -351,5 +357,21 @@ jobs:
         # `./` is load-bearing. Without it npm reads `tmp/qfai-1.10.0.tgz` as the
         # `owner/repo` GitHub shorthand and fails with EALLOWGIT, refusing to
         # fetch "github:tmp/qfai-1.10.0.tgz" — a path that looks like a spec.
-        run: npm publish "./tmp/qfai-${RELEASE_VERSION}.tgz" --access public --provenance
+        run: npm publish --access public --provenance --ignore-scripts
+        working-directory: tmp/packed/package
+        shell: bash
+      - name: npm debug log (on failure)
+        if: failure()
+        # Every diagnosis so far has come from guessing at an error code.
+        # npm writes its own account of the request, including whether it
+        # attempted the OIDC exchange at all.
+        run: |
+          set -euo pipefail
+          log="$(ls -t "$HOME"/.npm/_logs/*-debug-0.log 2>/dev/null | head -1 || true)"
+          if [ -n "$log" ]; then
+            echo "--- $log ---"
+            tail -80 "$log"
+          else
+            echo "no npm debug log found"
+          fi
         shell: bash
