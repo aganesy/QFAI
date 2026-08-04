@@ -328,5 +328,8 @@ jobs:
         # change would remove it without failing anything.
         env:
           RELEASE_VERSION: ${{ needs.verify.outputs.version }}
-        run: npm publish "tmp/qfai-${RELEASE_VERSION}.tgz" --access public --provenance
+        # `./` is load-bearing. Without it npm reads `tmp/qfai-1.10.0.tgz` as the
+        # `owner/repo` GitHub shorthand and fails with EALLOWGIT, refusing to
+        # fetch "github:tmp/qfai-1.10.0.tgz" — a path that looks like a spec.
+        run: npm publish "./tmp/qfai-${RELEASE_VERSION}.tgz" --access public --provenance
         shell: bash
