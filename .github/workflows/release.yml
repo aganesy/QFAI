@@ -228,7 +228,13 @@ jobs:
         with:
           node-version: ${{ env.NODE_PUBLISH }}
           cache: pnpm
-          registry-url: "https://registry.npmjs.org"
+          # No `registry-url`. It makes setup-node write an .npmrc holding
+          # `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}` and export
+          # NODE_AUTH_TOKEN as the literal placeholder XXXXX-XXXXX-XXXXX-XXXXX.
+          # npm then believes it already has a credential, never attempts the
+          # OIDC exchange, and the registry answers `E404 PUT .../qfai` — which
+          # reads as "package missing" but means "not authenticated".
+          # registry.npmjs.org is npm's default, so omitting it costs nothing.
       - name: Re-shim pnpm against toolcache Node
         run: corepack prepare pnpm@9.12.3 --activate
         shell: bash
