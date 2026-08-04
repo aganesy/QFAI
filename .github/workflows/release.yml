@@ -38,10 +38,15 @@ on:
 
 env:
   NODE_LTS: "20.19"
-  # Trusted publishing needs npm >= 11.5.1, which needs Node >= 22.14.0. Only
-  # the publish job runs on it: the gate must keep running on the version the
-  # package supports (`engines.node`), or it would stop testing what ships.
-  NODE_PUBLISH: "22.14"
+  # Trusted publishing needs npm >= 11.5.1. Pinning Node to that requirement is
+  # documented minimum (22.14.0) is not enough: `npm@latest` carries its own
+  # engine range — npm 12 wants `^22.22.2 || ^24.15.0 || >=26.0.0` — so the
+  # install fails with EBADENGINE before the version check ever runs. Track the
+  # current LTS major instead, and let setup-node resolve its newest patch.
+  #
+  # Only the publish job runs on it. The gate stays on `NODE_LTS`, which is the
+  # version `engines.node` promises; moving it would stop testing what ships.
+  NODE_PUBLISH: "24"
 
 concurrency:
   group: release-${{ inputs.tag || github.ref_name }}
@@ -240,7 +245,7 @@ jobs:
           need="11.5.1"
           lowest="$(printf '%s\n%s\n' "$have" "$need" | sort -V | head -1)"
           if [ "$lowest" != "$need" ]; then
-            echo "::error::npm $have is below $need, the minimum for trusted publishing"
+            echo "::error::npm $have is below $need, the minimum for trusted publishing (node $(node --version))"
             exit 1
           fi
           echo "npm $have"
