@@ -22,7 +22,9 @@ import * as initModule from "../../src/cli/commands/init.js";
 import {
   readInstallProvenance,
   resolveWorkflowFileState,
-} from "../../src/cli/lib/provenance.js";
+  type WorkflowFileState,
+  type WorkflowProvenanceEntry,
+} from "../../src/shared/provenance.js";
 import { QFAI_GITIGNORE_BLOCK } from "../../src/core/gitignore.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { captureStdout } from "../helpers/stdout.js";
@@ -145,7 +147,7 @@ describe("TC-0003-0052 (TDD-0052): pruneMatchingEntries is exported and receives
     const prefixGlobSites = workflowsSites.filter((site) => site.includes('startsWith("qfai-")'));
     expect(
       prefixGlobSites,
-      "no workflows-directory pruneMatchingEntries call site may use a startsWith(\"qfai-\") prefix-glob predicate",
+      'no workflows-directory pruneMatchingEntries call site may use a startsWith("qfai-") prefix-glob predicate',
     ).toEqual([]);
 
     // The predicate must be name-set membership over the retired-name list.
@@ -163,10 +165,7 @@ describe("TC-0003-0052 (TDD-0052): pruneMatchingEntries is exported and receives
 
     // Exactly one definition of the removal primitive.
     const definitionCount = source.split(`function ${PRUNE_CALLEE}`).length - 1;
-    expect(
-      definitionCount,
-      "init.ts must define pruneMatchingEntries exactly once",
-    ).toBe(1);
+    expect(definitionCount, "init.ts must define pruneMatchingEntries exactly once").toBe(1);
 
     // The exported removal surface is exactly the one primitive: exporting a
     // second removal helper would be the parallel implementation the contract
@@ -236,7 +235,10 @@ describe(
       await runInitQuiet(dir);
 
       const bytesAfter = await readFile(orphanPath).catch(() => undefined);
-      expect(bytesAfter, `${ORPHAN_NAME} must still exist after runInit (not pruned)`).toBeDefined();
+      expect(
+        bytesAfter,
+        `${ORPHAN_NAME} must still exist after runInit (not pruned)`,
+      ).toBeDefined();
       if (bytesAfter === undefined) {
         throw new Error(`${ORPHAN_NAME} was removed by runInit`);
       }
@@ -365,16 +367,309 @@ describe(
         path.join(getInitAssetsDir(), "root", ".github", "workflows", COLLISION_NAME),
       );
       const state = resolveWorkflowFileState(entry, diskSha, sha256(packagedBytes));
-      expect(
-        state,
-        "no provenance entry + present on disk must classify as adopter-owned",
-      ).toBe("adopter-owned");
+      expect(state, "no provenance entry + present on disk must classify as adopter-owned").toBe(
+        "adopter-owned",
+      );
     });
 
     it("the provenance record path is not in the managed gitignore block (the record stays tracked)", () => {
       // QFAI_GITIGNORE_BLOCK is the pre-joined managed block text.
       expect(QFAI_GITIGNORE_BLOCK).not.toContain(".qfai/install-provenance.json");
       expect(QFAI_GITIGNORE_BLOCK).not.toContain("install-provenance");
+    });
+  },
+);
+
+describe(
+  "TC-0003-0047 (TDD-0047): the five file states resolve and prune stays zero in all of them",
+  { timeout: 60000 },
+  () => {
+    // Scope notes (delivery-planner ruling for this row):
+    // - The TC bullet "declined is not recreated" is TDD-0051's obligation
+    //   (declined-name exclusion from the copy set BEFORE the copy runs) and
+    //   is deliberately NOT asserted here: today's create-only copy does
+    //   recreate a declined file, and asserting it here would blur that
+    //   row's RED.
+    // - "declined is never reported as stale drift" is the doctor detection
+    //   surface (owned by the doctor contract, not init) and is not asserted
+    //   here either. The prune half of that bullet IS asserted below.
+    // - Nothing here asserts that runInit WRITES a provenance entry: no
+    //   writer exists yet (a later row owns it). Every record below is
+    //   fixture-authored — which is exactly the shape the resolver must
+    //   consume after a fresh clone, where the record predates the run.
+    const WORKFLOW_NAME = "qfai-validate.yml";
+    const PROVENANCE_REL = ".qfai/install-provenance.json";
+    const ADOPTER_BODY =
+      "# adopter-authored workflow that predates the QFAI install\nname: adopter-owned\n";
+    const EDITED_BODY = "# the adopter hand-edited the installed workflow\nname: hand-edited\n";
+    const OLD_TEMPLATE_BODY =
+      "# an older template a previous package version shipped\nname: old-template\n";
+    // A retired-shaped adopter file: qfai-prefixed, in NEITHER name list,
+    // with no provenance entry (= adopter-owned). It must never be pruned.
+    const RETIRED_SHAPED_NAME = "qfai-retired-legacy.yml";
+    const RETIRED_SHAPED_BODY =
+      "# adopter-authored file whose name looks like a retired QFAI workflow\nname: retired-shaped\n";
+
+    // Compile-time closure at five: a sixth member added to the union fails
+    // the Record constraint (missing key here), and a key outside the union
+    // fails the excess-property check — both directions break `tsc --noEmit`
+    // before this test even runs. The runtime sweep below is the value-level
+    // half of the same closure.
+    const FIVE_STATE_MEMBERS = {
+      absent: true,
+      "adopter-owned": true,
+      installed: true,
+      modified: true,
+      declined: true,
+    } satisfies Record<WorkflowFileState, true>;
+
+    const ALL_FIVE_STATES = [
+      "absent",
+      "adopter-owned",
+      "installed",
+      "modified",
+      "declined",
+    ] as const satisfies readonly WorkflowFileState[];
+
+    const packagedTemplatePath = (): string =>
+      path.join(getInitAssetsDir(), "root", ".github", "workflows", WORKFLOW_NAME);
+
+    function provenanceEntry(digest: string): WorkflowProvenanceEntry {
+      return { sha256: digest, installedByVersion: "0.0.0", installedAt: "2020-01-01T00:00:00Z" };
+    }
+
+    async function writeProvenanceRecord(
+      dir: string,
+      workflows: Record<string, WorkflowProvenanceEntry>,
+    ): Promise<void> {
+      const provenancePath = path.join(dir, PROVENANCE_REL);
+      await mkdir(path.dirname(provenancePath), { recursive: true });
+      await writeFile(provenancePath, JSON.stringify({ workflows }, null, 2), "utf-8");
+    }
+
+    /**
+     * Seeds one fixture per contract state for the shipped name: the two
+     * independent observations (provenance entry yes/no, on-disk bytes
+     * absent/equal/differing) are authored directly on disk.
+     */
+    async function seedFiveStateFixture(dir: string, state: WorkflowFileState): Promise<void> {
+      const workflowsDir = path.join(dir, ".github", "workflows");
+      await mkdir(workflowsDir, { recursive: true });
+      const filePath = path.join(workflowsDir, WORKFLOW_NAME);
+      const packagedBytes = await readFile(packagedTemplatePath());
+      const packagedDigest = sha256(packagedBytes);
+      switch (state) {
+        case "absent":
+          // No entry, no file: never installed.
+          return;
+        case "adopter-owned":
+          // No entry, file present: name collision the adopter authored.
+          await writeFile(filePath, ADOPTER_BODY, "utf-8");
+          return;
+        case "installed":
+          // Entry, file present, bytes equal the packaged template.
+          await writeFile(filePath, packagedBytes);
+          await writeProvenanceRecord(dir, { [WORKFLOW_NAME]: provenanceEntry(packagedDigest) });
+          return;
+        case "modified":
+          // Entry, file present, bytes differ from the packaged template.
+          await writeFile(filePath, EDITED_BODY, "utf-8");
+          await writeProvenanceRecord(dir, { [WORKFLOW_NAME]: provenanceEntry(packagedDigest) });
+          return;
+        case "declined":
+          // Entry, no file: deliberately removed by the adopter.
+          await writeProvenanceRecord(dir, { [WORKFLOW_NAME]: provenanceEntry(packagedDigest) });
+          return;
+      }
+    }
+
+    /** Reads the fixture back through the real reader and resolver. */
+    async function observeFixtureState(dir: string): Promise<WorkflowFileState> {
+      const record = await readInstallProvenance(dir);
+      const entry = record.workflows[WORKFLOW_NAME];
+      const diskBytes = await readFile(path.join(dir, ".github", "workflows", WORKFLOW_NAME)).catch(
+        () => undefined,
+      );
+      const diskDigest = diskBytes === undefined ? undefined : sha256(diskBytes);
+      const packagedBytes = await readFile(packagedTemplatePath());
+      return resolveWorkflowFileState(entry, diskDigest, sha256(packagedBytes));
+    }
+
+    /** Reads a modified-cause fixture's record entry and current disk digest. */
+    async function readModifiedObservation(
+      dir: string,
+    ): Promise<{ entry: WorkflowProvenanceEntry; diskDigest: string }> {
+      const record = await readInstallProvenance(dir);
+      const entry = record.workflows[WORKFLOW_NAME];
+      expect(entry, "modified-cause fixture must carry a provenance entry").toBeDefined();
+      if (entry === undefined) {
+        throw new Error("modified-cause fixture is missing its provenance entry");
+      }
+      const diskBytes = await readFile(path.join(dir, ".github", "workflows", WORKFLOW_NAME));
+      return { entry, diskDigest: sha256(diskBytes) };
+    }
+
+    it("each fixture resolves to exactly its state member: absent / adopter-owned / installed / modified / declined", async () => {
+      for (const state of ALL_FIVE_STATES) {
+        const dir = await newTempDir();
+        await seedFiveStateFixture(dir, state);
+        const resolved = await observeFixtureState(dir);
+        expect(
+          resolved,
+          `[fixture ${state}] the reader + resolver must return exactly this member`,
+        ).toBe(state);
+      }
+    });
+
+    it("the enum is closed at five: the full observation space yields no sixth member and reaches all five", () => {
+      // The literal fixture list and the compile-time closure record must
+      // name the same five members (ties the two declarations together).
+      expect([...ALL_FIVE_STATES].sort()).toEqual(Object.keys(FIVE_STATE_MEMBERS).sort());
+
+      // Value-level closure: sweep every combination of the resolver's
+      // observation space — entry present/absent x disk absent/record-equal/
+      // other x packaged absent/record-equal/disk-equal/other — and collect
+      // the members it produces.
+      const recordDigest = "a".repeat(64);
+      const otherDigest = "b".repeat(64);
+      const thirdDigest = "c".repeat(64);
+      const entryCandidates = [undefined, provenanceEntry(recordDigest)];
+      const diskCandidates = [undefined, recordDigest, otherDigest];
+      const packagedCandidates = [undefined, recordDigest, otherDigest, thirdDigest];
+
+      const observed = new Set<string>();
+      for (const entry of entryCandidates) {
+        for (const disk of diskCandidates) {
+          for (const packaged of packagedCandidates) {
+            observed.add(resolveWorkflowFileState(entry, disk, packaged));
+          }
+        }
+      }
+
+      const known = new Set<string>(ALL_FIVE_STATES);
+      for (const member of observed) {
+        expect(known.has(member), `a sixth state appeared: ${member}`).toBe(true);
+      }
+      // All five are reachable — the enum is not only bounded but covering.
+      expect([...observed].sort()).toEqual([...known].sort());
+    });
+
+    it("absent (never-installed) and declined are distinct states under the identical disk observation", () => {
+      // Both observations share the SAME disk fact (no file) and the SAME
+      // packaged digest; the only discriminant is the provenance entry.
+      // Never-installed is not "deleted".
+      const packagedDigest = "d".repeat(64);
+      const neverInstalled = resolveWorkflowFileState(undefined, undefined, packagedDigest);
+      const deliberatelyRemoved = resolveWorkflowFileState(
+        provenanceEntry("a".repeat(64)),
+        undefined,
+        packagedDigest,
+      );
+      expect(neverInstalled).toBe("absent");
+      expect(deliberatelyRemoved).toBe("declined");
+      expect(neverInstalled).not.toBe(deliberatelyRemoved);
+    });
+
+    it("prune stays zero in all five states: runInit removes no pre-existing file, including a retired-shaped adopter file", async () => {
+      // Fixture validity: the retired-shaped name must sit in NEITHER name
+      // list, or this fixture would be measuring the write/prune name lists
+      // instead of the five states (list semantics are TDD-0045's oracle).
+      const shipped = requireStringSetExport("SHIPPED_WORKFLOW_NAMES");
+      const retired = requireStringSetExport("RETIRED_WORKFLOW_NAMES");
+      expect(shipped.has(RETIRED_SHAPED_NAME)).toBe(false);
+      expect(retired.has(RETIRED_SHAPED_NAME)).toBe(false);
+
+      // Disclosed triviality: RETIRED_WORKFLOW_NAMES is EMPTY at this
+      // revision, so the retired-name prune branch cannot fire and this
+      // measurement passes without exercising it. The oracle deliberately
+      // measures REMOVALS (before minus after), so it becomes discriminating
+      // the moment the retired list is populated: today's prune predicate is
+      // provenance-blind name membership, which would remove an
+      // adopter-owned file bearing a retired name and fail this assertion.
+      for (const state of ALL_FIVE_STATES) {
+        const dir = await newTempDir();
+        await seedFiveStateFixture(dir, state);
+        const workflowsDir = path.join(dir, ".github", "workflows");
+        await writeFile(path.join(workflowsDir, RETIRED_SHAPED_NAME), RETIRED_SHAPED_BODY, "utf-8");
+        const beforeNames = await readdir(workflowsDir);
+        const provenancePath = path.join(dir, PROVENANCE_REL);
+        const provenanceBefore = await readFile(provenancePath).catch(() => undefined);
+
+        await runInitQuiet(dir);
+
+        const afterNames = new Set(await readdir(workflowsDir));
+        const removed = beforeNames.filter((name) => !afterNames.has(name)).sort();
+        expect(
+          removed,
+          `[fixture ${state}] prune must remove zero files from the workflows directory`,
+        ).toEqual([]);
+
+        // The record itself must also survive: removing it would collapse
+        // declined into absent on the next run.
+        if (provenanceBefore !== undefined) {
+          const provenanceAfter = await readFile(provenancePath).catch(() => undefined);
+          expect(
+            provenanceAfter,
+            `[fixture ${state}] the provenance record must survive runInit`,
+          ).toBeDefined();
+        }
+      }
+    });
+
+    it("modified's two causes are distinguishable via the record sha256 (digest of the originally-written bytes, not the current file)", async () => {
+      const packagedBytes = await readFile(packagedTemplatePath());
+      const packagedDigest = sha256(packagedBytes);
+
+      // Cause 1 — the adopter hand-edited: QFAI wrote the CURRENT template
+      // (record = its digest); the file on disk was edited afterwards.
+      const adopterEditDir = await newTempDir();
+      const adopterEditWorkflows = path.join(adopterEditDir, ".github", "workflows");
+      await mkdir(adopterEditWorkflows, { recursive: true });
+      await writeFile(path.join(adopterEditWorkflows, WORKFLOW_NAME), EDITED_BODY, "utf-8");
+      await writeProvenanceRecord(adopterEditDir, {
+        [WORKFLOW_NAME]: provenanceEntry(packagedDigest),
+      });
+
+      // Cause 2 — the package moved on: QFAI wrote an OLD template (record =
+      // digest of those old bytes); the adopter never touched the file; the
+      // packaged template has since changed.
+      const packageMovedDir = await newTempDir();
+      const packageMovedWorkflows = path.join(packageMovedDir, ".github", "workflows");
+      await mkdir(packageMovedWorkflows, { recursive: true });
+      const oldTemplatePath = path.join(packageMovedWorkflows, WORKFLOW_NAME);
+      await writeFile(oldTemplatePath, OLD_TEMPLATE_BODY, "utf-8");
+      const oldTemplateBytes = await readFile(oldTemplatePath);
+      await writeProvenanceRecord(packageMovedDir, {
+        [WORKFLOW_NAME]: provenanceEntry(sha256(oldTemplateBytes)),
+      });
+
+      const adopterEdit = await readModifiedObservation(adopterEditDir);
+      const packageMoved = await readModifiedObservation(packageMovedDir);
+
+      // Without the record the two causes present identically: both disk
+      // digests differ from the packaged digest, and the detection half
+      // reports `modified` either way — the resolver compares disk bytes to
+      // the PACKAGED template, never to the record.
+      expect(adopterEdit.diskDigest).not.toBe(packagedDigest);
+      expect(packageMoved.diskDigest).not.toBe(packagedDigest);
+      expect(
+        resolveWorkflowFileState(adopterEdit.entry, adopterEdit.diskDigest, packagedDigest),
+      ).toBe("modified");
+      expect(
+        resolveWorkflowFileState(packageMoved.entry, packageMoved.diskDigest, packagedDigest),
+      ).toBe("modified");
+
+      // The record sha256 is the digest of the bytes QFAI originally wrote,
+      // NOT of the current file: in the hand-edit fixture the two differ.
+      expect(adopterEdit.entry.sha256).not.toBe(adopterEdit.diskDigest);
+
+      // Cause separation a consumer can compute from the record:
+      //   disk != record, record == packaged  ->  the adopter edited it
+      //   disk == record, record != packaged  ->  the package moved on
+      expect(adopterEdit.diskDigest === adopterEdit.entry.sha256).toBe(false);
+      expect(adopterEdit.entry.sha256).toBe(packagedDigest);
+      expect(packageMoved.diskDigest === packageMoved.entry.sha256).toBe(true);
+      expect(packageMoved.entry.sha256).not.toBe(packagedDigest);
     });
   },
 );

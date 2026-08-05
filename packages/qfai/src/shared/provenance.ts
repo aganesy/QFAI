@@ -76,6 +76,9 @@ export async function readInstallProvenance(rootDir: string): Promise<InstallPro
  *   adopter authored it, QFAI leaves it alone)
  * - entry + present on disk, bytes equal the packaged template: `installed`
  * - entry + present on disk, bytes differ: `modified`
+ * - entry + present on disk, no packaged digest available (the current
+ *   package no longer ships the name): `modified` — the conservative
+ *   direction, since equality with the packaged template cannot be shown
  * - entry + absent on disk: `declined` (deliberately removed — never
  *   recreated, never reported as stale, never pruned)
  */
