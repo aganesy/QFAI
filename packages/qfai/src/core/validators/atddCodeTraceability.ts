@@ -94,6 +94,22 @@ export async function validateAtddCodeTraceability(
     );
   }
 
+  if (result.unitComponentTcIds.length > 0) {
+    const ids = result.unitComponentTcIds;
+    issues.push(
+      issue(
+        "QFAI-ATDD-117",
+        `宣言 Level が Unit / Component の TC は ATDD の注釈義務対象外です（${String(ids.length)} 件）: ${ids.slice(0, 10).join(", ")}${ids.length > 10 ? ` (他 ${String(ids.length - 10)} 件)` : ""}`,
+        "info",
+        result.specsRoot,
+        "atddCodeTraceability.coverage.unitComponentExcluded",
+        ids,
+        "canonical",
+        "これらは `/qfai-implement` の担当です。`tdd/test-list.md` に行があること（`TDDLIST_TC_NOT_COVERED` が error で検査）で担保してください。ATDD 側の注釈は不要で、置いても違反にはなりません。",
+      ),
+    );
+  }
+
   if (result.deferredApiContractIds.size > 0) {
     const deferred = Array.from(result.deferredApiContractIds).sort((left, right) =>
       left.localeCompare(right),

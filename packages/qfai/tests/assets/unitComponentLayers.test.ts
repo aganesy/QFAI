@@ -28,12 +28,23 @@ describe("the layer SSOT defines every layer the rest of qfai names", () => {
       for (const heading of ["### L1 Unit", "### L2 Component"]) {
         expect(section).toContain(heading);
       }
-      // Each layer block carries Scope / Goal / Location rule.
+      // Each layer block carries Scope / Goal / where its tests live.
       const blocks = section.split(/### L\d /).slice(1);
       expect(blocks).toHaveLength(5);
       for (const block of blocks) {
         expect(block).toContain("- Scope:");
         expect(block).toContain("- Goal:");
+      }
+      // L1/L2 say "Convention" and L3-L5 say "Location rule", and the
+      // difference is load-bearing: only the pinned three are scanned, and
+      // calling `tests/unit/**` a rule is what made a project believe its
+      // correctly-placed L1 annotation was owed to `tests/integration/**`.
+      const [l1, l2, ...pinned] = blocks;
+      for (const block of [l1, l2]) {
+        expect(block).toContain("- Convention:");
+        expect(block).not.toContain("- Location rule:");
+      }
+      for (const block of pinned) {
         expect(block).toContain("- Location rule:");
       }
     });
@@ -51,15 +62,25 @@ describe("the layer SSOT defines every layer the rest of qfai names", () => {
       expect(catalog).toContain("- `tests/component/**` -> Component");
     });
 
-    it(`${tree}: the per-level routing is published as an unenforced target state`, async () => {
+    it(`${tree}: Unit and Component are stated to owe no ATDD annotation`, async () => {
       const catalog = await read(tree, CATALOG);
-      // The routing must be documented, but flagged as not-yet-enforced: the
-      // scanner globs only tests/{e2e,api,integration}, so following it today
-      // makes QFAI-ATDD-112 report the TC as uncovered.
-      expect(catalog).toContain("target state — **not enforced, do not follow yet**");
-      expect(catalog).toContain("L1 -> `tests/unit/**`, L2 -> `tests/component/**`");
-      expect(catalog).toContain("buildAtddTestGlobs");
-      expect(catalog).toContain("keep discharging every `TC-*` in `tests/integration/**`");
+      // The previous text told the reader to "keep discharging every TC-* in
+      // tests/integration/**" until per-level routing went live. That made
+      // QFAI-ATDD-112 — an `error`, and unwaivable under QFAI-WAIVER-002 —
+      // demand an annotation in a directory this same file says L1/L2 do not
+      // have. The resolution is that ATDD does not own them at all.
+      expect(catalog).toContain("**Unit and Component owe no ATDD annotation.**");
+      expect(catalog).toContain("QFAI-ATDD-117");
+      expect(catalog).not.toContain("keep discharging every `TC-*` in `tests/integration/**`");
+      expect(catalog).not.toContain("target state — **not enforced, do not follow yet**");
+    });
+
+    it(`${tree}: the exclusion names the gate that still covers L1/L2`, async () => {
+      // Removing an obligation without naming its replacement would read as
+      // "unit tests are ungated", which is not what happened.
+      const catalog = await read(tree, CATALOG);
+      expect(catalog).toContain("TDDLIST_TC_NOT_COVERED");
+      expect(catalog).toContain("`/qfai-implement`");
     });
 
     it(`${tree}: an L4 obligation is discharged as CON-API, never as TC`, async () => {

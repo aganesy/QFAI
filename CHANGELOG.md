@@ -4,6 +4,33 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **`QFAI-ATDD-112` no longer demands an annotation for a Unit or Component
+  TC.** `LEVEL_TO_TEST_KIND` had keys for `l3`/`l4`/`l5` and none for
+  `l1`/`l2`, so `resolveTcHomeKind` fell through its `?? "integration"` case —
+  the fallback meant for a spec with _no_ `Level` column — and every declared
+  L1/L2 TC was reported as uncovered in `tests/integration/**`. That is not
+  their home: `catalog/test-layers.md` gives L1/L2 no mandated directory and
+  `qfai-atdd/SKILL.md` puts Unit and Component out of its scope. Since the rule
+  is `error` and `QFAI-WAIVER-002` refuses waivers on `error` rules, a project
+  that filed unit tests where the layer policy says to had **no exit** — the
+  only validator-clean path was duplicating every annotation into
+  `tests/integration/**`, which is the all-integration collapse the same
+  catalog lists as an anti-pattern. Measured on one consumer repository: 263
+  findings, 255 L1 + 8 L2, zero L3, against 483 TCs all correctly annotated.
+  L1/L2 stay gated by `tdd/test-list.md` / `TDDLIST_TC_NOT_COVERED` under
+  `/qfai-implement`, the stage that owns them. The no-`Level` default is
+  unchanged, and an L1/L2 annotation that happens to sit in a scanned directory
+  is not reported as forbidden either — the routing rule and the forbidden rule
+  have to agree.
+
+### Added
+
+- **`QFAI-ATDD-117` (info)** names the TCs excluded from the annotation
+  obligation on every run. A silent exclusion is indistinguishable from a scan
+  that matched nothing, which is how the JS-only test glob survived a release.
+
 ## [1.10.0] - 2026-08-03
 
 ### Changed

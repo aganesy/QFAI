@@ -31,8 +31,12 @@ const TC_TABLE = `# 06 Test Cases
 
 | TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |
 | ----- | ----- | ------- | ------ | ----- | -------- |
-| TC-0001 | unit | AC-0001 | EX-0001 | step | expected |
+| TC-0001 | L3 | AC-0001 | EX-0001 | step | expected |
 `;
+
+// `Level` has to be one that owes an ATDD annotation. The fixture used to
+// declare `unit`, which now carries no `QFAI-ATDD-112` obligation at all, so
+// both coverage assertions below would have passed without proving anything.
 
 async function withProject<T>(
   testFiles: Record<string, string>,

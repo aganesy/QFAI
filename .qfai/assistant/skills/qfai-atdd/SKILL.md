@@ -156,6 +156,13 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
     to: `L3`/`Integration` -> `tests/integration/**`, `L4`/`API` ->
     `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`. A TC with no declared `Level`
     routes to `tests/integration/**`.
+  - **`L1`/`Unit` and `L2`/`Component` owe nothing here.** They are out of this
+    skill's scope (see Scope below), have no mandated directory, and are
+    excluded from `QFAI-ATDD-112`; `QFAI-ATDD-117` (`info`) names them on every
+    run. Their gate is `tdd/test-list.md` under `/qfai-implement`. Do not
+    duplicate an L1/L2 annotation into `tests/integration/**` to quiet a gate —
+    that is the all-integration collapse `catalog/test-layers.md` lists as an
+    anti-pattern, and nothing asks for it.
   - `tests/api/**` must cover all required `CON-API-*`.
 - Forbidden references (a TC annotation outside its declared home):
   - `tests/api/**` must not contain `QFAI:SPEC-XXXX:TC-YYYY` unless that TC

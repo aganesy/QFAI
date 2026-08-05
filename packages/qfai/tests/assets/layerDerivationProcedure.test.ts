@@ -73,12 +73,14 @@ describe("deriving a TC's layer is a published procedure", () => {
       expect(catalog).toContain("**A `TC-*` row's `Level` stays within L1–L3.**");
       expectPhrase(
         catalog,
-        "**An L1/L2 `Level` does not relax `QFAI-ATDD-112`, and the gate does not change the `Level`.**",
+        "**An L1/L2 `Level` carries no `QFAI-ATDD-112` obligation, and the gate does not change the `Level`.**",
       );
-      // The derived Level records the oracle; it must not depend on whether an
-      // integration test happens to exist yet.
-      expect(catalog).toContain("Never rewrite a derived L1/L2 to L3");
+      // The derived Level records the oracle; it must not be rewritten to make
+      // a gate quieter, and the gate it used to trip is no longer ATDD's.
+      // Wrap-tolerant: the sentence is the rule, its wrap column is not.
+      expectPhrase(catalog, "Never rewrite a derived L1/L2 to L3");
       expect(catalog).toContain("depend on implementation order");
+      expect(catalog).toContain("TDDLIST_TC_NOT_COVERED");
     });
 
     it(`${tree}: re-filing an L4/L5 obligation keeps the EX→TC edge satisfiable`, async () => {
