@@ -345,7 +345,8 @@ The skill may declare "this spec's implementation is complete" only when:
 - Every `US-*` the spec declares has a `Layer = E2E` row whose `US-Refs` names it,
   and every declared `CON-API-*` has a `Layer = API` row whose `CON-API-Refs`
   names it. Without these rows an all-`done` ledger can sit alongside a
-  `QFAI-ATDD-111` / `QFAI-ATDD-113` hard gate at 0%- Each item reached `done` or valid `exception` (with DR-ID)
+  `QFAI-ATDD-111` / `QFAI-ATDD-113` hard gate at 0%.
+- Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain
 - Checkpoint verification passed at the spec-level boundary (see `#checkpoint-verification`)
 - No unresolved Change Request or waiver dependency exists. The gate covers only the
