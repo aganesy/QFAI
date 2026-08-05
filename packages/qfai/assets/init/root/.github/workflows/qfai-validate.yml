@@ -19,14 +19,27 @@ on:
     branches: [main, master]
   pull_request:
 
+# One live run per ref: a superseded push or PR update cancels the older run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     name: qfai validate (full profile, fail on error)
     runs-on: ubuntu-latest
+    # Least privilege: the job only checks out the repository and runs the
+    # validator; it writes nothing back to GitHub.
+    permissions:
+      contents: read
     timeout-minutes: 10
     steps:
       - name: Checkout via actions/checkout 4.4.0
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          # Nothing in this job pushes back, so the token never needs to
+          # outlive the checkout step.
+          persist-credentials: false
       - name: Set up pnpm via pnpm/action-setup 4.4.0 (if project uses pnpm)
         if: ${{ hashFiles('pnpm-lock.yaml') != '' }}
         # The pnpm setup action resolves the pnpm version from

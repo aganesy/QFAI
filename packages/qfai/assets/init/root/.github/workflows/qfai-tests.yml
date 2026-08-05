@@ -20,11 +20,21 @@ on:
     branches: [main, master]
   pull_request:
 
+# One live run per ref: a superseded push or PR update cancels the older run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   unit:
     name: unit tests
     if: ${{ false }}
     runs-on: ubuntu-latest
+    # Least privilege for a test lane: read the repository, write nothing
+    # back. Bounded even while the lane is disabled.
+    permissions:
+      contents: read
+    timeout-minutes: 10
     steps:
       - name: unit lane placeholder
         run: echo "unit lane is declared but not yet enabled"
@@ -32,6 +42,11 @@ jobs:
     name: component tests
     if: ${{ false }}
     runs-on: ubuntu-latest
+    # Least privilege for a test lane: read the repository, write nothing
+    # back. Bounded even while the lane is disabled.
+    permissions:
+      contents: read
+    timeout-minutes: 10
     steps:
       - name: component lane placeholder
         run: echo "component lane is declared but not yet enabled"
@@ -39,6 +54,11 @@ jobs:
     name: integration tests
     if: ${{ false }}
     runs-on: ubuntu-latest
+    # Least privilege for a test lane: read the repository, write nothing
+    # back. Bounded even while the lane is disabled.
+    permissions:
+      contents: read
+    timeout-minutes: 10
     steps:
       - name: integration lane placeholder
         run: echo "integration lane is declared but not yet enabled"
@@ -46,6 +66,11 @@ jobs:
     name: api tests
     if: ${{ false }}
     runs-on: ubuntu-latest
+    # Least privilege for a test lane: read the repository, write nothing
+    # back. Bounded even while the lane is disabled.
+    permissions:
+      contents: read
+    timeout-minutes: 10
     steps:
       - name: api lane placeholder
         run: echo "api lane is declared but not yet enabled"
@@ -53,6 +78,11 @@ jobs:
     name: e2e tests
     if: ${{ false }}
     runs-on: ubuntu-latest
+    # Least privilege for a test lane: read the repository, write nothing
+    # back. Bounded even while the lane is disabled.
+    permissions:
+      contents: read
+    timeout-minutes: 10
     steps:
       - name: e2e lane placeholder
         run: echo "e2e lane is declared but not yet enabled"
