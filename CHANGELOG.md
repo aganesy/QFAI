@@ -4,6 +4,28 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **`/qfai-atdd` now has RED discipline for the ledger rows it writes.**
+  `qfai-implement/SKILL.md` states the split — `Layer = E2E` and `Layer = API`
+  rows are tracked in its ledger, their tests authored in `/qfai-atdd` — and its
+  Phase Red requires an admissible failure confirmed before production code
+  exists. `qfai-atdd/SKILL.md` contained no occurrence of `RED`, `red`, `green`,
+  `refactor`, `exception` or `test-list.md`, and its stage gates ran
+  plan → layer → E2E → API → integration → validate → runtime → repo gates →
+  reviewer with no failing-test step. Since `todo` has exactly two exits and
+  `todo -> red` needs a RED the stage order makes unobservable, `exception` was
+  the only terminal state such a row could reach: on one consumer repository all
+  13 remaining `todo` rows were ATDD-owned, and the ledger closed at 95
+  `exception` against 21 `done`. The skill now names the ledger and the cells it
+  may write, adds stage gate **P1b** (RED observed before P2-P4 build any
+  surface), and documents three ordered branches in
+  `references/red-provenance.md` — observed RED, falsifiability via the existing
+  `red-not-observable.md` path, and `exception` with a `DR-*` only when both are
+  unavailable. `qa-gatekeeper` accepts the falsifiability form for these rows as
+  expected evidence and REVISEs an `exception` whose only stated reason is that
+  the surface came first.
+
 ## [1.10.0] - 2026-08-03
 
 ### Changed

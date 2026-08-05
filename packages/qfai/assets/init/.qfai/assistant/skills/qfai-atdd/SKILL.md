@@ -163,6 +163,10 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
   - `tests/e2e/**` must not contain `QFAI:SPEC-XXXX:TC-YYYY` unless that TC
     declares `Level` `L5`/`E2E`.
 - Unknown references (`US/TC/CON-API` not declared) must be treated as errors.
+- **This skill writes to `/qfai-implement`'s execution ledger, and is bound by
+  its rules.** See "Execution Ledger: the rows this skill owns" below. A row
+  advanced without either an observed RED or falsifiability evidence is a
+  lifecycle violation, not a completed row.
 - Floors/ratios are planning signals only, not gates.
 - Legacy `scenario.feature` or coverage ledgers may exist but are not mandatory inputs for completion.
 - Evidence file is required under `.qfai/evidence/`. Stage evidence is
@@ -180,6 +184,40 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-fai
 ## Goal
 
 Turn specs/contracts obligations (`US` / `TC` / `CON-API` / `CON-DB`) into runnable acceptance tests in this repository.
+
+## Execution Ledger: the rows this skill owns
+
+`.qfai/specs/<spec-id>/tdd/test-list.md` is `/qfai-implement`'s execution
+ledger, and `qfai-implement/SKILL.md` states the split: **`Layer = E2E` and
+`Layer = API` rows are tracked there, but their tests are authored here.** This
+skill therefore writes into a ledger whose status lifecycle it does not define.
+
+- **Cells this skill may write**: `Status`, `DR-ID`, `Evidence`, on
+  `Layer = E2E` / `Layer = API` rows only. Nothing else in the ledger.
+- **The lifecycle is `references/execution-ledger.md#allowed-transitions`**
+  under `qfai-implement`: forward-only from `todo`, and `todo -> red` requires
+  an **admissible RED** observed before the code that makes it pass exists.
+- **This skill's stage order makes that a real question**: Work Orders build the
+  surfaces a journey needs (P3, P4), so a journey written after them passes first
+  run — an anomaly bound for `exception`, which then becomes the only terminal
+  state an ATDD-owned row can reach.
+
+### RED provenance for an ATDD-owned row (MUST)
+
+Read `references/red-provenance.md` before advancing any row. Take the first
+branch that applies and record which one in the evidence file:
+
+1. **Observed RED (preferred).** Write the test against the current tree, before
+   this cycle builds the surface, and watch it fail. Stage gate **P1b**.
+2. **Falsifiability (surface already exists).** `Satisfied-by` + mutate the
+   asserted predicate + `Falsifiability command` / `Falsifiability result` +
+   GREEN pair, per `qfai-implement/references/red-not-observable.md`. Never
+   weaken a correct test to manufacture a failure.
+3. **Neither is possible.** `exception` with a `DR-*` naming what made both
+   branches unavailable.
+
+Branch 3 is the last resort, not the default. A stage that routes every row it
+owns to `exception` has recorded that it did not try branches 1 and 2.
 
 ## Scope (ATDD only)
 
@@ -265,6 +303,9 @@ Notes:
 - Validation passes: `npx qfai validate --profile atdd --fail-on error`.
 - Repository quality gates (format/lint/type/tests/pack) pass with evidence.
 - Evidence file exists and includes work orders + reviewer notes.
+- Every ledger row this cycle advanced carries RED provenance — an observed RED
+  pair, or the `Satisfied-by` + falsifiability trio — and `qa-gatekeeper` has
+  accepted it.
 - Completion is approved by a reviewer who did not implement tests.
 
 ## Not-done criteria
@@ -274,6 +315,10 @@ Notes:
 - Tests exist but were never executed.
 - Validation evidence is missing or failing.
 - Coverage Depth Matrix is missing or contains unjustified ❌ cells (normal-path-only coverage is incomplete).
+- A ledger row was advanced past `todo` with neither an observed RED nor
+  falsifiability evidence.
+- A row was sent to `exception` without a `DR-*` recording why **both** branches
+  were unavailable. "The surface was built earlier in this cycle" is not such a reason.
 
 ## Failure handling (mandatory)
 
@@ -293,6 +338,9 @@ Required sections:
 - Commands executed + key outputs
 - Test volume estimate
 - Coverage obligations checklist
+- **Ledger rows advanced** — per row: `TDD-ID`, the branch taken, and its
+  evidence. Shapes: `references/red-provenance.md#evidence-shape`. Exactly one
+  form per row, never both and never neither.
 - Work Orders Summary
 - Execution logs
 - Gaps / Open risks
@@ -316,6 +364,11 @@ Template:
 ## Test volume estimate
 
 ## Coverage obligations checklist
+
+## Ledger rows advanced
+
+| TDD-ID | Branch | Evidence |
+| ------ | ------ | -------- |
 
 ## Work Orders Summary
 
@@ -345,6 +398,10 @@ Template:
 
 - P0: Plan and obligations checklist prepared.
 - P1: Layer assignment validated against `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`.
+- P1b: **RED provenance established** for every row this cycle will advance —
+  branch 1 runs here, **before** P2-P4 build any surface, because after them
+  there is nothing left to watch fail. Branch 2 records at P6. Skipping P1b is
+  what leaves a row with no legal transition out of `todo`.
 - P2: E2E implementation completed.
 - P3: API implementation completed.
 - P4: Integration implementation completed.

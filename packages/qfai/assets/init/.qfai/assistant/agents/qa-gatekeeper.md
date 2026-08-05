@@ -84,6 +84,16 @@ instead — never both forms, never neither. See
 `.qfai/assistant/skills/qfai-implement/references/red-not-observable.md` and
 `.qfai/assistant/skills/qfai-implement/references/red-admissibility.md`.
 
+**A `Layer = E2E` / `Layer = API` row from `/qfai-atdd` is judged the same
+way.** Its journey is often written after the surface the same cycle built, so
+the falsifiability form is the expected evidence rather than a concession —
+accept it, with the mutated predicate being one the journey actually asserts
+on. What is **not** acceptable is the third outcome appearing by default: a row
+routed to `exception` whose `DR-*` says only that the surface came first has
+not shown that either branch was unavailable, and that is a REVISE. See
+`.qfai/assistant/skills/qfai-atdd/SKILL.md#red-provenance-for-an-atdd-owned-row-must`
+and `references/execution-ledger.md#atdd-owned-rows-layer--e2e--layer--api`.
+
 Verdict scope: a PASS covers the observation for that round and nothing else. It
 does not ratify item scope and does not clear the completion gate.
 

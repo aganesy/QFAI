@@ -239,6 +239,37 @@ is re-submitted.
 `review-fix` is not a completion state and appears in the completion-prohibition
 list. Round-by-round evidence rules: `round-evidence.md`.
 
+## ATDD-owned rows (`Layer = E2E` / `Layer = API`)
+
+These rows live in this ledger and follow every rule above, but their tests are
+authored by `/qfai-atdd` (`qfai-implement/SKILL.md` Non-goals). The two skills
+therefore share one lifecycle, and the ordering that skill works in makes the
+RED question different rather than absent.
+
+`/qfai-atdd` builds the API and integration surfaces a journey needs inside the
+same cycle that writes the journey. A test written after its surface passes on
+the first run, so:
+
+- **There is no waiver here.** `todo -> red` still requires an admissible RED,
+  and a first-run pass is still not one.
+- **The falsifiability path is the answer, not `exception`.**
+  `references/red-not-observable.md` already defines the substitute — record
+  `Satisfied-by`, mutate the predicate the journey asserts on, watch this row's
+  test fail, restore, and record `Falsifiability command` /
+  `Falsifiability result` beside the GREEN pair. It was written for an
+  obligation a sibling row had already satisfied; a journey whose surface the
+  same cycle just built is the same situation with the sibling being the
+  surface work. `qa-gatekeeper` accepts that form, and the row proceeds to
+  `green` and `done`.
+- **`/qfai-atdd` also has a first branch this ledger cannot see**: writing the
+  journey against the tree *before* the surface exists, which produces an
+  ordinary RED. Its stage gate P1b is where that happens.
+- **`exception` is for a row where both are unavailable** — an obligation with
+  no persisted form or no observable surface at L5, recorded with a `DR-*`
+  naming what is missing. It is not the routine outcome of surface-first
+  ordering. A spec whose ATDD rows are all `exception` has recorded that the
+  provenance step was skipped, not that the obligations were unverifiable.
+
 ## Blocked rows
 
 `blocked` means **cannot be started**, not "not started yet" and not "anomaly".
