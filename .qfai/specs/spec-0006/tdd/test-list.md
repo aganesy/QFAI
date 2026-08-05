@@ -30,6 +30,15 @@
 | TDD-0026 | TC-0006-0024 | integration | packages/qfai/tests/integration/cli/commands/doctorSkillProfile.probe.test.ts  | TC-0006-0024: --profile <skill> probes manifest runtimeDependencies                               | done      | (Pair III; REQ-0159)     | RED→GREEN 2026-06-01 (W3 d74a546f); reviewers PASS×3; REQ-0159           |
 | TDD-0027 | TC-0006-0025 | unit        | packages/qfai/tests/unit/core/doctor/skillManifestProbe.empty.test.ts          | TC-0006-0025: empty runtimeDependencies → no probe finding (no false positive)                    | done      | (REQ-0159)               | RED→GREEN 2026-06-01 (W3 d74a546f); reviewers PASS×3; REQ-0159           |
 | TDD-0028 | TC-0006-0026 | integration | packages/qfai/tests/integration/validators/skillManifestDrift.test.ts          | TC-0006-0026: manifest↔probe drift → R-SKILL-MANIFEST-DRIFT (SSOT-sync Pair III)                  | done      | (Pair III; REQ-0159)     | RED→GREEN 2026-06-01 (W3 d74a546f); reviewers PASS×3; REQ-0159           |
+| TDD-0029 | TC-0006-0027 | Integration | —                                                                              | TC-0006-0027: edited installed shipped workflow → workflows.integrity advisory                    | todo      | —                        | —                                                                        |
+| TDD-0030 | TC-0006-0028 | Integration | —                                                                              | TC-0006-0028: content-identical installed tree → severity ok, zero drift findings                 | todo      | —                        | —                                                                        |
+| TDD-0031 | TC-0006-0029 | Unit        | —                                                                              | TC-0006-0029: drift advisory severity/group + --fail-on error exit-code invariance                | todo      | —                        | —                                                                        |
+| TDD-0032 | TC-0006-0030 | Integration | —                                                                              | TC-0006-0030: repair text names no command; absent file / unresolved copy not drift               | todo      | —                        | —                                                                        |
+| TDD-0033 | TC-0006-0031 | Integration | —                                                                              | TC-0006-0031: adopter-authored name collision is never reported                                   | todo      | —                        | —                                                                        |
+| TDD-0034 | TC-0006-0032 | Unit        | —                                                                              | TC-0006-0032: drift-only tree exits 0 under --fail-on warning                                     | todo      | —                        | —                                                                        |
+| TDD-0035 | TC-0006-0033 | Unit        | —                                                                              | TC-0006-0033: unrelated warning still exits 1 under --fail-on warning (control)                   | todo      | —                        | —                                                                        |
+| TDD-0036 | TC-0006-0034 | Integration | —                                                                              | TC-0006-0034: details carries workflowsDir / modified / declined / packagedDir                    | todo      | —                        | —                                                                        |
+| TDD-0037 | TC-0006-0035 | Integration | —                                                                              | TC-0006-0035: declined-only tree emits no drift finding                                           | todo      | —                        | —                                                                        |
 
 ## Notes
 
@@ -39,3 +48,18 @@
 
 - TDD-0021..0028 cover REQ-0153 (doctor --clean review-pack TTL archival), REQ-0156 (doctor --autoremediate mode), REQ-0159 (per-skill manifest probe / Pair III). Cross-spec decisions cited from `_policies/08_Decisions.md`: DR-0264 (review.staleTtlDays default 14d). REQ-0159 manifest-schema authoring + distributed-surface lint side is owned by spec-0015; this slice covers the doctor probe behavior only.
 - Ledger sync follow-up: the spec-0006 CHG-006 SDD wave omitted `UPDATE:APPEND tdd/test-list.md` from its triage table. This section reconciles the ledger before `/qfai-implement` proceeds.
+
+## CHG-007 — adopter drift-detection channel, detection half (2026-08-05)
+
+CHG-007 notes:
+
+- TDD-0029..0032 cover REQ-0022 (detection half only). The overwrite / refresh half stays blocked on OQ-0021 (deferred), so no ledger row is opened for it — opening one would make the ledger claim an obligation the spec deliberately does not carry.
+- `Layer` uses the word form (`Integration` / `Unit`) per the layer crosswalk in `catalog/test-layers.md`; `06_Test-Cases.md#Level` keeps this pack's existing word spelling (`integration` / `unit`).
+- Every `TC-*` — including the `Unit` row — is still discharged from `<testsDir>/integration/**` for `QFAI-ATDD-112` until the scanner supports per-level routing.
+
+### CHG-007 round-2 remediation (2026-08-05)
+
+- TDD-0034..0037 close the two oracle gaps review round 2 found in the CHG-007 slice:
+  - TDD-0034 / TDD-0035 make the `info` severity decision (DR-0006-0004) falsifiable. TDD-0029..0032 all exercise `--fail-on error`, where `shouldFailDoctor` reads `summary.error > 0` only, so `info` and `warning` are indistinguishable there. `--fail-on warning` is the single discriminating leg, and TDD-0035 is its non-vacuity control.
+  - TDD-0036 / TDD-0037 give the `details.declined` transparency clause of `CLI-DOC` a spec-side owner (BR-0006-0022). TDD-0037 fixes the boundary that `declined` is payload, never a trigger.
+- Rows are appended to the **first** `TDD-ID` table above on purpose. A second table in this file would not be read by `parseFirstMarkdownTable`; that shape is the defect this pack already repaired once.
