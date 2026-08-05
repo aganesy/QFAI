@@ -4,6 +4,23 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **`qfai validate --spec` now actually scopes the two spec-owned ATDD coverage
+  rules, and the per-spec skills use it.** `QFAI-ATDD-111` and `QFAI-ATDD-112`
+  were filed against `specsRoot` itself; `owningSpecNumber` returns `null` for a
+  path that is not inside a `spec-NNNN` directory and `isPathInSpecScope` treats
+  an unowned path as belonging to every scope, so both findings survived every
+  `--spec` filter. They are now attributed to the spec directories the missing
+  refs name, using the representative-plus-`relatedFiles` shape `QFAI-ID-001`
+  already uses. `/qfai-atdd` (four gate statements) and `/qfai-implement`
+  (`checkpoint-verification.md`, `final-checklist.md`) pass `--spec <spec-id>`,
+  which only `/qfai-sdd` did before — so a stage that discharged everything its
+  own spec owns can close, instead of failing on a sibling's obligations.
+  `QFAI-ATDD-113` / `-115` are attributed to `.qfai/contracts/**`, which no spec
+  owns, so they stay repo-wide under every scope; `/qfai-atdd` now says so
+  rather than implying a scoped gate is clean.
+
 ## [1.10.0] - 2026-08-03
 
 ### Changed

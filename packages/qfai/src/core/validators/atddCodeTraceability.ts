@@ -13,6 +13,53 @@ import {
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
+/** `SPEC-0004:US-0002` / `SPEC-0004:TC-0002-0007` — the spec number is group 1. */
+const OWNING_SPEC_RE = /^SPEC-(\d{4}):/;
+
+/**
+ * Spec directories implicated by a list of `SPEC-NNNN:*` refs, first one first.
+ *
+ * `QFAI-ATDD-111` and `QFAI-ATDD-112` were filed against `specsRoot` itself.
+ * `owningSpecNumber` returns `null` for a path that is not inside a
+ * `spec-NNNN` directory, and `isPathInSpecScope` treats an unowned path as
+ * belonging to every scope — so both findings survived every `--spec` filter,
+ * and a spec that had discharged all of its own obligations still failed its
+ * gate on a sibling's. Attributing the finding to the specs it actually names
+ * follows the representative-plus-`relatedFiles` shape `QFAI-ID-001` already
+ * uses for a multi-file finding.
+ *
+ * Contract-owned findings (`QFAI-ATDD-113` / `-115`) are deliberately left
+ * repo-wide: `.qfai/contracts/**` has no spec owner in the model, so there is
+ * nothing to attribute them to.
+ */
+function owningSpecDirs(refs: readonly string[], specsRoot: string): string[] {
+  const numbers = new Set<string>();
+  for (const ref of refs) {
+    const number = OWNING_SPEC_RE.exec(ref)?.[1];
+    if (number !== undefined) {
+      numbers.add(number);
+    }
+  }
+  return Array.from(numbers)
+    .sort((left, right) => left.localeCompare(right))
+    .map((number) => path.join(specsRoot, `spec-${number}`));
+}
+
+/**
+ * Splits owning spec directories into the finding's representative `file` and
+ * its `relatedFiles`. Falls back to `specsRoot` when no ref names a spec, which
+ * keeps the previous behaviour for a malformed ref rather than dropping the
+ * finding's location entirely.
+ */
+function specAttribution(
+  refs: readonly string[],
+  specsRoot: string,
+): { file: string; relatedFiles: string[] } {
+  const dirs = owningSpecDirs(refs, specsRoot);
+  const [first, ...rest] = dirs;
+  return { file: first ?? specsRoot, relatedFiles: rest };
+}
+
 type AtddTraceabilitySummary = {
   missing: {
     us: string[];
@@ -58,12 +105,13 @@ export async function validateAtddCodeTraceability(
   issues.push(...buildUnknownIssues(result.unknown));
 
   if (result.missing.us.length > 0) {
+    const usAttribution = specAttribution(result.missing.us, result.specsRoot);
     issues.push(
       issue(
         "QFAI-ATDD-111",
         `E2E で参照されていない US があります: ${result.missing.us.join(", ")}`,
         "error",
-        result.specsRoot,
+        usAttribution.file,
         "atddCodeTraceability.coverage.usToE2e",
         result.missing.us,
         "change",
@@ -74,22 +122,25 @@ export async function validateAtddCodeTraceability(
         // "annotate every US in the repository", which is the annotation-only
         // E2E tree `catalog/test-layers.md` forbids.
         "tests/e2e/** に `QFAI:SPEC-XXXX:US-YYYY` 注釈を追加し、上記の US を少なくとも1回参照してください。surface typing を宣言している場合、対象は user-facing surface の spec のみです。どの spec も宣言していない場合は全 spec が対象のままです（`.qfai/assistant/catalog/test-layers.md#atdd-annotation-hard-gate`）。",
+        { relatedFiles: usAttribution.relatedFiles },
       ),
     );
   }
 
   if (result.missing.tc.length > 0) {
     const grouped = groupMissingTcByHome(result.missing.tc, result.missingTcHomes);
+    const tcAttribution = specAttribution(result.missing.tc, result.specsRoot);
     issues.push(
       issue(
         "QFAI-ATDD-112",
         `宣言 Level が指すディレクトリで参照されていない TC があります: ${formatMissingTcGroups(grouped, dirs)}`,
         "error",
-        result.specsRoot,
+        tcAttribution.file,
         "atddCodeTraceability.coverage.tcToDeclaredLayer",
         result.missing.tc,
         "change",
         buildMissingTcFix(grouped, dirs),
+        { relatedFiles: tcAttribution.relatedFiles },
       ),
     );
   }

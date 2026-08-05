@@ -15,5 +15,7 @@ cannot be ticked is a reason not to declare completion, not a note to carry forw
 - [ ] No backward transitions occurred.
 - [ ] Exception items have DR-IDs recorded.
 - [ ] All tests pass.
-- [ ] `npx qfai validate --profile tdd --fail-on error` passes with zero `QFAI-TEST-001` findings (no
-      `it.todo` / `test.todo` / `describe.todo` stubs remain).
+- [ ] `npx qfai validate --profile tdd --fail-on error --spec <spec-id>` passes with zero
+      `QFAI-TEST-001` findings (no `it.todo` / `test.todo` / `describe.todo` stubs remain).
+      `--spec` scopes the gate to the spec this run owns; the repo-wide run belongs to
+      `/qfai-verify`.

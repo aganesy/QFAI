@@ -52,9 +52,13 @@ the placeholders; record the literal commands actually executed in evidence.
 2. The full test suite — `<test runner>` with no file filter and no test-name option.
 3. The project's static gates, when the repository defines them — formatter check, linter, and type
    check.
-4. `npx qfai validate --profile tdd --fail-on error` — qfai is a project dependency, not a global
-   command; a bare `qfai …` is `command not found` (exit 127) on a normal local install, which would
-   fail every checkpoint.
+4. `npx qfai validate --profile tdd --fail-on error --spec <spec-id>` — qfai is a project
+   dependency, not a global command; a bare `qfai …` is `command not found` (exit 127) on a normal
+   local install, which would fail every checkpoint. `--spec` scopes the run to the spec this
+   checkpoint is for: this skill processes one spec at a time, so an unscoped run makes a sibling
+   spec's in-flight failure fail this checkpoint. It also writes
+   `<report>/validate.spec-<id>.json` instead of the shared `validate.json`, so the checkpoint
+   artifact cannot be overwritten by another spec's run.
 
 ## Verification command set (per spec)
 
