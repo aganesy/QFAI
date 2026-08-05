@@ -91,7 +91,11 @@ does not ratify item scope and does not clear the completion gate.
 
 In addition to traceability-based coverage (US/TC/CON-API existence), verify the **depth** of test cases:
 
-- Confirm a Coverage Depth Matrix exists at `.qfai/evidence/coverage-depth-<spec-id>.md` (produced by `test-design-analyst`). Missing matrix: REVISE from the ATDD review cycle onward; on an SDD review cycle record it as a finding. See the scope note. A matrix that exists only inside `.qfai/evidence/atdd-<spec-id>.md` is a **missing** matrix: that file is ignored by the managed `.gitignore` block, so neither it nor the justification for any `❌` reaches a commit, and the "unjustified" judgement cannot be re-made by anyone reading the repository.
+- Confirm a Coverage Depth Matrix exists at `.qfai/evidence/coverage-depth-<spec-id>.md` (produced by `test-design-analyst`).
+  Missing matrix: REVISE from the ATDD review cycle onward; on an SDD review cycle record it as a finding. See the scope note.
+  A matrix that exists only inside `.qfai/evidence/atdd-<spec-id>.md` is a **missing** matrix: that file is ignored by the
+  managed `.gitignore` block, so neither it nor the justification for any `❌` reaches a commit, and the "unjustified"
+  judgement cannot be re-made by anyone reading the repository.
 - Check that each US/TC has test cases for at minimum: normal path AND error/failure path.
 - Flag any US/TC that has only normal-path test cases as a coverage gap.
 - Reference: `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`
