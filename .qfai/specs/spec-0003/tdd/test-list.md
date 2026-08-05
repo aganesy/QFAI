@@ -56,3 +56,17 @@
 | TDD-0052 | TC-0003-0052 | Unit        | packages/qfai/tests/integration/shippedWorkflowOwnership.test.ts   | TC-0003-0052 (TDD-0052): pruneMatchingEntries is exported and receives a retired-name predicate                                 | todo      | -            | -                                                                                                   |
 | TDD-0053 | TC-0003-0053 | Integration | packages/qfai/tests/integration/shippedWorkflowPortability.test.ts | TC-0003-0053 (TDD-0053): version file plus packageManager field is the non-degrading happy path                                 | todo      | -            | -                                                                                                   |
 | TDD-0054 | TC-0003-0054 | Integration | packages/qfai/tests/integration/shippedWorkflowOwnership.test.ts   | TC-0003-0054 (TDD-0054): an absent (never-installed) name is written and recorded, unlike declined                              | todo      | -            | -                                                                                                   |
+| TDD-0055 | TC-0003-0028 | Integration | packages/qfai/tests/integration/shippedWorkflows.test.ts           | TC-0003-0028 (TDD-0055): every shipped checkout refuses to persist credentials and full history stays job-scoped                | todo      | -            | -                                                                                                   |
+| TDD-0056 | TC-0003-0033 | Integration | packages/qfai/tests/integration/shippedWorkflowPins.test.ts        | TC-0003-0033 (TDD-0056): the pre-build shipped-YAML rule evaluates before the comment skip                                      | todo      | -            | -                                                                                                   |
+
+## /qfai-implement notes (CHG-007, 2026-08-05)
+
+- Row splits per `references/selector-granularity.md` (delivery-planner ruling, recorded in
+  `.qfai/evidence/implement-spec-0003.md`): TDD-0028 conflated a static asset-shape boundary with a
+  lane-enforcement boundary — the static half is now TDD-0055 (same TC-0003-0028; `TC-Refs` is
+  many-to-many with `TDD-ID`); TDD-0033 conflated the leakage-guard halves with the pre-build-rule
+  ordering clause — the ordering clause is now TDD-0056 (same TC-0003-0033).
+- TDD-0028, TDD-0032 and TDD-0056 depend on spec-0017-owned surfaces (the workflow-hygiene lane and
+  the pre-build shipped-YAML rule in `lint-shipping.ts`) that do not exist yet. They stay at `todo`
+  and are deliberately not selected until spec-0017's hygiene-lane rows are done; spec-0003 is
+  reported blocked-pending-spec-0017 rather than complete while they remain open.
