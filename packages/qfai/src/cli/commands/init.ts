@@ -1269,6 +1269,15 @@ async function pruneStaleQfaiWrappers(
 }
 
 /**
+ * Names the current package version ships into the adopter's
+ * `.github/workflows/` directory (the shipped-workflows contract's write
+ * set). This is the in-binary name list: it is never computed by globbing
+ * the asset tree at runtime or the adopter's disk, and the shipped-asset
+ * shape gate keeps it equal to the packaged workflow assets.
+ */
+export const SHIPPED_WORKFLOW_NAMES: ReadonlySet<string> = new Set<string>(["qfai-validate.yml"]);
+
+/**
  * Names a previous package version shipped into the adopter's
  * `.github/workflows/` directory that the current version no longer ships
  * (the shipped-workflows contract's prune set). A name moves here in the
@@ -1276,7 +1285,7 @@ async function pruneStaleQfaiWrappers(
  * the retired list is not QFAI's. Never computed by globbing the
  * adopter's disk. Currently empty: no shipped workflow has been retired.
  */
-const RETIRED_WORKFLOW_NAMES: ReadonlySet<string> = new Set<string>();
+export const RETIRED_WORKFLOW_NAMES: ReadonlySet<string> = new Set<string>();
 
 /**
  * The only removal primitive for QFAI-owned entries in an adopter tree:
