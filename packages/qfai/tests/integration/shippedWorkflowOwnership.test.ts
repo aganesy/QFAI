@@ -939,3 +939,256 @@ describe(
     });
   },
 );
+
+describe(
+  "TC-0003-0048 (TDD-0048): write and removal path contains no filesystem call of its own",
+  { timeout: 60000 },
+  () => {
+    // Scope reading (disclosed): the scanned set is the workflows-directory
+    // write/removal path — the three workflow-path functions plus the
+    // runInit workflows segment. `pruneMatchingEntries` is NOT scanned: it
+    // is the sanctioned removal primitive itself (its `rm` is the one the
+    // contract routes everything through; its uniqueness is TDD-0052's
+    // oracle). `writeInstallProvenance` (src/shared/provenance.ts) is not
+    // scanned either: its writeFile writes the RECORD file — a different
+    // artifact under .qfai/, not a workflows-directory write — and the
+    // workflow path reaches the record only through that single exported
+    // writer. init.ts's other writeFile/rm call sites (gitignore, wrapper,
+    // memo, skills-prune helpers) belong to other artifacts' paths and are
+    // outside this TC.
+    const WORKFLOW_NAME = "qfai-validate.yml";
+    const PROVENANCE_REL = ".qfai/install-provenance.json";
+    const ADOPTER_BODY =
+      "# adopter-authored workflow that predates the QFAI install\nname: adopter-collision\n";
+    const EDITED_BODY = "# the adopter hand-edited the installed workflow\nname: hand-edited\n";
+    const FORBIDDEN_FS_CALL_RE = /\b(?:copyFile|writeFile|rm|unlink)\s*\(/g;
+    const WORKFLOW_PATH_FUNCTIONS = [
+      "resolveWorkflowCopySet",
+      "captureShippedWorkflowPreInitState",
+      "recordInstalledWorkflows",
+    ] as const;
+
+    const packagedTemplatePath = (): string =>
+      path.join(getInitAssetsDir(), "root", ".github", "workflows", WORKFLOW_NAME);
+
+    const forbiddenCalls = (text: string): string[] => text.match(FORBIDDEN_FS_CALL_RE) ?? [];
+
+    /**
+     * Extracts a function's body text by brace counting from the
+     * `function <name>(` definition marker (call sites never match: they
+     * are not preceded by `function `). Returns undefined when absent so
+     * the caller's assertion is what fails.
+     */
+    function extractFunctionBody(source: string, name: string): string | undefined {
+      const idx = source.indexOf(`function ${name}(`);
+      if (idx === -1) {
+        return undefined;
+      }
+      const braceStart = source.indexOf("{", idx);
+      if (braceStart === -1) {
+        return undefined;
+      }
+      let depth = 1;
+      let end = braceStart + 1;
+      while (end < source.length && depth > 0) {
+        const ch = source.charAt(end);
+        if (ch === "{") {
+          depth += 1;
+        } else if (ch === "}") {
+          depth -= 1;
+        }
+        end += 1;
+      }
+      return source.slice(braceStart + 1, end - 1);
+    }
+
+    /**
+     * Extracts the argument text of every CALL site of `callee(`, paren
+     * counted; the `function callee(` definition itself is excluded (same
+     * approach as extractPruneCallSites above, parameterized).
+     */
+    function extractCallSites(source: string, calleeWithParen: string): string[] {
+      const sites: string[] = [];
+      let from = 0;
+      for (;;) {
+        const idx = source.indexOf(calleeWithParen, from);
+        if (idx === -1) {
+          break;
+        }
+        const argStart = idx + calleeWithParen.length;
+        from = argStart;
+        const preceding = source.slice(Math.max(0, idx - "function ".length), idx);
+        if (preceding === "function ") {
+          continue;
+        }
+        let depth = 1;
+        let end = argStart;
+        while (end < source.length && depth > 0) {
+          const ch = source.charAt(end);
+          if (ch === "(") {
+            depth += 1;
+          } else if (ch === ")") {
+            depth -= 1;
+          }
+          end += 1;
+        }
+        sites.push(source.slice(argStart, end - 1));
+      }
+      return sites;
+    }
+
+    async function seedProvenanceEntry(dir: string, sha256Hex: string): Promise<void> {
+      const provenancePath = path.join(dir, PROVENANCE_REL);
+      await mkdir(path.dirname(provenancePath), { recursive: true });
+      await writeFile(
+        provenancePath,
+        JSON.stringify(
+          {
+            workflows: {
+              [WORKFLOW_NAME]: {
+                sha256: sha256Hex,
+                installedByVersion: "0.0.1",
+                installedAt: "2021-02-03T04:05:06Z",
+              },
+            },
+          },
+          null,
+          2,
+        ),
+        "utf-8",
+      );
+    }
+
+    async function observeFixtureState(
+      dir: string,
+      packagedDigest: string,
+    ): Promise<WorkflowFileState> {
+      const record = await readInstallProvenance(dir);
+      const entry = record.workflows[WORKFLOW_NAME];
+      const diskBytes = await readFile(path.join(dir, ".github", "workflows", WORKFLOW_NAME)).catch(
+        () => undefined,
+      );
+      const diskDigest = diskBytes === undefined ? undefined : sha256(diskBytes);
+      return resolveWorkflowFileState(entry, diskDigest, packagedDigest);
+    }
+
+    it("no filesystem mutation call of its own: the workflow-path functions and the runInit workflows segment use the primitives only", async () => {
+      const source = await readInitSource();
+
+      for (const fnName of WORKFLOW_PATH_FUNCTIONS) {
+        const body = extractFunctionBody(source, fnName);
+        expect(body, `init.ts must define ${fnName} (a workflow-path function)`).toBeDefined();
+        if (body === undefined) {
+          throw new Error(`workflow-path function ${fnName} not found in init.ts`);
+        }
+        expect(
+          forbiddenCalls(body),
+          `${fnName} must contain no copyFile/writeFile/rm/unlink call of its own`,
+        ).toEqual([]);
+      }
+
+      // The runInit workflows segment: from the pre-init capture through
+      // the retired-name prune (ending at the removals aggregation).
+      const start = source.indexOf("captureShippedWorkflowPreInitState(destRoot)");
+      const end = source.indexOf("const removed = [");
+      expect(start, "runInit must call the pre-init capture").toBeGreaterThanOrEqual(0);
+      expect(end, "runInit must aggregate removals after the workflows prune").toBeGreaterThan(
+        start,
+      );
+      const segment = source.slice(start, end);
+      expect(
+        forbiddenCalls(segment),
+        "the runInit workflows segment must contain no direct fs mutation call",
+      ).toEqual([]);
+
+      // Routing evidence: the segment reaches the filesystem only through
+      // the named primitives (and the record through its named recorder).
+      for (const callee of [
+        "resolveWorkflowCopySet(",
+        "copyTemplateTree(",
+        "copyTemplatePaths(",
+        "recordInstalledWorkflows(",
+        "pruneMatchingEntries(",
+      ]) {
+        expect(
+          segment,
+          `the workflows segment must route through ${callee.slice(0, -1)}`,
+        ).toContain(callee);
+      }
+    });
+
+    it("the collision, declined and modified fixtures are processed through the primitives with the contract outcomes", async () => {
+      // "Processed via the primitives" is established by conjunction: it1
+      // proves the workflow flow has no other mutation path, and these
+      // outcomes prove the primitives' create-only / exclusion / prune
+      // semantics produced them (matching the TC's paired source-search +
+      // fixture-run Action).
+      const packagedBytes = await readFile(packagedTemplatePath());
+      const packagedDigest = sha256(packagedBytes);
+
+      // (a) name collision: file present, no entry -> untouched, adopter-owned.
+      const collisionDir = await newTempDir();
+      const collisionWorkflows = path.join(collisionDir, ".github", "workflows");
+      await mkdir(collisionWorkflows, { recursive: true });
+      const collisionPath = path.join(collisionWorkflows, WORKFLOW_NAME);
+      await writeFile(collisionPath, ADOPTER_BODY, "utf-8");
+      const collisionDigestBefore = sha256(await readFile(collisionPath));
+      await runInitQuiet(collisionDir);
+      expect(sha256(await readFile(collisionPath)), "[collision] byte identity").toBe(
+        collisionDigestBefore,
+      );
+      await expect(observeFixtureState(collisionDir, packagedDigest)).resolves.toBe(
+        "adopter-owned",
+      );
+
+      // (b) declined: entry present, file absent -> stays absent, declined.
+      const declinedDir = await newTempDir();
+      await seedProvenanceEntry(declinedDir, packagedDigest);
+      await runInitQuiet(declinedDir);
+      const declinedStillAbsent = await readFile(
+        path.join(declinedDir, ".github", "workflows", WORKFLOW_NAME),
+      ).then(
+        () => false,
+        () => true,
+      );
+      expect(declinedStillAbsent, "[declined] the file must stay absent").toBe(true);
+      await expect(observeFixtureState(declinedDir, packagedDigest)).resolves.toBe("declined");
+
+      // (c) modified: entry present, edited file -> bytes untouched, modified.
+      const modifiedDir = await newTempDir();
+      const modifiedWorkflows = path.join(modifiedDir, ".github", "workflows");
+      await mkdir(modifiedWorkflows, { recursive: true });
+      const modifiedPath = path.join(modifiedWorkflows, WORKFLOW_NAME);
+      await writeFile(modifiedPath, EDITED_BODY, "utf-8");
+      await seedProvenanceEntry(modifiedDir, packagedDigest);
+      const modifiedDigestBefore = sha256(await readFile(modifiedPath));
+      await runInitQuiet(modifiedDir);
+      expect(sha256(await readFile(modifiedPath)), "[modified] byte identity").toBe(
+        modifiedDigestBefore,
+      );
+      await expect(observeFixtureState(modifiedDir, packagedDigest)).resolves.toBe("modified");
+    });
+
+    it("the create-only force: false literal stays at the root-copy call site and is not lifted to options.force", async () => {
+      const source = await readInitSource();
+      const rootCopySites = extractCallSites(source, "copyTemplateTree(").filter((args) =>
+        args.includes("rootAssets"),
+      );
+      expect(
+        rootCopySites.length,
+        "init.ts must contain exactly one root-tree copyTemplateTree call site",
+      ).toBe(1);
+      const site = rootCopySites[0] ?? "";
+      // The literal is load-bearing for the ownership contract: lifting it
+      // to options.force would let a --force run overwrite an
+      // adopter-owned collision, and NO behavioral fixture in this file
+      // would catch the lift (options.force is false in all of them) —
+      // which is exactly why this oracle is source-level.
+      expect(site).toContain("force: false");
+      expect(
+        site.includes("force: options.force"),
+        "the root-copy create-only literal must not be lifted to options.force",
+      ).toBe(false);
+    });
+  },
+);
