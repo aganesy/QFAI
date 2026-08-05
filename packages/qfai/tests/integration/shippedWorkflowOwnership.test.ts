@@ -19,6 +19,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import * as initModule from "../../src/cli/commands/init.js";
+import { copyTemplatePaths } from "../../src/cli/lib/fs.js";
 import {
   readInstallProvenance,
   resolveWorkflowFileState,
@@ -786,6 +787,155 @@ describe(
       const entry = record.workflows[WORKFLOW_NAME];
       expect(entry, "the declined entry must survive runInit unreplaced").toBeDefined();
       expect(entry).toEqual(DECLINED_SEED_ENTRY);
+    });
+  },
+);
+
+describe(
+  "TC-0003-0051 (TDD-0051): declined name is excluded from the copy set before the copy runs",
+  { timeout: 60000 },
+  () => {
+    // Scope notes:
+    // - This row owns the copy-set EXCLUSION joint: a declined name must be
+    //   removed from the copy set BEFORE the copy primitive runs. Create-only
+    //   cannot hold the declined row on its own — the file is absent, so the
+    //   create-only predicate ("write when absent") is precisely what would
+    //   recreate it (it3 is that falsifying control).
+    // - The record side of declined (entry retained, never restamped) is
+    //   TDD-0054's describe and is not re-asserted here. The behavioral
+    //   inclusion of `absent` names is TDD-0054 it1; the byte-identity of
+    //   adopter-owned collisions is TDD-0046 it1 — both referenced, not
+    //   duplicated; it1 here pins their COPY-SET-level counterparts.
+    const WORKFLOW_NAME = "qfai-validate.yml";
+    const PROVENANCE_REL = ".qfai/install-provenance.json";
+    // The pre-copy copy-set joint this row demands from the init module. Its
+    // signature is fixed test-first: a PURE resolver over the two pre-init
+    // observations — (shippedNames, provenance record, names present on
+    // disk) -> Set of names the copy may write.
+    const COPY_SET_RESOLVER_EXPORT = "resolveWorkflowCopySet";
+    const DECLINED_ENTRY: WorkflowProvenanceEntry = {
+      sha256: "cd".repeat(32),
+      installedByVersion: "0.0.1",
+      installedAt: "2022-03-04T05:06:07Z",
+    };
+
+    /** Entry present + file absent on disk = the `declined` state. */
+    async function seedDeclinedFixture(dir: string): Promise<void> {
+      const provenancePath = path.join(dir, PROVENANCE_REL);
+      await mkdir(path.dirname(provenancePath), { recursive: true });
+      await writeFile(
+        provenancePath,
+        JSON.stringify({ workflows: { [WORKFLOW_NAME]: DECLINED_ENTRY } }, null, 2),
+        "utf-8",
+      );
+    }
+
+    it("the copy set is resolvable before the copy: an exported pure resolver excludes the declined name and swallows neither absent nor adopter-owned", () => {
+      // The copy-set decision must exist as an observable joint BEFORE any
+      // filesystem work. A missing export fails THIS assertion instead of
+      // crashing module load (namespace-import pattern).
+      expect(
+        Object.keys(initModule),
+        `init module must export ${COPY_SET_RESOLVER_EXPORT} (the pre-copy copy-set joint)`,
+      ).toContain(COPY_SET_RESOLVER_EXPORT);
+      const resolverExport: unknown = Reflect.get(initModule, COPY_SET_RESOLVER_EXPORT);
+      expect(typeof resolverExport).toBe("function");
+      if (typeof resolverExport !== "function") {
+        throw new Error(`${COPY_SET_RESOLVER_EXPORT} is not exported as a function`);
+      }
+
+      const shipped = new Set([WORKFLOW_NAME]);
+
+      // declined (entry present, not on disk): EXCLUDED from the set.
+      const declinedResult: unknown = resolverExport(
+        shipped,
+        { workflows: { [WORKFLOW_NAME]: DECLINED_ENTRY } },
+        new Set<string>(),
+      );
+      expect(declinedResult).toBeInstanceOf(Set);
+      expect(
+        declinedResult instanceof Set && declinedResult.has(WORKFLOW_NAME),
+        "a declined name must not be in the copy set",
+      ).toBe(false);
+
+      // absent (no entry, not on disk): INCLUDED — the exclusion must not
+      // swallow never-installed names (behavioral half: TDD-0054 it1).
+      const absentResult: unknown = resolverExport(shipped, { workflows: {} }, new Set<string>());
+      expect(
+        absentResult instanceof Set && absentResult.has(WORKFLOW_NAME),
+        "an absent (never-installed) name must stay in the copy set",
+      ).toBe(true);
+
+      // adopter-owned (no entry, present on disk): INCLUDED — the on-disk
+      // file's protection is the create-only skip (behavioral half:
+      // TDD-0046 it1), so the exclusion must key on the entry+absence PAIR,
+      // not on disk absence alone.
+      const adopterOwnedResult: unknown = resolverExport(
+        shipped,
+        { workflows: {} },
+        new Set([WORKFLOW_NAME]),
+      );
+      expect(
+        adopterOwnedResult instanceof Set && adopterOwnedResult.has(WORKFLOW_NAME),
+        "an adopter-owned name must stay in the copy set (create-only skips it)",
+      ).toBe(true);
+    });
+
+    it("a declined file stays absent on disk after runInit (never recreated)", async () => {
+      const dir = await newTempDir();
+      await seedDeclinedFixture(dir);
+
+      await runInitQuiet(dir);
+
+      const filePath = path.join(dir, ".github", "workflows", WORKFLOW_NAME);
+      const stillAbsent = await readFile(filePath).then(
+        () => false,
+        () => true,
+      );
+      expect(
+        stillAbsent,
+        `${WORKFLOW_NAME} must not be recreated by runInit for a declined name`,
+      ).toBe(true);
+    });
+
+    it("control: the unfiltered copy primitive writes the declined file — create-only cannot be the exclusion mechanism", async () => {
+      const dir = await newTempDir();
+      await seedDeclinedFixture(dir);
+
+      // Invoke the copy primitive directly with the UNFILTERED shipped
+      // workflows tree (no copy-set construction in front of it). The
+      // declined file is absent, so create-only writes it: the falsifying
+      // oracle for any claim that create-only alone satisfies the declined
+      // row — which is why the exclusion must precede the copy.
+      const rootAssets = path.join(getInitAssetsDir(), "root");
+      await copyTemplatePaths(rootAssets, dir, [path.join(".github", "workflows")], {
+        force: false,
+        dryRun: false,
+        conflictPolicy: "skip",
+      });
+
+      const filePath = path.join(dir, ".github", "workflows", WORKFLOW_NAME);
+      const written = await readFile(filePath).then(
+        () => true,
+        () => false,
+      );
+      expect(
+        written,
+        `${WORKFLOW_NAME} must be written by the unfiltered create-only copy (the file was absent)`,
+      ).toBe(true);
+    });
+
+    it("single state derivation: init.ts reads the provenance record exactly once (the resolver must consume the pre-init capture)", async () => {
+      const source = await readInitSource();
+      // The pre-init snapshot is the single provenance read; the copy-set
+      // resolver must consume THAT state rather than deriving its own from
+      // a second read — two reads could disagree mid-run and would make
+      // the record decision and the copy decision separable.
+      const readCallSites = source.split("readInstallProvenance(").length - 1;
+      expect(
+        readCallSites,
+        "init.ts must contain exactly one readInstallProvenance call site",
+      ).toBe(1);
     });
   },
 );

@@ -95,6 +95,19 @@ export async function runInit(options: InitOptions): Promise<void> {
   // copy ends up writing.
   const workflowPreInit = await captureShippedWorkflowPreInitState(destRoot);
 
+  // Declined names are excluded from the copy set BEFORE the copy runs:
+  // the file is absent on disk, so the create-only predicate ("write when
+  // absent") is exactly what would recreate it. Only pre-copy exclusion
+  // holds the declined row of the state table.
+  const workflowCopySet = resolveWorkflowCopySet(
+    SHIPPED_WORKFLOW_NAMES,
+    workflowPreInit.record,
+    workflowPreInit.presentOnDisk,
+  );
+  const declinedWorkflowExcludes = [...SHIPPED_WORKFLOW_NAMES]
+    .filter((name) => !workflowCopySet.has(name))
+    .map((name) => path.join(".github", "workflows", name));
+
   // root/ と .qfai/ は create-only（既存は skip）
   // assistant/skills のみ --force で上書きする
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
@@ -102,6 +115,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
     conflictPolicy: "skip",
     protect: ["DESIGN.md"],
+    exclude: declinedWorkflowExcludes,
   });
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
@@ -1305,17 +1319,42 @@ export const SHIPPED_WORKFLOW_NAMES: ReadonlySet<string> = new Set<string>(["qfa
 export const RETIRED_WORKFLOW_NAMES: ReadonlySet<string> = new Set<string>();
 
 /**
+ * Pure copy-set construction for the shipped workflow names: a name is in
+ * the copy set unless its pre-run state is declined (record entry present
+ * AND file absent on disk — the adopter deliberately removed it, and the
+ * file is never recreated). Absent (never-installed) names stay in, and
+ * adopter-owned names (present on disk without an entry) stay in as well:
+ * their on-disk protection is the create-only skip, not this exclusion.
+ */
+export function resolveWorkflowCopySet(
+  shippedNames: ReadonlySet<string>,
+  record: InstallProvenanceRecord,
+  presentOnDisk: ReadonlySet<string>,
+): Set<string> {
+  const copySet = new Set<string>();
+  for (const name of shippedNames) {
+    const declined = record.workflows[name] !== undefined && !presentOnDisk.has(name);
+    if (!declined) {
+      copySet.add(name);
+    }
+  }
+  return copySet;
+}
+
+/**
  * Pre-copy snapshot of the shipped-workflow provenance state: the record
- * as it stood before this run, plus the shipped names that were absent
- * (no record entry AND no file on disk). Only those names may gain an
- * entry afterwards — a name with an existing entry keeps it untouched (a
- * deliberately deleted file stays declined; an earlier install keeps its
- * original digest), and an adopter-authored file (present, no entry)
- * stays unrecorded because the create-only copy skips it.
+ * as it stood before this run, the shipped names that were absent (no
+ * record entry AND no file on disk), and the shipped names present on
+ * disk. This single snapshot feeds BOTH decisions — the copy-set
+ * exclusion (declined names are dropped before the copy) and the record
+ * write (only pre-run-absent names may gain an entry afterwards; a name
+ * with an existing entry keeps it untouched, and an adopter-authored
+ * file stays unrecorded because the create-only copy skips it).
  */
 type ShippedWorkflowPreInitState = {
   record: InstallProvenanceRecord;
   absentNames: string[];
+  presentOnDisk: Set<string>;
 };
 
 async function captureShippedWorkflowPreInitState(
@@ -1323,16 +1362,17 @@ async function captureShippedWorkflowPreInitState(
 ): Promise<ShippedWorkflowPreInitState> {
   const record = await readInstallProvenance(destRoot);
   const absentNames: string[] = [];
+  const presentOnDisk = new Set<string>();
   for (const name of SHIPPED_WORKFLOW_NAMES) {
-    if (record.workflows[name] !== undefined) {
-      continue; // existing entry: retained as-is, whatever the disk says
+    const onDisk = await exists(path.join(destRoot, ".github", "workflows", name));
+    if (onDisk) {
+      presentOnDisk.add(name);
     }
-    if (await exists(path.join(destRoot, ".github", "workflows", name))) {
-      continue; // adopter-owned collision: the create-only copy skips it
+    if (record.workflows[name] === undefined && !onDisk) {
+      absentNames.push(name);
     }
-    absentNames.push(name);
   }
-  return { record, absentNames };
+  return { record, absentNames, presentOnDisk };
 }
 
 /**
