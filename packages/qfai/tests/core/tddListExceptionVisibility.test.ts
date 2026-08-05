@@ -81,6 +81,28 @@ describe("parked exception rows are visible in CI", () => {
     );
   });
 
+  it("cites the transition table it is asking the operator to use", async () => {
+    // The remediation names `exception -> todo`, an edge `qfai-implement`'s
+    // SKILL.md summarises without listing. An operator who checked the finding
+    // against the skill found "backward transitions are prohibited … the only
+    // exception is an approved Change Request reset" and concluded the tool was
+    // asking for something the skill forbids. The finding now says where the
+    // real table is, and that this edge carries no approval requirement.
+    await withLedger(
+      [
+        "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | case a   | exception | DR-0001-0001   | anomaly  |",
+      ],
+      (issues) => {
+        const finding = parked(issues)[0];
+        expect(finding?.message).toContain("references/execution-ledger.md#allowed-transitions");
+        expect(finding?.message).toContain("needs no Change Request");
+        expect(finding?.suggested_action).toContain(
+          "references/execution-ledger.md#allowed-transitions",
+        );
+      },
+    );
+  });
+
   it("keys dl_id per row even when two rows share one DR-ID", async () => {
     // A DR-ID is not row-unique: several parked rows can cite the same decision
     // record. Falling back to it let one `match.dl_ids` entry suppress every row

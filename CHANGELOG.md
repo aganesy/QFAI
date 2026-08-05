@@ -4,6 +4,20 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **`references/execution-ledger.md` is the only place the ledger's transition
+  table is stated.** `qfai-implement/SKILL.md` summarised it four times and
+  three of those summaries claimed the re-entry set was a single edge
+  (`refactor` -> `red`), so `blocked` -> `todo`, `exception` -> `todo` and the
+  reviewer loop read as illegal to anyone working from the skill — including the
+  `project_memory` line, which is the one most likely to be quoted into a
+  delegated work order. The summaries now state the forward spine, name the
+  reference as the complete list, and say outright not to infer an edge's
+  absence from them. `TDDLIST_EXCEPTION_PARKED` cites the same anchor and says
+  its `exception -> todo` remediation needs no Change Request, which is what an
+  operator could not tell from the skill alone.
+
 ## [1.10.0] - 2026-08-03
 
 ### Changed
