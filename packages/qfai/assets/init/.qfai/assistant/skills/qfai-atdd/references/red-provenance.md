@@ -19,7 +19,7 @@ skill therefore writes into a ledger whose status lifecycle it does not define.
 ## Why the stage order makes this a real question
 
 Work Orders build the API and integration surfaces a journey needs (P3, P4). A
-journey written *after* its surface passes on the first run, so there is nothing
+journey written _after_ its surface passes on the first run, so there is nothing
 to watch fail — and `qfai-implement/SKILL.md` classifies a test that
 unexpectedly passes as an anomaly bound for `exception`.
 
@@ -61,11 +61,11 @@ try branches 1 and 2.
 
 Exactly one form per row, never both and never neither:
 
-| Branch          | Recorded                                                                    |
-| --------------- | --------------------------------------------------------------------------- |
-| Observed RED    | RED command+result, GREEN command+result                                     |
-| Falsifiability  | `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, GREEN pair |
-| `exception`     | `DR-*`, and why both other branches were unavailable                          |
+| Branch         | Recorded                                                                      |
+| -------------- | ----------------------------------------------------------------------------- |
+| Observed RED   | RED command+result, GREEN command+result                                      |
+| Falsifiability | `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, GREEN pair |
+| `exception`    | `DR-*`, and why both other branches were unavailable                          |
 
 The `Evidence` cell is a pointer; the payload lives in
 `.qfai/evidence/atdd-<spec-id>.md` under `## Ledger rows advanced`

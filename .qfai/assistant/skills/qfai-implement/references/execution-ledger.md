@@ -262,7 +262,7 @@ the first run, so:
   surface work. `qa-gatekeeper` accepts that form, and the row proceeds to
   `green` and `done`.
 - **`/qfai-atdd` also has a first branch this ledger cannot see**: writing the
-  journey against the tree *before* the surface exists, which produces an
+  journey against the tree _before_ the surface exists, which produces an
   ordinary RED. Its stage gate P1b is where that happens.
 - **`exception` is for a row where both are unavailable** — an obligation with
   no persisted form or no observable surface at L5, recorded with a `DR-*`
