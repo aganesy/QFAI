@@ -11,12 +11,11 @@
  * This file grows row by row; each describe block is one ledger row.
  */
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import * as initModule from "../../src/cli/commands/init.js";
 import { copyTemplatePaths } from "../../src/cli/lib/fs.js";
@@ -28,6 +27,7 @@ import {
 } from "../../src/shared/provenance.js";
 import { QFAI_GITIGNORE_BLOCK } from "../../src/core/gitignore.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
+import { shippedWorkflowPath, useTempDirPool } from "../helpers/shippedWorkflowFixtures.js";
 import { captureStdout } from "../helpers/stdout.js";
 
 // tests/integration/<this file> -> tests -> packages/qfai
@@ -36,20 +36,7 @@ const INIT_MODULE_PATH = path.join(packageRoot, "src", "cli", "commands", "init.
 
 const readInitSource = (): Promise<string> => readFile(INIT_MODULE_PATH, "utf-8");
 
-const tempDirs: string[] = [];
-
-afterEach(async () => {
-  while (tempDirs.length > 0) {
-    const dir = tempDirs.pop();
-    if (dir) await rm(dir, { recursive: true, force: true });
-  }
-});
-
-async function newTempDir(): Promise<string> {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-wfown-"));
-  tempDirs.push(dir);
-  return dir;
-}
+const newTempDir = useTempDirPool("qfai-wfown-");
 
 async function runInitQuiet(dir: string): Promise<void> {
   await captureStdout(() => initModule.runInit({ dir, force: false, dryRun: false, yes: true }));
@@ -364,9 +351,7 @@ describe(
       expect(entry).toBeUndefined();
 
       const diskSha = sha256(await readFile(collisionPath));
-      const packagedBytes = await readFile(
-        path.join(getInitAssetsDir(), "root", ".github", "workflows", COLLISION_NAME),
-      );
+      const packagedBytes = await readFile(shippedWorkflowPath(COLLISION_NAME));
       const state = resolveWorkflowFileState(entry, diskSha, sha256(packagedBytes));
       expect(state, "no provenance entry + present on disk must classify as adopter-owned").toBe(
         "adopter-owned",
@@ -432,8 +417,7 @@ describe(
       "declined",
     ] as const satisfies readonly WorkflowFileState[];
 
-    const packagedTemplatePath = (): string =>
-      path.join(getInitAssetsDir(), "root", ".github", "workflows", WORKFLOW_NAME);
+    const packagedTemplatePath = (): string => shippedWorkflowPath(WORKFLOW_NAME);
 
     function provenanceEntry(digest: string): WorkflowProvenanceEntry {
       return { sha256: digest, installedByVersion: "0.0.0", installedAt: "2020-01-01T00:00:00Z" };
@@ -700,8 +684,7 @@ describe(
       installedAt: "2021-02-03T04:05:06Z",
     };
 
-    const packagedTemplatePath = (): string =>
-      path.join(getInitAssetsDir(), "root", ".github", "workflows", WORKFLOW_NAME);
+    const packagedTemplatePath = (): string => shippedWorkflowPath(WORKFLOW_NAME);
 
     async function writeProvenanceRecord(
       dir: string,
@@ -968,8 +951,7 @@ describe(
       "recordInstalledWorkflows",
     ] as const;
 
-    const packagedTemplatePath = (): string =>
-      path.join(getInitAssetsDir(), "root", ".github", "workflows", WORKFLOW_NAME);
+    const packagedTemplatePath = (): string => shippedWorkflowPath(WORKFLOW_NAME);
 
     const forbiddenCalls = (text: string): string[] => text.match(FORBIDDEN_FS_CALL_RE) ?? [];
 

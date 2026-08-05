@@ -11,23 +11,24 @@
  *
  * This file grows row by row; each describe block is one ledger row.
  */
-import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
+import { cp, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
-import { getInitAssetsDir } from "../../src/shared/assets.js";
+import {
+  isRecord,
+  loadShippedWorkflows,
+  shippedGithubDir,
+  shippedWorkflowsDir,
+  useTempDirPool,
+} from "../helpers/shippedWorkflowFixtures.js";
 
 // tests/integration/<this file> -> tests -> packages/qfai -> packages -> repo root
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const repoRoot = path.resolve(packageRoot, "..", "..");
-
-/** The real shipped `.github/` tree inside the packaged init assets. */
-const shippedGithubDir = (): string => path.join(getInitAssetsDir(), "root", ".github");
-const shippedWorkflowsDir = (): string => path.join(shippedGithubDir(), "workflows");
 
 /**
  * The adopter-facing test layers the orchestrator must separate as jobs or
@@ -36,18 +37,7 @@ const shippedWorkflowsDir = (): string => path.join(shippedGithubDir(), "workflo
  */
 const LAYER_NAMES: readonly string[] = ["unit", "component", "integration", "api", "e2e"];
 
-const tempDirs: string[] = [];
-
-afterEach(async () => {
-  while (tempDirs.length > 0) {
-    const dir = tempDirs.pop();
-    if (dir) await rm(dir, { recursive: true, force: true });
-  }
-});
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
+const newTempDir = useTempDirPool("qfai-wftopo-");
 
 /**
  * Collects the layer names a parsed workflow document declares, either as a
@@ -95,10 +85,10 @@ function collectDeclaredLayers(doc: unknown): string[] {
 
 describe("TC-0003-0035 (TDD-0035): zero cross-file references; layer separation is jobs inside the orchestrator", () => {
   it("no shipped file references another shipped file, including the uses: ./.github/workflows/ form", async () => {
-    const names = (await readdir(shippedWorkflowsDir())).sort();
+    const files = await loadShippedWorkflows();
+    const names = files.map(([name]) => name);
     const violations: string[] = [];
-    for (const name of names) {
-      const body = await readFile(path.join(shippedWorkflowsDir(), name), "utf-8");
+    for (const [name, body] of files) {
       // A mention of another shipped filename ANYWHERE in the body is the
       // violation (an absent target turns the referencing workflow into a
       // parse error with no repair path under create-only install), and the
@@ -125,13 +115,11 @@ describe("TC-0003-0035 (TDD-0035): zero cross-file references; layer separation 
   });
 
   it("exactly one shipped file is the orchestrator and it declares one job or matrix leg per layer", async () => {
-    const names = (await readdir(shippedWorkflowsDir())).sort();
     // Every shipped file must parse independently; layer lanes must all sit
     // inside ONE file (jobs / matrix legs), so layer separation is provably
     // not one-file-per-layer.
     const layerDeclarationsByFile = new Map<string, string[]>();
-    for (const name of names) {
-      const body = await readFile(path.join(shippedWorkflowsDir(), name), "utf-8");
+    for (const [name, body] of await loadShippedWorkflows()) {
       const declared = collectDeclaredLayers(parse(body));
       if (declared.length > 0) {
         layerDeclarationsByFile.set(name, declared);
@@ -202,8 +190,7 @@ describe("TC-0003-0034 (TDD-0034): planted actions directory and non-prefixed fi
 
   /** Copies the REAL shipped `.github/` tree into a fresh temp dir. */
   async function copyShippedGithubToTemp(): Promise<string> {
-    const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-wftopo-"));
-    tempDirs.push(dir);
+    const dir = await newTempDir();
     const dest = path.join(dir, ".github");
     await cp(shippedGithubDir(), dest, { recursive: true });
     return dest;

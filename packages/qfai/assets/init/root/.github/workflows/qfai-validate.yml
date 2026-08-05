@@ -25,18 +25,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - name: Set up pnpm (if project uses pnpm)
         if: ${{ hashFiles('pnpm-lock.yaml') != '' }}
-        # pnpm/action-setup@v4 resolves the pnpm version from
+        # The pnpm setup action resolves the pnpm version from
         # `package.json#packageManager` when no `version:` input is
         # provided. Setting `version:` would override the consumer's
         # declared packageManager (e.g. forcing pnpm 9 on a pnpm 10
         # project), so we leave it unset and require the consumer to
         # declare `"packageManager": "pnpm@X.Y.Z"` in package.json —
         # the most common pnpm-on-CI baseline.
-        uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           # Match the QFAI repo's CI baseline (Node 20 LTS) and the package
           # `engines: ">=18.0.0"`. Bump deliberately when QFAI raises its
