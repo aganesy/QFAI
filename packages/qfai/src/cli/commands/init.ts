@@ -114,7 +114,21 @@ export async function runInit(options: InitOptions): Promise<void> {
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
-  const removed = [...removedLegacySkills, ...wrappersResult.removed];
+
+  // Retired shipped workflows: prune by retired-name-set membership ONLY.
+  // The adopter's `.github/workflows/` directory is adopter-authored; the
+  // `qfai-` filename prefix is a reservation notice, never a deletion
+  // selector, so a prefix predicate is forbidden here (shipped-workflows
+  // contract) — an adopter-created `qfai-*.yml` must stay untouched.
+  const removedRetiredWorkflows: string[] = [];
+  await pruneMatchingEntries(
+    path.join(destRoot, ".github", "workflows"),
+    (entry) => entry.isFile() && RETIRED_WORKFLOW_NAMES.has(entry.name),
+    removedRetiredWorkflows,
+    options.dryRun,
+  );
+
+  const removed = [...removedLegacySkills, ...wrappersResult.removed, ...removedRetiredWorkflows];
 
   // 4-layer assistant-tree seed + project-root steering surface seed.
   // These run AFTER copyTemplateTree so they can detect when the
@@ -1254,7 +1268,23 @@ async function pruneStaleQfaiWrappers(
   return removed;
 }
 
-async function pruneMatchingEntries(
+/**
+ * Names a previous package version shipped into the adopter's
+ * `.github/workflows/` directory that the current version no longer ships
+ * (the shipped-workflows contract's prune set). A name moves here in the
+ * same change that stops shipping it; a name in neither the shipped nor
+ * the retired list is not QFAI's. Never computed by globbing the
+ * adopter's disk. Currently empty: no shipped workflow has been retired.
+ */
+const RETIRED_WORKFLOW_NAMES: ReadonlySet<string> = new Set<string>();
+
+/**
+ * The only removal primitive for QFAI-owned entries in an adopter tree:
+ * removes the direct entries of `dir` that match `predicate`, appending
+ * each removed path to `removed`. Exported for reuse — the
+ * shipped-workflows contract forbids parallel removal implementations.
+ */
+export async function pruneMatchingEntries(
   dir: string,
   predicate: (entry: Dirent) => boolean,
   removed: string[],
