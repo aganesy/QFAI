@@ -129,8 +129,10 @@ describe("qfai init", { timeout: 60000 }, () => {
 
       const content = await readFile(workflowPath, "utf-8");
       expect(content).toContain("qfai validate --profile full --fail-on error");
-      expect(content).toContain("actions/checkout@v4");
-      expect(content).toContain("actions/setup-node@v4");
+      // DTC-26 co-change (TC-0003-0030): the shipped set is SHA-pinned, so
+      // the former floating-major expectations are asserted in pin form.
+      expect(content).toMatch(/actions\/checkout@[0-9a-f]{40}\b/);
+      expect(content).toMatch(/actions\/setup-node@[0-9a-f]{40}\b/);
       expect(content).toContain("QFAI-TEST-001");
     } finally {
       await rm(root, { recursive: true, force: true });
