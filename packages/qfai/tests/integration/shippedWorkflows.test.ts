@@ -9,15 +9,25 @@
  * cancels superseded runs via a ref-scoped `concurrency:` group. The
  * shipped/retired name lists' disjointness invariant (the write/prune sets
  * can never claim the same name) is asserted here as well — its ruled home
- * per the shape-guard scope of this suite.
+ * per the shape-guard scope of this suite. The lockfile-aware install
+ * path's survival through the hardening (five branches, nested cache
+ * ternary, engines-backed header floor claims) is the third describe's
+ * surface.
  *
  * This file grows row by row; each describe block is one ledger row.
  */
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
 import { RETIRED_WORKFLOW_NAMES, SHIPPED_WORKFLOW_NAMES } from "../../src/cli/commands/init.js";
 import { isRecord, loadShippedWorkflows } from "../helpers/shippedWorkflowFixtures.js";
+
+// tests/integration/<this file> -> tests -> packages/qfai
+const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 /** Every job of a parsed workflow document as `{ jobId, job }` records. */
 function collectJobs(doc: unknown): Array<{ jobId: string; job: Record<string, unknown> }> {
@@ -275,6 +285,173 @@ describe("TC-0003-0028 (TDD-0055): every shipped checkout refuses to persist cre
           `${name}: ${totalOccurrences - checkoutScoped} fetch-depth key(s) outside a checkout step's with: block`,
         );
       }
+    }
+    expect(violations).toEqual([]);
+  });
+});
+
+describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile branch survive hardening", () => {
+  // Realizes TC-0003-0029 (AC-0003-0026 / BR-0003-0023 "extend, never
+  // replace"), one it() per verify bullet. Scoping decisions, disclosed:
+  //   - Install-shape bullets apply to shipped files that HAVE install
+  //     steps. The qfai-tests lanes ship install-less by the skeleton's
+  //     staging design (their install bodies land with the lane-enabling
+  //     rows), so demanding the branch shape of every FILE would contradict
+  //     that staging; the set-wide scan below picks up any file the moment
+  //     it gains an install step.
+  //   - The header bullet pins the explicit engines-citation form present
+  //     in the shipped set, judged against `package.json#engines.node` read
+  //     at run time (never hardcoded). Prose-form header completeness is
+  //     TC-0003-0042's surface.
+
+  /** The five install branches BR-0003-0023 requires, as body markers. */
+  const INSTALL_BRANCH_MARKERS: readonly string[] = [
+    "pnpm install --frozen-lockfile",
+    "yarn install --immutable",
+    "yarn install --frozen-lockfile",
+    "npm ci",
+    "npm install --no-audit --no-fund",
+  ];
+
+  /** The three lockfile probes the branch selection detects. */
+  const LOCKFILE_PROBES: readonly string[] = ["pnpm-lock.yaml", "yarn.lock", "package-lock.json"];
+
+  /** Steps whose run body invokes a package-manager install, per job. */
+  function collectInstallSteps(doc: unknown): Array<{ jobId: string; run: string }> {
+    const installs: Array<{ jobId: string; run: string }> = [];
+    for (const { jobId, job } of collectJobs(doc)) {
+      for (const step of collectSteps(job)) {
+        const run = step["run"];
+        if (typeof run === "string" && /\b(?:pnpm|yarn|npm)\s+(?:install|ci)\b/.test(run)) {
+          installs.push({ jobId, run });
+        }
+      }
+    }
+    return installs;
+  }
+
+  it("every install step keeps all five branches: pnpm, Yarn Berry, Yarn Classic, npm and the no-lockfile fallback", async () => {
+    const violations: string[] = [];
+    let installStepCount = 0;
+    for (const [name, body] of await loadShippedWorkflows()) {
+      for (const { jobId, run } of collectInstallSteps(parse(body))) {
+        installStepCount += 1;
+        for (const marker of INSTALL_BRANCH_MARKERS) {
+          if (!run.includes(marker)) {
+            violations.push(`${name}: job "${jobId}" install step lost the "${marker}" branch`);
+          }
+        }
+        for (const probe of LOCKFILE_PROBES) {
+          if (!run.includes(`[ -f ${probe} ]`)) {
+            violations.push(`${name}: job "${jobId}" install step lost the ${probe} detection`);
+          }
+        }
+      }
+    }
+    // Non-vacuity: the shipped set carries an install step today.
+    expect(installStepCount).toBeGreaterThanOrEqual(1);
+    expect(violations).toEqual([]);
+  });
+
+  it("every setup-node cache: value stays the nested lockfile-detection ternary, not a single package-manager literal", async () => {
+    const violations: string[] = [];
+    let cacheExpressionCount = 0;
+    for (const [name, body] of await loadShippedWorkflows()) {
+      for (const { jobId, job } of collectJobs(parse(body))) {
+        for (const step of collectSteps(job)) {
+          const uses = step["uses"];
+          if (typeof uses !== "string" || !uses.startsWith("actions/setup-node@")) {
+            continue;
+          }
+          const withNode = step["with"];
+          const cache = isRecord(withNode) ? withNode["cache"] : undefined;
+          if (cache === undefined) {
+            continue;
+          }
+          cacheExpressionCount += 1;
+          if (typeof cache !== "string") {
+            violations.push(`${name}: job "${jobId}" cache: is not a string expression`);
+            continue;
+          }
+          if (["pnpm", "yarn", "npm"].includes(cache.trim())) {
+            violations.push(
+              `${name}: job "${jobId}" cache: was replaced by the single literal "${cache.trim()}"`,
+            );
+            continue;
+          }
+          for (const probe of LOCKFILE_PROBES) {
+            if (!cache.includes(`hashFiles('${probe}')`)) {
+              violations.push(`${name}: job "${jobId}" cache: lost the ${probe} detection`);
+            }
+          }
+          if (!cache.includes("&&") || !cache.includes("||")) {
+            violations.push(`${name}: job "${jobId}" cache: is no longer a conditional chain`);
+          }
+        }
+      }
+    }
+    expect(cacheExpressionCount).toBeGreaterThanOrEqual(1);
+    expect(violations).toEqual([]);
+  });
+
+  it("every install-bearing shipped file carries the same five-branch install shape", async () => {
+    // The "extend, never replace" half of BR-0003-0023: a new shipped file
+    // that introduces an install step must reproduce the full branch form.
+    // Deliberate overlap with the first it (per-step branch presence) —
+    // this it judges at file level so a future file with a partial install
+    // step is named as a shape divergence, not just a missing marker.
+    const violations: string[] = [];
+    for (const [name, body] of await loadShippedWorkflows()) {
+      const installSteps = collectInstallSteps(parse(body));
+      if (installSteps.length === 0) {
+        // Install-less files (today: the staged qfai-tests lanes) are out
+        // of scope by the skeleton's staging design, disclosed above.
+        continue;
+      }
+      const markersPresent = new Set<string>();
+      for (const { run } of installSteps) {
+        for (const marker of INSTALL_BRANCH_MARKERS) {
+          if (run.includes(marker)) {
+            markersPresent.add(marker);
+          }
+        }
+      }
+      if (markersPresent.size !== INSTALL_BRANCH_MARKERS.length) {
+        violations.push(
+          `${name}: install shape diverges from the canonical five-branch form (${markersPresent.size}/${INSTALL_BRANCH_MARKERS.length} branches)`,
+        );
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("no shipped comment line claims a Node support floor the package's engines field does not declare", async () => {
+    const packageJsonRaw = await readFile(path.join(packageRoot, "package.json"), "utf-8");
+    const packageJson: unknown = JSON.parse(packageJsonRaw);
+    const engines = isRecord(packageJson) ? packageJson["engines"] : undefined;
+    const enginesNode = isRecord(engines) ? engines["node"] : undefined;
+    if (typeof enginesNode !== "string") {
+      throw new Error("package.json#engines.node is missing — the floor oracle has no baseline");
+    }
+    const declared = enginesNode.match(/>=\s*([0-9]+(?:\.[0-9]+){0,2})/)?.[1];
+    if (declared === undefined) {
+      throw new Error(`package engines.node "${enginesNode}" declares no >=X.Y.Z floor`);
+    }
+    const violations: string[] = [];
+    for (const [name, body] of await loadShippedWorkflows()) {
+      body.split(/\r?\n/).forEach((line, index) => {
+        if (!line.trimStart().startsWith("#")) {
+          return;
+        }
+        for (const match of line.matchAll(/>=\s*([0-9]+(?:\.[0-9]+){0,2})/g)) {
+          const claimed = match[1] ?? "";
+          if (claimed !== declared) {
+            violations.push(
+              `${name}:${index + 1}: claims floor ">=${claimed}" but package engines.node declares "${enginesNode}"`,
+            );
+          }
+        }
+      });
     }
     expect(violations).toEqual([]);
   });
