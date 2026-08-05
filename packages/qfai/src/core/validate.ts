@@ -23,6 +23,7 @@ import { validateContracts } from "./validators/contracts.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
+import { validateIntegrationSurface } from "./validators/integrationSurface.js";
 import { validateDefinedIds } from "./validators/ids.js";
 import { validateReviewArtifacts } from "./validators/reviewArtifacts.js";
 import { validateSpecPacks } from "./validators/specPack.js";
@@ -227,22 +228,31 @@ async function runProfileValidators(
   platformOption?: string,
   specScope?: SpecScope,
 ): Promise<Issue[]> {
-  switch (profile) {
-    case "discussion":
-      return runDiscussionValidators(root, config);
-    case "sdd":
-      return runSddValidators(root, config, false, true, specScope);
-    case "prototyping":
-      return runPrototypingValidators(root, config, platformOption);
-    case "atdd":
-      return runAtddValidators(root, config);
-    case "tdd":
-      return runTddValidators(root, config);
-    case "verify":
-    case "full":
-      return runFullValidators(root, config, platformOption, specScope);
-    case "saas-package":
-      return runSaasPackage(root, config, platformOption);
+  // Runs in every profile, ahead of the profile's own validators. A broken
+  // integration link means the assistant loaded no skill and routed no agent,
+  // so every gate the profile is about was defined by files nothing read. That
+  // is not an SDD fact or an ATDD fact; it invalidates the run.
+  const surfaceIssues = await validateIntegrationSurface(root);
+  return [...surfaceIssues, ...(await runProfileOwnValidators())];
+
+  async function runProfileOwnValidators(): Promise<Issue[]> {
+    switch (profile) {
+      case "discussion":
+        return runDiscussionValidators(root, config);
+      case "sdd":
+        return runSddValidators(root, config, false, true, specScope);
+      case "prototyping":
+        return runPrototypingValidators(root, config, platformOption);
+      case "atdd":
+        return runAtddValidators(root, config);
+      case "tdd":
+        return runTddValidators(root, config);
+      case "verify":
+      case "full":
+        return runFullValidators(root, config, platformOption, specScope);
+      case "saas-package":
+        return runSaasPackage(root, config, platformOption);
+    }
   }
 }
 

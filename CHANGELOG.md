@@ -4,6 +4,34 @@
 
 ## [Unreleased]
 
+### Added
+
+- **`QFAI-LINK-001` (error) — the assistant integration surface is checked.**
+  `qfai init` builds `.claude/skills`, `.agents/skills`, `.codex/skills`,
+  `.github/skills`, `.claude/agents` and `.github/agents` entirely out of
+  symlinks, and pins their precondition (`core.symlinks true`) into repo-local
+  git config. `.git/config` is not cloned, so on any machine whose system or
+  global config says `core.symlinks = false` — the Windows default — a fresh
+  clone materialises every one of them as a small text file holding the link
+  target. Nothing noticed: `qfai validate` never read those directories, and
+  `qfai doctor`'s `skills.integrity` / `agents.frontmatter` both read the
+  canonical `.qfai/assistant/**` tree, which is unaffected. The assistant then
+  loads no skill and routes no agent, and every gate they define silently stops
+  existing. The new rule runs in **every** profile, ahead of the profile's own
+  validators, and reports a qfai-owned entry that is not a symlink or whose
+  target does not resolve. A directory the project does not have is not a
+  finding, and entries qfai does not own are left alone.
+
+### Fixed
+
+- **`qfai init` repairs a flattened link instead of skipping it.**
+  `ensureSymlink` returned `"skipped"` for any existing non-symlink unless
+  `--force` was passed, and skipped paths print as a plain list — so the one
+  command that could repair the surface reported the broken entry as preserved
+  and changed nothing. The path is one qfai created and owns, and its content is
+  the link target, so it is now replaced without `--force` and the repair is
+  announced on stdout.
+
 ## [1.10.0] - 2026-08-03
 
 ### Changed

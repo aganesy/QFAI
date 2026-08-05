@@ -901,14 +901,14 @@ async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<
 // Symlink-based integration sync
 // ---------------------------------------------------------------------------
 
-const SKILL_INTEGRATION_DIRS = [
+export const SKILL_INTEGRATION_DIRS = [
   ".claude/skills",
   ".agents/skills",
   ".codex/skills",
   ".github/skills",
 ];
 
-const AGENT_INTEGRATION_CONFIGS: Array<{ dir: string; suffix: string }> = [
+export const AGENT_INTEGRATION_CONFIGS: Array<{ dir: string; suffix: string }> = [
   { dir: ".claude/agents", suffix: ".md" },
   { dir: ".github/agents", suffix: ".agent.md" },
 ];
@@ -1096,13 +1096,24 @@ async function ensureSymlink(
         await rm(linkPath, { recursive: true, force: true });
       }
     } else {
-      // Regular file/dir exists
-      if (!options.force) {
-        return "skipped";
-      }
+      // A regular file or directory sits where qfai's own link belongs.
+      //
+      // The overwhelmingly common cause is a checkout that flattened the link:
+      // git wrote the link target as file content because `core.symlinks` was
+      // false, which is the Windows default and is not carried by a clone
+      // (`configureGitSymlinks` writes it repo-locally, and `.git/config` is
+      // not cloned). Returning "skipped" made `qfai init` — the one command
+      // that could repair it — report the broken entry in a reassuring list of
+      // preserved paths and change nothing, so recovery required knowing to
+      // pass `--force`, which nothing told the operator.
+      //
+      // The path is one qfai created and owns, so there is no user content to
+      // preserve. It is replaced without `--force`, and the repair is
+      // announced: silently rewriting a path is what hid the problem.
       if (!options.dryRun) {
         await rm(linkPath, { recursive: true, force: true });
       }
+      info(`  repaired: ${linkPath} was not a symlink (recreating)`);
     }
   }
 
