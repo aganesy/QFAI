@@ -65,6 +65,15 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   "!.qfai/evidence/decisions/**",
   "!.qfai/evidence/change-request-*.md",
   "!.qfai/evidence/decision-*.md",
+  // The Coverage Depth Matrix and the justification behind each `❌` cell.
+  // `/qfai-atdd` makes "no unjustified ❌ cells" both a Definition-of-Done
+  // condition and a Not-done criterion, and `qa-gatekeeper` REVISEs a missing
+  // matrix — so the judgement that discharges those gates is a governance
+  // record, not a regenerable log. Re-running the stage recomputes the cells;
+  // it does not recompute *why* an uncoverable obligation was accepted. Left
+  // inside the ignored stage-evidence file, that reasoning never reaches a
+  // commit and "unjustified" becomes unfalsifiable for every later reader.
+  "!.qfai/evidence/coverage-depth-*.md",
 ] as const;
 
 /** Lines removed from the managed block in previous versions; stripped during migration. */

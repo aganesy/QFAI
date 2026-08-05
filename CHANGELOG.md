@@ -4,6 +4,24 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **The Coverage Depth Matrix has a committed home.** `/qfai-atdd` gates
+  completion on it three times — Mandatory Output 2, a Definition-of-Done
+  condition and a Not-done criterion — and `qa-gatekeeper` REVISEs when it is
+  absent, but nothing said where it goes. The only file the skill mandates
+  writing is `.qfai/evidence/atdd-<spec-id>.md`, whose eleven Required sections
+  had no slot for it and which the managed `.gitignore` block ignores, so the
+  judgement that discharges those gates — why a given `❌` cell is acceptable —
+  was guaranteed never to reach a commit, and "unjustified ❌" was unfalsifiable
+  for every later reader. The matrix and its per-`❌` justifications now go to
+  `.qfai/evidence/coverage-depth-<spec-id>.md`, negated in the managed block
+  alongside Change Requests and decision records; the stage evidence file gains
+  a section that links to it and carries the totals. `qa-gatekeeper` treats a
+  matrix that exists only inside the ignored stage evidence as a missing matrix.
+  Existing projects pick the negation up on the next `qfai init`; no ignore line
+  is removed, so nothing previously tracked becomes untracked.
+
 ## [1.10.0] - 2026-08-03
 
 ### Changed
