@@ -1306,7 +1306,10 @@ async function pruneStaleQfaiWrappers(
  * the asset tree at runtime or the adopter's disk, and the shipped-asset
  * shape gate keeps it equal to the packaged workflow assets.
  */
-export const SHIPPED_WORKFLOW_NAMES: ReadonlySet<string> = new Set<string>(["qfai-validate.yml"]);
+export const SHIPPED_WORKFLOW_NAMES: ReadonlySet<string> = new Set<string>([
+  "qfai-validate.yml",
+  "qfai-tests.yml",
+]);
 
 /**
  * Names a previous package version shipped into the adopter's
