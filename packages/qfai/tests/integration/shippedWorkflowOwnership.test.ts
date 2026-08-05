@@ -19,6 +19,12 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import * as initModule from "../../src/cli/commands/init.js";
+import {
+  readInstallProvenance,
+  resolveWorkflowFileState,
+} from "../../src/cli/lib/provenance.js";
+import { QFAI_GITIGNORE_BLOCK } from "../../src/core/gitignore.js";
+import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { captureStdout } from "../helpers/stdout.js";
 
 // tests/integration/<this file> -> tests -> packages/qfai
@@ -244,6 +250,131 @@ describe(
       const retired = requireStringSetExport("RETIRED_WORKFLOW_NAMES");
       expect(shipped.has(ORPHAN_NAME)).toBe(false);
       expect(retired.has(ORPHAN_NAME)).toBe(false);
+    });
+  },
+);
+
+describe(
+  "TC-0003-0046 (TDD-0046): adopter-authored name collision is left byte-identical across four record states",
+  { timeout: 60000 },
+  () => {
+    // The shipped name itself: an adopter who authored a file under this
+    // name BEFORE installing QFAI must keep it untouched forever.
+    const COLLISION_NAME = "qfai-validate.yml";
+    const ADOPTER_BODY =
+      "# adopter-authored workflow that predates the QFAI install\nname: adopter-collision\n";
+    // Contract-fixed record path in the adopter tree.
+    const PROVENANCE_REL = ".qfai/install-provenance.json";
+    // A shipped-name entry that is NOT the collision name, for state (d).
+    const OTHER_NAME = "qfai-some-other.yml";
+
+    type RecordState = "absent" | "no-workflows-key" | "malformed" | "valid-without-name";
+    const ALL_RECORD_STATES: readonly RecordState[] = [
+      "absent",
+      "no-workflows-key",
+      "malformed",
+      "valid-without-name",
+    ];
+
+    async function seedProvenanceState(dir: string, state: RecordState): Promise<void> {
+      if (state === "absent") {
+        return;
+      }
+      const provenancePath = path.join(dir, PROVENANCE_REL);
+      await mkdir(path.dirname(provenancePath), { recursive: true });
+      if (state === "no-workflows-key") {
+        await writeFile(provenancePath, JSON.stringify({ somethingElse: {} }), "utf-8");
+        return;
+      }
+      if (state === "malformed") {
+        await writeFile(provenancePath, "{ this is not json", "utf-8");
+        return;
+      }
+      await writeFile(
+        provenancePath,
+        JSON.stringify({
+          workflows: {
+            [OTHER_NAME]: {
+              sha256: "0".repeat(64),
+              installedByVersion: "0.0.0",
+              installedAt: "2020-01-01T00:00:00Z",
+            },
+          },
+        }),
+        "utf-8",
+      );
+    }
+
+    async function plantCollision(dir: string): Promise<string> {
+      const workflowsDir = path.join(dir, ".github", "workflows");
+      await mkdir(workflowsDir, { recursive: true });
+      const collisionPath = path.join(workflowsDir, COLLISION_NAME);
+      await writeFile(collisionPath, ADOPTER_BODY, "utf-8");
+      return collisionPath;
+    }
+
+    it("the collision file survives runInit byte-identical in all four record states (no overwrite, no prune)", async () => {
+      for (const state of ALL_RECORD_STATES) {
+        const dir = await newTempDir();
+        const collisionPath = await plantCollision(dir);
+        await seedProvenanceState(dir, state);
+        const digestBefore = sha256(await readFile(collisionPath));
+
+        await runInitQuiet(dir);
+
+        const bytesAfter = await readFile(collisionPath).catch(() => undefined);
+        expect(
+          bytesAfter,
+          `[record ${state}] ${COLLISION_NAME} must survive runInit (not pruned)`,
+        ).toBeDefined();
+        if (bytesAfter === undefined) {
+          throw new Error(`[record ${state}] collision file was removed by runInit`);
+        }
+        expect(sha256(bytesAfter), `[record ${state}] byte identity`).toBe(digestBefore);
+      }
+    });
+
+    it("the reader treats an absent file, a missing workflows key, and malformed JSON as empty without throwing", async () => {
+      for (const state of ["absent", "no-workflows-key", "malformed"] as const) {
+        const dir = await newTempDir();
+        await seedProvenanceState(dir, state);
+        // Fail-safe direction: an unreadable record means every file on
+        // disk is adopter-owned, so QFAI leaves everything alone. A throw
+        // here would fail this resolves-assertion, not crash the test.
+        await expect(
+          readInstallProvenance(dir),
+          `[record ${state}] reader must resolve to an empty record`,
+        ).resolves.toEqual({ workflows: {} });
+      }
+    });
+
+    it("a valid record without the name classifies the collision as adopter-owned", async () => {
+      const dir = await newTempDir();
+      const collisionPath = await plantCollision(dir);
+      await seedProvenanceState(dir, "valid-without-name");
+
+      const record = await readInstallProvenance(dir);
+      // The reader must surface a valid record as-is: the other name's
+      // entry is visible and the collision name has none.
+      expect(Object.keys(record.workflows)).toEqual([OTHER_NAME]);
+      const entry = record.workflows[COLLISION_NAME];
+      expect(entry).toBeUndefined();
+
+      const diskSha = sha256(await readFile(collisionPath));
+      const packagedBytes = await readFile(
+        path.join(getInitAssetsDir(), "root", ".github", "workflows", COLLISION_NAME),
+      );
+      const state = resolveWorkflowFileState(entry, diskSha, sha256(packagedBytes));
+      expect(
+        state,
+        "no provenance entry + present on disk must classify as adopter-owned",
+      ).toBe("adopter-owned");
+    });
+
+    it("the provenance record path is not in the managed gitignore block (the record stays tracked)", () => {
+      // QFAI_GITIGNORE_BLOCK is the pre-joined managed block text.
+      expect(QFAI_GITIGNORE_BLOCK).not.toContain(".qfai/install-provenance.json");
+      expect(QFAI_GITIGNORE_BLOCK).not.toContain("install-provenance");
     });
   },
 );
