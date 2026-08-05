@@ -35,6 +35,51 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Every job of a parsed workflow document as `{ jobId, job }` records. */
+export function collectWorkflowJobs(
+  doc: unknown,
+): Array<{ jobId: string; job: Record<string, unknown> }> {
+  const jobs: Array<{ jobId: string; job: Record<string, unknown> }> = [];
+  if (!isRecord(doc)) {
+    return jobs;
+  }
+  const jobsNode = doc["jobs"];
+  if (!isRecord(jobsNode)) {
+    return jobs;
+  }
+  for (const [jobId, job] of Object.entries(jobsNode)) {
+    if (isRecord(job)) {
+      jobs.push({ jobId, job });
+    }
+  }
+  return jobs;
+}
+
+/** One job of a parsed workflow document by id, or undefined when absent. */
+export function findWorkflowJob(doc: unknown, jobId: string): Record<string, unknown> | undefined {
+  return collectWorkflowJobs(doc).find((entry) => entry.jobId === jobId)?.job;
+}
+
+/** Every step of one job, in declaration order (empty for step-less jobs). */
+export function collectJobSteps(job: Record<string, unknown>): Array<Record<string, unknown>> {
+  const steps = job["steps"];
+  if (!Array.isArray(steps)) {
+    return [];
+  }
+  return steps.filter(isRecord);
+}
+
+/** The first step body of a job carrying a string `run:`, or undefined. */
+export function firstRunBody(job: Record<string, unknown>): string | undefined {
+  for (const step of collectJobSteps(job)) {
+    const run = step["run"];
+    if (typeof run === "string") {
+      return run;
+    }
+  }
+  return undefined;
+}
+
 /**
  * Registers an afterEach-scoped temp-directory pool for the calling suite
  * and returns its allocator. Cleanup drains the whole pool at once

@@ -1,0 +1,395 @@
+/**
+ * Integration: shipped orchestrator change detection and verdict.
+ *
+ * Covers the detection/verdict half of the shipped-workflows contract
+ * (`.qfai/contracts/cli/shipped-workflows.md`, CLI-WFSET §5): the
+ * orchestrator's change-detection shell is self-contained (name-only diff
+ * + JSON filtering, no third-party action), selects the minimal lane set
+ * for docs-only diffs and the full one for source diffs, fails OPEN to the
+ * full superset with a warning on degraded inputs, and the co-located
+ * verdict stays green over an empty matrix. The detection shell and the
+ * verdict body are extracted from the REAL shipped orchestrator and
+ * executed with bash against git fixture repositories built in temp dirs —
+ * env stubs (GITHUB_OUTPUT, QFAI_BASE_REF, QFAI_NEEDS_JSON) stand in for
+ * the runner context.
+ *
+ * This file grows row by row; each describe block is one ledger row.
+ */
+import { spawnSync } from "node:child_process";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+import { describe, expect, it } from "vitest";
+import { parse } from "yaml";
+
+import {
+  collectJobSteps,
+  collectWorkflowJobs,
+  findWorkflowJob,
+  firstRunBody,
+  isRecord,
+  loadShippedWorkflows,
+  shippedWorkflowPath,
+  useTempDirPool,
+} from "../helpers/shippedWorkflowFixtures.js";
+
+/** The orchestrator file that owns detection, lanes and verdict. */
+const ORCHESTRATOR = "qfai-tests.yml";
+
+/** The full lane superset (value SSOT in the suite per CLI-WFSET §5). */
+const FULL_LANES: readonly string[] = ["unit", "component", "integration", "api", "e2e"];
+
+const newTempDir = useTempDirPool("qfai-wfdetect-");
+
+/** Parses the shipped orchestrator fresh from disk. */
+async function orchestratorDoc(): Promise<unknown> {
+  return parse(await readFile(shippedWorkflowPath(ORCHESTRATOR), "utf-8"));
+}
+
+interface ShellRun {
+  status: number | null;
+  stdout: string;
+  stderr: string;
+  outputs: Record<string, string>;
+}
+
+/**
+ * Executes one extracted `run:` body via bash with a stubbed GITHUB_OUTPUT
+ * file and the given env, returning exit status, streams and the parsed
+ * `key=value` outputs the shell wrote.
+ */
+async function runShell(body: string, cwd: string, env: Record<string, string>): Promise<ShellRun> {
+  const stage = await newTempDir();
+  const scriptPath = path.join(stage, "step.sh");
+  const outputPath = path.join(stage, "github-output.txt");
+  await writeFile(scriptPath, body, "utf-8");
+  await writeFile(outputPath, "", "utf-8");
+  const child = spawnSync("bash", [scriptPath], {
+    cwd,
+    encoding: "utf-8",
+    env: { ...process.env, GITHUB_OUTPUT: outputPath, ...env },
+  });
+  if (child.error) {
+    throw child.error;
+  }
+  const outputs: Record<string, string> = {};
+  for (const line of (await readFile(outputPath, "utf-8")).split(/\r?\n/)) {
+    const eq = line.indexOf("=");
+    if (eq > 0) {
+      outputs[line.slice(0, eq)] = line.slice(eq + 1);
+    }
+  }
+  return { status: child.status, stdout: child.stdout ?? "", stderr: child.stderr ?? "", outputs };
+}
+
+/** Runs git in a fixture repo, throwing loudly on any failure. */
+function git(cwd: string, ...args: string[]): string {
+  const child = spawnSync("git", args, { cwd, encoding: "utf-8" });
+  if (child.error) {
+    throw child.error;
+  }
+  if (child.status !== 0) {
+    throw new Error(`git ${args.join(" ")} failed (${String(child.status)}): ${child.stderr}`);
+  }
+  return (child.stdout ?? "").trim();
+}
+
+/** A fresh fixture repository with one base commit (README.md only). */
+async function makeRepo(): Promise<{ dir: string; baseSha: string }> {
+  const dir = await newTempDir();
+  git(dir, "init", "--initial-branch=main");
+  git(dir, "config", "user.email", "fixture@example.invalid");
+  git(dir, "config", "user.name", "QFAI Fixture");
+  git(dir, "config", "commit.gpgsign", "false");
+  await writeFile(path.join(dir, "README.md"), "# fixture\n", "utf-8");
+  git(dir, "add", ".");
+  git(dir, "commit", "-m", "base");
+  return { dir, baseSha: git(dir, "rev-parse", "HEAD") };
+}
+
+/** Writes one file (creating parents) and commits it. */
+async function commitChange(dir: string, relPath: string, content: string): Promise<void> {
+  const filePath = path.join(dir, relPath);
+  await mkdir(path.dirname(filePath), { recursive: true });
+  await writeFile(filePath, content, "utf-8");
+  git(dir, "add", ".");
+  git(dir, "commit", "-m", `change ${relPath}`);
+}
+
+/**
+ * Extracts the shipped detection shell (asserting it exists) and executes
+ * it inside the fixture repo with the given base ref.
+ */
+async function runDetection(repoDir: string, baseRef: string): Promise<ShellRun> {
+  const detection = findWorkflowJob(await orchestratorDoc(), "detection");
+  const body = detection === undefined ? undefined : firstRunBody(detection);
+  expect(body, "the orchestrator declares no detection job with a run: step").toBeTypeOf("string");
+  if (typeof body !== "string") {
+    throw new Error("unreachable: asserted above");
+  }
+  return runShell(body, repoDir, { QFAI_BASE_REF: baseRef });
+}
+
+/** The lanes output of a detection run, parsed from JSON (null if absent). */
+function lanesOf(run: ShellRun): unknown {
+  return JSON.parse(run.outputs["lanes"] ?? "null");
+}
+
+describe("TC-0003-0038 (TDD-0038): docs-only diff selects the minimal lane set, source diff selects the full one", () => {
+  // One it() per TC-0003-0038 verify bullet. The detection shell is the
+  // REAL shipped run: body, executed against real git repos; the minimal
+  // lane set for a docs-only diff is the EMPTY set (nothing to test), which
+  // is exactly the empty-matrix input the verdict row handles.
+
+  it("a Markdown-only diff selects the minimal (empty) lane set without a warning", async () => {
+    const { dir, baseSha } = await makeRepo();
+    await commitChange(dir, "README.md", "# fixture\n\nupdated docs\n");
+    await commitChange(dir, "docs/guide.md", "# guide\n");
+    const run = await runDetection(dir, baseSha);
+    expect(run.status).toBe(0);
+    expect(run.stdout).not.toMatch(/::warning::/);
+    expect(lanesOf(run)).toEqual([]);
+  });
+
+  it("a diff containing source selects the full lane set", async () => {
+    const { dir, baseSha } = await makeRepo();
+    await commitChange(dir, "README.md", "# fixture\n\nupdated docs\n");
+    await commitChange(dir, "src/index.ts", "export const marker = 1;\n");
+    const run = await runDetection(dir, baseSha);
+    expect(run.status).toBe(0);
+    expect(lanesOf(run)).toEqual([...FULL_LANES]);
+  });
+
+  it("the detection path uses no third-party action: name-only diff plus JSON filtering only", async () => {
+    const doc = await orchestratorDoc();
+    const detection = findWorkflowJob(doc, "detection");
+    expect(detection, "the orchestrator declares no detection job").toBeDefined();
+    if (detection === undefined) {
+      throw new Error("unreachable: asserted above");
+    }
+    const violations: string[] = [];
+    for (const step of collectJobSteps(detection)) {
+      const uses = step["uses"];
+      if (typeof uses === "string" && !uses.startsWith("actions/")) {
+        violations.push(`detection step uses non-first-party action: ${uses}`);
+      }
+    }
+    expect(violations).toEqual([]);
+    // The mechanism itself: a name-only git diff feeding JSON lane output.
+    const body = firstRunBody(detection);
+    expect(body, "detection has no run: step").toBeTypeOf("string");
+    if (typeof body !== "string") {
+      throw new Error("unreachable: asserted above");
+    }
+    expect(body).toContain("git diff --name-only");
+    expect(body).toContain('"$GITHUB_OUTPUT"');
+  });
+
+  it("the full-history request appears on the detection job only, across the whole shipped set", async () => {
+    /** Occurrences of a mapping key anywhere in a parsed YAML tree. */
+    function countKeyOccurrences(node: unknown, key: string): number {
+      if (Array.isArray(node)) {
+        return node.reduce((count: number, member) => count + countKeyOccurrences(member, key), 0);
+      }
+      if (!isRecord(node)) {
+        return 0;
+      }
+      let count = 0;
+      for (const [candidate, value] of Object.entries(node)) {
+        if (candidate === key) {
+          count += 1;
+        }
+        count += countKeyOccurrences(value, key);
+      }
+      return count;
+    }
+
+    let detectionFullHistoryRequests = 0;
+    const violations: string[] = [];
+    for (const [name, body] of await loadShippedWorkflows()) {
+      const doc: unknown = parse(body);
+      let insideDetectionCheckout = 0;
+      for (const { jobId, job } of collectWorkflowJobs(doc)) {
+        for (const step of collectJobSteps(job)) {
+          const uses = step["uses"];
+          const withNode = step["with"];
+          if (
+            typeof uses === "string" &&
+            uses.startsWith("actions/checkout@") &&
+            isRecord(withNode) &&
+            withNode["fetch-depth"] === 0
+          ) {
+            if (jobId === "detection" && name === ORCHESTRATOR) {
+              insideDetectionCheckout += 1;
+              detectionFullHistoryRequests += 1;
+            } else {
+              violations.push(`${name}: job "${jobId}" requests full history`);
+            }
+          }
+        }
+      }
+      const total = countKeyOccurrences(doc, "fetch-depth");
+      if (total !== insideDetectionCheckout) {
+        violations.push(
+          `${name}: ${total - insideDetectionCheckout} fetch-depth key(s) outside the detection job's checkout`,
+        );
+      }
+    }
+    // Non-vacuity: the detection job itself must request full history —
+    // the name-only diff needs the base commit locally reachable.
+    expect(detectionFullHistoryRequests).toBe(1);
+    expect(violations).toEqual([]);
+  });
+});
+
+describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail open with a warning annotation", () => {
+  // One it() per TC-0003-0039 verify bullet, each judging the SAME three
+  // degraded fixtures: a --depth 1 clone, an unreachable base sha, and a
+  // diff whose only changed path is outside the recognized set. Scoping
+  // decision for bullet 3, disclosed: "verdict is green" is realized here
+  // as the DETECTION shell exiting 0 in all three cases (fail open is the
+  // green path — the superset selection is what keeps the claim honest);
+  // the verdict job's own green behaviour (always-run, empty matrix,
+  // aggregation) is TC-0003-0040's dedicated surface, landing next in this
+  // same group.
+
+  type DegradedCase = { label: string; run: ShellRun };
+
+  /** Builds and runs the three degraded fixtures against the REAL shell. */
+  async function runDegradedCases(): Promise<DegradedCase[]> {
+    // Shallow: a --depth 1 clone cannot prove the base commit reachable.
+    const origin = await makeRepo();
+    await commitChange(origin.dir, "src/app.ts", "export {};\n");
+    const cloneParent = await newTempDir();
+    git(cloneParent, "clone", "--depth", "1", pathToFileURL(origin.dir).href, "shallow-clone");
+    const shallowRun = await runDetection(path.join(cloneParent, "shallow-clone"), origin.baseSha);
+
+    // Unreachable base: a syntactically valid sha no commit answers to.
+    const orphan = await makeRepo();
+    await commitChange(orphan.dir, "src/app.ts", "export {};\n");
+    const unreachableRun = await runDetection(
+      orphan.dir,
+      "0123456789abcdef0123456789abcdef01234567",
+    );
+
+    // Unrecognized path: the only change is neither docs nor source class.
+    const stranger = await makeRepo();
+    await commitChange(stranger.dir, "logo.png", "placeholder bytes\n");
+    const unrecognizedRun = await runDetection(stranger.dir, stranger.baseSha);
+
+    return [
+      { label: "shallow clone", run: shallowRun },
+      { label: "unreachable base ref", run: unreachableRun },
+      { label: "unrecognized changed path", run: unrecognizedRun },
+    ];
+  }
+
+  it("all three degraded cases emit a warning annotation", async () => {
+    const violations: string[] = [];
+    for (const { label, run } of await runDegradedCases()) {
+      if (!/::warning::/.test(run.stdout)) {
+        violations.push(`${label}: no ::warning:: annotation in stdout`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("all three degraded cases select the full lane superset", async () => {
+    const violations: string[] = [];
+    for (const { label, run } of await runDegradedCases()) {
+      const lanes = lanesOf(run);
+      if (JSON.stringify(lanes) !== JSON.stringify(FULL_LANES)) {
+        violations.push(`${label}: selected ${JSON.stringify(lanes)} instead of the full superset`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("all three degraded cases exit 0 — fail open stays green because the superset claim holds", async () => {
+    const violations: string[] = [];
+    for (const { label, run } of await runDegradedCases()) {
+      if (run.status !== 0) {
+        violations.push(`${label}: detection exited ${String(run.status)} instead of failing open`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});
+
+describe("TC-0003-0040 (TDD-0040): verdict exits 0 on an empty matrix and carries an empty permission map", () => {
+  // One it() per TC-0003-0040 verify bullet. The verdict body is the REAL
+  // shipped run: block, executed via bash with QFAI_NEEDS_JSON stubs. This
+  // row also discharges the GB3 conditional oracles: once the verdict job
+  // lands, TDD-0027's verdict-empty-map it becomes non-vacuous.
+
+  /** The shipped verdict job, asserted present, with its extracted body. */
+  async function verdictJobAndBody(): Promise<{
+    verdict: Record<string, unknown>;
+    body: string;
+  }> {
+    const verdict = findWorkflowJob(await orchestratorDoc(), "verdict");
+    expect(verdict, "the orchestrator declares no verdict job").toBeDefined();
+    if (verdict === undefined) {
+      throw new Error("unreachable: asserted above");
+    }
+    const body = firstRunBody(verdict);
+    expect(body, "the verdict job has no run: step").toBeTypeOf("string");
+    if (typeof body !== "string") {
+      throw new Error("unreachable: asserted above");
+    }
+    return { verdict, body };
+  }
+
+  /** A needs-context stub: detection succeeded, every lane as given. */
+  function needsStub(laneResult: string, lanes: string): string {
+    const needs: Record<string, unknown> = {
+      detection: { result: "success", outputs: { lanes } },
+    };
+    for (const lane of FULL_LANES) {
+      needs[lane] = { result: laneResult, outputs: {} };
+    }
+    return JSON.stringify(needs, null, 2);
+  }
+
+  it("the verdict runs under an always-run condition and exits 0 on an empty matrix", async () => {
+    const { verdict, body } = await verdictJobAndBody();
+    expect(String(verdict["if"])).toContain("always()");
+    // Empty matrix: detection selected zero lanes, every lane skipped.
+    const stage = await newTempDir();
+    const emptyMatrix = await runShell(body, stage, {
+      QFAI_NEEDS_JSON: needsStub("skipped", "[]"),
+    });
+    expect(emptyMatrix.status).toBe(0);
+    // Discriminating control of the same predicate: green-on-skip is not
+    // green-on-anything — a failed lane must turn the verdict red.
+    const failedLane = await runShell(body, stage, {
+      QFAI_NEEDS_JSON: needsStub("failure", '["unit"]'),
+    });
+    expect(failedLane.status).toBe(1);
+  });
+
+  it("the verdict permissions block is an empty map", async () => {
+    const { verdict } = await verdictJobAndBody();
+    const permissions = verdict["permissions"];
+    expect(isRecord(permissions) ? Object.keys(permissions) : permissions).toEqual([]);
+  });
+
+  it("verdict and detection are co-located in the same shipped file and the dependency edge stays inside it", async () => {
+    const declaringFiles: Record<string, string[]> = { detection: [], verdict: [] };
+    for (const [name, body] of await loadShippedWorkflows()) {
+      for (const { jobId } of collectWorkflowJobs(parse(body))) {
+        if (jobId === "detection" || jobId === "verdict") {
+          declaringFiles[jobId]?.push(name);
+        }
+      }
+    }
+    expect(declaringFiles["detection"]).toEqual([ORCHESTRATOR]);
+    expect(declaringFiles["verdict"]).toEqual([ORCHESTRATOR]);
+    // The dependency edge: verdict needs detection, inside the same file.
+    const { verdict } = await verdictJobAndBody();
+    const needs = verdict["needs"];
+    const needsList = Array.isArray(needs) ? needs : [needs];
+    expect(needsList).toContain("detection");
+  });
+});
