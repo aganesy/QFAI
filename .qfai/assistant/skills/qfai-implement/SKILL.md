@@ -71,10 +71,9 @@ Skill-specific examples:
 - When every item is terminal (`done` or a valid `exception`) **and the mandatory Change Request
   preflight (see Required Process) reset nothing**, the per-item work is finished — but the
   **spec-level checkpoint boundary** may still be owed — an interrupted run, or a re-run of an
-  already-terminal ledger, leaves it unrecorded. Before reporting "nothing to do" and exiting,
-  confirm fresh spec-level checkpoint verification evidence exists for this ledger state; run the
-  per-spec verification first when it is missing or stale. See `references/checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`. Only
-  then report "nothing to do" for that spec, then advance to the next spec of a confirmed queue; exit when the queue is empty (Volume Policy > Advancing the queue).
+  already-terminal ledger, leaves it unrecorded. Before reporting "nothing to do" and exiting, confirm fresh spec-level checkpoint verification evidence exists for this ledger state; run the
+  per-spec verification first when it is missing or stale (`references/checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`).
+  Only then report "nothing to do" for that spec, then advance to the next spec of a confirmed queue; exit when the queue is empty (Volume Policy > Advancing the queue).
 
 ## Goal
 
