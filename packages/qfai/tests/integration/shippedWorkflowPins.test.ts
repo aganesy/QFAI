@@ -9,11 +9,15 @@
  * DTC-26 co-change obligation, scanned tree-wide across
  * `packages/qfai/tests` after the class escaped a file-scoped scan once).
  * The readable version relocated into step `name:` values is the second
+ * describe's surface. The leakage guard's own behaviour — rejecting a
+ * conventional pin-comment trailer on a staged copy while accepting the
+ * shipped tree as-is, with the guard script itself unchanged — is the third
  * describe's surface.
  *
  * This file grows row by row; each describe block is one ledger row.
  */
-import { readFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { cp, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -21,7 +25,12 @@ import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
-import { isRecord, loadShippedWorkflows } from "../helpers/shippedWorkflowFixtures.js";
+import {
+  isRecord,
+  loadShippedWorkflows,
+  shippedGithubDir,
+  useTempDirPool,
+} from "../helpers/shippedWorkflowFixtures.js";
 
 // tests/integration/<this file> -> tests -> packages/qfai
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -226,5 +235,149 @@ describe("TC-0003-0031 (TDD-0031): readable version lives in the step name witho
       });
     }
     expect(hits).toEqual([]);
+  });
+});
+
+describe("TC-0003-0033 (TDD-0033): leakage guard exits 1 on a planted conventional pin trailer, guard diff is empty", () => {
+  // Realizes TC-0003-0033 (AC-0003-0028; BR-0003-0027 "guard breadth is
+  // invariant", NFR-C0005). Bullet mapping:
+  //   - Verify bullet 1 ("planted exit 1, clean exit 0") is the first two
+  //     it()s. The REAL committed guard is spawned against a temp-staged
+  //     package fixture — planted trailers live only on temp copies, never
+  //     on the shipped tree or the guard's own inputs.
+  //   - Verify bullet 2 ("guard script diff is 0 lines — no narrowing, no
+  //     new pragma, no allow-list entry") is the third it(). The guard
+  //     script is edit-forbidden for this change (DR-0003-0008), so the
+  //     empty diff is realized as content pins on the committed script.
+  //     The INTERNAL_VERSION_RE literal itself is already byte-pinned by
+  //     TDD-0031's SSOT-sync assertion earlier in this file (it runs in
+  //     every whole-file run); the third it() pins the complementary
+  //     surfaces and deliberately does not duplicate that pin.
+  //   - Verify bullet 3 (the pre-build lint-shipping YAML rule detecting
+  //     own-line trailers before comment-line skipping) was split off to
+  //     TDD-0056 and is NOT covered by this describe.
+  const newTempDir = useTempDirPool("qfai-pins-leakage-");
+
+  const GUARD_SCRIPT_PATH = path.join(
+    packageRoot,
+    "scripts",
+    "check-no-internal-version-leakage.sh",
+  );
+
+  // The conventional pin-comment form the contract rejects (the trailing
+  // `# v<X.Y.Z>` after a pinned uses: value). Carries a dot so it matches
+  // the guard's version pattern, and no at-sign so the DTC-26 tree-wide
+  // test scan in the first describe stays clean over this file.
+  const PLANTED_TRAILER = "# v6.1.0";
+
+  type GuardRun = { status: number | null; stdout: string; stderr: string };
+
+  /**
+   * Spawns the committed guard script with cwd inside the fixture so its
+   * auto-ROOT detection falls through to ROOT="." (the proven pattern from
+   * tests/scripts/checkNoInternalVersionLeakage.test.ts).
+   */
+  function runGuard(cwd: string): GuardRun {
+    const child = spawnSync("bash", [GUARD_SCRIPT_PATH], { cwd, encoding: "utf-8" });
+    if (child.error) {
+      // Fail loudly if bash itself could not be spawned — a null status
+      // would otherwise read as a confusing assertion diff.
+      throw child.error;
+    }
+    return { status: child.status, stdout: child.stdout ?? "", stderr: child.stderr ?? "" };
+  }
+
+  /**
+   * Stages a minimal package the guard can scan end-to-end: a package.json
+   * whose files[] lists only "assets", plus a copy of the REAL shipped
+   * `.github/` tree at its packaged location under assets/. The guard
+   * derives its scan set from files[], so it scans exactly this copy.
+   */
+  async function stageShippedPackageFixture(): Promise<{ dir: string; workflowsDir: string }> {
+    const dir = await newTempDir();
+    await writeFile(
+      path.join(dir, "package.json"),
+      JSON.stringify({ name: "qfai-leakage-fixture", version: "0.0.0", files: ["assets"] }),
+      "utf-8",
+    );
+    const githubDest = path.join(dir, "assets", "init", "root", ".github");
+    await cp(shippedGithubDir(), githubDest, { recursive: true });
+    return { dir, workflowsDir: path.join(githubDest, "workflows") };
+  }
+
+  /**
+   * Appends the planted trailer to the first `uses:` line of the first
+   * staged workflow that has one and returns that file's name. Throws when
+   * no staged workflow carries a `uses:` line — the plant would be vacuous
+   * and the guard run would prove nothing.
+   */
+  async function plantPinTrailer(workflowsDir: string): Promise<string> {
+    for (const name of (await readdir(workflowsDir)).sort()) {
+      const filePath = path.join(workflowsDir, name);
+      const body = await readFile(filePath, "utf-8");
+      const planted = body.replace(/^([ \t]*(?:- )?uses:[^\r\n]*)/m, `$1 ${PLANTED_TRAILER}`);
+      if (planted !== body) {
+        await writeFile(filePath, planted, "utf-8");
+        return name;
+      }
+    }
+    throw new Error(`no staged workflow under ${workflowsDir} carries a uses: line to plant on`);
+  }
+
+  it("exits 1 on a staged copy carrying a conventional pin trailer on a uses: line, naming the file", async () => {
+    const { dir, workflowsDir } = await stageShippedPackageFixture();
+    const plantedFile = await plantPinTrailer(workflowsDir);
+    const run = runGuard(dir);
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(/FAIL: internal spec id, version marker, or trace id leaked/);
+    // The guard's grep -rn hit output names the offending file and echoes
+    // the planted line itself.
+    expect(run.stderr).toContain(plantedFile);
+    expect(run.stderr).toContain(PLANTED_TRAILER);
+  });
+
+  it("exits 0 on the clean staged copy — the version-bearing step names ship through the guard as-is", async () => {
+    const { dir, workflowsDir } = await stageShippedPackageFixture();
+    // Non-vacuity: this clean pass is only proof that the readable
+    // step-name versions clear the guard while the staged tree demonstrably
+    // carries at least one such name (e.g. "... actions/checkout 4.4.0").
+    let versionBearingNames = 0;
+    for (const name of (await readdir(workflowsDir)).sort()) {
+      const body = await readFile(path.join(workflowsDir, name), "utf-8");
+      for (const line of body.split(/\r?\n/)) {
+        if (/^[ \t]*(?:- )?name:.*\b[0-9]+\.[0-9]+\.[0-9]+\b/.test(line)) {
+          versionBearingNames += 1;
+        }
+      }
+    }
+    expect(versionBearingNames).toBeGreaterThanOrEqual(1);
+    const run = runGuard(dir);
+    expect(run.status).toBe(0);
+    expect(run.stdout).toMatch(/^OK: no internal spec ids/m);
+  });
+
+  it("guard-diff-is-empty: the committed script keeps its unfiltered scan line and gains no pragma / allow-list / exclusion handling", async () => {
+    const script = await readFile(GUARD_SCRIPT_PATH, "utf-8");
+    // The one scan pipeline every distributed surface goes through, pinned
+    // byte-for-byte: all three pattern classes feed a single recursive grep
+    // with no inverted-grep filter, no exclusion flag and no pragma layer
+    // in between. (The INTERNAL_VERSION_RE literal feeding it is byte-pinned
+    // by TDD-0031's SSOT-sync assertion above — referenced, not repeated.)
+    expect(script).toContain(
+      'hits=$(grep -rnE "$INTERNAL_SPEC_RE|$INTERNAL_VERSION_RE|$INTERNAL_ID_RE" "$target" 2>/dev/null || true)',
+    );
+    // No pragma support of any spelling has been added to the guard (the
+    // `qfai-shipping:allow` pragma exists only in the pre-build src-comment
+    // lint, a different layer; the guard stays pragma-blind).
+    expect(script).not.toMatch(/pragma/i);
+    // No allow-list handling and no grep path-exclusion or path-inclusion
+    // flags anywhere in the script.
+    expect(script).not.toMatch(/allow[-_]?list/i);
+    expect(script).not.toMatch(/--exclude|--include/);
+    // The only inverted grep in the whole script is the pre-existing
+    // schemaVersion carve-out for package.json — nothing new filters
+    // version-marker hits out of the FAIL path.
+    expect(script.match(/grep -v/g) ?? []).toHaveLength(1);
+    expect(script).toContain(String.raw`| grep -vE 'package\.json' || true`);
   });
 });
