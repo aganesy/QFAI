@@ -173,7 +173,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
   in version control — the managed `.gitignore` block negates them for that
   reason.
 - **The matrix is a governance record, not a log.** Re-running this stage
-  recomputes which cells are `❌`. It does not recompute *why* an uncoverable
+  recomputes which cells are `❌`. It does not recompute _why_ an uncoverable
   obligation was accepted, and that judgement is what discharges the
   "no unjustified `❌`" gate below. Written only into the stage evidence file it
   would never reach a commit, so a later reviewer could not tell a justified

@@ -82,7 +82,9 @@ describe.each(TREES)("%s", (tree) => {
   it("says why the matrix is not regenerable stage evidence", async () => {
     const skill = flat(await read(tree, SKILL));
     expect(skill).toContain("**The matrix is a governance record, not a log.**");
-    expect(skill).toContain("It does not recompute *why* an uncoverable obligation was accepted");
+    // `_why_`, not `*why*`: prettier normalises markdown emphasis, so pinning
+    // the asterisk form would fail the moment `format:check` ran.
+    expect(skill).toContain("It does not recompute _why_ an uncoverable obligation was accepted");
   });
 
   it("the depth checklist states the home and that a justification must survive", async () => {
