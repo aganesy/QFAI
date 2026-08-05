@@ -38,6 +38,13 @@ import {
   type AssistantLayer,
 } from "../../core/paths/assistantPaths.js";
 import { resolveToolVersion } from "../../core/version.js";
+import {
+  createWorkflowProvenanceEntry,
+  readInstallProvenance,
+  writeInstallProvenance,
+  type InstallProvenanceRecord,
+  type WorkflowProvenanceEntry,
+} from "../../shared/provenance.js";
 
 const execAsync = promisify(execCb);
 
@@ -82,6 +89,12 @@ export async function runInit(options: InitOptions): Promise<void> {
     ? await runUpgradeAssistantTree(destRoot, options.dryRun, toolVersion)
     : { copied: [], skipped: [], removed: [], preservedNotes: [] as string[] };
 
+  // Snapshot the shipped-workflow provenance state BEFORE the copy: the
+  // record decision keys off the pre-run state (an existing entry is never
+  // restamped — a declined name keeps its entry as-is), not off what the
+  // copy ends up writing.
+  const workflowPreInit = await captureShippedWorkflowPreInitState(destRoot);
+
   // root/ と .qfai/ は create-only（既存は skip）
   // assistant/skills のみ --force で上書きする
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
@@ -101,6 +114,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
     conflictPolicy: "skip",
   });
+
+  // Record provenance for the shipped workflow files this run actually
+  // wrote (no-op on dry-run and when nothing new was written).
+  await recordInstalledWorkflows(destRoot, workflowPreInit, toolVersion, options.dryRun);
 
   // git config core.symlinks true（symlink 生成の前提条件）
   await configureGitSymlinks(destRoot, options.dryRun);
@@ -1286,6 +1303,71 @@ export const SHIPPED_WORKFLOW_NAMES: ReadonlySet<string> = new Set<string>(["qfa
  * adopter's disk. Currently empty: no shipped workflow has been retired.
  */
 export const RETIRED_WORKFLOW_NAMES: ReadonlySet<string> = new Set<string>();
+
+/**
+ * Pre-copy snapshot of the shipped-workflow provenance state: the record
+ * as it stood before this run, plus the shipped names that were absent
+ * (no record entry AND no file on disk). Only those names may gain an
+ * entry afterwards — a name with an existing entry keeps it untouched (a
+ * deliberately deleted file stays declined; an earlier install keeps its
+ * original digest), and an adopter-authored file (present, no entry)
+ * stays unrecorded because the create-only copy skips it.
+ */
+type ShippedWorkflowPreInitState = {
+  record: InstallProvenanceRecord;
+  absentNames: string[];
+};
+
+async function captureShippedWorkflowPreInitState(
+  destRoot: string,
+): Promise<ShippedWorkflowPreInitState> {
+  const record = await readInstallProvenance(destRoot);
+  const absentNames: string[] = [];
+  for (const name of SHIPPED_WORKFLOW_NAMES) {
+    if (record.workflows[name] !== undefined) {
+      continue; // existing entry: retained as-is, whatever the disk says
+    }
+    if (await exists(path.join(destRoot, ".github", "workflows", name))) {
+      continue; // adopter-owned collision: the create-only copy skips it
+    }
+    absentNames.push(name);
+  }
+  return { record, absentNames };
+}
+
+/**
+ * Records provenance entries for the shipped workflow files this run
+ * actually wrote: only names whose pre-run state was absent qualify, and
+ * each entry's sha256 digests the bytes just written. The record file is
+ * untouched when nothing new was written (idempotent re-runs, declined
+ * names) and on --dry-run.
+ */
+async function recordInstalledWorkflows(
+  destRoot: string,
+  preInit: ShippedWorkflowPreInitState,
+  toolVersion: string,
+  dryRun: boolean,
+): Promise<void> {
+  if (dryRun) {
+    return;
+  }
+  const installedAt = new Date().toISOString();
+  const added: Record<string, WorkflowProvenanceEntry> = {};
+  for (const name of preInit.absentNames) {
+    const writtenPath = path.join(destRoot, ".github", "workflows", name);
+    const writtenBytes = await readFile(writtenPath).catch(() => undefined);
+    if (writtenBytes === undefined) {
+      continue; // not written after all: a skipped file produces no entry
+    }
+    added[name] = createWorkflowProvenanceEntry(writtenBytes, toolVersion, installedAt);
+  }
+  if (Object.keys(added).length === 0) {
+    return;
+  }
+  await writeInstallProvenance(destRoot, {
+    workflows: { ...preInit.record.workflows, ...added },
+  });
+}
 
 /**
  * The only removal primitive for QFAI-owned entries in an adopter tree:

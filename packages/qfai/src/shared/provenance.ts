@@ -7,7 +7,8 @@
  * because a deliberately deleted (declined) file is only recognizable as
  * declined while the record survives a fresh clone.
  */
-import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export type WorkflowProvenanceEntry = {
@@ -94,6 +95,40 @@ export function resolveWorkflowFileState(
     return "declined";
   }
   return packagedSha256 !== undefined && diskSha256 === packagedSha256 ? "installed" : "modified";
+}
+
+/**
+ * Writes the install-provenance record into the adopter tree rooted at
+ * `rootDir`, creating the parent directory when needed. This is the single
+ * writer for the record file; the serialized form is the pretty-printed
+ * JSON shape `readInstallProvenance` round-trips, with a trailing newline.
+ */
+export async function writeInstallProvenance(
+  rootDir: string,
+  record: InstallProvenanceRecord,
+): Promise<void> {
+  const recordPath = path.join(rootDir, ...PROVENANCE_SEGMENTS);
+  await mkdir(path.dirname(recordPath), { recursive: true });
+  await writeFile(recordPath, `${JSON.stringify(record, null, 2)}\n`, "utf-8");
+}
+
+/**
+ * Builds the record entry for one freshly written workflow file. The
+ * sha256 is the hex digest of exactly the bytes that were written — never
+ * of whatever the file holds later — which is what keeps a future byte
+ * difference on disk attributable (adopter edit vs newer packaged
+ * template). Stamped once at install time.
+ */
+export function createWorkflowProvenanceEntry(
+  writtenBytes: Uint8Array,
+  installedByVersion: string,
+  installedAt: string,
+): WorkflowProvenanceEntry {
+  return {
+    sha256: createHash("sha256").update(writtenBytes).digest("hex"),
+    installedByVersion,
+    installedAt,
+  };
 }
 
 function isRecordObject(value: unknown): value is Record<string, unknown> {

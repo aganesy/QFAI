@@ -673,3 +673,119 @@ describe(
     });
   },
 );
+
+describe(
+  "TC-0003-0054 (TDD-0054): an absent (never-installed) name is written and recorded, unlike declined",
+  { timeout: 60000 },
+  () => {
+    // Scope notes (delivery-planner ruling for this row):
+    // - This row owns the provenance WRITE path: after runInit over a fresh
+    //   adopter tree (no record, no file = `absent`), the shipped file is
+    //   written AND the record gains an entry whose sha256 is the digest of
+    //   the bytes init wrote, with the contract's three fields.
+    // - The DISK half of the declined contrast — the file must not be
+    //   recreated — is TDD-0051's row (copy-set exclusion before the copy
+    //   runs). Today's create-only copy DOES recreate a declined file, so
+    //   file absence is deliberately NOT asserted here; only the RECORD side
+    //   of the absent/declined distinction is.
+    const WORKFLOW_NAME = "qfai-validate.yml";
+    const PROVENANCE_REL = ".qfai/install-provenance.json";
+    // A seeded declined entry with values a fresh install record could not
+    // legitimately reproduce (old digest, old version, old timestamp), so
+    // "retained as-is" is distinguishable from "rewritten identically".
+    const DECLINED_SEED_ENTRY: WorkflowProvenanceEntry = {
+      sha256: "ab".repeat(32),
+      installedByVersion: "0.0.1",
+      installedAt: "2021-02-03T04:05:06Z",
+    };
+
+    const packagedTemplatePath = (): string =>
+      path.join(getInitAssetsDir(), "root", ".github", "workflows", WORKFLOW_NAME);
+
+    async function writeProvenanceRecord(
+      dir: string,
+      workflows: Record<string, WorkflowProvenanceEntry>,
+    ): Promise<void> {
+      const provenancePath = path.join(dir, PROVENANCE_REL);
+      await mkdir(path.dirname(provenancePath), { recursive: true });
+      await writeFile(provenancePath, JSON.stringify({ workflows }, null, 2), "utf-8");
+    }
+
+    /** Reads the canonical version the record must stamp (package.json#version). */
+    async function readPackageVersion(): Promise<string> {
+      const raw = await readFile(path.join(packageRoot, "package.json"), "utf-8");
+      const parsed: unknown = JSON.parse(raw);
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+        throw new Error("package.json did not parse to a plain object");
+      }
+      const version: unknown = Reflect.get(parsed, "version");
+      if (typeof version !== "string" || version.length === 0) {
+        throw new Error("package.json#version must be a non-empty string");
+      }
+      return version;
+    }
+
+    it("the absent name is included in the copy set: runInit writes the shipped file byte-equal to the packaged template", async () => {
+      // Fixture: fresh adopter tree — no provenance record, no workflows
+      // file. That is the `absent` (never-installed) state.
+      const dir = await newTempDir();
+      await runInitQuiet(dir);
+
+      const writtenPath = path.join(dir, ".github", "workflows", WORKFLOW_NAME);
+      const writtenBytes = await readFile(writtenPath).catch(() => undefined);
+      expect(
+        writtenBytes,
+        `${WORKFLOW_NAME} must be written on a fresh tree (absent is not declined)`,
+      ).toBeDefined();
+      if (writtenBytes === undefined) {
+        throw new Error(`${WORKFLOW_NAME} was not written by runInit`);
+      }
+      const packagedBytes = await readFile(packagedTemplatePath());
+      expect(sha256(writtenBytes)).toBe(sha256(packagedBytes));
+    });
+
+    it("runInit records a provenance entry for the written name: sha256 of the written bytes plus the version and timestamp fields", async () => {
+      const dir = await newTempDir();
+      await runInitQuiet(dir);
+
+      const writtenPath = path.join(dir, ".github", "workflows", WORKFLOW_NAME);
+      const writtenBytes = await readFile(writtenPath);
+
+      const record = await readInstallProvenance(dir);
+      const entry = record.workflows[WORKFLOW_NAME];
+      expect(
+        entry,
+        `init must record a provenance entry for ${WORKFLOW_NAME} after writing it`,
+      ).toBeDefined();
+      if (entry === undefined) {
+        throw new Error(`no provenance entry recorded for ${WORKFLOW_NAME}`);
+      }
+
+      // Read back immediately after init: nothing else has touched the
+      // file, so these bytes ARE the bytes init wrote and the record's
+      // sha256 must be their digest (the record contract: digest of the
+      // WRITTEN bytes, stamped once at install time).
+      expect(entry.sha256).toBe(sha256(writtenBytes));
+      expect(entry.installedByVersion).toBe(await readPackageVersion());
+      expect(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(entry.installedAt)).toBe(true);
+      expect(Number.isNaN(Date.parse(entry.installedAt))).toBe(false);
+    });
+
+    it("a declined name's entry is retained as-is: init never replaces it with a fresh install record", async () => {
+      // Fixture: entry present, file absent — the `declined` state. Only
+      // the record side is asserted (see the scope note above): a fresh
+      // install record here (current version, new timestamp) would mark the
+      // adopter's deliberate removal as a brand-new install and destroy
+      // declined-state decidability on the next run.
+      const dir = await newTempDir();
+      await writeProvenanceRecord(dir, { [WORKFLOW_NAME]: DECLINED_SEED_ENTRY });
+
+      await runInitQuiet(dir);
+
+      const record = await readInstallProvenance(dir);
+      const entry = record.workflows[WORKFLOW_NAME];
+      expect(entry, "the declined entry must survive runInit unreplaced").toBeDefined();
+      expect(entry).toEqual(DECLINED_SEED_ENTRY);
+    });
+  },
+);
