@@ -36,11 +36,13 @@ import { parse } from "yaml";
 
 import {
   collectWorkflowJobs,
+  isRecord,
   shippedGithubDir,
   useTempDirPool,
 } from "../helpers/shippedWorkflowFixtures.js";
 import type { ShapeFinding } from "./shippedWorkflowShape.js";
 import {
+  SHAPE_PIN_SEPARATOR,
   SHIPPED_WORKFLOW_SHAPE,
   SHIPPED_WORKFLOW_SHAPE_DRIFT_CODE,
   diffShippedWorkflowShape,
@@ -302,12 +304,16 @@ const DIMENSION_PLANTS: readonly DimensionPlant[] = [
       const file = await orchestratorFile(root);
       const body = await readWorkflow(root, file);
       const block = ["env:", "  QFAI_PLANTED_TOKEN: ${{ secrets.GITHUB_TOKEN }}", ""].join("\n");
-      await writeWorkflow(root, file, `${body}${block}`);
+      const planted = `${body}${block}`;
+      if (planted === body) {
+        throw new Error(`${file} did not take the planted secret block`);
+      }
+      await writeWorkflow(root, file, planted);
     },
   },
   {
     dimension: 9,
-    label: "reference to a sibling shipped file",
+    label: "comment naming a sibling shipped file",
     plant: async (root) => {
       const target = await orchestratorFile(root);
       const sibling = (await workflowNames(root)).find((name) => name !== target);
@@ -315,10 +321,66 @@ const DIMENSION_PLANTS: readonly DimensionPlant[] = [
         throw new Error("the shipped set has no sibling file to reference");
       }
       const body = await readWorkflow(root, target);
-      await writeWorkflow(root, target, `${body}# planted cross-file reference: ${sibling}\n`);
+      const planted = `${body}# planted cross-file reference: ${sibling}\n`;
+      if (planted === body) {
+        throw new Error(`${target} did not take the planted comment reference`);
+      }
+      await writeWorkflow(root, target, planted);
+    },
+  },
+  {
+    dimension: 9,
+    // The actual hazard the contract names: an EXECUTABLE local reference. An
+    // absent target turns the referencing workflow into a parse error with no
+    // repair path under create-only install, and a comment cannot do that — so
+    // dimension 9 has to reject the executable form on its own evidence.
+    label: "executable local workflow reference to a sibling",
+    plant: async (root) => {
+      const target = await orchestratorFile(root);
+      const sibling = (await workflowNames(root)).find((name) => name !== target);
+      if (sibling === undefined) {
+        throw new Error("the shipped set has no sibling file to reference");
+      }
+      const body = await readWorkflow(root, target);
+      let planted = false;
+      const result = mapExecutableLines(body, (line) => {
+        const match = /^(\s*(?:- )?uses:\s*)[^\s@]+@\S+$/.exec(line);
+        if (planted || match === null) {
+          return line;
+        }
+        planted = true;
+        return `${match[1] ?? ""}./.github/workflows/${sibling}`;
+      });
+      if (!planted) {
+        throw new Error(`${target} carries no executable uses: reference to redirect`);
+      }
+      await writeWorkflow(root, target, result);
+    },
+  },
+  {
+    dimension: 1,
+    // Dimension 1 owns diagnosis, not just membership: an unparsable shipped
+    // file must be named as unparsable rather than surfacing as "no QFAI
+    // invocation" or "lane is not declared" somewhere downstream.
+    label: "shipped file that no longer parses",
+    plant: async (root) => {
+      const file = await orchestratorFile(root);
+      const body = await readWorkflow(root, file);
+      const planted = `${body}broken: [unclosed\n`;
+      if (planted === body) {
+        throw new Error(`${file} did not take the planted parse error`);
+      }
+      await writeWorkflow(root, file, planted);
     },
   },
 ];
+
+/**
+ * Values that name a pin's site and answer nothing. A closed deny-list, because
+ * the structural coupling between `pinned` and the diff cannot by itself tell a
+ * real expectation from a filler one.
+ */
+const PLACEHOLDER_PIN_VALUES: readonly string[] = ["pinned", "ok", "n/a", "-", "tbd", "none"];
 
 /** How far the statement window below may walk in either direction. */
 const STATEMENT_WINDOW = 12;
@@ -332,9 +394,13 @@ const STATEMENT_WINDOW = 12;
  * this statement's end, bounded so no input makes the walk unbounded.
  */
 function enclosingStatement(lines: readonly string[], index: number): string {
+  // A statement ends at `;` or at a blank line — NOT at `{` or `}`. Treating a
+  // brace as a boundary let an object literal escape the scan entirely:
+  // `expect(finding).toEqual({` ends in `{`, so the backward walk stopped there
+  // and never reached the `expect(` on the same line.
   const isBoundary = (line: string): boolean => {
     const trimmed = line.trim();
-    return trimmed === "" || /[;{}]$/.test(trimmed);
+    return trimmed === "" || trimmed.endsWith(";");
   };
   let start = index;
   while (start > 0 && index - start < STATEMENT_WINDOW && !isBoundary(lines[start - 1] ?? "")) {
@@ -493,20 +559,50 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
     ).toEqual(CONTRACT_DIMENSION_IDS);
 
     // Suite self-consistency: the falsifying plants cover the same closed set.
-    expect([...DIMENSION_PLANTS].map((plant) => plant.dimension).sort((a, b) => a - b)).toEqual(
-      CONTRACT_DIMENSION_IDS,
-    );
+    // Distinct dimensions, because a dimension may carry more than one plant
+    // (dimension 9's comment and executable forms, dimension 1's membership and
+    // diagnosis forms).
+    expect(
+      [...new Set(DIMENSION_PLANTS.map((plant) => plant.dimension))].sort((a, b) => a - b),
+    ).toEqual(CONTRACT_DIMENSION_IDS);
 
     for (const dimension of SHIPPED_WORKFLOW_SHAPE.dimensions) {
-      expect(dimension.title.trim(), `dimension ${dimension.id} carries no title`).not.toEqual("");
-      expect(
-        dimension.pinned.length,
-        `dimension ${dimension.id} pins nothing — declared but empty is omitted`,
-      ).toBeGreaterThanOrEqual(1);
-      expect(
-        dimension.pinned.filter((entry) => entry.trim() === ""),
-        `dimension ${dimension.id} carries an empty pin`,
-      ).toEqual([]);
+      expect
+        .soft(dimension.title.trim(), `dimension ${dimension.id} carries no title`)
+        .not.toEqual("");
+      expect
+        .soft(
+          dimension.pinned.length,
+          `dimension ${dimension.id} pins nothing — declared but empty is omitted`,
+        )
+        .toBeGreaterThanOrEqual(1);
+
+      // Every pin's VALUE half must answer its dimension. The structural
+      // coupling between `pinned` and the diff guarantees the two lists agree;
+      // it cannot tell a real expectation from filler, so the value is judged
+      // against a closed placeholder deny-list and a minimum-informativeness
+      // rule. `<site> — pinned` names the file and states nothing.
+      for (const entry of dimension.pinned) {
+        const separator = entry.indexOf(SHAPE_PIN_SEPARATOR);
+        const value = (
+          separator === -1 ? entry : entry.slice(separator + SHAPE_PIN_SEPARATOR.length)
+        ).trim();
+        expect
+          .soft(value, `dimension ${dimension.id} carries an empty pin ("${entry}")`)
+          .not.toEqual("");
+        expect
+          .soft(
+            PLACEHOLDER_PIN_VALUES.includes(value.toLowerCase()),
+            `dimension ${dimension.id} pin "${entry}" states a placeholder, not an expectation`,
+          )
+          .toBe(false);
+        expect
+          .soft(
+            value.includes(" ") || value.includes(":"),
+            `dimension ${dimension.id} pin "${entry}" is too terse to be an expectation`,
+          )
+          .toBe(true);
+      }
     }
 
     // Per-file dimensions name every shipped file, so no file can be dropped
@@ -516,7 +612,7 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
       const dimension = SHIPPED_WORKFLOW_SHAPE.dimensions.find((entry) => entry.id === id);
       const pins = (dimension?.pinned ?? []).join("\n");
       for (const name of names) {
-        expect(pins, `dimension ${id} states nothing about ${name}`).toContain(name);
+        expect.soft(pins, `dimension ${id} states nothing about ${name}`).toContain(name);
       }
     }
 
@@ -526,8 +622,10 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
     // dimension N" loop for all nine at once while analysing nothing. Each
     // plant therefore has to light its own dimension and leave the other eight
     // dark. No plant is allowed cross-talk: the per-file observers treat an
-    // absent file as accepted (absence is dimension 1's finding and nobody
-    // else's), and each plant mutates only what its own dimension reads.
+    // absent file — and an unparsable one — as accepted (both are dimension 1's
+    // finding and nobody else's), and each plant mutates only what its own
+    // dimension reads. Soft assertions, so one dead leg reports every other
+    // leg's verdict in the same run instead of hiding behind the first failure.
     expect(await diffShippedWorkflowShape(await copyShippedRootToTemp())).toEqual([]);
     for (const plant of DIMENSION_PLANTS) {
       const root = await copyShippedRootToTemp();
@@ -538,33 +636,42 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
           finding.dimension === plant.dimension &&
           finding.code === SHIPPED_WORKFLOW_SHAPE_DRIFT_CODE,
       );
-      expect(
-        own.length,
-        `dimension ${plant.dimension} is declared but not diffed: the planted ${plant.label} produced ${JSON.stringify(findings)}`,
-      ).toBeGreaterThanOrEqual(1);
-      expect(
-        findings.filter((finding) => finding.dimension !== plant.dimension),
-        `the planted ${plant.label} was reported outside dimension ${plant.dimension} — an indiscriminate diff cannot attribute drift to a dimension`,
-      ).toEqual([]);
+      expect
+        .soft(
+          own.length,
+          `dimension ${plant.dimension} is declared but not diffed: the planted ${plant.label} produced ${JSON.stringify(findings)}`,
+        )
+        .toBeGreaterThanOrEqual(1);
+      expect
+        .soft(
+          findings.filter((finding) => finding.dimension !== plant.dimension),
+          `the planted ${plant.label} was reported outside dimension ${plant.dimension} — an indiscriminate diff cannot attribute drift to a dimension`,
+        )
+        .toEqual([]);
 
-      // Each reported expectation must be one the dimension PINS, which is what
-      // forces `pinned` to be rendered from the same structured expectations the
-      // diff consumes. A pin that merely mentions a filename answers nothing and
-      // cannot contain the expectation a finding carries.
+      // Each reported expectation must be one the dimension PINS. The
+      // containment is structural by construction (`pinned` renders these same
+      // pins), so it is the informativeness rules above — not this line — that
+      // reject a filler pin; this line is what keeps the two lists ONE list, so
+      // a future refactor cannot let the table and the diff diverge.
       const pins = (
         SHIPPED_WORKFLOW_SHAPE.dimensions.find((entry) => entry.id === plant.dimension)?.pinned ??
         []
       ).join("\n");
       for (const finding of own) {
-        expect(
-          finding.expected.trim(),
-          `dimension ${plant.dimension} reported an empty expectation`,
-        ).not.toEqual("");
-        expect(finding.expected).not.toEqual(finding.actual);
-        expect(
-          pins,
-          `dimension ${plant.dimension} reported the expectation "${finding.expected}" that its own pins do not state`,
-        ).toContain(finding.expected);
+        expect
+          .soft(
+            finding.expected.trim(),
+            `dimension ${plant.dimension} reported an empty expectation`,
+          )
+          .not.toEqual("");
+        expect.soft(finding.expected).not.toEqual(finding.actual);
+        expect
+          .soft(
+            pins,
+            `dimension ${plant.dimension} reported the expectation "${finding.expected}" that its own pins do not state`,
+          )
+          .toContain(finding.expected);
       }
     }
   });
@@ -634,8 +741,178 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
     const contract = await readFile(CONTRACT_PATH, "utf-8");
     const contractRestatements = needles.filter((needle) => contract.includes(needle));
     expect(contractRestatements, "the contract restates a declared-shape value").toEqual([]);
-    expect(contract).toContain("The **values** are SSOT in the test suite");
-    expect(contract).toContain("This contract does not restate them");
-    expect(contract).toContain("**closed set of dimensions** the declared shape must pin");
+
+    // The three positions are matched on NORMALISED prose — emphasis markers
+    // dropped, whitespace collapsed, lowercased — and on the shortest phrase
+    // that still identifies each position. A verbatim pin would red this lane
+    // for a re-wrap or a bolding change, which is a non-defect; what must not
+    // change silently is the contract's stated position itself.
+    const normalizedContract = contract.replace(/[*_`]/g, "").replace(/\s+/g, " ").toLowerCase();
+    for (const position of [
+      "values are ssot in the test suite",
+      "does not restate them",
+      "closed set of dimensions",
+    ]) {
+      expect
+        .soft(
+          normalizedContract,
+          `the contract no longer states "${position}" — the one-place obligation would rest on this suite alone`,
+        )
+        .toContain(position);
+    }
+  });
+});
+
+/** The package script that runs this gate, and the root aggregate entry that names it. */
+const GATE_PACKAGE_SCRIPT = "lint:workflow-shape";
+const GATE_ROOT_INVOCATION = `pnpm -C packages/qfai ${GATE_PACKAGE_SCRIPT}`;
+
+/** The established precedent this wiring copies: a vitest run already inside the lint aggregate. */
+const PRECEDENT_PACKAGE_SCRIPT = "lint:shipping";
+const PRECEDENT_ROOT_INVOCATION = `pnpm -C packages/qfai ${PRECEDENT_PACKAGE_SCRIPT}`;
+
+/** The release-only aggregate's whole-suite entry, through which it runs this gate transitively. */
+const RELEASE_TRANSITIVE_ENTRY = "pnpm -C packages/qfai test";
+
+/** This file, package-relative — the operand the gate's package script must name. */
+const GATE_TEST_REL = "tests/integration/shippedWorkflowShapeGate.test.ts";
+
+/** The subsumed asset assertions' test-case reference, registered on the shape-gate side. */
+const SUBSUMED_ANNOTATION = "QFAI:SPEC-0003:TC-0003-0049";
+
+/** The `scripts` block of a package manifest, string entries only. */
+async function readScripts(packageJsonPath: string): Promise<Record<string, string>> {
+  const parsed: unknown = JSON.parse(await readFile(packageJsonPath, "utf-8"));
+  const scripts = isRecord(parsed) ? parsed["scripts"] : undefined;
+  if (!isRecord(scripts)) {
+    throw new Error(`${packageJsonPath} declares no scripts block`);
+  }
+  const entries: Record<string, string> = {};
+  for (const [name, value] of Object.entries(scripts)) {
+    if (typeof value === "string") {
+      entries[name] = value;
+    }
+  }
+  return entries;
+}
+
+describe("TC-0003-0050 (TDD-0050): gate is wired into the lint aggregate and not the release-only aggregate", () => {
+  // One it() per TC-0003-0050 verify bullet.
+  //
+  // RULING 124 — "does not appear in `ci:gate`" is the NAMED invocation, and
+  // this suite asserts that reading explicitly rather than assuming it.
+  // `ci:gate` already contains `pnpm -C packages/qfai test`, which runs the
+  // whole package suite and therefore executes this very gate transitively, so
+  // a literal-absence reading is unsatisfiable by ANY edit to `ci:lint`. What
+  // the contract's placement rule protects is that the gate can red a pull
+  // request: `ci:gate` is release-only, so a divergence caught only there
+  // arrives too late. That property is delivered by the NAMED `ci:lint` entry
+  // and is not defeated by the transitive execution — so it2 asserts the named
+  // absence, and asserts the transitive entry's PRESENCE as well, so the
+  // reading is visible instead of implied.
+  //
+  // RULING 125 — the wiring form is established precedent, not a new one.
+  // `pnpm -C packages/qfai lint:shipping` is already a `vitest run <file>`
+  // entry inside `ci:lint`, so a vitest invocation there is not a novel mixed
+  // aggregate. it1 asserts the precedent alongside the new entry, so "we
+  // followed the existing form" is a checked fact. It also settles the shape
+  // module's home: vitest is the invoker, so the module stays in the tests
+  // tree beside this file and needs no build step.
+  //   QFAI:SPEC-0003:TC-0003-0050
+
+  it("the gate's invocation path appears in pnpm ci:lint, in the form the existing vitest lane already uses", async () => {
+    const rootScripts = await readScripts(path.join(repoRoot, "package.json"));
+    const ciLint = rootScripts["ci:lint"] ?? "";
+    expect(ciLint, "the root manifest declares no ci:lint script").not.toEqual("");
+    expect(
+      ciLint,
+      `ci:lint must name the gate's invocation path (${GATE_ROOT_INVOCATION}) — the lint aggregate is what pull requests run`,
+    ).toContain(GATE_ROOT_INVOCATION);
+
+    // The path is complete, not just a name: the package script it names must
+    // be a vitest run of THIS file.
+    const packageScripts = await readScripts(path.join(packageRoot, "package.json"));
+    const gateScript = packageScripts[GATE_PACKAGE_SCRIPT] ?? "";
+    expect(gateScript, `packages/qfai declares no ${GATE_PACKAGE_SCRIPT} script`).not.toEqual("");
+    expect(gateScript).toContain("vitest run");
+    expect(gateScript).toContain(GATE_TEST_REL);
+    expect(
+      path.resolve(packageRoot, GATE_TEST_REL),
+      "the wired path does not resolve to this suite",
+    ).toEqual(fileURLToPath(import.meta.url));
+
+    // Ruling 125 made falsifiable: the precedent it copies is really there.
+    expect(ciLint, "the precedent vitest lane is no longer in ci:lint").toContain(
+      PRECEDENT_ROOT_INVOCATION,
+    );
+    expect(packageScripts[PRECEDENT_PACKAGE_SCRIPT] ?? "").toContain("vitest run");
+  });
+
+  it("the gate's invocation path does not appear in pnpm ci:gate, which only the release workflow runs", async () => {
+    const rootScripts = await readScripts(path.join(repoRoot, "package.json"));
+    const ciGate = rootScripts["ci:gate"] ?? "";
+    const ciLint = rootScripts["ci:lint"] ?? "";
+    expect(ciGate, "the root manifest declares no ci:gate script").not.toEqual("");
+
+    for (const named of [GATE_ROOT_INVOCATION, GATE_PACKAGE_SCRIPT, GATE_TEST_REL]) {
+      expect
+        .soft(
+          ciGate,
+          `ci:gate names the gate ("${named}") — a divergence caught only in the release-only aggregate arrives after the pull request is already green`,
+        )
+        .not.toContain(named);
+    }
+
+    // Ruling 124's premise, asserted rather than assumed: the release aggregate
+    // does run this gate transitively through the whole-suite entry. The named
+    // absence above is therefore the only satisfiable reading, and the property
+    // the rule protects lives in the lint aggregate.
+    expect(
+      ciGate,
+      "ci:gate no longer runs the package suite — ruling 124's premise would need revisiting",
+    ).toContain(RELEASE_TRANSITIVE_ENTRY);
+    expect(ciLint).toContain(GATE_ROOT_INVOCATION);
+    expect(ciLint).not.toContain(RELEASE_TRANSITIVE_ENTRY);
+  });
+
+  it("the subsumed asset assertions' test-case reference stays registered on the expected-shape side", async () => {
+    // Registered as an ANNOTATION, which is what the traceability scan reads:
+    // a comment line, not this assertion's own string literal. Scanning only
+    // comment lines is what keeps the check from proving itself.
+    const gateSource = await readFile(fileURLToPath(import.meta.url), "utf-8");
+    const annotatedComments = gateSource.split(/\r\n|\r|\n/).filter((line) => {
+      const trimmed = line.trimStart();
+      return (
+        (trimmed.startsWith("//") || trimmed.startsWith("*")) && line.includes(SUBSUMED_ANNOTATION)
+      );
+    });
+    expect(
+      annotatedComments.length,
+      `the subsumed reference ${SUBSUMED_ANNOTATION} is not registered in a comment on the shape-gate side`,
+    ).toBeGreaterThanOrEqual(1);
+
+    // And registered where the repository's traceability registry reads it.
+    const registry = await readFile(
+      path.join(repoRoot, "tests", "integration", "qfai-traceability.md"),
+      "utf-8",
+    );
+    expect(registry).toContain(`- ${SUBSUMED_ANNOTATION}`);
+
+    // Neither carrier lost its own test-case annotation, and each still points
+    // at the gate that subsumed its dimension-5 assertion — "not deleted"
+    // means the trail from the old site to the new oracle survives too.
+    const carriers: ReadonlyArray<{ rel: string; annotation: string }> = [
+      { rel: "tests/assets/assets.test.ts", annotation: "TC-0003 (static)" },
+      { rel: "tests/cli/init.test.ts", annotation: "TC-0003-0001 (alias)" },
+    ];
+    for (const carrier of carriers) {
+      const source = await readFile(path.join(packageRoot, carrier.rel), "utf-8");
+      expect
+        .soft(source, `${carrier.rel} lost its ${carrier.annotation} annotation`)
+        .toContain(carrier.annotation);
+      expect
+        .soft(source, `${carrier.rel} no longer points at the gate that subsumed its assertion`)
+        .toContain(GATE_TEST_REL.split("/").pop() ?? GATE_TEST_REL);
+    }
   });
 });

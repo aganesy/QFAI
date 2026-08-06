@@ -38,6 +38,7 @@
     "lint": "eslint src",
     "lint:branch-version": "bash scripts/check-branch-version-pin.sh",
     "lint:shipping": "vitest run tests/scripts/lintShipping.test.ts",
+    "lint:workflow-shape": "vitest run tests/integration/shippedWorkflowShapeGate.test.ts",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage tests/unit/core/prototyping tests/core/prototyping",

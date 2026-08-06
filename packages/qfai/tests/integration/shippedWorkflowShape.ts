@@ -40,8 +40,11 @@ import { parse } from "yaml";
 import {
   collectJobSteps,
   collectWorkflowJobs,
+  HEADER_PLACEHOLDER_VALUE_RE,
   headerComment,
   isRecord,
+  normalizeHeaderLabel,
+  parseHeaderTable,
 } from "../helpers/shippedWorkflowFixtures.js";
 
 /** One dimension of the closed set the declared shape must pin. */
@@ -79,6 +82,14 @@ export interface ShapeFinding {
 
 /** The gate's failure code, per the shipped-workflows contract. */
 export const SHIPPED_WORKFLOW_SHAPE_DRIFT_CODE = "R-SHIPPED-WORKFLOW-SHAPE-DRIFT";
+
+/**
+ * What separates a pin's site from its expected value in the rendered
+ * `pinned` entries. Exported so the gate suite can judge the EXPECTED half on
+ * its own — a pin whose value reads "pinned" or "n/a" names its site and
+ * answers nothing, and that has to be rejectable.
+ */
+export const SHAPE_PIN_SEPARATOR = " — ";
 
 /** The site name for a pin whose subject is the set rather than one file. */
 const SET_SITE = "<shipped set>";
@@ -167,8 +178,16 @@ const QFAI_INVOCATION_RE =
 interface WorkflowFile {
   readonly name: string;
   readonly body: string;
-  /** The parsed document, or undefined when the file does not parse. */
+  /** The parsed document, or undefined when the entry does not parse. */
   readonly doc: unknown;
+  /**
+   * Why this entry has no usable document — a YAML error, or the read failure
+   * a directory or an unreadable file produces. Retained rather than discarded
+   * so dimension 1 can DIAGNOSE it: without it an unparsable file surfaces as
+   * "no QFAI invocation" and "lane is not declared", which sends a reader to
+   * the wrong dimension entirely.
+   */
+  readonly parseError: string | undefined;
 }
 
 interface WorkflowTree {
@@ -180,6 +199,10 @@ interface WorkflowTree {
  * directory, an unreadable entry and an unparsable body are all tolerated and
  * turn into findings downstream: a gate that throws is a gate that reports
  * nothing.
+ *
+ * An entry that cannot be READ (a subdirectory, a broken link) is recorded
+ * rather than skipped. Skipping it made it invisible to dimension 1, so a
+ * directory dropped into the shipped tree passed the set pin unnoticed.
  */
 async function loadWorkflowTree(rootDir: string): Promise<WorkflowTree> {
   const dir = path.join(rootDir, ".github", "workflows");
@@ -194,16 +217,24 @@ async function loadWorkflowTree(rootDir: string): Promise<WorkflowTree> {
     let body: string;
     try {
       body = await readFile(path.join(dir, name), "utf-8");
-    } catch {
+    } catch (error) {
+      files.push({
+        name,
+        body: "",
+        doc: undefined,
+        parseError: `cannot read entry: ${error instanceof Error ? error.message : String(error)}`,
+      });
       continue;
     }
     let doc: unknown;
+    let parseError: string | undefined;
     try {
       doc = parse(body);
-    } catch {
+    } catch (error) {
       doc = undefined;
+      parseError = error instanceof Error ? error.message.split("\n")[0] : String(error);
     }
-    files.push({ name, body, doc });
+    files.push({ name, body, doc, parseError });
   }
   return { files };
 }
@@ -230,10 +261,11 @@ interface ShapePin {
 const declaredNames = (): string[] => SHIPPED_FILE_EXPECTATIONS.map((file) => file.name);
 
 /**
- * A pin about one file. An ABSENT file observes as accepted on purpose:
- * absence is dimension 1's finding and nobody else's. Without this rule one
- * removed file would light up every per-file dimension at once and
- * per-dimension attribution would be gone.
+ * A pin about one file. An ABSENT file — and an UNPARSABLE one — observes as
+ * accepted on purpose: both are dimension 1's finding and nobody else's.
+ * Without this rule one removed or broken file would light up every per-file
+ * dimension at once, per-dimension attribution would be gone, and the reader
+ * would be sent to whichever dimension happened to notice first.
  */
 function filePin(
   dimension: number,
@@ -247,7 +279,7 @@ function filePin(
     expected,
     observe: (tree) => {
       const found = tree.files.find((candidate) => candidate.name === file);
-      if (found === undefined) {
+      if (found === undefined || found.parseError !== undefined) {
         return expected;
       }
       const violation = observe(found);
@@ -265,8 +297,14 @@ function fileSetPins(): ShapePin[] {
       site: file.name,
       expected,
       observe: (tree: WorkflowTree): string => {
-        if (!tree.files.some((candidate) => candidate.name === file.name)) {
+        const found = tree.files.find((candidate) => candidate.name === file.name);
+        if (found === undefined) {
           return "absent from the tree";
+        }
+        if (found.parseError !== undefined) {
+          // Diagnosed here rather than as a downstream symptom: every other
+          // per-file dimension stands down for an unparsable entry.
+          return `present but does not parse: ${found.parseError}`;
         }
         return SHIPPED_FILENAME_RE.test(file.name)
           ? expected
@@ -289,36 +327,21 @@ function fileSetPins(): ShapePin[] {
   return pins;
 }
 
-/** A label reduced to its identity, so a re-cased or re-punctuated row is the same row. */
-function normalizeLabel(label: string): string {
-  return label
-    .replace(/`/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-/** Values that fill a header row without stating anything. */
-const PLACEHOLDER_VALUE_RE = /^(?:[-–—.]+|tbd|todo|n\/?a|none|see above)$/i;
-
-/** The normalized labels of the header-table rows that state something. */
+/**
+ * The normalized labels of the header-table rows that state something. The
+ * table parse and the placeholder rule are the SHARED ones the header row's own
+ * oracle uses, so this observer cannot drift from the row it defers to about
+ * what a shipped header states.
+ */
 function headerRowLabels(body: string): string[] {
   const labels: string[] = [];
-  for (const line of headerComment(body).split(/\r\n|\r|\n/)) {
-    const row = line.replace(/^#\s?/, "").trim();
-    if (!row.startsWith("|") || !row.endsWith("|") || row.length < 3) {
-      continue;
+  for (const [label, values] of parseHeaderTable(headerComment(body))) {
+    const stated = values.filter(
+      (value) => value !== "" && !HEADER_PLACEHOLDER_VALUE_RE.test(value),
+    );
+    if (stated.length > 0) {
+      labels.push(label);
     }
-    const cells = row
-      .slice(1, -1)
-      .split("|")
-      .map((cell) => cell.trim());
-    const label = normalizeLabel(cells[0] ?? "");
-    const value = cells.slice(1).join(" | ").trim();
-    if (label === "" || value === "" || PLACEHOLDER_VALUE_RE.test(value)) {
-      continue;
-    }
-    labels.push(label);
   }
   return labels;
 }
@@ -329,7 +352,9 @@ function headerBlockPins(): ShapePin[] {
   return SHIPPED_FILE_EXPECTATIONS.map((file) =>
     filePin(2, file.name, expected, (found) => {
       const present = headerRowLabels(found.body);
-      const missing = REQUIRED_HEADER_ROWS.filter((row) => !present.includes(normalizeLabel(row)));
+      const missing = REQUIRED_HEADER_ROWS.filter(
+        (row) => !present.includes(normalizeHeaderLabel(row)),
+      );
       return missing.length === 0 ? "" : `header table is missing: ${missing.join(", ")}`;
     }),
   );
@@ -509,12 +534,14 @@ function laneInertnessPins(): ShapePin[] {
     const clauses: string[] = [];
     if (gated.length > 0) {
       clauses.push(
-        `inert until opted in — ${gated.join(", ")} each gate on an if: condition naming the lane`,
+        `inert until opted in: ${gated.join(", ")} each gate on an if: condition naming the lane`,
       );
     }
     if (always.length > 0) {
       clauses.push(
-        `never inert, deletion is the opt-out — ${always.join(", ")} declare no gating if:`,
+        `never inert, deletion is the opt-out: ${always.join(", ")} ${
+          always.length === 1 ? "declares" : "declare"
+        } no gating if:`,
       );
     }
     return filePin(6, file.name, clauses.join("; "), (found) =>
@@ -570,7 +597,12 @@ function collectUsesRepos(node: unknown): string[] {
   return repos;
 }
 
-/** Dimension 7: third-party `uses:` references stay inside the sanctioned set. */
+/**
+ * Dimension 7: third-party `uses:` references stay inside the sanctioned set.
+ * A LOCAL reference (`./…`) is deliberately not this dimension's subject — it
+ * is not a third party at all, and it is exactly what dimension 9 exists to
+ * reject, so classifying it here would report one hazard under two dimensions.
+ */
 function thirdPartyUsesPins(): ShapePin[] {
   const expected = `third-party uses: limited to the sanctioned set (${SANCTIONED_THIRD_PARTY_USES.join(
     ", ",
@@ -578,7 +610,10 @@ function thirdPartyUsesPins(): ShapePin[] {
   return SHIPPED_FILE_EXPECTATIONS.map((file) =>
     filePin(7, file.name, expected, (found) => {
       const unsanctioned = collectUsesRepos(found.doc).filter(
-        (repo) => !repo.startsWith("actions/") && !SANCTIONED_THIRD_PARTY_USES.includes(repo),
+        (repo) =>
+          !repo.startsWith("./") &&
+          !repo.startsWith("actions/") &&
+          !SANCTIONED_THIRD_PARTY_USES.includes(repo),
       );
       return unsanctioned.length === 0
         ? ""
@@ -608,11 +643,11 @@ function countKeyOccurrences(node: unknown, key: string): number {
 /** Dimension 8: no secret declaration, context reference or inheritance. */
 function zeroSecretPins(): ShapePin[] {
   const expected =
-    "no secrets: declaration, no secrets. context reference and no secrets: inherit anywhere in the file";
+    "no `secrets:` declaration, no `secrets.` context reference and no `secrets: inherit` anywhere in the file";
   return SHIPPED_FILE_EXPECTATIONS.map((file) =>
     filePin(8, file.name, expected, (found) => {
       const problems: string[] = [];
-      found.body.split(/\r?\n/).forEach((line, index) => {
+      found.body.split(/\r\n|\r|\n/).forEach((line, index) => {
         if (/\bsecrets\s*\./.test(line)) {
           problems.push(`line ${index + 1}: secret context reference`);
         }
@@ -698,7 +733,7 @@ export const SHIPPED_WORKFLOW_SHAPE: DeclaredShape = {
     id,
     title,
     pinned: SHAPE_PINS.filter((pin) => pin.dimension === id).map(
-      (pin) => `${pin.site} — ${pin.expected}`,
+      (pin) => `${pin.site}${SHAPE_PIN_SEPARATOR}${pin.expected}`,
     ),
   })),
 };

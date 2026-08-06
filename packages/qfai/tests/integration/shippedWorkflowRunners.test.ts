@@ -25,9 +25,11 @@ import { parse } from "yaml";
 
 import {
   collectWorkflowJobs,
+  HEADER_PLACEHOLDER_VALUE_RE,
   headerComment,
   isRecord,
   loadShippedWorkflows,
+  parseHeaderTable,
 } from "../helpers/shippedWorkflowFixtures.js";
 
 // tests/integration/<this file> -> tests -> packages/qfai
@@ -358,59 +360,9 @@ describe("TC-0003-0041 (TDD-0041): planted organization-private label literal is
   });
 });
 
-/**
- * A row label reduced to its identity: backticks dropped, lowercased, every
- * run of non-alphanumerics collapsed to one space. A re-padded, re-cased or
- * re-punctuated table is still the same table, so the header stays
- * human-formattable without breaking this oracle.
- */
-function normalizeLabel(label: string): string {
-  return label
-    .replace(/`/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-/** A table cell holding only a separator run (`---`, `:--:`). */
-const SEPARATOR_CELL_RE = /^:?-{2,}:?$/;
-
-/** Values that fill a row without stating anything. */
-const PLACEHOLDER_VALUE_RE = /^(?:[-–—.]+|tbd|todo|n\/?a|none|see above)$/i;
-
-/**
- * Parses the pipe table out of a header block: comment lines whose body
- * starts and ends with `|`, separator rows dropped. Returns every value seen
- * per normalized label, so a duplicated row is visible as a second entry
- * rather than silently overwriting the first.
- */
-function parseHeaderTable(header: string): Map<string, string[]> {
-  const rows = new Map<string, string[]>();
-  for (const line of header.split(/\r\n|\r|\n/)) {
-    const body = line.replace(/^#\s?/, "").trim();
-    if (!body.startsWith("|") || !body.endsWith("|") || body.length < 3) {
-      continue;
-    }
-    const cells = body
-      .slice(1, -1)
-      .split("|")
-      .map((cell) => cell.trim());
-    if (cells.length < 2 || cells.every((cell) => SEPARATOR_CELL_RE.test(cell))) {
-      continue;
-    }
-    const label = normalizeLabel(cells[0] ?? "");
-    if (label === "") {
-      continue;
-    }
-    const value = cells.slice(1).join(" | ").trim();
-    rows.set(label, [...(rows.get(label) ?? []), value]);
-  }
-  return rows;
-}
-
 /** One header-table field the contract requires, with its obligations. */
 interface RequiredHeaderField {
-  /** Normalized row label (see `normalizeLabel`). */
+  /** Normalized row label (see `normalizeHeaderLabel`). */
   readonly label: string;
   /** Human-readable name, for violation messages. */
   readonly title: string;
@@ -483,7 +435,7 @@ function headerFieldViolations(file: string, header: string, labels: readonly st
       continue;
     }
     const value = values[0] ?? "";
-    if (value === "" || PLACEHOLDER_VALUE_RE.test(value)) {
+    if (value === "" || HEADER_PLACEHOLDER_VALUE_RE.test(value)) {
       violations.push(`${file}: header table "${field.title}" row states nothing ("${value}")`);
       continue;
     }

@@ -89,6 +89,61 @@ export function headerComment(body: string): string {
   return lines.join("\n");
 }
 
+/**
+ * A header-table row label reduced to its identity: backticks dropped,
+ * lowercased, every run of non-alphanumerics collapsed to one space. A
+ * re-padded, re-cased or re-punctuated table is still the same table, so the
+ * shipped headers stay human-formattable without breaking either oracle that
+ * reads them.
+ */
+export function normalizeHeaderLabel(label: string): string {
+  return label
+    .replace(/`/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/** A table cell holding only a separator run (`---`, `:--:`). */
+const SEPARATOR_CELL_RE = /^:?-{2,}:?$/;
+
+/** Header-row values that fill a row without stating anything. */
+export const HEADER_PLACEHOLDER_VALUE_RE = /^(?:[-–—.]+|tbd|todo|n\/?a|none|see above)$/i;
+
+/**
+ * Parses the pipe table out of a header block: comment lines whose body starts
+ * and ends with `|`, separator rows dropped. Returns every value seen per
+ * normalized label, so a duplicated row is visible as a second entry rather
+ * than silently overwriting the first.
+ *
+ * Shared on purpose: the header row's own oracle and the declared shape's
+ * dimension-2 observer must read a shipped header the same way, or the gate and
+ * the row it defers to could disagree about what a header states.
+ */
+export function parseHeaderTable(header: string): Map<string, string[]> {
+  const rows = new Map<string, string[]>();
+  for (const line of header.split(/\r\n|\r|\n/)) {
+    const body = line.replace(/^#\s?/, "").trim();
+    if (!body.startsWith("|") || !body.endsWith("|") || body.length < 3) {
+      continue;
+    }
+    const cells = body
+      .slice(1, -1)
+      .split("|")
+      .map((cell) => cell.trim());
+    if (cells.length < 2 || cells.every((cell) => SEPARATOR_CELL_RE.test(cell))) {
+      continue;
+    }
+    const label = normalizeHeaderLabel(cells[0] ?? "");
+    if (label === "") {
+      continue;
+    }
+    const value = cells.slice(1).join(" | ").trim();
+    rows.set(label, [...(rows.get(label) ?? []), value]);
+  }
+  return rows;
+}
+
 /** The first step body of a job carrying a string `run:`, or undefined. */
 export function firstRunBody(job: Record<string, unknown>): string | undefined {
   for (const step of collectJobSteps(job)) {
