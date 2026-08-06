@@ -511,7 +511,12 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const content = await readFile(workflowPath, "utf-8");
 
     expect(content).toContain("name: qfai validate");
-    expect(content).toContain("qfai validate --profile full --fail-on error");
+    // The lane's subcommand / --profile value / --fail-on threshold used to be
+    // asserted here as one ad-hoc string. Subsumed and replaced (DTC-26) by the
+    // declared shape's dimension-5 pins in
+    // tests/integration/shippedWorkflowShapeGate.test.ts, which is now their one
+    // oracle; this it keeps its TC-0003 annotation for the static checks that
+    // remain.
     expect(content).toContain("QFAI-TEST-001");
     // DTC-26 co-change (TC-0003-0030): the shipped set is SHA-pinned, so the
     // former floating-major expectations are subsumed by pin-form assertions.

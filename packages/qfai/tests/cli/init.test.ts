@@ -128,7 +128,13 @@ describe("qfai init", { timeout: 60000 }, () => {
       await expect(access(workflowPath)).resolves.toBeUndefined();
 
       const content = await readFile(workflowPath, "utf-8");
-      expect(content).toContain("qfai validate --profile full --fail-on error");
+      // The lane's subcommand / --profile value / --fail-on threshold used to
+      // be asserted here as one ad-hoc string — the same literal the asset
+      // suite carried. Subsumed and replaced (DTC-26) by the declared shape's
+      // dimension-5 pins in
+      // tests/integration/shippedWorkflowShapeGate.test.ts, which is now their
+      // one oracle; this it keeps its TC-0003-0001 alias annotation for the
+      // init-written checks that remain.
       // DTC-26 co-change (TC-0003-0030): the shipped set is SHA-pinned, so
       // the former floating-major expectations are asserted in pin form.
       expect(content).toMatch(/actions\/checkout@[0-9a-f]{40}\b/);
