@@ -39,6 +39,7 @@ import { validateSddDesignContractReadiness } from "./validators/designContractR
 import { resolveToolVersion } from "./version.js";
 import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
 import { probeSkillManifestRuntimeDeps } from "./doctor/skillManifestProbe.js";
+import { buildWorkflowsIntegrityCheck } from "./doctor/workflowsIntegrity.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
 export type DoctorProfile = "prototyping";
@@ -250,6 +251,11 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   }
 
   addCheck(checks, await buildAgentFrontmatterCheck(root));
+
+  const workflowsCheck = await buildWorkflowsIntegrityCheck(root);
+  if (workflowsCheck !== undefined) {
+    addCheck(checks, workflowsCheck);
+  }
 
   const deprecatedPromptsDir = resolvePath(root, config, "promptsDir");
   const deprecatedPromptsExists = await exists(deprecatedPromptsDir);
