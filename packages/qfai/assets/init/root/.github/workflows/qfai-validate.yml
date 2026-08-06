@@ -11,6 +11,18 @@
 # Install step auto-detects the project's lockfile (pnpm / yarn /
 # npm) and runs the appropriate frozen-lockfile install. `npx qfai`
 # works with any Node package manager.
+#
+# Package manager: the install step follows your lockfile. A pnpm
+# lockfile additionally requires `"packageManager": "pnpm@<version>"`
+# in package.json, because the pnpm setup action reads the version from
+# that field only. Without it the lane stops CLOSED with an annotation
+# naming the field, rather than reporting a result it never computed.
+#
+# Node version: an adopter version file wins — `.nvmrc` first, then
+# `.node-version`. With neither present the setup falls OPEN: it uses
+# Node 20 (the documented fallback, which satisfies the package
+# `engines: ">=20.19.0"` floor) and emits a warning annotation instead
+# of failing the lane.
 
 name: qfai validate
 
@@ -40,23 +52,101 @@ jobs:
           # Nothing in this job pushes back, so the token never needs to
           # outlive the checkout step.
           persist-credentials: false
+      - name: Resolve the package manager (pnpm route fails closed)
+        id: package-manager
+        shell: bash
+        run: |
+          # Package manager resolution, fail CLOSED. The pnpm setup action
+          # below is invoked with no `version:` input on purpose —
+          # overriding the version the adopter declared would be worse, e.g.
+          # forcing pnpm 9 on a pnpm 10 project — so
+          # `package.json#packageManager` is its only source. With that
+          # field missing the action stops with a resolution error naming
+          # neither the file nor the fix; we stop first and name both.
+          # Continuing without an install is not an option: the lane would
+          # report a validate result it never computed.
+          #
+          # Scoped to the pnpm route deliberately: Yarn Classic and npm ship
+          # with the runner and do resolve without the field, so stopping
+          # there would stop on a resolvable case.
+          if [ ! -f pnpm-lock.yaml ]; then
+            echo "qfai validate: no pnpm lockfile - no manifest-declared package manager required"
+            exit 0
+          fi
+          declared=""
+          if [ -f package.json ]; then
+            declared="$(node -e '
+              const { readFileSync } = require("node:fs");
+              let field = "";
+              try {
+                const parsed = JSON.parse(readFileSync("package.json", "utf8"));
+                if (
+                  parsed !== null &&
+                  typeof parsed === "object" &&
+                  typeof parsed.packageManager === "string"
+                ) {
+                  field = parsed.packageManager;
+                }
+              } catch {
+                field = "";
+              }
+              // The value is adopter input and this step echoes it, so every
+              // whitespace run collapses to one space: a `\n` (a legal JSON
+              // string escape) would otherwise start a new stdout line, and
+              // the runner reads `::`-leading lines as workflow commands - a
+              // fork PR could forge annotations against any file, mask
+              // output, or stop command processing for the rest of the step.
+              // Collapsing beats keeping the first line only: it also
+              // neutralises a lone `\r`, and it keeps the whole value
+              // visible in the log for diagnosis instead of silently
+              // truncating it.
+              process.stdout.write(field.trim().replace(/\s+/g, " "));
+            ')" || declared=""
+          fi
+          if [ -z "$declared" ]; then
+            echo '::error file=package.json::qfai validate: pnpm-lock.yaml is present but package.json does not resolve a "packageManager" string (the field is missing, is not a string, or package.json could not be read). Add "packageManager": "pnpm@<the pnpm version you use>" to package.json and commit it - the pnpm setup action reads the pnpm version from that field only, so this lane cannot install and must not report a validate result it did not compute.'
+            exit 1
+          fi
+          echo "qfai validate: package manager ${declared} (from the package.json packageManager field)"
       - name: Set up pnpm via pnpm/action-setup 4.4.0 (if project uses pnpm)
         if: ${{ hashFiles('pnpm-lock.yaml') != '' }}
-        # The pnpm setup action resolves the pnpm version from
-        # `package.json#packageManager` when no `version:` input is
-        # provided. Setting `version:` would override the consumer's
-        # declared packageManager (e.g. forcing pnpm 9 on a pnpm 10
-        # project), so we leave it unset and require the consumer to
-        # declare `"packageManager": "pnpm@X.Y.Z"` in package.json —
-        # the most common pnpm-on-CI baseline.
+        # No `version:` input: the action reads it from
+        # `package.json#packageManager`, whose presence the step above has
+        # already established (see its comment for why it is required).
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - name: Resolve the Node version (adopter file wins, else fall open)
+        id: node-version
+        shell: bash
+        run: |
+          # Node version resolution, fail OPEN. An adopter version file
+          # wins in the order probed below; with none present we use the
+          # documented fallback and warn, so the lane continues.
+          #
+          # setup-node's `node-version-file:` input is deliberately NOT
+          # used: it fails the job outright for every adopter who has no
+          # such file, which would make this workflow unusable on a tree
+          # that simply never pinned a Node version.
+          fallback="20"
+          for candidate in .nvmrc .node-version; do
+            [ -f "$candidate" ] || continue
+            first_line=""
+            IFS= read -r first_line < "$candidate" || true
+            resolved="$(printf '%s' "$first_line" | tr -d '[:space:]')"
+            if [ -n "$resolved" ]; then
+              echo "qfai validate: Node ${resolved} (from ${candidate})"
+              echo "version=${resolved}" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "::warning::qfai validate: no Node version file (.nvmrc or .node-version) found - using Node ${fallback} and continuing (fail open). Add one to pin the version this workflow uses."
+          echo "version=${fallback}" >> "$GITHUB_OUTPUT"
       - name: Set up Node via actions/setup-node 4.4.0
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          # Match the QFAI repo's CI baseline (Node 20 LTS) and the package
-          # `engines: ">=20.19.0"`. Bump deliberately when QFAI raises its
-          # supported floor.
-          node-version: "20"
+          # The version resolved by the step above: the adopter's own
+          # version file when they have one, else the documented fallback
+          # (Node 20, matching the package `engines: ">=20.19.0"` floor).
+          node-version: ${{ steps.node-version.outputs.version }}
           # setup-node@v4's `cache:` accepts a single package-manager value.
           # Pick the one matching the consumer's lockfile (or leave unset
           # when none of the three is present). The conditional expression
