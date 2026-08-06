@@ -6,16 +6,27 @@
 # A change-detection job computes which lanes a change would need from a
 # name-only diff against the base commit, and a script probe reads which
 # layer-named test scripts (test:unit, test:component, test:integration,
-# test:api, test:e2e) your package.json declares. Every lane below is
-# declared, and a lane runs only when BOTH hold: your package.json
-# declares the matching layer-named test script (your opt-in) and the
-# diff selected the lane. With no layer-named script declared every lane
-# is skipped, so this file executes no test in your repository until you
-# opt in. Delete the file if you do not want it; `qfai init` will not
-# recreate a file you deliberately removed.
+# test:api, test:e2e) your package.json declares. A lane runs only when
+# BOTH hold: your package.json declares the matching layer-named test
+# script (your opt-in) and the diff selected the lane. Delete the file if
+# you do not want it; `qfai init` will not recreate a file you
+# deliberately removed.
 #
-# This file is self-contained: it does not reference any other workflow
-# file QFAI ships.
+# What this file needs from your repository, and how it behaves when it does
+# not get it:
+#
+# | Field                         | Value                                                                                                     |
+# | ----------------------------- | --------------------------------------------------------------------------------------------------------- |
+# | Covered layer                 | all five adopter test layers - unit, component, integration, api, e2e - one lane each                     |
+# | Runner selector               | `vars.QFAI_CI_RUNNER`, default `ubuntu-latest`                                                            |
+# | Wrong runner value            | GitHub does not fail fast: an unknown label leaves the job queued indefinitely, never red                 |
+# | `packageManager` precondition | none today - no lane installs. A lane that gains a pnpm install needs `"packageManager"` in package.json  |
+# | Inert when                    | your package.json declares no `test:<layer>` script, or the diff did not select the lane                  |
+# | Fail-open behaviour           | degraded detection (unreachable base, shallow clone, failed diff, unknown path): warning, then every lane |
+#
+# Every lane is declared but inert until you opt in, so this file executes no
+# test in your repository today. It is also self-contained: it does not
+# reference any other workflow file QFAI ships.
 
 name: qfai tests
 
@@ -32,7 +43,7 @@ concurrency:
 jobs:
   detection:
     name: change detection
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     # Reads the repository only; the name-only diff writes nothing back.
     permissions:
       contents: read
@@ -139,7 +150,7 @@ jobs:
     name: unit tests
     needs: detection
     if: ${{ contains(needs.detection.outputs.scripts, 'unit') && contains(needs.detection.outputs.lanes, 'unit') }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     # Least privilege for a test lane: read the repository, write nothing
     # back. Bounded even while the lane is skipped.
     permissions:
@@ -152,7 +163,7 @@ jobs:
     name: component tests
     needs: detection
     if: ${{ contains(needs.detection.outputs.scripts, 'component') && contains(needs.detection.outputs.lanes, 'component') }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     # Least privilege for a test lane: read the repository, write nothing
     # back. Bounded even while the lane is skipped.
     permissions:
@@ -165,7 +176,7 @@ jobs:
     name: integration tests
     needs: detection
     if: ${{ contains(needs.detection.outputs.scripts, 'integration') && contains(needs.detection.outputs.lanes, 'integration') }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     # Least privilege for a test lane: read the repository, write nothing
     # back. Bounded even while the lane is skipped.
     permissions:
@@ -178,7 +189,7 @@ jobs:
     name: api tests
     needs: detection
     if: ${{ contains(needs.detection.outputs.scripts, 'api') && contains(needs.detection.outputs.lanes, 'api') }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     # Least privilege for a test lane: read the repository, write nothing
     # back. Bounded even while the lane is skipped.
     permissions:
@@ -191,7 +202,7 @@ jobs:
     name: e2e tests
     needs: detection
     if: ${{ contains(needs.detection.outputs.scripts, 'e2e') && contains(needs.detection.outputs.lanes, 'e2e') }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     # Least privilege for a test lane: read the repository, write nothing
     # back. Bounded even while the lane is skipped.
     permissions:
@@ -207,7 +218,7 @@ jobs:
     # skipped (the empty-matrix case). Skipped lanes are green - they
     # established nothing and claim nothing; failed lanes are not.
     if: ${{ always() }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     # The verdict only aggregates results GitHub already computed; it
     # needs no repository access at all.
     permissions: {}

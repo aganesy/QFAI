@@ -27,6 +27,7 @@ import { parse } from "yaml";
 import {
   collectJobSteps,
   collectWorkflowJobs,
+  headerComment,
   isRecord,
   loadShippedWorkflows,
   useTempDirPool,
@@ -136,22 +137,6 @@ function stepById(job: ShippedJob, id: string): Record<string, unknown> | undefi
 function stepRunBody(step: Record<string, unknown> | undefined): string | undefined {
   const run = step?.["run"];
   return typeof run === "string" ? run : undefined;
-}
-
-/** The leading comment block of a shipped file (its header per NFR-0011). */
-function headerComment(body: string): string {
-  const lines: string[] = [];
-  for (const line of body.split(/\r?\n/)) {
-    if (line.startsWith("#")) {
-      lines.push(line);
-      continue;
-    }
-    if (line.trim() === "") {
-      continue;
-    }
-    break;
-  }
-  return lines.join("\n");
 }
 
 interface ShellRun {
@@ -443,7 +428,7 @@ describe(
       }
     });
 
-    it("the failure annotation names the package.json packageManager field as the fix site", async () => {
+    it("the failure annotation names the package.json packageManager field as the fix site, and nothing else authors on that channel", async () => {
       for (const job of await installJobs()) {
         const body = guardBody(job);
         const run = await runShell(body, await pnpmTreeWithoutPackageManager());
@@ -479,9 +464,16 @@ describe(
           injected.status,
           `${job.file}: the injected-but-valid version did not resolve: ${injected.stderr}`,
         ).toBe(0);
+        // Split on every line terminator the runner honours (a bare `\r`
+        // included) and trim leading whitespace before the `::` test: the
+        // runner strips leading spaces and tabs before parsing a workflow
+        // command, so `  ::error` is a command too. Both shapes are
+        // unreachable today — the guard collapses every whitespace run — and
+        // that is exactly the hole a first-line-truncation implementation
+        // would open, so the predicate closes it in advance.
         const forged = `${injected.stdout}${injected.stderr}`
-          .split(/\r?\n/)
-          .filter((line) => line.startsWith("::"));
+          .split(/\r\n|\r|\n/)
+          .filter((line) => line.trimStart().startsWith("::"));
         expect(
           forged,
           `${job.file}: the manifest value forged workflow command line(s) on this step's output channel`,

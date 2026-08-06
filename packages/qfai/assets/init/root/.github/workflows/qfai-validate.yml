@@ -8,21 +8,21 @@
 # (you can opt out via `validation.testStrategy.forbidTestTodoStubs: false`
 # in qfai.config.yaml).
 #
-# Install step auto-detects the project's lockfile (pnpm / yarn /
-# npm) and runs the appropriate frozen-lockfile install. `npx qfai`
-# works with any Node package manager.
+# What this file needs from your repository, and how it behaves when it does
+# not get it:
 #
-# Package manager: the install step follows your lockfile. A pnpm
-# lockfile additionally requires `"packageManager": "pnpm@<version>"`
-# in package.json, because the pnpm setup action reads the version from
-# that field only. Without it the lane stops CLOSED with an annotation
-# naming the field, rather than reporting a result it never computed.
+# | Field                         | Value                                                                                                    |
+# | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
+# | Covered layer                 | specification and repository validation (`qfai validate`); it runs none of your own tests                |
+# | Runner selector               | `vars.QFAI_CI_RUNNER`, default `ubuntu-latest`                                                           |
+# | Wrong runner value            | GitHub does not fail fast: an unknown label leaves the job queued indefinitely, never red                |
+# | `packageManager` precondition | a `pnpm-lock.yaml` needs `"packageManager": "pnpm@<version>"` in package.json, or this lane stops CLOSED |
+# | Inert when                    | never inert; delete this file to opt out - `qfai init` will not recreate a file you removed              |
+# | Fail-open behaviour           | no `.nvmrc` / `.node-version` in your tree: warning annotation, Node 20, and the lane continues          |
+# | Node support floor            | the package declares `engines: ">=20.19.0"`; the fall-open Node 20 satisfies it                          |
+# | Dependency install            | follows your lockfile: pnpm / yarn Berry / yarn Classic / npm, else `npm install`                        |
 #
-# Node version: an adopter version file wins — `.nvmrc` first, then
-# `.node-version`. With neither present the setup falls OPEN: it uses
-# Node 20 (the documented fallback, which satisfies the package
-# `engines: ">=20.19.0"` floor) and emits a warning annotation instead
-# of failing the lane.
+# `.nvmrc` wins over `.node-version`; both are read before the fall-open.
 
 name: qfai validate
 
@@ -39,7 +39,7 @@ concurrency:
 jobs:
   validate:
     name: qfai validate (full profile, fail on error)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
     # Least privilege: the job only checks out the repository and runs the
     # validator; it writes nothing back to GitHub.
     permissions:
@@ -104,7 +104,7 @@ jobs:
             ')" || declared=""
           fi
           if [ -z "$declared" ]; then
-            echo '::error file=package.json::qfai validate: pnpm-lock.yaml is present but package.json does not resolve a "packageManager" string (the field is missing, is not a string, or package.json could not be read). Add "packageManager": "pnpm@<the pnpm version you use>" to package.json and commit it - the pnpm setup action reads the pnpm version from that field only, so this lane cannot install and must not report a validate result it did not compute.'
+            echo '::error file=package.json::qfai validate: pnpm-lock.yaml is present but package.json does not resolve a "packageManager" string (the field is missing, is empty, is not a string, or package.json could not be read). Add "packageManager": "pnpm@<the pnpm version you use>" to package.json and commit it - the pnpm setup action reads the pnpm version from that field only, so this lane cannot install and must not report a validate result it did not compute.'
             exit 1
           fi
           echo "qfai validate: package manager ${declared} (from the package.json packageManager field)"

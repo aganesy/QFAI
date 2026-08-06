@@ -69,6 +69,26 @@ export function collectJobSteps(job: Record<string, unknown>): Array<Record<stri
   return steps.filter(isRecord);
 }
 
+/**
+ * The leading comment block of a shipped workflow file — its header per
+ * NFR-C0011. Blank lines inside the block are skipped and the block ends at
+ * the first non-comment, non-blank line (i.e. at the YAML body).
+ */
+export function headerComment(body: string): string {
+  const lines: string[] = [];
+  for (const line of body.split(/\r\n|\r|\n/)) {
+    if (line.startsWith("#")) {
+      lines.push(line);
+      continue;
+    }
+    if (line.trim() === "") {
+      continue;
+    }
+    break;
+  }
+  return lines.join("\n");
+}
+
 /** The first step body of a job carrying a string `run:`, or undefined. */
 export function firstRunBody(job: Record<string, unknown>): string | undefined {
   for (const step of collectJobSteps(job)) {
