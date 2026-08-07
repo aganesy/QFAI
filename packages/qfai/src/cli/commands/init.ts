@@ -816,7 +816,30 @@ async function ensureLegacyEvidenceIgnoreNegations(
   }
 
   const lines = existing.split("\n").map((line) => line.trimEnd());
-  const missing = LEGACY_EVIDENCE_IGNORE_NEGATIONS.filter((entry) => !lines.includes(entry));
+  // Presence is not enough: git applies the **last** matching pattern, so a
+  // negation sitting above a broad re-ignore (`*`, or a later
+  // `coverage-depth-*` rule) is inert while a `lines.includes` check reads it
+  // as satisfied. `git check-ignore -v` still names the broad rule, and the
+  // governance record this migration promises to track stays untracked.
+  //
+  // A negation counts only when no ignore line below it can match the same
+  // path. Anything else is re-appended, which puts it last and therefore wins.
+  const lastIgnoreIndexFor = (negation: string): number => {
+    const wanted = negation.replace(/^!/, "");
+    let last = -1;
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = (lines[index] ?? "").trim();
+      if (line.length === 0 || line.startsWith("#") || line.startsWith("!")) continue;
+      if (line === "*" || wanted.startsWith(line.replace(/\*+$/, ""))) {
+        last = index;
+      }
+    }
+    return last;
+  };
+  const missing = LEGACY_EVIDENCE_IGNORE_NEGATIONS.filter((entry) => {
+    const at = lines.lastIndexOf(entry);
+    return at === -1 || lastIgnoreIndexFor(entry) > at;
+  });
   if (missing.length === 0) {
     return { copied: [], skipped: [target] };
   }

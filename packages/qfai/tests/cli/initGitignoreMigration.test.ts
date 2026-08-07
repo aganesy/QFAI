@@ -237,3 +237,41 @@ describe("a duplicated managed block keeps every ignore line it carries", () => 
     });
   });
 });
+
+describe("a legacy evidence negation must actually win", () => {
+  it("re-appends a negation that a later ignore line overrides", async () => {
+    // Git applies the last matching pattern, so a negation above a broad `*`
+    // is inert — but `lines.includes` read it as satisfied and the migration
+    // returned "already current". `git check-ignore -v` still named the `*`,
+    // so the governance record stayed untracked with the file looking correct.
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const legacy = path.join(root, ".qfai", "evidence", ".gitignore");
+      await mkdir(path.dirname(legacy), { recursive: true });
+      await writeFile(legacy, ["!decisions/", "!decisions/**", "*", ""].join(NL), "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const lines = (await readFile(legacy, "utf-8")).split(NL).filter((l) => l.length > 0);
+      const lastStar = lines.lastIndexOf("*");
+      const lastNegation = lines.lastIndexOf("!decisions/**");
+      expect(lastNegation).toBeGreaterThan(lastStar);
+    });
+  });
+
+  it("leaves a file whose negations already win untouched", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const legacy = path.join(root, ".qfai", "evidence", ".gitignore");
+      await mkdir(path.dirname(legacy), { recursive: true });
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const migrated = await readFile(legacy, "utf-8").catch(() => null);
+      if (migrated === null) return;
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      expect(await readFile(legacy, "utf-8")).toBe(migrated);
+    });
+  });
+});
