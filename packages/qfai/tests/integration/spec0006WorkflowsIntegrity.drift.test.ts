@@ -25,6 +25,7 @@ import { describe, expect, it } from "vitest";
 
 import { createDoctorData } from "../../src/core/doctor.js";
 import { diffInstalledShippedWorkflows } from "../../src/core/doctor/workflowsIntegrity.js";
+import { readInstallProvenance } from "../../src/shared/provenance.js";
 import {
   ADOPTER_WORKFLOWS_DIR,
   adopterWorkflowPath,
@@ -169,17 +170,65 @@ describe(
         "the differing packaged operand must be the one compared against",
       ).toEqual([`${ADOPTER_WORKFLOWS_DIR}/qfai-tests.yml`]);
 
-      // Named leg, not an incidental one: `qfai-validate.yml` IS recorded in
-      // provenance and IS present in the adopter tree, but NEITHER packaged
-      // tree above carries it. A name the running package no longer ships is
-      // the `extra` bucket, which BR-0006-0018 excludes from drift, so this is
-      // the assertion that fails if the packaged-absent leg of the reader is
-      // ever flipped to report drift. Keep `qfai-validate.yml` out of both
-      // packaged trees, or this protection disappears silently.
+      // Neither packaged tree above carries `qfai-validate.yml`, so both
+      // assertions in this `it` lean on the packaged-absent leg staying out of
+      // drift. That property is NOT pinned here — the `it` below owns it, for
+      // the reason stated there.
+    });
+
+    // The packaged-absent (`extra`) rule gets its own `it` and its own tree
+    // because it CANNOT be measured inside the override leg above. Under the
+    // mutation it guards — packaged-absent flipped to report drift — that
+    // block's `expect(same.modified).toEqual([])` sits ahead of it and fails
+    // first, so the assertion naming the rule never reddens and the rule reads
+    // as covered while being untested. Proving otherwise there requires
+    // temporarily deleting the earlier assertions, which only holds until the
+    // next edit to them and which no gate can notice. Reached unconditionally
+    // here instead.
+    it("treats a recorded name absent from the packaged tree as `extra`, never as drift", async () => {
+      const dir = await pool.seedAdopterTree();
+      const installed = await readFile(adopterWorkflowPath(dir, "qfai-tests.yml"), "utf-8");
+
+      // The packaged tree carries `qfai-tests.yml` byte-identical and nothing
+      // else, so the packaged-absent leg is the ONLY thing that can put an
+      // entry in `modified`.
+      const packaged = await pool.newTempDir();
+      await writeFile(path.join(packaged, "qfai-tests.yml"), installed, "utf-8");
+
+      // Preconditions asserted, not assumed: this guard is vacuous unless
+      // `qfai-validate.yml` is RECORDED (or the reader never visits the name),
+      // PRESENT in the adopter tree (or the adopter-absent leg answers first),
+      // and ABSENT from the packaged tree. All three read the record and the
+      // filesystem directly rather than the reader's output, so none of them
+      // can shadow the assertion below the way the override leg's did.
+      const record = await readInstallProvenance(dir);
       expect(
-        [...same.modified, ...drifted.modified],
+        Object.keys(record.workflows),
+        "`qfai-validate.yml` must be a recorded name, or the reader never visits it",
+      ).toContain("qfai-validate.yml");
+      const installedValidate = await readFile(
+        adopterWorkflowPath(dir, "qfai-validate.yml"),
+        "utf-8",
+      );
+      expect(
+        installedValidate.length,
+        "`qfai-validate.yml` must be present in the adopter tree",
+      ).toBeGreaterThan(0);
+      await expect(
+        readFile(path.join(packaged, "qfai-validate.yml"), "utf-8"),
+        "the packaged tree must not carry `qfai-validate.yml`, or nothing is being guarded",
+      ).rejects.toThrow();
+
+      const diff = await diffInstalledShippedWorkflows(dir, packaged);
+
+      // Deep equality rather than `not.toContain`: it pins the named rule and
+      // also catches the byte-identical name turning up, and its diff prints
+      // whichever entry appeared.
+      expect(
+        diff.modified,
         "a recorded name present on disk with no packaged counterpart is `extra`, never drift",
-      ).not.toContain(`${ADOPTER_WORKFLOWS_DIR}/qfai-validate.yml`);
+      ).toEqual([]);
+      expect(diff.status, "an `extra`-only comparison is not a drift status").toBe("ok");
     });
   },
 );

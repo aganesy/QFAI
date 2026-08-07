@@ -9,11 +9,13 @@
  * install path refreshes it.
  *
  * Emission — severity, wording and the `details` payload — belongs to
- * `createDoctorData`, where the sibling skills-integrity branch already
- * phrases its findings. This module returns a domain result and imports
- * nothing from `../doctor.js`: a type-only import back into that module is
- * erased from the emitted JavaScript but RETAINED in the generated `.d.ts`,
- * so the cycle would ship inside the published declaration graph.
+ * `createDoctorData`: the plan for this check asks for a reader plus an
+ * `addCheck` from there BY NAME, and both comparable siblings are built that
+ * way. `core/skillsIntegrity.ts` and `core/doctor/skillManifestProbe.ts` each
+ * return a domain result and let `doctor.ts` phrase the check; neither names
+ * doctor's check type at all. This module follows them, so the check's
+ * severity and wording are all readable at one site instead of split across
+ * two, and the drift rule stays testable without a doctor-shaped fixture.
  *
  * ## Comparison set: the provenance record, never a name pattern
  *
@@ -36,9 +38,19 @@
  * which is the basis BR-0006-0018 requires (改行正規化後の内容一致) and which
  * the sibling skills-integrity diff already uses. Digesting raw bytes instead
  * would report every installed workflow as drifted on a CRLF checkout — a
- * false advisory for every Windows adopter. The shipped-workflows contract
- * itself says nothing about normalization; the requirement comes from the
- * business rule, so attribute it there.
+ * false advisory for every Windows adopter.
+ *
+ * The contracts do not merely omit that basis, they state the OPPOSITE one:
+ * the shipped-workflows file-state table keys its `installed` / `modified`
+ * rows on `bytes == packaged` / `bytes != packaged`, the doctor contract says
+ * "whose bytes differ", and neither file contains the string `normaliz`,
+ * `CRLF` or 改行 anywhere (measured, not assumed). So the normalized basis is
+ * attributable to the business rule ALONE, and the raw-byte wording in the
+ * contracts is a live contradiction against it that is routed upstream rather
+ * than a silence this module is free to fill. Implementing the business rule
+ * is the deliberate call: raw bytes would ship the Windows false advisory.
+ * Do not "align" this code to the contract wording without that contradiction
+ * being resolved there first.
  *
  * These digests are consequently NOT comparable to the `sha256` field of a
  * provenance entry. That field is a RAW-BYTE digest of exactly the bytes the

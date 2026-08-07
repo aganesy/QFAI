@@ -15,7 +15,7 @@
  * content" means for callers that never asked for it.
  *
  * Note for a future consolidation pass. `core/skillsIntegrity.ts` still
- * carries a private copy of this function, so `src/` holds TWO
+ * carries a private copy of `normalizeNewlines`, so `src/` holds TWO
  * content-equality normalizers, not one; the test tree holds further local
  * copies. The two production copies agree today, and they are not yet wired
  * together only because that module's ownership was out of scope when this
