@@ -48,7 +48,7 @@ import { readFile } from "node:fs/promises";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { SCAFFOLD_PLACEHOLDER_MARKER } from "../atdd/scaffold.js";
-import { collectTcLevels, isOutsideAtddObligation } from "../atddTraceability.js";
+import { atddTestKindDirs, collectTcLevels, isOutsideAtddObligation } from "../atddTraceability.js";
 import {
   listValidateCycleKeys,
   recordValidateCycle,
@@ -129,6 +129,11 @@ export async function validateScaffoldPlaceholder(
   // reporting placeholders that are still on disk.
   const scaffoldDirs = [path.join(testsDir, "integration"), path.join(testsDir, "atdd")];
   const threshold = resolveEscalateThreshold(config.atdd?.scaffoldEscalateCycles);
+  // Through the configured `paths.testsDir`, like the scan and the scaffold
+  // writer. A project that relocated it was told to move the test to a
+  // literal `tests/api/**` that no validator reads, so following the
+  // remediation left `QFAI-ATDD-112` exactly as it was.
+  const dirs = atddTestKindDirs(config.paths.testsDir);
   // Glob for any test extension the project uses. fast-glob
   // returns absolute paths when the pattern is absolute.
   const globPatterns = scaffoldDirs.map((dir) =>
@@ -190,7 +195,7 @@ export async function validateScaffoldPlaceholder(
     // into `<testsDir>/integration/` is a different problem from an unfilled
     // one, and the ordinary finding gives it the wrong instruction. Filling in
     // an assertion there discharges nothing: the TC's declared `Level` routes
-    // to `tests/api/**` / `tests/e2e/**`, so the annotation stays uncounted by
+    // to the api / e2e directories `paths.testsDir` resolves, so the annotation stays uncounted by
     // `QFAI-ATDD-112` and `QFAI-ATDD-123` keeps rejecting it. The remediation
     // is to move or delete the file, and it does not escalate — escalation
     // exists to pressure an operator into writing the assertion, which is not
@@ -207,7 +212,7 @@ export async function validateScaffoldPlaceholder(
           "scaffoldPlaceholder.foreignHome",
           foreignHomeTcIds,
           "change",
-          "Move the test to the directory the TC's `Level` names (tests/api/** for L4, tests/e2e/** for L5) and delete this skeleton — or re-file the obligation as CON-API-* / US-*, which is what a TC-* at L4/L5 usually means.",
+          `Move the test to the directory the TC's \`Level\` names (${dirs.api} for L4, ${dirs.e2e} for L5) and delete this skeleton — or re-file the obligation as CON-API-* / US-*, which is what a TC-* at L4/L5 usually means.`,
         ),
       );
     }

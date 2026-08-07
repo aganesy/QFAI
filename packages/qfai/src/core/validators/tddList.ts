@@ -14,8 +14,8 @@ import {
 import type { LedgerTable } from "../tddHelpers.js";
 import {
   collectLedgerTables,
+  isRowShapeChecked,
   isCoverageBearingRow,
-  isLedgerRow,
   splitTcRefs,
   resolveParentTcId,
   TC_FORBIDDEN_LAYERS,
@@ -28,22 +28,6 @@ import {
 import { collectTestCaseIds, TEST_CASES_FILE_NAME } from "../testCaseCoverageTargets.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
-
-/**
- * Whether a row of a ledger table is subject to the per-row checks.
- *
- * The first table is checked whole, exactly as it always was: a blank `TDD-ID`
- * there is itself `TDDLIST_INVALID_ID`, so every one of its rows is either an
- * item or already reported. A later table has no such rule — the coverage
- * reader deliberately treats a blank `TDD-ID` as "this line is not a row" — so
- * applying the checks to those lines would report cells of something the ledger
- * does not treat as a row at all. What is left is exactly the set Check 10
- * scores coverage from, which is the point: a row that can discharge a
- * coverage-target TC is checked the same wherever in the ledger it sits.
- */
-function isRowShapeChecked(scan: LedgerTable, row: string[], tableIndex: number): boolean {
-  return tableIndex === 0 || isLedgerRow(scan, row);
-}
 
 /**
  * Where a row finding sits, for the human reading it.

@@ -233,6 +233,28 @@ export function isLedgerRow(scan: LedgerTable, row: readonly string[]): boolean 
  *
  * Shared so `qfai validate` and `qfai report` cannot answer either differently.
  */
+/**
+ * Whether a line is one the per-row rules apply to.
+ *
+ * Every row of the **first** ledger table is checked, including a malformed one
+ * with no `TDD-ID`: that table is the ledger a one-table spec has, its rows
+ * have always been reported by position, and dropping a malformed line there
+ * would silently stop reporting a defect the gate used to name. Past table 1 a
+ * line without an id is a note between tables, not an entry
+ * ({@link isLedgerRow}).
+ *
+ * Shared so `qfai report`'s parked-row roll-call covers exactly the rows
+ * `TDDLIST_EXCEPTION_PARKED` names. A report that omits an unapproved
+ * `exception` the gate reported is worse than one that omits none.
+ */
+export function isRowShapeChecked(
+  scan: LedgerTable,
+  row: readonly string[],
+  tableIndex: number,
+): boolean {
+  return tableIndex === 0 || isLedgerRow(scan, row);
+}
+
 export function isCoverageBearingRow(scan: LedgerTable, row: readonly string[]): boolean {
   if (!isLedgerRow(scan, row)) return false;
   return !TC_FORBIDDEN_LAYERS.has((row[scan.layerIndex] ?? "").trim().toLowerCase());

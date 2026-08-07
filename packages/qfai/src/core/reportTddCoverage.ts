@@ -14,10 +14,12 @@ import path from "node:path";
 import type { ReportTddCoverage, ReportTddCoverageSpec } from "./report.js";
 import type { SpecEntry } from "./specLayout.js";
 import { collectTestCaseIds } from "./testCaseCoverageTargets.js";
+import { maskNonSpecRegions, parseFirstMarkdownTable } from "./specPackParsers.js";
 import {
   collectLedgerTables,
   isCoverageBearingRow,
-  isLedgerRow,
+  isRowShapeChecked,
+  TDD_LEDGER_REQUIRED_COLUMNS,
   TDD_DONE_STATUSES,
   TDD_IN_REVIEW_STATUSES,
   splitTcRefs,
@@ -36,26 +38,27 @@ export async function collectTddCoverage(
     // spec (`## TC-0001` + `- Level: L1`) disappeared from the report while the
     // gate demanded a ledger row for every TC in it, and a TC declared in a
     // second table was gated but never counted.
-    const { unitComponentTcIds, fileMissing } = await collectTestCaseIds(entry.dir);
+    const { unitComponentTcIds, fileMissing, unresolved } = await collectTestCaseIds(entry.dir);
     // A spec with no `06_Test-Cases.md` is omitted rather than printed as a
     // zero row: the report would otherwise claim a document that does not
     // exist declares nothing, which is not the same statement.
     if (fileMissing) continue;
 
-    if (unitComponentTcIds.size === 0) {
-      specs.push({
-        specNumber: entry.specNumber,
-        unitComponentTotal: 0,
-        doneCount: 0,
-        inReviewCount: 0,
-        exceptionCount: 0,
-        openCount: 0,
-        blockedCount: 0,
-        missingTcRefs: [],
-        exceptionRows: [],
-      });
-      continue;
-    }
+    // An empty coverage set used to end the spec here. It cannot: the
+    // parked-row roll-call does not depend on that set, and a spec whose TCs
+    // are all L3-L5 can still hold `Status=exception` rows that
+    // `TDDLIST_EXCEPTION_PARKED` names. Ending early printed the spec with no
+    // parked rows beside a gate that had just listed them.
+    //
+    // An unresolved `06_Test-Cases.md` is a third state, not an empty one:
+    // the validator reports `TDDLIST_TC_TABLE_UNRESOLVED` and skips coverage,
+    // so `0 / 0` here would be a claim nothing supports.
+    const unassessableReason =
+      unresolved === undefined
+        ? undefined
+        : unresolved === "no-table"
+          ? "06_Test-Cases.md has no TC-ID table under its Test Case Table section"
+          : "the Test Case Table has no TC-ID column";
 
     const tddListPath = path.join(entry.dir, "tdd", "test-list.md");
     let tddContent: string;
@@ -64,6 +67,7 @@ export async function collectTddCoverage(
     } catch {
       specs.push({
         specNumber: entry.specNumber,
+        ...(unassessableReason === undefined ? {} : { unassessable: unassessableReason }),
         unitComponentTotal: unitComponentTcIds.size,
         doneCount: 0,
         inReviewCount: 0,
@@ -86,9 +90,31 @@ export async function collectTddCoverage(
     // required by the same reader, so a fenced template no longer inflates the
     // report either.
     const ledgerTables = collectLedgerTables(tddContent);
+
+    // The validator stops at Check 3 when the ledger's *first* table is
+    // missing a required column, so nothing past it — statuses, evidence,
+    // test files — is ever checked. `collectLedgerTables` skips that table
+    // and happily scores the schema-complete ones below it, which let the
+    // report print `open: 0` for a file the gate had refused to validate at
+    // all. The report shares the condition rather than the verdict: it does
+    // not re-run the check, it declines to publish progress the gate has not
+    // accepted.
+    const firstTable = parseFirstMarkdownTable(maskNonSpecRegions(tddContent));
+    const firstTableIsLedger =
+      firstTable !== null &&
+      TDD_LEDGER_REQUIRED_COLUMNS.every((column) =>
+        firstTable.headers.some((header) => header.trim() === column),
+      );
+    const ledgerUnvalidated =
+      unassessableReason ??
+      (firstTable !== null && !firstTableIsLedger
+        ? "the first table in tdd/test-list.md is missing required columns, so validate stops before checking the ledger"
+        : undefined);
+
     if (ledgerTables.length === 0) {
       specs.push({
         specNumber: entry.specNumber,
+        ...(unassessableReason === undefined ? {} : { unassessable: unassessableReason }),
         unitComponentTotal: unitComponentTcIds.size,
         doneCount: 0,
         inReviewCount: 0,
@@ -122,14 +148,17 @@ export async function collectTddCoverage(
       counts.set(tc, (counts.get(tc) ?? 0) + 1);
     };
 
-    for (const scan of ledgerTables) {
+    for (const [tableIndex, scan] of ledgerTables.entries()) {
       const statusIdx = scan.headers.indexOf("Status");
       const drIdIdx = scan.headers.indexOf("DR-ID");
 
       for (const row of scan.table.rows) {
-        // "Is this an entry at all" — the same answer the gate gives. A line
-        // with no `TDD-ID` is a note between tables, not a row.
-        if (!isLedgerRow(scan, row)) continue;
+        // The same rule the gate applies: every row of the first table,
+        // including a malformed one with no `TDD-ID`, and only real entries
+        // past it. Asking `isLedgerRow` everywhere dropped a first-table
+        // `exception` row with an empty id out of the roll-call while
+        // `TDDLIST_EXCEPTION_PARKED` still named it by position.
+        if (!isRowShapeChecked(scan, row, tableIndex)) continue;
         const status = statusIdx >= 0 ? (row[statusIdx] ?? "").trim().toLowerCase() : "";
 
         // The parked-row roll-call, before the coverage question is asked.
@@ -227,6 +256,7 @@ export async function collectTddCoverage(
 
     specs.push({
       specNumber: entry.specNumber,
+      ...(ledgerUnvalidated === undefined ? {} : { unassessable: ledgerUnvalidated }),
       unitComponentTotal: unitComponentTcIds.size,
       doneCount,
       inReviewCount,

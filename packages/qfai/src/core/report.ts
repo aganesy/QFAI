@@ -196,6 +196,18 @@ export type ReportWaivers = {
 
 export type ReportTddCoverageSpec = {
   specNumber: string;
+  /**
+   * Set when the spec's coverage cannot be assessed, naming why.
+   *
+   * A report is an audit artifact, and `0 done / 0 open` is a claim: it says
+   * the spec owes nothing. For a spec whose `06_Test-Cases.md` has no readable
+   * `TC-ID` table (`TDDLIST_TC_TABLE_UNRESOLVED`), or whose ledger's first
+   * table is missing required columns (`TDDLIST_REQUIRED_COLUMN_MISSING`, on
+   * which the validator stops before checking anything else), that claim is
+   * unfounded — and printed beside a failing gate it reads as the gate being
+   * wrong. The counts are omitted and this is printed instead.
+   */
+  unassessable?: string;
   unitComponentTotal: number;
   doneCount: number;
   /** Has a passing test, has not cleared its blocking reviewers / checkpoint. */
@@ -1193,6 +1205,20 @@ export function formatReportMarkdown(
     for (const spec of data.tddCoverage.specs) {
       lines.push(`### spec-${spec.specNumber}`);
       lines.push("");
+      if (spec.unassessable !== undefined) {
+        lines.push(`- coverage cannot be assessed: ${spec.unassessable}`);
+        // The parked rows are still printed below when the ledger was readable
+        // enough to find them — an unapproved `exception` is exactly what an
+        // auditor needs to see, and it does not depend on the coverage set.
+        if (spec.exceptionRows.length > 0) {
+          lines.push("- exception rows:");
+          for (const row of spec.exceptionRows) {
+            lines.push(`  - ${row.tddId}: DR-ID=${row.drId || "(empty)"}`);
+          }
+        }
+        lines.push("");
+        continue;
+      }
       lines.push(`- coverage-target TCs: ${spec.unitComponentTotal}`);
       lines.push(
         `- done: ${spec.doneCount} / in-review: ${spec.inReviewCount} / exception: ${spec.exceptionCount} / open: ${spec.openCount} (blocked: ${spec.blockedCount})`,

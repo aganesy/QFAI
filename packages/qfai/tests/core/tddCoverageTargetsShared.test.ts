@@ -192,3 +192,120 @@ describe("an unrecognized Level is reported only where it is in force", () => {
     expect(levels).toEqual([]);
   });
 });
+
+describe("the report says when it cannot assess coverage", () => {
+  async function reportFor(files: Record<string, string>): Promise<{
+    unassessable?: string;
+    exceptionRows: Array<{ tddId: string; drId: string }>;
+    openCount: number;
+  } | null> {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-unassessable-"));
+    try {
+      const specsRoot = path.join(root, ".qfai", "specs");
+      const specDir = path.join(specsRoot, "spec-0001");
+      await mkdir(path.join(specDir, "tdd"), { recursive: true });
+      await writeFile(path.join(specDir, "01_Spec.md"), "# Spec\n", "utf-8");
+      for (const [rel, body] of Object.entries(files)) {
+        const file = path.join(specDir, ...rel.split("/"));
+        await mkdir(path.dirname(file), { recursive: true });
+        await writeFile(file, body, "utf-8");
+      }
+      const coverage = await collectTddCoverage(await collectSpecEntries(specsRoot));
+      return coverage.specs[0] ?? null;
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  it("does not print 0/0 for a spec whose TC table cannot be resolved", async () => {
+    // `validate` reports `TDDLIST_TC_TABLE_UNRESOLVED` and skips coverage. The
+    // report showed `coverage-target TCs: 0 / open: 0`, which beside a failing
+    // gate reads as the gate being wrong.
+    const spec = await reportFor({
+      "06_Test-Cases.md": ["# 06 Test Cases", "", "## Notes", "", "no table here", ""].join("\n"),
+      "tdd/test-list.md": [HEADERS, SEP, ""].join("\n"),
+    });
+    expect(spec?.unassessable).toContain("TC-ID");
+  });
+
+  it("does not score a ledger whose first table validate refuses to check", async () => {
+    // A first table missing required columns stops `validateTddList` at Check
+    // 3, so nothing past it is checked. The report skipped that table and
+    // scored the schema-complete one below it as `open: 0`.
+    const spec = await reportFor({
+      "06_Test-Cases.md": [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001 | L1 | AC-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      "tdd/test-list.md": [
+        "| TDD-ID | Notes |",
+        "| ------ | ----- |",
+        "| TDD-0001 | explanatory table, not the ledger |",
+        "",
+        "## Ledger",
+        "",
+        HEADERS,
+        SEP,
+        "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | a | done | - | RED fail / GREEN pass |",
+        "",
+      ].join("\n"),
+    });
+    expect(spec?.unassessable).toContain("first table");
+  });
+
+  it("lists parked rows for a spec with no coverage-target TC", async () => {
+    // The report ended before reading the ledger when the coverage set was
+    // empty, so a spec whose TCs are all L3-L5 was printed with no `exception`
+    // rows while `TDDLIST_EXCEPTION_PARKED` was naming them.
+    const spec = await reportFor({
+      "06_Test-Cases.md": [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001 | L3 | AC-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      "tdd/test-list.md": [
+        HEADERS,
+        SEP,
+        "| TDD-0001 | TC-0001 | integration | tests/a.test.ts | a | exception | DR-0001 | - |",
+        "",
+      ].join("\n"),
+    });
+    expect(spec?.exceptionRows).toEqual([{ tddId: "TDD-0001", drId: "DR-0001" }]);
+  });
+
+  it("keeps a malformed first-table exception row in the roll-call", async () => {
+    // `isRowShapeChecked` checks every row of the first table, including one
+    // with no `TDD-ID`, so `TDDLIST_EXCEPTION_PARKED` names it by position. The
+    // report dropped it, hiding an unapproved exception from the audit.
+    const spec = await reportFor({
+      "06_Test-Cases.md": [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001 | L1 | AC-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      "tdd/test-list.md": [
+        HEADERS,
+        SEP,
+        "|  | TC-0001 | unit | tests/a.test.ts | a | exception |  | - |",
+        "",
+      ].join("\n"),
+    });
+    expect(spec?.exceptionRows).toEqual([{ tddId: "", drId: "" }]);
+  });
+});

@@ -103,9 +103,28 @@
     `ledger table N, row M` — the ordinal counts _ledger_ tables, so the shipped
     template's `## Schema` documentation table does not shift it; a single-table
     ledger keeps the `row M` label it had. The
-    status, evidence, transition and test-file checks are unchanged and still
-    read the first table only: they are about a row's execution state, not about
-    whether it is a row that can discharge a TC.
+    status, evidence, transition, duplicate-id and test-file checks read every
+    ledger table too. Splitting them — coverage over all tables, execution
+    state over the first — was a fail-open in two halves: a `Status=done` row
+    in an appended `## CHG-…` table cleared the coverage obligation while its
+    non-existent `Test file` and empty `Evidence` were never looked at, so the
+    gate accepted a completion claim it had declined to check. **Upgrading a
+    multi-table ledger can therefore surface new errors on rows that were
+    never validated before.**
+- **`qfai report` states when coverage cannot be assessed, instead of printing
+  zero.** A report is an audit artifact and `0 done / 0 open` is a claim: it
+  says the spec owes nothing. Printed for a spec whose `06_Test-Cases.md` has
+  no readable `TC-ID` table (`TDDLIST_TC_TABLE_UNRESOLVED`), or whose ledger's
+  first table is missing required columns — where `validate` stops at Check 3
+  and checks nothing else — that claim is unfounded, and beside a failing gate
+  it reads as the gate being wrong. Those specs now print
+  `coverage cannot be assessed: <why>` and no counts.
+- **The parked-row roll-call no longer depends on the coverage set or on a
+  well-formed id.** A spec whose TCs are all L3-L5 ended before the ledger was
+  read, so `qfai report` showed it with no `exception` rows while
+  `TDDLIST_EXCEPTION_PARKED` was listing them; and a first-table row with an
+  empty `TDD-ID` was dropped by the report while the gate reported it by
+  position. Both readers now share one row-shape rule.
 - **Two headings for one test case resolve to the first, on both sides.**
   `collectTcLevels` wrote every heading pair into the map, so the _last_
   duplicate heading won there while the ledger gate kept the first — a TC headed
