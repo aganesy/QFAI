@@ -2,52 +2,112 @@ import { lstat, readdir, readlink, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { Issue } from "../types.js";
-import { issue } from "./utils.js";
+import { exists, issue } from "./utils.js";
 
 /**
- * The directories `qfai init` builds entirely out of symlinks, and which are
- * the ONLY way an assistant loads a qfai skill or routes a qfai agent.
+ * Skill wrapper directories `qfai init` fills with symlinks, and the agent
+ * wrapper directories with the filename suffix each one uses.
  *
  * Kept in step with `cli/commands/init.ts#SKILL_INTEGRATION_DIRS` /
  * `#AGENT_INTEGRATION_CONFIGS`. `tests/core/integrationSurface.test.ts` asserts
- * the two lists agree, so a new integration target cannot ship unchecked.
+ * the lists agree, so a new integration target cannot ship unprobed.
  */
-export const INTEGRATION_SURFACE_DIRS: readonly string[] = [
+export const SKILL_WRAPPER_DIRS: readonly string[] = [
   ".claude/skills",
   ".agents/skills",
   ".codex/skills",
   ".github/skills",
-  ".claude/agents",
-  ".github/agents",
 ];
 
-/** Entries a directory legitimately holds that are not links qfai owns. */
-const NON_LINK_ENTRIES = new Set(["README.md", ".gitkeep", ".gitignore"]);
+export const AGENT_WRAPPER_DIRS: readonly { dir: string; suffix: string }[] = [
+  { dir: ".claude/agents", suffix: ".md" },
+  { dir: ".github/agents", suffix: ".agent.md" },
+];
 
-type BrokenEntry = {
-  /** Repo-relative path, POSIX-separated for stable messages across platforms. */
+/** Every directory this rule looks at, for the parity test and the docs. */
+export const INTEGRATION_SURFACE_DIRS: readonly string[] = [
+  ...SKILL_WRAPPER_DIRS,
+  ...AGENT_WRAPPER_DIRS.map((entry) => entry.dir),
+];
+
+type Broken = {
+  /** Repo-relative wrapper path, POSIX-separated so messages match across platforms. */
   relative: string;
-  kind: "not-a-symlink" | "dangling";
   detail: string;
 };
 
 const toPosix = (value: string): string => value.split(path.sep).join("/");
 
 /**
- * A qfai-owned entry: the skill links are `qfai-*` directories, the agent links
- * are `<agent>.md` / `<agent>.agent.md` files. Anything a project added itself
- * is left alone — this rule reports qfai's own surface being broken, never a
- * user's file being unusual.
+ * The skills `qfai init` would create a wrapper for: every directory under the
+ * project's canonical tree that carries a `SKILL.md`.
+ *
+ * Read from the project rather than assumed, and never from a name prefix. A
+ * `qfai-` prefix test skipped `web-research` — a shipped canonical skill that
+ * init wraps like any other — so a flattened `web-research` link passed the
+ * check while the assistant could not load it.
  */
-function isQfaiOwned(dir: string, name: string): boolean {
-  if (NON_LINK_ENTRIES.has(name)) {
-    return false;
+async function canonicalSkillIds(root: string): Promise<string[]> {
+  const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+  const entries = await readdir(skillsDir, { withFileTypes: true }).catch(() => []);
+  const ids: string[] = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (await exists(path.join(skillsDir, entry.name, "SKILL.md"))) {
+      ids.push(entry.name);
+    }
   }
-  return dir.endsWith("/skills") ? name.startsWith("qfai-") : name.endsWith(".md");
+  return ids.sort();
 }
 
 /**
- * Reports a qfai integration link that did not survive checkout.
+ * The agents `qfai init` would create a wrapper for.
+ *
+ * Also read from the canonical tree. Treating every non-README `*.md` in
+ * `.claude/agents` as qfai-owned turned a project's own agent definition into a
+ * `QFAI-LINK-001` error in every profile — the opposite of the rule's stated
+ * scope.
+ */
+async function canonicalAgentNames(root: string): Promise<string[]> {
+  const agentsDir = path.join(root, ".qfai", "assistant", "agents");
+  const entries = await readdir(agentsDir, { withFileTypes: true }).catch(() => []);
+  return entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".md") && entry.name !== "README.md")
+    .map((entry) => entry.name.slice(0, -".md".length))
+    .sort();
+}
+
+/** The wrapper path and the exact link target `qfai init` writes for it. */
+type Wrapper = { relative: string; absolute: string; target: string };
+
+function wrapperSet(root: string, skills: string[], agents: string[]): Wrapper[] {
+  const wrappers: Wrapper[] = [];
+
+  const push = (dir: string, name: string, canonicalRel: string[]): void => {
+    const dirAbsolute = path.join(root, ...dir.split("/"));
+    wrappers.push({
+      relative: `${dir}/${name}`,
+      absolute: path.join(dirAbsolute, name),
+      target: path.relative(dirAbsolute, path.join(root, ...canonicalRel)),
+    });
+  };
+
+  for (const dir of SKILL_WRAPPER_DIRS) {
+    for (const id of skills) {
+      push(dir, id, [".qfai", "assistant", "skills", id]);
+    }
+  }
+  for (const { dir, suffix } of AGENT_WRAPPER_DIRS) {
+    for (const name of agents) {
+      push(dir, `${name}${suffix}`, [".qfai", "assistant", "agents", `${name}.md`]);
+    }
+  }
+  return wrappers;
+}
+
+/**
+ * Reports a qfai wrapper link that did not survive checkout, or that resolves
+ * to something other than the canonical document it names.
  *
  * `qfai init` writes these as real symlinks and pins `core.symlinks true` into
  * **repo-local** git config. `.git/config` is not cloned, so on any machine
@@ -60,69 +120,66 @@ function isQfaiOwned(dir: string, name: string): boolean {
  * `qfai doctor`'s `skills.integrity` / `agents.frontmatter` both read the
  * canonical `.qfai/assistant/**` tree, which is unaffected. The assistant then
  * loads no skill and routes no agent, and every gate those files define stops
- * existing while work continues at full speed — silently, for as long as nobody
- * happens to notice the skills missing from a menu.
+ * existing while work continues at full speed.
  *
- * A directory that does not exist is not a finding: a project may legitimately
- * integrate with only some of the six.
+ * Scope is the wrapper set `qfai init` would create, derived from the project's
+ * own canonical tree. Entries a project added itself are not qfai's to judge,
+ * and a wrapper that was never created is not a finding: an older project
+ * legitimately predates a newly shipped skill, and `qfai init` creates it. What
+ * is reported is a wrapper that exists and cannot do its job.
  */
 export async function validateIntegrationSurface(root: string): Promise<Issue[]> {
-  const broken: BrokenEntry[] = [];
-  let probedDirs = 0;
+  const [skills, agents] = await Promise.all([canonicalSkillIds(root), canonicalAgentNames(root)]);
+  if (skills.length === 0 && agents.length === 0) {
+    // No canonical tree — nothing to wrap, so nothing to be broken.
+    return [];
+  }
 
-  for (const dir of INTEGRATION_SURFACE_DIRS) {
-    const absoluteDir = path.join(root, ...dir.split("/"));
-    let entries;
-    try {
-      entries = await readdir(absoluteDir, { withFileTypes: true });
-    } catch {
-      // Absent or unreadable — the project did not opt into this integration.
+  const broken: Broken[] = [];
+
+  for (const wrapper of wrapperSet(root, skills, agents)) {
+    const link = await lstat(wrapper.absolute).catch(() => null);
+    if (link === null) {
       continue;
     }
-    probedDirs += 1;
 
-    for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
-      if (!isQfaiOwned(dir, entry.name)) {
-        continue;
-      }
-      const absolute = path.join(absoluteDir, entry.name);
-      const relative = `${dir}/${entry.name}`;
+    if (!link.isSymbolicLink()) {
+      broken.push({
+        relative: wrapper.relative,
+        detail: link.isDirectory()
+          ? "directory, not a symlink"
+          : `regular file (${String(link.size)} bytes)`,
+      });
+      continue;
+    }
 
-      // `readdir` follows nothing, but be explicit: `lstat` describes the entry
-      // itself, which is the whole question here.
-      const link = await lstat(absolute).catch(() => null);
-      if (link === null) {
-        continue;
-      }
+    const actual = await readlink(wrapper.absolute).catch(() => null);
+    if (actual === null || path.normalize(actual) !== path.normalize(wrapper.target)) {
+      // A link that resolves to the wrong canonical document is worse than a
+      // dangling one: the assistant loads real instructions, just not these.
+      broken.push({
+        relative: wrapper.relative,
+        detail: `points at ${toPosix(actual ?? "?")}, expected ${toPosix(wrapper.target)}`,
+      });
+      continue;
+    }
 
-      if (!link.isSymbolicLink()) {
-        // The flattened-checkout signature: a small regular file whose bytes
-        // are the link target. Reported for any non-symlink, because a
-        // hand-copied directory is equally outside qfai's update path.
-        broken.push({
-          relative,
-          kind: "not-a-symlink",
-          detail: link.isDirectory() ? "directory" : `regular file (${String(link.size)} bytes)`,
-        });
-        continue;
-      }
-
-      const target = await readlink(absolute).catch(() => null);
-      const resolves = await stat(absolute).then(
-        () => true,
-        () => false,
-      );
-      if (!resolves) {
-        broken.push({
-          relative,
-          kind: "dangling",
-          detail: `-> ${toPosix(target ?? "?")}`,
-        });
-      }
+    // The target is in the roster, so the canonical document exists and this
+    // normally resolves. Kept as a guard for the cases the roster cannot see —
+    // an unreadable parent, or a link created with the wrong type on Windows.
+    // A wrapper whose canonical entry was *removed* is out of scope: it drops
+    // out of the roster and is stale rather than broken, which is what
+    // `pruneStaleQfaiWrappers` clears under `--force`.
+    const resolves = await stat(wrapper.absolute).then(
+      () => true,
+      () => false,
+    );
+    if (!resolves) {
+      broken.push({ relative: wrapper.relative, detail: `dangling -> ${toPosix(wrapper.target)}` });
     }
   }
 
-  if (probedDirs === 0 || broken.length === 0) {
+  if (broken.length === 0) {
     return [];
   }
 
@@ -140,7 +197,7 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       broken.map((entry) => entry.relative),
       "change",
       [
-        "`qfai init` を再実行すると、qfai が所有するこれらのパスは symlink として貼り直されます（`--force` は不要）。",
+        "`qfai init` を再実行すると、qfai が所有するこれらのパスは symlink として貼り直されます（`--force` は不要）。ただし内容が link target と一致しない通常ファイルは温存されるので、その場合は中身を確認してから退避してください。",
         "根本原因が clone 時の平坦化である場合は、先に `git config --global core.symlinks true` を設定してください。repo-local 設定は clone に引き継がれないため、これを直さないと次の clone で同じ状態に戻ります。",
         "Windows では Developer Mode の有効化が必要な場合があります。",
       ].join("\n"),

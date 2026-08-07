@@ -1095,25 +1095,33 @@ async function ensureSymlink(
       if (!options.dryRun) {
         await rm(linkPath, { recursive: true, force: true });
       }
-    } else {
-      // A regular file or directory sits where qfai's own link belongs.
-      //
-      // The overwhelmingly common cause is a checkout that flattened the link:
-      // git wrote the link target as file content because `core.symlinks` was
-      // false, which is the Windows default and is not carried by a clone
+    } else if (await isFlattenedLink(linkPath, target)) {
+      // A regular file whose entire content is the link target: the signature
+      // of a checkout that flattened the symlink because `core.symlinks` was
+      // false — the Windows default, and not carried by a clone
       // (`configureGitSymlinks` writes it repo-locally, and `.git/config` is
       // not cloned). Returning "skipped" made `qfai init` — the one command
       // that could repair it — report the broken entry in a reassuring list of
       // preserved paths and change nothing, so recovery required knowing to
       // pass `--force`, which nothing told the operator.
       //
-      // The path is one qfai created and owns, so there is no user content to
-      // preserve. It is replaced without `--force`, and the repair is
-      // announced: silently rewriting a path is what hid the problem.
+      // Auto-repair is scoped to exactly this signature. A file whose content
+      // is anything else is a file somebody wrote, and `--force` remains the
+      // documented way to overwrite one.
       if (!options.dryRun) {
         await rm(linkPath, { recursive: true, force: true });
       }
-      info(`  repaired: ${linkPath} was not a symlink (recreating)`);
+      info(`  repaired: ${linkPath} was a flattened symlink (recreating)`);
+    } else {
+      // Regular file or directory with content of its own — a customised agent
+      // wrapper, or a generated link replaced by a real directory. Preserve it
+      // unless `--force`.
+      if (!options.force) {
+        return "skipped";
+      }
+      if (!options.dryRun) {
+        await rm(linkPath, { recursive: true, force: true });
+      }
     }
   }
 
@@ -1137,6 +1145,33 @@ async function ensureSymlink(
   }
 
   return "created";
+}
+
+/**
+ * True when `linkPath` is a regular file whose whole content is `target`.
+ *
+ * That is what `git checkout` writes in place of a symlink when
+ * `core.symlinks` is false: the link target, verbatim, with no trailing
+ * newline. Bounded by a size check first so a large user file is never read,
+ * and compared through `path.normalize` so a separator difference does not
+ * make a flattened link look like user content.
+ */
+async function isFlattenedLink(linkPath: string, target: string): Promise<boolean> {
+  const stats = await safeLstat(linkPath);
+  if (stats === undefined || !stats.isFile()) {
+    return false;
+  }
+  // Generous ceiling: the longest plausible target is well under this, and it
+  // keeps the read off anything that is not a link-shaped file.
+  if (stats.size > 4096) {
+    return false;
+  }
+  try {
+    const content = await readFile(linkPath, "utf-8");
+    return path.normalize(content.trim()) === path.normalize(target);
+  } catch {
+    return false;
+  }
 }
 
 function isEpermOnWindows(err: unknown): boolean {

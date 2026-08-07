@@ -14,6 +14,10 @@
  * `.qfai/assistant/**` tree, which is unaffected. So the assistant silently
  * loaded no skill and routed no agent, and every gate they define stopped
  * existing while work continued at full speed.
+ *
+ * Ownership is derived from the project's canonical tree, exactly as `init`
+ * derives it. A name-prefix test skipped the shipped `web-research` skill, and
+ * an `endsWith('.md')` test claimed a project's own agent file.
  */
 
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
@@ -37,13 +41,24 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
   }
 }
 
-/** The canonical tree the links point at. */
-async function seedCanonical(root: string): Promise<string> {
-  const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
-  await mkdir(skillDir, { recursive: true });
-  await writeFile(path.join(skillDir, "SKILL.md"), "# skill\n", "utf-8");
-  return skillDir;
+/** The canonical tree the wrappers point at. */
+async function seedCanonical(root: string, skills: string[], agents: string[]): Promise<void> {
+  for (const id of skills) {
+    const dir = path.join(root, ".qfai", "assistant", "skills", id);
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "SKILL.md"), "# skill\n", "utf-8");
+  }
+  const agentsDir = path.join(root, ".qfai", "assistant", "agents");
+  await mkdir(agentsDir, { recursive: true });
+  await writeFile(path.join(agentsDir, "README.md"), "# readme\n", "utf-8");
+  for (const name of agents) {
+    await writeFile(path.join(agentsDir, `${name}.md`), "# agent\n", "utf-8");
+  }
 }
+
+/** The link `init` writes for a skill wrapper, as a relative target. */
+const skillTarget = (dir: string, id: string): string =>
+  path.join(...dir.split("/").map(() => ".."), ".qfai", "assistant", "skills", id);
 
 /**
  * Real symlinks need Developer Mode or elevation on Windows. A machine without
@@ -62,56 +77,92 @@ async function canCreateSymlink(root: string): Promise<boolean> {
   }
 }
 
+const finding = async (root: string) =>
+  (await validateIntegrationSurface(root)).find((entry) => entry.code === "QFAI-LINK-001");
+
 describe("the integration surface is checked for links that did not survive checkout", () => {
   it("reports a flattened link — a regular file holding the link target", async () => {
     await withProject(async (root) => {
-      await seedCanonical(root);
+      await seedCanonical(root, ["qfai-atdd"], []);
       const claudeSkills = path.join(root, ".claude", "skills");
       await mkdir(claudeSkills, { recursive: true });
-      // Exactly what git writes when core.symlinks is false: the target path,
-      // as file content.
+      // Exactly what git writes when core.symlinks is false.
       const flattened = "../../.qfai/assistant/skills/qfai-atdd";
       await writeFile(path.join(claudeSkills, "qfai-atdd"), flattened, "utf-8");
 
-      const issues = await validateIntegrationSurface(root);
-      const finding = issues.find((entry) => entry.code === "QFAI-LINK-001");
-
-      expect(finding?.severity).toBe("error");
-      expect(finding?.message).toContain(".claude/skills/qfai-atdd");
-      expect(finding?.message).toContain(`regular file (${String(flattened.length)} bytes)`);
-      expect(finding?.refs).toEqual([".claude/skills/qfai-atdd"]);
+      const found = await finding(root);
+      expect(found?.severity).toBe("error");
+      expect(found?.message).toContain(".claude/skills/qfai-atdd");
+      expect(found?.message).toContain(`regular file (${String(flattened.length)} bytes)`);
+      expect(found?.refs).toEqual([".claude/skills/qfai-atdd"]);
     });
   });
 
-  it("reports a dangling symlink", async () => {
+  it("covers a shipped skill whose name has no qfai- prefix", async () => {
+    // `web-research` is canonical and `init` wraps it like any other. A prefix
+    // heuristic let it break silently.
     await withProject(async (root) => {
-      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["web-research"], []);
       const claudeSkills = path.join(root, ".claude", "skills");
       await mkdir(claudeSkills, { recursive: true });
-      // Canonical tree deliberately absent: the link resolves to nothing.
+      await writeFile(
+        path.join(claudeSkills, "web-research"),
+        "../../.qfai/assistant/skills/web-research",
+        "utf-8",
+      );
+
+      expect((await finding(root))?.refs).toEqual([".claude/skills/web-research"]);
+    });
+  });
+
+  it("reports a symlink that resolves to the wrong canonical document", async () => {
+    // Worse than dangling: the assistant loads real instructions, just not
+    // these, and the surface looks clean.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd", "qfai-sdd"], []);
+      const claudeSkills = path.join(root, ".claude", "skills");
+      await mkdir(claudeSkills, { recursive: true });
       await symlink(
-        path.join("..", "..", ".qfai", "assistant", "skills", "qfai-atdd"),
-        path.join(claudeSkills, "qfai-atdd"),
+        skillTarget(".claude/skills", "qfai-atdd"),
+        path.join(claudeSkills, "qfai-sdd"),
         "dir",
       );
 
-      const issues = await validateIntegrationSurface(root);
-      const finding = issues.find((entry) => entry.code === "QFAI-LINK-001");
+      const found = await finding(root);
+      expect(found?.refs).toEqual([".claude/skills/qfai-sdd"]);
+      expect(found?.message).toContain("expected");
+    });
+  });
 
-      expect(finding?.severity).toBe("error");
-      expect(finding?.message).toContain(".claude/skills/qfai-atdd");
-      expect(finding?.message).toContain("->");
+  it("does not claim a wrapper whose canonical entry was removed", async () => {
+    // Deleting a canonical skill takes it out of the roster, so its leftover
+    // wrapper is stale rather than broken — `pruneStaleQfaiWrappers` removes it
+    // under `--force`. Reporting it here would make every retired skill an
+    // `error` in every profile until someone re-ran init with a flag.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      const claudeSkills = path.join(root, ".claude", "skills");
+      await mkdir(claudeSkills, { recursive: true });
+      await symlink(
+        skillTarget(".claude/skills", "qfai-retired"),
+        path.join(claudeSkills, "qfai-retired"),
+        "dir",
+      );
+
+      expect(await validateIntegrationSurface(root)).toEqual([]);
     });
   });
 
   it("says nothing about a healthy link", async () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
-      await seedCanonical(root);
+      await seedCanonical(root, ["qfai-atdd"], []);
       const claudeSkills = path.join(root, ".claude", "skills");
       await mkdir(claudeSkills, { recursive: true });
       await symlink(
-        path.join("..", "..", ".qfai", "assistant", "skills", "qfai-atdd"),
+        skillTarget(".claude/skills", "qfai-atdd"),
         path.join(claudeSkills, "qfai-atdd"),
         "dir",
       );
@@ -120,26 +171,50 @@ describe("the integration surface is checked for links that did not survive chec
     });
   });
 
-  it("says nothing when the project integrates with none of the six directories", async () => {
-    // Absence is a choice, not a fault.
+  it("leaves a project's own agent definition alone", async () => {
+    // `endsWith('.md')` turned a normal file into an error in every profile.
     await withProject(async (root) => {
-      await seedCanonical(root);
+      await seedCanonical(root, [], ["qa-gatekeeper"]);
+      const agents = path.join(root, ".claude", "agents");
+      await mkdir(agents, { recursive: true });
+      await writeFile(path.join(agents, "our-own-reviewer.md"), "# ours\n", "utf-8");
+      await writeFile(path.join(agents, "README.md"), "# readme\n", "utf-8");
+
       expect(await validateIntegrationSurface(root)).toEqual([]);
     });
   });
 
-  it("ignores entries qfai does not own", async () => {
+  it("leaves a project's own skill directory alone", async () => {
     await withProject(async (root) => {
+      await seedCanonical(root, ["qfai-atdd"], []);
       const claudeSkills = path.join(root, ".claude", "skills");
       await mkdir(path.join(claudeSkills, "my-own-skill"), { recursive: true });
-      await writeFile(path.join(claudeSkills, "README.md"), "# readme\n", "utf-8");
 
       expect(await validateIntegrationSurface(root)).toEqual([]);
     });
   });
 
-  it("reports every broken entry, across directories, with the rest as relatedFiles", async () => {
+  it("says nothing when a wrapper was never created", async () => {
+    // An older project predates a newly shipped skill. `qfai init` creates the
+    // wrapper; absence is not a link that failed to survive.
     await withProject(async (root) => {
+      await seedCanonical(root, ["qfai-atdd", "web-research"], []);
+      const claudeSkills = path.join(root, ".claude", "skills");
+      await mkdir(claudeSkills, { recursive: true });
+
+      expect(await validateIntegrationSurface(root)).toEqual([]);
+    });
+  });
+
+  it("says nothing when the project has no canonical tree", async () => {
+    await withProject(async (root) => {
+      expect(await validateIntegrationSurface(root)).toEqual([]);
+    });
+  });
+
+  it("reports every broken wrapper, with the rest as relatedFiles", async () => {
+    await withProject(async (root) => {
+      await seedCanonical(root, ["qfai-atdd", "qfai-sdd"], ["qa-gatekeeper"]);
       for (const dir of [".claude/skills", ".agents/skills"]) {
         const absolute = path.join(root, ...dir.split("/"));
         await mkdir(absolute, { recursive: true });
@@ -150,18 +225,15 @@ describe("the integration surface is checked for links that did not survive chec
       await mkdir(agents, { recursive: true });
       await writeFile(path.join(agents, "qa-gatekeeper.md"), "target", "utf-8");
 
-      const finding = (await validateIntegrationSurface(root)).find(
-        (entry) => entry.code === "QFAI-LINK-001",
-      );
-
-      expect(finding?.refs).toHaveLength(5);
-      expect(finding?.relatedFiles).toHaveLength(4);
-      expect(finding?.message).toContain("5 件");
+      const found = await finding(root);
+      expect(found?.refs).toHaveLength(5);
+      expect(found?.relatedFiles).toHaveLength(4);
+      expect(found?.message).toContain("5 件");
       // The remediation must not send the operator to `--force`: `qfai init`
-      // repairs a qfai-owned path on its own now.
-      expect(finding?.suggested_action).toContain("`qfai init` を再実行");
-      expect(finding?.suggested_action).toContain("git config --global core.symlinks true");
-      expect(finding?.suggested_action).not.toContain("qfai init --force");
+      // repairs a flattened link on its own, and preserves anything else.
+      expect(found?.suggested_action).toContain("`qfai init` を再実行");
+      expect(found?.suggested_action).toContain("git config --global core.symlinks true");
+      expect(found?.suggested_action).not.toContain("qfai init --force");
     });
   });
 });
@@ -185,10 +257,17 @@ describe("this repository's own surface", () => {
 });
 
 describe("the probed list stays in step with what init builds", () => {
-  it("covers every directory init writes links into", () => {
+  it("covers every directory init writes wrappers into", () => {
     const built = [...SKILL_INTEGRATION_DIRS, ...AGENT_INTEGRATION_CONFIGS.map((c) => c.dir)];
-    // A new integration target that this validator does not probe would ship
-    // with exactly the blind spot the rule exists to close.
     expect([...INTEGRATION_SURFACE_DIRS].sort()).toEqual([...built].sort());
+  });
+
+  it("uses the same agent filename suffix per directory as init", () => {
+    // `.github/agents` uses `.agent.md`; probing `<name>.md` there would miss
+    // every wrapper it owns.
+    expect(AGENT_INTEGRATION_CONFIGS).toEqual([
+      { dir: ".claude/agents", suffix: ".md" },
+      { dir: ".github/agents", suffix: ".agent.md" },
+    ]);
   });
 });

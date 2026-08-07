@@ -52,7 +52,7 @@ describe("qfai init repairs a link a checkout flattened", () => {
       expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
       expect(await readlink(linkPath)).toContain("qfai-atdd");
       // Silence is what hid the problem; the repair is announced.
-      expect(stdout).toContain("was not a symlink");
+      expect(stdout).toContain("was a flattened symlink");
     });
   });
 
@@ -65,7 +65,41 @@ describe("qfai init repairs a link a checkout flattened", () => {
       );
 
       expect((await lstat(path.join(root, LINK))).isSymbolicLink()).toBe(true);
-      expect(stdout).not.toContain("was not a symlink");
+      expect(stdout).not.toContain("was a flattened symlink");
+    });
+  });
+
+  it("preserves a file whose content is not the link target", async () => {
+    // A team that customised `.claude/agents/qa-gatekeeper.md`, or replaced a
+    // generated skill link with a real directory, has content of its own there.
+    // Auto-repair is scoped to the flattened-link signature — the target path
+    // and nothing else — and `--force` stays the documented overwrite path.
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const customised = path.join(root, ".claude", "agents", "qa-gatekeeper.md");
+      await rm(customised, { force: true });
+      await writeFile(customised, "# our own gatekeeper\n", "utf-8");
+
+      const stdout = await captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: false, yes: true }),
+      );
+
+      expect(await readFile(customised, "utf-8")).toBe("# our own gatekeeper\n");
+      expect((await lstat(customised)).isSymbolicLink()).toBe(false);
+      expect(stdout).not.toContain("was a flattened symlink");
+    });
+  });
+
+  it("still overwrites a customised wrapper under --force", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const customised = path.join(root, ".claude", "agents", "qa-gatekeeper.md");
+      await rm(customised, { force: true });
+      await writeFile(customised, "# our own gatekeeper\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect((await lstat(customised)).isSymbolicLink()).toBe(true);
     });
   });
 
