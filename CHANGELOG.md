@@ -33,6 +33,35 @@
   `tdd/test-list.md`, so a default-mode run could not enumerate the
   `Layer = E2E` / `Layer = API` rows it owes evidence for — and step 3b then
   stopped on a missing handoff for every one of them. It is read, never written.
+- **The observed-RED submission has a routing phase to go to.** Branch 1 says
+  to submit the RED to `qa-gatekeeper` at routing phase `red`, and
+  `agent-routing.yml` gave `qfai-atdd` only `coverage` / `implementation` /
+  `evidence` / `review` — the phase named belonged to `/qfai-implement`. A
+  blocking `red` phase now sits before `implementation`, which is the only
+  place it can sit: after the surfaces are built there is no RED left to
+  confirm.
+- **Branch 1 rows hand over before the gates that need a green tree (P1c).**
+  Branch 1 ends with a deliberately failing test and no production code, while
+  P5-P8 require the suite and the repo quality gates to pass — so the stage
+  could not finish its own gates. The handover to `/qfai-implement` is now an
+  explicit stage gate rather than a next-action at the end.
+- **P1b no longer demands evidence branch 2 cannot have yet.** It required RED
+  provenance "established" for every row while the same sentence deferred branch
+  2's mutation run to P6. P1b is now "branch chosen for every row, branch 1
+  discharged in full", and a branch 2 row legally leaves it with its branch
+  recorded and no evidence.
+- **A `review-fix` row does not replay the handover.** Phase Red selects it
+  first and keeps its status, so step 3b would have re-read the original ATDD
+  entry and written `todo -> red` from a row that is not at `todo`. It now
+  applies to `todo` rows only; rework goes through `round-evidence.md`.
+- **The layer-owned evidence file is named everywhere the row is written.** Gate
+  item 10 was not enough on its own: the orchestrator override and the ledger's
+  `Evidence` column definition both still said `implement-<spec-id>.md`
+  unconditionally, so following either produced a pointer item 10 rejects.
+- **Step 3b's reference resolves.** `qfai-atdd/references/red-provenance.md`
+  read from `qfai-implement/SKILL.md` points at
+  `qfai-implement/qfai-atdd/...`, which does not exist — the mandatory handover
+  contract was unreachable from the step that requires it.
 - **`/qfai-implement` Phase Red consumes the ATDD provenance instead of
   re-observing it.** The handover was declared but not executable: steps 4 and 5
   re-run the row's test and watch it fail, and by the time that skill reaches an

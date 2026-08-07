@@ -337,3 +337,68 @@ describe.each(TREES)("%s (ownership and gate alignment)", (tree) => {
     expect(atdd).toContain("`.qfai/specs/<spec-id>/tdd/test-list.md` — read, never written.");
   });
 });
+
+describe.each(TREES)("%s (reachability and sequencing)", (tree) => {
+  it("points step 3b at a path that exists", async () => {
+    // `qfai-atdd/references/red-provenance.md` resolves from
+    // `qfai-implement/SKILL.md` to `qfai-implement/qfai-atdd/...`, which is
+    // nothing — so the mandatory handover contract was unreachable.
+    const implement = await read(tree, IMPLEMENT);
+    expect(implement).toContain("`../qfai-atdd/references/red-provenance.md");
+    expect(implement).not.toContain("per `qfai-atdd/references/red-provenance.md");
+  });
+
+  it("keeps a review-fix row out of the handover branch", async () => {
+    // Phase Red step 1 selects a `review-fix` row first and step 2 keeps its
+    // status. 3b did not check, so it would replay the original handoff — and
+    // write `todo -> red` from a row that is not at `todo`.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("A `todo` `E2E` / `API` row consumes the provenance");
+    expect(implement).toContain("A `review-fix` row does **not** come here");
+    expect(implement).toContain("references/round-evidence.md");
+  });
+
+  it("names the layer-owned evidence file everywhere the row is written", async () => {
+    // Item 10 alone was not enough: the orchestrator override and the ledger's
+    // own column definition both still said `implement-<spec-id>.md`
+    // unconditionally, so following either produced a pointer item 10 rejects.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("plus the anchor into the evidence file the row's `Layer` owns");
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("an anchor into the evidence file this row's `Layer` owns");
+  });
+
+  it("gives the observed-RED submission a routing phase that exists", async () => {
+    // Branch 1 says to submit the RED at routing phase `red`, and
+    // `agent-routing.yml` gave qfai-atdd only coverage / implementation /
+    // evidence / review — the phase named was `/qfai-implement`'s.
+    const catalog = await read(tree, "assistant/manifest/agent-routing.yml");
+    const atdd = catalog.slice(catalog.indexOf("- skill: qfai-atdd"));
+    const block = atdd.slice(0, atdd.indexOf("- skill: ", 1));
+    expect(block).toContain("- id: red");
+    expect(block).toContain("blocking_agents: [qa-gatekeeper]");
+    // Before `implementation`: after the surfaces exist there is no RED left.
+    expect(block.indexOf("- id: red")).toBeLessThan(block.indexOf("- id: implementation"));
+  });
+
+  it("hands branch-1 rows over before the gates that require a green tree", async () => {
+    // Branch 1 ends with a deliberately failing test and no production code,
+    // and P5-P8 require the suite and the repo quality gates to pass. Without
+    // an intermediate handoff the stage cannot finish its own gates.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("P1c:");
+    expect(atdd).toContain("Branch 1 rows are handed to `/qfai-implement` before P5");
+    expect(atdd).toContain("return here with the tree green");
+  });
+
+  it("does not claim branch 2 has its evidence at P1b", async () => {
+    // P1b required RED provenance "established" for every row while the same
+    // sentence deferred branch 2's mutation run to P6 — a gate no branch-2 row
+    // could pass.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("Branch chosen for every row this cycle will advance");
+    expect(atdd).toContain(
+      "A branch 2 row legally leaves P1b with its branch recorded and no evidence yet",
+    );
+  });
+});

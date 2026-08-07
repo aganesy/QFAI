@@ -165,17 +165,10 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
   - `tests/e2e/**` must not contain `QFAI:SPEC-XXXX:TC-YYYY` unless that TC
     declares `Level` `L5`/`E2E`.
 - Unknown references (`US/TC/CON-API` not declared) must be treated as errors.
-- **The E2E/API ledger rows this stage feeds are bound by
-  `/qfai-implement`'s lifecycle.** See "Execution Ledger" below: a row advanced
-  on none of the three RED-provenance forms is a lifecycle violation.
+- **The E2E/API ledger rows this stage feeds are bound by `/qfai-implement`'s lifecycle.** See "Execution Ledger" below: a row advanced on none of the three RED-provenance forms is a lifecycle violation.
 - Floors/ratios are planning signals only, not gates.
 - Legacy `scenario.feature` or coverage ledgers may exist but are not mandatory inputs for completion.
-- Evidence file is required under `.qfai/evidence/`. Stage evidence is
-  **regenerable** and is not committed. **Governance records are different**:
-  Change Requests (`.qfai/decisions/CR-*.md`) and durable decision records
-  (`.qfai/evidence/decisions/*.json`) carry user approval, are not
-  regenerable, and stay in version control — the managed `.gitignore` block
-  negates them for that reason.
+- Evidence file is required under `.qfai/evidence/`. Stage evidence is **regenerable** and is not committed. **Governance records are different**: Change Requests (`.qfai/decisions/CR-*.md`) and durable decision records (`.qfai/evidence/decisions/*.json`) carry user approval, are not regenerable, and stay in version control — the managed `.gitignore` block negates them for that reason.
 
 ## Completion Contract (Shared)
 
@@ -291,11 +284,7 @@ Notes:
 - Validation passes: `npx qfai validate --profile atdd --fail-on error`.
 - Repository quality gates (format/lint/type/tests/pack) pass with evidence.
 - Evidence file exists and includes work orders + reviewer notes.
-- Every ledger row this cycle advanced carries one of the three RED-provenance
-  forms — an observed RED pair with its `Oracle proof`, the `Satisfied-by` +
-  falsifiability trio, or a `DR-*` recording why neither was available — and
-  `qa-gatekeeper` has accepted it. The third form is a valid outcome, not a
-  shortfall.
+- Every ledger row this cycle advanced carries one of the three RED-provenance forms — an observed RED pair with its `Oracle proof`, the `Satisfied-by` + falsifiability trio, or a `DR-*` recording why neither was available — and `qa-gatekeeper` has accepted it. The third form is a valid outcome, not a shortfall.
 - Completion is approved by a reviewer who did not implement tests.
 
 ## Not-done criteria
@@ -305,10 +294,8 @@ Notes:
 - Tests exist but were never executed.
 - Validation evidence is missing or failing.
 - Coverage Depth Matrix is missing or contains unjustified ❌ cells (normal-path-only coverage is incomplete).
-- A ledger row was advanced past `todo` with none of the three forms — no
-  observed RED, no falsifiability evidence, and no `DR-*`.
-- A row was sent to `exception` without a `DR-*` recording why **both** branches
-  were unavailable. "The surface was built earlier in this cycle" is not such a reason.
+- A ledger row was advanced past `todo` with none of the three forms — no observed RED, no falsifiability evidence, and no `DR-*`.
+- A row was sent to `exception` without a `DR-*` recording why **both** branches were unavailable. "The surface was built earlier in this cycle" is not such a reason.
 
 ## Failure handling (mandatory)
 
@@ -397,10 +384,21 @@ Template:
 
 - P0: Plan and obligations checklist prepared.
 - P1: Layer assignment validated against `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`.
-- P1b: **RED provenance established** for every row this cycle will advance —
-  branch 1 runs here, **before** P2-P4 build any surface, because after them
-  there is nothing left to watch fail. Branch 2 records at P6. Skipping P1b is
-  what leaves a row with no legal transition out of `todo`.
+- P1b: **Branch chosen for every row this cycle will advance, and branch 1
+  discharged in full.** Branch 1 runs here — write the test, take the RED, get
+  `qa-gatekeeper` PASS — **before** P2-P4 build any surface, because after them
+  there is nothing left to watch fail. A branch 2 row legally leaves P1b with
+  its branch recorded and no evidence yet: its mutation run needs the surface,
+  so it is captured at P6. A row with no branch chosen is what leaves it with
+  no legal transition out of `todo`.
+- P1c: **Branch 1 rows are handed to `/qfai-implement` before P5.** Branch 1
+  ends with a deliberately failing test and no production code — this stage does
+  not write it (`references/red-provenance.md#the-three-branches-must`). P5-P8
+  require the suite and the repo quality gates to pass, which that RED makes
+  impossible, so the handover is not deferred to the end: run
+  `/qfai-implement` for those rows now, let its Phase Green build the surface
+  and take the GREEN, and return here with the tree green. Rows on branch 2 and
+  branch 3 need no such round-trip.
 - P2: E2E implementation completed.
 - P3: API implementation completed.
 - P4: Integration implementation completed.
