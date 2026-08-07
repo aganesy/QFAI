@@ -31,6 +31,7 @@ const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const ATDD = "assistant/skills/qfai-atdd/SKILL.md";
 const IMPLEMENT = "assistant/skills/qfai-implement/SKILL.md";
 const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
+const PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
 const GATEKEEPER = "assistant/agents/qa-gatekeeper.md";
 const CATALOG = "assistant/manifest/agent-catalog.yml";
 
@@ -44,25 +45,31 @@ describe.each(TREES)("%s", (tree) => {
     // It never did. A skill that does not know it writes a ledger cannot be
     // held to that ledger's rules.
     const atdd = flat(await read(tree, ATDD));
-    expect(atdd).toContain("## Execution Ledger: the rows this skill owns");
+    expect(atdd).toContain("## Execution Ledger: the rows this skill feeds");
     expect(atdd).toContain("`.qfai/specs/<spec-id>/tdd/test-list.md`");
     expect(atdd).toContain("`Layer = E2E` and `Layer = API` rows");
   });
 
-  it("states which cells it may write, and that the lifecycle is not its own", async () => {
+  it("states that it produces evidence, not ledger cells, and whose lifecycle applies", async () => {
     const atdd = flat(await read(tree, ATDD));
-    expect(atdd).toContain("**Cells this skill may write**: `Status`, `DR-ID`, `Evidence`");
+    expect(atdd).toContain("**This skill does not write the ledger.**");
     expect(atdd).toContain("references/execution-ledger.md#allowed-transitions");
   });
 
-  it("gives the three RED-provenance branches, in order", async () => {
+  it("points at the reference and names the three branches in order", async () => {
+    // The branch detail lives in `references/red-provenance.md` — SKILL.md is
+    // at the 500-line asset ceiling, which is the split the guard exists to
+    // force. What the skill body must still carry is the rule and the pointer.
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("### RED provenance for an ATDD-owned row (MUST)");
-    expect(atdd).toContain("**Observed RED (preferred).**");
-    expect(atdd).toContain("**Falsifiability (surface already exists).**");
-    expect(atdd).toContain("**Neither is possible.**");
-    // The failure being fixed is `exception` as the default outcome.
-    expect(atdd).toContain("Branch 3 is the last resort, not the default.");
+    expect(atdd).toContain("**Read `references/red-provenance.md` before advancing any row.**");
+    expect(atdd).toContain("Branch 3 is the last resort");
+
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**Observed RED (preferred).**");
+    expect(provenance).toContain("**Falsifiability");
+    expect(provenance).toContain("**Neither is possible.**");
+    expect(provenance).toContain("Branch 3 is the last resort, not the default.");
   });
 
   it("has a stage gate that runs the RED before any surface is built", async () => {
@@ -77,9 +84,7 @@ describe.each(TREES)("%s", (tree) => {
 
   it("makes an unevidenced advance and a bare `exception` not-done", async () => {
     const atdd = flat(await read(tree, ATDD));
-    expect(atdd).toContain(
-      "A ledger row was advanced past `todo` with neither an observed RED nor falsifiability evidence.",
-    );
+    expect(atdd).toContain("A ledger row was advanced past `todo` with none of the three forms");
     expect(atdd).toContain('"The surface was built earlier in this cycle" is not such a reason.');
   });
 
@@ -102,8 +107,7 @@ describe.each(TREES)("%s", (tree) => {
 
   it("qfai-implement points at the ATDD side of the split", async () => {
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("## Execution Ledger: the rows this skill owns");
-    expect(implement).toContain("this skill neither writes those rows nor waives their evidence");
+    expect(implement).toContain("qfai-atdd/references/red-provenance.md");
   });
 
   it("qa-gatekeeper accepts the falsifiability form and rejects a default exception", async () => {
@@ -120,31 +124,56 @@ describe.each(TREES)("%s", (tree) => {
 
 describe.each(TREES)("%s — the split has one writer and reachable references", (tree) => {
   const DRIFT = "assistant/constitution/drift-protocol.md";
-  const TEMPLATE = "assistant/skills/qfai-sdd/templates/specs/spec/tdd/test-list.md";
-  const PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
 
-  it("the Drift Protocol whitelist names /qfai-atdd as a ledger writer", async () => {
-    // It authorised the carve-out for `/qfai-implement` only, so an agent
-    // honouring both documents had no legal writer for these rows at all.
+  it("does not claim the ledger carve-out for a second writer", async () => {
+    // The transfer this PR first attempted needs machinery the package does
+    // not have — Phase 2b does not seed E2E/API rows and the ledger header has
+    // no `US-Refs` / `CON-API-Refs` column — so it is out of scope here.
+    // `/qfai-implement` keeps the single carve-out; this stage produces the
+    // evidence its cells point at.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("**This skill does not write the ledger.**");
     const drift = flat(await read(tree, DRIFT));
-    expect(drift).toContain("`/qfai-atdd` writes the same three cells");
-    expect(drift).toContain("Exactly one skill owns any given row");
+    expect(drift).toContain("append/update by `/qfai-implement`");
   });
 
-  it("qfai-implement stops selecting and claiming the rows /qfai-atdd owns", async () => {
+  it("qfai-implement points at the provenance reference for those rows", async () => {
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain(
-      "skipping any `Layer = E2E` / `Layer = API` row, which `/qfai-atdd` owns end to end",
-    );
-    // The old sentence had this skill driving their status once the test exists
-    // — two owners for one row's cells.
-    expect(implement).not.toContain("this skill only drives that row's status and evidence");
+    expect(implement).toContain("qfai-atdd/references/red-provenance.md");
+    expect(implement).toContain("this skill writes their `Status` / `DR-ID` / `Evidence`");
   });
 
-  it("the shipped ledger template seeds the E2E/API rows", async () => {
-    const template = flat(await read(tree, TEMPLATE));
-    expect(template).toContain("one `Layer = E2E` row per `US-*`");
-    expect(template).not.toContain("`/qfai-atdd` does not write to this ledger");
+  it("states the falsifiability branch's status transitions", async () => {
+    // Without this the branch described a row reaching `green` with no `red`,
+    // and the shared lifecycle has no `todo -> green` edge.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**The row still moves `todo -> red -> green`.**");
+    expect(provenance).toContain("There is no `todo -> green` edge and none is needed");
+  });
+
+  it("requires an Oracle proof on the observed-RED branch too", async () => {
+    // `qa-gatekeeper` requires one on every item, and a natural RED is not a
+    // substitute — so the preferred branch's prescribed evidence could not
+    // clear the gate it is judged by.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain(
+      "| Observed RED | RED command+result, GREEN command+result, `Oracle proof` |",
+    );
+    expect(provenance).toContain("A natural RED is not a substitute");
+  });
+
+  it("accepts a valid exception as the third evidence form", async () => {
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("or a `DR-*` recording why neither was available");
+    expect(atdd).toContain("The third form is a valid outcome, not a shortfall");
+  });
+
+  it("names the per-stage evidence home in both contracts", async () => {
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("put the evidence in `.qfai/evidence/atdd-<spec-id>.md`");
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("**The evidence file follows the stage that produced it.**");
+    expect(ledger).not.toContain("is the single home for the per-item");
   });
 
   it("branch 1 creates the seam before the RED run", async () => {

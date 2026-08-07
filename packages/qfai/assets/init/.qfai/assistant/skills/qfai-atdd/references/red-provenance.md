@@ -5,10 +5,13 @@ ledger, and `qfai-implement/SKILL.md` states the split: **`Layer = E2E` and
 `Layer = API` rows are tracked there, but their tests are authored here.** This
 skill therefore writes into a ledger whose status lifecycle it does not define.
 
-## What this skill may write
+## What this skill produces
 
-- `Status`, `DR-ID` and `Evidence`, on `Layer = E2E` / `Layer = API` rows only.
-  Nothing else in the ledger, and no other spec artifact.
+- **Evidence, not ledger cells.** `/qfai-implement` writes `Status`, `DR-ID`
+  and `Evidence` for every row — one writer, as
+  `constitution/drift-protocol.md` grants it. This stage produces the evidence
+  those cells point at, in `.qfai/evidence/atdd-<spec-id>.md` under
+  `## Ledger rows advanced`, and hands it over.
 - The lifecycle is
   `../../qfai-implement/references/execution-ledger.md#allowed-transitions`. It is
   forward-only from `todo`, and `todo -> red` requires an **admissible RED**: an
@@ -69,6 +72,14 @@ Take the first that applies, and record which one in the evidence file.
    the field has to answer is "what would I mutate to falsify this row", and a
    path answers it as well as a row id does.
 
+   **The row still moves `todo -> red -> green`.** Falsifiability _is_ the RED
+   for this row — `red-not-observable.md` says so for its own case and
+   `qa-gatekeeper` accepts it as the row's minimum evidence — so the mutation
+   run satisfies `todo -> red` and the restored passing run is the GREEN. There
+   is no `todo -> green` edge and none is needed. Hand the pair over in that
+   order, so `/qfai-implement` writes the same two transitions it writes for
+   any other row.
+
 3. **Neither is possible.** Only then is the row an `exception`, with a `DR-*`
    naming what made both branches unavailable. An obligation with no persisted
    form, or one genuinely unobservable at L5, belongs here — but "the surface
@@ -85,9 +96,17 @@ Exactly one form per row, never both and never neither:
 
 | Branch         | Recorded                                                                      |
 | -------------- | ----------------------------------------------------------------------------- |
-| Observed RED   | RED command+result, GREEN command+result                                      |
+| Observed RED   | RED command+result, GREEN command+result, `Oracle proof`                      |
 | Falsifiability | `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, GREEN pair |
 | `exception`    | `DR-*`, and why both other branches were unavailable                          |
+
+`qa-gatekeeper` requires an `Oracle proof` on **every** item — a named
+production mutation that makes the test fail, or a recorded `equivalent-mutant`
+— because a passing run does not show the test depends on the behaviour the row
+owns. A natural RED is not a substitute: it shows the test failed before the
+code existed, not that it discriminates once the code does. Branch 2 satisfies
+this with the mutation it already performs; branch 1 records one explicitly.
+Criteria: `../../qfai-implement/references/oracle-strength.md`.
 
 The `Evidence` cell is a pointer; the payload lives in
 `.qfai/evidence/atdd-<spec-id>.md` under `## Ledger rows advanced`

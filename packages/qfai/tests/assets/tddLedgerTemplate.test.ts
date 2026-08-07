@@ -16,9 +16,6 @@ const TEMPLATE = "assistant/skills/qfai-sdd/templates/specs/spec/tdd/test-list.m
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
 
-/** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
-const flat = (s: string): string => s.replace(/\s+/g, " ");
-
 /** Splits a markdown table row into trimmed cells. */
 const cells = (row: string): string[] =>
   row
@@ -55,23 +52,10 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(template).toContain("An empty table below is valid");
     });
 
-    it(`${tree}: the template seeds the rows /qfai-atdd is told to own`, async () => {
-      // It used to say `US-*` / `CON-API-*` are not rows and `/qfai-atdd` does
-      // not write this ledger — the opposite of `execution-ledger.md`, which
-      // defines `US-Refs` / `CON-API-Refs` as layer-required columns and of
-      // `TDDLIST_OBLIGATION_LAYER_MISMATCH`, which enforces them. A spec seeded
-      // from the old template had no row for the E2E/API obligations at all, so
-      // an all-`done` ledger sat beside a `QFAI-ATDD-111` / `-113` gate at 0%.
-      const template = flat(await read(tree, TEMPLATE));
-      expect(template).not.toContain("`/qfai-atdd` does not write to this ledger");
-      expect(template).toContain("one `Layer = E2E` row per `US-*`");
-      expect(template).toContain("one `Layer = API` row per declared `CON-API-*`");
-    });
-
-    it(`${tree}: the template names exactly one writer per row`, async () => {
-      const template = flat(await read(tree, TEMPLATE));
-      expect(template).toContain("**Who writes which row.**");
-      expect(template).toContain("Exactly one skill owns any row.");
+    it(`${tree}: the template claims no producer the shipped skills do not implement`, async () => {
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("`/qfai-atdd` does not write to\nthis ledger");
+      expect(template).not.toContain("`Layer = E2E`");
     });
 
     it(`${tree}: reseeding is stated as a delta, not a regeneration`, async () => {

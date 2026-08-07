@@ -163,10 +163,9 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
   - `tests/e2e/**` must not contain `QFAI:SPEC-XXXX:TC-YYYY` unless that TC
     declares `Level` `L5`/`E2E`.
 - Unknown references (`US/TC/CON-API` not declared) must be treated as errors.
-- **This skill writes to `/qfai-implement`'s execution ledger, and is bound by
-  its rules.** See "Execution Ledger: the rows this skill owns" below. A row
-  advanced without either an observed RED or falsifiability evidence is a
-  lifecycle violation, not a completed row.
+- **The E2E/API ledger rows this stage feeds are bound by
+  `/qfai-implement`'s lifecycle.** See "Execution Ledger" below: a row advanced
+  on none of the three RED-provenance forms is a lifecycle violation.
 - Floors/ratios are planning signals only, not gates.
 - Legacy `scenario.feature` or coverage ledgers may exist but are not mandatory inputs for completion.
 - Evidence file is required under `.qfai/evidence/`. Stage evidence is
@@ -185,39 +184,34 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-fai
 
 Turn specs/contracts obligations (`US` / `TC` / `CON-API` / `CON-DB`) into runnable acceptance tests in this repository.
 
-## Execution Ledger: the rows this skill owns
+## Execution Ledger: the rows this skill feeds
 
 `.qfai/specs/<spec-id>/tdd/test-list.md` is `/qfai-implement`'s execution
 ledger, and `qfai-implement/SKILL.md` states the split: **`Layer = E2E` and
 `Layer = API` rows are tracked there, but their tests are authored here.** This
 skill therefore writes into a ledger whose status lifecycle it does not define.
 
-- **Cells this skill may write**: `Status`, `DR-ID`, `Evidence`, on
-  `Layer = E2E` / `Layer = API` rows only. Nothing else in the ledger.
+- **This skill does not write the ledger.** `/qfai-implement` owns the
+  `Status` / `DR-ID` / `Evidence` cells of every row — one writer, as
+  `constitution/drift-protocol.md` grants. This stage owes the **evidence those
+  cells point at**, in `.qfai/evidence/atdd-<spec-id>.md`.
 - **The lifecycle is
   `../qfai-implement/references/execution-ledger.md#allowed-transitions`**: forward-only from `todo`, and `todo -> red` requires
   an **admissible RED** observed before the code that makes it pass exists.
-- **This skill's stage order makes that a real question**: Work Orders build the
-  surfaces a journey needs (P3, P4), so a journey written after them passes first
-  run — an anomaly bound for `exception`, which then becomes the only terminal
-  state an ATDD-owned row can reach.
+- **The stage order makes that a real question**: Work Orders build the surfaces
+  a journey needs (P3, P4), so a journey written after them passes first run — an
+  anomaly bound for `exception`, which then becomes the only reachable terminal
+  state.
 
 ### RED provenance for an ATDD-owned row (MUST)
 
-Read `references/red-provenance.md` before advancing any row. Take the first
-branch that applies and record which one in the evidence file:
-
-1. **Observed RED (preferred).** Write the test against the current tree, before
-   this cycle builds the surface, and watch it fail. Stage gate **P1b**.
-2. **Falsifiability (surface already exists).** `Satisfied-by` + mutate the
-   asserted predicate + `Falsifiability command` / `Falsifiability result` +
-   GREEN pair, per `../qfai-implement/references/red-not-observable.md`. Never
-   weaken a correct test to manufacture a failure.
-3. **Neither is possible.** `exception` with a `DR-*` naming what made both
-   branches unavailable.
-
-Branch 3 is the last resort, not the default. A stage that routes every row it
-owns to `exception` has recorded that it did not try branches 1 and 2.
+**Read `references/red-provenance.md` before advancing any row.** It defines
+three branches, in order — observed RED (stage gate **P1b**, before P2-P4 build
+any surface), falsifiability when the surface is already there, and `exception`
+with a `DR-*` when neither is available. Take the first that applies, record
+which one, and put the evidence in `.qfai/evidence/atdd-<spec-id>.md` under
+`## Ledger rows advanced`. Branch 3 is the last resort: a stage that routes
+every row to `exception` has recorded that it did not try branches 1 and 2.
 
 ## Scope (ATDD only)
 
@@ -303,9 +297,11 @@ Notes:
 - Validation passes: `npx qfai validate --profile atdd --fail-on error`.
 - Repository quality gates (format/lint/type/tests/pack) pass with evidence.
 - Evidence file exists and includes work orders + reviewer notes.
-- Every ledger row this cycle advanced carries RED provenance — an observed RED
-  pair, or the `Satisfied-by` + falsifiability trio — and `qa-gatekeeper` has
-  accepted it.
+- Every ledger row this cycle advanced carries one of the three RED-provenance
+  forms — an observed RED pair with its `Oracle proof`, the `Satisfied-by` +
+  falsifiability trio, or a `DR-*` recording why neither was available — and
+  `qa-gatekeeper` has accepted it. The third form is a valid outcome, not a
+  shortfall.
 - Completion is approved by a reviewer who did not implement tests.
 
 ## Not-done criteria
@@ -315,8 +311,8 @@ Notes:
 - Tests exist but were never executed.
 - Validation evidence is missing or failing.
 - Coverage Depth Matrix is missing or contains unjustified ❌ cells (normal-path-only coverage is incomplete).
-- A ledger row was advanced past `todo` with neither an observed RED nor
-  falsifiability evidence.
+- A ledger row was advanced past `todo` with none of the three forms — no
+  observed RED, no falsifiability evidence, and no `DR-*`.
 - A row was sent to `exception` without a `DR-*` recording why **both** branches
   were unavailable. "The surface was built earlier in this cycle" is not such a reason.
 

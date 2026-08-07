@@ -85,7 +85,9 @@ non-TC obligation IDs are inert to it by design.
 
 The `Evidence` cell is a **pointer**, not the payload.
 
-`.qfai/evidence/implement-<spec-id>.md` is the single home for the per-item
+`.qfai/evidence/implement-<spec-id>.md` is the home — for every row this skill
+runs itself; the E2E/API rows use `atdd-<spec-id>.md`, see "ATDD-owned rows"
+below — of the per-item
 evidence contract — the RED/GREEN commands, their output, and the reviewer
 verdicts. The ledger cell records the outcome and says where to read the proof:
 
@@ -264,6 +266,13 @@ the first run, so:
 - **`/qfai-atdd` also has a first branch this ledger cannot see**: writing the
   journey against the tree _before_ the surface exists, which produces an
   ordinary RED. Its stage gate P1b is where that happens.
+- **The evidence file follows the stage that produced it.**
+  `implement-<spec-id>.md` holds the rows this skill runs itself;
+  `atdd-<spec-id>.md` holds `## Ledger rows advanced` for the E2E/API rows,
+  because that is the stage that ran the commands. The `Evidence` cell is a
+  pointer either way and its anchor names which file. Calling
+  `implement-<spec-id>.md` the single home was true while one stage produced
+  every pair; it stopped being true the moment another stage did.
 - **`exception` is for a row where both are unavailable** — an obligation with
   no persisted form or no observable surface at L5, recorded with a `DR-*`
   naming what is missing. It is not the routine outcome of surface-first
