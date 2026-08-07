@@ -60,7 +60,7 @@ describe("deriving a TC's layer is a published procedure", () => {
 
     it(`${tree}: the derived Level does not move the annotation`, async () => {
       const catalog = await read(tree, "assistant/catalog/test-layers.md");
-      expect(catalog).toContain("### Annotation routing is by ID type, not by `Level`");
+      expect(catalog).toContain("### Annotation routing");
       for (const code of [
         "QFAI-ATDD-111",
         "QFAI-ATDD-112",
@@ -109,7 +109,7 @@ describe("deriving a TC's layer is a published procedure", () => {
       // re-edited in two places every time the catalog's routing changes.
       expectPhrase(
         sdd,
-        "annotation routing is enforced by `.qfai/assistant/catalog/test-layers.md#annotation-routing-is-by-id-type-not-by-level`",
+        "annotation routing is enforced by `.qfai/assistant/catalog/test-layers.md#annotation-routing`",
       );
       expect(sdd).not.toContain("TC→Integration");
       expectPhrase(sdd, "`TC-*`'s `Level` is **not** a constant");

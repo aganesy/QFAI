@@ -108,3 +108,37 @@ describe("the layer SSOT defines every layer the rest of qfai names", () => {
     });
   }
 });
+
+describe.each(["packages/qfai/assets/init/.qfai", ".qfai"])(
+  "%s — the routing section matches the validator",
+  (tree) => {
+    const read = async (rel: string): Promise<string> =>
+      (await readFile(path.join(repoRoot, tree, rel), "utf-8")).replace(/\s+/g, " ");
+
+    it("routes a TC by its Level, not by its ID type", async () => {
+      // The section above the L1/L2 rule still said "Level does not move the
+      // annotation" and "every `TC-*` is answered from tests/integration/**,
+      // and api/e2e reject it outright". A reader following it duplicates
+      // L1/L2 into integration and misplaces L4/L5 — against the validator and
+      // against the rule two paragraphs below.
+      const catalog = await read("assistant/catalog/test-layers.md");
+      expect(catalog).toContain(
+        "A `TC-*` is answered from the directory **its own declared `Level`** names",
+      );
+      expect(catalog).toContain("| `L1`/`Unit` | no ATDD obligation |");
+      expect(catalog).toContain("| `L2`/`Component` | no ATDD obligation |");
+      expect(catalog).toContain("| `L3`/`Integration` | `tests/integration/**` |");
+      expect(catalog).toContain("| none declared | `tests/integration/**` |");
+      expect(catalog).not.toContain("It does **not** move the traceability annotation.");
+      expect(catalog).not.toContain(
+        "a `TC-*` reference inside `tests/api/**` or `tests/e2e/**` is rejected outright",
+      );
+    });
+
+    it("keeps the misplacement rule symmetric", async () => {
+      const catalog = await read("assistant/catalog/test-layers.md");
+      expect(catalog).toContain("`QFAI-ATDD-121` / `-122` / `-123`");
+      expect(catalog).toContain("the rejection is symmetric");
+    });
+  },
+);

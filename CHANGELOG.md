@@ -6,6 +6,15 @@
 
 ### Changed
 
+- **`catalog/test-layers.md` describes the routing the validator performs.**
+  The "Annotation routing" section still said the derived `Level` does not move
+  the annotation, that every `TC-*` is answered from `tests/integration/**`, and
+  that a `TC-*` in `tests/api/**` or `tests/e2e/**` is rejected outright — the
+  pre-`Level`-routing rules, two paragraphs above the L1/L2 exclusion that
+  contradicts them. A reader following it duplicated L1/L2 into integration and
+  misplaced L4/L5. It now carries the routing table the gate implements, and the
+  crosswalk paragraph above it agrees. The section anchor changed to
+  `#annotation-routing`.
 - **Coverage counts real ledger rows only.** The multi-table scan read the raw
   file and accepted any table with a `TC-Refs` column, so a fenced template or a
   commented-out old table in `test-list.md` counted a TC as covered, and a stray

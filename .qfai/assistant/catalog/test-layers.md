@@ -35,17 +35,17 @@ Rules:
   annotation: L1 and L2 have no mandated directory, so `QFAI-ATDD-112` does not
   apply to them and `QFAI-ATDD-117` (`info`) names them instead. Their gate is
   `tdd/test-list.md` / `TDDLIST_TC_NOT_COVERED`, under `/qfai-implement`.
-  For the layers ATDD does own, the hard gate routes an
-  obligation by its ID, not by its `Level`: `US-*` is answered from
-  `<testsDir>/e2e/**` (`QFAI-ATDD-111`), `TC-*` from
-  `<testsDir>/integration/**` (`QFAI-ATDD-112`) and `CON-API-*` from
-  `<testsDir>/api/**` (`QFAI-ATDD-113`) and `CON-DB-*` from
-  `<testsDir>/integration/**` (`QFAI-ATDD-115`), while a `TC-*` reference inside
-  `<testsDir>/api/**` or `<testsDir>/e2e/**` is rejected outright
-  (`QFAI-ATDD-121` / `QFAI-ATDD-122`). L4's goal is `CON-API-*` and L5's is
-  `US-*` (see the layer definitions below), so an oracle that lands at L4 or L5
-  means the obligation is misfiled: record it as `CON-API-*` or `US-*` rather
-  than as a `TC-*` row no test directory can carry.
+  `US-*` is answered from `<testsDir>/e2e/**` (`QFAI-ATDD-111`), `CON-API-*`
+  from `<testsDir>/api/**` (`QFAI-ATDD-113`) and `CON-DB-*` from
+  `<testsDir>/integration/**` (`QFAI-ATDD-115`) — those three are fixed by the
+  ID type. A `TC-*` is answered from the directory **its own declared `Level`**
+  names, which for a correctly filed row is `<testsDir>/integration/**`; see
+  [Annotation routing](#annotation-routing) for the full table and the
+  misplacement rules.
+  L4's goal is `CON-API-*` and L5's is `US-*` (see the layer definitions
+  below), so an oracle that lands at L4 or L5 means the obligation is misfiled:
+  record it as `CON-API-*` or `US-*` rather than leaving a `TC-*` row at a
+  layer whose goal is another ID type.
 - The two code-side word lists (`tddHelpers.ts#UNIT_COMPONENT_LAYERS` /
   `#NON_COVERAGE_LAYERS`) accept both the code and the word form for the same
   layer; they MUST stay in step with this table.
@@ -162,15 +162,34 @@ L4" applies only when the service-boundary values are themselves what the
 parent BR owns. Inverting this is what collapses a designed pyramid into an
 all-integration suite.
 
-### Annotation routing is by ID type, not by `Level`
+### Annotation routing
 
-The derived `Level` records which oracle owns the obligation. It does **not**
-move the traceability annotation. The [ATDD annotation hard gate](#atdd-annotation-hard-gate)
-routes by obligation ID: `US-*` is answered from `tests/e2e/**`
-(`QFAI-ATDD-111`), `TC-*` from `tests/integration/**` (`QFAI-ATDD-112`), and
-`CON-API-*` from `tests/api/**` (`QFAI-ATDD-113`); a `TC-*` reference inside
-`tests/api/**` or `tests/e2e/**` is rejected outright (`QFAI-ATDD-121` /
-`QFAI-ATDD-122`). Two consequences bind every `TC-*` row:
+The derived `Level` records which oracle owns the obligation, and the
+[ATDD annotation hard gate](#atdd-annotation-hard-gate) routes each obligation
+ID to exactly one directory. `US-*` is answered from `tests/e2e/**`
+(`QFAI-ATDD-111`) and `CON-API-*` from `tests/api/**` (`QFAI-ATDD-113`); those
+two are fixed by the ID type. A `TC-*` is answered from the directory **its own
+declared `Level`** names (`QFAI-ATDD-112`):
+
+| `Level`            | Answered from          |
+| ------------------ | ---------------------- |
+| `L1`/`Unit`        | no ATDD obligation     |
+| `L2`/`Component`   | no ATDD obligation     |
+| `L3`/`Integration` | `tests/integration/**` |
+| `L4`/`API`         | `tests/api/**` (note)  |
+| `L5`/`E2E`         | `tests/e2e/**` (note)  |
+| none declared      | `tests/integration/**` |
+
+**(note)** A `TC-*` **should not be** at L4 or L5 — the first bullet below says
+why and what to do instead. The gate routes it there rather than rejecting it so
+a misfiled row is reported once, by the rule that names the real cause, instead
+of twice as "uncovered in integration" and "forbidden in api".
+
+Exactly one directory, never two: an annotation outside the one its `Level`
+names is both uncovered and rejected (`QFAI-ATDD-121` / `-122` / `-123`), and
+the rejection is symmetric — an annotation left in `tests/integration/**` after
+its TC moved to `L4`/`L5` is rejected the same way an early one in
+`tests/api/**` is. Two consequences bind every `TC-*` row:
 
 - **A `TC-*` row's `Level` stays within L1–L3.** L4's goal is `CON-API-*` and
   L5's goal is `US-*` (see the layer definitions above), so an oracle that

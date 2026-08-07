@@ -733,3 +733,73 @@ describe("only real ledger rows count as coverage", () => {
     );
   });
 });
+
+describe("a heading TC that declares no Level is owed by ATDD, not by the ledger", () => {
+  async function withSpec(files: Record<string, string>, task: (root: string) => Promise<void>) {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-levelless-heading-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      // The ATDD scan enumerates specs, so the pack has to look like one.
+      for (const [name, body] of [
+        ["01_Spec.md", "# Spec\n"],
+        ["02_User-stories.md", "# US\n"],
+        ["03_Acceptance-Criteria.md", "# AC\n"],
+      ] as const) {
+        await writeFile(path.join(specDir, name), body, "utf-8");
+      }
+      for (const [rel, body] of Object.entries(files)) {
+        const file = path.join(specDir, ...rel.split("/"));
+        await mkdir(path.dirname(file), { recursive: true });
+        await writeFile(file, body, "utf-8");
+      }
+      await task(root);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  const HEADING_SPEC = [
+    "# 06 Test Cases",
+    "",
+    "## TC-0001: no level",
+    "",
+    "- AC-Refs: AC-0001",
+    "",
+  ].join("\n");
+
+  const LEDGER = [
+    "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+    "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+    "",
+  ].join("\n");
+
+  it("keeps the QFAI-ATDD-112 obligation, so it is not owed by nothing", async () => {
+    // The L1/L2 exclusion is what moved a TC's gate to the ledger. An absent
+    // `Level` is not L1/L2: `resolveTcHomeKind` still routes it to
+    // `tests/integration/**` — the default this PR deliberately did not move —
+    // so ATDD owns it and the ledger is not its gate.
+    await withSpec({ "06_Test-Cases.md": HEADING_SPEC }, async (root) => {
+      const codes = (await validateAtddCodeTraceability(root, defaultConfig)).map((e) => e.code);
+      expect(codes).toContain("QFAI-ATDD-112");
+      expect(codes).not.toContain("QFAI-ATDD-117");
+    });
+  });
+
+  it("is a known reference, so its ledger row is not reported as unknown", async () => {
+    await withSpec(
+      {
+        "06_Test-Cases.md": HEADING_SPEC,
+        "tdd/test-list.md": [
+          LEDGER.trimEnd(),
+          "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | a | todo | - | - |",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        const codes = (await validateTddList(root, defaultConfig)).map((e) => e.code);
+        expect(codes).not.toContain("TDDLIST_UNKNOWN_REF");
+      },
+    );
+  });
+});
