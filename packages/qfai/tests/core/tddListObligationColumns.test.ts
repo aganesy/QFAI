@@ -325,10 +325,15 @@ describe("the shipped ledger schema documents all eight required columns", () =>
         path.join(repoRoot, tree, "assistant/skills/qfai-implement/SKILL.md"),
         "utf-8",
       );
+      // Phase Red now selects only the layers this skill authors. It used to
+      // pick an `E2E` / `API` row and drive its status "once the acceptance test
+      // exists", which put two skills on one row's `Status` / `DR-ID` /
+      // `Evidence` cells and left those rows stalled between the stages.
+      expect(skill).toContain("`TC-Refs` for `Unit` / `Component` / `Integration`");
       expect(skill).toContain(
-        "`TC-Refs` for `Unit` / `Component` / `Integration`, `US-Refs` for `E2E`, `CON-API-Refs` for `API`",
+        "skipping any `Layer = E2E` / `Layer = API` row, which `/qfai-atdd` owns end to end",
       );
-      expect(skill).toContain("authored by `/qfai-atdd` (Non-goals)");
+      expect(skill).not.toContain("this skill only drives that row's status and evidence");
       expect(skill).toContain("On a `Layer = E2E` row read `US-ref`");
       expect(skill).toContain("`Layer = E2E` / `Layer = API` ledger rows are tracked here");
     });

@@ -6,14 +6,28 @@ Red/Green/Refactor cycle one row at a time.
 
 ## Producer
 
-Rows are derived from `06_Test-Cases.md`: **one row per coverage-target TC**.
-`/qfai-sdd` seeds them at Phase 2b. An empty table below is valid — it means
-the spec has no coverage-target TC yet, not that the ledger is missing.
+`/qfai-sdd` seeds every row at Phase 2b, from three sources:
 
-`US-*` and `CON-API-*` are **not** rows here. They are ATDD obligations,
-traced by `QFAI:` annotations in the test tree per
-`.qfai/assistant/catalog/test-layers.md`, and `/qfai-atdd` does not write to
-this ledger.
+- **one row per coverage-target TC** in `06_Test-Cases.md`, carrying its
+  `TC-Refs` — `Layer` `Unit` / `Component` / `Integration`;
+- **one `Layer = E2E` row per `US-*`** the spec declares, carrying `US-Refs`;
+- **one `Layer = API` row per declared `CON-API-*`**, carrying `CON-API-Refs`.
+
+An empty table below is valid — it means the spec has no obligations yet, not
+that the ledger is missing.
+
+The last two groups exist because a `TC-*` annotation is forbidden in
+`tests/e2e/**` and `tests/api/**`, so those rows have no legal `TC-Refs`
+value and record their obligation in `US-Refs` / `CON-API-Refs` instead
+(`qfai-implement/references/execution-ledger.md#obligation-columns-optional-required-by-layer`).
+Without them, an all-`done` ledger can sit beside a `QFAI-ATDD-111` /
+`QFAI-ATDD-113` hard gate at 0%.
+
+**Who writes which row.** `/qfai-implement` drives the `Status`, `DR-ID` and
+`Evidence` cells of the `Unit` / `Component` / `Integration` rows;
+`/qfai-atdd` drives the same three cells of the `E2E` / `API` rows, whose
+tests it authors. Exactly one skill owns any row. Neither adds, removes or
+re-scopes one — that is `/qfai-sdd`'s, through the Change Request path.
 
 Reseeding is a **delta**, never a regeneration: an unchanged TC's row keeps its
 `TDD-ID`, `Status`, `Test file`, `Selector`, `DR-ID` and `Evidence`, and TCs
@@ -41,16 +55,24 @@ parsed as the ledger instead and raises eight
 
 Required columns, in the order used above:
 
-| Column    | Description                                                  |
-| --------- | ------------------------------------------------------------ |
-| TDD-ID    | `TDD-NNNN`, unique within this spec                          |
-| TC-Refs   | Test cases from `06_Test-Cases.md` this row implements       |
-| Layer     | `Unit`, `Component`, `Integration`, `API` or `E2E`           |
-| Test file | Project-root-relative path to the test module                |
-| Selector  | Test selector/description for targeted execution             |
-| Status    | `todo` / `red` / `green` / `refactor` / `done` / `exception` |
-| DR-ID     | Decision Record ID for exception rows (`-` otherwise)        |
-| Evidence  | RED/GREEN command+result pairs proving the TDD cycle         |
+| Column    | Description                                                                                                                       |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| TDD-ID    | `TDD-NNNN`, unique within this spec                                                                                               |
+| Layer     | `Unit`, `Component`, `Integration`, `API` or `E2E`                                                                                |
+| TC-Refs   | Test cases from `06_Test-Cases.md`; `-` on `E2E` / `API` rows                                                                     |
+| Test file | Project-root-relative path to the test module                                                                                     |
+| Selector  | Test selector/description for targeted execution                                                                                  |
+| Status    | `todo` / `blocked` / `red` / `green` / `refactor` / `review-fix` / `done` / `exception`                                           |
+| DR-ID     | Decision Record ID for exception rows (`-` otherwise)                                                                             |
+| Evidence  | The RED/GREEN outcome in one word each, plus an anchor into the stage's evidence file. **Not** the commands and output themselves |
+
+Optional columns, required by layer or status:
+
+| Column       | Description                                                           |
+| ------------ | --------------------------------------------------------------------- |
+| US-Refs      | `US-*` this row implements. Legal **only** on `Layer = E2E` rows      |
+| CON-API-Refs | `CON-API-*` this row implements. Legal **only** on `Layer = API` rows |
+| Blocked-By   | What a `blocked` row waits on. Required on those rows                 |
 
 See `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
 for the full rules.

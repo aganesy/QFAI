@@ -40,7 +40,11 @@ case required reading the agent roster and reasoning backwards from it.
 
 - `.qfai/evidence/**` append/update
 - `.qfai/specs/<spec-id>/tdd/test-list.md` — the `Status`, `DR-ID` and
-  `Evidence` cells only, append/update by `/qfai-implement`. Every other column
+  `Evidence` cells only. `/qfai-implement` writes them for `Unit` /
+  `Component` / `Integration` rows; `/qfai-atdd` writes the same three cells
+  for `Layer = E2E` and `Layer = API` rows, whose tests it authors
+  (`qfai-implement/SKILL.md` Non-goals). Exactly one skill owns any given row,
+  so the carve-out never has two writers. Every other column
   of that file, and every other file under `.qfai/specs/**`, stays upstream
   SSOT: adding, removing or re-scoping a row is an upstream change and takes the
   `#when-drift-is-detected` path.

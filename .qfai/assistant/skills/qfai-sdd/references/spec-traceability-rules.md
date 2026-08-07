@@ -149,9 +149,13 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   `done`, `exception`. `blocked` is completion-prohibiting and is never selected by
   Phase Red.
 - **Ownership split.** `/qfai-sdd` owns the rows — which obligations exist and what each
-  covers. `/qfai-implement` owns the `Status`, `DR-ID` and `Evidence` cells and nothing else.
-  This is the one carve-out in `constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`; adding,
-  removing or re-scoping a row is an upstream change and takes the Change Request path.
+  covers, including one `Layer = E2E` row per `US-*` and one `Layer = API` row per declared
+  `CON-API-*`. The `Status`, `DR-ID` and `Evidence` cells are owned by whichever skill
+  authors that row's test: `/qfai-implement` for `Unit` / `Component` / `Integration`,
+  `/qfai-atdd` for `E2E` / `API`. Exactly one skill owns any row, so the carve-out in
+  `constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist` never has two
+  writers. Neither of them adds, removes or re-scopes a row: that is an upstream change and
+  takes the Change Request path.
 - `Evidence` is a **pointer**: the one-word RED/GREEN outcome plus an anchor into
   `.qfai/evidence/implement-<spec-id>.md`. A GFM cell is one physical line and ends at
   every unescaped `|`, so it cannot hold command output. Encoding rules and the cell

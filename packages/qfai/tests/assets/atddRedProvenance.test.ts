@@ -117,3 +117,81 @@ describe.each(TREES)("%s", (tree) => {
     }
   });
 });
+
+describe.each(TREES)("%s — the split has one writer and reachable references", (tree) => {
+  const DRIFT = "assistant/constitution/drift-protocol.md";
+  const TEMPLATE = "assistant/skills/qfai-sdd/templates/specs/spec/tdd/test-list.md";
+  const PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
+
+  it("the Drift Protocol whitelist names /qfai-atdd as a ledger writer", async () => {
+    // It authorised the carve-out for `/qfai-implement` only, so an agent
+    // honouring both documents had no legal writer for these rows at all.
+    const drift = flat(await read(tree, DRIFT));
+    expect(drift).toContain("`/qfai-atdd` writes the same three cells");
+    expect(drift).toContain("Exactly one skill owns any given row");
+  });
+
+  it("qfai-implement stops selecting and claiming the rows /qfai-atdd owns", async () => {
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "skipping any `Layer = E2E` / `Layer = API` row, which `/qfai-atdd` owns end to end",
+    );
+    // The old sentence had this skill driving their status once the test exists
+    // — two owners for one row's cells.
+    expect(implement).not.toContain("this skill only drives that row's status and evidence");
+  });
+
+  it("the shipped ledger template seeds the E2E/API rows", async () => {
+    const template = flat(await read(tree, TEMPLATE));
+    expect(template).toContain("one `Layer = E2E` row per `US-*`");
+    expect(template).not.toContain("`/qfai-atdd` does not write to this ledger");
+  });
+
+  it("branch 1 creates the seam before the RED run", async () => {
+    // Without it, a test for an unregistered route fails on a 404 — the exact
+    // shape branch 1 calls inadmissible, leaving new-surface rows no branch.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**Create the minimal seam first.**");
+    expect(provenance).toContain("Phase Red takes at 3a");
+  });
+
+  it("branch 2 covers the surface this cycle built, not only a pre-existing one", async () => {
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("or this cycle built it before the journey was written");
+    expect(provenance).not.toContain("When the surface predates this cycle, the correct test");
+  });
+
+  it("Satisfied-by accepts a surface, not only a sibling ledger row", async () => {
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain(
+      "**`Satisfied-by` takes whatever already implements the predicate.**",
+    );
+    expect(provenance).toContain("otherwise the production path and symbol");
+  });
+
+  it("every qfai-implement reference from the ATDD tree resolves", async () => {
+    // These are read from `qfai-atdd/`, where a bare `references/...` path
+    // resolves inside the ATDD skill and does not exist.
+    for (const rel of [ATDD, PROVENANCE]) {
+      const text = await read(tree, rel);
+      const bad = Array.from(
+        text.matchAll(
+          /`(references\/(?:execution-ledger|red-not-observable|red-admissibility)\.md[^`]*)`/g,
+        ),
+      ).map((m) => m[1]);
+      expect(bad, `${rel} points at a qfai-implement reference through a qfai-atdd path`).toEqual(
+        [],
+      );
+    }
+  });
+
+  it("qa-gatekeeper is given the ATDD evidence file and a resolvable ledger path", async () => {
+    for (const rel of [GATEKEEPER, CATALOG]) {
+      const text = flat(await read(tree, rel));
+      expect(text).toContain("`.qfai/evidence/atdd-<spec-id>.md`");
+      expect(text).toContain(
+        "`.qfai/assistant/skills/qfai-implement/references/execution-ledger.md#atdd-owned-rows",
+      );
+    }
+  });
+});

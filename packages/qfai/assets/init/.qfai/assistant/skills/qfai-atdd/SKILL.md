@@ -194,8 +194,8 @@ skill therefore writes into a ledger whose status lifecycle it does not define.
 
 - **Cells this skill may write**: `Status`, `DR-ID`, `Evidence`, on
   `Layer = E2E` / `Layer = API` rows only. Nothing else in the ledger.
-- **The lifecycle is `references/execution-ledger.md#allowed-transitions`**
-  under `qfai-implement`: forward-only from `todo`, and `todo -> red` requires
+- **The lifecycle is
+  `../qfai-implement/references/execution-ledger.md#allowed-transitions`**: forward-only from `todo`, and `todo -> red` requires
   an **admissible RED** observed before the code that makes it pass exists.
 - **This skill's stage order makes that a real question**: Work Orders build the
   surfaces a journey needs (P3, P4), so a journey written after them passes first
@@ -211,7 +211,7 @@ branch that applies and record which one in the evidence file:
    this cycle builds the surface, and watch it fail. Stage gate **P1b**.
 2. **Falsifiability (surface already exists).** `Satisfied-by` + mutate the
    asserted predicate + `Falsifiability command` / `Falsifiability result` +
-   GREEN pair, per `qfai-implement/references/red-not-observable.md`. Never
+   GREEN pair, per `../qfai-implement/references/red-not-observable.md`. Never
    weaken a correct test to manufacture a failure.
 3. **Neither is possible.** `exception` with a `DR-*` naming what made both
    branches unavailable.
