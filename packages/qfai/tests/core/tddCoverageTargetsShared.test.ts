@@ -1,0 +1,194 @@
+/**
+ * `qfai validate` and `qfai report` count the same test cases.
+ *
+ * The gate reads every `TC-ID` table plus the heading form; the report read the
+ * first table only and gave up on the spec when it did not resolve. A spec
+ * written as `## TC-0001` + `- Level: L1` therefore vanished from the report
+ * while `TDDLIST_TC_NOT_COVERED` demanded a ledger row for it, and a TC in a
+ * second table was gated but never counted.
+ */
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+import { describe, expect, it } from "vitest";
+
+import { defaultConfig } from "../../src/core/config.js";
+import { collectTddCoverage } from "../../src/core/reportTddCoverage.js";
+import { collectSpecEntries } from "../../src/core/specLayout.js";
+import { collectTestCaseIds } from "../../src/core/testCaseCoverageTargets.js";
+import { validateTddList } from "../../src/core/validators/tddList.js";
+
+const HEADERS =
+  "| TDD-ID   | TC-Refs | Layer | Test file       | Selector | Status | DR-ID | Evidence |";
+const SEP =
+  "| -------- | ------- | ----- | --------------- | -------- | ------ | ----- | -------- |";
+
+async function bothCommands(
+  testCases: string,
+  ledgerRows: string[],
+): Promise<{ codes: string[]; total: number | null; done: number | null }> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tc-shared-"));
+  try {
+    const specsRoot = path.join(root, ".qfai", "specs");
+    const specDir = path.join(specsRoot, "spec-0001");
+    await mkdir(path.join(specDir, "tdd"), { recursive: true });
+    await writeFile(path.join(specDir, "01_Spec.md"), "# Spec\n", "utf-8");
+    await writeFile(path.join(specDir, "06_Test-Cases.md"), testCases, "utf-8");
+    await writeFile(
+      path.join(specDir, "tdd", "test-list.md"),
+      ["# TDD Test List", "", HEADERS, SEP, ...ledgerRows, ""].join("\n"),
+      "utf-8",
+    );
+
+    const codes = (await validateTddList(root, defaultConfig)).map((entry) => entry.code);
+    const coverage = await collectTddCoverage(await collectSpecEntries(specsRoot));
+    const spec = coverage.specs.find((entry) => entry.specNumber === "0001");
+    return { codes, total: spec?.unitComponentTotal ?? null, done: spec?.doneCount ?? null };
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+describe("the report counts the test cases the gate gates", () => {
+  it("counts a heading-form spec that has no TC table at all", async () => {
+    const testCases = [
+      "# 06 Test Cases",
+      "",
+      "## TC-0001",
+      "",
+      "- Level: L1",
+      "",
+      "## TC-0002",
+      "",
+      "- Level: L1",
+      "",
+    ].join("\n");
+
+    const { codes, total, done } = await bothCommands(testCases, [
+      "| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | sel | done | | ev |",
+    ]);
+
+    // The gate owes TC-0002 a row and says so.
+    expect(codes).toContain("TDDLIST_TC_NOT_COVERED");
+    // The report used to drop the spec entirely; it now prints the same two.
+    expect(total).toBe(2);
+    expect(done).toBe(1);
+  });
+
+  it("counts a TC declared in a second TC-ID table", async () => {
+    const testCases = [
+      "# 06 Test Cases",
+      "",
+      "## Test Case Table",
+      "",
+      "| TC-ID   | Level | Title |",
+      "| ------- | ----- | ----- |",
+      "| TC-0001 | L1    | one   |",
+      "",
+      "### BR-0002",
+      "",
+      "| TC-ID   | Level | Title |",
+      "| ------- | ----- | ----- |",
+      "| TC-0002 | L1    | two   |",
+      "",
+    ].join("\n");
+
+    const { codes, total, done } = await bothCommands(testCases, [
+      "| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | sel | done | | ev |",
+      "| TDD-0002 | TC-0002 | Unit | tests/a.test.ts | sel | done | | ev |",
+    ]);
+
+    expect(codes).not.toContain("TDDLIST_TC_NOT_COVERED");
+    expect(total).toBe(2);
+    expect(done).toBe(2);
+  });
+
+  it("omits a spec that has no 06_Test-Cases.md rather than printing a zero row", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tc-shared-"));
+    try {
+      const specsRoot = path.join(root, ".qfai", "specs");
+      const specDir = path.join(specsRoot, "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(path.join(specDir, "01_Spec.md"), "# Spec\n", "utf-8");
+      const coverage = await collectTddCoverage(await collectSpecEntries(specsRoot));
+      expect(coverage.specs).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("an unrecognized Level is reported only where it is in force", () => {
+  async function levelsFor(testCases: string): Promise<string[]> {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tc-levels-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(path.join(specDir, "06_Test-Cases.md"), testCases, "utf-8");
+      const { unrecognizedLevels } = await collectTestCaseIds(specDir);
+      return [...unrecognizedLevels].sort();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  it("says nothing about a superseded duplicate heading", async () => {
+    // First declaration wins, so the second heading's `Level` decides nothing.
+    // `TDDLIST_UNKNOWN_LEVEL` says the value makes the TC a mandatory ledger
+    // row — which is false for a TC whose in-force `Level` is the first one.
+    const levels = await levelsFor(
+      [
+        "# 06 Test Cases",
+        "",
+        "## TC-0001",
+        "",
+        "- Level: L1",
+        "",
+        "## TC-0001",
+        "",
+        "- Level: bogus",
+        "",
+      ].join("\n"),
+    );
+
+    expect(levels).toEqual([]);
+  });
+
+  it("still reports the first declaration when it is the unrecognized one", async () => {
+    const levels = await levelsFor(
+      [
+        "# 06 Test Cases",
+        "",
+        "## TC-0001",
+        "",
+        "- Level: bogus",
+        "",
+        "## TC-0001",
+        "",
+        "- Level: L1",
+        "",
+      ].join("\n"),
+    );
+
+    expect(levels).toEqual(["bogus"]);
+  });
+
+  it("says nothing about a superseded duplicate table row", async () => {
+    const levels = await levelsFor(
+      [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID   | Level | Title |",
+        "| ------- | ----- | ----- |",
+        "| TC-0001 | L1    | one   |",
+        "| TC-0001 | bogus | dup   |",
+        "",
+      ].join("\n"),
+    );
+
+    expect(levels).toEqual([]);
+  });
+});

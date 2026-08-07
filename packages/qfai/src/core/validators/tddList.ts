@@ -1,15 +1,10 @@
-import { readFile, stat } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
-import {
-  maskNonSpecRegions,
-  parseFirstMarkdownTable,
-  resolveTestCaseTable,
-  resolveTestCaseTables,
-} from "../specPackParsers.js";
+import { maskNonSpecRegions, parseFirstMarkdownTable } from "../specPackParsers.js";
 import {
   EXCEPTION_PARKED_CODE,
   EXCEPTION_PARKED_RULE_ID,
@@ -18,10 +13,8 @@ import {
 } from "../ruleIds.js";
 import type { LedgerTable } from "../tddHelpers.js";
 import {
-  classifyCoverageLevel,
   collectLedgerTables,
   isCoverageBearingRow,
-  isCoverageTargetLevel,
   isLedgerRow,
   splitTcRefs,
   resolveParentTcId,
@@ -30,7 +23,9 @@ import {
   UNIT_COMPONENT_LAYERS,
   NON_COVERAGE_LAYERS,
 } from "../tddHelpers.js";
-import { collectHeadingTcIdsFrom, collectHeadingTcLevelsFrom } from "../atddTraceability.js";
+// The coverage-target TC set `qfai report` also reads, so the gate and the
+// progress figure cannot disagree about which TCs a spec declares.
+import { collectTestCaseIds, TEST_CASES_FILE_NAME } from "../testCaseCoverageTargets.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
 
@@ -485,9 +480,6 @@ function selectorResolves(selector: string, content: string): boolean {
   const last = tokens?.[tokens.length - 1];
   return last !== undefined && content.includes(last);
 }
-
-/** Per-spec file that owns the Test Case Table, and the target of its findings. */
-const TEST_CASES_FILE_NAME = "06_Test-Cases.md";
 
 /** Repo-relative, posix-slashed path used for the `file` field of an issue. */
 function toRelPath(root: string, filePath: string): string {
@@ -1408,26 +1400,6 @@ async function validateSpecTddList(
   return issues;
 }
 
-type TestCaseIds = {
-  knownTcIds: Set<string>;
-  unitComponentTcIds: Set<string>;
-  /**
-   * Coverage-target TC -> the lower-cased `Level` it declared, or `""` when the
-   * spec declared none. The id set alone discards the level, so coverage could
-   * only ask "is this TC on some row"; the crosswalk needs to ask "on a row of
-   * the layer its Level names".
-   */
-  coverageTargetLevels: Map<string, string>;
-  /** `Level` values that match neither vocabulary; reported so a mismatch is visible. */
-  unrecognizedLevels: Set<string>;
-  /**
-   * Set when no `TC-ID`-bearing table could be located. Both TC checks go
-   * silent in that case, so the caller reports the miss rather than letting
-   * "nothing found" read as "everything covered".
-   */
-  unresolved?: "no-table" | "no-tc-id-column";
-};
-
 type ObligationColumnSpec = {
   column: string;
   pattern: RegExp;
@@ -1495,154 +1467,4 @@ function validateObligationColumn(
     );
   }
   return issues;
-}
-
-async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
-  // One instance of each Set for the whole function: the early returns hand
-  // back the same (still empty) object the happy path fills, so there is no
-  // second `unrecognizedLevels` that could diverge from this one.
-  const knownTcIds = new Set<string>();
-  const unitComponentTcIds = new Set<string>();
-  const unrecognizedLevels = new Set<string>();
-  const coverageTargetLevels = new Map<string, string>();
-  const collected: TestCaseIds = {
-    knownTcIds,
-    unitComponentTcIds,
-    unrecognizedLevels,
-    coverageTargetLevels,
-  };
-  const testCasesPath = path.join(specDir, TEST_CASES_FILE_NAME);
-  if (!(await exists(testCasesPath))) return collected;
-  let content: string;
-  try {
-    content = await readFile(testCasesPath, "utf-8");
-  } catch {
-    return collected;
-  }
-  // Heading form (`## TC-0001` plus a `- Level:` line) is a supported shape
-  // that `parseTestCases` and the ATDD level collector both read, and that this
-  // gate did not: `resolveTestCaseTable` returns tables only, so a heading-form
-  // spec produced a `TDDLIST_TC_TABLE_UNRESOLVED` warning and skipped coverage
-  // entirely. With L1/L2 excluded from `QFAI-ATDD-112`, that left them gated by
-  // nothing at all. Collected before the table pass so a spec that uses only
-  // headings is still covered.
-  //
-  // The id pass is separate from the level pass on purpose. A heading block
-  // that declares no `- Level:` line yields no level pair, but the TC is still
-  // declared — seeding `knownTcIds` from the pairs alone made every level-less
-  // heading-form TC an "unknown reference" the moment its ledger cited it.
-  for (const tcId of collectHeadingTcIdsFrom(content)) {
-    knownTcIds.add(tcId);
-  }
-  const headingLeveledTcIds = new Set<string>();
-  for (const [tcId, level] of collectHeadingTcLevelsFrom(content)) {
-    knownTcIds.add(tcId);
-    if (classifyCoverageLevel(level) === "unrecognized") {
-      unrecognizedLevels.add(level);
-    }
-    // First declaration wins between two headings for the same TC, exactly as
-    // `collectTcLevels` now resolves them. Reading every pair let a later
-    // heading add a coverage target the earlier one had not claimed (`L3` then
-    // `L1`), or leave one the earlier had (`L1` then `L3`) — either way one TC
-    // owed by both gates, which is precisely what the L1/L2 exclusion cannot
-    // afford. `headingLeveledTcIds` is set here rather than at the top of the
-    // loop so a level-less heading does not out-rank a later levelled one.
-    if (headingLeveledTcIds.has(tcId)) continue;
-    headingLeveledTcIds.add(tcId);
-    if (isCoverageTargetLevel(level)) {
-      unitComponentTcIds.add(tcId);
-      // Heading form wins over the table form, matching `collectTcLevels`.
-      coverageTargetLevels.set(tcId, level.trim().toLowerCase());
-    }
-  }
-
-  // Scoped to the `## Test Case Table` section the template names, with a
-  // header-match fallback for older specs. Reading the first table in
-  // document order let an explanatory table above the heading hijack the set.
-  const resolution = resolveTestCaseTable(content);
-  if (!resolution.table) {
-    // Only unresolved when neither shape yielded anything. A heading-form spec
-    // has real TCs and must not be reported as an unreadable one.
-    return knownTcIds.size > 0 ? collected : { ...collected, unresolved: resolution.reason };
-  }
-
-  // Every TC-ID table, not just the first. `atddTraceability` already reads
-  // them all, so a spec that splits `06_Test-Cases.md` per BR had `TC-*` rows
-  // that `QFAI-ATDD-112` saw and this gate did not. Since L1/L2 are now
-  // excluded from `QFAI-ATDD-112`, the ledger is their only gate — a `Level =
-  // L1` row in a second table would otherwise be owed by nothing at all.
-
-  const tableLeveledTcIds = new Set<string>();
-  // Coverage targets admitted by the blank/absent-`Level` fallback rather than
-  // by a declaration, and therefore still revocable.
-  //
-  // `classifyCoverageLevel("")` is `coverage-target` on purpose — an unstated
-  // `Level` must not silently drop the TC out of the only gate L1/L2 have. But
-  // a row that says nothing cannot out-rank a later row that says `L3`: the
-  // ATDD collector ignores a blank cell entirely and takes the `L3`, so leaving
-  // the provisional target in place made a correctly annotated integration TC
-  // owe `QFAI-ATDD-112` *and* `TDDLIST_TC_NOT_COVERED`. Tracking which ids the
-  // fallback added is what lets the first explicit `Level` settle it either way.
-  const provisionalTcIds = new Set<string>();
-  for (const table of resolveTestCaseTables(content)) {
-    // Lower-cased on both sides: `resolveTestCaseTables` now accepts a `tc-id`
-    // / `TC-Id` header the way the ATDD collector always has, and a
-    // case-sensitive `indexOf` here would take the table and then read column
-    // `-1` from every row — the table would resolve and contribute nothing.
-    const headers = table.headers.map((h) => h.trim().toLowerCase());
-    const tcIdIndex = headers.indexOf("tc-id");
-    const levelIndex = headers.indexOf("level");
-
-    for (const row of table.rows) {
-      const tcId = (row[tcIdIndex] ?? "").trim().toUpperCase();
-      if (tcId.length === 0) continue;
-      knownTcIds.add(tcId);
-      // Heading wins on duplicates, which is what `collectTcLevels` and the
-      // scaffold parser already do. Without this, a TC declared `L3` by its
-      // heading and `L1` by a table row picked up a `TDDLIST_TC_NOT_COVERED`
-      // obligation on top of the `QFAI-ATDD-112` one its heading gives it —
-      // the two gates disagreeing about the same TC, which is the class of
-      // defect this PR exists to close.
-      if (headingLeveledTcIds.has(tcId)) continue;
-      const level = levelIndex >= 0 ? (row[levelIndex] ?? "").trim().toLowerCase() : "";
-      if (levelIndex >= 0) {
-        if (classifyCoverageLevel(level) === "unrecognized") {
-          unrecognizedLevels.add((row[levelIndex] ?? "").trim());
-        }
-        // First declaration wins across tables too, not only across shapes.
-        // The non-coverage `continue` used to leave the id unrecorded, so a
-        // TC declared `L3` by an earlier table and `L1` by a later one picked
-        // up a ledger obligation on top of its `QFAI-ATDD-112` one —
-        // `collectTcLevels` keeps the `L3`, and the two gates have to agree.
-        if (tableLeveledTcIds.has(tcId)) continue;
-        if (level.length > 0) {
-          // The first *explicit* `Level` is the declaration, and it settles a
-          // provisional target in whichever direction it points.
-          tableLeveledTcIds.add(tcId);
-          if (!isCoverageTargetLevel(level)) {
-            if (provisionalTcIds.delete(tcId)) {
-              unitComponentTcIds.delete(tcId);
-              coverageTargetLevels.delete(tcId);
-            }
-            continue;
-          }
-          if (provisionalTcIds.delete(tcId)) {
-            // Provisionally recorded as `""`; the declaration replaces it, so
-            // the `Level`/`Layer` crosswalk reads the level the spec states
-            // rather than the absence an earlier row happened to show.
-            coverageTargetLevels.set(tcId, level);
-          }
-        }
-      }
-      // Reaches here when: (a) Level is a coverage target, or (b) Level column is absent (fallback: all TCs)
-      unitComponentTcIds.add(tcId);
-      if (!coverageTargetLevels.has(tcId)) {
-        coverageTargetLevels.set(tcId, level);
-      }
-      if (level.length === 0) {
-        provisionalTcIds.add(tcId);
-      }
-    }
-  }
-  return collected;
 }

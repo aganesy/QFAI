@@ -6,6 +6,23 @@
 
 ### Changed
 
+- **`qfai report` counts the test cases `qfai validate` gates.** The gate reads
+  every `TC-ID` table plus the heading form (`## TC-0001` + `- Level: L1`); the
+  report built its own set from the first table alone and skipped the spec
+  outright when that table did not resolve. So a heading-form spec vanished from
+  `## TDD Coverage` while `TDDLIST_TC_NOT_COVERED` demanded a ledger row for
+  every TC in it, and a TC declared in a second table was gated but never
+  counted in `coverage-target TCs:` or `done:`. Both callers now read one
+  collector (`core/testCaseCoverageTargets.ts`). A spec with no
+  `06_Test-Cases.md` is still omitted from the report rather than printed as a
+  zero row.
+- **`TDDLIST_UNKNOWN_LEVEL` no longer reports a superseded declaration.**
+  `unrecognizedLevels` was filled before the first-declaration-wins guard, so a
+  duplicate heading or table row for a TC that already had a `Level` raised the
+  warning for a value nothing reads — with a message ("Unrecognized values are
+  treated as coverage targets, so every such TC becomes a mandatory ledger
+  row") that the guard makes false for exactly that TC. Only the declaration
+  actually in force is reported.
 - **Every ledger row is checked, not only the ones in the first table.** The
   previous release widened coverage scoring to every schema-shaped table but
   left the checks that make a row trustworthy — `Status` enum, `Test file`
@@ -106,6 +123,16 @@
   `Level` replaces the recorded blank, so the `Level`/`Layer` crosswalk reads
   what the spec states. A TC that nothing later contradicts still stays a
   coverage target — the fallback itself has not moved.
+  - **Known residual: a TC that declares no `Level` anywhere is still owed by
+    both gates.** `classifyCoverageLevel("")` is a coverage target, so it owes
+    a ledger row; `collectTcLevels` records no level for a blank cell and
+    `resolveAtddHomeKind(undefined)` routes to `tests/integration/**`, so it
+    also owes `QFAI-ATDD-112`. That is not an oversight — narrowing either side
+    would drop an undeclared TC out of a gate, and the fallback exists because
+    an unstated `Level` must not silently leave L1/L2 ungated. It is written
+    down here because the fix above removes the case where a _later_ row
+    contradicts the blank, and it would otherwise read as removing all of them.
+    Declare the `Level` and exactly one gate owns the TC.
 - **`qfai report` reads the ledger `qfai validate` reads.** `collectTddCoverage`
   parsed the first Markdown table in `tdd/test-list.md` while the gate scores
   every table carrying the ledger schema, so a `done` L1/L2 row in an appended

@@ -13,12 +13,11 @@ import path from "node:path";
 
 import type { ReportTddCoverage, ReportTddCoverageSpec } from "./report.js";
 import type { SpecEntry } from "./specLayout.js";
-import { resolveTestCaseTable } from "./specPackParsers.js";
+import { collectTestCaseIds } from "./testCaseCoverageTargets.js";
 import {
   collectLedgerTables,
   isCoverageBearingRow,
   isLedgerRow,
-  isCoverageTargetLevel,
   TDD_DONE_STATUSES,
   TDD_IN_REVIEW_STATUSES,
   splitTcRefs,
@@ -31,35 +30,17 @@ export async function collectTddCoverage(
   const specs: ReportTddCoverageSpec[] = [];
 
   for (const entry of entries) {
-    const testCasesPath = path.join(entry.dir, "06_Test-Cases.md");
-    let tcContent: string;
-    try {
-      tcContent = await readFile(testCasesPath, "utf-8");
-    } catch {
-      continue;
-    }
-
-    // Section-scoped, mirroring `tddList.collectTestCaseIds`: reading the
-    // first table in document order let an explanatory table above the
-    // `## Test Case Table` heading hijack the TC set.
-    const tcResolution = resolveTestCaseTable(tcContent);
-    if (!tcResolution.table) continue;
-    const tcTable = tcResolution.table;
-    const tcHeaders = tcTable.headers.map((h) => h.trim());
-    const tcIdIdx = tcHeaders.indexOf("TC-ID");
-    const levelIdx = tcHeaders.indexOf("Level");
-
-    const unitComponentTcIds = new Set<string>();
-    for (const row of tcTable.rows) {
-      const tcId = (row[tcIdIdx] ?? "").trim().toUpperCase();
-      if (tcId.length === 0) continue;
-      if (levelIdx >= 0) {
-        const level = (row[levelIdx] ?? "").trim().toLowerCase();
-        if (!isCoverageTargetLevel(level)) continue;
-      }
-      // Reaches here when: (a) Level is a coverage target, or (b) Level column is absent (fallback: all TCs)
-      unitComponentTcIds.add(tcId);
-    }
+    // The collector `validateTddList` decides coverage obligations from. The
+    // report used to build its own set from the *first* `TC-ID` table alone and
+    // skip the spec entirely when that table did not resolve, so a heading-form
+    // spec (`## TC-0001` + `- Level: L1`) disappeared from the report while the
+    // gate demanded a ledger row for every TC in it, and a TC declared in a
+    // second table was gated but never counted.
+    const { unitComponentTcIds, fileMissing } = await collectTestCaseIds(entry.dir);
+    // A spec with no `06_Test-Cases.md` is omitted rather than printed as a
+    // zero row: the report would otherwise claim a document that does not
+    // exist declares nothing, which is not the same statement.
+    if (fileMissing) continue;
 
     if (unitComponentTcIds.size === 0) {
       specs.push({
