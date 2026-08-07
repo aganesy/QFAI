@@ -265,6 +265,15 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   // command to run. `info` is the only severity that leaves the exit code
   // untouched under every `--fail-on` value, and the 2-group text renderer
   // routes `info` into the advisory group all the same.
+  //
+  // The `modified.length > 0` conjunct is NOT redundant with the status test
+  // and lint cannot prove it either way (TS will not correlate a string
+  // literal with an array length), so it has to be stated: BR-0006-0022
+  // forbids a finding whose `modified` is empty, and once `declined` lands the
+  // status is derived from ANY non-empty bucket — the sibling diff already
+  // reports `modified` for a `changed`-only or `missing`-only tree. Under that
+  // derivation the status test alone would emit an empty-`modified` finding.
+  // Do not simplify this to the status test.
   const workflowsDiff = await diffInstalledShippedWorkflows(root);
   if (workflowsDiff.status === "modified" && workflowsDiff.modified.length > 0) {
     addCheck(checks, {

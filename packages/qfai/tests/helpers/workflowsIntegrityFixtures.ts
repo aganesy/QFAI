@@ -5,9 +5,8 @@
  * directory, so `.github/workflows/` and the install-provenance record hold
  * whatever the shipped write path actually produces rather than a hand-built
  * imitation of it. On top of that the mutations the drift suites need are
- * exposed: hand-edit an installed workflow, delete one, make one unreadable,
- * and drop one name's provenance entry. Pure test plumbing — no assertions
- * live here.
+ * exposed: hand-edit an installed workflow, delete one, and make one
+ * unreadable. Pure test plumbing — no assertions live here.
  *
  * The temp-directory pool is handed out by `useAdopterTreePool()` rather than
  * registered at this module's top level: `useTempDirPool` calls `afterEach`,
@@ -20,7 +19,6 @@ import { appendFile, mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { runInit } from "../../src/cli/commands/init.js";
-import { readInstallProvenance, writeInstallProvenance } from "../../src/shared/provenance.js";
 import { useTempDirPool } from "./shippedWorkflowFixtures.js";
 import { captureStdout } from "./stdout.js";
 
@@ -69,9 +67,18 @@ export async function deleteShippedWorkflow(dir: string, name: string): Promise<
 }
 
 /**
- * Leaves an installed shipped workflow PRESENT in the adopter tree but makes
- * every read of it fail, by putting a directory of the same name in its place
- * (`EISDIR`).
+ * Makes every read of one installed shipped workflow fail while its NAME
+ * survives in the adopter tree, by destroying the file and putting a
+ * directory of the same name in its place (`EISDIR`).
+ *
+ * The file itself is destroyed: only the NAME survives a directory read, and
+ * it now names a directory. A subsequent `qfai init` neither repairs that nor
+ * fails on it (measured, not assumed): the root template copy is create-only
+ * regardless of `--force` — force reaches only `assistant/skills` and the
+ * integration wrappers — and its existence probe is an `access()` that a
+ * directory satisfies, so the name is SKIPPED, the directory survives, and no
+ * provenance entry is added for it. A caller that needs a real file back at
+ * that path must allocate a fresh tree instead of re-installing over this one.
  *
  * The realistic form of this state is a transient `EPERM` / `EBUSY` from an
  * editor lock or an AV scanner on Windows, which cannot be arranged
@@ -83,30 +90,4 @@ export async function makeShippedWorkflowUnreadable(dir: string, name: string): 
   const target = adopterWorkflowPath(dir, name);
   await rm(target, { force: true });
   await mkdir(target, { recursive: true });
-}
-
-/**
- * Drops one name's entry from the adopter tree's install-provenance record,
- * leaving every other entry untouched. Rebuilt rather than deleted in place
- * so the record stays the shape the sanctioned writer round-trips.
- *
- * Throws when the name has no entry to drop. `readInstallProvenance` is
- * fail-safe by contract — an absent or malformed record reads as an empty
- * one — so without this guard the helper would filter nothing, write, and
- * return normally, and a suite asserting "this name is not compared" would
- * pass because no name was ever recorded rather than because the entry was
- * removed.
- */
-export async function dropProvenanceEntry(dir: string, name: string): Promise<void> {
-  const record = await readInstallProvenance(dir);
-  if (record.workflows[name] === undefined) {
-    throw new Error(
-      `dropProvenanceEntry: '${name}' has no install-provenance entry under ${dir}; ` +
-        `recorded names: ${Object.keys(record.workflows).join(", ") || "(none)"}`,
-    );
-  }
-  const remaining = Object.fromEntries(
-    Object.entries(record.workflows).filter(([entryName]) => entryName !== name),
-  );
-  await writeInstallProvenance(dir, { workflows: remaining });
 }

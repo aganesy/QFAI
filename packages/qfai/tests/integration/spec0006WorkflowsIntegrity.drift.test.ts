@@ -62,6 +62,14 @@ describe(
       const check = data.checks.find((entry) => entry.id === "workflows.integrity");
 
       expect(check, "qfai doctor must emit a workflows.integrity check").toBeDefined();
+      // The TC Verify says the check fires 「1 件」, which counts EMISSIONS of
+      // the check, not entries in `modified`. `addCheck` is a bare push with
+      // no dedup and the lookup above is a `find`, so a second registration of
+      // the same id would be invisible to every other assertion here.
+      expect(
+        data.checks.filter((entry) => entry.id === "workflows.integrity"),
+        "workflows.integrity must be registered exactly once per doctor run",
+      ).toHaveLength(1);
       expect(
         check?.severity,
         "an edited installed shipped workflow is an info-severity advisory",
@@ -115,11 +123,12 @@ describe(
 
       const modified = readModifiedPaths(check?.details);
       expect(modified, "details.modified must be a string array").toBeDefined();
+      // Deep equality already pins length, membership and order, and its diff
+      // prints any extra entry — no separate length assertion is needed here.
       expect(
         modified,
         "the unreadable file must be reported, and the deleted one must not be",
       ).toEqual([`${ADOPTER_WORKFLOWS_DIR}/qfai-tests.yml`]);
-      expect(modified?.length, "one recorded name is unreadable, not two").toBe(1);
     });
 
     // Observed through the reader rather than `createDoctorData`, because the
@@ -153,11 +162,24 @@ describe(
 
       expect(same.modified, "a matching packaged operand yields no drift").toEqual([]);
       expect(same.status, "a matching packaged operand is not a drift status").toBe("ok");
+      // Deep equality pins length, membership and order on its own; a trailing
+      // length assertion would add no discriminating power.
       expect(
         drifted.modified,
         "the differing packaged operand must be the one compared against",
       ).toEqual([`${ADOPTER_WORKFLOWS_DIR}/qfai-tests.yml`]);
-      expect(drifted.modified.length, "one recorded name differs, not two").toBe(1);
+
+      // Named leg, not an incidental one: `qfai-validate.yml` IS recorded in
+      // provenance and IS present in the adopter tree, but NEITHER packaged
+      // tree above carries it. A name the running package no longer ships is
+      // the `extra` bucket, which BR-0006-0018 excludes from drift, so this is
+      // the assertion that fails if the packaged-absent leg of the reader is
+      // ever flipped to report drift. Keep `qfai-validate.yml` out of both
+      // packaged trees, or this protection disappears silently.
+      expect(
+        [...same.modified, ...drifted.modified],
+        "a recorded name present on disk with no packaged counterpart is `extra`, never drift",
+      ).not.toContain(`${ADOPTER_WORKFLOWS_DIR}/qfai-validate.yml`);
     });
   },
 );

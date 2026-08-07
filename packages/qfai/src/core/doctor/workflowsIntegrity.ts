@@ -46,7 +46,16 @@
  * it digests a Buffer — and comparing the two bases would mismatch on every
  * CRLF checkout, reintroducing the false advisory this module exists to
  * avoid. A provenance entry is used here for PRESENCE ONLY; its `sha256` is
- * never read. Do not fold the two together.
+ * never read.
+ *
+ * The differing basis is the cheap objection, not the load-bearing one: if
+ * the installer's digest basis were ever normalized to match, folding the two
+ * together would STILL be wrong, because they answer different questions.
+ * `entry.sha256` answers "has the adopter edited this file since install?";
+ * the packaged comparison answers "is this adopter behind the copy the
+ * running package ships?". REQ-0022 asks for the second, and an adopter who
+ * never touched a file still has to be told that the package moved on.
+ * Do not fold the two together.
  *
  * ## Read-only and fail-safe, but absence is not unreadability
  *
@@ -75,6 +84,16 @@ const WORKFLOWS_DIR_RELATIVE = WORKFLOWS_DIR_SEGMENTS.join("/");
 
 export type WorkflowsIntegrityStatus = "ok" | "modified" | "skipped_unresolved";
 
+/**
+ * Two members have no consumer at this revision, and that is deliberate
+ * rather than leftover: `packagedDir` is claimed by the `details` payload of
+ * business rule BR-0006-0022, and `status === "skipped_unresolved"` by the
+ * unresolvable-packaged-copy skip of BR-0006-0020 — both of which are later
+ * obligations of this same check. (`status === "ok"` IS consumed: the
+ * override leg of the drift suite asserts it.) Recorded here because the
+ * evidence directory that carries the longer argument is not version
+ * controlled; delete a member instead of widening it if its rule is dropped.
+ */
 export type WorkflowsIntegrityDiff = {
   status: WorkflowsIntegrityStatus;
   /** Root-relative POSIX path of the adopter's workflows directory. */
@@ -111,11 +130,12 @@ function digestNormalizedText(text: string): string {
  * One file read, discriminated so that "not there" and "there but could not
  * be read" stay distinguishable. Collapsing them is what lets an unreadable
  * file produce the same output as an identical one.
+ *
+ * `unreadable` carries no error code on purpose: every consumer branches on
+ * `kind` alone, and this module's output surface has no per-file slot to
+ * render a code into. A code is worth capturing when something reads it.
  */
-type FileDigest =
-  | { kind: "digest"; value: string }
-  | { kind: "absent" }
-  | { kind: "unreadable"; code: string };
+type FileDigest = { kind: "digest"; value: string } | { kind: "absent" } | { kind: "unreadable" };
 
 /** The `code` of a Node filesystem error, or `undefined` for other throws. */
 function errorCode(error: unknown): string | undefined {
@@ -130,11 +150,10 @@ async function digestFile(filePath: string): Promise<FileDigest> {
   try {
     return { kind: "digest", value: digestNormalizedText(await readFile(filePath, "utf-8")) };
   } catch (error) {
-    const code = errorCode(error);
-    if (code === "ENOENT") {
+    if (errorCode(error) === "ENOENT") {
       return { kind: "absent" };
     }
-    return { kind: "unreadable", code: code ?? "UNKNOWN" };
+    return { kind: "unreadable" };
   }
 }
 
