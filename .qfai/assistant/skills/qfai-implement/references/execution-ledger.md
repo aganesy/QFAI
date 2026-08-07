@@ -175,7 +175,10 @@ and examples: `selector-granularity.md`.
 
 Valid status values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`.
 
-Allowed transitions:
+### Allowed transitions
+
+This list is the complete one. `qfai-implement/SKILL.md` summarises it and
+`TDDLIST_EXCEPTION_PARKED` links here; both defer to what follows.
 
 - `todo` -> `blocked` (the row cannot be started: an upstream defect, an
   unresolved Change Request, or an unfinished row in another spec). Name the
@@ -208,7 +211,7 @@ Allowed transitions:
   The `Test file` existence check is unchanged for `green` / `refactor` /
   `done`: those statuses assert a test that ran.
 
-- `refactor` -> `red` (**QA rejection recovery — the only re-entry**): a routed
+- `refactor` -> `red` (**QA rejection recovery**): a routed
   `qa-gatekeeper` returned `REVISE` on this row's RED/GREEN evidence because the
   cycle itself was wrong. Batched (T1) review defers that confirmation until
   after the row has left `red`, so without this edge a rejected row could never
@@ -216,14 +219,23 @@ Allowed transitions:
   in `Evidence`, re-run the micro-cycle; rules:
   `volume-policy.md#group-formation-states-and-transitions`.
 
-Backward transitions are otherwise prohibited and nothing but that QA rejection
-re-opens a row. Attempting `green` -> `red` must produce:
-`"Backward transition prohibited: green -> red"`. The upstream reset above is
-not a backward transition: it is an owner-approved re-entry, and the row starts
-its cycle again from `todo`.
+Any edge not listed above is prohibited. Attempting `green` -> `red` must
+produce: `"Backward transition prohibited: green -> red"`.
 
-The one exception is an approved Change Request reset — the only sanctioned
-backward transition. Preconditions and the reset procedure:
+**"Backward" is narrower than "moves to an earlier status".** Four of the edges
+above return a row to an earlier state and none of them is a backward
+transition, because each restarts the cycle from `todo` or is an explicitly
+sanctioned re-entry:
+
+| Edge                         | Why it is not backward                              | Approval needed |
+| ---------------------------- | --------------------------------------------------- | --------------- |
+| `blocked` -> `todo`          | resumption — the row never started                  | none            |
+| `exception` -> `todo`        | anomaly resolved — nothing upstream changed         | none            |
+| `* -> todo` (upstream reset) | owner-approved re-entry, cycle restarts from `todo` | approved `CR-*` |
+| `refactor` -> `red`          | QA rejection recovery on this row's own evidence    | `qa-gatekeeper` |
+
+The approved Change Request reset is the only **sanctioned backward
+transition** in the strict sense. Preconditions and the reset procedure:
 `references/change-request-reset.md`.
 
 ### Reviewer rework is not a backward transition
