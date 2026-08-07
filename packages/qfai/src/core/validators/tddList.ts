@@ -23,6 +23,7 @@ import {
   UNIT_COMPONENT_LAYERS,
   NON_COVERAGE_LAYERS,
 } from "../tddHelpers.js";
+import { collectHeadingTcLevelsFrom } from "../atddTraceability.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
 
@@ -454,6 +455,30 @@ async function validateSpecTddList(
         "tddList.fileExists",
       ),
     );
+    // …but the obligations it would have carried do not disappear with it.
+    // A `warning` here was survivable while `QFAI-ATDD-112` demanded an
+    // annotation for every TC. Now that Unit/Component are excluded from that
+    // rule, this ledger is their only gate, and returning early on a missing
+    // file meant a spec with declared L1/L2 TCs, no tests and no ledger passed
+    // `validate --profile full --fail-on error` on an `info` finding alone.
+    const { unitComponentTcIds } = await collectTestCaseIds(specDir);
+    if (unitComponentTcIds.size > 0) {
+      const missing = Array.from(unitComponentTcIds).sort((left, right) =>
+        left.localeCompare(right),
+      );
+      issues.push(
+        issue(
+          "TDDLIST_TC_NOT_COVERED",
+          `tdd/test-list.md is absent for spec-${specNumber}, so ${String(missing.length)} coverage-target TC have no row: ${missing.slice(0, 10).join(", ")}${missing.length > 10 ? ` (他 ${String(missing.length - 10)} 件)` : ""}`,
+          "error",
+          relPath,
+          "tddList.tcCoverage",
+          missing,
+          "change",
+          `Seed \`${TDD_LIST_REL_PATH}\` with one row per coverage-target TC (\`/qfai-sdd\` Phase 2b), then run \`/qfai-implement\`.`,
+        ),
+      );
+    }
     return issues;
   }
 
@@ -1318,12 +1343,31 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   } catch {
     return collected;
   }
+  // Heading form (`## TC-0001` plus a `- Level:` line) is a supported shape
+  // that `parseTestCases` and the ATDD level collector both read, and that this
+  // gate did not: `resolveTestCaseTable` returns tables only, so a heading-form
+  // spec produced a `TDDLIST_TC_TABLE_UNRESOLVED` warning and skipped coverage
+  // entirely. With L1/L2 excluded from `QFAI-ATDD-112`, that left them gated by
+  // nothing at all. Collected before the table pass so a spec that uses only
+  // headings is still covered.
+  for (const [tcId, level] of collectHeadingTcLevelsFrom(content)) {
+    knownTcIds.add(tcId);
+    if (classifyCoverageLevel(level) === "unrecognized") {
+      unrecognizedLevels.add(level);
+    }
+    if (isCoverageTargetLevel(level)) {
+      unitComponentTcIds.add(tcId);
+    }
+  }
+
   // Scoped to the `## Test Case Table` section the template names, with a
   // header-match fallback for older specs. Reading the first table in
   // document order let an explanatory table above the heading hijack the set.
   const resolution = resolveTestCaseTable(content);
   if (!resolution.table) {
-    return { ...collected, unresolved: resolution.reason };
+    // Only unresolved when neither shape yielded anything. A heading-form spec
+    // has real TCs and must not be reported as an unreadable one.
+    return knownTcIds.size > 0 ? collected : { ...collected, unresolved: resolution.reason };
   }
 
   // Every TC-ID table, not just the first. `atddTraceability` already reads
@@ -1331,8 +1375,7 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   // that `QFAI-ATDD-112` saw and this gate did not. Since L1/L2 are now
   // excluded from `QFAI-ATDD-112`, the ledger is their only gate — a `Level =
   // L1` row in a second table would otherwise be owed by nothing at all.
-  // `resolution` above still decides *whether* a table was found, so the
-  // `unresolved` reason and its finding are unchanged.
+
   for (const table of resolveTestCaseTables(content)) {
     const headers = table.headers.map((h) => h.trim());
     const tcIdIndex = headers.indexOf("TC-ID");

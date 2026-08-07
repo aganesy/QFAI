@@ -14,7 +14,7 @@ import {
 } from "./fs.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { resolveSurfaceUnion } from "./prototyping/specResolution.js";
-import { parseAllMarkdownTables } from "./specPackParsers.js";
+import { maskNonSpecRegions, parseAllMarkdownTables } from "./specPackParsers.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { collectMarkdownItems, uniqueMatches } from "./validators/utils.js";
 
@@ -498,7 +498,13 @@ async function collectSpecRefs(specsRoot: string): Promise<{
  * just the first — a spec may split its catalogue across several tables, and
  * only scanning the first silently dropped the later tables' layers.
  */
-export function collectTcLevels(tcText: string): Map<string, string> {
+export function collectTcLevels(rawTcText: string): Map<string, string> {
+  // Fenced samples and HTML comments are not the spec. Without this, a
+  // commented-out old table or a format example declaring `TC-0001` as `L1`
+  // wins under first-declaration-wins and silently removes the real row's
+  // `QFAI-ATDD-112` obligation — a hole that only opened once L1/L2 stopped
+  // being an obligation of their own.
+  const tcText = maskNonSpecRegions(rawTcText);
   const levels = new Map<string, string>();
   for (const [id, level] of collectHeadingTcLevels(tcText)) {
     levels.set(id, level);
@@ -533,6 +539,19 @@ function collectTableTcLevels(tcText: string): Array<[string, string]> {
     }
   }
   return pairs;
+}
+
+/**
+ * Heading-form TC levels only (`## TC-0001` + `- Level:`), with non-spec
+ * regions masked.
+ *
+ * Exported for `validateTddList`: its table reader is deliberately
+ * section-scoped, so the heading shape needs collecting separately. Using the
+ * combined `collectTcLevels` there would re-admit every table in the document,
+ * including an Appendix one the section scoping exists to keep out.
+ */
+export function collectHeadingTcLevelsFrom(rawTcText: string): Array<[string, string]> {
+  return collectHeadingTcLevels(maskNonSpecRegions(rawTcText));
 }
 
 function collectHeadingTcLevels(tcText: string): Array<[string, string]> {

@@ -318,8 +318,10 @@ routes by obligation ID: `US-*` is answered from `tests/e2e/**`
     filed early into `tests/api/**`.
 - Unknown references (`US/TC/CON-API` not declared) are errors.
 - A `TC-*` annotation outside the directory its `Level` routes to is a
-  misplacement, whichever directory it lands in — including the two new
-  locations `tests/unit/**` and `tests/component/**`.
+  misplacement, whichever directory it lands in. **This applies to L3-L5 only.**
+  L1 and L2 route nowhere — they carry no ATDD annotation obligation at all — so
+  an annotation for one is neither required nor misplaced, in
+  `tests/unit/**`, `tests/component/**` or anywhere else.
 - AC annotations are not required in code; AC coverage is treated as indirect through TC coverage.
 - `QFAI:CON-API-*` in `tests/e2e/**` is not forbidden, but contract guarantee belongs to API tests.
 

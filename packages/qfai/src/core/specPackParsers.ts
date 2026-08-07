@@ -176,7 +176,7 @@ function maskLineComments(line: string, inComment: boolean): { text: string; ope
  * document. Comments are stripped before the fence check on a line, so a fence
  * marker that only appears inside a comment does not open a block either.
  */
-function maskNonSpecRegions(text: string): string {
+export function maskNonSpecRegions(text: string): string {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   let open: { marker: string; length: number } | null = null;
   let inComment = false;

@@ -245,3 +245,111 @@ describe("the replacement gate reads the same tables ATDD does", () => {
     }
   });
 });
+
+describe("the replacement gate has no holes the exclusion could fall through", () => {
+  async function withSpec(files: Record<string, string>, task: (root: string) => Promise<void>) {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-gate-holes-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      for (const [rel, body] of Object.entries(files)) {
+        const file = path.join(specDir, ...rel.split("/"));
+        await mkdir(path.dirname(file), { recursive: true });
+        await writeFile(file, body, "utf-8");
+      }
+      await task(root);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  const table = (rows: string) =>
+    [
+      "# 06 Test Cases",
+      "",
+      "## Test Case Table",
+      "",
+      "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+      "| ----- | ----- | ------- | ------ | ----- | -------- |",
+      rows,
+      "",
+    ].join("\n");
+
+  it("errors when the ledger is absent and the spec declares coverage-target TCs", async () => {
+    // `TDDLIST_MISSING` is a warning and returned early, so a spec with L1 TCs,
+    // no tests and no ledger passed `--fail-on error` on an `info` alone.
+    await withSpec(
+      { "06_Test-Cases.md": table("| TC-0001 | L1 | AC-0001 | - | s | e |") },
+      async (root) => {
+        const issues = await validateTddList(root, defaultConfig);
+        const notCovered = issues.find((entry) => entry.code === "TDDLIST_TC_NOT_COVERED");
+        expect(notCovered?.severity).toBe("error");
+        expect(notCovered?.message).toContain("TC-0001");
+      },
+    );
+  });
+
+  it("covers a heading-form TC, which the table reader never saw", async () => {
+    await withSpec(
+      {
+        "06_Test-Cases.md": ["# 06 Test Cases", "", "## TC-0001", "", "- Level: L1", ""].join("\n"),
+        "tdd/test-list.md": [
+          "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+          "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        const issues = await validateTddList(root, defaultConfig);
+        expect(issues.find((e) => e.code === "TDDLIST_TC_NOT_COVERED")?.message).toContain(
+          "TC-0001",
+        );
+      },
+    );
+  });
+});
+
+describe("a commented-out table cannot suppress a real obligation", () => {
+  it("ignores a Level declared inside an HTML comment", async () => {
+    // First-declaration-wins over unmasked text meant a stale commented table
+    // saying `L1` removed the live row's QFAI-ATDD-112 obligation entirely.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-masked-level-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      for (const [name, body] of [
+        ["01_Spec.md", "# Spec\n"],
+        ["02_User-stories.md", "# US\n"],
+        ["03_Acceptance-Criteria.md", "# AC\n"],
+      ] as const) {
+        await writeFile(path.join(specDir, name), body, "utf-8");
+      }
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "<!--",
+          "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+          "| ----- | ----- | ------- | ------ | ----- | -------- |",
+          "| TC-0001 | L1 | AC-0001 | - | s | e |",
+          "-->",
+          "",
+          "## Test Case Table",
+          "",
+          "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+          "| ----- | ----- | ------- | ------ | ----- | -------- |",
+          "| TC-0001 | L3 | AC-0001 | - | s | e |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const codes2 = (await validateAtddCodeTraceability(root, defaultConfig)).map((e) => e.code);
+      expect(codes2).toContain("QFAI-ATDD-112");
+      expect(codes2).not.toContain("QFAI-ATDD-117");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
