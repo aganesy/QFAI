@@ -6,6 +6,14 @@
 
 ### Fixed
 
+- **An unknown `US` / `TC` reference is scoped by the spec its token names.**
+  `QFAI-ATDD-101` / `-102` are filed against the test file carrying the typo,
+  which no spec owns, so a sibling's `QFAI:SPEC-0001:TC-9999` failed
+  `--spec 0002`. The root cause was narrower than it looked: the owning-spec
+  regex was anchored at `SPEC-`, and an unknown-reference token is the
+  annotation as written (`QFAI:SPEC-0001:TC-9999`), so every one of them read as
+  unattributed. Contract tokens (`CON-API-*` / `CON-DB-*`) name no spec and stay
+  repo-wide, the documented limit `QFAI-ATDD-113` already has.
 - **A forbidden TC placement is scoped too.** `narrowToScope` narrowed
   `missing.us` / `missing.tc` only, and `QFAI-ATDD-121` / `-122` / `-123` are
   filed against a `tests/**` path that `.qfai/specs/` does not own — so a

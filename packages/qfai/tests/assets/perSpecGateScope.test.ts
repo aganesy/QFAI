@@ -74,6 +74,18 @@ describe.each(TREES)("%s", (tree) => {
     expect(atdd).toContain("do **not** claim the gate passed, weaken the profile");
   });
 
+  it("says the tdd gate still fails on a sibling's todo stub", async () => {
+    // `--profile tdd` *does* run `validateTestTodoStubs`, and
+    // `QFAI-TEST-001` names a test file, which no spec owns — so a sibling's
+    // `it.todo` exits 1 on this gate. The checklist read as though `--spec`
+    // made the gate this spec's own, which is the reading that ends in an
+    // operator lowering `--fail-on` to get green.
+    const checklist = flat(await read(tree, FINAL));
+    expect(checklist).toContain("`QFAI-TEST-001` is **not** one of them");
+    expect(checklist).toContain("a sibling spec's `it.todo` exits 1 here");
+    expect(checklist).toContain("do **not** claim the gate passed");
+  });
+
   it("does not name a rule the atdd profile never runs", async () => {
     // `runAtddValidators` runs `validateAtddCodeTraceability` and
     // `validateScaffoldPlaceholder` only — `validateTestTodoStubs` is wired

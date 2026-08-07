@@ -15,7 +15,12 @@ import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
 /** `SPEC-0004:US-0002` / `SPEC-0004:TC-0002-0007` — the spec number is group 1. */
-const OWNING_SPEC_RE = /^SPEC-(\d{4}):/;
+// The optional `QFAI:` prefix is not cosmetic: `missing.*` and `forbidden.ids`
+// carry `SPEC-0001:TC-0001`, while an unknown-reference token is the annotation
+// as written, `QFAI:SPEC-0001:TC-9999`. Anchoring on `SPEC-` alone classified
+// every unknown token as unattributed — the same belongs-to-every-scope hole
+// the representative-path rule closes elsewhere.
+const OWNING_SPEC_RE = /^(?:QFAI:)?SPEC-(\d{4}):/;
 
 /**
  * Drops `SPEC-NNNN:`-prefixed refs the run was not scoped to.
@@ -55,8 +60,18 @@ function narrowToScope(
       .map((entry) => ({ ...entry, ids: entry.ids.filter(inScope) }))
       .filter((entry) => entry.ids.length > 0);
 
+  // Unknown `US` / `TC` tokens carry their own `SPEC-NNNN`, so they are
+  // attributable — and a sibling's typo failed a scoped gate the same way its
+  // uncovered obligation did. `conApi` / `conDb` tokens name no spec and stay
+  // repo-wide, on the same terms as `QFAI-ATDD-113` / `-115`.
+  const narrowUnknown = (entries: AtddUnknownRef[]): AtddUnknownRef[] =>
+    entries.filter((entry) =>
+      entry.kind === "us" || entry.kind === "tc" ? inScope(entry.token) : true,
+    );
+
   return {
     ...result,
+    unknown: narrowUnknown(result.unknown),
     missing: {
       ...result.missing,
       us: result.missing.us.filter(inScope),
@@ -165,7 +180,7 @@ export async function validateAtddCodeTraceability(
   const dirs = atddTestKindDirs(config.paths.testsDir);
   const issues: Issue[] = [];
 
-  issues.push(...buildUnknownIssues(result.unknown));
+  issues.push(...buildUnknownIssues(result.unknown, result.specsRoot));
 
   if (result.missing.us.length > 0) {
     const usAttribution = specAttribution(result.missing.us, result.specsRoot);
@@ -426,7 +441,7 @@ function buildMissingTcFix(
   return `各 TC の宣言 Level が指すディレクトリに \`QFAI:SPEC-XXXX:TC-YYYY\` 注釈を追加してください（L3/Integration -> ${dirs.integration}、L4/API -> ${dirs.api}、L5/E2E -> ${dirs.e2e}、Level 未宣言は ${dirs.integration}）: ${perHome}`;
 }
 
-function buildUnknownIssues(unknown: AtddUnknownRef[]): Issue[] {
+function buildUnknownIssues(unknown: AtddUnknownRef[], specsRoot: string): Issue[] {
   if (unknown.length === 0) {
     return [];
   }
@@ -459,6 +474,10 @@ function buildUnknownIssues(unknown: AtddUnknownRef[]): Issue[] {
           refs,
           "change",
           "spec 側に US を定義するか、テスト注釈を正しい ID へ修正してください。",
+          // `file` is the test carrying the typo — what the operator edits —
+          // but a `tests/**` path has no spec owner, so without this the
+          // finding survived every `--spec` filter.
+          { relatedFiles: owningSpecDirs(refs, specsRoot) },
         );
       }
       if (entry.kind === "tc") {
@@ -471,6 +490,7 @@ function buildUnknownIssues(unknown: AtddUnknownRef[]): Issue[] {
           refs,
           "change",
           "spec 側に TC を定義するか、テスト注釈を正しい ID へ修正してください。",
+          { relatedFiles: owningSpecDirs(refs, specsRoot) },
         );
       }
       if (entry.kind === "conDb") {

@@ -313,3 +313,51 @@ describe("a forbidden TC placement is scoped too", () => {
     });
   });
 });
+
+describe("an unknown US/TC reference is scoped by the spec its token names", () => {
+  it("drops a sibling spec's typo from a scoped run", async () => {
+    // `narrowToScope` left `result.unknown` whole, and `QFAI-ATDD-101` / `-102`
+    // are filed against the test file carrying the typo — a path no spec owns
+    // — so a sibling's `QFAI:SPEC-0001:TC-9999` failed `--spec 0002`.
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      const testFile = path.join(root, "tests", "integration", "typo.test.ts");
+      await mkdir(path.dirname(testFile), { recursive: true });
+      await writeFile(
+        testFile,
+        ["// QFAI:SPEC-0001:TC-9999", "it('x', () => {});", ""].join("\n"),
+        "utf-8",
+      );
+
+      const unscoped = await validateAtddCodeTraceability(root, defaultConfig);
+      const finding = unscoped.find((entry) => entry.code === "QFAI-ATDD-102");
+      expect(finding).toBeDefined();
+      expect(finding?.relatedFiles).toEqual([path.join(root, ".qfai", "specs", "spec-0001")]);
+
+      const scoped = await validateAtddCodeTraceability(root, defaultConfig, {
+        specScope: new Set(["0002"]),
+      });
+      expect(scoped.map((entry) => entry.code)).not.toContain("QFAI-ATDD-102");
+    });
+  });
+
+  it("keeps an unknown contract reference repo-wide", async () => {
+    // A `CON-API-*` token names no spec, so there is nothing to attribute it
+    // to — the same documented limit `QFAI-ATDD-113` has.
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      const testFile = path.join(root, "tests", "api", "typo.test.ts");
+      await mkdir(path.dirname(testFile), { recursive: true });
+      await writeFile(
+        testFile,
+        ["// QFAI:CON-API-9999", "it('x', () => {});", ""].join("\n"),
+        "utf-8",
+      );
+
+      const scoped = await validateAtddCodeTraceability(root, defaultConfig, {
+        specScope: new Set(["0002"]),
+      });
+      expect(scoped.map((entry) => entry.code)).toContain("QFAI-ATDD-103");
+    });
+  });
+});

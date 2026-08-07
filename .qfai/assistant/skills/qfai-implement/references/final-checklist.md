@@ -17,5 +17,9 @@ cannot be ticked is a reason not to declare completion, not a note to carry forw
 - [ ] All tests pass.
 - [ ] `npx qfai validate --profile tdd --fail-on error --spec <spec-id>` passes with zero
       `QFAI-TEST-001` findings (no `it.todo` / `test.todo` / `describe.todo` stubs remain).
-      `--spec` scopes the gate to the spec this run owns; the repo-wide run belongs to
-      `/qfai-verify`.
+      `--spec` scopes the **spec-owned** rules; `QFAI-TEST-001` is **not** one of them and
+      still fails this gate wherever the stub lives. It names a test file, which no spec
+      owns, so a sibling spec's `it.todo` exits 1 here. That is a real limit, not a
+      formality: record the finding, its owning spec and why it is not this run's work,
+      say so in the completion report, and do **not** claim the gate passed, weaken the
+      profile or lower `--fail-on`. The repo-wide run belongs to `/qfai-verify`.
