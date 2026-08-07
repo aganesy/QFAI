@@ -41,6 +41,7 @@ const TC_TABLE = `# 06 Test Cases
 async function withProject<T>(
   testFiles: Record<string, string>,
   fn: (root: string) => Promise<T>,
+  testCases: string = TC_TABLE,
 ): Promise<T> {
   const root = path.join(
     os.tmpdir(),
@@ -53,7 +54,7 @@ async function withProject<T>(
       ["01_Spec.md", "# Spec\n"],
       ["02_User-stories.md", "# US\n"],
       ["03_Acceptance-Criteria.md", "# AC\n"],
-      ["06_Test-Cases.md", TC_TABLE],
+      ["06_Test-Cases.md", testCases],
     ] as const) {
       await writeFile(path.join(specDir, name), body, "utf-8");
     }
@@ -125,5 +126,89 @@ describe("QFAI-ATDD-105 — a silently dropped test file is now visible", () => 
         expect(result.skippedTestFiles).toEqual([]);
       },
     );
+  });
+
+  describe("and does not send an L1/L2 annotation anywhere", () => {
+    // The finding's remediation is "move it into integration / api / e2e".
+    // For a legacy file carrying only Unit/Component annotations that advice is
+    // wrong twice: the TC owes no ATDD annotation at all, so the move counts
+    // towards nothing, and `catalog/test-layers.md` says outright that an L1/L2
+    // annotation is neither required nor misplaced wherever it lands. Following
+    // it walks the project back into the all-integration collapse the exclusion
+    // was written to undo.
+    const LEVELS = (rows: string[]): string =>
+      [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        ...rows,
+        "",
+      ].join("\n");
+
+    it("says nothing about a legacy file whose annotations are all L1/L2", async () => {
+      await withProject(
+        { "tests/atdd/spec-0001/TC-0001.test.ts": "// QFAI:SPEC-0001:TC-0001\n" },
+        async (root) => {
+          const result = await evaluateAtddCodeTraceability(root, defaultConfig);
+          expect(result.skippedTestFiles).toEqual([]);
+        },
+        LEVELS(["| TC-0001 | L1 | AC-0001 | EX-0001 | step | expected |"]),
+      );
+    });
+
+    it("still names a file that carries one owed annotation alongside them", async () => {
+      // Conservative: one annotation ATDD still owns is enough to make the
+      // move the right advice for the file.
+      await withProject(
+        {
+          "tests/atdd/spec-0001/mixed.test.ts":
+            "// QFAI:SPEC-0001:TC-0001\n// QFAI:SPEC-0001:TC-0002\n",
+        },
+        async (root) => {
+          const result = await evaluateAtddCodeTraceability(root, defaultConfig);
+          expect(result.skippedTestFiles).toHaveLength(1);
+        },
+        LEVELS([
+          "| TC-0001 | L1 | AC-0001 | EX-0001 | step | expected |",
+          "| TC-0002 | L3 | AC-0001 | EX-0001 | step | expected |",
+        ]),
+      );
+    });
+
+    it.each([
+      ["a US annotation", "// QFAI:SPEC-0001:US-0001\n"],
+      ["a CON-API annotation", "// QFAI:CON-API-0001\n"],
+      ["a CON-DB annotation", "// QFAI:CON-DB-0001\n"],
+    ])("still names a legacy file carrying %s", async (_name, body) => {
+      // `US-*` and `CON-*` obligations are fixed by ID type, so no `Level`
+      // can excuse them from a scanned directory.
+      await withProject(
+        { "tests/atdd/spec-0001/other.test.ts": body },
+        async (root) => {
+          const result = await evaluateAtddCodeTraceability(root, defaultConfig);
+          expect(result.skippedTestFiles).toHaveLength(1);
+        },
+        LEVELS(["| TC-0001 | L1 | AC-0001 | EX-0001 | step | expected |"]),
+      );
+    });
+
+    it("still names a file whose TC declares no Level", async () => {
+      // An absent `Level` routes to `tests/integration/**` — it is not "no
+      // obligation", so the file is genuinely in the wrong place.
+      await withProject(
+        { "tests/atdd/spec-0001/TC-0002.test.ts": "// QFAI:SPEC-0001:TC-0002\n" },
+        async (root) => {
+          const result = await evaluateAtddCodeTraceability(root, defaultConfig);
+          expect(result.skippedTestFiles).toHaveLength(1);
+        },
+        LEVELS([
+          "| TC-0001 | L1 | AC-0001 | EX-0001 | step | expected |",
+          "| TC-0002 |  | AC-0001 | EX-0001 | step | expected |",
+        ]),
+      );
+    });
   });
 });

@@ -13,8 +13,10 @@ import path from "node:path";
 
 import type { ReportTddCoverage, ReportTddCoverageSpec } from "./report.js";
 import type { SpecEntry } from "./specLayout.js";
-import { parseFirstMarkdownTable, resolveTestCaseTable } from "./specPackParsers.js";
+import { resolveTestCaseTable } from "./specPackParsers.js";
 import {
+  collectLedgerTables,
+  isCoverageBearingRow,
   isCoverageTargetLevel,
   TDD_DONE_STATUSES,
   TDD_IN_REVIEW_STATUSES,
@@ -92,8 +94,17 @@ export async function collectTddCoverage(
       continue;
     }
 
-    const tddTable = parseFirstMarkdownTable(tddContent);
-    if (!tddTable) {
+    // Every ledger table, through the reader `validateTddList` scores coverage
+    // with. Reading the first table alone made `qfai report` and `qfai validate`
+    // give two answers about one file: `/qfai-implement` appends a table per
+    // change request, so a `done` L1/L2 row in an appended section passed
+    // validation while the report printed the TC as missing and open. A CI
+    // progress figure that contradicts the gate blocking the same branch is
+    // worse than no figure. Non-spec regions are masked and the ledger schema is
+    // required by the same reader, so a fenced template no longer inflates the
+    // report either.
+    const ledgerTables = collectLedgerTables(tddContent);
+    if (ledgerTables.length === 0) {
       specs.push({
         specNumber: entry.specNumber,
         unitComponentTotal: unitComponentTcIds.size,
@@ -107,11 +118,6 @@ export async function collectTddCoverage(
       });
       continue;
     }
-    const tddHeaders = tddTable.headers.map((h) => h.trim());
-    const tcRefsIdx = tddHeaders.indexOf("TC-Refs");
-    const statusIdx = tddHeaders.indexOf("Status");
-    const tddIdIdx = tddHeaders.indexOf("TDD-ID");
-    const drIdIdx = tddHeaders.indexOf("DR-ID");
 
     const coveredTcIds = new Set<string>();
     const exceptionRows: Array<{ tddId: string; drId: string }> = [];
@@ -134,12 +140,21 @@ export async function collectTddCoverage(
       counts.set(tc, (counts.get(tc) ?? 0) + 1);
     };
 
-    for (const row of tddTable.rows) {
-      // A set, not a list: a row naming two children of the same parent would
-      // otherwise contribute that parent twice and never reach its row total.
-      const rowRefs = new Set<string>();
-      if (tcRefsIdx >= 0) {
-        const refs = splitTcRefs(row[tcRefsIdx] ?? "");
+    for (const scan of ledgerTables) {
+      const tddHeaders = scan.table.headers.map((h) => h.trim());
+      const statusIdx = tddHeaders.indexOf("Status");
+      const drIdIdx = tddHeaders.indexOf("DR-ID");
+
+      for (const row of scan.table.rows) {
+        // The same predicate the gate applies: a line with no `TDD-ID` is not
+        // an item, and a `TC-*` on an E2E/API row is a placement the ledger
+        // schema forbids. Counting either here would print progress the gate
+        // does not recognise.
+        if (!isCoverageBearingRow(scan, row)) continue;
+        // A set, not a list: a row naming two children of the same parent would
+        // otherwise contribute that parent twice and never reach its row total.
+        const rowRefs = new Set<string>();
+        const refs = splitTcRefs(row[scan.tcRefsIndex] ?? "");
         for (const ref of refs) {
           const upper = ref.toUpperCase();
           coveredTcIds.add(upper);
@@ -150,25 +165,25 @@ export async function collectTddCoverage(
             rowRefs.add(parent);
           }
         }
-      }
-      for (const tc of rowRefs) bump(rowsPerTc, tc);
+        for (const tc of rowRefs) bump(rowsPerTc, tc);
 
-      const status = statusIdx >= 0 ? (row[statusIdx] ?? "").trim().toLowerCase() : "";
-      if (TDD_DONE_STATUSES.has(status)) {
-        for (const tc of rowRefs) bump(doneRowsPerTc, tc);
-      }
-      if (status === "blocked") {
-        for (const tc of rowRefs) bump(blockedRowsPerTc, tc);
-      }
-      if (TDD_IN_REVIEW_STATUSES.has(status)) {
-        for (const tc of rowRefs) bump(inReviewRowsPerTc, tc);
-      }
-      if (status === "exception") {
-        for (const tc of rowRefs) bump(exceptionRowsPerTc, tc);
-        exceptionRows.push({
-          tddId: tddIdIdx >= 0 ? (row[tddIdIdx] ?? "").trim() : "",
-          drId: drIdIdx >= 0 ? (row[drIdIdx] ?? "").trim() : "",
-        });
+        const status = statusIdx >= 0 ? (row[statusIdx] ?? "").trim().toLowerCase() : "";
+        if (TDD_DONE_STATUSES.has(status)) {
+          for (const tc of rowRefs) bump(doneRowsPerTc, tc);
+        }
+        if (status === "blocked") {
+          for (const tc of rowRefs) bump(blockedRowsPerTc, tc);
+        }
+        if (TDD_IN_REVIEW_STATUSES.has(status)) {
+          for (const tc of rowRefs) bump(inReviewRowsPerTc, tc);
+        }
+        if (status === "exception") {
+          for (const tc of rowRefs) bump(exceptionRowsPerTc, tc);
+          exceptionRows.push({
+            tddId: scan.tddIdIndex >= 0 ? (row[scan.tddIdIndex] ?? "").trim() : "",
+            drId: drIdIdx >= 0 ? (row[drIdIdx] ?? "").trim() : "",
+          });
+        }
       }
     }
 

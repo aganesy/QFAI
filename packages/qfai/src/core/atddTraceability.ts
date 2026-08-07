@@ -350,8 +350,10 @@ export async function evaluateAtddCodeTraceability(
   // roots. They contribute nothing to coverage and used to vanish without a
   // diagnostic — which is how `qfai atdd scaffold` could write files that every
   // gate then reported as zero coverage. Probed separately because the main
-  // scan is glob-scoped to the three roots and never sees them.
-  skippedTestFiles.push(...(await collectUncountedTestFiles(root, testsRoot)));
+  // scan is glob-scoped to the three roots and never sees them. `tcLevels` is
+  // passed because "contributes nothing" is not the same as "should be moved":
+  // an L1/L2 annotation is owed to no ATDD directory at all.
+  skippedTestFiles.push(...(await collectUncountedTestFiles(root, testsRoot, tcLevels)));
 
   const missing = buildMissingRefs({
     specUsIds,
@@ -420,7 +422,46 @@ const UNCOUNTED_TEST_DIRS = ["atdd"];
 /** Any QFAI test annotation, in any of its forms. */
 const ANY_QFAI_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:(?:US|TC)-|CON-(?:API|DB)-)/;
 
-async function collectUncountedTestFiles(root: string, testsRoot: string): Promise<string[]> {
+/** Any QFAI annotation whose obligation is fixed by its ID type, not by a `Level`. */
+const LEVEL_INDEPENDENT_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:US-|CON-(?:API|DB)-)/;
+
+/**
+ * Whether a legacy file's annotations are all ones ATDD no longer owes.
+ *
+ * `QFAI-ATDD-105` tells the operator to move the file into
+ * `integration` / `api` / `e2e`, which is right for anything ATDD counts. For a
+ * file carrying nothing but L1/L2 `TC-*` annotations it is wrong twice over: the
+ * TC owes no ATDD annotation at all, so moving it counts towards nothing, and
+ * `catalog/test-layers.md` states outright that an L1/L2 annotation is neither
+ * required nor misplaced wherever it lands. The advice would push a project back
+ * into the all-integration collapse the exclusion exists to undo.
+ *
+ * Conservative on every uncertainty: a `US-*` or `CON-*` annotation is
+ * `Level`-independent and still owed, and an unknown or level-less `TC-*`
+ * resolves to the default home rather than to "no obligation", so only a file
+ * whose every annotation is provably outside ATDD goes quiet.
+ */
+function carriesOnlyExcludedAnnotations(
+  text: string,
+  tcLevels: Map<string, Map<string, string>>,
+): boolean {
+  if (LEVEL_INDEPENDENT_ANNOTATION.test(text)) {
+    return false;
+  }
+  const tcAnnotations = extractSpecScopedAnnotations(text, TC_TEST_ANNOTATION_RE);
+  if (tcAnnotations.length === 0) {
+    return false;
+  }
+  return tcAnnotations.every(
+    (ref) => resolveTcHomeKind(tcLevels, ref.spec, `TC-${ref.id}`) === null,
+  );
+}
+
+async function collectUncountedTestFiles(
+  root: string,
+  testsRoot: string,
+  tcLevels: Map<string, Map<string, string>>,
+): Promise<string[]> {
   const patterns = UNCOUNTED_TEST_DIRS.map(
     (dir) =>
       `${toPosixPath(path.join(testsRoot, dir)).replace(/\/+$/, "")}/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}`,
@@ -439,9 +480,10 @@ async function collectUncountedTestFiles(root: string, testsRoot: string): Promi
   }
   const annotated: string[] = [];
   for (const file of files) {
-    if (ANY_QFAI_ANNOTATION.test(await readSafe(file))) {
-      annotated.push(toPosixPath(path.relative(root, file)));
-    }
+    const text = await readSafe(file);
+    if (!ANY_QFAI_ANNOTATION.test(text)) continue;
+    if (carriesOnlyExcludedAnnotations(text, tcLevels)) continue;
+    annotated.push(toPosixPath(path.relative(root, file)));
   }
   return annotated.sort();
 }
@@ -494,8 +536,8 @@ async function collectSpecRefs(specsRoot: string): Promise<{
  *
  * Both shipped shapes are read, matching `parseTestCases` in
  * `core/atdd/scaffold.ts`: the heading form (`## TC-NNNN` plus `- Level: L4`
- * meta lines) and the table form. Heading form wins on duplicates; within the
- * table form the first declaration wins. Every `TC-ID` table is scanned, not
+ * meta lines) and the table form. Heading form wins on duplicates; within
+ * either form the first declaration wins. Every `TC-ID` table is scanned, not
  * just the first — a spec may split its catalogue across several tables, and
  * only scanning the first silently dropped the later tables' layers.
  */
@@ -507,8 +549,17 @@ export function collectTcLevels(rawTcText: string): Map<string, string> {
   // being an obligation of their own.
   const tcText = maskNonSpecRegions(rawTcText);
   const levels = new Map<string, string>();
+  // First-seen, not last: `set` on every pair made the *last* duplicate heading
+  // win here while the ledger gate kept the first, so a TC headed `L1` and then
+  // `L1`-superseded-by-`L3` was excluded from `QFAI-ATDD-112` by one collector
+  // and claimed by `TDDLIST_TC_NOT_COVERED` by the other — owed twice, which is
+  // the two-gates-disagree failure this routing exists to remove. The table pass
+  // below and `resolveTestCaseTables` already resolve duplicates first-seen, so
+  // the heading pass was the one shape out of step.
   for (const [id, level] of collectHeadingTcLevels(tcText)) {
-    levels.set(id, level);
+    if (!levels.has(id)) {
+      levels.set(id, level);
+    }
   }
   for (const [id, level] of collectTableTcLevels(tcText)) {
     if (!levels.has(id)) {

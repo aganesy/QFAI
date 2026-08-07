@@ -4,10 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
-import type { MarkdownTable } from "../specPackParsers.js";
 import {
-  maskNonSpecRegions,
-  parseAllMarkdownTables,
   parseFirstMarkdownTable,
   resolveTestCaseTable,
   resolveTestCaseTables,
@@ -18,11 +15,15 @@ import {
   UNKNOWN_LEVEL_CODE,
   UNKNOWN_LEVEL_RULE_ID,
 } from "../ruleIds.js";
+import type { LedgerTable } from "../tddHelpers.js";
 import {
   classifyCoverageLevel,
+  collectLedgerTables,
+  isCoverageBearingRow,
   isCoverageTargetLevel,
   splitTcRefs,
   resolveParentTcId,
+  TDD_LEDGER_REQUIRED_COLUMNS,
   UNIT_COMPONENT_LAYERS,
   NON_COVERAGE_LAYERS,
 } from "../tddHelpers.js";
@@ -30,58 +31,37 @@ import { collectHeadingTcIdsFrom, collectHeadingTcLevelsFrom } from "../atddTrac
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
 
-/** A ledger table that can carry coverage, with its column positions resolved. */
-interface CoverageTable {
-  table: MarkdownTable;
-  tcRefsIndex: number;
-  layerIndex: number;
-  tddIdIndex: number;
+/**
+ * Whether a row of a ledger table is subject to the row-shape checks
+ * (`TDDLIST_INVALID_ID`, `TDDLIST_UNKNOWN_LAYER`,
+ * `TDDLIST_OBLIGATION_LAYER_MISMATCH`).
+ *
+ * The first table is checked whole, exactly as it always was: a blank `TDD-ID`
+ * there is itself `TDDLIST_INVALID_ID`, so every one of its rows is either an
+ * item or already reported. A later table has no such rule — the coverage
+ * reader deliberately treats a blank `TDD-ID` as "this line is not a row" — so
+ * applying the shape checks to those lines would report cells of something the
+ * ledger does not treat as a row at all. What is left is exactly the set
+ * Check 10 scores coverage from, which is the point: a row that can discharge a
+ * coverage-target TC is checked the same wherever in the ledger it sits.
+ */
+function isRowShapeChecked(scan: LedgerTable, row: string[], tableIndex: number): boolean {
+  if (tableIndex === 0) return true;
+  return scan.tddIdIndex < 0 || (row[scan.tddIdIndex] ?? "").trim().length > 0;
 }
 
 /**
- * Every table in the ledger that can carry coverage.
+ * Where a row-shape finding sits, for the human reading it.
  *
- * Two conditions, both of which a `TC-Refs`-column test alone failed:
- *
- * - **Non-spec regions are masked first.** A fenced template or a commented-out
- *   old table inside `test-list.md` is not the ledger, and reading it let an
- *   L1/L2 TC that has no real row count as covered — clearing the only `error`
- *   that still owes it now that `QFAI-ATDD-112` excludes L1/L2. The spec-side
- *   readers already mask; this one has to as well.
- * - **The table must carry the ledger schema.** The later tables are outside
- *   the required-column, `Layer` and unknown-ref checks that the first table
- *   passes, so a stray two-column table headed `TC-Refs` counted a TC as
- *   covered with no `TDD-ID`, no `Layer` and no `Test file` behind it.
- *   Requiring `REQUIRED_COLUMNS` makes "counts as coverage" and "is a ledger
- *   row" the same claim.
+ * A one-table ledger is the common case and its label has always been `row N`;
+ * naming a table it does not have would be noise. Row indices are per table, so
+ * once there is more than one the table has to be named or `row 2` is ambiguous.
  */
-function collectCoverageTables(content: string): CoverageTable[] {
-  const tables: CoverageTable[] = [];
-  for (const table of parseAllMarkdownTables(maskNonSpecRegions(content))) {
-    const headers = table.headers.map((header) => header.trim());
-    if (!REQUIRED_COLUMNS.every((column) => headers.includes(column))) continue;
-    const tcRefsIndex = headers.indexOf("TC-Refs");
-    if (tcRefsIndex < 0) continue;
-    tables.push({
-      table,
-      tcRefsIndex,
-      layerIndex: headers.indexOf("Layer"),
-      tddIdIndex: headers.indexOf("TDD-ID"),
-    });
-  }
-  return tables;
+function describeLedgerRow(tableIndex: number, rowIndex: number): string {
+  return tableIndex === 0 ? `row ${rowIndex + 1}` : `table ${tableIndex + 1}, row ${rowIndex + 1}`;
 }
 
-const REQUIRED_COLUMNS = [
-  "TDD-ID",
-  "TC-Refs",
-  "Layer",
-  "Test file",
-  "Selector",
-  "Status",
-  "DR-ID",
-  "Evidence",
-];
+const REQUIRED_COLUMNS = TDD_LEDGER_REQUIRED_COLUMNS;
 
 // `review-fix` is the state an item holds while reworking a blocking
 // reviewer's REVISE. Without it a REVISE landed on `refactor`, whose only
@@ -733,7 +713,11 @@ async function validateSpecTddList(
 
   const layerIndex = normalizedHeaders.indexOf("Layer");
 
-  // Check 5a: the `Layer` enum, on every row.
+  // Every table coverage is scored from, resolved once. Checks 5a, 5c and 6
+  // below read it as well as Check 10 — see `describeLedgerRow`.
+  const coverageTables = collectLedgerTables(content);
+
+  // Check 5a: the `Layer` enum, on every row of every coverage table.
   //
   // Read independently of any reference column: the obligation checks below
   // skip a row whose reference cell is empty or `-`, so `Layer = System` or a
@@ -741,16 +725,19 @@ async function validateSpecTddList(
   // obligation column that row owns. Warning, not error: `Layer` predates the
   // declared enum and existing ledgers carry project-specific names — an error
   // would break them on upgrade without a migration.
-  if (layerIndex >= 0) {
-    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
-      const rawLayer = (table.rows[rowIdx]?.[layerIndex] ?? "").trim();
+  for (const [tableIdx, scan] of coverageTables.entries()) {
+    if (scan.layerIndex < 0) continue;
+    for (let rowIdx = 0; rowIdx < scan.table.rows.length; rowIdx++) {
+      const row = scan.table.rows[rowIdx];
+      if (!row || !isRowShapeChecked(scan, row, tableIdx)) continue;
+      const rawLayer = (row[scan.layerIndex] ?? "").trim();
       // An empty cell carries no claim; the required-column check owns that gap.
       if (rawLayer.length === 0 || rawLayer === "-") continue;
       if (VALID_LAYERS.has(rawLayer.toLowerCase())) continue;
       issues.push(
         issue(
           "TDDLIST_UNKNOWN_LAYER",
-          `Unknown Layer "${rawLayer}" in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Legal values: Unit, Component, Integration, API, E2E`,
+          `Unknown Layer "${rawLayer}" in tdd/test-list.md for spec-${specNumber} (${describeLedgerRow(tableIdx, rowIdx)}). Legal values: Unit, Component, Integration, API, E2E`,
           "warning",
           relPath,
           "tddList.layerEnum",
@@ -797,11 +784,14 @@ async function validateSpecTddList(
   // so `Layer = E2E` with `TC-Refs = TC-0001` still validated clean AND, worse,
   // Check 10 below counted it, letting a forbidden placement mark a
   // coverage-target TC as covered.
-  if (tcRefsIndex >= 0 && layerIndex >= 0) {
-    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
-      const rawLayer = (table.rows[rowIdx]?.[layerIndex] ?? "").trim();
+  for (const [tableIdx, scan] of coverageTables.entries()) {
+    if (scan.layerIndex < 0) continue;
+    for (let rowIdx = 0; rowIdx < scan.table.rows.length; rowIdx++) {
+      const row = scan.table.rows[rowIdx];
+      if (!row || !isRowShapeChecked(scan, row, tableIdx)) continue;
+      const rawLayer = (row[scan.layerIndex] ?? "").trim();
       if (!TC_FORBIDDEN_LAYERS.has(rawLayer.toLowerCase())) continue;
-      const tcRefsCell = (table.rows[rowIdx]?.[tcRefsIndex] ?? "").trim();
+      const tcRefsCell = (row[scan.tcRefsIndex] ?? "").trim();
       const tcTokens = splitTcRefs(tcRefsCell).filter((token) =>
         TC_ID_TOKEN.test(token.toUpperCase()),
       );
@@ -809,7 +799,7 @@ async function validateSpecTddList(
       issues.push(
         issue(
           "TDDLIST_OBLIGATION_LAYER_MISMATCH",
-          `TC-Refs is not legal on a Layer=${rawLayer.toUpperCase()} row, but spec-${specNumber} (row ${rowIdx + 1}) references ${tcTokens.join(", ")}`,
+          `TC-Refs is not legal on a Layer=${rawLayer.toUpperCase()} row, but spec-${specNumber} (${describeLedgerRow(tableIdx, rowIdx)}) references ${tcTokens.join(", ")}`,
           "error",
           relPath,
           "tddList.tcRefsLayer",
@@ -828,16 +818,17 @@ async function validateSpecTddList(
   const testFileIndex = normalizedHeaders.indexOf("Test file");
 
   // Phase 2 – Check 6: TDD-ID format (TDD-NNNN)
-  if (tddIdIndex >= 0) {
-    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
-      const row = table.rows[rowIdx];
-      if (!row) continue;
-      const tddId = (row[tddIdIndex] ?? "").trim();
+  for (const [tableIdx, scan] of coverageTables.entries()) {
+    if (scan.tddIdIndex < 0) continue;
+    for (let rowIdx = 0; rowIdx < scan.table.rows.length; rowIdx++) {
+      const row = scan.table.rows[rowIdx];
+      if (!row || !isRowShapeChecked(scan, row, tableIdx)) continue;
+      const tddId = (row[scan.tddIdIndex] ?? "").trim();
       if (!TDD_ID_FORMAT.test(tddId)) {
         issues.push(
           issue(
             "TDDLIST_INVALID_ID",
-            `Invalid TDD-ID "${tddId}" in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Expected format: TDD-NNNN`,
+            `Invalid TDD-ID "${tddId}" in tdd/test-list.md for spec-${specNumber} (${describeLedgerRow(tableIdx, rowIdx)}). Expected format: TDD-NNNN`,
             "error",
             relPath,
             "tddList.idFormat",
@@ -1304,7 +1295,13 @@ async function validateSpecTddList(
   // while this was the second gate behind `QFAI-ATDD-112`; with L1/L2 now
   // excluded from that rule it is the only one, so a false negative here is a
   // hard `error` on a correct ledger.
-  const coverageTables = collectCoverageTables(content);
+  //
+  // Widening this reader is also what obliged Checks 5a / 5c / 6 to read the
+  // same set. They did not, so the identical row produced `TDDLIST_UNKNOWN_LAYER`
+  // in the first table and *no finding whatsoever* in a later one — while
+  // clearing this rule's `error` from both. The exclusions below name those
+  // checks as the rules that report a bad `Layer`; in a later table that was
+  // simply untrue.
   if (coverageTables.length > 0) {
     if (unitComponentTcIds.size > 0) {
       // TC -> the row layers that cite it. A set, not a boolean: the coverage
@@ -1317,19 +1314,14 @@ async function validateSpecTddList(
       };
       for (const scan of coverageTables) {
         for (const row of scan.table.rows) {
+          // `isCoverageBearingRow` is the shared answer to "may a coverage
+          // claim be read from this row" — a `TC-*` on an E2E/API row is a
+          // forbidden placement (Check 5c) and a line with no `TDD-ID` is not
+          // an item at all. `qfai report` asks the same function, so the two
+          // commands cannot disagree about one row.
+          if (!isCoverageBearingRow(scan, row)) continue;
           const rowLayer =
             scan.layerIndex >= 0 ? (row[scan.layerIndex] ?? "").trim().toLowerCase() : "";
-          // A `TC-*` sitting on an E2E/API row is a forbidden placement
-          // (Check 5c). Counting it here would let that single illegal row
-          // clear the coverage obligation for a unit/component TC.
-          if (TC_FORBIDDEN_LAYERS.has(rowLayer)) continue;
-          // A schema-shaped header is not enough: the row itself has to be a
-          // ledger row. A later table can carry the full header and then hold a
-          // line that fills `TC-Refs` and leaves `TDD-ID`, `Layer` and
-          // `Test file` blank — which clears the coverage obligation while a
-          // blank `Layer` also slips past both the E2E/API exclusion above and
-          // the crosswalk below. `TDD-ID` is what makes a row an item.
-          if (scan.tddIdIndex >= 0 && (row[scan.tddIdIndex] ?? "").trim().length === 0) continue;
           const tcRefsCell = (row[scan.tcRefsIndex] ?? "").trim();
           if (tcRefsCell.length === 0) continue;
           const refs = splitTcRefs(tcRefsCell);
@@ -1538,13 +1530,21 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   const headingLeveledTcIds = new Set<string>();
   for (const [tcId, level] of collectHeadingTcLevelsFrom(content)) {
     knownTcIds.add(tcId);
-    headingLeveledTcIds.add(tcId);
     if (classifyCoverageLevel(level) === "unrecognized") {
       unrecognizedLevels.add(level);
     }
+    // First declaration wins between two headings for the same TC, exactly as
+    // `collectTcLevels` now resolves them. Reading every pair let a later
+    // heading add a coverage target the earlier one had not claimed (`L3` then
+    // `L1`), or leave one the earlier had (`L1` then `L3`) — either way one TC
+    // owed by both gates, which is precisely what the L1/L2 exclusion cannot
+    // afford. `headingLeveledTcIds` is set here rather than at the top of the
+    // loop so a level-less heading does not out-rank a later levelled one.
+    if (headingLeveledTcIds.has(tcId)) continue;
+    headingLeveledTcIds.add(tcId);
     if (isCoverageTargetLevel(level)) {
       unitComponentTcIds.add(tcId);
-      // Heading form wins on duplicates, matching `collectTcLevels`.
+      // Heading form wins over the table form, matching `collectTcLevels`.
       coverageTargetLevels.set(tcId, level.trim().toLowerCase());
     }
   }
@@ -1566,6 +1566,17 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   // L1` row in a second table would otherwise be owed by nothing at all.
 
   const tableLeveledTcIds = new Set<string>();
+  // Coverage targets admitted by the blank/absent-`Level` fallback rather than
+  // by a declaration, and therefore still revocable.
+  //
+  // `classifyCoverageLevel("")` is `coverage-target` on purpose — an unstated
+  // `Level` must not silently drop the TC out of the only gate L1/L2 have. But
+  // a row that says nothing cannot out-rank a later row that says `L3`: the
+  // ATDD collector ignores a blank cell entirely and takes the `L3`, so leaving
+  // the provisional target in place made a correctly annotated integration TC
+  // owe `QFAI-ATDD-112` *and* `TDDLIST_TC_NOT_COVERED`. Tracking which ids the
+  // fallback added is what lets the first explicit `Level` settle it either way.
+  const provisionalTcIds = new Set<string>();
   for (const table of resolveTestCaseTables(content)) {
     // Lower-cased on both sides: `resolveTestCaseTables` now accepts a `tc-id`
     // / `TC-Id` header the way the ATDD collector always has, and a
@@ -1586,8 +1597,8 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
       // the two gates disagreeing about the same TC, which is the class of
       // defect this PR exists to close.
       if (headingLeveledTcIds.has(tcId)) continue;
+      const level = levelIndex >= 0 ? (row[levelIndex] ?? "").trim().toLowerCase() : "";
       if (levelIndex >= 0) {
-        const level = (row[levelIndex] ?? "").trim().toLowerCase();
         if (classifyCoverageLevel(level) === "unrecognized") {
           unrecognizedLevels.add((row[levelIndex] ?? "").trim());
         }
@@ -1598,17 +1609,31 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
         // `collectTcLevels` keeps the `L3`, and the two gates have to agree.
         if (tableLeveledTcIds.has(tcId)) continue;
         if (level.length > 0) {
+          // The first *explicit* `Level` is the declaration, and it settles a
+          // provisional target in whichever direction it points.
           tableLeveledTcIds.add(tcId);
+          if (!isCoverageTargetLevel(level)) {
+            if (provisionalTcIds.delete(tcId)) {
+              unitComponentTcIds.delete(tcId);
+              coverageTargetLevels.delete(tcId);
+            }
+            continue;
+          }
+          if (provisionalTcIds.delete(tcId)) {
+            // Provisionally recorded as `""`; the declaration replaces it, so
+            // the `Level`/`Layer` crosswalk reads the level the spec states
+            // rather than the absence an earlier row happened to show.
+            coverageTargetLevels.set(tcId, level);
+          }
         }
-        if (!isCoverageTargetLevel(level)) continue;
       }
       // Reaches here when: (a) Level is a coverage target, or (b) Level column is absent (fallback: all TCs)
       unitComponentTcIds.add(tcId);
       if (!coverageTargetLevels.has(tcId)) {
-        coverageTargetLevels.set(
-          tcId,
-          levelIndex >= 0 ? (row[levelIndex] ?? "").trim().toLowerCase() : "",
-        );
+        coverageTargetLevels.set(tcId, level);
+      }
+      if (level.length === 0) {
+        provisionalTcIds.add(tcId);
       }
     }
   }

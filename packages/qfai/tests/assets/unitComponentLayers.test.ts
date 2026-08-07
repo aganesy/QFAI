@@ -150,3 +150,47 @@ describe.each(["packages/qfai/assets/init/.qfai", ".qfai"])(
     });
   },
 );
+
+describe("the npm README states the routing the package ships", () => {
+  // `packages/qfai/README.md` is in `package.json#files`, so it is the npm
+  // landing page. It kept the pre-`Level`-routing rules: every `TC` in
+  // `tests/integration/**` and a blanket ban on `TC` in `tests/api/**` /
+  // `tests/e2e/**`. A reader arriving from npm duplicated L1/L2 into
+  // integration — the collapse this release exists to stop — and could not put
+  // an L4/L5 annotation in the home the validator demands.
+  const readReadme = async (): Promise<string> =>
+    (await readFile(path.join(repoRoot, "packages/qfai/README.md"), "utf-8")).replace(/\s+/g, " ");
+
+  it("routes a TC by its declared Level", async () => {
+    const readme = await readReadme();
+    expect(readme).toContain("| `L1`/`Unit`, `L2`/`Component` | no ATDD annotation |");
+    expect(readme).toContain("| `L3`/`Integration` | `tests/integration/**` |");
+    expect(readme).toContain("| `L4`/`API` | `tests/api/**` |");
+    expect(readme).toContain("| `L5`/`E2E` | `tests/e2e/**` |");
+    expect(readme).toContain("| none declared, or unreadable | `tests/integration/**` |");
+  });
+
+  it("no longer sends every test case to tests/integration or bans TC outright", async () => {
+    const readme = await readReadme();
+    expect(readme).not.toContain(
+      "`tests/integration/**`: annotate all covered test cases with concrete IDs",
+    );
+    expect(readme).not.toContain(
+      "`tests/api/**` and `tests/e2e/**` must not use `TC` annotations.",
+    );
+    expect(readme).toContain("The rule is `Level`-relative, not a blanket ban");
+  });
+
+  it("names the gate that owns Unit and Component instead", async () => {
+    // Dropping an obligation without naming its replacement reads as "unit
+    // tests are ungated", which is not what happened.
+    const readme = await readReadme();
+    expect(readme).toContain("carry **no** ATDD annotation obligation");
+    expect(readme).toContain("`tdd/test-list.md` ledger");
+  });
+
+  it("says the directories follow the configured testsDir", async () => {
+    const readme = await readReadme();
+    expect(readme).toContain("follow `paths.testsDir`");
+  });
+});

@@ -1,11 +1,14 @@
 /**
  * Shared constants and helpers for TDD list processing.
  *
- * The layer constants and the TC-Refs / parent-ID helpers are shared by the
- * `tddList` validator and the report generator, which is what keeps their
- * classification identical. The status sets below are the report generator's
- * alone — the validator owns its own `VALID_STATUSES` and does not read them.
+ * The layer constants, the ledger-table reader and the TC-Refs / parent-ID
+ * helpers are shared by the `tddList` validator and the report generator, which
+ * is what keeps their classification identical. The status sets below are the
+ * report generator's alone — the validator owns its own `VALID_STATUSES` and
+ * does not read them.
  */
+import type { MarkdownTable } from "./specPackParsers.js";
+import { maskNonSpecRegions, parseAllMarkdownTables } from "./specPackParsers.js";
 
 /**
  * Level values that ARE TDD coverage targets, in every spelling the shipped
@@ -102,6 +105,98 @@ export const TDD_DONE_STATUSES = new Set(["done"]);
  * what made the headline unusable.
  */
 export const TDD_IN_REVIEW_STATUSES = new Set(["green", "refactor", "review-fix"]);
+
+/**
+ * The columns a table must carry to be a `tdd/test-list.md` ledger table.
+ *
+ * Lives here rather than in the validator because "is this a ledger table" is
+ * the question `qfai validate` and `qfai report` have to answer identically:
+ * they score the same file and a reader keys one against the other.
+ */
+export const TDD_LEDGER_REQUIRED_COLUMNS = [
+  "TDD-ID",
+  "TC-Refs",
+  "Layer",
+  "Test file",
+  "Selector",
+  "Status",
+  "DR-ID",
+  "Evidence",
+];
+
+/** A ledger table that can carry coverage, with its column positions resolved. */
+export interface LedgerTable {
+  table: MarkdownTable;
+  tcRefsIndex: number;
+  layerIndex: number;
+  tddIdIndex: number;
+}
+
+/**
+ * Every table in the ledger that can carry coverage.
+ *
+ * Two conditions, both of which a `TC-Refs`-column test alone failed:
+ *
+ * - **Non-spec regions are masked first.** A fenced template or a commented-out
+ *   old table inside `test-list.md` is not the ledger, and reading it let an
+ *   L1/L2 TC that has no real row count as covered — clearing the only `error`
+ *   that still owes it now that `QFAI-ATDD-112` excludes L1/L2. The spec-side
+ *   readers already mask; this one has to as well.
+ * - **The table must carry the ledger schema.** A stray two-column table headed
+ *   `TC-Refs` would otherwise count a TC as covered with no `TDD-ID`, no `Layer`
+ *   and no `Test file` behind it. Requiring
+ *   {@link TDD_LEDGER_REQUIRED_COLUMNS} makes "counts as coverage" and "is a
+ *   ledger row" the same claim.
+ *
+ * **One reader, two commands.** `qfai validate` scores coverage from every
+ * ledger table because `/qfai-implement` appends a table per change request;
+ * `qfai report` read only the first, so a `done` row in an appended section
+ * validated clean and was printed as `open`. The progress figure a CI job
+ * publishes and the gate that blocks it must not disagree about the same file.
+ */
+export function collectLedgerTables(content: string): LedgerTable[] {
+  const tables: LedgerTable[] = [];
+  for (const table of parseAllMarkdownTables(maskNonSpecRegions(content))) {
+    const headers = table.headers.map((header) => header.trim());
+    if (!TDD_LEDGER_REQUIRED_COLUMNS.every((column) => headers.includes(column))) continue;
+    const tcRefsIndex = headers.indexOf("TC-Refs");
+    if (tcRefsIndex < 0) continue;
+    tables.push({
+      table,
+      tcRefsIndex,
+      layerIndex: headers.indexOf("Layer"),
+      tddIdIndex: headers.indexOf("TDD-ID"),
+    });
+  }
+  return tables;
+}
+
+/**
+ * Layers whose rows cannot host a `TC-*` obligation.
+ *
+ * `catalog/test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and
+ * `tests/api/**`, so those rows record their obligation in `US-Refs` /
+ * `CON-API-Refs`.
+ */
+const TC_FORBIDDEN_LEDGER_LAYERS = new Set(["api", "e2e"]);
+
+/**
+ * Whether a ledger row is one a coverage claim may be read from.
+ *
+ * A schema-shaped header is not enough: the row itself has to be an item. A
+ * line that fills `TC-Refs` and leaves `TDD-ID`, `Layer` and `Test file` blank
+ * would otherwise discharge a coverage obligation while its blank `Layer` also
+ * slipped past the E2E/API exclusion — `TDD-ID` is what makes a row an item.
+ * A `TC-*` sitting on an E2E/API row is a forbidden placement, and counting it
+ * would let that one illegal row close a coverage-target TC.
+ *
+ * Shared so `qfai validate` and `qfai report` cannot answer it differently.
+ */
+export function isCoverageBearingRow(scan: LedgerTable, row: readonly string[]): boolean {
+  if (scan.tddIdIndex >= 0 && (row[scan.tddIdIndex] ?? "").trim().length === 0) return false;
+  const layer = scan.layerIndex >= 0 ? (row[scan.layerIndex] ?? "").trim().toLowerCase() : "";
+  return !TC_FORBIDDEN_LEDGER_LAYERS.has(layer);
+}
 
 /**
  * Split a TC-Refs cell value into individual TC reference strings.

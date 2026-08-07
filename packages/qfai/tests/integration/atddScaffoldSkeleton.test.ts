@@ -494,5 +494,55 @@ describe("atdd scaffold — API and E2E TCs are out of scope too", () => {
     ).resolves.toBeDefined();
     expect(errors.join("\n")).toContain("API/E2E TC");
     expect(errors.join("\n")).toContain("QFAI-ATDD-123");
+    expect(errors.join("\n")).toContain("tests/api/**");
+    expect(errors.join("\n")).toContain("tests/e2e/**");
   });
+
+  it.each([
+    ["spec-tests", "spec-tests/api/**", "spec-tests/e2e/**"],
+    [".", "api/**", "e2e/**"],
+  ])(
+    "names the homes a testsDir of %s actually has",
+    async (testsDir, expectedApi, expectedE2e) => {
+      // The scaffold writer and the ATDD scan both follow `paths.testsDir`;
+      // only this advice was pinned to `tests/`. A project that relocated its
+      // tests was sent to a directory no gate reads, so following the
+      // instruction left `QFAI-ATDD-112` unclearable.
+      const specId = "spec-0005";
+      const specDir = path.join(root, ".qfai", "specs", specId);
+      await mkdir(specDir, { recursive: true });
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "## TC-0001-0001: api case",
+          "",
+          "- EX-Ref: EX-0001-0001",
+          "- Level: L4",
+          "- Verify something.",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        ["paths:", `  testsDir: "${testsDir}"`, ""].join("\n"),
+        "utf-8",
+      );
+
+      const errors: string[] = [];
+      await runAtddScaffold({
+        root,
+        specId,
+        write: () => {},
+        writeErr: (m) => errors.push(m),
+      });
+
+      // The whole clause, not the two paths on their own: `spec-tests/api/**`
+      // contains `tests/api/**` as a substring, so a containment check alone
+      // would pass on the very default this is meant to rule out.
+      expect(errors.join("\n")).toContain(`Author them in ${expectedApi} or ${expectedE2e}`);
+    },
+  );
 });

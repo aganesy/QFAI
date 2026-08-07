@@ -25,7 +25,11 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { AtddTestKind } from "../../src/core/atddTraceability.js";
-import { isOutsideAtddObligation, resolveAtddHomeKind } from "../../src/core/atddTraceability.js";
+import {
+  collectTcLevels,
+  isOutsideAtddObligation,
+  resolveAtddHomeKind,
+} from "../../src/core/atddTraceability.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { classifyCoverageLevel, UNIT_COMPONENT_LAYERS } from "../../src/core/tddHelpers.js";
 import { validateAtddCodeTraceability } from "../../src/core/validators/atddCodeTraceability.js";
@@ -1016,6 +1020,124 @@ describe("a later ledger table only counts its real rows", () => {
   });
 });
 
+describe("a row is checked the same wherever in the ledger it sits", () => {
+  // Widening the coverage reader to every ledger table left the row checks on
+  // the first one, so an identical row was diagnosed in table 1 and passed in
+  // silence in table 2 — while clearing `TDDLIST_TC_NOT_COVERED` from both.
+  // The only gate an L1/L2 TC has left became a claim that a meaningless cell
+  // could falsify with nothing on screen to say so.
+  async function run(ledgerBody: string) {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ledger-symmetry-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(path.join(specDir, "tdd"), { recursive: true });
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "## Test Case Table",
+          "",
+          "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+          "| ----- | ----- | ------- | ------ | ----- | -------- |",
+          "| TC-0001 | L1 | AC-0001 | - | s | e |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(path.join(specDir, "tdd", "test-list.md"), ledgerBody, "utf-8");
+      return await validateTddList(root, defaultConfig);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  const HEADER = [
+    "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+    "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+  ];
+  const FILLER = "| TDD-0001 | - | unit | tests/a.test.ts | a | todo | - | - |";
+
+  const inFirstTable = (row: string): string => [...HEADER, row, ""].join("\n");
+  const inLaterTable = (row: string): string =>
+    [...HEADER, FILLER, "", "## CHG-001", "", ...HEADER, row, ""].join("\n");
+
+  it("reports an unknown Layer in a later table, not only in the first", async () => {
+    const row = "| TDD-0002 | TC-0001 | bogus | tests/b.test.ts | b | todo | - | - |";
+    const later = (await run(inLaterTable(row))).filter(
+      (entry) => entry.code === "TDDLIST_UNKNOWN_LAYER",
+    );
+
+    expect(later).toHaveLength(1);
+    expect(later[0]?.severity).toBe("warning");
+    expect(later[0]?.message).toContain('Unknown Layer "bogus"');
+    // The row index is per table, so the table has to be named or `row 1`
+    // points at a different row than the one that carries the typo.
+    expect(later[0]?.message).toContain("table 2, row 1");
+  });
+
+  it.each([
+    [
+      "TDDLIST_UNKNOWN_LAYER",
+      "| TDD-0002 | TC-0001 | bogus | tests/b.test.ts | b | todo | - | - |",
+    ],
+    ["TDDLIST_INVALID_ID", "| nope | TC-0001 | unit | tests/b.test.ts | b | todo | - | - |"],
+    [
+      "TDDLIST_OBLIGATION_LAYER_MISMATCH",
+      "| TDD-0002 | TC-0001 | e2e | tests/e2e/b.test.ts | b | todo | - | - |",
+    ],
+  ])("raises %s for the same row in either table", async (code, row) => {
+    const first = (await run(inFirstTable(row))).filter((entry) => entry.code === code);
+    const later = (await run(inLaterTable(row))).filter((entry) => entry.code === code);
+
+    expect(first).toHaveLength(1);
+    expect(later).toHaveLength(1);
+    expect(later[0]?.severity).toBe(first[0]?.severity);
+  });
+
+  it("leaves the first table's own row label unchanged", async () => {
+    // A one-table ledger is the common case; naming a table it does not have
+    // would churn every existing message for nothing.
+    const issues = await run(
+      inFirstTable("| TDD-0002 | TC-0001 | bogus | tests/b.test.ts | b | todo | - | - |"),
+    );
+    const found = issues.find((entry) => entry.code === "TDDLIST_UNKNOWN_LAYER");
+
+    expect(found?.message).toContain("(row 1)");
+    expect(found?.message).not.toContain("table 1");
+  });
+
+  it("does not report the cells of a later line that is not a row", async () => {
+    // A blank `TDD-ID` under a schema-shaped header is the documented "not a
+    // row" shape, which the coverage reader already skips. Reporting its
+    // `Layer` would be a finding about something the ledger does not treat as
+    // a row — and the `TDDLIST_TC_NOT_COVERED` it earns says the real thing.
+    const codes = (await run(inLaterTable("|  | TC-0001 | bogus |  |  |  |  |  |"))).map(
+      (entry) => entry.code,
+    );
+
+    expect(codes).not.toContain("TDDLIST_UNKNOWN_LAYER");
+    expect(codes).not.toContain("TDDLIST_INVALID_ID");
+    expect(codes).toContain("TDDLIST_TC_NOT_COVERED");
+  });
+
+  it("keeps an unknown Layer at warning rather than turning it into a coverage failure", async () => {
+    // Deliberate: the row IS a ledger row — it has an id, a test file, a
+    // selector and a status — so "this TC has no row" would be false. Which
+    // severity a wrong `Layer` deserves is what `TDDLIST_COVERAGE_LAYER_MISMATCH`
+    // stages, and `TDDLIST_UNKNOWN_LAYER` is a warning because ledgers written
+    // before the enum existed carry project-specific names. Escalating here
+    // would make a typo stricter than a known-but-wrong layer next to it, and
+    // `QFAI-WAIVER-002` refuses every waiver on an `error`.
+    const codes = (
+      await run(inLaterTable("| TDD-0002 | TC-0001 | bogus | tests/b.test.ts | b | todo | - | - |"))
+    ).map((entry) => entry.code);
+
+    expect(codes).toContain("TDDLIST_UNKNOWN_LAYER");
+    expect(codes).not.toContain("TDDLIST_TC_NOT_COVERED");
+  });
+});
+
 describe("the heading form wins over a table row for the same TC", () => {
   it("does not re-add a heading-declared L3 TC as a coverage target", async () => {
     // `collectTcLevels` and the scaffold parser both prefer the heading. The
@@ -1106,6 +1228,225 @@ describe("the first declaration wins across tables, not only across shapes", () 
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe("exactly one gate owns a TC however its Level was written", () => {
+  /**
+   * Both gates on one spec. The property under test is not what either says on
+   * its own but that they never both claim, or both disown, the same TC.
+   */
+  async function gatesFor(
+    testCases: string,
+  ): Promise<{ atdd: string[]; tdd: string[]; levels: Map<string, string> }> {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-one-gate-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(path.join(specDir, "tdd"), { recursive: true });
+      for (const [name, body] of [
+        ["01_Spec.md", "# Spec\n"],
+        ["02_User-stories.md", "# US\n"],
+        ["03_Acceptance-Criteria.md", "# AC\n"],
+      ] as const) {
+        await writeFile(path.join(specDir, name), body, "utf-8");
+      }
+      await writeFile(path.join(specDir, "06_Test-Cases.md"), testCases, "utf-8");
+      await writeFile(
+        path.join(specDir, "tdd", "test-list.md"),
+        [
+          "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+          "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      return {
+        atdd: (await validateAtddCodeTraceability(root, defaultConfig)).map((entry) => entry.code),
+        tdd: (await validateTddList(root, defaultConfig)).map((entry) => entry.code),
+        levels: collectTcLevels(testCases),
+      };
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  const owners = (gates: { atdd: string[]; tdd: string[] }): string[] =>
+    [
+      gates.atdd.includes("QFAI-ATDD-112") ? "atdd" : null,
+      gates.tdd.includes("TDDLIST_TC_NOT_COVERED") ? "ledger" : null,
+    ].filter((owner): owner is string => owner !== null);
+
+  const headings = (...levels: string[]): string =>
+    [
+      "# 06 Test Cases",
+      "",
+      ...levels.flatMap((level, index) => [
+        `## TC-0001: declaration ${index + 1}`,
+        "",
+        `- Level: ${level}`,
+        "",
+      ]),
+    ].join("\n");
+
+  describe("two headings for one TC", () => {
+    // `collectTcLevels` used `set` on every pair, so the *last* heading won on
+    // the ATDD side while the ledger side kept the first. `L1` then `L3` was
+    // owed by both gates at once; the mirror order would have been owed by both
+    // the moment either side changed alone. Only first-seen on both makes the
+    // pair agree in either order — and it is the rule the table reader and the
+    // scaffold parser already follow.
+    it.each([
+      ["L1", "L3"],
+      ["L3", "L1"],
+    ])("is owned by exactly one gate when declared %s then %s", async (first, second) => {
+      const gates = await gatesFor(headings(first, second));
+
+      expect(owners(gates)).toHaveLength(1);
+      expect(gates.levels.get("TC-0001")).toBe(first.toLowerCase());
+    });
+
+    it("hands an L1-then-L3 TC to the ledger, which is what the first heading declared", async () => {
+      const gates = await gatesFor(headings("L1", "L3"));
+
+      expect(owners(gates)).toEqual(["ledger"]);
+      expect(gates.atdd).toContain("QFAI-ATDD-117");
+    });
+
+    it("does not let a level-less heading outrank a later levelled one", async () => {
+      // First-seen is about *declarations*. A `## TC-0001` block with no
+      // `- Level:` line declares nothing, so it must not consume the slot.
+      const gates = await gatesFor(
+        [
+          "# 06 Test Cases",
+          "",
+          "## TC-0001: no level",
+          "",
+          "- AC-Refs: AC-0001",
+          "",
+          "## TC-0001: declared",
+          "",
+          "- Level: L1",
+          "",
+        ].join("\n"),
+      );
+
+      expect(owners(gates)).toEqual(["ledger"]);
+    });
+  });
+
+  describe("a blank Level settled by a later explicit one", () => {
+    // `classifyCoverageLevel("")` is `coverage-target`, so a row that states no
+    // `Level` provisionally claims the TC for the ledger. The ATDD collector
+    // ignores a blank cell entirely and takes the later `L3`, so the
+    // provisional claim had to be released and was not: a TC with a correct
+    // integration annotation owed `QFAI-ATDD-112` and `TDDLIST_TC_NOT_COVERED`
+    // together, and full validation failed on a spec that was right.
+    const withLevelColumn = [
+      "# 06 Test Cases",
+      "",
+      "## Test Case Table",
+      "",
+      "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+      "| ----- | ----- | ------- | ------ | ----- | -------- |",
+      "| TC-0001 |  | AC-0001 | - | s | e |",
+      "",
+      "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+      "| ----- | ----- | ------- | ------ | ----- | -------- |",
+      "| TC-0001 | L3 | AC-0001 | - | s | e |",
+      "",
+    ].join("\n");
+
+    const withoutLevelColumn = [
+      "# 06 Test Cases",
+      "",
+      "## Test Case Table",
+      "",
+      "| TC-ID | AC-Refs | EX-Ref | Steps | Expected |",
+      "| ----- | ------- | ------ | ----- | -------- |",
+      "| TC-0001 | AC-0001 | - | s | e |",
+      "",
+      "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+      "| ----- | ----- | ------- | ------ | ----- | -------- |",
+      "| TC-0001 | L3 | AC-0001 | - | s | e |",
+      "",
+    ].join("\n");
+
+    it.each([
+      ["a blank Level cell", withLevelColumn],
+      ["no Level column at all", withoutLevelColumn],
+    ])("releases the provisional target after %s", async (_name, testCases) => {
+      const gates = await gatesFor(testCases);
+
+      expect(owners(gates)).toEqual(["atdd"]);
+      expect(gates.levels.get("TC-0001")).toBe("l3");
+    });
+
+    it("keeps the TC when nothing later contradicts the fallback", async () => {
+      // The fallback itself is not the defect and must not move: an unstated
+      // `Level` still has to land on a gate, and the ledger is the one that
+      // takes it.
+      const gates = await gatesFor(
+        [
+          "# 06 Test Cases",
+          "",
+          "## Test Case Table",
+          "",
+          "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+          "| ----- | ----- | ------- | ------ | ----- | -------- |",
+          "| TC-0001 |  | AC-0001 | - | s | e |",
+          "",
+        ].join("\n"),
+      );
+
+      expect(owners(gates)).toContain("ledger");
+    });
+
+    it("adopts a later explicit coverage Level instead of the blank it recorded", async () => {
+      // The crosswalk reads the recorded `Level`; leaving it `""` would make a
+      // declared L1 look like a TC that declared nothing, and
+      // `TDDLIST_COVERAGE_LAYER_MISMATCH` would go quiet on an Integration row.
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-provisional-upgrade-"));
+      try {
+        const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+        await mkdir(path.join(specDir, "tdd"), { recursive: true });
+        await writeFile(
+          path.join(specDir, "06_Test-Cases.md"),
+          [
+            "# 06 Test Cases",
+            "",
+            "## Test Case Table",
+            "",
+            "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+            "| ----- | ----- | ------- | ------ | ----- | -------- |",
+            "| TC-0001 |  | AC-0001 | - | s | e |",
+            "",
+            "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+            "| ----- | ----- | ------- | ------ | ----- | -------- |",
+            "| TC-0001 | L1 | AC-0001 | - | s | e |",
+            "",
+          ].join("\n"),
+          "utf-8",
+        );
+        await writeFile(
+          path.join(specDir, "tdd", "test-list.md"),
+          [
+            "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+            "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+            "| TDD-0001 | TC-0001 | integration | tests/integration/a.test.ts | a | todo | - | - |",
+            "",
+          ].join("\n"),
+          "utf-8",
+        );
+
+        const found = (await validateTddList(root, defaultConfig)).find(
+          (entry) => entry.code === "TDDLIST_COVERAGE_LAYER_MISMATCH",
+        );
+
+        expect(found?.message).toContain("Level=l1");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
   });
 });
 

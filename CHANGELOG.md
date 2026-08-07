@@ -6,6 +6,84 @@
 
 ### Changed
 
+- **A ledger row is checked the same wherever in the ledger it sits.** Widening
+  the coverage reader to every ledger table left the row checks on the first
+  one, so `TDD-ID = x` / `Layer = bogus` produced `TDDLIST_INVALID_ID` +
+  `TDDLIST_UNKNOWN_LAYER` in the first table and **no finding at all** in an
+  appended one — while clearing `TDDLIST_TC_NOT_COVERED` from both. With L1/L2
+  out of `QFAI-ATDD-112` that turned "the ledger picks the obligation up" into a
+  claim one meaningless cell could falsify with nothing on screen to say so.
+  `TDDLIST_INVALID_ID`, `TDDLIST_UNKNOWN_LAYER` and
+  `TDDLIST_OBLIGATION_LAYER_MISMATCH` now run on every table coverage is scored
+  from.
+  - **What is new is the diagnostic, not the verdict.** The same row already
+    counted as coverage in the first table, at `warning`. Refusing to count it
+    would instead escalate `TDDLIST_UNKNOWN_LAYER` into an unwaivable `error`,
+    against the reason it is a warning — ledgers written before the enum existed
+    carry project-specific layer names — and would make a typo stricter than the
+    known-but-wrong layer beside it, which
+    `TDDLIST_COVERAGE_LAYER_MISMATCH` stages with an announced window.
+  - **Who it hits.** Only a ledger with more than one schema-shaped table. A
+    row there that is malformed, or carries `TC-Refs` on an `API`/`E2E` layer,
+    now raises what it always raised in the first table — including one `error`
+    for the forbidden placement. Findings outside the first table are labelled
+    `table N, row M`; a single-table ledger keeps the `row M` label it had. The
+    status, evidence, transition and test-file checks are unchanged and still
+    read the first table only: they are about a row's execution state, not about
+    whether it is a row that can discharge a TC.
+- **Two headings for one test case resolve to the first, on both sides.**
+  `collectTcLevels` wrote every heading pair into the map, so the _last_
+  duplicate heading won there while the ledger gate kept the first — a TC headed
+  `L1` and then `L3` was excluded from `QFAI-ATDD-112` by one collector and
+  claimed by `TDDLIST_TC_NOT_COVERED` by the other, owed twice for one
+  declaration. Both collectors are first-seen now, matching what the table
+  reader and the scaffold parser already do, so either order leaves exactly one
+  gate owning the TC. A heading block with no `- Level:` line declares nothing
+  and no longer consumes the slot.
+- **A blank `Level` is released by the first explicit one.** An unstated `Level`
+  classifies as a coverage target so the TC cannot
+  fall out of the only gate L1/L2 have — but a row that says nothing must not
+  outrank a later row that says `L3`. The ATDD collector ignores a blank cell
+  and takes the `L3`, so a TC whose first table row had a blank `Level` (or
+  whose first table had no `Level` column) owed `QFAI-ATDD-112` **and**
+  `TDDLIST_TC_NOT_COVERED` together, failing full validation on a spec that was
+  correct. Ids admitted by the fallback are tracked and dropped when a later
+  explicit `Level` says they are not coverage; a later explicit _coverage_
+  `Level` replaces the recorded blank, so the `Level`/`Layer` crosswalk reads
+  what the spec states. A TC that nothing later contradicts still stays a
+  coverage target — the fallback itself has not moved.
+- **`qfai report` reads the ledger `qfai validate` reads.** `collectTddCoverage`
+  parsed the first Markdown table in `tdd/test-list.md` while the gate scores
+  every table carrying the ledger schema, so a `done` L1/L2 row in an appended
+  `## CHG-…` section passed validation and was printed as missing and open. A CI
+  progress figure that contradicts the gate blocking the same branch is worse
+  than none. Both now call one reader in `core/tddHelpers.ts`, which also masks
+  fenced templates and commented-out tables out of the report and applies the
+  same "is this a row that can carry coverage" rule (`TDD-ID` present, `TC-Refs`
+  not on an `API`/`E2E` row). Report figures may move for a ledger with appended
+  tables, a fenced template, or `TC-Refs` on an `API`/`E2E` row.
+- **`qfai atdd scaffold`'s skip guidance follows `paths.testsDir`.** The message
+  naming where an L4/L5 test case belongs was pinned to `tests/api/**` /
+  `tests/e2e/**` while the writer and the ATDD scan both follow the configured
+  directory, so a project that relocated `testsDir` was sent somewhere no gate
+  reads and could not clear `QFAI-ATDD-112` by doing as it was told.
+- **`QFAI-ATDD-105` no longer asks for an L1/L2 annotation to be moved.** The
+  legacy `tests/atdd/**` probe listed every annotated file, and the finding's
+  advice is "move it into integration / api / e2e" — wrong for a file carrying
+  only Unit/Component annotations, which owe no ATDD directory at all and which
+  `catalog/test-layers.md` says are not misplaced wherever they land. Following
+  it walked the project back into the all-integration collapse the exclusion
+  undoes. Only a file whose every annotation is provably outside ATDD goes
+  quiet: one `US-*`, `CON-API-*` or `CON-DB-*` reference, or one `TC-*` with an
+  unknown or absent `Level`, still names the file.
+- **The npm README states the routing the package ships.** `README.md` is in
+  `package.json#files`, so it is the npm landing page, and it still carried the
+  pre-`Level`-routing rules: every `TC` annotated in `tests/integration/**` and
+  a blanket ban on `TC` in `tests/api/**` / `tests/e2e/**`. A reader arriving
+  from npm duplicated L1/L2 into integration and could not place an L4/L5
+  annotation in the home the validator requires. It now carries the routing
+  table, the L1/L2 exclusion and the gate that replaces it, and says the
+  directories follow `paths.testsDir`.
 - **`tdd/test-list.md` is now required for a spec that declares a
   coverage-target TC.** This is an escalation from warning to error, announced
   here because it is one. The file used to be optional for every spec: an

@@ -17,7 +17,11 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
-import { collectTcLevels, resolveAtddHomeKind } from "../../core/atddTraceability.js";
+import {
+  atddTestKindDirs,
+  collectTcLevels,
+  resolveAtddHomeKind,
+} from "../../core/atddTraceability.js";
 import {
   buildSkeleton,
   emitSkeleton,
@@ -221,11 +225,18 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
   // coverage, and reported as a forbidden reference by `QFAI-ATDD-123`. The
   // command would be making validation worse than emitting nothing.
   if (excludedApiE2e.length > 0) {
+    // The homes are rendered against the configured `paths.testsDir`, which is
+    // what the scaffold writer and the ATDD scan both follow. Naming
+    // `tests/api/**` to a project that relocated `testsDir` sent the operator
+    // to a directory no gate reads, so following the advice left
+    // `QFAI-ATDD-112` unclearable — the same trap `atddTestKindDirs` exists to
+    // close on the validator side.
+    const homes = atddTestKindDirs(testsDirRel);
     writeErr(
       `qfai atdd scaffold: skipped ${String(excludedApiE2e.length)} API/E2E TC ` +
         `(${excludedApiE2e.join(", ")}) — this command writes integration skeletons only, and ` +
         `an L4/L5 annotation there is uncounted and forbidden (QFAI-ATDD-123). Author them in ` +
-        `tests/api/** or tests/e2e/**, or re-file the obligation as CON-API-* / US-*.`,
+        `${homes.api} or ${homes.e2e}, or re-file the obligation as CON-API-* / US-*.`,
     );
   }
   if (entries.length === 0) {
