@@ -36,7 +36,7 @@ Take the first that applies, and record which one in the evidence file.
 
 1. **Observed RED (preferred).** Write the journey or API test **against the
    current tree**, before this cycle builds any surface it needs.
-   1. **Ask `/qfai-implement` for the minimal seam first.** A test for a route
+   1. **Ask `/qfai-implement` for the minimal seam first — for a surface that does not exist.** A row that reached branch 1 from branch 2's first-run check has its surface already; skip to step 2 and read the note there. A test for a route
       that does not exist yet fails with a 404 or an import error, and that is a
       missing seam, not a RED — but the seam is production code, and this stage
       owns none: its `red` phase is `acceptance-test-engineer` and
@@ -94,9 +94,15 @@ Take the first that applies, and record which one in the evidence file.
    **Run the test before choosing this branch.** Surface existence is not the
    condition; a first-run **pass** is. A surface that exists can still be wrong,
    and a correct test against a buggy one fails naturally — that is an observed
-   RED, and the row belongs in branch 1: record the failure as its RED pair,
-   hand the fix to `/qfai-implement` Phase Green, and take the GREEN from the
-   corrected surface. Choosing branch 2 from existence alone sends a real,
+   RED, and the row belongs in branch 1 — **at its step 2**. Steps 1 and 3-4
+   are for a surface that does not exist yet: there is no seam to ask for, and
+   "before any production code exists" is not the condition to confirm. What
+   `qa-gatekeeper` is asked to confirm here is that the failure is an
+   assertion inside this row's selector, naming the predicate the row owns,
+   observed **against the tree before the fix**. Record that pair, get the
+   PASS, hand the fix to `/qfai-implement` Phase Green, and take the GREEN
+   from the corrected surface. Record the branch as `observed-red` with a note
+   that the surface existed and was wrong. Choosing branch 2 from existence alone sends a real,
    legitimately observed defect to `exception` or to a stop, because the
    mutation step cannot run against a test that is already failing and there is
    no GREEN to restore to.

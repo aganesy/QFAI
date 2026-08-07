@@ -5,10 +5,13 @@ run.
 
 ## Classify first
 
-- **Obligation already satisfied by a sibling row** — the new test exercises a
-  predicate an earlier `done` row already made pass. This is the usual case
-  when a BR binds several ACs to one common validator. It is **not an anomaly**
-  and does **not** go to `exception`. Follow the procedure below.
+- **Obligation already satisfied by something already in the tree** — the new
+  test exercises a predicate that already passes. The usual case is an earlier
+  `done` sibling row, when a BR binds several ACs to one common validator; the
+  other is production code no ledger row owns, which is what an `E2E` / `API`
+  row handed over by `/qfai-atdd` normally meets (a pre-existing route, or one
+  built outside the ledger). Both are **not an anomaly** and do **not** go to
+  `exception`. Follow the procedure below.
 - **Anything else** — the test is wrong, the SUT is wrong, or the cause is
   unknown. Transition to `exception` and record the anomaly.
 
@@ -20,8 +23,13 @@ An honest GREEN from a sibling item is evidence the system works, not a defect.
 The row still needs to be falsifiable, so substitute falsifiability evidence
 for the natural RED and let the row proceed to `green` and `done`:
 
-1. Record `Satisfied-by: TDD-NNNN` — the row whose implementation already
-   satisfies this obligation.
+1. Record `Satisfied-by` — **what already satisfies this obligation**. A
+   sibling `TDD-NNNN` when there is one; otherwise the production path and
+   symbol (`src/api/routes/evaluations.py::register`) or the commit that added
+   it. The field has to answer "what would I mutate to falsify this row", and
+   a path answers it as well as a row id does. Requiring a row id sent every
+   ATDD-owned row whose surface no ledger row owns to `exception` — the
+   terminal state this whole procedure exists to avoid.
 2. Break the shared predicate deliberately (inject a mutation), run this row's
    test, and confirm it **fails**. Record the command and its output as
    `Falsifiability command` / `Falsifiability result`.

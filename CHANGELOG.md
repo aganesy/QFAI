@@ -12,6 +12,21 @@
   differs from the GREEN's and the reviewers' — that is the property the RED is
   worth having, and demanding one revision made an `observed-red` E2E/API row
   unable to reach `done` at all.
+- **`Satisfied-by` accepts what actually satisfies the row, in the shared
+  contract too.** `red-provenance.md` required the production path and symbol
+  for an ATDD surface no ledger row owns, while `red-not-observable.md` called
+  a sibling `TDD-NNNN` the only legal value and `qa-gatekeeper.md` called a
+  sibling row the only legitimate absence — so the form one document mandates
+  was rejected by the gate that judges it, and every such row stopped. All
+  three now ask the same question of the field: what would I mutate to falsify
+  this row.
+- **A natural RED on an existing surface has a step to enter branch 1 at.**
+  Branch 2's first-run check correctly sends an already-failing row to branch
+  1, but branch 1 opens by asking for a seam for a surface that does not exist
+  and confirms the RED "before any production code exists" — neither true
+  here, so a row that observed a real defect had nowhere to go. It enters at
+  step 2, and what `qa-gatekeeper` confirms is a failure observed against the
+  tree before the fix.
 - **The GREEN is submitted after the `Oracle proof`, not before it.**
   `qa-gatekeeper` requires a proof on every item and the `build` phase is
   blocking, so a GREEN submitted before step 2a produced one is a REVISE by
@@ -137,7 +152,7 @@ advanced` asked for RED/GREEN commands, output and the falsifiability result
 
 ### Changed
 
-- **`/qfai-atdd` now has RED discipline for the ledger rows it writes.**
+- **`/qfai-atdd` now has RED discipline for the ledger rows it feeds.**
   `qfai-implement/SKILL.md` states the split — `Layer = E2E` and `Layer = API`
   rows are tracked in its ledger, their tests authored in `/qfai-atdd` — and its
   Phase Red requires an admissible failure confirmed before production code

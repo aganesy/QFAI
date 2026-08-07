@@ -1416,9 +1416,16 @@ agents:
       - "the suite is green" in place of the row's own GREEN.
 
       The one legitimate absence is the _RED not observable_ path: the obligation is
-      already satisfied by a sibling row, so the correct test passes first run. Then
-      require `Satisfied-by`, `Falsifiability command` and `Falsifiability result`
-      instead — never both forms, never neither. See
+      already satisfied by something already in the tree, so the correct test passes
+      first run. Then require `Satisfied-by`, `Falsifiability command` and
+      `Falsifiability result` instead — never both forms, never neither.
+
+      **`Satisfied-by` is not restricted to a sibling `TDD-NNNN`.** A production
+      path and symbol, or the commit that added it, is equally valid and is the
+      normal answer for an `E2E` / `API` row whose surface no ledger row owns.
+      Rejecting that form sends every such row to `exception` — the terminal state
+      the path exists to avoid. What the field must answer is "what would I mutate
+      to falsify this row"; judge it on that, not on its shape. See
       `.qfai/assistant/skills/qfai-implement/references/red-not-observable.md` and
       `.qfai/assistant/skills/qfai-implement/references/red-admissibility.md`.
 

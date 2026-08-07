@@ -186,12 +186,16 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     // has no backend or frontend agent, so writing it here is the ownership
     // breach step 5 forbids. It is asked for, not authored.
     const provenance = flat(await read(tree, PROVENANCE));
-    expect(provenance).toContain("**Ask `/qfai-implement` for the minimal seam first.**");
+    expect(provenance).toContain(
+      "**Ask `/qfai-implement` for the minimal seam first — for a surface that does not exist.**",
+    );
     expect(provenance).toContain("Phase Red step 3a");
     expect(provenance).toContain(
       "writing it here is the ownership breach step 5 exists to prevent",
     );
     expect(provenance).not.toContain("**Create the minimal seam first.**");
+    // A row that arrives from branch 2s first-run check has its surface already.
+    expect(provenance).toContain("skip to step 2 and read the note there");
   });
 
   it("branch 2 covers the surface this cycle built, not only a pre-existing one", async () => {
@@ -517,5 +521,35 @@ describe.each(TREES)("%s (gate ordering)", (tree) => {
     const block = atdd.slice(0, atdd.indexOf("- skill: ", 1));
     const red = block.slice(block.indexOf("- id: red"), block.indexOf("- id: implementation"));
     expect(red).toContain("rerun_policy: changed-scope-dependents");
+  });
+});
+
+describe.each(TREES)("%s (natural RED and the shared falsifiability gate)", (tree) => {
+  it("routes a natural RED into branch 1 at the step that fits it", async () => {
+    // Branch 2's first-run check sends an already-failing row to branch 1, but
+    // branch 1 step 1 asks for a seam for a surface that does not exist and
+    // step 4 confirms "before any production code exists" — neither is true
+    // here, so the row that observed a real defect stopped.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("the row belongs in branch 1 — **at its step 2**");
+    expect(provenance).toContain("observed **against the tree before the fix**");
+    expect(provenance).toContain("for a surface that does not exist");
+  });
+
+  it("lets the shared contract accept a `Satisfied-by` that is not a row id", async () => {
+    // `red-provenance.md` required the path/symbol form for an ATDD surface no
+    // ledger row owns, while `red-not-observable.md` called a sibling
+    // `TDD-NNNN` the only legal value and `qa-gatekeeper.md` called a sibling
+    // row the only legitimate absence — so the form ATDD mandates was rejected
+    // by the gate that judges it, and the row could not proceed.
+    const shared = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/red-not-observable.md"),
+    );
+    expect(shared).toContain("otherwise the production path and symbol");
+    expect(shared).toContain("already satisfied by something already in the tree");
+
+    const gatekeeper = flat(await read(tree, GATEKEEPER));
+    expect(gatekeeper).toContain("**`Satisfied-by` is not restricted to a sibling `TDD-NNNN`.**");
+    expect(gatekeeper).toContain("judge it on that, not on its shape");
   });
 });
