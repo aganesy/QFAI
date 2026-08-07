@@ -3,26 +3,30 @@
 This file is written by every `qfai validate` run and always points at the newest
 run-log directory. Do not edit it by hand; do not pipe stdout into it.
 
-- run_id: run-20260804061624484
-- started_at: 2026-08-03T21:16:24.484Z
+- run_id: run-20260807143115444
+- started_at: 2026-08-07T05:31:15.444Z
 - command: /qfai-validate
-- status: pass
-- errors: 0
-- warnings: 367
-- run_log: .qfai/report/run-20260804061624484
+- status: fail
+- errors: 6
+- warnings: 393
+- run_log: .qfai/report/run-20260807143115444
 
 # Validate Run Summary
 
-- run_id: run-20260804061624484
-- started_at: 2026-08-03T21:16:24.484Z
-- status: pass
-- report_dir: .qfai/report/run-20260804061624484
-- errors: 0
-- warnings: 367
+- run_id: run-20260807143115444
+- started_at: 2026-08-07T05:31:15.444Z
+- status: fail
+- report_dir: .qfai/report/run-20260807143115444
+- errors: 6
+- warnings: 393
 
 ## Top Errors
 
-- none
+- TDDLIST_TC_NOT_COVERED (.qfai/specs/spec-0015/tdd/test-list.md): TC "TC-0015-0021" (coverage-target) is not referenced in tdd/test-list.md for spec-0015. Add a row with this TC in TC-Refs
+- TDDLIST_TC_NOT_COVERED (.qfai/specs/spec-0015/tdd/test-list.md): TC "TC-0015-0023" (coverage-target) is not referenced in tdd/test-list.md for spec-0015. Add a row with this TC in TC-Refs
+- TDDLIST_TC_NOT_COVERED (.qfai/specs/spec-0015/tdd/test-list.md): TC "TC-0015-0025" (coverage-target) is not referenced in tdd/test-list.md for spec-0015. Add a row with this TC in TC-Refs
+- TDDLIST_TC_NOT_COVERED (.qfai/specs/spec-0015/tdd/test-list.md): TC "TC-0015-0026" (coverage-target) is not referenced in tdd/test-list.md for spec-0015. Add a row with this TC in TC-Refs
+- TDDLIST_TC_NOT_COVERED (.qfai/specs/spec-0015/tdd/test-list.md): TC "TC-0015-0029" (coverage-target) is not referenced in tdd/test-list.md for spec-0015. Add a row with this TC in TC-Refs
 
 ## Top Warnings
 

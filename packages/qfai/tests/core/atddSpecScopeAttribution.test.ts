@@ -378,11 +378,19 @@ describe("a reference to a spec that does not exist stays repo-wide", () => {
         "utf-8",
       );
 
+      const roots = { root, specsRoot: path.join(root, ".qfai", "specs") };
       for (const specScope of [new Set(["0001"]), new Set(["0002"])]) {
-        const codes = (await validateAtddCodeTraceability(root, defaultConfig, { specScope })).map(
-          (entry) => entry.code,
-        );
-        expect(codes).toContain("QFAI-ATDD-102");
+        const issues = await validateAtddCodeTraceability(root, defaultConfig, { specScope });
+        const finding = issues.find((entry) => entry.code === "QFAI-ATDD-102");
+        expect(finding).toBeDefined();
+        // Surviving `narrowToScope` is not enough. `runValidate` applies
+        // `isFindingInSpecScope` afterwards, and attributing the finding to a
+        // `.qfai/specs/spec-9999` that does not exist gives it an owner of
+        // `9999` — which that filter then drops from every real scope, undoing
+        // the repo-wide treatment this test is about. The assertion has to run
+        // the whole path, not just the validator's return.
+        expect(finding?.relatedFiles ?? []).toEqual([]);
+        expect(isFindingInSpecScope(finding ?? {}, roots, specScope)).toBe(true);
       }
     });
   });

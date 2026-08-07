@@ -113,13 +113,24 @@ function narrowToScope(
  * repo-wide: `.qfai/contracts/**` has no spec owner in the model, so there is
  * nothing to attribute them to.
  */
-function owningSpecDirs(refs: readonly string[], specsRoot: string): string[] {
+function owningSpecDirs(
+  refs: readonly string[],
+  specsRoot: string,
+  declaredSpecs?: ReadonlySet<string>,
+): string[] {
   const numbers = new Set<string>();
   for (const ref of refs) {
     const number = OWNING_SPEC_RE.exec(ref)?.[1];
-    if (number !== undefined) {
-      numbers.add(number);
-    }
+    // A number no spec pack has is not an owner. Naming
+    // `.qfai/specs/spec-9999` in `relatedFiles` gave the finding an owner of
+    // `9999`, so `isFindingInSpecScope` — which lets attributed owners decide
+    // and ignores the unattributed test path — dropped it from every scope,
+    // undoing the very repo-wide treatment `narrowToScope` had preserved for
+    // it. `declaredSpecs` is omitted where every ref is known to name a real
+    // spec (the coverage and forbidden findings read the spec packs).
+    if (number === undefined) continue;
+    if (declaredSpecs !== undefined && !declaredSpecs.has(number)) continue;
+    numbers.add(number);
   }
   return Array.from(numbers)
     .sort((left, right) => left.localeCompare(right))
@@ -192,7 +203,13 @@ export async function validateAtddCodeTraceability(
   const dirs = atddTestKindDirs(config.paths.testsDir);
   const issues: Issue[] = [];
 
-  issues.push(...buildUnknownIssues(result.unknown, result.specsRoot));
+  issues.push(
+    ...buildUnknownIssues(
+      result.unknown,
+      result.specsRoot,
+      new Set([...result.specUsIds.keys(), ...result.specTcIds.keys()]),
+    ),
+  );
 
   if (result.missing.us.length > 0) {
     const usAttribution = specAttribution(result.missing.us, result.specsRoot);
@@ -459,7 +476,11 @@ function buildMissingTcFix(
   return `各 TC の宣言 Level が指すディレクトリに \`QFAI:SPEC-XXXX:TC-YYYY\` 注釈を追加してください（L3/Integration -> ${dirs.integration}、L4/API -> ${dirs.api}、L5/E2E -> ${dirs.e2e}、Level 未宣言は ${dirs.integration}）: ${perHome}`;
 }
 
-function buildUnknownIssues(unknown: AtddUnknownRef[], specsRoot: string): Issue[] {
+function buildUnknownIssues(
+  unknown: AtddUnknownRef[],
+  specsRoot: string,
+  declaredSpecs: ReadonlySet<string>,
+): Issue[] {
   if (unknown.length === 0) {
     return [];
   }
@@ -495,7 +516,7 @@ function buildUnknownIssues(unknown: AtddUnknownRef[], specsRoot: string): Issue
           // `file` is the test carrying the typo — what the operator edits —
           // but a `tests/**` path has no spec owner, so without this the
           // finding survived every `--spec` filter.
-          { relatedFiles: owningSpecDirs(refs, specsRoot) },
+          { relatedFiles: owningSpecDirs(refs, specsRoot, declaredSpecs) },
         );
       }
       if (entry.kind === "tc") {
@@ -508,7 +529,7 @@ function buildUnknownIssues(unknown: AtddUnknownRef[], specsRoot: string): Issue
           refs,
           "change",
           "spec 側に TC を定義するか、テスト注釈を正しい ID へ修正してください。",
-          { relatedFiles: owningSpecDirs(refs, specsRoot) },
+          { relatedFiles: owningSpecDirs(refs, specsRoot, declaredSpecs) },
         );
       }
       if (entry.kind === "conDb") {
