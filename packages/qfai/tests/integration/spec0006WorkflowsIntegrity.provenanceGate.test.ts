@@ -30,6 +30,8 @@ import { describe, expect, it } from "vitest";
 
 import { createDoctorData } from "../../src/core/doctor.js";
 import { readInstallProvenance } from "../../src/shared/provenance.js";
+import { normalizeNewlines } from "../../src/shared/text.js";
+import { shippedWorkflowPath } from "../helpers/shippedWorkflowFixtures.js";
 import {
   ADOPTER_WORKFLOWS_DIR,
   adopterWorkflowPath,
@@ -52,9 +54,12 @@ const CONTROL_NAME = "qfai-validate.yml";
 
 /**
  * The adopter's own workflow, written under the colliding name before QFAI is
- * installed. Deliberately nothing like the packaged copy: were the installer
- * to overwrite it, or were the comparison to run against it, the assertion on
- * its surviving bytes fails and says so.
+ * installed.
+ *
+ * Its difference from the packaged copy of the same name is load-bearing twice
+ * over — byte survival is vacuous if the two are identical, and the collision
+ * only DRIFTS while its content differs — so guard #2 below asserts that
+ * difference instead of leaving it to this comment.
  */
 const ADOPTER_BODY = [
   "# Authored by this repository's owner long before QFAI arrived.",
@@ -64,7 +69,7 @@ const ADOPTER_BODY = [
   "  adopter-owned:",
   "    runs-on: ubuntu-latest",
   "    steps:",
-  "      - run: echo 'this file is not QFAI's'",
+  '      - run: echo "this file is not QFAI\'s"',
   "",
 ].join("\n");
 
@@ -80,79 +85,171 @@ describe(
       // instead produce a recorded, edited file — the `modified` state, which
       // is the sibling suite's subject.
       const dir = await pool.seedAdopterTree(async (tree) => {
-        await mkdir(path.join(tree, ...ADOPTER_WORKFLOWS_DIR.split("/")), { recursive: true });
+        await mkdir(path.dirname(adopterWorkflowPath(tree, COLLIDING_NAME)), { recursive: true });
         await writeFile(adopterWorkflowPath(tree, COLLIDING_NAME), ADOPTER_BODY, "utf-8");
       });
       await editShippedWorkflow(dir, CONTROL_NAME);
 
-      // Anti-vacuity guard #1, and the reason it comes first: the record
-      // reader is fail-safe by contract — a missing, unreadable or malformed
-      // record resolves to an EMPTY record and never throws. A fixture that
-      // skipped the install, or a record path that moved, would therefore
-      // yield an empty comparison set, and EVERY absence assertion below
-      // would pass for the wrong reason. Pinning the key set to exactly one
-      // name closes that and, in the same assertion, proves the install did
-      // not record the collision.
-      const record = await readInstallProvenance(dir);
-      expect(
-        Object.keys(record.workflows).sort(),
-        "exactly one shipped name may be recorded: the collision must be unrecorded, and the control must be recorded, or nothing is being compared",
-      ).toEqual([CONTROL_NAME]);
+      // Guards #1-#3 are PRECONDITIONS on the fixture, so they stay hard: if
+      // the tree is not in the state this row reasons about, nothing below
+      // measures anything and continuing would only add noise. Everything
+      // after them is the row's claim, and all of it is `expect.soft` — see
+      // the block above the claim for why.
 
-      // Anti-vacuity guard #2: the silence has to be about provenance, not
-      // about the file having been replaced by the installer. If the create-only
-      // copy had overwritten the adopter's bytes there would be no adopter file
-      // left to stay silent about.
+      // Guard #1: the record reader is fail-safe by contract — a missing,
+      // unreadable or malformed record resolves to an EMPTY record and never
+      // throws. A fixture that skipped the install, or a record path that
+      // moved, would therefore yield an empty comparison set, and EVERY
+      // absence assertion below would pass for the wrong reason.
+      //
+      // Asserted as the two facts the row actually needs (the collision is
+      // unrecorded, the control is recorded) rather than as deep equality on
+      // the sorted key set. Deep equality would additionally pin the shipped
+      // set's CARDINALITY at 2, and contract §1 explicitly anticipates that
+      // number changing (`SHIPPED_WORKFLOW_NAMES` is an in-binary list names
+      // enter and leave). A third shipped workflow would then redden this row
+      // for a reason it says nothing about, and no assertion here needs the
+      // number — the live control's deep equality survives a third name
+      // installed byte-identical, because such a name never enters `modified`.
+      const recordedNames = Object.keys((await readInstallProvenance(dir)).workflows);
+      expect(
+        recordedNames,
+        "the collision must have gained no provenance entry, or it is not `adopter-owned` and this row has no subject",
+      ).not.toContain(COLLIDING_NAME);
+      expect(
+        recordedNames,
+        "the control must be recorded, or the comparison set is empty and every absence claim below passes vacuously",
+      ).toContain(CONTROL_NAME);
+
+      // Guard #2: `ADOPTER_BODY` must not BE the packaged copy. Were they
+      // equal, guard #3 would pass even under an overwriting installer (the
+      // bytes would match either way) and the collision would no longer drift,
+      // so the gate-removal mutation would stop reddening too — both of this
+      // row's anti-vacuity guards would silently stop working while every
+      // assertion still passed.
+      //
+      // Compared on the reader's own basis (newline-normalized text), because
+      // that is the basis which decides drift; on raw bytes a CRLF checkout of
+      // the packaged asset would satisfy this guard while the reader saw two
+      // identical files.
+      expect(
+        normalizeNewlines(await readFile(shippedWorkflowPath(COLLIDING_NAME), "utf-8")),
+        "the adopter fixture must differ from the packaged copy under the comparison basis, or this row's guards are vacuous",
+      ).not.toBe(normalizeNewlines(ADOPTER_BODY));
+
+      // Guard #3: the silence has to be about provenance, not about the file
+      // having been replaced by the installer. If the create-only copy had
+      // overwritten the adopter's bytes there would be no adopter file left to
+      // stay silent about.
       expect(
         await readFile(adopterWorkflowPath(dir, COLLIDING_NAME), "utf-8"),
         "the installer must leave the adopter's colliding file byte-for-byte alone",
       ).toBe(ADOPTER_BODY);
 
       const data = await createDoctorData({ startDir: dir, rootExplicit: true });
-      const check = data.checks.find((entry) => entry.id === "workflows.integrity");
+      // The finding SET, not the first match. The TC's Assert is about the set
+      // (「finding 集合に ... 1 度も現れない」), and `addCheck` is a bare push
+      // with no dedup — so a `find` would hand back only the gated emission
+      // while a second, ungated registration of the same id named the
+      // collision, and every assertion below would read the clean one and
+      // pass. The sibling drift suite pins the same property for the same
+      // reason.
+      const findings = data.checks.filter((entry) => entry.id === "workflows.integrity");
+      const check = findings[0];
 
-      expect(
-        check,
-        "the recorded stale file must still produce a workflows.integrity finding in this tree",
-      ).toBeDefined();
-
-      // The row's named claim, across BOTH operator-visible surfaces of the
-      // finding at once. A bare filename is a safe needle here because this
-      // revision's `details` carries only `workflowsDir` (`.github/workflows`)
-      // and `modified`, neither of which can contain the collision's name for
-      // an unrelated reason.
+      // Every assertion from here down is `expect.soft`, and that is the whole
+      // ordering argument rather than a style choice. Each has its own
+      // reddening mutation, and under a hard `expect` only the FIRST failing
+      // one is ever observed: a mutation that reddens an earlier assertion
+      // aborts the run before the later ones execute, so they read as covered
+      // while never having been exercised. Reordering can only move that
+      // shadow around. Soft assertions remove it — every one of them runs and
+      // reports regardless of the ones before it — which makes the property
+      // structural instead of a comment a later edit can quietly break.
       //
-      // It is asserted BEFORE its own non-vacuity controls, and that ordering
-      // is load-bearing rather than stylistic. Both assertions in this block
-      // fail under the mutation that removes the provenance gate, and only the
-      // FIRST one to run ever reddens; whichever comes second reads as covered
-      // while never having been exercised. Putting the named claim first gives
-      // it the gate-removal mutation, and leaves the controls below with the
-      // report-nothing mutation, which the claim above passes vacuously. Each
-      // assertion then has a mutation that reddens it. (The sibling drift
-      // suite hit the same shadowing and split an `it` for it; here a swap
-      // suffices, because the two mutations are distinct.)
-      const findingSurface = `${check?.message ?? ""}\n${JSON.stringify(check?.details ?? {})}`;
-      expect(
-        findingSurface,
-        "an adopter-authored file with no provenance entry must not appear anywhere in the finding",
-      ).not.toContain(COLLIDING_NAME);
+      // The ordering rule this replaces, recorded because it still governs
+      // hard assertions (guards #1-#3 above, and the sibling suites):
+      //   (i)   a guard that closes a VACUOUS-PASS mode of the claim MUST
+      //         precede it;
+      //   (ii)  a control that SHARES a reddening mutation with the claim must
+      //         not sit in front of it, or the claim never reddens;
+      //   (iii) where one guard is both, ordering satisfies neither and the
+      //         `it` has to split.
+      // Only (ii) is an anti-pattern. An earlier pass of this row swapped two
+      // assertions to satisfy (ii), and it is worth being exact about what
+      // that bought, because it is easy to misread: the swap never changed
+      // what the suite DETECTS — the mutation failed the run either way — only
+      // which assertion was OBSERVED to redden.
+      //
+      // The `it` is NOT split despite the two facts below being separable.
+      // Unlike the sibling drift suite's split, these have to come out of ONE
+      // `qfai doctor` run over ONE tree: "silent about the collision WHILE
+      // reporting the recorded stale file" is a co-occurrence, and that
+      // co-occurrence is the row's claim. Two runs over two trees would assert
+      // the halves independently and establish neither.
+      expect
+        .soft(
+          check,
+          "the recorded stale file must still produce a workflows.integrity finding in this tree",
+        )
+        .toBeDefined();
+      expect
+        .soft(findings, "workflows.integrity must be registered exactly once per doctor run")
+        .toHaveLength(1);
 
-      // The live control. Without it, a check that named NOTHING — one that
-      // never fired, or fired with an empty payload — would satisfy the
-      // absence claim above, and the row would assert nothing about the
-      // provenance gate at all. Deep equality pins membership, order and
-      // length in one shot, and its diff prints whichever entry appeared; a
-      // separate length assertion adds no discriminating power.
-      expect(
-        check?.details?.["modified"],
-        "the recorded, hand-edited file must be the one and only reported entry",
-      ).toEqual([`${ADOPTER_WORKFLOWS_DIR}/${CONTROL_NAME}`]);
+      // Severity belongs to the claim, not to the decoration: `shouldFailDoctor`
+      // counts `warning + error`, so a collision that leaked into a
+      // `warning`-severity finding would move the exit code under
+      // `--fail-on warning` while every path assertion here stayed green.
+      //
+      // The exit code itself is deliberately NOT asserted here. At `info` it
+      // cannot move under the gate-removal mutation, and a fresh `runInit` tree
+      // carries unrelated warnings, so an exit-code pin in this row would
+      // measure a fixture artefact instead of the gate. TDD-0031 / TDD-0034 /
+      // TDD-0035 own that clause of the TC.
+      expect.soft(check?.severity, "the drift advisory is an info-severity finding").toBe("info");
+
+      // The row's named claim, over every rendered field of EVERY registered
+      // finding: `title`, `message`, and the serialized `details` of each. A
+      // bare filename is a safe needle, and the haystack stays forward-safe as
+      // the payload grows, because growth can only produce a false RED, never
+      // a false GREEN. Of the reader's four-key result: `workflowsDir` is
+      // `.github/workflows`; `packagedDir` is a DIRECTORY path and cannot
+      // carry a filename; `modified` holds recorded names only, and this one
+      // is unrecorded (guard #1); and a future `declined` bucket cannot carry
+      // it either, since `resolveWorkflowCopySet` marks a name declined only
+      // when a record entry EXISTS and the file is absent, while an
+      // adopter-owned collision has no entry at all.
+      const findingSurface = findings
+        .map(
+          (finding) =>
+            `${finding.title}\n${finding.message}\n${JSON.stringify(finding.details ?? {})}`,
+        )
+        .join("\n");
+      expect
+        .soft(
+          findingSurface,
+          "an adopter-authored file with no provenance entry must not appear anywhere in any workflows.integrity finding",
+        )
+        .not.toContain(COLLIDING_NAME);
+
+      // The live control. Without it a check that named NOTHING — one that
+      // never fired, or fired with an empty payload — would satisfy the absence
+      // claim above, and the row would assert nothing about the provenance gate
+      // at all. Deep equality pins membership, order and length in one shot,
+      // and its diff prints whichever entry appeared; a separate length
+      // assertion adds no discriminating power.
+      expect
+        .soft(
+          check?.details?.modified,
+          "the recorded, hand-edited file must be the one and only reported entry",
+        )
+        .toEqual([`${ADOPTER_WORKFLOWS_DIR}/${CONTROL_NAME}`]);
       // The `message` half of the haystack above is only a claim while the
       // message is non-empty, so it gets its own control alongside `details`.
-      expect(check?.message, "the advisory message must name the recorded stale path").toContain(
-        `${ADOPTER_WORKFLOWS_DIR}/${CONTROL_NAME}`,
-      );
+      expect
+        .soft(check?.message, "the advisory message must name the recorded stale path")
+        .toContain(`${ADOPTER_WORKFLOWS_DIR}/${CONTROL_NAME}`);
     });
   },
 );
