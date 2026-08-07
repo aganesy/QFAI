@@ -33,8 +33,25 @@ export function adopterWorkflowPath(dir: string, name: string): string {
 export type AdopterTreePool = {
   /** Allocates an empty pooled temp directory. */
   newTempDir: () => Promise<string>;
-  /** Allocates a pooled temp directory carrying a real `qfai init` install. */
-  seedAdopterTree: () => Promise<string>;
+  /**
+   * Allocates a pooled temp directory carrying a real `qfai init` install.
+   *
+   * `preInit` runs against the still-empty directory, before the install. It
+   * exists because some adopter-tree states are only reachable BEFORE the
+   * installer runs: a file the create-only copy has to SKIP must predate the
+   * copy, and that is the only way to produce the `adopter-owned` state of the
+   * shipped-workflows contract (a colliding name with no provenance entry).
+   * Writing the file afterwards would produce a different state — the copy
+   * would already have written its own bytes and recorded the name.
+   *
+   * A callback here rather than a `runInit` call in the calling suite: the
+   * install options are this module's single decision about how the adopter
+   * tree is produced ("a real `qfai init`", per the header). A suite that
+   * called `runInit` itself would own a second copy of that decision, and the
+   * two could drift apart silently — the tree under one suite's assertions
+   * would stop being the tree under every sibling's.
+   */
+  seedAdopterTree: (preInit?: (dir: string) => Promise<void>) => Promise<string>;
 };
 
 /**
@@ -45,8 +62,9 @@ export function useAdopterTreePool(): AdopterTreePool {
   const newTempDir = useTempDirPool("qfai-wfint-");
   return {
     newTempDir,
-    seedAdopterTree: async (): Promise<string> => {
+    seedAdopterTree: async (preInit?: (dir: string) => Promise<void>): Promise<string> => {
       const dir = await newTempDir();
+      await preInit?.(dir);
       await captureStdout(() => runInit({ dir, force: false, dryRun: false, yes: true }));
       return dir;
     },
