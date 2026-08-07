@@ -132,6 +132,23 @@
   unchanged, and an L1/L2 annotation that happens to sit in a scanned directory
   is not reported as forbidden either — the routing rule and the forbidden rule
   have to agree.
+  - **What the exclusion adds to the output.** A silent exclusion is
+    indistinguishable from a scan that found nothing, so it is stated in three
+    places a consumer may already parse. `QFAI-ATDD-117` is a new `info` finding
+    naming every excluded TC in `refs` — a code that did not exist before, so a
+    consumer keying on rule codes will meet it on upgrade. `summary.json` gains
+    `excludedUnitComponentTc` (rendered under Deferred Coverage in
+    `summary.md`), because `missing.tc: []` alone reads as "ATDD covers every
+    TC". Neither is an `error` and neither changes an exit code.
+  - **`D-SCAFFOLD-PLACEHOLDER` stops blocking on Unit and Component too.**
+    `qfai atdd scaffold` did not route by `Level` before this release, so an
+    upgrading project can already hold an unfilled L1/L2 skeleton under
+    `tests/integration/**`, and an unfilled one escalates to `error` in
+    `--profile atdd|full`. Left alone, the release would have traded
+    `QFAI-ATDD-112` for that — the same unwaivable block under a second code.
+    The validator reads the spec's declared levels and skips TCs outside the
+    ATDD obligation, through the same `isOutsideAtddObligation` the routing
+    uses, so the two rules cannot disagree about one cell.
 - **`TDDLIST_TC_NOT_COVERED` now reads the whole ledger and the whole spec.**
   Two gaps surfaced once L1/L2 depended on this gate alone. Coverage was scored
   against the _first_ table in `tdd/test-list.md`, so a ledger that appends a
