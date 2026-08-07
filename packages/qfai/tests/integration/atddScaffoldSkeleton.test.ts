@@ -363,3 +363,79 @@ describe("atdd scaffold — per-TC skeleton emission", () => {
     await expect(stat(defaultPath)).rejects.toThrow();
   });
 });
+
+describe("atdd scaffold — Unit and Component TCs are out of scope", () => {
+  async function seed(specDir: string, levels: Array<string | null>): Promise<void> {
+    await mkdir(specDir, { recursive: true });
+    const lines = ["# 06 Test Cases", ""];
+    levels.forEach((level, index) => {
+      lines.push(`## TC-0001-000${String(index + 1)}: case ${String(index + 1)}`, "");
+      lines.push("- EX-Ref: EX-0001-0001", "- AC-Refs: AC-0001-0001");
+      if (level !== null) lines.push(`- Level: ${level}`);
+      lines.push("- Verify something.", "");
+    });
+    await writeFile(path.join(specDir, "06_Test-Cases.md"), lines.join("\n"), "utf-8");
+  }
+
+  it("does not emit a tests/integration skeleton for an L1 TC", async () => {
+    // The skill forbids duplicating an L1/L2 annotation into
+    // `tests/integration/**`, and `QFAI-ATDD-112` no longer counts one — so a
+    // skeleton there was the command handing the operator work that
+    // discharges nothing and violates its own skill.
+    const specId = "spec-0001";
+    const specDir = path.join(root, ".qfai", "specs", specId);
+    await seed(specDir, ["L1", "L3"]);
+
+    const errors: string[] = [];
+    const code = await runAtddScaffold({
+      root,
+      specId,
+      write: () => {},
+      writeErr: (m) => errors.push(m),
+    });
+
+    expect(code).toBe(0);
+    await expect(
+      stat(path.join(root, "tests", "integration", specId, "TC-0001-0001.test.ts")),
+    ).rejects.toThrow();
+    await expect(
+      stat(path.join(root, "tests", "integration", specId, "TC-0001-0002.test.ts")),
+    ).resolves.toBeDefined();
+    expect(errors.join("\n")).toContain("TC-0001-0001");
+    expect(errors.join("\n")).toContain("outside this command's scope");
+  });
+
+  it("still emits for a TC that declares no Level", async () => {
+    // No `Level` routes to integration, which this command owns; the filter
+    // must not swallow the default case.
+    const specId = "spec-0002";
+    const specDir = path.join(root, ".qfai", "specs", specId);
+    await seed(specDir, [null]);
+
+    const code = await runAtddScaffold({ root, specId, write: () => {}, writeErr: () => {} });
+
+    expect(code).toBe(0);
+    await expect(
+      stat(path.join(root, "tests", "integration", specId, "TC-0001-0001.test.ts")),
+    ).resolves.toBeDefined();
+  });
+
+  it("exits 0 and says nothing was in scope when every TC is L1/L2", async () => {
+    // Distinct from "no Test-Case entries found", which is exit 1: the spec
+    // has TCs, they just are not this command's.
+    const specId = "spec-0003";
+    const specDir = path.join(root, ".qfai", "specs", specId);
+    await seed(specDir, ["L1", "component"]);
+
+    const messages: string[] = [];
+    const code = await runAtddScaffold({
+      root,
+      specId,
+      write: (m) => messages.push(m),
+      writeErr: () => {},
+    });
+
+    expect(code).toBe(0);
+    expect(messages.join("\n")).toContain("0 TC entries in scope");
+  });
+});

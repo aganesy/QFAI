@@ -1,8 +1,9 @@
 /**
  * `qfai atdd scaffold --spec <id>` — bulk-emit per-TC test skeletons.
  *
- * For each TC entry in the target spec's Test-Cases catalogue, the
- * command writes a placeholder test file under
+ * For each TC entry in the target spec's Test-Cases catalogue whose declared
+ * `Level` this stage owns — L1/Unit and L2/Component are skipped, and named on
+ * stderr — the command writes a placeholder test file under
  * `<root>/tests/integration/<specId>/<TC-ID>.test.ts` — the directory
  * `QFAI-ATDD-112` scans, so a scaffolded test counts as coverage once its
  * assertions are filled in. Existing files are
@@ -12,9 +13,11 @@
  * escalation warning naming the TC and suggesting manual review.
  */
 
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
+import { collectTcLevels, isOutsideAtddObligation } from "../../core/atddTraceability.js";
 import {
   buildSkeleton,
   emitSkeleton,
@@ -41,6 +44,21 @@ export type AtddScaffoldOptions = {
   /** Error / warning sink. Defaults to console.error. */
   writeErr?: (message: string) => void;
 };
+
+/**
+ * Declared `Level` per TC, read through the same collector `QFAI-ATDD-112`
+ * uses so the writer and the gate cannot disagree about a TC's layer.
+ *
+ * Fails soft: an unreadable catalogue means no levels, which puts every TC in
+ * scope — the behaviour before this filter existed.
+ */
+async function readDeclaredTcLevels(specDir: string): Promise<Map<string, string>> {
+  try {
+    return collectTcLevels(await readFile(path.join(specDir, "06_Test-Cases.md"), "utf-8"));
+  } catch {
+    return new Map();
+  }
+}
 
 function validateSpecId(specId: string): boolean {
   // Permissive: accept `spec-NNNN` shapes; future renaming is at the
@@ -153,6 +171,39 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
         `(looked under ${path.relative(options.root, specDir).replace(/\\/g, "/") || specDir}).`,
     );
     return 1;
+  }
+
+  // L1/L2 are out of this command's scope, on the same terms as the skill.
+  // The scaffold writes into `tests/integration/<spec-id>/`, and a filled-in
+  // skeleton there is exactly the annotation `qfai-atdd/SKILL.md` now forbids
+  // for a Unit or Component TC — the all-integration collapse
+  // `catalog/test-layers.md` lists as an anti-pattern. Emitting one handed the
+  // operator, from the command itself, the thing the same skill tells them not
+  // to do — and `QFAI-ATDD-112` no longer asks for it either, so the skeleton
+  // discharged nothing.
+  const tcLevels = await readDeclaredTcLevels(specDir);
+  const excluded: string[] = [];
+  const inScope: TCEntry[] = [];
+  for (const entry of entries) {
+    if (isOutsideAtddObligation(tcLevels.get(entry.tcId.toUpperCase()))) {
+      excluded.push(entry.tcId);
+    } else {
+      inScope.push(entry);
+    }
+  }
+  entries = inScope;
+  // Named, not silently dropped: a scaffold run that emits nothing has to say
+  // whether the spec had no TCs or only ones this command does not own.
+  if (excluded.length > 0) {
+    writeErr(
+      `qfai atdd scaffold: skipped ${String(excluded.length)} Unit/Component TC ` +
+        `(${excluded.join(", ")}) — L1/L2 are outside this command's scope and are ` +
+        `gated by tdd/test-list.md under /qfai-implement.`,
+    );
+  }
+  if (entries.length === 0) {
+    write(`qfai atdd scaffold: ${specId} — 0 TC entries in scope; nothing to emit.`);
+    return 0;
   }
 
   const threshold = resolveEscalateThreshold(config.atdd?.scaffoldEscalateCycles);

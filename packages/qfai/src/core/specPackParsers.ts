@@ -206,6 +206,19 @@ export function maskNonSpecRegions(text: string): string {
 
 const TC_ID_HEADER = "TC-ID";
 
+/**
+ * Case-**sensitive**, on purpose: a `TC-Id` / `tc-id` header is a mistyped
+ * column, and `resolveTestCaseTable` surfaces that as `no-tc-id-column` rather
+ * than silently adopting an Appendix table instead.
+ *
+ * The agreement that matters is between the readers, not with the typo:
+ * `atddTraceability.ts#collectTableTcLevels` reads through
+ * `resolveTestCaseTables`, so both gates see the same tables. When the header
+ * is mistyped neither gate resolves it — `validateTddList` reports
+ * `TDDLIST_TC_TABLE_UNRESOLVED` and `QFAI-ATDD-112` sees no declared `Level`
+ * and keeps the default obligation — so the TC is owed by both, not neither,
+ * and fixing the header clears both.
+ */
 function hasTcIdColumn(table: MarkdownTable): boolean {
   return table.headers.some((header) => header.trim() === TC_ID_HEADER);
 }

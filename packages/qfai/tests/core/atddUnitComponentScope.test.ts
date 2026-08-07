@@ -448,3 +448,180 @@ describe("a commented-out table cannot suppress a real obligation", () => {
     }
   });
 });
+
+describe("the two collectors agree on which tables are authoritative", () => {
+  async function withTcFile(body: string, task: (root: string) => Promise<void>) {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tc-tables-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      for (const [name, content] of [
+        ["01_Spec.md", "# Spec\n"],
+        ["02_User-stories.md", "# US\n"],
+        ["03_Acceptance-Criteria.md", "# AC\n"],
+        ["06_Test-Cases.md", body],
+      ] as const) {
+        await writeFile(path.join(specDir, name), content, "utf-8");
+      }
+      await task(root);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  it("ignores an illustrative table above the authoritative section", async () => {
+    // First-declaration-wins over every table in the document meant a format
+    // example saying `TC-0001 | L1` excluded the TC from QFAI-ATDD-112, while
+    // the section-scoped ledger gate read the real `L3` row and did not claim
+    // it either — full validation passed with no test at all.
+    await withTcFile(
+      [
+        "# 06 Test Cases",
+        "",
+        "## How to fill this in",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001 | L1 | AC-0001 | - | s | e |",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001 | L3 | AC-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+        expect(issues.map((entry) => entry.code)).toContain("QFAI-ATDD-112");
+        expect(issues.map((entry) => entry.code)).not.toContain("QFAI-ATDD-117");
+      },
+    );
+  });
+
+  it("leaves a mistyped TC-ID header owed by both gates, not neither", async () => {
+    // `hasTcIdColumn` is case-sensitive so a mistyped column surfaces as a
+    // failure (`testCaseTableResolution.test.ts` pins that). The hole was that
+    // the ATDD collector read every table directly and so still saw the `L1`,
+    // excluding the TC from `QFAI-ATDD-112` while `validateTddList` reported
+    // `TDDLIST_TC_TABLE_UNRESOLVED` and skipped coverage. Reading through
+    // `resolveTestCaseTables` makes both gates see the same tables: the ledger
+    // says it cannot read the catalogue, and ATDD keeps the default
+    // obligation. Fixing the header clears both.
+    const doc = [
+      "# 06 Test Cases",
+      "",
+      "## Test Case Table",
+      "",
+      "| tc-id | level | AC-Refs | EX-Ref | Steps | Expected |",
+      "| ----- | ----- | ------- | ------ | ----- | -------- |",
+      "| TC-0001 | L1 | AC-0001 | - | s | e |",
+      "",
+    ].join("\n");
+    await withTcFile(doc, async (root) => {
+      const tddDir = path.join(root, ".qfai", "specs", "spec-0001", "tdd");
+      await mkdir(tddDir, { recursive: true });
+      await writeFile(
+        path.join(tddDir, "test-list.md"),
+        [
+          "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+          "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const ledger = (await validateTddList(root, defaultConfig)).map((entry) => entry.code);
+      expect(ledger).toContain("TDDLIST_TC_TABLE_UNRESOLVED");
+
+      const atdd = (await validateAtddCodeTraceability(root, defaultConfig)).map(
+        (entry) => entry.code,
+      );
+      expect(atdd).toContain("QFAI-ATDD-112");
+      expect(atdd).not.toContain("QFAI-ATDD-117");
+    });
+  });
+});
+
+describe("a declared Level names the layer that discharges it", () => {
+  async function withSpecAndLedger(
+    level: string,
+    layer: string,
+    task: (issues: Awaited<ReturnType<typeof validateTddList>>) => void,
+  ) {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-level-layer-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(path.join(specDir, "tdd"), { recursive: true });
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "## Test Case Table",
+          "",
+          "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+          "| ----- | ----- | ------- | ------ | ----- | -------- |",
+          `| TC-0001 | ${level} | AC-0001 | - | s | e |`,
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(specDir, "tdd", "test-list.md"),
+        [
+          "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+          "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+          `| TDD-0001 | TC-0001 | ${layer} | tests/a.test.ts | a | todo | - | - |`,
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      task(await validateTddList(root, defaultConfig));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  it("reports an L1 TC discharged only from an Integration row", async () => {
+    // Coverage counted any non-API/E2E row, so an L1 TC closed on an
+    // integration test alone — and since L1/L2 no longer owe QFAI-ATDD-112
+    // either, nothing else asked for the unit test.
+    await withSpecAndLedger("L1", "integration", (issues) => {
+      const mismatch = issues.find((e) => e.code === "TDDLIST_COVERAGE_LAYER_MISMATCH");
+      expect(mismatch?.message).toContain("TC-0001");
+      expect(mismatch?.message).toContain("Layer=INTEGRATION");
+      expect(mismatch?.severity).toBe("warning");
+      // Still counted as covered — the mismatch is the finding, not a second
+      // "not covered" on the same row.
+      expect(issues.map((e) => e.code)).not.toContain("TDDLIST_TC_NOT_COVERED");
+    });
+  });
+
+  it.each([
+    ["L1", "unit"],
+    ["unit", "unit"],
+    ["L2", "component"],
+    ["component", "component"],
+  ])("accepts a %s TC on a %s row", async (level, layer) => {
+    await withSpecAndLedger(level, layer, (issues) => {
+      expect(issues.map((e) => e.code)).not.toContain("TDDLIST_COVERAGE_LAYER_MISMATCH");
+    });
+  });
+
+  it("says nothing when the TC declared no Level", async () => {
+    // An absent Level is the fallback-to-everything case; it makes no claim
+    // about layer, so no row can contradict it.
+    await withSpecAndLedger("", "integration", (issues) => {
+      expect(issues.map((e) => e.code)).not.toContain("TDDLIST_COVERAGE_LAYER_MISMATCH");
+    });
+  });
+
+  it("says nothing when the row's Layer is outside the vocabulary", async () => {
+    // `TDDLIST_UNKNOWN_LAYER` already names that typo; a second finding
+    // blaming the crosswalk would send the author at the wrong file.
+    await withSpecAndLedger("L1", "smoke", (issues) => {
+      expect(issues.map((e) => e.code)).not.toContain("TDDLIST_COVERAGE_LAYER_MISMATCH");
+    });
+  });
+});

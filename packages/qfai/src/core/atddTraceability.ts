@@ -14,7 +14,7 @@ import {
 } from "./fs.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { resolveSurfaceUnion } from "./prototyping/specResolution.js";
-import { maskNonSpecRegions, parseAllMarkdownTables } from "./specPackParsers.js";
+import { maskNonSpecRegions, resolveTestCaseTables } from "./specPackParsers.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { collectMarkdownItems, uniqueMatches } from "./validators/utils.js";
 
@@ -517,9 +517,21 @@ export function collectTcLevels(rawTcText: string): Map<string, string> {
   return levels;
 }
 
+/**
+ * Table-form levels, read from the same tables `resolveTestCaseTables` reads.
+ *
+ * These two collectors decide the same TC's fate from opposite ends —
+ * `QFAI-ATDD-112` excludes an L1/L2 TC, `TDDLIST_TC_NOT_COVERED` demands a
+ * ledger row for it — so they must agree on which tables are authoritative.
+ * Scanning every table in the document meant an explanatory table above the
+ * `## Test Case Table` heading won under first-declaration-wins: an example
+ * row saying `TC-0001 | L1` excluded the TC from `QFAI-ATDD-112`, while the
+ * section-scoped ledger gate read the real `L3` row and did not claim it
+ * either. Full validation then passed with no test at all.
+ */
 function collectTableTcLevels(tcText: string): Array<[string, string]> {
   const pairs: Array<[string, string]> = [];
-  for (const table of parseAllMarkdownTables(tcText)) {
+  for (const table of resolveTestCaseTables(tcText)) {
     // Header matching is case-insensitive, like the heading-form `- Level:`
     // parser and every `Level` *value* comparison downstream. A case-sensitive
     // match made a table headed `level` fall through to the integration

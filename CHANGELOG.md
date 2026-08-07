@@ -6,6 +6,20 @@
 
 ### Changed
 
+- **The two TC readers now read the same tables.** `collectTcLevels` scanned
+  every table in `06_Test-Cases.md` while `resolveTestCaseTables` reads the
+  `## Test Case Table` section, so an illustrative table above the heading won
+  under first-declaration-wins: an example row saying `TC-0001 | L1` excluded
+  the TC from `QFAI-ATDD-112` while the section-scoped ledger gate read the
+  real `L3` row and did not claim it either. Both now read through
+  `resolveTestCaseTables`, which also leaves a mistyped `tc-id` header owed by
+  both gates instead of neither.
+- **`qfai atdd scaffold` skips Unit and Component TCs.** It wrote a skeleton
+  into `tests/integration/<spec-id>/` for every TC, which for an L1/L2 TC is
+  the annotation the same skill forbids and that `QFAI-ATDD-112` no longer
+  counts — so filling it in discharged nothing. Skipped TCs are named on
+  stderr; a spec whose TCs are all L1/L2 exits 0 saying nothing was in scope,
+  which is distinct from the exit-1 no-Test-Case-entries case.
 - **`QFAI-ATDD-112` no longer demands an annotation for a Unit or Component
   TC.** `LEVEL_TO_TEST_KIND` had keys for `l3`/`l4`/`l5` and none for
   `l1`/`l2`, so `resolveTcHomeKind` fell through its `?? "integration"` case —
@@ -35,6 +49,14 @@
 
 ### Added
 
+- **`TDDLIST_COVERAGE_LAYER_MISMATCH` (warning)** reports a coverage-target TC
+  discharged only from a row whose `Layer` contradicts its declared `Level` — a
+  `Level = L1` TC closed by a `Layer = Integration` row alone. Coverage counted
+  any non-API/E2E row, so with L1/L2 out of `QFAI-ATDD-112` nothing asked for
+  the unit test. It is a warning, not an error: every ledger written before this
+  check could carry one (this repository has five), and escalating on the
+  release that introduces the rule is a zero-length window. The row still counts
+  as coverage today; the finding announces the escalation.
 - **`QFAI-ATDD-117` (info)** names the TCs excluded from the annotation
   obligation on every run. A silent exclusion is indistinguishable from a scan
   that matched nothing, which is how the JS-only test glob survived a release.

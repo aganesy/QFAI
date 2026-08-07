@@ -102,6 +102,34 @@ const VALID_LAYERS = new Set(["unit", "component", "integration", "api", "e2e"])
  */
 const TC_FORBIDDEN_LAYERS = new Set(["api", "e2e"]);
 
+/**
+ * The ledger `Layer` vocabulary, lower-cased. A value outside it is already
+ * reported by `TDDLIST_UNKNOWN_LAYER`; the crosswalk treats it as "no evidence"
+ * rather than stacking a second finding on the same typo.
+ */
+const KNOWN_LEDGER_LAYERS = new Set(["unit", "component", "integration", "api", "e2e"]);
+
+/**
+ * The ledger layers that discharge a coverage-target TC of this declared
+ * `Level`, or `null` when the level names none — an absent or unrecognized
+ * `Level` says nothing about layer, so any legal row still counts.
+ *
+ * `catalog/test-layers.md`'s crosswalk: L1 -> unit, L2 -> component. L3-L5 are
+ * not coverage targets and never reach here.
+ */
+function expectedCoverageLayers(level: string): Set<string> | null {
+  switch (level) {
+    case "l1":
+    case "unit":
+      return new Set(["unit"]);
+    case "l2":
+    case "component":
+      return new Set(["component"]);
+    default:
+      return null;
+  }
+}
+
 const TC_ID_TOKEN = /^TC-\d{4}(-\d{4})?$/;
 
 // `review-fix` is reached from `refactor`, so the item's test file already
@@ -577,7 +605,7 @@ async function validateSpecTddList(
 
   // Check 5: TC reference existence
   const tcRefsIndex = normalizedHeaders.indexOf("TC-Refs");
-  const { knownTcIds, unitComponentTcIds, unrecognizedLevels, unresolved } =
+  const { knownTcIds, unitComponentTcIds, unrecognizedLevels, coverageTargetLevels, unresolved } =
     await collectTestCaseIds(specDir);
   // The offending `Level` cell lives in 06_Test-Cases.md, not in the ledger
   // this validator is otherwise reading. Reporting `relPath` here pointed
@@ -1230,29 +1258,36 @@ async function validateSpecTddList(
   const coverageTables = collectCoverageTables(content);
   if (coverageTables.length > 0) {
     if (unitComponentTcIds.size > 0) {
-      const coveredTcIds = new Set<string>();
+      // TC -> the row layers that cite it. A set, not a boolean: the coverage
+      // question and the crosswalk question are both answered from it.
+      const citedLayers = new Map<string, Set<string>>();
+      const cite = (tcId: string, layer: string): void => {
+        const layers = citedLayers.get(tcId) ?? new Set<string>();
+        layers.add(layer);
+        citedLayers.set(tcId, layers);
+      };
       for (const scan of coverageTables) {
         for (const row of scan.table.rows) {
+          const rowLayer =
+            scan.layerIndex >= 0 ? (row[scan.layerIndex] ?? "").trim().toLowerCase() : "";
           // A `TC-*` sitting on an E2E/API row is a forbidden placement
           // (Check 5c). Counting it here would let that single illegal row
           // clear the coverage obligation for a unit/component TC.
-          if (scan.layerIndex >= 0) {
-            const rowLayer = (row[scan.layerIndex] ?? "").trim().toLowerCase();
-            if (TC_FORBIDDEN_LAYERS.has(rowLayer)) continue;
-          }
+          if (TC_FORBIDDEN_LAYERS.has(rowLayer)) continue;
           const tcRefsCell = (row[scan.tcRefsIndex] ?? "").trim();
           if (tcRefsCell.length === 0) continue;
           const refs = splitTcRefs(tcRefsCell);
           for (const ref of refs) {
             const upper = ref.toUpperCase();
-            coveredTcIds.add(upper);
+            cite(upper, rowLayer);
             const parent = resolveParentTcId(upper);
-            if (parent) coveredTcIds.add(parent);
+            if (parent) cite(parent, rowLayer);
           }
         }
       }
       for (const tcId of unitComponentTcIds) {
-        if (!coveredTcIds.has(tcId)) {
+        const layers = citedLayers.get(tcId);
+        if (layers === undefined) {
           issues.push(
             issue(
               "TDDLIST_TC_NOT_COVERED",
@@ -1262,7 +1297,48 @@ async function validateSpecTddList(
               "tddList.tcCoverage",
             ),
           );
+          continue;
         }
+        // Crosswalk: a declared `Level` names the layer that discharges the TC.
+        // Counting any non-E2E/API row let a `Level = L1` TC be closed by an
+        // `Layer = Integration` row alone — and since L1/L2 no longer owe
+        // `QFAI-ATDD-112` either, full validation passed with no unit test at
+        // all. Only an explicit contradiction is reported: a TC that declared
+        // no `Level`, or a row whose `Layer` is blank or outside the ledger
+        // vocabulary, is not evidence of a mismatch.
+        const expected = expectedCoverageLayers(coverageTargetLevels.get(tcId) ?? "");
+        if (expected === null) continue;
+        const decisive = [...layers].filter((layer) => KNOWN_LEDGER_LAYERS.has(layer));
+        if (decisive.length !== layers.size || decisive.length === 0) continue;
+        if (decisive.some((layer) => expected.has(layer))) continue;
+        issues.push(
+          issue(
+            "TDDLIST_COVERAGE_LAYER_MISMATCH",
+            `TC "${tcId}" declares Level=${coverageTargetLevels.get(tcId) ?? ""} but is only referenced from Layer=${decisive
+              .map((layer) => layer.toUpperCase())
+              .sort()
+              .join(
+                ", ",
+              )} row(s) in tdd/test-list.md for spec-${specNumber}. The row still counts as coverage today; this escalates to error in a later release`,
+            // `warning`, not `error`, on purpose. The mismatch is real and the
+            // hole it names is real — but every ledger written before this rule
+            // existed could carry one, and escalating on the release that
+            // introduces the check hands consumers a zero-length window. This
+            // repository's own specs have five. Making the drift visible is
+            // what was missing; failing on it needs an announced window.
+            "warning",
+            relPath,
+            "tddList.tcCoverageLayer",
+            [tcId],
+            "change",
+            `Move the TC-Refs to a Layer=${[...expected]
+              .map((layer) => layer.toUpperCase())
+              .sort()
+              .join(
+                " / ",
+              )} row, or change the TC's \`Level\` in ${TEST_CASES_FILE_NAME} to the layer that actually covers it.`,
+          ),
+        );
       }
     }
   }
@@ -1273,6 +1349,13 @@ async function validateSpecTddList(
 type TestCaseIds = {
   knownTcIds: Set<string>;
   unitComponentTcIds: Set<string>;
+  /**
+   * Coverage-target TC -> the lower-cased `Level` it declared, or `""` when the
+   * spec declared none. The id set alone discards the level, so coverage could
+   * only ask "is this TC on some row"; the crosswalk needs to ask "on a row of
+   * the layer its Level names".
+   */
+  coverageTargetLevels: Map<string, string>;
   /** `Level` values that match neither vocabulary; reported so a mismatch is visible. */
   unrecognizedLevels: Set<string>;
   /**
@@ -1366,7 +1449,13 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   const knownTcIds = new Set<string>();
   const unitComponentTcIds = new Set<string>();
   const unrecognizedLevels = new Set<string>();
-  const collected: TestCaseIds = { knownTcIds, unitComponentTcIds, unrecognizedLevels };
+  const coverageTargetLevels = new Map<string, string>();
+  const collected: TestCaseIds = {
+    knownTcIds,
+    unitComponentTcIds,
+    unrecognizedLevels,
+    coverageTargetLevels,
+  };
   const testCasesPath = path.join(specDir, TEST_CASES_FILE_NAME);
   if (!(await exists(testCasesPath))) return collected;
   let content: string;
@@ -1397,6 +1486,8 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
     }
     if (isCoverageTargetLevel(level)) {
       unitComponentTcIds.add(tcId);
+      // Heading form wins on duplicates, matching `collectTcLevels`.
+      coverageTargetLevels.set(tcId, level.trim().toLowerCase());
     }
   }
 
@@ -1417,9 +1508,13 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   // L1` row in a second table would otherwise be owed by nothing at all.
 
   for (const table of resolveTestCaseTables(content)) {
-    const headers = table.headers.map((h) => h.trim());
-    const tcIdIndex = headers.indexOf("TC-ID");
-    const levelIndex = headers.indexOf("Level");
+    // Lower-cased on both sides: `resolveTestCaseTables` now accepts a `tc-id`
+    // / `TC-Id` header the way the ATDD collector always has, and a
+    // case-sensitive `indexOf` here would take the table and then read column
+    // `-1` from every row — the table would resolve and contribute nothing.
+    const headers = table.headers.map((h) => h.trim().toLowerCase());
+    const tcIdIndex = headers.indexOf("tc-id");
+    const levelIndex = headers.indexOf("level");
 
     for (const row of table.rows) {
       const tcId = (row[tcIdIndex] ?? "").trim().toUpperCase();
@@ -1434,6 +1529,12 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
       }
       // Reaches here when: (a) Level is a coverage target, or (b) Level column is absent (fallback: all TCs)
       unitComponentTcIds.add(tcId);
+      if (!coverageTargetLevels.has(tcId)) {
+        coverageTargetLevels.set(
+          tcId,
+          levelIndex >= 0 ? (row[levelIndex] ?? "").trim().toLowerCase() : "",
+        );
+      }
     }
   }
   return collected;
