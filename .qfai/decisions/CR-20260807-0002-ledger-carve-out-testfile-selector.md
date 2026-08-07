@@ -36,7 +36,7 @@ the carve-out does **not**. This is structurally the same deadlock
 `drift-protocol.md#why-the-execution-ledger-is-named-here` already resolved by naming `Status` and
 `Evidence`, one and two columns over.
 
-## Reproduction
+### How it presents (folded in from Reproduction, which the template drops for Class: intent)
 
 On this branch, rows `SPEC-0006:TDD-0029` and `SPEC-0006:TDD-0033`:
 
@@ -100,6 +100,12 @@ is not filing it.
 | Item | Kind | Why it depends on the artifact |
 | ---- | ---- | ------------------------------ |
 | —    | —    | —                              |
+
+- Not blocked by this CR: every other row of this slice continues its micro-cycle normally; only the
+  transition to `done` waits.
+- Overlapping open CRs: `CR-20260807-0001`. The two are independent — neither
+  option set changes the other's artifact, and no row is in both blocked sets in a way that makes the
+  union stricter than either alone.
 
 ## Impact scope
 

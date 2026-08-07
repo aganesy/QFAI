@@ -482,8 +482,6 @@ as `it.todo` Red placeholders; conversion to executable Red is the next
 - QFAI:SPEC-0006:TC-0006-0024
 - QFAI:SPEC-0006:TC-0006-0025
 - QFAI:SPEC-0006:TC-0006-0026
-- QFAI:SPEC-0006:TC-0006-0027
-- QFAI:SPEC-0006:TC-0006-0031
 - QFAI:SPEC-0008:TC-0008-0013
 - QFAI:SPEC-0008:TC-0008-0014
 - QFAI:SPEC-0010:TC-0010-0009
@@ -526,3 +524,8 @@ as `it.todo` Red placeholders; conversion to executable Red is the next
 - QFAI:SPEC-0015:TC-0015-0032
 - QFAI:SPEC-0015:TC-0015-0033
 - QFAI:SPEC-0015:TC-0015-0034
+
+## CHG-007 (adopter drift-detection channel + layered CI scaffold)
+
+- QFAI:SPEC-0006:TC-0006-0027
+- QFAI:SPEC-0006:TC-0006-0031

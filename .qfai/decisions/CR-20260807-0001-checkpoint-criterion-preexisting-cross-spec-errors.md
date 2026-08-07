@@ -107,6 +107,12 @@ degrades what `done` means.
 | spec-0006 TDD-0030..0040                  | ledger rows | same, once each completes its micro-cycle                                                  |
 | spec-0017 (82 rows), spec-0015, spec-0008 | ledger rows | same                                                                                       |
 
+- Not blocked by this CR: every other row of this slice continues its micro-cycle normally; only the
+  transition to `done` waits.
+- Overlapping open CRs: `CR-20260807-0002`. The two are independent — neither
+  option set changes the other's artifact, and no row is in both blocked sets in a way that makes the
+  union stricter than either alone.
+
 ## Impact scope
 
 - References: `.qfai/assistant/skills/qfai-implement/references/checkpoint-verification.md`
