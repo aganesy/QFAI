@@ -678,8 +678,17 @@ async function validateSpecTddList(
     return issues;
   }
 
-  // Informational notice for header-only tables
-  if (table.rows.length === 0) {
+  // Every table coverage is scored from, resolved once and read by every
+  // per-row check below. Past Check 3 the first entry is `table` itself: the
+  // masked reader above found it first and this one requires the same schema.
+  const coverageTables = collectLedgerTables(content);
+  const ledgerRows = (): Generator<LedgerRowRef> => checkedLedgerRows(coverageTables);
+
+  // Informational notice for a ledger with no rows anywhere. Keyed on the whole
+  // ledger, not on the first table: "No active items" was printed for a file
+  // whose first table is an empty header and whose `## CHG-…` table holds every
+  // row, which is the shape `/qfai-implement` produces.
+  if (coverageTables.every((scan) => scan.table.rows.length === 0)) {
     issues.push(
       issue(
         "TDDLIST_INFO",
@@ -692,12 +701,6 @@ async function validateSpecTddList(
     // Do NOT return early: Phase 2 TC coverage check must still run
     // even when the table has no rows, to detect missing test entries.
   }
-
-  // Every table coverage is scored from, resolved once and read by every
-  // per-row check below. Past Check 3 the first entry is `table` itself: the
-  // masked reader above found it first and this one requires the same schema.
-  const coverageTables = collectLedgerTables(content);
-  const ledgerRows = (): Generator<LedgerRowRef> => checkedLedgerRows(coverageTables);
 
   // Check 4: Status enum validation
   for (const ref of ledgerRows()) {

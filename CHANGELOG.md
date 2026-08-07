@@ -44,6 +44,10 @@
     `TDDLIST_EXCEPTION_PARKED` keys its per-row waiver on the `TDD-ID` — so one
     approved `match.dl_ids` entry silently covered a second row nobody
     approved.
+  - `TDDLIST_INFO` ("No active items") is keyed on the whole ledger. It was
+    keyed on the first table, so a file whose first table is a bare header and
+    whose `## CHG-…` table holds every row — the shape `/qfai-implement`
+    produces — was reported as empty while it was being worked.
 - **A fenced or commented-out table is no longer read as the ledger.** Check 2
   took the first Markdown table in the _raw_ file while the coverage reader
   masks non-spec regions, so a `tdd/test-list.md` whose only schema-shaped table

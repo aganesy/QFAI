@@ -160,6 +160,17 @@ describe("a completion claim in an appended table is checked", () => {
     expect(missing?.message).toContain("ledger table 2, row 1");
   });
 
+  it("does not call a ledger empty because its first table is a bare header", async () => {
+    // `/qfai-implement` appends a table per change request, so a first table
+    // holding only its header row and a `## CHG-001` table holding every item
+    // is a shape it produces.
+    const codes = await codesFor(
+      appendedLedger(["| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | sel | todo | | - |"]),
+    );
+
+    expect(codes).not.toContain("TDDLIST_INFO");
+  });
+
   it("leaves a line with no TDD-ID alone in a later table", async () => {
     // The coverage reader treats a blank `TDD-ID` outside the first table as
     // "this line is not a row", so checking its cells would report on something
