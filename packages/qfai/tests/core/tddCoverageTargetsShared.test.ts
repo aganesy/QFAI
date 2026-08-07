@@ -410,3 +410,43 @@ describe("an unassessable spec publishes no counts in either format", () => {
     }
   });
 });
+
+describe("a malformed TC reference discharges nothing", () => {
+  it("does not let an over-long ref clear its real parent's obligation", async () => {
+    // `resolveParentTcId` strips the last segment, so `TC-0001-0001-0001`
+    // resolved to the real `TC-0001-0001`. Check 5 skips a token that fails
+    // `TC_ID_TOKEN` instead of reporting it, so nothing named the typo either
+    // — the TC was owed by neither gate on the strength of a malformed cell.
+    const { codes } = await bothCommands(
+      [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001-0001 | L1 | AC-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      ["| TDD-0001 | TC-0001-0001-0001 | unit | tests/a.test.ts | a | todo | - | - |"],
+    );
+    expect(codes).toContain("TDDLIST_TC_NOT_COVERED");
+  });
+
+  it("still resolves a legitimate child reference to its parent", async () => {
+    const { codes } = await bothCommands(
+      [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001 | L1 | AC-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      ["| TDD-0001 | TC-0001-0001 | unit | tests/a.test.ts | a | todo | - | - |"],
+    );
+    expect(codes).not.toContain("TDDLIST_TC_NOT_COVERED");
+  });
+});

@@ -111,6 +111,11 @@
     gate accepted a completion claim it had declined to check. **Upgrading a
     multi-table ledger can therefore surface new errors on rows that were
     never validated before.**
+- **A malformed `TC-Refs` value discharges nothing.** `resolveParentTcId`
+  strips the last segment, so an over-long `TC-0001-0001-0001` resolved to the
+  real `TC-0001-0001` and cleared its obligation — while Check 5 skips a token
+  that fails the `TC-*` shape rather than reporting it, so nothing named the
+  typo either. Only a well-formed reference is counted or resolved.
 - **A ledger row with no `Layer` no longer discharges a TC.** Every rule that
   would police the placement keys on that cell and skips when it is empty —
   the enum check, the forbidden-layer test, the `Level`/`Layer` crosswalk — so

@@ -1321,6 +1321,14 @@ async function validateSpecTddList(
         const refs = splitTcRefs(tcRefsCell);
         for (const ref of refs) {
           const upper = ref.toUpperCase();
+          // Only a well-formed reference discharges anything.
+          // `resolveParentTcId` strips the last segment, so an over-long
+          // `TC-0001-0001-0001` resolved to the real `TC-0001-0001` and
+          // cleared its obligation — while Check 5 skips a token that fails
+          // `TC_ID_TOKEN` rather than reporting it, so nothing named the
+          // malformed ref either. The TC ended up owed by neither gate on the
+          // strength of a typo.
+          if (!TC_ID_TOKEN.test(upper)) continue;
           cite(upper, rowLayer);
           const parent = resolveParentTcId(upper);
           if (parent) cite(parent, rowLayer);

@@ -112,12 +112,20 @@ export async function collectTddCoverage(
         : undefined);
 
     if (ledgerTables.length === 0) {
+      if (ledgerUnvalidated !== undefined) {
+        // Counts omitted, on the same terms as the branch below: the sole
+        // table in a one-table ledger can be the malformed one, and printing
+        // `open: N` for a file the validator stopped checking at Check 3
+        // publishes progress nothing accepted — in JSON as well as markdown.
+        specs.push({
+          specNumber: entry.specNumber,
+          unassessable: ledgerUnvalidated,
+          exceptionRows: [],
+        });
+        continue;
+      }
       specs.push({
         specNumber: entry.specNumber,
-        // `ledgerUnvalidated`, not `unassessableReason`: the sole table in a
-        // one-table ledger can be the one missing required columns, which
-        // stops the validator at Check 3 *and* leaves this list empty.
-        ...(ledgerUnvalidated === undefined ? {} : { unassessable: ledgerUnvalidated }),
         unitComponentTotal: unitComponentTcIds.size,
         doneCount: 0,
         inReviewCount: 0,
