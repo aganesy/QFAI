@@ -465,7 +465,7 @@ must be ticked; a box that cannot be ticked is a reason not to declare completio
 When this skill is complete, provide a final user-facing completion message and enumerate all actionable next steps.
 
 - Verify gates: `/qfai-verify`.
-  Action: run `npx qfai validate --profile tdd --fail-on error` for this skill, then `/qfai-verify` for full-scan approval.
+  Action: run `npx qfai validate --profile tdd --fail-on error --spec <spec-id>` for this skill, then `/qfai-verify` for full-scan approval.
 - Spec updates needed: `/qfai-sdd`.
   Action: update spec artifacts if implementation revealed scope changes.
 - Acceptance tests: `/qfai-atdd`.

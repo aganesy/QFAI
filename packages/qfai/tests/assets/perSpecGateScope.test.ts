@@ -23,15 +23,23 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const ATDD = "assistant/skills/qfai-atdd/SKILL.md";
+const IMPLEMENT = "assistant/skills/qfai-implement/SKILL.md";
 const CHECKPOINT = "assistant/skills/qfai-implement/references/checkpoint-verification.md";
 const FINAL = "assistant/skills/qfai-implement/references/final-checklist.md";
 
 const read = async (tree: string, rel: string): Promise<string> =>
   await readFile(path.join(repoRoot, tree, rel), "utf-8");
 
+/** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
+const flat = (s: string): string => s.replace(/\s+/g, " ");
+
 /** Gate invocations that must carry `--spec`, per file. */
 const SCOPED_GATES: Array<{ file: string; profile: string }> = [
   { file: ATDD, profile: "atdd" },
+  // The skill body too, not only its references: its Completion Message names
+  // the command an operator runs straight after a per-spec run, so leaving it
+  // unscoped pointed them back at the repo-wide gate the flag exists to avoid.
+  { file: IMPLEMENT, profile: "tdd" },
   { file: CHECKPOINT, profile: "tdd" },
   { file: FINAL, profile: "tdd" },
 ];
@@ -54,13 +62,17 @@ describe.each(TREES)("%s", (tree) => {
     expect(atdd).toContain("QFAI-SCOPE-001");
   });
 
-  it("states which rules `--spec` cannot scope, instead of implying it scopes all", async () => {
-    // The contract rules are filed against `.qfai/contracts/**`, which no spec
-    // owns. Claiming a scoped gate is clean would be false for them.
-    const atdd = await read(tree, ATDD);
-    expect(atdd).toContain("`--spec` scopes the spec-owned rules only.");
+  it("states which rules `--spec` cannot scope, and that they still fail the gate", async () => {
+    // The contract rules are filed against `.qfai/contracts/**` and
+    // `QFAI-TEST-001` against a test file — neither has a spec owner, so a
+    // scoped run still exits 1 on a sibling's. Saying the flag makes the gate
+    // this spec's own would be false, and the failure mode of believing it is
+    // an operator weakening the profile to get green.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("and the gate still fails on the rest");
     expect(atdd).toContain("`QFAI-ATDD-113`");
     expect(atdd).toContain("`QFAI-ATDD-115`");
-    expect(atdd).toContain("has no spec owner in the model, so they stay repo-wide");
+    expect(atdd).toContain("`QFAI-TEST-001` names a test file");
+    expect(atdd).toContain("do **not** claim the gate passed, weaken the profile");
   });
 });

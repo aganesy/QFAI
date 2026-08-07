@@ -106,6 +106,10 @@ export async function validateScaffoldPlaceholder(
   // that change have skeletons there, and dropping the directory would stop
   // reporting placeholders that are still on disk.
   const scaffoldDirs = [path.join(testsDir, "integration"), path.join(testsDir, "atdd")];
+  /** Repo-relative specs root, for attributing a finding to its spec directory. */
+  const specsRelative = path
+    .relative(root, resolvePath(root, config, "specsDir"))
+    .replace(/\\/g, "/");
   const threshold = resolveEscalateThreshold(config.atdd?.scaffoldEscalateCycles);
   // Glob for any test extension the project uses. fast-glob
   // returns absolute paths when the pattern is absolute.
@@ -225,6 +229,13 @@ export async function validateScaffoldPlaceholder(
         tcIds,
         "change",
         `Implement an assertion for ${tcIds.join(", ")} in ${relPath}, then re-run validate.`,
+        // The skeleton's spec is in its path, so this finding can be attributed
+        // and `--spec` can scope it. Without it, `owningSpecNumber` returns
+        // `null` for `tests/integration/spec-0001/...` — a repo-level path —
+        // and `isPathInSpecScope` keeps the finding under every scope, so a
+        // sibling spec's unfilled skeleton failed this spec's scoped gate.
+        // `file` stays the test path: that is what the operator has to edit.
+        specId === null ? undefined : { relatedFiles: [path.posix.join(specsRelative, specId)] },
       ),
     );
   }

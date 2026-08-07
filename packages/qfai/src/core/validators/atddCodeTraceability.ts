@@ -10,11 +10,48 @@ import {
   type AtddTestKind,
   type AtddUnknownRef,
 } from "../atddTraceability.js";
+import type { SpecScope } from "../specScope.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
 /** `SPEC-0004:US-0002` / `SPEC-0004:TC-0002-0007` — the spec number is group 1. */
 const OWNING_SPEC_RE = /^SPEC-(\d{4}):/;
+
+/**
+ * Drops `SPEC-NNNN:`-prefixed refs the run was not scoped to.
+ *
+ * `isFindingInSpecScope` decides whether a finding survives, but it cannot edit
+ * one. So a `--spec` run kept these findings — correctly, the requested spec is
+ * implicated — while the message, `refs` and GitHub annotation still listed
+ * every other spec's missing obligations. Narrowing the ref lists before the
+ * messages are built is what makes "this spec's obligations only" true of the
+ * output and not merely of the exit code.
+ *
+ * Only the two spec-owned rules are narrowed. `QFAI-ATDD-113` / `-115` are
+ * attributed to `.qfai/contracts/**`, which no spec owns, so there is nothing
+ * to narrow them by; `qfai-atdd/SKILL.md` states that limit rather than this
+ * hiding it.
+ */
+function narrowToScope(
+  result: AtddCodeTraceabilityResult,
+  scope: SpecScope | undefined,
+): AtddCodeTraceabilityResult {
+  if (scope === undefined) {
+    return result;
+  }
+  const inScope = (ref: string): boolean => {
+    const number = OWNING_SPEC_RE.exec(ref)?.[1];
+    return number === undefined || scope.has(number);
+  };
+  return {
+    ...result,
+    missing: {
+      ...result.missing,
+      us: result.missing.us.filter(inScope),
+      tc: result.missing.tc.filter(inScope),
+    },
+  };
+}
 
 /**
  * Spec directories implicated by a list of `SPEC-NNNN:*` refs, first one first.
@@ -96,8 +133,17 @@ type AtddTraceabilitySummary = {
 export async function validateAtddCodeTraceability(
   root: string,
   config: QfaiConfig,
+  options: { specScope?: SpecScope } = {},
 ): Promise<Issue[]> {
-  const result = await evaluateAtddCodeTraceability(root, config);
+  const evaluated = await evaluateAtddCodeTraceability(root, config);
+  // A `--spec` run must not put a sibling spec's ids in this run's message.
+  // `isFindingInSpecScope` decides whether a finding survives, but it cannot
+  // edit one — so a scoped run kept the finding (correctly, the requested spec
+  // is implicated) while its message, `refs` and GitHub annotation still
+  // listed every other spec's missing obligations. Narrowing the ref lists
+  // before the messages are built is what makes "this spec's obligations only"
+  // true of the output and not just of the exit code.
+  const result = narrowToScope(evaluated, options.specScope);
   // Display paths must follow the configured testsDir; the scan already does.
   const dirs = atddTestKindDirs(config.paths.testsDir);
   const issues: Issue[] = [];

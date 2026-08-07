@@ -118,3 +118,34 @@ describe.each([
     });
   });
 });
+
+describe("a scoped run reports only the scoped spec's ids", () => {
+  it("narrows the message and refs, not just whether the finding survives", async () => {
+    // `isFindingInSpecScope` can drop a finding but cannot edit one, so a
+    // scoped run kept these (correctly — the requested spec is implicated)
+    // while the message, `refs` and GitHub annotation still listed every other
+    // spec's missing obligations.
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      const issues = await validateAtddCodeTraceability(root, defaultConfig, {
+        specScope: new Set(["0002"]),
+      });
+
+      for (const code of ["QFAI-ATDD-111", "QFAI-ATDD-112"]) {
+        const finding = issues.find((entry) => entry.code === code);
+        expect(finding?.refs?.every((ref) => ref.includes("SPEC-0002"))).toBe(true);
+        expect(finding?.message).not.toContain("SPEC-0001");
+      }
+    });
+  });
+
+  it("leaves an unscoped run untouched", async () => {
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      const finding = (await validateAtddCodeTraceability(root, defaultConfig)).find(
+        (entry) => entry.code === "QFAI-ATDD-112",
+      );
+      expect(finding?.refs).toHaveLength(2);
+    });
+  });
+});
