@@ -63,16 +63,25 @@ describe.each(TREES)("%s", (tree) => {
   });
 
   it("states which rules `--spec` cannot scope, and that they still fail the gate", async () => {
-    // The contract rules are filed against `.qfai/contracts/**` and
-    // `QFAI-TEST-001` against a test file — neither has a spec owner, so a
-    // scoped run still exits 1 on a sibling's. Saying the flag makes the gate
-    // this spec's own would be false, and the failure mode of believing it is
-    // an operator weakening the profile to get green.
+    // The contract rules are filed against `.qfai/contracts/**`, which has no
+    // spec owner, so a scoped run still exits 1 on a sibling's. Saying the flag
+    // makes the gate this spec's own would be false, and the failure mode of
+    // believing it is an operator weakening the profile to get green.
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("and the gate still fails on the rest");
     expect(atdd).toContain("`QFAI-ATDD-113`");
     expect(atdd).toContain("`QFAI-ATDD-115`");
-    expect(atdd).toContain("`QFAI-TEST-001` names a test file");
     expect(atdd).toContain("do **not** claim the gate passed, weaken the profile");
+  });
+
+  it("does not name a rule the atdd profile never runs", async () => {
+    // `runAtddValidators` runs `validateAtddCodeTraceability` and
+    // `validateScaffoldPlaceholder` only — `validateTestTodoStubs` is wired
+    // into the tdd profile. Listing `QFAI-TEST-001` among the rules that fail
+    // this skill's gate told a completion reviewer that
+    // `--profile atdd` catches an `it.todo` acceptance test. It does not, so
+    // the reviewer would trust a green gate over an unimplemented test.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).not.toContain("QFAI-TEST-001");
   });
 });

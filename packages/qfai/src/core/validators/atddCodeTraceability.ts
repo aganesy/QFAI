@@ -324,7 +324,14 @@ export async function validateAtddCodeTraceability(
   }
 
   try {
-    await writeAtddTraceabilityReport(root, config, result);
+    // `evaluated`, not `result`: `.qfai/report/atdd-traceability/` is a single
+    // shared path with no scope in its name, so writing the narrowed set there
+    // let a `--spec 0002` gate overwrite the repo-wide audit artifact with a
+    // partial one — and two per-spec runs would leave the last writer's spec
+    // only, with `summary.json` and `summary.md` possibly from different runs.
+    // The report stays repo-wide under every scope, which also makes a
+    // concurrent overwrite harmless: both writers produce the same content.
+    await writeAtddTraceabilityReport(root, config, evaluated);
   } catch (error) {
     issues.push(
       issue(

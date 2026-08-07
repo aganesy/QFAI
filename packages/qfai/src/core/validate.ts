@@ -381,7 +381,9 @@ async function runAtddValidators(
     // operator implements a real assertion. Wired into atdd + full
     // profiles so the documented escalation path is reachable from
     // the validate command surface.
-    ...(await validateScaffoldPlaceholder(root, config)),
+    // Scoped: this validator writes `.qfai/state.json` escalation counters, so
+    // an unscoped scan under `--spec` mutated sibling specs' state.
+    ...(await validateScaffoldPlaceholder(root, config, specScope ? { specScope } : {})),
   ];
 }
 

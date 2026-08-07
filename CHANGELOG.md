@@ -6,6 +6,24 @@
 
 ### Fixed
 
+- **A `--spec` run no longer touches another spec.** Three ways it still did.
+  `isFindingInSpecScope` kept a finding when _any_ of its paths was in scope,
+  and an unowned path is in every scope — so `D-SCAFFOLD-PLACEHOLDER`, whose
+  representative `file` is a test path outside `.qfai/specs/`, survived every
+  filter no matter what it was attributed to. Once a finding names an owning
+  spec, only its owners decide; a finding no spec owns still belongs to every
+  scope. `validateScaffoldPlaceholder` also scanned and counted repo-wide, so
+  three scoped gates pushed an unrelated spec's placeholder to the escalation
+  threshold and opened its next run at `error` — it now scans, counts and
+  resets only the specs in scope. And the shared
+  `.qfai/report/atdd-traceability/summary.{json,md}` artifact is written from
+  the repo-wide evaluation again rather than the narrowed one, which also
+  makes a concurrent per-spec run harmless instead of last-writer-wins.
+- **`qfai-atdd` no longer claims `QFAI-TEST-001` fails its gate.**
+  `runAtddValidators` runs the coverage and scaffold validators only;
+  `validateTestTodoStubs` is wired into the tdd profile. A completion reviewer
+  trusting that line would read a green `--profile atdd` as proof there is no
+  `it.todo` acceptance test.
 - **`qfai validate --spec` now actually scopes the two spec-owned ATDD coverage
   rules, and the per-spec skills use it.** `QFAI-ATDD-111` and `QFAI-ATDD-112`
   were filed against `specsRoot` itself; `owningSpecNumber` returns `null` for a

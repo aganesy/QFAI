@@ -56,6 +56,7 @@ import {
   shouldEscalate,
 } from "../atdd/scaffoldEscalation.js";
 import { hasErrnoCode } from "../fs/errno.js";
+import type { SpecScope } from "../specScope.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -91,9 +92,18 @@ function extractSpecIdFromScaffoldPath(testsAtddDir: string, filePath: string): 
   return firstSegment;
 }
 
+/**
+ * `spec-NNNN` -> `NNNN`, for comparing a scaffold path's spec id against a
+ * `--spec` scope (which holds bare numbers).
+ */
+function scaffoldSpecNumber(specId: string): string | null {
+  return /^spec-(\d{3,4})$/.exec(specId)?.[1] ?? null;
+}
+
 export async function validateScaffoldPlaceholder(
   root: string,
   config: QfaiConfig,
+  options: { specScope?: SpecScope } = {},
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   // Honor `config.paths.testsDir`; default `tests` covers the
@@ -149,6 +159,23 @@ export async function validateScaffoldPlaceholder(
     // Resolved against whichever scaffold root actually contains the file.
     const owningDir = scaffoldDirs.find((dir) => path.resolve(file).startsWith(path.resolve(dir)));
     const specId = owningDir ? extractSpecIdFromScaffoldPath(owningDir, file) : null;
+    // Scope decides before the counter, not after the finding. Filtering the
+    // emitted issue downstream still let a `--spec 0002` run advance
+    // spec-0001's escalation counter on every pass — three scoped gates and
+    // spec-0001 hit the default threshold without ever being validated, so its
+    // next run opened at `error`. Two concurrent per-spec runs also
+    // read-modify-write the same `.qfai/state.json`, and only the specs each
+    // run owns should be in that write at all.
+    //
+    // `specId === null` is a non-canonical layout the scan cannot attribute;
+    // it stays in every scope, matching `isFindingInSpecScope`'s treatment of
+    // an unattributed finding. The counter is already skipped for those.
+    if (specId !== null && options.specScope !== undefined) {
+      const number = scaffoldSpecNumber(specId);
+      if (number !== null && !options.specScope.has(number)) {
+        continue;
+      }
+    }
     // Advance the validate-only escalation counter PER (spec, TC) —
     // not per file — so a spec-NNNN/TC-NNNN-NNNN that appears in two
     // scaffold files (split assertions) still escalates after the
@@ -250,6 +277,15 @@ export async function validateScaffoldPlaceholder(
   try {
     const tracked = await listValidateCycleKeys(root);
     for (const { specId, tcId } of tracked) {
+      // A scoped run did not scan the other specs, so it cannot conclude their
+      // placeholders were filled — resetting them would discard a real count
+      // the same way advancing them would invent one.
+      if (options.specScope !== undefined) {
+        const number = scaffoldSpecNumber(specId);
+        if (number !== null && !options.specScope.has(number)) {
+          continue;
+        }
+      }
       if (!observedKeys.has(`${specId}:${tcId}`)) {
         try {
           await resetValidateCycle(root, specId, tcId);

@@ -13,7 +13,7 @@
  * drops it when the scoped spec is not implicated.
  */
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -21,7 +21,9 @@ import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { isFindingInSpecScope, resolveSpecScope } from "../../src/core/specScope.js";
+import { SCAFFOLD_PLACEHOLDER_MARKER } from "../../src/core/atdd/scaffold.js";
 import { validateAtddCodeTraceability } from "../../src/core/validators/atddCodeTraceability.js";
+import { validateScaffoldPlaceholder } from "../../src/core/validators/scaffoldPlaceholder.js";
 
 type SpecSeed = { specNumber: string; usIds: string[]; tcIds: string[] };
 
@@ -146,6 +148,117 @@ describe("a scoped run reports only the scoped spec's ids", () => {
         (entry) => entry.code === "QFAI-ATDD-112",
       );
       expect(finding?.refs).toHaveLength(2);
+    });
+  });
+});
+
+describe("an attributed finding is not rescued by a repo-level path", () => {
+  it("scopes D-SCAFFOLD-PLACEHOLDER by its owning spec", async () => {
+    // The skeleton's `file` is `tests/integration/spec-0001/…`, outside
+    // `specsRoot` and therefore unowned. `isFindingInSpecScope` used to keep a
+    // finding when *any* path was in scope, and an unowned path is in every
+    // scope — so the added `relatedFiles` attribution changed nothing and
+    // spec-0001's escalated placeholder still failed `--spec 0002`.
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      const testFile = path.join(root, "tests", "integration", "spec-0001", "TC-0001-0001.test.ts");
+      await mkdir(path.dirname(testFile), { recursive: true });
+      await writeFile(
+        testFile,
+        [
+          `// ${SCAFFOLD_PLACEHOLDER_MARKER}`,
+          "it('TC-0001-0001', () => {",
+          "  // TODO: implement assertion for TC-0001-0001",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const finding = (await validateScaffoldPlaceholder(root, defaultConfig)).find(
+        (entry) => entry.code === "D-SCAFFOLD-PLACEHOLDER",
+      );
+      expect(finding).toBeDefined();
+
+      const roots = { root, specsRoot: path.join(root, ".qfai", "specs") };
+      expect(isFindingInSpecScope(finding ?? {}, roots, new Set(["0002"]))).toBe(false);
+      expect(isFindingInSpecScope(finding ?? {}, roots, new Set(["0001"]))).toBe(true);
+      expect(isFindingInSpecScope(finding ?? {}, roots, undefined)).toBe(true);
+    });
+  });
+
+  it("keeps a finding no spec owns at all", async () => {
+    // The rule is "attributed findings are judged by their owners", not
+    // "unowned findings are dropped" — `QFAI-ATDD-113` against
+    // `.qfai/contracts/**` must still fail every scoped gate.
+    const roots = { root: "/repo", specsRoot: "/repo/.qfai/specs" };
+    expect(
+      isFindingInSpecScope(
+        { file: "/repo/.qfai/contracts/api/CON-API-0001.yaml" },
+        roots,
+        new Set(["0002"]),
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("a scoped run does not mutate a sibling spec's escalation counter", () => {
+  it("skips out-of-scope skeletons before the counter advances", async () => {
+    // Three `--spec 0002` gates used to push spec-0001 to the default
+    // threshold, so its next run opened at `error` without ever being
+    // validated.
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      const testFile = path.join(root, "tests", "integration", "spec-0001", "TC-0001-0001.test.ts");
+      await mkdir(path.dirname(testFile), { recursive: true });
+      await writeFile(
+        testFile,
+        [
+          `// ${SCAFFOLD_PLACEHOLDER_MARKER}`,
+          "it('TC-0001-0001', () => {",
+          "  // TODO: implement assertion for TC-0001-0001",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      for (let pass = 0; pass < 4; pass += 1) {
+        const issues = await validateScaffoldPlaceholder(root, defaultConfig, {
+          specScope: new Set(["0002"]),
+        });
+        expect(issues.filter((entry) => entry.code === "D-SCAFFOLD-PLACEHOLDER")).toEqual([]);
+      }
+
+      // The counter never moved, so spec-0001's own first run is still a
+      // warning with a fresh window.
+      const finding = (await validateScaffoldPlaceholder(root, defaultConfig)).find(
+        (entry) => entry.code === "D-SCAFFOLD-PLACEHOLDER",
+      );
+      expect(finding?.severity).toBe("warning");
+      expect(finding?.message).toContain("(1/3 validate cycles observed)");
+    });
+  });
+});
+
+describe("the shared traceability report stays repo-wide", () => {
+  it("writes every spec's obligations under a --spec run", async () => {
+    // `.qfai/report/atdd-traceability/summary.{json,md}` has no scope in its
+    // path, so writing the narrowed set there overwrote the repo-wide audit
+    // artifact with a partial one.
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      await validateAtddCodeTraceability(root, defaultConfig, { specScope: new Set(["0002"]) });
+
+      const summary = JSON.parse(
+        await readFile(
+          path.join(root, ".qfai", "report", "atdd-traceability", "summary.json"),
+          "utf-8",
+        ),
+      ) as { missing: { tc: string[] } };
+      expect(summary.missing.tc).toEqual(
+        expect.arrayContaining(["SPEC-0001:TC-0001", "SPEC-0002:TC-0001"]),
+      );
     });
   });
 });

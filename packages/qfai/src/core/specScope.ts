@@ -160,5 +160,18 @@ export function isFindingInSpecScope(
   if (paths.length === 0) {
     return true;
   }
-  return paths.some((value) => isPathInSpecScope(value, roots, scope));
+  // An unowned path means "unattributed", not "belongs to every spec". Judging
+  // with `some(isPathInSpecScope)` over the whole list made one repo-level path
+  // grant universal membership, so a finding whose representative `file` is a
+  // test path (`tests/integration/spec-0001/…` — outside `specsRoot`, hence
+  // unowned) survived every `--spec` filter no matter what its `relatedFiles`
+  // attributed it to. Once any path names an owning spec the finding IS
+  // attributed, and only those owners decide.
+  const owners = paths
+    .map((value) => owningSpecNumber(value, roots))
+    .filter((owner): owner is string => owner !== null);
+  if (owners.length === 0) {
+    return true;
+  }
+  return owners.some((owner) => scope.has(owner));
 }
