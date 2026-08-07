@@ -129,10 +129,16 @@ routing:
       # `implementation`: after the surfaces are built there is nothing left to
       # watch fail.
       - id: red
-        mandatory_agents: [acceptance-test-engineer, qa-gatekeeper]
+        # `delivery-planner` is blocking here, ahead of `qa-gatekeeper`:
+        # `qfai-implement/SKILL.md` makes it the only authority on whether a
+        # selector covers a sufficient slice of its obligation, and requires a
+        # scope REVISE to be settled BEFORE the RED is submitted. Approving the
+        # RED first leaves the planner only "keep the PASS and open a new row",
+        # which cannot repair a handoff taken at the wrong granularity.
+        mandatory_agents: [delivery-planner, acceptance-test-engineer, qa-gatekeeper]
         conditional_agents: []
         parallel_groups: []
-        blocking_agents: [qa-gatekeeper]
+        blocking_agents: [delivery-planner, qa-gatekeeper]
         rerun_policy: failed-agents-only
       - id: implementation
         mandatory_agents: [acceptance-test-engineer]

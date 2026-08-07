@@ -6,6 +6,45 @@
 
 ### Fixed
 
+- **The handed-over RED is exempt from the same-revision rule.** Completion item
+  10 asked the item's four sub-agent observations for one revision. A branch-1
+  RED is taken before the production code exists, so its revision necessarily
+  differs from the GREEN's and the reviewers' — that is the property the RED is
+  worth having, and demanding one revision made an `observed-red` E2E/API row
+  unable to reach `done` at all.
+- **Phase Green runs the `Oracle proof`.** Branch 1 records the mutation it
+  intends; there is nothing to mutate until Phase Green builds the surface, and
+  the phase had no step for it. Completion item 5 wants the command and its real
+  failing output, so a handed-over row arrived at the gate with a plan and no
+  run. New step 2a applies the mutation, captures the failure, and reverts it
+  immediately. A falsifiability row already has one and must not repeat it.
+- **The mandatory `## Evidence` section follows the row's `Layer` too.** Items
+  10-11 pointed an `E2E` / `API` row at `atdd-<spec-id>.md` while the section
+  below still created `implement-<spec-id>.md` and called it the single home for
+  every row — so following it split one row across two files and left the file
+  the gate reads incomplete.
+- **The minimal seam is requested, not written, by `/qfai-atdd`.** Branch 1 told
+  it to register the route or add the export, which is production code its
+  `red` phase has no agent for — the same ownership breach the branch forbids
+  two steps later. It is asked of `/qfai-implement` Phase Red step 3a instead.
+- **Branch 2 is chosen from a first-run pass, not from surface existence.** A
+  surface that exists can still be wrong, and a correct test against a buggy one
+  fails naturally — an observed RED. Keying on existence sent that real defect to
+  `exception` or to a stop, because the mutation cannot run against an
+  already-failing test and there is no GREEN to restore to.
+- **A branch-2 row is deferred by step 3b, not treated as a malformed handoff.**
+  Phase Red always takes the first `todo` row, and branch 2 records its evidence
+  at the ATDD stage's P6 — after the P1c handover. Stopping on it meant a
+  branch-2 row above the branch-1 rows blocked them from Phase Green, so their
+  tests stayed red, ATDD never passed P5-P8, and P6 never happened. P1c also
+  names the rows it hands over.
+- **`delivery-planner` approves the slice before the RED gate.**
+  `qfai-implement` makes it the only authority on whether a selector covers a
+  sufficient slice and requires a scope REVISE settled _before_ the RED is
+  submitted. The ATDD `red` phase took the `qa-gatekeeper` PASS first, leaving
+  the planner only "keep the PASS and open a new row" — which cannot repair a
+  handoff taken at the wrong granularity. It is now mandatory and blocking in
+  that phase.
 - **The handover is verified before the status moves.** Phase Red step 2 wrote
   `todo -> red` unconditionally, so a row whose ATDD entry was missing or
   malformed was parked at `red` with no RED behind it, and an `exception` row

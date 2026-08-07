@@ -36,13 +36,16 @@ Take the first that applies, and record which one in the evidence file.
 
 1. **Observed RED (preferred).** Write the journey or API test **against the
    current tree**, before this cycle builds any surface it needs.
-   1. **Create the minimal seam first.** A test for a route that does not exist
-      yet fails with a 404 or an import error, and that is a missing seam, not a
-      RED. Register the route — or the export the test imports — so it
-      **resolves but does not satisfy the row's predicate**. This is the same
-      step `/qfai-implement` Phase Red takes at 3a, for the same reason: without
-      it the first failure of any new-surface row is a resolution error by
-      construction.
+   1. **Ask `/qfai-implement` for the minimal seam first.** A test for a route
+      that does not exist yet fails with a 404 or an import error, and that is a
+      missing seam, not a RED — but the seam is production code, and this stage
+      owns none: its `red` phase is `acceptance-test-engineer` and
+      `qa-gatekeeper`, with no backend or frontend agent. Hand the row over for
+      its Phase Red step 3a — register the route, or add the export the test
+      imports, so it **resolves but does not satisfy the row's predicate** — and
+      come back with the seam in place. Skipping it makes the first failure of
+      any new-surface row a resolution error by construction; writing it here
+      is the ownership breach step 5 exists to prevent.
 
       **The seam must not return the contracted status.** When the row's
       predicate _is_ the status — `201` on create, `204` on delete, `403` on a
@@ -61,27 +64,45 @@ Take the first that applies, and record which one in the evidence file.
       expected-status check — inside this row's own selector, naming the
       predicate the row owns. Record the command and output as the row's RED
       pair.
-   3. **Submit that run to `qa-gatekeeper` (routing phase `red`) before any
+   3. **Get the row's scope approved by `delivery-planner` first.**
+      `qfai-implement/SKILL.md` makes it the only authority on whether a
+      selector covers a sufficient slice of its obligation, and requires a scope
+      REVISE to be settled _before_ the RED is submitted. Approving the RED
+      first leaves the planner nothing but "keep the PASS and open a new row",
+      which cannot repair a handoff at the wrong granularity — the row has to be
+      split before its RED is taken, not after.
+   4. **Submit that run to `qa-gatekeeper` (routing phase `red`) before any
       production code exists, and wait for PASS.** `qfai-implement/SKILL.md`
       requires an independent reviewer to confirm the RED while the surface is
       still absent; a confirmation sought after it is built is post-hoc
       self-attestation of a state nobody can re-observe. Record the verdict
       beside the pair.
-   4. **Stop there. Do not build the surface.** This skill owns acceptance
+   5. **Stop there. Do not build the surface.** This skill owns acceptance
       tests, not production code — `agent-routing.yml` gives its implementation
       phase `acceptance-test-engineer` and no backend or frontend agent. The
       surface is built by `/qfai-implement` Phase Green from this handover, and
       the GREEN pair is recorded there. Branch 1's output is the RED pair, its
       `qa-gatekeeper` PASS, and the `Oracle proof` plan.
 
-   Stage gate **P1b** is where steps 1-3 happen.
+   Stage gate **P1b** is where steps 1-4 happen.
 
-2. **Falsifiability (the surface is already there).** Two cases, one rule: the
-   surface predates this cycle, or this cycle built it before the journey was
-   written — the ordinary shape when branch 1's seam step was not taken, or when
-   the work order sequenced surfaces first. Either way the correct test passes on
-   its first run. Do **not** weaken it to manufacture a failure. Use the shared
-   path in
+2. **Falsifiability (the surface is there and the test passes on its first
+   run).** The usual shape when the surface predates this cycle, or this cycle
+   built it before the journey was written — branch 1's seam step was not taken,
+   or the work order sequenced surfaces first.
+
+   **Run the test before choosing this branch.** Surface existence is not the
+   condition; a first-run **pass** is. A surface that exists can still be wrong,
+   and a correct test against a buggy one fails naturally — that is an observed
+   RED, and the row belongs in branch 1: record the failure as its RED pair,
+   hand the fix to `/qfai-implement` Phase Green, and take the GREEN from the
+   corrected surface. Choosing branch 2 from existence alone sends a real,
+   legitimately observed defect to `exception` or to a stop, because the
+   mutation step cannot run against a test that is already failing and there is
+   no GREEN to restore to.
+
+   When it does pass: do **not** weaken it to manufacture a failure. Use the
+   shared path in
    `../../qfai-implement/references/red-not-observable.md`: record `Satisfied-by`,
    mutate the production predicate the journey asserts on, run this row's test
    and confirm it fails, restore, and record `Falsifiability command` /
@@ -164,8 +185,19 @@ Read the row's entry and take the branch it names:
 | `falsifiability` | Verify `Satisfied-by`, `Falsifiability command` and `Falsifiability result` are present and that the mutation names the predicate this row asserts on. The mutation run **is** `todo -> red`; the restored run is GREEN.                                                           |
 | `exception`      | Write `todo -> exception` with the `DR-*` the stage recorded; do not re-derive it, and do not enter Phase Green.                                                                                                                                                                   |
 
-If the entry is absent, malformed, or names no branch, the row **stays at
-`todo`** and `/qfai-implement` **stops with a handoff note**. Writing `red`
-first and discovering the gap afterwards parks a `red` row with no RED behind
-it; inventing one for a test it did not author is a drift violation, not a
-recovery.
+**A branch-2 row whose evidence is not written yet is deferred, not a stop.**
+P1b fixes every row's branch; branch 2's mutation needs the surface, so it is
+recorded at P6 — after the P1c handover. A `falsifiability` entry with its
+branch named and its trio still empty therefore means "not yet", and
+`/qfai-implement` leaves the row at `todo` and moves to the next one. Treating
+it as a malformed handoff stops the whole run on the first such row, and if it
+sits above a branch-1 row in the ledger the branch-1 row never reaches Phase
+Green — so its test stays red, this stage cannot pass P5-P8, and P6 (where that
+same branch-2 evidence would have been written) is never reached. The deadlock
+is entirely inside the two skills' own sequencing.
+
+If the entry is absent, names no branch, or is malformed in any other way, the
+row **stays at `todo`** and `/qfai-implement` **stops with a handoff note**.
+Writing `red` first and discovering the gap afterwards parks a `red` row with
+no RED behind it; inventing one for a test it did not author is a drift
+violation, not a recovery.

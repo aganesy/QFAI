@@ -261,12 +261,7 @@ Every generated ATDD test MUST include QFAI annotations by layer:
 
 Notes:
 
-- A TC's annotation belongs in exactly one directory — the one its declared
-  `Level` routes to. Placing it elsewhere is both uncovered (`QFAI-ATDD-112`)
-  and forbidden (`QFAI-ATDD-121` / `QFAI-ATDD-122` / `QFAI-ATDD-123`). The rule
-  is symmetric: an annotation left behind in `tests/integration/**` after the
-  TC moved to `L4`/`L5` is rejected by `QFAI-ATDD-123` just as an early one in
-  `tests/api/**` is rejected by `QFAI-ATDD-121`.
+- A TC's annotation belongs in exactly one directory — the one its declared `Level` routes to. Placing it elsewhere is both uncovered (`QFAI-ATDD-112`) and forbidden (`QFAI-ATDD-121` / `QFAI-ATDD-122` / `QFAI-ATDD-123`). The rule is symmetric: an annotation left behind in `tests/integration/**` after the TC moved to `L4`/`L5` is rejected by `QFAI-ATDD-123` just as an early one in `tests/api/**` is rejected by `QFAI-ATDD-121`.
 - AC annotations are optional in code.
 - `QFAI:CON-API-*` in E2E is not forbidden, but contract guarantee belongs to API tests.
 
@@ -391,14 +386,19 @@ Template:
   its branch recorded and no evidence yet: its mutation run needs the surface,
   so it is captured at P6. A row with no branch chosen is what leaves it with
   no legal transition out of `todo`.
-- P1c: **Branch 1 rows are handed to `/qfai-implement` before P5.** Branch 1
-  ends with a deliberately failing test and no production code — this stage does
-  not write it (`references/red-provenance.md#the-three-branches-must`). P5-P8
-  require the suite and the repo quality gates to pass, which that RED makes
-  impossible, so the handover is not deferred to the end: run
-  `/qfai-implement` for those rows now, let its Phase Green build the surface
-  and take the GREEN, and return here with the tree green. Rows on branch 2 and
-  branch 3 need no such round-trip.
+- P1c: **Branch 1 rows are handed to `/qfai-implement` before P5, by
+  `TDD-ID`.** Branch 1 ends with a deliberately failing test and no production
+  code — this stage does not write it
+  (`references/red-provenance.md#the-three-branches-must`). P5-P8 require the
+  suite and the repo quality gates to pass, which that RED makes impossible, so
+  the handover is not deferred to the end: run `/qfai-implement` for those rows
+  now, let its Phase Green build the surface and take the GREEN, and return here
+  with the tree green. Name the rows in the handoff — a branch-2 row sitting
+  above them in the ledger has its branch recorded and its evidence still to
+  come at P6, and `/qfai-implement` defers such a row and moves on rather than
+  stopping, which is what keeps this round-trip from deadlocking against its own
+  P6 (`references/red-provenance.md#handover-to-qfai-implement`). Branch 2 and
+  branch 3 rows need no round-trip of their own.
 - P2: E2E implementation completed.
 - P3: API implementation completed.
 - P4: Integration implementation completed.
