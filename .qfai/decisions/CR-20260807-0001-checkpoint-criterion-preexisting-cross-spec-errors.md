@@ -1,0 +1,116 @@
+# CR-20260807-0001: checkpoint step-4 criterion for pre-existing cross-spec errors
+
+- ID: `CR-20260807-0001`
+- Title: Sanction a measured-delta pass criterion for `/qfai-implement` checkpoint step 4 when the
+  `tdd` profile carries errors no row in the slice can discharge
+- Raised by: `/qfai-implement` orchestrator, on a blocking `completion-reviewer` finding
+- Raised at: 2026-08-07
+- Status: `proposed`
+- Approved by: —
+- Approved at: —
+- Applied at: —
+- Resolution: —
+
+## Why this exists
+
+`references/checkpoint-verification.md#pass-criteria` is categorical: checkpoint verification passes
+only when **every** command in the applicable set exits 0, and "any non-zero exit is a FAIL: for a
+per-item checkpoint the item stays at `refactor`".
+
+Step 4 is `node packages/qfai/dist/cli/index.mjs validate --profile tdd --fail-on error`. In this
+repository it exits **1**, and has done since before the current run started, because of exactly two
+errors:
+
+- `QFAI-ATDD-111` — 20 `US-*` with no `Layer = E2E` ledger row: `SPEC-0003:US-0003-0021..0028` (8),
+  `SPEC-0006:US-0006-0011`, `SPEC-0008:US-0008-0008`, `SPEC-0015:US-0015-0016`, and
+  `SPEC-0017:US-0017-0001..0009` (9).
+- `QFAI-ATDD-112` — 98 `TC-*` unreferenced in their declared level's directory: spec-0003 **1**,
+  spec-0006 **9**, spec-0008 4, spec-0015 2, spec-0017 **82**.
+
+`QFAI-TEST-001` — the criterion the reference names explicitly — is **0**.
+
+Neither error is dischargeable by `/qfai-implement`. Creating a `Layer = E2E` row introduces a new
+obligation ID with no `TC-*` parent, which is `/qfai-sdd` Phase 2b's seeding step, and the tests behind
+those rows are `/qfai-atdd`'s. 82 of the 98 unreferenced TCs belong to spec-0017, whose entire ledger
+is `todo`. So a literal reading of the pass criterion fails **every** checkpoint in the run — for
+reasons no row owns — and no amount of implementation work changes that.
+
+## What the executing stage did, and why that was the wrong route
+
+The orchestrator substituted a three-part criterion, recorded in
+`.qfai/evidence/implement-spec-0006.md` and inherited from the spec-0003 slice of the same run:
+
+1. the `tdd` aggregate is **unchanged** from a baseline captured before the slice's first code change
+   (`info=4 warning=352 error=2`), **and**
+2. `QFAI-TEST-001` stays at 0, **and**
+3. the row's own `TC-*` has left the `QFAI-ATDD-112` list.
+
+`completion-reviewer` accepted every factual premise — the errors genuinely are not the slice's, the
+measurement is sound and was independently corroborated — and rejected the **route**:
+`constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` closes both exits
+the substitution might have used ("do not weaken profiles, lower `--fail-on`, waive errors"; and for
+upstream spec findings, "never repair — **STOP** and follow drift-protocol.md"). Relaxing a shipped
+pass criterion is a user decision, and recording it in an evidence file "puts it nowhere". The stage
+that the criterion binds is not the stage that may relax it.
+
+This CR exists so the decision is a record instead of a paragraph.
+
+## Options
+
+### Option A — sanction the measured-delta criterion (what this CR proposes)
+
+Add a clause to `references/checkpoint-verification.md#pass-criteria`: step 4 may pass on a **measured
+delta** against a baseline captured before the slice's first code change, provided that (a) the
+baseline and the named finding IDs are recorded in the slice's evidence before any row starts, (b)
+`QFAI-TEST-001` is 0, (c) the aggregate does not worsen, (d) each row's own `TC-*` leaves the
+`QFAI-ATDD-112` list, and (e) every finding held open by the baseline names a spec that is out of the
+slice's scope.
+
+Cost: a documented weakening of a hard gate. Mitigation: (e) is the load-bearing clause — it forbids
+carrying a baseline error that belongs to a spec the slice _is_ working on.
+
+### Option B — discharge the errors upstream first
+
+Run `/qfai-sdd` Phase 2b to seed the 20 missing `Layer = E2E` rows, `/qfai-atdd` to author their
+tests, and complete spec-0017's 82 rows, before any `/qfai-implement` row may close.
+
+Cost: no row in this run closes until that work lands — a very large body of work ahead of every
+implementation row, including 82 rows in a spec this run has not started.
+
+### Option C — accept rows accumulating at `refactor`
+
+Rows finish their micro-cycle, pass all three reviews, and stay at `refactor` with the checkpoint
+recorded as FAIL-for-external-reasons. They close in a later run once the errors are gone.
+
+Cost: the ledger stops distinguishing "reviewed and complete" from "in progress", which is the
+distinction `done` exists to carry. Every subsequent run re-derives the same determination.
+
+## Recommendation
+
+**Option A**, with clause (e) mandatory. It is the only option that keeps the gate meaningful for the
+errors a slice can actually cause while not blocking work on errors it cannot. Option B is the
+theoretically clean answer and is unaffordable at this repository's current state; Option C silently
+degrades what `done` means.
+
+## Blocked downstream items
+
+| Item                                      | Kind        | Why it depends on this CR                                                                  |
+| ----------------------------------------- | ----------- | ------------------------------------------------------------------------------------------ |
+| spec-0006 TDD-0029                        | ledger row  | reviewed PASS/PASS with one documentation REVISE; cannot reach `done` while step 4 exits 1 |
+| spec-0006 TDD-0030..0040                  | ledger rows | same, once each completes its micro-cycle                                                  |
+| spec-0017 (82 rows), spec-0015, spec-0008 | ledger rows | same                                                                                       |
+
+## Impact scope
+
+- References: `.qfai/assistant/skills/qfai-implement/references/checkpoint-verification.md`
+- Specs: none edited
+- Tests: none reset
+- Contracts: none
+
+## Notes
+
+Two smaller reference-level defects surfaced alongside this one and are **not** part of this CR:
+`checkpoint-verification.md` says "12-point gate" where `volume-policy.md` and `execution-ledger.md`
+say "11-point gate", and `volume-policy.md` says checkpoint-per-group where
+`checkpoint-verification.md` says per-item with "no every-N rule". The orchestrator ruled for
+`checkpoint-verification.md` on both as the dedicated SSOT and the stricter reading.
