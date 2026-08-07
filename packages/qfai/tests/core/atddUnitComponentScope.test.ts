@@ -27,6 +27,7 @@ import { describe, expect, it } from "vitest";
 import type { AtddTestKind } from "../../src/core/atddTraceability.js";
 import { isOutsideAtddObligation, resolveAtddHomeKind } from "../../src/core/atddTraceability.js";
 import { defaultConfig } from "../../src/core/config.js";
+import { classifyCoverageLevel, UNIT_COMPONENT_LAYERS } from "../../src/core/tddHelpers.js";
 import { validateAtddCodeTraceability } from "../../src/core/validators/atddCodeTraceability.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
 
@@ -1129,6 +1130,46 @@ describe("one Level predicate, one normalization, one answer", () => {
       expect(isOutsideAtddObligation(level)).toBe(false);
     },
   );
+
+  // The set identity is asserted here as well as implied by the import,
+  // because the import is the kind of thing a future edit undoes by inlining
+  // a literal "for clarity" — and the resulting divergence is silent.
+  it("asks one word list what Unit and Component are called", () => {
+    expect(new Set(UNIT_COMPONENT_LAYERS)).toEqual(new Set(["unit", "component", "l1", "l2"]));
+    for (const spelling of UNIT_COMPONENT_LAYERS) {
+      expect(isOutsideAtddObligation(spelling)).toBe(true);
+      expect(classifyCoverageLevel(spelling)).toBe("coverage-target");
+    }
+  });
+
+  // The property the exclusion rests on, stated at the predicate level so it
+  // survives the constants being split apart again: dropping the ATDD
+  // obligation for a `Level` is only safe while the ledger picks that `Level`
+  // up. A cell that is outside ATDD *and* non-coverage is owed by no gate —
+  // an `error` deleted by one keystroke in a spec table.
+  it.each([
+    "l1",
+    "L1",
+    " Unit ",
+    "l2",
+    "COMPONENT",
+    "l3",
+    "Integration",
+    "L4",
+    "api",
+    "l5",
+    " E2E ",
+    "",
+    "   ",
+    "L3/L5",
+    "constructor",
+    "__proto__",
+    "unti",
+  ])("leaves no gate owning the Level cell %s", (level) => {
+    const outsideAtdd = isOutsideAtddObligation(level);
+    const ledgerOwns = classifyCoverageLevel(level) !== "non-coverage";
+    expect(outsideAtdd && !ledgerOwns).toBe(false);
+  });
 
   it("does not let a Level cell reach into Object.prototype", async () => {
     // End to end: the inherited value is neither `"integration"` nor any other

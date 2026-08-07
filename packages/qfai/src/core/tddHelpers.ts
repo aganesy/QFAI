@@ -18,6 +18,13 @@
  * `false`. Use {@link classifyCoverageLevel} or {@link isCoverageTargetLevel},
  * which normalize for you; reach for the raw set only to enumerate the
  * vocabulary.
+ *
+ * **Editing this set moves two gates, not one.** `atddTraceability.ts` uses it
+ * as `NO_ATDD_OBLIGATION_LEVELS`: the levels named here are exactly the levels
+ * `QFAI-ATDD-112` stops demanding an annotation for, because this ledger is
+ * what picks them up instead. Adding a spelling here silences the ATDD gate for
+ * it; removing one leaves it owed by ATDD and not by the ledger. The two are
+ * one set on purpose — a spelling in neither is a `Level` no gate owns.
  */
 export const UNIT_COMPONENT_LAYERS = new Set(["unit", "component", "l1", "l2"]);
 

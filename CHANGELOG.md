@@ -52,7 +52,12 @@
   or `__proto__` no longer resolves to an inherited `Object.prototype` value:
   that made the TC uncounted where it was annotated **and** reported as
   forbidden there — two errors from one correct placement, on a cell whose only
-  fault was a typo.
+  fault was a typo. The Unit/Component word list is now one list rather than
+  two: the ATDD side imports `UNIT_COMPONENT_LAYERS` instead of restating its
+  members, since the levels ATDD stops owing have to be exactly the levels the
+  ledger starts owing, and a spelling in one set and not the other is a `Level`
+  owed by no gate at all. A test pins that property at the predicate level, so
+  it survives the constants being split apart again.
 - **First declaration wins between two tables, not only between two shapes.**
   The heading-wins fix below settled a heading disagreeing with a table row; two
   tables inside `## Test Case Table` still disagreed. The non-coverage branch

@@ -15,6 +15,7 @@ import {
 import { collectSpecEntries } from "./specLayout.js";
 import { resolveSurfaceUnion } from "./prototyping/specResolution.js";
 import { maskNonSpecRegions, resolveTestCaseTables } from "./specPackParsers.js";
+import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { collectMarkdownItems, uniqueMatches } from "./validators/utils.js";
 
@@ -674,8 +675,22 @@ function normalizeLevel(level: string): string {
  * coverage-target TC and `TDDLIST_TC_NOT_COVERED` (`error`) reports a missing
  * one, which is `/qfai-implement`'s gate and the stage that owns Unit and
  * Component.
+ *
+ * **One vocabulary, not two.** This is `UNIT_COMPONENT_LAYERS` itself, not a
+ * second copy of its members. The handoff above is the whole safety argument
+ * for dropping the ATDD obligation, and it only holds while the set ATDD stops
+ * owing is the set the ledger starts owing: a spelling in one and not the
+ * other is a `Level` owed by no gate at all, which is the hole this exclusion
+ * was written to avoid opening. Two literals with the same members and two
+ * private normalizations is exactly how `resolveAtddHomeKind` came to have
+ * three answers, so the vocabulary is imported rather than restated. The two
+ * modules still ask different questions of it — "does this owe an ATDD
+ * annotation" here, "is this a ledger coverage target" there — and those
+ * predicates stay separate; only the word list is shared. Both normalize with
+ * `trim().toLowerCase()`, which `tddHelpers` documents as the membership
+ * contract of the set.
  */
-const NO_ATDD_OBLIGATION_LEVELS = new Set(["l1", "unit", "l2", "component"]);
+const NO_ATDD_OBLIGATION_LEVELS = UNIT_COMPONENT_LAYERS;
 
 /**
  * Where a declared `Level` routes its ATDD annotation obligation, or `null`
