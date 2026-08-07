@@ -252,12 +252,13 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
 
   addCheck(checks, await buildAgentFrontmatterCheck(root));
 
-  // Installed shipped-workflow drift. Two of the reader's three statuses are
-  // emitted: `modified` as the `info` advisory below, and the
-  // content-identical `ok` state as the `ok` check after it. The
-  // unresolved-packaged-copy skip (`skipped_unresolved`) is a separate
-  // obligation that is not implemented yet and deliberately registers nothing,
-  // so no check here claims behavior nothing has verified.
+  // Installed shipped-workflow drift. `modified` is emitted as the `info`
+  // advisory below and the content-identical `ok` state as the `ok` check after
+  // it; every status without a branch below registers nothing, so no check here
+  // claims behavior nothing has verified. At this revision the only such status
+  // is the unresolved-packaged-copy skip, whose emission is a separate
+  // obligation — the invariant is stated as the general rule rather than as
+  // that one status so it survives the status gaining a branch.
   //
   // Severity is `info` deliberately, and unlike the skills-integrity branch
   // above it is NOT `warning`: `shouldFailDoctor` counts `warning + error`
@@ -281,6 +282,11 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     addCheck(checks, {
       id: "workflows.integrity",
       severity: "info",
+      // Two literal copies of this title, left unextracted on purpose: the
+      // `skills.integrity` branch chain directly above carries FOUR copies of
+      // its own, so two is this file's convention and a lone constant here would
+      // be the odd one out. Extract both into a module constant when the third
+      // copy arrives with the next emission branch.
       title: "Workflows integrity (.github/workflows)",
       // `title` has no consumer in the text renderer — it prints
       // `[severity] id: message` — so the prose has to live in `message`.
@@ -290,7 +296,24 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
         modified: workflowsDiff.modified,
       },
     });
-  } else if (workflowsDiff.status === "ok") {
+  } else if (workflowsDiff.status === "ok" && workflowsDiff.comparedCount > 0) {
+    // The `comparedCount > 0` conjunct is the mirror of the `modified.length`
+    // one above, and it is a CORRECTNESS gate, not a tidiness one. The
+    // provenance record is empty for a missing, unreadable or malformed file by
+    // contract, and `status: "ok"` is what the reader returns after comparing
+    // NOTHING. Every shipped name in that tree is `adopter-owned` or `absent`
+    // in the shipped-workflows state enum (§3) and both rows require silence;
+    // the doctor contract keys `ok` to `installed` alone and says outright that
+    // it reports nothing for a workflow with no provenance entry. Emitting here
+    // would tell an adopter their workflows match a packaged copy that was
+    // never opened — including the adopter who installed before the record
+    // existed, for whom §3's known limitation says this channel is silent.
+    //
+    // Deliberately the count and not "some name resolved to `installed`":
+    // BR-0006-0022 requires `ok` on a tree whose recorded files were all
+    // deliberately removed, which has zero `installed` names and where the
+    // claim is nonetheless true.
+    //
     // `details` carries `workflowsDir` and NOTHING else. The four-key payload
     // of BR-0006-0022 belongs to the drift emission alone: `modified` here
     // would render an empty file list as a drift report, and `declined` here

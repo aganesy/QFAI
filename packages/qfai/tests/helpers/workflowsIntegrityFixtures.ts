@@ -85,6 +85,23 @@ export async function deleteShippedWorkflow(dir: string, name: string): Promise<
 }
 
 /**
+ * Removes the whole install-provenance record from the adopter tree, leaving
+ * every installed file on disk. This is the state of an adopter who installed
+ * before the record existed: no entry for any name, so every shipped name is
+ * `adopter-owned` under the shipped-workflows contract's §3 enum.
+ *
+ * The record path is duplicated from `src/shared/provenance.ts`, whose
+ * `PROVENANCE_SEGMENTS` is module-private. The duplication is safe in the
+ * direction that matters: if the record ever moves, this `rm` deletes nothing,
+ * the record survives, and every caller's "the record now reads empty"
+ * precondition FAILS rather than passing on an unmutated tree. Callers assert
+ * that precondition through `readInstallProvenance` for exactly that reason.
+ */
+export async function deleteInstallProvenanceRecord(dir: string): Promise<void> {
+  await rm(path.join(dir, ".qfai", "install-provenance.json"), { force: true });
+}
+
+/**
  * Makes every read of one installed shipped workflow fail while its NAME
  * survives in the adopter tree, by destroying the file and putting a
  * directory of the same name in its place (`EISDIR`).

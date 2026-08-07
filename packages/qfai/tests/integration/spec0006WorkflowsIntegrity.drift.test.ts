@@ -30,6 +30,7 @@ import { readInstallProvenance } from "../../src/shared/provenance.js";
 import {
   ADOPTER_WORKFLOWS_DIR,
   adopterWorkflowPath,
+  deleteInstallProvenanceRecord,
   deleteShippedWorkflow,
   editShippedWorkflow,
   makeShippedWorkflowUnreadable,
@@ -54,10 +55,12 @@ function readModifiedPaths(details: Record<string, unknown> | undefined): string
 
 /**
  * The `details` key SET as a codepoint-sorted array, or `undefined` when the
- * payload is absent. Sorted so an assertion on it pins the set rather than
- * insertion order, which no consumer of the JSON surface depends on.
+ * payload is absent. The sort is named in the function's own name because it is
+ * the load-bearing property, not an implementation detail: it turns a caller's
+ * `toEqual` from an assertion about insertion order — which no consumer of the
+ * JSON surface depends on — into one about the key set.
  */
-function detailsKeys(details: Record<string, unknown> | undefined): string[] | undefined {
+function sortedDetailsKeys(details: Record<string, unknown> | undefined): string[] | undefined {
   return details === undefined ? undefined : Object.keys(details).sort();
 }
 
@@ -290,11 +293,28 @@ describe(
       // TC's false-positive clause. A weaker guard measures strictly more here,
       // and the exact-list property belongs to the sibling row above, which
       // owns it.
+      //
+      // `status` is pinned alongside `modified` because the two are separately
+      // mutable: a reader that returned `status: "ok"` unconditionally while
+      // still filling `modified` leaves this guard green on `modified` alone,
+      // and then the claim block below reads the `ok` branch and passes for the
+      // WRONG reason. `toBe("modified")` is still weaker than the exact list,
+      // so the reason for the weak `modified` form above survives intact.
+      //
+      // What this guard does NOT measure: the false-NEGATIVE direction of that
+      // same mutation — a reader whose `status` never reports drift. The
+      // sibling row above owns it (its first `it` asserts `severity: "info"`
+      // through `createDoctorData`, which reads the status), and that is a
+      // borrowed measurement, not one made here.
       const drifted = await diffInstalledShippedWorkflows(dir);
       expect(
         drifted.modified,
         "the hand edit must be observable as drift BEFORE it is reverted, or the silence after the revert is vacuous",
       ).toContain(`${ADOPTER_WORKFLOWS_DIR}/qfai-tests.yml`);
+      expect(
+        drifted.status,
+        "the drift must also be visible in `status`, or the claim block below can read the ok branch for the wrong reason",
+      ).toBe("modified");
 
       await writeFile(target, original, "utf-8");
 
@@ -325,10 +345,29 @@ describe(
       // false positive なし) is measured JOINTLY by the severity, payload and
       // message assertions below rather than by an extra "no info finding"
       // assertion, which would have no mutation of its own: under the
-      // false-positive mutation (`hasDrifted` returning true for two equal
-      // digests) the reader reports drift, the `info` branch fires instead of
-      // the `ok` one, and the severity, `details` key-set and message
-      // assertions all redden together.
+      // false-positive mutation — `hasDrifted`'s final
+      // `return packaged.value !== installed.value;` replaced by
+      // `return true;`, so equal digests report drift — the `info` branch fires
+      // instead of the `ok` one, and the severity, `details` key-set and message
+      // assertions all redden together. Measured as exactly those three.
+      //
+      // KEPT DELIBERATELY, AS A NAMED EXEMPTION from the entailment criterion
+      // applied further down. The next assertion — `findings` has length 1 —
+      // ENTAILS that `findings[0]` is defined, so this one has no mutation that
+      // reddens it alone: the mutation that empties `findings` reddens all seven
+      // claim assertions, while the one that duplicates the registration reddens
+      // only the length assertion. Measured, and it is the inverse of what the
+      // pair looks like.
+      //
+      // The exemption is diagnostic, and it is the whole reason: under "no check
+      // emitted" the other six failures read `expected undefined to be 'ok'`,
+      // `expected undefined to deeply equal [ 'workflowsDir' ]` and so on, none
+      // of which names the cause. This line turns that into one failure that
+      // says what is wrong. It is NOT precedent for re-adding an entailed
+      // assertion that carries no such diagnostic value — the deleted
+      // `details.modified is undefined` assertion below is the case in point,
+      // and it would have failed with `expected [ ... ] to be undefined`, which
+      // says no more than the key-set failure printed beside it.
       expect
         .soft(check, "a content-identical tree must still register a workflows.integrity check")
         .toBeDefined();
@@ -350,12 +389,22 @@ describe(
       // that claim rests on is pinned.)
       //
       // A separate `details.modified is undefined` assertion was considered and
-      // deliberately left out: pinning the key set already forbids that key,
-      // and no mutation reddens such an assertion without reddening this one —
-      // it would read as coverage while measuring nothing of its own.
+      // deliberately left out. The criterion is ENTAILMENT, not redundancy of
+      // wording: `toEqual(["workflowsDir"])` on the sorted key set is true only
+      // of a payload whose key set is exactly that, which forbids a `modified`
+      // key outright — so no payload can redden the deleted assertion without
+      // reddening this one.
+      //
+      // That entailment holds ONLY WHILE THIS ASSERTION STAYS EXACT. Weakening
+      // it to `toContain("workflowsDir")` breaks it, and the weakening is
+      // plausible rather than hypothetical: the row that lands `packagedDir` and
+      // `declined` in the drift payload will be looking at this line. If it is
+      // ever loosened, the deleted property does not fail — it silently stops
+      // being pinned at all. Restore an explicit `modified`-absent assertion in
+      // the same edit that loosens this one.
       expect
         .soft(
-          detailsKeys(check?.details),
+          sortedDetailsKeys(check?.details),
           "an ok check carries `workflowsDir` only — the drift payload belongs to the info emission",
         )
         .toEqual(["workflowsDir"]);
@@ -374,9 +423,25 @@ describe(
       expect
         .soft(check?.message, "the ok message must read as prose, not as an empty renderer slot")
         .toMatch(/match the packaged copy/);
+      // `toBe` on the whole title, NOT `toContain(ADOPTER_WORKFLOWS_DIR)`. The
+      // containment form had a surviving mutant: the title is a HARDCODED
+      // literal at the emission site while `details.workflowsDir` is derived
+      // from the reader, and retitling only the literal to
+      // `Workflows integrity (.github/workflows-old)` left the suite green,
+      // because the mutated string still CONTAINS `.github/workflows`. Substring
+      // containment cannot see a suffix being appended to the thing it looks
+      // for.
+      //
+      // The alternative — building the expected value out of
+      // `check.details.workflowsDir` — was rejected: it has the same substring
+      // hole under `toContain`, and under `toBe` it is satisfiable by a
+      // COORDINATED edit that moves the title and the payload together, which is
+      // the realistic refactor rather than an exotic one. Pinning both to the
+      // shared constant (here and in the `workflowsDir` assertion above) forces
+      // agreement transitively and reddens on the coordinated edit too.
       expect
-        .soft(check?.title, "the JSON surface's title must identify the checked directory")
-        .toContain(ADOPTER_WORKFLOWS_DIR);
+        .soft(check?.title, "the JSON surface's title must name the checked directory exactly")
+        .toBe(`Workflows integrity (${ADOPTER_WORKFLOWS_DIR})`);
 
       // NOT COVERED BY THIS ROW — BR-0006-0018's 改行正規化 clause.
       //
@@ -387,9 +452,87 @@ describe(
       // assumed). This row cannot close it either, and not by omission — the
       // TC's Setup asks for a byte-identical revert, and a byte-identical
       // fixture answers the same way under both bases BY CONSTRUCTION. Closing
-      // it needs a fixture whose two sides differ in line endings ONLY, which
-      // is a change to the TC's Setup and is routed upstream. Do not read this
-      // row as covering that clause.
+      // it needs a fixture whose two sides differ in line endings ONLY, which is
+      // a change to the TC's Setup.
+      //
+      // The handle for that hand-off is the evidence anchor
+      // `.qfai/evidence/implement-spec-0006.md#tdd-0030`, which records the
+      // measurement above and the clause left unfilled. "Routed upstream" with
+      // no artifact named is not verifiable by the next reader, and an
+      // unverifiable hand-off is indistinguishable from an unmade one. Do not
+      // read this row as covering that clause.
+    });
+
+    // The BOUNDARY COMPLEMENT of the `ok` emission above: the tree on which it
+    // must NOT fire. It lives in this row because this row introduces that
+    // emission, and narrowing a new emission to its own licence is part of
+    // adding it — the licence is the closed state enum of
+    // `.qfai/contracts/cli/shipped-workflows.md` §3, where a name with no
+    // provenance entry is `adopter-owned` (present on disk) or `absent`, and
+    // BOTH rows mandate silence from `qfai doctor`. The doctor contract states
+    // the same thing twice: its emission table keys `ok` to `installed` alone,
+    // and its non-goals say it reports nothing for a workflow with no
+    // provenance entry.
+    //
+    // An empty record therefore has to produce ZERO checks, not an `ok` one:
+    // with no recorded name there is no `installed` name either, so an `ok`
+    // check would be claiming a match QFAI never looked for. This is also the
+    // exact tree of §3's known limitation — an adopter who installed before
+    // the record existed — for which the contract says the drift channel is
+    // silent.
+    //
+    // Not TDD-0038's case: that row owns a PER-NAME no-entry file inside a
+    // tree whose record is non-empty, observed as that name's absence from the
+    // comparison. This is the WHOLE-RECORD-EMPTY aggregate, observed at the
+    // emission site as the count of registered checks.
+    it("registers no workflows.integrity check at all when the provenance record is absent", async () => {
+      const dir = await pool.seedAdopterTree();
+      await editShippedWorkflow(dir, "qfai-tests.yml");
+
+      // Precondition: drift is observable while the record still exists. This
+      // is what makes the silence below attributable to the empty record
+      // rather than to a tree with nothing to compare — and it proves the
+      // record was non-empty without reading it, because the reader only ever
+      // visits recorded names, so a non-empty `modified` is impossible from an
+      // empty record.
+      const beforeDeletion = await diffInstalledShippedWorkflows(dir);
+      expect(
+        beforeDeletion.modified,
+        "drift must be observable while the record survives, or the silence after its deletion is vacuous",
+      ).toContain(`${ADOPTER_WORKFLOWS_DIR}/qfai-tests.yml`);
+
+      await deleteInstallProvenanceRecord(dir);
+
+      // Precondition: the comparison set is now empty, read through the
+      // production reader rather than trusted from the fixture. A record that
+      // moved would leave the fixture's `rm` deleting nothing, and this is the
+      // assertion that fails instead of the run passing on an unmutated tree.
+      expect(
+        Object.keys((await readInstallProvenance(dir)).workflows),
+        "the record must read as empty, or this is not the state §3 reasons about",
+      ).toEqual([]);
+      // Precondition: the files are still ON DISK and still differ from the
+      // packaged copy. That makes every shipped name `adopter-owned` (no
+      // entry, present on disk) rather than `absent`, which is the stronger of
+      // the two silent rows: an implementation that inferred ownership from
+      // the reserved filename prefix instead of from the record would report
+      // this file, and the prefix is a reservation notice, not a selector.
+      await expect(
+        readFile(adopterWorkflowPath(dir, "qfai-tests.yml"), "utf-8"),
+        "the edited file must still be on disk, or the state is `absent`, not `adopter-owned`",
+      ).resolves.toContain("# adopter hand edit");
+
+      const data = await createDoctorData({ startDir: dir, rootExplicit: true });
+
+      // One claim assertion, so nothing here can be shadowed by an earlier
+      // failure and `expect.soft` would buy nothing. Deep equality against the
+      // empty array rather than a length assertion: its diff prints the check
+      // that leaked, including its severity, which is the difference between
+      // "the `ok` branch fired" and "the drift branch fired".
+      expect(
+        data.checks.filter((entry) => entry.id === "workflows.integrity"),
+        "a tree with no provenance record has no `installed` name, so no workflows.integrity check may be registered at all",
+      ).toEqual([]);
     });
   },
 );

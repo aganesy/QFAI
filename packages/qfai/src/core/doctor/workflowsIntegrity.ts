@@ -40,17 +40,24 @@
  * would report every installed workflow as drifted on a CRLF checkout — a
  * false advisory for every Windows adopter.
  *
- * The contracts do not merely omit that basis, they state the OPPOSITE one:
- * the shipped-workflows file-state table keys its `installed` / `modified`
- * rows on `bytes == packaged` / `bytes != packaged`, the doctor contract says
- * "whose bytes differ", and neither file contains the string `normaliz`,
- * `CRLF` or 改行 anywhere (measured, not assumed). So the normalized basis is
- * attributable to the business rule ALONE, and the raw-byte wording in the
- * contracts is a live contradiction against it that is routed upstream rather
- * than a silence this module is free to fill. Implementing the business rule
- * is the deliberate call: raw bytes would ship the Windows false advisory.
- * Do not "align" this code to the contract wording without that contradiction
- * being resolved there first.
+ * The contracts do not merely omit that basis, they state the OPPOSITE one,
+ * and the contradiction is named on both sides so a later reader can check it
+ * rather than take it on trust. Implemented: BR-0006-0018 (改行正規化後の内容
+ * 一致). Contradicting it: the file-state table in §3 of
+ * `.qfai/contracts/cli/shipped-workflows.md`, whose `installed` / `modified`
+ * rows key on `bytes == packaged` / `bytes != packaged`; and the opening
+ * sentence of the `workflows.integrity` section of
+ * `.qfai/contracts/cli/qfai-doctor.md`, which says "whose bytes differ".
+ * Neither file contains the string `normaliz`, `CRLF` or 改行 anywhere
+ * (measured, not assumed), so the normalized basis is attributable to the
+ * business rule ALONE.
+ *
+ * The contradiction is live and belongs to the contract owner, not to a
+ * silence this module is free to fill — which is why the two contradicting
+ * sections are cited by name above instead of being described. Implementing
+ * the business rule is the deliberate call: raw bytes would ship the Windows
+ * false advisory. Do not "align" this code to the contract wording without
+ * that contradiction being resolved there first.
  *
  * These digests are consequently NOT comparable to the `sha256` field of a
  * provenance entry. That field is a RAW-BYTE digest of exactly the bytes the
@@ -102,9 +109,11 @@ export type WorkflowsIntegrityStatus = "ok" | "modified" | "skipped_unresolved";
  * business rule BR-0006-0022, and `status === "skipped_unresolved"` by the
  * unresolvable-packaged-copy skip of BR-0006-0020 — both of which are later
  * obligations of this same check. (`status === "ok"` IS consumed: the
- * override leg of the drift suite asserts it.) Recorded here because the
- * evidence directory that carries the longer argument is not version
- * controlled; delete a member instead of widening it if its rule is dropped.
+ * override leg of the drift suite asserts it. So is `comparedCount`, which
+ * gates that same `ok` emission — do not add it to this list.) Recorded here
+ * because the evidence directory that carries the longer argument is not
+ * version controlled; delete a member instead of widening it if its rule is
+ * dropped.
  */
 export type WorkflowsIntegrityDiff = {
   status: WorkflowsIntegrityStatus;
@@ -114,6 +123,33 @@ export type WorkflowsIntegrityDiff = {
   packagedDir: string | undefined;
   /** Root-relative POSIX paths of the drifted files, sorted by codepoint. */
   modified: string[];
+  /**
+   * How many recorded names were compared — the SIZE OF THE COMPARISON SET,
+   * not a count of matches and not a count of drifted files. Zero means this
+   * reader examined nothing.
+   *
+   * It exists because `status: "ok"` alone cannot carry that distinction, and a
+   * caller that emits on `ok` alone reports a match on a tree where nothing
+   * was looked at. The record is empty for a missing, unreadable or malformed
+   * file by contract, and an empty record puts every shipped name in the
+   * `adopter-owned` or `absent` row of the shipped-workflows state enum
+   * (§3) — both of which the enum and the doctor contract's emission table
+   * require to stay SILENT, the latter keying `ok` to `installed` alone. So a
+   * consumer must be able to tell "compared some names, all matched" from
+   * "compared no names", and the second must produce no output.
+   *
+   * A COUNT and deliberately not a fourth status: the doctor contract says
+   * this check introduces no state of its own, and its state vocabulary is
+   * exactly that closed enum. A count is an observation about the comparison,
+   * not a new member of the vocabulary.
+   *
+   * Not narrowed to "names that resolved to `installed`", which would be the
+   * stronger-looking predicate and is wrong: a tree whose recorded files were
+   * all deliberately removed has zero `installed` names, and BR-0006-0022
+   * requires severity `ok` there — truthfully, because QFAI did compare every
+   * recorded name and found nothing stale.
+   */
+  comparedCount: number;
 };
 
 /**
@@ -216,6 +252,7 @@ export async function diffInstalledShippedWorkflows(
       workflowsDir: WORKFLOWS_DIR_RELATIVE,
       packagedDir: undefined,
       modified: [],
+      comparedCount: 0,
     };
   }
 
@@ -242,5 +279,6 @@ export async function diffInstalledShippedWorkflows(
     workflowsDir: WORKFLOWS_DIR_RELATIVE,
     packagedDir,
     modified,
+    comparedCount: recordedNames.length,
   };
 }
