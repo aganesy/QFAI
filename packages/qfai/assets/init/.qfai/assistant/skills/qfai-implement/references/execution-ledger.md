@@ -248,9 +248,13 @@ authored by `/qfai-atdd` (`qfai-implement/SKILL.md` Non-goals). The two skills
 therefore share one lifecycle, and the ordering that skill works in makes the
 RED question different rather than absent.
 
-`/qfai-atdd` builds the API and integration surfaces a journey needs inside the
-same cycle that writes the journey. A test written after its surface passes on
-the first run, so:
+`/qfai-atdd` does **not** write production code — `agent-routing.yml` gives its
+implementation phase `acceptance-test-engineer`, who owns acceptance tests, and
+no backend or frontend agent. The surface a journey needs is built by this
+skill's Phase Green, from the RED that stage handed over. What makes the RED
+question different there is ordering, not ownership: the work orders that build
+a spec's surfaces often run before the journey is written, and a test written
+after its surface passes on the first run. So:
 
 - **There is no waiver here.** `todo -> red` still requires an admissible RED,
   and a first-run pass is still not one.
@@ -273,6 +277,12 @@ the first run, so:
   pointer either way and its anchor names which file. Calling
   `implement-<spec-id>.md` the single home was true while one stage produced
   every pair; it stopped being true the moment another stage did.
+  `qfai-implement/SKILL.md`'s completion item 10 reads the same split, so an
+  E2E/API row whose anchor names the ATDD file reaches `done`; items 11 and the
+  matching prohibition condition append the two reviewer verdicts to **that**
+  file. This skill still runs `completion-reviewer` and
+  `implementation-reviewer` for every row it advances — only the RED provenance
+  came from elsewhere.
 - **`exception` is for a row where both are unavailable** — an obligation with
   no persisted form or no observable surface at L5, recorded with a `DR-*`
   naming what is missing. It is not the routine outcome of surface-first

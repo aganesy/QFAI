@@ -53,6 +53,7 @@ When unsure, read inputs in this order:
   - `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md` (AC)
   - `.qfai/specs/<spec-id>/05_Examples.md` (EX)
   - `.qfai/specs/<spec-id>/06_Test-Cases.md` (TC)
+  - `.qfai/specs/<spec-id>/tdd/test-list.md` (the execution ledger — enumerate the `Layer = E2E` / `Layer = API` rows this run owes evidence for, with their `TDD-ID`, obligation column and `Selector`)
   - `.qfai/contracts/api/**` (CON-API)
   - `.qfai/contracts/db/**` (CON-DB)
   - `.qfai/contracts/ui/**` and `.qfai/contracts/design/**` when the target spec is UI-bearing
@@ -70,6 +71,7 @@ Do not read discussion-pack UI/UX sidecars. UI-bearing acceptance tests consume 
   - `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md`
   - `.qfai/specs/<spec-id>/05_Examples.md`
   - `.qfai/specs/<spec-id>/06_Test-Cases.md`
+  - `.qfai/specs/<spec-id>/tdd/test-list.md` — read, never written. A run that does not enumerate its `Layer = E2E` / `Layer = API` rows produces no `## Ledger rows advanced` entry for them, and `/qfai-implement` Phase Red step 3b then stops on a missing handoff.
 - Escalation Mode:
   - allowed only when `01_Spec.md` Escalation Hook signals ambiguity / conflict / missing constraint / trade-off
   - read only `.qfai/specs/_policies/01_Objective.md` and `.qfai/specs/_policies/08_Decisions.md`

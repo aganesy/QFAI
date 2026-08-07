@@ -60,9 +60,21 @@ Take the first that applies, and record which one in the evidence file.
    2. Run the test. An admissible failure is an assertion — or an
       expected-status check — inside this row's own selector, naming the
       predicate the row owns. Record the command and output as the row's RED
-      pair, then build the surface and re-run for GREEN.
+      pair.
+   3. **Submit that run to `qa-gatekeeper` (routing phase `red`) before any
+      production code exists, and wait for PASS.** `qfai-implement/SKILL.md`
+      requires an independent reviewer to confirm the RED while the surface is
+      still absent; a confirmation sought after it is built is post-hoc
+      self-attestation of a state nobody can re-observe. Record the verdict
+      beside the pair.
+   4. **Stop there. Do not build the surface.** This skill owns acceptance
+      tests, not production code — `agent-routing.yml` gives its implementation
+      phase `acceptance-test-engineer` and no backend or frontend agent. The
+      surface is built by `/qfai-implement` Phase Green from this handover, and
+      the GREEN pair is recorded there. Branch 1's output is the RED pair, its
+      `qa-gatekeeper` PASS, and the `Oracle proof` plan.
 
-   Stage gate **P1b** is where this happens.
+   Stage gate **P1b** is where steps 1-3 happen.
 
 2. **Falsifiability (the surface is already there).** Two cases, one rule: the
    surface predates this cycle, or this cycle built it before the journey was
@@ -108,11 +120,11 @@ try branches 1 and 2.
 
 Exactly one form per row, never both and never neither:
 
-| Branch         | Recorded                                                                      |
-| -------------- | ----------------------------------------------------------------------------- |
-| Observed RED   | RED command+result, GREEN command+result, `Oracle proof`                      |
-| Falsifiability | `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, GREEN pair |
-| `exception`    | `DR-*`, and why both other branches were unavailable                          |
+| Branch         | Recorded                                                                                                         |
+| -------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Observed RED   | RED command+result, `qa-gatekeeper` PASS, the `Oracle proof` plan                                                |
+| Falsifiability | `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, GREEN pair                                    |
+| `exception`    | Write `todo -> exception` with the `DR-*` the stage recorded; do not re-derive it, and do not enter Phase Green. |
 
 **Where each form lives.** The `## Ledger rows advanced` table is an index: one
 row per `TDD-*`, holding the branch and an anchor. The commands and their output
@@ -127,7 +139,9 @@ production mutation that makes the test fail, or a recorded `equivalent-mutant`
 — because a passing run does not show the test depends on the behaviour the row
 owns. A natural RED is not a substitute: it shows the test failed before the
 code existed, not that it discriminates once the code does. Branch 2 satisfies
-this with the mutation it already performs; branch 1 records one explicitly.
+this with the mutation it already performs; branch 1 names the mutation it
+intends and `/qfai-implement` records the run at GREEN, when there is production
+code to mutate.
 Criteria: `../../qfai-implement/references/oracle-strength.md`.
 
 The `Evidence` cell is a pointer; the payload lives in
@@ -144,12 +158,14 @@ terminal state branch 2 exists to avoid, reached through the branch itself.
 
 Read the row's entry and take the branch it names:
 
-| Branch           | What `/qfai-implement` does                                                                                                                                                                                              |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `observed-red`   | Verify the RED pair names this row's selector and the predicate it owns, write `todo -> red` from it, continue at Phase Green with the recorded GREEN pair. Do **not** re-run for a second RED.                          |
-| `falsifiability` | Verify `Satisfied-by`, `Falsifiability command` and `Falsifiability result` are present and that the mutation names the predicate this row asserts on. The mutation run **is** `todo -> red`; the restored run is GREEN. |
-| `exception`      | Accept the `DR-*` the stage recorded; do not re-derive it.                                                                                                                                                               |
+| Branch           | What `/qfai-implement` does                                                                                                                                                                                                                                                        |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `observed-red`   | Verify the RED pair names this row's selector and the predicate it owns and that `qa-gatekeeper` passed it, write `todo -> red` from it, then run Phase Green normally — the surface does not exist yet, and building it is this skill's work. Do **not** re-run for a second RED. |
+| `falsifiability` | Verify `Satisfied-by`, `Falsifiability command` and `Falsifiability result` are present and that the mutation names the predicate this row asserts on. The mutation run **is** `todo -> red`; the restored run is GREEN.                                                           |
+| `exception`      | Write `todo -> exception` with the `DR-*` the stage recorded; do not re-derive it, and do not enter Phase Green.                                                                                                                                                                   |
 
-If the entry is absent, malformed, or names no branch, `/qfai-implement` **stops
-with a handoff note**. Inventing a RED for a test it did not author is a drift
-violation, not a recovery.
+If the entry is absent, malformed, or names no branch, the row **stays at
+`todo`** and `/qfai-implement` **stops with a handoff note**. Writing `red`
+first and discovering the gap afterwards parks a `red` row with no RED behind
+it; inventing one for a test it did not author is a drift violation, not a
+recovery.

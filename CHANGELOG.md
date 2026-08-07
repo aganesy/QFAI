@@ -6,6 +6,33 @@
 
 ### Fixed
 
+- **The handover is verified before the status moves.** Phase Red step 2 wrote
+  `todo -> red` unconditionally, so a row whose ATDD entry was missing or
+  malformed was parked at `red` with no RED behind it, and an `exception` row
+  reached its `DR-*` only after an illegal `red` hop. An `E2E` / `API` row's
+  transition is now decided by step 3b: `observed-red` and `falsifiability`
+  write `red`, `exception` writes `exception` and skips Phase Green, and an
+  unusable entry leaves the row at `todo`.
+- **The completion gate can see the ATDD evidence file.** Item 10 required every
+  row's `Evidence` anchor to resolve into `implement-<spec-id>.md`, so an
+  `E2E` / `API` row pointing at `atdd-<spec-id>.md` — where this release puts
+  its RED provenance — could not reach `done` however correct its evidence was.
+  The gate now reads the evidence file the row's `Layer` owns, and the reviewer
+  verdicts are appended to that file. `/qfai-implement` still runs both
+  reviewers for every row it advances.
+- **`/qfai-atdd` no longer told to write production code.** Branch 1 ended
+  "build the surface and re-run for GREEN", but `agent-routing.yml` gives that
+  stage `acceptance-test-engineer` and no backend or frontend agent — so it
+  either wrote code it does not own or stopped with no GREEN. It now records the
+  RED, gets `qa-gatekeeper` PASS **before any production code exists** (the
+  blocking confirmation `qfai-implement` requires, which cannot honestly be
+  sought after the surface is built), and hands over; `/qfai-implement` Phase
+  Green builds the surface and takes the GREEN.
+- **The execution ledger is a mandatory `/qfai-atdd` input.** Neither the
+  preflight priority list nor the Read Set Contract named
+  `tdd/test-list.md`, so a default-mode run could not enumerate the
+  `Layer = E2E` / `Layer = API` rows it owes evidence for — and step 3b then
+  stopped on a missing handoff for every one of them. It is read, never written.
 - **`/qfai-implement` Phase Red consumes the ATDD provenance instead of
   re-observing it.** The handover was declared but not executable: steps 4 and 5
   re-run the row's test and watch it fail, and by the time that skill reaches an
@@ -42,9 +69,13 @@ advanced` asked for RED/GREEN commands, output and the falsifiability result
   `todo -> red` needs a RED the stage order makes unobservable, `exception` was
   the only terminal state such a row could reach: on one consumer repository all
   13 remaining `todo` rows were ATDD-owned, and the ledger closed at 95
-  `exception` against 21 `done`. The skill now names the ledger and the cells it
-  may write, adds stage gate **P1b** (RED observed before P2-P4 build any
-  surface), and documents three ordered branches in
+  `exception` against 21 `done`. The skill now names the ledger it feeds and
+  states that it **does not write it** — `/qfai-implement` remains the single
+  writer of every `Status` / `DR-ID` / `Evidence` cell, as the Drift Protocol
+  grants; what `/qfai-atdd` owes is the evidence those cells point at, in
+  `.qfai/evidence/atdd-<spec-id>.md`. It adds stage gate **P1b** (RED observed,
+  and `qa-gatekeeper`-confirmed, before P2-P4 build any surface) and documents
+  three ordered branches in
   `references/red-provenance.md` — observed RED, falsifiability via the existing
   `red-not-observable.md` path, and `exception` with a `DR-*` only when both are
   unavailable. `qa-gatekeeper` accepts the falsifiability form for these rows as

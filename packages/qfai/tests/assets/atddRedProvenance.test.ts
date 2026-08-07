@@ -154,12 +154,15 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
   it("requires an Oracle proof on the observed-RED branch too", async () => {
     // `qa-gatekeeper` requires one on every item, and a natural RED is not a
     // substitute — so the preferred branch's prescribed evidence could not
-    // clear the gate it is judged by.
+    // clear the gate it is judged by. The branch names the mutation it
+    // intends; the run is recorded at GREEN, which is `/qfai-implement`'s
+    // phase, because there is no production code to mutate until then.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain(
-      "| Observed RED | RED command+result, GREEN command+result, `Oracle proof` |",
+      "| Observed RED | RED command+result, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
     );
     expect(provenance).toContain("A natural RED is not a substitute");
+    expect(provenance).toContain("branch 1 names the mutation it intends");
   });
 
   it("accepts a valid exception as the third evidence form", async () => {
@@ -268,5 +271,69 @@ describe.each(TREES)("%s (handover and container)", (tree) => {
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain("**Where each form lives.**");
     expect(provenance).toContain("execution-ledger.md#evidence-cell-contract");
+  });
+});
+
+describe.each(TREES)("%s (ownership and gate alignment)", (tree) => {
+  it("does not write `red` before the handover has been verified", async () => {
+    // Step 2 wrote `todo -> red` unconditionally, so a row whose ATDD entry is
+    // missing or malformed was parked at `red` with no RED behind it — and an
+    // `exception` row reached its DR only after an illegal `red` hop.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("not yet for an `E2E` / `API` row");
+    expect(implement).toContain("`exception` writes `todo -> exception`");
+    expect(implement).toContain("leaves the row at `todo` and stops with a handoff note");
+  });
+
+  it("keeps the ATDD evidence file reachable from the completion gate", async () => {
+    // Item 10 required every row's anchor to resolve into
+    // `implement-<spec-id>.md`, so an E2E/API row pointing at the ATDD file
+    // could not reach `done` however correct its RED and GREEN were.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("the evidence file its `Layer` owns");
+    expect(implement).toContain("`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` row");
+    expect(implement).toContain(
+      "The item's evidence file (item 10) is appended with both reviewer verdicts",
+    );
+
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("completion item 10 reads the same split");
+  });
+
+  it("submits the observed RED to qa-gatekeeper before any production code exists", async () => {
+    // Branch 1 went straight from recording the RED to building the surface,
+    // so the blocking confirmation `qfai-implement` requires could only be
+    // sought after the fact — post-hoc self-attestation of a state nobody can
+    // re-observe.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain(
+      "Submit that run to `qa-gatekeeper` (routing phase `red`) before any production code exists",
+    );
+    expect(provenance).toContain("Stage gate **P1b** is where steps 1-3 happen.");
+  });
+
+  it("leaves the production surface to the skill that owns production code", async () => {
+    // `agent-routing.yml` gives this stage `acceptance-test-engineer` and no
+    // backend or frontend agent, so "build the surface and re-run for GREEN"
+    // asked it to write code it does not own — or to stop without a GREEN.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**Stop there. Do not build the surface.**");
+    expect(provenance).toContain("no backend or frontend agent");
+    expect(provenance).not.toContain("then build the surface and re-run for GREEN");
+
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("does **not** write production code");
+  });
+
+  it("makes the ledger a mandatory ATDD input", async () => {
+    // The stage has to enumerate the E2E/API rows it owes evidence for. Both
+    // the preflight priority list and the Read Set Contract omitted the
+    // ledger, so a default-mode run could not name a single row — and step 3b
+    // then stops on a missing handoff for every one of them.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain(
+      "`.qfai/specs/<spec-id>/tdd/test-list.md` (the execution ledger — enumerate the `Layer = E2E` / `Layer = API` rows",
+    );
+    expect(atdd).toContain("`.qfai/specs/<spec-id>/tdd/test-list.md` — read, never written.");
   });
 });
