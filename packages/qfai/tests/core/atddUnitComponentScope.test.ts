@@ -381,6 +381,27 @@ describe("the replacement gate has no holes the exclusion could fall through", (
     );
   });
 
+  it("adds advice to these findings without moving their JSON category", async () => {
+    // `category` splits `qfai report` into its Canonical and Change sections
+    // and is emitted verbatim into `validate.json`, so a consumer can key on
+    // it. Both findings here gained a `suggested_action`, which sits behind
+    // `category` in `issue()`'s positional list — the slot has to be spelled
+    // out, and spelling it differently would ship an output change this PR
+    // does not announce. `TDDLIST_TC_NOT_COVERED` also has a second call site
+    // for the file-present path; one rule code must not report two categories.
+    await withSpec(
+      { "06_Test-Cases.md": table("| TC-0001 | L1 | AC-0001 | - | s | e |") },
+      async (root) => {
+        const issues = await validateTddList(root, defaultConfig);
+        for (const code of ["TDDLIST_MISSING", "TDDLIST_TC_NOT_COVERED"]) {
+          const found = issues.find((entry) => entry.code === code);
+          expect(found?.category, code).toBe("canonical");
+          expect(found?.suggested_action, code).toBeTruthy();
+        }
+      },
+    );
+  });
+
   it("keeps the ledger optional for a spec that declares no coverage-target TC", async () => {
     // The other half of the same promise: the escalation is conditional, so a
     // spec whose TCs are all L3 keeps the warning and gains no error.

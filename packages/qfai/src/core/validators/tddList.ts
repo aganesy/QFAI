@@ -545,7 +545,12 @@ async function validateSpecTddList(
         relPath,
         "tddList.fileExists",
         undefined,
-        "change",
+        // `canonical` is what this rule has always emitted, and the positional
+        // `category` slot is only spelled out here because `suggested_action`
+        // sits behind it. A JSON `category` is machine-readable output a
+        // consumer may key on, and moving one is a change to announce on its
+        // own merits, not a side effect of adding advice text.
+        "canonical",
         owed > 0
           ? `Unit/Component TC are gated here alone since \`QFAI-ATDD-112\` stopped demanding an annotation for them, so the absent ledger is reported as \`TDDLIST_TC_NOT_COVERED\` (error) below. Seed \`${TDD_LIST_REL_PATH}\` with one row per coverage-target TC (\`/qfai-sdd\` Phase 2b), then run \`/qfai-implement\`.`
           : `Seed \`${TDD_LIST_REL_PATH}\` when the spec gains a Unit or Component TC (\`/qfai-sdd\` Phase 2b).`,
@@ -564,7 +569,10 @@ async function validateSpecTddList(
           relPath,
           "tddList.tcCoverage",
           missing,
-          "change",
+          // Same `category` as the other `TDDLIST_TC_NOT_COVERED` site below.
+          // One rule code emitting two categories would sort the same finding
+          // into a different report section depending on which path raised it.
+          "canonical",
           `Seed \`${TDD_LIST_REL_PATH}\` with one row per coverage-target TC (\`/qfai-sdd\` Phase 2b), then run \`/qfai-implement\`.`,
         ),
       );
