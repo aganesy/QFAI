@@ -438,7 +438,9 @@ describe.each(TREES)("%s (executability of the handed-over row)", (tree) => {
     // command and its real failing output, so without this step an
     // `observed-red` row arrives at the gate with a plan and no run.
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("2a. **Run the `Oracle proof` and record it here.**");
+    expect(implement).toContain(
+      "2a. **Run the `Oracle proof` and record it here, before the submission in step 2.**",
+    );
     expect(implement).toContain("revert the mutation immediately");
     expect(implement).toContain("its falsifiability run **is** the Oracle proof");
   });
@@ -488,5 +490,32 @@ describe.each(TREES)("%s (executability of the handed-over row)", (tree) => {
     const atddBlock = catalog.slice(catalog.indexOf("- skill: qfai-atdd"));
     const block = atddBlock.slice(0, atddBlock.indexOf("- skill: ", 1));
     expect(block).toContain("blocking_agents: [delivery-planner, qa-gatekeeper]");
+  });
+});
+
+describe.each(TREES)("%s (gate ordering)", (tree) => {
+  it("takes the Oracle proof before submitting the GREEN", async () => {
+    // `qa-gatekeeper` requires an `Oracle proof` on every item, and the `build`
+    // phase is blocking — so a GREEN submitted before step 2a produced one is a
+    // REVISE by construction, and that REVISE blocks the step meant to produce
+    // the proof.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("Do not submit it yet");
+    expect(implement).toContain("a GREEN submitted before step 2a has produced one is a REVISE");
+    expect(implement).toContain(
+      "Take the proof first (2a), then submit the pass and the proof together",
+    );
+  });
+
+  it("reruns the agents a scope REVISE invalidates, not only the planner", async () => {
+    // A `delivery-planner` REVISE means the selector covers too little, and the
+    // repair is `acceptance-test-engineer` splitting the test plus a fresh
+    // `qa-gatekeeper` verdict on the new RED. `failed-agents-only` re-ran the
+    // planner against an unchanged selector, or left a stale PASS standing.
+    const catalog = await read(tree, "assistant/manifest/agent-routing.yml");
+    const atdd = catalog.slice(catalog.indexOf("- skill: qfai-atdd"));
+    const block = atdd.slice(0, atdd.indexOf("- skill: ", 1));
+    const red = block.slice(block.indexOf("- id: red"), block.indexOf("- id: implementation"));
+    expect(red).toContain("rerun_policy: changed-scope-dependents");
   });
 });

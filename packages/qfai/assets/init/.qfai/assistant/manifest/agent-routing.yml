@@ -139,7 +139,14 @@ routing:
         conditional_agents: []
         parallel_groups: []
         blocking_agents: [delivery-planner, qa-gatekeeper]
-        rerun_policy: failed-agents-only
+        # `changed-scope-dependents`, not `failed-agents-only`: a
+        # `delivery-planner` REVISE here means the selector covers too little
+        # of its obligation, and the repair is `acceptance-test-engineer`
+        # splitting the test — then a fresh `qa-gatekeeper` verdict on the new
+        # RED. Re-running only the agent that failed would have the planner
+        # re-read an unchanged selector and return the same REVISE, or leave
+        # the previous gatekeeper PASS standing over a test that changed.
+        rerun_policy: changed-scope-dependents
       - id: implementation
         mandatory_agents: [acceptance-test-engineer]
         conditional_agents: []

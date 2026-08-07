@@ -12,6 +12,17 @@
   differs from the GREEN's and the reviewers' — that is the property the RED is
   worth having, and demanding one revision made an `observed-red` E2E/API row
   unable to reach `done` at all.
+- **The GREEN is submitted after the `Oracle proof`, not before it.**
+  `qa-gatekeeper` requires a proof on every item and the `build` phase is
+  blocking, so a GREEN submitted before step 2a produced one is a REVISE by
+  construction — and that REVISE blocks the step meant to produce the proof.
+  Step 2 takes the passing run, step 2a takes the proof, and the two are
+  submitted together.
+- **A scope REVISE in the ATDD `red` phase reruns the agents it invalidates.**
+  `failed-agents-only` re-ran `delivery-planner` alone, against a selector
+  nobody had changed — so it returned the same REVISE, or the previous
+  `qa-gatekeeper` PASS stood over a test that had since been split. The phase
+  uses `changed-scope-dependents`.
 - **Phase Green runs the `Oracle proof`.** Branch 1 records the mutation it
   intends; there is nothing to mutate until Phase Green builds the surface, and
   the phase had no step for it. Completion item 5 wants the command and its real
