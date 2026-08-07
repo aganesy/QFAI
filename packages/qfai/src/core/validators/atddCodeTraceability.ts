@@ -374,10 +374,16 @@ export async function validateAtddCodeTraceability(
     // `evaluated`, not `result`: `.qfai/report/atdd-traceability/` is a single
     // shared path with no scope in its name, so writing the narrowed set there
     // let a `--spec 0002` gate overwrite the repo-wide audit artifact with a
-    // partial one — and two per-spec runs would leave the last writer's spec
-    // only, with `summary.json` and `summary.md` possibly from different runs.
-    // The report stays repo-wide under every scope, which also makes a
-    // concurrent overwrite harmless: both writers produce the same content.
+    // partial one, and two per-spec runs left the last writer's spec only.
+    // Repo-wide under every scope means the artifact no longer depends on which
+    // scope wrote it.
+    //
+    // It does **not** make concurrent writes atomic. Two runs evaluate at
+    // different instants, and `summary.json` and `summary.md` are separate
+    // writes, so an interleaving can still leave the two files describing
+    // different snapshots. That is the shared-state race tracked with the
+    // `.qfai/state.json` one; a fix belongs at the artifact-writing layer, not
+    // in this validator.
     await writeAtddTraceabilityReport(root, config, evaluated);
   } catch (error) {
     issues.push(
