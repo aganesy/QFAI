@@ -279,7 +279,15 @@ export async function validateScaffoldPlaceholder(
         // and `isPathInSpecScope` keeps the finding under every scope, so a
         // sibling spec's unfilled skeleton failed this spec's scoped gate.
         // `file` stays the test path: that is what the operator has to edit.
-        specId === null ? undefined : { relatedFiles: [path.posix.join(specsRelative, specId)] },
+        // Only a spec that exists is named. `.qfai/specs/spec-9999` for a
+        // mistyped scaffold directory would give the finding an owner of
+        // `9999`, and `isFindingInSpecScope` — which lets attributed owners
+        // decide and ignores the unattributed test path — then drops it from
+        // every real scope, undoing the repo-wide treatment the scan above
+        // preserved for it.
+        specId !== null && declaredSpecNumbers.has(scaffoldSpecNumber(specId) ?? "")
+          ? { relatedFiles: [path.posix.join(specsRelative, specId)] }
+          : undefined,
       ),
     );
   }

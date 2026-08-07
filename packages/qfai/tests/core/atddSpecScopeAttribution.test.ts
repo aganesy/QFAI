@@ -467,7 +467,21 @@ describe("existence is a directory question, not an id question", () => {
       const issues = await validateScaffoldPlaceholder(root, defaultConfig, {
         specScope: new Set(["0001"]),
       });
-      expect(issues.map((entry) => entry.code)).toContain("D-SCAFFOLD-PLACEHOLDER");
+      const finding = issues.find((entry) => entry.code === "D-SCAFFOLD-PLACEHOLDER");
+      expect(finding).toBeDefined();
+      // Surviving the scan is not enough — `runValidate` applies
+      // `isFindingInSpecScope` afterwards, and naming a `.qfai/specs/spec-9999`
+      // that does not exist gives the finding an owner of `9999`, which that
+      // filter drops from every real scope. The assertion has to run the whole
+      // path, not just the validator's return.
+      expect(finding?.relatedFiles ?? []).toEqual([]);
+      expect(
+        isFindingInSpecScope(
+          finding ?? {},
+          { root, specsRoot: path.join(root, ".qfai", "specs") },
+          new Set(["0001"]),
+        ),
+      ).toBe(true);
     });
   });
 });
