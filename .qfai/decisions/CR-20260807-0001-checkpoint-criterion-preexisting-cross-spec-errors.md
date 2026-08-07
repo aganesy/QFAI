@@ -114,6 +114,56 @@ degrades what `done` means.
 - Tests: none reset
 - Contracts: none
 
+## Decision needed from user
+
+Choose **A**, **B** or **C** from the Options section above, and say so in this file's `Status` /
+`Approved option` fields. Nothing else is being asked.
+
+The concrete effect of each choice on the work already done:
+
+- **A** — the twelve rows of this slice, and every row of spec-0017 / spec-0015 / spec-0008 after them,
+  become closable as they finish. Two rows are waiting on it right now (TDD-0029, TDD-0033), both with
+  all three reviewers reported.
+- **B** — no `/qfai-implement` row closes anywhere in this repository until 20 `Layer = E2E` rows are
+  seeded, their tests authored, and spec-0017's 82 rows completed.
+- **C** — rows keep finishing and keep parking at `refactor`. Nothing is lost, but the ledger stops
+  distinguishing "reviewed and complete" from "in progress", and every later run re-derives the same
+  determination for the same rows.
+
+## Approved actions (owner skill rerun plan)
+
+Mode: **`confirm-only`**. No spec, contract or ledger content is re-derived by this CR — the artifact
+it changes is a skill reference, and no downstream artifact is invalidated by the change.
+
+**Owner correction, and it matters for who performs the edit.** The `Impact scope` above named
+`.qfai/assistant/skills/qfai-implement/references/checkpoint-verification.md`, which reads as
+`/qfai-sdd` surface. It is not. That file is **byte-identical (5880 bytes, verified) to
+`packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/references/checkpoint-verification.md`**
+and is mirrored from it by `scripts/sync-init-to-root.mjs`. So under Option A the change is a **QFAI
+package change** authored in `packages/qfai/assets/init/**` and mirrored down — not a `/qfai-sdd`
+rerun, and not an edit to the root copy (editing the root copy alone fails `pnpm ci:gate`'s
+`git diff --exit-code .qfai/`).
+
+Under Option A:
+
+1. Edit `packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/references/checkpoint-verification.md`,
+   adding the measured-delta clause to `#pass-criteria` with clause (e) mandatory.
+2. Run the asset mirror so the root copy matches, and confirm `pnpm ci:gate` is clean.
+3. Add or extend a test under `packages/qfai/tests/` covering the new clause, per the repository rule
+   that all source changes carry test coverage. The reference is shipped content, so the
+   distributed-surface rules apply to its wording — no internal IDs, no version markers.
+4. Set this CR's `Status: approved`, `Approved option`, `Approved by`, `Approved at`, `Applied at`, and
+   fill `## Resolution`.
+5. The blocked rows above then transition `refactor -> done` on their existing evidence; no row re-runs
+   its micro-cycle, because none of their obligations changed.
+
+Under Option B or C, no artifact changes and this CR closes with the chosen option recorded.
+
+## Resolution
+
+Pending. To be filled by the owner with: the option chosen, the artifact revision that applied it (if
+any), and the disposition of each row in the blocked set.
+
 ## Notes
 
 Two smaller reference-level defects surfaced alongside this one and are **not** part of this CR:
