@@ -6,6 +6,18 @@
 
 ### Changed
 
+- **One `Level` predicate, one normalization.** `resolveTcHomeKind` matched
+  `NO_ATDD_OBLIGATION_LEVELS` against the raw map value, the exported
+  `isOutsideAtddObligation` matched a trimmed and lower-cased one, and
+  `qfai atdd scaffold` carried a third set with a third inline normalization —
+  one question with three answers, inside the routing whose whole purpose is
+  stopping two rules from disagreeing about one cell. All three now call
+  `resolveAtddHomeKind`, which owns the normalization. The level table is a
+  `Map` rather than an object literal, so a `Level` cell spelled `constructor`
+  or `__proto__` no longer resolves to an inherited `Object.prototype` value:
+  that made the TC uncounted where it was annotated **and** reported as
+  forbidden there — two errors from one correct placement, on a cell whose only
+  fault was a typo.
 - **`catalog/test-layers.md` describes the routing the validator performs.**
   The "Annotation routing" section still said the derived `Level` does not move
   the annotation, that every `TC-*` is answered from `tests/integration/**`, and

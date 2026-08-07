@@ -616,15 +616,41 @@ function collectHeadingTcLevels(tcText: string): Array<[string, string]> {
   return pairs;
 }
 
-/** Test directory a declared `Level` routes its TC obligation to. */
-const LEVEL_TO_TEST_KIND: Record<string, AtddTestKind | undefined> = {
-  l3: "integration",
-  integration: "integration",
-  l4: "api",
-  api: "api",
-  l5: "e2e",
-  e2e: "e2e",
-};
+/**
+ * Test directory a declared `Level` routes its TC obligation to.
+ *
+ * A `Map`, not an object literal, because the key comes out of a spec document.
+ * `Record<string, …>` inherits `Object.prototype`, so a `Level` cell spelled
+ * `constructor` or `__proto__` resolved to an inherited value instead of
+ * `undefined` and never reached {@link DEFAULT_ATDD_HOME_KIND} — the TC was
+ * then neither counted where it was annotated nor accepted there, which is the
+ * two-errors-from-one-correct-action shape this routing exists to remove.
+ */
+const LEVEL_TO_TEST_KIND = new Map<string, AtddTestKind>([
+  ["l3", "integration"],
+  ["integration", "integration"],
+  ["l4", "api"],
+  ["api", "api"],
+  ["l5", "e2e"],
+  ["e2e", "e2e"],
+]);
+
+/**
+ * Where a `Level` this file cannot read routes to.
+ *
+ * The historical hard-coded answer, and deliberately the conservative one: a
+ * cell qfai does not understand keeps its obligation rather than discharging
+ * it. If an unreadable cell silently cleared `QFAI-ATDD-112`, `L1/L2` would be
+ * a one-keystroke way to delete any TC from the gate. Reached by a spec with no
+ * `Level` column, by a multi-valued cell (`L3/L5` — illegal, see
+ * `catalog/test-layers.md`) and by a typo alike.
+ */
+const DEFAULT_ATDD_HOME_KIND: AtddTestKind = "integration";
+
+/** The one normalization every `Level` comparison in this module applies. */
+function normalizeLevel(level: string): string {
+  return level.trim().toLowerCase();
+}
 
 /**
  * `Level` values that carry no ATDD annotation obligation.
@@ -652,6 +678,33 @@ const LEVEL_TO_TEST_KIND: Record<string, AtddTestKind | undefined> = {
 const NO_ATDD_OBLIGATION_LEVELS = new Set(["l1", "unit", "l2", "component"]);
 
 /**
+ * Where a declared `Level` routes its ATDD annotation obligation, or `null`
+ * when it owes none at all (Unit / Component).
+ *
+ * **The single answer to "what does this `Level` mean for ATDD".** It used to
+ * be three: `resolveTcHomeKind` matched `NO_ATDD_OBLIGATION_LEVELS` against the
+ * raw value, `isOutsideAtddObligation` against a trimmed and lower-cased one,
+ * and `qfai atdd scaffold` kept a third set with a third inline normalization.
+ * One question answered in three places is three chances for the routing rule
+ * and the exclusion rule to disagree about the same cell — which is the defect
+ * class this routing exists to remove, so it must not be reintroduced by the
+ * removal itself.
+ *
+ * `undefined` means the spec declares no `Level` for the TC (no column, no
+ * row): that is not "no obligation", it is the default home.
+ */
+export function resolveAtddHomeKind(level: string | undefined): AtddTestKind | null {
+  if (level === undefined) {
+    return DEFAULT_ATDD_HOME_KIND;
+  }
+  const normalized = normalizeLevel(level);
+  if (NO_ATDD_OBLIGATION_LEVELS.has(normalized)) {
+    return null;
+  }
+  return LEVEL_TO_TEST_KIND.get(normalized) ?? DEFAULT_ATDD_HOME_KIND;
+}
+
+/**
  * True when a declared `Level` puts the TC outside every ATDD obligation.
  *
  * Exported so the rules that fire on ATDD artefacts agree on one answer.
@@ -660,31 +713,23 @@ const NO_ATDD_OBLIGATION_LEVELS = new Set(["l1", "unit", "l2", "component"]);
  * `validate --profile atdd` for a TC that ATDD no longer owes anything for.
  */
 export function isOutsideAtddObligation(level: string | undefined): boolean {
-  return level !== undefined && NO_ATDD_OBLIGATION_LEVELS.has(level.trim().toLowerCase());
+  return resolveAtddHomeKind(level) === null;
 }
 
 /**
  * Where a TC's annotation legally lives, or `null` when the declared `Level`
  * owes no ATDD annotation at all.
  *
- * Defaults to `integration` — the historical hard-coded answer — so a spec
- * with no `Level` column behaves exactly as before. A TC that declares an
- * API-level obligation routes to `tests/api/**`, which was previously both
- * uncounted and reported as forbidden: two errors from one correct placement.
+ * A TC that declares an API-level obligation routes to `tests/api/**`, which
+ * was previously both uncounted and reported as forbidden: two errors from one
+ * correct placement.
  */
 function resolveTcHomeKind(
   tcLevels: Map<string, Map<string, string>>,
   spec: string,
   tcId: string,
 ): AtddTestKind | null {
-  const level = tcLevels.get(spec)?.get(tcId.toUpperCase());
-  if (level === undefined) {
-    return "integration";
-  }
-  if (NO_ATDD_OBLIGATION_LEVELS.has(level)) {
-    return null;
-  }
-  return LEVEL_TO_TEST_KIND[level] ?? "integration";
+  return resolveAtddHomeKind(tcLevels.get(spec)?.get(tcId.toUpperCase()));
 }
 
 /**
@@ -701,12 +746,12 @@ function buildMissingTcHomes(
     const spec = parsed?.[1];
     const id = parsed?.[2];
     if (spec === undefined || id === undefined) {
-      homes.set(ref, "integration");
+      homes.set(ref, DEFAULT_ATDD_HOME_KIND);
       continue;
     }
     // Every ref reaching here has already been filtered to one that owes an
     // annotation, so `null` cannot occur; fall back rather than assert.
-    homes.set(ref, resolveTcHomeKind(tcLevels, spec, `TC-${id}`) ?? "integration");
+    homes.set(ref, resolveTcHomeKind(tcLevels, spec, `TC-${id}`) ?? DEFAULT_ATDD_HOME_KIND);
   }
   return homes;
 }

@@ -24,6 +24,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import type { AtddTestKind } from "../../src/core/atddTraceability.js";
+import { isOutsideAtddObligation, resolveAtddHomeKind } from "../../src/core/atddTraceability.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateAtddCodeTraceability } from "../../src/core/validators/atddCodeTraceability.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
@@ -1024,5 +1026,65 @@ describe("the first declaration wins across tables, not only across shapes", () 
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe("one Level predicate, one normalization, one answer", () => {
+  // The same question was asked three ways. `resolveTcHomeKind` tested
+  // `NO_ATDD_OBLIGATION_LEVELS.has(level)` against the raw map value, the
+  // exported `isOutsideAtddObligation` tested
+  // `...has(level.trim().toLowerCase())`, and `qfai atdd scaffold` carried a
+  // third spelling of its own. Three copies of one predicate are three chances
+  // for the routing rule and the exclusion rule to disagree about one cell —
+  // the defect class this change exists to close, arriving through the back
+  // door. They now share `resolveAtddHomeKind`, which owns the normalization.
+  const routes: Array<[string | undefined, AtddTestKind | null]> = [
+    [" L1 ", null],
+    ["l1\t", null],
+    [" Unit", null],
+    ["L2 ", null],
+    [" COMPONENT ", null],
+    [" l3 ", "integration"],
+    ["\tIntegration", "integration"],
+    [" L4 ", "api"],
+    ["API ", "api"],
+    [" l5\t", "e2e"],
+    ["\tE2E ", "e2e"],
+    // No `Level` column at all: the historical default, unchanged.
+    [undefined, "integration"],
+  ];
+
+  it.each(routes)("resolves %s the same way whichever entry point asks", (level, home) => {
+    expect(resolveAtddHomeKind(level)).toBe(home);
+    expect(isOutsideAtddObligation(level)).toBe(home === null);
+  });
+
+  it.each(["constructor", " Constructor ", "__proto__", "hasOwnProperty"])(
+    "treats the Level cell %s as the unknown value it is",
+    (level) => {
+      // The raw lookup indexed a plain object literal with a key taken straight
+      // out of a spec document, so a cell spelled `constructor` or `__proto__`
+      // resolved to something off `Object.prototype` instead of `undefined` and
+      // never reached the `?? "integration"` default. Normalization is what
+      // makes ` Constructor ` reach that key, so the two are one defect.
+      expect(resolveAtddHomeKind(level)).toBe("integration");
+      expect(isOutsideAtddObligation(level)).toBe(false);
+    },
+  );
+
+  it("does not let a Level cell reach into Object.prototype", async () => {
+    // End to end: the inherited value is neither `"integration"` nor any other
+    // `AtddTestKind`, so the correctly placed annotation was not counted AND
+    // was reported as forbidden where it sat — two errors from one correct
+    // action, on a cell the author only misspelled.
+    await withProject(
+      [{ id: "TC-0001", level: " Constructor " }],
+      { "tests/integration/spec_0001/tc-0001.test.ts": "// QFAI:SPEC-0001:TC-0001\n" },
+      async (root) => {
+        const found = codes(await validateAtddCodeTraceability(root, defaultConfig));
+        expect(found).not.toContain("QFAI-ATDD-112");
+        expect(found).not.toContain("QFAI-ATDD-123");
+      },
+    );
   });
 });

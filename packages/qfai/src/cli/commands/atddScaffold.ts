@@ -17,7 +17,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
-import { collectTcLevels, isOutsideAtddObligation } from "../../core/atddTraceability.js";
+import { collectTcLevels, resolveAtddHomeKind } from "../../core/atddTraceability.js";
 import {
   buildSkeleton,
   emitSkeleton,
@@ -61,10 +61,10 @@ async function readDeclaredTcLevels(specDir: string): Promise<Map<string, string
 }
 
 /**
- * Declared `Level` values whose home is a directory this writer does not emit
- * into. `scaffoldDestPath` is integration-only by contract.
+ * The one directory this writer emits into. `scaffoldDestPath` is
+ * integration-only by contract, so any other home is foreign to it.
  */
-const SCAFFOLD_FOREIGN_LEVELS = new Set(["l4", "api", "l5", "e2e"]);
+const SCAFFOLD_HOME_KIND = "integration";
 
 function validateSpecId(specId: string): boolean {
   // Permissive: accept `spec-NNNN` shapes; future renaming is at the
@@ -192,10 +192,14 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
   const excludedApiE2e: string[] = [];
   const inScope: TCEntry[] = [];
   for (const entry of entries) {
-    const level = tcLevels.get(entry.tcId.toUpperCase());
-    if (isOutsideAtddObligation(level)) {
+    // One predicate decides both exclusions, so the writer and the gate cannot
+    // read the same cell differently: `null` is "ATDD owes nothing", any home
+    // other than this writer's is a directory it must not emit into, and an
+    // unreadable `Level` lands on the same default the gate uses.
+    const home = resolveAtddHomeKind(tcLevels.get(entry.tcId.toUpperCase()));
+    if (home === null) {
       excludedUnitComponent.push(entry.tcId);
-    } else if (SCAFFOLD_FOREIGN_LEVELS.has((level ?? "").trim().toLowerCase())) {
+    } else if (home !== SCAFFOLD_HOME_KIND) {
       excludedApiE2e.push(entry.tcId);
     } else {
       inScope.push(entry);
