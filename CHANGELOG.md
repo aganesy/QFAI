@@ -111,6 +111,18 @@
     gate accepted a completion claim it had declined to check. **Upgrading a
     multi-table ledger can therefore surface new errors on rows that were
     never validated before.**
+- **A ledger row with no `Layer` no longer discharges a TC.** Every rule that
+  would police the placement keys on that cell and skips when it is empty —
+  the enum check, the forbidden-layer test, the `Level`/`Layer` crosswalk — so
+  a row carrying an id and a `TC-Refs` and nothing else cleared
+  `TDDLIST_TC_NOT_COVERED` with no test behind it and no rule able to say so.
+  An unknown but non-empty `Layer` still counts, as before: that is a
+  project's own vocabulary and `TDDLIST_UNKNOWN_LAYER` names it. An empty cell
+  is not vocabulary, it is an absent claim.
+- **The counts are omitted, not zeroed, when coverage cannot be assessed.**
+  `report --format json` serializes the spec object verbatim, so hiding the
+  numbers in the markdown formatter alone left machine consumers reading
+  progress computed from rows the validator never accepted.
 - **`qfai report` states when coverage cannot be assessed, instead of printing
   zero.** A report is an audit artifact and `0 done / 0 open` is a claim: it
   says the spec owes nothing. Printed for a spec whose `06_Test-Cases.md` has

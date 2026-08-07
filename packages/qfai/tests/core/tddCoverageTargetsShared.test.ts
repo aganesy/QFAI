@@ -309,3 +309,104 @@ describe("the report says when it cannot assess coverage", () => {
     expect(spec?.exceptionRows).toEqual([{ tddId: "", drId: "" }]);
   });
 });
+
+describe("a row with no Layer cannot discharge a TC", () => {
+  it("is not counted as coverage", async () => {
+    // The row has an id and a `TC-Refs` and nothing else. Every rule that
+    // would police the placement keys on `Layer` and skips when it is empty —
+    // the enum check, the forbidden-layer test, the Level/Layer crosswalk — so
+    // it cleared `TDDLIST_TC_NOT_COVERED` with no test behind it and no rule
+    // able to say so. An unknown but non-empty layer still counts, by design.
+    const { codes } = await bothCommands(
+      [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001 | L1 | AC-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      ["| TDD-0001 | TC-0001 |  |  |  |  | - | - |"],
+    );
+    expect(codes).toContain("TDDLIST_TC_NOT_COVERED");
+  });
+});
+
+describe("an unassessable spec publishes no counts in either format", () => {
+  it("omits them from the serialized object, not only from the markdown", async () => {
+    // `report --format json` serializes the spec object verbatim, so hiding
+    // the numbers in the formatter left machine consumers reading progress
+    // computed from rows the validator never accepted.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-json-"));
+    try {
+      const specsRoot = path.join(root, ".qfai", "specs");
+      const specDir = path.join(specsRoot, "spec-0001");
+      await mkdir(path.join(specDir, "tdd"), { recursive: true });
+      await writeFile(path.join(specDir, "01_Spec.md"), "# Spec\n", "utf-8");
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        ["# 06 Test Cases", "", "## Notes", "", "no table here", ""].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(specDir, "tdd", "test-list.md"),
+        [
+          HEADERS,
+          SEP,
+          "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | a | done | - | x |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const coverage = await collectTddCoverage(await collectSpecEntries(specsRoot));
+      const spec = coverage.specs[0];
+      expect(spec?.unassessable).toBeDefined();
+      expect(spec?.doneCount).toBeUndefined();
+      expect(spec?.openCount).toBeUndefined();
+      expect(spec?.unitComponentTotal).toBeUndefined();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("says so when the ledger's only table is missing required columns", async () => {
+    // `firstTable` sets the verdict but `collectLedgerTables` is also empty in
+    // that case, and the empty-ledger branch carried the other reason only.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-onetable-"));
+    try {
+      const specsRoot = path.join(root, ".qfai", "specs");
+      const specDir = path.join(specsRoot, "spec-0001");
+      await mkdir(path.join(specDir, "tdd"), { recursive: true });
+      await writeFile(path.join(specDir, "01_Spec.md"), "# Spec\n", "utf-8");
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "## Test Case Table",
+          "",
+          "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+          "| ----- | ----- | ------- | ------ | ----- | -------- |",
+          "| TC-0001 | L1 | AC-0001 | - | s | e |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(specDir, "tdd", "test-list.md"),
+        ["| TDD-ID | Notes |", "| ------ | ----- |", "| TDD-0001 | not the ledger |", ""].join(
+          "\n",
+        ),
+        "utf-8",
+      );
+
+      const coverage = await collectTddCoverage(await collectSpecEntries(specsRoot));
+      expect(coverage.specs[0]?.unassessable).toContain("first table");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});

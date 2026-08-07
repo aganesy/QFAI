@@ -200,6 +200,15 @@ export function collectLedgerTables(content: string): LedgerTable[] {
  * **Membership is lower-case only**, on the same terms as
  * {@link UNIT_COMPONENT_LAYERS}.
  */
+/**
+ * The ledger `Layer` vocabulary, lower-cased.
+ *
+ * Shared with `tddList.ts`'s enum check so "is this a legal layer" has one
+ * answer: the check that reports a bad value and the predicate that declines
+ * to score from it must not disagree about which values are bad.
+ */
+export const TDD_LEDGER_LAYERS = new Set(["unit", "component", "integration", "api", "e2e"]);
+
 export const TC_FORBIDDEN_LAYERS = new Set(["api", "e2e"]);
 
 /**
@@ -257,7 +266,21 @@ export function isRowShapeChecked(
 
 export function isCoverageBearingRow(scan: LedgerTable, row: readonly string[]): boolean {
   if (!isLedgerRow(scan, row)) return false;
-  return !TC_FORBIDDEN_LAYERS.has((row[scan.layerIndex] ?? "").trim().toLowerCase());
+  const layer = (row[scan.layerIndex] ?? "").trim().toLowerCase();
+  // A **blank** `Layer` cannot bear a coverage claim. Every rule that would
+  // police the placement keys on this cell and skips when it is empty —
+  // Check 5a's enum, the forbidden-layer test just below, the `Level`/`Layer`
+  // crosswalk — so a row with an id, a `TC-Refs` and nothing else cleared
+  // `TDDLIST_TC_NOT_COVERED` with no test behind it and no rule able to say
+  // so.
+  //
+  // An unknown but *non-empty* layer still counts, deliberately: the row is a
+  // ledger row, ledgers written before the enum existed carry
+  // project-specific names, and `TDDLIST_UNKNOWN_LAYER` names it at
+  // `warning`. An empty cell is not a project's own vocabulary, it is an
+  // absent claim — and it is the only value no rule reports at all.
+  if (layer.length === 0) return false;
+  return !TC_FORBIDDEN_LAYERS.has(layer);
 }
 
 /**

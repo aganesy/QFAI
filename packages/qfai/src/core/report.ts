@@ -208,15 +208,22 @@ export type ReportTddCoverageSpec = {
    * wrong. The counts are omitted and this is printed instead.
    */
   unassessable?: string;
-  unitComponentTotal: number;
-  doneCount: number;
+  /**
+   * The counts, present only when {@link unassessable} is absent.
+   *
+   * Optional rather than zeroed: `report --format json` serializes this
+   * object verbatim, so a zero here is a published claim that the spec owes
+   * nothing. Omitting them makes the JSON say what the markdown says.
+   */
+  unitComponentTotal?: number;
+  doneCount?: number;
   /** Has a passing test, has not cleared its blocking reviewers / checkpoint. */
-  inReviewCount: number;
-  exceptionCount: number;
-  openCount: number;
+  inReviewCount?: number;
+  exceptionCount?: number;
+  openCount?: number;
   /** Open rows that cannot be started, reported apart from "not started yet". */
-  blockedCount: number;
-  missingTcRefs: string[];
+  blockedCount?: number;
+  missingTcRefs?: string[];
   exceptionRows: Array<{ tddId: string; drId: string }>;
 };
 
@@ -1223,8 +1230,9 @@ export function formatReportMarkdown(
       lines.push(
         `- done: ${spec.doneCount} / in-review: ${spec.inReviewCount} / exception: ${spec.exceptionCount} / open: ${spec.openCount} (blocked: ${spec.blockedCount})`,
       );
-      if (spec.missingTcRefs.length > 0) {
-        lines.push(`- missing TC refs (add to test-list.md): ${spec.missingTcRefs.join(", ")}`);
+      const missingTcRefs = spec.missingTcRefs ?? [];
+      if (missingTcRefs.length > 0) {
+        lines.push(`- missing TC refs (add to test-list.md): ${missingTcRefs.join(", ")}`);
       }
       if (spec.exceptionRows.length > 0) {
         lines.push("- exception rows:");

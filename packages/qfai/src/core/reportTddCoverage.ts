@@ -114,7 +114,10 @@ export async function collectTddCoverage(
     if (ledgerTables.length === 0) {
       specs.push({
         specNumber: entry.specNumber,
-        ...(unassessableReason === undefined ? {} : { unassessable: unassessableReason }),
+        // `ledgerUnvalidated`, not `unassessableReason`: the sole table in a
+        // one-table ledger can be the one missing required columns, which
+        // stops the validator at Check 3 *and* leaves this list empty.
+        ...(ledgerUnvalidated === undefined ? {} : { unassessable: ledgerUnvalidated }),
         unitComponentTotal: unitComponentTcIds.size,
         doneCount: 0,
         inReviewCount: 0,
@@ -254,9 +257,21 @@ export async function collectTddCoverage(
       unitComponentTcIds.size -
       Array.from(unitComponentTcIds).filter((id) => accountedTcIds.has(id)).length;
 
+    if (ledgerUnvalidated !== undefined) {
+      // Counts are omitted, not zeroed: `report --format json` serializes this
+      // object verbatim, so leaving them in published progress computed from
+      // rows the validator never accepted — the markdown formatter hid them
+      // and the machine-readable one did not, which is the worse half.
+      specs.push({
+        specNumber: entry.specNumber,
+        unassessable: ledgerUnvalidated,
+        exceptionRows,
+      });
+      continue;
+    }
+
     specs.push({
       specNumber: entry.specNumber,
-      ...(ledgerUnvalidated === undefined ? {} : { unassessable: ledgerUnvalidated }),
       unitComponentTotal: unitComponentTcIds.size,
       doneCount,
       inReviewCount,
