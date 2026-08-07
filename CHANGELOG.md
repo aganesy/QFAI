@@ -6,6 +6,13 @@
 
 ### Fixed
 
+- **A forbidden TC placement is scoped too.** `narrowToScope` narrowed
+  `missing.us` / `missing.tc` only, and `QFAI-ATDD-121` / `-122` / `-123` are
+  filed against a `tests/**` path that `.qfai/specs/` does not own — so a
+  sibling's half-finished annotation failed a scoped gate the requested spec had
+  fully discharged. The lists are narrowed by the same rule, an entry left with
+  no in-scope id is dropped, and the finding carries the owning spec dirs in
+  `relatedFiles` while `file` stays the test path the operator edits.
 - **A `--spec` run no longer touches another spec.** Three ways it still did.
   `isFindingInSpecScope` kept a finding when _any_ of its paths was in scope,
   and an unowned path is in every scope — so `D-SCAFFOLD-PLACEHOLDER`, whose

@@ -262,3 +262,54 @@ describe("the shared traceability report stays repo-wide", () => {
     });
   });
 });
+
+describe("a forbidden TC placement is scoped too", () => {
+  it("drops a sibling spec's misplaced annotation from a scoped run", async () => {
+    // `narrowToScope` narrowed `missing.us` / `missing.tc` only, and the
+    // forbidden findings are filed against a `tests/**` path that `specsRoot`
+    // does not own — so spec-0001's half-finished annotation failed a
+    // `--spec 0002` gate spec-0002 had fully discharged.
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      const apiTest = path.join(root, "tests", "api", "misplaced.test.ts");
+      await mkdir(path.dirname(apiTest), { recursive: true });
+      await writeFile(
+        apiTest,
+        ["// QFAI:SPEC-0001:TC-0001", "it('x', () => {});", ""].join("\n"),
+        "utf-8",
+      );
+
+      const unscoped = await validateAtddCodeTraceability(root, defaultConfig);
+      expect(unscoped.map((entry) => entry.code)).toContain("QFAI-ATDD-121");
+
+      const scoped = await validateAtddCodeTraceability(root, defaultConfig, {
+        specScope: new Set(["0002"]),
+      });
+      expect(scoped.map((entry) => entry.code)).not.toContain("QFAI-ATDD-121");
+    });
+  });
+
+  it("keeps it, attributed, when the scoped spec owns the misplacement", async () => {
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      const apiTest = path.join(root, "tests", "api", "misplaced.test.ts");
+      await mkdir(path.dirname(apiTest), { recursive: true });
+      await writeFile(
+        apiTest,
+        ["// QFAI:SPEC-0001:TC-0001", "it('x', () => {});", ""].join("\n"),
+        "utf-8",
+      );
+
+      const finding = (await validateAtddCodeTraceability(root, defaultConfig)).find(
+        (entry) => entry.code === "QFAI-ATDD-121",
+      );
+      // `file` stays the test path — that is what the operator edits.
+      expect(finding?.file).toContain(path.join("tests", "api"));
+      expect(finding?.relatedFiles).toEqual([path.join(root, ".qfai", "specs", "spec-0001")]);
+
+      const roots = { root, specsRoot: path.join(root, ".qfai", "specs") };
+      expect(isFindingInSpecScope(finding ?? {}, roots, new Set(["0001"]))).toBe(true);
+      expect(isFindingInSpecScope(finding ?? {}, roots, new Set(["0002"]))).toBe(false);
+    });
+  });
+});

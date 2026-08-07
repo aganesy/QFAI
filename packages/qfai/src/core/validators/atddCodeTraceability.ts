@@ -43,12 +43,29 @@ function narrowToScope(
     const number = OWNING_SPEC_RE.exec(ref)?.[1];
     return number === undefined || scope.has(number);
   };
+  // The forbidden lists are narrowed on the same terms. Their findings are
+  // filed against a `tests/**` path, which `specsRoot` does not own, so a
+  // sibling's misplaced annotation survived every filter and failed a scoped
+  // gate the requested spec had fully discharged. An entry left with no
+  // in-scope id is dropped entirely rather than reported with an empty list.
+  const narrowForbidden = (
+    entries: Array<{ file: string; ids: string[] }>,
+  ): Array<{ file: string; ids: string[] }> =>
+    entries
+      .map((entry) => ({ ...entry, ids: entry.ids.filter(inScope) }))
+      .filter((entry) => entry.ids.length > 0);
+
   return {
     ...result,
     missing: {
       ...result.missing,
       us: result.missing.us.filter(inScope),
       tc: result.missing.tc.filter(inScope),
+    },
+    forbidden: {
+      tcInApi: narrowForbidden(result.forbidden.tcInApi),
+      tcInE2e: narrowForbidden(result.forbidden.tcInE2e),
+      tcInIntegration: narrowForbidden(result.forbidden.tcInIntegration),
     },
   };
 }
@@ -289,6 +306,11 @@ export async function validateAtddCodeTraceability(
         forbidden.ids,
         "change",
         `${dirs.api} から TC 参照を削除して契約ID（\`QFAI:CON-API-XXXX\`）を使うか、その TC の \`Level\` を \`L4\`/\`API\` に修正してください。`,
+        // Attributed to the specs the misplaced ids name. `file` stays the
+        // test path — that is what the operator edits — but a `tests/**`
+        // path has no spec owner, so without this the finding survived every
+        // `--spec` filter.
+        { relatedFiles: owningSpecDirs(forbidden.ids, result.specsRoot) },
       ),
     );
   }
@@ -304,6 +326,11 @@ export async function validateAtddCodeTraceability(
         forbidden.ids,
         "change",
         `${dirs.e2e} から TC 参照を削除して US 参照（\`QFAI:SPEC-XXXX:US-YYYY\`）を使うか、その TC の \`Level\` を \`L5\`/\`E2E\` に修正してください。`,
+        // Attributed to the specs the misplaced ids name. `file` stays the
+        // test path — that is what the operator edits — but a `tests/**`
+        // path has no spec owner, so without this the finding survived every
+        // `--spec` filter.
+        { relatedFiles: owningSpecDirs(forbidden.ids, result.specsRoot) },
       ),
     );
   }
@@ -319,6 +346,11 @@ export async function validateAtddCodeTraceability(
         forbidden.ids,
         "change",
         `TC 注釈は宣言 Level が指す1ディレクトリだけに置きます。${dirs.integration} に残存する TC 参照を削除するか、その TC の \`Level\` を \`L3\`/\`Integration\` に戻してください。`,
+        // Attributed to the specs the misplaced ids name. `file` stays the
+        // test path — that is what the operator edits — but a `tests/**`
+        // path has no spec owner, so without this the finding survived every
+        // `--spec` filter.
+        { relatedFiles: owningSpecDirs(forbidden.ids, result.specsRoot) },
       ),
     );
   }
