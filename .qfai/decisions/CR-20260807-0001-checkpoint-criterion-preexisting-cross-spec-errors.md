@@ -1,15 +1,16 @@
-# CR-20260807-0001: checkpoint step-4 criterion for pre-existing cross-spec errors
+# Change Request
 
 - ID: `CR-20260807-0001`
-- Title: Sanction a measured-delta pass criterion for `/qfai-implement` checkpoint step 4 when the
-  `tdd` profile carries errors no row in the slice can discharge
-- Raised by: `/qfai-implement` orchestrator, on a blocking `completion-reviewer` finding
-- Raised at: 2026-08-07
-- Status: `proposed`
-- Approved by: —
-- Approved at: —
-- Applied at: —
-- Resolution: —
+- Title: `Sanction a measured-delta pass criterion for /qfai-implement checkpoint step 4 when the tdd profile carries errors no row in the slice can discharge`
+- Raised by: `/qfai-implement orchestrator, on a blocking completion-reviewer finding (the executing stage may not relax its own shipped pass criterion)`
+- Raised at: `2026-08-07T15:10:00Z`
+- Class: `intent`
+- Status: `open`
+- Approved by: `-`
+- Approved at: `-`
+- Approved option: `-`
+- Applied at: `-`
+- Superseded by: `-`
 
 ## Why this exists
 
@@ -28,6 +29,12 @@ errors:
   spec-0006 **9**, spec-0008 4, spec-0015 2, spec-0017 **82**.
 
 `QFAI-TEST-001` — the criterion the reference names explicitly — is **0**.
+
+Those two figures are the **pre-slice baseline**, captured before this slice's first code change so
+that later checkpoints are judged against a fixed reference. **Live at the time of writing they are
+97 / 8**, not 98 / 9, because `SPEC-0006:TC-0006-0027` has already left the `QFAI-ATDD-112` list —
+which is criterion 3 of the very substitution this CR is about. Stated here so the reader does not
+re-measure a number the CR appears not to predict.
 
 Neither error is dischargeable by `/qfai-implement`. Creating a `Layer = E2E` row introduces a new
 obligation ID with no `TC-*` parent, which is `/qfai-sdd` Phase 2b's seeding step, and the tests behind
