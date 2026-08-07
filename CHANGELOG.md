@@ -6,6 +6,40 @@
 
 ### Changed
 
+- **Every ledger row is checked, not only the ones in the first table.** The
+  previous release widened coverage scoring to every schema-shaped table but
+  left the checks that make a row trustworthy — `Status` enum, `Test file`
+  existence, `Evidence`, `Selector`, `Blocked-By`, the `DR-ID` of a parked row,
+  duplicate `TDD-ID`, unknown `TC-Refs` — reading the first table alone. A
+  `Status=done` row in an appended `## CHG-…` table therefore cleared
+  `TDDLIST_TC_NOT_COVERED` while its non-existent `Test file` and empty
+  `Evidence` were never looked at, and full validation passed: the gate accepted
+  a completion claim it had declined to check. All per-row checks now read one
+  iteration of the ledger, so "does this row discharge a TC" and "is this row
+  trustworthy" are asked of the same rows.
+  - **Who it hits.** Only a ledger with more than one schema-shaped table.
+    Rows there now raise what they always raised in the first table. Measured
+    on this repository: 30 further findings, all `warning`
+    (26 `TDDLIST_EVIDENCE_STATUS_ONLY`, 4 `TDDLIST_SELECTOR_UNRESOLVED`), all
+    in one spec's appended table; `error` stays at 0.
+  - `TDDLIST_DUPLICATE_ID` is now ledger-wide rather than per table. An id
+    repeated in an appended table was invisible, and
+    `TDDLIST_EXCEPTION_PARKED` keys its per-row waiver on the `TDD-ID` — so one
+    approved `match.dl_ids` entry silently covered a second row nobody
+    approved.
+- **A fenced or commented-out table is no longer read as the ledger.** Check 2
+  took the first Markdown table in the _raw_ file while the coverage reader
+  masks non-spec regions, so a `tdd/test-list.md` whose only schema-shaped table
+  sat inside a fence failed open in both directions at once: the row checks ran
+  against rows inside the fence, and the coverage check — guarded by
+  `if (coverageTables.length > 0)` — skipped itself entirely in the one case
+  where every TC is certainly uncovered. With L1/L2 out of `QFAI-ATDD-112` that
+  made a copy-paste template a complete substitute for a ledger under
+  `validate --profile full --fail-on error`. Such a file now raises
+  `TDDLIST_TABLE_MISSING` (`error`) plus `TDDLIST_TC_NOT_COVERED` naming the
+  ids that owe a row, the same pair an absent file already raised. A real table
+  sitting below a fenced sample is now read correctly rather than being
+  shadowed by the sample.
 - **`qfai report` lists every parked row `qfai validate` names.** Sharing one
   "can this row carry coverage" predicate between the two commands put the
   report's `- exception rows:` block behind it too, so a `Status=exception` row
