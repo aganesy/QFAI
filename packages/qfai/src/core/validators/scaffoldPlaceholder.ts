@@ -48,6 +48,7 @@ import { readFile } from "node:fs/promises";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { SCAFFOLD_PLACEHOLDER_MARKER } from "../atdd/scaffold.js";
+import { collectTcLevels, isOutsideAtddObligation } from "../atddTraceability.js";
 import {
   listValidateCycleKeys,
   recordValidateCycle,
@@ -96,6 +97,19 @@ export async function validateScaffoldPlaceholder(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
+  /** `06_Test-Cases.md` levels per spec, read once per spec and memoised. */
+  const levelCache = new Map<string, Map<string, string>>();
+  const tcLevelsForSpec = async (specId: string): Promise<Map<string, string>> => {
+    const cached = levelCache.get(specId);
+    if (cached) return cached;
+    const specsRoot = resolvePath(root, config, "specsDir");
+    const text = await readFile(path.join(specsRoot, specId, "06_Test-Cases.md"), "utf-8").catch(
+      () => "",
+    );
+    const levels = collectTcLevels(text);
+    levelCache.set(specId, levels);
+    return levels;
+  };
   // Honor `config.paths.testsDir`; default `tests` covers the
   // legacy `tests/atdd/<spec-id>/<TC>.test.*` layout. The atdd
   // subdirectory is fixed by the scaffold contract; only the
@@ -138,13 +152,26 @@ export async function validateScaffoldPlaceholder(
     if (matches.length === 0) {
       continue;
     }
-    const tcIds = Array.from(
+    const allTcIds = Array.from(
       new Set(matches.map((m) => m[1]).filter((id): id is string => typeof id === "string")),
     );
     const relPath = path.relative(root, file).replace(/\\/g, "/");
     // Resolved against whichever scaffold root actually contains the file.
     const owningDir = scaffoldDirs.find((dir) => path.resolve(file).startsWith(path.resolve(dir)));
     const specId = owningDir ? extractSpecIdFromScaffoldPath(owningDir, file) : null;
+
+    // A TC whose declared `Level` is Unit or Component carries no ATDD
+    // obligation (`QFAI-ATDD-117`), so an unfilled skeleton for it must not
+    // escalate to `error` and block `validate --profile atdd|full`. `qfai atdd
+    // scaffold` still generates one — it does not route by `Level` — so the
+    // skeleton exists and this is where it stops being a gate.
+    const levels = specId === null ? new Map<string, string>() : await tcLevelsForSpec(specId);
+    const tcIds = allTcIds.filter(
+      (tcId) => !isOutsideAtddObligation(levels.get(tcId.toUpperCase())),
+    );
+    if (tcIds.length === 0) {
+      continue;
+    }
     // Advance the validate-only escalation counter PER (spec, TC) —
     // not per file — so a spec-NNNN/TC-NNNN-NNNN that appears in two
     // scaffold files (split assertions) still escalates after the

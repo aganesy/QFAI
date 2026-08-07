@@ -282,6 +282,30 @@ export function resolveTestCaseTable(rawText: string): TestCaseTableResolution {
   return { table: null, reason: allTables.length === 0 ? "no-table" : "no-tc-id-column" };
 }
 
+/**
+ * Every `TC-ID`-bearing table the spec declares, not only the first.
+ *
+ * A spec that splits `06_Test-Cases.md` into several tables — per BR, per AC,
+ * or a migration table beside the authoritative one — was read by two different
+ * rules in two different ways: `atddTraceability.ts#collectTableTcLevels`
+ * iterates `parseAllMarkdownTables`, while `resolveTestCaseTable` returns the
+ * first match. A `TC-*` in the second table was therefore visible to
+ * `QFAI-ATDD-112` and invisible to `TDDLIST_TC_NOT_COVERED`.
+ *
+ * That was survivable while both rules demanded something. It stops being
+ * survivable once L1/L2 is excluded from `QFAI-ATDD-112` and the ledger becomes
+ * the only gate: an L1 TC in a second table would then be owed by neither.
+ *
+ * `resolveTestCaseTable` is unchanged — `reportTddCoverage` and `specPack`
+ * describe a spec's *shape* and want the single authoritative table.
+ */
+export function resolveTestCaseTables(rawText: string): MarkdownTable[] {
+  const text = maskNonSpecRegions(rawText);
+  const section = extractTestCaseTableSection(text);
+  const tables = parseAllMarkdownTables(section ?? text);
+  return tables.filter(hasTcIdColumn);
+}
+
 export function parseFirstMarkdownTable(text: string): MarkdownTable | null {
   const tables = parseAllMarkdownTables(text);
   return tables.length > 0 ? (tables[0] ?? null) : null;

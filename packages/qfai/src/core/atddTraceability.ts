@@ -498,7 +498,7 @@ async function collectSpecRefs(specsRoot: string): Promise<{
  * just the first — a spec may split its catalogue across several tables, and
  * only scanning the first silently dropped the later tables' layers.
  */
-function collectTcLevels(tcText: string): Map<string, string> {
+export function collectTcLevels(tcText: string): Map<string, string> {
   const levels = new Map<string, string>();
   for (const [id, level] of collectHeadingTcLevels(tcText)) {
     levels.set(id, level);
@@ -599,6 +599,18 @@ const LEVEL_TO_TEST_KIND: Record<string, AtddTestKind | undefined> = {
  * Component.
  */
 const NO_ATDD_OBLIGATION_LEVELS = new Set(["l1", "unit", "l2", "component"]);
+
+/**
+ * True when a declared `Level` puts the TC outside every ATDD obligation.
+ *
+ * Exported so the rules that fire on ATDD artefacts agree on one answer.
+ * `validateScaffoldPlaceholder` needs it: a skeleton generated for an L1 TC
+ * would otherwise keep escalating to `error` and block
+ * `validate --profile atdd` for a TC that ATDD no longer owes anything for.
+ */
+export function isOutsideAtddObligation(level: string | undefined): boolean {
+  return level !== undefined && NO_ATDD_OBLIGATION_LEVELS.has(level.trim().toLowerCase());
+}
 
 /**
  * Where a TC's annotation legally lives, or `null` when the declared `Level`

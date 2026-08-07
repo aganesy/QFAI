@@ -32,6 +32,16 @@ type AtddTraceabilitySummary = {
     conApi: string[];
     conDb: string[];
   };
+  /**
+   * `TC-*` refs outside the `QFAI-ATDD-112` obligation because their declared
+   * `Level` is Unit or Component (`QFAI-ATDD-117`).
+   *
+   * Persisted for the same reason `deferred` is: on a project whose TCs are
+   * all L1/L2, `missing.tc: []` would otherwise read as "every TC is covered
+   * by ATDD" to anyone auditing this artifact in CI, when the truth is that
+   * ATDD owes nothing for them and `tdd/test-list.md` is the gate.
+   */
+  excludedUnitComponentTc: string[];
   unknown: Array<{ file: string; token: string }>;
   forbidden: {
     tcInApi: Array<{ file: string; ids: string[] }>;
@@ -412,6 +422,7 @@ async function writeAtddTraceabilityReport(
         left.localeCompare(right),
       ),
     },
+    excludedUnitComponentTc: result.unitComponentTcIds,
     unknown: result.unknown.map((entry) => ({
       file: entry.file,
       token: entry.token,
@@ -471,6 +482,10 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
   lines.push(...toList(summary.deferred.conApi));
   lines.push("- CON-DB (`-- x-qfai-status: planned`, outside QFAI-ATDD-115)");
   lines.push(...toList(summary.deferred.conDb));
+  lines.push(
+    "- TC (declared Level Unit/Component, outside QFAI-ATDD-112 — gated by tdd/test-list.md)",
+  );
+  lines.push(...toList(summary.excludedUnitComponentTc));
   lines.push("");
   lines.push("## Unknown References");
   lines.push("");

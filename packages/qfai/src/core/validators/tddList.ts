@@ -4,7 +4,11 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
-import { parseFirstMarkdownTable, resolveTestCaseTable } from "../specPackParsers.js";
+import {
+  parseFirstMarkdownTable,
+  resolveTestCaseTable,
+  resolveTestCaseTables,
+} from "../specPackParsers.js";
 import {
   EXCEPTION_PARKED_CODE,
   EXCEPTION_PARKED_RULE_ID,
@@ -1321,24 +1325,33 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   if (!resolution.table) {
     return { ...collected, unresolved: resolution.reason };
   }
-  const table = resolution.table;
-  const headers = table.headers.map((h) => h.trim());
-  const tcIdIndex = headers.indexOf("TC-ID");
-  const levelIndex = headers.indexOf("Level");
 
-  for (const row of table.rows) {
-    const tcId = (row[tcIdIndex] ?? "").trim().toUpperCase();
-    if (tcId.length === 0) continue;
-    knownTcIds.add(tcId);
-    if (levelIndex >= 0) {
-      const level = (row[levelIndex] ?? "").trim().toLowerCase();
-      if (classifyCoverageLevel(level) === "unrecognized") {
-        unrecognizedLevels.add((row[levelIndex] ?? "").trim());
+  // Every TC-ID table, not just the first. `atddTraceability` already reads
+  // them all, so a spec that splits `06_Test-Cases.md` per BR had `TC-*` rows
+  // that `QFAI-ATDD-112` saw and this gate did not. Since L1/L2 are now
+  // excluded from `QFAI-ATDD-112`, the ledger is their only gate — a `Level =
+  // L1` row in a second table would otherwise be owed by nothing at all.
+  // `resolution` above still decides *whether* a table was found, so the
+  // `unresolved` reason and its finding are unchanged.
+  for (const table of resolveTestCaseTables(content)) {
+    const headers = table.headers.map((h) => h.trim());
+    const tcIdIndex = headers.indexOf("TC-ID");
+    const levelIndex = headers.indexOf("Level");
+
+    for (const row of table.rows) {
+      const tcId = (row[tcIdIndex] ?? "").trim().toUpperCase();
+      if (tcId.length === 0) continue;
+      knownTcIds.add(tcId);
+      if (levelIndex >= 0) {
+        const level = (row[levelIndex] ?? "").trim().toLowerCase();
+        if (classifyCoverageLevel(level) === "unrecognized") {
+          unrecognizedLevels.add((row[levelIndex] ?? "").trim());
+        }
+        if (!isCoverageTargetLevel(level)) continue;
       }
-      if (!isCoverageTargetLevel(level)) continue;
+      // Reaches here when: (a) Level is a coverage target, or (b) Level column is absent (fallback: all TCs)
+      unitComponentTcIds.add(tcId);
     }
-    // Reaches here when: (a) Level is a coverage target, or (b) Level column is absent (fallback: all TCs)
-    unitComponentTcIds.add(tcId);
   }
   return collected;
 }

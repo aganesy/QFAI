@@ -13,6 +13,9 @@ const read = (tree: string, rel: string): Promise<string> =>
 
 const CATALOG = "assistant/catalog/test-layers.md";
 
+/** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
+const flat = (s: string): string => s.replace(/\s+/g, " ");
+
 /** Returns the `## Layer definitions` body. */
 function layerDefinitions(content: string): string {
   const start = content.indexOf("## Layer definitions");
@@ -94,8 +97,14 @@ describe("the layer SSOT defines every layer the rest of qfai names", () => {
         tree,
         "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
       );
-      expect(rules).toContain("it says nothing about where the test file lives");
-      expect(rules).toContain("still discharged in `tests/integration/**`");
+      expect(flat(rules)).toContain("it says nothing about where the test file lives");
+      // The SDD reference used to say every TC — unit/component included — is
+      // discharged in `tests/integration/**`. That is the instruction
+      // `QFAI-ATDD-112` no longer implements, and leaving it here would have
+      // `/qfai-sdd` and `/qfai-atdd` hand an author opposite procedures.
+      expect(flat(rules)).not.toContain("still discharged in `tests/integration/**`");
+      expect(flat(rules)).toContain("**`L1`/`L2` owe no ATDD annotation at all**");
+      expect(rules).toContain("TDDLIST_TC_NOT_COVERED");
     });
   }
 });
