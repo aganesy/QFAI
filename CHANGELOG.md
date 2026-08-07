@@ -48,15 +48,20 @@
   Depth Matrix — stayed ignored however correct the managed block was. The
   leaf negations are appended to that file when it exists; nothing else in it is
   touched.
-- **`qfai init --force` regenerates `assistant/agents` and
-  `assistant/manifest/agent-catalog.yml`, not only `assistant/skills`.** Every
-  other `.qfai/**` path is create-only, so a correction to an agent definition
-  or to the catalog reached new projects and nobody else — an installed
-  repository kept the old reviewer instructions with no command that would
-  update them. Those are generated in the same sense `skills/` is. The rest of
-  `assistant/manifest/` is **not** touched: `agent-routing.yml` and
-  `review-profiles.yml` are yours to tune, and `--upgrade-assistant-tree`
-  migrates them. `specs/`, `contracts/` and `steering/` stay create-only.
+- **`qfai init --force` regenerates `assistant/agents`, not only
+  `assistant/skills`.** Every other `.qfai/**` path is create-only, so a
+  correction to an agent definition reached new projects and nobody else — an
+  installed repository kept the old reviewer instructions with no command that
+  would update them. `agents/` is generated in the same sense `skills/` is.
+  **`assistant/manifest/` is not touched at all**, `agent-catalog.yml`
+  included: `qfai-configure` is the shipped entrypoint for editing those
+  declarative manifests, so forcing the catalog would replace a taxonomy
+  adjustment made through the supported path, and nothing migrates it back —
+  `--upgrade-assistant-tree` deliberately does not walk `manifest/`. The cost
+  is that `agent-catalog.yml#developer_instructions` can drift from
+  `assistant/agents/*.md` in an installed project; drift is visible and
+  repairable, a silently overwritten taxonomy is neither. `specs/`,
+  `contracts/` and `steering/` stay create-only.
 
 ## [1.10.0] - 2026-08-03
 

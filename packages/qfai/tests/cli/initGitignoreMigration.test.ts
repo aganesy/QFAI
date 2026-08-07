@@ -151,23 +151,29 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
 });
 
 describe("--force regenerates the standard asset trees", () => {
-  it("restores an edited agent definition and manifest, not project content", async () => {
-    // Without this, a correction to an agent body or to `agent-catalog.yml`
-    // reached new projects only: `.qfai/**` is copied create-only and `--force`
-    // covered `assistant/skills` alone.
+  it("restores an edited agent definition, not the manifest and not project content", async () => {
+    // Without this, a correction to an agent body reached new projects only:
+    // `.qfai/**` is copied create-only and `--force` covered
+    // `assistant/skills` alone.
+    //
+    // `agent-catalog.yml` is **not** in the set. `qfai-configure` is the
+    // shipped entrypoint for editing the declarative manifests, so forcing the
+    // catalog would replace a taxonomy adjustment made through the supported
+    // path — and nothing migrates it back, because `--upgrade-assistant-tree`
+    // deliberately does not walk `manifest/`.
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       const agent = path.join(root, ".qfai", "assistant", "agents", "qa-gatekeeper.md");
       const manifest = path.join(root, ".qfai", "assistant", "manifest", "agent-catalog.yml");
       const steering = path.join(root, ".qfai", "steering", "README.md");
-      await writeFile(agent, "# stale\n", "utf-8");
-      await writeFile(manifest, "stale: true\n", "utf-8");
+      await writeFile(agent, "# stale" + NL, "utf-8");
+      await writeFile(manifest, "tuned: true" + NL, "utf-8");
       const projectContent = await readFile(steering, "utf-8").catch(() => null);
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
-      expect(await readFile(agent, "utf-8")).not.toBe("# stale\n");
-      expect(await readFile(manifest, "utf-8")).not.toBe("stale: true\n");
+      expect(await readFile(agent, "utf-8")).not.toBe("# stale" + NL);
+      expect(await readFile(manifest, "utf-8")).toBe("tuned: true" + NL);
       if (projectContent !== null) {
         expect(await readFile(steering, "utf-8")).toBe(projectContent);
       }

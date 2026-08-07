@@ -47,30 +47,30 @@ const execAsync = promisify(execCb);
  * whose direct editing is already discouraged.
  *
  * `assistant/skills` alone was not enough. Every other `.qfai/**` path is
- * copied create-only, so a correction to an agent definition or to
- * `agent-catalog.yml` reached new projects and nobody else — an installed
- * repository kept the old routing and the old reviewer instructions with no
- * command that would update them, and no signal that it had not. `agents/` and
- * `agent-catalog.yml` are generated in exactly the sense `skills/` is:
+ * copied create-only, so a correction to an agent definition reached new
+ * projects and nobody else — an installed repository kept the old reviewer
+ * instructions with no command that would update them, and no signal that it
+ * had not. `agents/` is generated in exactly the sense `skills/` is:
  * `qfai doctor`'s `skills.integrity` and the shipped README both say a project
  * edits them at its own risk.
  *
- * The rest of `manifest/` is deliberately excluded. `agent-routing.yml` and
- * `review-profiles.yml` are the two files a project is expected to tune, and
- * `--upgrade-assistant-tree` migrates user-edited manifests into this tree — so
- * forcing the whole directory would overwrite that migration one step after it
- * ran. `specs/`, `contracts/`, `steering/` and everything else stay create-only
- * for the same reason: they hold project content.
+ * **`assistant/manifest/` is excluded in full, including `agent-catalog.yml`.**
+ * `qfai-configure` is the shipped, user-facing entrypoint for editing those
+ * declarative manifests — its own `project_memory` names the agent-catalog /
+ * agent-routing / review-profiles SSOTs together — so a project that adjusted
+ * its agent taxonomy through the supported path would have had that adjustment
+ * replaced by the template on the next `--force`. Nothing migrates it back:
+ * `--upgrade-assistant-tree` deliberately does not walk `manifest/`, because
+ * that layer's path is the same before and after the recut.
+ *
+ * The cost is that `agent-catalog.yml#developer_instructions` can drift from
+ * `assistant/agents/*.md` in an installed project. That is the lesser failure:
+ * drift is visible and repairable, a silently overwritten taxonomy is neither.
+ *
+ * `specs/`, `contracts/`, `steering/` and everything else stay create-only for
+ * the same reason: they hold project content.
  */
-const STANDARD_ASSET_PATHS: readonly string[] = [
-  "assistant/skills",
-  "assistant/agents",
-  // The catalog only, not the whole manifest directory. `agent-routing.yml` and
-  // `review-profiles.yml` are the two files a project is expected to tune, and
-  // `--upgrade-assistant-tree` migrates user-edited manifests into this tree —
-  // regenerating the directory would overwrite that migration a step later.
-  "assistant/manifest/agent-catalog.yml",
-];
+const STANDARD_ASSET_PATHS: readonly string[] = ["assistant/skills", "assistant/agents"];
 
 export type InitOptions = {
   dir: string;
@@ -99,7 +99,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/**、assistant/agents/**、assistant/manifest/agent-catalog.yml と symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts/steering、および agent-routing.yml / review-profiles.yml は上書きしません）。",
+      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。",
     );
   }
 
