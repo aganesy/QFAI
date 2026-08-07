@@ -39,7 +39,7 @@ import { validateSddDesignContractReadiness } from "./validators/designContractR
 import { resolveToolVersion } from "./version.js";
 import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
 import { probeSkillManifestRuntimeDeps } from "./doctor/skillManifestProbe.js";
-import { buildWorkflowsIntegrityCheck } from "./doctor/workflowsIntegrity.js";
+import { diffInstalledShippedWorkflows } from "./doctor/workflowsIntegrity.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
 export type DoctorProfile = "prototyping";
@@ -252,9 +252,33 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
 
   addCheck(checks, await buildAgentFrontmatterCheck(root));
 
-  const workflowsCheck = await buildWorkflowsIntegrityCheck(root);
-  if (workflowsCheck !== undefined) {
-    addCheck(checks, workflowsCheck);
+  // Installed shipped-workflow drift. Emitted on drift only for now: the
+  // content-identical `ok` state and the unresolved-packaged-copy skip are
+  // separate obligations that are not implemented yet, so registering a
+  // finding for either here would claim behavior nothing has verified.
+  //
+  // Severity is `info` deliberately, and unlike the skills-integrity branch
+  // above it is NOT `warning`: `shouldFailDoctor` counts `warning + error`
+  // under `--fail-on warning`, so a `warning` here would change the exit code
+  // for every adopter running behind the current package — exactly the
+  // population this advisory exists to inform, and none of whom has a repair
+  // command to run. `info` is the only severity that leaves the exit code
+  // untouched under every `--fail-on` value, and the 2-group text renderer
+  // routes `info` into the advisory group all the same.
+  const workflowsDiff = await diffInstalledShippedWorkflows(root);
+  if (workflowsDiff.status === "modified" && workflowsDiff.modified.length > 0) {
+    addCheck(checks, {
+      id: "workflows.integrity",
+      severity: "info",
+      title: "Workflows integrity (.github/workflows)",
+      // `title` has no consumer in the text renderer — it prints
+      // `[severity] id: message` — so the prose has to live in `message`.
+      message: `installed shipped workflow(s) differ from the packaged copy: ${workflowsDiff.modified.join(", ")}`,
+      details: {
+        workflowsDir: workflowsDiff.workflowsDir,
+        modified: workflowsDiff.modified,
+      },
+    });
   }
 
   const deprecatedPromptsDir = resolvePath(root, config, "promptsDir");
