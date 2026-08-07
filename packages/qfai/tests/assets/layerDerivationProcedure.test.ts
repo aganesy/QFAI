@@ -40,8 +40,28 @@ describe("deriving a TC's layer is a published procedure", () => {
     it(`${tree}: a spanning obligation has one stated resolution`, async () => {
       const catalog = await read(tree, "assistant/catalog/test-layers.md");
       expect(catalog).toContain("**Split the row.** One TC = one oracle = one layer.");
-      expect(catalog).toContain("A multi-valued `Level` cell (`L3/L5`) is **illegal**");
+      expectPhrase(
+        catalog,
+        "A multi-valued `Level` cell (`L3/L5`, `L1/L2`, `L1, L3`) is **illegal**",
+      );
       expect(catalog).toContain("escalate through the Drift Protocol");
+    });
+
+    it(`${tree}: it says what the validators do with an illegal cell`, async () => {
+      // "Nothing consumes it and no validator can route it" was the opposite of
+      // the shipped behaviour, in the file this repository ships as the SSOT
+      // for it: `QFAI-ATDD-112` routes such a cell to the no-`Level` default
+      // and keeps the obligation, and `TDDLIST_UNKNOWN_LEVEL` names it while
+      // the TC stays a coverage target. A reader who believed the old sentence
+      // had to invent the missing answer — and one consumer project's
+      // invention, "an `L3/L5` row normalizes to `L3`", was recorded as a fact
+      // about a value that spec never held.
+      const catalog = await read(tree, "assistant/catalog/test-layers.md");
+      expectPhrase(catalog, "**What a reader does with one: split the row.**");
+      expectPhrase(catalog, 'do not record a normalization that "drops one half"');
+      expectPhrase(catalog, "routes the TC to the same place a TC with no declared `Level` goes");
+      expect(catalog).toContain("TDDLIST_UNKNOWN_LEVEL");
+      expect(flat(catalog)).not.toContain("Nothing consumes it and no validator can route it");
     });
 
     it(`${tree}: the direction of authority is stated as an anti-pattern`, async () => {

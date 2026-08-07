@@ -6,6 +6,16 @@
 
 ### Changed
 
+- **`catalog/test-layers.md` says what happens to a multi-valued `Level` cell.**
+  It called `L3/L5` illegal and then claimed "nothing consumes it and no
+  validator can route it" — the opposite of the shipped behaviour, in the file
+  that is the SSOT for it. `QFAI-ATDD-112` routes such a cell to the same
+  default a TC with no `Level` gets (`<testsDir>/integration/**`) and keeps the
+  obligation, and `TDDLIST_UNKNOWN_LEVEL` (`warning`) names the cell while the
+  TC stays a coverage target. Both are written down now, with the only fix
+  (split the row) and an explicit statement that nothing normalizes such a cell
+  to one of its own halves — a consumer project had recorded exactly that
+  invented normalization as a fact about a spec value it never held.
 - **One `Level` predicate, one normalization.** `resolveTcHomeKind` matched
   `NO_ATDD_OBLIGATION_LEVELS` against the raw map value, the exported
   `isOutsideAtddObligation` matched a trimmed and lower-cased one, and

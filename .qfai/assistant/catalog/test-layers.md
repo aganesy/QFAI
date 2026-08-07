@@ -141,8 +141,23 @@ falsifying-oracle rule:
 observable at two layers, it is two obligations: write one TC per oracle and
 give each its own `Level`.
 
-- A multi-valued `Level` cell (`L3/L5`) is **illegal**. Nothing consumes it and
-  no validator can route it.
+- A multi-valued `Level` cell (`L3/L5`, `L1/L2`, `L1, L3`) is **illegal**. It
+  matches no entry in the crosswalk, so no rule can read a layer out of it.
+- **What a reader does with one: split the row.** One TC per oracle, each with
+  its own single `Level`. Nothing else is a fix — in particular, do not record
+  a normalization that "drops one half": no tool performs one, and a note
+  saying an `L3/L5` row "normalizes to `L3`" is a claim about a value that only
+  `06_Test-Cases.md` can make.
+- **What the validators do with one, until it is split.** They neither guess
+  nor let it through:
+  - `QFAI-ATDD-112` routes the TC to the same place a TC with no declared
+    `Level` goes — `<testsDir>/integration/**` — and keeps the obligation.
+    Unreadable is deliberately not "excused": if a cell qfai cannot read
+    discharged the obligation, `L1/L2` would be a one-keystroke way to delete
+    any TC from the gate. That default is where the obligation is _reported_,
+    not where the obligation _belongs_.
+  - `TDDLIST_UNKNOWN_LEVEL` (`warning`) names the cell, and the TC stays a
+    coverage target, so `tdd/test-list.md` still owes it a row.
 - If splitting is genuinely impossible, escalate through the Drift Protocol
   rather than inventing a combined value.
 
@@ -171,19 +186,27 @@ ID to exactly one directory. `US-*` is answered from `tests/e2e/**`
 two are fixed by the ID type. A `TC-*` is answered from the directory **its own
 declared `Level`** names (`QFAI-ATDD-112`):
 
-| `Level`            | Answered from          |
-| ------------------ | ---------------------- |
-| `L1`/`Unit`        | no ATDD obligation     |
-| `L2`/`Component`   | no ATDD obligation     |
-| `L3`/`Integration` | `tests/integration/**` |
-| `L4`/`API`         | `tests/api/**` (note)  |
-| `L5`/`E2E`         | `tests/e2e/**` (note)  |
-| none declared      | `tests/integration/**` |
+| `Level`                       | Answered from                  |
+| ----------------------------- | ------------------------------ |
+| `L1`/`Unit`                   | no ATDD obligation             |
+| `L2`/`Component`              | no ATDD obligation             |
+| `L3`/`Integration`            | `tests/integration/**`         |
+| `L4`/`API`                    | `tests/api/**` (note)          |
+| `L5`/`E2E`                    | `tests/e2e/**` (note)          |
+| none declared                 | `tests/integration/**`         |
+| anything else — typo, `L3/L5` | `tests/integration/**` (note2) |
 
 **(note)** A `TC-*` **should not be** at L4 or L5 — the first bullet below says
 why and what to do instead. The gate routes it there rather than rejecting it so
 a misfiled row is reported once, by the rule that names the real cause, instead
 of twice as "uncovered in integration" and "forbidden in api".
+
+**(note2)** A `Level` the crosswalk does not list — a typo, a project's own
+word, or the illegal multi-valued cell — falls to the same default as an
+undeclared one, and keeps its obligation. The default is the conservative
+answer to a cell qfai cannot read, never a supported spelling: fix the cell
+(see [Obligation spanning more than one layer](#obligation-spanning-more-than-one-layer)).
+`TDDLIST_UNKNOWN_LEVEL` (`warning`) names such a cell on the ledger side.
 
 Exactly one directory, never two: an annotation outside the one its `Level`
 names is both uncovered and rejected (`QFAI-ATDD-121` / `QFAI-ATDD-122` /

@@ -362,6 +362,33 @@ describe("the replacement gate has no holes the exclusion could fall through", (
     );
   });
 
+  it("names a multi-valued Level cell and still owes it a ledger row", async () => {
+    // `catalog/test-layers.md` states both halves of what happens to a cell no
+    // vocabulary matches: `QFAI-ATDD-112` routes it to the no-`Level` default
+    // (pinned above) and the ledger side names it at `warning` while keeping it
+    // a coverage target. Nothing normalizes it to one of its own values — the
+    // reading a downstream project recorded as a fact about `L3/L5`.
+    await withSpec(
+      {
+        "06_Test-Cases.md": table("| TC-0001 | L3/L5 | AC-0001 | - | s | e |"),
+        "tdd/test-list.md": [
+          "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+          "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        const issues = await validateTddList(root, defaultConfig);
+        const unknown = issues.find((entry) => entry.code === "TDDLIST_UNKNOWN_LEVEL");
+        expect(unknown?.severity).toBe("warning");
+        expect(unknown?.refs).toEqual(["L3/L5"]);
+        expect(issues.find((entry) => entry.code === "TDDLIST_TC_NOT_COVERED")?.message).toContain(
+          "TC-0001",
+        );
+      },
+    );
+  });
+
   it("covers a heading-form TC, which the table reader never saw", async () => {
     await withSpec(
       {
