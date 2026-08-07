@@ -32,8 +32,13 @@
   threshold and opened its next run at `error` — it now scans, counts and
   resets only the specs in scope. And the shared
   `.qfai/report/atdd-traceability/summary.{json,md}` artifact is written from
-  the repo-wide evaluation again rather than the narrowed one, which also
-  makes a concurrent per-spec run harmless instead of last-writer-wins.
+  the repo-wide evaluation again rather than the narrowed one, so the artifact
+  no longer depends on which scope wrote it. That is **not** the same as making
+  concurrent runs safe: the two files are separate writes taken at separate
+  instants, so an interleaving can still leave them describing different
+  snapshots. Do not run per-spec gates in parallel expecting a consistent audit
+  artifact — that race is open, tracked in the shared-state issue alongside the
+  `.qfai/state.json` counters.
 - **`qfai-atdd` no longer claims `QFAI-TEST-001` fails its gate.**
   `runAtddValidators` runs the coverage and scaffold validators only;
   `validateTestTodoStubs` is wired into the tdd profile. A completion reviewer
