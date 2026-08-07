@@ -212,7 +212,11 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   several test modules is legitimate. `TDD-ID` uniqueness is the only
   identity constraint.
 - `TDD-ID` must match `TDD-NNNN` and be unique within the spec.
-- Missing `tdd/test-list.md` is a warning; missing DR-ID/Evidence columns is an error.
+- Missing `tdd/test-list.md` is a warning **only when the spec declares no
+  coverage-target TC**. If it declares any, the absent file also raises
+  `TDDLIST_TC_NOT_COVERED` (error) naming them: the obligations do not
+  disappear with the ledger, and `QFAI-ATDD-112` no longer covers L1/L2, so
+  this is their only gate. Missing DR-ID/Evidence columns is an error.
 - The `Evidence` **cell** is checked too, not only the header: on a row at
   `green` / `refactor` / `review-fix` / `done`, an empty-or-dash cell is
   `TDDLIST_EVIDENCE_EMPTY` and a verdict with no command is

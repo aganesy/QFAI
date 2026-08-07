@@ -1540,6 +1540,7 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   // excluded from `QFAI-ATDD-112`, the ledger is their only gate — a `Level =
   // L1` row in a second table would otherwise be owed by nothing at all.
 
+  const tableLeveledTcIds = new Set<string>();
   for (const table of resolveTestCaseTables(content)) {
     // Lower-cased on both sides: `resolveTestCaseTables` now accepts a `tc-id`
     // / `TC-Id` header the way the ATDD collector always has, and a
@@ -1564,6 +1565,15 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
         const level = (row[levelIndex] ?? "").trim().toLowerCase();
         if (classifyCoverageLevel(level) === "unrecognized") {
           unrecognizedLevels.add((row[levelIndex] ?? "").trim());
+        }
+        // First declaration wins across tables too, not only across shapes.
+        // The non-coverage `continue` used to leave the id unrecorded, so a
+        // TC declared `L3` by an earlier table and `L1` by a later one picked
+        // up a ledger obligation on top of its `QFAI-ATDD-112` one —
+        // `collectTcLevels` keeps the `L3`, and the two gates have to agree.
+        if (tableLeveledTcIds.has(tcId)) continue;
+        if (level.length > 0) {
+          tableLeveledTcIds.add(tcId);
         }
         if (!isCoverageTargetLevel(level)) continue;
       }

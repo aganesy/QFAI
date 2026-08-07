@@ -979,3 +979,50 @@ describe("the heading form wins over a table row for the same TC", () => {
     }
   });
 });
+
+describe("the first declaration wins across tables, not only across shapes", () => {
+  it("keeps an earlier L3 row over a later L1 row for the same TC", async () => {
+    // `collectTcLevels` keeps the first declaration, so `QFAI-ATDD-112` owns
+    // the TC. The ledger gate's non-coverage `continue` left the id
+    // unrecorded, so the later `L1` row added a `TDDLIST_TC_NOT_COVERED`
+    // obligation on top — the two gates disagreeing about one TC again, this
+    // time between two tables rather than between heading and table.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-table-wins-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(path.join(specDir, "tdd"), { recursive: true });
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "## Test Case Table",
+          "",
+          "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+          "| ----- | ----- | ------- | ------ | ----- | -------- |",
+          "| TC-0001 | L3 | AC-0001 | - | s | e |",
+          "",
+          "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+          "| ----- | ----- | ------- | ------ | ----- | -------- |",
+          "| TC-0001 | L1 | AC-0001 | - | s | e |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(specDir, "tdd", "test-list.md"),
+        [
+          "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+          "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const codes = (await validateTddList(root, defaultConfig)).map((entry) => entry.code);
+      expect(codes).not.toContain("TDDLIST_TC_NOT_COVERED");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
