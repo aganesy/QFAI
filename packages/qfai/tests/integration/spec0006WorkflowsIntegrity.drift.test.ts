@@ -359,15 +359,30 @@ describe(
       // only the length assertion. Measured, and it is the inverse of what the
       // pair looks like.
       //
-      // The exemption is diagnostic, and it is the whole reason: under "no check
-      // emitted" the other six failures read `expected undefined to be 'ok'`,
-      // `expected undefined to deeply equal [ 'workflowsDir' ]` and so on, none
-      // of which names the cause. This line turns that into one failure that
-      // says what is wrong. It is NOT precedent for re-adding an entailed
-      // assertion that carries no such diagnostic value — the deleted
-      // `details.modified is undefined` assertion below is the case in point,
-      // and it would have failed with `expected [ ... ] to be undefined`, which
-      // says no more than the key-set failure printed beside it.
+      // The exemption is diagnostic. The standard it is claimed under: delete an
+      // entailed assertion UNLESS the kept line is the only one whose message
+      // names the claim. Four of the other six fail with their own claim against
+      // an observed `undefined` (`expected undefined to be 'ok'`,
+      // `expected undefined to deeply equal [ 'workflowsDir' ]`, and so on),
+      // which points at the cause only by inference, and the message assertion
+      // loses its label entirely (`.toMatch() expects to receive a string, but
+      // got undefined`).
+      //
+      // Stated honestly, this line is at the MARGIN of that standard rather than
+      // comfortably inside it: the length assertion immediately below also names
+      // the cause (`expected [] to have a length of 1 but got +0` — an empty
+      // finding set), so deleting this one would not leave the block mute. What
+      // it buys is locality — the requirement "a check must be registered" read
+      // as itself, first, instead of inferred from a container's length. That is
+      // a small delta, and it is recorded as small so nobody mistakes it for a
+      // strong warrant.
+      //
+      // It is therefore NOT precedent for re-adding an entailed assertion that
+      // merely has some diagnostic value. The deleted
+      // `details.modified is undefined` assertion below is the case in point: it
+      // would have failed with `expected [ ... ] to be undefined`, which says no
+      // more than the key-set failure printed beside it and names no claim the
+      // key-set line does not already name.
       expect
         .soft(check, "a content-identical tree must still register a workflows.integrity check")
         .toBeDefined();
@@ -439,6 +454,17 @@ describe(
       // the realistic refactor rather than an exotic one. Pinning both to the
       // shared constant (here and in the `workflowsDir` assertion above) forces
       // agreement transitively and reddens on the coordinated edit too.
+      //
+      // `ADOPTER_WORKFLOWS_DIR` is TEST-OWNED and must stay that way. Do NOT
+      // "DRY" it into an import of the reader's own directory constant: the
+      // whole discriminating power here comes from the expected value being
+      // stated INDEPENDENTLY of the code under test. Import it and a single
+      // rename inside the reader moves the title, the payload AND both expected
+      // values together, which is precisely the coordinated edit the paragraph
+      // above rejects — the assertion would then check that production agrees
+      // with itself instead of that it agrees with what this row requires.
+      // The reader's constants are module-private today, so the DRY edit needs
+      // an `export` added first; that export is the step to refuse.
       expect
         .soft(check?.title, "the JSON surface's title must name the checked directory exactly")
         .toBe(`Workflows integrity (${ADOPTER_WORKFLOWS_DIR})`);
@@ -485,6 +511,12 @@ describe(
     // tree whose record is non-empty, observed as that name's absence from the
     // comparison. This is the WHOLE-RECORD-EMPTY aggregate, observed at the
     // emission site as the count of registered checks.
+    //
+    // Observed RED before the emission was gated, under
+    // `cd packages/qfai && npx vitest run
+    // tests/integration/spec0006WorkflowsIntegrity.drift.test.ts` (file-scoped,
+    // no `-t`): `Tests 1 failed | 5 passed (6)`, this `it` the only failure,
+    // reporting the leaked `severity: "ok"` check verbatim.
     it("registers no workflows.integrity check at all when the provenance record is absent", async () => {
       const dir = await pool.seedAdopterTree();
       await editShippedWorkflow(dir, "qfai-tests.yml");
