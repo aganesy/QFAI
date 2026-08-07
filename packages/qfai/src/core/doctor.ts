@@ -252,10 +252,12 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
 
   addCheck(checks, await buildAgentFrontmatterCheck(root));
 
-  // Installed shipped-workflow drift. Emitted on drift only for now: the
-  // content-identical `ok` state and the unresolved-packaged-copy skip are
-  // separate obligations that are not implemented yet, so registering a
-  // finding for either here would claim behavior nothing has verified.
+  // Installed shipped-workflow drift. Two of the reader's three statuses are
+  // emitted: `modified` as the `info` advisory below, and the
+  // content-identical `ok` state as the `ok` check after it. The
+  // unresolved-packaged-copy skip (`skipped_unresolved`) is a separate
+  // obligation that is not implemented yet and deliberately registers nothing,
+  // so no check here claims behavior nothing has verified.
   //
   // Severity is `info` deliberately, and unlike the skills-integrity branch
   // above it is NOT `warning`: `shouldFailDoctor` counts `warning + error`
@@ -287,6 +289,26 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
         workflowsDir: workflowsDiff.workflowsDir,
         modified: workflowsDiff.modified,
       },
+    });
+  } else if (workflowsDiff.status === "ok") {
+    // `details` carries `workflowsDir` and NOTHING else. The four-key payload
+    // of BR-0006-0022 belongs to the drift emission alone: `modified` here
+    // would render an empty file list as a drift report, and `declined` here
+    // would contradict the declined-only tree's requirement that severity be
+    // `ok` while `details.declined` does not appear at all.
+    //
+    // `message` is non-empty because the text renderer prints
+    // `[severity] id: message` and nothing else — an empty message would print
+    // the bare line `[ok] workflows.integrity:`. It is phrased in English to
+    // match the drift emission directly above it, which is the same check id
+    // the same operator reads; the Japanese `skills.integrity` ok branch is a
+    // different check and its language is not this one's to inherit.
+    addCheck(checks, {
+      id: "workflows.integrity",
+      severity: "ok",
+      title: "Workflows integrity (.github/workflows)",
+      message: "installed shipped workflow(s) match the packaged copy",
+      details: { workflowsDir: workflowsDiff.workflowsDir },
     });
   }
 

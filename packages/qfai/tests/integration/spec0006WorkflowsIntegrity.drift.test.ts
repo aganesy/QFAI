@@ -17,6 +17,7 @@
  * This file grows row by row; each describe block is one ledger row.
  */
 // QFAI:SPEC-0006:TC-0006-0027
+// QFAI:SPEC-0006:TC-0006-0028
 
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -49,6 +50,15 @@ function readModifiedPaths(details: Record<string, unknown> | undefined): string
   }
   const paths = value.filter((entry): entry is string => typeof entry === "string");
   return paths.length === value.length ? paths : undefined;
+}
+
+/**
+ * The `details` key SET as a codepoint-sorted array, or `undefined` when the
+ * payload is absent. Sorted so an assertion on it pins the set rather than
+ * insertion order, which no consumer of the JSON surface depends on.
+ */
+function detailsKeys(details: Record<string, unknown> | undefined): string[] | undefined {
+  return details === undefined ? undefined : Object.keys(details).sort();
 }
 
 describe(
@@ -229,6 +239,157 @@ describe(
         "a recorded name present on disk with no packaged counterpart is `extra`, never drift",
       ).toEqual([]);
       expect(diff.status, "an `extra`-only comparison is not a drift status").toBe("ok");
+    });
+  },
+);
+
+describe(
+  "TC-0006-0028 (TDD-0030): a content-identical installed tree reports severity ok and emits no drift finding",
+  { timeout: 60000 },
+  () => {
+    it("registers exactly one ok-severity workflows.integrity check carrying no drift payload", async () => {
+      // The TC's Setup is 「TC-0006-0027 の手編集を戻し」, so the edit is applied
+      // and then reverted rather than skipped: guard #2 below is this row's
+      // anti-vacuity guard and an edit that was never made cannot be reverted.
+      // The revert restores CAPTURED bytes rather than re-deriving them, which
+      // is what makes the reverted tree provably identical to the installed one.
+      const dir = await pool.seedAdopterTree();
+      const target = adopterWorkflowPath(dir, "qfai-tests.yml");
+      const original = await readFile(target, "utf-8");
+
+      await editShippedWorkflow(dir, "qfai-tests.yml");
+
+      // Guards #1-#3 are PRECONDITIONS on the fixture and stay hard: if the
+      // tree is not in the state this row reasons about, nothing below measures
+      // anything. Everything after them is the row's claim and is `expect.soft`.
+      //
+      // Guard #1: the comparison set is non-empty. `readInstallProvenance` is
+      // fail-safe by contract — a missing, unreadable or malformed record
+      // resolves to an EMPTY record, which the reader reports as `status: "ok"`
+      // having compared nothing at all. Every claim below would then pass while
+      // no file had been examined.
+      const recordedNames = Object.keys((await readInstallProvenance(dir)).workflows);
+      expect(
+        recordedNames,
+        "the recorded name set must be non-empty, or `status: ok` only means `nothing was compared`",
+      ).toContain("qfai-tests.yml");
+
+      // Guard #2: drift is OBSERVABLE in this tree against this packaged
+      // operand, which establishes that the packaged copy resolved, was
+      // readable, and was actually compared. Guard #1 does not get there on its
+      // own: a packaged directory that resolved but was EMPTY would make every
+      // recorded name packaged-absent (the `extra` bucket, never drift),
+      // yielding `status: "ok"` and a fully green run in which no content
+      // comparison ever happened.
+      //
+      // `toContain`, deliberately NOT deep equality. The guard's job is "drift
+      // is observable here", and pinning the exact list would additionally make
+      // this hard guard fail under a reader mutation that over-reports drift —
+      // aborting the run before the claim block, whose severity, payload and
+      // message assertions are precisely what has to be seen reddening for the
+      // TC's false-positive clause. A weaker guard measures strictly more here,
+      // and the exact-list property belongs to the sibling row above, which
+      // owns it.
+      const drifted = await diffInstalledShippedWorkflows(dir);
+      expect(
+        drifted.modified,
+        "the hand edit must be observable as drift BEFORE it is reverted, or the silence after the revert is vacuous",
+      ).toContain(`${ADOPTER_WORKFLOWS_DIR}/qfai-tests.yml`);
+
+      await writeFile(target, original, "utf-8");
+
+      // Guard #3: the revert is byte-exact. This row reasons about a
+      // content-identical tree, and a comment claiming that property is not a
+      // guard.
+      expect(
+        await readFile(target, "utf-8"),
+        "the revert must restore the installed file byte-for-byte",
+      ).toBe(original);
+
+      const data = await createDoctorData({ startDir: dir, rootExplicit: true });
+      // The finding SET, not the first match. `addCheck` is a bare push with no
+      // dedup, so a `find` would hand back the clean registration while a
+      // second one carried a drift payload, and every assertion below would
+      // read the clean one and pass.
+      const findings = data.checks.filter((entry) => entry.id === "workflows.integrity");
+      const check = findings[0];
+
+      // Every assertion from here down is the row's claim and is `expect.soft`.
+      // Under hard asserts only the FIRST failing assertion is observed, so a
+      // mutation that reddens an earlier one aborts the run before the later
+      // ones execute and they read as covered while never having been
+      // exercised. Soft assertions make that structural instead of a comment a
+      // later edit can quietly break.
+      //
+      // The TC's second Verify bullet (drift finding が 1 件も emit されない —
+      // false positive なし) is measured JOINTLY by the severity, payload and
+      // message assertions below rather than by an extra "no info finding"
+      // assertion, which would have no mutation of its own: under the
+      // false-positive mutation (`hasDrifted` returning true for two equal
+      // digests) the reader reports drift, the `info` branch fires instead of
+      // the `ok` one, and the severity, `details` key-set and message
+      // assertions all redden together.
+      expect
+        .soft(check, "a content-identical tree must still register a workflows.integrity check")
+        .toBeDefined();
+      expect
+        .soft(findings, "workflows.integrity must be registered exactly once per doctor run")
+        .toHaveLength(1);
+      expect
+        .soft(check?.severity, "a content-identical installed tree is severity `ok`")
+        .toBe("ok");
+
+      // The payload is pinned as a SET rather than by the absence of one named
+      // key. The four-key drift payload of BR-0006-0022 belongs to the `info`
+      // emission alone, so an `ok` check carries `workflowsDir` and nothing
+      // else: `modified` leaking in here would render an empty file list as a
+      // drift report, and `declined` leaking in would contradict
+      // TC-0006-0035's requirement that it not appear on an `ok` tree.
+      // (TC-0006-0035's own claim is NOT made here — it is about a
+      // declined-only tree, which this fixture is not. Only the payload shape
+      // that claim rests on is pinned.)
+      //
+      // A separate `details.modified is undefined` assertion was considered and
+      // deliberately left out: pinning the key set already forbids that key,
+      // and no mutation reddens such an assertion without reddening this one —
+      // it would read as coverage while measuring nothing of its own.
+      expect
+        .soft(
+          detailsKeys(check?.details),
+          "an ok check carries `workflowsDir` only — the drift payload belongs to the info emission",
+        )
+        .toEqual(["workflowsDir"]);
+      expect
+        .soft(
+          check?.details?.["workflowsDir"],
+          "`workflowsDir` must name the adopter-tree-relative workflows directory",
+        )
+        .toBe(ADOPTER_WORKFLOWS_DIR);
+
+      // `message` and `title` are both asserted because both are rendered.
+      // `formatDoctorText` prints `[severity] id: message`, so an empty message
+      // prints the bare line `[ok] workflows.integrity:`; `title` has no
+      // consumer in the text renderer but is emitted verbatim under
+      // `--format json`.
+      expect
+        .soft(check?.message, "the ok message must read as prose, not as an empty renderer slot")
+        .toMatch(/match the packaged copy/);
+      expect
+        .soft(check?.title, "the JSON surface's title must identify the checked directory")
+        .toContain(ADOPTER_WORKFLOWS_DIR);
+
+      // NOT COVERED BY THIS ROW — BR-0006-0018's 改行正規化 clause.
+      //
+      // The rule says the comparison basis is newline-NORMALIZED content, and
+      // no test in this repository can currently tell that basis from a
+      // raw-byte one: reducing `normalizeNewlines` to `return text;` reddens
+      // nothing, including the full closure this slice runs (measured, not
+      // assumed). This row cannot close it either, and not by omission — the
+      // TC's Setup asks for a byte-identical revert, and a byte-identical
+      // fixture answers the same way under both bases BY CONSTRUCTION. Closing
+      // it needs a fixture whose two sides differ in line endings ONLY, which
+      // is a change to the TC's Setup and is routed upstream. Do not read this
+      // row as covering that clause.
     });
   },
 );
