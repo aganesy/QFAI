@@ -69,6 +69,14 @@ import { issue } from "./utils.js";
 const TODO_MARKER_RE = /\/\/\s*TODO:\s*implement assertion for\s+(TC-\d{4}-\d{4})\b/g;
 
 /**
+ * Declared `Level` values whose home is a directory this writer does not emit
+ * into. Kept in step with `atddScaffold.ts`'s own set: the command stopped
+ * generating these, and this validator has to stop gating the ones it already
+ * generated.
+ */
+const SCAFFOLD_FOREIGN_LEVELS = new Set(["l4", "api", "l5", "e2e"]);
+
+/**
  * Extract the spec id from an atdd-scaffold file path of the shape
  * `<testsRoot>/atdd/<spec-id>/<TC>.test.*`. Returns `null` when the
  * path does not match the canonical layout — the caller falls back
@@ -166,9 +174,44 @@ export async function validateScaffoldPlaceholder(
     // scaffold` still generates one — it does not route by `Level` — so the
     // skeleton exists and this is where it stops being a gate.
     const levels = specId === null ? new Map<string, string>() : await tcLevelsForSpec(specId);
-    const tcIds = allTcIds.filter(
-      (tcId) => !isOutsideAtddObligation(levels.get(tcId.toUpperCase())),
-    );
+    const tcIds: string[] = [];
+    const foreignHomeTcIds: string[] = [];
+    for (const tcId of allTcIds) {
+      const level = levels.get(tcId.toUpperCase());
+      if (isOutsideAtddObligation(level)) continue;
+      if (SCAFFOLD_FOREIGN_LEVELS.has((level ?? "").trim().toLowerCase())) {
+        foreignHomeTcIds.push(tcId);
+        continue;
+      }
+      tcIds.push(tcId);
+    }
+
+    // An L4/L5 skeleton that a pre-upgrade `qfai atdd scaffold` already wrote
+    // into `<testsDir>/integration/` is a different problem from an unfilled
+    // one, and the ordinary finding gives it the wrong instruction. Filling in
+    // an assertion there discharges nothing: the TC's declared `Level` routes
+    // to `tests/api/**` / `tests/e2e/**`, so the annotation stays uncounted by
+    // `QFAI-ATDD-112` and `QFAI-ATDD-123` keeps rejecting it. The remediation
+    // is to move or delete the file, and it does not escalate — escalation
+    // exists to pressure an operator into writing the assertion, which is not
+    // what this one needs.
+    if (foreignHomeTcIds.length > 0) {
+      issues.push(
+        issue(
+          "D-SCAFFOLD-FOREIGN-HOME",
+          `Scaffold skeleton in ${relPath} covers TC whose declared Level routes elsewhere (${foreignHomeTcIds.join(", ")}). ` +
+            "`qfai atdd scaffold` writes integration skeletons only; an L4/L5 annotation here is uncounted by " +
+            "QFAI-ATDD-112 and rejected by QFAI-ATDD-123, so implementing an assertion in this file discharges nothing.",
+          "warning",
+          relPath,
+          "scaffoldPlaceholder.foreignHome",
+          foreignHomeTcIds,
+          "change",
+          "Move the test to the directory the TC's `Level` names (tests/api/** for L4, tests/e2e/** for L5) and delete this skeleton — or re-file the obligation as CON-API-* / US-*, which is what a TC-* at L4/L5 usually means.",
+        ),
+      );
+    }
+
     if (tcIds.length === 0) {
       continue;
     }

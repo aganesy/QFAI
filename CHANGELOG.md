@@ -323,6 +323,15 @@
 
 ### Added
 
+- **`D-SCAFFOLD-FOREIGN-HOME` (warning)** replaces the placeholder gate for an
+  L4/L5 skeleton a pre-upgrade `qfai atdd scaffold` already wrote into
+  `tests/integration/**`. The command stopped generating those, but the ones on
+  disk kept escalating `D-SCAFFOLD-PLACEHOLDER` and telling the operator to
+  implement an assertion — which discharges nothing, because the TC's declared
+  `Level` routes elsewhere and `QFAI-ATDD-123` rejects the annotation wherever
+  the file sits. The new finding names the move-or-delete remediation and does
+  not escalate: escalation exists to pressure an operator into writing the
+  assertion, which is not what this one needs.
 - **`TDDLIST_COVERAGE_LAYER_MISMATCH` (warning)** reports a coverage-target TC
   discharged only from a row whose `Layer` contradicts its declared `Level` — a
   `Level = L1` TC closed by a `Layer = Integration` row alone. Coverage counted

@@ -30,9 +30,11 @@ import {
   isOutsideAtddObligation,
   resolveAtddHomeKind,
 } from "../../src/core/atddTraceability.js";
+import { SCAFFOLD_PLACEHOLDER_MARKER } from "../../src/core/atdd/scaffold.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { classifyCoverageLevel, UNIT_COMPONENT_LAYERS } from "../../src/core/tddHelpers.js";
 import { validateAtddCodeTraceability } from "../../src/core/validators/atddCodeTraceability.js";
+import { validateScaffoldPlaceholder } from "../../src/core/validators/scaffoldPlaceholder.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
 
 type Tc = { id: string; level: string };
@@ -1547,5 +1549,70 @@ describe("one Level predicate, one normalization, one answer", () => {
         expect(found).not.toContain("QFAI-ATDD-123");
       },
     );
+  });
+});
+
+describe("a pre-upgrade L4/L5 skeleton is not told to implement an assertion", () => {
+  it("reports a move/delete remediation instead of the placeholder gate", async () => {
+    // The command stopped generating these, but the ones it already wrote into
+    // `tests/integration/**` remain. `D-SCAFFOLD-PLACEHOLDER` escalates them
+    // and says to write the assertion — which discharges nothing, because the
+    // TC's declared `Level` routes elsewhere and `QFAI-ATDD-123` keeps
+    // rejecting the annotation wherever the file sits.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-foreign-scaffold-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      for (const [name, body] of [
+        ["01_Spec.md", "# Spec\n"],
+        ["02_User-stories.md", "# US\n"],
+        ["03_Acceptance-Criteria.md", "# AC\n"],
+      ] as const) {
+        await writeFile(path.join(specDir, name), body, "utf-8");
+      }
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "## Test Case Table",
+          "",
+          "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+          "| ----- | ----- | ------- | ------ | ----- | -------- |",
+          "| TC-0001-0001 | L4 | AC-0001 | - | s | e |",
+          "| TC-0001-0002 | L3 | AC-0001 | - | s | e |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const skeleton = (tcId: string): string =>
+        [
+          `// ${SCAFFOLD_PLACEHOLDER_MARKER}`,
+          `it('${tcId}', () => {`,
+          `  // TODO: implement assertion for ${tcId}`,
+          "});",
+          "",
+        ].join("\n");
+      const dir = path.join(root, "tests", "integration", "spec-0001");
+      await mkdir(dir, { recursive: true });
+      await writeFile(path.join(dir, "TC-0001-0001.test.ts"), skeleton("TC-0001-0001"), "utf-8");
+      await writeFile(path.join(dir, "TC-0001-0002.test.ts"), skeleton("TC-0001-0002"), "utf-8");
+
+      const issues = await validateScaffoldPlaceholder(root, defaultConfig);
+
+      const foreign = issues.find((entry) => entry.code === "D-SCAFFOLD-FOREIGN-HOME");
+      expect(foreign?.severity).toBe("warning");
+      expect(foreign?.refs).toEqual(["TC-0001-0001"]);
+      expect(foreign?.suggested_action).toContain("Move the test");
+
+      // The L4 skeleton is not also reported as an unfilled placeholder, and
+      // the L3 one still is — the gate keeps working for the rows it owns.
+      const placeholders = issues.filter((entry) => entry.code === "D-SCAFFOLD-PLACEHOLDER");
+      expect(placeholders).toHaveLength(1);
+      expect(placeholders[0]?.refs).toEqual(["TC-0001-0002"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });
