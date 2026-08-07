@@ -6,6 +6,13 @@
 
 ### Changed
 
+- **Coverage counts real ledger rows only.** The multi-table scan read the raw
+  file and accepted any table with a `TC-Refs` column, so a fenced template or a
+  commented-out old table in `test-list.md` counted a TC as covered, and a stray
+  two-column table headed `TC-Refs` cleared the obligation with no `TDD-ID`, no
+  `Layer` and no `Test file` behind it — clearing the only `error` that still
+  owes an L1/L2 TC. Non-spec regions are masked first, and a table must carry the
+  full ledger schema to contribute.
 - **The two TC readers now read the same tables.** `collectTcLevels` scanned
   every table in `06_Test-Cases.md` while `resolveTestCaseTables` reads the
   `## Test Case Table` section, so an illustrative table above the heading won

@@ -6,6 +6,7 @@ import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
 import type { MarkdownTable } from "../specPackParsers.js";
 import {
+  maskNonSpecRegions,
   parseAllMarkdownTables,
   parseFirstMarkdownTable,
   resolveTestCaseTable,
@@ -36,11 +37,28 @@ interface CoverageTable {
   layerIndex: number;
 }
 
-/** Every table in the ledger that has a `TC-Refs` column. */
+/**
+ * Every table in the ledger that can carry coverage.
+ *
+ * Two conditions, both of which a `TC-Refs`-column test alone failed:
+ *
+ * - **Non-spec regions are masked first.** A fenced template or a commented-out
+ *   old table inside `test-list.md` is not the ledger, and reading it let an
+ *   L1/L2 TC that has no real row count as covered — clearing the only `error`
+ *   that still owes it now that `QFAI-ATDD-112` excludes L1/L2. The spec-side
+ *   readers already mask; this one has to as well.
+ * - **The table must carry the ledger schema.** The later tables are outside
+ *   the required-column, `Layer` and unknown-ref checks that the first table
+ *   passes, so a stray two-column table headed `TC-Refs` counted a TC as
+ *   covered with no `TDD-ID`, no `Layer` and no `Test file` behind it.
+ *   Requiring `REQUIRED_COLUMNS` makes "counts as coverage" and "is a ledger
+ *   row" the same claim.
+ */
 function collectCoverageTables(content: string): CoverageTable[] {
   const tables: CoverageTable[] = [];
-  for (const table of parseAllMarkdownTables(content)) {
+  for (const table of parseAllMarkdownTables(maskNonSpecRegions(content))) {
     const headers = table.headers.map((header) => header.trim());
+    if (!REQUIRED_COLUMNS.every((column) => headers.includes(column))) continue;
     const tcRefsIndex = headers.indexOf("TC-Refs");
     if (tcRefsIndex < 0) continue;
     tables.push({ table, tcRefsIndex, layerIndex: headers.indexOf("Layer") });

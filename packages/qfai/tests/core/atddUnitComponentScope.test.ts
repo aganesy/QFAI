@@ -625,3 +625,111 @@ describe("a declared Level names the layer that discharges it", () => {
     });
   });
 });
+
+describe("only real ledger rows count as coverage", () => {
+  async function withLedger(ledger: string, task: (root: string) => Promise<void>) {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ledger-rows-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(path.join(specDir, "tdd"), { recursive: true });
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "## Test Case Table",
+          "",
+          "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+          "| ----- | ----- | ------- | ------ | ----- | -------- |",
+          "| TC-0001 | L1 | AC-0001 | - | s | e |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(path.join(specDir, "tdd", "test-list.md"), ledger, "utf-8");
+      await task(root);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  const HEADER = [
+    "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+    "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+  ];
+
+  it("does not count a row inside a fenced template", async () => {
+    // `parseAllMarkdownTables` read the raw file, so a copy-paste template in
+    // the ledger cleared the only error that still owes an L1 TC.
+    await withLedger(
+      [
+        ...HEADER,
+        "",
+        "```md",
+        ...HEADER,
+        "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | a | todo | - | - |",
+        "```",
+        "",
+      ].join("\n"),
+      async (root) => {
+        const issues = await validateTddList(root, defaultConfig);
+        expect(issues.find((e) => e.code === "TDDLIST_TC_NOT_COVERED")?.message).toContain(
+          "TC-0001",
+        );
+      },
+    );
+  });
+
+  it("does not count a row inside an HTML comment", async () => {
+    await withLedger(
+      [
+        ...HEADER,
+        "",
+        "<!--",
+        ...HEADER,
+        "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | a | todo | - | - |",
+        "-->",
+        "",
+      ].join("\n"),
+      async (root) => {
+        const issues = await validateTddList(root, defaultConfig);
+        expect(issues.find((e) => e.code === "TDDLIST_TC_NOT_COVERED")?.message).toContain(
+          "TC-0001",
+        );
+      },
+    );
+  });
+
+  it("does not count a later table that is not a ledger table", async () => {
+    // A stray table carrying only `TC-Refs` sits outside every schema, Layer
+    // and unknown-ref check the first table passes, so counting it made
+    // "covered" mean something weaker than "has a row".
+    await withLedger(
+      [...HEADER, "", "## Notes", "", "| TC-Refs |", "| ------- |", "| TC-0001 |", ""].join("\n"),
+      async (root) => {
+        const issues = await validateTddList(root, defaultConfig);
+        expect(issues.find((e) => e.code === "TDDLIST_TC_NOT_COVERED")?.message).toContain(
+          "TC-0001",
+        );
+      },
+    );
+  });
+
+  it("still counts a later table that carries the ledger schema", async () => {
+    await withLedger(
+      [
+        ...HEADER,
+        "",
+        "## CHG-001 second wave",
+        "",
+        ...HEADER,
+        "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | a | todo | - | - |",
+        "",
+      ].join("\n"),
+      async (root) => {
+        const issues = await validateTddList(root, defaultConfig);
+        expect(issues.map((e) => e.code)).not.toContain("TDDLIST_TC_NOT_COVERED");
+      },
+    );
+  });
+});
