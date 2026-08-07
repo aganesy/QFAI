@@ -24,6 +24,14 @@
   unchanged, and an L1/L2 annotation that happens to sit in a scanned directory
   is not reported as forbidden either — the routing rule and the forbidden rule
   have to agree.
+- **`TDDLIST_TC_NOT_COVERED` now reads the whole ledger and the whole spec.**
+  Two gaps surfaced once L1/L2 depended on this gate alone. Coverage was scored
+  against the _first_ table in `tdd/test-list.md`, so a ledger that appends a
+  per-change-request section with its own table reported every TC those later
+  tables cover as uncovered. And the known-TC set was seeded from heading-form
+  `- Level:` pairs, so a `## TC-NNNN` block declaring no `Level` counted as
+  undeclared and its own ledger row became a `TDDLIST_UNKNOWN_REF`. A `TC-*` on
+  an E2E/API row still does not count towards coverage, wherever that row lives.
 
 ### Added
 

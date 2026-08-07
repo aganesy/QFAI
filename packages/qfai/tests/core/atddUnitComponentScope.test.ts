@@ -307,6 +307,101 @@ describe("the replacement gate has no holes the exclusion could fall through", (
       },
     );
   });
+
+  it("knows a heading-form TC that declares no Level", async () => {
+    // Seeding the known set from the level pairs alone made a level-less
+    // heading block undeclared, so its own ledger row became an unknown
+    // reference. `- Level:` is optional; the heading is what declares the TC.
+    await withSpec(
+      {
+        "06_Test-Cases.md": [
+          "# 06 Test Cases",
+          "",
+          "## TC-0001: no level here",
+          "",
+          "- AC-Refs: AC-0001",
+          "",
+          "## TC-0002",
+          "",
+          "- Level: L1",
+          "",
+        ].join("\n"),
+        "tdd/test-list.md": [
+          "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+          "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+          "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | a | todo | - | - |",
+          "| TDD-0002 | TC-0002 | unit | tests/b.test.ts | b | todo | - | - |",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        const issues = await validateTddList(root, defaultConfig);
+        expect(issues.filter((e) => e.code === "TDDLIST_UNKNOWN_REF")).toEqual([]);
+        expect(issues.filter((e) => e.code === "TDDLIST_TC_NOT_COVERED")).toEqual([]);
+      },
+    );
+  });
+
+  it("counts coverage from every ledger table, not just the first", async () => {
+    // `/qfai-implement` appends a per-change-request section with its own
+    // table. Scoring against table 1 alone reported every TC the later tables
+    // cover as uncovered — an `error` on a correct ledger.
+    await withSpec(
+      {
+        "06_Test-Cases.md": table(
+          ["| TC-0001 | L1 | AC-0001 | - | s | e |", "| TC-0002 | L1 | AC-0001 | - | s | e |"].join(
+            "\n",
+          ),
+        ),
+        "tdd/test-list.md": [
+          "# TDD Execution Ledger",
+          "",
+          "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+          "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+          "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | a | todo | - | - |",
+          "",
+          "## CHG-001 second wave",
+          "",
+          "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+          "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+          "| TDD-0002 | TC-0002 | unit | tests/b.test.ts | b | todo | - | - |",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        const issues = await validateTddList(root, defaultConfig);
+        expect(issues.filter((e) => e.code === "TDDLIST_TC_NOT_COVERED")).toEqual([]);
+      },
+    );
+  });
+
+  it("still refuses to let a later E2E table clear a coverage-target TC", async () => {
+    // Widening the scan to every table must not widen what counts: a `TC-*` on
+    // an E2E row is a forbidden placement wherever the row lives.
+    await withSpec(
+      {
+        "06_Test-Cases.md": table("| TC-0001 | L1 | AC-0001 | - | s | e |"),
+        "tdd/test-list.md": [
+          "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+          "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+          "| TDD-0001 | - | unit | tests/a.test.ts | a | todo | - | - |",
+          "",
+          "## CHG-001 second wave",
+          "",
+          "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+          "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+          "| TDD-0002 | TC-0001 | e2e | tests/e2e/b.test.ts | b | todo | - | - |",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        const issues = await validateTddList(root, defaultConfig);
+        expect(issues.find((e) => e.code === "TDDLIST_TC_NOT_COVERED")?.message).toContain(
+          "TC-0001",
+        );
+      },
+    );
+  });
 });
 
 describe("a commented-out table cannot suppress a real obligation", () => {

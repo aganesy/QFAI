@@ -4,7 +4,9 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
+import type { MarkdownTable } from "../specPackParsers.js";
 import {
+  parseAllMarkdownTables,
   parseFirstMarkdownTable,
   resolveTestCaseTable,
   resolveTestCaseTables,
@@ -23,9 +25,28 @@ import {
   UNIT_COMPONENT_LAYERS,
   NON_COVERAGE_LAYERS,
 } from "../tddHelpers.js";
-import { collectHeadingTcLevelsFrom } from "../atddTraceability.js";
+import { collectHeadingTcIdsFrom, collectHeadingTcLevelsFrom } from "../atddTraceability.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
+
+/** A ledger table that can carry coverage, with its column positions resolved. */
+interface CoverageTable {
+  table: MarkdownTable;
+  tcRefsIndex: number;
+  layerIndex: number;
+}
+
+/** Every table in the ledger that has a `TC-Refs` column. */
+function collectCoverageTables(content: string): CoverageTable[] {
+  const tables: CoverageTable[] = [];
+  for (const table of parseAllMarkdownTables(content)) {
+    const headers = table.headers.map((header) => header.trim());
+    const tcRefsIndex = headers.indexOf("TC-Refs");
+    if (tcRefsIndex < 0) continue;
+    tables.push({ table, tcRefsIndex, layerIndex: headers.indexOf("Layer") });
+  }
+  return tables;
+}
 
 const REQUIRED_COLUMNS = [
   "TDD-ID",
@@ -1198,25 +1219,36 @@ async function validateSpecTddList(
   }
 
   // Phase 2 – Check 10: TC coverage (unit/component TCs must appear in test-list)
-  if (tcRefsIndex >= 0) {
+  //
+  // Read from every ledger table, not just the first. A ledger that appends a
+  // per-change-request section (`## CHG-006 …` + its own table) is a shape the
+  // implement skill produces, and scoring coverage against table 1 alone
+  // reports every TC the later tables cover as uncovered. That was survivable
+  // while this was the second gate behind `QFAI-ATDD-112`; with L1/L2 now
+  // excluded from that rule it is the only one, so a false negative here is a
+  // hard `error` on a correct ledger.
+  const coverageTables = collectCoverageTables(content);
+  if (coverageTables.length > 0) {
     if (unitComponentTcIds.size > 0) {
       const coveredTcIds = new Set<string>();
-      for (const row of table.rows) {
-        // A `TC-*` sitting on an E2E/API row is a forbidden placement
-        // (Check 5c). Counting it here would let that single illegal row clear
-        // the coverage obligation for a unit/component TC.
-        if (layerIndex >= 0) {
-          const rowLayer = (row[layerIndex] ?? "").trim().toLowerCase();
-          if (TC_FORBIDDEN_LAYERS.has(rowLayer)) continue;
-        }
-        const tcRefsCell = (row[tcRefsIndex] ?? "").trim();
-        if (tcRefsCell.length === 0) continue;
-        const refs = splitTcRefs(tcRefsCell);
-        for (const ref of refs) {
-          const upper = ref.toUpperCase();
-          coveredTcIds.add(upper);
-          const parent = resolveParentTcId(upper);
-          if (parent) coveredTcIds.add(parent);
+      for (const scan of coverageTables) {
+        for (const row of scan.table.rows) {
+          // A `TC-*` sitting on an E2E/API row is a forbidden placement
+          // (Check 5c). Counting it here would let that single illegal row
+          // clear the coverage obligation for a unit/component TC.
+          if (scan.layerIndex >= 0) {
+            const rowLayer = (row[scan.layerIndex] ?? "").trim().toLowerCase();
+            if (TC_FORBIDDEN_LAYERS.has(rowLayer)) continue;
+          }
+          const tcRefsCell = (row[scan.tcRefsIndex] ?? "").trim();
+          if (tcRefsCell.length === 0) continue;
+          const refs = splitTcRefs(tcRefsCell);
+          for (const ref of refs) {
+            const upper = ref.toUpperCase();
+            coveredTcIds.add(upper);
+            const parent = resolveParentTcId(upper);
+            if (parent) coveredTcIds.add(parent);
+          }
         }
       }
       for (const tcId of unitComponentTcIds) {
@@ -1350,6 +1382,14 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   // entirely. With L1/L2 excluded from `QFAI-ATDD-112`, that left them gated by
   // nothing at all. Collected before the table pass so a spec that uses only
   // headings is still covered.
+  //
+  // The id pass is separate from the level pass on purpose. A heading block
+  // that declares no `- Level:` line yields no level pair, but the TC is still
+  // declared — seeding `knownTcIds` from the pairs alone made every level-less
+  // heading-form TC an "unknown reference" the moment its ledger cited it.
+  for (const tcId of collectHeadingTcIdsFrom(content)) {
+    knownTcIds.add(tcId);
+  }
   for (const [tcId, level] of collectHeadingTcLevelsFrom(content)) {
     knownTcIds.add(tcId);
     if (classifyCoverageLevel(level) === "unrecognized") {

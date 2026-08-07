@@ -554,6 +554,26 @@ export function collectHeadingTcLevelsFrom(rawTcText: string): Array<[string, st
   return collectHeadingTcLevels(maskNonSpecRegions(rawTcText));
 }
 
+/**
+ * Every heading-form TC id, whether or not the block declares a `Level`.
+ *
+ * `collectHeadingTcLevelsFrom` yields a pair only when a `- Level:` line
+ * follows the heading, so it cannot answer "does this spec declare this TC?" —
+ * a level-less TC is still declared. `validateTddList` needs both questions
+ * answered from the same shape: the id set decides whether a ledger `TC-Refs`
+ * value is known, the level pairs decide whether it is a coverage target.
+ */
+export function collectHeadingTcIdsFrom(rawTcText: string): string[] {
+  const ids: string[] = [];
+  for (const rawLine of maskNonSpecRegions(rawTcText).replace(/\r\n/g, "\n").split("\n")) {
+    const id = TC_HEADING_RE.exec(rawLine.trim())?.[1];
+    if (id !== undefined) {
+      ids.push(id.toUpperCase());
+    }
+  }
+  return ids;
+}
+
 function collectHeadingTcLevels(tcText: string): Array<[string, string]> {
   const pairs: Array<[string, string]> = [];
   let currentId: string | null = null;
