@@ -6,6 +6,13 @@
 
 ### Fixed
 
+- **A reference to a spec that does not exist stays repo-wide.** `--spec`
+  narrowing drops a sibling's unknown reference because that sibling's own
+  gate will report it. A token naming a spec number no spec pack has —
+  `QFAI:SPEC-9999:TC-0001`, the ordinary fat-finger — has no such gate:
+  `--spec 9999` is rejected by `QFAI-SCOPE-002`, so every legitimate per-spec
+  run would drop it and the annotation would sit in the current spec's own
+  tests unreported. Only refs naming a spec that exists are narrowed.
 - **An unknown `US` / `TC` reference is scoped by the spec its token names.**
   `QFAI-ATDD-101` / `-102` are filed against the test file carrying the typo,
   which no spec owns, so a sibling's `QFAI:SPEC-0001:TC-9999` failed

@@ -64,10 +64,22 @@ function narrowToScope(
   // attributable — and a sibling's typo failed a scoped gate the same way its
   // uncovered obligation did. `conApi` / `conDb` tokens name no spec and stay
   // repo-wide, on the same terms as `QFAI-ATDD-113` / `-115`.
+  //
+  // **Only a spec that exists can own the typo.** A token naming a spec
+  // number no spec pack has — `QFAI:SPEC-9999:TC-0001`, the ordinary
+  // fat-finger — has no owning gate to fall through to: `--spec 9999` is
+  // rejected by `QFAI-SCOPE-002`, so every legitimate per-spec run would drop
+  // it and the annotation would sit in the current spec's own tests unseen.
+  // Those stay repo-wide, which is the same rule the contract tokens follow
+  // and for the same reason.
+  const declaredSpecs = new Set([...result.specUsIds.keys(), ...result.specTcIds.keys()]);
   const narrowUnknown = (entries: AtddUnknownRef[]): AtddUnknownRef[] =>
-    entries.filter((entry) =>
-      entry.kind === "us" || entry.kind === "tc" ? inScope(entry.token) : true,
-    );
+    entries.filter((entry) => {
+      if (entry.kind !== "us" && entry.kind !== "tc") return true;
+      const number = OWNING_SPEC_RE.exec(entry.token)?.[1];
+      if (number === undefined || !declaredSpecs.has(number)) return true;
+      return scope.has(number);
+    });
 
   return {
     ...result,

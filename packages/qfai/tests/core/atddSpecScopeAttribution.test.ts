@@ -361,3 +361,49 @@ describe("an unknown US/TC reference is scoped by the spec its token names", () 
     });
   });
 });
+
+describe("a reference to a spec that does not exist stays repo-wide", () => {
+  it("survives a scoped run, because no per-spec gate could own it", async () => {
+    // `QFAI:SPEC-9999:TC-0001` in this spec's own tests is the ordinary
+    // fat-finger. Treating it as an out-of-scope sibling dropped it from
+    // `--spec 0002` — and `--spec 9999` is rejected by `QFAI-SCOPE-002`, so no
+    // legitimate per-spec run would ever report it.
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      const testFile = path.join(root, "tests", "integration", "typo.test.ts");
+      await mkdir(path.dirname(testFile), { recursive: true });
+      await writeFile(
+        testFile,
+        ["// QFAI:SPEC-9999:TC-0001", "it('x', () => {});", ""].join("\n"),
+        "utf-8",
+      );
+
+      for (const specScope of [new Set(["0001"]), new Set(["0002"])]) {
+        const codes = (await validateAtddCodeTraceability(root, defaultConfig, { specScope })).map(
+          (entry) => entry.code,
+        );
+        expect(codes).toContain("QFAI-ATDD-102");
+      }
+    });
+  });
+
+  it("still scopes a typo that names a spec that does exist", async () => {
+    // The narrowing is not abandoned: a sibling's own unknown reference is
+    // still that sibling's to fix.
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      const testFile = path.join(root, "tests", "integration", "sibling.test.ts");
+      await mkdir(path.dirname(testFile), { recursive: true });
+      await writeFile(
+        testFile,
+        ["// QFAI:SPEC-0001:TC-9999", "it('x', () => {});", ""].join("\n"),
+        "utf-8",
+      );
+
+      const scoped = (
+        await validateAtddCodeTraceability(root, defaultConfig, { specScope: new Set(["0002"]) })
+      ).map((entry) => entry.code);
+      expect(scoped).not.toContain("QFAI-ATDD-102");
+    });
+  });
+});
