@@ -183,6 +183,77 @@ describe("Unit and Component carry no ATDD annotation obligation", () => {
       },
     );
   });
+
+  it.each([
+    ["L4", "tests/api/**"],
+    ["L5", "tests/e2e/**"],
+  ])("leaves the %s route exactly where it was", async (level, home) => {
+    // The exclusion is two `Level` values wide. L4 and L5 keep routing to the
+    // directory they routed to before it, named in the finding as before —
+    // pinned here because a widening that swallowed them would still leave
+    // every other assertion in this file green.
+    await withProject([{ id: "TC-0001", level }], {}, async (root) => {
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      const missing = issues.find((entry) => entry.code === "QFAI-ATDD-112");
+
+      expect(missing?.refs).toEqual(["SPEC-0001:TC-0001"]);
+      expect(missing?.message).toContain(home);
+      expect(codes(issues)).not.toContain("QFAI-ATDD-117");
+    });
+  });
+});
+
+describe("a multi-valued Level cell is not an exit from the gate", () => {
+  // `catalog/test-layers.md` calls a multi-valued cell (`L3/L5`) illegal and
+  // says no validator can route it. "Cannot route" must resolve to the
+  // conservative answer — keep the obligation at the `integration` default and
+  // report it — never to the permissive one. If a cell qfai does not
+  // understand silently discharged the obligation, `L1/L2` would be a
+  // one-keystroke way to delete any TC from the gate, and the exclusion built
+  // here would be the thing that made it possible.
+  it.each(["L3/L5", "L1/L2", "L1/L3", "L1, L3"])(
+    "keeps %s owed rather than treating it as excluded",
+    async (level) => {
+      await withProject([{ id: "TC-0001", level }], {}, async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+
+        // Owed, and owed at the documented no-answer default.
+        const missing = issues.find((entry) => entry.code === "QFAI-ATDD-112");
+        expect(missing?.refs).toEqual(["SPEC-0001:TC-0001"]);
+        expect(missing?.message).toContain("tests/integration/**");
+
+        // Not reported as excluded: the exclusion applies to a cell that
+        // declares exactly Unit or exactly Component, nothing that merely
+        // contains the word.
+        expect(codes(issues)).not.toContain("QFAI-ATDD-117");
+      });
+    },
+  );
+
+  it("still discharges the multi-valued TC from tests/integration/**", async () => {
+    // The obligation the previous case keeps has to be satisfiable, or the
+    // conservative reading just moves the unclearable-error defect to a new
+    // input instead of removing it.
+    await withProject(
+      [{ id: "TC-0001", level: "L3/L5" }],
+      { "tests/integration/spec_0001/tc-0001.test.ts": "# QFAI:SPEC-0001:TC-0001\n" },
+      async (root) => {
+        const found = codes(await validateAtddCodeTraceability(root, defaultConfig));
+        expect(found).not.toContain("QFAI-ATDD-112");
+        expect(found).not.toContain("QFAI-ATDD-123");
+      },
+    );
+  });
+
+  it("excludes a Unit cell that only differs by surrounding whitespace", async () => {
+    // The complement of the case above: the exclusion must not be so literal
+    // that ` L1 ` — which every markdown table writes — falls out of it.
+    await withProject([{ id: "TC-0001", level: " L1 " }], {}, async (root) => {
+      expect(codes(await validateAtddCodeTraceability(root, defaultConfig))).not.toContain(
+        "QFAI-ATDD-112",
+      );
+    });
+  });
 });
 
 describe("the replacement gate reads the same tables ATDD does", () => {
