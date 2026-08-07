@@ -27,7 +27,10 @@
     nothing new becomes unsatisfiable.
   - `TDDLIST_MISSING` now states which of the two cases the spec is in and
     names the error that follows, so the escalation is visible in the run that
-    first reports it rather than only in these notes.
+    first reports it rather than only in these notes. The shipped `/qfai-sdd`
+    reference (`references/spec-traceability-rules.md`) said unconditionally
+    that a missing ledger is a warning, which told the author the gap was
+    non-blocking; it now states the condition.
 - **`catalog/test-layers.md` says what happens to a multi-valued `Level` cell.**
   It called `L3/L5` illegal and then claimed "nothing consumes it and no
   validator can route it" — the opposite of the shipped behaviour, in the file
@@ -50,6 +53,15 @@
   that made the TC uncounted where it was annotated **and** reported as
   forbidden there — two errors from one correct placement, on a cell whose only
   fault was a typo.
+- **First declaration wins between two tables, not only between two shapes.**
+  The heading-wins fix below settled a heading disagreeing with a table row; two
+  tables inside `## Test Case Table` still disagreed. The non-coverage branch
+  `continue`d without recording the id, so a TC declared `L3` by an earlier
+  table and `L1` by a later one was claimed by the ledger gate as well as by
+  `QFAI-ATDD-112`, which reads the `L3` — the same two-gates-disagree failure
+  one level down, and the one an L1/L2 TC can no longer afford now that exactly
+  one gate is meant to own it. A levelled id is recorded whether or not it is a
+  coverage target, so the first declaration wins in both directions.
 - **`catalog/test-layers.md` describes the routing the validator performs.**
   The "Annotation routing" section still said the derived `Level` does not move
   the annotation, that every `TC-*` is answered from `tests/integration/**`, and
