@@ -275,3 +275,68 @@ describe("a legacy evidence negation must actually win", () => {
     });
   });
 });
+
+describe("a project rule after the managed block does not win", () => {
+  it("re-appends the block when a later ignore line re-ignores the negations", async () => {
+    // Git applies the last matching pattern, so `.qfai/evidence/*.md` appended
+    // below the managed block re-ignores the Coverage Depth Matrix. The
+    // freshness check read the block only, called the negations effective and
+    // returned early — while `git check-ignore -v` named the project's line.
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const before = await readGitignore(root);
+      await writeFile(
+        path.join(root, ".gitignore"),
+        `${before}${NL}# project rules${NL}.qfai/evidence/*.md${NL}`,
+        "utf-8",
+      );
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const lines = (await readGitignore(root)).split(NL).map((l) => l.trimEnd());
+      const projectRule = lines.lastIndexOf(".qfai/evidence/*.md");
+      const negation = lines.lastIndexOf("!.qfai/evidence/coverage-depth-*.md");
+      expect(projectRule).toBeGreaterThan(-1);
+      expect(negation).toBeGreaterThan(projectRule);
+      // The project's own rule is preserved, not deleted.
+      expect(lines.filter((l) => l === ".qfai/evidence/*.md")).toHaveLength(1);
+    });
+  });
+
+  it("leaves a file whose negations already win alone", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const first = await readGitignore(root);
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      expect(await readGitignore(root)).toBe(first);
+    });
+  });
+});
+
+describe("a legacy evidence negation loses to a later glob too", () => {
+  it("re-appends when a later *.md re-ignores the governance records", async () => {
+    // The prefix comparison saw `*` and `.qfai/evidence/*`; it did not see
+    // `*.md`, which matches `coverage-depth-*.md`, `decision-*.md` and
+    // `change-request-*.md` exactly.
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const legacy = path.join(root, ".qfai", "evidence", ".gitignore");
+      await mkdir(path.dirname(legacy), { recursive: true });
+      await writeFile(
+        legacy,
+        ["*", "!coverage-depth-*.md", "!decision-*.md", "*.md", ""].join(NL),
+        "utf-8",
+      );
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const lines = (await readFile(legacy, "utf-8")).split(NL).map((l) => l.trimEnd());
+      const lastMd = lines.lastIndexOf("*.md");
+      expect(lines.lastIndexOf("!coverage-depth-*.md")).toBeGreaterThan(lastMd);
+      expect(lines.lastIndexOf("!decision-*.md")).toBeGreaterThan(lastMd);
+    });
+  });
+});

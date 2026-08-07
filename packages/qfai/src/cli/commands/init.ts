@@ -25,6 +25,7 @@ import {
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_LEGACY_LINES,
   RETIRED_LINE_SUCCESSORS,
+  negationsOutrankLaterIgnores,
 } from "../../core/gitignore.js";
 import {
   ASSISTANT_LAYERS,
@@ -688,17 +689,26 @@ async function ensureRootGitignoreEntries(
   // reach fresh inits.
   //
   // Presence alone is not enough — git applies the LAST matching pattern, so a
-  // negation hand-placed above `.qfai/evidence/*` is inert and the decision
-  // records stay ignored. `governanceNegationsEffective` re-checks the order.
+  // negation with any matching ignore line below it is inert and the decision
+  // records stay ignored.
+  //
+  // The order check reads the **whole file**, not the managed block. A project
+  // that appended its own `.qfai/evidence/*.md` after the block wins under
+  // git's last-match rule, and a block-scoped check called the negation
+  // effective while `git check-ignore -v` named the project's line. The repair
+  // path was already right — `removeManagedBlock` strips the block and the
+  // rebuilt one is appended last, so it lands below the project's rule — but
+  // the early return fired first and it never ran.
   //
   // Required entries are matched only against the managed block: a project that
   // deliberately removed, say, `.qfai/evidence/*` to track its own audit trail
   // must not have that choice silently undone by the next `qfai init`.
   const managedBlock = extractManagedBlock(existing);
+  const existingLines = existing.split("\n").map((line) => line.trimEnd());
   if (
     existing.includes(QFAI_GITIGNORE_MARKER) &&
     QFAI_GITIGNORE_GOVERNANCE_NEGATIONS.every((entry) => managedBlock.includes(entry)) &&
-    governanceNegationsEffective(managedBlock) &&
+    negationsOutrankLaterIgnores(existingLines, QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) &&
     QFAI_GITIGNORE_LEGACY_LINES.every((entry) => !existing.includes(entry))
   ) {
     return { copied: [], skipped: [gitignorePath] };
@@ -824,22 +834,14 @@ async function ensureLegacyEvidenceIgnoreNegations(
   //
   // A negation counts only when no ignore line below it can match the same
   // path. Anything else is re-appended, which puts it last and therefore wins.
-  const lastIgnoreIndexFor = (negation: string): number => {
-    const wanted = negation.replace(/^!/, "");
-    let last = -1;
-    for (let index = 0; index < lines.length; index += 1) {
-      const line = (lines[index] ?? "").trim();
-      if (line.length === 0 || line.startsWith("#") || line.startsWith("!")) continue;
-      if (line === "*" || wanted.startsWith(line.replace(/\*+$/, ""))) {
-        last = index;
-      }
-    }
-    return last;
-  };
-  const missing = LEGACY_EVIDENCE_IGNORE_NEGATIONS.filter((entry) => {
-    const at = lines.lastIndexOf(entry);
-    return at === -1 || lastIgnoreIndexFor(entry) > at;
-  });
+  //
+  // Real glob semantics, not a prefix comparison. A prefix test cannot see
+  // that a later `*.md` or a double-star `/*.md` matches
+  // `coverage-depth-*.md`, `decision-*.md` and `change-request-*.md`, so it
+  // called those negations effective and left the records ignored.
+  const missing = LEGACY_EVIDENCE_IGNORE_NEGATIONS.filter(
+    (entry) => !negationsOutrankLaterIgnores(lines, [entry]),
+  );
   if (missing.length === 0) {
     return { copied: [], skipped: [target] };
   }
@@ -868,7 +870,7 @@ async function ensureLegacyEvidenceIgnoreNegations(
  * a later block — `.qfai/state.json`, say — was deleted with that block and
  * never rebuilt, exposing local run state to the next commit. The blocks are
  * merged in document order: the first block's ordering is preserved (which is
- * what `governanceNegationsEffective` and the last-pattern-wins semantics
+ * what `negationsOutrankLaterIgnores` and the last-pattern-wins semantics
  * depend on) and any line only a later block carries is appended.
  */
 function extractManagedBlock(content: string): string {
@@ -897,33 +899,6 @@ function extractManagedBlock(content: string): string {
     cursor = endIdx;
   }
   return merged.join("\n");
-}
-
-/**
- * True when every governance negation appears AFTER the ignore line it undoes.
- *
- * Git applies the last matching pattern, so `!.qfai/evidence/decisions/` placed
- * above `.qfai/evidence/*` re-ignores the directory and the decision records
- * stay untracked while the file looks correct to a presence-only check.
- */
-function governanceNegationsEffective(block: string): boolean {
-  const lines = block.split("\n");
-  for (const negation of QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) {
-    const negationIdx = lines.indexOf(negation);
-    if (negationIdx === -1) {
-      return false;
-    }
-    // The ignore line this negation undoes, e.g. `.qfai/evidence/*`.
-    const target = negation.replace(/^!/, "").replace(/\/(\*\*)?$/, "");
-    const ignoreIdx = lines.findIndex(
-      (line) =>
-        !line.startsWith("!") && line.endsWith("/*") && target.startsWith(line.slice(0, -2)),
-    );
-    if (ignoreIdx !== -1 && ignoreIdx > negationIdx) {
-      return false;
-    }
-  }
-  return true;
 }
 
 /** Remove all QFAI managed blocks (known block lines only; stops at unknown lines). */

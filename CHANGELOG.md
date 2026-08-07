@@ -21,6 +21,18 @@
   matrix that exists only inside the ignored stage evidence as a missing matrix.
   Existing projects pick the negation up on the next `qfai init`; no ignore line
   is removed, so nothing previously tracked becomes untracked.
+- **A governance negation is checked against real gitignore globs, and against
+  the whole file.** Git applies the last matching pattern, so a negation is
+  effective only when no ignore line below it matches the same path — and both
+  checks got that wrong. The root check read the managed block alone, so a
+  project rule appended _after_ the block (`.qfai/evidence/*.md`) won while the
+  check called the negations effective and returned early. The leaf
+  `.qfai/evidence/.gitignore` check compared string prefixes, which sees `*` and
+  `.qfai/evidence/*` but not `*.md` or its double-star form — the patterns that
+  match `coverage-depth-*.md`, `decision-*.md` and `change-request-*.md`
+  exactly. Both now use one matcher that implements the anchoring, directory
+  and star rules, over the whole file. The repair itself was already correct;
+  only the detection short-circuited it.
 - **A duplicated managed block no longer loses the lines only its later copy
   carries.** A past duplicate-append bug left some projects with two blocks
   separated by their own entries. `removeManagedBlock` strips all of them but
