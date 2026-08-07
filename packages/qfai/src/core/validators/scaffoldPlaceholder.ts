@@ -56,7 +56,7 @@ import {
   shouldEscalate,
 } from "../atdd/scaffoldEscalation.js";
 import { hasErrnoCode } from "../fs/errno.js";
-import type { SpecScope } from "../specScope.js";
+import { normalizeSpecId, type SpecScope } from "../specScope.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -97,7 +97,13 @@ function extractSpecIdFromScaffoldPath(testsAtddDir: string, filePath: string): 
  * `--spec` scope (which holds bare numbers).
  */
 function scaffoldSpecNumber(specId: string): string | null {
-  return /^spec-(\d{3,4})$/.exec(specId)?.[1] ?? null;
+  // Normalized the way `resolveSpecScope` normalizes `--spec`: it pads to four
+  // digits, and `extractSpecIdFromScaffoldPath` accepts the three-digit
+  // `spec-NNN` shape `qfai atdd scaffold` also accepts. Comparing the raw
+  // capture made a `tests/integration/spec-001/` skeleton look like a different
+  // spec from the `--spec 001` that requested it, so a scoped gate skipped it
+  // silently — no finding, no counter, no reset.
+  return normalizeSpecId(specId);
 }
 
 export async function validateScaffoldPlaceholder(

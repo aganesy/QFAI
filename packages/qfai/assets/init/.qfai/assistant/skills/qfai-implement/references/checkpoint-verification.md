@@ -59,6 +59,12 @@ the placeholders; record the literal commands actually executed in evidence.
    spec's in-flight failure fail this checkpoint. It also writes
    `<report>/validate.spec-<id>.json` instead of the shared `validate.json`, so the checkpoint
    artifact cannot be overwritten by another spec's run.
+   **`--spec` scopes the spec-owned rules only, and this checkpoint still fails on the rest.**
+   `QFAI-TEST-001` names a test file and the `QFAI-TRACE-*` family is filed against
+   `.qfai/specs/` itself — neither has a spec owner, so a sibling spec's `it.todo`, or a
+   `CAP-*` it has not created yet, exits 1 here. Record the finding, its owning spec and why it
+   is not this checkpoint's work; do **not** drop `--fail-on error`, weaken the profile, or
+   report the checkpoint as passed.
 
 ## Verification command set (per spec)
 
