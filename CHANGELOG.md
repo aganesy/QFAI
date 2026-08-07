@@ -6,6 +6,14 @@
 
 ### Fixed
 
+- **"Does this spec exist" is a directory question.** It was answered from the
+  US/TC id maps, which only key a spec that declares at least one id — so a
+  sibling created moments ago read as nonexistent and its typo was kept
+  repo-wide, failing exactly the gate separation `--spec` exists for. The
+  answer comes from the enumerated spec directories now, and the same
+  correction applies to a scaffold directory: `tests/integration/spec-9999/`
+  is not an out-of-scope sibling, and skipping it removed the placeholder from
+  every valid scoped gate.
 - **A reference to a spec that does not exist stays repo-wide.** `--spec`
   narrowing drops a sibling's unknown reference because that sibling's own
   gate will report it. A token naming a spec number no spec pack has —

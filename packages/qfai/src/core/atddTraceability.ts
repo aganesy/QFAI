@@ -87,6 +87,15 @@ export type AtddTraceabilityMissing = {
 export type AtddCodeTraceabilityResult = {
   specsRoot: string;
   contractsApiRoot: string;
+  /**
+   * Every spec directory that exists, whether or not it declares an id yet.
+   *
+   * Not the same question as `specUsIds.has(n)`: a spec created moments ago has
+   * a directory and empty catalogues, and scope logic that asks the id maps
+   * treats it as nonexistent — so a typo naming it is handled as repo-wide when
+   * that spec's own gate would in fact own it.
+   */
+  declaredSpecNumbers: Set<string>;
   specUsIds: Map<string, Set<string>>;
   specTcIds: Map<string, Set<string>>;
   /**
@@ -350,6 +359,7 @@ export async function evaluateAtddCodeTraceability(
   const missingTcHomes = buildMissingTcHomes(missing.tc, tcLevels);
 
   return {
+    declaredSpecNumbers: specRefs.declaredSpecNumbers,
     specsRoot,
     contractsApiRoot,
     specUsIds,
@@ -433,11 +443,14 @@ async function collectSpecRefs(specsRoot: string): Promise<{
   tc: Map<string, Set<string>>;
   /** `spec -> TC-ID -> declared Level`, lower-cased. Absent when no Level column. */
   tcLevels: Map<string, Map<string, string>>;
+  /** Every spec directory that exists, whether or not it declares any id yet. */
+  declaredSpecNumbers: Set<string>;
 }> {
   const entries = await collectSpecEntries(specsRoot);
   const us = new Map<string, Set<string>>();
   const tc = new Map<string, Set<string>>();
   const tcLevels = new Map<string, Map<string, string>>();
+  const declaredSpecNumbers = new Set(entries.map((entry) => entry.specNumber));
 
   for (const entry of entries) {
     const [usText, tcText] = await Promise.all([
@@ -461,7 +474,7 @@ async function collectSpecRefs(specsRoot: string): Promise<{
     }
   }
 
-  return { us, tc, tcLevels };
+  return { us, tc, tcLevels, declaredSpecNumbers };
 }
 
 /**

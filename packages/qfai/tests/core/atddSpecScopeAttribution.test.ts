@@ -415,3 +415,59 @@ describe("a reference to a spec that does not exist stays repo-wide", () => {
     });
   });
 });
+
+describe("existence is a directory question, not an id question", () => {
+  it("scopes a typo naming a sibling whose catalogues are still empty", async () => {
+    // `collectSpecRefs` only keys `specUsIds` / `specTcIds` when the spec
+    // declares at least one id, so a spec created moments ago read as
+    // nonexistent — and its typo was kept repo-wide, failing the very gate
+    // separation this PR exists for.
+    await withProject(async (root) => {
+      await seed(root, [SPECS[0] as SpecSeed]);
+      const emptySpec = path.join(root, ".qfai", "specs", "spec-0002");
+      await mkdir(emptySpec, { recursive: true });
+      for (const name of ["01_Spec.md", "02_User-stories.md", "06_Test-Cases.md"]) {
+        await writeFile(path.join(emptySpec, name), "# empty\n", "utf-8");
+      }
+      const testFile = path.join(root, "tests", "integration", "typo.test.ts");
+      await mkdir(path.dirname(testFile), { recursive: true });
+      await writeFile(
+        testFile,
+        ["// QFAI:SPEC-0002:TC-9999", "it('x', () => {});", ""].join("\n"),
+        "utf-8",
+      );
+
+      const scoped = (
+        await validateAtddCodeTraceability(root, defaultConfig, { specScope: new Set(["0001"]) })
+      ).map((entry) => entry.code);
+      expect(scoped).not.toContain("QFAI-ATDD-102");
+    });
+  });
+
+  it("keeps a scaffold under a spec directory no pack has in every scope", async () => {
+    // `tests/integration/spec-9999/` is the mistyped scaffold. Treating it as
+    // an out-of-scope sibling removed the placeholder from every valid scoped
+    // gate, because `--spec 9999` is itself rejected by `QFAI-SCOPE-002`.
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      const testFile = path.join(root, "tests", "integration", "spec-9999", "TC-9999-0001.test.ts");
+      await mkdir(path.dirname(testFile), { recursive: true });
+      await writeFile(
+        testFile,
+        [
+          `// ${SCAFFOLD_PLACEHOLDER_MARKER}`,
+          "it('TC-9999-0001', () => {",
+          "  // TODO: implement assertion for TC-9999-0001",
+          "});",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validateScaffoldPlaceholder(root, defaultConfig, {
+        specScope: new Set(["0001"]),
+      });
+      expect(issues.map((entry) => entry.code)).toContain("D-SCAFFOLD-PLACEHOLDER");
+    });
+  });
+});

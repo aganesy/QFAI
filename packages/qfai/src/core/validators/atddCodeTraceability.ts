@@ -72,7 +72,10 @@ function narrowToScope(
   // it and the annotation would sit in the current spec's own tests unseen.
   // Those stay repo-wide, which is the same rule the contract tokens follow
   // and for the same reason.
-  const declaredSpecs = new Set([...result.specUsIds.keys(), ...result.specTcIds.keys()]);
+  // The spec *directories* that exist, not the ones with ids: a sibling spec
+  // created moments ago has empty catalogues, and treating it as nonexistent
+  // would keep its typo repo-wide when its own gate does in fact own it.
+  const declaredSpecs = result.declaredSpecNumbers;
   const narrowUnknown = (entries: AtddUnknownRef[]): AtddUnknownRef[] =>
     entries.filter((entry) => {
       if (entry.kind !== "us" && entry.kind !== "tc") return true;
@@ -203,13 +206,7 @@ export async function validateAtddCodeTraceability(
   const dirs = atddTestKindDirs(config.paths.testsDir);
   const issues: Issue[] = [];
 
-  issues.push(
-    ...buildUnknownIssues(
-      result.unknown,
-      result.specsRoot,
-      new Set([...result.specUsIds.keys(), ...result.specTcIds.keys()]),
-    ),
-  );
+  issues.push(...buildUnknownIssues(result.unknown, result.specsRoot, result.declaredSpecNumbers));
 
   if (result.missing.us.length > 0) {
     const usAttribution = specAttribution(result.missing.us, result.specsRoot);

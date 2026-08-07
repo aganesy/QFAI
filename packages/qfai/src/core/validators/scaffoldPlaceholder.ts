@@ -56,6 +56,7 @@ import {
   shouldEscalate,
 } from "../atdd/scaffoldEscalation.js";
 import { hasErrnoCode } from "../fs/errno.js";
+import { collectSpecEntries } from "../specLayout.js";
 import { normalizeSpecId, type SpecScope } from "../specScope.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -127,6 +128,11 @@ export async function validateScaffoldPlaceholder(
     .relative(root, resolvePath(root, config, "specsDir"))
     .replace(/\\/g, "/");
   const threshold = resolveEscalateThreshold(config.atdd?.scaffoldEscalateCycles);
+  const declaredSpecNumbers = new Set(
+    (await collectSpecEntries(resolvePath(root, config, "specsDir"))).map(
+      (entry) => entry.specNumber,
+    ),
+  );
   // Glob for any test extension the project uses. fast-glob
   // returns absolute paths when the pattern is absolute.
   const globPatterns = scaffoldDirs.map((dir) =>
@@ -178,7 +184,12 @@ export async function validateScaffoldPlaceholder(
     // an unattributed finding. The counter is already skipped for those.
     if (specId !== null && options.specScope !== undefined) {
       const number = scaffoldSpecNumber(specId);
-      if (number !== null && !options.specScope.has(number)) {
+      // A directory naming a spec no pack has — `tests/integration/spec-9999/`,
+      // the ordinary mistyped scaffold — is not an out-of-scope sibling. No run
+      // would ever report it: `--spec 9999` is rejected by `QFAI-SCOPE-002`, so
+      // skipping it here removes the placeholder from every valid scoped gate
+      // and its escalation with it. Only a real sibling is skipped.
+      if (number !== null && declaredSpecNumbers.has(number) && !options.specScope.has(number)) {
         continue;
       }
     }
@@ -288,7 +299,7 @@ export async function validateScaffoldPlaceholder(
       // the same way advancing them would invent one.
       if (options.specScope !== undefined) {
         const number = scaffoldSpecNumber(specId);
-        if (number !== null && !options.specScope.has(number)) {
+        if (number !== null && declaredSpecNumbers.has(number) && !options.specScope.has(number)) {
           continue;
         }
       }
