@@ -93,8 +93,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 - Writing spec artifacts other than this skill's own `tdd/test-list.md` ledger (use `/qfai-sdd`). The ledger's `Status` / `DR-ID` / `Evidence` cells are the one carve-out the Drift Protocol grants (`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`); its rows are still upstream.
 - Writing acceptance tests (use `/qfai-atdd`). `Layer = E2E` / `Layer = API` ledger rows are tracked here but their tests are authored there, and the RED provenance those rows carry is defined in `qfai-atdd/references/red-provenance.md` — this skill writes their `Status` / `DR-ID` / `Evidence` from the evidence that stage produced.
 - Running validation gates (use `/qfai-verify`).
-- Parallel execution across multiple **specs** simultaneously. (Item-level parallelism _within_ one spec is a separate question, governed by
-  `## Parallelization Policy` below.)
+- Parallel execution across multiple **specs** simultaneously. (Item-level parallelism _within_ one spec is a separate question, governed by `## Parallelization Policy` below.)
 
 ## Execution Ledger: test-list.md
 
@@ -116,6 +115,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 2. Transition status to `red` — **only for a `todo` row**. A `review-fix` row **stays at `review-fix`** for the whole rework: it runs steps 3-5 and the Green phase in place, and `review-fix -> red` is not an allowed transition.
 3. Write a **failing test** from the row's obligation column, selected by `Layer`: `TC-Refs` for `Unit` / `Component` / `Integration`, `US-Refs` for `E2E`, `CON-API-Refs` for `API`. An `E2E` or `API` row's test is authored by `/qfai-atdd` (Non-goals); this skill only drives that row's status and evidence once the acceptance test exists, and stops with a handoff note if it does not.
    3a. Create the **minimal seam** the test imports — module, export or signature with no behaviour — so the test module loads. This is not Phase Green's production code: it implements no predicate. Without it, the first failure of any new-symbol row is a resolution error by construction.
+   3b. **An `E2E` / `API` row consumes the provenance `/qfai-atdd` recorded; steps 4 and 5 do not apply to it.** Verify and carry over that row's entry in `.qfai/evidence/atdd-<spec-id>.md` per `qfai-atdd/references/red-provenance.md#handover-to-qfai-implement`, then continue at Phase Green. Re-running the test here passes — the surface exists by now — and treating that as step 5's unexpected pass is what sent correctly evidenced rows to `exception`.
 4. Run the test and **watch it fail**. Admissible only when an assertion — or an expected-exception check — inside this row's `Selector` raised the failure and its message names the predicate the row owns; a collection / import / syntax / fixture error, or an unasserted throw, is a **missing seam**, not a RED (`references/red-admissibility.md`). Observe each `Selector` entry's failure separately; one aggregate run is not a valid RED observation. Submit that run to `qa-gatekeeper` and obtain confirmation **before** any production code exists — routing phase `red`.
 5. If the test unexpectedly passes, classify **why** before doing anything else. An obligation
    already satisfied by a sibling row is **not an anomaly** and does **not** go to `exception`;

@@ -4,6 +4,31 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **`/qfai-implement` Phase Red consumes the ATDD provenance instead of
+  re-observing it.** The handover was declared but not executable: steps 4 and 5
+  re-run the row's test and watch it fail, and by the time that skill reaches an
+  `E2E` / `API` row the surface exists, so the run passes and step 5 classifies
+  it as an anomaly bound for `exception` — the terminal state the falsifiability
+  branch exists to avoid, reached through the branch itself. New step 3b verifies
+  and carries over the recorded branch; a missing or malformed entry stops with a
+  handoff note rather than inventing a RED.
+- **The ATDD minimal seam must not answer with the contracted status.** Branch 1
+  said to register the route "with the declared status, an empty body". When the
+  row's predicate _is_ the status — `201` on create, `204` on delete, `403` on a
+  refusal — that passes the assertion the moment the seam exists, so there is no
+  RED left to observe and the behaviour was implemented before the test failed.
+  The seam now answers with a not-implemented sentinel outside the contract's
+  declared set.
+- **ATDD evidence keeps its payload out of the table cell.** `## Ledger rows
+advanced` asked for RED/GREEN commands, output and the falsifiability result
+  inside a GFM cell — the same container defect the implement ledger had. Real
+  output is multi-line and carries bare `|`, so it either truncated the proof
+  `qa-gatekeeper` requires or broke the table below it. The table is now an
+  index; each row's payload lives under its own `### TDD-NNNN` heading in fenced
+  blocks.
+
 ### Changed
 
 - **`/qfai-atdd` now has RED discipline for the ledger rows it writes.**

@@ -224,3 +224,49 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     }
   });
 });
+
+describe.each(TREES)("%s (handover and container)", (tree) => {
+  it("gives /qfai-implement a branch that consumes the evidence instead of re-observing", async () => {
+    // Phase Red's steps 4 and 5 re-run the test and watch it fail. By the time
+    // that skill reaches an ATDD-owned row the surface exists, so the run
+    // passes and step 5 classifies it as an anomaly bound for `exception` —
+    // the terminal state branch 2 exists to avoid, reached through the branch
+    // itself. A falsifiability row could not reach `green` at all.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("3b.");
+    expect(implement).toContain("consumes the provenance `/qfai-atdd` recorded");
+    expect(implement).toContain("steps 4 and 5 do not apply to it");
+    expect(implement).toContain("red-provenance.md#handover-to-qfai-implement");
+
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("## Handover to /qfai-implement");
+    expect(provenance).toContain("The mutation run **is** `todo -> red`");
+    expect(provenance).toContain("stops with a handoff note");
+  });
+
+  it("forbids a minimal seam that answers with the contracted status", async () => {
+    // When the row's predicate IS the status — 201 on create, 204 on delete,
+    // 403 on a refusal — a handler registered with "the declared status"
+    // passes the assertion the moment it exists. There is no RED left to
+    // observe, and the row's behaviour was implemented before its test failed.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**The seam must not return the contracted status.**");
+    expect(provenance).toContain("not-implemented sentinel the contract does not use");
+    expect(provenance).not.toContain("with **no behaviour**: the declared status");
+    expect(provenance).toContain("no assertion in this row's selector can pass against the seam");
+  });
+
+  it("keeps the run payload out of the evidence table cell", async () => {
+    // Same container defect the implement ledger had: a GFM row is one
+    // physical line and a cell ends at every unescaped `|`, so a multi-line
+    // run or a shell pipe in the output truncates the proof qa-gatekeeper
+    // needs, or breaks every row below it.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("cell is an **anchor, never the commands and output**");
+    expect(atdd).toContain("### TDD-NNNN");
+
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**Where each form lives.**");
+    expect(provenance).toContain("execution-ledger.md#evidence-cell-contract");
+  });
+});

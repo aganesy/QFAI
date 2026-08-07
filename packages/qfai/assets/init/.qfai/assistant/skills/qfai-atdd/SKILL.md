@@ -188,20 +188,11 @@ Turn specs/contracts obligations (`US` / `TC` / `CON-API` / `CON-DB`) into runna
 
 `.qfai/specs/<spec-id>/tdd/test-list.md` is `/qfai-implement`'s execution
 ledger, and `qfai-implement/SKILL.md` states the split: **`Layer = E2E` and
-`Layer = API` rows are tracked there, but their tests are authored here.** This
-skill therefore writes into a ledger whose status lifecycle it does not define.
+`Layer = API` rows are tracked there, but their tests are authored here.**
 
-- **This skill does not write the ledger.** `/qfai-implement` owns the
-  `Status` / `DR-ID` / `Evidence` cells of every row — one writer, as
-  `constitution/drift-protocol.md` grants. This stage owes the **evidence those
-  cells point at**, in `.qfai/evidence/atdd-<spec-id>.md`.
-- **The lifecycle is
-  `../qfai-implement/references/execution-ledger.md#allowed-transitions`**: forward-only from `todo`, and `todo -> red` requires
-  an **admissible RED** observed before the code that makes it pass exists.
-- **The stage order makes that a real question**: Work Orders build the surfaces
-  a journey needs (P3, P4), so a journey written after them passes first run — an
-  anomaly bound for `exception`, which then becomes the only reachable terminal
-  state.
+- **This skill does not write the ledger.** `/qfai-implement` owns the `Status` / `DR-ID` / `Evidence` cells of every row — one writer, as `constitution/drift-protocol.md` grants. This stage owes the **evidence those cells point at**, in `.qfai/evidence/atdd-<spec-id>.md`.
+- **The lifecycle is `../qfai-implement/references/execution-ledger.md#allowed-transitions`**: forward-only from `todo`, and `todo -> red` requires an **admissible RED** observed before the code that makes it pass exists.
+- **The stage order makes that a real question**: Work Orders build the surfaces a journey needs (P3, P4), so a journey written after them passes first run — an anomaly bound for `exception`, which then becomes the only reachable terminal state.
 
 ### RED provenance for an ATDD-owned row (MUST)
 
@@ -210,8 +201,9 @@ three branches, in order — observed RED (stage gate **P1b**, before P2-P4 buil
 any surface), falsifiability when the surface is already there, and `exception`
 with a `DR-*` when neither is available. Take the first that applies, record
 which one, and put the evidence in `.qfai/evidence/atdd-<spec-id>.md` under
-`## Ledger rows advanced`. Branch 3 is the last resort: a stage that routes
-every row to `exception` has recorded that it did not try branches 1 and 2.
+`## Ledger rows advanced` — `/qfai-implement` consumes that entry rather than
+re-observing a RED. Branch 3 is the last resort: a stage that routes every row
+to `exception` has recorded that it did not try branches 1 and 2.
 
 ## Scope (ATDD only)
 
@@ -334,9 +326,12 @@ Required sections:
 - Commands executed + key outputs
 - Test volume estimate
 - Coverage obligations checklist
-- **Ledger rows advanced** — per row: `TDD-ID`, the branch taken, and its
-  evidence. Shapes: `references/red-provenance.md#evidence-shape`. Exactly one
-  form per row, never both and never neither.
+- **Ledger rows advanced** — an index table (`TDD-ID`, branch, anchor) plus one
+  `### TDD-NNNN` section per row holding the payload in fenced blocks. The table
+  cell is an **anchor, never the commands and output**: a GFM row is one
+  physical line whose cells end at every unescaped `|`. Shapes and rationale:
+  `references/red-provenance.md#evidence-shape`. Exactly one form per row, never
+  both and never neither.
 - Work Orders Summary
 - Execution logs
 - Gaps / Open risks
@@ -363,8 +358,14 @@ Template:
 
 ## Ledger rows advanced
 
-| TDD-ID | Branch | Evidence |
-| ------ | ------ | -------- |
+| TDD-ID   | Branch       | Evidence                 |
+| -------- | ------------ | ------------------------ |
+| TDD-NNNN | observed-red | see `### TDD-NNNN` below |
+
+### TDD-NNNN
+
+<!-- One section per row. Commands and output in fenced blocks here, never in
+     the table cell above. -->
 
 ## Work Orders Summary
 
