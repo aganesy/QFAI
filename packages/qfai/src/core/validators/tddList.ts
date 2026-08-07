@@ -21,8 +21,10 @@ import {
   collectLedgerTables,
   isCoverageBearingRow,
   isCoverageTargetLevel,
+  isLedgerRow,
   splitTcRefs,
   resolveParentTcId,
+  TC_FORBIDDEN_LAYERS,
   TDD_LEDGER_REQUIRED_COLUMNS,
   UNIT_COMPONENT_LAYERS,
   NON_COVERAGE_LAYERS,
@@ -46,8 +48,7 @@ import { exists, issue, readSafe } from "./utils.js";
  * coverage-target TC is checked the same wherever in the ledger it sits.
  */
 function isRowShapeChecked(scan: LedgerTable, row: string[], tableIndex: number): boolean {
-  if (tableIndex === 0) return true;
-  return scan.tddIdIndex < 0 || (row[scan.tddIdIndex] ?? "").trim().length > 0;
+  return tableIndex === 0 || isLedgerRow(scan, row);
 }
 
 /**
@@ -56,9 +57,18 @@ function isRowShapeChecked(scan: LedgerTable, row: string[], tableIndex: number)
  * A one-table ledger is the common case and its label has always been `row N`;
  * naming a table it does not have would be noise. Row indices are per table, so
  * once there is more than one the table has to be named or `row 2` is ambiguous.
+ *
+ * **The ordinal counts ledger tables, not tables in the file**, and says so.
+ * `collectLedgerTables` admits only schema-complete tables outside fenced and
+ * commented regions, so the shipped `test-list.md` template — a `## Ledger`
+ * table, a `## Schema` documentation table, a `## CHG-001` ledger table — makes
+ * its third table the *second* ledger table. An unqualified `table 2` sent the
+ * reader to the documentation table that has no rows to fix.
  */
 function describeLedgerRow(tableIndex: number, rowIndex: number): string {
-  return tableIndex === 0 ? `row ${rowIndex + 1}` : `table ${tableIndex + 1}, row ${rowIndex + 1}`;
+  return tableIndex === 0
+    ? `row ${rowIndex + 1}`
+    : `ledger table ${tableIndex + 1}, row ${rowIndex + 1}`;
 }
 
 const REQUIRED_COLUMNS = TDD_LEDGER_REQUIRED_COLUMNS;
@@ -96,15 +106,6 @@ const BLOCKED_BY_COLUMN = "Blocked-By";
  * set leaves it with no rule to follow.
  */
 const VALID_LAYERS = new Set(["unit", "component", "integration", "api", "e2e"]);
-
-/**
- * Layers that cannot host a `TC-*` obligation.
- *
- * `test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and
- * `tests/api/**`, so those rows record their obligation in `US-Refs` /
- * `CON-API-Refs`. This is the mirror of the `US-Refs`-on-a-Unit-row check.
- */
-const TC_FORBIDDEN_LAYERS = new Set(["api", "e2e"]);
 
 /**
  * The ledger `Layer` vocabulary, lower-cased. A value outside it is already
@@ -726,7 +727,6 @@ async function validateSpecTddList(
   // declared enum and existing ledgers carry project-specific names — an error
   // would break them on upgrade without a migration.
   for (const [tableIdx, scan] of coverageTables.entries()) {
-    if (scan.layerIndex < 0) continue;
     for (let rowIdx = 0; rowIdx < scan.table.rows.length; rowIdx++) {
       const row = scan.table.rows[rowIdx];
       if (!row || !isRowShapeChecked(scan, row, tableIdx)) continue;
@@ -785,7 +785,6 @@ async function validateSpecTddList(
   // Check 10 below counted it, letting a forbidden placement mark a
   // coverage-target TC as covered.
   for (const [tableIdx, scan] of coverageTables.entries()) {
-    if (scan.layerIndex < 0) continue;
     for (let rowIdx = 0; rowIdx < scan.table.rows.length; rowIdx++) {
       const row = scan.table.rows[rowIdx];
       if (!row || !isRowShapeChecked(scan, row, tableIdx)) continue;
@@ -819,7 +818,6 @@ async function validateSpecTddList(
 
   // Phase 2 – Check 6: TDD-ID format (TDD-NNNN)
   for (const [tableIdx, scan] of coverageTables.entries()) {
-    if (scan.tddIdIndex < 0) continue;
     for (let rowIdx = 0; rowIdx < scan.table.rows.length; rowIdx++) {
       const row = scan.table.rows[rowIdx];
       if (!row || !isRowShapeChecked(scan, row, tableIdx)) continue;
@@ -1320,8 +1318,7 @@ async function validateSpecTddList(
           // an item at all. `qfai report` asks the same function, so the two
           // commands cannot disagree about one row.
           if (!isCoverageBearingRow(scan, row)) continue;
-          const rowLayer =
-            scan.layerIndex >= 0 ? (row[scan.layerIndex] ?? "").trim().toLowerCase() : "";
+          const rowLayer = (row[scan.layerIndex] ?? "").trim().toLowerCase();
           const tcRefsCell = (row[scan.tcRefsIndex] ?? "").trim();
           if (tcRefsCell.length === 0) continue;
           const refs = splitTcRefs(tcRefsCell);

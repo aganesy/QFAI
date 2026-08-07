@@ -124,9 +124,21 @@ export const TDD_LEDGER_REQUIRED_COLUMNS = [
   "Evidence",
 ];
 
-/** A ledger table that can carry coverage, with its column positions resolved. */
+/**
+ * A ledger table that can carry coverage, with its column positions resolved.
+ *
+ * **Every index below is `>= 0`.** {@link collectLedgerTables} admits a table
+ * only when it carries all of {@link TDD_LEDGER_REQUIRED_COLUMNS}, so the
+ * lookups cannot miss — a `>= 0` guard at a call site reads as though a
+ * schema-complete table might lack `TDD-ID`, which by construction it cannot,
+ * and hid the real question (is this line an item?) behind a false one.
+ * `headers` is trimmed once here so the optional columns can be resolved the
+ * same way without re-trimming per check.
+ */
 export interface LedgerTable {
   table: MarkdownTable;
+  /** Trimmed header cells, in column order. */
+  headers: readonly string[];
   tcRefsIndex: number;
   layerIndex: number;
   tddIdIndex: number;
@@ -159,11 +171,11 @@ export function collectLedgerTables(content: string): LedgerTable[] {
   for (const table of parseAllMarkdownTables(maskNonSpecRegions(content))) {
     const headers = table.headers.map((header) => header.trim());
     if (!TDD_LEDGER_REQUIRED_COLUMNS.every((column) => headers.includes(column))) continue;
-    const tcRefsIndex = headers.indexOf("TC-Refs");
-    if (tcRefsIndex < 0) continue;
+    // Every index resolves: the check above required all eight columns.
     tables.push({
       table,
-      tcRefsIndex,
+      headers,
+      tcRefsIndex: headers.indexOf("TC-Refs"),
       layerIndex: headers.indexOf("Layer"),
       tddIdIndex: headers.indexOf("TDD-ID"),
     });
@@ -177,25 +189,53 @@ export function collectLedgerTables(content: string): LedgerTable[] {
  * `catalog/test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and
  * `tests/api/**`, so those rows record their obligation in `US-Refs` /
  * `CON-API-Refs`.
+ *
+ * **One set, two rules.** `tddList.ts` reads it to raise
+ * `TDDLIST_OBLIGATION_LAYER_MISMATCH` on a `TC-*` placed there, and
+ * {@link isCoverageBearingRow} reads it to decline to count that same
+ * placement. A second copy would let the ledger report a row as illegal and
+ * still score coverage from it — the exact disagreement this module exists to
+ * make impossible.
+ *
+ * **Membership is lower-case only**, on the same terms as
+ * {@link UNIT_COMPONENT_LAYERS}.
  */
-const TC_FORBIDDEN_LEDGER_LAYERS = new Set(["api", "e2e"]);
+export const TC_FORBIDDEN_LAYERS = new Set(["api", "e2e"]);
 
 /**
- * Whether a ledger row is one a coverage claim may be read from.
+ * Whether the line is a ledger row at all.
  *
- * A schema-shaped header is not enough: the row itself has to be an item. A
- * line that fills `TC-Refs` and leaves `TDD-ID`, `Layer` and `Test file` blank
- * would otherwise discharge a coverage obligation while its blank `Layer` also
- * slipped past the E2E/API exclusion — `TDD-ID` is what makes a row an item.
- * A `TC-*` sitting on an E2E/API row is a forbidden placement, and counting it
- * would let that one illegal row close a coverage-target TC.
+ * A schema-shaped header is not enough: the row itself has to be an item, and
+ * `TDD-ID` is what makes it one. A line that fills `TC-Refs` and leaves
+ * `TDD-ID`, `Layer` and `Test file` blank is a note between tables, not an
+ * entry — every per-row rule keys on the identity this cell carries
+ * (`TDDLIST_DUPLICATE_ID`, the `match.dl_ids` waiver key), and a line without
+ * one has nothing for them to key on.
+ */
+export function isLedgerRow(scan: LedgerTable, row: readonly string[]): boolean {
+  return (row[scan.tddIdIndex] ?? "").trim().length > 0;
+}
+
+/**
+ * Whether a ledger row is one a **coverage claim** may be read from.
  *
- * Shared so `qfai validate` and `qfai report` cannot answer it differently.
+ * Strictly narrower than {@link isLedgerRow}: a `TC-*` sitting on an E2E/API
+ * row is a forbidden placement, and counting it would let that one illegal row
+ * close a coverage-target TC.
+ *
+ * The two questions are deliberately separate. Answering both with this
+ * predicate dropped every parked E2E/API row out of `qfai report`'s
+ * `- exception rows:` block while `TDDLIST_EXCEPTION_PARKED` still named it —
+ * a roll-call of ledger rows is not a coverage claim, and a report that
+ * silently omits a subset of the rows the gate reports is worse than one that
+ * omits none. Ask {@link isLedgerRow} for "is this an entry", ask this for
+ * "may progress be scored from it".
+ *
+ * Shared so `qfai validate` and `qfai report` cannot answer either differently.
  */
 export function isCoverageBearingRow(scan: LedgerTable, row: readonly string[]): boolean {
-  if (scan.tddIdIndex >= 0 && (row[scan.tddIdIndex] ?? "").trim().length === 0) return false;
-  const layer = scan.layerIndex >= 0 ? (row[scan.layerIndex] ?? "").trim().toLowerCase() : "";
-  return !TC_FORBIDDEN_LEDGER_LAYERS.has(layer);
+  if (!isLedgerRow(scan, row)) return false;
+  return !TC_FORBIDDEN_LAYERS.has((row[scan.layerIndex] ?? "").trim().toLowerCase());
 }
 
 /**

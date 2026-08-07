@@ -17,6 +17,7 @@ import { resolveTestCaseTable } from "./specPackParsers.js";
 import {
   collectLedgerTables,
   isCoverageBearingRow,
+  isLedgerRow,
   isCoverageTargetLevel,
   TDD_DONE_STATUSES,
   TDD_IN_REVIEW_STATUSES,
@@ -141,15 +142,31 @@ export async function collectTddCoverage(
     };
 
     for (const scan of ledgerTables) {
-      const tddHeaders = scan.table.headers.map((h) => h.trim());
-      const statusIdx = tddHeaders.indexOf("Status");
-      const drIdIdx = tddHeaders.indexOf("DR-ID");
+      const statusIdx = scan.headers.indexOf("Status");
+      const drIdIdx = scan.headers.indexOf("DR-ID");
 
       for (const row of scan.table.rows) {
-        // The same predicate the gate applies: a line with no `TDD-ID` is not
-        // an item, and a `TC-*` on an E2E/API row is a placement the ledger
-        // schema forbids. Counting either here would print progress the gate
-        // does not recognise.
+        // "Is this an entry at all" — the same answer the gate gives. A line
+        // with no `TDD-ID` is a note between tables, not a row.
+        if (!isLedgerRow(scan, row)) continue;
+        const status = statusIdx >= 0 ? (row[statusIdx] ?? "").trim().toLowerCase() : "";
+
+        // The parked-row roll-call, before the coverage question is asked.
+        // `TDDLIST_EXCEPTION_PARKED` names every `exception` row whatever its
+        // `Layer`, and this block is what the report prints beside it; running
+        // it through the coverage predicate dropped every API/E2E parked row
+        // out of the report while the gate still named it.
+        if (status === "exception") {
+          exceptionRows.push({
+            tddId: (row[scan.tddIdIndex] ?? "").trim(),
+            drId: drIdIdx >= 0 ? (row[drIdIdx] ?? "").trim() : "",
+          });
+        }
+
+        // Everything below is a coverage claim, so the narrower predicate
+        // applies: a `TC-*` on an E2E/API row is a placement the ledger schema
+        // forbids, and counting it would print progress the gate does not
+        // recognise.
         if (!isCoverageBearingRow(scan, row)) continue;
         // A set, not a list: a row naming two children of the same parent would
         // otherwise contribute that parent twice and never reach its row total.
@@ -167,7 +184,6 @@ export async function collectTddCoverage(
         }
         for (const tc of rowRefs) bump(rowsPerTc, tc);
 
-        const status = statusIdx >= 0 ? (row[statusIdx] ?? "").trim().toLowerCase() : "";
         if (TDD_DONE_STATUSES.has(status)) {
           for (const tc of rowRefs) bump(doneRowsPerTc, tc);
         }
@@ -179,10 +195,6 @@ export async function collectTddCoverage(
         }
         if (status === "exception") {
           for (const tc of rowRefs) bump(exceptionRowsPerTc, tc);
-          exceptionRows.push({
-            tddId: scan.tddIdIndex >= 0 ? (row[scan.tddIdIndex] ?? "").trim() : "",
-            drId: drIdIdx >= 0 ? (row[drIdIdx] ?? "").trim() : "",
-          });
         }
       }
     }

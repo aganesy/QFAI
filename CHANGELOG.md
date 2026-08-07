@@ -6,6 +6,24 @@
 
 ### Changed
 
+- **`qfai report` lists every parked row `qfai validate` names.** Sharing one
+  "can this row carry coverage" predicate between the two commands put the
+  report's `- exception rows:` block behind it too, so a `Status=exception` row
+  on an `API` or `E2E` layer was dropped from the report while
+  `TDDLIST_EXCEPTION_PARKED` still named it — the two commands disagreeing about
+  one row, which is the defect the shared reader exists to remove. The two
+  questions are separate now: `isLedgerRow` ("is this an entry at all", i.e. does
+  it carry a `TDD-ID`) governs the roll-call, and the narrower
+  `isCoverageBearingRow` still governs the arithmetic, so an `API`/`E2E` row
+  appears in `- exception rows:` without discharging any TC. Projects carrying
+  parked API/E2E rows will see them in `qfai report` again.
+- **One list of the layers a `TC-*` may not sit on.** `tddList.ts` and
+  `tddHelpers.ts` each held a private `["api", "e2e"]`, so the rule that rejects
+  the placement (`TDDLIST_OBLIGATION_LAYER_MISMATCH`) and the rule that declines
+  to score coverage from it read different copies of their own vocabulary. They
+  are one exported `TC_FORBIDDEN_LAYERS` now, on the same terms as
+  `UNIT_COMPONENT_LAYERS`: a layer cannot be added to the rejection and left out
+  of the arithmetic. No behaviour changes — the two sets were identical.
 - **A ledger row is checked the same wherever in the ledger it sits.** Widening
   the coverage reader to every ledger table left the row checks on the first
   one, so `TDD-ID = x` / `Layer = bogus` produced `TDDLIST_INVALID_ID` +
@@ -27,7 +45,9 @@
     row there that is malformed, or carries `TC-Refs` on an `API`/`E2E` layer,
     now raises what it always raised in the first table — including one `error`
     for the forbidden placement. Findings outside the first table are labelled
-    `table N, row M`; a single-table ledger keeps the `row M` label it had. The
+    `ledger table N, row M` — the ordinal counts _ledger_ tables, so the shipped
+    template's `## Schema` documentation table does not shift it; a single-table
+    ledger keeps the `row M` label it had. The
     status, evidence, transition and test-file checks are unchanged and still
     read the first table only: they are about a row's execution state, not about
     whether it is a row that can discharge a TC.
