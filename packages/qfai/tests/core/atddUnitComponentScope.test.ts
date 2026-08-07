@@ -362,6 +362,37 @@ describe("the replacement gate has no holes the exclusion could fall through", (
     );
   });
 
+  it("says in the warning itself that the ledger is no longer optional here", async () => {
+    // The escalation above is real and deliberate, and `TDDLIST_MISSING` is the
+    // finding an operator reads first. While it said the file was "optional for
+    // older specs" the accompanying `error` was discoverable only by CI going
+    // red — a promise the same function breaks one statement later.
+    await withSpec(
+      { "06_Test-Cases.md": table("| TC-0001 | L1 | AC-0001 | - | s | e |") },
+      async (root) => {
+        const missing = (await validateTddList(root, defaultConfig)).find(
+          (entry) => entry.code === "TDDLIST_MISSING",
+        );
+        expect(missing?.severity).toBe("warning");
+        expect(missing?.message).toContain("coverage-target TC");
+        expect(missing?.suggested_action).toContain("TDDLIST_TC_NOT_COVERED");
+      },
+    );
+  });
+
+  it("keeps the ledger optional for a spec that declares no coverage-target TC", async () => {
+    // The other half of the same promise: the escalation is conditional, so a
+    // spec whose TCs are all L3 keeps the warning and gains no error.
+    await withSpec(
+      { "06_Test-Cases.md": table("| TC-0001 | L3 | AC-0001 | - | s | e |") },
+      async (root) => {
+        const issues = await validateTddList(root, defaultConfig);
+        expect(issues.map((entry) => entry.code)).toEqual(["TDDLIST_MISSING"]);
+        expect(issues[0]?.severity).toBe("warning");
+      },
+    );
+  });
+
   it("names a multi-valued Level cell and still owes it a ledger row", async () => {
     // `catalog/test-layers.md` states both halves of what happens to a cell no
     // vocabulary matches: `QFAI-ATDD-112` routes it to the no-`Level` default

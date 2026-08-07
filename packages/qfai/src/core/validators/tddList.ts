@@ -515,27 +515,44 @@ async function validateSpecTddList(
   const relPath = toRelPath(root, filePath);
   const issues: Issue[] = [];
 
-  // Check 1: File existence
+  // Check 1: File existence.
+  //
+  // **`tdd/test-list.md` is optional only for a spec that declares no
+  // coverage-target TC.** That is an escalation from "optional for older
+  // specs", and a deliberate one: a `warning` here was survivable while
+  // `QFAI-ATDD-112` demanded an annotation for every TC, but with Unit and
+  // Component excluded from that rule this ledger is their only gate. Returning
+  // early on a missing file let a spec with declared L1/L2 TCs, no tests and no
+  // ledger pass `validate --profile full --fail-on error`.
+  //
+  // The escalation is carried by `TDDLIST_TC_NOT_COVERED` (`error`), not by
+  // `TDDLIST_MISSING` itself, and it is conditional on the spec: a spec whose
+  // TCs are all L3-L5 still sees only the warning. It is also NOT waivable —
+  // `QFAI-WAIVER-002` refuses every waiver on an `error` rule — so the finding
+  // has to be clearable by the operator, and it is: seed the ledger. The
+  // warning below says all of this, because a new hard failure an operator
+  // meets first as red CI is the failure mode this package keeps re-learning.
   if (!(await exists(filePath))) {
-    // tdd/test-list.md is optional for older specs; emit a warning so
-    // existing specs are not broken.
+    const { unitComponentTcIds } = await collectTestCaseIds(specDir);
+    const owed = unitComponentTcIds.size;
     issues.push(
       issue(
         "TDDLIST_MISSING",
-        `tdd/test-list.md not found for spec-${specNumber}`,
+        owed > 0
+          ? `tdd/test-list.md not found for spec-${specNumber}. It is optional only for a spec that declares no coverage-target TC, and this one declares ${String(owed)}`
+          : `tdd/test-list.md not found for spec-${specNumber} (optional: the spec declares no coverage-target TC)`,
         "warning",
         relPath,
         "tddList.fileExists",
+        undefined,
+        "change",
+        owed > 0
+          ? `Unit/Component TC are gated here alone since \`QFAI-ATDD-112\` stopped demanding an annotation for them, so the absent ledger is reported as \`TDDLIST_TC_NOT_COVERED\` (error) below. Seed \`${TDD_LIST_REL_PATH}\` with one row per coverage-target TC (\`/qfai-sdd\` Phase 2b), then run \`/qfai-implement\`.`
+          : `Seed \`${TDD_LIST_REL_PATH}\` when the spec gains a Unit or Component TC (\`/qfai-sdd\` Phase 2b).`,
       ),
     );
-    // …but the obligations it would have carried do not disappear with it.
-    // A `warning` here was survivable while `QFAI-ATDD-112` demanded an
-    // annotation for every TC. Now that Unit/Component are excluded from that
-    // rule, this ledger is their only gate, and returning early on a missing
-    // file meant a spec with declared L1/L2 TCs, no tests and no ledger passed
-    // `validate --profile full --fail-on error` on an `info` finding alone.
-    const { unitComponentTcIds } = await collectTestCaseIds(specDir);
-    if (unitComponentTcIds.size > 0) {
+    // …the obligations the ledger would have carried do not disappear with it.
+    if (owed > 0) {
       const missing = Array.from(unitComponentTcIds).sort((left, right) =>
         left.localeCompare(right),
       );

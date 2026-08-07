@@ -6,6 +6,28 @@
 
 ### Changed
 
+- **`tdd/test-list.md` is now required for a spec that declares a
+  coverage-target TC.** This is an escalation from warning to error, announced
+  here because it is one. The file used to be optional for every spec: an
+  absent one raised `TDDLIST_MISSING` (`warning`) and the validator returned.
+  With Unit and Component out of `QFAI-ATDD-112` (below) that early return
+  became the last hole — a spec with declared L1/L2 TCs, no tests and no ledger
+  passed `validate --profile full --fail-on error` on a `warning` and an `info`.
+  An absent ledger now also raises `TDDLIST_TC_NOT_COVERED` (`error`), naming
+  every coverage-target TC it leaves without a row.
+  - **Who it hits.** Only a spec that declares at least one coverage-target
+    `Level` — `L1`/`L2`/`Unit`/`Component`, an unrecognized value, or no
+    `Level` column at all — _and_ has no `tdd/test-list.md`. A spec whose TCs
+    are all L3-L5 keeps the warning and gains no error; a spec that already has
+    a ledger is unaffected, and the escalation is per spec, not per project.
+  - **It is not waivable, and it is clearable.** `QFAI-WAIVER-002` refuses
+    every waiver on an `error` rule, so the exit is to seed `tdd/test-list.md`
+    with one row per coverage-target TC (`/qfai-sdd` Phase 2b) and run
+    `/qfai-implement`. That is the same exit the rule has when the file exists;
+    nothing new becomes unsatisfiable.
+  - `TDDLIST_MISSING` now states which of the two cases the spec is in and
+    names the error that follows, so the escalation is visible in the run that
+    first reports it rather than only in these notes.
 - **`catalog/test-layers.md` says what happens to a multi-valued `Level` cell.**
   It called `L3/L5` illegal and then claimed "nothing consumes it and no
   validator can route it" — the opposite of the shipped behaviour, in the file
