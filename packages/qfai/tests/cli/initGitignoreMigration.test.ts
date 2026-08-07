@@ -60,10 +60,11 @@ describe("re-init preserves what the project chose to track", () => {
     });
   });
 
-  it("still migrates a block that is provably outdated", async () => {
-    // The distinction is the retired lines. A block carrying one predates the
-    // current shape, so a missing ignore is age rather than a choice, and the
-    // wholesale migration that strips those lines is the right move.
+  it("strips retired lines from an old block without re-adding what it dropped", async () => {
+    // A legacy-shaped block can ALSO carry a deliberate removal, so the earlier
+    // "migrate it wholesale" rule resurrected the ignore for exactly those
+    // projects. Age and intent are indistinguishable from the file, so the
+    // conservative reading wins in both cases.
     await withProject(async (root) => {
       await writeFile(
         path.join(root, ".gitignore"),
@@ -71,7 +72,7 @@ describe("re-init preserves what the project chose to track", () => {
           QFAI_GITIGNORE_MARKER,
           ".qfai/report/*",
           "!.qfai/report/README.md",
-          ".qfai/evidence/*",
+          ".qfai/discussion/discussion-*/",
           "",
         ].join("\n"),
         "utf-8",
@@ -79,10 +80,16 @@ describe("re-init preserves what the project chose to track", () => {
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const after = await readGitignore(root);
+      const after = (await readGitignore(root)).split("\n");
+      // Retired lines go.
       expect(after).not.toContain("!.qfai/report/README.md");
-      // Re-added, because this block never had the chance to omit it.
+      expect(after).not.toContain(".qfai/discussion/discussion-*/");
+      // A renamed line keeps its successor — dropping it alone would remove an
+      // ignore the project never gave up.
       expect(after).toContain(".qfai/discussion/*");
+      // But an ignore this block simply never had is NOT added.
+      expect(after).not.toContain(".qfai/evidence/*");
+      expect(after).toContain("!.qfai/decisions/**");
     });
   });
 

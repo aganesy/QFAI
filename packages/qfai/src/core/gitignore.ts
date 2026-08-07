@@ -76,6 +76,20 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   "!.qfai/evidence/coverage-depth-*.md",
 ] as const;
 
+/**
+ * Retired lines that were **renamed** rather than dropped, mapped to their
+ * successor.
+ *
+ * Migration strips every entry of {@link QFAI_GITIGNORE_LEGACY_LINES} and does
+ * not re-add recommended ignores a project removed on purpose. A renamed line
+ * is the one case where that would take away something the project never gave
+ * up: dropping the old discussion ignore without adding the one that replaced
+ * it leaves the project with no discussion ignore at all.
+ */
+export const RETIRED_LINE_SUCCESSORS: Readonly<Record<string, string>> = {
+  ".qfai/discussion/discussion-*/": ".qfai/discussion/*",
+};
+
 /** Lines removed from the managed block in previous versions; stripped during migration. */
 export const QFAI_GITIGNORE_LEGACY_LINES: readonly string[] = [
   "!.qfai/report/README.md",

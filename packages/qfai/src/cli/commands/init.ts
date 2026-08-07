@@ -24,6 +24,7 @@ import {
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_LEGACY_LINES,
+  RETIRED_LINE_SUCCESSORS,
 } from "../../core/gitignore.js";
 import {
   ASSISTANT_LAYERS,
@@ -50,15 +51,25 @@ const execAsync = promisify(execCb);
  * `agent-catalog.yml` reached new projects and nobody else — an installed
  * repository kept the old routing and the old reviewer instructions with no
  * command that would update them, and no signal that it had not. `agents/` and
- * `manifest/` are generated in exactly the sense `skills/` is: `qfai doctor`'s
- * `skills.integrity` and the shipped README both say a project edits them at
- * its own risk. `specs/`, `contracts/`, `steering/` and everything else stay
- * create-only, because those hold project content.
+ * `agent-catalog.yml` are generated in exactly the sense `skills/` is:
+ * `qfai doctor`'s `skills.integrity` and the shipped README both say a project
+ * edits them at its own risk.
+ *
+ * The rest of `manifest/` is deliberately excluded. `agent-routing.yml` and
+ * `review-profiles.yml` are the two files a project is expected to tune, and
+ * `--upgrade-assistant-tree` migrates user-edited manifests into this tree — so
+ * forcing the whole directory would overwrite that migration one step after it
+ * ran. `specs/`, `contracts/`, `steering/` and everything else stay create-only
+ * for the same reason: they hold project content.
  */
 const STANDARD_ASSET_PATHS: readonly string[] = [
   "assistant/skills",
   "assistant/agents",
-  "assistant/manifest",
+  // The catalog only, not the whole manifest directory. `agent-routing.yml` and
+  // `review-profiles.yml` are the two files a project is expected to tune, and
+  // `--upgrade-assistant-tree` migrates user-edited manifests into this tree —
+  // regenerating the directory would overwrite that migration a step later.
+  "assistant/manifest/agent-catalog.yml",
 ];
 
 export type InitOptions = {
@@ -88,7 +99,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/{skills,agents,manifest}/** と symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts 等は上書きしません）。",
+      "NOTE: --force は .qfai/assistant/skills/**、assistant/agents/**、assistant/manifest/agent-catalog.yml と symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts/steering、および agent-routing.yml / review-profiles.yml は上書きしません）。",
     );
   }
 
@@ -732,20 +743,38 @@ function rebuildManagedBlock(existingBlock: string): string {
     return QFAI_GITIGNORE_BLOCK;
   }
   const legacy = new Set<string>(QFAI_GITIGNORE_LEGACY_LINES);
-  const lines = existingBlock.split("\n").map((line) => line.trimEnd());
-
-  // A block still carrying lines from a previous block shape is provably
-  // outdated, not curated: migrate it wholesale, which is what strips the
-  // retired negations. Only a block that is already current-shaped can have a
-  // missing ignore line read as a deliberate removal.
-  if (lines.some((line) => legacy.has(line))) {
-    return QFAI_GITIGNORE_BLOCK;
-  }
-
   const negations = new Set<string>(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS);
-  const kept = lines.filter((line) => line !== QFAI_GITIGNORE_MARKER && !negations.has(line));
+  const lines = existingBlock.split("\n").map((line) => line.trimEnd());
+  const present = new Set(lines);
 
-  return [QFAI_GITIGNORE_MARKER, ...kept, ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS]
+  // The retired lines are dropped and the governance negations appended, both
+  // unconditionally. What is *kept* is the project's own ignore set.
+  //
+  // An earlier attempt migrated a legacy-shaped block wholesale, on the theory
+  // that a missing ignore there is age rather than a choice. That is not safe:
+  // a project can carry a retired line *and* have deleted `.qfai/evidence/*` to
+  // track its audit trail, and the wholesale rewrite resurrects the deletion —
+  // the very regression this function exists to stop. Age and intent cannot be
+  // told apart from the file, so the conservative reading wins in both cases:
+  // never re-add an ignore line the block does not have.
+  //
+  // The cost is that a project on an old block does not pick up a newly shipped
+  // *recommended* ignore. `QFAI-REVIEW-008` reports that at `info`, and the
+  // consequence is generated files showing in `git status` — noisy. Silently
+  // re-hiding an audit trail the project chose to track is not noisy, which is
+  // why it is the side to err on.
+  const kept = lines.filter(
+    (line) => line !== QFAI_GITIGNORE_MARKER && !negations.has(line) && !legacy.has(line),
+  );
+  // The one exception: a retired line that was *renamed* rather than dropped.
+  // Stripping `.qfai/discussion/discussion-*/` without adding its successor
+  // would leave the project with no discussion ignore at all — a removal it
+  // never asked for, which is the same harm from the other direction.
+  const renamed = Object.entries(RETIRED_LINE_SUCCESSORS)
+    .filter(([retired, successor]) => present.has(retired) && !present.has(successor))
+    .map(([, successor]) => successor);
+
+  return [QFAI_GITIGNORE_MARKER, ...kept, ...renamed, ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS]
     .filter((line, index, all) => line.length > 0 || all[index - 1]?.length !== 0)
     .join("\n");
 }

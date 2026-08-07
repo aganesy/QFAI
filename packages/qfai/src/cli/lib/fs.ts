@@ -1,4 +1,4 @@
-import { access, copyFile, mkdir, readdir } from "node:fs/promises";
+import { access, copyFile, mkdir, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 export type CopyOptions = {
@@ -158,6 +158,14 @@ function formatConflictMessage(conflicts: string[]): string {
 async function collectTemplateFiles(root: string): Promise<string[]> {
   const entries: string[] = [];
   if (!(await exists(root))) {
+    return entries;
+  }
+
+  // A caller may name a single file rather than a directory — `qfai init`
+  // forces `assistant/manifest/agent-catalog.yml` without forcing the tunable
+  // manifests beside it. Without this, `readdir` throws ENOTDIR on the path.
+  if ((await stat(root)).isFile()) {
+    entries.push(root);
     return entries;
   }
 
