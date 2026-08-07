@@ -86,10 +86,18 @@ describe("the layer SSOT defines every layer the rest of qfai names", () => {
       expect(catalog).toContain("`/qfai-implement`");
     });
 
-    it(`${tree}: an L4 obligation is discharged as CON-API, never as TC`, async () => {
-      const catalog = await read(tree, CATALOG);
-      expect(catalog).toContain("`QFAI-ATDD-121` / `QFAI-ATDD-122`");
-      expect(catalog).toContain("never as a `TC-*` one");
+    it(`${tree}: a misplaced TC annotation is rejected relative to its own Level`, async () => {
+      // The bullet used to ban `TC-*` from `tests/api/**` and `tests/e2e/**`
+      // outright and tell the reader to discharge an L4 obligation as
+      // `CON-API-*`. The validator allows — and requires — a `TC-*`
+      // annotation in the directory its declared `Level` names, so a reader
+      // following the ban left an L4/L5 TC uncovered.
+      const catalog = flat(await read(tree, CATALOG));
+      expect(catalog).toContain("`QFAI-ATDD-121` / `QFAI-ATDD-122` / `QFAI-ATDD-123`");
+      expect(catalog).toContain("The rule is `Level`-relative, not a blanket ban");
+      expect(catalog).not.toContain("never as a `TC-*` one");
+      // The re-filing advice stays: a `TC-*` should not be at L4/L5 at all.
+      expect(catalog).toContain("re-file that obligation as `CON-API-*` or `US-*`");
     });
 
     it(`${tree}: the coverage metric is separated from the file location`, async () => {
@@ -137,7 +145,7 @@ describe.each(["packages/qfai/assets/init/.qfai", ".qfai"])(
 
     it("keeps the misplacement rule symmetric", async () => {
       const catalog = await read("assistant/catalog/test-layers.md");
-      expect(catalog).toContain("`QFAI-ATDD-121` / `-122` / `-123`");
+      expect(catalog).toContain("`QFAI-ATDD-121` / `QFAI-ATDD-122` / `QFAI-ATDD-123`");
       expect(catalog).toContain("the rejection is symmetric");
     });
   },

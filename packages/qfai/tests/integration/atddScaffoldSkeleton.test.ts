@@ -439,3 +439,60 @@ describe("atdd scaffold — Unit and Component TCs are out of scope", () => {
     expect(messages.join("\n")).toContain("0 TC entries in scope");
   });
 });
+
+describe("atdd scaffold — API and E2E TCs are out of scope too", () => {
+  it("does not emit an integration skeleton for an L4 or L5 TC", async () => {
+    // `scaffoldDestPath` is integration-only, so an L4/L5 skeleton lands in a
+    // directory its declared `Level` does not name: uncounted towards its
+    // api/e2e coverage, and a forbidden reference under `QFAI-ATDD-123`.
+    const specId = "spec-0004";
+    const specDir = path.join(root, ".qfai", "specs", specId);
+    await mkdir(specDir, { recursive: true });
+    await writeFile(
+      path.join(specDir, "06_Test-Cases.md"),
+      [
+        "# 06 Test Cases",
+        "",
+        "## TC-0001-0001: api case",
+        "",
+        "- EX-Ref: EX-0001-0001",
+        "- Level: L4",
+        "- Verify something.",
+        "",
+        "## TC-0001-0002: e2e case",
+        "",
+        "- EX-Ref: EX-0001-0001",
+        "- Level: L5",
+        "- Verify something.",
+        "",
+        "## TC-0001-0003: integration case",
+        "",
+        "- EX-Ref: EX-0001-0001",
+        "- Level: L3",
+        "- Verify something.",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const errors: string[] = [];
+    const code = await runAtddScaffold({
+      root,
+      specId,
+      write: () => {},
+      writeErr: (m) => errors.push(m),
+    });
+
+    expect(code).toBe(0);
+    for (const tc of ["TC-0001-0001", "TC-0001-0002"]) {
+      await expect(
+        stat(path.join(root, "tests", "integration", specId, `${tc}.test.ts`)),
+      ).rejects.toThrow();
+    }
+    await expect(
+      stat(path.join(root, "tests", "integration", specId, "TC-0001-0003.test.ts")),
+    ).resolves.toBeDefined();
+    expect(errors.join("\n")).toContain("API/E2E TC");
+    expect(errors.join("\n")).toContain("QFAI-ATDD-123");
+  });
+});

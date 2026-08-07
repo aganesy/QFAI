@@ -186,7 +186,8 @@ a misfiled row is reported once, by the rule that names the real cause, instead
 of twice as "uncovered in integration" and "forbidden in api".
 
 Exactly one directory, never two: an annotation outside the one its `Level`
-names is both uncovered and rejected (`QFAI-ATDD-121` / `-122` / `-123`), and
+names is both uncovered and rejected (`QFAI-ATDD-121` / `QFAI-ATDD-122` /
+`QFAI-ATDD-123`), and
 the rejection is symmetric — an annotation left in `tests/integration/**` after
 its TC moved to `L4`/`L5` is rejected the same way an early one in
 `tests/api/**` is. Two consequences bind every `TC-*` row:
@@ -269,9 +270,17 @@ its TC moved to `L4`/`L5` is rejected the same way an early one in
     no reference at all** — see "Unit and Component owe no ATDD annotation"
     below. This is what `QFAI-ATDD-112` checks.
   - Use `QFAI:SPEC-XXXX:TC-YYYY` annotations.
-  - `tests/api/**` and `tests/e2e/**` must not carry `TC-*` annotations
-    (`QFAI-ATDD-121` / `QFAI-ATDD-122`), so an L4 obligation is discharged as a
-    `CON-API-*` reference, never as a `TC-*` one.
+  - A `TC-*` annotation outside the directory its declared `Level` names is
+    rejected (`QFAI-ATDD-121` / `QFAI-ATDD-122` / `QFAI-ATDD-123`). The rule is
+    `Level`-relative,
+    not a blanket ban: a `TC-*` in `tests/api/**` is rejected **unless** that TC
+    declares `L4`/`API`, and in `tests/e2e/**` unless it declares `L5`/`E2E` —
+    an annotation matching its own `Level` is what discharges the obligation
+    there. A `TC-*` should not be at L4 or L5 in the first place (see
+    "Annotation routing"): re-file that obligation as `CON-API-*` or `US-*`.
+    But while the row exists at that `Level`, its annotation belongs in the one
+    directory the `Level` names, and putting it anywhere else leaves the TC
+    uncovered as well as forbidden.
   - Every declared `CON-DB-*` must be referenced at least once from
     `tests/integration/**` (`QFAI-ATDD-115`). Use `QFAI:CON-DB-XXXX`
     annotations. L3 owns this because a DB contract is only exercised against

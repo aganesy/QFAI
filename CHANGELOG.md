@@ -15,6 +15,23 @@
   misplaced L4/L5. It now carries the routing table the gate implements, and the
   crosswalk paragraph above it agrees. The section anchor changed to
   `#annotation-routing`.
+- **A coverage row needs a `TDD-ID`, and the heading form wins over a table
+  row.** Requiring the ledger schema of a later table left two ways through: a
+  line under a complete header that fills only `TC-Refs` cleared the obligation
+  with no item behind it (and its blank `Layer` slipped past both the E2E/API
+  exclusion and the `Level` crosswalk), and a TC declared `L3` by its heading
+  and `L1` by a table row picked up a ledger obligation on top of its
+  `QFAI-ATDD-112` one — the two gates disagreeing about one TC.
+- **`qfai atdd scaffold` skips `L4`/`L5` TCs as well.** The writer is
+  integration-only, so their skeleton landed in a directory their declared
+  `Level` does not name: uncounted towards api/e2e coverage and reported as a
+  forbidden reference by `QFAI-ATDD-123`. Skipped TCs are named on stderr with
+  what to do instead.
+- **The forbidden-reference bullet is `Level`-relative, not a blanket ban.** It
+  said `tests/api/**` and `tests/e2e/**` "must not carry `TC-*` annotations",
+  so a reader left an L4/L5 TC uncovered: the validator requires the annotation
+  in the directory the TC's own `Level` names. The re-filing advice — a `TC-*`
+  should not be at L4/L5 at all — stays.
 - **Coverage counts real ledger rows only.** The multi-table scan read the raw
   file and accepted any table with a `TC-Refs` column, so a fenced template or a
   commented-out old table in `test-list.md` counted a TC as covered, and a stray

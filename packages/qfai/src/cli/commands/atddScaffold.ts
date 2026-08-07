@@ -60,6 +60,12 @@ async function readDeclaredTcLevels(specDir: string): Promise<Map<string, string
   }
 }
 
+/**
+ * Declared `Level` values whose home is a directory this writer does not emit
+ * into. `scaffoldDestPath` is integration-only by contract.
+ */
+const SCAFFOLD_FOREIGN_LEVELS = new Set(["l4", "api", "l5", "e2e"]);
+
 function validateSpecId(specId: string): boolean {
   // Permissive: accept `spec-NNNN` shapes; future renaming is at the
   // discretion of the spec authority.
@@ -182,11 +188,15 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
   // to do — and `QFAI-ATDD-112` no longer asks for it either, so the skeleton
   // discharged nothing.
   const tcLevels = await readDeclaredTcLevels(specDir);
-  const excluded: string[] = [];
+  const excludedUnitComponent: string[] = [];
+  const excludedApiE2e: string[] = [];
   const inScope: TCEntry[] = [];
   for (const entry of entries) {
-    if (isOutsideAtddObligation(tcLevels.get(entry.tcId.toUpperCase()))) {
-      excluded.push(entry.tcId);
+    const level = tcLevels.get(entry.tcId.toUpperCase());
+    if (isOutsideAtddObligation(level)) {
+      excludedUnitComponent.push(entry.tcId);
+    } else if (SCAFFOLD_FOREIGN_LEVELS.has((level ?? "").trim().toLowerCase())) {
+      excludedApiE2e.push(entry.tcId);
     } else {
       inScope.push(entry);
     }
@@ -194,11 +204,24 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
   entries = inScope;
   // Named, not silently dropped: a scaffold run that emits nothing has to say
   // whether the spec had no TCs or only ones this command does not own.
-  if (excluded.length > 0) {
+  if (excludedUnitComponent.length > 0) {
     writeErr(
-      `qfai atdd scaffold: skipped ${String(excluded.length)} Unit/Component TC ` +
-        `(${excluded.join(", ")}) — L1/L2 are outside this command's scope and are ` +
+      `qfai atdd scaffold: skipped ${String(excludedUnitComponent.length)} Unit/Component TC ` +
+        `(${excludedUnitComponent.join(", ")}) — L1/L2 are outside this command's scope and are ` +
         `gated by tdd/test-list.md under /qfai-implement.`,
+    );
+  }
+  // The writer emits into `<testsDir>/integration/<spec-id>/` only
+  // (`scaffoldDestPath`), so an L4/L5 TC's skeleton would land in a directory
+  // its declared `Level` does not name: not counted towards its api/e2e
+  // coverage, and reported as a forbidden reference by `QFAI-ATDD-123`. The
+  // command would be making validation worse than emitting nothing.
+  if (excludedApiE2e.length > 0) {
+    writeErr(
+      `qfai atdd scaffold: skipped ${String(excludedApiE2e.length)} API/E2E TC ` +
+        `(${excludedApiE2e.join(", ")}) — this command writes integration skeletons only, and ` +
+        `an L4/L5 annotation there is uncounted and forbidden (QFAI-ATDD-123). Author them in ` +
+        `tests/api/** or tests/e2e/**, or re-file the obligation as CON-API-* / US-*.`,
     );
   }
   if (entries.length === 0) {

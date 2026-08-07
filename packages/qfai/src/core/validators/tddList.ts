@@ -35,6 +35,7 @@ interface CoverageTable {
   table: MarkdownTable;
   tcRefsIndex: number;
   layerIndex: number;
+  tddIdIndex: number;
 }
 
 /**
@@ -61,7 +62,12 @@ function collectCoverageTables(content: string): CoverageTable[] {
     if (!REQUIRED_COLUMNS.every((column) => headers.includes(column))) continue;
     const tcRefsIndex = headers.indexOf("TC-Refs");
     if (tcRefsIndex < 0) continue;
-    tables.push({ table, tcRefsIndex, layerIndex: headers.indexOf("Layer") });
+    tables.push({
+      table,
+      tcRefsIndex,
+      layerIndex: headers.indexOf("Layer"),
+      tddIdIndex: headers.indexOf("TDD-ID"),
+    });
   }
   return tables;
 }
@@ -1292,6 +1298,13 @@ async function validateSpecTddList(
           // (Check 5c). Counting it here would let that single illegal row
           // clear the coverage obligation for a unit/component TC.
           if (TC_FORBIDDEN_LAYERS.has(rowLayer)) continue;
+          // A schema-shaped header is not enough: the row itself has to be a
+          // ledger row. A later table can carry the full header and then hold a
+          // line that fills `TC-Refs` and leaves `TDD-ID`, `Layer` and
+          // `Test file` blank — which clears the coverage obligation while a
+          // blank `Layer` also slips past both the E2E/API exclusion above and
+          // the crosswalk below. `TDD-ID` is what makes a row an item.
+          if (scan.tddIdIndex >= 0 && (row[scan.tddIdIndex] ?? "").trim().length === 0) continue;
           const tcRefsCell = (row[scan.tcRefsIndex] ?? "").trim();
           if (tcRefsCell.length === 0) continue;
           const refs = splitTcRefs(tcRefsCell);
@@ -1497,8 +1510,10 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
   for (const tcId of collectHeadingTcIdsFrom(content)) {
     knownTcIds.add(tcId);
   }
+  const headingLeveledTcIds = new Set<string>();
   for (const [tcId, level] of collectHeadingTcLevelsFrom(content)) {
     knownTcIds.add(tcId);
+    headingLeveledTcIds.add(tcId);
     if (classifyCoverageLevel(level) === "unrecognized") {
       unrecognizedLevels.add(level);
     }
@@ -1538,6 +1553,13 @@ async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
       const tcId = (row[tcIdIndex] ?? "").trim().toUpperCase();
       if (tcId.length === 0) continue;
       knownTcIds.add(tcId);
+      // Heading wins on duplicates, which is what `collectTcLevels` and the
+      // scaffold parser already do. Without this, a TC declared `L3` by its
+      // heading and `L1` by a table row picked up a `TDDLIST_TC_NOT_COVERED`
+      // obligation on top of the `QFAI-ATDD-112` one its heading gives it —
+      // the two gates disagreeing about the same TC, which is the class of
+      // defect this PR exists to close.
+      if (headingLeveledTcIds.has(tcId)) continue;
       if (levelIndex >= 0) {
         const level = (row[levelIndex] ?? "").trim().toLowerCase();
         if (classifyCoverageLevel(level) === "unrecognized") {

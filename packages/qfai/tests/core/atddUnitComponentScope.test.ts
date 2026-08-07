@@ -803,3 +803,108 @@ describe("a heading TC that declares no Level is owed by ATDD, not by the ledger
     );
   });
 });
+
+describe("a later ledger table only counts its real rows", () => {
+  async function run(ledgerBody: string): Promise<string[]> {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ledger-rows2-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(path.join(specDir, "tdd"), { recursive: true });
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "## Test Case Table",
+          "",
+          "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+          "| ----- | ----- | ------- | ------ | ----- | -------- |",
+          "| TC-0001 | L1 | AC-0001 | - | s | e |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(path.join(specDir, "tdd", "test-list.md"), ledgerBody, "utf-8");
+      return (await validateTddList(root, defaultConfig)).map((entry) => entry.code);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  const HEADER = [
+    "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+    "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+  ];
+
+  it("ignores a row with no TDD-ID under a schema-shaped header", async () => {
+    // Requiring the header alone was not enough: a line that fills `TC-Refs`
+    // and leaves `TDD-ID`, `Layer` and `Test file` blank cleared the
+    // obligation, and the blank `Layer` also slipped past the E2E/API
+    // exclusion and the Level/Layer crosswalk.
+    const codes = await run(
+      [...HEADER, "", "## Notes", "", ...HEADER, "|  | TC-0001 |  |  |  |  |  |  |", ""].join("\n"),
+    );
+    expect(codes).toContain("TDDLIST_TC_NOT_COVERED");
+  });
+
+  it("still counts a complete row in the later table", async () => {
+    const codes = await run(
+      [
+        ...HEADER,
+        "",
+        "## CHG-001",
+        "",
+        ...HEADER,
+        "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | a | todo | - | - |",
+        "",
+      ].join("\n"),
+    );
+    expect(codes).not.toContain("TDDLIST_TC_NOT_COVERED");
+  });
+});
+
+describe("the heading form wins over a table row for the same TC", () => {
+  it("does not re-add a heading-declared L3 TC as a coverage target", async () => {
+    // `collectTcLevels` and the scaffold parser both prefer the heading. The
+    // ledger gate did not, so a TC declared `L3` by its heading and `L1` by a
+    // table row owed a QFAI-ATDD-112 annotation *and* a ledger row — the two
+    // gates disagreeing about the same TC.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-heading-wins-"));
+    try {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(path.join(specDir, "tdd"), { recursive: true });
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "## TC-0001: declared L3 by its heading",
+          "",
+          "- Level: L3",
+          "",
+          "## Test Case Table",
+          "",
+          "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+          "| ----- | ----- | ------- | ------ | ----- | -------- |",
+          "| TC-0001 | L1 | AC-0001 | - | s | e |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(specDir, "tdd", "test-list.md"),
+        [
+          "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+          "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const codes = (await validateTddList(root, defaultConfig)).map((entry) => entry.code);
+      expect(codes).not.toContain("TDDLIST_TC_NOT_COVERED");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
