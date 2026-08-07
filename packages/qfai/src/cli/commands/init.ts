@@ -832,25 +832,48 @@ async function ensureLegacyEvidenceIgnoreNegations(
 }
 
 /**
- * The contiguous QFAI managed block, or `""` when the marker is absent.
+ * The QFAI managed block, or `""` when the marker is absent.
  *
  * Freshness is judged against the block this writer owns, not the whole file:
  * a project that deliberately deleted an ignore line to track its own audit
  * trail keeps that choice, and a line the user re-added elsewhere does not
  * make a stale managed block look current.
+ *
+ * **Every block, not the first.** A past duplicate-append bug left some
+ * projects with two managed blocks, and `removeManagedBlock` strips all of
+ * them. Reading only the first meant an ignore line that lived exclusively in
+ * a later block — `.qfai/state.json`, say — was deleted with that block and
+ * never rebuilt, exposing local run state to the next commit. The blocks are
+ * merged in document order: the first block's ordering is preserved (which is
+ * what `governanceNegationsEffective` and the last-pattern-wins semantics
+ * depend on) and any line only a later block carries is appended.
  */
 function extractManagedBlock(content: string): string {
   const lines = content.split("\n");
-  const startIdx = lines.findIndex((line) => line.includes(QFAI_GITIGNORE_MARKER));
-  if (startIdx === -1) {
-    return "";
-  }
   const knownLines = new Set([...QFAI_GITIGNORE_BLOCK.split("\n"), ...QFAI_GITIGNORE_LEGACY_LINES]);
-  let endIdx = startIdx + 1;
-  while (endIdx < lines.length && knownLines.has(lines[endIdx] ?? "")) {
-    endIdx += 1;
+
+  const merged: string[] = [];
+  const seen = new Set<string>();
+  let cursor = 0;
+  while (cursor < lines.length) {
+    const startIdx = lines.findIndex(
+      (line, index) => index >= cursor && line.includes(QFAI_GITIGNORE_MARKER),
+    );
+    if (startIdx === -1) break;
+    let endIdx = startIdx + 1;
+    while (endIdx < lines.length && knownLines.has(lines[endIdx] ?? "")) {
+      endIdx += 1;
+    }
+    for (const line of lines.slice(startIdx, endIdx)) {
+      // The marker itself is deduplicated with everything else, so a merged
+      // block carries exactly one.
+      if (seen.has(line)) continue;
+      seen.add(line);
+      merged.push(line);
+    }
+    cursor = endIdx;
   }
-  return lines.slice(startIdx, endIdx).join("\n");
+  return merged.join("\n");
 }
 
 /**

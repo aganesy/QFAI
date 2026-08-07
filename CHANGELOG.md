@@ -21,15 +21,26 @@
   matrix that exists only inside the ignored stage evidence as a missing matrix.
   Existing projects pick the negation up on the next `qfai init`; no ignore line
   is removed, so nothing previously tracked becomes untracked.
+- **A duplicated managed block no longer loses the lines only its later copy
+  carries.** A past duplicate-append bug left some projects with two blocks
+  separated by their own entries. `removeManagedBlock` strips all of them but
+  the rebuild read only the first, so a line living exclusively in the later
+  block — `.qfai/state.json`, for one — was deleted and never written back, and
+  local run state became committable on the next `qfai init`. The blocks are
+  merged in document order before the rebuild and collapse to one.
 - **Re-init no longer resurrects an ignore line a project deleted.**
   `ensureRootGitignoreEntries` rewrote the managed block from the canonical list
   whenever its freshness check failed — and shipping a new governance negation
   is exactly what makes it fail. A project that had removed `.qfai/evidence/*`
   to track its own audit trail got that line back from the very release meant to
-  widen tracking. A block that is already current-shaped now keeps its own
-  ignore lines and only gains the governance negations it is missing. A block
-  still carrying retired lines is provably outdated rather than curated, so it
-  is migrated wholesale as before.
+  widen tracking. **Every** block now keeps its own ignore lines and only gains
+  the governance negations it is missing — a block still carrying retired lines
+  is not migrated wholesale either, because age and intent cannot be told apart
+  from the file and a project can carry a retired line _and_ have deleted
+  `.qfai/evidence/*` on purpose. Retired lines are dropped, one has a named
+  successor, and no ignore line is ever re-added. A project with no managed
+  block still gets the full canonical one. If you deleted a line you now want
+  back, add it to the block yourself; `qfai init` will preserve it.
 - **`qfai init` migrates a legacy `.qfai/evidence/.gitignore`.** Earlier
   versions wrote a per-directory ignore whose first line is `*`. Git applies the
   deepest matching file, so that `*` beat every root-level negation and the

@@ -34,6 +34,8 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
   }
 }
 
+const NL = "\n";
+
 const readGitignore = (root: string): Promise<string> =>
   readFile(path.join(root, ".gitignore"), "utf-8");
 
@@ -181,6 +183,51 @@ describe("--force regenerates the standard asset trees", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       expect(await readFile(agent, "utf-8")).toBe("# ours\n");
+    });
+  });
+});
+
+describe("a duplicated managed block keeps every ignore line it carries", () => {
+  it("rebuilds from all blocks, not the first", async () => {
+    // A past duplicate-append bug left some projects with two managed blocks.
+    // `removeManagedBlock` strips all of them but `extractManagedBlock` read
+    // only the first, so a line living exclusively in the later block was
+    // deleted and never rebuilt — `.qfai/state.json` came back tracked and
+    // local run state could be committed.
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const first = await readGitignore(root);
+      expect(first).toContain(".qfai/state.json");
+
+      const lines = first.split(NL);
+      const start = lines.findIndex((line) => line.includes(QFAI_GITIGNORE_MARKER));
+      const block = lines.slice(start).filter((line) => line.trim().length > 0);
+      // Block 1 is stale — it carries a retired line, so the freshness check
+      // fails and the file is rewritten — and it lacks `.qfai/state.json`.
+      // Block 2 carries it.
+      const stale = [
+        ...block.filter((line) => line !== ".qfai/state.json"),
+        ".qfai/discussion/discussion-*/",
+      ];
+      await writeFile(
+        path.join(root, ".gitignore"),
+        // A project line separates the two blocks. Without something unknown
+        // between them the extractor runs straight through the blank line into
+        // the second block and the bug does not appear.
+        [...stale, "", "node_modules/", "", ...block, ""].join(NL),
+        "utf-8",
+      );
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const rebuilt = await readGitignore(root);
+      expect(rebuilt).toContain(".qfai/state.json");
+      // The duplicate is collapsed to exactly one block.
+      expect(rebuilt.split(QFAI_GITIGNORE_MARKER).length - 1).toBe(1);
+      for (const entry of QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) {
+        expect(rebuilt).toContain(entry);
+      }
     });
   });
 });
