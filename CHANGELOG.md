@@ -21,6 +21,29 @@
   matrix that exists only inside the ignored stage evidence as a missing matrix.
   Existing projects pick the negation up on the next `qfai init`; no ignore line
   is removed, so nothing previously tracked becomes untracked.
+- **Re-init no longer resurrects an ignore line a project deleted.**
+  `ensureRootGitignoreEntries` rewrote the managed block from the canonical list
+  whenever its freshness check failed — and shipping a new governance negation
+  is exactly what makes it fail. A project that had removed `.qfai/evidence/*`
+  to track its own audit trail got that line back from the very release meant to
+  widen tracking. A block that is already current-shaped now keeps its own
+  ignore lines and only gains the governance negations it is missing. A block
+  still carrying retired lines is provably outdated rather than curated, so it
+  is migrated wholesale as before.
+- **`qfai init` migrates a legacy `.qfai/evidence/.gitignore`.** Earlier
+  versions wrote a per-directory ignore whose first line is `*`. Git applies the
+  deepest matching file, so that `*` beat every root-level negation and the
+  governance records — Change Requests, decision records, and now the Coverage
+  Depth Matrix — stayed ignored however correct the managed block was. The
+  leaf negations are appended to that file when it exists; nothing else in it is
+  touched.
+- **`qfai init --force` regenerates `assistant/agents` and
+  `assistant/manifest`, not only `assistant/skills`.** Every other `.qfai/**`
+  path is create-only, so a correction to an agent definition or to
+  `agent-catalog.yml` reached new projects and nobody else — an installed
+  repository kept the old routing and reviewer instructions with no command that
+  would update them. Those two trees are generated in the same sense `skills/`
+  is. `specs/`, `contracts/` and `steering/` stay create-only.
 
 ## [1.10.0] - 2026-08-03
 

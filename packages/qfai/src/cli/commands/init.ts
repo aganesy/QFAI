@@ -41,6 +41,26 @@ import { resolveToolVersion } from "../../core/version.js";
 
 const execAsync = promisify(execCb);
 
+/**
+ * Standard assets `--force` regenerates: the trees qfai owns end to end and
+ * whose direct editing is already discouraged.
+ *
+ * `assistant/skills` alone was not enough. Every other `.qfai/**` path is
+ * copied create-only, so a correction to an agent definition or to
+ * `agent-catalog.yml` reached new projects and nobody else — an installed
+ * repository kept the old routing and the old reviewer instructions with no
+ * command that would update them, and no signal that it had not. `agents/` and
+ * `manifest/` are generated in exactly the sense `skills/` is: `qfai doctor`'s
+ * `skills.integrity` and the shipped README both say a project edits them at
+ * its own risk. `specs/`, `contracts/`, `steering/` and everything else stay
+ * create-only, because those hold project content.
+ */
+const STANDARD_ASSET_PATHS: readonly string[] = [
+  "assistant/skills",
+  "assistant/agents",
+  "assistant/manifest",
+];
+
 export type InitOptions = {
   dir: string;
   force: boolean;
@@ -68,7 +88,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/** と symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts 等は上書きしません）。",
+      "NOTE: --force は .qfai/assistant/{skills,agents,manifest}/** と symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts 等は上書きしません）。",
     );
   }
 
@@ -83,7 +103,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     : { copied: [], skipped: [], removed: [], preservedNotes: [] as string[] };
 
   // root/ と .qfai/ は create-only（既存は skip）
-  // assistant/skills のみ --force で上書きする
+  // STANDARD_ASSET_PATHS のみ --force で上書きする
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
     force: false,
     dryRun: options.dryRun,
@@ -94,9 +114,9 @@ export async function runInit(options: InitOptions): Promise<void> {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
-    exclude: ["assistant/skills"],
+    exclude: [...STANDARD_ASSET_PATHS],
   });
-  const skillsResult = await copyTemplatePaths(qfaiAssets, destQfai, ["assistant/skills"], {
+  const skillsResult = await copyTemplatePaths(qfaiAssets, destQfai, [...STANDARD_ASSET_PATHS], {
     force: options.force,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
@@ -111,6 +131,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
   });
   const gitignoreResult = await ensureRootGitignoreEntries(destRoot, options.dryRun);
+  const legacyEvidenceIgnoreResult = await ensureLegacyEvidenceIgnoreNegations(
+    destRoot,
+    options.dryRun,
+  );
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
@@ -144,6 +168,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...skillsResult.copied,
       ...wrappersResult.copied,
       ...gitignoreResult.copied,
+      ...legacyEvidenceIgnoreResult.copied,
       ...assistantTreeResult.copied,
       ...projectSteeringResult.copied,
       ...upgradeResult.copied,
@@ -154,6 +179,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...skillsResult.skipped,
       ...wrappersResult.skipped,
       ...gitignoreResult.skipped,
+      ...legacyEvidenceIgnoreResult.skipped,
       ...assistantTreeResult.skipped,
       ...projectSteeringResult.skipped,
       ...upgradeResult.skipped,
@@ -678,11 +704,102 @@ async function ensureRootGitignoreEntries(
   }
 
   const separator = stripped.length > 0 && !stripped.endsWith("\n") ? "\n\n" : "\n";
-  const content =
-    stripped.length > 0 ? stripped + separator + QFAI_GITIGNORE_BLOCK : QFAI_GITIGNORE_BLOCK;
+  const block = rebuildManagedBlock(managedBlock);
+  const content = stripped.length > 0 ? stripped + separator + block : block;
   await writeFile(gitignorePath, content, "utf-8");
   info("  updated: .gitignore (appended QFAI entries)");
   return { copied: [gitignorePath], skipped: [] };
+}
+
+/**
+ * The managed block to write, preserving whatever ignore lines the project's
+ * existing block already had.
+ *
+ * Writing `QFAI_GITIGNORE_BLOCK` wholesale was a silent regression for the one
+ * case the freshness check exists to protect. A project that deliberately
+ * removed, say, `.qfai/evidence/*` from the block to track its own audit trail
+ * fails the `every(...)` check the moment a NEW governance negation ships —
+ * the block is then stripped and the canonical list written back, resurrecting
+ * the ignore line the user deleted and re-hiding every evidence file from that
+ * release on.
+ *
+ * So an existing block keeps its own ignore lines and only gains the governance
+ * negations it is missing (appended last, because git applies the last matching
+ * pattern). A project with no managed block still gets the full canonical one.
+ */
+function rebuildManagedBlock(existingBlock: string): string {
+  if (existingBlock.length === 0) {
+    return QFAI_GITIGNORE_BLOCK;
+  }
+  const legacy = new Set<string>(QFAI_GITIGNORE_LEGACY_LINES);
+  const lines = existingBlock.split("\n").map((line) => line.trimEnd());
+
+  // A block still carrying lines from a previous block shape is provably
+  // outdated, not curated: migrate it wholesale, which is what strips the
+  // retired negations. Only a block that is already current-shaped can have a
+  // missing ignore line read as a deliberate removal.
+  if (lines.some((line) => legacy.has(line))) {
+    return QFAI_GITIGNORE_BLOCK;
+  }
+
+  const negations = new Set<string>(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS);
+  const kept = lines.filter((line) => line !== QFAI_GITIGNORE_MARKER && !negations.has(line));
+
+  return [QFAI_GITIGNORE_MARKER, ...kept, ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS]
+    .filter((line, index, all) => line.length > 0 || all[index - 1]?.length !== 0)
+    .join("\n");
+}
+
+/**
+ * Leaf negations for the governance records, as a legacy
+ * `.qfai/evidence/.gitignore` needs them.
+ *
+ * Earlier `qfai init` versions wrote a per-directory ignore file whose first
+ * line is `*`. Git applies the deepest matching file, so that `*` wins over
+ * every root-level negation: `change-request-*.md`, `decision-*.md`,
+ * `decisions/**` and the Coverage Depth Matrix all stay ignored in a project
+ * that still has it, however correct the managed block is. The file is not
+ * removed — a project may want the rest of its behaviour — but the governance
+ * records are re-included inside it.
+ */
+const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
+  "!change-request-*.md",
+  "!decision-*.md",
+  "!coverage-depth-*.md",
+  "!decisions/",
+  "!decisions/**",
+];
+
+async function ensureLegacyEvidenceIgnoreNegations(
+  destRoot: string,
+  dryRun: boolean,
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const target = path.join(destRoot, ".qfai", "evidence", ".gitignore");
+  let existing: string;
+  try {
+    existing = await readFile(target, "utf-8");
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      // No legacy file: the root managed block is already authoritative.
+      return { copied: [], skipped: [] };
+    }
+    throw err;
+  }
+
+  const lines = existing.split("\n").map((line) => line.trimEnd());
+  const missing = LEGACY_EVIDENCE_IGNORE_NEGATIONS.filter((entry) => !lines.includes(entry));
+  if (missing.length === 0) {
+    return { copied: [], skipped: [target] };
+  }
+  if (dryRun) {
+    info(`  would update: ${target} (re-include governance records)`);
+    return { copied: [target], skipped: [] };
+  }
+
+  const separator = existing.endsWith("\n") ? "" : "\n";
+  await writeFile(target, `${existing}${separator}${missing.join("\n")}\n`, "utf-8");
+  info(`  updated: ${target} (re-include governance records)`);
+  return { copied: [target], skipped: [] };
 }
 
 /**
