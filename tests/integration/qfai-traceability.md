@@ -529,3 +529,4 @@ as `it.todo` Red placeholders; conversion to executable Red is the next
 
 - QFAI:SPEC-0006:TC-0006-0027
 - QFAI:SPEC-0006:TC-0006-0031
+- QFAI:SPEC-0006:TC-0006-0028
