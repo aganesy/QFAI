@@ -94,14 +94,23 @@ it unrecorded:
 
 In both, an unconditional "nothing to do" exit would skip the boundary permanently, and no later
 re-run could repair it — a re-run finds no `todo` rows to process either. So before that exit: read
-`.qfai/evidence/implement-<spec-id>.md` for spec-level `Checkpoint verification command` /
+the spec's evidence file for spec-level `Checkpoint verification command` /
 `Checkpoint verification result` entries covering the current ledger state. Run the **per spec**
 command set above and record them when they are absent, or when they predate the last ledger
 change. Only then report "nothing to do".
 
+**Which file, for a boundary that has no `Layer`.** The per-item rule below picks the file from the
+row's `Layer`, and this result belongs to no row. The spec-level boundary is written to
+`.qfai/evidence/implement-<spec-id>.md` whenever that file exists, and to
+`.qfai/evidence/atdd-<spec-id>.md` when it does not — the terminal-ledger case of a spec whose every
+row is `E2E` / `API`, where the implement file was never created. Read and write are the same rule,
+so a re-run finds what the previous run wrote instead of judging the boundary unrecorded, and the
+one-file-per-spec contract holds: a spec never has this boundary in both files.
+
 ## Evidence
 
-Record the result in the evidence file the row's `Layer` owns —
+Record a **per-item** result in the evidence file the row's `Layer` owns (the spec-level boundary
+above has no row, and its own rule is stated there) —
 `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API`
 row — using the two per-item evidence fields `Checkpoint verification command` and
 `Checkpoint verification result`. These are per-item fields of the same contract gate item 10

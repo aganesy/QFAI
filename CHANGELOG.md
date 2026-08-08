@@ -6,6 +6,32 @@
 
 ### Fixed
 
+- **Every branch is handed over; only the timing differs.** `/qfai-atdd` said
+  branch 2 and branch 3 rows needed no round-trip, but `/qfai-implement` is the
+  only writer of `Status` / `DR-ID` / `Evidence` — and branch 2's mutation is run
+  by its Phase Red step 3c. A run with no branch-1 row therefore ended with the
+  falsifiability trio never produced (P6 and P8 unpassable) or the Decision
+  Record written and the ledger untouched. New stage gate P1d hands both over:
+  branch 2 after P2-P4 build the surface and before P6, branch 3 once its `DR-*`
+  exists.
+- **P1b and P1c are one loop per `TDD-ID`.** P1b required branch 1 "discharged in
+  full" before P1c, while P1c takes each row through GREEN before the next
+  failing test is written — following P1b left several deliberate REDs open at
+  once, and the first row's full-suite checkpoint failed on them. The two gates
+  now read as choose, discharge, next row. The scheduling contract moved to
+  `red-provenance.md#which-stage-hands-a-row-over`, which owns the branches it
+  schedules.
+- **The spec-level checkpoint boundary has a defined home.** Its rule read and
+  wrote `implement-<spec-id>.md`, but a spec whose every row is `E2E` / `API`
+  never has that file — so a terminal ATDD-only ledger judged the boundary
+  unrecorded on every re-run, or wrote a second evidence file and broke the
+  one-file-per-spec contract. The boundary has no `Layer` to route by, so it
+  goes to the implement file when it exists and to the ATDD file when it does
+  not, by the same rule on read and on write.
+- **Two broken references in the skills.** P1's layer catalog resolved from no
+  root (`catalog/test-layers.md` → `.qfai/assistant/catalog/test-layers.md`), and
+  `#atdd-owned-rows` named an anchor the parenthesised heading did not generate.
+  The heading is short now, so one anchor serves every reference to it.
 - **Phase Red selects the row P1c named.** It took the first `todo` row
   regardless, so a branch-2 row above the named one was processed first — and
   its full-suite checkpoint ran against a tree still holding the named row's

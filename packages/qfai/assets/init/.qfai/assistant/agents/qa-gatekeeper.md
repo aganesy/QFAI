@@ -100,7 +100,7 @@ on. What is **not** acceptable is the third outcome appearing by default: a row
 routed to `exception` whose `DR-*` says only that the surface came first has
 not shown that either branch was unavailable, and that is a REVISE. See
 `.qfai/assistant/skills/qfai-atdd/SKILL.md#red-provenance-for-an-atdd-owned-row-must`
-and `.qfai/assistant/skills/qfai-implement/references/execution-ledger.md#atdd-owned-rows-layer--e2e--layer--api`.
+and `.qfai/assistant/skills/qfai-implement/references/execution-ledger.md#atdd-owned-rows`.
 
 Verdict scope: a PASS covers the observation for that round and nothing else. It
 does not ratify item scope and does not clear the completion gate.

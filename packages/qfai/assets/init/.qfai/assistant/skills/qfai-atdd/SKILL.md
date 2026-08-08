@@ -375,32 +375,24 @@ Template:
 ## Stage Gates (Do not skip)
 
 - P0: Plan and obligations checklist prepared.
-- P1: Layer assignment validated against `catalog/test-layers.md#layer-derivation-procedure-normative`.
-- P1b: **Branch chosen for every row this cycle will advance, and branch 1
-  discharged in full.** Branch 1 runs here — write the test, take the RED, get
-  `qa-gatekeeper` PASS — **before** P2-P4 build any surface, because after them
-  there is nothing left to watch fail. A branch 2 row legally leaves P1b with
-  its branch recorded and no evidence yet: its mutation run needs the surface,
-  so it is captured at P6. **The `red` phase's blocking `qa-gatekeeper` judges the rows that have evidence at P1b — the branch 1 ones.** It cannot judge a branch 2 row here: that row's payload is the falsifiability trio, which does not exist yet by the same rule that lets the row leave P1b. A run whose rows are all branch 2 passes P1b with nothing submitted, and its rows are gated when the trio lands. A row with no branch chosen is what leaves it with no legal transition out of `todo`. **The choice is provisional until the row's own handoff.** Re-run the test against the tree as it stands immediately before handing the row over and take the branch that result names (`references/red-provenance.md#the-three-branches-must`): an earlier branch-1 row's production code can satisfy a later row's predicate, so a branch recorded at P1b as `observed-red` can have no observable RED left by the time that row's turn comes.
-- P1c: **Branch 1 rows are handed to `/qfai-implement` before P5, by
-  `TDD-ID`.** Branch 1 ends with a deliberately failing test and no production
-  code — this stage does not write it
-  (`references/red-provenance.md#the-three-branches-must`). P5-P8 require the
-  suite and the repo quality gates to pass, which that RED makes impossible, so
-  the handover is not deferred to the end: run `/qfai-implement` for those rows
-  now, let its Phase Green build the surface and take the GREEN, and return here
-  with the tree green. **One row at a time**: take a branch-1 row through RED,
-  handoff, GREEN and its checkpoint before writing the next branch-1 row's
-  failing test. Every row's checkpoint runs the full suite
-  (`../qfai-implement/references/checkpoint-verification.md`), so a second
-  deliberate RED left open elsewhere fails the first row's checkpoint — and
-  that row is then stranded at `refactor`, which Phase Red does not re-select.
-  Name the rows in the handoff — a branch-2 row sitting
-  above them in the ledger has its branch recorded and its evidence still to
-  come at P6, and `/qfai-implement` defers such a row and moves on rather than
-  stopping, which is what keeps this round-trip from deadlocking against its own
-  P6 (`references/red-provenance.md#handover-to-qfai-implement`). Branch 2 and
-  branch 3 rows need no round-trip of their own.
+- P1: Layer assignment validated against `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`.
+- P1b: **A branch is chosen for every row this cycle will advance**, and the
+  choice is provisional until that row's own handoff — re-run the test
+  against the tree as it stands and take the branch the result names. P1b and
+  P1c are **one loop per `TDD-ID`**: choose, discharge, next row.
+- P1c: **A branch 1 row is discharged in that loop** — write the test, take
+  the RED, `qa-gatekeeper` PASS, hand it to `/qfai-implement`, GREEN,
+  checkpoint — before the next branch-1 row's failing test is written, and
+  before P2-P4 build any surface.
+- P1d: **Branch 2 rows are handed over after P2-P4 and before P6; branch 3
+  rows once their `DR-*` is written.** Every branch needs a handoff, because
+  `/qfai-implement` is the only writer of `Status` / `DR-ID` / `Evidence`
+  (**This skill does not write the ledger**, above).
+
+  Which branch goes when, what the blocking `qa-gatekeeper` can judge at each
+  point, and why one deliberate RED at a time is not a style preference:
+  `references/red-provenance.md#which-stage-hands-a-row-over`.
+
 - P2: E2E implementation completed.
 - P3: API implementation completed.
 - P4: Integration implementation completed.

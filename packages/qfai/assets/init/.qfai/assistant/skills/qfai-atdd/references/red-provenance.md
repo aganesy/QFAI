@@ -214,6 +214,59 @@ Read the row's entry and take the branch it names:
 
 **A branch-2 row whose evidence is not written yet is not a stop, and not a defer either.** P1b fixes every row branch; the mutation needs production code this stage does not own, so `/qfai-implement` performs it at Phase Red step 3c and records it here. Treating the empty trio as a malformed handoff stopped the run on the first such row; deferring it left nobody able to produce the evidence, since the only phase with a production agent was waiting for it.
 
+## Which stage hands a row over
+
+All three branches are handed to `/qfai-implement`. None of them writes its own
+ledger transition — that skill owns `Status` / `DR-ID` / `Evidence` for every
+row — so a row `/qfai-atdd` never hands over stays at `todo` however complete
+its work is. What differs is _when_, and a run consisting only of branch-2 or
+only of branch-3 rows has to hand them over just as a branch-1 run does.
+
+| Branch           | Handed over                     | Why then                                                                                                                                                                                                                                            |
+| ---------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `observed-red`   | P1c, one row at a time          | The row ends with a deliberately failing test and no production code, and P5-P8 need a green suite. A second deliberate RED left open elsewhere fails the first row's checkpoint.                                                                   |
+| `falsifiability` | P1d, after P2-P4 and before P6  | The trio is produced by Phase Red **step 3c**, the only step that runs the mutation, and the mutation needs the surface P2-P4 build. The trio is the row's RED payload, so P6 has nothing to capture and P8 nothing to judge until step 3c has run. |
+| `exception`      | P1d, once the `DR-*` is written | Only `/qfai-implement` can write `todo -> exception`. A run with no branch-1 row otherwise ends with the Decision Record recorded and the ledger untouched.                                                                                         |
+
+A branch-2 row is _passed over_ by `/qfai-implement` when it is not the named
+row — see the note above — which is neither a stop nor a defer of the branch:
+P1d hands it over in its turn.
+
+### What each stage gate owes
+
+**P1b — choose, for every row.** A row with no branch chosen is the one that
+leaves P1b with no legal transition out of `todo`. **The choice is provisional
+until the row's own handoff**: re-run the test against the tree as it stands
+immediately before handing the row over and take the branch that result names.
+An earlier branch-1 row's production code can satisfy a later row's predicate,
+so a branch recorded at P1b as `observed-red` can have no observable RED left by
+the time that row's turn comes.
+
+**P1b and P1c are one loop per `TDD-ID`**, not two phases. P1c takes each row
+through GREEN and its checkpoint before the next row's failing test is written;
+completing every branch-1 RED in P1b first would leave several deliberate
+failures open at once, and every row's checkpoint runs the full suite
+(`../qfai-implement/references/checkpoint-verification.md`). A second deliberate
+RED left open elsewhere fails the first row's checkpoint — and that row is then
+stranded at `refactor`, which Phase Red does not re-select.
+
+**P1c — discharge branch 1, one row at a time.** Branch 1 ends with a
+deliberately failing test and no production code, and this stage does not write
+that code. P5-P8 require the suite and the repo quality gates to pass, which
+the RED makes impossible, so the handover is not deferred to the end: run
+`/qfai-implement` for the row now, let its Phase Green build the surface and
+take the GREEN, and return with the tree green. Name the row in the handoff —
+`/qfai-implement` passes over a branch-2 row sitting above it rather than
+stopping, which is what keeps this round-trip from deadlocking against its own
+P6.
+
+**What the blocking `qa-gatekeeper` judges.** The `red` phase's gatekeeper
+judges the rows that have evidence at P1b — the branch 1 ones. It cannot judge a
+branch 2 row there: that row's payload is the falsifiability trio, which does
+not exist yet by the same rule that lets the row leave P1b. A run whose rows are
+all branch 2 passes P1b with nothing submitted, and its rows are gated when the
+trio lands.
+
 If the entry is absent, names no branch, or is malformed in any other way, the
 row **stays at `todo`** and `/qfai-implement` **stops with a handoff note**.
 Writing `red` first and discovering the gap afterwards parks a `red` row with

@@ -241,10 +241,11 @@ is re-submitted.
 `review-fix` is not a completion state and appears in the completion-prohibition
 list. Round-by-round evidence rules: `round-evidence.md`.
 
-## ATDD-owned rows (`Layer = E2E` / `Layer = API`)
+## ATDD-owned rows
 
-These rows live in this ledger and follow every rule above, but their tests are
-authored by `/qfai-atdd` (`qfai-implement/SKILL.md` Non-goals). The two skills
+A row whose `Layer` is `E2E` or `API`. These rows live in this ledger and follow
+every rule above, but their tests are authored by `/qfai-atdd`
+(`qfai-implement/SKILL.md` Non-goals). The two skills
 therefore share one lifecycle, and the ordering that skill works in makes the
 RED question different rather than absent.
 

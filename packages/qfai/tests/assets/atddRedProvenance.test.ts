@@ -78,7 +78,7 @@ describe.each(TREES)("%s", (tree) => {
     const atdd = await read(tree, ATDD);
     const gates = atdd.slice(atdd.indexOf("## Stage Gates"));
     expect(gates).toContain("P1b:");
-    expect(flat(gates)).toContain("**before** P2-P4 build any surface");
+    expect(flat(gates)).toContain("before P2-P4 build any surface");
     expect(gates.indexOf("P1b:")).toBeLessThan(gates.indexOf("P2: E2E"));
   });
 
@@ -97,7 +97,10 @@ describe.each(TREES)("%s", (tree) => {
 
   it("the ledger reference documents the ATDD-owned case and refuses to waive RED", async () => {
     const ledger = flat(await read(tree, LEDGER));
-    expect(ledger).toContain("## ATDD-owned rows (`Layer = E2E` / `Layer = API`)");
+    // The heading is short so one anchor serves every reference to it; the
+    // layers it covers are named in the first line of its body.
+    expect(ledger).toContain("## ATDD-owned rows");
+    expect(ledger).toContain("A row whose `Layer` is `E2E` or `API`.");
     expect(ledger).toContain("**There is no waiver here.**");
     expect(ledger).toContain("**The falsifiability path is the answer, not `exception`.**");
     expect(ledger).toContain(
@@ -398,8 +401,8 @@ describe.each(TREES)("%s (reachability and sequencing)", (tree) => {
     // an intermediate handoff the stage cannot finish its own gates.
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("P1c:");
-    expect(atdd).toContain("Branch 1 rows are handed to `/qfai-implement` before P5");
-    expect(atdd).toContain("return here with the tree green");
+    expect(atdd).toContain("A branch 1 row is discharged in that loop");
+    expect(flat(await read(tree, PROVENANCE))).toContain("return with the tree green");
   });
 
   it("does not claim branch 2 has its evidence at P1b", async () => {
@@ -407,9 +410,9 @@ describe.each(TREES)("%s (reachability and sequencing)", (tree) => {
     // sentence deferred branch 2's mutation run to P6 — a gate no branch-2 row
     // could pass.
     const atdd = flat(await read(tree, ATDD));
-    expect(atdd).toContain("Branch chosen for every row this cycle will advance");
-    expect(atdd).toContain(
-      "A branch 2 row legally leaves P1b with its branch recorded and no evidence yet",
+    expect(atdd).toContain("A branch is chosen for every row this cycle will advance");
+    expect(flat(await read(tree, PROVENANCE))).toContain(
+      "A run whose rows are all branch 2 passes P1b with nothing submitted",
     );
   });
 });
@@ -470,8 +473,8 @@ describe.each(TREES)("%s (executability of the handed-over row)", (tree) => {
 
   it("hands the P1c round-trip a named row list", async () => {
     const atdd = flat(await read(tree, ATDD));
-    expect(atdd).toContain("handed to `/qfai-implement` before P5, by `TDD-ID`");
-    expect(atdd).toContain("Name the rows in the handoff");
+    expect(atdd).toContain("hand it to `/qfai-implement`, GREEN,");
+    expect(flat(await read(tree, PROVENANCE))).toContain("Name the row in the handoff");
   });
 
   it("chooses branch 2 from a first-run pass, not from surface existence", async () => {
@@ -586,9 +589,12 @@ describe.each(TREES)("%s (the contracts the handover has to land in)", (tree) =>
     // Every row's checkpoint runs the full suite, so a second deliberate RED
     // left open elsewhere fails the first row's checkpoint — and that row is
     // then stranded at `refactor`, which Phase Red does not re-select.
-    const atdd = flat(await read(tree, ATDD));
-    expect(atdd).toContain("**One row at a time**");
-    expect(atdd).toContain("stranded at `refactor`, which Phase Red does not re-select");
+    expect(flat(await read(tree, PROVENANCE))).toContain(
+      "P1c — discharge branch 1, one row at a time",
+    );
+    expect(flat(await read(tree, PROVENANCE))).toContain(
+      "stranded at `refactor`, which Phase Red does not re-select",
+    );
   });
 
   it("hands branch 2's mutation to the skill that owns production code", async () => {
@@ -644,7 +650,9 @@ describe.each(TREES)("%s (someone can perform every step)", (tree) => {
     const checkpoint = flat(
       await read(tree, "assistant/skills/qfai-implement/references/checkpoint-verification.md"),
     );
-    expect(checkpoint).toContain("Record the result in the evidence file the row's `Layer` owns");
+    expect(checkpoint).toContain(
+      "Record a **per-item** result in the evidence file the row's `Layer` owns",
+    );
     expect(checkpoint).not.toContain(
       "Record the result in `.qfai/evidence/implement-<spec-id>.md`",
     );
@@ -673,9 +681,10 @@ describe.each(TREES)("%s (gates only what has a payload)", (tree) => {
     // 2 row's payload is the falsifiability trio — which by the same gate's own
     // rule does not exist until P6. A run whose rows are all branch 2 had
     // nothing submittable and could not pass P1b to reach P6.
-    const atdd = flat(await read(tree, ATDD));
-    expect(atdd).toContain("judges the rows that have evidence at P1b — the branch 1 ones");
-    expect(atdd).toContain("its rows are gated when the trio lands");
+    expect(flat(await read(tree, PROVENANCE))).toContain(
+      "judges the rows that have evidence at P1b — the branch 1 ones",
+    );
+    expect(flat(await read(tree, PROVENANCE))).toContain("its rows are gated when the trio lands");
   });
 
   it("reruns the production owner when the RED gate faults its edit", async () => {
@@ -709,8 +718,10 @@ describe.each(TREES)("%s (the handoff survives ledger order and time)", (tree) =
     // later row's predicate, leaving a row recorded as `observed-red` with no
     // observable RED and no re-classification step.
     const atdd = flat(await read(tree, ATDD));
-    expect(atdd).toContain("**The choice is provisional until the row's own handoff.**");
-    expect(atdd).toContain("can have no observable RED left by the time that row's turn comes");
+    expect(atdd).toContain("the choice is provisional until that row's own handoff");
+    expect(flat(await read(tree, PROVENANCE))).toContain(
+      "can have no observable RED left by the time that row's turn comes",
+    );
   });
 
   it("records the RED revision where it can still be observed", async () => {
