@@ -222,10 +222,14 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
 Any edge not listed above is prohibited. Attempting `green` -> `red` must
 produce: `"Backward transition prohibited: green -> red"`.
 
-**"Backward" is narrower than "moves to an earlier status".** Four of the edges
-above return a row to an earlier state and none of them is a backward
-transition, because each restarts the cycle from `todo` or is an explicitly
-sanctioned re-entry:
+**"Backward" is narrower than "moves to an earlier status".** All four edges
+below return a row to an earlier state, and **three of them are not backward
+transitions** — a resumption, an anomaly exit and the rework edge each restart
+an earlier phase of the row's own cycle with nothing upstream changed. The
+fourth, the approved Change Request reset, **is** the one sanctioned backward
+transition: an upstream obligation moved and the row's completed work is
+withdrawn. The column below therefore asks why each edge is _legal_, not why it
+is not backward:
 
 | Edge                                                                               | Why it is legal                                     | Approval needed |
 | ---------------------------------------------------------------------------------- | --------------------------------------------------- | --------------- |

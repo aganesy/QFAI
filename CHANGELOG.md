@@ -15,8 +15,11 @@
   delegated work order. The summaries now state the forward spine, name the
   reference as the complete list, and say outright not to infer an edge's
   absence from them. `TDDLIST_EXCEPTION_PARKED` cites the same anchor and says
-  its `exception -> todo` remediation needs no Change Request, which is what an
-  operator could not tell from the skill alone.
+  its `exception -> todo` remediation needs no Change Request **when the row's
+  approved obligation is unchanged**, which is what an operator could not tell
+  from the skill alone. When the investigation finds the obligation itself was
+  wrong, that is an upstream change: the row re-enters through the approved
+  Change Request reset under the Drift Protocol instead.
 
 ### Fixed
 
