@@ -117,8 +117,14 @@
   vanished from the gate and from `qfai report`, and a `done` row in the first
   table read as the whole story while the follow-up work sat in a table nobody
   looked at. A table carrying `TDD-ID` and `TC-Refs` is a ledger attempt, and
-  a missing column in one is now `TDDLIST_REQUIRED_COLUMN_MISSING`. A
-  documentation table beside the ledger is untouched.
+  a missing column in one is now `TDDLIST_REQUIRED_COLUMN_MISSING`. "Ledger
+  attempt" is a **count** — six of the eight required columns — not two named
+  marker columns: keying on markers left the same escape one level in, since a
+  table mistyping `TC-Refs` itself would leave both detectors. Every
+  single-header typo leaves seven of eight standing, and a documentation table
+  beside the ledger shares almost none, so the shipped template's own `## Schema`
+  table stays out. `qfai report` treats an unreadable ledger table the same way
+  it treats an unreadable first one: no counts, and the reason printed instead.
 - **A malformed `TC-Refs` value discharges nothing.** `resolveParentTcId`
   strips the last segment, so an over-long `TC-0001-0001-0001` resolved to the
   real `TC-0001-0001` and cleared its obligation — while Check 5 skips a token

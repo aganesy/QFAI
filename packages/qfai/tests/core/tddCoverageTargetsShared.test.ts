@@ -510,3 +510,83 @@ describe("an incomplete later ledger table is reported, not dropped", () => {
     expect(codes).not.toContain("TDDLIST_REQUIRED_COLUMN_MISSING");
   });
 });
+
+describe("a mistyped marker column does not hide the table", () => {
+  it("reports a later table that mistypes TC-Refs itself", async () => {
+    // Keying the detector on two marker columns had the same escape one level
+    // in: mistype `TC-Refs` and the table left both `collectIncompleteLedgerTables`
+    // and `collectLedgerTables`, so the first table's `done` row was again the
+    // whole story. A count has no such hole — one typo leaves seven of eight.
+    const { codes } = await bothCommands(
+      [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001 | L1 | AC-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      [
+        "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | a | done | - | RED fail / GREEN pass |",
+        "",
+        "## CHG-001",
+        "",
+        "| TDD-ID | TC Ref | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+        "| ------ | ------ | ----- | --------- | -------- | ------ | ----- | -------- |",
+        "| TDD-0002 | TC-0001 | unit | tests/b.test.ts | b | todo | - | - |",
+      ],
+    );
+    expect(codes).toContain("TDDLIST_REQUIRED_COLUMN_MISSING");
+  });
+});
+
+describe("the report stops when a later ledger table is unreadable", () => {
+  it("publishes no counts while the gate is failing on that table", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-incomplete-"));
+    try {
+      const specsRoot = path.join(root, ".qfai", "specs");
+      const specDir = path.join(specsRoot, "spec-0001");
+      await mkdir(path.join(specDir, "tdd"), { recursive: true });
+      await writeFile(path.join(specDir, "01_Spec.md"), "# Spec\n", "utf-8");
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "## Test Case Table",
+          "",
+          "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+          "| ----- | ----- | ------- | ------ | ----- | -------- |",
+          "| TC-0001 | L1 | AC-0001 | - | s | e |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(specDir, "tdd", "test-list.md"),
+        [
+          HEADERS,
+          SEP,
+          "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | a | done | - | RED fail / GREEN pass |",
+          "",
+          "## CHG-001",
+          "",
+          "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID |",
+          "| ------ | ------- | ----- | --------- | -------- | ------ | ----- |",
+          "| TDD-0002 | TC-0001 | unit | tests/b.test.ts | b | todo | - |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const coverage = await collectTddCoverage(await collectSpecEntries(specsRoot));
+      const spec = coverage.specs[0];
+      expect(spec?.unassessable).toContain("missing required columns");
+      expect(spec?.doneCount).toBeUndefined();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});

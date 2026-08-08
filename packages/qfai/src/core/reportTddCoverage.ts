@@ -16,6 +16,7 @@ import type { SpecEntry } from "./specLayout.js";
 import { collectTestCaseIds } from "./testCaseCoverageTargets.js";
 import { maskNonSpecRegions, parseFirstMarkdownTable } from "./specPackParsers.js";
 import {
+  collectIncompleteLedgerTables,
   collectLedgerTables,
   isCoverageBearingRow,
   isRowShapeChecked,
@@ -116,11 +117,19 @@ export async function collectTddCoverage(
       TDD_LEDGER_REQUIRED_COLUMNS.every((column) =>
         firstTable.headers.some((header) => header.trim() === column),
       );
+    // An incomplete *later* table counts too. The validator reports it as
+    // `TDDLIST_REQUIRED_COLUMN_MISSING`, and `collectLedgerTables` drops it —
+    // so scoring the remaining tables published `done: 1 / open: 0` while the
+    // gate was failing on the rows that table holds. The report declines to
+    // publish whenever the gate has said the ledger is not fully readable.
+    const incompleteTables = collectIncompleteLedgerTables(tddContent);
     const ledgerUnvalidated =
       unassessableReason ??
       (firstTable !== null && !firstTableIsLedger
         ? "the first table in tdd/test-list.md is missing required columns, so validate stops before checking the ledger"
-        : undefined);
+        : incompleteTables.length > 0
+          ? `a ledger table in tdd/test-list.md is missing required columns (${incompleteTables[0]?.missing.join(", ") ?? ""}), so its rows are not read`
+          : undefined);
 
     if (ledgerTables.length === 0) {
       if (ledgerUnvalidated !== undefined) {

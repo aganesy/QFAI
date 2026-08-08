@@ -145,17 +145,21 @@ export interface LedgerTable {
 }
 
 /**
- * Columns that make a table a ledger table *attempt*, whatever else it lacks.
+ * How many of {@link TDD_LEDGER_REQUIRED_COLUMNS} a table must carry before a
+ * missing one is read as an omission rather than as "not a ledger table".
  *
  * `collectLedgerTables` admits only schema-complete tables, and a table it
- * rejects contributes nothing — which for an appended `## CHG-…` section that
- * mistyped one header meant its rows vanished from both the gate and the
- * report. A `done` row in the first table then read as the whole story while
- * the follow-up work sat in a table nobody looked at. These two columns are
- * what says "this was meant to be a ledger", so the omission can be reported
- * instead of inferred.
+ * rejects contributes nothing — so an appended `## CHG-…` section that
+ * mistyped one header had its rows vanish from both the gate and the report,
+ * and a `done` row in the first table read as the whole story.
+ *
+ * Keying on two marker columns did not fix that: a table mistyping one of the
+ * *markers* escaped the detector too, which is the same escape one level in.
+ * A count has no such hole — every single-header typo leaves seven of eight
+ * standing — while a documentation table beside the ledger shares almost none
+ * of them, so the shipped template's own `## Schema` table stays out.
  */
-export const TDD_LEDGER_MARKER_COLUMNS: readonly string[] = ["TDD-ID", "TC-Refs"];
+export const TDD_LEDGER_ATTEMPT_MIN_COLUMNS = 6;
 
 /** Ledger-shaped tables that are missing at least one required column. */
 export function collectIncompleteLedgerTables(
@@ -164,8 +168,9 @@ export function collectIncompleteLedgerTables(
   const incomplete: Array<{ headers: readonly string[]; missing: string[] }> = [];
   for (const table of parseAllMarkdownTables(maskNonSpecRegions(content))) {
     const headers = table.headers.map((header) => header.trim());
-    if (!TDD_LEDGER_MARKER_COLUMNS.every((column) => headers.includes(column))) continue;
     const missing = TDD_LEDGER_REQUIRED_COLUMNS.filter((column) => !headers.includes(column));
+    const present = TDD_LEDGER_REQUIRED_COLUMNS.length - missing.length;
+    if (present < TDD_LEDGER_ATTEMPT_MIN_COLUMNS) continue;
     if (missing.length > 0) {
       incomplete.push({ headers, missing });
     }
