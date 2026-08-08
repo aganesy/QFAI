@@ -111,11 +111,21 @@
     gate accepted a completion claim it had declined to check. **Upgrading a
     multi-table ledger can therefore surface new errors on rows that were
     never validated before.**
+- **An incomplete later ledger table is reported instead of dropped.**
+  `collectLedgerTables` admits only schema-complete tables, so an appended
+  `## CHG-…` section that mistyped one header contributed nothing: its rows
+  vanished from the gate and from `qfai report`, and a `done` row in the first
+  table read as the whole story while the follow-up work sat in a table nobody
+  looked at. A table carrying `TDD-ID` and `TC-Refs` is a ledger attempt, and
+  a missing column in one is now `TDDLIST_REQUIRED_COLUMN_MISSING`. A
+  documentation table beside the ledger is untouched.
 - **A malformed `TC-Refs` value discharges nothing.** `resolveParentTcId`
   strips the last segment, so an over-long `TC-0001-0001-0001` resolved to the
   real `TC-0001-0001` and cleared its obligation — while Check 5 skips a token
   that fails the `TC-*` shape rather than reporting it, so nothing named the
-  typo either. Only a well-formed reference is counted or resolved.
+  typo either. Only a well-formed reference is counted or resolved — in `qfai
+report` as well, which was computing `done: 1 / open: 0` from the same
+  malformed cell the gate was reporting as uncovered.
 - **A ledger row with no `Layer` no longer discharges a TC.** Every rule that
   would police the placement keys on that cell and skips when it is empty —
   the enum check, the forbidden-layer test, the `Level`/`Layer` crosswalk — so

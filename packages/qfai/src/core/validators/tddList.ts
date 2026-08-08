@@ -13,8 +13,10 @@ import {
 } from "../ruleIds.js";
 import type { LedgerTable } from "../tddHelpers.js";
 import {
+  collectIncompleteLedgerTables,
   collectLedgerTables,
   isRowShapeChecked,
+  isWellFormedTcRef,
   isCoverageBearingRow,
   splitTcRefs,
   resolveParentTcId,
@@ -667,6 +669,27 @@ async function validateSpecTddList(
   // masked reader above found it first and this one requires the same schema.
   const coverageTables = collectLedgerTables(content);
   const ledgerRows = (): Generator<LedgerRowRef> => checkedLedgerRows(coverageTables);
+
+  // A later table that looks like a ledger table and is missing a column is
+  // reported, not dropped. `collectLedgerTables` admits only schema-complete
+  // tables, so an appended `## CHG-…` section that mistyped one header
+  // contributed nothing at all — its rows vanished from the gate and from
+  // `qfai report`, and a `done` row in the first table read as the whole
+  // story while the follow-up work sat in a table nobody looked at. Check 3
+  // only ever saw the first table, so nothing named the omission either.
+  for (const incomplete of collectIncompleteLedgerTables(content)) {
+    for (const column of incomplete.missing) {
+      issues.push(
+        issue(
+          "TDDLIST_REQUIRED_COLUMN_MISSING",
+          `Required column "${column}" missing from a ledger table in tdd/test-list.md for spec-${specNumber}. Its rows are not read: a table carrying TDD-ID and TC-Refs is a ledger table, and an incomplete one is a gap, not a note`,
+          "error",
+          relPath,
+          "tddList.requiredColumns",
+        ),
+      );
+    }
+  }
 
   // Informational notice for a ledger with no rows anywhere. Keyed on the whole
   // ledger, not on the first table: "No active items" was printed for a file
@@ -1328,7 +1351,7 @@ async function validateSpecTddList(
           // `TC_ID_TOKEN` rather than reporting it, so nothing named the
           // malformed ref either. The TC ended up owed by neither gate on the
           // strength of a typo.
-          if (!TC_ID_TOKEN.test(upper)) continue;
+          if (!isWellFormedTcRef(upper)) continue;
           cite(upper, rowLayer);
           const parent = resolveParentTcId(upper);
           if (parent) cite(parent, rowLayer);

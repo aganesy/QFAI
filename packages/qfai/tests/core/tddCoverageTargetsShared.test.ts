@@ -450,3 +450,63 @@ describe("a malformed TC reference discharges nothing", () => {
     expect(codes).not.toContain("TDDLIST_TC_NOT_COVERED");
   });
 });
+
+describe("an incomplete later ledger table is reported, not dropped", () => {
+  it("names the missing column instead of ignoring the table's rows", async () => {
+    // `collectLedgerTables` admits only schema-complete tables, so an appended
+    // `## CHG-…` section that mistyped one header contributed nothing — its
+    // rows vanished from the gate and the report, and the first table's `done`
+    // row read as the whole story. Check 3 only ever saw the first table, so
+    // nothing named the omission either.
+    const { codes } = await bothCommands(
+      [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001 | L1 | AC-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      [
+        "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | a | done | - | RED fail / GREEN pass |",
+        "",
+        "## CHG-001",
+        "",
+        "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID |",
+        "| ------ | ------- | ----- | --------- | -------- | ------ | ----- |",
+        "| TDD-0002 | TC-0001 | unit | tests/b.test.ts | b | todo | - |",
+      ],
+    );
+    expect(codes).toContain("TDDLIST_REQUIRED_COLUMN_MISSING");
+  });
+
+  it("says nothing about a table that is not a ledger attempt", async () => {
+    // Two marker columns are what says "this was meant to be a ledger". A
+    // documentation table beside the ledger is not one, and reporting it would
+    // make the shipped template itself an error.
+    const { codes } = await bothCommands(
+      [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001 | L1 | AC-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      [
+        "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | a | done | - | RED fail / GREEN pass |",
+        "",
+        "## Column reference",
+        "",
+        "| Column | Meaning |",
+        "| ------ | ------- |",
+        "| Status | the row's lifecycle state |",
+      ],
+    );
+    expect(codes).not.toContain("TDDLIST_REQUIRED_COLUMN_MISSING");
+  });
+});

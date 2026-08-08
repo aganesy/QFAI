@@ -19,6 +19,7 @@ import {
   collectLedgerTables,
   isCoverageBearingRow,
   isRowShapeChecked,
+  isWellFormedTcRef,
   TDD_LEDGER_REQUIRED_COLUMNS,
   TDD_DONE_STATUSES,
   TDD_IN_REVIEW_STATUSES,
@@ -65,9 +66,19 @@ export async function collectTddCoverage(
     try {
       tddContent = await readFile(tddListPath, "utf-8");
     } catch {
+      if (unassessableReason !== undefined) {
+        // Counts omitted on the same terms as every other unassessable
+        // branch: the type says a spec carries counts or a reason, never
+        // both, and `report --format json` publishes whatever is here.
+        specs.push({
+          specNumber: entry.specNumber,
+          unassessable: unassessableReason,
+          exceptionRows: [],
+        });
+        continue;
+      }
       specs.push({
         specNumber: entry.specNumber,
-        ...(unassessableReason === undefined ? {} : { unassessable: unassessableReason }),
         unitComponentTotal: unitComponentTcIds.size,
         doneCount: 0,
         inReviewCount: 0,
@@ -195,6 +206,10 @@ export async function collectTddCoverage(
         const refs = splitTcRefs(row[scan.tcRefsIndex] ?? "");
         for (const ref of refs) {
           const upper = ref.toUpperCase();
+          // The same shape rule the gate applies. Without it a malformed
+          // `TC-0001-0001-0001` resolved to the real parent here and printed
+          // `done: 1 / open: 0` for a TC the gate was reporting as uncovered.
+          if (!isWellFormedTcRef(upper)) continue;
           coveredTcIds.add(upper);
           rowRefs.add(upper);
           const parent = resolveParentTcId(upper);

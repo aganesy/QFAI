@@ -145,6 +145,34 @@ export interface LedgerTable {
 }
 
 /**
+ * Columns that make a table a ledger table *attempt*, whatever else it lacks.
+ *
+ * `collectLedgerTables` admits only schema-complete tables, and a table it
+ * rejects contributes nothing — which for an appended `## CHG-…` section that
+ * mistyped one header meant its rows vanished from both the gate and the
+ * report. A `done` row in the first table then read as the whole story while
+ * the follow-up work sat in a table nobody looked at. These two columns are
+ * what says "this was meant to be a ledger", so the omission can be reported
+ * instead of inferred.
+ */
+export const TDD_LEDGER_MARKER_COLUMNS: readonly string[] = ["TDD-ID", "TC-Refs"];
+
+/** Ledger-shaped tables that are missing at least one required column. */
+export function collectIncompleteLedgerTables(
+  content: string,
+): Array<{ headers: readonly string[]; missing: string[] }> {
+  const incomplete: Array<{ headers: readonly string[]; missing: string[] }> = [];
+  for (const table of parseAllMarkdownTables(maskNonSpecRegions(content))) {
+    const headers = table.headers.map((header) => header.trim());
+    if (!TDD_LEDGER_MARKER_COLUMNS.every((column) => headers.includes(column))) continue;
+    const missing = TDD_LEDGER_REQUIRED_COLUMNS.filter((column) => !headers.includes(column));
+    if (missing.length > 0) {
+      incomplete.push({ headers, missing });
+    }
+  }
+  return incomplete;
+}
+/**
  * Every table in the ledger that can carry coverage.
  *
  * Two conditions, both of which a `TC-Refs`-column test alone failed:
@@ -264,6 +292,22 @@ export function isRowShapeChecked(
   return tableIndex === 0 || isLedgerRow(scan, row);
 }
 
+/** The `TC-*` shapes a reference may take: `TC-NNNN` or `TC-NNNN-NNNN`. */
+const TC_REF_SHAPE = /^TC-\d{4}(-\d{4})?$/;
+
+/**
+ * Whether a `TC-Refs` token can discharge anything.
+ *
+ * `resolveParentTcId` strips the last segment, so an over-long
+ * `TC-0001-0001-0001` resolves to the real `TC-0001-0001` and would mark it
+ * covered — while the validator's unknown-ref check skips a token of the
+ * wrong shape rather than reporting it, so nothing names the typo either. A
+ * malformed cell must not discharge the obligation it mistyped, in the gate
+ * or in the report.
+ */
+export function isWellFormedTcRef(ref: string): boolean {
+  return TC_REF_SHAPE.test(ref.trim().toUpperCase());
+}
 export function isCoverageBearingRow(scan: LedgerTable, row: readonly string[]): boolean {
   if (!isLedgerRow(scan, row)) return false;
   const layer = (row[scan.layerIndex] ?? "").trim().toLowerCase();
