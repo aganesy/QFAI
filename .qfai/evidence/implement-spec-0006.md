@@ -3736,7 +3736,14 @@ reviewers as an explicit ruling rather than left as the engineer's judgement.
 
 **22 assertions**, new labels `P` (the pin), `T7`, `T8`. G1←R13/R19, G2←R1/R2/R14/R15, C1←R3,
 **P←R4–R11/R20–R40**, C2←R4/R5/R6/R11/R17/R24–R29, C4←R7/R20–R23, T1←R8/R9/R41/R42, T2/T3/T5←R9,
-T4←R8/R41/R42, T6←R8/R21, T7←R9/R10/R35–R39, T8←R9/R10/R38/R39/R40/R41. R12 remains the recorded
+T4←R8/R41/R42, T6←R8/R21, T7←R9/R10/R35–R39/**R42**, T8←R9/R10/R38/R39/R40/R41. **Correction, measured in round 5.** This map recorded `T1←R42, T4←R42` for the title mutation
+` - run qfai doctor --force`. It fires **1, 4 and 7** — `run qfai doctor` satisfies token 7's
+imperative-plus-subcommand binding, which I verified independently against the token's own source
+rather than taking the engineer's word for it. The map understated T7's witness set by one. Noted
+rather than silently edited: a coverage map corrected without a note is indistinguishable from one
+that was always right.
+
+R12 remains the recorded
 equivalent mutant (`69dfd2e8`, `1 passed`). R16 → P, C2, C4, so guard #2's vacuity scope is **nine**,
 corrected from eight in the comment. R17 → P, C2; R18 control passes entirely.
 
@@ -4426,3 +4433,279 @@ so nothing was created that was not already there. `tests/core/tddCoverageAggreg
 suite that mode can break — was run at the final state and is **7 passed**, exit 0. `dist/` is therefore
 left as inherited; deleting it would remove the tsup barrels that `dist/cli/index.mjs` invocations depend
 on.
+
+### G4 round 4 code review: approve with required fixes, and the mechanism claim measured rather than argued
+
+`implementation-reviewer` returned **Approve with required fixes** — 2 MAJOR + 4 MINOR + 5 NIT, none a
+correctness or security defect. It verified the comments-only claim independently, ran all four gates at
+0 **after** my `.bin` damage window, and reproduced the closure as a **27-file superset**
+(`177 passed | 14 skipped (191)`), consistent with the recorded 186 as a five-test-narrower subset with
+the 14 skips matching exactly.
+
+**The damage-window mitigation is measured, not assumed.** Its first `eslint` returned **127** and an
+early full-suite run had 13 suites failing on `Cannot find module 'is-potential-custom-element-name'`;
+both were **discarded and re-run** on my notification rather than reported as findings. That is the
+notification doing exactly the work it was sent to do, and it is the only reason those numbers are not
+now in this file as defects of the code.
+
+#### The two rulings I asked for, both answered by measurement
+
+1. **Keeping three needles alongside the pin is a real defense, and the decisive experiment is the one
+   the design claim required.** The reviewer applied the direction reversal to production **and pasted
+   the new string into `expectedMessage`** — simulating the reflex exactly (blobs `599d8b1e`, `d2af8505`).
+   Result: **pin GREEN, requirement-2 needle RED**, sole failure, label naming the contract item. My
+   counter-argument ("the human has the red needle lines in the same output") is true and **does not
+   defeat the mechanism**: the mechanism is not visibility at first failure, it is *residual redness
+   after the reflex*. The pin's red is extinguished by the paste; the needle's is not. Also confirmed:
+   soft failures report in assertion order, so the pin sitting last does make the output read
+   requirement-first (needle at line 6, pin at line 7).
+2. **The pin's brittleness is the right trade, and the composition is genuinely not the tautological DRY
+   import.** A compliant cosmetic rewording (`Manual repair:` → `Manual repair -`, blob `5ca4b9a1`)
+   yields **exactly one RED, in one file, with a label telling the author what to re-check**. And the
+   `root/.github/workflows` join — the part production can get wrong — is verified stated **twice
+   independently**, with only the "where is this package installed" prefix shared, which no test can
+   state independently.
+
+**One asymmetry the reviewer volunteered and I had not seen: the paste-in defense covers requirements 2,
+3 and 4 — not requirement 1.** The stale path has no needle in this file, so a reflexive paste that drops
+the stale-path clause goes fully green here. It is caught by the sibling drift row, which means the
+disclosed cross-row coupling is doing real work rather than being a documented cost.
+
+#### Required fixes, all in the test artifact, all with reproducible mutations
+
+- **V1 (MAJOR) — the `details` half of the new sweep is vacuous under a reachable, type-checking
+  mutation.** `details?:` is **optional** on `DoctorCheck` (verified myself at `doctor.ts:52`), so
+  deleting the `details` block from the drift emission (blob `7d8e402f`) gives `tsc -b` **0** and this
+  row **`1 passed`** — the half whose whole purpose is closing the `nextActions` vector. Guards #1 and
+  #2 close the undefined-check and `ok`-emission modes; **nothing closes "defined but no details"**.
+  `?? {}` is *not* the cause and fixing it there would not help — `JSON.stringify({title, details:
+  undefined})` is equally token-clean, so the fallback is a no-op for the verdict.
+  The mode *is* caught elsewhere (it reddens `drift.test.ts:96/139` and `provenanceGate.test.ts:247`), so
+  the slice has no hole — but this file **does not name that owner**, contrary to its own
+  "BORROWED PRECONDITION, owner named" convention, **and the precedent was set one row earlier by the
+  same author**: `provenanceGate.test.ts:236-247` adds a live control beside its negative absence sweep
+  for precisely this reason. Round 4 added a negative sweep over the same payload and omitted it.
+- **C1 (MAJOR) — the rendered-surface serialization is now duplicated across two rows, and the older
+  copy is strictly stronger.** Verified myself: `provenanceGate.test.ts:226` builds
+  `` `${finding.title}\n${finding.message}\n${JSON.stringify(finding.details ?? {})}` `` — it includes
+  **`message`** and maps **every** registered finding; round 4's `repairText.test.ts:704` serializes only
+  `title` + `details` of `findings[0]`. Two hand-rolled shapes for one concept, with eight more rows
+  landing on this payload. This is the shared helper I asked about, and the duplication already exists
+  rather than being hypothetical.
+- **C2 (MINOR, and the sharpest point in the review) — `CLI_SUBCOMMANDS` is an unguarded hand-mirror
+  whose failure direction is a false GREEN.** It currently matches the dispatch exactly (10 `case`
+  labels, verified myself). Nothing enforces that, and a subcommand added to `main.ts` and not here
+  silently narrows tokens 7 and 8 — on the day the registry grows, which is the scheduled event this
+  whole row presumes has not happened yet. The decisive observation: **the file's own rule authorizes
+  the import it elsewhere refuses** — "in a NEGATIVE assertion an over-broad needle can only produce a
+  false RED, never a false GREEN" — so importing the production registry *widens* a negative sweep and
+  the DRY refusal that is correct for the positive needles is inconsistent here.
+- **C3 (MINOR)** — both sweeps read `findings[0]` where the sibling sweeps all findings, and the
+  duplicate-registration case is caught only by a **soft** `toHaveLength(1)`.
+- **M4 (MINOR) — a comment stale on arrival, contradicted 250 lines later in the same commit.**
+  Lines 404-410 state the pin "says nothing about `details`, so the `nextActions` vector remains open …
+  the one violation still constructible after this change"; lines 652-665 of the same commit close
+  exactly that. The single comment a maintainer would trust for "what is not covered" names a hole this
+  commit filled.
+- **M3 (MAJOR) — the evidence destination did not exist, and it invalidated a warrant in shipped
+  source.** Fixed by me this round, and the finding was correct: the ledger cites
+  `implement-spec-0006.md#tdd-0032` while the file was untracked, which is *why* the reviewer had to
+  substitute a superset for the closure. Force-adding follows established practice rather than breaking
+  it — the `*` ignore landed 2026-03-07, `implement-spec-0012.md` was force-added 2026-04-16, and
+  evidence was still being committed through 2026-05-19, so the ignore is a default-off, not a
+  prohibition. **Consequence for the next round**: the warrant in `workflowsIntegrity.ts:110-112` that
+  the evidence directory "is not version controlled" is now **false**, and it is the premise holding up
+  roughly 300 lines of comment.
+- **M1 (MAJOR) — 82% comment, a 1.5× outlier against its own siblings** (`drift` 55%, `provenanceGate`
+  58%). The reviewer supplied the operational line I asked for and it is the right one: **keep a comment
+  iff it changes what a maintainer would do to the code; move it iff it only records how we got here.**
+  It then applied that test block by block, and its ruling on the hardest case is the one worth keeping:
+  the anti-relativization anchor's comment **stays in full, including its three-variant measurement
+  table**, because the invariant is not *believable* without it and the weakening is invisible to the
+  only lane that runs POSIX. The enumeration of defeated candidates goes. Stated as the comment analogue
+  of the file's own assertion standard: *delete when the rule is stated, unless the witness is the only
+  thing that makes the rule believable.*
+- **M2 (MAJOR)** — the header never says legs (b) and (c) of TC-0006-0030 belong to TDD-0038 / TDD-0039,
+  so a reader checking the file against the TC concludes two thirds is unimplemented. The reviewer did.
+- **P1 (MINOR)** — `doctor.ts:376-403` restates the test's regex constraints in prose, creating a second
+  SSOT that silently lies when a needle is loosened.
+
+#### One advisory that is a genuine drift-protocol item, not a nit
+
+**A1 — the contract scopes requirement 4 to the `message`; the new sweep asserts it over `title` and
+`details` too.** `qfai-doctor.md` heads the clause "The message must not name a refresh command" and
+lists the four items under "Required message content". So the assertion is **stricter than the
+contract**, while its failure label is phrased as a contract obligation the contract does not carry. The
+reviewer is explicitly not asking for removal — the vector is measured real and `skills.integrity` ships
+exactly that shape — but per `drift-protocol.md#reviewer-originated-obligations` widening belongs on the
+Change Request path rather than being encoded downstream. Recommended option: widen the clause to "no
+rendered surface of this finding names a command", which is what the code already means. Noted
+countervailing fact: once TDD-0036's four-key `toEqual` lands, a `nextActions` key violates
+BR-0006-0022's key set independently, which may make the widening unnecessary.
+
+#### `FYI-1` — `pnpm check-types` writes into the directory tsup publishes from
+
+`packages/qfai/tsconfig.json` sets `"outDir": "dist"`, so `tsc -b` emits a tsc-shaped `dist/` where
+`tsup` publishes. In the reviewer's run that made `tddCoverageAggregation.test.ts` ("is not reachable
+from the published barrels") fail until the directory was removed. Pre-existing and unrelated to this
+row, but it lands in the same place as the `.bin/tsc` finding recorded upstream today: `check-types` runs
+**before** `test` in `ci:gate`, so the two interact. Both belong to whoever owns the toolchain.
+
+### G4 round 4 gate verdict: REVISE, narrow and record-only — plus the check nobody had run
+
+`qa-gatekeeper` returned **REVISE** with the mechanism **accepted and not to be re-litigated**. Its two
+blockers were **false statements in the delivered file**, not oracle holes — which is a different and
+better kind of REVISE than rounds 1-3 produced.
+
+**It reproduced all five witness mutant blobs byte-for-byte from the comment text alone**
+(`a4d45b35`, `1d5fcad9`, `4d2905d3`, `b6f01467`, `f4ce6377`), and independently screened all 18 pattern
+assertions by **extracting the regex sources programmatically from the test file rather than
+transcribing them** — zero fire on any of the five. "P only" confirmed. That is the by-text rule paying
+off a third time, and it sits in this file directly beside ten rounds that are permanently
+unrecoverable because they were recorded by label.
+
+**The check nobody had recorded in four rounds.** It verified the **pinned string itself** against the
+contract's "Required message content", item by item. All four hold. An exact-equality oracle is only as
+strong as its fixed point, and until this pass nothing had ever tested the fixed point — four rounds of
+attacking the *oracle* while the *expected value* went unaudited.
+
+#### The paste-in limit, measured in both directions
+
+- **P2**: pasting the *reversed repair* into both sides (prod `599d8b1e`, test `d2af8505`) → requirement
+  2's needle **RED**, naming the item. So the file's literal claim is **true**.
+- **P1**: pasting the *governing negation* into both sides (prod `a4d45b35`, test `c23cba4e`) →
+  **1 passed, ALL GREEN**.
+
+So the paste-in defense is a **proper subset of the threat, and it specifically excludes the
+governing-negation class that motivated the pin in the first place.** My round-4 framing implied the
+needles covered the reflex generally; they cover it for requirements 2, 3 and 4. `implementation-reviewer`
+supplied the other half independently: requirement 1 has **no needle in this file at all**, so a paste
+dropping the stale-path clause goes fully green here and is caught only by the sibling drift row.
+
+**Entailment ruling, explicit: keep all three. The exemption applies and they are not dead weight.** P2
+is the proof — the needles catch a class the pin cannot catch once a human has updated it, and their
+labels name the requirement.
+
+#### Field coverage is total, and two hole classes were measured passing
+
+`DoctorCheck` is exactly `{id, severity, title, message, details}` — `id` pinned by the filter,
+`severity` by guard #2, `message` by the pin, `title` + `details` by the sweep. Nothing unswept. Caught
+by measurement: nested objects, arrays of objects, **key names**, title suffixes, prose imperatives,
+escaped quotes. Two classes pass:
+
+- `nextActions: ["qfai\tinit\t--force"]`, blob `77661ef9` — `JSON.stringify` **escapes** the tab, so the
+  serialization holds a backslash then `t` and tokens 1, 4 and 8 all miss. `\n` and `\r\n` identical.
+- `nextActions: ["doctor"]`, blob `a9012bd7` — a bare `report` / `audit` / `doctor` is excluded from
+  token 8 because those collide with this **message's** prose, a justification that does not transfer to
+  a machine surface.
+
+Both **routed away from this row** by both reviewers independently, on the ground that the contract,
+`TC-0006-0030` clause (a) and `BR-0006-0020` all scope the prohibition to the message body, and
+`TDD-0036`'s four-key `toEqual` kills both for free since each needs an extra key.
+
+#### Forward compatibility, verified more strongly than the engineer measured it
+
+The engineer measured `declined: []` — an **empty** array, which is a weak test. The gate measured the
+real payload with `declined` **populated** (blob `a8a219a9`): passes. Both shipped names are clean in
+both positions, because `qfai-validate` puts a hyphen before `validate` (token 8's lookbehind) and after
+`qfai` (token 1 needs `\s`). The space-in-checkout-path false positive needs no pre-emption: it already
+fires on `message` today for the same tree, so `TDD-0036` adds a second firing of an existing
+false-RED, incremental cost zero.
+
+#### Both reviewers hit my `.bin` damage window, and both discarded rather than reported
+
+`qa-gatekeeper` re-ran every gate after verifying root `.bin` at 18 entries.
+`implementation-reviewer`'s first `eslint` returned **127** and an early full-suite run had 13 suites
+failing on `Cannot find module 'is-potential-custom-element-name'`; **both discarded and re-run** on my
+notification. That is the mitigation working, measurably — and it is the only reason those numbers are
+not now recorded here as defects of the code.
+
+Both also independently reported being unable to reproduce the 19-selector closure because the evidence
+file was **gitignored**, and both said so instead of papering over it — one substituted a 27-file
+superset (`177 passed | 14 skipped`), the other a 25-file one (`167 passed | 14 skipped`), with the 14
+skips reconciling exactly in both. Fixed by force-adding the file at `74c09dc0`.
+
+#### Two advisories from the gate, routed not actioned
+
+- **`modified.join(", ")` is an unexercised separator.** No fixture ever drifts two files;
+  `join(" | ")` survives the entire spec-0006 doctor family (blob `d09eaba5`). The contract specifies the
+  multi-file emission and requirement 1 says "**each** stale file". A `TDD-0029` boundary-coverage gap
+  for `delivery-planner`, not this row's.
+- **`title` has no pin in any row** and `TDD-0036` is unlikely to add one, so title-only evasions would
+  outlive it. Reported at low confidence per policy so it is not rediscovered.
+
+**The gate bounded its own verdict explicitly**: it covers oracle strength only, does **not** adjudicate
+the RED/GREEN observation evidence (it could not read the then-untracked evidence file), and does **not**
+ratify item scope — five rounds with zero production behaviour change is a `delivery-planner` question.
+Recorded as owed rather than treated as settled.
+
+---
+
+### G4 round 5: my ruling on the comment target, and a gate I broke
+
+Landed at `46345bd5`. Test `0996469f → e43645e4`; helper `29d87902` (new); `doctor.ts 56fe58d5 → 1d8eab08`
+and `workflowsIntegrity.ts 48e0ef2c → 851f72c3`, **both comments only** — verified by me, non-comment
+diff against `85bb86ce` empty for the **fifth** consecutive round. Row green at the committed blobs
+(`2 passed`; the new control is the second `it`).
+
+#### Ruling: 336 comment lines accepted, not the ~230 I relayed
+
+The engineer declined to resolve this unilaterally and showed the arithmetic instead, which is the right
+call. Keep-verbatim ranges I explicitly protected total **129** lines; round 5's own *required* new
+records cost **~68** (the two constructible violations with blobs, the lookbehind rewrite with its
+measured firing set, the paste-in limit in both directions, the vacuity note, the guard rationale). That
+is **197** before a single discretionary line, leaving ~33 for roughly twenty un-listed notes that each
+pass the keep test.
+
+**Accepted at 336, for three reasons.**
+
+1. **The target was computed on a different basis than the one I then measured.** The reviewer's
+   classifier put the siblings at 55-58%; measured consistently, they are **60% and 62%** and this file
+   is **71%**. The gap is nine points, not twenty-four. I relayed a number without re-deriving it.
+2. **~68 of those lines are round 5's own required records** — measurements that did not exist when the
+   target was set, and exactly the kind the reviewer said to keep.
+3. **Reaching 230 requires evicting explicitly protected material** — the POSIX measurement table (27
+   lines) and the DRY refusals (16) — and the reviewer's own ruling was "`492-520` stays, in full".
+
+The file went **724 → 499 lines, 595 → 336 comments (43% cut)**. Everything moved is verbatim in the
+now-tracked evidence file, so the decision is reversible at zero cost if the next reviewer disagrees.
+
+Related, and accepted on the same logic: the ATDD annotation moved from line 108 to **line 30** rather
+than the siblings' 19-24, because landing it there requires evicting the two needle rules from the
+header, and the keep-list outranks an exact line number.
+
+#### Corrections the engineer made to my order — three of five items
+
+1. **My `dist/` instruction was wrong and would have broken things.** I told it to remove any `dist/` that
+   `tsc -b` created. But `pnpm check-types` **is** `tsc -b`, so the gate emits it by design; the emission
+   pre-dates this session; and removing it would take out the tsup barrels that
+   `dist/cli/index.mjs` invocations need. It created nothing and deleted nothing, and
+   `tddCoverageAggregation.test.ts` runs `7 passed` at the final state.
+2. **It found a better precedent for the C2 guard than the one I gave.** I cited
+   `lintShipping.test.ts` as the source-scanning idiom; `shippedWorkflowOwnership.test.ts` is **inside
+   this row's own 19-selector closure** and already asserts over `src/cli/commands/init.ts` source text
+   with the same non-vacuity floor. It also chose `toContain("doctor")` over set equality or a count,
+   because `doctor` is the command this row's fixture runs and so cannot go stale when another
+   subcommand is retired — which a floor would.
+3. **A keep-verbatim line was factually wrong and it changed it anyway**, correctly: the DRY-refusal
+   block said "including the **seven** negative ones" when there are eight tokens.
+
+And one correction to **my** record, verified independently against the token's own source: round 4's
+coverage map recorded `T1←R42, T4←R42` for the title mutation, but ` - run qfai doctor --force` fires
+**1, 4 and 7**, because `run qfai doctor` satisfies token 7's imperative-plus-subcommand binding.
+
+#### `format:check` was red on this branch for three commits, and it was mine
+
+The engineer found it and **proved it pre-dated its own work** by stashing the five row files and
+re-running — the right method, and it kept the fix out of the row's commit. Both failing files are mine:
+`2026-08-08-chg-007-spec-0006-g5-tier-escalation.md` and the upstream handoff. I confirmed attribution
+precisely: the handoff **passes** at `e21bba16~1` and fails at `HEAD`, so I broke it by appending items
+10 and 11 without running the formatter, and the tier file was unformatted from creation. Three commits
+went out red, which means `ci:lint` was red on this branch the whole time.
+
+Fixed at `353e2acc`; the change is cosmetic only (prettier normalising `*emphasis*` to `_emphasis_`
+across six lines) and full `pnpm format:check` is now green.
+
+**The lesson is not "run prettier".** It is that I have been treating `.qfai/steering/**` and
+`.qfai/evidence/**` as prose outside the toolchain, when `format:check` is `prettier -c .` — the whole
+tree. Every artifact I author is inside a gate I was only running against code.
