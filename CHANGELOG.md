@@ -4,6 +4,29 @@
 
 ## [Unreleased]
 
+### Added
+
+- **`D-SCAFFOLD-FOREIGN-HOME` (warning)** replaces the placeholder gate for an
+  L4/L5 skeleton a pre-upgrade `qfai atdd scaffold` already wrote into
+  `tests/integration/**`. The command stopped generating those, but the ones on
+  disk kept escalating `D-SCAFFOLD-PLACEHOLDER` and telling the operator to
+  implement an assertion — which discharges nothing, because the TC's declared
+  `Level` routes elsewhere and `QFAI-ATDD-123` rejects the annotation wherever
+  the file sits. The new finding names the move-or-delete remediation and does
+  not escalate: escalation exists to pressure an operator into writing the
+  assertion, which is not what this one needs.
+- **`TDDLIST_COVERAGE_LAYER_MISMATCH` (warning)** reports a coverage-target TC
+  discharged only from a row whose `Layer` contradicts its declared `Level` — a
+  `Level = L1` TC closed by a `Layer = Integration` row alone. Coverage counted
+  any non-API/E2E row, so with L1/L2 out of `QFAI-ATDD-112` nothing asked for
+  the unit test. It is a warning, not an error: every ledger written before this
+  check could carry one (this repository has five), and escalating on the
+  release that introduces the rule is a zero-length window. The row still counts
+  as coverage today; the finding announces the escalation.
+- **`QFAI-ATDD-117` (info)** names the TCs excluded from the annotation
+  obligation on every run. A silent exclusion is indistinguishable from a scan
+  that matched nothing, which is how the JS-only test glob survived a release.
+
 ### Changed
 
 - **`qfai report` counts the test cases `qfai validate` gates.** The gate reads
@@ -381,28 +404,15 @@ report` as well, which was computing `done: 1 / open: 0` from the same
   undeclared and its own ledger row became a `TDDLIST_UNKNOWN_REF`. A `TC-*` on
   an E2E/API row still does not count towards coverage, wherever that row lives.
 
-### Added
+### Fixed
 
-- **`D-SCAFFOLD-FOREIGN-HOME` (warning)** replaces the placeholder gate for an
-  L4/L5 skeleton a pre-upgrade `qfai atdd scaffold` already wrote into
-  `tests/integration/**`. The command stopped generating those, but the ones on
-  disk kept escalating `D-SCAFFOLD-PLACEHOLDER` and telling the operator to
-  implement an assertion — which discharges nothing, because the TC's declared
-  `Level` routes elsewhere and `QFAI-ATDD-123` rejects the annotation wherever
-  the file sits. The new finding names the move-or-delete remediation and does
-  not escalate: escalation exists to pressure an operator into writing the
-  assertion, which is not what this one needs.
-- **`TDDLIST_COVERAGE_LAYER_MISMATCH` (warning)** reports a coverage-target TC
-  discharged only from a row whose `Layer` contradicts its declared `Level` — a
-  `Level = L1` TC closed by a `Layer = Integration` row alone. Coverage counted
-  any non-API/E2E row, so with L1/L2 out of `QFAI-ATDD-112` nothing asked for
-  the unit test. It is a warning, not an error: every ledger written before this
-  check could carry one (this repository has five), and escalating on the
-  release that introduces the rule is a zero-length window. The row still counts
-  as coverage today; the finding announces the escalation.
-- **`QFAI-ATDD-117` (info)** names the TCs excluded from the annotation
-  obligation on every run. A silent exclusion is indistinguishable from a scan
-  that matched nothing, which is how the JS-only test glob survived a release.
+- **`qfai-implement`'s primary spec-completion condition is a list item again.**
+  A missing newline joined `- Each item reached \`done\` or valid \`exception\`
+  (with DR-ID)`to the tail of the bullet above it, and because the joined line
+is a two-space continuation, markdown rendered the condition as trailing prose
+inside a bullet about the`QFAI-ATDD-111`/`QFAI-ATDD-113`hard gate. The
+words were all still there, so nothing flagged it — while the clause had no
+line of its own, and downstream Decision Records that cite it by`file:line`pointed at a line it does not occupy.`tests/assets/swallowedListItem.test.ts`now scans the shipped`assistant/\*\*` tree for a list marker stranded mid-line.
 
 ## [1.10.0] - 2026-08-03
 
