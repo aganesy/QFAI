@@ -80,7 +80,7 @@ Five times in this slice a recorded model has been invalidated by a neighbouring
 ruling (twice), an assumption that a sibling's `toBe` covered the drift `title`, a `details` premise
 that had never been measured, and now this attribution. The cause is structural: **every row in this
 ledger writes the same two production modules and the same emission site**, so any coverage attribution
-naming a mutation there is a claim about a *revision*, not a fact.
+naming a mutation there is a claim about a _revision_, not a fact.
 
 The rule one reviewer derived from its own error — "a reach ruling must be re-derived from the current
 file, never recalled" — is therefore not reviewer hygiene but a property of this ledger's shape. The

@@ -175,7 +175,7 @@ the slice entirely. What is certain is the current state and that it contradicts
 **Suggested fix, for the owner to judge**: give the RC a non-colliding bin (or drop its bin linkage) so
 `.bin/tsc` unambiguously means the pinned compiler, and have `check-types` assert the version it is
 about to run rather than trusting resolution — the same principle this slice applied to vitest
-selectors, where a gate that cannot report *which* thing it measured cannot be trusted to have measured
+selectors, where a gate that cannot report _which_ thing it measured cannot be trusted to have measured
 the right one.
 
 ## 11. Requirement 4 of the drift advisory is contract-scoped to the `message`, but the real hazard is any rendered surface
@@ -184,8 +184,8 @@ Owner: `/qfai-sdd --contract` against `.qfai/contracts/cli/qfai-doctor.md`. Non-
 single pass so `TDD-0036` / `TDD-0037` inherit a resolved contract.
 
 **Both reviewers reached this independently**, which is why it is recorded rather than left as a
-preference. The contract heads the clause *"### The message must not name a refresh command"* and lists
-its four items under *"Required message content"*; `TC-0006-0030` clause (a) and `BR-0006-0020` likewise
+preference. The contract heads the clause _"### The message must not name a refresh command"_ and lists
+its four items under _"Required message content"_; `TC-0006-0030` clause (a) and `BR-0006-0020` likewise
 scope the prohibition to the **finding message body**. So `title` and `details` are outside it.
 
 **But the vector is measured real on those surfaces, not hypothetical.** During round 4:
@@ -198,8 +198,8 @@ scope the prohibition to the **finding message body**. So `title` and `details` 
 So an implementer could satisfy the contract to the letter and still ship the operator an instruction to
 run a command that does not exist — which is the harm the clause names.
 
-**Two options for the owner.** Recommended: **widen the clause** to something like *"no rendered surface
-of this finding — `message`, `title` or `details` — names a refresh command or CLI verb"*, because that
+**Two options for the owner.** Recommended: **widen the clause** to something like _"no rendered surface
+of this finding — `message`, `title` or `details` — names a refresh command or CLI verb"_, because that
 is what the code already means and what an operator actually reads under `--format json`, where key names
 are part of the output. Alternative: leave the contract message-scoped and keep the sweep labelled as a
 deliberate defensive over-approximation, which is what round 5 does in the interim.
