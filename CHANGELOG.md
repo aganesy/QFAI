@@ -24,6 +24,24 @@
 
 ### Fixed
 
+- **Ownership of an integration wrapper is the roster `qfai init` ships.** It
+  was every directory in the project's own canonical tree, but
+  `.qfai/assistant/skills/<own>/SKILL.md` is an allowed project-owned location
+  and init enumerates what to wrap from the package assets, never from the
+  project — so a hand-published `.claude/skills/my-skill` was reported as a
+  broken qfai link in every profile. The roster is the shipped set intersected
+  with what the project has, which also keeps a removed skill's stale wrapper
+  out of scope.
+- **A failing filesystem no longer reads as a healthy surface.** The roster read
+  and the wrapper probe folded every error into "absent", and absent is the
+  benign case — an empty roster takes the early return, an absent wrapper is
+  skipped. `EACCES` on the canonical tree therefore produced a clean
+  `QFAI-LINK-001` pass at exactly the moment the assistant could load nothing.
+  Only `ENOENT` / `ENOTDIR` mean absent; everything else propagates.
+- **`qfai init --dry-run` no longer reports a repair it did not make.** The
+  removal and the recreate are both suppressed under `--dry-run`, but the
+  flattened-link log said `repaired` unconditionally — to the one invocation
+  whose whole purpose is to preview. It says `would repair` there now.
 - **`qfai init` repairs a flattened link instead of skipping it.**
   `ensureSymlink` returned `"skipped"` for any existing non-symlink unless
   `--force` was passed, and skipped paths print as a plain list — so the one

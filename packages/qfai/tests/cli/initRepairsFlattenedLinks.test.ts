@@ -56,6 +56,28 @@ describe("qfai init repairs a link a checkout flattened", () => {
     });
   });
 
+  it("reports a dry run as a repair it would make, and makes none", async () => {
+    // Both the removal and the recreate are behind `!options.dryRun`, so the
+    // unconditional "repaired" line told the one invocation whose whole purpose
+    // is to preview that a broken file had been fixed.
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const linkPath = path.join(root, LINK);
+      await rm(linkPath, { recursive: true, force: true });
+      await mkdir(path.dirname(linkPath), { recursive: true });
+      await writeFile(linkPath, "../../.qfai/assistant/skills/qfai-atdd", "utf-8");
+
+      const stdout = await captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: true, yes: true }),
+      );
+
+      expect(stdout).toContain("would repair");
+      expect(stdout).not.toContain("  repaired:");
+      expect((await lstat(linkPath)).isSymbolicLink()).toBe(false);
+    });
+  });
+
   it("leaves a healthy link alone and does not announce a repair", async () => {
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });

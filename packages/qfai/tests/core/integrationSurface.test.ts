@@ -271,3 +271,46 @@ describe("the probed list stays in step with what init builds", () => {
     ]);
   });
 });
+
+describe("ownership is the roster init ships, not the canonical tree", () => {
+  it("ignores a project-owned skill published by hand", async () => {
+    // `.qfai/assistant/skills/<own>/SKILL.md` is an allowed project-owned
+    // location — `skillDocReferences` permits it — and `qfai init` enumerates
+    // what to wrap from the package assets, never from the project. Treating
+    // every canonical directory as qfai-owned turned a hand-published
+    // `.claude/skills/my-skill` directory into a QFAI-LINK-001 in every
+    // profile.
+    await withProject(async (root) => {
+      await seedCanonical(root, ["qfai-atdd", "my-skill"], []);
+      const mine = path.join(root, ".claude", "skills", "my-skill");
+      await mkdir(mine, { recursive: true });
+      await writeFile(path.join(mine, "SKILL.md"), "# mine\n", "utf-8");
+
+      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
+
+  it("ignores a project-owned agent published by hand", async () => {
+    await withProject(async (root) => {
+      await seedCanonical(root, [], ["qa-gatekeeper", "our-reviewer"]);
+      const agents = path.join(root, ".claude", "agents");
+      await mkdir(agents, { recursive: true });
+      await writeFile(path.join(agents, "our-reviewer.md"), "# ours\n", "utf-8");
+
+      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
+
+  it("still reports a shipped skill whose wrapper was flattened", async () => {
+    // The narrowing must not cost the rule its reason for existing.
+    await withProject(async (root) => {
+      await seedCanonical(root, ["qfai-atdd", "my-skill"], []);
+      const flattened = path.join(root, ".claude", "skills", "qfai-atdd");
+      await mkdir(path.dirname(flattened), { recursive: true });
+      await writeFile(flattened, skillTarget(".claude/skills", "qfai-atdd"), "utf-8");
+
+      const issues = await validateIntegrationSurface(root);
+      expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-001"]);
+    });
+  });
+});

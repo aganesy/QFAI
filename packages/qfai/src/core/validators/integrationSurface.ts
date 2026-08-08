@@ -1,6 +1,8 @@
+import type { Dirent } from "node:fs";
 import { lstat, readdir, readlink, stat } from "node:fs/promises";
 import path from "node:path";
 
+import { getInitAssetsDir } from "../../shared/assets.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
@@ -30,6 +32,29 @@ export const INTEGRATION_SURFACE_DIRS: readonly string[] = [
   ...AGENT_WRAPPER_DIRS.map((entry) => entry.dir),
 ];
 
+/**
+ * Directory entries, or `null` when the directory does not exist.
+ *
+ * Absence is the only condition this rule may treat as "nothing to check".
+ * `catch(() => [])` also swallowed `EACCES` and transient I/O errors, turning
+ * the roster empty and taking the early return — so the harder the filesystem
+ * was failing, the more confidently `QFAI-LINK-001` reported a clean surface.
+ * Everything that is not `ENOENT` / `ENOTDIR` propagates.
+ */
+async function readDirOrNull(dir: string): Promise<Dirent[] | null> {
+  try {
+    return await readdir(dir, { withFileTypes: true });
+  } catch (error) {
+    if (isMissing(error)) return null;
+    throw error;
+  }
+}
+
+function isMissing(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException | null)?.code;
+  return code === "ENOENT" || code === "ENOTDIR";
+}
+
 type Broken = {
   /** Repo-relative wrapper path, POSIX-separated so messages match across platforms. */
   relative: string;
@@ -39,42 +64,70 @@ type Broken = {
 const toPosix = (value: string): string => value.split(path.sep).join("/");
 
 /**
- * The skills `qfai init` would create a wrapper for: every directory under the
- * project's canonical tree that carries a `SKILL.md`.
+ * The skills `qfai init` would create a wrapper for.
  *
- * Read from the project rather than assumed, and never from a name prefix. A
- * `qfai-` prefix test skipped `web-research` — a shipped canonical skill that
- * init wraps like any other — so a flattened `web-research` link passed the
- * check while the assistant could not load it.
+ * Two rosters, intersected, because each alone is wrong:
+ *
+ * - **Shipped** (`assets/init`) is what init actually wraps. The project's own
+ *   canonical tree is not: a user-defined `.qfai/assistant/skills/my-skill/`
+ *   is explicitly allowed there — `skillDocReferences` permits it — and init
+ *   never creates a wrapper for it, so publishing it by hand as a real
+ *   directory would have been reported as a broken qfai link in every profile.
+ * - **Present in the project** keeps a removed skill out of scope. Its wrapper
+ *   is stale rather than broken, which is what `pruneStaleQfaiWrappers` clears
+ *   under `--force`.
+ *
+ * Never a name prefix. A `qfai-` prefix test skipped `web-research` — a shipped
+ * skill init wraps like any other — so a flattened `web-research` link passed
+ * the check while the assistant could not load it.
  */
 async function canonicalSkillIds(root: string): Promise<string[]> {
-  const skillsDir = path.join(root, ".qfai", "assistant", "skills");
-  const entries = await readdir(skillsDir, { withFileTypes: true }).catch(() => []);
-  const ids: string[] = [];
-  for (const entry of entries) {
+  const shipped = await skillIdsIn(path.join(getInitAssetsDir(), ".qfai", "assistant", "skills"));
+  if (shipped.size === 0) return [];
+  const present = await skillIdsIn(path.join(root, ".qfai", "assistant", "skills"));
+  return Array.from(present)
+    .filter((id) => shipped.has(id))
+    .sort();
+}
+
+/** Directory names under `skillsDir` that carry a `SKILL.md`. */
+async function skillIdsIn(skillsDir: string): Promise<Set<string>> {
+  const entries = await readDirOrNull(skillsDir);
+  const ids = new Set<string>();
+  for (const entry of entries ?? []) {
     if (!entry.isDirectory()) continue;
     if (await exists(path.join(skillsDir, entry.name, "SKILL.md"))) {
-      ids.push(entry.name);
+      ids.add(entry.name);
     }
   }
-  return ids.sort();
+  return ids;
 }
 
 /**
- * The agents `qfai init` would create a wrapper for.
+ * The agents `qfai init` would create a wrapper for. Same two rosters, same
+ * reasons as {@link canonicalSkillIds}.
  *
- * Also read from the canonical tree. Treating every non-README `*.md` in
- * `.claude/agents` as qfai-owned turned a project's own agent definition into a
- * `QFAI-LINK-001` error in every profile — the opposite of the rule's stated
- * scope.
+ * Treating every non-README `*.md` in `.claude/agents` as qfai-owned turned a
+ * project's own agent definition into a `QFAI-LINK-001` error in every profile
+ * — the opposite of the rule's stated scope.
  */
 async function canonicalAgentNames(root: string): Promise<string[]> {
-  const agentsDir = path.join(root, ".qfai", "assistant", "agents");
-  const entries = await readdir(agentsDir, { withFileTypes: true }).catch(() => []);
-  return entries
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".md") && entry.name !== "README.md")
-    .map((entry) => entry.name.slice(0, -".md".length))
+  const shipped = await agentNamesIn(path.join(getInitAssetsDir(), ".qfai", "assistant", "agents"));
+  if (shipped.size === 0) return [];
+  const present = await agentNamesIn(path.join(root, ".qfai", "assistant", "agents"));
+  return Array.from(present)
+    .filter((name) => shipped.has(name))
     .sort();
+}
+
+/** Agent document basenames under `agentsDir`, `README` excluded. */
+async function agentNamesIn(agentsDir: string): Promise<Set<string>> {
+  const entries = await readDirOrNull(agentsDir);
+  return new Set(
+    (entries ?? [])
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".md") && entry.name !== "README.md")
+      .map((entry) => entry.name.slice(0, -".md".length)),
+  );
 }
 
 /** The wrapper path and the exact link target `qfai init` writes for it. */
@@ -138,7 +191,14 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
   const broken: Broken[] = [];
 
   for (const wrapper of wrapperSet(root, skills, agents)) {
-    const link = await lstat(wrapper.absolute).catch(() => null);
+    // Same rule as the roster read: absent is "not created yet", and an older
+    // project legitimately predates a newly shipped skill. A wrapper that
+    // exists but cannot be stat'd is a filesystem failure and must not read as
+    // one that was never created.
+    const link = await lstat(wrapper.absolute).catch((error: unknown) => {
+      if (isMissing(error)) return null;
+      throw error;
+    });
     if (link === null) {
       continue;
     }

@@ -1111,7 +1111,14 @@ async function ensureSymlink(
       if (!options.dryRun) {
         await rm(linkPath, { recursive: true, force: true });
       }
-      info(`  repaired: ${linkPath} was a flattened symlink (recreating)`);
+      // Both the removal above and the `symlink` below are suppressed under
+      // `--dry-run`; saying "repaired" there reported a repair that did not
+      // happen, to the one invocation whose whole purpose is to preview.
+      info(
+        options.dryRun
+          ? `  would repair: ${linkPath} is a flattened symlink`
+          : `  repaired: ${linkPath} was a flattened symlink (recreating)`,
+      );
     } else {
       // Regular file or directory with content of its own — a customised agent
       // wrapper, or a generated link replaced by a real directory. Preserve it

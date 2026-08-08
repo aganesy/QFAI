@@ -1,0 +1,103 @@
+/**
+ * A filesystem that is failing must not read as a surface that is fine.
+ *
+ * The roster read was `readdir(...).catch(() => [])` and the wrapper probe was
+ * `lstat(...).catch(() => null)`. Both fold every error into "absent", and
+ * absent is the benign case: an empty roster takes the early return and an
+ * absent wrapper is skipped, so `EACCES` on `.qfai/assistant/skills` — or a
+ * disk erroring under the wrapper directories — produced a clean
+ * `QFAI-LINK-001` pass at exactly the moment the assistant could load nothing.
+ *
+ * Only `ENOENT` / `ENOTDIR` mean absent. This file lives apart from
+ * `integrationSurface.test.ts` because `vi.mock` is hoisted to module scope and
+ * would otherwise apply to every case in that file.
+ */
+
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+import type * as fsPromises from "node:fs/promises";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+type FsPromises = typeof fsPromises;
+
+const { readdirSpy, lstatSpy } = vi.hoisted(() => ({
+  readdirSpy: vi.fn(),
+  lstatSpy: vi.fn(),
+}));
+
+vi.mock("node:fs/promises", async () => {
+  const actual = await vi.importActual<FsPromises>("node:fs/promises");
+  return {
+    ...actual,
+    readdir: (...args: unknown[]) => readdirSpy(actual, ...args),
+    lstat: (...args: unknown[]) => lstatSpy(actual, ...args),
+  };
+});
+
+const { validateIntegrationSurface } =
+  await import("../../src/core/validators/integrationSurface.js");
+
+function errno(code: string): NodeJS.ErrnoException {
+  const error = new Error(`simulated ${code}`) as NodeJS.ErrnoException;
+  error.code = code;
+  return error;
+}
+
+async function withProject(task: (root: string) => Promise<void>): Promise<void> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-link-errors-"));
+  try {
+    await task(root);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+/** A canonical tree with one shipped skill, so the roster is non-empty. */
+async function seedCanonical(root: string): Promise<void> {
+  const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, "SKILL.md"), "# skill\n", "utf-8");
+}
+
+beforeEach(() => {
+  readdirSpy.mockReset();
+  lstatSpy.mockReset();
+  readdirSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.readdir(...args));
+  lstatSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.lstat(...args));
+});
+
+describe("validateIntegrationSurface read errors", () => {
+  it("propagates EACCES on the canonical skills directory", async () => {
+    await withProject(async (root) => {
+      await seedCanonical(root);
+      readdirSpy.mockImplementation((actual: FsPromises, dir: string, ...rest: never[]) =>
+        dir.endsWith(path.join("assistant", "skills"))
+          ? Promise.reject(errno("EACCES"))
+          : actual.readdir(dir, ...rest),
+      );
+
+      await expect(validateIntegrationSurface(root)).rejects.toThrow("simulated EACCES");
+    });
+  });
+
+  it("propagates EIO on a wrapper probe", async () => {
+    await withProject(async (root) => {
+      await seedCanonical(root);
+      lstatSpy.mockImplementation(() => Promise.reject(errno("EIO")));
+
+      await expect(validateIntegrationSurface(root)).rejects.toThrow("simulated EIO");
+    });
+  });
+
+  it("still treats a missing directory as nothing to check", async () => {
+    await withProject(async (root) => {
+      await seedCanonical(root);
+
+      // No wrapper directories exist at all — the ordinary state of a project
+      // that has not run `qfai init` yet, and not a finding.
+      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
+});
