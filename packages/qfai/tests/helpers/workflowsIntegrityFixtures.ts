@@ -6,9 +6,8 @@
  * whatever the shipped write path actually produces rather than a hand-built
  * imitation of it. On top of that the mutations the drift suites need are
  * exposed: hand-edit an installed workflow, delete one, and make one
- * unreadable. One renderer joins a finding set's operator-visible fields for
- * the drift suites' negative sweeps. Pure test plumbing — no assertions live
- * here.
+ * unreadable. One renderer serializes a finding set whole for the drift suites'
+ * negative sweeps. Pure test plumbing — no assertions live here.
  *
  * The temp-directory pool is handed out by `useAdopterTreePool()` rather than
  * registered at this module's top level: `useTempDirPool` calls `afterEach`,
@@ -21,7 +20,6 @@ import { appendFile, mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { runInit } from "../../src/cli/commands/init.js";
-import type { DoctorCheck } from "../../src/core/doctor.js";
 import { useTempDirPool } from "./shippedWorkflowFixtures.js";
 import { captureStdout } from "./stdout.js";
 
@@ -29,8 +27,8 @@ import { captureStdout } from "./stdout.js";
 export const ADOPTER_WORKFLOWS_DIR = ".github/workflows";
 
 /**
- * Every field an operator can read, of EVERY finding in the set, as one string:
- * `title`, `message`, and the SERIALIZED `details` of each.
+ * A finding set serialized WHOLE, as one string: every own field of every
+ * finding, key names included.
  *
  * FOR NEGATIVE SWEEPS ONLY (`not.toContain` / `not.toMatch`). Two properties
  * make it safe there and unsafe anywhere else:
@@ -40,33 +38,41 @@ export const ADOPTER_WORKFLOWS_DIR = ".github/workflows";
  *   - payload growth can only ADD haystack, so a future key can widen a
  *     caller's needle into a false RED but can never narrow it into a false
  *     GREEN.
- * The whole SET is mapped, not `findings[0]`: `addCheck` is a bare push with no
- * dedup, so a second registration carrying different prose would otherwise be
- * invisible to the sweep.
+ * The whole SET, not `findings[0]`: `addCheck` is a bare push with no dedup, so
+ * a second registration carrying different prose would otherwise be invisible.
  *
- * `JSON.stringify` rather than joining values: the KEY NAMES are part of what
- * an operator reads under `qfai doctor --format json`, so a key literally
- * called `nextActions` must be visible to a sweep even if its value alone were
- * clean.
+ * NO FIELD IS NAMED HERE, which is the point rather than terseness. The
+ * three-field form this replaced (`title`, `message`, serialized `details`) had
+ * two failure modes and NO GATE THAT CATCHES EITHER — a RENAMED field put the
+ * string `undefined` in the haystack and swept nothing, an ADDED one was
+ * silently unswept — because NOTHING in this repository type-checks a test
+ * file: the `tests` tree is outside the `include` of both tsconfigs (measured:
+ * `tsc -b --force --listFiles` names 0 files under it) and `eslint.config.js`
+ * puts `disableTypeChecked` on it. Serializing closes both modes — the haystack
+ * is whatever the finding holds, whatever its keys are called.
  *
- * KNOWN LIMIT: the three fields are named explicitly, so a RENAMED field
- * breaks compilation (the parameter is `DoctorCheck`) while an ADDED top-level
- * field is silently unswept. A new rendered field on `DoctorCheck` must be
- * added here in the same commit.
+ * `JSON.stringify` and not a join of values: the KEY NAMES are part of what an
+ * operator reads under `qfai doctor --format json`, so a key literally called
+ * `nextActions` must be visible to a sweep even if its value alone were clean.
+ * ESCAPING is the price and is NOT closed here — a tab inside a value becomes an
+ * escape sequence no whitespace-anchored needle can see — so a row needing that
+ * closed pins the key set instead. `readonly object[]` rather than
+ * `DoctorCheck[]` so a caller may pass a PROJECTION: the repair-text row drops
+ * `message` to keep its two sweeps non-overlapping.
  *
- * `spec0006WorkflowsIntegrity.provenanceGate.test.ts` (TDD-0033) carries the
- * original of this expression inline and is deliberately NOT edited to call it:
- * that row sits at `refactor` with three reviewer PASSes, and a DRY win does
- * not justify invalidating a completed review. This helper is byte-equivalent
- * to that expression for a single-finding set — adopt it there the next time
- * that file is touched for its own reasons.
+ * `spec0006WorkflowsIntegrity.provenanceGate.test.ts` (TDD-0033) carries a
+ * three-field ancestor of this expression inline and is deliberately NOT edited
+ * to call it. SCOPE HYGIENE, not a safety claim: that row is at `refactor`,
+ * adoption costs one selector run, and this helper is STRONGER FOR THAT ROW'S
+ * NEEDLE — `id` and `severity` join the haystack, and the escaping the swap adds
+ * cannot break a bare filename, which carries no character `JSON.stringify`
+ * rewrites. NOT stronger unconditionally: a needle spanning whitespace or a
+ * backslash would have to be re-measured against the escaped form. Carried out
+ * of this round as named routing; until it lands this helper has one consumer
+ * and the DRY win is zero.
  */
-export function renderFindingSurface(findings: readonly DoctorCheck[]): string {
-  return findings
-    .map(
-      (finding) => `${finding.title}\n${finding.message}\n${JSON.stringify(finding.details ?? {})}`,
-    )
-    .join("\n");
+export function renderFindingSurface(findings: readonly object[]): string {
+  return JSON.stringify(findings);
 }
 
 /** Absolute path of one installed shipped workflow inside an adopter tree. */

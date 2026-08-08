@@ -82,12 +82,10 @@ function escapeForRegExp(value: string): string {
  * direction of a stale hand-mirror is a FALSE GREEN: a subcommand present in the
  * dispatch and missing here silently narrows tokens 7 and 8. Mirrored rather
  * than imported to keep this row's zero-production-change record; the guard
- * supplies what the import would have.
- *
- * The FULL registry is admissible because token 7 binds the imperative to the
- * subcommand (rule 2) instead of sampling bare verbs. An earlier form dropped
- * `report`, `audit` and `doctor` to stop over-firing on compliant prose, and
- * thereby admitted three ALL-GREEN violations naming real modes of `doctor`.
+ * supplies what the import would have. "NO omissions" is that guard's measured
+ * reach and not a hope — it holds for every `case ` line, including one whose
+ * label the extractor cannot parse. Both tokens 7 and 8 take the FULL registry;
+ * token 8's note carries the constraint that puts on the message.
  */
 const CLI_SUBCOMMANDS = [
   "init",
@@ -101,18 +99,6 @@ const CLI_SUBCOMMANDS = [
   "discussion",
   "prototyping",
 ] as const;
-
-/**
- * The subset safe to match as a BARE word, for token 8. Excludes exactly the
- * three that collide with doctor's own prose vocabulary ("this check will report
- * the difference", "see the audit trail" — measured FIRING), on the criterion
- * this file applies throughout: drop a token when its over-fire happens on prose
- * a compliant author would write, keep it when the over-fire needs something
- * pathological.
- */
-const BARE_SUBCOMMANDS = CLI_SUBCOMMANDS.filter(
-  (name) => name !== "report" && name !== "audit" && name !== "doctor",
-);
 
 /**
  * Tokens whose presence in the advisory would make it name a command.
@@ -192,7 +178,19 @@ const COMMAND_TOKENS: RegExp[] = [
   // imperative through — measured, `\b(?:…)\b(?![\\/@.])` is GREEN on `re-run
   // init.` and on `To repair, validate.` where the form below reddens both. Do
   // not add `.` back to silence a path false positive; widen the lookbehind.
-  new RegExp(`(?<![\\\\/@.\\w-])(?:${BARE_SUBCOMMANDS.join("|")})\\b(?![\\\\/@])`, "i"),
+  //
+  // THE FULL REGISTRY, `report` / `audit` / `doctor` included. An earlier form
+  // dropped those three because compliant prose MIGHT fire on them ("this check
+  // will report the difference") — a narrowing of a NEGATIVE needle to avoid a
+  // false RED, which is the one move the rule at the head of this list forbids,
+  // and it admitted three ALL-GREEN violations (`nextActions: ["doctor"]` /
+  // `["report"]` / `["audit"]`). Its false-RED risk is bounded by the equality
+  // pin: any rewording already reddens that, so this token can only add a
+  // labelled failure beside it. CONSTRAINT ON THE MESSAGE, recorded as token 1's
+  // is: it may not use those three as BARE WORDS. The shipped text says
+  // "reports", which the trailing `\b` rejects — measured on the message, the
+  // title and the whole rendered surface, not inferred from one of them.
+  new RegExp(`(?<![\\\\/@.\\w-])(?:${CLI_SUBCOMMANDS.join("|")})\\b(?![\\\\/@])`, "i"),
 ];
 
 describe(
@@ -273,19 +271,18 @@ describe(
       //
       // The pin says nothing about `title` or `details`; both are swept below,
       // which closed the `nextActions` vector (`["qfai init --force"]`, the shape
-      // `skills.integrity` ships, fires tokens 1, 4 and 8). TWO VIOLATIONS REMAIN
-      // CONSTRUCTIBLE, measured GREEN through this row and RECORDED rather than
-      // closed — each needs an EXTRA `details` key, so TDD-0036's `toEqual` on
-      // BR-0006-0022's closed four-key payload kills both for free and that key
-      // set is its row's business, not this one's:
-      //   - `nextActions: ["qfai\tinit\t--force"]` (mutant `77661ef9`).
-      //     `JSON.stringify` ESCAPES the tab, so the serialization holds a
-      //     backslash then `t` rather than whitespace, and tokens 1, 4 and 8 all
-      //     miss. `\n` and `\r\n` behave identically (measured).
-      //   - `nextActions: ["doctor"]` (mutant `a9012bd7`). A bare `report`,
-      //     `audit` or `doctor` sits outside token 8 because those collide with
-      //     THIS MESSAGE's prose — a justification that does not transfer to a
-      //     machine surface, where no prose is being written.
+      // `skills.integrity` ships, fires tokens 1, 4 and 8 — mutant `0670aa46`).
+      // ONE VIOLATION REMAINS CONSTRUCTIBLE, measured GREEN through this row and
+      // RECORDED rather than closed: `nextActions: ["qfai\tinit\t--force"]`
+      // (mutant `192751ee`). `JSON.stringify` ESCAPES the tab, so the
+      // serialization holds a backslash then `t` rather than whitespace, and
+      // tokens 1, 4 and 8 all miss; `\n` and `\r\n` behave identically
+      // (measured). It needs an EXTRA `details` key, so TDD-0036's `toEqual` on
+      // BR-0006-0022's closed four-key payload kills it for free and that key set
+      // is its row's business, not this one's. The bare-subcommand vector that
+      // used to sit beside it — `["doctor"]` (`653dd950`), `["report"]`
+      // (`55de1f13`), `["audit"]` (`74c13b46`), all three ALL-GREEN — is CLOSED
+      // by token 8's full registry, not by a key set.
       const expectedMessage =
         `installed shipped workflow(s) differ from the packaged copy: ${ADOPTER_STALE_PATH}. ` +
         `Manual repair: replace each listed file with the copy of the same name in ${shippedWorkflowsDir()}. ` +
@@ -401,8 +398,8 @@ describe(
           .not.toMatch(token);
       }
 
-      // THE SAME SWEEP OVER THE WHOLE RENDERED SURFACE — `title`, `message` and
-      // the serialized `details` of EVERY registered finding.
+      // THE SAME SWEEP OVER EVERY OTHER RENDERED FIELD of EVERY registered
+      // finding — `id`, `severity`, `title` and `details`, serialized whole.
       //
       // DELIBERATELY STRICTER THAN THE CONTRACT, and the label says so instead of
       // claiming an obligation the contract does not carry: TC-0006-0030 clause
@@ -416,15 +413,29 @@ describe(
       // Sweeping a SERIALIZATION rather than a pinned key set keeps it out of
       // BR-0006-0022's territory: it adds no expectation about which keys exist,
       // so TDD-0036 stays free to `toEqual` the four-key payload — measured clean
-      // against that payload on both platforms. The `message`-only sweep above is
-      // NOT deleted as entailed: its label is the only one stating requirement 4
-      // as the contract states it, which is this file's kept-line standard.
-      const renderedSurface = renderFindingSurface(findings);
+      // against that payload on both platforms.
+      //
+      // `message` IS PROJECTED OUT so the two sweeps do not overlap. They did:
+      // `message` is a contiguous substring of the serialization and no token
+      // distinguishes the haystacks, so ONE appended sentence reddened both loops
+      // — seven failures, three of them exact duplicates (prod `4ab1083b`); now
+      // four. A DENY-list, never an allow-list: a field added to `DoctorCheck`
+      // lands here automatically, and a RENAMED `message` merely stops being
+      // omitted, restoring the duplicates — false RED at worst, never a gap.
+      //
+      // The `message`-only sweep above is NOT deleted as entailed: its label is
+      // the only one stating requirement 4 as the contract states it, which is
+      // this file's kept-line standard. It reads `findings[0]` where this one
+      // reads the whole set, so a SECOND registration's message is swept by
+      // neither — held by `toHaveLength(1)` above, which reddens on one.
+      const renderedSurface = renderFindingSurface(
+        findings.map(({ message: _message, ...rest }) => rest),
+      );
       for (const token of COMMAND_TOKENS) {
         expect
           .soft(
             renderedSurface,
-            `deliberate over-approximation of requirement 4 (the contract scopes it to the message body): no rendered field of any finding may name a command, because \`details.nextActions\` is where the sibling check ships \`qfai init --force\`: token /${token.source}/ matched`,
+            `deliberate over-approximation of requirement 4 (the contract scopes it to the message body): no rendered field of any finding OTHER THAN THE MESSAGE — swept separately above — may name a command, because \`details.nextActions\` is where the sibling check ships \`qfai init --force\`: token /${token.source}/ matched`,
           )
           .not.toMatch(token);
       }
@@ -434,17 +445,16 @@ describe(
       // optional on `DoctorCheck`, so deleting the whole `details` block from the
       // drift emission left `tsc -b` at 0 and this row at `1 passed` — the half
       // whose entire purpose is closing the `nextActions` vector. Mutants
-      // `7d8e402f` (against `doctor.ts 56fe58d5`) and `6a06270e` (re-measured
-      // here); this line is the sole reacher of both. `?? {}` in the helper is
-      // NOT the cause and changing it would not help: `JSON.stringify({ details:
-      // undefined })` is equally token-clean (measured), so the fallback is a
-      // no-op for the verdict, not a guard.
+      // `7d8e402f` (against `doctor.ts 56fe58d5`) and `c50eca08` (re-measured
+      // here); this line is the sole reacher of both. No RENDERER change
+      // substitutes for it — `JSON.stringify` omits an absent `details` key
+      // outright, which is equally token-clean (measured).
       //
       // PRESENCE ONLY, and that property is to be preserved: it says `details`
       // exists and NOTHING about which keys it has, so TDD-0036 stays free to
       // `toEqual` its payload. BORROWED PRECONDITION, owner named:
       // `spec0006WorkflowsIntegrity.drift.test.ts` catches the same mutation
-      // independently and hard in both its `it`s, via
+      // independently and hard, in two of its six `it`s (`:96` and `:139`), via
       // `readModifiedPaths(check?.details)` → `toBeDefined`. Restated here
       // because the sweep it guards is this row's, on the precedent one row
       // earlier — the provenance-gate suite's live control beside its negative
@@ -477,16 +487,32 @@ describe(
     // would over-collect, which is again the safe direction.
     it("this row's CLI_SUBCOMMANDS mirror covers every subcommand in the dispatch", async () => {
       const source = await readFile(CLI_MAIN_PATH, "utf-8");
-      const dispatched = [...source.matchAll(/^\s*case "([a-z][a-z-]*)":/gm)].map(
-        (match) => match[1],
-      );
+      // `[\w-]+`, not `[a-z][a-z-]*`: the narrow class could not see a label
+      // carrying a DIGIT or an UNDERSCORE, and the miss was a FALSE GREEN —
+      // prepending `case "atdd2":` left this `it` at `2 passed`, exit 0 (prod
+      // `36279c26`), the label matching neither the capture nor the coverage
+      // check below.
+      const dispatched = [...source.matchAll(/^\s*case "([\w-]+)":/gm)].map((match) => match[1]);
 
-      // Non-vacuity: a broken extraction yields `[]` and coverage over an empty
-      // set passes trivially. `doctor` is the anchor rather than a count, because
-      // it is the command this row's fixture runs — its presence in the dispatch
-      // is a precondition of the row existing at all, and unlike a floor it
-      // cannot go stale when some other subcommand is retired.
+      // NON-VACUITY, two legs, neither of which covers the other's failure.
+      //
+      // Leg 1 — the extraction found the dispatch at all; `[]` would pass the
+      // coverage check trivially. `doctor` is the anchor rather than a floor
+      // count because it is the command this row's fixture runs, and unlike a
+      // floor it cannot go stale when some other subcommand retires.
       expect(dispatched, "the case-label extraction must find the dispatch").toContain("doctor");
+
+      // Leg 2 — the extraction was TOTAL. Leg 1 is blind to a PARTIAL miss,
+      // since `doctor` stays found however many other labels the capture drops,
+      // so even the widened class leaves a label outside `[\w-]+` (a dot, a
+      // space, a computed label) uncovered — measured, prod `b0bc981e`
+      // (`case "a.b":`) reaches this leg and nothing else in this row. A COUNT
+      // rather than a pinned number, so it cannot go stale when a subcommand
+      // retires.
+      expect(
+        dispatched.length,
+        "every `case ` line in src/cli/main.ts's dispatch must be extractable, or this guard covers only the labels it happened to parse",
+      ).toBe((source.match(/^\s*case /gm) ?? []).length);
 
       const missing = dispatched.filter((name) => !CLI_SUBCOMMANDS.some((known) => known === name));
       expect(
