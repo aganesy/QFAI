@@ -4395,12 +4395,63 @@ every one: needle-uniqueness (`split(needle).length === 2`) and blob-differs.
 | # | Target | Needle | Replacement | Base → mutant blob | Result |
 | --- | --- | --- | --- | --- | --- |
 | R5-M1 | `src/core/doctor.ts` | `      details: {\n        workflowsDir: workflowsDiff.workflowsDir,\n        modified: workflowsDiff.modified,\n      },` | *(deleted)* | `1d8eab08` → `6a06270e` | `tsc -b` **0**; row **1 failed \| 1 passed**, sole reacher is the new control, message `the drift finding must CARRY a 'details' payload … expected undefined to be defined`. Was `1 passed` before this round. |
-| R5-M2 | the row's test file | `  "handoff",` | *(deleted)* | `7edbbade` → `dbd3f327` | **1 failed**, `every subcommand in src/cli/main.ts's dispatch must appear in this file's CLI_SUBCOMMANDS …`, diff prints `+ "handoff"`. Proves C2's guard is live. |
-| R5-M3 | the row's test file | `/^\s*case "([a-z][a-z-]*)":/gm` | `/^\s*kase "([a-z][a-z-]*)":/gm` | `7edbbade` → `140001a8` | **1 failed**, `the case-label extraction must find the dispatch: expected [] to include 'doctor'`. Proves the guard is not vacuous when extraction breaks — the direction a coverage-only assertion cannot catch. |
+| R5-M2 | the row's test file | `  "handoff",` | *(deleted)* | `e43645e4` → `739dec07` | **1 failed**, `every subcommand in src/cli/main.ts's dispatch must appear in this file's CLI_SUBCOMMANDS …`, diff prints `+ "handoff"`. Proves C2's guard is live. |
+| R5-M3 | the row's test file | `/^\s*case "([a-z][a-z-]*)":/gm` | `/^\s*kase "([a-z][a-z-]*)":/gm` | `e43645e4` → `ed12473e` | **1 failed**, `the case-label extraction must find the dispatch: expected [] to include 'doctor'`. Proves the guard is not vacuous when extraction breaks — the direction a coverage-only assertion cannot catch. |
+
+**The two still-constructible violations are now recorded BY TEXT, closing the third instance of this
+gap class.** `77661ef9` and `a9012bd7` were recorded by *intent* ("`nextActions: […]` added to
+`details`") — the same shape as `G4-R41`, which no reviewer blocked and which `qa-gatekeeper` declined to
+block again, verifying the behaviour directly instead. Rather than carry a third unreproducible pair, I
+re-measured all of it myself in an isolated worktree, from a needle unique at one site (the four-line
+`details` block of the drift emission, base `1d8eab08`):
+
+| Round | Line inserted after `modified:` | Mutant blob | Result |
+| --- | --- | --- | --- |
+| `R5-M4` | `nextActions: ["qfai	init	--force"],` | `192751ee` | **PASSES — violation not caught** |
+| `R5-M5` | `nextActions: ["doctor"],` | `653dd950` | **PASSES — violation not caught** |
+| `R5-M6` | `nextActions: ["qfai init --force"],` | `0670aa46` | **REDDENS** |
+
+**`R5-M6` is the control and it is what makes the other two meaningful.** Without it, "the sweep does not
+catch these" is indistinguishable from "the sweep does not work"; with it, the sweep is demonstrably live
+on the plain form and the two escapes are specific to `JSON.stringify`'s escaping and to token 8's
+bare-subcommand exclusion. That control is exactly what the by-intent records could not supply.
+
+My blobs differ from the by-intent pair because the inserted line's exact text was never recorded — which
+is the whole argument, restated for the third time in this file: a blob is proof only insofar as an auditor
+can reproduce the edit that produced it.
+
+**One harness defect of mine, disclosed.** My first driver had no `finally`, crashed on a subprocess path
+error, and left the mutation in the worktree; I found it by checking the blob rather than by any test
+failing. The rewritten driver reverts in a `finally` and printed its own revert-verification — which then
+caught a second crash (a `cp932` decode of vitest output) with the tree already clean. A mutation harness
+without a guaranteed revert is one exception away from committing a mutant.
+
+**Newline convention, because a deletion blob is ambiguous without it.** `R5-M1`'s needle EXCLUDES its
+trailing newline (the four lines go, a blank line stays), which is what makes `6a06270e` reproduce.
+`R5-M2`'s excises the whole line INCLUDING its newline → `739dec07`; excluding it gives `613722b1`.
+
+**`R5-M2` / `R5-M3` were re-measured by `qa-gatekeeper` against the committed test blob `e43645e4`.** The
+pairs first recorded here cited a base blob `7edbbade` that **is in no object database and is no state of
+the file** — the same transcript states the final blob is `e43645e4` four lines above, so the record was
+refuted by its own artifact. That is the `B1` class, one round later and in the record rather than the
+code. It is not a line-ending artifact: `R5-M1`'s pair reproduced byte-for-byte, which fixes the hashing
+convention and rules the alternatives out. The pairs were taken at a pre-`prettier --write` state that no
+artifact carries, and the round disclosed `prettier` only for the closure re-run. Both results are exactly
+as the Result column already states, so no re-measurement is owed by anyone.
 
 R5-M1's scope is worth stating: it produces **exactly one** failure. The rendered-surface sweep does not
 redden on it, because an absent payload is token-clean — that is precisely the vacuity being closed, and
 it is why a control was needed rather than a tighter sweep.
+
+**RED transfer re-measured at THIS round's blobs.** `G4-R44` was measured against the round-4 oracle
+(test `0996469f`, prod `56fe58d5` → `839519b9`), and that scoping is stated honestly where it was
+written — but round 5 changed the oracle again and this round's transcript neither restated nor
+re-derived it. Re-run by `qa-gatekeeper`: same needle and replacement, base `1d8eab08` → mutant
+**`772564d9`**, `Tests 1 failed | 1 passed`, three `AssertionError`s — requirement 2's needle,
+requirement 3's needle and the equality pin — each naming its own predicate, with the module loading
+cleanly (the second `it` passed). The code-level diff `0996469f → e43645e4` leaves all three of those
+assertions **byte-identical**, so the transfer is measured rather than argued and round 5 is purely
+additive.
 
 **Suites.** This row alone: **2 passed** (was 1; the completeness guard is the second `it`). The
 19-selector doctor/workflows closure at the final blobs: `Test Files 17 passed | 2 skipped (19)` /
@@ -4417,7 +4468,7 @@ state.
 | `pnpm lint` | exit 0 |
 | `pnpm check-types` (`tsc -b`) | exit 0 |
 | `pnpm -C packages/qfai lint:shipping` | `20 passed`, exit 0 |
-| `pnpm format:check` | **exit 1 — pre-existing, not this round's** |
+| `pnpm format:check` | exit 1 at measurement time — pre-existing, **exit 0 at HEAD** since `353e2acc` |
 
 `format:check` fails on exactly two files, both tracked, both unmodified by this round:
 `.qfai/steering/2026-08-08-chg-007-spec-0006-g5-tier-escalation.md` and
@@ -4425,6 +4476,20 @@ state.
 modified files and re-running `prettier -c .qfai/steering/` — both still fail with the working tree at
 `74c09dc0`. This round's two files were reformatted and pass. Left for the steering artifacts' owner
 rather than fixed here, to keep an unrelated edit out of this row's commit.
+
+**Resolved, and the attribution is mine.** Both files are ones I authored, and the diagnosis was exactly
+right — I confirmed it precisely: the handoff **passes** at `e21bba16~1` and fails at `HEAD`, so I broke
+it by appending items 10 and 11 without running the formatter, and the tier file was unformatted from
+creation. Three commits went out red, which means `ci:lint` was red on this branch the whole time. Fixed
+at `353e2acc`; the change is cosmetic only (prettier normalising `*emphasis*` to `_emphasis_` across six
+lines) and `pnpm format:check` is **exit 0** at HEAD, independently re-measured by `qa-gatekeeper`.
+
+The lesson is not "run prettier". It is that I had been treating `.qfai/steering/**` and
+`.qfai/evidence/**` as prose outside the toolchain when `format:check` is `prettier -c .` — the whole
+tree. Every artifact I author is inside a gate I was only running against code, and no test can catch it:
+the row's own suite was green throughout. The engineer's method is the part to keep — it **stashed its own
+five files and re-ran** to prove the failure pre-dated its work, rather than either absorbing the fix or
+reporting it as the row's.
 
 **`dist/` disclosure.** `pnpm check-types` **is** `tsc -b` at the repo root, so the gate itself emits into
 `packages/qfai/dist/`. The emission pre-dates this session (`dist/core/`, `dist/cli/`, `dist/shared/`
@@ -4709,3 +4774,66 @@ across six lines) and full `pnpm format:check` is now green.
 **The lesson is not "run prettier".** It is that I have been treating `.qfai/steering/**` and
 `.qfai/evidence/**` as prose outside the toolchain, when `format:check` is `prettier -c .` — the whole
 tree. Every artifact I author is inside a gate I was only running against code.
+
+#### Round-5 gate advisories, dispositioned — and one where the gate is over-broad
+
+`qa-gatekeeper` returned **REVISE with two record-only blockers** and verified **every substantive claim
+of round 5 as true**: B1 and B2 discharged with the token set extracted **verbatim from the committed
+blob** rather than retyped; V1's "sole reacher" confirmed in the strongest available form; C2 live,
+non-vacuous and with the right relation; the helper acceptable; and seventeen further constructions
+producing nothing new inside requirement 4. Both blockers are fixed above, in the record, with no code
+moving.
+
+- **A1 — C2's extractor has a measured character-class limit.** `/^\s*case "([a-z][a-z-]*)":/gm` silently
+  **passes while the mirror is incomplete** for `case "spec2":` (digit), `case "myCmd":` (uppercase),
+  `case "my_cmd":` (underscore), `case 'plan':` (single quotes), a second label on the same line, and a
+  dispatch outside the `switch`. All ten current labels are lowercase, double-quoted and line-initial, so
+  the guard is complete today and is a strict improvement on none; the comment addresses only the
+  over-collection direction. One clause owed, not a blocker.
+- **A3 — the coupling cost is real and was unstated**: this row now reddens when *any* other row or spec
+  adds a subcommand to `main.ts`. Direction is RED and the label names the fix, so it is the intended
+  trade — but a trade nobody wrote down is indistinguishable from an accident.
+- **A5 — two residuals recorded as out-of-scope, with reasons.** `pnpm install qfai@latest`,
+  `pnpm dlx`, `pnpm i qfai` and `reinstall the package` are all token-clean on both surfaces; tokens 2 and
+  3 (`npx`, `npm i|install|run`) are declared over-approximations, so this is a gap in the
+  over-approximation and not in `TC-0006-0030` (a) / `BR-0006-0020`. The gate explicitly declined to add
+  `pnpm` on its own authority, which is right. Separately, **a command shipped under a different check id
+  is unclosable by widening** — `skills.integrity` legitimately ships `qfai init --force` in its own
+  `details.nextActions`, so a whole-`checks[]` sweep would redden on a compliant sibling. The id filter
+  must stay, and that is now the recorded reason rather than an unexamined default.
+- **A6 — the helper's `\n` join lets token 1's `\s` cross a field boundary.** A `title` ending in `qfai`
+  fires token 1 because the message's first letter follows across the join (` - yarn add qfai` → `[1]`,
+  while ` - pnpm install qfai@latest` → `[]` because `@` follows). Over-fire only, but the token
+  docblock's account of token 1's false positives does not mention it.
+- **A8 (low confidence, no action)** — spec-0006 still has no Coverage Depth Matrix and no
+  `atdd-spec-0006.md`; already recorded earlier in this file with the three single-TC ACs routed upstream.
+  `TC-0006-0030`'s legs (b) and (c) are `TDD-0038` / `TDD-0039`, both verified present at `todo`, so no
+  depth gap originates in this row.
+
+##### A9 — the gate is over-broad here, and the distinction is worth keeping
+
+It asked that the canonical `Refactor verify command` replace `npx vitest run` with
+`./node_modules/.bin/vitest run`, citing this file's own record of the prohibition being violated twice.
+
+**The prohibition is narrower than that.** It is on `npx <package NOT in the lockfile>`, and both actual
+violations were **`npx tsx`** — `tsx` is absent from the lockfile, so `npx` fetched it and that fetch is
+what wiped the root `node_modules/.bin`. `vitest` **is** a `packages/qfai` dependency and resolves from
+`packages/qfai/node_modules/.bin/vitest`, verified present. `npx vitest` therefore never reaches the
+registry and is not an instance of the class.
+
+So the twelve-plus `npx vitest run` occurrences in this file are **accurate historical records of
+commands that were actually run**, and rewriting them would falsify the record to satisfy a rule they do
+not break. They stay.
+
+What the gate is right about is the **habit**: `./node_modules/.bin/vitest` cannot fetch under any
+circumstance, which is why every command *I* have issued this session uses that form, and why the round-5
+work order specified it. Recorded as the preferred form for new commands, not as a correction to old
+ones. The gate also confirmed it reproduced the recorded closure numbers exactly using the `.bin` form, so
+no measurement depends on the difference.
+
+**Naming the general failure here, because it has now happened twice in this slice**: a rule compressed
+into a memorable slogan ("never `npx`", "never `rm -rf` a worktree") loses the predicate that made it
+true, and then over-fires on compliant work — exactly the defect this row spent four rounds removing from
+its own oracle. The junction rule needed the same repair earlier today: "any recursive delete of a tree
+holding a link" was too broad, since 83 tracked skill symlinks resolve *inside* the worktree and are safe;
+the load-bearing predicate is that the link **escapes** the tree being deleted.
