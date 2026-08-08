@@ -115,9 +115,22 @@ export type WorkflowsIntegrityStatus = "ok" | "modified" | "skipped_unresolved";
  * consumer is not the one this comment used to predict: the drift advisory's
  * MESSAGE names it as the packaged source path to copy from, per the required
  * message content of `.qfai/contracts/cli/qfai-doctor.md`. Its `details` slot
- * (BR-0006-0022) is still outstanding, so the field is consumed while that
- * payload obligation is not — the two are separate, and landing the payload
- * does not put the field back here.
+ * (BR-0006-0022) is still outstanding and is owned by TDD-0036 / TC-0006-0034,
+ * named here for the same reason `skipped_unresolved` names its claimant: the
+ * field is consumed while that payload obligation is not, the two are separate,
+ * and landing the payload does not put the field back on the unconsumed list.
+ *
+ * THE CONVENTION THAT ROW INHERITS, stated before it lands rather than after:
+ * `details` will then carry `packagedDir` beside `workflowsDir`, which puts an
+ * ABSOLUTE NATIVE path next to a ROOT-RELATIVE POSIX one in a single JSON
+ * object. That mix is intended and is keyed to the ROOT the path belongs to,
+ * not to the key it sits under — in-tree paths are root-relative POSIX so the
+ * payload is stable across machines and platforms, and the packaged path is
+ * absolute and native because it has no shared root to be relative to and is
+ * meant to be pasted into a copy command unmodified. Do not "normalize" the two
+ * to one form: relativizing the packaged path degrades to a `../..` chain whose
+ * meaning depends on the reader's cwd, and absolutizing `workflowsDir` puts the
+ * host layout into a machine surface that today has none.
  *
  * (`status === "ok"` IS consumed: the override leg of the drift suite asserts
  * it. So is `comparedCount`, which gates that same `ok` emission — do not add
@@ -164,7 +177,13 @@ export type WorkflowsIntegrityDiff = {
  * Absolute path of the workflows directory inside the installed package, or
  * `undefined` when the packaged asset tree cannot be resolved at all —
  * `getInitAssetsDir` throws in that case, and an unresolvable operand is a
- * skip, not a drift report. Module-private: the only caller is below.
+ * skip, not a drift report.
+ *
+ * Module-private: the only caller is below, and it must STAY private together
+ * with `WORKFLOWS_DIR_SEGMENTS`. Exporting either so a test can build the
+ * expected packaged path is the DRY edit that collapses the repair-text suite's
+ * independent `root/.github/workflows` join into agreement with whatever this
+ * function computes — and that join is the part this module can get wrong.
  */
 function resolvePackagedWorkflowsDir(): string | undefined {
   try {

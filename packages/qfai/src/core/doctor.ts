@@ -282,11 +282,23 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   // the other two, TS cannot correlate it with the status literal. It is a
   // CONTENT gate, not a type workaround: the doctor contract's required message
   // content includes the packaged source path to copy from, so a finding that
-  // cannot name that path is not the finding the contract describes. The state
-  // is unreachable at this revision — an unresolvable packaged tree yields
-  // `skipped_unresolved` with an empty `modified` — and its own emission is a
-  // separate obligation of BR-0006-0020, so routing it to silence here matches
-  // exactly what the unresolved status already produces.
+  // cannot name that path is not the finding the contract describes.
+  //
+  // It is UNREACHABLE at this revision — an unresolvable packaged tree yields
+  // `skipped_unresolved`, which this branch's status test already excludes — and
+  // that is the whole of its warrant. Deliberately NOT "routing it to silence
+  // here matches what the unresolved status produces": that reading goes stale
+  // the moment the unresolved skip lands its own emission at severity `info`
+  // with an empty `modified`, at which point silence is no longer what that
+  // status produces, while the unreachability is unaffected.
+  //
+  // Kept as an EQUIVALENT MUTANT by construction, and recorded as one rather
+  // than as covered code: deleting it leaves this file's behaviour, `tsc -b` and
+  // `eslint` all unchanged (measured — it is not load-bearing for lint either),
+  // so no oracle exists in the deletion direction and none can be written while
+  // the state is unreachable. It survives as an executable statement of the
+  // contract's content requirement, to be paid for by the row that makes the
+  // state reachable.
   const workflowsDiff = await diffInstalledShippedWorkflows(root);
   if (
     workflowsDiff.status === "modified" &&
@@ -316,16 +328,27 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       // behind to run something that does not exist. The command arrives in the
       // same release that rewrites this message.
       //
-      // `packagedDir` is emitted ABSOLUTE and unrelativized, which is the one
-      // deliberate exception to this file's `toRelativePath` habit. It is the
-      // operand the operator has to copy FROM, and it is frequently outside the
-      // adopter root (a global install, a pnpm store, or — as in this repo's own
-      // tests — a workspace checkout against a temp-dir root), where
+      // `packagedDir` is emitted ABSOLUTE and unrelativized. Not an exception to
+      // this file's `toRelativePath` habit but the FIRST MEMBER OF A CLASS it has
+      // never had: every other `toRelativePath` call here relativizes a path
+      // INSIDE the adopter root and does it in `details`, never in a `message`.
+      // It is the operand the operator has to copy FROM, and it is frequently
+      // outside the adopter root (a global install, a pnpm store, or — as in this
+      // repo's own tests — a workspace checkout against a temp-dir root), where
       // `path.relative` degrades to a `../..` chain or, across Windows drives,
       // silently back to the absolute path it started from. A package-relative
       // rendering was rejected for the same reason from the other side: under
       // pnpm the install root is `node_modules/.pnpm/qfai@<version>/node_modules/qfai`,
       // which an operator cannot guess.
+      //
+      // The cost is real and is stated rather than left silent: this is the first
+      // absolute HOST path in any human-facing `qfai doctor` output, and on a
+      // default Windows or global install it carries the OS username in text
+      // operators routinely paste into issues. The contract requires the packaged
+      // source path, so it is not a defect and nothing here suppresses it; the
+      // JSON surface is unaffected because `details.workflowsDir` stays
+      // root-relative. Raise redaction with the owner before adding any, rather
+      // than quietly truncating the one path the repair depends on.
       //
       // The stale file names are NOT repeated on the packaged side. Each is
       // already listed above by its adopter-relative path, so directory plus
@@ -333,6 +356,22 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       // keeping one path in the message instead of one per file. It also keeps
       // the packaged clause incapable of carrying a FILENAME, which is the
       // property the provenance-gate suite's absence assertion leans on.
+      //
+      // THREE PROSE CONSTRAINTS this message is under, from the repair-text
+      // integration suite's needles. All three are broader than the contract, so
+      // a natural rewording can redden with no contract violation; that is
+      // deliberate on the test side (the token sweep is a NEGATIVE assertion,
+      // where an over-broad needle can only over-fire) and it is recorded here
+      // because the rewording happens in this file:
+      //   1. keep punctuation straight after the product name — token 1 matches
+      //      `qfai` followed by whitespace and a letter, so "… by QFAI:" passes
+      //      and "QFAI will not overwrite it" fires;
+      //   2. keep the repair verb, `with`, and the packaged path in that ORDER
+      //      inside one sentence, with the path preceded by whitespace — the
+      //      needle is directional so that "replace the packaged copy with your
+      //      file" cannot pass, and anchored so that relativizing the path cannot;
+      //   3. keep the no-overwrite statement PASSIVE and adjacent — `never` must
+      //      be within three words of `overwritten`.
       message:
         `installed shipped workflow(s) differ from the packaged copy: ${workflowsDiff.modified.join(", ")}. ` +
         `Manual repair: replace each listed file with the copy of the same name in ${workflowsDiff.packagedDir}. ` +
