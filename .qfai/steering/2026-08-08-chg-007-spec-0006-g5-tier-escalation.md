@@ -85,3 +85,27 @@ naming a mutation there is a claim about a _revision_, not a fact.
 The rule one reviewer derived from its own error — "a reach ruling must be re-derived from the current
 file, never recalled" — is therefore not reviewer hygiene but a property of this ledger's shape. The
 remaining rows should be planned as if every attribution they write has a half-life of one row.
+
+## Re-derived at round 7 (2026-08-09), not assumed
+
+This entry's whole argument is that a coverage attribution in this ledger has a half-life of one row, so
+it would be self-refuting to leave the precondition unchecked across seven rework rounds. Re-derived
+against `152dc587`:
+
+- **Both guards survive.** Guard #1 (`toBeDefined` on the registered check) is at
+  `spec0006WorkflowsIntegrity.repairText.test.ts:227`; guard #2 (`not.toBe("ok")`) at `:243`. Round 7
+  deleted the rendered-surface sweep and its presence control, not the preconditions.
+- **The `TDD-0039` conflict is unchanged and still owed.** Making `skipped_unresolved` emit at severity
+  `info` still stops the unresolvable-packaged-directory mutation from producing absence, so it still
+  falsifies that attribution on the day `TDD-0039` ships, and guard #1 still survives on its second
+  mutation.
+- **Guard #2's exposure is unchanged**: `not.toBe("ok")` still cannot separate the drift finding's `info`
+  from the new skip finding's `info`, so the equality pin remains the only thing that does.
+- **One thing did change in `TDD-0039`'s favour.** With the `title` + `details` sweep deleted, the surface
+  `TDD-0039`'s new emission lands on is narrower — the row now pins only `message` (exactly), `severity`
+  (as not-`ok`), and registration count. That reduces, but does not remove, the number of `TDD-0032`
+  assertions a third emission branch can perturb.
+
+The three in-row precondition steps are unchanged, including the recorded prediction that `TDD-0032` stays
+green — its fixture drives a genuinely modified file, so `status === "modified"` and the skip branch is
+untouched.
