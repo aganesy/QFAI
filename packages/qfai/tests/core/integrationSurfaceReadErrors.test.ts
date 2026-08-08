@@ -22,9 +22,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type FsPromises = typeof fsPromises;
 
-const { readdirSpy, lstatSpy } = vi.hoisted(() => ({
+const { readdirSpy, lstatSpy, accessSpy } = vi.hoisted(() => ({
   readdirSpy: vi.fn(),
   lstatSpy: vi.fn(),
+  accessSpy: vi.fn(),
 }));
 
 vi.mock("node:fs/promises", async () => {
@@ -33,6 +34,7 @@ vi.mock("node:fs/promises", async () => {
     ...actual,
     readdir: (...args: unknown[]) => readdirSpy(actual, ...args),
     lstat: (...args: unknown[]) => lstatSpy(actual, ...args),
+    access: (...args: unknown[]) => accessSpy(actual, ...args),
   };
 });
 
@@ -64,8 +66,10 @@ async function seedCanonical(root: string): Promise<void> {
 beforeEach(() => {
   readdirSpy.mockReset();
   lstatSpy.mockReset();
+  accessSpy.mockReset();
   readdirSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.readdir(...args));
   lstatSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.lstat(...args));
+  accessSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.access(...args));
 });
 
 describe("validateIntegrationSurface read errors", () => {
@@ -88,6 +92,24 @@ describe("validateIntegrationSurface read errors", () => {
       lstatSpy.mockImplementation(() => Promise.reject(errno("EIO")));
 
       await expect(validateIntegrationSurface(root)).rejects.toThrow("simulated EIO");
+    });
+  });
+
+  it("propagates EACCES on the SKILL.md membership probe", async () => {
+    // The directory reads fine; the file inside it does not. Folding that into
+    // `false` drops the skill from the roster, and if it were the only
+    // canonical entry the early return then passed a broken surface with no
+    // finding — the guarantee holding everywhere except where membership is
+    // decided.
+    await withProject(async (root) => {
+      await seedCanonical(root);
+      accessSpy.mockImplementation((_actual: FsPromises, filePath: string) =>
+        filePath.endsWith("SKILL.md")
+          ? Promise.reject(errno("EACCES"))
+          : Promise.resolve(undefined),
+      );
+
+      await expect(validateIntegrationSurface(root)).rejects.toThrow("simulated EACCES");
     });
   });
 

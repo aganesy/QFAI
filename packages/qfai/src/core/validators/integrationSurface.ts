@@ -1,10 +1,10 @@
 import type { Dirent } from "node:fs";
-import { lstat, readdir, readlink, stat } from "node:fs/promises";
+import { access, lstat, readdir, readlink, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
 import type { Issue } from "../types.js";
-import { exists, issue } from "./utils.js";
+import { issue } from "./utils.js";
 
 /**
  * Skill wrapper directories `qfai init` fills with symlinks, and the agent
@@ -96,11 +96,30 @@ async function skillIdsIn(skillsDir: string): Promise<Set<string>> {
   const ids = new Set<string>();
   for (const entry of entries ?? []) {
     if (!entry.isDirectory()) continue;
-    if (await exists(path.join(skillsDir, entry.name, "SKILL.md"))) {
+    if (await fileExists(path.join(skillsDir, entry.name, "SKILL.md"))) {
       ids.add(entry.name);
     }
   }
   return ids;
+}
+
+/**
+ * `exists` with the same error honesty as {@link readDirOrNull}.
+ *
+ * The shared helper turns every error into `false`, which drops the skill from
+ * the roster — and if it were the only canonical entry, the early return then
+ * passed a broken surface with no finding. The directory read and the wrapper
+ * probe both propagate a non-absence error; the probe that decides membership
+ * has to as well, or the guarantee holds everywhere except where it is decided.
+ */
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await access(filePath);
+    return true;
+  } catch (error) {
+    if (isMissing(error)) return false;
+    throw error;
+  }
 }
 
 /**

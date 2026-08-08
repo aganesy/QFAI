@@ -24,6 +24,18 @@
 
 ### Fixed
 
+- **`assets/init` resolves from the package's public entry.** `tsup` bundles
+  with `splitting: false`, so `dist/index.mjs` sits one level shallower than
+  `dist/cli/index.mjs` — a depth the candidate list did not cover. Calling
+  `validateProject` through the library entry therefore searched
+  `<parent-of-package>/assets/init` and threw `Template assets not found`
+  before any validator ran; the CLI was unaffected, which is why it went
+  unnoticed. `QFAI-LINK-001` made this reachable by reading the shipped roster.
+- **The membership probe propagates a read error too.** `readdir` and the
+  wrapper `lstat` were fixed to distinguish absence from failure, but the
+  `SKILL.md` probe that decides whether a skill is in the roster still folded
+  every error into `false` — dropping the skill, and with it the only canonical
+  entry, into the early return that passes a broken surface with no finding.
 - **Ownership of an integration wrapper is the roster `qfai init` ships.** It
   was every directory in the project's own canonical tree, but
   `.qfai/assistant/skills/<own>/SKILL.md` is an allowed project-owned location
