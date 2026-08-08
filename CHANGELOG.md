@@ -23,6 +23,13 @@
 
 ### Fixed
 
+- **The upstream reset admits every source status.** The lifecycle table
+  enumerated five, which read as a complete list — but `drift-protocol.md`
+  step 5 sweeps the ledger with `any status -> todo`, so a row at `blocked` or
+  `review-fix` when the upstream obligation moved was one the table forbade the
+  Protocol from sweeping, leaving the preflight with nothing legal to do. The
+  enumeration existed to stop an unapproved `review-fix -> todo`; the approval
+  column already does that, and does it without contradicting the Protocol.
 - **`qfai-implement`'s primary spec-completion condition is a list item again.**
   A missing newline joined `- Each item reached \`done\` or valid \`exception\`
   (with DR-ID)`to the tail of the bullet above it, and because the joined line

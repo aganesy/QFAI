@@ -231,12 +231,12 @@ transition: an upstream obligation moved and the row's completed work is
 withdrawn. The column below therefore asks why each edge is _legal_, not why it
 is not backward:
 
-| Edge                                                                               | Why it is legal                                     | Approval needed |
-| ---------------------------------------------------------------------------------- | --------------------------------------------------- | --------------- |
-| `blocked` -> `todo`                                                                | resumption — the row never started                  | none            |
-| `exception` -> `todo`                                                              | anomaly resolved — nothing upstream changed         | none            |
-| `red` \| `green` \| `refactor` \| `done` \| `exception` -> `todo` (upstream reset) | owner-approved re-entry, cycle restarts from `todo` | approved `CR-*` |
-| `refactor` -> `red`                                                                | QA rejection recovery on this row's own evidence    | `qa-gatekeeper` |
+| Edge                                      | Why it is legal                                     | Approval needed |
+| ----------------------------------------- | --------------------------------------------------- | --------------- |
+| `blocked` -> `todo`                       | resumption — the row never started                  | none            |
+| `exception` -> `todo`                     | anomaly resolved — nothing upstream changed         | none            |
+| **any status** -> `todo` (upstream reset) | owner-approved re-entry, cycle restarts from `todo` | approved `CR-*` |
+| `refactor` -> `red`                       | QA rejection recovery on this row's own evidence    | `qa-gatekeeper` |
 
 The first, second and fourth rows are **re-entries, not backward transitions**:
 they return a row to an earlier phase of its own cycle without any upstream
@@ -247,6 +247,13 @@ edge is _legal_ rather than why it is not backward: three of them are not, one
 of them is and is authorised. `final-checklist.md` carries the same carve-out,
 so a run that performs an approved reset can still tick it. Preconditions and
 the reset procedure: `references/change-request-reset.md`.
+
+**The reset admits every source status**, not the five a run is most likely to
+be in. `constitution/drift-protocol.md` step 5 sweeps the ledger with
+`any status -> todo`, and a row sitting at `blocked` or `review-fix` when the
+upstream obligation moved is exactly a row that has to be swept. Enumerating
+the sources here let this table forbid a transition the Protocol requires, so
+a preflight that hit one had nothing legal left to do.
 
 ### Reviewer rework is not a backward transition
 

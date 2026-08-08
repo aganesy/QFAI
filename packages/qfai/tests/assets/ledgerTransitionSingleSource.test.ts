@@ -85,15 +85,22 @@ describe.each(TREES)("%s", (tree) => {
 });
 
 describe.each(TREES)("%s (the summary cannot license what the list forbids)", (tree) => {
-  it("names the five reset sources instead of a wildcard", async () => {
-    // `* -> todo` reads as "any status", and `review-fix`'s only exit is
-    // `refactor` — so an agent working from the table could write the
-    // forbidden `review-fix -> todo` on an approved reset.
+  it("admits every reset source, and gates it on the approval", async () => {
+    // The five-source enumeration was chosen to stop an agent writing
+    // `review-fix -> todo`, whose ordinary exit is `refactor`. It cost more
+    // than it bought: `drift-protocol.md` step 5 sweeps the ledger with
+    // `any status -> todo`, so a row at `blocked` or `review-fix` when the
+    // upstream obligation moved is one this table forbade the Protocol from
+    // sweeping — a preflight with nothing legal left to do. What keeps the
+    // wildcard from licensing an unapproved `review-fix -> todo` is the
+    // approval column, not a shorter source list.
     const ledger = flat(await read(tree, LEDGER));
-    expect(ledger).toContain(
-      "| `red` \\| `green` \\| `refactor` \\| `done` \\| `exception` -> `todo` (upstream reset) |",
-    );
-    expect(ledger).not.toContain("| `* -> todo` (upstream reset) |");
+    expect(ledger).toContain("| **any status** -> `todo` (upstream reset)");
+    expect(ledger).toContain("The reset admits every source status");
+    expect(ledger).toContain("a row sitting at `blocked` or `review-fix`");
+    // The wildcard is legal only with the approval that makes it a reset.
+    const resetRow = ledger.slice(ledger.indexOf("| **any status** -> `todo`"));
+    expect(resetRow.slice(0, 200)).toContain("approved `CR-*`");
   });
 
   it("classifies the approved reset once, not twice", async () => {
