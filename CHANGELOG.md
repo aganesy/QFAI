@@ -6,6 +6,38 @@
 
 ### Fixed
 
+- **Phase Red selects the row P1c named.** It took the first `todo` row
+  regardless, so a branch-2 row above the named one was processed first — and
+  its full-suite checkpoint ran against a tree still holding the named row's
+  deliberate RED, failed, and left that row at `refactor`, which step 1 does
+  not re-select. A named `TDD-ID` now wins over ledger order.
+- **The branch is re-checked at each row's handoff.** Fixing every row's
+  branch at P1b goes stale once rows are taken one at a time: an earlier
+  branch-1 row's production code can satisfy a later row's predicate, leaving
+  a row recorded as `observed-red` with no observable RED and no
+  re-classification step. The P1b choice is provisional; the branch is taken
+  from a run against the tree as it stands at handoff.
+- **`/qfai-atdd` records `RED revision` when it takes the RED.** The
+  completion gate requires it on a handed-over RED and the producer recorded
+  no revision at all — an uncommitted tree's address cannot be recovered once
+  Phase Green has changed the tree, so the required field was a guess or
+  missing, and a guess fails the freshness gate exactly as a gap does.
+- **A `review-fix` on an `E2E` / `API` row hands its test back.**
+  `/qfai-implement` does not author acceptance tests and its `red` phase has
+  no `acceptance-test-engineer`, so a REVISE asking for a test change left the
+  row at `review-fix` or had a production agent edit a test it does not own.
+  The corrected test and its new RED come from `/qfai-atdd`; the production
+  fix and the re-review stay here.
+- **Cross-spec obligations follow the row's `Layer` too.**
+  `cross-spec-ownership.md` still wrote `## Cross-spec obligations` to
+  `implement-<spec-id>.md`, so an unresolved obligation was invisible in the
+  file gate item 10 reads for an `E2E` / `API` row.
+- **The production-path form of `Satisfied-by` is scoped to handed-over rows.**
+  Widening it for every row let an ordinary `Unit` / `Component` /
+  `Integration` row reach `done` with no production change and no sibling —
+  `qfai-implement/SKILL.md` Phase Red step 5 sends exactly that case to
+  `exception`, so the shared reference and the gatekeeper were contradicting
+  the skill body they serve.
 - **P1b gates the rows that have evidence at P1b.** The `red` phase's
   `qa-gatekeeper` is mandatory and blocking, and a branch 2 row's payload is
   the falsifiability trio — which by the same gate's own rule does not exist

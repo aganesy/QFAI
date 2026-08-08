@@ -63,7 +63,13 @@ Take the first that applies, and record which one in the evidence file.
    2. Run the test. An admissible failure is an assertion — or an
       expected-status check — inside this row's own selector, naming the
       predicate the row owns. Record the command and output as the row's RED
-      pair.
+      pair, **and the revision it was observed at** — `git rev-parse HEAD`, or
+      `working-tree+<porcelain digest>` for an uncommitted tree. That address
+      is not recoverable later: `/qfai-implement` Phase Green changes the tree,
+      and its completion gate requires the handed-over RED to name the revision
+      it was taken at (`../../qfai-implement/references/evidence-revision.md`).
+      A value reconstructed afterwards is a guess, and a guess fails the
+      freshness gate exactly as a missing one does.
    3. **Get the row's scope approved by `delivery-planner` first.**
       `qfai-implement/SKILL.md` makes it the only authority on whether a
       selector covers a sufficient slice of its obligation, and requires a scope
@@ -164,7 +170,7 @@ Exactly one form per row, never both and never neither:
 
 | Branch         | Recorded                                                                                                         |
 | -------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Observed RED   | RED command+result, `qa-gatekeeper` PASS, the `Oracle proof` plan                                                |
+| Observed RED   | RED command+result, `RED revision`, `qa-gatekeeper` PASS, the `Oracle proof` plan                                |
 | Falsifiability | `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, GREEN pair                                    |
 | `exception`    | Write `todo -> exception` with the `DR-*` the stage recorded; do not re-derive it, and do not enter Phase Green. |
 

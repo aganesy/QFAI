@@ -80,7 +80,7 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
 
     it(`${relativePath}: an interrupted review-fix item is resumed before new work`, async () => {
       const skill = await read(relativePath, "SKILL.md");
-      expect(skill).toContain("**Rework first**: if any row is at `review-fix`");
+      expect(skill).toContain("**rework first**: if any row is at `review-fix`");
       expect(skill).toContain("otherwise never picked up");
 
       const reference = await read(relativePath, "references/round-evidence.md");

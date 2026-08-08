@@ -159,7 +159,7 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     // phase, because there is no production code to mutate until then.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain(
-      "| Observed RED | RED command+result, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
+      "| Observed RED | RED command+result, `RED revision`, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
     );
     expect(provenance).toContain("A natural RED is not a substitute");
     expect(provenance).toContain("branch 1 names the mutation it intends");
@@ -548,12 +548,20 @@ describe.each(TREES)("%s (natural RED and the shared falsifiability gate)", (tre
     const shared = flat(
       await read(tree, "assistant/skills/qfai-implement/references/red-not-observable.md"),
     );
-    expect(shared).toContain("otherwise the production path and symbol");
-    expect(shared).toContain("already satisfied by something already in the tree");
+    expect(shared).toContain(
+      "accepted only on a `Layer = E2E` / `Layer = API` row handed over by `/qfai-atdd`",
+    );
+    // And still refused elsewhere: widening it for every row would let an
+    // ordinary TDD row reach `done` with no production change and no sibling.
+    expect(shared).toContain(
+      "On a `Unit` / `Component` / `Integration` row it is **not** accepted",
+    );
 
     const gatekeeper = flat(await read(tree, GATEKEEPER));
-    expect(gatekeeper).toContain("**`Satisfied-by` is not restricted to a sibling `TDD-NNNN`.**");
-    expect(gatekeeper).toContain("judge it on that, not on its shape");
+    expect(gatekeeper).toContain(
+      "**On an `E2E` / `API` row, `Satisfied-by` need not be a sibling `TDD-NNNN`.**",
+    );
+    expect(gatekeeper).toContain("On any other row the sibling row is still required");
   });
 });
 
@@ -680,5 +688,55 @@ describe.each(TREES)("%s (gates only what has a payload)", (tree) => {
     const block = implement.slice(0, implement.indexOf("- skill: ", 1));
     const red = block.slice(block.indexOf("- id: red"), block.indexOf("- id: build"));
     expect(red).toContain("rerun_policy: changed-scope-dependents");
+  });
+});
+
+describe.each(TREES)("%s (the handoff survives ledger order and time)", (tree) => {
+  it("selects the row P1c named, not the first todo row", async () => {
+    // P1c hands over by `TDD-ID`, and Phase Red step 1 took the first `todo`
+    // row regardless — so a branch-2 row above the named one was processed
+    // first, and its full-suite checkpoint ran against a tree still holding
+    // the named row's deliberate RED. It failed, landed at `refactor`, and
+    // step 1 does not re-select that.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**A named row wins**");
+    expect(implement).toContain("Row order in the ledger is not a priority");
+  });
+
+  it("re-checks the branch against the tree at each row's handoff", async () => {
+    // Fixing every row's branch at P1b goes stale as soon as rows are taken
+    // one at a time: an earlier branch-1 row's production code can satisfy a
+    // later row's predicate, leaving a row recorded as `observed-red` with no
+    // observable RED and no re-classification step.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("**The choice is provisional until the row's own handoff.**");
+    expect(atdd).toContain("can have no observable RED left by the time that row's turn comes");
+  });
+
+  it("records the RED revision where it can still be observed", async () => {
+    // The completion gate requires `RED revision` on a handed-over RED, and
+    // the producer recorded no revision at all — `/qfai-implement` cannot
+    // recover an uncommitted tree's address after Phase Green has changed it,
+    // so the required field was a guess or absent.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**and the revision it was observed at**");
+    expect(provenance).toContain("| Observed RED | RED command+result, `RED revision`,");
+  });
+
+  it("hands a review-fix acceptance test back to the skill that owns it", async () => {
+    // `/qfai-implement` does not author those tests and its `red` phase has no
+    // `acceptance-test-engineer`, so a REVISE asking for a test change left
+    // the row at `review-fix` or had a production agent edit a test it does
+    // not own.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("hand the acceptance test back to `/qfai-atdd` first");
+    expect(implement).toContain("has nobody here to do it");
+  });
+
+  it("keeps cross-spec obligations in the row's own evidence file", async () => {
+    const cross = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/cross-spec-ownership.md"),
+    );
+    expect(cross).toContain("in the evidence file the row's `Layer` owns");
   });
 });
