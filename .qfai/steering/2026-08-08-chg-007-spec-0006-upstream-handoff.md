@@ -177,3 +177,42 @@ the slice entirely. What is certain is the current state and that it contradicts
 about to run rather than trusting resolution — the same principle this slice applied to vitest
 selectors, where a gate that cannot report *which* thing it measured cannot be trusted to have measured
 the right one.
+
+## 11. Requirement 4 of the drift advisory is contract-scoped to the `message`, but the real hazard is any rendered surface
+
+Owner: `/qfai-sdd --contract` against `.qfai/contracts/cli/qfai-doctor.md`. Non-blocking. Fold into item 1's
+single pass so `TDD-0036` / `TDD-0037` inherit a resolved contract.
+
+**Both reviewers reached this independently**, which is why it is recorded rather than left as a
+preference. The contract heads the clause *"### The message must not name a refresh command"* and lists
+its four items under *"Required message content"*; `TC-0006-0030` clause (a) and `BR-0006-0020` likewise
+scope the prohibition to the **finding message body**. So `title` and `details` are outside it.
+
+**But the vector is measured real on those surfaces, not hypothetical.** During round 4:
+
+- `details.nextActions: ["qfai init --force"]` — the exact shape the sibling `skills.integrity` check
+  ships — **passed the row and the entire 19-selector closure** before a sweep existed for it.
+- ` - run qfai doctor --force` appended to the drift `title` passed too, because the only `toBe` on a
+  title in the slice pins the **`ok`** emission's, not the drift one.
+
+So an implementer could satisfy the contract to the letter and still ship the operator an instruction to
+run a command that does not exist — which is the harm the clause names.
+
+**Two options for the owner.** Recommended: **widen the clause** to something like *"no rendered surface
+of this finding — `message`, `title` or `details` — names a refresh command or CLI verb"*, because that
+is what the code already means and what an operator actually reads under `--format json`, where key names
+are part of the output. Alternative: leave the contract message-scoped and keep the sweep labelled as a
+deliberate defensive over-approximation, which is what round 5 does in the interim.
+
+**One fact that may make the widening unnecessary, and should be checked before doing the work.** Once
+`TDD-0036`'s four-key `toEqual` on `details` lands, a `nextActions` key is a **key-set** violation of
+`BR-0006-0022` independently of any command-token rule — and both violations still constructible after
+round 5 need an **extra key**, so that `toEqual` kills them for free. If the owner judges the key-set
+pin sufficient for `details`, the residue is `title` alone, which no row pins today and which
+`TDD-0036` is not expected to.
+
+**Why this is here rather than encoded downstream.** `constitution/drift-protocol.md#reviewer-originated-obligations`
+puts a reviewer-originated widening on the Change Request path; encoding it as a hard test obligation
+would make an implementation row the author of a contract term. Round 5 therefore keeps the assertion —
+it catches a measured real defect — but relabels it so it no longer claims to enforce a contract clause
+the contract does not carry.
