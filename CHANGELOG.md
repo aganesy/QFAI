@@ -241,6 +241,13 @@ advanced` asked for RED/GREEN commands, output and the falsifiability result
   `qa-gatekeeper` requires or broke the table below it. The table is now an
   index; each row's payload lives under its own `### TDD-NNNN` heading in fenced
   blocks.
+- **`qfai-implement`'s primary spec-completion condition is a list item again.**
+  A missing newline joined `- Each item reached \`done\` or valid \`exception\`
+  (with DR-ID)`to the tail of the bullet above it, and because the joined line
+is a two-space continuation, markdown rendered the condition as trailing prose
+inside a bullet about the`QFAI-ATDD-111`/`QFAI-ATDD-113`hard gate. The
+words were all still there, so nothing flagged it — while the clause had no
+line of its own, and downstream Decision Records that cite it by`file:line`pointed at a line it does not occupy.`tests/assets/swallowedListItem.test.ts`now scans the shipped`assistant/\*\*` tree for a list marker stranded mid-line.
 
 ### Changed
 
