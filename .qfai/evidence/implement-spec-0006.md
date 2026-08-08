@@ -5051,11 +5051,13 @@ commit the evidence landed in, and it is now unblocked.
 
 #### Routing carried out of round 6
 
-- **`provenanceGate.test.ts` (TDD-0033) — adopt `renderFindingSurface` at that row's next touch; owner:
-  TDD-0033.** The helper is now **stronger** for that row's bare-filename needle (`id`/`severity` join the
-  haystack, and escaping cannot break a filename), so adoption is sound; a needle spanning whitespace or a
-  backslash would need re-measuring. Recorded here with an owner rather than only in a third file's
-  docblock, which is the weakest available instrument and was the substance of finding M-1.
+- **`provenanceGate.test.ts` (TDD-0033) — extract the one-line serializer at that row's next touch;
+  owner: TDD-0033.** *Reworded in place: round 7 **deleted** `renderFindingSurface` at zero consumers, so
+  the earlier phrasing named a function that no longer exists.* The thing to extract is
+  `JSON.stringify(findings)` over the whole set, which is stronger than that row's inline three-field form
+  for its bare-filename needle — `id` and `severity` join the haystack, and `JSON.stringify` cannot rewrite
+  the characters in `qfai-tests.yml`. A needle spanning whitespace or a backslash would need re-measuring,
+  because escaping is exactly what defeated the `title` sweep (`22435ceb`).
 - **Blob-form divergence, so the chain does not read as contradictory.** `7b9c1b93` / `c2debc98` (the
   reviewer's B4 pair) and `77661ef9` / `a9012bd7` are the **same semantic mutations** as `36279c26` /
   `a34079db` and `192751ee` / `653dd950`, in different byte forms; `653dd950` and `4ab1083b` reproduced
@@ -5156,3 +5158,102 @@ four of the engineer's divergences, saying its own instruction was the error on 
 **owned** for `title` / `details` / `severity` by `drift.test.ts:253`, **unowned** for its message's
 "names no command" property (`04b7fdf6`), with the contract-scoping qualification that makes it a
 desirable property rather than a coverage gap.
+
+### G4 round 7: the sweep deleted, and the fix created two more instances of the class it was fixing
+
+Test `0d2f9f75 → 2dff562f` (525 → 497 lines); helper `4ebdbd6f → 30381d1d` (179 → 139).
+`git diff --stat -- packages/qfai/src/` is **empty** — production byte-identical to HEAD, **seventh**
+consecutive round. `pnpm ci:lint` exit 0 across all ten members; closure `173 passed | 14 skipped (187)`,
+identical to round 6, because R1 removed **assertions, not tests**. Comments **356 / 361** and **90 / 126** —
+under both of `implementation-reviewer`'s caps.
+
+#### It checked the deletion instead of executing it, and reproduced the deciding fact at a different byte form
+
+Before touching anything it verified all three scope sources independently — `06_Test-Cases.md:284`
+("message body に…"), `BR-0006-0020` ("finding message body は…"), and the contract's four-item
+"Required message content" list — and confirmed the `drift-protocol.md` sentence verbatim.
+
+Then it re-derived the fact the deletion turns on, at **`22435ceb`** where mine was `3d0da844`: a title of
+`"Workflows integrity (.github/workflows) qfai\treport"` leaves the row at `2 passed` **with loop B
+present**, because `JSON.stringify` re-escapes the tab and both token 1's `\s` and token 8's lookbehind
+miss. Two independent constructions, same conclusion: **loop B never owned the `title` vector it was
+widened for.** And the cost reproduced exactly — `759e622b` gives **exactly one** `AssertionError`, from
+loop B alone, on a contract-compliant retitling.
+
+**One thing neither reviewer measured, which strengthens the deletion**: the presence control loses
+nothing. `c50eca08` reddens the sibling `drift.test.ts` **hard**, `2 failed | 4 passed (6)`, before and
+after — so the borrowed-precondition claim was true and the control was only de-vacuifying a sweep that is
+itself going.
+
+**The honest residual, with an owner rather than a wave.** `details.nextActions` is **uncovered in the
+interval** until `TDD-0036` lands at G8: `0670aa46` went from three failures to GREEN. That is
+`BR-0006-0022`'s obligation, not `TC-0006-0030` clause (a)'s, and it is now written into the pin comment as
+an interval gap with a named owner.
+
+#### R1 created a fourth and fifth false-safety claim, and it found both
+
+This is the part worth keeping. **Deleting the sweep made two surviving comments false**:
+
+- The token-8 note cited the three ALL-GREEN `nextActions` violations as the **warrant** for the full
+  registry. Those are `details`-side and left this row's reach with the sweep, so post-R1 they warrant
+  nothing here. Re-pointed at their owner; the registry's warrant restated as the rule plus the label.
+- The space-in-path paragraph promised the over-fire "extends to the rendered surface once TDD-0036 puts
+  the absolute `packagedDir` in `details`" — a surface this row no longer sweeps. Evicted under pool item
+  (c) rather than maintained in a corrected form.
+
+**A round that removes false claims writes new ones, and a round that *deletes* code invalidates the
+comments that justified it.** Third consecutive round in which the fix's own output contained the defect
+class being fixed — and the first in which deletion, rather than addition, was the cause.
+
+#### The near-miss inside a licensed eviction, disclosed by the engineer against itself
+
+Taking eviction (b) removed the clause *"Constructed, since this row cannot run ubuntu from here"* — the
+**provenance qualifier** on the three-variant table's POSIX column. Dropping it would have **silently
+promoted a constructed claim to a measured one**: a brand-new false-safety claim, manufactured by an
+authorised eviction. Restored explicitly as "the Windows column EXECUTED, the POSIX column CONSTRUCTED".
+
+That is the sharpest process finding of the round. **A licence to delete is not a licence to delete
+safely** — eviction can create the exact defect the eviction was granted to reduce, and nothing in the cap
+mechanism would have caught it.
+
+#### Two of my instructions overturned, both correctly
+
+- **`renderFindingSurface` deleted, where I leaned keep.** Its argument uses something I established
+  without connecting it: the TDD-0033 adoption **already lives in the record as a routed item with a named
+  owner**, which I wrote precisely because a docblock is the weakest instrument. Once the routing is in the
+  record, keeping a zero-consumer export preserves nothing — and `ci:lint` has no unused-export gate, so the
+  rot would never be reported. `provenanceGate.test.ts:226` keeps the technique alive in a live consumer.
+- **Evictions (a) and (d) declined.** Those blob hashes are the **join keys into this file**, which the
+  test's own header names as the derivation's home, so removing them would sever the test→record link that
+  `implementation-reviewer`'s sequencing argument existed to protect. Budget was met without them.
+
+Consequence I had to land myself: the routing item's wording named `renderFindingSurface`, which no longer
+exists. Reworded in place to name the one-line serializer and what it buys.
+
+#### The sibling-PASS determination round 6 omitted, done mechanically
+
+`renderFindingSurface` had exactly one consumer, removed by R1 → zero, confirmed by a post-edit grep across
+`packages/qfai/**/*.ts`. Every other export byte-unchanged; the diff is exactly two hunks; the only
+executable lines removed in the whole file are that function's two. One self-correction worth recording:
+its first comparison flagged `ADOPTER_WORKFLOWS_DIR` as CHANGED, which was a **slicing artifact** — the
+slice ran to the next export and absorbed the removed docblock — and the diff shows no `+`/`-` on its
+declaration.
+
+#### Verification discipline
+
+`prettier -c` clean on both files **before** the closure run, so no `--write` intervened and the numbers sit
+at the reported blobs. An intermediate blob was disclosed (`3cb42836`) and **all eleven scenarios, the
+closure and `ci:lint` were re-run at the final `2dff562f`** rather than asserting that comment-only deltas
+cannot move assertions — the same standard `completion-reviewer` imposed at round 1.
+
+`pnpm check-types` skipped **by name with two covering facts**: `packages/qfai/src/**` is byte-identical to
+HEAD, and the `tests` tree is outside both tsconfigs' `include`, so `tsc -b` could not observe the edits at
+all. The unused-import removal was **required, not tidy** — `@typescript-eslint/no-unused-vars` is `error`
+globally and `disableTypeChecked` strips only type-aware rules, so a stale import fails `ci:lint` member 2.
+
+**The uniqueness assertion earned its keep a third time**: `title: "Workflows integrity (.github/workflows)",`
+occurs **twice** in `doctor.ts`, deliberately, so a one-line needle failed the check and had to be anchored
+on the title plus its following comment. And nothing was shell-routed — vitest and prettier were spawned as
+`node <entry>` with argv arrays and `shell: false`, since the `.bin/*.cmd` shims cannot be spawned without
+`shell: true` on Node 24, which is the thing the no-shell rule forbids. **33 revert verifications, zero
+`restored=false`.**

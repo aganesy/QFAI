@@ -37,11 +37,7 @@ import { describe, expect, it } from "vitest";
 
 import { createDoctorData } from "../../src/core/doctor.js";
 import { shippedWorkflowsDir } from "../helpers/shippedWorkflowFixtures.js";
-import {
-  editShippedWorkflow,
-  renderFindingSurface,
-  useAdopterTreePool,
-} from "../helpers/workflowsIntegrityFixtures.js";
+import { editShippedWorkflow, useAdopterTreePool } from "../helpers/workflowsIntegrityFixtures.js";
 
 const pool = useAdopterTreePool();
 
@@ -83,9 +79,11 @@ function escapeForRegExp(value: string): string {
  * dispatch and missing here silently narrows tokens 7 and 8. Mirrored rather
  * than imported to keep this row's zero-production-change record; the guard
  * supplies what the import would have. "NO omissions" is that guard's measured
- * reach and not a hope — it holds for every `case ` line, including one whose
- * label the extractor cannot parse. Both tokens 7 and 8 take the FULL registry;
- * token 8's note carries the constraint that puts on the message.
+ * reach and not a hope — it holds for every `case ` LINE, including one whose
+ * label the extractor cannot parse. Reach per LINE, not per label: the one
+ * precondition the guard cannot enforce is recorded at its leg 2 rather than
+ * restated here. Both tokens 7 and 8 take the FULL registry; token 8's note
+ * carries the constraint that puts on the message.
  */
 const CLI_SUBCOMMANDS = [
   "init",
@@ -129,16 +127,10 @@ const CLI_SUBCOMMANDS = [
  * The other tokens are anchored so that a path SEGMENT BOUNDARY cannot satisfy
  * them — `\s` after `qfai`, a word boundary for the package managers, leading
  * whitespace before a flag. That is narrower than "a path cannot satisfy them",
- * which is false and was measured to be false: a checkout at
- * `…\GitHub\QFAI clone\packages\qfai\…` puts a SPACE inside the path and fires
- * token 1. Harmless in direction (see below) and invisible in CI, which runs a
- * space-free checkout path; recorded so the next reader does not re-derive it.
- * It extends to the rendered surface once TDD-0036 puts the absolute
- * `packagedDir` in `details` (measured: token 1 alone, on either surface) — an
- * over-fire only, and it already fires on `message` today for the same tree, so
- * the incremental cost is zero. The analogous prediction for token 5 (a ` -dir`
- * segment) did NOT reproduce — a path segment is preceded by a separator, not by
- * whitespace.
+ * which is false and was measured to be false: a checkout path containing a
+ * SPACE fires token 1. An over-fire only, in the FALSE-RED direction, and
+ * invisible in CI, which runs a space-free checkout path. The derivation is in
+ * the evidence file rather than here.
  *
  * The first token over-approximates the contract's "no imperative naming a
  * `qfai` subcommand": it also matches ordinary prose such as "QFAI will not
@@ -182,14 +174,28 @@ const COMMAND_TOKENS: RegExp[] = [
   // THE FULL REGISTRY, `report` / `audit` / `doctor` included. An earlier form
   // dropped those three because compliant prose MIGHT fire on them ("this check
   // will report the difference") — a narrowing of a NEGATIVE needle to avoid a
-  // false RED, which is the one move the rule at the head of this list forbids,
-  // and it admitted three ALL-GREEN violations (`nextActions: ["doctor"]` /
-  // `["report"]` / `["audit"]`). Its false-RED risk is bounded by the equality
-  // pin: any rewording already reddens that, so this token can only add a
-  // labelled failure beside it. CONSTRAINT ON THE MESSAGE, recorded as token 1's
-  // is: it may not use those three as BARE WORDS. The shipped text says
-  // "reports", which the trailing `\b` rejects — measured on the message, the
-  // title and the whole rendered surface, not inferred from one of them.
+  // false RED, which is the one move the rule at the head of this list forbids.
+  // The three ALL-GREEN violations that used to be cited as the warrant
+  // (`nextActions: ["doctor"]` / `["report"]` / `["audit"]`) were `details`-side
+  // and left this row's reach when the rendered-surface sweep was removed; their
+  // owner is now named at the pin below. What warrants the full registry HERE is
+  // the rule plus the LABEL: on `message` the equality pin is the closure, and
+  // this token is a labelled restatement of requirement 4 standing beside it.
+  //
+  // ITS FALSE-RED RISK IS BOUNDED BY THE EQUALITY PIN, and the bound holds because
+  // `message` is now this token's ONLY haystack — that scope is the whole of the
+  // argument, so it is stated rather than left to be inferred. The bound is a
+  // PROOF, not a measurement: any `message` differing from `expectedMessage`
+  // already reddens the pin, and `expectedMessage` itself is token-clean (measured
+  // every round), so this token can only ADD a labelled failure beside a red the
+  // pin has already raised — never raise a lone one. While the sweep existed the
+  // same token object also governed `title` and `details`, which no test pins, and
+  // there the bound did NOT hold: a contract-compliant retitle produced exactly
+  // that lone false RED.
+  //
+  // CONSTRAINT ON THE MESSAGE, recorded as token 1's is: it may not use those
+  // three as BARE WORDS. The shipped text says "reports", which the trailing `\b`
+  // rejects (measured).
   new RegExp(`(?<![\\\\/@.\\w-])(?:${CLI_SUBCOMMANDS.join("|")})\\b(?![\\\\/@])`, "i"),
 ];
 
@@ -269,20 +275,33 @@ describe(
       // class that motivated the pin: they reduce the snapshot risk, they do not
       // remove it, and no oracle available to this row does.
       //
-      // The pin says nothing about `title` or `details`; both are swept below,
-      // which closed the `nextActions` vector (`["qfai init --force"]`, the shape
-      // `skills.integrity` ships, fires tokens 1, 4 and 8 — mutant `0670aa46`).
-      // ONE VIOLATION REMAINS CONSTRUCTIBLE, measured GREEN through this row and
-      // RECORDED rather than closed: `nextActions: ["qfai\tinit\t--force"]`
-      // (mutant `192751ee`). `JSON.stringify` ESCAPES the tab, so the
-      // serialization holds a backslash then `t` rather than whitespace, and
-      // tokens 1, 4 and 8 all miss; `\n` and `\r\n` behave identically
-      // (measured). It needs an EXTRA `details` key, so TDD-0036's `toEqual` on
-      // BR-0006-0022's closed four-key payload kills it for free and that key set
-      // is its row's business, not this one's. The bare-subcommand vector that
-      // used to sit beside it — `["doctor"]` (`653dd950`), `["report"]`
-      // (`55de1f13`), `["audit"]` (`74c13b46`), all three ALL-GREEN — is CLOSED
-      // by token 8's full registry, not by a key set.
+      // The pin says nothing about `title` or `details`, AND NEITHER IS SWEPT HERE.
+      // TC-0006-0030 clause (a), BR-0006-0020 and the contract's "Required message
+      // content" all scope requirement 4 to the message BODY, so an assertion over
+      // the other rendered fields is a reviewer-originated obligation — recorded as
+      // advisory and routed to the Change Request path, never encoded as a hard
+      // assertion. One was carried here for three rounds and removed on
+      // measurement: it produced a CLEAN FALSE RED, no legitimate red beside it, on
+      // the contract-compliant retitling `"Workflows integrity report (…)"`, while
+      // MISSING the `title` vector it had been widened to cover — a title reading
+      // `qfai<TAB>report` passes this row whole. Contract widening is routed
+      // upstream; nothing here waits on it.
+      //
+      // WHAT THAT LEAVES, split by OWNER rather than by mechanism:
+      //   - `details` is BR-0006-0022's closed four-key payload, TDD-0036's to pin.
+      //     Every constructible violation needs an EXTRA key — `nextActions: ["qfai
+      //     init --force"]`, the shape `skills.integrity` actually ships, and its
+      //     tab-escaped form `["qfai\tinit\t--force"]` alike — so a `toEqual` on the
+      //     key set closes the whole class INCLUDING the escaped forms, which no
+      //     whitespace-anchored needle can see (`JSON.stringify` writes a backslash
+      //     then `t`; `\n` and `\r\n` behave identically — measured). TDD-0036 is
+      //     `todo`, so the class is UNCOVERED IN THE INTERVAL: deliberate, and with
+      //     a named owner rather than a silent gap.
+      //   - `title` is UNOWNED, and naming that is the point of this note. A tab
+      //     inside its VALUE carries a command with no key-set change, so TDD-0036's
+      //     `toEqual` will not reach it either and no key-set pin can. It is outside
+      //     the contract as written, which is why it is recorded and raised upstream
+      //     instead of asserted.
       const expectedMessage =
         `installed shipped workflow(s) differ from the packaged copy: ${ADOPTER_STALE_PATH}. ` +
         `Manual repair: replace each listed file with the copy of the same name in ${shippedWorkflowsDir()}. ` +
@@ -314,16 +333,12 @@ describe(
       // `ubuntu-latest` — for a `toRelativePath(root, packagedDir)` tidy-up at
       // the emission site, because `toRelativePath` has no absolute fallback
       // (`src/core/paths.ts`) and the `../..` chain CONTAINS the absolute
-      // target: the last `../` supplies the leading `/`. Constructed, since this
-      // row cannot run ubuntu from here:
-      //
-      //   rel      = ../../home/runner/work/QFAI/QFAI/packages/qfai/assets/init/root/.github/workflows
-      //   includes = true     ← the hole
-      //   anchored = false    ← this needle
+      // target: the last `../` supplies the leading `/`.
       //
       // On Windows the same edit reddens twice over (`C:` and backslashes). The
-      // relationship between the anchor and the gap is NOT independence.
-      // Measured, three variants against the relativized message:
+      // relationship between the anchor and the gap is NOT independence. Three
+      // variants against the relativized message — the Windows column EXECUTED, the
+      // POSIX column CONSTRUCTED, since this row cannot run ubuntu from this host:
       //
       //   `\s+` before the path            → RED on POSIX and Windows
       //   weakened to `\s*`                → RED on POSIX and Windows
@@ -389,82 +404,21 @@ describe(
       // failure: on prose that names no command but puts a word straight after the
       // product name, "must name no command" is a true statement about a message
       // the token just rejected.
+      //
+      // ITS HAYSTACK IS `findings[0].message` AND NOTHING ELSE, which the label
+      // states rather than leaving to be inferred from the code on a red: a SECOND
+      // registration's message is swept by nothing in this file. Held by
+      // `toHaveLength(1)` above, so there is no false GREEN — measured, a duplicate
+      // command-bearing registration yields exactly that one failure and the three
+      // token observations are LOST, not silently passed.
       for (const token of COMMAND_TOKENS) {
         expect
           .soft(
             message,
-            `no refresh command exists, so the repair text must name no command — token 1 also fires on a word placed straight after the product name, which is a known false positive, not a violation: token /${token.source}/ matched`,
+            `no refresh command exists, so the repair text must name no command — this sweep reads findings[0].message ONLY, so a second registration is held by the length assertion above and not by this one; token 1 also fires on a word placed straight after the product name, which is a known false positive, not a violation: token /${token.source}/ matched`,
           )
           .not.toMatch(token);
       }
-
-      // THE SAME SWEEP OVER EVERY OTHER RENDERED FIELD of EVERY registered
-      // finding — `id`, `severity`, `title` and `details`, serialized whole.
-      //
-      // DELIBERATELY STRICTER THAN THE CONTRACT, and the label says so instead of
-      // claiming an obligation the contract does not carry: TC-0006-0030 clause
-      // (a) and BR-0006-0020 scope the prohibition to the message BODY, and
-      // `details`' key set is BR-0006-0022's. Kept anyway because the vector is
-      // measured real — `skills.integrity` ships exactly this shape, and
-      // `details.nextActions: ["qfai init --force"]` passed this row AND all
-      // nineteen selectors of its refactor closure before the sweep existed.
-      // Contract widening is routed upstream; nothing here waits on it.
-      //
-      // Sweeping a SERIALIZATION rather than a pinned key set keeps it out of
-      // BR-0006-0022's territory: it adds no expectation about which keys exist,
-      // so TDD-0036 stays free to `toEqual` the four-key payload — measured clean
-      // against that payload on both platforms.
-      //
-      // `message` IS PROJECTED OUT so the two sweeps do not overlap. They did:
-      // `message` is a contiguous substring of the serialization and no token
-      // distinguishes the haystacks, so ONE appended sentence reddened both loops
-      // — seven failures, three of them exact duplicates (prod `4ab1083b`); now
-      // four. A DENY-list, never an allow-list: a field added to `DoctorCheck`
-      // lands here automatically, and a RENAMED `message` merely stops being
-      // omitted, restoring the duplicates — false RED at worst, never a gap.
-      //
-      // The `message`-only sweep above is NOT deleted as entailed: its label is
-      // the only one stating requirement 4 as the contract states it, which is
-      // this file's kept-line standard. It reads `findings[0]` where this one
-      // reads the whole set, so a SECOND registration's message is swept by
-      // neither — held by `toHaveLength(1)` above, which reddens on one.
-      const renderedSurface = renderFindingSurface(
-        findings.map(({ message: _message, ...rest }) => rest),
-      );
-      for (const token of COMMAND_TOKENS) {
-        expect
-          .soft(
-            renderedSurface,
-            `deliberate over-approximation of requirement 4 (the contract scopes it to the message body): no rendered field of any finding OTHER THAN THE MESSAGE — swept separately above — may name a command, because \`details.nextActions\` is where the sibling check ships \`qfai init --force\`: token /${token.source}/ matched`,
-          )
-          .not.toMatch(token);
-      }
-
-      // NON-VACUITY CONTROL for the `details` half of that sweep, which without
-      // it is vacuous under a reachable, TYPE-CHECKING mutation: `details?:` is
-      // optional on `DoctorCheck`, so deleting the whole `details` block from the
-      // drift emission left `tsc -b` at 0 and this row at `1 passed` — the half
-      // whose entire purpose is closing the `nextActions` vector. Mutants
-      // `7d8e402f` (against `doctor.ts 56fe58d5`) and `c50eca08` (re-measured
-      // here); this line is the sole reacher of both. No RENDERER change
-      // substitutes for it — `JSON.stringify` omits an absent `details` key
-      // outright, which is equally token-clean (measured).
-      //
-      // PRESENCE ONLY, and that property is to be preserved: it says `details`
-      // exists and NOTHING about which keys it has, so TDD-0036 stays free to
-      // `toEqual` its payload. BORROWED PRECONDITION, owner named:
-      // `spec0006WorkflowsIntegrity.drift.test.ts` catches the same mutation
-      // independently and hard, in two of its six `it`s (`:96` and `:139`), via
-      // `readModifiedPaths(check?.details)` → `toBeDefined`. Restated here
-      // because the sweep it guards is this row's, on the precedent one row
-      // earlier — the provenance-gate suite's live control beside its negative
-      // absence sweep.
-      expect
-        .soft(
-          check?.details,
-          "the drift finding must CARRY a `details` payload, or the rendered-surface sweep above swept nothing — presence only, no claim about which keys exist",
-        )
-        .toBeDefined();
 
       // The equality pin, last so the labelled restatements report first.
       expect
@@ -487,11 +441,17 @@ describe(
     // would over-collect, which is again the safe direction.
     it("this row's CLI_SUBCOMMANDS mirror covers every subcommand in the dispatch", async () => {
       const source = await readFile(CLI_MAIN_PATH, "utf-8");
-      // `[\w-]+`, not `[a-z][a-z-]*`: the narrow class could not see a label
-      // carrying a DIGIT or an UNDERSCORE, and the miss was a FALSE GREEN —
-      // prepending `case "atdd2":` left this `it` at `2 passed`, exit 0 (prod
-      // `36279c26`), the label matching neither the capture nor the coverage
-      // check below.
+      // `[\w-]+`, not `[a-z][a-z-]*`: the narrow class cannot see a label carrying
+      // a DIGIT or an UNDERSCORE. WHAT THE WIDENING BUYS IS NOT DETECTION, and the
+      // earlier claim that it was is corrected here: with the count leg below in
+      // place, `case "atdd2":` reddens under the NARROW class too, because the
+      // label the capture drops is still counted (measured: 1 failure, the count
+      // leg alone, `expected 10 to be 11`). It buys the RIGHT LABEL on that red —
+      // the count leg reports "not extractable" where the coverage check below
+      // reports the actual defect, a dispatched subcommand missing from this
+      // mirror — and it avoids a FALSE RED the day a legitimate label carries a
+      // digit, which the narrow class would report as an extraction failure
+      // forever.
       const dispatched = [...source.matchAll(/^\s*case "([\w-]+)":/gm)].map((match) => match[1]);
 
       // NON-VACUITY, two legs, neither of which covers the other's failure.
@@ -509,6 +469,18 @@ describe(
       // (`case "a.b":`) reaches this leg and nothing else in this row. A COUNT
       // rather than a pinned number, so it cannot go stale when a subcommand
       // retires.
+      //
+      // "TOTAL" IS TOTAL PER LINE, NOT PER LABEL, and that is a PRECONDITION THIS
+      // GUARD DOES NOT ENFORCE: both legs are line-anchored (`^\s*case `), so a
+      // single line carrying TWO labels is counted once and captured once and both
+      // legs stay green while the second label is dispatched and absent from the
+      // mirror. Measured: `case "init": case "zzz":` leaves this row at `2 passed`,
+      // exit 0, with `zzz` reachable (prod `0964f3b3`) — a FALSE GREEN, and the one
+      // the count leg was supposed to make impossible. ONE `case` LABEL PER LINE is
+      // therefore a precondition held by `pnpm format:check`, which rejects that
+      // form (measured: `prettier -c src/cli/main.ts` exits 1 on it), and not by
+      // anything in this file. Do not restate it as an assertion here: a
+      // line-anchored guard cannot see the property it would need to check.
       expect(
         dispatched.length,
         "every `case ` line in src/cli/main.ts's dispatch must be extractable, or this guard covers only the labels it happened to parse",
