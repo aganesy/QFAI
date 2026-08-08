@@ -2479,6 +2479,16 @@ named in that CR's blocked set.
 
 ## Test results summary — canonical roll-up (supersedes every earlier results table)
 
+**Scope correction, in place.** This table was written at G3 and its "supersedes every earlier results
+table" clause therefore **voided figures that came later** — including the round-5 and round-6 closures.
+`completion-reviewer` found that this left the record with no current closure measurement anywhere, its
+finding B4. The clause is hereby narrowed: **this table supersedes earlier tables only for the rows it
+lists (TDD-0029, TDD-0033) and only up to G3.** TDD-0030's and TDD-0032's figures are the per-row ones in
+their own sections, and the authoritative closure for TDD-0032 is
+`Tests 173 passed | 14 skipped (187)`, exit 0, at `ac902339`. The full serial suite figure below is at
+`921ad1fe` (4316/4353); a later run at `a2fd86bc` gives 4319/4356, and the most recent full package run is
+`4320 passed | 37 skipped` at round 6 — the roll-up named the oldest of the three.
+
 | Scope | Result |
 | --- | --- |
 | TDD-0029 selector, file-scoped, no `-t` | `Tests 3 passed (3)`, exit 0 |
@@ -3187,8 +3197,12 @@ worked, so "the target is intact" is not a sufficient post-check.
 
 ### TDD-0032
 
-**T2 solo, group G4. `todo → red → refactor`. `completion-reviewer` PASS at `85bb86ce`; gate and code
-review live.**
+**T2 solo, group G4. `todo → red → refactor`, then six `refactor → review-fix → refactor` rework
+cycles.** *Header corrected in place: it read "`completion-reviewer` PASS at `85bb86ce`; gate and code
+review live" for six rounds, so a reader who stopped here got 7 August. `completion-reviewer`'s round-1
+PASS was **six rounds stale** and was re-run at round 6 — it returned REVISE, and its findings are the B1-B10
+set recorded below. The `Revision:` field immediately following is round 1's and is retained as history;
+the current revision is `ac902339` (code) / `e34d663d` (record).*
 
 - **TC-Refs**: TC-0006-0030 clause **(a)** only — clauses (b) and (c) were split into TDD-0038 and
   TDD-0039 by `delivery-planner`, and clause (a) is entirely message content, so this row discharges it
@@ -3215,8 +3229,15 @@ review live.**
   from MT1 / MT2 rather than from the RED.
 - **GREEN result**: `Tests 1 passed (1)`, exit 0.
 - **Refactor verify command**: the literal 18-selector invocation recorded above, plus this row's file
-  (19 selectors). **Result**: `Test Files 17 passed | 2 skipped (19)` / `Tests 172 passed | 14 skipped (186)`,
-  exit 0. 172 − 1 confirms the recorded 18-file baseline of 171.
+  (19 selectors), run as `./node_modules/.bin/vitest run` from `packages/qfai`.
+  **Result at round 1 (`85bb86ce`, test blob `25191693`)**: `Test Files 17 passed | 2 skipped (19)` /
+  `Tests 172 passed | 14 skipped (186)`, exit 0. 172 − 1 confirms the recorded 18-file baseline of 171.
+  **Result at round 6 (`ac902339`, test blob `0d2f9f75`) — the revision the row landed at**:
+  `Test Files 17 passed | 2 skipped (19)` / `Tests 173 passed | 14 skipped (187)`, exit 0; 173 − 172 is
+  the completeness-guard `it` added in round 5. *Corrected in place: this field carried only the round-1
+  figure through five reworks. `references/round-evidence.md:61-63` requires the pair to be **fresh** —
+  "the pre-rework pair is stale evidence" — and present-but-stale is worse than absent because it reads as
+  current. Reproduced independently by `completion-reviewer` and `qa-gatekeeper` at `ac902339`.*
 - **Checkpoint verification**: `pnpm format:check` 0, `pnpm lint` 0, `pnpm check-types` 0,
   `pnpm -C packages/qfai lint:shipping` 0 — all four independently re-run by `completion-reviewer`, plus
   `lint:md`. Serial full suite at `a2fd86bc`: `Tests 4319 passed | 37 skipped (4356)`, zero failures.
@@ -4053,19 +4074,26 @@ is **not** the cause: `JSON.stringify({ title, details: undefined })` is token-c
 `JSON.stringify({ title, details: {} })` is token-clean, so the fallback is a **no-op for the verdict**
 and the comment says that rather than implying it guards. Precedent named in the comment
 (`provenanceGate.test.ts`'s live control beside its negative absence sweep) and owner named for the
-independent catch (`drift.test.ts`, both `it`s, `readModifiedPaths(check?.details)` → `toBeDefined`,
-which returns `undefined` for an absent payload and fails **hard**).
+independent catch (`drift.test.ts`, **two of its six `it`s** — the assertions at `:96` and `:139` —
+`readModifiedPaths(check?.details)` → `toBeDefined`, which returns `undefined` for an absent payload and
+fails **hard**). *Corrected in place from "both `it`s": the file has six, measured under `c50eca08` as
+`2 failed | 4 passed`.*
 
 **C1 / C3 — one rendered-surface helper, sweeping every finding.** `renderFindingSurface` extracted
-into `tests/helpers/workflowsIntegrityFixtures.ts`, byte-equivalent to the older and stronger copy at
-`provenanceGate.test.ts` (includes `message`, maps **every** registered finding). This row calls it,
+into `tests/helpers/workflowsIntegrityFixtures.ts`, at this round equivalent to the older and stronger
+copy at `provenanceGate.test.ts` (includes `message`, maps **every** registered finding). *Corrected in
+place from "byte-equivalent": round 6 replaced this with a whole-set `JSON.stringify`, and the two forms
+are measurably **not** byte-equivalent — the new one also escapes `title` and `message`.* This row calls it,
 which fixes C3 for free — round 4 serialized only `title` + `details` of `findings[0]`, so a second
 registration carrying a command token would have reported as a `toHaveLength(1)` mismatch rather than a
 token violation.
 
 `provenanceGate.test.ts` is **deliberately not edited**: TDD-0033 sits at `refactor` with three reviewer
-PASSes and a DRY win does not justify invalidating a completed review. The helper's docblock records
-that it should adopt the helper the next time that file is touched for its own reasons.
+PASSes. *Corrected in place: the reason is **scope hygiene** — a sibling row's edit does not belong in
+this row's commit — not "invalidating a completed review", which overstates it. TDD-0033 is at
+`refactor`, not `done`; the edit is behaviour-preserving; the cost is one selector run, not a review.*
+The adoption item now has a named owner in the round-6 routing list, rather than living only in a third
+file's docblock.
 
 **C2 — `CLI_SUBCOMMANDS` now has a completeness guard.** A second `it` in this row's describe block
 extracts `case "…":` labels from `src/cli/main.ts` and asserts the mirror **covers** them. Coverage and
@@ -4988,6 +5016,39 @@ Separately, a bash heredoc collapsed `\\n` to a newline and produced a syntactic
 fixed that by **extracting** the round-5 body from blob `29d87902` rather than retyping it — the same
 by-text discipline, applied to constructing a mutation rather than recording one.
 
+#### The record-correction method itself was wrong, and a reviewer had to say so
+
+`implementation-reviewer`'s round-6 MAJOR-1 named something I had been doing consistently and should not
+have been: **appending a correction while leaving the false statement in place.** Its instruction was
+explicit — "correct `:4056`, `:4060`, `:4067` **in place** rather than appending, since each appears
+exactly once and nothing supersedes them."
+
+That is the row's own blocker class, one level up. `B1` and the round-6 trio were all *false claims sitting
+beside later text that contradicted them*; a record that contains a false sentence plus a correction
+somewhere else is still a record containing a false sentence, and a reader who stops at the first one is
+misled exactly as much. Appending is only adequate when the appended text is **adjacent enough to be read
+together**, which a 4700-line file cannot guarantee.
+
+Adopted for the rest of this slice: **a false statement is edited where it lives, with an inline italic
+note saying what it used to say and what measurement changed it.** The note is what keeps the correction
+auditable — silently editing would make a corrected record indistinguishable from one that was always
+right, which is the failure the coverage-map correction avoided earlier.
+
+The three corrections applied under that rule are at their original sites above.
+
+#### MAJOR-1's body was already discharged by a commit the reviewer's worktree predates
+
+It measured `ac902339` and reported zero round-6 content in this file, six cited hashes absent, and stale
+`test-list.md` Notes. All true of `ac902339`; the round-6 section and the refreshed `Evidence` cell landed
+at `e34d663d`, after its worktree was cut. Verified after the fact: all six hashes (`55de1f13`,
+`74c13b46`, `c50eca08`, `36279c26`, `b0bc981e`, `4ab1083b`) are present, `4ab1083b` with its mutation
+text, and the ledger cell now reads six rounds rather than five.
+
+**The finding was still right to file**, and the sequencing point it rests on is the part to keep: it
+declined to order the comment eviction *because* the derivation had no durable home yet, so eviction would
+have destroyed the only record. That ordering — record first, evict second — is correct regardless of which
+commit the evidence landed in, and it is now unblocked.
+
 #### Routing carried out of round 6
 
 - **`provenanceGate.test.ts` (TDD-0033) — adopt `renderFindingSurface` at that row's next touch; owner:
@@ -5002,3 +5063,96 @@ by-text discipline, applied to constructing a mutation rather than recording one
   `c50eca08`.
 - The tab-escape residue (`P5`) is **unchanged and still TDD-0036's**, closed for free by that row's
   four-key `toEqual` since it needs an extra key.
+
+### The round-6 completion review: three reviewers, and the first direct conflict of the slice
+
+`completion-reviewer`'s round-1 PASS was **six rounds stale** and nobody had noticed — including me, the
+orchestrator whose job the routing is. Re-running it produced the most consequential review of the run,
+and it reversed part of what rounds 4-6 built.
+
+#### The conflict, and how it resolved
+
+- `implementation-reviewer` (round 5, B3) said the bare-subcommand exclusion's warrant was false and the
+  filter should be **deleted**, widening the sweep. Round 6 did that.
+- `qa-gatekeeper` (round 6, B) attacked the widening on my own criterion, could not construct a
+  false RED the pin does not already cover on the **message**, and would **keep** the sweep.
+- `completion-reviewer` (round 6, B1) ruled the sweep should **not exist**: it is a reviewer-originated
+  obligation encoded as a hard assertion. The contract, `TC-0006-0030` clause (a) and `BR-0006-0020` all
+  scope the prohibition to the **message body**, and `drift-protocol.md:286-289` is unconditional — a
+  `Traces to: none` finding "MUST be recorded as `advisory`, MUST NOT be `blocking`, and is routed to the
+  Change Request path — **never to the implementer**". `references/oracle-strength.md:66-70` says the same
+  in the same terms and offers **no "keep and relabel" branch**, which is what my interim disposition was.
+
+I verified both citations directly rather than accepting the quotation. `completion-reviewer` also filed
+the honest counter-argument against itself: the `oracle-strength.md` sentence sits under
+`## The equivalent-mutant case`, whose premise ("no mutation can be found because the contract is weaker
+than the obligation") does **not** hold here — clause (a) has a real oracle proof in the pin, so loop B is
+surplus rather than a workaround.
+
+**Resolved in `completion-reviewer`'s favour, on a fact neither reviewer connected to the question.**
+`qa-gatekeeper`'s F2 measured that loop B **in its round-6 escaped form misses a tab in `title`** — the
+very field the widening was supposed to cover (mutant `3d0da844`: the round-6 whole-set form passes, the
+round-5 three-field form reddens on tokens 1 and 8). So loop B does not own the `title` vector. Its
+remaining value is the `details` half, and **`TDD-0036`'s four-key `toEqual` closes that by key set**,
+because every constructible violation needs an extra key. Against that, the measured cost is a **clean
+false RED with no accompanying legitimate red** on a contract-compliant retitling (`759e622b`). Loop B is
+nearly all cost, and the obligation's proper owner is upstream — already routed as handoff item 11.
+
+One precision on `completion-reviewer`'s own premise: it said "production never emits
+`details.nextActions`". True of **this** check; `src/core/doctor.ts:246` shows the sibling
+`skills.integrity` check does emit it. That makes "a future author copies the sibling" the real risk —
+which is an argument for `TDD-0036` owning the key set, not for this row asserting past its contract.
+
+#### The status was wrong at the reviewed revision, and the rule is worth stating
+
+`completion-reviewer`'s B3: the ledger read `review-fix` at both `ac902339` and `e34d663d`, when round 6's
+rework was **complete, committed and under review**. Three shipped rules require `refactor` there —
+`references/round-evidence.md:46` ("`review-fix → refactor` is the only status change the rework
+produces"), its behaviour-preserving path step 4 ("then return to `refactor` and re-submit"), and
+`SKILL.md` Handoff Contract 4, whose whole point is that a `REVISE` must land on the one status with an
+outbound `review-fix` edge. **A review requested from `review-fix` has no legal landing edge.**
+
+That was my error, repeated at every round: I parked the row at `review-fix` when *dispatching* reviewers,
+rather than returning it to `refactor` and re-submitting from there. The current value happens to be
+correct because round 7's rework is genuinely in flight — so this is recorded as a rule rather than fixed
+by flipping a cell, which would be cosmetic.
+
+#### Gate item 9 has no determination anywhere in the slice
+
+`product-surface-reviewer` appears **zero** times in this file. It is `conditional_agents` in
+`agent-routing.yml`, and Handoff Contract 5 triggers on "UI behavior **or rendered output**" — and this
+row's entire subject is rendered CLI text plus a JSON `details` surface.
+
+**Determination, recorded now because item 9 presupposes one and none exists: not required, for this row
+and for the G1-G4 rows.** `ui-definition-protocol.md` and `cli-ux-guidelines.md` both key "product
+surface" to graphical UI and to `qfai validate` output; spec-0006 has no `.qfai/contracts/ui/*.yaml`; and
+`completion-reviewer` explicitly declined to assert the reviewer was required, on the ground that reading
+it as required would add a review obligation upstream never asked for. What was missing was never the
+reviewer — it was the **cheap determination**, and its absence is mine.
+
+#### Six further record defects, all mine, all corrected in place
+
+`B2` the `Refactor verify` pair carried round 1's `172 | 186` through five reworks (present-but-stale
+reads as current, which is worse than absent). `B4` the "supersedes every earlier results table" clause
+voided every **later** figure, so the record's canonical closure was an 18-selector number from G3 and no
+current measurement existed anywhere — the clause is now narrowed to the rows and rounds it actually
+covers. `B5` the `Evidence` cell dropped the closure figure at `e34d663d`. `B6` steering item 13 still
+carried `eslint.config.mjs` after I recorded that correction — **third instance of a correction landing in
+the narrative and not at the source**. `B8` the `### TDD-0032` header still described round 1. `B9`
+steering item 11 priced the residue at round 5 and understated the assertion it routes.
+
+The pattern across all six is one thing: **I corrected records by appending and left the false sentence
+standing.** `implementation-reviewer` named it in the same round (MAJOR-1) and it is now the rule — a false
+statement is edited where it lives, with an inline note of what changed it.
+
+#### What the reviewers confirmed, so the record is not only a defect list
+
+All three independently verified: production untouched for the **sixth** consecutive round (comment-stripped
+diff empty); `pnpm ci:lint` exit 0 across all ten members; the row and the 19-selector closure green at
+`173 | 187`. `qa-gatekeeper` reproduced **nine** cited mutant blobs byte-for-byte and confirmed `P11a`/`P11b`
+as the strictly-stronger proof; `implementation-reviewer` reproduced eleven to the digit and accepted all
+four of the engineer's divergences, saying its own instruction was the error on two of them. And
+`qa-gatekeeper` settled the `ok`-emission ownership question I had left open rather than guessing:
+**owned** for `title` / `details` / `severity` by `drift.test.ts:253`, **unowned** for its message's
+"names no command" property (`04b7fdf6`), with the contract-scoping qualification that makes it a
+desirable property rather than a coverage gap.

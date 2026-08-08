@@ -215,6 +215,31 @@ pin sufficient for `details`, the residue is `title` alone, which no row pins to
 puts a reviewer-originated widening on the Change Request path; encoding it as a hard test obligation
 would make an implementation row the author of a contract term. Round 5 therefore keeps the assertion —
 it catches a measured real defect — but relabels it so it no longer claims to enforce a contract clause
+
+**Superseded 2026-08-08 by round 7 — read this before acting on the paragraphs above.** The interim
+disposition described here ("keep the sweep, relabel it") **did not survive review.** `completion-reviewer`
+ruled the `title` + `details` sweep a reviewer-originated obligation encoded as a hard assertion, which
+`drift-protocol.md:286-289` forbids in those terms, and `references/oracle-strength.md` offers no
+"keep and relabel" branch. The sweep is **deleted** in round 7; the routing recorded in this item stands
+unchanged and is now the _only_ instrument.
+
+Two measured corrections to what this item says about the residue, both of which change what the owner is
+being asked for:
+
+- The tab-escape class is **wider than one `details` vector**. Round 6's whole-set serialization
+  JSON-escaped `title`, so a tab inside `title`'s **value** also escapes detection (witness `3d0da844`:
+  the round-6 form misses it, the round-5 form reddens on tokens 1 and 8). So there were at least **two**
+  constructible violations, not one.
+- **`TDD-0036`'s four-key `toEqual` closes only the `details` half.** A key-set pin cannot reach a tab
+  inside `title`'s value. The `title` half is therefore **unowned by any row**, and that is the residue the
+  owner is actually deciding about — not the `details` one, which `TDD-0036` closes for free.
+
+Also settled by measurement, so the owner does not have to: the **`ok` emission** is owned for `title`,
+`details` and `severity` by `drift.test.ts:253` (all exact pins), and **unowned for its message's
+"names no command" property** (witness `04b7fdf6` — a `Re-run qfai init to verify.` appended to the `ok`
+message passes both suites). Qualified in the deliverable's favour: the contract scopes requirement 4 to
+the `modified` message, and the `ok` row of the state table carries no such clause, so this is an unowned
+_desirable_ property rather than a coverage gap against the contract.
 the contract does not carry.
 
 ## 12. `.qfai/steering/**` sits inside both whole-tree lint gates; `.qfai/evidence/**` sits outside both
@@ -259,7 +284,7 @@ worth across the whole repository.
 
 Measured: `packages/qfai/tsconfig.json` and `tsconfig.build.json` both declare
 `"include": ["src/**/*.ts", "src/**/*.d.ts"]`, so `tsc -b` never visits `tests/**`; and
-`eslint.config.mjs` applies `tseslint.configs.disableTypeChecked` to `**/tests/**/*.ts`, so the
+the **root** `eslint.config.js` applies `tseslint.configs.disableTypeChecked` to `**/tests/**/*.ts`, so the
 type-aware lint rules are off there too. Vitest strips types without checking them.
 
 Demonstrated rather than argued: renaming a field access to one that does not exist on the parameter's
