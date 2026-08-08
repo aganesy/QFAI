@@ -75,7 +75,7 @@ function narrowToScope(
   // The spec *directories* that exist, not the ones with ids: a sibling spec
   // created moments ago has empty catalogues, and treating it as nonexistent
   // would keep its typo repo-wide when its own gate does in fact own it.
-  const declaredSpecs = result.declaredSpecNumbers;
+  const declaredSpecs = result.declaredSpecDirs;
   const narrowUnknown = (entries: AtddUnknownRef[]): AtddUnknownRef[] =>
     entries.filter((entry) => {
       if (entry.kind !== "us" && entry.kind !== "tc") return true;
@@ -119,7 +119,7 @@ function narrowToScope(
 function owningSpecDirs(
   refs: readonly string[],
   specsRoot: string,
-  declaredSpecs?: ReadonlySet<string>,
+  declaredSpecs: ReadonlyMap<string, string>,
 ): string[] {
   const numbers = new Set<string>();
   for (const ref of refs) {
@@ -132,12 +132,20 @@ function owningSpecDirs(
     // it. `declaredSpecs` is omitted where every ref is known to name a real
     // spec (the coverage and forbidden findings read the spec packs).
     if (number === undefined) continue;
-    if (declaredSpecs !== undefined && !declaredSpecs.has(number)) continue;
+    if (!declaredSpecs.has(number)) continue;
     numbers.add(number);
   }
-  return Array.from(numbers)
-    .sort((left, right) => left.localeCompare(right))
-    .map((number) => path.join(specsRoot, `spec-${number}`));
+  return (
+    Array.from(numbers)
+      .sort((left, right) => left.localeCompare(right))
+      // The enumerated directory, never `spec-${number}` rebuilt from the number:
+      // a `SPEC-0001/` spelling is valid on a case-sensitive filesystem and
+      // `listSpecDirs` keeps it verbatim, so a synthesised lower-case path would
+      // point the CLI report and the GitHub annotation at a file that is not
+      // there. The `??` is unreachable given the `has` guard above and only keeps
+      // the expression total.
+      .map((number) => declaredSpecs.get(number) ?? path.join(specsRoot, `spec-${number}`))
+  );
 }
 
 /**
@@ -149,8 +157,9 @@ function owningSpecDirs(
 function specAttribution(
   refs: readonly string[],
   specsRoot: string,
+  declaredSpecs: ReadonlyMap<string, string>,
 ): { file: string; relatedFiles: string[] } {
-  const dirs = owningSpecDirs(refs, specsRoot);
+  const dirs = owningSpecDirs(refs, specsRoot, declaredSpecs);
   const [first, ...rest] = dirs;
   return { file: first ?? specsRoot, relatedFiles: rest };
 }
@@ -206,10 +215,14 @@ export async function validateAtddCodeTraceability(
   const dirs = atddTestKindDirs(config.paths.testsDir);
   const issues: Issue[] = [];
 
-  issues.push(...buildUnknownIssues(result.unknown, result.specsRoot, result.declaredSpecNumbers));
+  issues.push(...buildUnknownIssues(result.unknown, result.specsRoot, result.declaredSpecDirs));
 
   if (result.missing.us.length > 0) {
-    const usAttribution = specAttribution(result.missing.us, result.specsRoot);
+    const usAttribution = specAttribution(
+      result.missing.us,
+      result.specsRoot,
+      result.declaredSpecDirs,
+    );
     issues.push(
       issue(
         "QFAI-ATDD-111",
@@ -233,7 +246,11 @@ export async function validateAtddCodeTraceability(
 
   if (result.missing.tc.length > 0) {
     const grouped = groupMissingTcByHome(result.missing.tc, result.missingTcHomes);
-    const tcAttribution = specAttribution(result.missing.tc, result.specsRoot);
+    const tcAttribution = specAttribution(
+      result.missing.tc,
+      result.specsRoot,
+      result.declaredSpecDirs,
+    );
     issues.push(
       issue(
         "QFAI-ATDD-112",
@@ -351,7 +368,7 @@ export async function validateAtddCodeTraceability(
         // test path — that is what the operator edits — but a `tests/**`
         // path has no spec owner, so without this the finding survived every
         // `--spec` filter.
-        { relatedFiles: owningSpecDirs(forbidden.ids, result.specsRoot) },
+        { relatedFiles: owningSpecDirs(forbidden.ids, result.specsRoot, result.declaredSpecDirs) },
       ),
     );
   }
@@ -371,7 +388,7 @@ export async function validateAtddCodeTraceability(
         // test path — that is what the operator edits — but a `tests/**`
         // path has no spec owner, so without this the finding survived every
         // `--spec` filter.
-        { relatedFiles: owningSpecDirs(forbidden.ids, result.specsRoot) },
+        { relatedFiles: owningSpecDirs(forbidden.ids, result.specsRoot, result.declaredSpecDirs) },
       ),
     );
   }
@@ -391,7 +408,7 @@ export async function validateAtddCodeTraceability(
         // test path — that is what the operator edits — but a `tests/**`
         // path has no spec owner, so without this the finding survived every
         // `--spec` filter.
-        { relatedFiles: owningSpecDirs(forbidden.ids, result.specsRoot) },
+        { relatedFiles: owningSpecDirs(forbidden.ids, result.specsRoot, result.declaredSpecDirs) },
       ),
     );
   }
@@ -476,7 +493,7 @@ function buildMissingTcFix(
 function buildUnknownIssues(
   unknown: AtddUnknownRef[],
   specsRoot: string,
-  declaredSpecs: ReadonlySet<string>,
+  declaredSpecs: ReadonlyMap<string, string>,
 ): Issue[] {
   if (unknown.length === 0) {
     return [];

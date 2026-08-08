@@ -97,6 +97,11 @@ function extractSpecIdFromScaffoldPath(testsAtddDir: string, filePath: string): 
  * `spec-NNNN` -> `NNNN`, for comparing a scaffold path's spec id against a
  * `--spec` scope (which holds bare numbers).
  */
+/** Repo-relative POSIX form of an enumerated spec directory. */
+function toPosixRelative(root: string, absolute: string | undefined): string {
+  return path.relative(root, absolute ?? "").replace(/\\/g, "/");
+}
+
 function scaffoldSpecNumber(specId: string): string | null {
   // Normalized the way `resolveSpecScope` normalizes `--spec`: it pads to four
   // digits, and `extractSpecIdFromScaffoldPath` accepts the three-digit
@@ -123,14 +128,15 @@ export async function validateScaffoldPlaceholder(
   // that change have skeletons there, and dropping the directory would stop
   // reporting placeholders that are still on disk.
   const scaffoldDirs = [path.join(testsDir, "integration"), path.join(testsDir, "atdd")];
-  /** Repo-relative specs root, for attributing a finding to its spec directory. */
-  const specsRelative = path
-    .relative(root, resolvePath(root, config, "specsDir"))
-    .replace(/\\/g, "/");
   const threshold = resolveEscalateThreshold(config.atdd?.scaffoldEscalateCycles);
-  const declaredSpecNumbers = new Set(
+  // Number -> the directory `collectSpecEntries` enumerated. The scaffold's
+  // own `spec-NNNN` comes from a *test* directory name, so joining it onto the
+  // specs root can name a path that does not exist — a `SPEC-0001/` spec pack
+  // is valid on a case-sensitive filesystem and kept verbatim by
+  // `listSpecDirs`. Attribution uses the enumerated path.
+  const declaredSpecDirs = new Map(
     (await collectSpecEntries(resolvePath(root, config, "specsDir"))).map(
-      (entry) => entry.specNumber,
+      (entry) => [entry.specNumber, entry.dir] as const,
     ),
   );
   // Glob for any test extension the project uses. fast-glob
@@ -189,7 +195,7 @@ export async function validateScaffoldPlaceholder(
       // would ever report it: `--spec 9999` is rejected by `QFAI-SCOPE-002`, so
       // skipping it here removes the placeholder from every valid scoped gate
       // and its escalation with it. Only a real sibling is skipped.
-      if (number !== null && declaredSpecNumbers.has(number) && !options.specScope.has(number)) {
+      if (number !== null && declaredSpecDirs.has(number) && !options.specScope.has(number)) {
         continue;
       }
     }
@@ -285,8 +291,12 @@ export async function validateScaffoldPlaceholder(
         // decide and ignores the unattributed test path — then drops it from
         // every real scope, undoing the repo-wide treatment the scan above
         // preserved for it.
-        specId !== null && declaredSpecNumbers.has(scaffoldSpecNumber(specId) ?? "")
-          ? { relatedFiles: [path.posix.join(specsRelative, specId)] }
+        specId !== null && declaredSpecDirs.has(scaffoldSpecNumber(specId) ?? "")
+          ? {
+              relatedFiles: [
+                toPosixRelative(root, declaredSpecDirs.get(scaffoldSpecNumber(specId) ?? "")),
+              ],
+            }
           : undefined,
       ),
     );
@@ -307,7 +317,7 @@ export async function validateScaffoldPlaceholder(
       // the same way advancing them would invent one.
       if (options.specScope !== undefined) {
         const number = scaffoldSpecNumber(specId);
-        if (number !== null && declaredSpecNumbers.has(number) && !options.specScope.has(number)) {
+        if (number !== null && declaredSpecDirs.has(number) && !options.specScope.has(number)) {
           continue;
         }
       }

@@ -6,6 +6,14 @@
 
 ### Fixed
 
+- **A finding names the spec directory as it is spelled on disk.** Spec
+  discovery matches `spec-NNNN` case-insensitively and keeps the directory name
+  it read, so a pack under `SPEC-0001/` is valid. Attribution rebuilt the path
+  from the number instead — `.qfai/specs/spec-0001` — so on a case-sensitive
+  filesystem the `file` and `relatedFiles` of `QFAI-ATDD-111` / `-112`, the
+  forbidden-layer findings and the scaffold placeholder all pointed at a path
+  that does not exist, and the GitHub annotation had nothing to attach to. The
+  enumerated directory is carried alongside the number now and used verbatim.
 - **"Does this spec exist" is a directory question.** It was answered from the
   US/TC id maps, which only key a spec that declares at least one id — so a
   sibling created moments ago read as nonexistent and its typo was kept
