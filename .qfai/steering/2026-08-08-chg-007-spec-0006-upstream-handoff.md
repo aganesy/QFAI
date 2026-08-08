@@ -144,7 +144,7 @@ Root `package.json` declares both `typescript` (`5.9.3`) and `typescript-future`
 (`typescript@6.0.1-rc`). **Both packages provide a `tsc` bin**, and the linked
 `node_modules/.bin/tsc` currently execs `../typescript-future/bin/tsc`:
 
-```
+```console
 $ pnpm exec tsc --version
 Version 6.0.1-rc
 ```
@@ -192,7 +192,7 @@ scope the prohibition to the **finding message body**. So `title` and `details` 
 
 - `details.nextActions: ["qfai init --force"]` — the exact shape the sibling `skills.integrity` check
   ships — **passed the row and the entire 19-selector closure** before a sweep existed for it.
-- ` - run qfai doctor --force` appended to the drift `title` passed too, because the only `toBe` on a
+- A `title` suffix of a space, then `- run qfai doctor --force`, passed too, because the only `toBe` on a
   title in the slice pins the **`ok`** emission's, not the drift one.
 
 So an implementer could satisfy the contract to the letter and still ship the operator an instruction to
