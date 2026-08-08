@@ -215,6 +215,7 @@ pin sufficient for `details`, the residue is `title` alone, which no row pins to
 puts a reviewer-originated widening on the Change Request path; encoding it as a hard test obligation
 would make an implementation row the author of a contract term. Round 5 therefore keeps the assertion —
 it catches a measured real defect — but relabels it so it no longer claims to enforce a contract clause
+the contract does not carry.
 
 **Superseded 2026-08-08 by round 7 — read this before acting on the paragraphs above.** The interim
 disposition described here ("keep the sweep, relabel it") **did not survive review.** `completion-reviewer`
@@ -240,7 +241,6 @@ Also settled by measurement, so the owner does not have to: the **`ok` emission*
 message passes both suites). Qualified in the deliverable's favour: the contract scopes requirement 4 to
 the `modified` message, and the `ok` row of the state table carries no such clause, so this is an unowned
 _desirable_ property rather than a coverage gap against the contract.
-the contract does not carry.
 
 ## 12. `.qfai/steering/**` sits inside both whole-tree lint gates; `.qfai/evidence/**` sits outside both
 

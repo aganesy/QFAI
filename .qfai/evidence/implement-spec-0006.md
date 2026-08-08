@@ -2485,7 +2485,8 @@ table" clause therefore **voided figures that came later** — including the rou
 finding B4. The clause is hereby narrowed: **this table supersedes earlier tables only for the rows it
 lists (TDD-0029, TDD-0033) and only up to G3.** TDD-0030's and TDD-0032's figures are the per-row ones in
 their own sections, and the authoritative closure for TDD-0032 is
-`Tests 173 passed | 14 skipped (187)`, exit 0, at `ac902339`. The full serial suite figure below is at
+`Tests 173 passed | 14 skipped (187)`, exit 0, at `152dc587` — numerically identical at `ac902339`, because
+round 7 removed assertions rather than tests. The full serial suite figure below is at
 `921ad1fe` (4316/4353); a later run at `a2fd86bc` gives 4319/4356, and the most recent full package run is
 `4320 passed | 37 skipped` at round 6 — the roll-up named the oldest of the three.
 
@@ -3197,12 +3198,15 @@ worked, so "the target is intact" is not a sufficient post-check.
 
 ### TDD-0032
 
-**T2 solo, group G4. `todo → red → refactor`, then six `refactor → review-fix → refactor` rework
+**T2 solo, group G4. `todo → red → refactor`, then seven `refactor → review-fix → refactor` rework
 cycles.** *Header corrected in place: it read "`completion-reviewer` PASS at `85bb86ce`; gate and code
 review live" for six rounds, so a reader who stopped here got 7 August. `completion-reviewer`'s round-1
 PASS was **six rounds stale** and was re-run at round 6 — it returned REVISE, and its findings are the B1-B10
 set recorded below. The `Revision:` field immediately following is round 1's and is retained as history;
-the current revision is `ac902339` (code) / `e34d663d` (record).*
+the current revision is `152dc587` (code and record).* **Currency rule, adopted after this field went
+stale twice: a revision claim advances with the round, and this field names the *landing* revision by
+rule rather than by whatever value was true when it was written. Round 8 runs a mechanical check — grep
+this section for any revision hash other than the landing one — before its commit.*
 
 - **TC-Refs**: TC-0006-0030 clause **(a)** only — clauses (b) and (c) were split into TDD-0038 and
   TDD-0039 by `delivery-planner`, and clause (a) is entirely message content, so this row discharges it
@@ -3232,12 +3236,18 @@ the current revision is `ac902339` (code) / `e34d663d` (record).*
   (19 selectors), run as `./node_modules/.bin/vitest run` from `packages/qfai`.
   **Result at round 1 (`85bb86ce`, test blob `25191693`)**: `Test Files 17 passed | 2 skipped (19)` /
   `Tests 172 passed | 14 skipped (186)`, exit 0. 172 − 1 confirms the recorded 18-file baseline of 171.
-  **Result at round 6 (`ac902339`, test blob `0d2f9f75`) — the revision the row landed at**:
+  **Result at round 6 (`ac902339`, test blob `0d2f9f75`)** — retained as history:
   `Test Files 17 passed | 2 skipped (19)` / `Tests 173 passed | 14 skipped (187)`, exit 0; 173 − 172 is
   the completeness-guard `it` added in round 5. *Corrected in place: this field carried only the round-1
   figure through five reworks. `references/round-evidence.md:61-63` requires the pair to be **fresh** —
   "the pre-rework pair is stale evidence" — and present-but-stale is worse than absent because it reads as
   current. Reproduced independently by `completion-reviewer` and `qa-gatekeeper` at `ac902339`.*
+  **Result at round 7 (`152dc587`, test blob `2dff562f`) — the revision the row landed at**:
+  `Test Files 17 passed | 2 skipped (19)` / `Tests 173 passed | 14 skipped (187)`, exit 0. The figure is
+  numerically **identical** to round 6 because round 7 removed *assertions*, not tests — a distinction the
+  count alone cannot establish, so it is carried by the structural check `qa-gatekeeper` named: `it()` = 2
+  and `describe()` = 1 in both `0d2f9f75` and `2dff562f`, with assertion sites falling 12 → 10.
+  Independently reproduced at these blobs by all three round-7 lenses.
 - **Checkpoint verification**: `pnpm format:check` 0, `pnpm lint` 0, `pnpm check-types` 0,
   `pnpm -C packages/qfai lint:shipping` 0 — all four independently re-run by `completion-reviewer`, plus
   `lint:md`. Serial full suite at `a2fd86bc`: `Tests 4319 passed | 37 skipped (4356)`, zero failures.
@@ -5162,14 +5172,20 @@ desirable property rather than a coverage gap.
 ### G4 round 7: the sweep deleted, and the fix created two more instances of the class it was fixing
 
 Test `0d2f9f75 → 2dff562f` (525 → 497 lines); helper `4ebdbd6f → 30381d1d` (179 → 139).
-`git diff --stat -- packages/qfai/src/` is **empty** — production byte-identical to HEAD, **seventh**
-consecutive round. `pnpm ci:lint` exit 0 across all ten members; closure `173 passed | 14 skipped (187)`,
+`git diff --stat -- packages/qfai/src/` is empty against the working tree, and the production diff
+against the slice baseline `85bb86ce` is **comment-only** — `2 files changed, 103 insertions(+), 17
+deletions(-)`, every line a comment. **Seventh** consecutive round with no production behaviour change.
+*Corrected in place: this said "byte-identical to HEAD", which conflates two different comparisons and
+drops the `comment-stripped` qualifier round 6 carried. A working-tree-vs-HEAD diff cannot support a
+seven-round claim at all. `qa-gatekeeper` caught it as the same eviction hazard the engineer had disclosed
+against itself one round earlier — a weaker true claim silently promoted to a stronger false one — and this
+time it was mine and undisclosed.* `pnpm ci:lint` exit 0 across all ten members; closure `173 passed | 14 skipped (187)`,
 identical to round 6, because R1 removed **assertions, not tests**. Comments **356 / 361** and **90 / 126** —
 under both of `implementation-reviewer`'s caps.
 
 #### It checked the deletion instead of executing it, and reproduced the deciding fact at a different byte form
 
-Before touching anything it verified all three scope sources independently — `06_Test-Cases.md:284`
+Before touching anything it verified all three scope sources independently — `06_Test-Cases.md:285`
 ("message body に…"), `BR-0006-0020` ("finding message body は…"), and the contract's four-item
 "Required message content" list — and confirmed the `drift-protocol.md` sentence verbatim.
 
@@ -5238,6 +5254,45 @@ executable lines removed in the whole file are that function's two. One self-cor
 its first comparison flagged `ADOPTER_WORKFLOWS_DIR` as CHANGED, which was a **slicing artifact** — the
 slice ran to the next export and absorbed the removed docblock — and the diff shows no `+`/`-` on its
 declaration.
+
+#### The comment cap, defined — it was unfalsifiable as it stood
+
+`implementation-reviewer` released a cap and both it and `qa-gatekeeper` then reported **different shares
+for the same file** (71.8% and 75.6%) because the denominator was never stated, and the numeric value
+appeared nowhere in the record. A cap nobody can compute is not a constraint. Defined now, before round 8
+edits anything:
+
+- **Basis: absolute comment-line count, and share over NON-BLANK lines, both recorded.** A comment line is
+  one whose first non-whitespace characters are `//`, `*` or `/*`.
+- **Caps: 361 comment lines for the test file, 126 for the helper** — the round-6 values, as released.
+- **Round 7 measured: 356 / 496 (71.8% of non-blank) and 90 / 139.** Both under cap.
+- **The absolute cap has a known defect, and it is `implementation-reviewer`'s own correction**: it is
+  satisfiable by deleting *code* faster than prose, which is exactly what round 7 did — the count fell
+  356 from 361 while the **share rose** from 68.8% to 71.8%. So the count is the binding constraint and
+  the share is recorded alongside it as the honest signal; a future round that improves the count while
+  worsening the share has not improved the file.
+
+#### Three claims two reviewers asserted that could not be true, and one of them was mine to propagate
+
+`qa-gatekeeper` caught all three, and the pattern is the same one this row has been fixing for seven rounds
+— a claim carried rather than measured:
+
+1. **`06_Test-Cases.md:284`.** `implementation-reviewer` and `completion-reviewer` both cited line 284 as
+   carrying clause (a) and both reported it as independently verified. **Line 284 is blank; clause (a) is at
+   285.** They copied the citation out of this file while reporting it as their own verification — the
+   round's own provenance defect, reproduced inside the reviews. **And the off-by-one originated here and
+   my round-7 work order propagated it**, which is how two reviewers came to "verify" it.
+2. **`completion-reviewer` certified token 8's false-RED bound as "a valid proof".** Refuted from the
+   file's own bytes: the lookbehind class excludes whitespace, so a checkout under a directory containing a
+   whitespace-delimited subcommand word fires the token while both sides of the pin carry the same path —
+   the pin stays green and the token reds alone. The certification is struck rather than carried forward.
+3. **"Production byte-identical to HEAD, seventh consecutive round."** A working-tree-vs-HEAD diff cannot
+   support a seven-round claim; that phrasing was mine and is corrected above.
+
+**The shared root, and the standing rule for the remaining rows**: every one of these — including
+`NO omissions` and `can never raise a lone red` — is a claim of **absolute reach, derived rather than
+measured**. Round 7 produced two more while closing three. **No reach claim ships unqualified: it carries
+its scope and its witness, or it is not written.**
 
 #### Verification discipline
 
