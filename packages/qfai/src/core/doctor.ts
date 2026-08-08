@@ -373,34 +373,32 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       // a governing negation ("Do NOT do the following: replace …") that no
       // adjacency pattern can see.
       //
-      // THREE PROSE CONSTRAINTS are also asserted separately, and they are the
-      // ones that survive a careless re-pinning. All three are broader than the
-      // contract, so a natural rewording can redden with no contract violation.
-      // That is deliberate on the test side and it is recorded HERE because the
-      // rewording happens in this file — an unstated oracle constraint is a trap,
-      // and this message has now been rewritten five times by people who could
-      // not see them. Every one fails RED, never silently:
-      //   1. keep punctuation straight after the product name — token 1 matches
-      //      `qfai` followed by whitespace and a letter, so "… by QFAI:" passes
-      //      and "QFAI will not overwrite it" fires;
-      //   2. the repair clause must read `replace` → the drifted files described
-      //      as `listed` / `stale` / `drifted` → `with` → the packaged path, with
-      //      NO comma, semicolon, dash or colon anywhere inside it, and with
-      //      `replace` opening its clause (punctuation before it, never a word).
-      //      So "you should replace …", "do NOT replace …", "replace each listed
-      //      file, one at a time, with …" and any reversal all redden, as does
-      //      relativizing the path;
-      //   3. the no-overwrite clause must read `installed file` → `never` →
-      //      `overwritten`, each within three words of the next and with no
-      //      punctuation between them. So the active voice ("QFAI never
-      //      overwrites the installed file"), a renamed subject ("the file in
-      //      your repository"), and a comma parenthetical all redden.
+      // THREE LABELLED NEEDLES are also asserted separately, and they are the
+      // ones that survive a careless re-pinning. All three are BROADER THAN THE
+      // CONTRACT, so a compliant rewording of this message can redden with no
+      // contract violation — deliberate on the test side, warned about here
+      // because the rewording happens in this file. Every one fails RED, never
+      // silently.
       //
-      // Constraints 2 and 3 are TIGHT ON PURPOSE: each replaced a looser form
-      // that was green on a message asserting the opposite of the contract item
-      // it was written for — including one that told the adopter their
-      // hand-edited file would be "refreshed in place on your next install".
-      // Loosen them only with a witness set in hand.
+      // The individual patterns are NOT restated here: a prose copy of them is a
+      // second SSOT that keeps claiming a constraint after the needle is
+      // loosened. What is stable is the two rules they are built from, and those
+      // are what a rewriter needs:
+      //   1. GAPS ARE BOUND IN WHOLE WORDS, never in characters, so no comma,
+      //      semicolon, dash, colon or parenthesis may appear inside a clause a
+      //      needle spans.
+      //   2. EVERY OPERAND THE REQUIREMENT NAMES IS BOUND — subject, verb, object
+      //      and instrument — so each is pinned as a noun phrase and cannot be
+      //      renamed, reordered or moved into another clause.
+      // Both are tight on purpose: every looser form was green on a message
+      // asserting the OPPOSITE of the contract item it was written for, including
+      // one that told the adopter their hand-edited file would be "refreshed in
+      // place on your next install". Loosen only with a witness set in hand.
+      //
+      // On a red, read the ASSERTION LABEL rather than the pattern. Each names
+      // its contract item and, where a needle over-fires, says so — the labels
+      // alone identified the broken requirement in every mutation run against
+      // this row so far.
       message:
         `installed shipped workflow(s) differ from the packaged copy: ${workflowsDiff.modified.join(", ")}. ` +
         `Manual repair: replace each listed file with the copy of the same name in ${workflowsDiff.packagedDir}. ` +

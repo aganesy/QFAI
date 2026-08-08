@@ -3963,3 +3963,466 @@ only because I checked `Test-Path node_modules\.bin\vitest` out of caution after
 `markdownlint-cli2`, `typescript`) all provide bins, so an **empty** root `.bin` was already impossible;
 that is what turned a plausible false alarm into a confirmed incident. The slice's own standard applies
 to its own tooling: a green suite is not evidence about anything the suite does not read.
+
+### G4 round 5: the stale-comment class closed, four code items landed, and the comment move executed
+
+Round 5 answers two independent reviews that both **accept the mechanism** — the exact-equality pin,
+the three named needles and the eight tokens all stand. Nothing about the oracle is re-litigated.
+
+Landed against `51c96851`'s blobs: test `0996469f`, `doctor.ts 56fe58d5`, `workflowsIntegrity.ts
+48e0ef2c`, plus the shared helper `tests/helpers/workflowsIntegrityFixtures.ts`.
+
+#### The stale-comment class, and what replaced it
+
+**B1 / M4 — a comment refuted by its own file.** `repairText.test.ts:404-410` said the pin "says
+nothing about `details`", that the `nextActions` vector "remains open", that "closing it is not this
+row's edit", and that it "is reported as the one violation still constructible after this change".
+Lines 704-712 of the same commit closed that vector 250 lines later. No mutant exists for this class —
+it is a statement refuted by its own artifact, which is why it outranks anything a mutation could find.
+
+Replaced with the **measured** position. Two violations ARE still constructible; both were re-measured
+here rather than relayed (transcript: eight tokens transcribed from `0996469f`, driven over the shipped
+message, title and a `details` payload):
+
+| Violation | Mutant | Tokens fired | Why it escapes |
+| --- | --- | --- | --- |
+| `nextActions: ["qfai\tinit\t--force"]` | `77661ef9` | **none** | `JSON.stringify` **escapes** the tab, so the serialization holds a backslash then `t`, not whitespace. Tokens 1, 4 and 8 all miss. `\n` and `\r\n` behave identically — all three measured empty. |
+| `nextActions: ["doctor"]` | `a9012bd7` | **none** | A bare `report` / `audit` / `doctor` is outside token 8 because those collide with **this message's** prose. That justification does not transfer to a machine surface, where no prose is being written. `["report"]` and `["audit"]` are equally clean. |
+
+Controls, in the same run: the vector round 4 **did** close, `nextActions: ["qfai init --force"]`, fires
+**tokens 1, 4 and 8**; a bare non-excluded member (`["init"]`, `["validate"]`, `["handoff"]`) fires
+token 8, so the escape above is specific to the excluded three and not a dead token.
+
+**Both are RECORDED, not closed.** `TC-0006-0030` clause (a) and `BR-0006-0020` scope the prohibition
+to the message body, and `details`' key set is `BR-0006-0022` / `TDD-0036`'s — whose `toEqual` on the
+closed four-key payload kills both for free, since each violation needs an extra key.
+
+**B2 — the token docblock presented token 8's superseded mechanism as current.** It described a
+separator **lookahead** ("a path occurrence is always *followed* by `/`, `\`, `.` or `@`") while lines
+258-272 of the same file named that premise as what shipped the sentence-final hole for two rounds.
+Rewritten around the **lookbehind**, with the measured firing set and the reason `.` stays out of the
+lookahead. Measured (mine, not relayed):
+
+| Phrase appended to the shipped message | Tokens fired | Old lookahead form `\b(?:…)\b(?![\\/@.])` |
+| --- | --- | --- |
+| `re-run init to restore it` | **7 and 8** | fires |
+| `re-run init.` | **7 and 8** | **misses** — the sentence-final hole |
+| `To repair, validate.` | **8 alone** | **misses** |
+| `If you prefer, init the tree again.` | **8 alone** | n/a (no `.` adjacency) |
+
+So the docblock's stale trailing clause — `re-run init to restore it` is "the phrasing that defeats
+every other token in this list" — was false in the direction that matters: it fires **two** tokens.
+The lookbehind form is measured clean on `qfai-validate.yml`, `.github/workflows/qfai-validate.yml`,
+the Windows packaged path, the POSIX packaged path, `qfai@1.9.0` and the pnpm store path
+(`node_modules/.pnpm/qfai@1.9.0/node_modules/qfai/assets/init/root`), and firing on `see the init
+assets` and `init the tree again`.
+
+#### Record items with no code change
+
+**The paste-in defense's limit, measured.** The file's claim that "paste in a reversed repair and
+requirement 2's line stays RED" is **true** (prod `599d8b1e` + test `d2af8505` → requirement 2 RED,
+naming the item). The other direction was also measured: pasting the **governing negation** into both
+sides (prod `a4d45b35` + test `c23cba4e`) is **ALL GREEN**. So the named-needle defense is a **proper
+subset** of the threat and specifically excludes the governing-negation class that motivated the pin.
+Now stated in the file in its own idiom rather than glossed.
+
+**Token 1's space-in-checkout-path false positive extends to `details`.** Measured, with the absolute
+`packagedDir` TDD-0036 will add: a checkout at `…\GitHub\QFAI clone\…` fires **token 1 alone** on the
+rendered surface, exactly as it already does on `message` for the same tree. Over-fire only, zero
+incremental cost, one sentence in the token docblock. TDD-0036's four-key payload is clean on both the
+POSIX and the space-free Windows form (measured, both empty).
+
+**Correction to round 4's coverage map.** It records `T1←R42, T4←R42` for the title mutation
+` - run qfai doctor --force`. Re-measured, that string fires **tokens 1, 4 and 7** — `run qfai doctor`
+satisfies token 7's imperative binding. The map understates T7's witness set by one.
+
+#### Code changes
+
+**V1 — the `details` half of the sweep was vacuous under a type-checking mutation.** `details?:` is
+optional on `DoctorCheck`, so deleting the `details` block from the drift emission (`7d8e402f`) gives
+`tsc -b` 0 and this row `1 passed`. Closed with `expect.soft(check?.details, …).toBeDefined()` — a
+**presence-only** control, so `TDD-0036` stays free to `toEqual` its key set; the label says so. `?? {}`
+is **not** the cause: `JSON.stringify({ title, details: undefined })` is token-clean and
+`JSON.stringify({ title, details: {} })` is token-clean, so the fallback is a **no-op for the verdict**
+and the comment says that rather than implying it guards. Precedent named in the comment
+(`provenanceGate.test.ts`'s live control beside its negative absence sweep) and owner named for the
+independent catch (`drift.test.ts`, both `it`s, `readModifiedPaths(check?.details)` → `toBeDefined`,
+which returns `undefined` for an absent payload and fails **hard**).
+
+**C1 / C3 — one rendered-surface helper, sweeping every finding.** `renderFindingSurface` extracted
+into `tests/helpers/workflowsIntegrityFixtures.ts`, byte-equivalent to the older and stronger copy at
+`provenanceGate.test.ts` (includes `message`, maps **every** registered finding). This row calls it,
+which fixes C3 for free — round 4 serialized only `title` + `details` of `findings[0]`, so a second
+registration carrying a command token would have reported as a `toHaveLength(1)` mismatch rather than a
+token violation.
+
+`provenanceGate.test.ts` is **deliberately not edited**: TDD-0033 sits at `refactor` with three reviewer
+PASSes and a DRY win does not justify invalidating a completed review. The helper's docblock records
+that it should adopt the helper the next time that file is touched for its own reasons.
+
+**C2 — `CLI_SUBCOMMANDS` now has a completeness guard.** A second `it` in this row's describe block
+extracts `case "…":` labels from `src/cli/main.ts` and asserts the mirror **covers** them. Coverage and
+not set equality, because a member the dispatch has dropped only widens a negative sweep (false RED at
+worst) while a dispatch label missing from the mirror silently narrows tokens 7 and 8 — a false GREEN,
+on the day the registry grows. Test-side by choice: this row's **zero production change** across five
+rounds is intact. Idiom precedent is inside this row's own refactor closure —
+`tests/integration/shippedWorkflowOwnership.test.ts` asserts over `src/cli/commands/init.ts` source text
+the same way, with the same non-vacuity floor. Non-vacuity here is `toContain("doctor")` rather than a
+count: `doctor` is the command this row's fixture runs, so its presence in the dispatch is a
+precondition of the row existing, and unlike a floor it cannot go stale when some other subcommand is
+retired.
+
+**M2** — one header line routes legs (b) and (c) of `TC-0006-0030` to `TDD-0038` / `TDD-0039`. A reader
+checking the file against the TC previously concluded two thirds was unimplemented.
+
+**P1 — `doctor.ts`'s prose copy of the test's regexes is gone.** The warning stays (the intent was
+right); the enumeration of the three patterns is replaced by the two **rules** they are built from
+(word-bounded gaps; every named operand bound) plus a pointer to the assertion labels. The patterns
+were a second SSOT that would keep claiming a constraint after a needle was loosened; the rules are
+stable under loosening, and the labels are what actually identified the broken requirement in every
+mutation the reviewers ran.
+
+**`workflowsIntegrity.ts`'s false warrant corrected.** It said the evidence directory "is not version
+controlled". Fourteen evidence files are tracked, including this one since `74c09dc0`. The claim it was
+propping up — delete the unconsumed `skipped_unresolved` member rather than widen it — survives on its
+own terms and now points at the tracked path.
+
+#### M1 — comment reduction, and where I stopped short of the target
+
+| Artifact | Before | After |
+| --- | --- | --- |
+| `repairText.test.ts` total | 724 | 498 |
+| comment lines | 595 | **336** |
+| code lines | 108 | 135 |
+| comment share | 85% | 71% |
+| sibling `drift.test.ts` | — | 60% |
+| sibling `provenanceGate.test.ts` | — | 62% |
+
+(Percentages from one classifier applied uniformly; it reads ~3pp higher than the work order's, which
+put the same three files at 82% / 55% / 58%.)
+
+**The ≈230 target is not reachable under the keep-list, and the arithmetic is the argument.** The
+keep-verbatim ranges total **129** comment lines (`71-74`=4, `121-131`=11, `196-234`=39, `353-359`=7,
+`367-373`=7, `473-484`=12, `492-520` less `507-508`=27, `547-562`=16, `591-594`=4). The round's own
+required new records cost **~68** (B1's two violations with blobs, B2's rewrite, the paste-in limit
+measured both ways, V1's vacuity note, C2's guard rationale, M2, the over-approximation relabel).
+That is **197** before a single discretionary line. The remaining **~136** are the un-listed notes that
+pass the order's own operational test — keep iff it changes what a maintainer would do: the token 6/7/8
+inline mechanisms, `escapeForRegExp`'s do-not-DRY rule, the two subcommand-list docblocks, guard #1 and
+#2, the `expect.soft` rationale, `ADOPTER_STALE_PATH`'s test-ownership rule, and the requirement
+preambles. Reaching 230 requires evicting keep-list items — most cheaply `492-520`'s measurement table
+(27) and `547-562`'s DRY refusals (16) — and both were explicitly protected. Not done unilaterally.
+
+Everything on the move list is below, verbatim, so nothing is lost. `492-520` stays **in full** in the
+test file including its three-variant table, on the ruling that a rule whose only witness is invisible
+to CI's single lane is not believable without the witness.
+
+The ATDD trace annotation moved from **line 108 to line 30** (siblings: 24). Landing it in 19-24 needs
+the two needle rules (`71-74`, keep-verbatim) out of the header; the keep-list outranks the exact line.
+
+##### Moved from `repairText.test.ts:33-53` — the four rounds, and the five governing negations
+
+> That is a reduction, and it was reached by exhausting the alternative. Four consecutive rounds
+> tightened a pattern oracle and each produced a new class of false pass; the fourth round's witnesses
+> showed why the sequence does not terminate. Pattern needles constrain ADJACENCY — which tokens sit
+> next to which — and the remaining defects are all about SCOPE: whether a negation governs the clause,
+> whether the imperative is asserted or retracted, whether the subject of "is never overwritten" is the
+> adopter's file. Five messages carrying a governing negation OUTSIDE the pinned clause passed all
+> twelve assertions:
+>
+> - `Do NOT do the following: replace each listed file with … in <dir>.`
+> - `Manual repair (do not): replace each listed file with … in <dir>.`
+> - `Never: replace each listed file with … in <dir>.`
+> - `Manual repair: replace … in <dir> -- no, do the reverse.`
+> - `The wrong repair, for the record: replace … in <dir>. Do the opposite.`
+>
+> Each is admitted by the clause anchor `(?:^|[^\w\s]\s+)` precisely BECAUSE that anchor requires
+> punctuation to the left of the verb — which is the position a negator label occupies. Tightening the
+> anchor cannot fix it; the negation is grammatically outside anything an adjacency pattern can see. An
+> oracle that admits exactly one string has no scope to get wrong.
+
+##### Moved from `repairText.test.ts:76-91` — five plausible oracles, three failure modes
+
+> FIVE separately-plausible oracles were each satisfiable by a message asserting the OPPOSITE of the
+> requirement they were written for, in three failure modes:
+>
+> - PRESENCE, not binding — `toContain(packagedDir)` and `/\breplace\b/i`. The word appears, so the
+>   oracle is content with a sentence that denies it.
+> - PROXIMITY, not binding — `/\bnever\b[\s\S]{0,40}overwrit/i` and
+>   `/\breplace\b[^.]{0,80}\bwith\b[^.]{0,60}…/i`. A bounded run of arbitrary characters holds a comma,
+>   a semicolon, a dash or a colon, so the halves can sit in different clauses saying unrelated things.
+>   Rule 1 exists because a word-bounded gap cannot contain a clause boundary AT ALL, which makes the
+>   bound stop being a length at which the defect returns.
+> - BOUND TO THE WRONG OPERAND — `/\bnever\b(?:\s+\w+){0,3}\s+overwritt/i`. Word-bounded already, and
+>   still green on "The packaged copy is never overwritten", which says nothing about the adopter's
+>   file. Rule 2 exists because tightening a gap tells you nothing about what is on either side.
+
+##### Moved from `repairText.test.ts:99-100`
+
+> The per-assertion comments carry every witness message that closed a hole, with its measurement.
+
+##### Moved from `repairText.test.ts:152-161` — why the registry lost three members and got them back
+
+> The list was previously three members short — `report`, `audit` and `doctor` were dropped because a
+> BARE verb token over-fires on prose a compliant author would write ("this check will report the
+> difference", "see the audit trail", "doctor reports the difference and writes nothing" — all measured
+> FIRING). Deleting members was the wrong repair and this file's own token rationale says why:
+> over-breadth in a negative assertion can only produce a false RED, while narrowing can admit a
+> violation. It duly admitted three — `Re-run doctor in autoremediate mode.`, `Run doctor again once you
+> have copied the file.`, `To repair automatically, run doctor.` — each ALL-GREEN, each naming a real
+> mode of a command whose own contract Non-goals say it does not refresh a workflow.
+
+##### Moved from `repairText.test.ts:304-326` — guard #1's non-degenerate red, and the record-as-text rule
+
+> It is also the one assertion in this file for which `expected undefined to be defined` is a
+> NON-degenerate observation, and the distinction is worth keeping so it is not re-litigated: a red is
+> degenerate when the predicate is about a VALUE and the mutant supplies ABSENCE (which is why guard
+> #2's severity red would not count), and admissible when the predicate IS presence. TWO mutations reach
+> it, and both produce genuine absence: an UNRESOLVABLE PACKAGED DIRECTORY (the skip firing spuriously),
+> and FALSIFYING THIS FILE'S OWN GATE CONDITION — `modified.length > 0` inverted, which leaves `status`
+> at `"modified"` so the `ok` else-if is false too and nothing is emitted at all. The second is the
+> better proof of the two, because it lives in the code this row's item owns rather than in a sibling
+> row's reader.
+>
+> What does NOT reach it is forcing the COMPARISON to report no drift: that converts the finding into
+> the content-identical `ok` emission (gated on `comparedCount > 0`, satisfied here), so it lands on
+> guard #2 with `expected 'ok' not to be 'ok'`. Measured, after an earlier record claimed the opposite.
+>
+> THAT PAIR IS THE ARGUMENT FOR RECORDING MUTATIONS AS TEXT RATHER THAN AS INTENT, and it is worth
+> naming here because the rule was itself first written down as an intent. "Kill the drift gate" is an
+> intent that two different edits satisfy — one in the reader, one in the gate condition — and they land
+> on two different assertions. A round recorded by intent cannot distinguish them; a round recorded as
+> needle and replacement text cannot fail to.
+
+##### Moved from `repairText.test.ts:337-351` — guard #2's scope, measured rather than reasoned
+
+> Guard #2 closes a VACUITY OF THE TOKEN SWEEP AND THE REGISTRATION PIN, and only that — the wider claim
+> this comment used to make ("the real false-pass mode" of the whole row) is measurably too strong.
+> Severity `ok` means the CONTENT-IDENTICAL emission is under inspection, whose message ("… match the
+> packaged copy") contains no command token either and is registered exactly once, so NINE assertions
+> pass while nothing about the repair text has been measured.
+>
+> The equality pin and the two CONTENT needles do not need this guard, and that is measured rather than
+> reasoned: disabling this line and forcing the `ok` branch to emit reddens exactly those three and
+> nothing else. So the guard's value is scope over the token sweep and the registration pin, not
+> necessity — and the pin's arrival shrank that scope rather than growing it, which is the shape every
+> assertion in this file has taken since the pin landed.
+
+##### Moved from `repairText.test.ts:439-460` — requirement 2's six witnesses
+
+> Eleven production-side mutation rounds still reach this line; every witness below was GREEN under some
+> earlier form of the needle and is red here:
+>
+> - (i) `replace the copy of the same name in ${packagedDir} with each listed file` — tells the operator
+>   to overwrite the PACKAGED copy with their stale file. It repairs nothing, is undone by the next
+>   install, and is the one rewording of this message that can destroy an operator's data.
+> - (ii) `The packaged copy of each lives in ${packagedDir}. … and nothing will replace it` — `replace`
+>   as a DENIAL. Carries no repair instruction at all, which is precisely what this row's title claims
+>   to pin, and it is where an implementer strengthening the no-overwrite sentence naturally lands.
+> - (iii) the packaged path relativized (see the anchor note).
+> - (iv) `replace the copy in the packaged tree with the stale file, using ${packagedDir}` — the same
+>   reversal as (i), reaching the path across a COMMA.
+> - (v) `replace the packaged copy -- not the installed one -- with the file listed above in
+>   ${packagedDir}` — the reversal reaching across a dash parenthetical, and it even contains the word
+>   the object anchor looks for, on the wrong side of `with`.
+> - (vi) `Do NOT replace each listed file with the copy of the same name in ${packagedDir}` /
+>   `replace your local backup with …` — the polarity and the LEFT operand, neither of which an ordered
+>   phrase can see.
+
+##### Moved from `repairText.test.ts:462-471` — the third copy of the word-bounded rule
+
+> THE GAPS ARE WORD-BOUNDED, NOT LENGTH-BOUNDED, and that is the whole fix for (iv)-(vi). An earlier
+> form used `[^.]{0,80}` / `[^.]{0,60}`, which bounds PROXIMITY: 80 characters of any content hold a
+> comma, a semicolon, a dash or a parenthesis, so the verb, `with` and the path could sit in three
+> different clauses saying three different things. That is the identical defect the requirement-3 needle
+> below was already rewritten to fix — the same reasoning had to be applied here, and the fact that it
+> was not is why (iv)-(vi) existed. `(?:\s+\w+){0,N}\s+` admits only whole words, so no clause boundary
+> can enter a gap at all, and the bound stops being a length at which the defect returns.
+
+##### Moved from `repairText.test.ts:486-490` — the deleted free-standing verb assertion
+
+> The free-standing verb assertion is DELETED rather than kept alongside: it is entailed by this needle,
+> and the standard this slice adopted is "delete when entailed, unless the kept line is the only one
+> whose MESSAGE names the claim" — the label below names the repair, so nothing survives the deletion.
+
+##### Moved from `repairText.test.ts:507-508` — a self-correction about the anchor
+
+> The relationship between the anchor and the gap is NOT independence, and an earlier record of mine
+> that called them "independent defenses" or "half-blind without each other" was wrong both ways.
+
+##### Moved from `repairText.test.ts:528-545` — what the shared prefix actually buys
+
+> The expected value is composed by the TEST, and the split matters. The `root/.github/workflows` join —
+> the part production can get wrong — is stated here through a test-owned helper; the assets-directory
+> prefix is not independently stateable by any test, because it answers "where is this package
+> installed", so `getInitAssetsDir()` is shared and the join is not.
+>
+> What that sharing actually buys is NARROWER than this comment once claimed, and the claim was measured
+> false: dropping `"root"` from the production join, and misspelling it `"rooot"`, each produce exactly
+> ONE failure — guard #2 — which is hard and aborts before this line runs. A wrong join makes every
+> packaged operand ABSENT, absence is not drift, so the reader reports `ok` and the `ok` branch emits;
+> the finding still exists, it is just the wrong one, which is exactly what guard #2 is for. So this
+> needle discriminates "the message carries the packaged directory, on the `with` side, unrelativized";
+> the COMPOSITION of that directory is pinned by guard #2, not by this assertion. There is no coverage
+> hole, but the sharing is not what makes the join falsifiable.
+
+##### Moved from `repairText.test.ts:564-576` — requirement 2's cost accounting
+
+> THE COST, stated rather than glossed, on the same accounting the requirement-3 needle uses. This
+> needle pins the SHAPE of the repair clause: verb opens the clause, object refers to the listing,
+> `with`, then the path, all inside one clause. Rewording INSIDE that shape is free and measured to be
+> free — `Manual repair - replace each stale file with the packaged copy of the same name in <dir>` and
+> `To repair, replace the drifted files with the copy of the same name in <dir>` both pass. RESHAPING
+> reddens: `you should replace …` (a word before the verb) and `replace each listed file, one at a time,
+> with …` (a comma inside a gap) both fail on compliant prose. That is the price of excluding clause
+> boundaries — a needle cannot admit a benign parenthetical and reject a meaning-reversing one, since
+> they are the same construction. The failure direction is RED, which is why the price is payable here
+> at all; it is recorded at the emission site so the rewriter meets it before CI does.
+>
+> Also moved with it, from `522-526`: this is the same standard the sibling suite set when it rejected
+> `toContain` for `toBe` on the title — "substring containment cannot see a suffix being appended to the
+> thing it looks for" — the POSIX case is the PREFIX form of it, and requirement 2 is not allowed to
+> reintroduce bare containment without answering it. (That sentence stays in the test file; the
+> pointer is recorded here for the move audit.)
+
+##### Moved from `repairText.test.ts:596-644` — requirement 3's four needle generations and its cost
+
+> All three of SUBJECT, NEGATION and VERB are bound in one chain, in that order, and each was added
+> because the previous form was green on a message asserting the opposite:
+>
+> 1. `/overwrit/` alone passes "QFAI overwrites the file for you".
+> 2. `/\bnever\b[\s\S]{0,40}overwrit/i` — proximity, not binding — passes `The installed file is never
+>    protected: doctor overwrites it in place and writes the packaged bytes.` 40 characters of any
+>    content hold a whole clause, so `never` governs something else inside it.
+> 3. `/\bnever\b(?:\s+\w+){0,3}\s+overwritt/i` binds negation to verb but says nothing about WHOSE
+>    file, and passes all three of:
+>    - `The packaged copy is never overwritten by QFAI: …` — the message now makes no statement about
+>      the installed file at all, so the requirement is literally unmet;
+>    - `The packaged copy is never overwritten by QFAI; the installed file is refreshed in place on your
+>      next install.` — tells the adopter their hand-edits WILL be destroyed, against the contract's own
+>      Non-goals (and it escapes `/\brefresh\b/i`, which is why token 6 lost its trailing `\b`);
+>    - `Files that are never overwritten are listed in the provenance record.` — the sentence deleted
+>      outright.
+>
+>    The first of those is MORE plausible than (2)'s witness, because the preceding round's whole
+>    subject was the packaged copy being clobbered, so an author answering that review lands on it.
+> 4. The form below adds the subject, WORD-BOUNDED like the rest. The proposal that came in used
+>    `[^.]{0,40}` between subject and `never`, and that would have reproduced defect (2) one level out:
+>    measured, `The installed file is stale, but the packaged copy is never overwritten by QFAI.` is
+>    GREEN under it and RED here. A bounded any-character gap is never the right instrument in this file.
+>
+> The sentence-gap control is UNCONFOUNDED, which the previous one was not. `never. Three sentences
+> later, doctor overwrites it.` also lacks `overwritt`, so it failed on spelling and proved nothing
+> about binding. The control that isolates it: `The installed file is never touched. Three sentences
+> later, it is overwritten in place.` — GREEN under (2), RED here, and it CONTAINS `overwritten`, so
+> only the binding can be what rejects it.
+>
+> THE COST, on the same accounting as requirement 2: three noun phrases are now pinned, and compliant
+> rewordings redden. Measured — passes: "is never overwritten by QFAI", "will never be overwritten",
+> "is never automatically overwritten". Reddens: "QFAI never overwrites the installed file" (active
+> voice puts the subject after the verb), "The file in your repository is never overwritten" (subject
+> renamed), "The installed file is, in every mode, never overwritten" (comma in a gap). Accepted because
+> this is a POSITIVE assertion, so an over-tight needle fails RED, and because the alternative — leaving
+> the subject unbound — is a false GREEN on a message that inverts the contract.
+
+##### Moved from `repairText.test.ts:656-660` — the `details` exclusion, and the correction to it
+
+> Swept over `message` AND over a serialization of `details`, and the second half is a correction: this
+> comment previously said `details` was excluded because "its keys and values are owned by other rows,
+> and folding it in would make this row redden on their payloads". The first clause is true and the
+> second was never measured — and the exclusion left requirement 4, WHICH THIS ROW ORIGINATES, open on
+> the one vector the contract text points straight at. Measured: adding
+> `nextActions: ["qfai init --force"]` to this finding's `details` — the exact shape `skills.integrity`
+> ships and the exact thing requirement 4 forbids — passed this row AND all nineteen selectors of its
+> refactor closure, 172 passed, exit 0. A message-only sweep cannot see it, and no other oracle in the
+> slice looks.
+
+##### Moved from `doctor.ts:376-403` — the three prose constraints (P1's second SSOT)
+
+Replaced in production by the two rules plus a pointer to the assertion labels. Kept here because it is
+an accurate snapshot of the needles **as of `56fe58d5`** and is useful for reconstructing a round:
+
+> 1. keep punctuation straight after the product name — token 1 matches `qfai` followed by whitespace
+>    and a letter, so "… by QFAI:" passes and "QFAI will not overwrite it" fires;
+> 2. the repair clause must read `replace` → the drifted files described as `listed` / `stale` /
+>    `drifted` → `with` → the packaged path, with NO comma, semicolon, dash or colon anywhere inside it,
+>    and with `replace` opening its clause (punctuation before it, never a word). So "you should replace
+>    …", "do NOT replace …", "replace each listed file, one at a time, with …" and any reversal all
+>    redden, as does relativizing the path;
+> 3. the no-overwrite clause must read `installed file` → `never` → `overwritten`, each within three
+>    words of the next and with no punctuation between them. So the active voice ("QFAI never overwrites
+>    the installed file"), a renamed subject ("the file in your repository"), and a comma parenthetical
+>    all redden.
+
+##### Moved from `repairText.test.ts:258-272` — the lookbehind's origin
+
+> A lookbehind was considered in the first round of this token and dismissed as speculative; that call
+> was wrong, and this is what it cost: `re-run init.` and `re-run validate.` were both ALL-GREEN for two
+> rounds, and the one round that fired the old token did so only because of its trailing " to restore
+> it".
+
+#### Routing carried out of this round, not closed in it
+
+- The two constructible violations are **recorded** above with mutants `77661ef9` and `a9012bd7`.
+  Closure belongs to `TDD-0036` (`BR-0006-0022`'s four-key `toEqual`), which kills both for free.
+- The `title` + `details` sweep is **stricter than the contract**; relabelled in the file as a
+  deliberate defensive over-approximation rather than as a contract obligation. Contract widening is
+  routed upstream.
+- `modified.join(", ")` remains an unexercised separator (no fixture drifts two files; `join(" | ")`
+  survives the whole spec-0006 doctor family, `d09eaba5`) — a `TDD-0029` coverage gap for
+  `delivery-planner`, not this row's.
+
+#### Round 5 verification transcript
+
+Final blobs: test `e43645e4`, helper `29d87902`, `doctor.ts 1d8eab08`, `workflowsIntegrity.ts 851f72c3`.
+
+**Steps skipped by name, per the redundancy rule.** The `nextActions` / bare-verb / path token
+measurements are NOT re-derived through vitest — the eight tokens are pure `RegExp`s over strings, so a
+transcribed driver (`token 7`/`token 8` sources printed and compared to the file) measures exactly what
+the assertion measures, at no fixture cost. `tsc -b` was run once inside the V1 mutant (where its verdict
+is the finding) and then again as the `check-types` gate; it is not run a third time.
+
+**Mutations, recorded as literal needle → replacement plus mutant blob.** Both harness checks ran on
+every one: needle-uniqueness (`split(needle).length === 2`) and blob-differs.
+
+| # | Target | Needle | Replacement | Base → mutant blob | Result |
+| --- | --- | --- | --- | --- | --- |
+| R5-M1 | `src/core/doctor.ts` | `      details: {\n        workflowsDir: workflowsDiff.workflowsDir,\n        modified: workflowsDiff.modified,\n      },` | *(deleted)* | `1d8eab08` → `6a06270e` | `tsc -b` **0**; row **1 failed \| 1 passed**, sole reacher is the new control, message `the drift finding must CARRY a 'details' payload … expected undefined to be defined`. Was `1 passed` before this round. |
+| R5-M2 | the row's test file | `  "handoff",` | *(deleted)* | `7edbbade` → `dbd3f327` | **1 failed**, `every subcommand in src/cli/main.ts's dispatch must appear in this file's CLI_SUBCOMMANDS …`, diff prints `+ "handoff"`. Proves C2's guard is live. |
+| R5-M3 | the row's test file | `/^\s*case "([a-z][a-z-]*)":/gm` | `/^\s*kase "([a-z][a-z-]*)":/gm` | `7edbbade` → `140001a8` | **1 failed**, `the case-label extraction must find the dispatch: expected [] to include 'doctor'`. Proves the guard is not vacuous when extraction breaks — the direction a coverage-only assertion cannot catch. |
+
+R5-M1's scope is worth stating: it produces **exactly one** failure. The rendered-surface sweep does not
+redden on it, because an absent payload is token-clean — that is precisely the vacuity being closed, and
+it is why a control was needed rather than a tighter sweep.
+
+**Suites.** This row alone: **2 passed** (was 1; the completeness guard is the second `it`). The
+19-selector doctor/workflows closure at the final blobs: `Test Files 17 passed | 2 skipped (19)` /
+`Tests 173 passed | 14 skipped (187)`, exit 0 — up from 172 by exactly the new `it`. The 2 skipped files
+are the named `describe.skip` placeholders `spec0006DoctorRemediation.test.ts` (8) and
+`spec0006DoctorRemediationE2E.test.ts` (6). The closure was re-run **after** `prettier --write` touched
+the test file and the helper, so the recorded result is at the committed blobs and not at a pre-format
+state.
+
+**Gates.**
+
+| Gate | Result |
+| --- | --- |
+| `pnpm lint` | exit 0 |
+| `pnpm check-types` (`tsc -b`) | exit 0 |
+| `pnpm -C packages/qfai lint:shipping` | `20 passed`, exit 0 |
+| `pnpm format:check` | **exit 1 — pre-existing, not this round's** |
+
+`format:check` fails on exactly two files, both tracked, both unmodified by this round:
+`.qfai/steering/2026-08-08-chg-007-spec-0006-g5-tier-escalation.md` and
+`.qfai/steering/2026-08-08-chg-007-spec-0006-upstream-handoff.md`. Verified by stashing this round's five
+modified files and re-running `prettier -c .qfai/steering/` — both still fail with the working tree at
+`74c09dc0`. This round's two files were reformatted and pass. Left for the steering artifacts' owner
+rather than fixed here, to keep an unrelated edit out of this row's commit.
+
+**`dist/` disclosure.** `pnpm check-types` **is** `tsc -b` at the repo root, so the gate itself emits into
+`packages/qfai/dist/`. The emission pre-dates this session (`dist/core/`, `dist/cli/`, `dist/shared/`
+directories dated 07:16, tsup's `index.mjs` / `index.cjs` 06:30, both before the first command run here),
+so nothing was created that was not already there. `tests/core/tddCoverageAggregation.test.ts` — the
+suite that mode can break — was run at the final state and is **7 passed**, exit 0. `dist/` is therefore
+left as inherited; deleting it would remove the tsup barrels that `dist/cli/index.mjs` invocations depend
+on.

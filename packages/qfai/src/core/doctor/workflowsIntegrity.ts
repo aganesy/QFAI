@@ -107,9 +107,10 @@ export type WorkflowsIntegrityStatus = "ok" | "modified" | "skipped_unresolved";
  * ONE member has no consumer at this revision, and that is deliberate rather
  * than leftover: `status === "skipped_unresolved"` is claimed by the
  * unresolvable-packaged-copy skip of BR-0006-0020, a later obligation of this
- * same check. Recorded here because the evidence directory that carries the
- * longer argument is not version controlled; delete the member instead of
- * widening it if its rule is dropped.
+ * same check (TDD-0039). The claim is recorded here because it constrains what
+ * may be done to the member — delete it rather than widen it if its rule is
+ * dropped; the longer argument is version controlled at
+ * `.qfai/evidence/implement-spec-0006.md`.
  *
  * `packagedDir` LEFT that list and the departure is worth stating, because the
  * consumer is not the one this comment used to predict: the drift advisory's
