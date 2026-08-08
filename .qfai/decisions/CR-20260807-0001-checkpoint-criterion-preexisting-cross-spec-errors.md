@@ -76,6 +76,26 @@ slice's scope.
 Cost: a documented weakening of a hard gate. Mitigation: (e) is the load-bearing clause — it forbids
 carrying a baseline error that belongs to a spec the slice _is_ working on.
 
+**A limit on clause (d), found after this CR was filed and stated here because it changes what the
+option is worth.** Clause (d) — "each row's own `TC-*` leaves the `QFAI-ATDD-112` list" — is one of the
+two clauses that make the substitution checkable rather than asserted. It is **undischargeable by
+construction for two rows of this slice**: `TDD-0038` and `TDD-0039` both carry
+`TC-Refs: TC-0006-0030`, and `TDD-0032` has already removed that TC from the list. Both later rows will
+therefore satisfy (d) **vacuously**, and it can never discriminate for them.
+
+The same shape will recur wherever `delivery-planner` splits one `TC-*` across several rows, which is a
+sanctioned in-skill act. So (d) is a real check for the **first** row to discharge a TC and a no-op for
+every sibling that shares it. Two ways to keep the clause meaningful, both for the owner to choose:
+
+- **Weaken (d) to "no row's TC re-enters the list"**, which is checkable for every row including
+  siblings, and pair it with the row-level obligation that each row's own `Selector` resolves in its own
+  test file — a property the validator already enforces.
+- **Scope (d) to the first row that cites a given TC**, and record explicitly that sibling rows are
+  covered by (b), (c) and (e) alone.
+
+Found by `completion-reviewer` during the `TDD-0032` review and routed here rather than to the
+implementer, because it is a property of this CR's own option text.
+
 ### Option B — discharge the errors upstream first
 
 Run `/qfai-sdd` Phase 2b to seed the 20 missing `Layer = E2E` rows, `/qfai-atdd` to author their
