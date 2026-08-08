@@ -216,3 +216,65 @@ puts a reviewer-originated widening on the Change Request path; encoding it as a
 would make an implementation row the author of a contract term. Round 5 therefore keeps the assertion —
 it catches a measured real defect — but relabels it so it no longer claims to enforce a contract clause
 the contract does not carry.
+
+## 12. `.qfai/steering/**` sits inside both whole-tree lint gates; `.qfai/evidence/**` sits outside both
+
+Owner: repository toolchain, or nobody — this is a note for the next author of a `.qfai/**` artifact.
+Non-blocking. Recorded because the slice paid for it **twice in one day**, the second time after
+"fixing" it.
+
+Measured coverage, not inferred:
+
+| Path                | `prettier -c .`              | `markdownlint-cli2 "**/*.md"`          |
+| ------------------- | ---------------------------- | -------------------------------------- |
+| `.qfai/steering/**` | **covered**                  | **covered**                            |
+| `.qfai/evidence/**` | excluded (`.prettierignore`) | excluded (`.qfai/evidence/*[0-9]*.md`) |
+
+`.markdownlint-cli2.jsonc` ignores `.qfai/assistant/steering/**` — note the `assistant/` segment — but
+**not** `.qfai/steering/**`. The near-identical path is the trap.
+
+What actually happened: two steering files authored as prose broke `format:check` across three pushed
+commits, which meant `ci:lint` was red on the branch the whole time. That was fixed — and the fix
+addressed **one** whole-tree gate over that directory and left the other, so `pnpm lint:md` was still
+red at the next reviewed revision (MD040, a fence with no language; MD038, a code span whose content
+begins with a space) and the branch still could not merge. Neither failure was visible to any test; the
+row's own suite was green throughout, and both surfaced only because reviewers ran gates the slice had
+not.
+
+**Two further corrections of the slice's own habit, both worth carrying forward.**
+
+- **`pnpm ci:lint` has ten members**, and this slice had been reporting "four gates 0" for five rounds:
+  `format:check`, `lint`, `lint:md`, `check-bidi`, `check-instructions-size`,
+  `check-review-profile-consistency`, `check-prompt-scanner-pair`, `lint:shipping`,
+  `lint:workflow-shape`, `check-pack-locations`. Run the lane, not a hand-picked subset. It exits 0 as of
+  `202edbcd`, including six members this slice had never once run.
+- The general failure is not "forgot to run a formatter". It is that **fixing one gate over a directory
+  is not evidence about the others**, and that a `.qfai/**` path being documentation says nothing about
+  whether a gate globs it.
+
+## 13. `packages/qfai/tests/**` is type-checked by nothing
+
+Owner: repository toolchain. Non-blocking for CHG-007, but it changes what test-side type annotations are
+worth across the whole repository.
+
+Measured: `packages/qfai/tsconfig.json` and `tsconfig.build.json` both declare
+`"include": ["src/**/*.ts", "src/**/*.d.ts"]`, so `tsc -b` never visits `tests/**`; and
+`eslint.config.mjs` applies `tseslint.configs.disableTypeChecked` to `**/tests/**/*.ts`, so the
+type-aware lint rules are off there too. Vitest strips types without checking them.
+
+Demonstrated rather than argued: renaming a field access to one that does not exist on the parameter's
+declared type (`${finding.title}` → `${finding.titel}` in a helper typed `DoctorCheck`) leaves
+`tsc -b` at **0**, `eslint --max-warnings 0` at **0**, and the consuming test at **2 passed**.
+
+**Consequence to state plainly: every type annotation in this slice's test files is decoration.** A test
+comment that claims a rename "breaks compilation" is false, and one such claim shipped in round 5 before
+review caught it. Anything relying on the compiler to catch a test-side field rename needs a runtime
+assertion instead.
+
+Also worth the owner's attention: `tsconfig.json` sets `"composite": true`, which is incompatible with
+`noEmit`, so `pnpm check-types` (= `tsc -b`) **cannot run without emitting** into `dist/` — the same
+directory `tsup` publishes from and that `package.json#files` ships. The distributed-surface guard
+(`check-no-internal-version-leakage.sh`) and `lint:shipping` both pass against the `tsc`-emitted tree, so
+there is no leak today; the hazard is that `dist/` after `check-types` is a mixture of two toolchains'
+output, and deleting it to "clean up" removes tsup's `dist/cli/index.mjs` barrel that checkpoint step 4
+invokes.

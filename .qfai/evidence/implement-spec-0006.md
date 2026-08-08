@@ -4416,6 +4416,15 @@ catch these" is indistinguishable from "the sweep does not work"; with it, the s
 on the plain form and the two escapes are specific to `JSON.stringify`'s escaping and to token 8's
 bare-subcommand exclusion. That control is exactly what the by-intent records could not supply.
 
+`R5-M4`'s inserted line carries two LITERAL TAB characters (U+0009) inside the string, not the
+two-character escape `	`. The distinction is load-bearing for reproduction: the escape spelling gives
+`d0eb34f7`, not `192751ee`. Both spellings produce the same runtime string and the same verdict — only the
+blob differs — so a reader who pastes this line through a tab-expanding editor gets a hash mismatch on a
+correct mutation. Found by `qa-gatekeeper` reproducing all three blobs from this table and having to test
+both spellings to land on the recorded one; it is the same class as the newline-convention note above, and
+the second time in this row that a **whitespace** convention turned out to be part of a mutation's
+identity.
+
 My blobs differ from the by-intent pair because the inserted line's exact text was never recorded — which
 is the whole argument, restated for the third time in this file: a blob is proof only insofar as an auditor
 can reproduce the edit that produced it.
@@ -4810,7 +4819,31 @@ moving.
   `TC-0006-0030`'s legs (b) and (c) are `TDD-0038` / `TDD-0039`, both verified present at `todo`, so no
   depth gap originates in this row.
 
-##### A9 — the gate is over-broad here, and the distinction is worth keeping
+##### A9 — WITHDRAWN by `qa-gatekeeper` after verifying both premises
+
+It re-derived both independently and withdrew the advisory: `vitest ^2.1.8` is a `packages/qfai`
+devDependency with `vitest` / `vitest.CMD` / `vitest.ps1` present in that package's `.bin`, and the
+recorded command begins `cd packages/qfai &&`, so `npx vitest` resolves locally. `tsx`, by contrast,
+appears in `pnpm-lock.yaml` **only** as an optional peerDependency of `postcss-load-config` with no
+resolved entry and **no binary in either `.bin`** — so `npx tsx` did fetch, and the causal account of
+instance 2 is confirmed rather than assumed.
+
+It named its own error precisely, and the shape is worth keeping: it had treated **the blanket
+instruction given to it for this session** ("never run `npx <package>`") as the repository's standing
+rule, when the rule as recorded in this very file is scoped to *a package not in the lockfile*. So the
+over-broad slogan was one I had authored in the work order — the third instance of that failure in this
+slice, and this time I introduced it into a reviewer rather than into an oracle.
+
+**One clause it added that is worth keeping, because it is a real hazard the original advisory pointed at
+from the wrong direction**: `npx vitest` is **cwd-dependent**. Root `node_modules/.bin` has **no**
+`vitest`, so the identical command run from the repository root *would* fetch and would reproduce
+instance 2 exactly. As recorded — with the `cd packages/qfai &&` prefix — it is safe; the hazard is a
+future reader dropping the prefix. The preferred form for any **new** command is therefore
+`./node_modules/.bin/vitest run` from `packages/qfai`, which cannot fetch from any cwd, and that is the
+form used for every command issued in rounds 4-6.
+
+##### A9 as originally filed, and why the historical records stay
+
 
 It asked that the canonical `Refactor verify command` replace `npx vitest run` with
 `./node_modules/.bin/vitest run`, citing this file's own record of the prohibition being violated twice.
