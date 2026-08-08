@@ -15,12 +15,58 @@
  * legitimate there because that command really does restore skills. Copying
  * that shape here would ship the defect the contract forbids.
  *
- * Requirement 1 is NOT re-asserted here: the sibling drift suite's first row
- * (`spec0006WorkflowsIntegrity.drift.test.ts`) owns the stale-path clause of
- * the message and asserts it directly. This file owns requirements 2, 3 and 4.
+ * Requirement 1's separate ASSERTION is not repeated here — the sibling drift
+ * suite's first row (`spec0006WorkflowsIntegrity.drift.test.ts`) owns the
+ * stale-path clause and asserts it directly — but the equality pin below
+ * NECESSARILY SUBSUMES IT, because it pins the whole message and the stale path
+ * is the first sentence. Disclosed rather than glossed: a change to that clause
+ * now reddens this row as well as the sibling's. That coupling is accepted
+ * because the four required items belong to ONE message with ONE emission site,
+ * so there is no version of a whole-message pin that owns three of them; and
+ * because the failure direction is a RED in two rows rather than a gap in
+ * either. This file still ORIGINATES requirements 2, 3 and 4.
  *
- * Requirements 2 and 3 are each ONE needle over a whole clause, and the two
- * rules they follow are the entire lesson of this row's review rounds:
+ * THE PRIMARY ORACLE IS EXACT EQUALITY on the whole message, composed
+ * test-side. Everything after it is a NAMED RESTATEMENT of one contract item,
+ * kept for a reason given below — none of them is the closure any more.
+ *
+ * That is a reduction, and it was reached by exhausting the alternative. Four
+ * consecutive rounds tightened a pattern oracle and each produced a new class of
+ * false pass; the fourth round's witnesses showed why the sequence does not
+ * terminate. Pattern needles constrain ADJACENCY — which tokens sit next to
+ * which — and the remaining defects are all about SCOPE: whether a negation
+ * governs the clause, whether the imperative is asserted or retracted, whether
+ * the subject of "is never overwritten" is the adopter's file. Five messages
+ * carrying a governing negation OUTSIDE the pinned clause passed all twelve
+ * assertions:
+ *
+ *   `Do NOT do the following: replace each listed file with … in <dir>.`
+ *   `Manual repair (do not): replace each listed file with … in <dir>.`
+ *   `Never: replace each listed file with … in <dir>.`
+ *   `Manual repair: replace … in <dir> -- no, do the reverse.`
+ *   `The wrong repair, for the record: replace … in <dir>. Do the opposite.`
+ *
+ * Each is admitted by the clause anchor `(?:^|[^\w\s]\s+)` precisely BECAUSE
+ * that anchor requires punctuation to the left of the verb — which is the
+ * position a negator label occupies. Tightening the anchor cannot fix it; the
+ * negation is grammatically outside anything an adjacency pattern can see. An
+ * oracle that admits exactly one string has no scope to get wrong.
+ *
+ * WHY THE NAMED NEEDLES SURVIVE THE PIN, since the pin entails all of them: the
+ * pin's failure message names no requirement, and the natural response to a
+ * failing equality assertion is to paste in the new string. That reflex is the
+ * one failure mode exact equality has, and it is a real one — it turns the
+ * oracle into a snapshot whose discriminating power depends on a human declining
+ * to update it. The named assertions are what make a reflexive update visibly
+ * wrong: paste in a reversed repair and the pin goes green while requirement 2's
+ * line stays RED and says which contract item was just broken. This is also what
+ * the slice's own standard requires — "delete when entailed, UNLESS the kept
+ * line is the only one whose MESSAGE names the claim" — and here it is.
+ *
+ * So the assertions below are two hard guards, a registration pin, the equality
+ * pin, and then three labelled contract restatements. Requirements 2 and 3 are
+ * each ONE needle over a whole clause, and the two rules they follow are worth
+ * keeping written down because they were expensive:
  *
  *   1. A NEEDLE SPANNING MORE THAN ONE WORD MUST BOUND ITS GAPS IN WORDS
  *      (`(?:\s+\w+){0,N}\s+`), NEVER IN CHARACTERS.
@@ -73,6 +119,18 @@ const pool = useAdopterTreePool();
 const STALE_NAME = "qfai-tests.yml";
 
 /**
+ * How that file is rendered in the message: root-relative, POSIX separators.
+ *
+ * TEST-OWNED and deliberately not imported from the sibling suite's
+ * `ADOPTER_WORKFLOWS_DIR` nor from production's `WORKFLOWS_DIR_RELATIVE`. The
+ * equality pin's whole discriminating power is that both sides are stated
+ * independently; taking this from the reader would make the pin agree with
+ * whatever the reader computes, which is the coordinated-edit hole the sibling
+ * row's `toBe` was introduced to close.
+ */
+const ADOPTER_STALE_PATH = `.github/workflows/${STALE_NAME}`;
+
+/**
  * Escapes a literal for embedding in a `RegExp` source.
  *
  * TEST-LOCAL although `src/core/regex.ts` exports the same one-liner, and the
@@ -87,48 +145,51 @@ function escapeForRegExp(value: string): string {
 }
 
 /**
- * `qfai` subcommands as of `src/cli/main.ts`'s dispatch, MINUS three, for the
- * verb token below. TEST-OWNED: when a subcommand is added, add it here.
+ * Every `qfai` subcommand in `src/cli/main.ts`'s dispatch, with NO omissions.
+ * TEST-OWNED: when a subcommand is added, add it here.
  *
- * THE EXCLUSION CRITERION, stated because it was twice applied without being
- * named: a token is dropped when its over-fire happens on PROSE A COMPLIANT
- * AUTHOR WOULD WRITE, and kept when the over-fire needs something pathological.
- * That is what makes keeping token 1's over-breadth and dropping three verbs
- * non-contradictory rather than arbitrary — token 1 only over-fires on a
- * checkout path containing a space, which no message author controls or
- * produces, whereas each verb below over-fires on a sentence someone answering
- * a review would plausibly write.
+ * The list was previously three members short — `report`, `audit` and `doctor`
+ * were dropped because a BARE verb token over-fires on prose a compliant author
+ * would write ("this check will report the difference", "see the audit trail",
+ * "doctor reports the difference and writes nothing" — all measured FIRING).
+ * Deleting members was the wrong repair and this file's own token rationale says
+ * why: over-breadth in a negative assertion can only produce a false RED, while
+ * narrowing can admit a violation. It duly admitted three —
+ * `Re-run doctor in autoremediate mode.`, `Run doctor again once you have copied
+ * the file.`, `To repair automatically, run doctor.` — each ALL-GREEN, each
+ * naming a real mode of a command whose own contract Non-goals say it does not
+ * refresh a workflow.
  *
- * The three omissions, all measured:
- *   - `report`: "this check will report the difference" FIRES. Note the shipped
- *     sentence itself says "reports the difference", which `/\breport\b/i` does
- *     NOT match — so the warrant is not a hypothetical rewording but the message
- *     already using this vocabulary ONE INFLECTION away.
- *   - `audit`: "see the audit trail" FIRES.
- *   - `doctor`: "doctor reports the difference and writes nothing" and
- *     "doctor only reports the difference" both FIRE, and both are the most
- *     natural third-person rewording available precisely because `doctor` is the
- *     name of the command emitting the text. The shipped message escapes only by
- *     saying "this finding reports…". Dropping it REMOVES a prose constraint
- *     nobody had written down instead of adding a fourth one to the emission
- *     site, which is the deciding consideration: an unstated constraint is a
- *     trap, and the alternative here was to state one whose only content is
- *     "never name the command that prints this".
- *
- * The residual gap is an imperative naming one of the three WITHOUT the binary.
- * An imperative naming the binary is caught by token 1 (`qfai doctor` fires),
- * and neither `report` nor `audit` restores a workflow, so none of the three is
- * a repair an advisory could plausibly offer bare.
+ * The fix is this file's rule 2 (bind every operand the requirement names)
+ * applied to the negative sweep: the contract forbids an IMPERATIVE naming a
+ * subcommand, so token 7 binds the imperative and the subcommand together
+ * instead of sampling verbs and hoping. Binding the operand costs nothing in
+ * prose tolerance, so the full registry comes back at no price.
  */
-const CLI_SUBCOMMAND_VERBS = [
+const CLI_SUBCOMMANDS = [
   "init",
   "validate",
+  "report",
+  "doctor",
   "guardrails",
+  "audit",
   "atdd",
   "handoff",
   "discussion",
   "prototyping",
 ] as const;
+
+/**
+ * The subset safe to match as a BARE word, for token 8. Excludes exactly the
+ * three that collide with doctor's own prose vocabulary, on the criterion this
+ * file applies throughout: drop a token when its over-fire happens on prose a
+ * compliant author would write, keep it when the over-fire needs something
+ * pathological. Token 8 exists because token 7 requires a "run"-class word, so
+ * an imperative that IS the verb ("init the tree again") escapes it.
+ */
+const BARE_SUBCOMMANDS = CLI_SUBCOMMANDS.filter(
+  (name) => name !== "report" && name !== "audit" && name !== "doctor",
+);
 
 /**
  * Tokens whose presence in the advisory would make it name a command.
@@ -185,9 +246,30 @@ const COMMAND_TOKENS: RegExp[] = [
   // hand-edits are about to be destroyed. Measured clean on the shipped message
   // and on both the Windows and POSIX packaged paths.
   /\brefresh/i,
-  // A bare CLI verb, separator-anchored. `(?![\\/@.])` is what keeps the
-  // packaged path out of it; see the `assets/init` paragraph above.
-  new RegExp(`\\b(?:${CLI_SUBCOMMAND_VERBS.join("|")})\\b(?![\\\\/@.])`, "i"),
+  // Token 7 — the IMPERATIVE bound to the subcommand, which is the shape the
+  // contract actually forbids. The `(?:qfai\s+)?` makes the binary optional, so
+  // both `run qfai doctor` and the bare `re-run doctor` fire. No separator
+  // lookahead is needed: a path segment is never preceded by a `run`-class word,
+  // which is why binding the operand let the full registry back in.
+  new RegExp(
+    `(?:^|[^\\w])(?:re-?)?(?:run|execute|invoke|use)\\s+(?:qfai\\s+)?(?:${CLI_SUBCOMMANDS.join("|")})\\b`,
+    "i",
+  ),
+  // Token 8 — the bare verb for the subset that cannot collide with this
+  // message's prose, catching an imperative with no "run"-class word before it.
+  //
+  // The LOOKBEHIND is the fix to a hole that shipped in the previous two rounds:
+  // the old form's trailing `(?![\\/@.])` had to exempt a full stop so that
+  // `qfai-validate.yml` would not fire, and exempting the full stop let a
+  // SENTENCE-FINAL imperative through — `re-run init.` and `re-run validate.`
+  // were both ALL-GREEN, and the one round that fired the old token did so only
+  // because of its trailing " to restore it". Excluding a path on the LEFT
+  // (`…/assets/init/root`, `qfai-validate.yml` — separator or hyphen before the
+  // word) is what makes the right-hand exemption unnecessary, so `.` comes out
+  // of the lookahead and the sentence-final form is caught. A lookbehind was
+  // considered in the first round of this token and dismissed as speculative;
+  // that call was wrong, and this is what it cost.
+  new RegExp(`(?<![\\\\/@.\\w-])(?:${BARE_SUBCOMMANDS.join("|")})\\b(?![\\\\/@])`, "i"),
 ];
 
 describe(
@@ -211,9 +293,10 @@ describe(
       //
       // Guard #1 closes the no-emission mode. Not a false-pass mode on its own —
       // `expect(undefined).not.toMatch(/x/)` errors rather than passing — but it
-      // is what turns the nine `message`-reading failures labelled
-      // `toMatch() expects to receive a string, but got undefined` into one that
-      // names the cause.
+      // is what turns the ten `toMatch`-family failures labelled
+      // `toMatch() expects to receive a string, but got undefined` — two content
+      // needles and eight tokens — plus the equality pin's `expected undefined to
+      // be '…'`, into one failure that names the cause.
       //
       // It is also the one assertion in this file for which
       // `expected undefined to be defined` is a NON-degenerate observation, and
@@ -256,13 +339,16 @@ describe(
       // false-pass mode" of the whole row) is measurably too strong. Severity
       // `ok` means the CONTENT-IDENTICAL emission is under inspection, whose
       // message ("… match the packaged copy") contains no command token either
-      // and is registered exactly once, so eight assertions pass while nothing
+      // and is registered exactly once, so NINE assertions pass while nothing
       // about the repair text has been measured.
       //
-      // The two CONTENT needles do not need this guard, and that is measured
-      // rather than reasoned: disabling this line and forcing the `ok` branch to
-      // emit reddens exactly the packaged-repair needle and the no-overwrite
-      // needle, and nothing else. So the guard's value is scope, not necessity.
+      // The equality pin and the two CONTENT needles do not need this guard, and
+      // that is measured rather than reasoned: disabling this line and forcing the
+      // `ok` branch to emit reddens exactly those three and nothing else. So the
+      // guard's value is scope over the token sweep and the registration pin, not
+      // necessity — and the pin's arrival shrank that scope rather than growing
+      // it, which is the shape every assertion in this file has taken since the
+      // pin landed.
       //
       // `not.toBe("ok")` and deliberately NOT `toBe("info")`. `toBe` is the
       // stronger form and the surplus — the `info`-versus-`warning` distinction —
@@ -289,6 +375,44 @@ describe(
         .soft(findings, "workflows.integrity must be registered exactly once per doctor run")
         .toHaveLength(1);
 
+      // THE PRIMARY ORACLE — exact equality on the whole message, composed from
+      // parts this test owns. Asserted LAST so that a failure reads
+      // requirement-first; ordering is otherwise irrelevant, because every
+      // assertion here is `expect.soft` and all of them run.
+      //
+      // Composed, not imported. `shippedWorkflowsDir()` is the same test-owned
+      // helper the requirement-2 needle uses — the `root/.github/workflows` join
+      // is stated here and only the "where is this package installed" prefix is
+      // shared — and `ADOPTER_STALE_PATH` is a literal in this file. So this is
+      // NOT the DRY import this suite refuses: nothing is read from the module
+      // under test, and the two refusals recorded at requirement 2 (importing
+      // `resolvePackagedWorkflowsDir` / `WORKFLOWS_DIR_SEGMENTS`, or exporting
+      // the message's sentences as constants) apply to this line unchanged. The
+      // second refusal is now the load-bearing one: exporting the sentences and
+      // asserting against them would make THIS assertion tautological, and it is
+      // the only assertion in the file that a single import can hollow out
+      // completely.
+      //
+      // WHAT IT BUYS, and it is the reason four rounds of pattern-tightening are
+      // being replaced rather than extended: an oracle admitting exactly one
+      // string has no adjacency to widen and no scope to get wrong. Every witness
+      // in this row's history reddens on it in one move — the five governing
+      // negations, the four clause-boundary reversals, the three subject swaps,
+      // the two polarity edits, the relativized path, and every rewording nobody
+      // has thought of yet.
+      //
+      // WHAT IT DOES NOT BUY, stated because a pin invites over-trust: it says
+      // nothing about `details`, so the `nextActions` vector that
+      // `skills.integrity` uses for `qfai init --force` remains open — a command
+      // could ship there with `message` pinned and this row green. That key set
+      // is BR-0006-0022's and TDD-0036's, so closing it is not this row's edit;
+      // it is reported as the one violation still constructible after this
+      // change.
+      const expectedMessage =
+        `installed shipped workflow(s) differ from the packaged copy: ${ADOPTER_STALE_PATH}. ` +
+        `Manual repair: replace each listed file with the copy of the same name in ${shippedWorkflowsDir()}. ` +
+        `The installed file is never overwritten by QFAI: this finding reports the difference and writes nothing.`;
+
       // REQUIREMENT 2 — the packaged source path to copy from — as ONE needle
       // over the whole repair clause: an affirmative `replace`, the drifted files
       // as its object, `with`, then the packaged directory. It replaces two
@@ -296,9 +420,21 @@ describe(
       // `/\breplace\b/i`) that were BOTH direction-blind, while TC-0006-0030's
       // Verify (a) is directional in its own words (「install 済み package 内の
       // copy で当該ファイルを置き換える」) and BR-0006-0020 names the packaged
-      // copy as the INSTRUMENT. Eleven production-side mutation rounds reach
-      // this line; every witness below was GREEN under some earlier form of the
-      // needle and is red here:
+      // copy as the INSTRUMENT.
+      //
+      // NO LONGER THE CLOSURE — the equality pin is. This line survives as the
+      // labelled statement of requirement 2, and its limit is now known and
+      // written down rather than waiting to be found: it constrains ADJACENCY,
+      // so a negation that governs from OUTSIDE the clause it anchors passes it.
+      // `Do NOT do the following: replace each listed file with … in <dir>.` and
+      // `Never: replace … in <dir>.` both satisfy every part of this needle,
+      // because `(?:^|[^\w\s]\s+)` requires punctuation to the left of the verb
+      // and a negator label supplies exactly that. Those are closed by the pin,
+      // not by any tightening available here.
+      //
+      // Eleven production-side mutation rounds still reach this line; every
+      // witness below was GREEN under some earlier form of the needle and is red
+      // here:
       //
       //  (i)  `replace the copy of the same name in ${packagedDir} with each
       //       listed file` — tells the operator to overwrite the PACKAGED copy
@@ -515,10 +651,29 @@ describe(
 
       // REQUIREMENT 4 — no imperative naming a `qfai` subcommand as the repair.
       //
-      // Swept over `check.message` alone and never over a serialization of the
-      // whole check: `details` is a machine surface whose keys and values are
-      // owned by other rows, and folding it in would make this row redden on
-      // their payloads.
+      // Swept over `message` AND over a serialization of `details`, and the
+      // second half is a correction: this comment previously said `details` was
+      // excluded because "its keys and values are owned by other rows, and
+      // folding it in would make this row redden on their payloads". The first
+      // clause is true and the second was never measured — and the exclusion left
+      // requirement 4, WHICH THIS ROW ORIGINATES, open on the one vector the
+      // contract text points straight at. Measured: adding
+      // `nextActions: ["qfai init --force"]` to this finding's `details` — the
+      // exact shape `skills.integrity` ships and the exact thing requirement 4
+      // forbids — passed this row AND all nineteen selectors of its refactor
+      // closure, 172 passed, exit 0. A message-only sweep cannot see it, and no
+      // other oracle in the slice looks.
+      //
+      // The sweep is over a SERIALIZATION rather than over a pinned key set, and
+      // that is what keeps it out of BR-0006-0022's territory: it adds no
+      // expectation about which keys exist, so TDD-0036 remains free to assert
+      // the four-key payload without contradicting anything here. Measured safe
+      // against that future payload: with `declined: []` and the absolute
+      // `packagedDir` both present, every token stays clean, because a path
+      // segment is preceded by a separator (token 8's lookbehind), never followed
+      // by a space (token 1), and never preceded by a `run`-class word (token 7).
+      // So the "would redden on their payloads" prediction is false for the
+      // payload the contract actually specifies.
       //
       // Each token is reported with its own source in the label, so a failure
       // names which token fired rather than only that one did. The label admits
@@ -534,6 +689,36 @@ describe(
           )
           .not.toMatch(token);
       }
+
+      // `title` is swept together with `details` because it is the same gap
+      // measured twice: appending ` - run qfai doctor --force` to this finding's
+      // title also passed this row and the whole closure. The drift emission's
+      // title is asserted NOWHERE — the sibling row's `toBe` pins the `ok`
+      // emission's title, not this one — so a message-only sweep leaves two
+      // rendered surfaces open, not one.
+      //
+      // `JSON.stringify` and not `Object.values(...).join()`: the KEY NAMES are
+      // part of what an operator reads under `--format json`, so a key literally
+      // called `nextActions` must be visible to the sweep even if its value alone
+      // were somehow clean.
+      const machineSurface = JSON.stringify({ title: check?.title, details: check?.details ?? {} });
+      for (const token of COMMAND_TOKENS) {
+        expect
+          .soft(
+            machineSurface,
+            `no refresh command exists, so \`title\` and \`details\` must name no command either — \`details.nextActions\` is where the sibling check ships \`qfai init --force\`: token /${token.source}/ matched`,
+          )
+          .not.toMatch(token);
+      }
+
+      // The equality pin, last so that the three labelled restatements above
+      // report first. Composed at the top of this block; see the reasoning there.
+      expect
+        .soft(
+          message,
+          "the drift message must be EXACTLY the contract-fixed text: the stale path, the manual repair naming the packaged source, and the no-overwrite statement, with nothing added, removed, negated, retracted or reordered",
+        )
+        .toBe(expectedMessage);
     });
   },
 );

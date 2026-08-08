@@ -357,13 +357,29 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       // the packaged clause incapable of carrying a FILENAME, which is the
       // property the provenance-gate suite's absence assertion leans on.
       //
-      // THREE PROSE CONSTRAINTS this message is under, from the repair-text
-      // integration suite's needles. All three are broader than the contract, so
-      // a natural rewording can redden with no contract violation. That is
-      // deliberate on the test side and it is recorded HERE because the rewording
-      // happens in this file — an unstated oracle constraint is a trap, and this
-      // message has now been rewritten five times by people who could not see
-      // them. Every one fails RED, never silently:
+      // THIS MESSAGE IS PINNED BY EXACT EQUALITY. The repair-text integration
+      // suite (`tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts`)
+      // composes the expected string test-side and asserts `toBe`, so ANY edit
+      // here — a comma, a reordering, an added sentence — reddens it. Editing
+      // this template means editing that expectation in the same commit, and the
+      // point of the pin is that you cannot do the first without being made to
+      // re-read the contract while doing the second. Do not "fix" the failure by
+      // pasting the new string in without checking the four required items; the
+      // labelled assertions beside the pin exist to catch exactly that, and they
+      // name which item you broke.
+      //
+      // The pin replaced four rounds of pattern oracles, each of which admitted a
+      // message asserting the opposite of a contract item — the last set carried
+      // a governing negation ("Do NOT do the following: replace …") that no
+      // adjacency pattern can see.
+      //
+      // THREE PROSE CONSTRAINTS are also asserted separately, and they are the
+      // ones that survive a careless re-pinning. All three are broader than the
+      // contract, so a natural rewording can redden with no contract violation.
+      // That is deliberate on the test side and it is recorded HERE because the
+      // rewording happens in this file — an unstated oracle constraint is a trap,
+      // and this message has now been rewritten five times by people who could
+      // not see them. Every one fails RED, never silently:
       //   1. keep punctuation straight after the product name — token 1 matches
       //      `qfai` followed by whitespace and a letter, so "… by QFAI:" passes
       //      and "QFAI will not overwrite it" fires;
