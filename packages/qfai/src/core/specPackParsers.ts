@@ -312,6 +312,18 @@ export function resolveTestCaseTable(rawText: string): TestCaseTableResolution {
  * `resolveTestCaseTable` is unchanged — `reportTddCoverage` and `specPack`
  * describe a spec's *shape* and want the single authoritative table.
  */
+/**
+ * True when the document has a `## Test Case Table` section at all.
+ *
+ * A heading-form spec legitimately has none, and its unresolved result is
+ * not a fault. A document that has the section and cannot resolve a table in
+ * it is broken — and if it *also* uses the heading form, the presence of one
+ * readable heading was enough to discard the failure and take the broken
+ * table's TCs with it.
+ */
+export function hasTestCaseTableSection(rawText: string): boolean {
+  return extractTestCaseTableSection(maskNonSpecRegions(rawText)) !== null;
+}
 export function resolveTestCaseTables(rawText: string): MarkdownTable[] {
   const text = maskNonSpecRegions(rawText);
   const section = extractTestCaseTableSection(text);

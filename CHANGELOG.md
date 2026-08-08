@@ -118,13 +118,20 @@
   table read as the whole story while the follow-up work sat in a table nobody
   looked at. A table carrying `TDD-ID` and `TC-Refs` is a ledger attempt, and
   a missing column in one is now `TDDLIST_REQUIRED_COLUMN_MISSING`. "Ledger
-  attempt" is a **count** — six of the eight required columns — not two named
-  marker columns: keying on markers left the same escape one level in, since a
-  table mistyping `TC-Refs` itself would leave both detectors. Every
-  single-header typo leaves seven of eight standing, and a documentation table
-  beside the ledger shares almost none, so the shipped template's own `## Schema`
-  table stays out. `qfai report` treats an unreadable ledger table the same way
+  attempt" is **either** test, because neither alone is enough: `TDD-ID` and
+  `TC-Refs` together say "ledger" whatever else is absent, and six of the eight
+  required columns say it for a table that mistyped one of those two. Markers
+  alone miss a mistyped marker; a count alone misses a five-column table that
+  keeps both. A documentation table beside the ledger passes neither, so the
+  shipped template's own `## Schema` table stays out. `qfai report` treats an unreadable ledger table the same way
   it treats an unreadable first one: no counts, and the reason printed instead.
+- **A broken `## Test Case Table` is unresolved even beside heading-form TCs.**
+  One readable `## TC-NNNN` heading discarded the failure, so a document with
+  both shapes and a mistyped `TC-ID` header lost that table's TCs entirely:
+  no level, no coverage target, and no `TDDLIST_TC_TABLE_UNRESOLVED` — while
+  `collectShortIds` still saw them declared, so ATDD asked for the default
+  integration annotation and full validation passed on a test at the wrong
+  layer. A spec that has no such section is still not a fault.
 - **A malformed `TC-Refs` value discharges nothing.** `resolveParentTcId`
   strips the last segment, so an over-long `TC-0001-0001-0001` resolved to the
   real `TC-0001-0001` and cleared its obligation — while Check 5 skips a token
@@ -132,14 +139,15 @@
   typo either. Only a well-formed reference is counted or resolved — in `qfai
 report` as well, which was computing `done: 1 / open: 0` from the same
   malformed cell the gate was reporting as uncovered.
-- **A ledger row with no `Layer` no longer discharges a TC.** Every rule that
+- **A ledger row whose `Layer` is blank or `-` no longer discharges a TC.** Every rule that
   would police the placement keys on that cell and skips when it is empty —
   the enum check, the forbidden-layer test, the `Level`/`Layer` crosswalk — so
   a row carrying an id and a `TC-Refs` and nothing else cleared
   `TDDLIST_TC_NOT_COVERED` with no test behind it and no rule able to say so.
-  An unknown but non-empty `Layer` still counts, as before: that is a
-  project's own vocabulary and `TDDLIST_UNKNOWN_LAYER` names it. An empty cell
-  is not vocabulary, it is an absent claim.
+  An unknown but real `Layer` still counts, as before: that is a project's own
+  vocabulary and `TDDLIST_UNKNOWN_LAYER` names it. A blank cell and `-` are not
+  vocabulary — the enum check treats both as the same "no claim" placeholder and
+  skips them, so a row carrying either is exempt from every placement rule.
 - **The counts are omitted, not zeroed, when coverage cannot be assessed.**
   `report --format json` serializes the spec object verbatim, so hiding the
   numbers in the markdown formatter alone left machine consumers reading

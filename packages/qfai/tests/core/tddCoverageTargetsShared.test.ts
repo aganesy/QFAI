@@ -590,3 +590,90 @@ describe("the report stops when a later ledger table is unreadable", () => {
     }
   });
 });
+
+describe("a ledger attempt is caught by markers or by count", () => {
+  it("reports a five-column later table that keeps both markers", async () => {
+    // The count alone missed it: `TDD-ID | TC-Refs | Layer | Test file | Status`
+    // is five of eight, below the threshold, so the table left both detectors
+    // and its `todo` rows were invisible to the gate and the report.
+    const { codes } = await bothCommands(
+      [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001 | L1 | AC-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      [
+        "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | a | done | - | RED fail / GREEN pass |",
+        "",
+        "## CHG-001",
+        "",
+        "| TDD-ID | TC-Refs | Layer | Test file | Status |",
+        "| ------ | ------- | ----- | --------- | ------ |",
+        "| TDD-0002 | TC-0001 | unit | tests/b.test.ts | todo |",
+      ],
+    );
+    expect(codes).toContain("TDDLIST_REQUIRED_COLUMN_MISSING");
+  });
+});
+
+describe("a `-` Layer is a placeholder, not a claim", () => {
+  it("does not discharge a TC from a row that declares nothing", async () => {
+    // The enum check treats `-` and an empty cell as the same "no claim", so a
+    // row carrying `Layer = -` is exempt from every placement rule — and it was
+    // still counted as coverage.
+    const { codes } = await bothCommands(
+      [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001 | L1 | AC-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      ["| TDD-0001 | TC-0001 | - |  |  | todo | - | - |"],
+    );
+    expect(codes).toContain("TDDLIST_TC_NOT_COVERED");
+  });
+});
+
+describe("a broken Test Case Table is unresolved even beside headings", () => {
+  it("keeps the failure when the document has both shapes", async () => {
+    // One readable heading used to discard the failure, so the broken table's
+    // TCs had no level and no coverage target here while `collectShortIds`
+    // still saw them declared — neither TDDLIST_TC_TABLE_UNRESOLVED nor
+    // TDDLIST_TC_NOT_COVERED was raised for them.
+    const { codes } = await bothCommands(
+      [
+        "# 06 Test Cases",
+        "",
+        "## TC-0002",
+        "",
+        "- Level: L3",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC Id | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001 | L1 | AC-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      [],
+    );
+    expect(codes).toContain("TDDLIST_TC_TABLE_UNRESOLVED");
+  });
+
+  it("stays silent for a document that only uses headings", async () => {
+    const { codes } = await bothCommands(
+      ["# 06 Test Cases", "", "## TC-0001", "", "- Level: L3", ""].join("\n"),
+      [],
+    );
+    expect(codes).not.toContain("TDDLIST_TC_TABLE_UNRESOLVED");
+  });
+});

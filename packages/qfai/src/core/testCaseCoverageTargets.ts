@@ -20,7 +20,11 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { collectHeadingTcIdsFrom, collectHeadingTcLevelsFrom } from "./atddTraceability.js";
-import { resolveTestCaseTable, resolveTestCaseTables } from "./specPackParsers.js";
+import {
+  hasTestCaseTableSection,
+  resolveTestCaseTable,
+  resolveTestCaseTables,
+} from "./specPackParsers.js";
 import { classifyCoverageLevel, isCoverageTargetLevel } from "./tddHelpers.js";
 import { exists } from "./validators/utils.js";
 
@@ -123,9 +127,18 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
   // document order let an explanatory table above the heading hijack the set.
   const resolution = resolveTestCaseTable(content);
   if (!resolution.table) {
-    // Only unresolved when neither shape yielded anything. A heading-form spec
-    // has real TCs and must not be reported as an unreadable one.
-    return knownTcIds.size > 0 ? collected : { ...collected, unresolved: resolution.reason };
+    // A heading-form spec has real TCs and must not be reported as an
+    // unreadable one — but only when it has no `## Test Case Table` section to
+    // fail at. A **mixed** document, headings plus a section whose table is
+    // broken (`TC Id`), used to have the failure discarded because one heading
+    // resolved: that table's TCs then had no level and no coverage target
+    // here, while `collectShortIds` still saw them as declared, so neither
+    // `TDDLIST_TC_TABLE_UNRESOLVED` nor `TDDLIST_TC_NOT_COVERED` was raised
+    // and ATDD asked for the default integration annotation instead.
+    const brokenSection = hasTestCaseTableSection(content);
+    return knownTcIds.size > 0 && !brokenSection
+      ? collected
+      : { ...collected, unresolved: resolution.reason };
   }
 
   // Every TC-ID table, not just the first. `atddTraceability` already reads

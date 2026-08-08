@@ -153,13 +153,18 @@ export interface LedgerTable {
  * mistyped one header had its rows vanish from both the gate and the report,
  * and a `done` row in the first table read as the whole story.
  *
- * Keying on two marker columns did not fix that: a table mistyping one of the
- * *markers* escaped the detector too, which is the same escape one level in.
- * A count has no such hole — every single-header typo leaves seven of eight
- * standing — while a documentation table beside the ledger shares almost none
- * of them, so the shipped template's own `## Schema` table stays out.
+ * Neither test alone is enough, so both are applied and either suffices.
+ * Marker columns miss a table that mistypes a *marker*; a count misses a table
+ * that keeps its markers and drops three other columns. `TDD-ID` **and**
+ * `TC-Refs` together say "ledger" whatever else is absent, and six of eight say
+ * it for a table that mistyped one of those two. A documentation table beside
+ * the ledger passes neither, so the shipped template's own `## Schema` table
+ * stays out.
  */
 export const TDD_LEDGER_ATTEMPT_MIN_COLUMNS = 6;
+
+/** The two columns that are only ever a ledger's. See above. */
+export const TDD_LEDGER_MARKER_COLUMNS: readonly string[] = ["TDD-ID", "TC-Refs"];
 
 /** Ledger-shaped tables that are missing at least one required column. */
 export function collectIncompleteLedgerTables(
@@ -170,7 +175,8 @@ export function collectIncompleteLedgerTables(
     const headers = table.headers.map((header) => header.trim());
     const missing = TDD_LEDGER_REQUIRED_COLUMNS.filter((column) => !headers.includes(column));
     const present = TDD_LEDGER_REQUIRED_COLUMNS.length - missing.length;
-    if (present < TDD_LEDGER_ATTEMPT_MIN_COLUMNS) continue;
+    const carriesMarkers = TDD_LEDGER_MARKER_COLUMNS.every((column) => headers.includes(column));
+    if (!carriesMarkers && present < TDD_LEDGER_ATTEMPT_MIN_COLUMNS) continue;
     if (missing.length > 0) {
       incomplete.push({ headers, missing });
     }
@@ -328,7 +334,10 @@ export function isCoverageBearingRow(scan: LedgerTable, row: readonly string[]):
   // project-specific names, and `TDDLIST_UNKNOWN_LAYER` names it at
   // `warning`. An empty cell is not a project's own vocabulary, it is an
   // absent claim — and it is the only value no rule reports at all.
-  if (layer.length === 0) return false;
+  // `-` too, not only an empty cell: the enum check treats them as the same
+  // "no claim" placeholder, so a row can carry `Layer = -` and be exempt from
+  // every placement rule while still clearing the coverage obligation.
+  if (layer.length === 0 || layer === "-") return false;
   return !TC_FORBIDDEN_LAYERS.has(layer);
 }
 
