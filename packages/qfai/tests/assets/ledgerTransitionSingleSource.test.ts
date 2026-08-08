@@ -83,3 +83,50 @@ describe.each(TREES)("%s", (tree) => {
     }
   });
 });
+
+describe.each(TREES)("%s (the summary cannot license what the list forbids)", (tree) => {
+  it("names the five reset sources instead of a wildcard", async () => {
+    // `* -> todo` reads as "any status", and `review-fix`'s only exit is
+    // `refactor` — so an agent working from the table could write the
+    // forbidden `review-fix -> todo` on an approved reset.
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain(
+      "| `red` \\| `green` \\| `refactor` \\| `done` \\| `exception` -> `todo` (upstream reset) |",
+    );
+    expect(ledger).not.toContain("| `* -> todo` (upstream reset) |");
+  });
+
+  it("classifies the approved reset once, not twice", async () => {
+    // The table said none of the four is backward; the paragraph under it
+    // called the reset the only sanctioned backward transition. A run that
+    // performed one could not tick `final-checklist.md`'s "No backward
+    // transitions occurred" while the table said it was legal.
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("**None of the four is a backward transition**");
+    expect(ledger).not.toContain(
+      "is the only **sanctioned backward transition** in the strict sense",
+    );
+  });
+
+  it("requires a new DR-ID for a second anomaly on the same row", async () => {
+    // The retained `DR-*` documents an anomaly already resolved, and
+    // `TDDLIST_EXCEPTION_MISSING_DR` only asks that the cell be non-empty with
+    // resolvable tokens — so the stale id alone passed the gate while the
+    // current anomaly had no Decision Record at all.
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain(
+      "**A row that enters `exception` again records a new `DR-*` for the new anomaly**",
+    );
+    expect(ledger).toContain("appended, not substituted");
+  });
+
+  it("does not let the skill summary restart a changed obligation", async () => {
+    // The constraint asserted `exception -> todo` needs no Change Request
+    // unconditionally. When the investigation finds the obligation itself was
+    // wrong, that is an upstream change — and this line is read before the
+    // Exception Handling section that says so.
+    const skill = flat(await read(tree, SKILL));
+    expect(skill).toContain("**when the row's approved obligation is unchanged**");
+    expect(skill).toContain("**When the investigation finds the obligation itself was wrong**");
+  });
+});
