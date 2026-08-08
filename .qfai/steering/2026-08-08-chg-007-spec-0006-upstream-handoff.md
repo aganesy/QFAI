@@ -134,3 +134,46 @@ same surface.
   leaves the file green. Equivalent today because `skipped_unresolved ⇒ comparedCount = 0`, and
   non-equivalent exactly when a `declined`-derived status breaks that biconditional — which the
   registration site's comment already anticipates. Owned by TDD-0039.
+
+## 10. `node_modules/.bin/tsc` resolves to `typescript-future`, so the `check-types` CI job may not be testing the pinned compiler
+
+Owner: repository toolchain. Non-blocking for CHG-007; found while repairing a `node_modules` incident,
+not while reviewing a row.
+
+Root `package.json` declares both `typescript` (`5.9.3`) and `typescript-future`
+(`typescript@6.0.1-rc`). **Both packages provide a `tsc` bin**, and the linked
+`node_modules/.bin/tsc` currently execs `../typescript-future/bin/tsc`:
+
+```
+$ pnpm exec tsc --version
+Version 6.0.1-rc
+```
+
+That matters because the two are meant to be distinct gates:
+
+- `check-types` = `tsc -b` — intended to run the **pinned** compiler.
+- `check-types:future` = `node ./scripts/check-types-future.mjs`, which deliberately resolves the RC by
+  its own explicit path (`node_modules/typescript-future/bin/tsc`) rather than through `.bin`.
+- `.github/workflows/ci.yml` runs them as **two separate required jobs** (`:66` / `:86`), both gated in
+  the summary job's success condition (`:253`, `:266-267`).
+
+If `.bin/tsc` resolves to the RC in CI as it does locally, the two jobs run the same compiler, the
+pinned-compiler check is silently lost, and the redundancy is invisible because both jobs pass.
+
+**What is measured and what is not.** Measured: the local `.bin/tsc` target and its reported version.
+**Not** measured: whether CI's own `pnpm install --frozen-lockfile` resolves the bin conflict the same
+way, and whether the pinned compiler would still report zero errors. I did not run the pinned compiler
+to find out, because `tsc -b` rewrites `.tsbuildinfo` and two reviewers were running `check-types`
+concurrently at the time; a green-vs-green comparison was not worth corrupting their measurements for.
+
+**Attribution is genuinely uncertain and is not being guessed at.** This state was observed immediately
+after a `pnpm install --force` that I ran to repair a `node_modules` incident. An earlier
+`pnpm install --force` in the same run had the same opportunity to set it, and pnpm's bin-conflict
+resolution is not alphabetical-first here (`typescript` would have won if it were). So this may predate
+the slice entirely. What is certain is the current state and that it contradicts the CI job structure.
+
+**Suggested fix, for the owner to judge**: give the RC a non-colliding bin (or drop its bin linkage) so
+`.bin/tsc` unambiguously means the pinned compiler, and have `check-types` assert the version it is
+about to run rather than trusting resolution — the same principle this slice applied to vitest
+selectors, where a gate that cannot report *which* thing it measured cannot be trusted to have measured
+the right one.
