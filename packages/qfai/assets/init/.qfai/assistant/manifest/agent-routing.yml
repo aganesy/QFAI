@@ -87,7 +87,13 @@ routing:
         conditional_agents: [frontend-engineer, backend-engineer]
         parallel_groups: []
         blocking_agents: [qa-gatekeeper]
-        rerun_policy: failed-agents-only
+        # `changed-scope-dependents`: the gatekeeper's REVISE here is usually
+        # *about* the seam or the mutation — it touched code the row does not
+        # own, or the selector did not fail. Re-running only the agent that
+        # returned non-PASS re-judges an unchanged artifact and returns the
+        # same REVISE, so the row never leaves `red`. Whoever wrote the
+        # production edit has to be rerun with it.
+        rerun_policy: changed-scope-dependents
       - id: build
         iteration: per-ledger-item
         mandatory_agents: [qa-gatekeeper]
@@ -143,6 +149,12 @@ routing:
         # scope REVISE to be settled BEFORE the RED is submitted. Approving the
         # RED first leaves the planner only "keep the PASS and open a new row",
         # which cannot repair a handoff taken at the wrong granularity.
+        #
+        # `qa-gatekeeper` is blocking for the rows that have evidence at this
+        # gate — the branch 1 ones. A branch 2 row's payload is its
+        # falsifiability trio, which by design does not exist until P6, so it
+        # is judged when the trio lands rather than blocked here for lacking
+        # something the branch says it should not yet have.
         mandatory_agents: [delivery-planner, acceptance-test-engineer, qa-gatekeeper]
         conditional_agents: []
         parallel_groups: []

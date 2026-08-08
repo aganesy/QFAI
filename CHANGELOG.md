@@ -6,6 +6,18 @@
 
 ### Fixed
 
+- **P1b gates the rows that have evidence at P1b.** The `red` phase's
+  `qa-gatekeeper` is mandatory and blocking, and a branch 2 row's payload is
+  the falsifiability trio — which by the same gate's own rule does not exist
+  until P6. A run whose rows are all branch 2 had nothing submittable and
+  could not pass P1b to reach P6. It judges the branch 1 rows there; branch 2
+  rows are judged when their trio lands.
+- **A RED-gate REVISE reruns whoever wrote the production edit.** The seam and
+  the mutation are written by the production owners in that phase, and a
+  `qa-gatekeeper` REVISE there is usually about one of them —
+  `failed-agents-only` re-judged an unchanged artifact and returned the same
+  REVISE, so the row never left `red`. The phase uses
+  `changed-scope-dependents`.
 - **Someone is routed to every step that touches production code.** The
   implement `red` phase had `qa-gatekeeper` alone and the orchestrator may not
   implement, so neither step 3a's minimal seam nor the falsifiability mutation
@@ -27,10 +39,11 @@
   still wrote its two per-item fields to `implement-<spec-id>.md`, splitting an
   `E2E` / `API` row across two files and leaving the one gate item 10 reads
   incomplete.
-- **`qa-gatekeeper` requires the ATDD evidence file only where it exists.**
-  Listing it unconditionally made the Stop condition fire on a Unit-only spec
-  that never ran `/qfai-atdd`, before the `implement-<spec-id>.md` that does
-  exist was read.
+- **`qa-gatekeeper` requires the evidence file the row's `Layer` owns, and only
+  that one.** Requiring both made the Stop condition fire on a spec that
+  legitimately has one: a Unit-only spec never ran `/qfai-atdd`, and a spec
+  whose rows are all `E2E` / `API` has no implement file. Either way the gate
+  stopped before reading the evidence that does exist.
 - **`execution-ledger.md` has an `### Allowed transitions` heading**, so the
   anchor two documents cite resolves instead of landing at the top of the file.
 - **`RED revision` is a field, so that exemption can be recorded.** Declaring

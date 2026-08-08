@@ -375,14 +375,13 @@ Template:
 ## Stage Gates (Do not skip)
 
 - P0: Plan and obligations checklist prepared.
-- P1: Layer assignment validated against `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`.
+- P1: Layer assignment validated against `catalog/test-layers.md#layer-derivation-procedure-normative`.
 - P1b: **Branch chosen for every row this cycle will advance, and branch 1
   discharged in full.** Branch 1 runs here — write the test, take the RED, get
   `qa-gatekeeper` PASS — **before** P2-P4 build any surface, because after them
   there is nothing left to watch fail. A branch 2 row legally leaves P1b with
   its branch recorded and no evidence yet: its mutation run needs the surface,
-  so it is captured at P6. A row with no branch chosen is what leaves it with
-  no legal transition out of `todo`.
+  so it is captured at P6. **The `red` phase's blocking `qa-gatekeeper` judges the rows that have evidence at P1b — the branch 1 ones.** It cannot judge a branch 2 row here: that row's payload is the falsifiability trio, which does not exist yet by the same rule that lets the row leave P1b. A run whose rows are all branch 2 passes P1b with nothing submitted, and its rows are gated when the trio lands. A row with no branch chosen is what leaves it with no legal transition out of `todo`.
 - P1c: **Branch 1 rows are handed to `/qfai-implement` before P5, by
   `TDD-ID`.** Branch 1 ends with a deliberately failing test and no production
   code — this stage does not write it

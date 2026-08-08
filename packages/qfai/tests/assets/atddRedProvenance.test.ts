@@ -642,19 +642,43 @@ describe.each(TREES)("%s (someone can perform every step)", (tree) => {
     );
   });
 
-  it("requires the ATDD evidence file of the gatekeeper only where it exists", async () => {
+  it("requires of the gatekeeper only the evidence file the row's Layer owns", async () => {
     // Listed unconditionally, the Stop condition fired on a Unit-only spec that
     // never ran `/qfai-atdd`, before the `implement-<spec-id>.md` that does
     // exist was read.
     const gatekeeper = flat(await read(tree, GATEKEEPER));
-    expect(gatekeeper).toContain(
-      "**required only when the row under review has `Layer = E2E` or `Layer = API`**",
-    );
-    expect(gatekeeper).toContain("It is **not** required otherwise");
+    expect(gatekeeper).toContain("in the file its `Layer` owns, and only that one");
+    // Both directions: a Unit-only spec has no ATDD file, an E2E/API-only spec
+    // has no implement file, and requiring both stops on one of them.
+    expect(gatekeeper).toContain("has no implement file");
   });
 
   it("points the lifecycle reference at a heading that exists", async () => {
     const ledger = await read(tree, LEDGER);
     expect(ledger).toContain("### Allowed transitions");
+  });
+});
+
+describe.each(TREES)("%s (gates only what has a payload)", (tree) => {
+  it("does not block a branch-2-only run on evidence P1b defers", async () => {
+    // The `red` phase's `qa-gatekeeper` is mandatory and blocking, and a branch
+    // 2 row's payload is the falsifiability trio — which by the same gate's own
+    // rule does not exist until P6. A run whose rows are all branch 2 had
+    // nothing submittable and could not pass P1b to reach P6.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("judges the rows that have evidence at P1b — the branch 1 ones");
+    expect(atdd).toContain("its rows are gated when the trio lands");
+  });
+
+  it("reruns the production owner when the RED gate faults its edit", async () => {
+    // The seam and the mutation are written by `frontend-engineer` /
+    // `backend-engineer` in this phase, and a `qa-gatekeeper` REVISE here is
+    // usually about one of them. `failed-agents-only` re-judged an unchanged
+    // artifact and returned the same REVISE, so the row never left `red`.
+    const catalog = await read(tree, "assistant/manifest/agent-routing.yml");
+    const implement = catalog.slice(catalog.indexOf("- skill: qfai-implement"));
+    const block = implement.slice(0, implement.indexOf("- skill: ", 1));
+    const red = block.slice(block.indexOf("- id: red"), block.indexOf("- id: build"));
+    expect(red).toContain("rerun_policy: changed-scope-dependents");
   });
 });
