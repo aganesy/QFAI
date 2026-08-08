@@ -32,7 +32,14 @@ fail=0
 # Internal spec IDs: spec-0010 and above are QFAI-internal specs.
 # spec-0001..0009 are reserved for sample / Category-B template usage and
 # are tolerated.
-INTERNAL_SPEC_RE='spec-0(0[1-9][0-9]|[1-9][0-9]{2,})'
+#
+# Three alternatives, because "0010 and above" is a numeric range and the
+# first spelling covered only its leading-zero half: 0010-0099, then
+# 0100-0999 (and 01000+), then 1000 and up. A four-digit id with no leading
+# zero walked past every layer. The `[sS]` spelling is deliberate — a spec
+# directory may legally be `SPEC-0042` on a case-sensitive filesystem, so a
+# case-exact guard misses the id in exactly the tree that produced it.
+INTERNAL_SPEC_RE='[sS][pP][eE][cC]-(0(0[1-9][0-9]|[1-9][0-9]{2,})|[1-9][0-9]{3,})'
 
 # Internal version markers: any "vN.M" or "vN.M.P" outside of
 # package.json version, plus the "v1.x" sentinel. Intentionally broad

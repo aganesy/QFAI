@@ -1,6 +1,5 @@
 /**
  * MetricsCollector — collects per-iteration metrics and computes aggregates.
- * SPEC-0032
  *
  * PII exclusion: never includes file contents, emails, or names in metrics.
  * 100% emission guarantee: all emitted metrics are stored.

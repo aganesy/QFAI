@@ -49,7 +49,10 @@ async function newTempDir(): Promise<string> {
 }
 
 const PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> = [
-  { name: "internal spec id (spec-0010+)", re: /spec-0(0[1-9][0-9]|[1-9][0-9]{2,})/g },
+  {
+    name: "internal spec id (spec-0010+)",
+    re: /spec-(0(0[1-9][0-9]|[1-9][0-9]{2,})|[1-9][0-9]{3,})/gi,
+  },
   { name: "internal version marker", re: /\bv[0-9]+\.[0-9]+(?:\.[0-9]+)?\b|\bv1\.x\b/g },
   {
     name: "internal trace id (CAP-0010+/DEC/DR/PROT2/OQ)",

@@ -190,7 +190,7 @@ export async function validateScaffoldPlaceholder(
     // an unattributed finding. The counter is already skipped for those.
     if (specId !== null && options.specScope !== undefined) {
       const number = scaffoldSpecNumber(specId);
-      // A directory naming a spec no pack has — `tests/integration/spec-9999/`,
+      // A directory naming a spec no pack has — a typo in the directory name,
       // the ordinary mistyped scaffold — is not an out-of-scope sibling. No run
       // would ever report it: `--spec 9999` is rejected by `QFAI-SCOPE-002`, so
       // skipping it here removes the placeholder from every valid scoped gate
@@ -285,7 +285,7 @@ export async function validateScaffoldPlaceholder(
         // and `isPathInSpecScope` keeps the finding under every scope, so a
         // sibling spec's unfilled skeleton failed this spec's scoped gate.
         // `file` stays the test path: that is what the operator has to edit.
-        // Only a spec that exists is named. `.qfai/specs/spec-9999` for a
+        // Only a spec that exists is named. A nonexistent spec path for a
         // mistyped scaffold directory would give the finding an owner of
         // `9999`, and `isFindingInSpecScope` — which lets attributed owners
         // decide and ignores the unattributed test path — then drops it from

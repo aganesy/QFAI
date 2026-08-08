@@ -66,9 +66,9 @@ function narrowToScope(
   // repo-wide, on the same terms as `QFAI-ATDD-113` / `-115`.
   //
   // **Only a spec that exists can own the typo.** A token naming a spec
-  // number no spec pack has — `QFAI:SPEC-9999:TC-0001`, the ordinary
-  // fat-finger — has no owning gate to fall through to: `--spec 9999` is
-  // rejected by `QFAI-SCOPE-002`, so every legitimate per-spec run would drop
+  // number no spec pack has — a typo in the spec segment of an annotation,
+  // the ordinary fat-finger — has no owning gate to fall through to: that
+  // number is rejected by `QFAI-SCOPE-002` as a scope argument, so every legitimate per-spec run would drop
   // it and the annotation would sit in the current spec's own tests unseen.
   // Those stay repo-wide, which is the same rule the contract tokens follow
   // and for the same reason.
@@ -125,8 +125,8 @@ function owningSpecDirs(
   for (const ref of refs) {
     const number = OWNING_SPEC_RE.exec(ref)?.[1];
     // A number no spec pack has is not an owner. Naming
-    // `.qfai/specs/spec-9999` in `relatedFiles` gave the finding an owner of
-    // `9999`, so `isFindingInSpecScope` — which lets attributed owners decide
+    // A nonexistent spec directory in `relatedFiles` gave the finding an owner
+    // no scope can name, so `isFindingInSpecScope` — which lets attributed owners decide
     // and ignores the unattributed test path — dropped it from every scope,
     // undoing the very repo-wide treatment `narrowToScope` had preserved for
     // it. `declaredSpecs` is omitted where every ref is known to name a real

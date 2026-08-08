@@ -6,6 +6,15 @@
 
 ### Fixed
 
+- **The distributed-surface spec-ID guard covered half its own range.**
+  `spec-0010 and above` is a numeric range, but all three layers spelled only
+  its leading-zero half and matched case-exactly — so a four-digit id with no
+  leading zero, or any `SPEC-` spelling, shipped past every one of them. The
+  regex now covers 0010-0099, 0100-0999 (and 01000+) and 1000 and up, in either
+  case; the `SPEC-` spelling matters because a spec directory may legally be
+  `SPEC-0042` on a case-sensitive filesystem. Widening it surfaced two
+  pre-existing leaks in `src/` header comments, which `tsup` was retaining in
+  `dist/*.d.ts` and the sourcemaps; both are removed.
 - **A finding names the spec directory as it is spelled on disk.** Spec
   discovery matches `spec-NNNN` case-insensitively and keeps the directory name
   it read, so a pack under `SPEC-0001/` is valid. Attribution rebuilt the path
