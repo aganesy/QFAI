@@ -104,16 +104,24 @@ const WORKFLOWS_DIR_RELATIVE = WORKFLOWS_DIR_SEGMENTS.join("/");
 export type WorkflowsIntegrityStatus = "ok" | "modified" | "skipped_unresolved";
 
 /**
- * Two members have no consumer at this revision, and that is deliberate
- * rather than leftover: `packagedDir` is claimed by the `details` payload of
- * business rule BR-0006-0022, and `status === "skipped_unresolved"` by the
- * unresolvable-packaged-copy skip of BR-0006-0020 — both of which are later
- * obligations of this same check. (`status === "ok"` IS consumed: the
- * override leg of the drift suite asserts it. So is `comparedCount`, which
- * gates that same `ok` emission — do not add it to this list.) Recorded here
- * because the evidence directory that carries the longer argument is not
- * version controlled; delete a member instead of widening it if its rule is
- * dropped.
+ * ONE member has no consumer at this revision, and that is deliberate rather
+ * than leftover: `status === "skipped_unresolved"` is claimed by the
+ * unresolvable-packaged-copy skip of BR-0006-0020, a later obligation of this
+ * same check. Recorded here because the evidence directory that carries the
+ * longer argument is not version controlled; delete the member instead of
+ * widening it if its rule is dropped.
+ *
+ * `packagedDir` LEFT that list and the departure is worth stating, because the
+ * consumer is not the one this comment used to predict: the drift advisory's
+ * MESSAGE names it as the packaged source path to copy from, per the required
+ * message content of `.qfai/contracts/cli/qfai-doctor.md`. Its `details` slot
+ * (BR-0006-0022) is still outstanding, so the field is consumed while that
+ * payload obligation is not — the two are separate, and landing the payload
+ * does not put the field back here.
+ *
+ * (`status === "ok"` IS consumed: the override leg of the drift suite asserts
+ * it. So is `comparedCount`, which gates that same `ok` emission — do not add
+ * either to this list.)
  */
 export type WorkflowsIntegrityDiff = {
   status: WorkflowsIntegrityStatus;

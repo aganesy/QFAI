@@ -277,8 +277,22 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   // reports `modified` for a `changed`-only or `missing`-only tree. Under that
   // derivation the status test alone would emit an empty-`modified` finding.
   // Do not simplify this to the status test.
+  //
+  // The `packagedDir !== undefined` conjunct is the third of these and, like
+  // the other two, TS cannot correlate it with the status literal. It is a
+  // CONTENT gate, not a type workaround: the doctor contract's required message
+  // content includes the packaged source path to copy from, so a finding that
+  // cannot name that path is not the finding the contract describes. The state
+  // is unreachable at this revision — an unresolvable packaged tree yields
+  // `skipped_unresolved` with an empty `modified` — and its own emission is a
+  // separate obligation of BR-0006-0020, so routing it to silence here matches
+  // exactly what the unresolved status already produces.
   const workflowsDiff = await diffInstalledShippedWorkflows(root);
-  if (workflowsDiff.status === "modified" && workflowsDiff.modified.length > 0) {
+  if (
+    workflowsDiff.status === "modified" &&
+    workflowsDiff.modified.length > 0 &&
+    workflowsDiff.packagedDir !== undefined
+  ) {
     addCheck(checks, {
       id: "workflows.integrity",
       severity: "info",
@@ -289,8 +303,40 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       // copy arrives with the next emission branch.
       title: "Workflows integrity (.github/workflows)",
       // `title` has no consumer in the text renderer — it prints
-      // `[severity] id: message` — so the prose has to live in `message`.
-      message: `installed shipped workflow(s) differ from the packaged copy: ${workflowsDiff.modified.join(", ")}`,
+      // `[severity] id: message` — so the prose has to live in `message`,
+      // including all four items the contract requires of it: the stale paths,
+      // the packaged source path, the no-overwrite statement, and NO imperative
+      // naming a `qfai` subcommand.
+      //
+      // That last one is why this message may not copy the `skills.integrity`
+      // branch above, which puts `qfai init --force` in `details.nextActions`.
+      // That string is honest there — `init --force` really does restore
+      // skills — but no command refreshes an installed shipped workflow at this
+      // revision, so naming one here would tell every adopter running a version
+      // behind to run something that does not exist. The command arrives in the
+      // same release that rewrites this message.
+      //
+      // `packagedDir` is emitted ABSOLUTE and unrelativized, which is the one
+      // deliberate exception to this file's `toRelativePath` habit. It is the
+      // operand the operator has to copy FROM, and it is frequently outside the
+      // adopter root (a global install, a pnpm store, or — as in this repo's own
+      // tests — a workspace checkout against a temp-dir root), where
+      // `path.relative` degrades to a `../..` chain or, across Windows drives,
+      // silently back to the absolute path it started from. A package-relative
+      // rendering was rejected for the same reason from the other side: under
+      // pnpm the install root is `node_modules/.pnpm/qfai@<version>/node_modules/qfai`,
+      // which an operator cannot guess.
+      //
+      // The stale file names are NOT repeated on the packaged side. Each is
+      // already listed above by its adopter-relative path, so directory plus
+      // "the copy of the same name" states the source path completely while
+      // keeping one path in the message instead of one per file. It also keeps
+      // the packaged clause incapable of carrying a FILENAME, which is the
+      // property the provenance-gate suite's absence assertion leans on.
+      message:
+        `installed shipped workflow(s) differ from the packaged copy: ${workflowsDiff.modified.join(", ")}. ` +
+        `Manual repair: replace each listed file with the copy of the same name in ${workflowsDiff.packagedDir}. ` +
+        `The installed file is never overwritten by QFAI: this finding reports the difference and writes nothing.`,
       details: {
         workflowsDir: workflowsDiff.workflowsDir,
         modified: workflowsDiff.modified,
