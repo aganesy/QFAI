@@ -359,19 +359,32 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       //
       // THREE PROSE CONSTRAINTS this message is under, from the repair-text
       // integration suite's needles. All three are broader than the contract, so
-      // a natural rewording can redden with no contract violation; that is
-      // deliberate on the test side (the token sweep is a NEGATIVE assertion,
-      // where an over-broad needle can only over-fire) and it is recorded here
-      // because the rewording happens in this file:
+      // a natural rewording can redden with no contract violation. That is
+      // deliberate on the test side and it is recorded HERE because the rewording
+      // happens in this file — an unstated oracle constraint is a trap, and this
+      // message has now been rewritten five times by people who could not see
+      // them. Every one fails RED, never silently:
       //   1. keep punctuation straight after the product name — token 1 matches
       //      `qfai` followed by whitespace and a letter, so "… by QFAI:" passes
       //      and "QFAI will not overwrite it" fires;
-      //   2. keep the repair verb, `with`, and the packaged path in that ORDER
-      //      inside one sentence, with the path preceded by whitespace — the
-      //      needle is directional so that "replace the packaged copy with your
-      //      file" cannot pass, and anchored so that relativizing the path cannot;
-      //   3. keep the no-overwrite statement PASSIVE and adjacent — `never` must
-      //      be within three words of `overwritten`.
+      //   2. the repair clause must read `replace` → the drifted files described
+      //      as `listed` / `stale` / `drifted` → `with` → the packaged path, with
+      //      NO comma, semicolon, dash or colon anywhere inside it, and with
+      //      `replace` opening its clause (punctuation before it, never a word).
+      //      So "you should replace …", "do NOT replace …", "replace each listed
+      //      file, one at a time, with …" and any reversal all redden, as does
+      //      relativizing the path;
+      //   3. the no-overwrite clause must read `installed file` → `never` →
+      //      `overwritten`, each within three words of the next and with no
+      //      punctuation between them. So the active voice ("QFAI never
+      //      overwrites the installed file"), a renamed subject ("the file in
+      //      your repository"), and a comma parenthetical all redden.
+      //
+      // Constraints 2 and 3 are TIGHT ON PURPOSE: each replaced a looser form
+      // that was green on a message asserting the opposite of the contract item
+      // it was written for — including one that told the adopter their
+      // hand-edited file would be "refreshed in place on your next install".
+      // Loosen them only with a witness set in hand.
       message:
         `installed shipped workflow(s) differ from the packaged copy: ${workflowsDiff.modified.join(", ")}. ` +
         `Manual repair: replace each listed file with the copy of the same name in ${workflowsDiff.packagedDir}. ` +

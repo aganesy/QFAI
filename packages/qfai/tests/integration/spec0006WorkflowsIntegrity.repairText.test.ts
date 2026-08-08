@@ -19,14 +19,39 @@
  * (`spec0006WorkflowsIntegrity.drift.test.ts`) owns the stale-path clause of
  * the message and asserts it directly. This file owns requirements 2, 3 and 4.
  *
- * Requirements 2 and 3 are each ONE needle that binds a verb to its operand,
- * and that shape is the whole lesson of this row's review rounds. Three
- * separately-plausible oracles — `toContain(packagedDir)`, `/\breplace\b/i`,
- * `/\bnever\b[\s\S]{0,40}overwrit/i` — were each satisfiable by a message
- * asserting the OPPOSITE of the requirement they were written for, because each
- * measured the PRESENCE of a word rather than what the word was bound to. Every
- * needle below therefore names the operand and the ordering in one pattern; the
- * per-assertion comments carry the witness message that closed each hole.
+ * Requirements 2 and 3 are each ONE needle over a whole clause, and the two
+ * rules they follow are the entire lesson of this row's review rounds:
+ *
+ *   1. A NEEDLE SPANNING MORE THAN ONE WORD MUST BOUND ITS GAPS IN WORDS
+ *      (`(?:\s+\w+){0,N}\s+`), NEVER IN CHARACTERS.
+ *   2. IT MUST BIND EVERY OPERAND THE REQUIREMENT NAMES — subject as well as
+ *      verb, object as well as instrument.
+ *
+ * FIVE separately-plausible oracles were each satisfiable by a message asserting
+ * the OPPOSITE of the requirement they were written for, in three failure modes:
+ *
+ *   PRESENCE, not binding — `toContain(packagedDir)` and `/\breplace\b/i`. The
+ *     word appears, so the oracle is content with a sentence that denies it.
+ *   PROXIMITY, not binding — `/\bnever\b[\s\S]{0,40}overwrit/i` and
+ *     `/\breplace\b[^.]{0,80}\bwith\b[^.]{0,60}…/i`. A bounded run of arbitrary
+ *     characters holds a comma, a semicolon, a dash or a colon, so the halves
+ *     can sit in different clauses saying unrelated things. Rule 1 exists
+ *     because a word-bounded gap cannot contain a clause boundary AT ALL, which
+ *     makes the bound stop being a length at which the defect returns.
+ *   BOUND TO THE WRONG OPERAND — `/\bnever\b(?:\s+\w+){0,3}\s+overwritt/i`.
+ *     Word-bounded already, and still green on "The packaged copy is never
+ *     overwritten", which says nothing about the adopter's file. Rule 2 exists
+ *     because tightening a gap tells you nothing about what is on either side.
+ *
+ * The cost is symmetric and is stated at each assertion rather than glossed:
+ * excluding clause boundaries also excludes benign parentheticals, and binding
+ * an operand pins its noun phrase, so compliant rewordings can redden. Both
+ * needles are POSITIVE assertions, where that failure direction is RED; the
+ * token sweep is negative, where over-breadth is the safe direction. Which side
+ * an oracle sits on is what decides how tight to make it.
+ *
+ * The per-assertion comments carry every witness message that closed a hole,
+ * with its measurement.
  *
  * Observed through `createDoctorData` rather than through the reader, matching
  * both sibling suites — the message is composed at the registration site, so a
@@ -62,21 +87,42 @@ function escapeForRegExp(value: string): string {
 }
 
 /**
- * `qfai` subcommands as of `src/cli/main.ts`'s dispatch, MINUS two, for the
+ * `qfai` subcommands as of `src/cli/main.ts`'s dispatch, MINUS three, for the
  * verb token below. TEST-OWNED: when a subcommand is added, add it here.
  *
- * `report` and `audit` are the two omissions and they are measured, not
- * guessed. Both are ordinary words in doctor's own vocabulary — "this check
- * will report the difference", "see the audit trail" both FIRE — so including
- * them would redden on compliant prose that names no command at all. The
- * residual gap is an imperative naming one of those two WITHOUT the binary,
- * which is not a repair an advisory could plausibly offer (neither command
- * restores a workflow); an imperative naming the binary is caught by token 1.
+ * THE EXCLUSION CRITERION, stated because it was twice applied without being
+ * named: a token is dropped when its over-fire happens on PROSE A COMPLIANT
+ * AUTHOR WOULD WRITE, and kept when the over-fire needs something pathological.
+ * That is what makes keeping token 1's over-breadth and dropping three verbs
+ * non-contradictory rather than arbitrary — token 1 only over-fires on a
+ * checkout path containing a space, which no message author controls or
+ * produces, whereas each verb below over-fires on a sentence someone answering
+ * a review would plausibly write.
+ *
+ * The three omissions, all measured:
+ *   - `report`: "this check will report the difference" FIRES. Note the shipped
+ *     sentence itself says "reports the difference", which `/\breport\b/i` does
+ *     NOT match — so the warrant is not a hypothetical rewording but the message
+ *     already using this vocabulary ONE INFLECTION away.
+ *   - `audit`: "see the audit trail" FIRES.
+ *   - `doctor`: "doctor reports the difference and writes nothing" and
+ *     "doctor only reports the difference" both FIRE, and both are the most
+ *     natural third-person rewording available precisely because `doctor` is the
+ *     name of the command emitting the text. The shipped message escapes only by
+ *     saying "this finding reports…". Dropping it REMOVES a prose constraint
+ *     nobody had written down instead of adding a fourth one to the emission
+ *     site, which is the deciding consideration: an unstated constraint is a
+ *     trap, and the alternative here was to state one whose only content is
+ *     "never name the command that prints this".
+ *
+ * The residual gap is an imperative naming one of the three WITHOUT the binary.
+ * An imperative naming the binary is caught by token 1 (`qfai doctor` fires),
+ * and neither `report` nor `audit` restores a workflow, so none of the three is
+ * a repair an advisory could plausibly offer bare.
  */
 const CLI_SUBCOMMAND_VERBS = [
   "init",
   "validate",
-  "doctor",
   "guardrails",
   "atdd",
   "handoff",
@@ -132,7 +178,13 @@ const COMMAND_TOKENS: RegExp[] = [
   /\bnpm\s+(?:i|install|run)\b/i,
   /(?:^|\s)--[A-Za-z]/, // long flag
   /(?:^|\s)-[A-Za-z]\b/, // short flag
-  /\brefresh\b/i,
+  // No trailing `\b`: the INFLECTIONS are the dangerous forms. `refreshed` and
+  // `refreshes` both escaped `/\brefresh\b/i` (measured), and one of them
+  // carried the worst message in this row's history — "the installed file is
+  // refreshed in place on your next install", which tells the adopter their
+  // hand-edits are about to be destroyed. Measured clean on the shipped message
+  // and on both the Windows and POSIX packaged paths.
+  /\brefresh/i,
   // A bare CLI verb, separator-anchored. `(?![\\/@.])` is what keeps the
   // packaged path out of it; see the `assets/init` paragraph above.
   new RegExp(`\\b(?:${CLI_SUBCOMMAND_VERBS.join("|")})\\b(?![\\\\/@.])`, "i"),
@@ -168,17 +220,27 @@ describe(
       // the distinction is worth keeping so it is not re-litigated: a red is
       // degenerate when the predicate is about a VALUE and the mutant supplies
       // ABSENCE (which is why guard #2's severity red would not count), and
-      // admissible when the predicate IS presence. The mutation that reaches it
-      // is an UNRESOLVABLE PACKAGED DIRECTORY — the skip firing spuriously —
-      // whose entire observable consequence is "no `workflows.integrity`
-      // finding", so `undefined` is the observation rather than the absence of
-      // one.
+      // admissible when the predicate IS presence. TWO mutations reach it, and
+      // both produce genuine absence: an UNRESOLVABLE PACKAGED DIRECTORY (the
+      // skip firing spuriously), and FALSIFYING THIS FILE'S OWN GATE CONDITION
+      // — `modified.length > 0` inverted, which leaves `status` at `"modified"`
+      // so the `ok` else-if is false too and nothing is emitted at all. The
+      // second is the better proof of the two, because it lives in the code this
+      // row's item owns rather than in a sibling row's reader.
       //
-      // Deliberately NOT the drift gate, and that correction is measured:
-      // forcing the comparison to report no drift does NOT remove the finding,
-      // it converts it into the content-identical `ok` emission (which is gated
-      // on `comparedCount > 0`, satisfied here), so that mutant lands on guard
-      // #2 with `expected 'ok' not to be 'ok'` and never reaches this line.
+      // What does NOT reach it is forcing the COMPARISON to report no drift:
+      // that converts the finding into the content-identical `ok` emission
+      // (gated on `comparedCount > 0`, satisfied here), so it lands on guard #2
+      // with `expected 'ok' not to be 'ok'`. Measured, after an earlier record
+      // claimed the opposite.
+      //
+      // THAT PAIR IS THE ARGUMENT FOR RECORDING MUTATIONS AS TEXT RATHER THAN AS
+      // INTENT, and it is worth naming here because the rule was itself first
+      // written down as an intent. "Kill the drift gate" is an intent that two
+      // different edits satisfy — one in the reader, one in the gate condition —
+      // and they land on two different assertions. A round recorded by intent
+      // cannot distinguish them; a round recorded as needle and replacement
+      // text cannot fail to.
       //
       // BORROWED PRECONDITION, owner named: "the emission site can fire at all"
       // is established by TDD-0029's first `it`, which drives the same fixture
@@ -227,14 +289,16 @@ describe(
         .soft(findings, "workflows.integrity must be registered exactly once per doctor run")
         .toHaveLength(1);
 
-      // REQUIREMENT 2 — the packaged source path to copy from — as ONE ordered
-      // needle: the repair verb, then `with`, then the packaged directory on the
-      // `with` side. It replaces two assertions (`toContain(packagedDir)` and a
-      // free-standing `/\breplace\b/i`) that were BOTH direction-blind, while
-      // TC-0006-0030's Verify (a) is directional in its own words
-      // (「install 済み package 内の copy で当該ファイルを置き換える」) and
-      // BR-0006-0020 names the packaged copy as the INSTRUMENT. Three witness
-      // messages, each green under the old pair and each red here:
+      // REQUIREMENT 2 — the packaged source path to copy from — as ONE needle
+      // over the whole repair clause: an affirmative `replace`, the drifted files
+      // as its object, `with`, then the packaged directory. It replaces two
+      // assertions (`toContain(packagedDir)` and a free-standing
+      // `/\breplace\b/i`) that were BOTH direction-blind, while TC-0006-0030's
+      // Verify (a) is directional in its own words (「install 済み package 内の
+      // copy で当該ファイルを置き換える」) and BR-0006-0020 names the packaged
+      // copy as the INSTRUMENT. Eleven production-side mutation rounds reach
+      // this line; every witness below was GREEN under some earlier form of the
+      // needle and is red here:
       //
       //  (i)  `replace the copy of the same name in ${packagedDir} with each
       //       listed file` — tells the operator to overwrite the PACKAGED copy
@@ -247,6 +311,41 @@ describe(
       //       claims to pin, and it is where an implementer strengthening the
       //       no-overwrite sentence naturally lands.
       //  (iii) the packaged path relativized (see the anchor note below).
+      //  (iv) `replace the copy in the packaged tree with the stale file, using
+      //       ${packagedDir}` — the same reversal as (i), reaching the path
+      //       across a COMMA.
+      //  (v)  `replace the packaged copy -- not the installed one -- with the
+      //       file listed above in ${packagedDir}` — the reversal reaching
+      //       across a dash parenthetical, and it even contains the word the
+      //       object anchor looks for, on the wrong side of `with`.
+      //  (vi) `Do NOT replace each listed file with the copy of the same name in
+      //       ${packagedDir}` / `replace your local backup with …` — the
+      //       polarity and the LEFT operand, neither of which an ordered phrase
+      //       can see.
+      //
+      // THE GAPS ARE WORD-BOUNDED, NOT LENGTH-BOUNDED, and that is the whole
+      // fix for (iv)-(vi). An earlier form used `[^.]{0,80}` / `[^.]{0,60}`,
+      // which bounds PROXIMITY: 80 characters of any content hold a comma, a
+      // semicolon, a dash or a parenthesis, so the verb, `with` and the path
+      // could sit in three different clauses saying three different things. That
+      // is the identical defect the requirement-3 needle below was already
+      // rewritten to fix — the same reasoning had to be applied here, and the
+      // fact that it was not is why (iv)-(vi) existed. `(?:\s+\w+){0,N}\s+`
+      // admits only whole words, so no clause boundary can enter a gap at all,
+      // and the bound stops being a length at which the defect returns.
+      //
+      // The three anchors, each with the witness it closes:
+      //   - `(?:^|[^\w\s]\s+)` before `replace` — the verb must OPEN its clause,
+      //     i.e. be preceded by punctuation rather than by a word. Any negation
+      //     of a verb necessarily puts a word in front of it ("do NOT replace",
+      //     "nothing will replace", "we never replace"), so this is a STRUCTURAL
+      //     sufficient condition for the verb being asserted, needing no
+      //     negator vocabulary to maintain.
+      //   - `(?:listed|stale|drifted)` between the verb and `with` — the object
+      //     must refer back to the enumeration in the first sentence. Closes
+      //     `replace your local backup with …`, which is directionally correct
+      //     and sends the operator at the wrong file.
+      //   - `\s+` immediately before the path — see the anchor note below.
       //
       // The free-standing verb assertion is DELETED rather than kept alongside:
       // it is entailed by this needle, and the standard this slice adopted is
@@ -254,22 +353,35 @@ describe(
       // MESSAGE names the claim" — the label below names the repair, so nothing
       // survives the deletion.
       //
-      // `[\s(]` before the path is the ANTI-RELATIVIZATION ANCHOR and it is
-      // load-bearing on POSIX specifically. `toContain(packagedDir)` was GREEN
-      // on ubuntu — all seven `ci.yml` `runs-on` values are `ubuntu-latest` —
-      // for a `toRelativePath(root, packagedDir)` tidy-up at the emission site,
-      // because `toRelativePath` has no absolute fallback (`src/core/paths.ts`)
-      // and the `../..` chain CONTAINS the absolute target: the last `../`
-      // supplies the leading `/`. Constructed, since this row cannot run ubuntu
-      // from here:
+      // The `\s+` immediately before the path is the ANTI-RELATIVIZATION ANCHOR
+      // and it is load-bearing on POSIX specifically. `toContain(packagedDir)`
+      // was GREEN on ubuntu — all seven `ci.yml` `runs-on` values are
+      // `ubuntu-latest` — for a `toRelativePath(root, packagedDir)` tidy-up at
+      // the emission site, because `toRelativePath` has no absolute fallback
+      // (`src/core/paths.ts`) and the `../..` chain CONTAINS the absolute
+      // target: the last `../` supplies the leading `/`. Constructed, since this
+      // row cannot run ubuntu from here:
       //
       //   rel      = ../../home/runner/work/QFAI/QFAI/packages/qfai/assets/init/root/.github/workflows
       //   includes = true     ← the hole
       //   anchored = false    ← this needle
       //
-      // On Windows the same edit reddens twice over (`C:` and backslashes), and
-      // the `[^.]{0,60}` gap cannot span `../../` on either platform, so the
-      // anchor and the gap are independent defenses.
+      // On Windows the same edit reddens twice over (`C:` and backslashes). The
+      // relationship between the anchor and the gap is NOT independence, and an
+      // earlier record of mine that called them "independent defenses" or
+      // "half-blind without each other" was wrong both ways. Measured, three
+      // variants against the relativized message:
+      //
+      //   `\s+` before the path            → RED on POSIX and Windows
+      //   weakened to `\s*`                → RED on POSIX and Windows
+      //   replaced by `[\s\S]{0,8}`        → **GREEN on POSIX**, red on Windows
+      //
+      // So the anchor is the LAST LINK OF THE WORD-BOUNDED CHAIN rather than a
+      // second mechanism: what closes the relativization is that no gap in this
+      // needle admits a non-word character, and `\s+` is where that property
+      // meets the path. Weakening it to `\s*` is harmless; replacing it with any
+      // character window reopens the exact ubuntu-only hole this row was reviewed
+      // for. Do not "simplify" it in that direction.
       //
       // This is the same standard the sibling suite set when it rejected
       // `toContain` for `toBe` on the title: "substring containment cannot see a
@@ -312,50 +424,94 @@ describe(
       //     prose form — it would make every needle in this file tautological,
       //     including the seven negative ones — and it is the edit the previous
       //     round already required be refused for the directory constant.
+      // THE COST, stated rather than glossed, on the same accounting the
+      // requirement-3 needle uses. This needle pins the SHAPE of the repair
+      // clause: verb opens the clause, object refers to the listing, `with`,
+      // then the path, all inside one clause. Rewording INSIDE that shape is
+      // free and measured to be free — `Manual repair - replace each stale file
+      // with the packaged copy of the same name in <dir>` and `To repair,
+      // replace the drifted files with the copy of the same name in <dir>` both
+      // pass. RESHAPING reddens: `you should replace …` (a word before the verb)
+      // and `replace each listed file, one at a time, with …` (a comma inside a
+      // gap) both fail on compliant prose. That is the price of excluding clause
+      // boundaries — a needle cannot admit a benign parenthetical and reject a
+      // meaning-reversing one, since they are the same construction. The failure
+      // direction is RED, which is why the price is payable here at all; it is
+      // recorded at the emission site so the rewriter meets it before CI does.
       const packagedDirNeedle = escapeForRegExp(shippedWorkflowsDir());
       const directionalRepair = new RegExp(
-        `\\breplace\\b[^.]{0,80}\\bwith\\b[^.]{0,60}[\\s(]${packagedDirNeedle}`,
+        `(?:^|[^\\w\\s]\\s+)replace\\b(?:\\s+\\w+){0,3}\\s+(?:listed|stale|drifted)\\b` +
+          `(?:\\s+\\w+){0,3}\\s+with\\b(?:\\s+\\w+){0,10}\\s+${packagedDirNeedle}`,
         "i",
       );
       expect
         .soft(
           message,
-          "the message must instruct the operator to replace the stale file WITH the packaged copy, naming the packaged source path unrelativized on the `with` side, per the contract's required message content and BR-0006-0020",
+          "the message must instruct the operator to replace the listed files WITH the packaged copy — one affirmative clause, no clause boundary inside it, the packaged source path unrelativized on the `with` side — per the contract's required message content and BR-0006-0020",
         )
         .toMatch(directionalRepair);
 
       // REQUIREMENT 3 — an explicit statement that QFAI will not overwrite the
-      // file itself.
+      // file itself. THIS ROW IS ITS SOLE OWNER: `grep -r overwritt
+      // packages/qfai/tests/` finds no other assertion on it, so a single
+      // noun-phrase edit is enough to drop or invert the one contract item
+      // nothing else pins. That is why the needle grew twice.
       //
-      // The negation is BOUND to the verb, not merely near it. A bare
-      // `/overwrit/` needle passes on "QFAI overwrites the file for you", which
-      // is the exact opposite of the requirement; and the bounded-proximity form
-      // `/\bnever\b[\s\S]{0,40}overwrit/i` that replaced it was ALSO green on
-      // the opposite claim, because 40 characters of any content hold a whole
-      // clause and `never` is free to govern something else inside it:
+      // All three of SUBJECT, NEGATION and VERB are bound in one chain, in that
+      // order, and each was added because the previous form was green on a
+      // message asserting the opposite:
       //
-      //   `The installed file is never protected: doctor overwrites it in place
-      //    and writes the packaged bytes.`
+      //  1. `/overwrit/` alone passes "QFAI overwrites the file for you".
+      //  2. `/\bnever\b[\s\S]{0,40}overwrit/i` — proximity, not binding — passes
+      //     `The installed file is never protected: doctor overwrites it in
+      //     place and writes the packaged bytes.` 40 characters of any content
+      //     hold a whole clause, so `never` governs something else inside it.
+      //  3. `/\bnever\b(?:\s+\w+){0,3}\s+overwritt/i` binds negation to verb but
+      //     says nothing about WHOSE file, and passes all three of:
+      //       `The packaged copy is never overwritten by QFAI: …` — the message
+      //         now makes no statement about the installed file at all, so the
+      //         requirement is literally unmet;
+      //       `The packaged copy is never overwritten by QFAI; the installed
+      //         file is refreshed in place on your next install.` — tells the
+      //         adopter their hand-edits WILL be destroyed, against the
+      //         contract's own Non-goals (and it escapes `/\brefresh\b/i`, which
+      //         is why token 6 lost its trailing `\b`);
+      //       `Files that are never overwritten are listed in the provenance
+      //         record.` — the sentence deleted outright.
+      //     The first of those is MORE plausible than (2)'s witness, because the
+      //     preceding round's whole subject was the packaged copy being
+      //     clobbered, so an author answering that review lands on it.
+      //  4. The form below adds the subject, WORD-BOUNDED like the rest. The
+      //     proposal that came in used `[^.]{0,40}` between subject and `never`,
+      //     and that would have reproduced defect (2) one level out: measured,
+      //     `The installed file is stale, but the packaged copy is never
+      //     overwritten by QFAI.` is GREEN under it and RED here. A bounded
+      //     any-character gap is never the right instrument in this file.
       //
-      // Proximity is not binding. `(?:\s+\w+){0,3}\s+` admits only up to three
-      // intervening WORDS, so no clause boundary can sit between the two: the
-      // witness above is rejected because `protected:` is not `\w+`, and a
-      // `never` three sentences away is rejected because a `.` is not `\w`.
+      // The sentence-gap control is UNCONFOUNDED, which the previous one was
+      // not. `never. Three sentences later, doctor overwrites it.` also lacks
+      // `overwritt`, so it failed on spelling and proved nothing about binding.
+      // The control that isolates it: `The installed file is never touched.
+      // Three sentences later, it is overwritten in place.` — GREEN under (2),
+      // RED here, and it CONTAINS `overwritten`, so only the binding can be
+      // what rejects it.
       //
-      // Adopted as proposed by review; the one thing it is NOT is strictly
-      // stronger in every dimension, and that is worth stating rather than
-      // glossing. `overwritt` (double `t`) admits only the passive
-      // ("never overwritten", "never be overwritten", "never automatically
-      // overwritten" — all measured green), so an ACTIVE-voice compliant
-      // rewording ("QFAI never overwrites the installed file") reddens. Accepted:
-      // this is a POSITIVE assertion, so the failure direction of an
-      // over-tight needle is RED, and the shipped sentence is passive.
+      // THE COST, on the same accounting as requirement 2: three noun phrases
+      // are now pinned, and compliant rewordings redden. Measured — passes:
+      // "is never overwritten by QFAI", "will never be overwritten", "is never
+      // automatically overwritten". Reddens: "QFAI never overwrites the
+      // installed file" (active voice puts the subject after the verb), "The
+      // file in your repository is never overwritten" (subject renamed), "The
+      // installed file is, in every mode, never overwritten" (comma in a gap).
+      // Accepted because this is a POSITIVE assertion, so an over-tight needle
+      // fails RED, and because the alternative — leaving the subject unbound —
+      // is a false GREEN on a message that inverts the contract.
       expect
         .soft(
           message,
-          "the message must state that the installed file is never overwritten — with `never` bound to that verb, not merely near it — per the contract's required message content",
+          "the message must state that THE INSTALLED FILE is never overwritten — subject, negation and verb bound in one clause, not merely present in the same sentence — per the contract's required message content",
         )
-        .toMatch(/\bnever\b(?:\s+\w+){0,3}\s+overwritt/i);
+        .toMatch(/\binstalled\s+file\b(?:\s+\w+){0,3}\s+never\b(?:\s+\w+){0,3}\s+overwritt/i);
 
       // REQUIREMENT 4 — no imperative naming a `qfai` subcommand as the repair.
       //
