@@ -71,10 +71,9 @@ Skill-specific examples:
 - When every item is terminal (`done` or a valid `exception`) **and the mandatory Change Request
   preflight (see Required Process) reset nothing**, the per-item work is finished — but the
   **spec-level checkpoint boundary** may still be owed — an interrupted run, or a re-run of an
-  already-terminal ledger, leaves it unrecorded. Before reporting "nothing to do" and exiting,
-  confirm fresh spec-level checkpoint verification evidence exists for this ledger state; run the
-  per-spec verification first when it is missing or stale. See `references/checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`. Only
-  then report "nothing to do" for that spec, then advance to the next spec of a confirmed queue; exit when the queue is empty (Volume Policy > Advancing the queue).
+  already-terminal ledger, leaves it unrecorded. Before reporting "nothing to do" and exiting, confirm fresh spec-level checkpoint verification evidence exists for this ledger state; run the
+  per-spec verification first when it is missing or stale (`references/checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`).
+  Only then report "nothing to do" for that spec, then advance to the next spec of a confirmed queue; exit when the queue is empty (Volume Policy > Advancing the queue).
 
 ## Goal
 
@@ -345,7 +344,8 @@ The skill may declare "this spec's implementation is complete" only when:
 - Every `US-*` the spec declares has a `Layer = E2E` row whose `US-Refs` names it,
   and every declared `CON-API-*` has a `Layer = API` row whose `CON-API-Refs`
   names it. Without these rows an all-`done` ledger can sit alongside a
-  `QFAI-ATDD-111` / `QFAI-ATDD-113` hard gate at 0%- Each item reached `done` or valid `exception` (with DR-ID)
+  `QFAI-ATDD-111` / `QFAI-ATDD-113` hard gate at 0%.
+- Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain
 - Checkpoint verification passed at the spec-level boundary (see `#checkpoint-verification`)
 - No unresolved Change Request or waiver dependency exists. The gate covers only the

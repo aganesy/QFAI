@@ -73,6 +73,13 @@
   `QFAI-ATDD-113` / `-115` are attributed to `.qfai/contracts/**`, which no spec
   owns, so they stay repo-wide under every scope; `/qfai-atdd` now says so
   rather than implying a scoped gate is clean.
+- **`qfai-implement`'s primary spec-completion condition is a list item again.**
+  A missing newline joined `- Each item reached \`done\` or valid \`exception\`
+  (with DR-ID)`to the tail of the bullet above it, and because the joined line
+is a two-space continuation, markdown rendered the condition as trailing prose
+inside a bullet about the`QFAI-ATDD-111`/`QFAI-ATDD-113`hard gate. The
+words were all still there, so nothing flagged it — while the clause had no
+line of its own, and downstream Decision Records that cite it by`file:line`pointed at a line it does not occupy.`tests/assets/swallowedListItem.test.ts`now scans the shipped`assistant/\*\*` tree for a list marker stranded mid-line.
 
 ## [1.10.0] - 2026-08-03
 
