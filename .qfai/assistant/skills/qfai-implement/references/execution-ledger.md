@@ -227,21 +227,22 @@ above return a row to an earlier state and none of them is a backward
 transition, because each restarts the cycle from `todo` or is an explicitly
 sanctioned re-entry:
 
-| Edge                                                                               | Why it is not backward                              | Approval needed |
+| Edge                                                                               | Why it is legal                                     | Approval needed |
 | ---------------------------------------------------------------------------------- | --------------------------------------------------- | --------------- |
 | `blocked` -> `todo`                                                                | resumption — the row never started                  | none            |
 | `exception` -> `todo`                                                              | anomaly resolved — nothing upstream changed         | none            |
 | `red` \| `green` \| `refactor` \| `done` \| `exception` -> `todo` (upstream reset) | owner-approved re-entry, cycle restarts from `todo` | approved `CR-*` |
 | `refactor` -> `red`                                                                | QA rejection recovery on this row's own evidence    | `qa-gatekeeper` |
 
-**None of the four is a backward transition**, including the approved reset:
-each is a sanctioned re-entry into an earlier phase of the row's own cycle, not
-a retreat from progress. Calling the reset "the only sanctioned backward
-transition" made a run that performed one unable to tick
-`final-checklist.md`'s "No backward transitions occurred" while this table said
-it was legal — one edge, two verdicts, and the checklist is the one a completion
-report is written against. Preconditions and the reset procedure:
-`references/change-request-reset.md`.
+The first, second and fourth rows are **re-entries, not backward transitions**:
+they return a row to an earlier phase of its own cycle without any upstream
+change. The approved Change Request reset is the one **sanctioned backward
+transition** — an upstream obligation moved, so the row's completed work is
+withdrawn. The distinction is the whole reason the column above asks why each
+edge is _legal_ rather than why it is not backward: three of them are not, one
+of them is and is authorised. `final-checklist.md` carries the same carve-out,
+so a run that performs an approved reset can still tick it. Preconditions and
+the reset procedure: `references/change-request-reset.md`.
 
 ### Reviewer rework is not a backward transition
 

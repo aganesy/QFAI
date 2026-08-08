@@ -12,7 +12,10 @@ cannot be ticked is a reason not to declare completion, not a note to carry forw
       observable_ path, where the `Satisfied-by` row already implements the predicate.
 - [ ] Refactor phase: code improved with tests still passing.
 - [ ] `test-list.md` statuses are accurate.
-- [ ] No backward transitions occurred.
+- [ ] No backward transitions occurred — other than an approved Change Request reset, the
+      one the lifecycle sanctions (`execution-ledger.md#allowed-transitions`). A resumption, an
+      anomaly exit and the `qa-gatekeeper` rework edge are re-entries, not backward transitions,
+      and do not need to be declared here.
 - [ ] Exception items have DR-IDs recorded.
 - [ ] All tests pass.
 - [ ] `npx qfai validate --profile tdd --fail-on error` passes with zero `QFAI-TEST-001` findings (no

@@ -97,15 +97,22 @@ describe.each(TREES)("%s (the summary cannot license what the list forbids)", (t
   });
 
   it("classifies the approved reset once, not twice", async () => {
-    // The table said none of the four is backward; the paragraph under it
-    // called the reset the only sanctioned backward transition. A run that
-    // performed one could not tick `final-checklist.md`'s "No backward
-    // transitions occurred" while the table said it was legal.
+    // The table header asked "why it is not backward" of all four rows while
+    // the paragraph under it called the reset the only sanctioned backward
+    // transition — one edge, two verdicts. Resolved towards the established
+    // vocabulary: "backward" is narrow, the reset is its one instance, and the
+    // column asks why each edge is *legal* instead.
     const ledger = flat(await read(tree, LEDGER));
-    expect(ledger).toContain("**None of the four is a backward transition**");
-    expect(ledger).not.toContain(
-      "is the only **sanctioned backward transition** in the strict sense",
+    expect(ledger).toContain("| Edge | Why it is legal | Approval needed |");
+    expect(ledger).not.toContain("| Why it is not backward |");
+    expect(ledger).toContain("three of them are not, one of them is and is authorised");
+
+    // And the checklist a completion report is written against carries the
+    // carve-out, so performing an approved reset does not make it unanswerable.
+    const checklist = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/final-checklist.md"),
     );
+    expect(checklist).toContain("other than an approved Change Request reset");
   });
 
   it("requires a new DR-ID for a second anomaly on the same row", async () => {
