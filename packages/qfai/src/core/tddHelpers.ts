@@ -153,15 +153,35 @@ export interface LedgerTable {
  * mistyped one header had its rows vanish from both the gate and the report,
  * and a `done` row in the first table read as the whole story.
  *
- * Neither test alone is enough, so both are applied and either suffices.
- * Marker columns miss a table that mistypes a *marker*; a count misses a table
- * that keeps its markers and drops three other columns. `TDD-ID` **and**
- * `TC-Refs` together say "ledger" whatever else is absent, and six of eight say
- * it for a table that mistyped one of those two. A documentation table beside
- * the ledger passes neither, so the shipped template's own `## Schema` table
- * stays out.
+ * No single test is enough, so three are applied and any one suffices:
+ *
+ * 1. **Both markers.** `TDD-ID` *and* `TC-Refs` together say "ledger" whatever
+ *    else is absent.
+ * 2. **Six of eight**, which says it for a table that mistyped one marker and
+ *    kept the rest.
+ * 3. **One marker and {@link TDD_LEDGER_MARKED_ATTEMPT_MIN_COLUMNS} columns**,
+ *    for the gap the first two leave between them: a table that drops one
+ *    marker *and* two other columns —
+ *    `TDD-ID | Layer | Test file | Status | Evidence` is five columns with one
+ *    marker, obviously able to hold ledger rows, and it passed neither test. A
+ *    `done` row in the complete first table and a `todo` row here reported no
+ *    missing column and no outstanding work, and the report published
+ *    `done: 1 / open: 0` from the first table alone.
+ *
+ * A documentation table beside the ledger passes none of the three, so the
+ * shipped template's own `## Schema` table (`Column | Description`) stays out.
  */
 export const TDD_LEDGER_ATTEMPT_MIN_COLUMNS = 6;
+
+/**
+ * Columns required of a table that carries only *one* marker before it counts
+ * as a ledger attempt.
+ *
+ * Four, so the marker is joined by three more of the schema — enough that a
+ * two-column summary such as `TDD-ID | Status` is still read as a summary,
+ * while every shape that could hold a row is caught.
+ */
+export const TDD_LEDGER_MARKED_ATTEMPT_MIN_COLUMNS = 4;
 
 /** The two columns that are only ever a ledger's. See above. */
 export const TDD_LEDGER_MARKER_COLUMNS: readonly string[] = ["TDD-ID", "TC-Refs"];
@@ -175,8 +195,12 @@ export function collectIncompleteLedgerTables(
     const headers = table.headers.map((header) => header.trim());
     const missing = TDD_LEDGER_REQUIRED_COLUMNS.filter((column) => !headers.includes(column));
     const present = TDD_LEDGER_REQUIRED_COLUMNS.length - missing.length;
-    const carriesMarkers = TDD_LEDGER_MARKER_COLUMNS.every((column) => headers.includes(column));
-    if (!carriesMarkers && present < TDD_LEDGER_ATTEMPT_MIN_COLUMNS) continue;
+    const markers = TDD_LEDGER_MARKER_COLUMNS.filter((column) => headers.includes(column)).length;
+    const isAttempt =
+      markers === TDD_LEDGER_MARKER_COLUMNS.length ||
+      present >= TDD_LEDGER_ATTEMPT_MIN_COLUMNS ||
+      (markers > 0 && present >= TDD_LEDGER_MARKED_ATTEMPT_MIN_COLUMNS);
+    if (!isAttempt) continue;
     if (missing.length > 0) {
       incomplete.push({ headers, missing });
     }

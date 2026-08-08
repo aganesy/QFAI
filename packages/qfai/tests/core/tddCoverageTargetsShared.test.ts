@@ -619,6 +619,65 @@ describe("a ledger attempt is caught by markers or by count", () => {
     );
     expect(codes).toContain("TDDLIST_REQUIRED_COLUMN_MISSING");
   });
+
+  it("reports a five-column later table that kept only one marker", async () => {
+    // The gap the other two tests leave between them: drop one marker *and*
+    // two other columns and the table passed neither. `TDD-ID | Layer | Test
+    // file | Status | Evidence` is obviously able to hold ledger rows, so a
+    // `done` row in the complete first table and a `todo` row here reported no
+    // missing column and no outstanding work, and the report published
+    // `done: 1 / open: 0` from the first table alone.
+    const { codes } = await bothCommands(
+      [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001 | L1 | AC-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      [
+        "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | a | done | - | RED fail / GREEN pass |",
+        "",
+        "## CHG-001",
+        "",
+        "| TDD-ID | Layer | Test file | Status | Evidence |",
+        "| ------ | ----- | --------- | ------ | -------- |",
+        "| TDD-0002 | unit | tests/b.test.ts | todo | - |",
+      ],
+    );
+    expect(codes).toContain("TDDLIST_REQUIRED_COLUMN_MISSING");
+  });
+
+  it("leaves a two-column summary table alone", async () => {
+    // One marker is not enough on its own — the threshold asks for three more
+    // of the schema behind it, so a `TDD-ID | Status` roll-up beside the ledger
+    // is still read as a summary and not as a ledger missing six columns.
+    const { codes } = await bothCommands(
+      [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001 | L1 | AC-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      [
+        "| TDD-0001 | TC-0001 | unit | tests/a.test.ts | a | done | - | RED fail / GREEN pass |",
+        "",
+        "## Progress",
+        "",
+        "| TDD-ID | Status |",
+        "| ------ | ------ |",
+        "| TDD-0001 | done |",
+      ],
+    );
+    expect(codes).not.toContain("TDDLIST_REQUIRED_COLUMN_MISSING");
+  });
 });
 
 describe("a `-` Layer is a placeholder, not a claim", () => {

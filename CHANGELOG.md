@@ -406,6 +406,15 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A ledger table that kept one marker column is a ledger table.** Detection
+  admitted a table carrying both `TDD-ID` and `TC-Refs`, or six of the eight
+  required columns — and a table that drops one marker _and_ two other columns
+  fell between them. `TDD-ID | Layer | Test file | Status | Evidence` can
+  obviously hold ledger rows, so a `done` row in the complete first table and a
+  `todo` row in this one reported no missing column and no outstanding work,
+  and the report published `done: 1 / open: 0` from the first table alone. One
+  marker plus four columns now counts as an attempt, which leaves a
+  `TDD-ID | Status` roll-up read as the summary it is.
 - **`qfai-implement`'s primary spec-completion condition is a list item again.**
   A missing newline joined `- Each item reached \`done\` or valid \`exception\`
   (with DR-ID)`to the tail of the bullet above it, and because the joined line
