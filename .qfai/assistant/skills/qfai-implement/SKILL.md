@@ -399,13 +399,11 @@ parts with different write points; the fields are the same, the sequencing is no
 - `TDD-ID` — the item identifier
 - `TC-ref` — reference to the test case(s). On a `Layer = E2E` row read `US-ref` (the row's `US-Refs`) instead, and on a `Layer = API` row read `CON-API-ref` (the row's `CON-API-Refs`): exactly one obligation reference is required, the one the row's `Layer` selects
 - `Revision` — the state the observation was made against: `git rev-parse HEAD`, or `working-tree+<porcelain digest>` for an uncommitted tree. One per round block, and one for the refactor-verify pair (`references/evidence-revision.md`)
+- `RED revision` — **only on a row whose RED `/qfai-atdd` handed over**, and required there. That RED was observed before the production code existed, so its revision is earlier than `Revision` by construction; recording both in one field made the row permanently stale (`references/evidence-revision.md`)
 - `RED command` — the exact command executed to observe failure
 - `RED result` — the failure output. Truncation is acceptable for the stack tail, never for the assertion message and its location: that is what demonstrates admissibility
 - `RED failure mode` — `assertion` | `expected-error` | `falsifiability`. There is no admissible value for a load error (`references/red-admissibility.md`)
-- **Exclusive alternative to the RED pair**: a row on the _RED not observable_ path carries
-  `Satisfied-by`, `Falsifiability command` and `Falsifiability result` in place of the two
-  RED fields above. Exactly one of the two forms must be present — never both, never
-  neither (`references/red-not-observable.md`).
+- **Exclusive alternative to the RED pair**: a row on the _RED not observable_ path carries `Satisfied-by`, `Falsifiability command` and `Falsifiability result` in place of the two RED fields above. Exactly one of the two forms must be present — never both, never neither (`references/red-not-observable.md`).
 - `GREEN command` — the exact command executed to observe success
 - `GREEN result` — the success output
 - Each RED/GREEN cycle is one **round block** and every field above carries a `Round N:` prefix; numbering, the two rework paths and the full field list are in `references/round-evidence.md`

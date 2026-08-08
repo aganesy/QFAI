@@ -6,6 +6,26 @@
 
 ### Fixed
 
+- **`RED revision` is a field, so that exemption can be recorded.** Declaring
+  it in the completion gate was not enough: the per-item contract stores one
+  `Revision` per round and `evidence-revision.md` calls any observation naming
+  a different revision stale, so a correct `observed-red` row stayed
+  permanently stale whatever the gate said. The handed-over RED records its own
+  revision; `Revision` covers the GREEN and the two reviews, which must still
+  agree with each other.
+- **P1c takes branch-1 rows one at a time.** Writing every branch-1 failing
+  test and then handing the batch over cannot work: each row's checkpoint runs
+  the full suite, so a second deliberate RED left open elsewhere fails the
+  first row's checkpoint — and that row is then stranded at `refactor`, which
+  Phase Red does not re-select. RED, handoff, GREEN and checkpoint complete for
+  one row before the next one's test is written.
+- **Branch 2's mutation is applied by `/qfai-implement`.** It rewrites a
+  production predicate, and this stage's `evidence` phase is
+  `devops-ci-engineer` and `qa-gatekeeper` — neither owns production source,
+  the same boundary branch 1 states two branches earlier. Following the old
+  text meant editing production code out of ownership; refusing to meant a stop
+  with no falsifiability trio. The row is handed over naming the predicate to
+  break, and records the pair that comes back.
 - **The handed-over RED is exempt from the same-revision rule.** Completion item
   10 asked the item's four sub-agent observations for one revision. A branch-1
   RED is taken before the production code exists, so its revision necessarily

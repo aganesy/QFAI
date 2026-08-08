@@ -107,8 +107,19 @@ Take the first that applies, and record which one in the evidence file.
    mutation step cannot run against a test that is already failing and there is
    no GREEN to restore to.
 
-   When it does pass: do **not** weaken it to manufacture a failure. Use the
-   shared path in
+   When it does pass: do **not** weaken it to manufacture a failure.
+
+   **The mutation is production code, so `/qfai-implement` applies it.** This
+   stage's `evidence` phase is `devops-ci-engineer` and `qa-gatekeeper`, and
+   neither owns production source — the same ownership boundary branch 1 step 5
+   states. Hand the row over naming the predicate to break: that skill applies
+   the mutation, runs this row's selector, captures the failure, reverts, and
+   returns the pair. Record what comes back. Writing the mutation here to
+   "just take the evidence" is the breach the boundary exists to prevent, and
+   the alternative — stopping because no agent may touch the file — sends a
+   row with a perfectly good falsifiability story to `exception`.
+
+   Use the shared path in
    `../../qfai-implement/references/red-not-observable.md`: record `Satisfied-by`,
    mutate the production predicate the journey asserts on, run this row's test
    and confirm it fails, restore, and record `Falsifiability command` /

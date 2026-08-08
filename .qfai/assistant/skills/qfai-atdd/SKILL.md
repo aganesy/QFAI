@@ -250,12 +250,9 @@ a discharge of the obligation.
 
 Every generated ATDD test MUST include QFAI annotations by layer:
 
-- `tests/e2e/**`: `QFAI:SPEC-XXXX:US-YYYY` (plus `QFAI:SPEC-XXXX:TC-YYYY` for a
-  TC that declares `Level` `L5`/`E2E`)
-- `tests/integration/**`: `QFAI:SPEC-XXXX:TC-YYYY` (TCs declaring `L3`/
-  `Integration`, and TCs with no declared `Level`)
-- `tests/api/**`: `QFAI:CON-API-XXXX` (plus `QFAI:SPEC-XXXX:TC-YYYY` for a TC
-  that declares `Level` `L4`/`API`)
+- `tests/e2e/**`: `QFAI:SPEC-XXXX:US-YYYY` (plus `QFAI:SPEC-XXXX:TC-YYYY` for a TC that declares `Level` `L5`/`E2E`)
+- `tests/integration/**`: `QFAI:SPEC-XXXX:TC-YYYY` (TCs declaring `L3`/`Integration`, and TCs with no declared `Level`)
+- `tests/api/**`: `QFAI:CON-API-XXXX` (plus `QFAI:SPEC-XXXX:TC-YYYY` for a TC that declares `Level` `L4`/`API`)
 - `tests/integration/**` also carries `QFAI:CON-DB-XXXX` for every declared DB
   contract the slice exercises
 
@@ -393,7 +390,13 @@ Template:
   suite and the repo quality gates to pass, which that RED makes impossible, so
   the handover is not deferred to the end: run `/qfai-implement` for those rows
   now, let its Phase Green build the surface and take the GREEN, and return here
-  with the tree green. Name the rows in the handoff — a branch-2 row sitting
+  with the tree green. **One row at a time**: take a branch-1 row through RED,
+  handoff, GREEN and its checkpoint before writing the next branch-1 row's
+  failing test. Every row's checkpoint runs the full suite
+  (`../qfai-implement/references/checkpoint-verification.md`), so a second
+  deliberate RED left open elsewhere fails the first row's checkpoint — and
+  that row is then stranded at `refactor`, which Phase Red does not re-select.
+  Name the rows in the handoff — a branch-2 row sitting
   above them in the ledger has its branch recorded and its evidence still to
   come at P6, and `/qfai-implement` defers such a row and moves on rather than
   stopping, which is what keeps this round-trip from deadlocking against its own

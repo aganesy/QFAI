@@ -55,6 +55,16 @@ Consequences:
 - An item's four verdicts (gate items 3, 5, 7, 8) MUST all name the **same**
   revision. Verdicts from different revisions do not compose into a ruling about
   one state — the earlier ones ruled on code that no longer exists.
+- **One exception, and it is structural: a RED `/qfai-atdd` handed over.** That
+  RED is taken before the production code exists, so its revision is earlier
+  than the GREEN's by construction — that is the property it is worth having,
+  not decay. Such a row records it as `RED revision` (its own field, beside the
+  RED pair) and leaves `Revision` for the GREEN and the two reviews, which must
+  still agree with each other. Folding both into one field made a correct
+  `observed-red` E2E/API row permanently stale and unable to reach `done`.
+  Everything else about staleness is unchanged: `RED revision` is judged
+  against the tree the RED was observed on, and a later commit touching the
+  test itself invalidates it the same way.
 - A commit that changes any file the observation covered invalidates it. Re-run
   the observation; do not carry the verdict forward because "the change was
   unrelated". Whether it was unrelated is exactly the judgement the evidence

@@ -553,3 +553,41 @@ describe.each(TREES)("%s (natural RED and the shared falsifiability gate)", (tre
     expect(gatekeeper).toContain("judge it on that, not on its shape");
   });
 });
+
+describe.each(TREES)("%s (the contracts the handover has to land in)", (tree) => {
+  it("gives the handed-over RED its own revision field", async () => {
+    // Item 10's exception could not be expressed: the per-item contract stores
+    // one `Revision` per round and `evidence-revision.md` calls any observation
+    // naming a different revision stale — so a correct `observed-red` row was
+    // permanently stale however the gate worded its carve-out.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("`RED revision`");
+    expect(implement).toContain("recording both in one field made the row permanently stale");
+
+    const revision = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(revision).toContain("One exception, and it is structural");
+    expect(revision).toContain("leaves `Revision` for the GREEN and the two reviews");
+  });
+
+  it("takes branch-1 rows through P1c one at a time", async () => {
+    // Every row's checkpoint runs the full suite, so a second deliberate RED
+    // left open elsewhere fails the first row's checkpoint — and that row is
+    // then stranded at `refactor`, which Phase Red does not re-select.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("**One row at a time**");
+    expect(atdd).toContain("stranded at `refactor`, which Phase Red does not re-select");
+  });
+
+  it("hands branch 2's mutation to the skill that owns production code", async () => {
+    // The `evidence` phase is `devops-ci-engineer` and `qa-gatekeeper`, neither
+    // of which owns production source — the same boundary branch 1 step 5
+    // states. Applying the mutation here is the breach; refusing to is a stop.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain(
+      "**The mutation is production code, so `/qfai-implement` applies it.**",
+    );
+    expect(provenance).toContain("returns the pair");
+  });
+});
