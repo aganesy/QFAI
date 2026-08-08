@@ -4870,3 +4870,135 @@ true, and then over-fires on compliant work — exactly the defect this row spen
 its own oracle. The junction rule needed the same repair earlier today: "any recursive delete of a tree
 holding a link" was too broad, since 83 tracked skill symlinks resolve *inside* the worktree and are safe;
 the load-bearing predicate is that the link **escapes** the tree being deleted.
+
+### G4 round 6: three false-safety claims closed, four instructions of mine refused
+
+Landed at `ac902339`. Helper `29d87902 → 4ebdbd6f`; test `e43645e4 → 0d2f9f75`. **Production untouched** —
+`doctor.ts 1d8eab08`, `workflowsIntegrity.ts 851f72c3`, `main.ts 27326793`; I verified the non-comment
+diff against `85bb86ce` is empty for both src files, the **sixth** consecutive round. Row `2 passed`.
+
+**`pnpm ci:lint` exit 0 across all ten members**, and that number is itself a correction: this slice had
+been reporting "four gates 0" for five rounds while the lane runs `format:check`, `lint`, `lint:md`,
+`check-bidi`, `check-instructions-size`, `check-review-profile-consistency`, `check-prompt-scanner-pair`,
+`lint:shipping`, `lint:workflow-shape` and `check-pack-locations`. Two of the six never-run members had
+been **red on the branch** from steering prose I authored.
+
+#### All three blockers were false-safety claims in round 5's own new code
+
+That is the class round 5 was chartered to close, reappearing one round later inside the fix. Worth stating
+plainly rather than as an irony: **a round that removes false claims is itself a round that writes new
+claims**, and nothing in the process made the new ones true by construction.
+
+- **The helper claimed a renamed field "breaks compilation".** Measured absent — and the engineer proved
+  it a stronger way than either the reviewer or I had: `tsc -b --force --listFiles` names **zero** files
+  under `packages/qfai/tests` and 286 under `src`. The file is not merely unchecked, **it is not in the
+  program**. Independently, `parseArgs` returns `command: string | null` rather than a union, so
+  `case "atdd2":` was *type-valid* and there was never any type-level defense anywhere in this row.
+- **"Those collide with THIS MESSAGE's prose"** was false: widening token 8 to the full registry leaves
+  message, title and rendered surface all clean. The exclusion was a **narrowing of a negative needle to
+  avoid a false RED**, which the file's own rule six lines earlier forbids.
+- **The case-label guard claimed "no omissions"** while `case "atdd2":` passed at exit 0.
+
+#### The engineer refused four of my instructions, each with a reason I accept
+
+1. **It kept a parameter type (`readonly object[]`) instead of dropping typing.** Dropping the
+   `DoctorCheck` import was forced (unused import fails `pnpm lint`), but `object[]` costs nothing, rejects
+   `renderFindingSurface("x")`, and is what lets the caller pass a projection.
+2. **It deleted the false bullet rather than correcting it.** I required a correction; its argument is
+   better — once the filter is gone the violation is **no longer constructible**, so a corrected bullet
+   would document a closed hole. The three closed vectors are recorded as closed, with blobs.
+3. **It found the decisive argument for deleting the exclusion, which neither the reviewer nor I made**:
+   the message is **`toBe`-pinned**, so any rewording already reddens the row. The wider token can
+   therefore only add a labelled failure *beside a red that was already coming*, which bounds the
+   false-RED cost at ~zero. That is what makes the trade unambiguous rather than merely defensible.
+4. **It rejected the obvious implementation of my M-2 instruction, and was right to.** A
+   `JSON.stringify` replacer (`key === "message" ? undefined : value`) **recurses**, so it would also
+   strip a nested `details.message` — which loop A does not sweep. That combination is a **new unswept
+   spot**: my instruction would have created the exact false-GREEN class the round exists to close. It
+   used a call-site destructure, which omits at top level only.
+
+It also declined **N-7** (recorded-for-completeness, nothing breaks, file over its comment target) and
+rejected an option/sibling for M-2 on YAGNI grounds — a sibling would have zero consumers and an option is
+a knob with one caller passing one value.
+
+#### Two factual errors of mine it corrected
+
+- **`eslint.config.mjs` does not exist — it is `eslint.config.js`.** I relayed the wrong filename; the
+  line range and the substance were right.
+- **My framing of the B2 residue was incomplete.** It is not only that `id`/`severity` join the haystack:
+  the swap moves `title` and `message` from raw to **JSON-escaped**. Inert for this row, load-bearing for
+  TDD-0033's future adoption — so the docblock states the bound as *stronger for a bare-filename needle*,
+  not stronger unconditionally. Escaping is the mechanism behind the surviving tab residue, so this
+  distinction is the difference between a strengthening and a regression.
+
+#### Falsifications, 22 mutants — every one with needle-uniqueness, blob-differs and `try/finally` revert
+
+At HEAD, establishing each defect before fixing it:
+
+| ID | Mutation | Blob | Result |
+| --- | --- | --- | --- |
+| M-A | helper `${finding.title}` → `${finding.titel}` | `29d87902 → 7e9b0444` | `tsc -b --force` **0**, eslint **0**, row **2 passed** |
+| R1 / R3 / R8 | `details.nextActions: ["doctor"]` / `["report"]` / `["audit"]` | `653dd950` / `55de1f13` / `74c13b46` | **2 passed** — hole exactly three wide |
+| R5 | message `+= " Re-run qfai init to repair."` | `4ab1083b` | **7** soft failures, **3 exact duplicates** |
+| R6 / R7 | `case "atdd2":` / `case "refresh":` prepended | `36279c26` / `a34079db` | **2 passed, exit 0** / 1 failed |
+| R9 | drift `details` block deleted | `c50eca08` | `drift.test.ts` **2 failed / 4 passed** at `:96`, `:139` |
+
+Against the final blobs:
+
+| ID | Mutation | Result |
+| --- | --- | --- |
+| P1/P2/P3 | `["doctor"]` / `["report"]` / `["audit"]` | **RED**, one labelled failure each, token 8 |
+| P4 | `["qfai init --force"]` | **RED**, tokens 1/4/8 — no regression |
+| P5 | `["qfai\tinit\t--force"]` | **GREEN** — residue unchanged, still TDD-0036's |
+| P6 | message append | **4** failures (was 7), **zero duplicates** |
+| P7/P8 | `case "atdd2":` / `case "refresh":` | **RED** / **RED** (control) |
+| P9 | `case "a.b":` (`b0bc981e`) | **RED via the count leg only**, `expected 10 to be 11` |
+| P11a | `DoctorCheck` gains `nextSteps`; emission sets it (`7578afe1 → 813e79a9`) | `tsc -b --force` **0**, row **RED**, tokens 7/8 |
+| P11b | same, helper reverted to the round-5 three-field form (`aafcaa5b`) | **2 passed — THE MISS** |
+
+**`P11a`/`P11b` is the strictly-stronger proof of B2** and is why the whole-set form is right rather than
+merely tidier: a rendered field added to `DoctorCheck` type-checks clean, reddens under the new helper, and
+is **invisible** to the superseded one. **`P9` is the sole reacher of the count leg**, which is what
+establishes that the widened capture and the totality leg catch **disjoint** classes — otherwise one of
+them would be decoration.
+
+One claim of mine it **could not measure and declined to pretend on**: "shipped `ok` emission clean" —
+guard #2 excludes that emission from this row, so nothing here reaches it. Routed to `qa-gatekeeper` to
+confirm ownership or record it as unowned.
+
+#### The comment budget went the wrong way, and it is routed rather than absorbed
+
+Test file **336 → 361** comment lines (+25), 73% share; helper **115 → 126**, 75%. Measured by me, not
+taken on report. The engineer compressed twice and then said plainly that three MAJOR blockers each
+required replacing a false claim with a true one **plus its witness**, which is the floor without evicting
+prose `implementation-reviewer` had already PASSed — and that evicting reviewer-approved content is not its
+call. That is the right escalation, and I am not overruling the reviewer's own protected ranges on my own
+authority; it is routed back to the reviewer who set the target, with the note that everything on its
+round-4 move list is already verbatim in the tracked evidence, so eviction now costs nothing further.
+
+#### Its harness reproduced my incident, one round later
+
+Its first driver reverted per-mutation snapshots **in array order**, so a second mutation on the same file
+recorded the *first mutant* as its original, left `doctor.ts` at `5c470de8` — a mutant — and invalidated
+one `P11a`/`P11b` pair. **The printed revert verification caught it**, which is the line I added to my own
+driver after my crash, and it is now earned its keep twice. Rewritten to snapshot each file **once** and to
+diff `git status` pre/post; every run since prints `UNCHANGED (no mutant left behind)`.
+
+Separately, a bash heredoc collapsed `\\n` to a newline and produced a syntactically broken mutant. It
+fixed that by **extracting** the round-5 body from blob `29d87902` rather than retyping it — the same
+by-text discipline, applied to constructing a mutation rather than recording one.
+
+#### Routing carried out of round 6
+
+- **`provenanceGate.test.ts` (TDD-0033) — adopt `renderFindingSurface` at that row's next touch; owner:
+  TDD-0033.** The helper is now **stronger** for that row's bare-filename needle (`id`/`severity` join the
+  haystack, and escaping cannot break a filename), so adoption is sound; a needle spanning whitespace or a
+  backslash would need re-measuring. Recorded here with an owner rather than only in a third file's
+  docblock, which is the weakest available instrument and was the substance of finding M-1.
+- **Blob-form divergence, so the chain does not read as contradictory.** `7b9c1b93` / `c2debc98` (the
+  reviewer's B4 pair) and `77661ef9` / `a9012bd7` are the **same semantic mutations** as `36279c26` /
+  `a34079db` and `192751ee` / `653dd950`, in different byte forms; `653dd950` and `4ab1083b` reproduced
+  exactly. `6a06270e` and `c50eca08` are likewise the same deletion, and the test file now cites
+  `c50eca08`.
+- The tab-escape residue (`P5`) is **unchanged and still TDD-0036's**, closed for free by that row's
+  four-key `toEqual` since it needs an extra key.
