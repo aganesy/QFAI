@@ -145,11 +145,13 @@ ships a section for it, so:
   role adjudicates. Both are listed because the Stop condition below ("target
   artifacts are missing") is not checkable against an artifact this role was
   never told to open.
-- `.qfai/evidence/atdd-<spec-id>.md` — the same evidence for `Layer = E2E` /
-  `Layer = API` rows, under `## Ledger rows advanced`. On an ATDD review cycle
-  this is the file to read: without it the RED-provenance branch this role is
-  asked to accept has no artifact, and the Stop condition would fire on evidence
-  that is present but unnamed.
+- `.qfai/evidence/atdd-<spec-id>.md` — **required only when the row under
+  review has `Layer = E2E` or `Layer = API`**, under `## Ledger rows advanced`.
+  That is where those rows' evidence lives, and without it the RED-provenance
+  branch this role is asked to accept has no artifact. It is **not** required
+  otherwise: a Unit-only spec that never ran `/qfai-atdd` has no such file, and
+  listing it unconditionally made the Stop condition fire on a missing input
+  before the `implement-<spec-id>.md` that does exist was ever read.
 - `.qfai/report/validate.log`
 - `.qfai/report/specs-coverage/spec-*.md`
 - Runtime evidence and prototyping evidence artifacts

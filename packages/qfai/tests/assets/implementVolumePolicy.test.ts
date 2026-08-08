@@ -131,11 +131,12 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       // assertion below vacuous instead of failing. That is exactly what it
       // caught when the lifecycle moved out of SKILL.md.
       const ledger = unwrap(await read(tree, LEDGER));
-      const lifecycleStart = ledger.indexOf("Allowed transitions:");
+      const lifecycleStart = ledger.indexOf("### Allowed transitions");
       const lifecycleEnd = ledger.indexOf("## Exception Handling");
-      expect(lifecycleStart, "execution-ledger.md has no `Allowed transitions:`").toBeGreaterThan(
-        -1,
-      );
+      expect(
+        lifecycleStart,
+        "execution-ledger.md has no `### Allowed transitions`",
+      ).toBeGreaterThan(-1);
       expect(lifecycleEnd, "execution-ledger.md has no `## Exception Handling`").toBeGreaterThan(
         lifecycleStart,
       );

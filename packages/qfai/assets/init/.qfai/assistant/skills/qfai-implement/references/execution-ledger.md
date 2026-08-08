@@ -177,7 +177,7 @@ and examples: `selector-granularity.md`.
 
 Valid status values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`.
 
-Allowed transitions:
+### Allowed transitions
 
 - `todo` -> `blocked` (the row cannot be started: an upstream defect, an
   unresolved Change Request, or an unfinished row in another spec). Name the

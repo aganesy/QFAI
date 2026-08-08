@@ -254,7 +254,7 @@ describe.each(TREES)("%s (handover and container)", (tree) => {
 
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain("## Handover to /qfai-implement");
-    expect(provenance).toContain("The mutation run **is** `todo -> red`");
+    expect(provenance).toContain("treat the mutation run as `todo -> red`");
     expect(provenance).toContain("stops with a handoff note");
   });
 
@@ -449,18 +449,21 @@ describe.each(TREES)("%s (executability of the handed-over row)", (tree) => {
     expect(implement).toContain("its falsifiability run **is** the Oracle proof");
   });
 
-  it("defers a branch-2 row instead of stopping the run on it", async () => {
+  it("performs the branch-2 mutation instead of stopping or deferring", async () => {
     // Phase Red always takes the first `todo` row. A branch-2 row above the
     // branch-1 rows has its branch recorded and its evidence still to come at
     // P6 — treating that as a malformed handoff stops the run, so the
     // branch-1 rows never reach Phase Green, their tests stay red, ATDD never
     // passes P5-P8, and P6 never happens. The deadlock is self-inflicted.
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("is **deferred** — leave the row at `todo` and take the next one");
+    expect(implement).toContain("goes to **step 3c**");
+    expect(implement).toContain(
+      "3c. **A `falsifiability` entry with no evidence yet: take it here.**",
+    );
 
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain(
-      "**A branch-2 row whose evidence is not written yet is deferred, not a stop.**",
+      "**A branch-2 row whose evidence is not written yet is not a stop, and not a defer either.**",
     );
     expect(provenance).toContain("names no branch, or is malformed in any other way");
   });
@@ -588,6 +591,70 @@ describe.each(TREES)("%s (the contracts the handover has to land in)", (tree) =>
     expect(provenance).toContain(
       "**The mutation is production code, so `/qfai-implement` applies it.**",
     );
-    expect(provenance).toContain("returns the pair");
+    expect(provenance).toContain("writes the trio into this row's entry here");
+  });
+});
+
+describe.each(TREES)("%s (someone can perform every step)", (tree) => {
+  it("routes the production owners into the phase that touches production code", async () => {
+    // The `red` phase had `qa-gatekeeper` alone, and the orchestrator may not
+    // implement — so neither step 3a's seam nor step 3c's mutation had anyone
+    // to perform it, and a new-surface row could not reach an admissible RED.
+    const catalog = await read(tree, "assistant/manifest/agent-routing.yml");
+    const implement = catalog.slice(catalog.indexOf("- skill: qfai-implement"));
+    const block = implement.slice(0, implement.indexOf("- skill: ", 1));
+    const red = block.slice(block.indexOf("- id: red"), block.indexOf("- id: build"));
+    expect(red).toContain("conditional_agents: [frontend-engineer, backend-engineer]");
+  });
+
+  it("names one phase that performs the first falsifiability mutation", async () => {
+    // The precondition was circular: 3b deferred until the trio existed, and
+    // Phase Green 2a refused to repeat a mutation it assumed had run — so
+    // nobody performed the first one and an ordinary first-run-pass row could
+    // not leave `todo`.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "3c. **A `falsifiability` entry with no evidence yet: take it here.**",
+    );
+    expect(implement).toContain("this mutation _is_ the row's `Oracle proof`");
+
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("Phase Red **step 3c** applies the mutation");
+    expect(provenance).toContain("not a stop, and not a defer either");
+  });
+
+  it("keeps the scope and RED gates on a natural RED", async () => {
+    // Only the seam is skipped when the surface already exists. Skipping steps
+    // 3-4 dropped `delivery-planner`'s scope approval and the `qa-gatekeeper`
+    // PASS the handover table then requires on every `observed-red` entry.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("Only step 1 is skipped");
+    expect(provenance).toContain("Steps 3 and 4 still run");
+  });
+
+  it("writes checkpoint evidence to the file the row's Layer owns", async () => {
+    const checkpoint = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/checkpoint-verification.md"),
+    );
+    expect(checkpoint).toContain("Record the result in the evidence file the row's `Layer` owns");
+    expect(checkpoint).not.toContain(
+      "Record the result in `.qfai/evidence/implement-<spec-id>.md`",
+    );
+  });
+
+  it("requires the ATDD evidence file of the gatekeeper only where it exists", async () => {
+    // Listed unconditionally, the Stop condition fired on a Unit-only spec that
+    // never ran `/qfai-atdd`, before the `implement-<spec-id>.md` that does
+    // exist was read.
+    const gatekeeper = flat(await read(tree, GATEKEEPER));
+    expect(gatekeeper).toContain(
+      "**required only when the row under review has `Layer = E2E` or `Layer = API`**",
+    );
+    expect(gatekeeper).toContain("It is **not** required otherwise");
+  });
+
+  it("points the lifecycle reference at a heading that exists", async () => {
+    const ledger = await read(tree, LEDGER);
+    expect(ledger).toContain("### Allowed transitions");
   });
 });

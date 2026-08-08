@@ -101,6 +101,10 @@ change. Only then report "nothing to do".
 
 ## Evidence
 
-Record the result in `.qfai/evidence/implement-<spec-id>.md` using the two per-item evidence fields
-`Checkpoint verification command` and `Checkpoint verification result`. As with RED/GREEN evidence,
+Record the result in the evidence file the row's `Layer` owns —
+`.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API`
+row — using the two per-item evidence fields `Checkpoint verification command` and
+`Checkpoint verification result`. These are per-item fields of the same contract gate item 10
+resolves, so writing them to the implement file for a row anchored at the ATDD one splits that row
+across two files and leaves the one the gate reads incomplete. As with RED/GREEN evidence,
 a status without its command is invalid, and evidence from a previous checkpoint MUST NOT be reused.

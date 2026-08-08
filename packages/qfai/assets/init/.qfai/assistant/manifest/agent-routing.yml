@@ -76,7 +76,15 @@ routing:
       - id: red
         iteration: per-ledger-item
         mandatory_agents: [qa-gatekeeper]
-        conditional_agents: []
+        # The production owners are conditional here, not absent. Two steps
+        # in this phase touch production source before any RED exists, and
+        # the orchestrator may not implement (`SKILL.md` Orchestrator
+        # Protocol): step 3a's minimal seam, which a new-surface row needs
+        # before its failure is an assertion rather than a 404, and step 3c's
+        # falsifiability mutation for a handed-over row whose evidence is not
+        # written yet. Without them the phase had `qa-gatekeeper` alone and
+        # neither step had anyone to perform it.
+        conditional_agents: [frontend-engineer, backend-engineer]
         parallel_groups: []
         blocking_agents: [qa-gatekeeper]
         rerun_policy: failed-agents-only

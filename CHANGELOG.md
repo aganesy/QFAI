@@ -6,6 +6,33 @@
 
 ### Fixed
 
+- **Someone is routed to every step that touches production code.** The
+  implement `red` phase had `qa-gatekeeper` alone and the orchestrator may not
+  implement, so neither step 3a's minimal seam nor the falsifiability mutation
+  had an agent able to perform it — a new-surface row could not reach an
+  admissible RED at all. `frontend-engineer` / `backend-engineer` are
+  conditional agents of that phase now.
+- **Phase Red step 3c performs the first falsifiability mutation.** The
+  preconditions were circular: step 3b deferred a branch-2 row until its trio
+  existed, and Phase Green step 2a refused to repeat a mutation it assumed had
+  already run — so nobody performed the first one and an ordinary
+  first-run-pass row could not leave `todo`. 3c applies it, records the trio in
+  the row's ATDD entry, and writes `todo -> red`; it is that row's
+  `Oracle proof` and 2a still does not repeat it.
+- **A natural RED keeps its scope and RED gates.** The path into branch 1
+  skipped steps 1 and 3-4 as "for a surface that does not exist", which also
+  dropped `delivery-planner`'s scope approval and the `qa-gatekeeper` PASS the
+  handover table then requires. Only the seam is skipped.
+- **Checkpoint evidence follows the row's `Layer`.** `checkpoint-verification.md`
+  still wrote its two per-item fields to `implement-<spec-id>.md`, splitting an
+  `E2E` / `API` row across two files and leaving the one gate item 10 reads
+  incomplete.
+- **`qa-gatekeeper` requires the ATDD evidence file only where it exists.**
+  Listing it unconditionally made the Stop condition fire on a Unit-only spec
+  that never ran `/qfai-atdd`, before the `implement-<spec-id>.md` that does
+  exist was read.
+- **`execution-ledger.md` has an `### Allowed transitions` heading**, so the
+  anchor two documents cite resolves instead of landing at the top of the file.
 - **`RED revision` is a field, so that exemption can be recorded.** Declaring
   it in the completion gate was not enough: the per-item contract stores one
   `Revision` per round and `evidence-revision.md` calls any observation naming

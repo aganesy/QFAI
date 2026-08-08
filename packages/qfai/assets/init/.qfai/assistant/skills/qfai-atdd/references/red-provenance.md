@@ -94,10 +94,12 @@ Take the first that applies, and record which one in the evidence file.
    **Run the test before choosing this branch.** Surface existence is not the
    condition; a first-run **pass** is. A surface that exists can still be wrong,
    and a correct test against a buggy one fails naturally — that is an observed
-   RED, and the row belongs in branch 1 — **at its step 2**. Steps 1 and 3-4
-   are for a surface that does not exist yet: there is no seam to ask for, and
-   "before any production code exists" is not the condition to confirm. What
-   `qa-gatekeeper` is asked to confirm here is that the failure is an
+   RED, and the row belongs in branch 1 — **at its step 2**. Only step 1 is
+   skipped: the surface exists, so there is no seam to ask for. Steps 3 and 4
+   still run — `delivery-planner` still approves the slice before the RED is
+   confirmed, and `qa-gatekeeper` still passes it, because the handover table
+   requires that PASS on every `observed-red` entry. What the gatekeeper
+   confirms is not "no production code exists" but that the failure is an
    assertion inside this row's selector, naming the predicate the row owns,
    observed **against the tree before the fix**. Record that pair, get the
    PASS, hand the fix to `/qfai-implement` Phase Green, and take the GREEN
@@ -112,12 +114,14 @@ Take the first that applies, and record which one in the evidence file.
    **The mutation is production code, so `/qfai-implement` applies it.** This
    stage's `evidence` phase is `devops-ci-engineer` and `qa-gatekeeper`, and
    neither owns production source — the same ownership boundary branch 1 step 5
-   states. Hand the row over naming the predicate to break: that skill applies
-   the mutation, runs this row's selector, captures the failure, reverts, and
-   returns the pair. Record what comes back. Writing the mutation here to
-   "just take the evidence" is the breach the boundary exists to prevent, and
-   the alternative — stopping because no agent may touch the file — sends a
-   row with a perfectly good falsifiability story to `exception`.
+   states. Hand the row over naming the predicate to break: its Phase Red
+   **step 3c** applies the mutation, runs this row's selector, captures the
+   failure, reverts, and writes the trio into this row's entry here. The row
+   is not deferred waiting for evidence only that step can produce. Writing
+   the mutation here to "just take the evidence" is the breach the boundary
+   exists to prevent, and the alternative — stopping because no agent may
+   touch the file — sends a row with a perfectly good falsifiability story to
+   `exception`.
 
    Use the shared path in
    `../../qfai-implement/references/red-not-observable.md`: record `Satisfied-by`,
@@ -199,19 +203,10 @@ Read the row's entry and take the branch it names:
 | Branch           | What `/qfai-implement` does                                                                                                                                                                                                                                                        |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `observed-red`   | Verify the RED pair names this row's selector and the predicate it owns and that `qa-gatekeeper` passed it, write `todo -> red` from it, then run Phase Green normally — the surface does not exist yet, and building it is this skill's work. Do **not** re-run for a second RED. |
-| `falsifiability` | Verify `Satisfied-by`, `Falsifiability command` and `Falsifiability result` are present and that the mutation names the predicate this row asserts on. The mutation run **is** `todo -> red`; the restored run is GREEN.                                                           |
+| `falsifiability` | If the trio is present, verify it and treat the mutation run as `todo -> red` with the restored run as GREEN. If it is not — the ordinary case, since only this skill owns the production code the mutation touches — Phase Red **step 3c** performs it and writes it here first.  |
 | `exception`      | Write `todo -> exception` with the `DR-*` the stage recorded; do not re-derive it, and do not enter Phase Green.                                                                                                                                                                   |
 
-**A branch-2 row whose evidence is not written yet is deferred, not a stop.**
-P1b fixes every row's branch; branch 2's mutation needs the surface, so it is
-recorded at P6 — after the P1c handover. A `falsifiability` entry with its
-branch named and its trio still empty therefore means "not yet", and
-`/qfai-implement` leaves the row at `todo` and moves to the next one. Treating
-it as a malformed handoff stops the whole run on the first such row, and if it
-sits above a branch-1 row in the ledger the branch-1 row never reaches Phase
-Green — so its test stays red, this stage cannot pass P5-P8, and P6 (where that
-same branch-2 evidence would have been written) is never reached. The deadlock
-is entirely inside the two skills' own sequencing.
+**A branch-2 row whose evidence is not written yet is not a stop, and not a defer either.** P1b fixes every row branch; the mutation needs production code this stage does not own, so `/qfai-implement` performs it at Phase Red step 3c and records it here. Treating the empty trio as a malformed handoff stopped the run on the first such row; deferring it left nobody able to produce the evidence, since the only phase with a production agent was waiting for it.
 
 If the entry is absent, names no branch, or is malformed in any other way, the
 row **stays at `todo`** and `/qfai-implement` **stops with a handoff note**.
