@@ -6,6 +6,17 @@
 
 ### Fixed
 
+- **Phase Red step 3a covers the seam an HTTP row needs.** It was defined as a
+  module, export or signature the test _imports_, but `/qfai-atdd` hands a row
+  here precisely when an unregistered route 404s — the same resolution error,
+  reached a different way. Following the step as written left the test 404ing
+  with nowhere to go. The step now names the registered route as a seam, and
+  requires a status the row does not contract for, so the route resolves and
+  the assertion still fails.
+- **A checkpoint reference pointed inside the ATDD skill.**
+  `../qfai-implement/...` from `qfai-atdd/references/` resolves to
+  `qfai-atdd/qfai-implement/...`; every other reference in that file already
+  used `../../`.
 - **Every branch is handed over; only the timing differs.** `/qfai-atdd` said
   branch 2 and branch 3 rows needed no round-trip, but `/qfai-implement` is the
   only writer of `Status` / `DR-ID` / `Evidence` — and branch 2's mutation is run

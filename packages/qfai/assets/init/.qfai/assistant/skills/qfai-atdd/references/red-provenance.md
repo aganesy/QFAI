@@ -246,7 +246,7 @@ the time that row's turn comes.
 through GREEN and its checkpoint before the next row's failing test is written;
 completing every branch-1 RED in P1b first would leave several deliberate
 failures open at once, and every row's checkpoint runs the full suite
-(`../qfai-implement/references/checkpoint-verification.md`). A second deliberate
+(`../../qfai-implement/references/checkpoint-verification.md`). A second deliberate
 RED left open elsewhere fails the first row's checkpoint — and that row is then
 stranded at `refactor`, which Phase Red does not re-select.
 
