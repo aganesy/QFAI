@@ -168,7 +168,21 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 - **The E2E/API ledger rows this stage feeds are bound by `/qfai-implement`'s lifecycle.** See "Execution Ledger" below: a row advanced on none of the three RED-provenance forms is a lifecycle violation.
 - Floors/ratios are planning signals only, not gates.
 - Legacy `scenario.feature` or coverage ledgers may exist but are not mandatory inputs for completion.
-- Evidence file is required under `.qfai/evidence/`. Stage evidence is **regenerable** and is not committed. **Governance records are different**: Change Requests (`.qfai/decisions/CR-*.md`) and durable decision records (`.qfai/evidence/decisions/*.json`) carry user approval, are not regenerable, and stay in version control — the managed `.gitignore` block negates them for that reason.
+- Evidence file is required under `.qfai/evidence/`. Stage evidence is
+  **regenerable** and is not committed. **Governance records are different**:
+  Change Requests (`.qfai/decisions/CR-*.md`), durable decision records
+  (`.qfai/evidence/decisions/*.json`) and the **Coverage Depth Matrix**
+  (`.qfai/evidence/coverage-depth-<spec-id>.md`) are not regenerable and stay
+  in version control — the managed `.gitignore` block negates them for that
+  reason.
+- **The matrix is a governance record, not a log.** Re-running this stage
+  recomputes which cells are `❌`. It does not recompute _why_ an uncoverable
+  obligation was accepted, and that judgement is what discharges the
+  "no unjustified `❌`" gate below. Written only into the stage evidence file it
+  would never reach a commit, so a later reviewer could not tell a justified
+  `❌` from an unjustified one. Write the matrix and one justification per `❌`
+  to `.qfai/evidence/coverage-depth-<spec-id>.md`; the stage evidence file
+  links to it rather than restating it.
 
 ## Completion Contract (Shared)
 
@@ -213,7 +227,7 @@ to `exception` has recorded that it did not try branches 1 and 2.
 ## Mandatory Outputs
 
 1. Test Volume Estimate (signal table with evidence)
-2. **Coverage Depth Matrix** (per spec; see `references/test-case-depth-checklist.md`)
+2. **Coverage Depth Matrix**, written to `.qfai/evidence/coverage-depth-<spec-id>.md` (per spec; template and scoring in `references/test-case-depth-checklist.md`). Committed — see CRITICAL CONSTRAINTS.
 3. Coverage obligations checklist (`US` / `TC` / `CON-API`)
 4. Implemented tests per layer (E2E/API/Integration)
 5. Reviewer notes (`PASS` or concrete rework list)
@@ -307,12 +321,13 @@ Required sections:
 - Commands executed + key outputs
 - Test volume estimate
 - Coverage obligations checklist
-- **Ledger rows advanced** — an index table (`TDD-ID`, branch, anchor) plus one
-  `### TDD-NNNN` section per row holding the payload in fenced blocks. The table
-  cell is an **anchor, never the commands and output**: a GFM row is one
-  physical line whose cells end at every unescaped `|`. Shapes and rationale:
-  `references/red-provenance.md#evidence-shape`. Exactly one form per row, never
-  both and never neither.
+- **Ledger rows advanced** — an index table plus one `### TDD-NNNN` section per
+  row. Exactly one form per row, never both and never neither; the cell is an
+  anchor and the payload goes in the section
+  (`references/red-provenance.md#evidence-shape`).
+- Coverage Depth Matrix — a link to `.qfai/evidence/coverage-depth-<spec-id>.md`
+  and the `✅`/`⚠️`/`❌` totals. The matrix and its per-`❌` justifications live
+  in that committed file; restating them here would lose them.
 - Work Orders Summary
 - Execution logs
 - Gaps / Open risks
@@ -339,14 +354,12 @@ Template:
 
 ## Ledger rows advanced
 
-| TDD-ID   | Branch       | Evidence                 |
-| -------- | ------------ | ------------------------ |
-| TDD-NNNN | observed-red | see `### TDD-NNNN` below |
+<!-- Index table + one `### TDD-NNNN` section per row:
+     `references/red-provenance.md#evidence-shape`. -->
 
-### TDD-NNNN
+## Coverage Depth Matrix
 
-<!-- One section per row. Commands and output in fenced blocks here, never in
-     the table cell above. -->
+See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / ⚠️ N / ❌ N.
 
 ## Work Orders Summary
 
@@ -376,31 +389,22 @@ Template:
 
 - P0: Plan and obligations checklist prepared.
 - P1: Layer assignment validated against `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`.
-- P1b: **A branch is chosen for every row this cycle will advance**, and the
-  choice is provisional until that row's own handoff — re-run the test
-  against the tree as it stands and take the branch the result names. P1b and
-  P1c are **one loop per `TDD-ID`**: choose, discharge, next row.
-- P1c: **A branch 1 row is discharged in that loop** — write the test, take
-  the RED, `qa-gatekeeper` PASS, hand it to `/qfai-implement`, GREEN,
-  checkpoint — before the next branch-1 row's failing test is written, and
-  before P2-P4 build any surface.
+- P1b: **A branch is chosen for every row**, provisionally until its handoff.
+- P1c: **A branch 1 row is discharged in that loop** — write the test, take the
+  RED, `qa-gatekeeper` PASS, hand it to `/qfai-implement`, GREEN, checkpoint —
+  before the next branch-1 row's failing test is written, and before P2-P4 build
+  any surface. P1b and P1c are **one loop per `TDD-ID`**.
 - P1d: **Branch 3 rows are handed over once their `DR-*` is written.** Every
-  branch needs a handoff, because `/qfai-implement` is the only writer of
-  `Status` / `DR-ID` / `Evidence` (**This skill does not write the ledger**,
-  above) — including the row this stage will not advance itself.
-
-  Which branch goes when, what the blocking `qa-gatekeeper` can judge at each
-  point, and why one deliberate RED at a time is not a style preference:
+  branch needs a handoff — `/qfai-implement` is the only writer of `Status` /
+  `DR-ID` / `Evidence`. Which branch goes when, and what the blocking
+  `qa-gatekeeper` can judge at each point:
   `references/red-provenance.md#which-stage-hands-a-row-over`.
-
 - P2: E2E implementation completed.
 - P3: API implementation completed.
 - P4: Integration implementation completed.
-- P4b: **Branch 2 rows are handed over.** Their mutation needs the surface P2-P4
-  build, and the trio it produces is the row's RED payload — so this gate sits
-  after P4 and before P6, not with P1d. Listing it at P1 order was a gate that
-  could not be met without skipping P2-P4, and skipping it broke Do-not-skip
-  either way.
+- P4b: **Branch 2 rows are handed over**, after P4 and before P6 — their
+  mutation needs the surface P2-P4 build, and the trio it produces is the row's
+  RED payload.
 - P5: Validation gate passed.
 - P6: Runtime evidence captured.
 - P7: Repo quality gates passed.

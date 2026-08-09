@@ -91,8 +91,11 @@ describe.each(TREES)("%s", (tree) => {
   it("requires the branch and its evidence in the stage evidence file", async () => {
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("**Ledger rows advanced**");
-    expect(atdd).toContain("Exactly one form per row, never both and never neither.");
+    expect(atdd).toContain("Exactly one form per row, never both and never neither");
     expect(atdd).toContain("## Ledger rows advanced");
+    expect(flat(await read(tree, PROVENANCE))).toContain(
+      "Exactly one form per row, never both and never neither:",
+    );
   });
 
   it("the ledger reference documents the ATDD-owned case and refuses to waive RED", async () => {
@@ -278,11 +281,17 @@ describe.each(TREES)("%s (handover and container)", (tree) => {
     // physical line and a cell ends at every unescaped `|`, so a multi-line
     // run or a shell pipe in the output truncates the proof qa-gatekeeper
     // needs, or breaks every row below it.
+    // SKILL.md points at the shape; the shape and its rationale live in the
+    // reference, which is what the 500-line ceiling forces and what keeps one
+    // statement of the rule rather than two that can drift.
     const atdd = flat(await read(tree, ATDD));
-    expect(atdd).toContain("cell is an **anchor, never the commands and output**");
+    expect(atdd).toContain("the cell is an anchor and the payload goes in the section");
     expect(atdd).toContain("### TDD-NNNN");
 
     const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain(
+      "row per `TDD-*`, holding the branch and an anchor. The commands and their output",
+    );
     expect(provenance).toContain("**Where each form lives.**");
     expect(provenance).toContain("execution-ledger.md#evidence-cell-contract");
   });
@@ -410,7 +419,7 @@ describe.each(TREES)("%s (reachability and sequencing)", (tree) => {
     // sentence deferred branch 2's mutation run to P6 — a gate no branch-2 row
     // could pass.
     const atdd = flat(await read(tree, ATDD));
-    expect(atdd).toContain("A branch is chosen for every row this cycle will advance");
+    expect(atdd).toContain("A branch is chosen for every row");
     expect(flat(await read(tree, PROVENANCE))).toContain(
       "A run whose rows are all branch 2 passes P1b with nothing submitted",
     );
@@ -718,7 +727,10 @@ describe.each(TREES)("%s (the handoff survives ledger order and time)", (tree) =
     // later row's predicate, leaving a row recorded as `observed-red` with no
     // observable RED and no re-classification step.
     const atdd = flat(await read(tree, ATDD));
-    expect(atdd).toContain("the choice is provisional until that row's own handoff");
+    // The gate names the rule; the reference carries it, which is what the
+    // 500-line ceiling forces and what keeps one statement of it.
+    expect(atdd).toContain("provisionally until its handoff");
+    expect(flat(await read(tree, PROVENANCE))).toContain("**The choice is provisional");
     expect(flat(await read(tree, PROVENANCE))).toContain(
       "can have no observable RED left by the time that row's turn comes",
     );
@@ -759,7 +771,7 @@ describe.each(TREES)("%s (a gate must be reachable in the order it is listed)", 
     // whose precondition needed gates it had not reached, or skip it.
     const atdd = await read(tree, ATDD);
     const gates = atdd.slice(atdd.indexOf("## Stage Gates"));
-    expect(gates).toContain("P4b: **Branch 2 rows are handed over.**");
+    expect(gates).toContain("P4b: **Branch 2 rows are handed over**");
     expect(gates.indexOf("P4: Integration")).toBeLessThan(gates.indexOf("P4b:"));
     expect(gates.indexOf("P4b:")).toBeLessThan(gates.indexOf("P6: Runtime"));
     // Branch 3 has no such precondition and stays early.
