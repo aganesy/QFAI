@@ -503,6 +503,14 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **An init marker must be a regular file.** These paths are create-only, so
+  whatever the project already had survives; a directory made `readFile` throw
+  `EISDIR` and reject the whole probe, losing the finding a valid marker
+  beside it would have produced, and a FIFO would block the validator.
+- **A wrapper is checked by where it lands, not by what it spells.** The
+  target is relative and the wrapper directory can itself be a symlink, so an
+  outside tree with a canonical-shaped path at the same offset passed every
+  check while the assistant loaded instructions that are not the project's.
 - **A rollback no longer overwrites a file created in the gap.** Between the
   removal and the failed `symlink`, another process can create its own file at
   the path — that is what an `EEXIST` from `symlink` means — and the default

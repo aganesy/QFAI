@@ -1,6 +1,6 @@
 import { constants } from "node:fs";
 import type { Dirent, Stats } from "node:fs";
-import { access, lstat, readFile, readdir, readlink, stat } from "node:fs/promises";
+import { access, lstat, readFile, readdir, readlink, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
@@ -166,11 +166,37 @@ async function isReadable(filePath: string): Promise<boolean> {
 
 /** Whether a README at `filePath` is one `qfai init` wrote. */
 async function hasInitSignature(filePath: string): Promise<boolean> {
+  // A regular file, checked before the read. These paths are create-only, so
+  // whatever the project already had at one of them is still there — and a
+  // directory makes `readFile` throw `EISDIR`, which rejected the whole
+  // `Promise.all` and lost the `QFAI-LINK-001` the other markers would have
+  // produced. A FIFO is worse: the read blocks and the validator never
+  // returns. Anything that is not a regular file is not a marker.
+  const stats = await statOrNull(filePath);
+  if (stats === null || stats === "cycle" || !stats.isFile()) {
+    return false;
+  }
   const body = await readFile(filePath, "utf-8").catch((error: unknown) => {
     if (isMissing(error)) return null;
     throw error;
   });
   return body !== null && body.includes(INIT_MARKER_SIGNATURE);
+}
+
+/**
+ * `realpath`, or `null` when it cannot be taken.
+ *
+ * `null` is not a finding here: absence and a cycle are already reported by the
+ * probes above, and reporting them again would name one path with two remedies.
+ */
+async function realpathOrNull(filePath: string): Promise<string | null> {
+  try {
+    return await realpath(filePath);
+  } catch (error) {
+    if (isMissing(error)) return null;
+    if ((error as NodeJS.ErrnoException | null)?.code === "ELOOP") return null;
+    throw error;
+  }
 }
 
 /** `stat`, or `null` when the path is absent. Any other error propagates. */
@@ -426,6 +452,26 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
     // file**, not merely something that is not a directory. A FIFO, a socket or
     // a device passes `!isDirectory()` and can pass `access(R_OK)` as well — and
     // then the assistant either fails to read it or, on a FIFO, blocks.
+    // Where it *lands*, not what it spells. The target is relative, so it
+    // resolves against the wrapper directory's physical location — and that
+    // directory can itself be a symlink. Point `.claude/skills` at an outside
+    // tree holding a `.qfai/assistant/skills/<name>/SKILL.md` at the same
+    // relative offset and every check above passes, while the assistant loads
+    // instructions that are not this project's. Comparing the resolved paths
+    // is what makes "this wrapper names the project canonical" true, rather
+    // than "some canonical-shaped path exists over there".
+    const [here, canonical] = await Promise.all([
+      realpathOrNull(wrapper.absolute),
+      realpathOrNull(wrapper.canonical),
+    ]);
+    if (here !== null && canonical !== null && here !== canonical) {
+      broken.push({
+        relative: wrapper.relative,
+        detail: `resolves to ${toPosix(here)}, outside the project canonical ${toPosix(canonical)}`,
+      });
+      continue;
+    }
+
     const wantsDirectory = wrapper.kind === "skill";
     const kindMatches = wantsDirectory ? target.isDirectory() : target.isFile();
     if (!kindMatches) {

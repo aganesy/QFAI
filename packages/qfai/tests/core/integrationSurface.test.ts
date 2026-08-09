@@ -525,6 +525,28 @@ describe("an initialised project is recognised without any wrapper left", () => 
     });
   });
 
+  it("reads past a marker path that is not a regular file", async () => {
+    // These paths are create-only, so whatever the project had at one of them
+    // survives. A directory made `readFile` throw `EISDIR`, which rejected the
+    // whole `Promise.all` and lost the finding the valid marker beside it
+    // would have produced.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      for (const dir of INTEGRATION_SURFACE_DIRS) {
+        await rm(path.join(root, ...dir.split("/")), { recursive: true, force: true });
+      }
+      // One marker path is the project's own directory; another is init's.
+      await mkdir(path.join(root, ".agents", "README.md"), { recursive: true });
+      await mkdir(path.join(root, ".codex"), { recursive: true });
+      await writeFile(path.join(root, ".codex", "README.md"), INIT_README_BODY, "utf-8");
+
+      const found = await finding(root);
+      expect(found?.message).toContain("integration surface missing");
+    });
+  });
+
   it("still says nothing when init has left no marker either", async () => {
     await withProject(async (root) => {
       await seedCanonical(root, ["qfai-atdd"], []);
@@ -568,11 +590,57 @@ describe("the init marker has to be QFAI's own", () => {
   });
 });
 
+describe("a wrapper can spell the right target and land somewhere else", () => {
+  it("reports a link that resolves outside the project canonical", async () => {
+    // The target is relative, so it resolves against the wrapper directory's
+    // physical location — and that directory can itself be a symlink. An
+    // outside tree with a canonical-shaped path at the same relative offset
+    // passes the string comparison, the `stat`, the kind check and the
+    // readability check, and the assistant loads instructions that are not
+    // this project's.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+
+      // A complete decoy: `<outside>/.qfai/assistant/skills/qfai-atdd/SKILL.md`
+      // sits at exactly the offset `../../.qfai/assistant/skills/qfai-atdd`
+      // names, counted from `<outside>/.claude/skills`.
+      const outside = path.join(root, "..", `${path.basename(root)}-outside`);
+      const decoy = path.join(outside, ".qfai", "assistant", "skills", "qfai-atdd");
+      await mkdir(decoy, { recursive: true });
+      await writeFile(path.join(decoy, "SKILL.md"), "# not ours\n", "utf-8");
+      const claudeSkills = path.join(outside, ".claude", "skills");
+      await mkdir(claudeSkills, { recursive: true });
+      await symlink(
+        skillTarget(".claude/skills", "qfai-atdd"),
+        path.join(claudeSkills, "qfai-atdd"),
+        "dir",
+      );
+
+      try {
+        // Swap the project's own wrapper *directory* for a link to the decoy's.
+        await rm(path.join(root, ".claude", "skills"), { recursive: true, force: true });
+        await symlink(claudeSkills, path.join(root, ".claude", "skills"), "dir");
+
+        const found = await finding(root);
+        expect(found?.message).toContain("outside the project canonical");
+      } finally {
+        await rm(outside, { recursive: true, force: true });
+      }
+    });
+  });
+});
+
 describe("a target can resolve and still be unusable", () => {
   it("reports a canonical document that cannot be read", async () => {
     // `stat` reads metadata, which a mode can allow while the body stays shut —
     // and the assistant loads the body.
     if (process.platform === "win32") return; // chmod does not gate reads here.
+    // Nor does it gate root: `access(R_OK)` answers yes on a mode `000` file
+    // for UID 0, so this would fail in a container CI or a dev image that runs
+    // as root — a red test about the environment, not about the rule.
+    if (process.geteuid?.() === 0) return;
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, [], ["qa-gatekeeper"]);
