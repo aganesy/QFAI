@@ -24,6 +24,8 @@ import {
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_LEGACY_LINES,
+  RETIRED_LINE_SUCCESSORS,
+  negationsOutrankLaterIgnores,
 } from "../../core/gitignore.js";
 import {
   ASSISTANT_LAYERS,
@@ -40,6 +42,36 @@ import {
 import { resolveToolVersion } from "../../core/version.js";
 
 const execAsync = promisify(execCb);
+
+/**
+ * Standard assets `--force` regenerates: the trees qfai owns end to end and
+ * whose direct editing is already discouraged.
+ *
+ * `assistant/skills` alone was not enough. Every other `.qfai/**` path is
+ * copied create-only, so a correction to an agent definition reached new
+ * projects and nobody else — an installed repository kept the old reviewer
+ * instructions with no command that would update them, and no signal that it
+ * had not. `agents/` is generated in exactly the sense `skills/` is:
+ * `qfai doctor`'s `skills.integrity` and the shipped README both say a project
+ * edits them at its own risk.
+ *
+ * **`assistant/manifest/` is excluded in full, including `agent-catalog.yml`.**
+ * `qfai-configure` is the shipped, user-facing entrypoint for editing those
+ * declarative manifests — its own `project_memory` names the agent-catalog /
+ * agent-routing / review-profiles SSOTs together — so a project that adjusted
+ * its agent taxonomy through the supported path would have had that adjustment
+ * replaced by the template on the next `--force`. Nothing migrates it back:
+ * `--upgrade-assistant-tree` deliberately does not walk `manifest/`, because
+ * that layer's path is the same before and after the recut.
+ *
+ * The cost is that `agent-catalog.yml#developer_instructions` can drift from
+ * `assistant/agents/*.md` in an installed project. That is the lesser failure:
+ * drift is visible and repairable, a silently overwritten taxonomy is neither.
+ *
+ * `specs/`, `contracts/`, `steering/` and everything else stay create-only for
+ * the same reason: they hold project content.
+ */
+const STANDARD_ASSET_PATHS: readonly string[] = ["assistant/skills", "assistant/agents"];
 
 export type InitOptions = {
   dir: string;
@@ -68,7 +100,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/** と symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts 等は上書きしません）。",
+      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。",
     );
   }
 
@@ -83,7 +115,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     : { copied: [], skipped: [], removed: [], preservedNotes: [] as string[] };
 
   // root/ と .qfai/ は create-only（既存は skip）
-  // assistant/skills のみ --force で上書きする
+  // STANDARD_ASSET_PATHS のみ --force で上書きする
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
     force: false,
     dryRun: options.dryRun,
@@ -94,9 +126,9 @@ export async function runInit(options: InitOptions): Promise<void> {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
-    exclude: ["assistant/skills"],
+    exclude: [...STANDARD_ASSET_PATHS],
   });
-  const skillsResult = await copyTemplatePaths(qfaiAssets, destQfai, ["assistant/skills"], {
+  const skillsResult = await copyTemplatePaths(qfaiAssets, destQfai, [...STANDARD_ASSET_PATHS], {
     force: options.force,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
@@ -111,6 +143,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
   });
   const gitignoreResult = await ensureRootGitignoreEntries(destRoot, options.dryRun);
+  const legacyEvidenceIgnoreResult = await ensureLegacyEvidenceIgnoreNegations(
+    destRoot,
+    options.dryRun,
+  );
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
@@ -144,6 +180,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...skillsResult.copied,
       ...wrappersResult.copied,
       ...gitignoreResult.copied,
+      ...legacyEvidenceIgnoreResult.copied,
       ...assistantTreeResult.copied,
       ...projectSteeringResult.copied,
       ...upgradeResult.copied,
@@ -154,6 +191,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...skillsResult.skipped,
       ...wrappersResult.skipped,
       ...gitignoreResult.skipped,
+      ...legacyEvidenceIgnoreResult.skipped,
       ...assistantTreeResult.skipped,
       ...projectSteeringResult.skipped,
       ...upgradeResult.skipped,
@@ -651,17 +689,26 @@ async function ensureRootGitignoreEntries(
   // reach fresh inits.
   //
   // Presence alone is not enough — git applies the LAST matching pattern, so a
-  // negation hand-placed above `.qfai/evidence/*` is inert and the decision
-  // records stay ignored. `governanceNegationsEffective` re-checks the order.
+  // negation with any matching ignore line below it is inert and the decision
+  // records stay ignored.
+  //
+  // The order check reads the **whole file**, not the managed block. A project
+  // that appended its own `.qfai/evidence/*.md` after the block wins under
+  // git's last-match rule, and a block-scoped check called the negation
+  // effective while `git check-ignore -v` named the project's line. The repair
+  // path was already right — `removeManagedBlock` strips the block and the
+  // rebuilt one is appended last, so it lands below the project's rule — but
+  // the early return fired first and it never ran.
   //
   // Required entries are matched only against the managed block: a project that
   // deliberately removed, say, `.qfai/evidence/*` to track its own audit trail
   // must not have that choice silently undone by the next `qfai init`.
   const managedBlock = extractManagedBlock(existing);
+  const existingLines = existing.split("\n").map((line) => line.trimEnd());
   if (
     existing.includes(QFAI_GITIGNORE_MARKER) &&
     QFAI_GITIGNORE_GOVERNANCE_NEGATIONS.every((entry) => managedBlock.includes(entry)) &&
-    governanceNegationsEffective(managedBlock) &&
+    negationsOutrankLaterIgnores(existingLines, QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) &&
     QFAI_GITIGNORE_LEGACY_LINES.every((entry) => !existing.includes(entry))
   ) {
     return { copied: [], skipped: [gitignorePath] };
@@ -678,60 +725,180 @@ async function ensureRootGitignoreEntries(
   }
 
   const separator = stripped.length > 0 && !stripped.endsWith("\n") ? "\n\n" : "\n";
-  const content =
-    stripped.length > 0 ? stripped + separator + QFAI_GITIGNORE_BLOCK : QFAI_GITIGNORE_BLOCK;
+  const block = rebuildManagedBlock(managedBlock);
+  const content = stripped.length > 0 ? stripped + separator + block : block;
   await writeFile(gitignorePath, content, "utf-8");
   info("  updated: .gitignore (appended QFAI entries)");
   return { copied: [gitignorePath], skipped: [] };
 }
 
 /**
- * The contiguous QFAI managed block, or `""` when the marker is absent.
+ * The managed block to write, preserving whatever ignore lines the project's
+ * existing block already had.
+ *
+ * Writing `QFAI_GITIGNORE_BLOCK` wholesale was a silent regression for the one
+ * case the freshness check exists to protect. A project that deliberately
+ * removed, say, `.qfai/evidence/*` from the block to track its own audit trail
+ * fails the `every(...)` check the moment a NEW governance negation ships —
+ * the block is then stripped and the canonical list written back, resurrecting
+ * the ignore line the user deleted and re-hiding every evidence file from that
+ * release on.
+ *
+ * So an existing block keeps its own ignore lines and only gains the governance
+ * negations it is missing (appended last, because git applies the last matching
+ * pattern). A project with no managed block still gets the full canonical one.
+ */
+function rebuildManagedBlock(existingBlock: string): string {
+  if (existingBlock.length === 0) {
+    return QFAI_GITIGNORE_BLOCK;
+  }
+  const legacy = new Set<string>(QFAI_GITIGNORE_LEGACY_LINES);
+  const negations = new Set<string>(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS);
+  const lines = existingBlock.split("\n").map((line) => line.trimEnd());
+  const present = new Set(lines);
+
+  // The retired lines are dropped and the governance negations appended, both
+  // unconditionally. What is *kept* is the project's own ignore set.
+  //
+  // An earlier attempt migrated a legacy-shaped block wholesale, on the theory
+  // that a missing ignore there is age rather than a choice. That is not safe:
+  // a project can carry a retired line *and* have deleted `.qfai/evidence/*` to
+  // track its audit trail, and the wholesale rewrite resurrects the deletion —
+  // the very regression this function exists to stop. Age and intent cannot be
+  // told apart from the file, so the conservative reading wins in both cases:
+  // never re-add an ignore line the block does not have.
+  //
+  // The cost is that a project on an old block does not pick up a newly shipped
+  // *recommended* ignore. `QFAI-REVIEW-008` reports that at `info`, and the
+  // consequence is generated files showing in `git status` — noisy. Silently
+  // re-hiding an audit trail the project chose to track is not noisy, which is
+  // why it is the side to err on.
+  const kept = lines.filter(
+    (line) => line !== QFAI_GITIGNORE_MARKER && !negations.has(line) && !legacy.has(line),
+  );
+  // The one exception: a retired line that was *renamed* rather than dropped.
+  // Stripping `.qfai/discussion/discussion-*/` without adding its successor
+  // would leave the project with no discussion ignore at all — a removal it
+  // never asked for, which is the same harm from the other direction.
+  const renamed = Object.entries(RETIRED_LINE_SUCCESSORS)
+    .filter(([retired, successor]) => present.has(retired) && !present.has(successor))
+    .map(([, successor]) => successor);
+
+  return [QFAI_GITIGNORE_MARKER, ...kept, ...renamed, ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS]
+    .filter((line, index, all) => line.length > 0 || all[index - 1]?.length !== 0)
+    .join("\n");
+}
+
+/**
+ * Leaf negations for the governance records, as a legacy
+ * `.qfai/evidence/.gitignore` needs them.
+ *
+ * Earlier `qfai init` versions wrote a per-directory ignore file whose first
+ * line is `*`. Git applies the deepest matching file, so that `*` wins over
+ * every root-level negation: `change-request-*.md`, `decision-*.md`,
+ * `decisions/**` and the Coverage Depth Matrix all stay ignored in a project
+ * that still has it, however correct the managed block is. The file is not
+ * removed — a project may want the rest of its behaviour — but the governance
+ * records are re-included inside it.
+ */
+const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
+  "!change-request-*.md",
+  "!decision-*.md",
+  "!coverage-depth-*.md",
+  "!decisions/",
+  "!decisions/**",
+];
+
+async function ensureLegacyEvidenceIgnoreNegations(
+  destRoot: string,
+  dryRun: boolean,
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const target = path.join(destRoot, ".qfai", "evidence", ".gitignore");
+  let existing: string;
+  try {
+    existing = await readFile(target, "utf-8");
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      // No legacy file: the root managed block is already authoritative.
+      return { copied: [], skipped: [] };
+    }
+    throw err;
+  }
+
+  const lines = existing.split("\n").map((line) => line.trimEnd());
+  // Presence is not enough: git applies the **last** matching pattern, so a
+  // negation sitting above a broad re-ignore (`*`, or a later
+  // `coverage-depth-*` rule) is inert while a `lines.includes` check reads it
+  // as satisfied. `git check-ignore -v` still names the broad rule, and the
+  // governance record this migration promises to track stays untracked.
+  //
+  // A negation counts only when no ignore line below it can match the same
+  // path. Anything else is re-appended, which puts it last and therefore wins.
+  //
+  // Real glob semantics, not a prefix comparison. A prefix test cannot see
+  // that a later `*.md` or a double-star `/*.md` matches
+  // `coverage-depth-*.md`, `decision-*.md` and `change-request-*.md`, so it
+  // called those negations effective and left the records ignored.
+  const missing = LEGACY_EVIDENCE_IGNORE_NEGATIONS.filter(
+    (entry) => !negationsOutrankLaterIgnores(lines, [entry]),
+  );
+  if (missing.length === 0) {
+    return { copied: [], skipped: [target] };
+  }
+  if (dryRun) {
+    info(`  would update: ${target} (re-include governance records)`);
+    return { copied: [target], skipped: [] };
+  }
+
+  const separator = existing.endsWith("\n") ? "" : "\n";
+  await writeFile(target, `${existing}${separator}${missing.join("\n")}\n`, "utf-8");
+  info(`  updated: ${target} (re-include governance records)`);
+  return { copied: [target], skipped: [] };
+}
+
+/**
+ * The QFAI managed block, or `""` when the marker is absent.
  *
  * Freshness is judged against the block this writer owns, not the whole file:
  * a project that deliberately deleted an ignore line to track its own audit
  * trail keeps that choice, and a line the user re-added elsewhere does not
  * make a stale managed block look current.
+ *
+ * **Every block, not the first.** A past duplicate-append bug left some
+ * projects with two managed blocks, and `removeManagedBlock` strips all of
+ * them. Reading only the first meant an ignore line that lived exclusively in
+ * a later block — `.qfai/state.json`, say — was deleted with that block and
+ * never rebuilt, exposing local run state to the next commit. The blocks are
+ * merged in document order: the first block's ordering is preserved (which is
+ * what `negationsOutrankLaterIgnores` and the last-pattern-wins semantics
+ * depend on) and any line only a later block carries is appended.
  */
 function extractManagedBlock(content: string): string {
   const lines = content.split("\n");
-  const startIdx = lines.findIndex((line) => line.includes(QFAI_GITIGNORE_MARKER));
-  if (startIdx === -1) {
-    return "";
-  }
   const knownLines = new Set([...QFAI_GITIGNORE_BLOCK.split("\n"), ...QFAI_GITIGNORE_LEGACY_LINES]);
-  let endIdx = startIdx + 1;
-  while (endIdx < lines.length && knownLines.has(lines[endIdx] ?? "")) {
-    endIdx += 1;
-  }
-  return lines.slice(startIdx, endIdx).join("\n");
-}
 
-/**
- * True when every governance negation appears AFTER the ignore line it undoes.
- *
- * Git applies the last matching pattern, so `!.qfai/evidence/decisions/` placed
- * above `.qfai/evidence/*` re-ignores the directory and the decision records
- * stay untracked while the file looks correct to a presence-only check.
- */
-function governanceNegationsEffective(block: string): boolean {
-  const lines = block.split("\n");
-  for (const negation of QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) {
-    const negationIdx = lines.indexOf(negation);
-    if (negationIdx === -1) {
-      return false;
-    }
-    // The ignore line this negation undoes, e.g. `.qfai/evidence/*`.
-    const target = negation.replace(/^!/, "").replace(/\/(\*\*)?$/, "");
-    const ignoreIdx = lines.findIndex(
-      (line) =>
-        !line.startsWith("!") && line.endsWith("/*") && target.startsWith(line.slice(0, -2)),
+  const merged: string[] = [];
+  const seen = new Set<string>();
+  let cursor = 0;
+  while (cursor < lines.length) {
+    const startIdx = lines.findIndex(
+      (line, index) => index >= cursor && line.includes(QFAI_GITIGNORE_MARKER),
     );
-    if (ignoreIdx !== -1 && ignoreIdx > negationIdx) {
-      return false;
+    if (startIdx === -1) break;
+    let endIdx = startIdx + 1;
+    while (endIdx < lines.length && knownLines.has(lines[endIdx] ?? "")) {
+      endIdx += 1;
     }
+    for (const line of lines.slice(startIdx, endIdx)) {
+      // The marker itself is deduplicated with everything else, so a merged
+      // block carries exactly one.
+      if (seen.has(line)) continue;
+      seen.add(line);
+      merged.push(line);
+    }
+    cursor = endIdx;
   }
-  return true;
+  return merged.join("\n");
 }
 
 /** Remove all QFAI managed blocks (known block lines only; stops at unknown lines). */

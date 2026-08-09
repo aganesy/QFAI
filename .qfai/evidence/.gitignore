@@ -1,3 +1,8 @@
 *
 !.gitignore
 !README.md
+!change-request-*.md
+!decision-*.md
+!coverage-depth-*.md
+!decisions/
+!decisions/**
