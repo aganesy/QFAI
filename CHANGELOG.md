@@ -488,6 +488,17 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The RED subject holds the transient revision, not the final one.**
+  `Revision` names the tree the GREEN landed at, so including it put a field
+  into the subject that appeared later and made every correct RED PASS stale
+  at GREEN.
+- **The completion subject takes a round block's phase-authored fields only.**
+  Those reviewers write `Round N: reviewer verdict` into the block after
+  reading it, so the whole block put their own line inside what they hashed.
+- **The pre-split anchor is accepted only from a marked row.** Status and
+  anchor cannot tell a legacy row from one written to the wrong file after the
+  split, so accepting it unmarked let a row that never produced an ATDD
+  handoff pass the gate as complete.
 - **Each observation hashes the fields it could read.** Subtracting a list of
   later-written fields only moved the problem to the next field added: the RED
   gatekeeper hashes an entry with no GREEN in it yet, so its PASS went stale as

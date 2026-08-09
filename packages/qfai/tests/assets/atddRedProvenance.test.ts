@@ -889,7 +889,9 @@ describe.each(TREES)("%s (a gate must be executable by the routing it declares)"
     expect(implement).toContain(
       "an `E2E` / `API` row that reached `done` or `review-fix` before this split",
     );
-    expect(implement).toContain("Accept that anchor for such a row");
+    // Gateable, but only once the marker identifies it as legacy: the sentence
+    // now names the marker rather than "such a row".
+    expect(implement).toContain("its implement anchor is accepted");
   });
 
   it("tells a project whose manifest predates the red phase what to do", async () => {
@@ -1398,6 +1400,40 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(baseline).toContain("**RED observation**");
     expect(baseline).toContain("**GREEN observation**");
     expect(baseline).toContain("**Completion review**");
+  });
+
+  it("keeps the final Revision out of the RED subject", async () => {
+    // `Revision` names the tree the GREEN landed at and does not exist when
+    // the RED gatekeeper hashes, so including it put a later field into the
+    // subject and made every correct RED PASS stale at GREEN.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("**Not `Revision`**");
+    expect(baseline).toContain("**GREEN observation**: the RED subject plus `Revision`");
+  });
+
+  it("keeps the round reviewer verdict out of the completion subject", async () => {
+    // These reviewers write `Round N: reviewer verdict` into the block after
+    // reading it, so taking the whole block put their own line inside what
+    // they hashed.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("that block's **phase-authored** fields only");
+    expect(baseline).toContain("ask which observation could have read it");
+  });
+
+  it("accepts the pre-split anchor only from a row that carries the marker", async () => {
+    // Status and anchor alone cannot tell a legacy row from one written to the
+    // wrong file after the split, so accepting the implement anchor unmarked
+    // let a row that never produced an ATDD handoff pass as complete.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**A row that carries the marker**");
+    expect(implement).toContain("which for an `E2E` / `API` row means the ATDD file");
+    expect(implement).not.toContain(
+      "A row with no marker is judged by the current rule whatever its status. Accept that anchor",
+    );
   });
 
   it("writes the whole entry before the gate hashes it", async () => {

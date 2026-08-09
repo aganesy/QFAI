@@ -324,19 +324,27 @@ post-escalation verification review of a user-named fix.
      heading line through the line before the next `###` heading that names a
      `TDD-` id, or the next `##` / `#` heading, or end of file — each taking
      only its own fields, in the order the contract lists them:
-     - **RED observation**: `TDD-ID`, `TC-ref`, `Revision`, `RED test hash`,
-       `RED revision` / `Falsifiability revision`, and the RED pair or the
-       falsifiability trio with `RED failure mode`.
-     - **GREEN observation**: the RED subject plus the GREEN pair and
+     - **RED observation**: `TDD-ID`, `TC-ref`, `RED test hash`, the row's own
+       transient revision (`RED revision` or `Falsifiability revision`), and the
+       RED pair or the falsifiability trio with `RED failure mode`. **Not
+       `Revision`**: that field names the tree the GREEN landed at and does not
+       exist yet, so including it put a field into the subject that appeared
+       later and made every correct RED PASS stale at GREEN.
+     - **GREEN observation**: the RED subject plus `Revision`, the GREEN pair and
        `Oracle proof`.
      - **Completion review** (`completion-reviewer` / `implementation-reviewer`):
-       the GREEN subject plus `Refactor verify command` / `result` and every
-       `### Round N` block the row carries.
+       the GREEN subject plus `Refactor verify command` / `result` and, from every
+       `### Round N` block the row carries, that block's **phase-authored**
+       fields only. `Round N: reviewer verdict` is written by these reviewers
+       after they have read the block, so taking the whole block put their own
+       line inside what they hashed.
 
      A field absent at that point contributes nothing — it is not a placeholder
      and not an error. Nothing written after an observation is in its subject,
      which is what makes a verdict re-checkable at all: gate item 10 recomputes
-     each one against its own list.
+     each one against its own list. **When in doubt about a new field, ask which
+     observation could have read it**; that is the whole rule, and it is why the
+     subjects are named rather than derived by subtraction.
 
   2. **Normalize.** LF line endings; strip trailing whitespace from every line;
      drop leading and trailing blank lines; end with exactly one newline.
