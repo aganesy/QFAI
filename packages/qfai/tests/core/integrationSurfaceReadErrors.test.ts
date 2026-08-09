@@ -13,7 +13,7 @@
  * would otherwise apply to every case in that file.
  */
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -22,10 +22,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type FsPromises = typeof fsPromises;
 
-const { readdirSpy, lstatSpy, accessSpy } = vi.hoisted(() => ({
+const { readdirSpy, lstatSpy, accessSpy, statSpy } = vi.hoisted(() => ({
   readdirSpy: vi.fn(),
   lstatSpy: vi.fn(),
   accessSpy: vi.fn(),
+  statSpy: vi.fn(),
 }));
 
 vi.mock("node:fs/promises", async () => {
@@ -35,6 +36,7 @@ vi.mock("node:fs/promises", async () => {
     readdir: (...args: unknown[]) => readdirSpy(actual, ...args),
     lstat: (...args: unknown[]) => lstatSpy(actual, ...args),
     access: (...args: unknown[]) => accessSpy(actual, ...args),
+    stat: (...args: unknown[]) => statSpy(actual, ...args),
   };
 });
 
@@ -67,9 +69,11 @@ beforeEach(() => {
   readdirSpy.mockReset();
   lstatSpy.mockReset();
   accessSpy.mockReset();
+  statSpy.mockReset();
   readdirSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.readdir(...args));
   lstatSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.lstat(...args));
   accessSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.access(...args));
+  statSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.stat(...args));
 });
 
 describe("validateIntegrationSurface read errors", () => {
@@ -123,6 +127,21 @@ describe("validateIntegrationSurface read errors", () => {
       lstatSpy.mockImplementation(() => Promise.reject(errno("ENOTDIR")));
 
       await expect(validateIntegrationSurface(root)).rejects.toThrow("simulated ENOTDIR");
+    });
+  });
+
+  it("propagates a stat failure instead of calling the wrapper dangling", async () => {
+    // The remedy this finding prints is "re-run `qfai init`", which leaves the
+    // wrapper `skipped` because the target string is already correct — a
+    // QFAI-LINK-001 an operator cannot clear by following it.
+    await withProject(async (root) => {
+      await seedCanonical(root);
+      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      await mkdir(path.dirname(wrapper), { recursive: true });
+      await symlink("../../.qfai/assistant/skills/qfai-atdd", wrapper, "dir");
+      statSpy.mockImplementation(() => Promise.reject(errno("EACCES")));
+
+      await expect(validateIntegrationSurface(root)).rejects.toThrow("simulated EACCES");
     });
   });
 

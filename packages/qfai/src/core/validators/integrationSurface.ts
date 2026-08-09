@@ -72,28 +72,28 @@ const toPosix = (value: string): string => value.split(path.sep).join("/");
 /**
  * The skills `qfai init` would create a wrapper for.
  *
- * Two rosters, intersected, because each alone is wrong:
+ * **The shipped roster alone**, read from `assets/init` — what init actually
+ * wraps. The project's own canonical tree is not the question: a user-defined
+ * `.qfai/assistant/skills/my-skill/` is explicitly allowed there —
+ * `skillDocReferences` permits it — and init never creates a wrapper for it, so
+ * publishing it by hand as a real directory would be reported as a broken qfai
+ * link in every profile.
  *
- * - **Shipped** (`assets/init`) is what init actually wraps. The project's own
- *   canonical tree is not: a user-defined `.qfai/assistant/skills/my-skill/`
- *   is explicitly allowed there — `skillDocReferences` permits it — and init
- *   never creates a wrapper for it, so publishing it by hand as a real
- *   directory would have been reported as a broken qfai link in every profile.
- * - **Present in the project** keeps a removed skill out of scope. Its wrapper
- *   is stale rather than broken, which is what `pruneStaleQfaiWrappers` clears
- *   under `--force`.
+ * **Not intersected with what the project has.** That was the first fix and it
+ * went one step too far: a shipped skill whose canonical `SKILL.md` was deleted
+ * by mistake, wrapper still in place, dropped out of the roster and its dangling
+ * wrapper passed every profile — which is precisely the state this rule exists
+ * to report. The intersection was there to keep a retired skill out of scope,
+ * and the shipped roster already does that (a retired skill is not shipped); a
+ * skill this project has not taken yet is skipped by its wrapper being absent.
  *
  * Never a name prefix. A `qfai-` prefix test skipped `web-research` — a shipped
  * skill init wraps like any other — so a flattened `web-research` link passed
  * the check while the assistant could not load it.
  */
-async function canonicalSkillIds(root: string): Promise<string[]> {
+async function canonicalSkillIds(): Promise<string[]> {
   const shipped = await skillIdsIn(path.join(getInitAssetsDir(), ".qfai", "assistant", "skills"));
-  if (shipped.size === 0) return [];
-  const present = await skillIdsIn(path.join(root, ".qfai", "assistant", "skills"));
-  return Array.from(present)
-    .filter((id) => shipped.has(id))
-    .sort();
+  return Array.from(shipped).sort();
 }
 
 /** Directory names under `skillsDir` that carry a `SKILL.md`. */
@@ -129,20 +129,16 @@ async function fileExists(filePath: string): Promise<boolean> {
 }
 
 /**
- * The agents `qfai init` would create a wrapper for. Same two rosters, same
- * reasons as {@link canonicalSkillIds}.
+ * The agents `qfai init` would create a wrapper for. Same roster, same reasons
+ * as {@link canonicalSkillIds}.
  *
  * Treating every non-README `*.md` in `.claude/agents` as qfai-owned turned a
  * project's own agent definition into a `QFAI-LINK-001` error in every profile
  * — the opposite of the rule's stated scope.
  */
-async function canonicalAgentNames(root: string): Promise<string[]> {
+async function canonicalAgentNames(): Promise<string[]> {
   const shipped = await agentNamesIn(path.join(getInitAssetsDir(), ".qfai", "assistant", "agents"));
-  if (shipped.size === 0) return [];
-  const present = await agentNamesIn(path.join(root, ".qfai", "assistant", "agents"));
-  return Array.from(present)
-    .filter((name) => shipped.has(name))
-    .sort();
+  return Array.from(shipped).sort();
 }
 
 /** Agent document basenames under `agentsDir`, `README` excluded. */
@@ -207,7 +203,7 @@ function wrapperSet(root: string, skills: string[], agents: string[]): Wrapper[]
  * is reported is a wrapper that exists and cannot do its job.
  */
 export async function validateIntegrationSurface(root: string): Promise<Issue[]> {
-  const [skills, agents] = await Promise.all([canonicalSkillIds(root), canonicalAgentNames(root)]);
+  const [skills, agents] = await Promise.all([canonicalSkillIds(), canonicalAgentNames()]);
   if (skills.length === 0 && agents.length === 0) {
     // No canonical tree — nothing to wrap, so nothing to be broken.
     return [];
@@ -249,17 +245,16 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       continue;
     }
 
-    // The target is in the roster, so the canonical document exists and this
-    // normally resolves. Kept as a guard for the cases the roster cannot see —
-    // an unreadable parent, or a link created with the wrong type on Windows.
-    // A wrapper whose canonical entry was *removed* is out of scope: it drops
-    // out of the roster and is stale rather than broken, which is what
-    // `pruneStaleQfaiWrappers` clears under `--force`.
-    const resolves = await stat(wrapper.absolute).then(
-      () => true,
-      () => false,
-    );
-    if (!resolves) {
+    // The link target is right, so what remains is whether it resolves.
+    // `catch(() => false)` reported every failure as dangling, including
+    // `EACCES` and a transient `EIO` — and the fix the finding prints is
+    // "re-run `qfai init`", which leaves the wrapper `skipped` because the
+    // target string is already correct. That is a `QFAI-LINK-001` an operator
+    // cannot clear by following it. Only an absent target is dangling.
+    try {
+      await stat(wrapper.absolute);
+    } catch (error) {
+      if (!isMissing(error)) throw error;
       broken.push({ relative: wrapper.relative, detail: `dangling -> ${toPosix(wrapper.target)}` });
     }
   }

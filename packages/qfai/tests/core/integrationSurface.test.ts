@@ -272,6 +272,31 @@ describe("the probed list stays in step with what init builds", () => {
   });
 });
 
+describe("a shipped skill stays in scope when its canonical document is gone", () => {
+  it("reports a dangling wrapper whose SKILL.md was deleted", async () => {
+    // Intersecting the shipped roster with what the project has dropped the
+    // skill out of scope exactly when its canonical document went missing —
+    // the state this rule exists to report. The shipped roster already keeps a
+    // retired skill out (it is not shipped), and a skill the project has not
+    // taken yet is skipped by its wrapper being absent.
+    await withProject(async (root) => {
+      await seedCanonical(root, ["qfai-atdd"], []);
+      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      await mkdir(path.dirname(wrapper), { recursive: true });
+      await symlink(skillTarget(".claude/skills", "qfai-atdd"), wrapper, "dir");
+      // The canonical document is removed; the wrapper stays.
+      await rm(path.join(root, ".qfai", "assistant", "skills", "qfai-atdd"), {
+        recursive: true,
+        force: true,
+      });
+
+      const issues = await validateIntegrationSurface(root);
+      expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-001"]);
+      expect(issues[0]?.message).toContain("dangling");
+    });
+  });
+});
+
 describe("ownership is the roster init ships, not the canonical tree", () => {
   it("ignores a project-owned skill published by hand", async () => {
     // `.qfai/assistant/skills/<own>/SKILL.md` is an allowed project-owned

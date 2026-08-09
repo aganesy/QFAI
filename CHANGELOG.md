@@ -95,6 +95,18 @@
 
 ### Fixed
 
+- **A `stat` failure is not a dangling link.** Every error was reported as
+  dangling, including `EACCES` and a transient `EIO` — and the remedy the
+  finding prints is "re-run `qfai init`", which leaves the wrapper `skipped`
+  because the target string is already correct. That was a `QFAI-LINK-001` an
+  operator could not clear by following it. Only an absent target is dangling.
+- **Ownership is the shipped roster, without the project intersection.** The
+  intersection went one step too far: a shipped skill whose canonical
+  `SKILL.md` was deleted by mistake, wrapper still in place, dropped out of
+  scope and its dangling wrapper passed every profile — precisely the state the
+  rule exists to report. A retired skill is already excluded by not being
+  shipped, and a skill this project has not taken yet is skipped by its wrapper
+  being absent.
 - **The flattened-link match tolerates the separator and nothing else.**
   Dropping `trim()` left `path.normalize`, which widens the same way for a
   different input: `../../.qfai//assistant/x` and `../../.qfai/assistant/./x`
