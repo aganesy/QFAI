@@ -89,6 +89,10 @@ async function wireAll(root: string, skills: string[], agents: string[]): Promis
 const INIT_README_BODY = [
   "# QFAI Agents skills",
   "",
+  "This directory provides Agents/Codex-compatible skill symlinks for QFAI.",
+  "",
+  "## Canonical entrypoint",
+  "",
   "Skill symlinks point to QFAI's canonical skill documents under:",
   "",
   "- .qfai/assistant/skills/",
@@ -638,6 +642,29 @@ describe("a project's own entry is not proof init ran", () => {
     });
   });
 
+  it("does not accept a lone mention of the canonical tree as a marker", async () => {
+    // A project documenting where it keeps its own QFAI tree writes that
+    // sentence, and `includes(".qfai/assistant/")` alone made one of those a
+    // marker — so a checkout that never ran init was told all six surfaces
+    // were missing. The title and the section are part of the signature.
+    await withProject(async (root) => {
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await mkdir(path.join(root, ".agents"), { recursive: true });
+      await writeFile(
+        path.join(root, ".agents", "README.md"),
+        [
+          "# Our agent notes",
+          "",
+          "Our QFAI lives under .qfai/assistant/ — do not edit by hand.",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
+
   it("does not accept a symlinked README as a marker init wrote", async () => {
     // `stat` followed the link, so a project's own `.agents/README.md` pointing
     // at another file that happens to mention `.qfai/assistant/` read as
@@ -656,6 +683,29 @@ describe("a project's own entry is not proof init ran", () => {
       );
 
       await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
+});
+
+describe("an integration directory can be a cycle rather than a directory", () => {
+  it("reports it once instead of ending the run with ELOOP", async () => {
+    // `lstat` on every wrapper under it raises `ELOOP` — the final component is
+    // not followed, but the path to it is — and propagating that ended
+    // `qfai validate` with a stack trace instead of a finding.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const claudeSkills = path.join(root, ".claude", "skills");
+      await rm(claudeSkills, { recursive: true, force: true });
+      // `.claude/skills` -> `.claude/loop` -> `.claude/skills`.
+      await symlink(path.join(root, ".claude", "loop"), claudeSkills, "dir");
+      await symlink(claudeSkills, path.join(root, ".claude", "loop"), "dir");
+
+      const found = await finding(root);
+      expect(found?.message).toContain("the integration directory is a symlink cycle");
+      // Once for the directory, not once per wrapper under it.
+      expect(found?.message.match(/the integration directory is a symlink cycle/g)).toHaveLength(1);
     });
   });
 });

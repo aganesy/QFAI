@@ -84,6 +84,18 @@ function isMissing(error: unknown): boolean {
  */
 const INIT_MARKER_SIGNATURE = ".qfai/assistant/";
 
+/**
+ * The rest of the signature: a title `qfai init` writes and the section every
+ * one of these READMEs has.
+ *
+ * One mention of `.qfai/assistant/` is not a signature — a project documenting
+ * where it keeps its own QFAI tree writes that sentence, and one of those made a
+ * checkout that never ran init read as initialised, with all six surfaces then
+ * reported missing. All three parts together are init's.
+ */
+const INIT_MARKER_TITLE = /^# QFAI /;
+const INIT_MARKER_SECTION = "## Canonical entrypoint";
+
 const INIT_MARKERS: readonly (readonly string[])[] = [
   [".agents", "README.md"],
   [".codex", "README.md"],
@@ -265,7 +277,12 @@ async function hasInitSignature(filePath: string): Promise<boolean> {
     if (isMissing(error)) return null;
     throw error;
   });
-  return body !== null && body.includes(INIT_MARKER_SIGNATURE);
+  return (
+    body !== null &&
+    INIT_MARKER_TITLE.test(body) &&
+    body.includes(INIT_MARKER_SECTION) &&
+    body.includes(INIT_MARKER_SIGNATURE)
+  );
 }
 
 /**
@@ -418,15 +435,31 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
   }
 
   const wrappers = wrapperSet(root, skills, agents);
+  // An integration directory that is itself a symlink cycle. `lstat` on every
+  // wrapper under it raises `ELOOP` — the final component is not followed, but
+  // the path to it is — and propagating that ended `qfai validate` with a stack
+  // trace instead of a `QFAI-LINK-001`. It is the same structural damage the
+  // wrapper target and the nested `SKILL.md` already report, one level up, so
+  // it is reported the same way: once for the directory, not once per wrapper
+  // that cannot be reached through it.
+  const cyclicDirs = new Set<string>();
+  await Promise.all(
+    INTEGRATION_SURFACE_DIRS.map(async (dir) => {
+      if ((await canonicalState(path.join(root, ...dir.split("/")))) === "cycle") {
+        cyclicDirs.add(dir);
+      }
+    }),
+  );
   // A wrapper that exists but cannot be stat'd is a filesystem failure and must
   // not read as one that was never created.
   const links = await Promise.all(
-    wrappers.map((wrapper) =>
-      lstat(wrapper.absolute).catch((error: unknown) => {
+    wrappers.map(async (wrapper) => {
+      if (cyclicDirs.has(wrapper.dir)) return null;
+      return lstat(wrapper.absolute).catch((error: unknown) => {
         if (isMissing(error)) return null;
         throw error;
-      }),
-    ),
+      });
+    }),
   );
   // Has `qfai init` ever run here? Judged across **all** the integration
   // surfaces, not per directory. Per directory it could not see a directory
@@ -461,6 +494,9 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
   const missingDirs = new Set<string>();
   if (initialised) {
     for (const dir of INTEGRATION_SURFACE_DIRS) {
+      // A cyclic one is reported as damage below, not as absence: `readdir`
+      // raises `ELOOP` on it, which this probe deliberately propagates.
+      if (cyclicDirs.has(dir)) continue;
       if ((await readDirOrNull(path.join(root, ...dir.split("/")))) === null) {
         missingDirs.add(dir);
       }
@@ -469,6 +505,13 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
 
   const broken: Broken[] = [];
   const damagedCanonicals = new Set<string>();
+  if (initialised) {
+    for (const dir of INTEGRATION_SURFACE_DIRS) {
+      if (cyclicDirs.has(dir)) {
+        broken.push({ relative: dir, detail: "the integration directory is a symlink cycle" });
+      }
+    }
+  }
 
   // Nothing to say about a project that never ran init. Every wrapper path is
   // then a path it owns, and reporting one — a directory of its own under a

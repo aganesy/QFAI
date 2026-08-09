@@ -503,6 +503,12 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A cyclic integration directory is reported, not thrown.** `lstat` on
+  every wrapper under it raises `ELOOP`, and propagating that ended
+  `qfai validate` with a stack trace instead of a finding.
+- **An init marker is matched on a full signature.** One mention of
+  `.qfai/assistant/` is what a project documenting its own QFAI tree writes,
+  and it made a checkout that never ran init read as initialised.
 - **A flattened wrapper is matched byte-exactly.** `path.normalize` accepted
   `../../.qfai/assistant/./skills/<id>` — not what git writes — so a project's
   own note at that path made a checkout that never ran init read as
