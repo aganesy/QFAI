@@ -226,8 +226,12 @@ describe("the DR-ID column definition covers the reset row", () => {
         path.join(repoRoot, tree, "assistant/skills/qfai-implement/references/execution-ledger.md"),
         "utf-8",
       );
+      // The enumeration was itself too narrow: the list declares itself
+      // complete and prohibits every unlisted edge, so naming five sources
+      // forbade the sweep for a row at `blocked` or `review-fix` — the two
+      // statuses `drift-protocol.md` step 5 is most likely to find in flight.
       expect(skill).toContain(
-        "- `red` | `green` | `refactor` | `done` | `exception` -> `todo` — **upstream\n  reset**, the only legal reopen, available from every status a row can hold.",
+        "- **Any status** -> `todo` — **upstream reset**, the only legal reopen,\n  available from every status a row can hold, `blocked` and `review-fix`\n  included.",
       );
       expect(skill).toContain(
         "A row swept out of `exception`\n  keeps the anomaly's DR-ID alongside the reset ID.",
