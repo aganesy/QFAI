@@ -13,9 +13,15 @@ import path from "node:path";
 
 import type { ReportTddCoverage, ReportTddCoverageSpec } from "./report.js";
 import type { SpecEntry } from "./specLayout.js";
-import { parseFirstMarkdownTable, resolveTestCaseTable } from "./specPackParsers.js";
+import { collectTestCaseIds } from "./testCaseCoverageTargets.js";
+import { maskNonSpecRegions, parseFirstMarkdownTable } from "./specPackParsers.js";
 import {
-  isCoverageTargetLevel,
+  collectIncompleteLedgerTables,
+  collectLedgerTables,
+  isCoverageBearingRow,
+  isRowShapeChecked,
+  isWellFormedTcRef,
+  TDD_LEDGER_REQUIRED_COLUMNS,
   TDD_DONE_STATUSES,
   TDD_IN_REVIEW_STATUSES,
   splitTcRefs,
@@ -28,56 +34,50 @@ export async function collectTddCoverage(
   const specs: ReportTddCoverageSpec[] = [];
 
   for (const entry of entries) {
-    const testCasesPath = path.join(entry.dir, "06_Test-Cases.md");
-    let tcContent: string;
-    try {
-      tcContent = await readFile(testCasesPath, "utf-8");
-    } catch {
-      continue;
-    }
+    // The collector `validateTddList` decides coverage obligations from. The
+    // report used to build its own set from the *first* `TC-ID` table alone and
+    // skip the spec entirely when that table did not resolve, so a heading-form
+    // spec (`## TC-0001` + `- Level: L1`) disappeared from the report while the
+    // gate demanded a ledger row for every TC in it, and a TC declared in a
+    // second table was gated but never counted.
+    const { unitComponentTcIds, fileMissing, unresolved } = await collectTestCaseIds(entry.dir);
+    // A spec with no `06_Test-Cases.md` is omitted rather than printed as a
+    // zero row: the report would otherwise claim a document that does not
+    // exist declares nothing, which is not the same statement.
+    if (fileMissing) continue;
 
-    // Section-scoped, mirroring `tddList.collectTestCaseIds`: reading the
-    // first table in document order let an explanatory table above the
-    // `## Test Case Table` heading hijack the TC set.
-    const tcResolution = resolveTestCaseTable(tcContent);
-    if (!tcResolution.table) continue;
-    const tcTable = tcResolution.table;
-    const tcHeaders = tcTable.headers.map((h) => h.trim());
-    const tcIdIdx = tcHeaders.indexOf("TC-ID");
-    const levelIdx = tcHeaders.indexOf("Level");
-
-    const unitComponentTcIds = new Set<string>();
-    for (const row of tcTable.rows) {
-      const tcId = (row[tcIdIdx] ?? "").trim().toUpperCase();
-      if (tcId.length === 0) continue;
-      if (levelIdx >= 0) {
-        const level = (row[levelIdx] ?? "").trim().toLowerCase();
-        if (!isCoverageTargetLevel(level)) continue;
-      }
-      // Reaches here when: (a) Level is a coverage target, or (b) Level column is absent (fallback: all TCs)
-      unitComponentTcIds.add(tcId);
-    }
-
-    if (unitComponentTcIds.size === 0) {
-      specs.push({
-        specNumber: entry.specNumber,
-        unitComponentTotal: 0,
-        doneCount: 0,
-        inReviewCount: 0,
-        exceptionCount: 0,
-        openCount: 0,
-        blockedCount: 0,
-        missingTcRefs: [],
-        exceptionRows: [],
-      });
-      continue;
-    }
+    // An empty coverage set used to end the spec here. It cannot: the
+    // parked-row roll-call does not depend on that set, and a spec whose TCs
+    // are all L3-L5 can still hold `Status=exception` rows that
+    // `TDDLIST_EXCEPTION_PARKED` names. Ending early printed the spec with no
+    // parked rows beside a gate that had just listed them.
+    //
+    // An unresolved `06_Test-Cases.md` is a third state, not an empty one:
+    // the validator reports `TDDLIST_TC_TABLE_UNRESOLVED` and skips coverage,
+    // so `0 / 0` here would be a claim nothing supports.
+    const unassessableReason =
+      unresolved === undefined
+        ? undefined
+        : unresolved === "no-table"
+          ? "06_Test-Cases.md has no TC-ID table under its Test Case Table section"
+          : "the Test Case Table has no TC-ID column";
 
     const tddListPath = path.join(entry.dir, "tdd", "test-list.md");
     let tddContent: string;
     try {
       tddContent = await readFile(tddListPath, "utf-8");
     } catch {
+      if (unassessableReason !== undefined) {
+        // Counts omitted on the same terms as every other unassessable
+        // branch: the type says a spec carries counts or a reason, never
+        // both, and `report --format json` publishes whatever is here.
+        specs.push({
+          specNumber: entry.specNumber,
+          unassessable: unassessableReason,
+          exceptionRows: [],
+        });
+        continue;
+      }
       specs.push({
         specNumber: entry.specNumber,
         unitComponentTotal: unitComponentTcIds.size,
@@ -92,8 +92,58 @@ export async function collectTddCoverage(
       continue;
     }
 
-    const tddTable = parseFirstMarkdownTable(tddContent);
-    if (!tddTable) {
+    // Every ledger table, through the reader `validateTddList` scores coverage
+    // with. Reading the first table alone made `qfai report` and `qfai validate`
+    // give two answers about one file: `/qfai-implement` appends a table per
+    // change request, so a `done` L1/L2 row in an appended section passed
+    // validation while the report printed the TC as missing and open. A CI
+    // progress figure that contradicts the gate blocking the same branch is
+    // worse than no figure. Non-spec regions are masked and the ledger schema is
+    // required by the same reader, so a fenced template no longer inflates the
+    // report either.
+    const ledgerTables = collectLedgerTables(tddContent);
+
+    // The validator stops at Check 3 when the ledger's *first* table is
+    // missing a required column, so nothing past it — statuses, evidence,
+    // test files — is ever checked. `collectLedgerTables` skips that table
+    // and happily scores the schema-complete ones below it, which let the
+    // report print `open: 0` for a file the gate had refused to validate at
+    // all. The report shares the condition rather than the verdict: it does
+    // not re-run the check, it declines to publish progress the gate has not
+    // accepted.
+    const firstTable = parseFirstMarkdownTable(maskNonSpecRegions(tddContent));
+    const firstTableIsLedger =
+      firstTable !== null &&
+      TDD_LEDGER_REQUIRED_COLUMNS.every((column) =>
+        firstTable.headers.some((header) => header.trim() === column),
+      );
+    // An incomplete *later* table counts too. The validator reports it as
+    // `TDDLIST_REQUIRED_COLUMN_MISSING`, and `collectLedgerTables` drops it —
+    // so scoring the remaining tables published `done: 1 / open: 0` while the
+    // gate was failing on the rows that table holds. The report declines to
+    // publish whenever the gate has said the ledger is not fully readable.
+    const incompleteTables = collectIncompleteLedgerTables(tddContent);
+    const ledgerUnvalidated =
+      unassessableReason ??
+      (firstTable !== null && !firstTableIsLedger
+        ? "the first table in tdd/test-list.md is missing required columns, so validate stops before checking the ledger"
+        : incompleteTables.length > 0
+          ? `a ledger table in tdd/test-list.md is missing required columns (${incompleteTables[0]?.missing.join(", ") ?? ""}), so its rows are not read`
+          : undefined);
+
+    if (ledgerTables.length === 0) {
+      if (ledgerUnvalidated !== undefined) {
+        // Counts omitted, on the same terms as the branch below: the sole
+        // table in a one-table ledger can be the malformed one, and printing
+        // `open: N` for a file the validator stopped checking at Check 3
+        // publishes progress nothing accepted — in JSON as well as markdown.
+        specs.push({
+          specNumber: entry.specNumber,
+          unassessable: ledgerUnvalidated,
+          exceptionRows: [],
+        });
+        continue;
+      }
       specs.push({
         specNumber: entry.specNumber,
         unitComponentTotal: unitComponentTcIds.size,
@@ -107,11 +157,6 @@ export async function collectTddCoverage(
       });
       continue;
     }
-    const tddHeaders = tddTable.headers.map((h) => h.trim());
-    const tcRefsIdx = tddHeaders.indexOf("TC-Refs");
-    const statusIdx = tddHeaders.indexOf("Status");
-    const tddIdIdx = tddHeaders.indexOf("TDD-ID");
-    const drIdIdx = tddHeaders.indexOf("DR-ID");
 
     const coveredTcIds = new Set<string>();
     const exceptionRows: Array<{ tddId: string; drId: string }> = [];
@@ -134,14 +179,46 @@ export async function collectTddCoverage(
       counts.set(tc, (counts.get(tc) ?? 0) + 1);
     };
 
-    for (const row of tddTable.rows) {
-      // A set, not a list: a row naming two children of the same parent would
-      // otherwise contribute that parent twice and never reach its row total.
-      const rowRefs = new Set<string>();
-      if (tcRefsIdx >= 0) {
-        const refs = splitTcRefs(row[tcRefsIdx] ?? "");
+    for (const [tableIndex, scan] of ledgerTables.entries()) {
+      const statusIdx = scan.headers.indexOf("Status");
+      const drIdIdx = scan.headers.indexOf("DR-ID");
+
+      for (const row of scan.table.rows) {
+        // The same rule the gate applies: every row of the first table,
+        // including a malformed one with no `TDD-ID`, and only real entries
+        // past it. Asking `isLedgerRow` everywhere dropped a first-table
+        // `exception` row with an empty id out of the roll-call while
+        // `TDDLIST_EXCEPTION_PARKED` still named it by position.
+        if (!isRowShapeChecked(scan, row, tableIndex)) continue;
+        const status = statusIdx >= 0 ? (row[statusIdx] ?? "").trim().toLowerCase() : "";
+
+        // The parked-row roll-call, before the coverage question is asked.
+        // `TDDLIST_EXCEPTION_PARKED` names every `exception` row whatever its
+        // `Layer`, and this block is what the report prints beside it; running
+        // it through the coverage predicate dropped every API/E2E parked row
+        // out of the report while the gate still named it.
+        if (status === "exception") {
+          exceptionRows.push({
+            tddId: (row[scan.tddIdIndex] ?? "").trim(),
+            drId: drIdIdx >= 0 ? (row[drIdIdx] ?? "").trim() : "",
+          });
+        }
+
+        // Everything below is a coverage claim, so the narrower predicate
+        // applies: a `TC-*` on an E2E/API row is a placement the ledger schema
+        // forbids, and counting it would print progress the gate does not
+        // recognise.
+        if (!isCoverageBearingRow(scan, row)) continue;
+        // A set, not a list: a row naming two children of the same parent would
+        // otherwise contribute that parent twice and never reach its row total.
+        const rowRefs = new Set<string>();
+        const refs = splitTcRefs(row[scan.tcRefsIndex] ?? "");
         for (const ref of refs) {
           const upper = ref.toUpperCase();
+          // The same shape rule the gate applies. Without it a malformed
+          // `TC-0001-0001-0001` resolved to the real parent here and printed
+          // `done: 1 / open: 0` for a TC the gate was reporting as uncovered.
+          if (!isWellFormedTcRef(upper)) continue;
           coveredTcIds.add(upper);
           rowRefs.add(upper);
           const parent = resolveParentTcId(upper);
@@ -150,25 +227,20 @@ export async function collectTddCoverage(
             rowRefs.add(parent);
           }
         }
-      }
-      for (const tc of rowRefs) bump(rowsPerTc, tc);
+        for (const tc of rowRefs) bump(rowsPerTc, tc);
 
-      const status = statusIdx >= 0 ? (row[statusIdx] ?? "").trim().toLowerCase() : "";
-      if (TDD_DONE_STATUSES.has(status)) {
-        for (const tc of rowRefs) bump(doneRowsPerTc, tc);
-      }
-      if (status === "blocked") {
-        for (const tc of rowRefs) bump(blockedRowsPerTc, tc);
-      }
-      if (TDD_IN_REVIEW_STATUSES.has(status)) {
-        for (const tc of rowRefs) bump(inReviewRowsPerTc, tc);
-      }
-      if (status === "exception") {
-        for (const tc of rowRefs) bump(exceptionRowsPerTc, tc);
-        exceptionRows.push({
-          tddId: tddIdIdx >= 0 ? (row[tddIdIdx] ?? "").trim() : "",
-          drId: drIdIdx >= 0 ? (row[drIdIdx] ?? "").trim() : "",
-        });
+        if (TDD_DONE_STATUSES.has(status)) {
+          for (const tc of rowRefs) bump(doneRowsPerTc, tc);
+        }
+        if (status === "blocked") {
+          for (const tc of rowRefs) bump(blockedRowsPerTc, tc);
+        }
+        if (TDD_IN_REVIEW_STATUSES.has(status)) {
+          for (const tc of rowRefs) bump(inReviewRowsPerTc, tc);
+        }
+        if (status === "exception") {
+          for (const tc of rowRefs) bump(exceptionRowsPerTc, tc);
+        }
       }
     }
 
@@ -216,6 +288,19 @@ export async function collectTddCoverage(
     const openCount =
       unitComponentTcIds.size -
       Array.from(unitComponentTcIds).filter((id) => accountedTcIds.has(id)).length;
+
+    if (ledgerUnvalidated !== undefined) {
+      // Counts are omitted, not zeroed: `report --format json` serializes this
+      // object verbatim, so leaving them in published progress computed from
+      // rows the validator never accepted — the markdown formatter hid them
+      // and the machine-readable one did not, which is the worse half.
+      specs.push({
+        specNumber: entry.specNumber,
+        unassessable: ledgerUnvalidated,
+        exceptionRows,
+      });
+      continue;
+    }
 
     specs.push({
       specNumber: entry.specNumber,
