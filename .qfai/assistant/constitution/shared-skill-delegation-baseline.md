@@ -314,23 +314,30 @@ post-escalation verification review of a user-named fix.
   file-level manifest alone is ambiguous, and two readers hashing different
   extents produce a verdict that is either always stale or never checked. One
   procedure, in four steps:
-  1. **Extract.** The row's `### <TDD-ID>` section of the evidence file its
-     `Layer` owns: the heading line through the line before the next `###`
-     heading that **names a `TDD-` id**, or the next `##` / `#` heading, or end
-     of file. Ending at any `###` cut the row's own `### Round N` blocks out of
-     the subject — and a rework's RED, GREEN and proof live there, so a PASS
-     survived every edit to the very evidence it was given for. Then drop
-     **every field written after the hash is taken** — the whole
-     **gate-completed** group `qfai-implement/SKILL.md` names (`Spec review`,
-     `Code quality review`, `Prototype parity`,
-     `Checkpoint verification command` / `result`) **and the `qa-gatekeeper`
-     RED / GREEN observation verdicts**, with any lines indented under them.
-     What is left is what the reviewer read. The group is the rule, not a list
-     to keep in step by hand: dropping only the two code-review verdicts left
-     the gatekeeper's PASS in — it hashes the entry and then writes into it, so
-     its own verdict was stale on recording — and leaving the checkpoint fields
-     in did the same to **both** reviewers on every ordinary item, the moment
-     the checkpoint ran.
+  1. **Extract — the fields this observation could read, named.** Not "the
+     section minus what is written later": the entry keeps growing after every
+     observation, so subtracting a list only moved the problem to the next
+     field added. The RED gatekeeper hashes an entry that has no GREEN yet, the
+     GREEN gatekeeper one that has no `Refactor verify`, and each was stale as
+     soon as the phase wrote on. **Three subjects, from the row's
+     `### <TDD-ID>` section** of the evidence file its `Layer` owns — the
+     heading line through the line before the next `###` heading that names a
+     `TDD-` id, or the next `##` / `#` heading, or end of file — each taking
+     only its own fields, in the order the contract lists them:
+     - **RED observation**: `TDD-ID`, `TC-ref`, `Revision`, `RED test hash`,
+       `RED revision` / `Falsifiability revision`, and the RED pair or the
+       falsifiability trio with `RED failure mode`.
+     - **GREEN observation**: the RED subject plus the GREEN pair and
+       `Oracle proof`.
+     - **Completion review** (`completion-reviewer` / `implementation-reviewer`):
+       the GREEN subject plus `Refactor verify command` / `result` and every
+       `### Round N` block the row carries.
+
+     A field absent at that point contributes nothing — it is not a placeholder
+     and not an error. Nothing written after an observation is in its subject,
+     which is what makes a verdict re-checkable at all: gate item 10 recomputes
+     each one against its own list.
+
   2. **Normalize.** LF line endings; strip trailing whitespace from every line;
      drop leading and trailing blank lines; end with exactly one newline.
   3. **Serialize.** One record per artifact — the repo-relative path, a NUL

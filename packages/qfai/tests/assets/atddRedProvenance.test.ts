@@ -895,11 +895,13 @@ describe.each(TREES)("%s (a gate must be executable by the routing it declares)"
   it("tells a project whose manifest predates the red phase what to do", async () => {
     // `qfai init --force` leaves `assistant/manifest/**` alone, so the skill
     // update can arrive without the phase it relies on.
+    // The detail moved to its own reference when the catalog joined routing
+    // as a thing that goes stale; the skill keeps the pointer.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain("## A project without the `red` phase");
-    expect(provenance).toContain(
-      "A missing phase is a stale manifest, never the gate not applying",
-    );
+    expect(provenance).toContain("references/stale-manifest.md");
+    const stale = flat(await read(tree, "assistant/skills/qfai-atdd/references/stale-manifest.md"));
+    expect(stale).toContain("A missing phase is a stale manifest, never the gate not applying");
   });
 
   it("requires a neutral seam response, not an empty one", async () => {
@@ -1294,8 +1296,10 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     );
     // Widened again: the checkpoint fields are appended after the reviewers
     // too, so the rule is the whole gate-completed group.
-    expect(baseline).toContain("**every field written after the hash is taken**");
-    expect(baseline).toContain("`qa-gatekeeper` RED / GREEN observation verdicts");
+    // Replaced by named per-observation subjects: no exclusion list can keep
+    // up with an entry that goes on growing.
+    expect(baseline).toContain("the fields this observation could read, named");
+    expect(baseline).toContain("**RED observation**");
   });
 
   it("names both transient observations where the rule is stated", async () => {
@@ -1337,6 +1341,65 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(provenance).toContain("under `Shared-artifact re-verify`");
     expect(provenance).toContain("**A row whose re-run fails is not re-verified**");
   });
+  it("gives the seam a body the selector can decode", async () => {
+    // A selector that decodes JSON before asserting raises a parse error on an
+    // empty body, which the admissibility rule rejects as a non-assertion
+    // failure — so the gate could not accept the RED and P1c stopped.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**schema-compatible neutral body**");
+    expect(provenance).toContain("Not an empty body");
+    expect(provenance).not.toContain("`NotImplementedError`) and an empty body");
+  });
+
+  it("re-takes the proof when a shared artifact could have weakened a test", async () => {
+    // A passing re-run says the earlier test still passes; it does not say the
+    // test still fails when the predicate it owns is broken, which is what a
+    // weakened helper or snapshot takes away.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**A passing re-run is not enough on a row that has a proof.**");
+    expect(provenance).toContain("re-run its original mutation");
+  });
+
+  it("names both stale manifests and how to bring them forward", async () => {
+    // `agent-catalog.yml` carries each role's `developer_instructions` — the
+    // reviewer's own contract — so an old one REVISEs correct handoffs and
+    // routing by hand does not help.
+    const stale = flat(await read(tree, "assistant/skills/qfai-atdd/references/stale-manifest.md"));
+    expect(stale).toContain("**Two files are stale, not one.**");
+    expect(stale).toContain("**Run `/qfai-configure`.**");
+    expect(stale).toContain("the catalog predates this contract");
+  });
+
+  it("moves the transient revision with a replaced test", async () => {
+    // `RED revision` / `Falsifiability revision` address the tree the
+    // observation ran against, which included the test as it was.
+    const reviewFix = flat(await read(tree, REVIEW_FIX));
+    expect(reviewFix).toContain("**The transient revision moves with it.**");
+    expect(reviewFix).toContain("one verdict, one re-taken proof, one revision, one manifest");
+  });
+
+  it("opens the next round for a fresh RED, not the reviewer's", async () => {
+    // The REVISE closed the round it was given on, so writing the rework into
+    // it mixed two cycles and no reader could tell which pair was audited.
+    const reviewFix = flat(await read(tree, REVIEW_FIX));
+    expect(reviewFix).toContain("**Which N.**");
+    expect(reviewFix).toContain("round `N+1` where `N` is the round the reviewer ruled on");
+    expect(reviewFix).not.toContain("keyed to the round the reviewer opened");
+  });
+
+  it("hashes what each observation could read, not the whole section", async () => {
+    // The entry keeps growing after every observation, so subtracting a list
+    // of later fields only moved the problem to the next field added.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("the fields this observation could read, named");
+    expect(baseline).toContain('Not "the section minus what is written later"');
+    expect(baseline).toContain("**RED observation**");
+    expect(baseline).toContain("**GREEN observation**");
+    expect(baseline).toContain("**Completion review**");
+  });
+
   it("writes the whole entry before the gate hashes it", async () => {
     // The gatekeeper hashes the phase-authored entry, and the test hash,
     // manifest and revision are inside that subject — written afterwards, they
@@ -1408,9 +1471,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const baseline = flat(
       await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
     );
-    expect(baseline).toContain("**every field written after the hash is taken**");
-    expect(baseline).toContain("`Checkpoint verification command` / `result`");
-    expect(baseline).toContain("The group is the rule, not a list to keep in step by hand");
+    // The gate-completed fields are simply not in any observation subject now.
+    expect(baseline).toContain("**Completion review**");
+    expect(baseline).toContain("Nothing written after an observation is in its subject");
   });
 
   it("records a shared-artifact re-verify on the row that caused it", async () => {
@@ -1462,11 +1525,10 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     );
     expect(baseline).toContain("**How to compute it, exactly.**");
     expect(baseline).toContain("the heading line through the line before the next");
-    // The row's own `### Round N` blocks are inside the subject: a rework's
-    // RED, GREEN and proof live there, so ending at any `###` let a PASS
-    // survive every edit to the very evidence it was given for.
-    expect(baseline).toContain("heading that **names a `TDD-` id**");
-    expect(baseline).toContain("cut the row's own `### Round N` blocks out of the subject");
+    // The row's own `### Round N` blocks are in the completion-review subject:
+    // a rework's RED, GREEN and proof live there.
+    expect(baseline).toContain("heading that names a `TDD-` id");
+    expect(baseline).toContain("every `### Round N` block the row carries");
     expect(baseline).toContain("strip trailing whitespace from every line");
     expect(baseline).toContain("Gate item 10 runs the same four steps");
   });

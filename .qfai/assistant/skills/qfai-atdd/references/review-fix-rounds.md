@@ -36,6 +36,17 @@ handoff of a `todo` row, so this one needs its own contract.
     moved under the RED" from "only production changed" — is discharged by
     naming the verdict that moved it.
 
+    **The transient revision moves with it.** `RED revision` on an
+    `observed-red` row, and `Falsifiability revision` on a `falsifiability` one,
+    address the tree the observation was taken against — which included the
+    test as it was. `evidence-revision.md` makes a later change to the test
+    invalidate exactly that evidence, so leaving them alone either stalls the
+    repair for ever or pairs an old observation with a new test hash. Record
+    the revision of the tree the re-taken proof ran against, in the same field,
+    marked `test-only replacement` with the verdict that asked for it. That is
+    what ties the replacement to the observation a consumer can check: one
+    verdict, one re-taken proof, one revision, one manifest.
+
     **Re-take the proof as well, on a row that has one.** A new hash over the
     old `Oracle proof` / falsifiability result says only that somebody edited
     the test; it does not say the _edited_ test still fails when the predicate
@@ -63,10 +74,19 @@ handoff of a `todo` row, so this one needs its own contract.
     and the branch above applies.
 
 - **Where it goes.** A `### Round N` block in
-  `.qfai/evidence/atdd-<spec-id>.md`, keyed to the round the reviewer opened,
-  in the shape `../../qfai-implement/references/round-evidence.md` defines.
-  Not a second `## Ledger rows advanced` entry: that section is the record of
-  a first handoff, and appending to it would read as one.
+  `.qfai/evidence/atdd-<spec-id>.md`, in the shape
+  `../../qfai-implement/references/round-evidence.md` defines. Not a second
+  `## Ledger rows advanced` entry: that section is the record of a first
+  handoff, and appending to it would read as one.
+
+  **Which N.** The REVISE closed the round it was given on, so a fresh RED
+  opens the **next** one — round `N+1` where `N` is the round the reviewer
+  ruled on. Writing it into the reviewer's own round mixed the original
+  cycle and the rework into one block, and then no reader could tell which
+  RED/GREEN pair the next reviewer audited. The no-round path above opens
+  none, so it leaves the numbering where it is. Name the number in the
+  handback either way.
+
 - **Handing back.** Return to `/qfai-implement` naming the round. The
   production fix and the re-review happen there, and the row leaves
   `review-fix` by that skill's own path. **A proof marked

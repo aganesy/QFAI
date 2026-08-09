@@ -54,7 +54,12 @@ Take the first that applies, and record which one in the evidence file.
       row's behaviour was implemented before its test failed, which is what
       branch 1 exists to prevent. Answer with a not-implemented sentinel the
       contract does not use (`501`, or `500` from an explicit
-      `NotImplementedError`) and an empty body. Routing resolves, the status
+      `NotImplementedError`) and a **schema-compatible neutral body** — the
+      shape the selector decodes, with the contracted predicate absent or at a
+      value the row does not own. Not an empty body: a selector that decodes
+      JSON before asserting raises a parse error, which the admissibility rule
+      a few lines below rejects as a non-assertion failure, so the gate could
+      not accept the RED and P1c stopped. Routing resolves, the status
       assertion fails on the predicate the row owns, and the RED is admissible.
       If the contract genuinely uses that sentinel too, pick another status
       outside its declared set — the requirement is that no assertion in this
@@ -305,7 +310,19 @@ it — and records that on itself.** The editing row already runs its own
 selector; run the earlier rows' selectors in the same pass and record them in
 **the editing row's** entry, under `Shared-artifact re-verify`: one line per
 earlier row naming its `TDD-ID`, the selector re-run, its result, and the
-artifact's new manifest and hash. **A row whose re-run fails is not
+artifact's new manifest and hash.
+
+**A passing re-run is not enough on a row that has a proof.** Weakening an
+assertion helper, a snapshot or an expected-value fixture leaves the earlier
+row's selector passing while making it tautological — and its recorded
+`Oracle proof` was taken against the artifact as it was, so it no longer shows
+what `qa-gatekeeper` requires: that the **current** test fails when the
+predicate the row owns is broken. For each affected row that carries one,
+re-run its original mutation — the one its `Oracle proof` plan or
+`Satisfied-by` names — under the changed artifact, capture the failure, revert,
+and record the restored GREEN, in the same `Shared-artifact re-verify` block.
+A row whose mutation no longer fails the test is the tautology this exists to
+catch, and the editing row does not reach `done` until it is repaired. **A row whose re-run fails is not
 re-verified** — it is a regression the editing row introduced, and the editing
 row does not reach `done` until it is fixed, exactly as any other failure in
 its own checkpoint.
@@ -349,17 +366,12 @@ which this stage does own
 
 ## A project without the `red` phase
 
-`npx qfai init --force` regenerates `assistant/skills/**` and `assistant/agents/**`
-but leaves `assistant/manifest/**` alone: those are the declarative files
-`qfai-configure` owns, and overwriting a project's adjusted agent taxonomy is
-the worse failure. So an existing project can take this skill's update without
-taking the `red` phase the update relies on.
-
-The gate still applies. Route `qa-gatekeeper` for the branch-1 rows by hand at
-P1b, and record in the evidence file that the phase was absent and the routing
-was manual. A missing phase is a stale manifest, never the gate not applying —
-and the same is true of the production owners `qfai-implement`'s red phase
-needs for step 3c.
+`npx qfai init --force` regenerates `assistant/skills/**` and
+`assistant/agents/**` but leaves `assistant/manifest/**` alone, so an existing
+project can take this skill's update without the `red` phase it relies on — and
+without the `agent-catalog.yml` role contracts the reviewers read. The gate
+still applies. What is stale, why routing it by hand is not enough on its own,
+and how to bring both files forward: `references/stale-manifest.md`.
 
 ## What the nested run owes
 

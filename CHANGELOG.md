@@ -488,6 +488,19 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **Each observation hashes the fields it could read.** Subtracting a list of
+  later-written fields only moved the problem to the next field added: the RED
+  gatekeeper hashes an entry with no GREEN in it yet, so its PASS went stale as
+  soon as the phase wrote on. Three named subjects instead.
+- **The seam returns a schema-compatible neutral body**, not an empty one — a
+  selector that decodes JSON first raises a parse error, which the
+  admissibility rule rejects.
+- **A weakened shared artifact re-takes the proof**, not just a passing re-run:
+  a passing test is not a discriminating one.
+- **Both stale manifests are named**, with a remediation — `agent-catalog.yml`
+  carries the reviewer contracts, so an old one REVISEs correct handoffs.
+- **A replaced test moves its transient revision**, and a fresh RED after a
+  REVISE opens round `N+1` rather than the round the reviewer closed.
 - **Step 3c writes the whole entry before the gate hashes it**, and reverts
   the mutation whatever the verdict — a REVISE left the broken predicate in
   the working tree for the next run to break again.
