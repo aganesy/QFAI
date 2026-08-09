@@ -78,12 +78,12 @@ function escapeForRegExp(value: string): string {
  * direction of a stale hand-mirror is a FALSE GREEN: a subcommand present in the
  * dispatch and missing here silently narrows tokens 7 and 8. Mirrored rather
  * than imported to keep this row's zero-production-change record; the guard
- * supplies what the import would have. "NO omissions" is that guard's measured
- * reach and not a hope — it holds for every `case ` LINE, including one whose
- * label the extractor cannot parse. Reach per LINE, not per label: the one
- * precondition the guard cannot enforce is recorded at its leg 2 rather than
- * restated here. Both tokens 7 and 8 take the FULL registry; token 8's note
- * carries the constraint that puts on the message.
+ * supplies what the import would have. "NO omissions" is that guard's MEASURED
+ * reach and not a hope, SCOPED ON BOTH SIDES: every `case` occurrence that
+ * whitespace FOLLOWS and no IDENTIFIER CHARACTER precedes, whatever else does and
+ * whether or not the label parses. What falls outside that, and the over-fire it
+ * costs, are at its leg 2 with the mutants for both. Tokens 7 and 8 take the FULL
+ * REGISTRY; token 8's note carries the constraint that puts on the message.
  */
 const CLI_SUBCOMMANDS = [
   "init",
@@ -182,16 +182,17 @@ const COMMAND_TOKENS: RegExp[] = [
   // the rule plus the LABEL: on `message` the equality pin is the closure, and
   // this token is a labelled restatement of requirement 4 standing beside it.
   //
-  // ITS FALSE-RED RISK IS BOUNDED BY THE EQUALITY PIN, and the bound holds because
-  // `message` is now this token's ONLY haystack — that scope is the whole of the
-  // argument, so it is stated rather than left to be inferred. The bound is a
-  // PROOF, not a measurement: any `message` differing from `expectedMessage`
-  // already reddens the pin, and `expectedMessage` itself is token-clean (measured
-  // every round), so this token can only ADD a labelled failure beside a red the
-  // pin has already raised — never raise a lone one. While the sweep existed the
-  // same token object also governed `title` and `details`, which no test pins, and
-  // there the bound did NOT hold: a contract-compliant retitle produced exactly
-  // that lone false RED.
+  // ITS FALSE-RED RISK IS BOUNDED BY THE EQUALITY PIN ONLY WHERE THE TWO SIDES CAN
+  // DIFFER — not the PROOF this note used to claim. Any `message` differing from
+  // `expectedMessage` reddens the pin, and the composed SENTENCES are token-clean
+  // (measured each round), so over them this token can only ADD a labelled failure
+  // beside an existing red. Over the INTERPOLATED HOST PATH it bounds NOTHING, both
+  // sides carrying it identically: measured, the row run from a checkout named `my
+  // init copy` leaves the pin GREEN and reddens this token ALONE (`1 failed`, one
+  // AssertionError, its own), the lookbehind excluding whitespace and the lookahead
+  // blocking only `\`, `/` and `@` — token 1's space-in-path over-fire above, one
+  // segment wider. The sweep-era bound over `title` and `details` failed the same
+  // way; NEITHER IS PINNED HERE, though `details.modified` is, by the drift suite.
   //
   // CONSTRAINT ON THE MESSAGE, recorded as token 1's is: it may not use those
   // three as BARE WORDS. The shipped text says "reports", which the trailing `\b`
@@ -399,23 +400,21 @@ describe(
 
       // REQUIREMENT 4 — no imperative naming a `qfai` subcommand as the repair —
       // over `message`, the surface the contract scopes it to. Each token's source
-      // is in the label, so a failure names which token fired. The label admits
-      // token 1's known false positive because otherwise it MISDESCRIBES its own
-      // failure: on prose that names no command but puts a word straight after the
-      // product name, "must name no command" is a true statement about a message
-      // the token just rejected.
+      // is in the label, and the label admits BOTH known false positives, because
+      // one that omits them MISDESCRIBES its own failure: token 1 fires on a word
+      // straight after the product name, token 8 on a subcommand word standing
+      // alone in the HOST PATH the message interpolates (measured at its note).
       //
       // ITS HAYSTACK IS `findings[0].message` AND NOTHING ELSE, which the label
-      // states rather than leaving to be inferred from the code on a red: a SECOND
-      // registration's message is swept by nothing in this file. Held by
-      // `toHaveLength(1)` above, so there is no false GREEN — measured, a duplicate
-      // command-bearing registration yields exactly that one failure and the three
-      // token observations are LOST, not silently passed.
+      // states: a SECOND registration's message is swept by nothing here, and
+      // `toHaveLength(1)` above is what reddens for it. The three token observations
+      // are not LOST when that happens — measured, they RAN against `findings[0]` and
+      // PASSED; WHICH registration that is stays order-dependent, and UNMEASURED.
       for (const token of COMMAND_TOKENS) {
         expect
           .soft(
             message,
-            `no refresh command exists, so the repair text must name no command — this sweep reads findings[0].message ONLY, so a second registration is held by the length assertion above and not by this one; token 1 also fires on a word placed straight after the product name, which is a known false positive, not a violation: token /${token.source}/ matched`,
+            `no refresh command exists, so the repair text must name no command — this sweep reads findings[0].message ONLY, so a second registration is held by the length assertion above and not by this one; two KNOWN FALSE POSITIVES are not violations: token 1 fires on a word placed straight after the product name, and token 8 on a subcommand word standing alone inside the interpolated host path: token /${token.source}/ matched`,
           )
           .not.toMatch(token);
       }
@@ -452,7 +451,9 @@ describe(
       // mirror — and it avoids a FALSE RED the day a legitimate label carries a
       // digit, which the narrow class would report as an extraction failure
       // forever.
-      const dispatched = [...source.matchAll(/^\s*case "([\w-]+)":/gm)].map((match) => match[1]);
+      const dispatched = [...source.matchAll(/(?:^|[^\w$])case\s+"([\w-]+)":/gm)].map(
+        (match) => match[1],
+      );
 
       // NON-VACUITY, two legs, neither of which covers the other's failure.
       //
@@ -470,21 +471,24 @@ describe(
       // rather than a pinned number, so it cannot go stale when a subcommand
       // retires.
       //
-      // "TOTAL" IS TOTAL PER LINE, NOT PER LABEL, and that is a PRECONDITION THIS
-      // GUARD DOES NOT ENFORCE: both legs are line-anchored (`^\s*case `), so a
-      // single line carrying TWO labels is counted once and captured once and both
-      // legs stay green while the second label is dispatched and absent from the
-      // mirror. Measured: `case "init": case "zzz":` leaves this row at `2 passed`,
-      // exit 0, with `zzz` reachable (prod `0964f3b3`) — a FALSE GREEN, and the one
-      // the count leg was supposed to make impossible. ONE `case` LABEL PER LINE is
-      // therefore a precondition held by `pnpm format:check`, which rejects that
-      // form (measured: `prettier -c src/cli/main.ts` exits 1 on it), and not by
-      // anything in this file. Do not restate it as an assertion here: a
-      // line-anchored guard cannot see the property it would need to check.
+      // "TOTAL" IS PER `case` OCCURRENCE, NOT PER LINE, which is what the
+      // `(?:^|[^\w$])` prefix buys and the earlier `^\s*case ` did not: a same-line
+      // leading comment removed the label from BOTH legs at once, leaving them
+      // mutually consistent at 10 while the label stayed dispatched. Measured on
+      // prod `e836ae40` (`/* istanbul ignore next */ case "zzz":`, base `27326793`):
+      // `2 passed`, exit 0, ZERO AssertionErrors, `zzz` falling through into the
+      // init body — and `prettier -c` AND `eslint --max-warnings 0` BOTH exit 0, so
+      // the format:check mitigation this note used to name is STRUCK; it holds only
+      // for the two-labels-on-one-line form (prod `0964f3b3`, prettier exit 1). The
+      // WIDENED PAIR reddens the coverage leg naming `zzz` on both. WHAT STAYS
+      // OUTSIDE, measured not argued: `case"zzz":` unspaced defeats both legs again
+      // (prod `f433a280`, prettier exit 1 there), and the count leg now fires on ANY
+      // `case` before whitespace, so prose in `main.ts` carrying the word raises a
+      // FALSE RED (prod `2bd40b19`) — it carries none today.
       expect(
         dispatched.length,
-        "every `case ` line in src/cli/main.ts's dispatch must be extractable, or this guard covers only the labels it happened to parse",
-      ).toBe((source.match(/^\s*case /gm) ?? []).length);
+        "every `case ` occurrence in src/cli/main.ts's dispatch must be extractable, or this guard covers only the labels it happened to parse",
+      ).toBe((source.match(/(?:^|[^\w$])case\s/gm) ?? []).length);
 
       const missing = dispatched.filter((name) => !CLI_SUBCOMMANDS.some((known) => known === name));
       expect(
