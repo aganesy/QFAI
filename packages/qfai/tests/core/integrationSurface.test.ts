@@ -749,6 +749,49 @@ describe("a type collision is reported wherever it sits on the path", () => {
   });
 });
 
+describe("an integration directory that is a symlink is not a directory", () => {
+  it("reports an empty external surface instead of passing it", async () => {
+    // The wrappers under it carry relative targets, so they resolve against
+    // wherever it physically is. Empty, there are no wrappers to reach the
+    // realpath check — it read as healthy while `qfai init` filled the
+    // external location and the link resolved outside the project.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const outside = path.join(root, "elsewhere");
+      await mkdir(outside, { recursive: true });
+      const claudeSkills = path.join(root, ".claude", "skills");
+      await rm(claudeSkills, { recursive: true, force: true });
+      await symlink(outside, claudeSkills, "dir");
+
+      const found = await finding(root);
+      expect(found?.message).toContain("the integration directory is a symlink");
+    });
+  });
+});
+
+describe("a wrapper replaced by something other than a file", () => {
+  it("names the kind it found and gives a remedy that applies", async () => {
+    // A FIFO, socket or device is neither a directory nor a regular file, and
+    // calling one "regular file" sent the operator to advice about inspecting
+    // content first — which does not apply, and on a FIFO blocks.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      await rm(wrapper, { recursive: true, force: true });
+      await mkdir(wrapper, { recursive: true });
+
+      const found = await finding(root);
+      expect(found?.message).toContain("directory, not a symlink");
+      expect(found?.suggested_action).toContain("wrapper が symlink 以外");
+      expect(found?.suggested_action).toContain("--force");
+    });
+  });
+});
+
 describe("an integration directory can be a cycle rather than a directory", () => {
   it("reports it once instead of ending the run with ELOOP", async () => {
     // `lstat` on every wrapper under it raises `ELOOP` — the final component is
@@ -830,9 +873,11 @@ describe("a wrapper can spell the right target and land somewhere else", () => {
       );
 
       try {
-        // Swap the project's own wrapper *directory* for a link to the decoy's.
-        await rm(path.join(root, ".claude", "skills"), { recursive: true, force: true });
-        await symlink(claudeSkills, path.join(root, ".claude", "skills"), "dir");
+        // Swap the *parent* for a link to the decoy tree: `.claude/skills`
+        // stays a real directory, so the surface probe has nothing to say and
+        // only the resolved-path comparison can catch this.
+        await rm(path.join(root, ".claude"), { recursive: true, force: true });
+        await symlink(path.join(outside, ".claude"), path.join(root, ".claude"), "dir");
 
         const found = await finding(root);
         expect(found?.message).toContain("outside the project canonical");

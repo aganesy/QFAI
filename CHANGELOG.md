@@ -503,6 +503,13 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **An integration directory that is a symlink is reported.** The wrappers
+  under it carry relative targets, so they resolve against wherever it
+  physically is; empty, there were no wrappers to reach the resolved-path
+  check and it read as healthy while `qfai init` filled the external location.
+- **A wrapper replaced by something other than a file names its kind**, and
+  the remedy covers it — `qfai init` preserves a directory or a special file,
+  and "inspect the content first" does not apply to a FIFO.
 - **An unreadable document has a remedy that changes something.** `qfai init`
   skips both the wrapper (its target string is right) and the canonical asset
   (create-only), so the generic remedy left the operator with a check that

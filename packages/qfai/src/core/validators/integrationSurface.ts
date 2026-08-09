@@ -496,17 +496,31 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
   const damagedDirs = new Map<string, string>();
   await Promise.all(
     INTEGRATION_SURFACE_DIRS.map(async (dir) => {
-      const state = await canonicalState(path.join(root, ...dir.split("/")));
+      const absolute = path.join(root, ...dir.split("/"));
+      // `lstat` first: the wrappers under this directory carry **relative**
+      // targets, so they resolve against wherever it physically is. A symlink
+      // here points every one of them at an external tree — and when it is
+      // empty there are no wrappers to reach the realpath check, so it read as
+      // a healthy directory while `qfai init` filled the external location.
+      const state = await canonicalState(absolute);
       if (state.kind === "absent") return;
-      if (state.kind === "present") {
-        // A regular file where the directory belongs. `lstat` on every wrapper
-        // under it raises `ENOTDIR`, which is the same failure the cycle was.
-        if (!state.stats.isDirectory()) {
-          damagedDirs.set(dir, `the integration directory is a ${describeKind(state.stats)}`);
-        }
+      // A cycle or a dangling link is named for what it is before the plain
+      // "it is a symlink" rule below, which would otherwise bury the more
+      // specific damage under the more general one.
+      if (state.kind !== "present") {
+        damagedDirs.set(dir, describeDamage(state, "the integration directory"));
         return;
       }
-      damagedDirs.set(dir, describeDamage(state, "the integration directory"));
+      const own = await lstatOrNull(absolute);
+      if (own?.isSymbolicLink() === true) {
+        damagedDirs.set(dir, "the integration directory is a symlink");
+        return;
+      }
+      // A regular file where the directory belongs. `lstat` on every wrapper
+      // under it raises `ENOTDIR`, which is the same failure the cycle was.
+      if (!state.stats.isDirectory()) {
+        damagedDirs.set(dir, `the integration directory is a ${describeKind(state.stats)}`);
+      }
     }),
   );
   // A wrapper that exists but cannot be stat'd is a filesystem failure and must
@@ -624,11 +638,15 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
     }
 
     if (!link.isSymbolicLink()) {
+      // The kind it actually is. A FIFO, socket or device is neither a
+      // directory nor a regular file, and calling one "regular file" sent the
+      // operator to a remedy about inspecting content before moving it aside —
+      // which does not apply, and on a FIFO the inspection blocks.
       broken.push({
         relative: wrapper.relative,
-        detail: link.isDirectory()
-          ? "directory, not a symlink"
-          : `regular file (${String(link.size)} bytes)`,
+        detail: link.isFile()
+          ? `regular file (${String(link.size)} bytes), not a symlink`
+          : `${describeKind(link)}, not a symlink`,
       });
       continue;
     }
@@ -794,6 +812,7 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       [
         "`qfai init` を再実行すると、qfai が所有するこれらのパスは symlink として貼り直されます（`--force` は不要）。ただし内容が link target と一致しない通常ファイルは温存されるので、その場合は中身を確認してから退避してください。",
         "**integration directory 自体が壊れている場合（`the integration directory is …`）も init では直りません。** 外部 symlink 配下の wrapper は target 文字列が正しいので `ensureSymlink` が skip し、`--force` でも同じ外部ディレクトリの中に貼り直すだけです。cycle では親ディレクトリの作成が `ELOOP` で失敗します。該当する `.claude/skills` などのパスを退避（または削除）してから `qfai init` を実行してください。",
+        "**wrapper が symlink 以外（`directory, not a symlink` / `FIFO` / `socket` / `device`）の場合も init では直りません。** `ensureSymlink` はそれらを `skipped` として温存します。中身を確認できるもの（ディレクトリ）は退避してから `qfai init` を、特殊ファイルは削除してから `qfai init` を実行してください。`--force` は確認なしで削除するので、中身が要るかどうか分からないうちは使わないでください。",
         "**`unreadable` は権限の問題であり、init では直りません。** wrapper の target 文字列は正しいので `ensureSymlink` は skip し、canonical asset は create-only なので上書きもしません。該当ファイルの読み取り権限を戻してください（POSIX: `chmod u+r <path>`、Windows: `icacls <path> /grant <user>:R`）。CI で出た場合は、そのファイルを作成した job の umask / ACL 設定を確認してください。",
         "**canonical 側が壊れている場合（`resolves to a …, but …` / `its SKILL.md is …` / `symlink cycle`）は init では直りません。** canonical asset は create-only なので既存パスを skip し、`--force` でも `copyFile` / `mkdir` が型衝突で失敗します。該当する `.qfai/assistant/**` のパスを退避（または削除）してから `qfai init` を実行してください — 中身は失われるので、先に確認してください。",
         "根本原因が clone 時の平坦化である場合は、先に `git config --global core.symlinks true` を設定してください。repo-local 設定は clone に引き継がれないため、これを直さないと次の clone で同じ状態に戻ります。",
