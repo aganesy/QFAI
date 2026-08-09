@@ -148,9 +148,6 @@ async function skillIdsIn(skillsDir: string): Promise<Set<string>> {
  * probe both propagate a non-absence error; the probe that decides membership
  * has to as well, or the guarantee holds everywhere except where it is decided.
  */
-/** Alias kept for the two call sites that only ask "is it there". */
-const exists = fileExists;
-
 /** Whether the file can actually be read, not merely stat'd. */
 async function isReadable(filePath: string): Promise<boolean> {
   try {
@@ -162,6 +159,71 @@ async function isReadable(filePath: string): Promise<boolean> {
     if (isMissing(error)) return false;
     throw error;
   }
+}
+
+/**
+ * Whether this entry is one `qfai init` wrote — proof it ran here.
+ *
+ * Two shapes, both unmistakably QFAI's: a symlink spelling the target this
+ * wrapper names, and the flattened form of the same thing — a regular file
+ * whose whole content is that target, which is what a checkout with
+ * `core.symlinks = false` leaves behind. The flattened one has to count: it is
+ * the scenario this rule exists for, and refusing it would make a wholly
+ * flattened checkout read as never initialised.
+ *
+ * Nothing weaker. These directories are conventional and a shipped skill id can
+ * be a name a project chose for itself, so "an entry exists at the path" said a
+ * project that never ran init was initialised — and its own directory was then
+ * reported as a broken qfai link, along with every integration directory it had
+ * no reason to have.
+ */
+async function isInitEvidence(wrapper: Wrapper, link: Stats | null | undefined): Promise<boolean> {
+  if (link === null || link === undefined) return false;
+  const spelled = (value: string | null): boolean =>
+    value !== null && path.normalize(value) === path.normalize(wrapper.target);
+  if (link.isSymbolicLink()) {
+    return spelled(
+      await readlink(wrapper.absolute).catch((error: unknown) => {
+        if (isMissing(error)) return null;
+        throw error;
+      }),
+    );
+  }
+  // The flattened form is a small text file. The ceiling keeps the read off
+  // anything that is not link-shaped, exactly as `init.ts` does.
+  if (!link.isFile() || link.size > 4096) return false;
+  return spelled(
+    await readFile(wrapper.absolute, "utf-8").catch((error: unknown) => {
+      if (isMissing(error)) return null;
+      throw error;
+    }),
+  );
+}
+
+/**
+ * What is at a canonical document path: nothing, something, or a broken link.
+ *
+ * `access` follows the link, so a canonical replaced by a dangling symlink
+ * answered "absent" and its skill left the check altogether — no wrapper
+ * reported for it in any profile, and nothing else reads the canonical tree
+ * outside `full`. A cycle was worse: the `ELOOP` propagated and `qfai validate`
+ * exited with a stack trace.
+ */
+async function canonicalState(
+  filePath: string,
+): Promise<"absent" | "present" | "dangling" | "cycle"> {
+  let entry: Stats;
+  try {
+    entry = await lstat(filePath);
+  } catch (error) {
+    if (isMissing(error)) return "absent";
+    if ((error as NodeJS.ErrnoException | null)?.code === "ELOOP") return "cycle";
+    throw error;
+  }
+  if (!entry.isSymbolicLink()) return "present";
+  const resolved = await statOrNull(filePath);
+  if (resolved === "cycle") return "cycle";
+  return resolved === null ? "dangling" : "present";
 }
 
 /** Whether a README at `filePath` is one `qfai init` wrote. */
@@ -268,6 +330,8 @@ type Wrapper = {
   dir: string;
   /** Absolute path of the canonical document, for the "was it ever created" test. */
   canonical: string;
+  /** The same path, repo-relative and POSIX-separated, for a message. */
+  canonicalRelative: string;
 };
 
 function wrapperSet(root: string, skills: string[], agents: string[]): Wrapper[] {
@@ -283,6 +347,7 @@ function wrapperSet(root: string, skills: string[], agents: string[]): Wrapper[]
       kind,
       dir,
       canonical,
+      canonicalRelative: canonicalRel.join("/"),
     });
   };
 
@@ -352,8 +417,18 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
   // where the assistant can load nothing then passes every profile most
   // confidently. `qfai init` writes these READMEs beside the wrappers and never
   // removes them, so they outlive the links they document.
+  //
+  // And not "some entry exists at a wrapper path" either. These directories are
+  // conventional, and a shipped name can collide with one a project chose for
+  // itself — a `.agents/skills/web-research` of its own made a project that
+  // never ran `qfai init` read as initialised, and then every other integration
+  // directory was reported missing and every profile failed. Only a link init
+  // itself would have written counts: a symlink whose target is the one this
+  // wrapper names.
   const initialised =
-    links.some((link) => link !== null) ||
+    (
+      await Promise.all(wrappers.map((wrapper, index) => isInitEvidence(wrapper, links[index])))
+    ).some(Boolean) ||
     (
       await Promise.all(INIT_MARKERS.map((marker) => hasInitSignature(path.join(root, ...marker))))
     ).some(Boolean);
@@ -370,8 +445,13 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
   }
 
   const broken: Broken[] = [];
+  const damagedCanonicals = new Set<string>();
 
-  for (const [index, wrapper] of wrappers.entries()) {
+  // Nothing to say about a project that never ran init. Every wrapper path is
+  // then a path it owns, and reporting one — a directory of its own under a
+  // name a shipped skill happens to share — as a broken qfai link is a finding
+  // it cannot act on and did not ask for.
+  for (const [index, wrapper] of initialised ? wrappers.entries() : []) {
     const link = links[index] ?? null;
     if (link === null) {
       // Absent is "not created yet" **only before init has run**. Once it has,
@@ -379,11 +459,30 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       // wrapper too, so its absence is a deletion — and nothing else reported
       // it, because `validateSkillsIntegrity` reads the canonical tree
       // (unchanged) and runs under `full` alone.
-      if (initialised && !missingDirs.has(wrapper.dir) && (await exists(wrapper.canonical))) {
-        broken.push({
-          relative: wrapper.relative,
-          detail: `missing — ${toPosix(wrapper.dir)} exists and so does the document it wraps`,
-        });
+      if (initialised && !missingDirs.has(wrapper.dir)) {
+        // `lstat`, not `access`: `access` follows the link, so a canonical
+        // replaced by a dangling symlink answered "absent" and the skill left
+        // the check entirely — no wrapper reported, and nothing else looks at
+        // the canonical tree outside `full`. A cycle was worse: `ELOOP` came
+        // out of `access` and ended `qfai validate` with a stack trace.
+        const canonical = await canonicalState(wrapper.canonical);
+        if (canonical === "present") {
+          broken.push({
+            relative: wrapper.relative,
+            detail: `missing — ${toPosix(wrapper.dir)} exists and so does the document it wraps`,
+          });
+        } else if (canonical !== "absent" && !damagedCanonicals.has(wrapper.canonicalRelative)) {
+          // Once per canonical, not once per wrapper: four wrappers name the
+          // same document, and one damaged document is one thing to repair.
+          damagedCanonicals.add(wrapper.canonicalRelative);
+          broken.push({
+            relative: wrapper.canonicalRelative,
+            detail:
+              canonical === "cycle"
+                ? "canonical document is a symlink cycle"
+                : "canonical document is a dangling symlink",
+          });
+        }
       }
       continue;
     }

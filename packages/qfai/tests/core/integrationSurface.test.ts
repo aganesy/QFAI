@@ -98,6 +98,10 @@ const INIT_README_BODY = [
 const skillTarget = (dir: string, id: string): string =>
   path.join(...dir.split("/").map(() => ".."), ".qfai", "assistant", "skills", id);
 
+/** The link `init` writes for an agent wrapper, as a relative target. */
+const agentTarget = (dir: string, name: string): string =>
+  path.join(...dir.split("/").map(() => ".."), ".qfai", "assistant", "agents", `${name}.md`);
+
 /**
  * Real symlinks need Developer Mode or elevation on Windows. A machine without
  * either cannot exercise the healthy case at all, and failing there would say
@@ -258,13 +262,20 @@ describe("the integration surface is checked for links that did not survive chec
         const absolute = path.join(root, ...dir.split("/"));
         await mkdir(absolute, { recursive: true });
         for (const id of skills) {
-          await writeFile(path.join(absolute, id), "target", "utf-8");
+          // The flattened form git actually leaves: the file content IS the
+          // link target. Arbitrary content at a wrapper path is a file the
+          // project owns, and this rule no longer claims those.
+          await writeFile(path.join(absolute, id), skillTarget(dir, id), "utf-8");
         }
       }
       for (const { dir, suffix } of AGENT_INTEGRATION_CONFIGS) {
         const absolute = path.join(root, ...dir.split("/"));
         await mkdir(absolute, { recursive: true });
-        await writeFile(path.join(absolute, `qa-gatekeeper${suffix}`), "target", "utf-8");
+        await writeFile(
+          path.join(absolute, `qa-gatekeeper${suffix}`),
+          agentTarget(dir, "qa-gatekeeper"),
+          "utf-8",
+        );
       }
 
       // Four skill directories x two skills, plus two agent directories.
@@ -586,6 +597,55 @@ describe("the init marker has to be QFAI's own", () => {
       await writeFile(path.join(root, ".agents", "README.md"), "# our agents\n", "utf-8");
 
       await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
+});
+
+describe("a project's own entry is not proof init ran", () => {
+  it("says nothing about a directory a project made for itself", async () => {
+    // These directories are conventional and a shipped skill id can be a name
+    // a project chose. Counting "an entry exists at a wrapper path" made a
+    // project that never ran `qfai init` read as initialised, and every other
+    // integration directory was then reported missing.
+    await withProject(async (root) => {
+      await seedCanonical(root, ["web-research"], []);
+      // Their own skill, at a path a shipped wrapper would occupy, and their
+      // own README beside it — with none of init's signature in either.
+      const own = path.join(root, ".agents", "skills", "web-research");
+      await mkdir(own, { recursive: true });
+      await writeFile(path.join(own, "notes.md"), "# ours\n", "utf-8");
+      await writeFile(path.join(root, ".agents", "README.md"), "# our agents\n", "utf-8");
+
+      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
+});
+
+describe("a canonical document can be broken rather than absent", () => {
+  it("reports a canonical replaced by a dangling symlink", async () => {
+    // `access` follows the link, so this answered "absent" and the skill left
+    // the check altogether — no wrapper reported for it in any profile, while
+    // nothing else reads the canonical tree outside `full`.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      // Init ran (the wrappers prove it), then this skill's wrappers went and
+      // its canonical was replaced by a link to nothing.
+      for (const dir of SKILL_INTEGRATION_DIRS) {
+        await rm(path.join(root, ...dir.split("/"), "qfai-atdd"), { recursive: true, force: true });
+      }
+      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      await rm(canonical, { recursive: true, force: true });
+      await symlink(path.join(root, ".qfai", "assistant", "skills", "gone"), canonical, "dir");
+      // One wrapper of another shipped skill survives, so init is still proven.
+      await seedCanonical(root, ["qfai-verify"], []);
+      await wireAll(root, ["qfai-verify"], []);
+
+      const found = await finding(root);
+      expect(found?.message).toContain("canonical document is a dangling symlink");
+      // Once for the document, not once for each of the four wrappers.
+      expect(found?.message.match(/canonical document is a dangling symlink/g)).toHaveLength(1);
     });
   });
 });

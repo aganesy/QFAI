@@ -503,6 +503,15 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **Only an entry init itself wrote counts as proof it ran.** These
+  directories are conventional and a shipped skill id can be a name a project
+  chose, so a project's own `.agents/skills/web-research` made a checkout that
+  never ran `qfai init` read as initialised — and its own directory was then
+  reported as a broken qfai link, with every other surface reported missing.
+- **A broken canonical document is reported, not skipped.** `access` follows
+  the link, so a canonical replaced by a dangling symlink answered "absent"
+  and its skill left the check altogether; a cycle propagated `ELOOP` and
+  ended `qfai validate` with a stack trace.
 - **An init marker must be a regular file.** These paths are create-only, so
   whatever the project already had survives; a directory made `readFile` throw
   `EISDIR` and reject the whole probe, losing the finding a valid marker
