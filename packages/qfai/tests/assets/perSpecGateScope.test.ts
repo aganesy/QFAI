@@ -86,6 +86,21 @@ describe.each(TREES)("%s", (tree) => {
     expect(checklist).toContain("do **not** claim the gate passed");
   });
 
+  it("names the contract family as still-blocking too", async () => {
+    // `runTddValidators` runs `validateContracts` regardless of `specScope`,
+    // and `QFAI-CONTRACT-*` / `QFAI-DB-002` are filed against
+    // `.qfai/contracts/**`, which no spec owns — so they survive the scope
+    // filter and exit 1 like the other two. Listing only `QFAI-TEST-001` and
+    // `QFAI-TRACE-*` made a contract error read as an unexplained checkpoint
+    // failure, which is the reading that ends in a lowered `--fail-on`.
+    const checkpoint = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/checkpoint-verification.md"),
+    );
+    expect(checkpoint).toContain("the contract validators run regardless of scope");
+    expect(checkpoint).toContain("`QFAI-CONTRACT-*` and `QFAI-DB-002`");
+    expect(checkpoint).toContain("None of the three has a spec owner");
+  });
+
   it("does not name a rule the atdd profile never runs", async () => {
     // `runAtddValidators` runs `validateAtddCodeTraceability` and
     // `validateScaffoldPlaceholder` only — `validateTestTodoStubs` is wired

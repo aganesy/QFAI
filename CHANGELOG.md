@@ -77,10 +77,16 @@
 
 ### Fixed
 
-The three layers express the range as a numeric property now —
-`spec-0*[1-9][0-9]+`, any leading zeros then a value of ten or more — because
-enumerating digit shapes kept them out of step: `spec-9999` (no leading zero)
-and `spec-00100` (two) were each caught by some layers and not others.
+- **The still-blocking families a `--spec` checkpoint names include the
+  contracts.** `runTddValidators` runs `validateContracts` regardless of scope,
+  and `QFAI-CONTRACT-*` / `QFAI-DB-002` are filed against `.qfai/contracts/**`,
+  which no spec owns — so they survive the scope filter and exit 1 exactly like
+  `QFAI-TEST-001` and `QFAI-TRACE-*`. Naming only those two made a contract
+  error read as an unexplained checkpoint failure.
+  The three layers express the range as a numeric property now —
+  `spec-0*[1-9][0-9]+`, any leading zeros then a value of ten or more — because
+  enumerating digit shapes kept them out of step: `spec-9999` (no leading zero)
+  and `spec-00100` (two) were each caught by some layers and not others.
 
 - **The distributed-surface spec-ID guard covered half its own range.**
   `spec-0010 and above` is a numeric range, but all three layers spelled only
