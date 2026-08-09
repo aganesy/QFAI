@@ -22,6 +22,19 @@ import {
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
 
+/**
+ * The one authoritative list of ledger status transitions.
+ *
+ * `TDDLIST_EXCEPTION_PARKED` remediates via `exception -> todo`, an edge
+ * `qfai-implement/SKILL.md` summarises without naming. An operator who checked
+ * the finding against the skill instead of the reference found only "backward
+ * transitions are prohibited … the only exception is an approved Change Request
+ * reset" and reasonably concluded the tool was asking for something it forbids.
+ * Citing the reference from the finding closes that loop.
+ */
+const TRANSITIONS_REF =
+  ".qfai/assistant/skills/qfai-implement/references/execution-ledger.md#allowed-transitions";
+
 const REQUIRED_COLUMNS = [
   "TDD-ID",
   "TC-Refs",
@@ -780,7 +793,7 @@ async function validateSpecTddList(
       issues.push(
         issue(
           "TDDLIST_EXCEPTION_PARKED",
-          `TDD item "${rowKey}" in spec-${specNumber} is parked at Status=exception${hasDrId ? ` (DR-ID ${drId})` : ""}. Resolve it (\`exception -> todo\`), or record the accepted risk as a \`${EXCEPTION_PARKED_CODE}\` waiver in \`.qfai/waivers.yml\` naming this row in \`match.dl_ids\``,
+          `TDD item "${rowKey}" in spec-${specNumber} is parked at Status=exception${hasDrId ? ` (DR-ID ${drId})` : ""}. Resolve it (\`exception -> todo\` — see ${TRANSITIONS_REF} — which needs no Change Request **only when the anomaly did not change an approved obligation**; if it did, that is drift and the approved upstream reset applies instead), or record the accepted risk as a \`${EXCEPTION_PARKED_CODE}\` waiver in \`.qfai/waivers.yml\` naming this row in \`match.dl_ids\``,
           "warning",
           relPath,
           // Rule id, not a dotted path: kept as a back-compat waiver key for
@@ -788,7 +801,7 @@ async function validateSpecTddList(
           EXCEPTION_PARKED_RULE_ID,
           hasDrId ? [drId] : undefined,
           "change",
-          `承認済みの accepted risk である場合は \`.qfai/waivers.yml\` に rule: ${EXCEPTION_PARKED_CODE} の waiver（id / reason / expires / evidence / scope.paths / match.dl_ids が必須）を登録してください。match.dl_ids には対象行の ${rowKeyLabel} だけを列挙します。作業を再開する場合は \`exception -> todo\` で戻してください。`,
+          `承認済みの accepted risk である場合は \`.qfai/waivers.yml\` に rule: ${EXCEPTION_PARKED_CODE} の waiver（id / reason / expires / evidence / scope.paths / match.dl_ids が必須）を登録してください。match.dl_ids には対象行の ${rowKeyLabel} だけを列挙します。作業を再開する場合は \`exception -> todo\` で戻してください（${TRANSITIONS_REF} が定める再入 edge です。anomaly が承認済み obligation を変更していない場合は Change Request 不要で、anomaly の DR-ID はそのまま残します。変更していた場合は drift なので、\`.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected\` の Change Request と承認済み upstream reset を使ってください）。`,
           { dl_id: rowKey },
         ),
       );

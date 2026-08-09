@@ -64,9 +64,9 @@ Skill-specific examples:
 - The execution ledger is located at `.qfai/specs/<spec-id>/tdd/test-list.md`.
 - Write a `.qfai/steering/<id>.md` work-log entry when this stage hits a condition in the `kind` trigger table of `.qfai/assistant/catalog/worklog-entry.schema.md` — `blocker`, `handoff`, `consultation-needed` and `decision` are the ones it reaches most. `npx qfai validate` polices that surface but nothing else asks for an entry, so an unwritten one is simply lost.
 - Items are processed **serially** by default. Item-level parallel processing inside one spec is allowed only under `## Parallelization Policy` below — both its technical gate and its consent gate must hold, and user approval cannot override a technical DENY. Cross-spec parallelism is never allowed.
-- Status transitions follow a strict forward-only lifecycle: `todo` -> `red` -> `green` -> `refactor` -> `done`. The single re-entry is `refactor` -> `red` after a `qa-gatekeeper` `REVISE` on the row's RED/GREEN evidence.
-- The `exception` status can be reached from any active status when an anomaly is detected.
-- Backward transitions are prohibited (e.g., `green` -> `red` is not allowed). The only exception is an approved Change Request reset (see Status Lifecycle).
+- Status transitions follow a forward-only lifecycle: `todo` -> `red` -> `green` -> `refactor` -> `done`. That spine is not the whole table. `references/execution-ledger.md#allowed-transitions` is the complete and only list; it additionally carries the QA re-entry (`refactor` -> `red`), the resumption (`blocked` -> `todo`), the anomaly exit (`exception` -> `todo`), the reviewer loop (`refactor` -> `review-fix` -> `refactor`) and the approved upstream reset. **Never infer that an edge does not exist from its absence in this summary** — read the reference before writing a `Status` cell.
+- The `exception` status can be reached from any active status when an anomaly is detected, and leaves via `exception` -> `todo` once the anomaly is resolved. That exit needs no Change Request **when the row's approved obligation is unchanged** — nothing upstream moved, so the row simply restarts its cycle, keeping the anomaly's DR-ID, and it is what `TDDLIST_EXCEPTION_PARKED` asks for. **When the investigation finds the obligation itself was wrong**, this exit does not apply: that is an upstream change, and the row re-enters through the approved-Change-Request reset under the Drift Protocol (`references/change-request-reset.md`). Reading this line alone let a row restart on a changed obligation with no approval anywhere.
+- Backward transitions are prohibited (e.g., `green` -> `red` is not allowed). The only exception is an approved Change Request reset (see Status Lifecycle). **"Backward" is the reference's term of art**, not "moves to an earlier status": `blocked` -> `todo`, `exception` -> `todo` and the `qa-gatekeeper` rework edge all return a row to an earlier phase and none of them is backward. `references/execution-ledger.md#allowed-transitions` is the complete list; do not infer an edge's absence from this line.
 - Completed items (`done`) are skipped on re-execution, unless an approved Change Request reset them.
 - When every item is terminal (`done` or a valid `exception`) **and the mandatory Change Request
   preflight (see Required Process) reset nothing**, the per-item work is finished — but the
@@ -98,7 +98,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 ## Execution Ledger: test-list.md
 
 The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single record of what this skill has done and may still do. Status values are `todo`, `blocked`, `red`, `green`, `refactor`, `done`, `exception`;
-the lifecycle is forward-only, an `exception` requires a DR-ID, and a `blocked` row requires a `Blocked-By` and is never selected.
+the lifecycle is forward-only along `todo` -> `red` -> `green` -> `refactor` -> `done` plus the re-entry edges the reference enumerates, an `exception` requires a DR-ID, and a `blocked` row requires a `Blocked-By` and is never selected.
 
 The eight required columns, the allowed transitions and the exception rules are in `references/execution-ledger.md`. Read it before writing to the ledger.
 
@@ -494,6 +494,6 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 
 project_memory:
 
-- One TDD item at a time from test-list.md by default; item-level parallelism inside one spec only when the Parallelization Policy technical gate and user consent both pass; status lifecycle is forward-only (todo → red → green → refactor → done) with one recorded re-entry, refactor → red on a qa-gatekeeper REVISE of the row's RED/GREEN evidence; exception requires DR-ID.
+- One TDD item at a time from test-list.md by default; item-level parallelism inside one spec only when the Parallelization Policy technical gate and user consent both pass; status lifecycle is forward-only along todo → red → green → refactor → done, plus re-entry edges (refactor → red on a qa-gatekeeper REVISE, blocked → todo, exception → todo, refactor → review-fix → refactor, approved upstream reset) enumerated only in `references/execution-ledger.md#allowed-transitions` — never conclude an edge is illegal from this line alone; exception requires DR-ID.
 - Fresh RED + GREEN command/result evidence is mandatory per item, except on the _RED not observable_ path where `Satisfied-by` + falsifiability command/result replace the RED pair (exclusive alternative, never both); status-only evidence (e.g. "Status: PASS") is rejected.
 - UI-affecting items require product-surface-reviewer prototype-parity PASS before the item can transition to done.
