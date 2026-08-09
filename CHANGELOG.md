@@ -503,6 +503,17 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The sidecar name is claimed exclusively.** A PID alone is not unique, so a
+  second repair in the same process renamed over the file an earlier failed
+  one had preserved — and the success path removes the sidecar.
+- **A nested `SKILL.md` has to resolve inside the project**, like the
+  directory holding it.
+- **Ancestors are checked component by component.** Comparing a resolved path
+  with a built one reported a sound surface as a symlink wherever the
+  filesystem is case-insensitive and the directory was created as `.Claude`.
+- **`ENOTDIR` on a marker path does not end the run.** A marker ancestor
+  written as a regular file lost the finding the other markers and wrappers
+  still had.
 - **The restore claims the path atomically.** Checking that it is free and
   then renaming are two operations, and `rename` overwrites — so a file
   created in between was destroyed by the rollback. `link` refuses an existing

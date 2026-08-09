@@ -1336,6 +1336,30 @@ async function ensureSymlink(
  * benign — the project that predates a newly shipped skill looks the same. The
  * flattened file at least announced itself.
  */
+/**
+ * A sidecar path this call owns, created empty and exclusively.
+ *
+ * The name has to be unique against every other repair, including an earlier
+ * one in this same process that failed and left its file behind. `wx` is what
+ * makes the claim and the test one operation; the counter only has to produce
+ * candidates, not guarantee anything by itself.
+ */
+async function claimSidecar(linkPath: string): Promise<string> {
+  const base = `${linkPath}.qfai-repair-${String(process.pid)}`;
+  for (let attempt = 0; attempt < 1000; attempt += 1) {
+    const candidate = attempt === 0 ? base : `${base}-${String(attempt)}`;
+    try {
+      await writeFile(candidate, "", { flag: "wx" });
+      return candidate;
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException | null)?.code !== "EEXIST") throw err;
+    }
+  }
+  throw new Error(
+    `修復用の退避先を確保できません: ${base} と連番の候補がすべて既存です。前回の修復が残した .qfai-repair-* を確認して退避してください。`,
+  );
+}
+
 async function recreateFlattenedLink(
   linkPath: string,
   target: string,
@@ -1348,7 +1372,13 @@ async function recreateFlattenedLink(
   // process holds the very bytes it is about to judge: if they are not the
   // flattened signature, the file goes straight back and nothing was ours to
   // remove. Nothing is deleted until the symlink is in place.
-  const sidecar = `${linkPath}.qfai-repair-${String(process.pid)}`;
+  // Claimed exclusively, then renamed onto the claim. A PID alone is not a
+  // unique name: a second `runInit` in the same process — or a later one after
+  // PID reuse — would rename straight over a sidecar an earlier failed repair
+  // had left behind, and the success path removes the sidecar, so the message
+  // that said the content was preserved would be describing a file that is
+  // gone. `wx` refuses a name that is taken, so the loop finds one that is not.
+  const sidecar = await claimSidecar(linkPath);
   await rename(linkPath, sidecar);
   const original = await readFile(sidecar, "utf-8").catch(async (readErr: unknown) => {
     await rename(sidecar, linkPath).catch(() => undefined);

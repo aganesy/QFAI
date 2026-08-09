@@ -967,6 +967,49 @@ describe("the canonical itself has to be in the project", () => {
   });
 });
 
+describe("a nested SKILL.md is in the project too", () => {
+  it("reports a SKILL.md that is a symlink to an outside document", async () => {
+    // The directory is the project fixed, the document is not: `stat` and
+    // `access` both succeed, and `skills.integrity` runs under `full` alone.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const outside = path.join(root, "..", path.basename(root) + "-doc");
+      await mkdir(outside, { recursive: true });
+      await writeFile(path.join(outside, "SKILL.md"), "# theirs", "utf-8");
+      const doc = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md");
+      try {
+        await rm(doc, { force: true });
+        await symlink(path.join(outside, "SKILL.md"), doc, "file");
+
+        const found = await finding(root);
+        expect(found?.message).toContain("its SKILL.md resolves outside the project");
+      } finally {
+        await rm(outside, { recursive: true, force: true });
+      }
+    });
+  });
+});
+
+describe("a marker whose ancestor is not a directory does not end the run", () => {
+  it("keeps reporting the surfaces when a marker path raises ENOTDIR", async () => {
+    // `.agents` as a regular file makes every path under it raise
+    // `ENOTDIR`, and re-throwing that from the marker probe lost the finding
+    // the other markers and wrappers still had.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      await rm(path.join(root, ".agents"), { recursive: true, force: true });
+      await writeFile(path.join(root, ".agents"), "not a directory", "utf-8");
+
+      const found = await finding(root);
+      expect(found?.message).toContain(".agents/skills");
+    });
+  });
+});
+
 describe("a target can resolve and still be unusable", () => {
   it("reports a canonical document that cannot be read", async () => {
     // `stat` reads metadata, which a mode can allow while the body stays shut —

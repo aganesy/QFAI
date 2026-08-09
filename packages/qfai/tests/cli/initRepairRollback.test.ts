@@ -266,6 +266,33 @@ describe("a wrapper that changed under the check is not deleted", () => {
   });
 });
 
+describe("a sidecar left by an earlier failed repair is not overwritten", () => {
+  it("claims a fresh name instead of taking the one already there", async () => {
+    // A PID alone is not unique: a second run in the same process would rename
+    // over the file the first one preserved, and the success path removes the
+    // sidecar — so the message that said the content was kept would describe a
+    // file that is gone.
+    await withProject(async (root) => {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      const linkPath = path.join(root, LINK);
+      await rm(linkPath, { recursive: true, force: true });
+      await mkdir(path.dirname(linkPath), { recursive: true });
+      await writeFile(linkPath, FLATTENED, "utf-8");
+
+      // What an earlier failed repair would have left behind.
+      const stranded = linkPath + ".qfai-repair-" + String(process.pid);
+      const strandedContent = "# preserved by an earlier run";
+      await writeFile(stranded, strandedContent, "utf-8");
+
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      expect(await readFile(stranded, "utf-8")).toBe(strandedContent);
+      expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
+    });
+  });
+});
+
 describe("the rollback does not overwrite a file created in the gap", () => {
   it("leaves a concurrently created file alone and reports it instead", async () => {
     // Between the `rm` and the `symlink`, another process can create its own

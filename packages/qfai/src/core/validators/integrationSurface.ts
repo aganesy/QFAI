@@ -227,7 +227,13 @@ async function lstatOrNull(filePath: string): Promise<Stats | null> {
     return await lstat(filePath);
   } catch (error) {
     if (isMissing(error)) return null;
-    if ((error as NodeJS.ErrnoException | null)?.code === "ELOOP") return null;
+    const code = (error as NodeJS.ErrnoException | null)?.code;
+    // A cycle or a non-directory component means there is nothing here to be
+    // what the caller is asking about — an init marker, a wrapper. Whatever
+    // damage put it there is reported by the probe that owns that path;
+    // re-throwing it from this one ended `qfai validate` with a stack trace
+    // while other markers and wrappers still had something to say.
+    if (code === "ELOOP" || code === "ENOTDIR") return null;
     throw error;
   }
 }
@@ -289,6 +295,23 @@ async function canonicalKindProblem(wrapper: Wrapper, stats: Stats): Promise<str
   if (doc === "not-a-directory")
     return "a path component above canonical SKILL.md is not a directory";
   return doc.isFile() ? null : `canonical SKILL.md is a ${describeKind(doc)}`;
+}
+
+/**
+ * The first component of `dir` under `root` that is a symlink, or `null`.
+ *
+ * Walked rather than compared: a resolved path and a built one differ for
+ * reasons that are not symlinks — case on a case-insensitive filesystem, most
+ * of all — and this question has an exact answer per component.
+ */
+async function symlinkAncestor(root: string, dir: string): Promise<string | null> {
+  const parts = dir.split("/");
+  for (let depth = 1; depth < parts.length; depth += 1) {
+    const partial = parts.slice(0, depth);
+    const stats = await lstatOrNull(path.join(root, ...partial));
+    if (stats?.isSymbolicLink() === true) return partial.join("/");
+  }
+  return null;
 }
 
 /** Whether `candidate` is `base` itself or sits under it. */
@@ -531,15 +554,18 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       // nothing while every relative wrapper under it still resolves against
       // the external location — reported as dangling or outside-canonical,
       // with a remedy about moving the integration directory aside that does
-      // not name the path at fault. Comparing the resolved path with the
-      // lexical one catches any component, without walking them by hand.
-      if (realRoot !== null) {
-        const resolved = await realpathOrNull(absolute);
-        const lexical = path.join(realRoot, ...dir.split("/"));
-        if (resolved !== null && resolved !== lexical) {
-          damagedDirs.set(dir, `an ancestor is a symlink: it resolves to ${toPosix(resolved)}`);
-          return;
-        }
+      // not name the path at fault.
+      //
+      // Each component is `lstat`ed rather than comparing the resolved path
+      // with the spelling this code builds. On a case-insensitive filesystem a
+      // directory created as `.Claude` resolves to that spelling while the
+      // lexical path says `.claude`, and the comparison reported a sound
+      // surface as a symlink — failing every profile with a remedy that could
+      // not apply. Asking each component what it *is* has no such question.
+      const ancestor = await symlinkAncestor(root, dir);
+      if (ancestor !== null) {
+        damagedDirs.set(dir, `an ancestor is a symlink: ${toPosix(ancestor)}`);
+        return;
       }
       // A regular file where the directory belongs. `lstat` on every wrapper
       // under it raises `ENOTDIR`, which is the same failure the cycle was.
@@ -811,6 +837,20 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
                   : `resolves, but its SKILL.md is a ${describeKind(doc)}`,
         });
         continue;
+      }
+      // Inside the project, like the directory holding it. A `SKILL.md`
+      // replaced by a symlink to a readable file outside the repository passes
+      // `stat` and `access` — and `skills.integrity`, which would notice, runs
+      // under `full` alone.
+      if (realRoot !== null) {
+        const docReal = await realpathOrNull(skillDoc);
+        if (docReal !== null && !isInside(realRoot, docReal)) {
+          broken.push({
+            relative: wrapper.relative,
+            detail: `resolves, but its SKILL.md resolves outside the project: ${toPosix(docReal)}`,
+          });
+          continue;
+        }
       }
       if (!(await isReadable(skillDoc))) {
         broken.push({

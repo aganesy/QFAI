@@ -20,6 +20,20 @@ import path from "node:path";
 import type * as fsPromises from "node:fs/promises";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+/** The signature `qfai init` writes into the READMEs it leaves behind. */
+const INIT_README_BODY = [
+  "# QFAI Agents skills",
+  "",
+  "This directory provides Agents/Codex-compatible skill symlinks for QFAI.",
+  "",
+  "## Canonical entrypoint",
+  "",
+  "Skill symlinks point to QFAI's canonical skill documents under:",
+  "",
+  "- .qfai/assistant/skills/",
+  "",
+].join("\n");
+
 type FsPromises = typeof fsPromises;
 
 const { readdirSpy, lstatSpy, accessSpy, statSpy, readlinkSpy } = vi.hoisted(() => ({
@@ -123,16 +137,26 @@ describe("validateIntegrationSurface read errors", () => {
     });
   });
 
-  it("propagates ENOTDIR, which says a path component is not a directory", async () => {
+  it("reports ENOTDIR as damage instead of reading it as absent", async () => {
     // `.claude/skills` written as a regular file makes every child probe return
     // ENOTDIR. Read as "not created yet", every wrapper under it was skipped and
     // a surface the assistant can load nothing from passed — the exact failure
-    // this rule exists to catch.
+    // this rule exists to catch. It used to be propagated, which ended the run
+    // for every profile; the surface probe names the directory instead.
     await withProject(async (root) => {
       await seedCanonical(root);
-      lstatSpy.mockImplementation(() => Promise.reject(errno("ENOTDIR")));
+      const claudeSkills = path.join(root, ".claude", "skills");
+      await mkdir(path.dirname(claudeSkills), { recursive: true });
+      await writeFile(claudeSkills, "not a directory\n", "utf-8");
+      // A marker so the project reads as initialised: a project that never ran
+      // init owns whatever is at these paths, and claiming it would be the
+      // false positive this rule was taught not to make.
+      await mkdir(path.join(root, ".agents"), { recursive: true });
+      await writeFile(path.join(root, ".agents", "README.md"), INIT_README_BODY, "utf-8");
 
-      await expect(validateIntegrationSurface(root)).rejects.toThrow("simulated ENOTDIR");
+      const issues = await validateIntegrationSurface(root);
+      expect(issues.map((entry) => entry.code)).toContain("QFAI-LINK-001");
+      expect(issues[0]?.message).toContain("the integration directory is a file");
     });
   });
 
