@@ -315,8 +315,12 @@ post-escalation verification review of a user-named fix.
   extents produce a verdict that is either always stale or never checked. One
   procedure, in four steps:
   1. **Extract.** The row's `### <TDD-ID>` section of the evidence file its
-     `Layer` owns: the heading line through the line before the next `###` of
-     any depth, or end of file. Then drop the reviewer-appended fields — the
+     `Layer` owns: the heading line through the line before the next `###`
+     heading that **names a `TDD-` id**, or the next `##` / `#` heading, or end
+     of file. Ending at any `###` cut the row's own `### Round N` blocks out of
+     the subject — and a rework's RED, GREEN and proof live there, so a PASS
+     survived every edit to the very evidence it was given for. Then drop the
+     reviewer-appended fields — the
      `Spec review`, `Code quality review` and `Prototype parity` lines and any
      lines indented under them. What is left is what the reviewer read.
   2. **Normalize.** LF line endings; strip trailing whitespace from every line;

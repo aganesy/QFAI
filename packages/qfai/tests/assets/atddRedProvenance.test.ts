@@ -1254,7 +1254,31 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // an expectation can weaken an assertion by accident.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain("**Re-take the proof as well, on a row that has one.**");
-    expect(provenance).toContain("Re-run the same mutation under the corrected selector");
+    // Owed here, performed where the production owners are: this stage owns no
+    // agent for a mutation, which the paragraph below it says of the same
+    // operation. It marks the proof and hands it back.
+    expect(provenance).toContain("Mark the proof `stale — test replaced`");
+    expect(provenance).toContain(
+      "happen in `/qfai-implement`'s rework, where the production owners are routed",
+    );
+    expect(provenance).not.toContain(
+      "Re-run the same mutation under the corrected selector and replace the proof",
+    );
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "**A returned proof marked `stale — test replaced` is re-taken here too**",
+    );
+  });
+
+  it("does not accept a falsifiability trio that no gate has judged", async () => {
+    // Step 3c writes the trio and only then routes the gatekeeper, so an
+    // interrupted run leaves a trio with no verdict — and step 3b read the
+    // trio alone as verified, advancing the row on evidence nothing judged.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "**complete means the trio _and_ the recorded `qa-gatekeeper` PASS on it**",
+    );
+    expect(implement).toContain("A trio with no PASS re-enters step 3c at the point the verdict");
   });
 
   it("defines one recomputable procedure for the audited evidence hash", async () => {
@@ -1266,6 +1290,11 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     );
     expect(baseline).toContain("**How to compute it, exactly.**");
     expect(baseline).toContain("the heading line through the line before the next");
+    // The row's own `### Round N` blocks are inside the subject: a rework's
+    // RED, GREEN and proof live there, so ending at any `###` let a PASS
+    // survive every edit to the very evidence it was given for.
+    expect(baseline).toContain("heading that **names a `TDD-` id**");
+    expect(baseline).toContain("cut the row's own `### Round N` blocks out of the subject");
     expect(baseline).toContain("strip trailing whitespace from every line");
     expect(baseline).toContain("Gate item 10 runs the same four steps");
   });

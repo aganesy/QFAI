@@ -399,10 +399,17 @@ handoff of a `todo` row, so this one needs its own contract.
     `Satisfied-by` names is broken. Clarifying an expectation or splitting a
     selector can weaken an assertion by accident, and the pair would then pass
     the consumer's check with a proof taken against the assertion that is gone.
-    Re-run the same mutation under the corrected selector and replace the proof
-    and the GREEN with those runs. Production behaviour is unchanged — that is
-    what makes this a no-round path — and this is the evidence that the test
-    still discriminates, which no hash can carry.
+    So the recorded proof is **stale**, and this stage says so rather than
+    re-taking it: the mutation rewrites a production predicate, which is the
+    one thing this stage owns no agent for — the paragraph below says exactly
+    that about the same operation. Mark the proof `stale — test replaced`
+    beside the new manifest and hash, and name it in the handback. Re-running
+    the same mutation under the corrected selector, and the GREEN after it,
+    happen in `/qfai-implement`'s rework, where the production owners are
+    routed and where the fix and the re-review already happen. Production
+    behaviour is unchanged — that is what keeps this a no-round path — and this
+    is the evidence that the corrected test still discriminates, which no hash
+    can carry.
 
     **Not falsifiability.** That form needs a production mutation, which this
     stage owns no agent for and cannot hand over either: Phase Red step 3b
@@ -419,7 +426,9 @@ handoff of a `todo` row, so this one needs its own contract.
   a first handoff, and appending to it would read as one.
 - **Handing back.** Return to `/qfai-implement` naming the round. The
   production fix and the re-review happen there, and the row leaves
-  `review-fix` by that skill's own path.
+  `review-fix` by that skill's own path. **A proof marked
+  `stale — test replaced` is part of that handback**: the mutation is re-run
+  under the corrected selector there, before the re-review.
 
 A REVISE that does **not** touch the acceptance test never reaches this stage;
 it is production rework and stays where it is.

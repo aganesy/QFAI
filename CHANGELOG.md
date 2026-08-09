@@ -488,6 +488,17 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The re-taken proof is performed where the production owners are.** The
+  `/qfai-atdd` stage owns no agent for a mutation — the paragraph below the
+  instruction said exactly that — so it marks the proof stale and the handback
+  re-takes it in `/qfai-implement`'s rework.
+- **The audited-evidence hash covers the row's `### Round N` blocks.** Ending
+  the extraction at any `###` cut them out, and a rework's RED, GREEN and
+  proof live there — so a PASS survived every edit to the evidence it was
+  given for.
+- **A falsifiability trio with no gatekeeper PASS is not a complete handoff.**
+  Step 3c writes the trio and only then routes the gate, so an interrupted run
+  left a trio no gate had judged, and step 3b advanced the row on it.
 - **A test-only replacement re-takes its mutation proof.** A new hash over the
   old proof says somebody edited the test; it does not say the edited test
   still fails when the predicate is broken.
