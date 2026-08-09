@@ -98,6 +98,15 @@ Take the first that applies, and record which one in the evidence file.
       assertion after the handoff with the hash unchanged, which is the same
       stale-RED the field exists to catch; and since the working-tree hash cannot
       be recomputed from the final tree, nothing else would have caught it.
+
+      **Record the manifest, not only the hash.** `RED test manifest` lists the
+      repo-relative path of every file that went into it, sorted, one per line —
+      and the hash is taken over `path + NUL + blob hash` in that order, the same
+      shape the revision manifest uses. Naming the _kinds_ of file is not enough:
+      the consumer recomputes this before GREEN, and two readers who choose
+      different sets get different values from an unchanged tree, so the gate
+      either loops or passes an edit it never looked at.
+
       Not the `Selector` — that column is a test _name_ in the ordinary case
       (`../../qfai-implement/references/checkpoint-verification.md` runs
       `<Test file> -t '<Selector>'`), so keying the hash on it yields an empty
@@ -296,7 +305,14 @@ checkpoint **before** P5 and P6. That run is an **item cycle**, not this spec's
 completion: its blocking reviewers judge the row's own RED/GREEN evidence, and
 the completion-gate inputs — `.qfai/report/validate.log`, the coverage reports,
 runtime evidence — are P5/P6 artifacts that do not exist yet and are not owed
-here (`../../../agents/qa-gatekeeper.md`, the note above its last three inputs).
+here. **That applies to every blocking reviewer of the nested run, not only
+`qa-gatekeeper`**: `completion-reviewer` is mandatory and blocking there too and
+requires validate evidence, so exempting one and not the other left the first
+branch-1 row stopped at the same gate for a different reason. In an item-cycle
+invocation each of them judges the row's own phase-authored evidence and nothing
+else (`../../../agents/qa-gatekeeper.md` and
+`../../../agents/completion-reviewer.md`, the note above their completion-gate
+inputs).
 
 Requiring them would strand the first branch-1 row at `refactor`, which Phase
 Red does not re-select, and P2 would never be reached — the gate blocking on
@@ -343,10 +359,18 @@ handoff of a `todo` row, so this one needs its own contract.
     selector, renaming a test, making an expectation explicit — so the corrected
     test passes on the first run and there is no RED to take. Demanding one
     stranded the row at `review-fix`. Record the run and its revision, and
-    take **falsifiability** as branch 2 does; where even that is unavailable,
-    `../../qfai-implement/references/round-evidence.md`'s no-new-behaviour
-    path applies and no round is opened. Which of the two, and why, goes in the
-    round block.
+    take the **no-new-behaviour path** of
+    `../../qfai-implement/references/round-evidence.md`: no round is opened, and
+    the row returns on that basis.
+
+    **Not falsifiability.** That form needs a production mutation, which this
+    stage owns no agent for and cannot hand over either: Phase Red step 3b
+    excludes a `review-fix` row by name and step 3c is reachable only from a
+    `todo` falsifiability entry, so there is nobody to produce the trio and the
+    row would sit at `review-fix` again. A REVISE whose repair genuinely needs
+    new production behaviour is not this case — that one's corrected test fails,
+    and the branch above applies.
+
 - **Where it goes.** A `### Round N` block in
   `.qfai/evidence/atdd-<spec-id>.md`, keyed to the round the reviewer opened,
   in the shape `../../qfai-implement/references/round-evidence.md` defines.

@@ -91,6 +91,30 @@
 
 ### Fixed
 
+- **The reviewer's revision excludes the ledger too.** `Revision` is
+  phase-authored and `Reviewed revision` is not, and the phases write
+  `test-list.md` between them — so hashing all of `git diff HEAD` in the shared
+  contract made the two permanently unequal while item 10 wants them equal.
+- **The RED test hash records the manifest it was taken over.** Naming only the
+  _kinds_ of file left two readers free to choose different sets from an
+  unchanged tree, so the consumer's recomputation either looped or passed an
+  edit it never looked at.
+- **The migration finds its commit from the patch, not from `-S`.** The id is
+  on both sides of a status-only change, so `git log -S` walks back to the
+  commit that _added_ the row and the marker lands on the wrong one.
+- **Branch 2's mutation is submitted to the gate before the transition.**
+  Steps 4 and 5 are skipped for an `E2E` / `API` row and step 4 is the only
+  place that submits a RED, so the branch advanced the ledger with no
+  observation verdict at all — and the gatekeeper is conditional in that phase,
+  so nothing selected it by default.
+- **A passing `review-fix` row takes the no-round path, not falsifiability.**
+  That form needs a production mutation this stage owns no agent for and cannot
+  hand over: step 3b excludes a `review-fix` row by name and 3c is reachable
+  only from a `todo` entry, so the row would sit at `review-fix` again.
+- **Every blocking reviewer of the nested run is exempt, not just the
+  gatekeeper.** `completion-reviewer` is mandatory and blocking there too and
+  requires validate evidence, so exempting one left the first branch-1 row
+  stopped at the same gate for a different reason.
 - **The revision hash excludes the ledger and the evidence.** Phase Green
   writes `green` and Refactor writes `refactor` into `test-list.md` between the
   observations, and gate item 10 wants one revision across the GREEN and both

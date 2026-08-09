@@ -25,6 +25,15 @@ tools: [Read, Glob, Grep, Bash]
 - .qfai/specs/spec-\*/09_delta.md
 - Validation evidence and gate results
 
+**Validate evidence is a completion-gate input, not an item-cycle one.** When
+this role is routed inside an item cycle — `/qfai-atdd` stage gate P1c hands a
+single row to `/qfai-implement` and that run's reviewers gate its checkpoint —
+`.qfai/report/validate.log`, the coverage reports and runtime evidence are P5/P6
+artifacts of the calling stage and do not exist yet. Requiring them there
+stopped the first branch-1 row at `refactor`, which Phase Red does not
+re-select, so the calling stage never reached P2. Judge the row's own
+phase-authored evidence; the completion gate is where the rest is owed.
+
 ## Deliverables
 
 - PASS or REVISE with concrete rework list

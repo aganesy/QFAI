@@ -305,8 +305,13 @@ post-escalation verification review of a user-named fix.
   Path, boundary and order are all part of it: contents alone do not move when a
   file is renamed or two swap contents, and with no defined order a second
   reviewer cannot recompute the value this verdict is pinned to.
-  `references/evidence-revision.md` is the field's contract and this restates
-  it — the two have to agree or the verdict cannot be re-checked. **Not** a
+  **The ledger and the evidence tree are excluded**, exactly as that contract
+  says: the phases write `test-list.md` and `.qfai/evidence/**` between the
+  GREEN and the reviews, so hashing all of `git diff HEAD` here produced a
+  `Reviewed revision` that could never equal the phase-authored `Revision` —
+  and gate item 10 wants them equal. `references/evidence-revision.md` is the
+  field's contract and this restates it; the two have to agree or the verdict
+  cannot be re-checked. **Not** a
   `git status --porcelain` digest: that names the changed paths and their states, so it does not
   move when only the content of an already-changed file does, and a stale PASS reads as fresh.
   Without

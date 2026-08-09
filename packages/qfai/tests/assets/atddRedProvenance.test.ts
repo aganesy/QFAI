@@ -1117,3 +1117,63 @@ describe.each(TREES)("%s (a gate cannot fail on its own bookkeeping)", (tree) =>
     expect(provenance).toContain("no-new-behaviour");
   });
 });
+
+describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
+  it("excludes the ledger from the reviewer's revision too", async () => {
+    // `Revision` is phase-authored and `Reviewed revision` is not, and the
+    // phases write `test-list.md` between them — so hashing all of
+    // `git diff HEAD` here made the two permanently unequal while item 10
+    // wants them equal.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("**The ledger and the evidence tree are excluded**");
+  });
+
+  it("records the manifest the test hash was taken over", async () => {
+    // The consumer recomputes it; naming only the *kinds* of file leaves two
+    // readers free to choose different sets from an unchanged tree.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**Record the manifest, not only the hash.**");
+    expect(provenance).toContain("`RED test manifest`");
+    expect(provenance).toContain("`path + NUL + blob hash`");
+  });
+
+  it("finds the migration's commit from the patch, not from -S", async () => {
+    // The id is on both sides of a status-only change, so `-S` walks back to
+    // the commit that added the row and the marker lands on the wrong one.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("from the row's **patch history**, not with `git log -S`");
+    expect(implement).toContain("`git log -p -- <test-list.md>`");
+  });
+
+  it("submits branch 2's mutation to the gate before the transition", async () => {
+    // Steps 4 and 5 are skipped for this row and step 4 is the only place that
+    // submits a RED, so the branch advanced the ledger with no verdict at all.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "**Then route `qa-gatekeeper` on that mutation run and wait for PASS, before reverting and before writing any status.**",
+    );
+  });
+
+  it("routes a passing review-fix row to the no-round path, not falsifiability", async () => {
+    // That form needs a production mutation this stage owns no agent for and
+    // cannot hand over: 3b excludes `review-fix` and 3c is reachable only from
+    // a `todo` entry.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("take the **no-new-behaviour path**");
+    expect(provenance).toContain("**Not falsifiability.**");
+  });
+
+  it("exempts every blocking reviewer of the nested run, not just the gatekeeper", async () => {
+    // `completion-reviewer` is mandatory and blocking there too and requires
+    // validate evidence, so exempting one left the row stopped at the same gate
+    // for a different reason.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("applies to every blocking reviewer of the nested run");
+    const reviewer = flat(await read(tree, "assistant/agents/completion-reviewer.md"));
+    expect(reviewer).toContain(
+      "**Validate evidence is a completion-gate input, not an item-cycle one.**",
+    );
+  });
+});
