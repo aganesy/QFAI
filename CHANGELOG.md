@@ -488,6 +488,13 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The review pack is excluded from the working-tree revision.** A project
+  may legitimately track `.qfai/review/**`, and then every reviewer answer
+  written into it moved the address the previous reviewer had just recorded.
+- **Only the matrix rows an obligation names are hashed.** The coverage-depth
+  matrix is one document for the spec and a later run recomputes it, so
+  hashing it whole made every existing verdict stale when an unrelated
+  obligation's cell moved — with no re-review path for a `done` row.
 - **The audit-hash extraction is stated in one place.** The reference still
   described the old whole-section shape, so a reviewer following it produced a
   value neither the baseline nor gate item 10 would reproduce.

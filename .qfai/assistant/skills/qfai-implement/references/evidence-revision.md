@@ -28,9 +28,15 @@ Revision: <git rev> | working-tree+<content hash>
      exclusions below; and every untracked file
      `git ls-files --others --exclude-standard` reports, after the same
      exclusions.
-  2. **Exclude.** `.qfai/specs/*/tdd/test-list.md` and `.qfai/evidence/**`,
-     from **both** the diff and the untracked list — they are the record of the
-     observation, not the thing observed.
+  2. **Exclude.** `.qfai/specs/*/tdd/test-list.md`, `.qfai/evidence/**` and
+     `.qfai/review/**`, from **both** the diff and the untracked list — they are
+     the record of the observation, not the thing observed. The review pack is
+     on that list for the same reason the others are: a project may legitimately
+     track `.qfai/review/**`, and then every reviewer answer written into it
+     moved the address the previous reviewer had just recorded, so items 7-8
+     could not agree on one revision and a correct item never reached `done`.
+     What protects the pack instead is `Audited evidence hash`, which addresses
+     what each reviewer read.
   3. **Serialize.** `HEAD` + NUL + the rev; then `DIFF` + NUL + the SHA-256 of
      the diff bytes; then one record per untracked file, `path + NUL + the
 SHA-256 of its bytes`, sorted by path in byte order. Join the records with

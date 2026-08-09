@@ -1403,6 +1403,28 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(baseline).toContain("**Completion review**");
   });
 
+  it("keeps the review pack out of the working-tree revision", async () => {
+    // A project may legitimately track `.qfai/review/**`, and then every
+    // reviewer answer written into it moved the address the previous reviewer
+    // had just recorded — items 7-8 could not agree on one revision.
+    const revision = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(revision).toContain("`.qfai/review/**`, from **both** the diff and the untracked list");
+    expect(revision).toContain("What protects the pack instead is `Audited evidence hash`");
+  });
+
+  it("hashes only the matrix rows the obligation names", async () => {
+    // The matrix is one document for the spec and a later `/qfai-atdd` run
+    // recomputes it, so hashing all of it made every existing verdict stale
+    // when an unrelated obligation's cell moved.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("that name this row's obligation reference — not the file whole");
+    expect(baseline).toContain("a `done` row has no re-review path to clear that");
+  });
+
   it("states the audit-hash extraction in one place only", async () => {
     // The reference still described the old whole-section-minus-three-fields
     // shape, so a reviewer following it got a value neither the baseline nor

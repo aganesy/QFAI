@@ -359,13 +359,20 @@ post-escalation verification review of a user-named fix.
      byte, then the SHA-256 of that artifact's normalized bytes — sorted by
      path, joined with newlines. Two artifacts: the extracted section, recorded
      under the evidence file's path, and
-     `.qfai/evidence/coverage-depth-<spec-id>.md` **whole** (it has no per-row
-     section and no reviewer fields), normalized by step 2 as well.
+     the **rows of** `.qfai/evidence/coverage-depth-<spec-id>.md` that name this
+     row's obligation reference — not the file whole. The matrix is one document
+     for the spec and a later `/qfai-atdd` run recomputes it, so hashing all of
+     it made every existing verdict stale when an unrelated obligation's cell
+     moved, and a `done` row has no re-review path to clear that. Take the table
+     rows whose obligation column matches, with any justification lines under
+     them, normalized by step 2 as well; a row whose obligation appears nowhere
+     in the matrix contributes nothing.
   4. **Hash.** SHA-256 of that record list; record the hex digest.
 
-  Gate item 10 runs the same four steps. A row with no coverage-depth file has
-  one record, not a placeholder — an absent artifact contributes nothing rather
-  than a name with an empty hash.
+  Gate item 10 runs the same four steps. A row with no coverage-depth file, or
+  none whose matrix names its obligation, has one record rather than a
+  placeholder — an absent artifact contributes nothing, not a name with an empty
+  hash.
 
 - `Reviewed revision` is REQUIRED. It names the state the verdict describes — a `git rev-parse HEAD`
   value, or `working-tree+<content hash>` when the tree is uncommitted — a hash over
