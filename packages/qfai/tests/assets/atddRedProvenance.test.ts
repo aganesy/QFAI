@@ -1369,7 +1369,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // routing by hand does not help.
     const stale = flat(await read(tree, "assistant/skills/qfai-atdd/references/stale-manifest.md"));
     expect(stale).toContain("**Two files are stale, not one.**");
-    expect(stale).toContain("**Run `/qfai-configure`.**");
+    // The first step is the merge that actually moves the files;
+    // `/qfai-configure` has no migration to invoke.
+    expect(stale).toContain("**Diff the two files against the installed package**");
     expect(stale).toContain("the catalog predates this contract");
   });
 
@@ -1401,6 +1403,60 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(baseline).toContain("**RED observation**");
     expect(baseline).toContain("**GREEN observation**");
     expect(baseline).toContain("**Completion review**");
+  });
+
+  it("puts the falsifiability trio in the round block it belongs to", async () => {
+    // The reference listed only the RED/GREEN pair and step 3c wrote the trio
+    // unprefixed, so a normal branch-2 row either lacked the round fields or
+    // used a shape the gate could not find.
+    const round = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/round-evidence.md"),
+    );
+    expect(round).toContain("**in place of the RED pair** on a `falsifiability` row");
+    expect(round).toContain("**this list is the whole of it**");
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("`Round 1: Satisfied-by`");
+    expect(implement).toContain("is `references/round-evidence.md`'s list and only that");
+  });
+
+  it("rewrites the entry before a re-entry is judged again", async () => {
+    // After a REVISE the mutation or the test has usually changed, so a
+    // gatekeeper reading the current tree while hashing the previous entry
+    // either repeats the REVISE or records a PASS describing neither run.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "**write the re-taken trio, `RED test hash`, manifest and `Falsifiability revision` over the recorded ones**",
+    );
+  });
+
+  it("records the replacement revision where the proof is run", async () => {
+    // `/qfai-atdd` owns no production mutation, so it could only have named
+    // the tree before it — which is not what the gatekeeper judged.
+    const reviewFix = flat(await read(tree, REVIEW_FIX));
+    expect(reviewFix).toContain("is recorded **by the stage that runs it**");
+    expect(reviewFix).toContain("hand it over stale");
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**write the re-taken proof and the transient revision");
+  });
+
+  it("gives the stale manifest a remediation that exists", async () => {
+    // `/qfai-configure` edits what the project has; it does not read the
+    // installed package and reconcile, and no such migration exists.
+    const stale = flat(await read(tree, "assistant/skills/qfai-atdd/references/stale-manifest.md"));
+    expect(stale).toContain("**Diff the two files against the installed package**");
+    expect(stale).toContain("there is no migration to invoke, so do not wait for one");
+    expect(stale).not.toContain("**Run `/qfai-configure`.**");
+  });
+
+  it("puts row identity in every observation subject", async () => {
+    // The ledger is excluded from the revision, so changing `Selector` after a
+    // PASS to another valid test in the same file moved nothing — and a verdict
+    // that only ran the old selector stood as evidence for the new one.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("**Row identity, in all three**");
+    expect(baseline).toContain("Mutable bookkeeping — `Status`, `Evidence` — stays out");
   });
 
   it("keeps the review pack out of the working-tree revision", async () => {

@@ -17,15 +17,16 @@ not help.
 
 The gate still applies, and the remedy is to bring both files forward:
 
-1. **Run `/qfai-configure`.** It owns these manifests and reconciles a project's
-   adjusted taxonomy with the shipped one, which is why `init --force` leaves
-   them alone — overwriting an adjusted taxonomy is the worse failure.
-2. **If that is not available**, copy the two files from the installed package
-   (`node_modules/qfai/assets/init/.qfai/assistant/manifest/`) and re-apply the
-   project's own additions on top. Diff before copying: what is being restored
-   is the shipped roles' contracts, not the project's routing choices.
-3. **Until either has run**, route `qa-gatekeeper` for the branch-1 rows by hand
-   at P1b **and state in the evidence file that the catalog predates this
+1. **Diff the two files against the installed package** —
+   `node_modules/qfai/assets/init/.qfai/assistant/manifest/agent-catalog.yml` and
+   `agent-routing.yml` — and merge the shipped roles' contracts in, keeping the
+   project's own routing choices and any roles it added. This is the step that
+   actually moves the files. `/qfai-configure` owns these manifests as
+   artifacts, which is why `init --force` leaves them alone, but it edits what
+   the project has rather than reconciling it against the package: there is no
+   migration to invoke, so do not wait for one.
+2. **Until that merge has run**, route `qa-gatekeeper` for the branch-1 rows by
+   hand at P1b **and state in the evidence file that the catalog predates this
    contract**, so a REVISE that cites a rule the current contract does not have
    is read as the stale input it is rather than as a finding about the row.
 

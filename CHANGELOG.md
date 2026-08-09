@@ -488,6 +488,19 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The falsifiability trio is a round field**, in the RED pair's place, and
+  `round-evidence.md` is the only list of which fields take the prefix.
+- **A re-entry rewrites the entry before it is judged again.** After a REVISE
+  the mutation or the test has usually changed, so hashing the previous entry
+  recorded a PASS describing neither run.
+- **The replacement revision is recorded where the proof is run.** `/qfai-atdd`
+  owns no mutation, so it could only have named the tree before it.
+- **The stale-manifest remediation is one that exists.** `/qfai-configure`
+  edits what the project has; it does not reconcile against the package, and
+  no such migration exists.
+- **Row identity is in every observation subject.** The ledger is excluded
+  from the revision, so changing `Selector` after a PASS to another valid test
+  in the same file moved nothing.
 - **The review pack is excluded from the working-tree revision.** A project
   may legitimately track `.qfai/review/**`, and then every reviewer answer
   written into it moved the address the previous reviewer had just recorded.

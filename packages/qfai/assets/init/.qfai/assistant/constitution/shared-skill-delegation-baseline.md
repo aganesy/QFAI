@@ -324,7 +324,14 @@ post-escalation verification review of a user-named fix.
      heading line through the line before the next `###` heading that names a
      `TDD-` id, or the next `##` / `#` heading, or end of file — each taking
      only its own fields, in the order the contract lists them:
-     - **RED observation**: `TDD-ID`, the obligation reference the row's
+     - **Row identity, in all three**: `TDD-ID`, `Layer`, `Test file` and
+       `Selector` — copied from the ledger into the entry, because the ledger
+       is excluded from the revision. Without them, changing `Selector` after a
+       PASS to another valid test in the same file left every hash and every
+       revision unmoved, and a verdict that only ever ran the old selector stood
+       as evidence for the new one. Mutable bookkeeping — `Status`, `Evidence` —
+       stays out: it moves on its own between observations.
+     - **RED observation**: the obligation reference the row's
        `Layer` selects (`TC-ref`, or `US-ref` on an `E2E` row and `CON-API-ref`
        on an `API` row — an ATDD-owned row has no `TC-ref`, so naming only that
        one left its obligation outside every hash and let it be rewritten to a
