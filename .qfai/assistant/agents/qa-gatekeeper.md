@@ -98,7 +98,17 @@ production path and symbol, or the commit that added it, is equally valid there
 and is the normal answer for a row whose surface no ledger row owns; rejecting
 it sends every such row to `exception`, the terminal state the path exists to
 avoid. Judge it on whether it answers "what would I mutate to falsify this
-row". **On any other row the sibling row is still required** — production code
+row".
+
+**And the mutation may touch it.** The Oracle Strength Check rejects a mutation
+outside the code the item owns, which on an `E2E` / `API` row is every
+production predicate there is — the same sentence above says no ledger row owns
+that surface. Applied literally, no branch-2 row could ever produce
+falsifiability evidence that passes. On a handed-over row, **the predicate
+`Satisfied-by` names is the owned code** for this check; anything else is still
+out of bounds.
+
+**On any other row the sibling row is still required** — production code
 no ledger row owns is the anomaly case there, not a substitute. See
 `.qfai/assistant/skills/qfai-implement/references/red-not-observable.md` and
 `.qfai/assistant/skills/qfai-implement/references/red-admissibility.md`.
@@ -177,6 +187,16 @@ and written to `.qfai/evidence/coverage-depth-<spec-id>.md` — a committed path
 - `.qfai/report/validate.log`
 - `.qfai/report/specs-coverage/spec-*.md`
 - Runtime evidence and prototyping evidence artifacts
+
+**Branch 3 gets its own verdict.** The observation gate admits an observed RED
+or a falsifiability trio and calls anything else "never neither" — but a genuine
+branch-3 row _has_ neither, by the finding that put it there. Judged by the two
+forms it can only be REVISE, and skipping the gate leaves the stage's completion
+condition unmet, so the row could not close either way. Judge these on their own
+terms: a `DR-*` that records **what could not be observed and why each branch was
+unavailable**, PASS or REVISE on that. A missing `DR-*`, or one that names no
+unavailability, is still REVISE — this is a third form of evidence, not an
+exemption from having any.
 
 ## Deliverables
 

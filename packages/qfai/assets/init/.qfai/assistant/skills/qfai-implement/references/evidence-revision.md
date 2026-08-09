@@ -23,6 +23,15 @@ Revision: <git rev> | working-tree+<content hash>
   for the same tree, which is the one thing this address exists to allow. Not as good as a rev, and honest about not being as good: it says "this
   observation was made against a state that was never committed".
 
+  **The ledger is excluded from it.** Phase Green step 3 writes `green` and
+  Refactor step 3 writes `refactor` into `test-list.md` between the
+  observations, and gate item 10 requires the GREEN and the two reviews to name
+  the **same** revision — so a hash over the whole of `git diff HEAD` moved on
+  its own bookkeeping and no uncommitted item could reach `done`. Compute it
+  over the tree **minus `.qfai/specs/*/tdd/test-list.md` and `.qfai/evidence/**`\*\*:
+  those are the record of the observation, not the thing observed. Everything the
+  observation is about — production code, tests, fixtures — stays in.
+
   **A `git status --porcelain` digest is not sufficient**, which is what this
   field used to specify. Porcelain names the changed paths and their states, so
   editing the very file under test after the RED leaves it identical and a stale

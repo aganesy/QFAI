@@ -91,6 +91,35 @@
 
 ### Fixed
 
+- **The revision hash excludes the ledger and the evidence.** Phase Green
+  writes `green` and Refactor writes `refactor` into `test-list.md` between the
+  observations, and gate item 10 wants one revision across the GREEN and both
+  reviews — so a hash over all of `git diff HEAD` moved on its own bookkeeping
+  and no uncommitted item could reach `done`.
+- **The pre-split marker has a migration that writes it.** Nothing did, so no
+  row ever carried it and the compatibility clause it gates was unreachable.
+  It is written once from the history, and until then those rows are judged by
+  the current rule — reported rather than silently accepted.
+- **The consumer recomputes the test hash over the producer's inputs.** It
+  recomputed over `Test file` alone while the producer hashed the artifacts the
+  test reads, so every row with a fixture or a snapshot failed the gate
+  unchanged and was sent back on each pass.
+- **The shared reviewer contract carries the untracked manifest.** It still
+  said "the contents of every untracked file", so a reviewer following it
+  computed a value the consumer could not reproduce.
+- **A handed-over row's mutation may touch the predicate it names.** The Oracle
+  Strength Check rejects a mutation outside the code the item owns, and an
+  `E2E` / `API` row owns no production surface — so no branch-2 row could
+  produce falsifiability evidence that passes.
+- **Branch 3 has a verdict the observation gate can return.** Judged by the two
+  evidence forms a genuine branch-3 row can only be REVISE, and skipping the
+  gate leaves the stage's completion condition unmet: it could not close
+  either way. The `DR-*` and the unavailability of both branches are what that
+  verdict judges.
+- **A corrected test that passes on its first run is reclassified.** A REVISE
+  asking for no new behaviour — a selector split, a rename, an expectation made
+  explicit — leaves the test passing, and demanding a fresh RED stranded the
+  row at `review-fix`.
 - **Phase Red runs 3a, then 3b, then 3c.** Listed 3c first, an ordered read ran
   the production mutation and wrote `todo -> red` before 3b had checked the
   entry's branch, selector and missing fields — advancing the ledger on

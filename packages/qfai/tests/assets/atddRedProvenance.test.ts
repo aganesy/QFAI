@@ -1004,7 +1004,10 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
     // edited after the handoff passes gate item 10 exactly as a fresh one does.
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("**required on a handed-over `E2E` / `API` row**, and checked");
-    expect(implement).toContain("Recompute the hash over the row's `Test file` column");
+    expect(implement).toContain("Recompute it over the **same inputs the producer hashed**");
+    // Recomputing over `Test file` alone yields a different value for every row
+    // that reads a fixture, so an unchanged row failed the gate every pass.
+    expect(implement).toContain("the acceptance-test-owned artifacts it names");
   });
 
   it("identifies a pre-split row by a marker, not by its status", async () => {
@@ -1046,5 +1049,71 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
       "plus the acceptance-test-owned artifacts those files read — fixtures, snapshots",
     );
     expect(provenance).toContain("Not the production tree.");
+  });
+});
+
+describe.each(TREES)("%s (a gate cannot fail on its own bookkeeping)", (tree) => {
+  it("keeps the ledger and the evidence out of the revision hash", async () => {
+    // Phase Green writes `green` and Refactor writes `refactor` between the
+    // observations, and item 10 wants one revision across the three — so a hash
+    // over all of `git diff HEAD` moved on its own bookkeeping and no
+    // uncommitted item could reach `done`.
+    const revision = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(revision).toContain("**The ledger is excluded from it.**");
+    expect(revision).toContain("minus `.qfai/specs/*/tdd/test-list.md` and `.qfai/evidence/**`");
+  });
+
+  it("names the migration that writes the pre-split marker", async () => {
+    // Without one, no row ever carries the marker, so the compatibility clause
+    // it gates is unreachable and every legacy row is rejected.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**Write it once, from the history**");
+    expect(implement).toContain("`git log -S`");
+    expect(implement).toContain("until it has run, those rows are judged by the current rule");
+  });
+
+  it("recomputes the test hash over what the producer hashed", async () => {
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("Recompute it over the **same inputs the producer hashed**");
+  });
+
+  it("carries the untracked manifest into the shared reviewer contract", async () => {
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("a **manifest** of every untracked file");
+    expect(baseline).toContain(
+      "its path, a NUL byte, and the hash of its contents, sorted by path",
+    );
+  });
+
+  it("lets a handed-over row's mutation touch the predicate it names", async () => {
+    // The Oracle Strength Check rejects a mutation outside the code the item
+    // owns, and an `E2E` / `API` row owns no production surface — so no
+    // branch-2 row could produce falsifiability evidence that passes.
+    const gatekeeper = flat(await read(tree, GATEKEEPER));
+    expect(gatekeeper).toContain("**And the mutation may touch it.**");
+    expect(gatekeeper).toContain("the predicate `Satisfied-by` names is the owned code");
+  });
+
+  it("gives branch 3 a verdict the observation gate can return", async () => {
+    // Judged by the two evidence forms a genuine branch-3 row can only be
+    // REVISE, and skipping the gate leaves the stage's completion condition
+    // unmet — the row could not close either way.
+    const gatekeeper = flat(await read(tree, GATEKEEPER));
+    expect(gatekeeper).toContain("**Branch 3 gets its own verdict.**");
+    expect(gatekeeper).toContain("this is a third form of evidence, not an exemption");
+  });
+
+  it("reclassifies a corrected test that passes on its first run", async () => {
+    // A REVISE asking for no new behaviour — a selector split, a rename —
+    // leaves the corrected test passing, so demanding a fresh RED stranded the
+    // row at `review-fix`.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**run it and let the result choose the path**");
+    expect(provenance).toContain("**It passes.**");
+    expect(provenance).toContain("no-new-behaviour");
   });
 });

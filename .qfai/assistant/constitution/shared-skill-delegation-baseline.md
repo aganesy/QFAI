@@ -300,7 +300,13 @@ post-escalation verification review of a user-named fix.
 
 - `Reviewed revision` is REQUIRED. It names the state the verdict describes — a `git rev-parse HEAD`
   value, or `working-tree+<content hash>` when the tree is uncommitted — a hash over
-  `git rev-parse HEAD`, `git diff HEAD` and the contents of every untracked file. **Not** a
+  `git rev-parse HEAD`, `git diff HEAD` and a **manifest** of every untracked
+  file — its path, a NUL byte, and the hash of its contents, sorted by path.
+  Path, boundary and order are all part of it: contents alone do not move when a
+  file is renamed or two swap contents, and with no defined order a second
+  reviewer cannot recompute the value this verdict is pinned to.
+  `references/evidence-revision.md` is the field's contract and this restates
+  it — the two have to agree or the verdict cannot be re-checked. **Not** a
   `git status --porcelain` digest: that names the changed paths and their states, so it does not
   move when only the content of an already-changed file does, and a stale PASS reads as fresh.
   Without

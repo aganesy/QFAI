@@ -333,10 +333,20 @@ handoff of a `todo` row, so this one needs its own contract.
 - **Invocation.** Named by `TDD-ID`, with the reviewer's REVISE and its round
   number. The row stays at `review-fix` throughout — this stage writes no
   ledger cell, and `review-fix -> red` is not a transition.
-- **What this stage does.** Correct the test the REVISE names, then take a fresh
-  RED on the corrected selector, exactly as branch 1 does: run it, record the
-  pair, the `RED revision` and the `RED test hash`, and get
-  `qa-gatekeeper` PASS on that run.
+- **What this stage does.** Correct the test the REVISE names, then **run it and
+  let the result choose the path** — the same first-run check branch 1 makes,
+  for the same reason.
+  - **It fails.** Take that as the fresh RED, exactly as branch 1 does: record
+    the pair, the `RED revision` and the `RED test hash`, and get
+    `qa-gatekeeper` PASS on that run.
+  - **It passes.** Many REVISEs ask for no new behaviour at all — splitting a
+    selector, renaming a test, making an expectation explicit — so the corrected
+    test passes on the first run and there is no RED to take. Demanding one
+    stranded the row at `review-fix`. Record the run and its revision, and
+    take **falsifiability** as branch 2 does; where even that is unavailable,
+    `../../qfai-implement/references/round-evidence.md`'s no-new-behaviour
+    path applies and no round is opened. Which of the two, and why, goes in the
+    round block.
 - **Where it goes.** A `### Round N` block in
   `.qfai/evidence/atdd-<spec-id>.md`, keyed to the round the reviewer opened,
   in the shape `../../qfai-implement/references/round-evidence.md` defines.
