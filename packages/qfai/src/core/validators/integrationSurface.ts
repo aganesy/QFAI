@@ -241,21 +241,68 @@ async function lstatOrNull(filePath: string): Promise<Stats | null> {
  * outside `full`. A cycle was worse: the `ELOOP` propagated and `qfai validate`
  * exited with a stack trace.
  */
-async function canonicalState(
-  filePath: string,
-): Promise<"absent" | "present" | "dangling" | "cycle"> {
+type PathState =
+  | { kind: "absent" }
+  | { kind: "present"; stats: Stats }
+  | { kind: "dangling" }
+  | { kind: "cycle" }
+  | { kind: "not-a-directory" };
+
+async function canonicalState(filePath: string): Promise<PathState> {
   let entry: Stats;
   try {
     entry = await lstat(filePath);
   } catch (error) {
-    if (isMissing(error)) return "absent";
-    if ((error as NodeJS.ErrnoException | null)?.code === "ELOOP") return "cycle";
+    if (isMissing(error)) return { kind: "absent" };
+    const code = (error as NodeJS.ErrnoException | null)?.code;
+    if (code === "ELOOP") return { kind: "cycle" };
+    // A path component exists and is not a directory — `.qfai/assistant/skills`
+    // written as a regular file, say. It is the same class of damage as a cycle
+    // and it was the same failure: re-thrown, it ended `qfai validate` with a
+    // stack trace instead of a finding naming a path to repair.
+    if (code === "ENOTDIR") return { kind: "not-a-directory" };
     throw error;
   }
-  if (!entry.isSymbolicLink()) return "present";
+  if (!entry.isSymbolicLink()) return { kind: "present", stats: entry };
   const resolved = await statOrNull(filePath);
-  if (resolved === "cycle") return "cycle";
-  return resolved === null ? "dangling" : "present";
+  if (resolved === "cycle") return { kind: "cycle" };
+  if (resolved === "not-a-directory") return { kind: "not-a-directory" };
+  return resolved === null ? { kind: "dangling" } : { kind: "present", stats: resolved };
+}
+
+/**
+ * Why this canonical document cannot back its wrapper, or `null` when it can.
+ *
+ * The same rule the resolved-target check applies, reachable from the branch
+ * where there is no wrapper to resolve through.
+ */
+async function canonicalKindProblem(wrapper: Wrapper, stats: Stats): Promise<string | null> {
+  if (wrapper.kind === "agent") {
+    return stats.isFile() ? null : `canonical document is a ${describeKind(stats)}, not a file`;
+  }
+  if (!stats.isDirectory()) {
+    return `canonical skill is a ${describeKind(stats)}, not a directory`;
+  }
+  const doc = await statOrNull(path.join(wrapper.canonical, "SKILL.md"));
+  if (doc === null) return "canonical skill directory has no SKILL.md";
+  if (doc === "cycle") return "canonical SKILL.md is a symlink cycle";
+  if (doc === "not-a-directory")
+    return "a path component above canonical SKILL.md is not a directory";
+  return doc.isFile() ? null : `canonical SKILL.md is a ${describeKind(doc)}`;
+}
+
+/** The message for a path that is damaged rather than absent or usable. */
+function describeDamage(state: PathState, subject: string): string {
+  switch (state.kind) {
+    case "cycle":
+      return `${subject} is a symlink cycle`;
+    case "dangling":
+      return `${subject} is a dangling symlink`;
+    case "not-a-directory":
+      return `a path component above ${subject} is not a directory`;
+    default:
+      return `${subject} is unusable`;
+  }
 }
 
 /** Whether a README at `filePath` is one `qfai init` wrote. */
@@ -302,11 +349,15 @@ async function realpathOrNull(filePath: string): Promise<string | null> {
 }
 
 /** `stat`, or `null` when the path is absent. Any other error propagates. */
-async function statOrNull(filePath: string): Promise<Stats | null | "cycle"> {
+async function statOrNull(filePath: string): Promise<Stats | null | "cycle" | "not-a-directory"> {
   try {
     return await stat(filePath);
   } catch (error) {
     if (isMissing(error)) return null;
+    // `.qfai/assistant/skills` replaced by a regular file: every path under it
+    // raises this, and the wrapper naming it is as broken as one whose target
+    // is missing. Propagated, it ended the run instead of reporting.
+    if ((error as NodeJS.ErrnoException | null)?.code === "ENOTDIR") return "not-a-directory";
     // The same rule the wrapper target follows: a symlink cycle is structural
     // damage to the thing being inspected, not a filesystem fault to propagate.
     // Re-thrown here it exited `qfai validate` with a stack trace for a
@@ -442,19 +493,27 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
   // wrapper target and the nested `SKILL.md` already report, one level up, so
   // it is reported the same way: once for the directory, not once per wrapper
   // that cannot be reached through it.
-  const cyclicDirs = new Set<string>();
+  const damagedDirs = new Map<string, string>();
   await Promise.all(
     INTEGRATION_SURFACE_DIRS.map(async (dir) => {
-      if ((await canonicalState(path.join(root, ...dir.split("/")))) === "cycle") {
-        cyclicDirs.add(dir);
+      const state = await canonicalState(path.join(root, ...dir.split("/")));
+      if (state.kind === "absent") return;
+      if (state.kind === "present") {
+        // A regular file where the directory belongs. `lstat` on every wrapper
+        // under it raises `ENOTDIR`, which is the same failure the cycle was.
+        if (!state.stats.isDirectory()) {
+          damagedDirs.set(dir, `the integration directory is a ${describeKind(state.stats)}`);
+        }
+        return;
       }
+      damagedDirs.set(dir, describeDamage(state, "the integration directory"));
     }),
   );
   // A wrapper that exists but cannot be stat'd is a filesystem failure and must
   // not read as one that was never created.
   const links = await Promise.all(
     wrappers.map(async (wrapper) => {
-      if (cyclicDirs.has(wrapper.dir)) return null;
+      if (damagedDirs.has(wrapper.dir)) return null;
       return lstat(wrapper.absolute).catch((error: unknown) => {
         if (isMissing(error)) return null;
         throw error;
@@ -494,9 +553,10 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
   const missingDirs = new Set<string>();
   if (initialised) {
     for (const dir of INTEGRATION_SURFACE_DIRS) {
-      // A cyclic one is reported as damage below, not as absence: `readdir`
-      // raises `ELOOP` on it, which this probe deliberately propagates.
-      if (cyclicDirs.has(dir)) continue;
+      // A damaged one is reported as damage below, not as absence: `readdir`
+      // raises `ELOOP` / `ENOTDIR` on it, which this probe deliberately
+      // propagates.
+      if (damagedDirs.has(dir)) continue;
       if ((await readDirOrNull(path.join(root, ...dir.split("/")))) === null) {
         missingDirs.add(dir);
       }
@@ -507,9 +567,8 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
   const damagedCanonicals = new Set<string>();
   if (initialised) {
     for (const dir of INTEGRATION_SURFACE_DIRS) {
-      if (cyclicDirs.has(dir)) {
-        broken.push({ relative: dir, detail: "the integration directory is a symlink cycle" });
-      }
+      const detail = damagedDirs.get(dir);
+      if (detail !== undefined) broken.push({ relative: dir, detail });
     }
   }
 
@@ -532,21 +591,32 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
         // the canonical tree outside `full`. A cycle was worse: `ELOOP` came
         // out of `access` and ended `qfai validate` with a stack trace.
         const canonical = await canonicalState(wrapper.canonical);
-        if (canonical === "present") {
-          broken.push({
-            relative: wrapper.relative,
-            detail: `missing — ${toPosix(wrapper.dir)} exists and so does the document it wraps`,
-          });
-        } else if (canonical !== "absent" && !damagedCanonicals.has(wrapper.canonicalRelative)) {
+        if (canonical.kind === "absent") {
+          // Not taken yet. Nothing to report.
+        } else if (canonical.kind === "present") {
+          // What it *is*, not merely that it is there. With the wrapper gone
+          // there is no resolved target to reach the kind check below, so a
+          // canonical skill directory replaced by a regular file — or an agent
+          // document replaced by a directory — was reported as a plain missing
+          // wrapper, and the remedy it printed (`qfai init`) cannot recreate
+          // the wrapper while the collision stands.
+          const wrong = await canonicalKindProblem(wrapper, canonical.stats);
+          if (wrong === null) {
+            broken.push({
+              relative: wrapper.relative,
+              detail: `missing — ${toPosix(wrapper.dir)} exists and so does the document it wraps`,
+            });
+          } else if (!damagedCanonicals.has(wrapper.canonicalRelative)) {
+            damagedCanonicals.add(wrapper.canonicalRelative);
+            broken.push({ relative: wrapper.canonicalRelative, detail: wrong });
+          }
+        } else if (!damagedCanonicals.has(wrapper.canonicalRelative)) {
           // Once per canonical, not once per wrapper: four wrappers name the
           // same document, and one damaged document is one thing to repair.
           damagedCanonicals.add(wrapper.canonicalRelative);
           broken.push({
             relative: wrapper.canonicalRelative,
-            detail:
-              canonical === "cycle"
-                ? "canonical document is a symlink cycle"
-                : "canonical document is a dangling symlink",
+            detail: describeDamage(canonical, "canonical document"),
           });
         }
       }
@@ -595,14 +665,19 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       // symlink cycle, which is structural damage to the very thing this rule
       // inspects. Re-thrown, `qfai validate` exited with a stack trace instead
       // of a `QFAI-LINK-001` naming the path to repair.
+      // `ENOTDIR` joins it: `.qfai/assistant/skills` replaced by a regular file
+      // raises it for every wrapper naming a document under that path, and the
+      // wrapper is as broken as one whose target is missing.
       const code = (error as NodeJS.ErrnoException | null)?.code;
-      if (!isMissing(error) && code !== "ELOOP") throw error;
+      if (!isMissing(error) && code !== "ELOOP" && code !== "ENOTDIR") throw error;
       broken.push({
         relative: wrapper.relative,
         detail:
           code === "ELOOP"
             ? `resolves through a symlink cycle -> ${toPosix(wrapper.target)}`
-            : `dangling -> ${toPosix(wrapper.target)}`,
+            : code === "ENOTDIR"
+              ? `a path component of the canonical is not a directory -> ${toPosix(wrapper.target)}`
+              : `dangling -> ${toPosix(wrapper.target)}`,
       });
       continue;
     }
@@ -659,7 +734,7 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       // missing one.
       const skillDoc = path.join(wrapper.absolute, "SKILL.md");
       const doc = await statOrNull(skillDoc);
-      if (doc === null || doc === "cycle" || !doc.isFile()) {
+      if (doc === null || typeof doc === "string" || !doc.isFile()) {
         broken.push({
           relative: wrapper.relative,
           detail:
@@ -667,7 +742,9 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
               ? "resolves, but the directory has no SKILL.md"
               : doc === "cycle"
                 ? "resolves, but its SKILL.md is a symlink cycle"
-                : `resolves, but its SKILL.md is a ${describeKind(doc)}`,
+                : doc === "not-a-directory"
+                  ? "resolves, but a path component above its SKILL.md is not a directory"
+                  : `resolves, but its SKILL.md is a ${describeKind(doc)}`,
         });
         continue;
       }
@@ -716,6 +793,7 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       "change",
       [
         "`qfai init` を再実行すると、qfai が所有するこれらのパスは symlink として貼り直されます（`--force` は不要）。ただし内容が link target と一致しない通常ファイルは温存されるので、その場合は中身を確認してから退避してください。",
+        "**integration directory 自体が壊れている場合（`the integration directory is …`）も init では直りません。** 外部 symlink 配下の wrapper は target 文字列が正しいので `ensureSymlink` が skip し、`--force` でも同じ外部ディレクトリの中に貼り直すだけです。cycle では親ディレクトリの作成が `ELOOP` で失敗します。該当する `.claude/skills` などのパスを退避（または削除）してから `qfai init` を実行してください。",
         "**canonical 側が壊れている場合（`resolves to a …, but …` / `its SKILL.md is …` / `symlink cycle`）は init では直りません。** canonical asset は create-only なので既存パスを skip し、`--force` でも `copyFile` / `mkdir` が型衝突で失敗します。該当する `.qfai/assistant/**` のパスを退避（または削除）してから `qfai init` を実行してください — 中身は失われるので、先に確認してください。",
         "根本原因が clone 時の平坦化である場合は、先に `git config --global core.symlinks true` を設定してください。repo-local 設定は clone に引き継がれないため、これを直さないと次の clone で同じ状態に戻ります。",
         "Windows では Developer Mode の有効化が必要な場合があります。",

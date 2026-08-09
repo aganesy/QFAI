@@ -503,6 +503,12 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A type collision is reported wherever it sits on the path.** An
+  integration directory replaced by a regular file raised `ENOTDIR` on every
+  wrapper under it, and a canonical ancestor replaced by one did the same on
+  the target — both ended the run instead of reporting. An absent wrapper now
+  also names what the canonical actually is, which is the state `qfai init`
+  cannot repair on its own.
 - **A cyclic integration directory is reported, not thrown.** `lstat` on
   every wrapper under it raises `ELOOP`, and propagating that ended
   `qfai validate` with a stack trace instead of a finding.
@@ -679,9 +685,8 @@ real target and get deleted without`--force`.
   `.qfai/assistant/skills/<own>/SKILL.md` is an allowed project-owned location
   and init enumerates what to wrap from the package assets, never from the
   project — so a hand-published `.claude/skills/my-skill` was reported as a
-  broken qfai link in every profile. The roster is the shipped set intersected
-  with what the project has, which also keeps a removed skill's stale wrapper
-  out of scope.
+  broken qfai link in every profile. The roster is the shipped set alone — see
+  the shipped-roster entry above for why the project intersection was dropped.
 - **A failing filesystem no longer reads as a healthy surface.** The roster read
   and the wrapper probe folded every error into "absent", and absent is the
   benign case — an empty roster takes the early return, an absent wrapper is

@@ -687,6 +687,68 @@ describe("a project's own entry is not proof init ran", () => {
   });
 });
 
+describe("a type collision is reported wherever it sits on the path", () => {
+  it("reports an integration directory replaced by a regular file", async () => {
+    // `lstat` on every wrapper under it raises `ENOTDIR`, and propagating that
+    // ended the run for every profile with no finding and no remedy.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      await rm(path.join(root, ".claude", "skills"), { recursive: true, force: true });
+      await writeFile(path.join(root, ".claude", "skills"), "not a directory\n", "utf-8");
+
+      const found = await finding(root);
+      expect(found?.message).toContain("the integration directory is a file");
+      expect(found?.suggested_action).toContain("integration directory 自体が壊れている場合");
+    });
+  });
+
+  it("reports a canonical ancestor replaced by a regular file", async () => {
+    // The wrapper's target string is right, so the failure surfaces on `stat`.
+    // The errno differs by platform — POSIX raises `ENOTDIR`, Windows folds it
+    // into `ENOENT` — and only `ENOENT` and `ELOOP` were findings, so on POSIX
+    // this ended the run. Both now report; the wording is what differs.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+      await rm(skillsDir, { recursive: true, force: true });
+      await writeFile(skillsDir, "not a directory\n", "utf-8");
+
+      const found = await finding(root);
+      expect(found?.refs).toContain(".claude/skills/qfai-atdd");
+      if (process.platform !== "win32") {
+        expect(found?.message).toContain("a path component of the canonical is not a directory");
+      }
+    });
+  });
+
+  it("names the canonical collision when the wrapper is gone too", async () => {
+    // With no wrapper there is no resolved target to reach the kind check, so
+    // a canonical skill directory replaced by a file read as a plain missing
+    // wrapper — and `qfai init` cannot recreate the wrapper while the
+    // collision stands.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd", "qfai-verify"], []);
+      await wireAll(root, ["qfai-atdd", "qfai-verify"], []);
+      // `qfai-verify` keeps its wrappers, so init is still proven.
+      for (const dir of SKILL_INTEGRATION_DIRS) {
+        await rm(path.join(root, ...dir.split("/"), "qfai-atdd"), { recursive: true, force: true });
+      }
+      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      await rm(canonical, { recursive: true, force: true });
+      await writeFile(canonical, "# not a directory\n", "utf-8");
+
+      const found = await finding(root);
+      expect(found?.message).toContain("canonical skill is a file, not a directory");
+      expect(found?.message).not.toContain("and so does the document it wraps");
+    });
+  });
+});
+
 describe("an integration directory can be a cycle rather than a directory", () => {
   it("reports it once instead of ending the run with ELOOP", async () => {
     // `lstat` on every wrapper under it raises `ELOOP` — the final component is
