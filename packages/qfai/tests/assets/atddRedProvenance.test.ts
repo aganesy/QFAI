@@ -631,7 +631,9 @@ describe.each(TREES)("%s (someone can perform every step)", (tree) => {
     const implement = catalog.slice(catalog.indexOf("- skill: qfai-implement"));
     const block = implement.slice(0, implement.indexOf("- skill: ", 1));
     const red = block.slice(block.indexOf("- id: red"), block.indexOf("- id: build"));
-    expect(red).toContain("conditional_agents: [frontend-engineer, backend-engineer]");
+    expect(red).toContain(
+      "conditional_agents: [qa-gatekeeper, frontend-engineer, backend-engineer]",
+    );
   });
 
   it("names one phase that performs the first falsifiability mutation", async () => {
@@ -934,5 +936,46 @@ describe.each(TREES)("%s (the nested run and the third branch)", (tree) => {
     const ledger = flat(await read(tree, LEDGER));
     expect(ledger).toContain("`red-not-observable.md` already defines the substitute");
     expect(ledger).not.toContain("`references/red-not-observable.md` already defines");
+  });
+});
+
+describe.each(TREES)("%s (the contracts a row's Layer implies)", (tree) => {
+  it("keys the RED test hash on the Test file column", async () => {
+    // `Selector` is a test *name* in the ordinary case — the checkpoint runs
+    // `<Test file> -t '<Selector>'` — so hashing "the files the Selector names"
+    // yields an empty or guessed value and detects no post-handoff edit.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("the files the row's **`Test file`** column names");
+    expect(provenance).toContain("Not the `Selector` — that column is a test _name_");
+  });
+
+  it("scopes planner authority by the row's obligation column", async () => {
+    // An `E2E` row owes `US-Refs` and an `API` row owes `CON-API-Refs`. Defined
+    // as "a sufficient slice of its `TC-*` obligation", the blocking gate asked
+    // the planner to judge something those rows do not have.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("a sufficient slice of the obligation its `Layer` names");
+    const planner = flat(await read(tree, "assistant/agents/delivery-planner.md"));
+    expect(planner).toContain("**The document the row's obligation column points at.**");
+    expect(planner).toContain("`.qfai/specs/spec-*/02_User-stories.md` for a `US-Refs` row");
+    expect(planner).toContain("`.qfai/contracts/api/**` for a `CON-API-Refs` row");
+  });
+
+  it("says zero ATDD-owned rows is a count, not nothing to do", async () => {
+    // `/qfai-sdd` seeds a row per coverage-target `TC-*`, which excludes L4/L5,
+    // and this skill cannot write the ledger — so a fresh spec legitimately has
+    // none, and reading that as "no work" skips the US/CON-API obligations that
+    // are this skill's own.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("## A spec with no ATDD-owned rows");
+    expect(provenance).toContain('Zero is a count, not "nothing to do"');
+  });
+
+  it("states the reviewer revision as a content hash in the shared baseline", async () => {
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("`working-tree+<content hash>` when the tree is uncommitted");
+    expect(baseline).toContain("**Not** a `git status --porcelain` digest");
   });
 });

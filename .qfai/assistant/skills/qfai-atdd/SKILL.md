@@ -199,6 +199,7 @@ ledger, and `qfai-implement/SKILL.md` states the split: **`Layer = E2E` and
 
 - **This skill does not write the ledger.** `/qfai-implement` owns the `Status` / `DR-ID` / `Evidence` cells of every row — one writer, as `constitution/drift-protocol.md` grants. This stage owes the **evidence those cells point at**, in `.qfai/evidence/atdd-<spec-id>.md`.
 - **The lifecycle is `../qfai-implement/references/execution-ledger.md#allowed-transitions`**: forward-only from `todo`, and `todo -> red` requires an **admissible RED** observed before the code that makes it pass exists.
+- **A fresh spec has none of these rows yet, and this stage cannot create them** — zero is a legitimate count, not "nothing to do": `references/red-provenance.md#a-spec-with-no-atdd-owned-rows`.
 - **The stage order makes that a real question**: Work Orders build the surfaces a journey needs (P3, P4), so a journey written after them passes first run — an anomaly bound for `exception`, which then becomes the only reachable terminal state.
 
 ### RED provenance for an ATDD-owned row (MUST)
@@ -233,9 +234,7 @@ to `exception` has recorded that it did not try branches 1 and 2.
 
 ## Volume Signals (mandatory, not gates)
 
-- E2E signal: number of required `US-*`
-- API signal: number of declared `CON-API-*`
-- Integration signal: number of required `TC-*`
+- Signals: E2E = required `US-*`, API = declared `CON-API-*`, Integration = required `TC-*`
 - When signals are low/high, propose options and recommendation; do not fail solely on signal values.
 
 ### Estimator output table (required)
@@ -270,7 +269,7 @@ Every generated ATDD test MUST include QFAI annotations by layer:
 
 Notes:
 
-- A TC's annotation belongs in exactly one directory — the one its declared `Level` routes to. Placing it elsewhere is both uncovered (`QFAI-ATDD-112`) and forbidden (`QFAI-ATDD-121` / `QFAI-ATDD-122` / `QFAI-ATDD-123`). The rule is symmetric: an annotation left behind in `tests/integration/**` after the TC moved to `L4`/`L5` is rejected by `QFAI-ATDD-123` just as an early one in `tests/api/**` is rejected by `QFAI-ATDD-121`.
+- A TC's annotation belongs in exactly one directory — the one its declared `Level` routes to. Elsewhere it is both uncovered (`QFAI-ATDD-112`) and forbidden, symmetrically: one left behind in `tests/integration/**` after the TC moved to `L4`/`L5` is rejected by `QFAI-ATDD-123` just as an early one in `tests/api/**` is rejected by `QFAI-ATDD-121`.
 - AC annotations are optional in code.
 - `QFAI:CON-API-*` in E2E is not forbidden, but contract guarantee belongs to API tests.
 

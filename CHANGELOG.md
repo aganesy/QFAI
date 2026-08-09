@@ -77,6 +77,25 @@
 
 ### Fixed
 
+- **`qfai-implement`'s `red` phase routes `qa-gatekeeper` conditionally.** The
+  skill said not to route it for a seam-only invocation; the manifest listed it
+  as mandatory. The gate had no RED to judge, could only return REVISE, and the
+  round trip stopped on the contradiction.
+- **The RED test hash is keyed on `Test file`, not `Selector`.** `Selector` is a
+  test name in the ordinary case, so hashing "the files it names" produced an
+  empty or guessed value and detected no post-handoff edit.
+- **Planner scope authority follows the row's obligation column.** It was
+  defined as "a sufficient slice of its `TC-*` obligation", but an `E2E` row
+  owes `US-Refs` and an `API` row owes `CON-API-Refs` — and the role's required
+  inputs listed neither document, so a blocking gate asked it to judge
+  something it could not read.
+- **Zero ATDD-owned rows is a count, not "nothing to do".** `/qfai-sdd` seeds a
+  row per coverage-target `TC-*`, which excludes L4/L5, and this skill cannot
+  write the ledger — so a fresh spec legitimately has none. Reading that as no
+  work skipped the US and CON-API obligations that are this skill's own.
+- **The reviewer revision description follows the field contract.** It still
+  specified a `git status --porcelain` digest, so a reviewer following it could
+  read a stale PASS as fresh.
 - **The P1c round trip is an item cycle, not a completion gate.**
   `/qfai-implement` PASSes its blocking reviewers before the checkpoint, and
   those reviewers' completion-gate inputs are P5/P6 artifacts — so the first

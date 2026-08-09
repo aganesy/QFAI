@@ -91,16 +91,20 @@ Take the first that applies, and record which one in the evidence file.
       final tree, and cannot tell "only production changed, as it should" from
       "the acceptance test was edited after the handoff, so the RED is stale".
       Record `RED test hash` alongside `RED revision`: a hash over the contents
-      of the test files this row's `Selector` names, and nothing else. That one
-      **is** recomputable later — Phase Green does not touch those files — so it
-      is what makes the freshness claim checkable rather than asserted.
+      of the files the row's **`Test file`** column names, and nothing else.
+      Not the `Selector` — that column is a test _name_ in the ordinary case
+      (`../../qfai-implement/references/checkpoint-verification.md` runs
+      `<Test file> -t '<Selector>'`), so keying the hash on it yields an empty
+      or guessed value and detects no edit at all. That hash **is** recomputable
+      later — Phase Green does not touch those files — so it is what makes the
+      freshness claim checkable rather than asserted.
 
-      That address
-      is not recoverable later: `/qfai-implement` Phase Green changes the tree,
-      and its completion gate requires the handed-over RED to name the revision
-      it was taken at (`../../qfai-implement/references/evidence-revision.md`).
-      A value reconstructed afterwards is a guess, and a guess fails the
-      freshness gate exactly as a missing one does.
+      **Both are recorded when observed, never reconstructed.**
+      `/qfai-implement` Phase Green changes the tree, and its completion gate
+      requires the handed-over RED to name the revision it was taken at
+      (`../../qfai-implement/references/evidence-revision.md`). A value worked
+      out afterwards is a guess, and a guess fails the freshness gate exactly as
+      a missing one does.
 
    3. **Get the row's scope approved by `delivery-planner` first.**
       `qfai-implement/SKILL.md` makes it the only authority on whether a
@@ -245,6 +249,20 @@ Read the row's entry and take the branch it names:
 | `exception`      | Write `todo -> exception` with the `DR-*` the stage recorded; do not re-derive it, and do not enter Phase Green.                                                                                                                                                                   |
 
 **A branch-2 row whose evidence is not written yet is not a stop, and not a defer either.** P1b fixes every row branch; the mutation needs production code this stage does not own, so `/qfai-implement` performs it at Phase Red step 3c and records it here. Treating the empty trio as a malformed handoff stopped the run on the first such row; deferring it left nobody able to produce the evidence, since the only phase with a production agent was waiting for it.
+
+## A spec with no ATDD-owned rows
+
+`/qfai-sdd` Phase 2b seeds a ledger row per **coverage-target** `TC-*`, which
+excludes `L4` / `L5`; `US-*` and `CON-API-*` are not row-producing
+obligations there. A first run therefore finds **zero** `Layer = E2E` /
+`Layer = API` rows, legitimately, and this stage cannot create them — it is
+not the ledger's writer under any circumstance.
+
+Zero is a count, not "nothing to do". The US and CON-API coverage obligations
+are this skill's own (Success Criteria) and are discharged by the tests and
+their annotations, not by ledger rows. Report the row count as zero with that
+reason, and raise the missing rows as a request to `/qfai-sdd` — writing them
+here would make this stage a second writer of a single-writer artifact.
 
 ## A project without the `red` phase
 

@@ -189,7 +189,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 This skill delegates through the centralized routing policy in `.qfai/assistant/manifest/agent-routing.yml`. Its `red`, `build`, `test` and `review` phases carry `iteration: per-ledger-item` — they run once **per row**, not once per invocation, which is what puts `qa-gatekeeper` in a phase where a RED state still exists to observe.
 
 - `delivery-planner`
-  - reads `test-list.md`, selects the next pending item, and is the sole authority for **item selection and item scope** — whether this row's selector is a sufficient slice of its `TC-*` obligation
+  - reads `test-list.md`, selects the next pending item, and is the sole authority for **item selection and item scope** — whether this row's selector is a sufficient slice of the obligation its `Layer` names — `TC-Refs` for `Unit` / `Component` / `Integration`, `US-Refs` for `E2E`, `CON-API-Refs` for `API`
   - enforces Red-Green-Refactor **ordering** (which phase may run next), not the RED/GREEN observation itself
   - is the sole authority for parallel dispatch decisions
 - `frontend-engineer` / `backend-engineer`

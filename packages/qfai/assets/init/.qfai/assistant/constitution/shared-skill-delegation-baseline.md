@@ -299,7 +299,11 @@ Evidence checked:
 post-escalation verification review of a user-named fix.
 
 - `Reviewed revision` is REQUIRED. It names the state the verdict describes — a `git rev-parse HEAD`
-  value, or `working-tree+<digest of git status --porcelain>` when the tree is uncommitted. Without
+  value, or `working-tree+<content hash>` when the tree is uncommitted — a hash over
+  `git rev-parse HEAD`, `git diff HEAD` and the contents of every untracked file. **Not** a
+  `git status --porcelain` digest: that names the changed paths and their states, so it does not
+  move when only the content of an already-changed file does, and a stale PASS reads as fresh.
+  Without
   it a verdict cannot be re-checked, cannot be invalidated by a later commit, and cannot be told
   apart from a stale one, so "stale evidence MUST NOT be reused" has nothing to compare against.
   Reviewers are dispatched against the integrated tree by design, so the tree is legitimately

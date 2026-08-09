@@ -33,6 +33,14 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - .qfai/specs/spec-\*/01_Spec.md
 - `.qfai/specs/spec-*/tdd/test-list.md` — the execution ledger this role selects
   the next item from and whose Red-Green-Refactor ordering it enforces
+- **The document the row's obligation column points at.** Item scope is "is this
+  selector a sufficient slice of the obligation", and the obligation is not
+  always a `TC-*`: an `E2E` row owes `US-Refs` and an `API` row owes
+  `CON-API-Refs`. Without these the role has nothing to compare such a row
+  against and can only guess a PASS or stall the gate.
+  - `.qfai/specs/spec-*/06_Test-Cases.md` for a `TC-Refs` row
+  - `.qfai/specs/spec-*/02_User-stories.md` for a `US-Refs` row
+  - `.qfai/contracts/api/**` for a `CON-API-Refs` row
 - .qfai/discussion/discussion-\*/04_Sources.md
 - .qfai/discussion/discussion-\*/06_REQ.md
 - .qfai/discussion/discussion-\*/11_OQ-Register.md

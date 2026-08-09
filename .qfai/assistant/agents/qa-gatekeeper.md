@@ -21,7 +21,9 @@ tools: [Read, Glob, Grep, Bash]
 
 ## Ownership boundaries
 
-- `delivery-planner` owns **item selection and item scope** — whether a ledger row's selector is a sufficient slice of its `TC-*` obligation. Do not adjudicate item scope here; a PASS on observation
+- `delivery-planner` owns **item selection and item scope** — whether a ledger
+  row's selector is a sufficient slice of the obligation its `Layer` names
+  (`TC-Refs`, `US-Refs` or `CON-API-Refs`). Do not adjudicate item scope here; a PASS on observation
   evidence is explicitly scoped to that observation and never widens or ratifies item scope. See `.qfai/assistant/skills/qfai-implement/SKILL.md#precedence-between-delivery-planner-and-qa-gatekeeper`.
 - Refuse to evaluate RED/GREEN evidence while an unresolved `delivery-planner` scope REVISE is open on the same item.
 

@@ -75,7 +75,16 @@ routing:
       # the row is allowed to proceed to `build`.
       - id: red
         iteration: per-ledger-item
-        mandatory_agents: [qa-gatekeeper]
+        # `qa-gatekeeper` is **conditional**, not mandatory. `/qfai-atdd`
+        # invokes this phase for step 3a alone when a new route or export
+        # needs its seam before a RED can be taken — the row has no RED yet,
+        # which is the whole reason for the trip. Listed as mandatory, the
+        # gate had no assertion failure to judge and could only return
+        # REVISE, so `SKILL.md`'s "do not route `qa-gatekeeper` for a
+        # seam-only invocation" contradicted this manifest and the round trip
+        # stopped. It stays blocking: whenever a RED *is* submitted, its
+        # verdict decides.
+        mandatory_agents: []
         # The production owners are conditional here, not absent. Two steps
         # in this phase touch production source before any RED exists, and
         # the orchestrator may not implement (`SKILL.md` Orchestrator
@@ -84,7 +93,7 @@ routing:
         # falsifiability mutation for a handed-over row whose evidence is not
         # written yet. Without them the phase had `qa-gatekeeper` alone and
         # neither step had anyone to perform it.
-        conditional_agents: [frontend-engineer, backend-engineer]
+        conditional_agents: [qa-gatekeeper, frontend-engineer, backend-engineer]
         parallel_groups: []
         blocking_agents: [qa-gatekeeper]
         # `changed-scope-dependents`: the gatekeeper's REVISE here is usually
