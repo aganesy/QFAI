@@ -57,7 +57,17 @@ function narrowToScope(
     entries: Array<{ file: string; ids: string[] }>,
   ): Array<{ file: string; ids: string[] }> =>
     entries
-      .map((entry) => ({ ...entry, ids: entry.ids.filter(inScope) }))
+      .map((entry) => {
+        // The file's own spec owns its misplacements too. A test under
+        // `tests/integration/spec-0002/**` that references an `API`-homed
+        // `TC-0001` was attributed to `0001` alone, so `--spec 0002` — the gate
+        // of the spec whose tests hold the misplaced annotation — never saw it,
+        // and only an unrelated spec's run did. The unknown-reference path
+        // already treats that file as `0002`'s; this one has to agree.
+        const own = testPathSpecNumber(entry.file);
+        if (own !== null && scope.has(own)) return entry;
+        return { ...entry, ids: entry.ids.filter(inScope) };
+      })
       .filter((entry) => entry.ids.length > 0);
 
   // Unknown `US` / `TC` tokens carry their own `SPEC-NNNN`, so they are
@@ -199,9 +209,18 @@ function unknownOwnerDirs(
  * falls back to the token alone.
  */
 function testPathSpecNumber(file: string): string | null {
-  for (const segment of file.split(/[\\/]/)) {
-    const number = /^spec-(\d{4})$/i.exec(segment)?.[1];
-    if (number !== undefined) return number;
+  // Bounded to the layer directory, and read from the **end**: `entry.file` is
+  // absolute, so scanning every segment made a checkout that happens to sit
+  // under a directory called `spec-0002` claim every test in it. Only
+  // `<anything>/<integration|api|e2e|atdd>/spec-NNNN/**` counts.
+  const segments = file.split(/[\\/]/);
+  for (let index = segments.length - 1; index > 0; index -= 1) {
+    const number = /^spec-(\d{4})$/i.exec(segments[index] ?? "")?.[1];
+    if (number === undefined) continue;
+    const parent = (segments[index - 1] ?? "").toLowerCase();
+    return parent === "integration" || parent === "api" || parent === "e2e" || parent === "atdd"
+      ? number
+      : null;
   }
   return null;
 }

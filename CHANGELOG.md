@@ -91,6 +91,19 @@
 
 ### Fixed
 
+- **A forbidden reference is owned by the tests that hold it.** The
+  unknown-reference path already treats a file under
+  `tests/integration/spec-0002/**` as `0002`'s; attributing a misplaced
+  annotation to the token alone meant the gate of the spec whose tests hold the
+  misplacement never saw it, and only an unrelated spec's run did.
+- **The test-path owner is read from the layer directory, not any ancestor.**
+  `entry.file` is absolute, so scanning every segment made a checkout that
+  happens to live under a directory called `spec-0002` claim every test in it —
+  dropping repo-wide findings from one scope and leaking siblings into another.
+  Only `<integration|api|e2e|atdd>/spec-NNNN/**` counts.
+- **`lint:shipping` keeps its rules' own flags.** Globalising them with a bare
+  `"g"` dropped the `i` on the spec-id rules, so `SPEC-9999` in JSDoc passed
+  the pre-build lint while the post-build guard and the smoke test caught it.
 - **An unknown reference is attributed to both of its owners.** `narrowUnknown`
   keeps the finding when either the token's spec or the test's own per-spec
   directory is in scope, but `relatedFiles` listed only the token's — and

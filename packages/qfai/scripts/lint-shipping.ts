@@ -53,6 +53,11 @@ type PatternRule = {
   appliesTo: ReadonlyArray<Target>;
 };
 
+/** The rule's own flags, plus `g`. Never a bare `"g"` — see the call sites. */
+function withGlobal(flags: string): string {
+  return flags.includes("g") ? flags : `${flags}g`;
+}
+
 const PATTERNS: ReadonlyArray<PatternRule> = [
   {
     name: "spec-id-literal",
@@ -322,7 +327,11 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
     // source, not only post-build by the leakage shell script.
     if (isTs && TS_COMMENT_LINE_RE.test(line)) {
       for (const rule of srcCommentRules) {
-        const globalRe = new RegExp(rule.re.source, "g");
+        // `rule.re.flags`, not a bare `"g"`: dropping them lost the `i` on the
+        // spec-id rules, so `SPEC-9999` in JSDoc passed here while the
+        // post-build guard and the smoke test — both case-insensitive — caught
+        // it. The same distributed content, three answers.
+        const globalRe = new RegExp(rule.re.source, withGlobal(rule.re.flags));
         let match: RegExpExecArray | null;
         while ((match = globalRe.exec(line)) !== null) {
           violations.push({

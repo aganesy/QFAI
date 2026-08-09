@@ -579,3 +579,53 @@ describe("an unknown reference is attributed to both of its owners", () => {
     });
   });
 });
+
+describe("a forbidden reference is owned by the tests that hold it", () => {
+  it("keeps a misplaced annotation inside the owning spec's own scope", async () => {
+    // The unknown-reference path already treats a file under
+    // `tests/integration/spec-0002/**` as `0002`'s. Attributing a forbidden
+    // placement to the token alone meant the gate of the spec whose tests hold
+    // the misplacement never saw it, and only an unrelated spec's run did.
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      // `TC-0001` declares no `Level`, so its home is `tests/integration/**`
+      // and this reference from `tests/api/**` is a forbidden placement.
+      const testFile = path.join(root, "tests", "api", "spec-0002", "misplaced.test.ts");
+      await mkdir(path.dirname(testFile), { recursive: true });
+      await writeFile(
+        testFile,
+        ["// QFAI:SPEC-0001:TC-0001", "it('x', () => {});", ""].join("\n"),
+        "utf-8",
+      );
+
+      const scoped = await validateAtddCodeTraceability(root, defaultConfig, {
+        specScope: new Set(["0002"]),
+      });
+      expect(scoped.map((entry) => entry.code)).toContain("QFAI-ATDD-121");
+    });
+  });
+
+  it("does not read a spec number from an ancestor of the checkout", async () => {
+    // `entry.file` is absolute, so scanning every segment made a checkout that
+    // happens to live under a directory called `spec-0002` claim every test in
+    // it — dropping repo-wide findings from one scope and leaking siblings into
+    // another. Only `<layer>/spec-NNNN/**` counts.
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      const testFile = path.join(root, "tests", "integration", "flat.test.ts");
+      await mkdir(path.dirname(testFile), { recursive: true });
+      await writeFile(
+        testFile,
+        ["// QFAI:SPEC-9999:TC-0001", "it('x', () => {});", ""].join("\n"),
+        "utf-8",
+      );
+
+      // `9999` names no spec pack, so this stays repo-wide whatever the
+      // checkout's own path segments happen to be called.
+      const scoped = await validateAtddCodeTraceability(root, defaultConfig, {
+        specScope: new Set(["0001"]),
+      });
+      expect(scoped.map((entry) => entry.code)).toContain("QFAI-ATDD-102");
+    });
+  });
+});
