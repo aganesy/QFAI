@@ -475,6 +475,18 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A settled `Level` survives a later table that has no `Level` column.** The
+  first-declaration-wins guard sat inside the `levelIndex >= 0` branch, so a
+  re-listing without that column skipped it and fell through to the
+  column-absent fallback — re-adding an `L3` TC as a Unit/Component target on
+  top of the integration obligation its declaration gives it. The result was
+  `TDDLIST_TC_NOT_COVERED` beside a correct `QFAI-ATDD-112`, and an inflated
+  target count in the report.
+- **The declared-id set is read from the same masked text as the levels.**
+  `collectTcLevels` masks fenced samples and HTML comments; the id collector
+  read the raw document, so an id that appears only in a format example stayed
+  declared with no `Level`, fell through to the integration default, and
+  `QFAI-ATDD-112` raised a hard error against a TC that does not exist.
 - **A ledger table that kept one marker column is a ledger table.** Detection
   admitted a table carrying both `TDD-ID` and `TC-Refs`, or six of the eight
   required columns — and a table that drops one marker _and_ two other columns

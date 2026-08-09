@@ -736,3 +736,32 @@ describe("a broken Test Case Table is unresolved even beside headings", () => {
     expect(codes).not.toContain("TDDLIST_TC_TABLE_UNRESOLVED");
   });
 });
+
+describe("a settled Level survives a later table that has no Level column", () => {
+  it("does not re-add an L3 TC as a coverage target", async () => {
+    // The first-declaration-wins guard sat inside `levelIndex >= 0`, so a later
+    // table with no `Level` column skipped it and fell through to the
+    // column-absent fallback — re-adding the TC as a Unit/Component target on
+    // top of the integration obligation its `L3` gives it. The result is
+    // `TDDLIST_TC_NOT_COVERED` beside a correct `QFAI-ATDD-112`, and a target
+    // count the report overstates.
+    const { codes } = await bothCommands(
+      [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001 | L3 | AC-0001 | - | s | e |",
+        "",
+        "| TC-ID | AC-Refs | Steps |",
+        "| ----- | ------- | ----- |",
+        "| TC-0001 | AC-0001 | s |",
+        "",
+      ].join("\n"),
+      ["| TDD-0001 | - | - | - | - | todo | - | - |"],
+    );
+    expect(codes).not.toContain("TDDLIST_TC_NOT_COVERED");
+  });
+});

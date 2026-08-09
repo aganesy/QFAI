@@ -510,8 +510,15 @@ async function collectSpecRefs(specsRoot: string): Promise<{
       readSafe(entry.testCasesPath),
     ]);
 
-    const usIds = collectShortIds(usText, "US");
-    const tcIds = collectShortIds(tcText, "TC");
+    // Masked, like the `Level` collectors on the same documents. Reading the
+    // raw text kept an id that appears only in a fenced sample or an HTML
+    // comment in the declared set, while `collectTcLevels` — which masks —
+    // saw no `Level` for it. The id then fell through to the integration
+    // default and `QFAI-ATDD-112` raised a hard error against a TC that does
+    // not exist. The declared set and the level map have to be read from the
+    // same text or they can always disagree.
+    const usIds = collectShortIds(maskNonSpecRegions(usText), "US");
+    const tcIds = collectShortIds(maskNonSpecRegions(tcText), "TC");
 
     if (usIds.size > 0) {
       us.set(entry.specNumber, usIds);

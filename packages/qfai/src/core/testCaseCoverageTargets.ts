@@ -179,18 +179,22 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
       // the two gates disagreeing about the same TC, which is the class of
       // defect this PR exists to close.
       if (headingLeveledTcIds.has(tcId)) continue;
+      // First declaration wins across tables too, not only across shapes.
+      // `collectTcLevels` keeps the earlier `L3`, and the two gates have to
+      // agree, so a TC that already has an explicit `Level` is settled however
+      // a later table re-lists it. **Outside the `levelIndex >= 0` guard**: a
+      // later table with no `Level` column skipped this check and fell through
+      // to the column-absent fallback below, re-adding the TC as a
+      // Unit/Component target on top of the integration obligation its first
+      // declaration gives it — `TDDLIST_TC_NOT_COVERED` alongside a correct
+      // `QFAI-ATDD-112`, and an inflated target count in the report.
+      if (tableLeveledTcIds.has(tcId)) continue;
       const level = levelIndex >= 0 ? (row[levelIndex] ?? "").trim().toLowerCase() : "";
       if (levelIndex >= 0) {
-        // First declaration wins across tables too, not only across shapes.
-        // The non-coverage `continue` used to leave the id unrecorded, so a
-        // TC declared `L3` by an earlier table and `L1` by a later one picked
-        // up a ledger obligation on top of its `QFAI-ATDD-112` one —
-        // `collectTcLevels` keeps the `L3`, and the two gates have to agree.
-        // The unrecognized-value report sits behind the same guard, for the
-        // same reason it does in the heading pass: a superseded row's `Level`
-        // is not in force and must not be described as making the TC a
-        // mandatory ledger row.
-        if (tableLeveledTcIds.has(tcId)) continue;
+        // The unrecognized-value report sits behind the same rule, for the same
+        // reason it does in the heading pass: a superseded row's `Level` is not
+        // in force and must not be described as making the TC a mandatory
+        // ledger row.
         if (classifyCoverageLevel(level) === "unrecognized") {
           unrecognizedLevels.add((row[levelIndex] ?? "").trim());
         }

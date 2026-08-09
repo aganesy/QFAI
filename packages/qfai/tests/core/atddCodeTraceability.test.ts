@@ -145,6 +145,50 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
   }
 }
 
+describe("a TC that exists only in a fenced sample is not declared", () => {
+  it("raises no QFAI-ATDD-112 for an id inside a code fence", async () => {
+    // `collectTcLevels` masks fenced samples and HTML comments; the declared-id
+    // collector read the raw text, so a sample id stayed in the declared set
+    // with no `Level`, fell through to the integration default, and the gate
+    // raised a hard error against a TC that does not exist. Both have to read
+    // the same text or they can always disagree.
+    await withProject(async (root) => {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
+      await writeFile(
+        path.join(specDir, "02_User-stories.md"),
+        ["# 02 User stories", "", "## US-0001: title", "- Parent: CAP-0001", ""].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        [
+          "# 06 Test cases",
+          "",
+          "## TC-0001: title",
+          "- Parent: EX-0001",
+          "",
+          "## Format example",
+          "",
+          "```md",
+          "## TC-0009: an id that only appears in this sample",
+          "```",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      expect(issues.filter((entry) => entry.code === "QFAI-ATDD-112")).toEqual([]);
+    });
+  });
+});
+
 async function seedSpec(
   root: string,
   specNumber: string,
