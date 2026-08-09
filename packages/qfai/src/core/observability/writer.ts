@@ -1,6 +1,5 @@
 /**
  * MetricsWriter — writes metric records to a sink with buffering on failure.
- * SPEC-0032
  *
  * On sink failure: buffers locally and logs a warning.
  * On sink recovery: flushes the buffer.

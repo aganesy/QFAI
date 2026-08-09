@@ -1,6 +1,5 @@
 /**
  * DriftTracker — detects score drift across runs.
- * SPEC-0032
  *
  * Compares score distributions across runs and flags dimensions
  * where drift exceeds a configurable threshold (default 0.15).

@@ -53,6 +53,11 @@ type PatternRule = {
   appliesTo: ReadonlyArray<Target>;
 };
 
+/** The rule's own flags, plus `g`. Never a bare `"g"` — see the call sites. */
+function withGlobal(flags: string): string {
+  return flags.includes("g") ? flags : `${flags}g`;
+}
+
 const PATTERNS: ReadonlyArray<PatternRule> = [
   {
     name: "spec-id-literal",
@@ -109,7 +114,11 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
   // is written in leading-comment-line blocks for declarations.
   {
     name: "internal-spec-id-jsdoc-leak",
-    re: /\bspec-0(?:0[1-9][0-9]|[1-9][0-9]{2,})\b/,
+    // No word boundaries: the post-build guard and the smoke test have none
+    // either, and a trailing `\b` made `spec-9999suffix` invisible here while
+    // both of them caught the `spec-9999` inside it — the same distributed
+    // content passing one layer of an SSOT-synced set and failing another.
+    re: /spec-0*[1-9][0-9]+/i,
     suggestion:
       "Internal spec IDs (spec-0010+) MUST NOT appear in src/ comments — tsup keeps JSDoc in dist/*.d.ts. Use a generic descriptor (e.g. 'the SDD skill business rules') and keep ID-level traceability in `.qfai/specs/` or test files.",
     appliesTo: ["src-comment"],
@@ -121,7 +130,7 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     // and smoke test, which both implicitly cover paths via the
     // spec-id regex applied to file content).
     name: "internal-spec-path-jsdoc-leak",
-    re: /\.qfai\/specs\/spec-0(?:0[1-9][0-9]|[1-9][0-9]{2,})\//,
+    re: /\.qfai\/specs\/spec-0*[1-9][0-9]+\//i,
     suggestion:
       "Internal spec paths (spec-0010+) MUST NOT appear in src/ JSDoc — they ship via dist/*.d.ts. Reference test files (under tests/, not shipped) or use a generic descriptor.",
     appliesTo: ["src-comment"],
@@ -318,7 +327,11 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
     // source, not only post-build by the leakage shell script.
     if (isTs && TS_COMMENT_LINE_RE.test(line)) {
       for (const rule of srcCommentRules) {
-        const globalRe = new RegExp(rule.re.source, "g");
+        // `rule.re.flags`, not a bare `"g"`: dropping them lost the `i` on the
+        // spec-id rules, so `SPEC-9999` in JSDoc passed here while the
+        // post-build guard and the smoke test — both case-insensitive — caught
+        // it. The same distributed content, three answers.
+        const globalRe = new RegExp(rule.re.source, withGlobal(rule.re.flags));
         let match: RegExpExecArray | null;
         while ((match = globalRe.exec(line)) !== null) {
           violations.push({

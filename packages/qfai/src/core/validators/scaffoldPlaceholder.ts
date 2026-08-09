@@ -57,6 +57,8 @@ import {
   shouldEscalate,
 } from "../atdd/scaffoldEscalation.js";
 import { hasErrnoCode } from "../fs/errno.js";
+import { collectSpecEntries } from "../specLayout.js";
+import { normalizeSpecId, type SpecScope } from "../specScope.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -114,9 +116,29 @@ function extractSpecIdFromScaffoldPath(testsAtddDir: string, filePath: string): 
   return firstSegment;
 }
 
+/**
+ * `spec-NNNN` -> `NNNN`, for comparing a scaffold path's spec id against a
+ * `--spec` scope (which holds bare numbers).
+ */
+/** Repo-relative POSIX form of an enumerated spec directory. */
+function toPosixRelative(root: string, absolute: string | undefined): string {
+  return path.relative(root, absolute ?? "").replace(/\\/g, "/");
+}
+
+function scaffoldSpecNumber(specId: string): string | null {
+  // Normalized the way `resolveSpecScope` normalizes `--spec`: it pads to four
+  // digits, and `extractSpecIdFromScaffoldPath` accepts the three-digit
+  // `spec-NNN` shape `qfai atdd scaffold` also accepts. Comparing the raw
+  // capture made a `tests/integration/spec-001/` skeleton look like a different
+  // spec from the `--spec 001` that requested it, so a scoped gate skipped it
+  // silently — no finding, no counter, no reset.
+  return normalizeSpecId(specId);
+}
+
 export async function validateScaffoldPlaceholder(
   root: string,
   config: QfaiConfig,
+  options: { specScope?: SpecScope } = {},
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   /** `06_Test-Cases.md` levels per spec, read once per spec and memoised. */
@@ -158,6 +180,16 @@ export async function validateScaffoldPlaceholder(
     path.join(testsDir, "e2e"),
   ];
   const threshold = resolveEscalateThreshold(config.atdd?.scaffoldEscalateCycles);
+  // Number -> the directory `collectSpecEntries` enumerated. The scaffold's
+  // own `spec-NNNN` comes from a *test* directory name, so joining it onto the
+  // specs root can name a path that does not exist — a `SPEC-0001/` spec pack
+  // is valid on a case-sensitive filesystem and kept verbatim by
+  // `listSpecDirs`. Attribution uses the enumerated path.
+  const declaredSpecDirs = new Map(
+    (await collectSpecEntries(resolvePath(root, config, "specsDir"))).map(
+      (entry) => [entry.specNumber, entry.dir] as const,
+    ),
+  );
   // Through the configured `paths.testsDir`, like the scan and the scaffold
   // writer. A project that relocated it was told to move the test to a
   // literal `tests/api/**` that no validator reads, so following the
@@ -201,6 +233,28 @@ export async function validateScaffoldPlaceholder(
     // Resolved against whichever scaffold root actually contains the file.
     const owningDir = scaffoldDirs.find((dir) => path.resolve(file).startsWith(path.resolve(dir)));
     const specId = owningDir ? extractSpecIdFromScaffoldPath(owningDir, file) : null;
+    // Scope decides before the counter, not after the finding. Filtering the
+    // emitted issue downstream still let a `--spec 0002` run advance
+    // spec-0001's escalation counter on every pass — three scoped gates and
+    // spec-0001 hit the default threshold without ever being validated, so its
+    // next run opened at `error`. Two concurrent per-spec runs also
+    // read-modify-write the same `.qfai/state.json`, and only the specs each
+    // run owns should be in that write at all.
+    //
+    // `specId === null` is a non-canonical layout the scan cannot attribute;
+    // it stays in every scope, matching `isFindingInSpecScope`'s treatment of
+    // an unattributed finding. The counter is already skipped for those.
+    if (specId !== null && options.specScope !== undefined) {
+      const number = scaffoldSpecNumber(specId);
+      // A directory naming a spec no pack has — a typo in the directory name,
+      // the ordinary mistyped scaffold — is not an out-of-scope sibling. No run
+      // would ever report it: `--spec 9999` is rejected by `QFAI-SCOPE-002`, so
+      // skipping it here removes the placeholder from every valid scoped gate
+      // and its escalation with it. Only a real sibling is skipped.
+      if (number !== null && declaredSpecDirs.has(number) && !options.specScope.has(number)) {
+        continue;
+      }
+    }
 
     // A TC whose declared `Level` is Unit or Component carries no ATDD
     // obligation (`QFAI-ATDD-117`), so an unfilled skeleton for it must not
@@ -342,6 +396,25 @@ export async function validateScaffoldPlaceholder(
         tcIds,
         "change",
         `Implement an assertion for ${tcIds.join(", ")} in ${relPath}, then re-run validate.`,
+        // The skeleton's spec is in its path, so this finding can be attributed
+        // and `--spec` can scope it. Without it, `owningSpecNumber` returns
+        // `null` for `tests/integration/spec-0001/...` — a repo-level path —
+        // and `isPathInSpecScope` keeps the finding under every scope, so a
+        // sibling spec's unfilled skeleton failed this spec's scoped gate.
+        // `file` stays the test path: that is what the operator has to edit.
+        // Only a spec that exists is named. A nonexistent spec path for a
+        // mistyped scaffold directory would give the finding an owner of
+        // `9999`, and `isFindingInSpecScope` — which lets attributed owners
+        // decide and ignores the unattributed test path — then drops it from
+        // every real scope, undoing the repo-wide treatment the scan above
+        // preserved for it.
+        specId !== null && declaredSpecDirs.has(scaffoldSpecNumber(specId) ?? "")
+          ? {
+              relatedFiles: [
+                toPosixRelative(root, declaredSpecDirs.get(scaffoldSpecNumber(specId) ?? "")),
+              ],
+            }
+          : undefined,
       ),
     );
   }
@@ -356,6 +429,15 @@ export async function validateScaffoldPlaceholder(
   try {
     const tracked = await listValidateCycleKeys(root);
     for (const { specId, tcId } of tracked) {
+      // A scoped run did not scan the other specs, so it cannot conclude their
+      // placeholders were filled — resetting them would discard a real count
+      // the same way advancing them would invent one.
+      if (options.specScope !== undefined) {
+        const number = scaffoldSpecNumber(specId);
+        if (number !== null && declaredSpecDirs.has(number) && !options.specScope.has(number)) {
+          continue;
+        }
+      }
       if (!observedKeys.has(`${specId}:${tcId}`)) {
         try {
           await resetValidateCycle(root, specId, tcId);

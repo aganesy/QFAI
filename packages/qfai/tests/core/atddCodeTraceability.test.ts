@@ -134,6 +134,24 @@ describe("validateAtddCodeTraceability", () => {
       expect(issues.some((entry) => entry.code === "QFAI-ATDD-122")).toBe(true);
     });
   });
+
+  it("attributes a finding to the spec directory as it is spelled on disk", async () => {
+    await withProject(async (root) => {
+      // `listSpecDirs` matches `spec-NNNN` case-insensitively and keeps the name
+      // it read, so this pack is discovered under `SPEC-0001`. A finding that
+      // rebuilt the path from the number alone would name `spec-0001`, which on
+      // a case-sensitive filesystem does not exist — the CLI report and the
+      // GitHub annotation would both point at nothing.
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"], { dirName: "SPEC-0001" });
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      const missingUs = issues.find((entry) => entry.code === "QFAI-ATDD-111");
+      expect(missingUs?.file).toBe(path.join(root, ".qfai", "specs", "SPEC-0001"));
+    });
+  });
 });
 
 async function withProject(task: (root: string) => Promise<void>): Promise<void> {
@@ -194,8 +212,9 @@ async function seedSpec(
   specNumber: string,
   usIds: string[],
   tcIds: string[],
+  options: { dirName?: string } = {},
 ): Promise<void> {
-  const specDir = path.join(root, ".qfai", "specs", `spec-${specNumber}`);
+  const specDir = path.join(root, ".qfai", "specs", options.dirName ?? `spec-${specNumber}`);
   await mkdir(specDir, { recursive: true });
 
   const usLines = usIds.flatMap((id) => [`## ${id}: title`, "- Parent: CAP-0001", ""]);

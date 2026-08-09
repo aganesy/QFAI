@@ -488,6 +488,162 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **`QFAI-ATDD-117` is scoped like the obligations it excludes.** It lists the
+  excluded ids and was filed at `specsRoot`, which belongs to every scope, so
+  a `--spec` run reported a sibling spec's L1/L2 TCs in its own evidence.
+- **The per-spec owner is read positionally, not by pattern search.** The
+  layout is exactly `<testsRoot>/<layer>/spec-NNNN/**`; scanning for that shape
+  anywhere in the path found it above the checkout and inside fixture
+  directories, attributing tests to specs that do not own them.
+- **A nonexistent-spec reference is repo-wide only where no spec owns the
+  file**, and the repo-wide `QFAI-TRACE-*` claim is limited to the findings
+  that have no spec owner — the per-artifact ones are dropped by the scope
+  filter before a scoped checkpoint sees them.
+- **The owner scan stops at the configured tests root.** Test paths are
+  absolute, so a checkout that itself lives under `/srv/integration/spec-0002/`
+  has an ancestor pair spelled exactly like the canonical layout, and a flat
+  `tests/integration/a.test.ts` inside it was attributed to `0002`.
+- **A spec-named directory that is not the owner no longer ends the search.**
+  In `tests/integration/spec-0002/fixtures/spec-0001/**` the innermost
+  `spec-NNNN` is a fixture named after the spec it stands in for; stopping
+  there lost `0002`, so `--spec 0002` dropped findings in its own tests.
+  The forbidden-placement findings (`QFAI-ATDD-121` / `-122` / `-123`) carry
+  that owner in `relatedFiles` too. `narrowForbidden` kept them for the right
+  scope, but `isFindingInSpecScope` re-derives the owners from `relatedFiles` —
+  so `qfai validate --spec 0002` still dropped a misplacement in its own tests,
+  and a test that stopped at the validator return value did not show it.
+
+- **A forbidden reference is owned by the tests that hold it.** The
+  unknown-reference path already treats a file under
+  `tests/integration/spec-0002/**` as `0002`'s; attributing a misplaced
+  annotation to the token alone meant the gate of the spec whose tests hold the
+  misplacement never saw it, and only an unrelated spec's run did.
+- **The test-path owner is read from the layer directory, not any ancestor.**
+  `entry.file` is absolute, so scanning every segment made a checkout that
+  happens to live under a directory called `spec-0002` claim every test in it —
+  dropping repo-wide findings from one scope and leaking siblings into another.
+  Only `<integration|api|e2e|atdd>/spec-NNNN/**` counts.
+- **`lint:shipping` keeps its rules' own flags.** Globalising them with a bare
+  `"g"` dropped the `i` on the spec-id rules, so `SPEC-9999` in JSDoc passed
+  the pre-build lint while the post-build guard and the smoke test caught it.
+- **An unknown reference is attributed to both of its owners.** `narrowUnknown`
+  keeps the finding when either the token's spec or the test's own per-spec
+  directory is in scope, but `relatedFiles` listed only the token's — and
+  `isFindingInSpecScope` re-derives the owners from there, where an unowned
+  `tests/**` path contributes nothing. The narrowing was undone one layer later.
+- **A shared spec artifact keeps a finding repo-wide.** A path under
+  `specsRoot` but outside any `spec-NNNN` directory — `_policies/**` — is part
+  of the finding, not an auxiliary representative path: the duplicate
+  `QFAI-ID-001` reports between a shared policy and one spec is present for
+  every spec, and attributing it to that one spec hid it from all the others.
+  A path outside `specsRoot` stays auxiliary and grants no membership.
+- **An unknown reference has two owners, and either one keeps it in scope.**
+  Attribution used the token alone, but the token is the thing that may be
+  mistyped: a test under `tests/integration/spec-0002/**` annotated
+  `QFAI:SPEC-0001:TC-9999` was attributed to `0001`, so `--spec 0002` — the
+  completion gate of the spec that owns the file — never saw its own broken
+  annotation, and only an unrelated spec's run reported it. A canonical
+  per-spec test directory is an owner too.
+  The three layers also scan the same input set now: the word boundaries the
+  pre-build lint carried made `spec-9999suffix` invisible to it while the
+  post-build guard and the smoke test both caught the `spec-9999` inside it —
+  the same distributed content passing one layer and failing another.
+
+- **The still-blocking families a `--spec` checkpoint names include the
+  contracts.** `runTddValidators` runs `validateContracts` regardless of scope,
+  and `QFAI-CONTRACT-*` / `QFAI-DB-002` are filed against `.qfai/contracts/**`,
+  which no spec owns — so they survive the scope filter and exit 1 exactly like
+  `QFAI-TEST-001` and `QFAI-TRACE-*`. Naming only those two made a contract
+  error read as an unexplained checkpoint failure.
+  The three layers express the range as a numeric property now —
+  `spec-0*[1-9][0-9]+`, any leading zeros then a value of ten or more — because
+  enumerating digit shapes kept them out of step: `spec-9999` (no leading zero)
+  and `spec-00100` (two) were each caught by some layers and not others.
+
+- **The distributed-surface spec-ID guard covered half its own range.**
+  `spec-0010 and above` is a numeric range, but all three layers spelled only
+  its leading-zero half and matched case-exactly — so a four-digit id with no
+  leading zero, or any `SPEC-` spelling, shipped past every one of them. The
+  regex now covers 0010-0099, 0100-0999 (and 01000+) and 1000 and up, in either
+  case; the `SPEC-` spelling matters because a spec directory may legally be
+  `SPEC-0042` on a case-sensitive filesystem. Widening it surfaced two
+  pre-existing leaks in `src/` header comments, which `tsup` was retaining in
+  `dist/*.d.ts` and the sourcemaps; both are removed.
+- **A finding names the spec directory as it is spelled on disk.** Spec
+  discovery matches `spec-NNNN` case-insensitively and keeps the directory name
+  it read, so a pack under `SPEC-0001/` is valid. Attribution rebuilt the path
+  from the number instead — `.qfai/specs/spec-0001` — so on a case-sensitive
+  filesystem the `file` and `relatedFiles` of `QFAI-ATDD-111` / `-112`, the
+  forbidden-layer findings and the scaffold placeholder all pointed at a path
+  that does not exist, and the GitHub annotation had nothing to attach to. The
+  enumerated directory is carried alongside the number now and used verbatim.
+- **"Does this spec exist" is a directory question.** It was answered from the
+  US/TC id maps, which only key a spec that declares at least one id — so a
+  sibling created moments ago read as nonexistent and its typo was kept
+  repo-wide, failing exactly the gate separation `--spec` exists for. The
+  answer comes from the enumerated spec directories now, and the same
+  correction applies to a scaffold directory: `tests/integration/spec-9999/`
+  is not an out-of-scope sibling, and skipping it removed the placeholder from
+  every valid scoped gate.
+- **A reference to a spec that does not exist stays repo-wide.** `--spec`
+  narrowing drops a sibling's unknown reference because that sibling's own
+  gate will report it. A token naming a spec number no spec pack has —
+  `QFAI:SPEC-9999:TC-0001`, the ordinary fat-finger — has no such gate:
+  `--spec 9999` is rejected by `QFAI-SCOPE-002`, so every legitimate per-spec
+  run would drop it and the annotation would sit in the current spec's own
+  tests unreported. Only refs naming a spec that exists are narrowed.
+- **An unknown `US` / `TC` reference is scoped by the spec its token names.**
+  `QFAI-ATDD-101` / `-102` are filed against the test file carrying the typo,
+  which no spec owns, so a sibling's `QFAI:SPEC-0001:TC-9999` failed
+  `--spec 0002`. The root cause was narrower than it looked: the owning-spec
+  regex was anchored at `SPEC-`, and an unknown-reference token is the
+  annotation as written (`QFAI:SPEC-0001:TC-9999`), so every one of them read as
+  unattributed. Contract tokens (`CON-API-*` / `CON-DB-*`) name no spec and stay
+  repo-wide, the documented limit `QFAI-ATDD-113` already has.
+- **A forbidden TC placement is scoped too.** `narrowToScope` narrowed
+  `missing.us` / `missing.tc` only, and `QFAI-ATDD-121` / `-122` / `-123` are
+  filed against a `tests/**` path that `.qfai/specs/` does not own — so a
+  sibling's half-finished annotation failed a scoped gate the requested spec had
+  fully discharged. The lists are narrowed by the same rule, an entry left with
+  no in-scope id is dropped, and the finding carries the owning spec dirs in
+  `relatedFiles` while `file` stays the test path the operator edits.
+- **A `--spec` run no longer touches another spec.** Three ways it still did.
+  `isFindingInSpecScope` kept a finding when _any_ of its paths was in scope,
+  and an unowned path is in every scope — so `D-SCAFFOLD-PLACEHOLDER`, whose
+  representative `file` is a test path outside `.qfai/specs/`, survived every
+  filter no matter what it was attributed to. Once a finding names an owning
+  spec, only its owners decide; a finding no spec owns still belongs to every
+  scope. `validateScaffoldPlaceholder` also scanned and counted repo-wide, so
+  three scoped gates pushed an unrelated spec's placeholder to the escalation
+  threshold and opened its next run at `error` — it now scans, counts and
+  resets only the specs in scope. And the shared
+  `.qfai/report/atdd-traceability/summary.{json,md}` artifact is written from
+  the repo-wide evaluation again rather than the narrowed one, so the artifact
+  no longer depends on which scope wrote it. That is **not** the same as making
+  concurrent runs safe: the two files are separate writes taken at separate
+  instants, so an interleaving can still leave them describing different
+  snapshots. Do not run per-spec gates in parallel expecting a consistent audit
+  artifact — that race is open, tracked in the shared-state issue alongside the
+  `.qfai/state.json` counters.
+- **`qfai-atdd` no longer claims `QFAI-TEST-001` fails its gate.**
+  `runAtddValidators` runs the coverage and scaffold validators only;
+  `validateTestTodoStubs` is wired into the tdd profile. A completion reviewer
+  trusting that line would read a green `--profile atdd` as proof there is no
+  `it.todo` acceptance test.
+- **`qfai validate --spec` now actually scopes the two spec-owned ATDD coverage
+  rules, and the per-spec skills use it.** `QFAI-ATDD-111` and `QFAI-ATDD-112`
+  were filed against `specsRoot` itself; `owningSpecNumber` returns `null` for a
+  path that is not inside a `spec-NNNN` directory and `isPathInSpecScope` treats
+  an unowned path as belonging to every scope, so both findings survived every
+  `--spec` filter. They are now attributed to the spec directories the missing
+  refs name, using the representative-plus-`relatedFiles` shape `QFAI-ID-001`
+  already uses. `/qfai-atdd` (four gate statements) and `/qfai-implement`
+  (`checkpoint-verification.md`, `final-checklist.md`) pass `--spec <spec-id>`,
+  which only `/qfai-sdd` did before — so a stage that discharged everything its
+  own spec owns can close, instead of failing on a sibling's obligations.
+  `QFAI-ATDD-113` / `-115` are attributed to `.qfai/contracts/**`, which no spec
+  owns, so they stay repo-wide under every scope; `/qfai-atdd` now says so
+  rather than implying a scoped gate is clean.
 - **Foreign home is a placement, not a `Level`.** Once `api` and `e2e` are
   scanned, an L4 skeleton that followed the remediation into `tests/api/**` is
   in its declared home — its annotation counts, so what it needs is the
