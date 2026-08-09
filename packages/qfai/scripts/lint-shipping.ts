@@ -109,7 +109,11 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
   // is written in leading-comment-line blocks for declarations.
   {
     name: "internal-spec-id-jsdoc-leak",
-    re: /\bspec-0*[1-9][0-9]+\b/i,
+    // No word boundaries: the post-build guard and the smoke test have none
+    // either, and a trailing `\b` made `spec-9999suffix` invisible here while
+    // both of them caught the `spec-9999` inside it — the same distributed
+    // content passing one layer of an SSOT-synced set and failing another.
+    re: /spec-0*[1-9][0-9]+/i,
     suggestion:
       "Internal spec IDs (spec-0010+) MUST NOT appear in src/ comments — tsup keeps JSDoc in dist/*.d.ts. Use a generic descriptor (e.g. 'the SDD skill business rules') and keep ID-level traceability in `.qfai/specs/` or test files.",
     appliesTo: ["src-comment"],

@@ -77,6 +77,11 @@
 
 ### Fixed
 
+The three layers also scan the same input set now: the word boundaries the
+pre-build lint carried made `spec-9999suffix` invisible to it while the
+post-build guard and the smoke test both caught the `spec-9999` inside it —
+the same distributed content passing one layer and failing another.
+
 - **The still-blocking families a `--spec` checkpoint names include the
   contracts.** `runTddValidators` runs `validateContracts` regardless of scope,
   and `QFAI-CONTRACT-*` / `QFAI-DB-002` are filed against `.qfai/contracts/**`,
