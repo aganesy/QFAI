@@ -310,6 +310,28 @@ post-escalation verification review of a user-named fix.
   same `path + NUL + blob hash` manifest form, sorted by path. **The reviewer
   computes it**, on the evidence it read; an orchestrator filling it in on the
   reviewer's behalf is recording something nobody audited.
+- **How to compute it, exactly.** The subject is part of a file, so a
+  file-level manifest alone is ambiguous, and two readers hashing different
+  extents produce a verdict that is either always stale or never checked. One
+  procedure, in four steps:
+  1. **Extract.** The row's `### <TDD-ID>` section of the evidence file its
+     `Layer` owns: the heading line through the line before the next `###` of
+     any depth, or end of file. Then drop the reviewer-appended fields — the
+     `Spec review`, `Code quality review` and `Prototype parity` lines and any
+     lines indented under them. What is left is what the reviewer read.
+  2. **Normalize.** LF line endings; strip trailing whitespace from every line;
+     drop leading and trailing blank lines; end with exactly one newline.
+  3. **Serialize.** One record per artifact — the repo-relative path, a NUL
+     byte, then the SHA-256 of that artifact's normalized bytes — sorted by
+     path, joined with newlines. Two artifacts: the extracted section, recorded
+     under the evidence file's path, and
+     `.qfai/evidence/coverage-depth-<spec-id>.md` **whole** (it has no per-row
+     section and no reviewer fields), normalized by step 2 as well.
+  4. **Hash.** SHA-256 of that record list; record the hex digest.
+
+  Gate item 10 runs the same four steps. A row with no coverage-depth file has
+  one record, not a placeholder — an absent artifact contributes nothing rather
+  than a name with an empty hash.
 
 - `Reviewed revision` is REQUIRED. It names the state the verdict describes — a `git rev-parse HEAD`
   value, or `working-tree+<content hash>` when the tree is uncommitted — a hash over

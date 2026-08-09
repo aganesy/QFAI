@@ -488,6 +488,16 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A test-only replacement re-takes its mutation proof.** A new hash over the
+  old proof says somebody edited the test; it does not say the edited test
+  still fails when the predicate is broken.
+- **`Audited evidence hash` has one recomputable procedure** — extract,
+  normalize, serialize, hash — because the subject is part of a file and a
+  file-level manifest alone left two readers free to hash different extents.
+- **The mutation run names its own revision.** The gate reads the mutated tree
+  before the revert, so item 3 observes a tree that is deliberately thrown
+  away while the GREEN and both reviews see the restored one; one revision
+  across all four made every correct branch-2 row permanently stale.
 - **The reviewer response template carries the hash it is judged on.** Every
   verdict needs an `Audited evidence hash`, but the shared template offered
   only `Reviewed revision`, so a reviewer answering it faithfully omitted the

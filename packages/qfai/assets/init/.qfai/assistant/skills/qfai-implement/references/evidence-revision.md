@@ -65,6 +65,17 @@ It appears in three places, all carrying the same address:
 3. **The review pack** — `summary.json`'s `revision` field, which is what makes
    the fact machine-checkable (`QFAI-REVIEW-009`).
 
+## A transient observation names its own revision
+
+Two exist, and neither can be taken against the tree the reviewers judge: a RED
+`/qfai-atdd` handed over precedes the production code (`RED revision`), and a
+`falsifiability` row's mutation run is taken against a tree that is reverted
+before the GREEN (`Falsifiability revision`). Both are exempt from the
+same-revision rule, because the property that makes them worth having is that
+they were taken somewhere else — a mutation run against the final tree would
+prove nothing, since the mutation is not in it. The remaining observations still
+agree with each other.
+
 ## Why an address, not a timestamp
 
 A timestamp orders observations; it does not identify what was observed. Two

@@ -393,6 +393,17 @@ handoff of a `todo` row, so this one needs its own contract.
     moved under the RED" from "only production changed" — is discharged by
     naming the verdict that moved it.
 
+    **Re-take the proof as well, on a row that has one.** A new hash over the
+    old `Oracle proof` / falsifiability result says only that somebody edited
+    the test; it does not say the _edited_ test still fails when the predicate
+    `Satisfied-by` names is broken. Clarifying an expectation or splitting a
+    selector can weaken an assertion by accident, and the pair would then pass
+    the consumer's check with a proof taken against the assertion that is gone.
+    Re-run the same mutation under the corrected selector and replace the proof
+    and the GREEN with those runs. Production behaviour is unchanged — that is
+    what makes this a no-round path — and this is the evidence that the test
+    still discriminates, which no hash can carry.
+
     **Not falsifiability.** That form needs a production mutation, which this
     stage owns no agent for and cannot hand over either: Phase Red step 3b
     excludes a `review-fix` row by name and step 3c is reachable only from a

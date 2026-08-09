@@ -437,7 +437,12 @@ describe.each(TREES)("%s (executability of the handed-over row)", (tree) => {
     // differs from GREEN's and the reviewers' — the property that RED is worth
     // having. An `observed-red` E2E/API row could not reach `done` at all.
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("**except a RED `/qfai-atdd` handed over**");
+    // The exemption now covers both transient observations, and the
+    // handed-over RED is named inside it.
+    expect(implement).toContain(
+      "**except an observation that cannot be taken against the final tree**",
+    );
+    expect(implement).toContain("a RED `/qfai-atdd` handed over, taken before the production code");
     expect(implement).toContain("items 5, 7 and 8 agree among themselves");
   });
 
@@ -1243,6 +1248,45 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(gatekeeper).not.toContain("or the commit that added it, is equally valid");
   });
 
+  it("re-takes the mutation proof when the test itself was replaced", async () => {
+    // A new hash over the old proof says somebody edited the test; it does not
+    // say the edited test still fails when the predicate is broken. Clarifying
+    // an expectation can weaken an assertion by accident.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**Re-take the proof as well, on a row that has one.**");
+    expect(provenance).toContain("Re-run the same mutation under the corrected selector");
+  });
+
+  it("defines one recomputable procedure for the audited evidence hash", async () => {
+    // The subject is part of a file, so a file-level manifest alone left the
+    // reviewer and item 10 free to hash different extents — a verdict that is
+    // either always stale or never checked.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("**How to compute it, exactly.**");
+    expect(baseline).toContain("the heading line through the line before the next");
+    expect(baseline).toContain("strip trailing whitespace from every line");
+    expect(baseline).toContain("Gate item 10 runs the same four steps");
+  });
+
+  it("gives the mutation run a revision of its own", async () => {
+    // The gate reads the mutated tree before the revert, so item 3 observes a
+    // tree that is deliberately thrown away while the GREEN and both reviews
+    // see the restored one. One revision across all four made every correct
+    // branch-2 row permanently stale.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "`Falsifiability revision` — **required on a `falsifiability` row**",
+    );
+    expect(implement).toContain(
+      "**except an observation that cannot be taken against the final tree**",
+    );
+    const revision = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(revision).toContain("## A transient observation names its own revision");
+  });
   it("does not gate completion on rows no skill is allowed to write", async () => {
     // The condition read "every `US-*` has a `Layer = E2E` row". Phase 2b seeds
     // one row per coverage-target `TC-*` and `/qfai-atdd` may not write the
