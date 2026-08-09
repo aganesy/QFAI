@@ -234,11 +234,18 @@ try branches 1 and 2.
 
 Exactly one form per row, never both and never neither:
 
-| Branch         | Recorded                                                                                                         |
-| -------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Observed RED   | RED command+result, `RED revision`, `qa-gatekeeper` PASS, the `Oracle proof` plan                                |
-| Falsifiability | `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, GREEN pair                                    |
-| `exception`    | Write `todo -> exception` with the `DR-*` the stage recorded; do not re-derive it, and do not enter Phase Green. |
+| Branch         | Recorded                                                                                                          |
+| -------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Observed RED   | RED command+result, `RED failure mode`, `RED revision`, `qa-gatekeeper` PASS, the `Oracle proof` plan             |
+| Falsifiability | `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, `RED failure mode: falsifiability`, GREEN pair |
+| `exception`    | Write `todo -> exception` with the `DR-*` the stage recorded; do not re-derive it, and do not enter Phase Green.  |
+
+`RED failure mode` is on both rows because the consumer's per-item contract
+requires it before the reviewers run, and neither branch was recording it — an
+otherwise correct ATDD-owned row reached the completion gate missing a mandatory
+field. On an observed RED it is the kind the failure actually was
+(`assertion` | `expected-error`); on branch 2 it is `falsifiability`, which is
+what that form is.
 
 **Where each form lives.** The `## Ledger rows advanced` table is an index: one
 row per `TDD-*`, holding the branch and an anchor. The commands and their output

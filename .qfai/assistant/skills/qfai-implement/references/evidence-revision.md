@@ -14,14 +14,33 @@ Revision: <git rev> | working-tree+<content hash>
 
 - **`<git rev>`** — the output of `git rev-parse HEAD` at the moment of the
   observation. Preferred: it is exact and someone else can reproduce from it.
-- **`working-tree+<content hash>`** — for an uncommitted tree, a hash over
-  `git rev-parse HEAD`, `git diff HEAD` and a **manifest** of every untracked
-  file: its path, a NUL byte, and the hash of its contents, sorted by path. Path,
-  boundary and order all have to be in it. Contents alone collide — renaming a
-  file, or swapping the contents of two, leaves the hash unchanged — and with no
-  defined order or separator a second reviewer cannot recompute the same value
-  for the same tree, which is the one thing this address exists to allow. Not as good as a rev, and honest about not being as good: it says "this
-  observation was made against a state that was never committed".
+- **`working-tree+<content hash>`** — for an uncommitted tree. Not as good as
+  a rev, and honest about not being as good: it says "this observation was made
+  against a state that was never committed".
+
+  **The procedure, exactly.** "A hash over HEAD, the diff and the untracked
+  files" is not one value: producer and reviewer can each pick a defensible
+  separator, diff option or record shape and get different answers for the same
+  tree, and then an ordinary uncommitted item is stale for nobody's mistake.
+  Four steps, the same shape as `Audited evidence hash`:
+  1. **Collect.** `git rev-parse HEAD`; the tracked diff from
+     `git diff HEAD --no-color --no-ext-diff --binary --` followed by the
+     exclusions below; and every untracked file
+     `git ls-files --others --exclude-standard` reports, after the same
+     exclusions.
+  2. **Exclude.** `.qfai/specs/*/tdd/test-list.md` and `.qfai/evidence/**`,
+     from **both** the diff and the untracked list — they are the record of the
+     observation, not the thing observed.
+  3. **Serialize.** `HEAD` + NUL + the rev; then `DIFF` + NUL + the SHA-256 of
+     the diff bytes; then one record per untracked file, `path + NUL + the
+SHA-256 of its bytes`, sorted by path in byte order. Join the records with
+     `\n`. Path, boundary and order are all in it on purpose: contents alone
+     collide — renaming a file, or swapping the contents of two, leaves the hash
+     unchanged.
+  4. **Hash.** SHA-256 of that string; record the hex digest.
+
+  An empty diff and an empty untracked list still contribute their records, so
+  "clean but uncommitted" has a value rather than a special case.
 
   **The ledger is excluded from it.** Phase Green step 3 writes `green` and
   Refactor step 3 writes `refactor` into `test-list.md` between the

@@ -488,6 +488,19 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **Step 3c writes the whole entry before the gate hashes it**, and reverts
+  the mutation whatever the verdict — a REVISE left the broken predicate in
+  the working tree for the next run to break again.
+- **The `Round N:` prefix is scoped to the per-round fields.** It swept in
+  `RED test hash`, `RED revision` and `Falsifiability revision`, which are
+  recorded once for the row.
+- **A re-taken proof reads the field its own branch wrote** — `Oracle proof`
+  on an `observed-red` row, which has no `Satisfied-by`.
+- **The handoff records `RED failure mode`**, which the consumer requires
+  before the reviewers run and neither branch was writing.
+- **The working-tree address has one serialization** — collect, exclude,
+  serialize, hash — so producer and reviewer cannot get different values for
+  the same tree.
 - **The audited entry drops the whole gate-completed group.** The checkpoint
   fields are appended after the reviewers, so leaving them in made both
   verdicts stale on every ordinary item the moment the checkpoint ran.

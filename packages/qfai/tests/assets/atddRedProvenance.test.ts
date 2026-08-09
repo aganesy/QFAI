@@ -166,7 +166,7 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     // phase, because there is no production code to mutate until then.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain(
-      "| Observed RED | RED command+result, `RED revision`, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
+      "| Observed RED | RED command+result, `RED failure mode`, `RED revision`, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
     );
     expect(provenance).toContain("A natural RED is not a substitute");
     expect(provenance).toContain("branch 1 names the mutation it intends");
@@ -764,7 +764,7 @@ describe.each(TREES)("%s (the handoff survives ledger order and time)", (tree) =
     // so the required field was a guess or absent.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain("**and the revision it was observed at**");
-    expect(provenance).toContain("| Observed RED | RED command+result, `RED revision`,");
+    expect(provenance).toContain("| Observed RED | RED command+result, `RED failure mode`,");
   });
 
   it("hands a review-fix acceptance test back to the skill that owns it", async () => {
@@ -1042,10 +1042,9 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
     const revision = flat(
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
-    expect(revision).toContain("a **manifest** of every untracked file");
-    expect(revision).toContain(
-      "its path, a NUL byte, and the hash of its contents, sorted by path",
-    );
+    // The manifest is now spelled out as a four-step procedure.
+    expect(revision).toContain("one record per untracked file");
+    expect(revision).toContain("sorted by path in byte order");
   });
 
   it("covers the artifacts the acceptance test reads", async () => {
@@ -1158,7 +1157,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // Steps 4 and 5 are skipped for this row and step 4 is the only place that
     // submits a RED, so the branch advanced the ledger with no verdict at all.
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("**route `qa-gatekeeper` on that mutation run and wait for PASS**");
+    expect(implement).toContain("**Then route `qa-gatekeeper` on that mutation run.**");
   });
 
   it("holds the revert until the gatekeeper has seen the mutated tree", async () => {
@@ -1168,7 +1167,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // the predicate `Satisfied-by` names.
     const implement = flat(await read(tree, IMPLEMENT));
     const order = implement.indexOf("route `qa-gatekeeper` on that mutation run");
-    const revert = implement.indexOf("only then revert and re-run to confirm the tree is green");
+    // The revert became unconditional, so the sentence that follows it says
+    // "once the gatekeeper has answered" rather than "only then".
+    const revert = implement.indexOf("Revert and re-run for the GREEN once the gatekeeper");
     expect(order).toBeGreaterThan(0);
     expect(revert).toBeGreaterThan(order);
     expect(implement).not.toContain("capture the failure, revert, and re-run");
@@ -1336,6 +1337,70 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(provenance).toContain("under `Shared-artifact re-verify`");
     expect(provenance).toContain("**A row whose re-run fails is not re-verified**");
   });
+  it("writes the whole entry before the gate hashes it", async () => {
+    // The gatekeeper hashes the phase-authored entry, and the test hash,
+    // manifest and revision are inside that subject — written afterwards, they
+    // made a correct branch-2 PASS stale the moment it was recorded.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**write the entry complete before the gate sees it**");
+    const write = implement.indexOf("write the entry complete before the gate sees it");
+    const route = implement.indexOf("**Then route `qa-gatekeeper` on that mutation run.**");
+    expect(write).toBeGreaterThan(0);
+    expect(route).toBeGreaterThan(write);
+  });
+
+  it("reverts the mutation on REVISE as well as on PASS", async () => {
+    // Reverting only after PASS left the deliberately broken predicate in the
+    // working tree, and step 3b readmits such a row and re-applies the
+    // mutation — so the next run broke an already-broken tree.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "**Revert and re-run for the GREEN once the gatekeeper has answered — whatever it answered.**",
+    );
+    expect(implement).toContain("The revert is cleanup, not a reward for PASS.");
+  });
+
+  it("keeps the round prefix off the row-level fields", async () => {
+    // `RED test hash`, `RED revision` and `Falsifiability revision` are
+    // recorded once for the row, so a blanket `Round N:` prefix either
+    // duplicated a value nothing produces a second of or hid the one the gate
+    // looks for.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("The **row-level** fields do not:");
+    expect(implement).not.toContain("every field above carries a `Round N:` prefix");
+  });
+
+  it("reads the predicate from the field the row's own branch wrote", async () => {
+    // An `observed-red` row has no `Satisfied-by`; its mutation is named by the
+    // `Oracle proof` plan. Reading `Satisfied-by` unconditionally left a
+    // branch-1 row with nothing to re-run.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**Which field names that predicate depends on the row's branch**");
+    expect(implement).toContain("the `Oracle proof` plan on an `observed-red` one");
+  });
+
+  it("records the RED failure mode on both handed-over branches", async () => {
+    // The consumer requires it before the reviewers run, and neither branch
+    // recorded it — so a correct ATDD-owned row reached the completion gate
+    // missing a mandatory field.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("`RED failure mode` is on both rows");
+    expect(provenance).toContain("on branch 2 it is `falsifiability`");
+  });
+
+  it("gives the working-tree address one serialization", async () => {
+    // "A hash over HEAD, the diff and the untracked files" is not one value:
+    // producer and reviewer can each pick a defensible separator or diff option
+    // and get different answers for the same tree.
+    const revision = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(revision).toContain("**The procedure, exactly.**");
+    expect(revision).toContain("git diff HEAD --no-color --no-ext-diff --binary --");
+    expect(revision).toContain("git ls-files --others --exclude-standard");
+    expect(revision).toContain("from **both** the diff and the untracked list");
+  });
+
   it("drops the whole gate-completed group from the audited entry", async () => {
     // `Checkpoint verification command`/`result` are appended after the
     // reviewers, so leaving them in made both verdicts stale on every ordinary
