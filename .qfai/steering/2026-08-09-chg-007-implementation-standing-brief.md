@@ -76,6 +76,11 @@ Another time a backtick inside a needle triggered command substitution. Author w
 were **red on the branch** from prose the orchestrator authored, so `ci:lint` was failing the whole time and
 no test could see it.
 
+**And do not pipe it.** `pnpm ci:lint 2>&1 | tail -30; echo $?` reports **`tail`'s** exit status, not the
+lane's — a lane whose exit code is silently discarded by a pipe is indistinguishable from one that passed.
+Redirect to a file and check `$?` directly. Found by an implementer who made the mistake, caught it and
+re-ran; it belongs beside the `npx` incidents because the failure is silent in the same way.
+
 Run the lane. Before running any _other_ verification step, **name the already-passing gate that covers it**
 and skip it if one does — both `npx` incidents were steps redundant with a gate that had already passed.
 

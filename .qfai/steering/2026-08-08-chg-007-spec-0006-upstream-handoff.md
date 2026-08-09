@@ -303,3 +303,27 @@ directory `tsup` publishes from and that `package.json#files` ships. The distrib
 there is no leak today; the hazard is that `dist/` after `check-types` is a mixture of two toolchains'
 output, and deleting it to "clean up" removes tsup's `dist/cli/index.mjs` barrel that checkpoint step 4
 invokes.
+
+## 14. `TC-0006-0030`'s Setup for leg (b) and the ledger `Selector` describe two different trees
+
+Owner: `/qfai-sdd` (the TC's Setup wording). Non-blocking — the row is discharged — but the ambiguity should
+not survive into another spec.
+
+`06_Test-Cases.md:281` reads: `(b) 当該 shipped workflow を削除した tree`. Read literally, deleting the
+**file** leaves the provenance **entry** in place, which is the `declined` state of the shipped-workflows
+enum. The ledger `Selector` for `TDD-0038` instead specifies `a shipped name with no provenance entry and
+absent from disk`, which is the `absent` state.
+
+**These are different production paths**, not two descriptions of one tree: `declined` is visited by the
+comparison and answered by `hasDrifted`, while `absent` is never visited at all because the iteration domain
+is `Object.keys(record.workflows)`. So the Setup and the Selector cannot both be satisfied by one fixture.
+
+Resolved downstream by following the **Selector**, which agrees with two other ledger sources (the plan
+notes and `drift.test.ts`). **Consequence to record rather than leave implicit: leg (b) is discharged jointly
+by two rows.** `TDD-0038` covers the `absent` reading; `TDD-0029`'s second `it` covers the literal Setup
+wording — and that is **measured**, not assumed: the mutation making installed-absence report as drift
+(base `851f72c3` + needle `return false;` → `return installed.kind === "absent";`) reddens nothing in
+`TDD-0038` and kills `TDD-0029`'s second `it` (`1 failed | 5 passed`).
+
+Suggested fix for the owner: split the Setup phrase so each leg names the enum state it means, since the
+enum is the thing the reader dispatches on.
