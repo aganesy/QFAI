@@ -109,7 +109,7 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
   // is written in leading-comment-line blocks for declarations.
   {
     name: "internal-spec-id-jsdoc-leak",
-    re: /\bspec-(?:0(?:0[1-9][0-9]|[1-9][0-9]{2,})|[1-9][0-9]{3,})\b/i,
+    re: /\bspec-0*[1-9][0-9]+\b/i,
     suggestion:
       "Internal spec IDs (spec-0010+) MUST NOT appear in src/ comments — tsup keeps JSDoc in dist/*.d.ts. Use a generic descriptor (e.g. 'the SDD skill business rules') and keep ID-level traceability in `.qfai/specs/` or test files.",
     appliesTo: ["src-comment"],
@@ -121,7 +121,7 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     // and smoke test, which both implicitly cover paths via the
     // spec-id regex applied to file content).
     name: "internal-spec-path-jsdoc-leak",
-    re: /\.qfai\/specs\/spec-(?:0(?:0[1-9][0-9]|[1-9][0-9]{2,})|[1-9][0-9]{3,})\//i,
+    re: /\.qfai\/specs\/spec-0*[1-9][0-9]+\//i,
     suggestion:
       "Internal spec paths (spec-0010+) MUST NOT appear in src/ JSDoc — they ship via dist/*.d.ts. Reference test files (under tests/, not shipped) or use a generic descriptor.",
     appliesTo: ["src-comment"],

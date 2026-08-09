@@ -6,6 +6,11 @@
 
 ### Fixed
 
+The three layers express the range as a numeric property now —
+`spec-0*[1-9][0-9]+`, any leading zeros then a value of ten or more — because
+enumerating digit shapes kept them out of step: `spec-9999` (no leading zero)
+and `spec-00100` (two) were each caught by some layers and not others.
+
 - **The distributed-surface spec-ID guard covered half its own range.**
   `spec-0010 and above` is a numeric range, but all three layers spelled only
   its leading-zero half and matched case-exactly — so a four-digit id with no

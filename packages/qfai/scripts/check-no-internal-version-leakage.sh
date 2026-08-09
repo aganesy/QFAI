@@ -33,13 +33,14 @@ fail=0
 # spec-0001..0009 are reserved for sample / Category-B template usage and
 # are tolerated.
 #
-# Three alternatives, because "0010 and above" is a numeric range and the
-# first spelling covered only its leading-zero half: 0010-0099, then
-# 0100-0999 (and 01000+), then 1000 and up. A four-digit id with no leading
-# zero walked past every layer. The `[sS]` spelling is deliberate — a spec
-# directory may legally be `SPEC-0042` on a case-sensitive filesystem, so a
-# case-exact guard misses the id in exactly the tree that produced it.
-INTERNAL_SPEC_RE='[sS][pP][eE][cC]-(0(0[1-9][0-9]|[1-9][0-9]{2,})|[1-9][0-9]{3,})'
+# "10 and above" as a numeric property, not as a list of digit shapes:
+# `0*` eats any number of leading zeros, then a non-zero digit followed by at
+# least one more digit is a value of 10 or more. Enumerating shapes is what let
+# `spec-9999` (no leading zero) and `spec-00100` (two of them) through
+# different layers. The `[sS]` spelling is deliberate — a spec directory may
+# legally be `SPEC-0042` on a case-sensitive filesystem, so a case-exact guard
+# misses the id in exactly the tree that produced it.
+INTERNAL_SPEC_RE='[sS][pP][eE][cC]-0*[1-9][0-9]+'
 
 # Internal version markers: any "vN.M" or "vN.M.P" outside of
 # package.json version, plus the "v1.x" sentinel. Intentionally broad
