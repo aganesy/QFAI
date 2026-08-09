@@ -39,7 +39,13 @@ export const INTEGRATION_SURFACE_DIRS: readonly string[] = [
  * `catch(() => [])` also swallowed `EACCES` and transient I/O errors, turning
  * the roster empty and taking the early return — so the harder the filesystem
  * was failing, the more confidently `QFAI-LINK-001` reported a clean surface.
- * Everything that is not `ENOENT` / `ENOTDIR` propagates.
+ * Everything that is not `ENOENT` propagates.
+ *
+ * **`ENOTDIR` is not absence.** It says a component of the path exists and is
+ * not a directory — `.claude/skills` written as a regular file, say. Folding it
+ * into "not created yet" skipped every wrapper under it and passed a surface the
+ * assistant cannot load anything from, which is the exact failure this rule
+ * exists to catch.
  */
 async function readDirOrNull(dir: string): Promise<Dirent[] | null> {
   try {
@@ -52,7 +58,7 @@ async function readDirOrNull(dir: string): Promise<Dirent[] | null> {
 
 function isMissing(error: unknown): boolean {
   const code = (error as NodeJS.ErrnoException | null)?.code;
-  return code === "ENOENT" || code === "ENOTDIR";
+  return code === "ENOENT";
 }
 
 type Broken = {

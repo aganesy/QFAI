@@ -113,6 +113,19 @@ describe("validateIntegrationSurface read errors", () => {
     });
   });
 
+  it("propagates ENOTDIR, which says a path component is not a directory", async () => {
+    // `.claude/skills` written as a regular file makes every child probe return
+    // ENOTDIR. Read as "not created yet", every wrapper under it was skipped and
+    // a surface the assistant can load nothing from passed — the exact failure
+    // this rule exists to catch.
+    await withProject(async (root) => {
+      await seedCanonical(root);
+      lstatSpy.mockImplementation(() => Promise.reject(errno("ENOTDIR")));
+
+      await expect(validateIntegrationSurface(root)).rejects.toThrow("simulated ENOTDIR");
+    });
+  });
+
   it("still treats a missing directory as nothing to check", async () => {
     await withProject(async (root) => {
       await seedCanonical(root);

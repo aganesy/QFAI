@@ -22,11 +22,18 @@ import { describe, expect, it, vi } from "vitest";
 
 type FsPromises = typeof fsPromises;
 
-const { symlinkSpy } = vi.hoisted(() => ({ symlinkSpy: vi.fn() }));
+const { symlinkSpy, writeFileSpy } = vi.hoisted(() => ({
+  symlinkSpy: vi.fn(),
+  writeFileSpy: vi.fn(),
+}));
 
 vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<FsPromises>("node:fs/promises");
-  return { ...actual, symlink: (...args: unknown[]) => symlinkSpy(actual, ...args) };
+  return {
+    ...actual,
+    symlink: (...args: unknown[]) => symlinkSpy(actual, ...args),
+    writeFile: (...args: unknown[]) => writeFileSpy(actual, ...args),
+  };
 });
 
 const { runInit } = await import("../../src/cli/commands/init.js");
@@ -53,6 +60,9 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
 describe("a repair that cannot finish leaves the file it found", () => {
   it("restores the flattened file when the symlink cannot be created", async () => {
     await withProject(async (root) => {
+      writeFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.writeFile(...args),
+      );
       symlinkSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
         actual.symlink(...args),
       );
@@ -76,6 +86,46 @@ describe("a repair that cannot finish leaves the file it found", () => {
       // it said, so the next run can try again and the operator can see it.
       expect(await readFile(linkPath, "utf-8")).toBe(FLATTENED);
       expect((await lstat(linkPath)).isSymbolicLink()).toBe(false);
+    });
+  });
+  it("says the restore failed, and carries the content, when it could not write", async () => {
+    // Swallowing the restore error reported "元のファイルは復元しました" on the
+    // one path where the operator has to know the file is gone.
+    await withProject(async (root) => {
+      writeFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.writeFile(...args),
+      );
+      symlinkSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.symlink(...args),
+      );
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      const linkPath = path.join(root, LINK);
+      await rm(linkPath, { recursive: true, force: true });
+      await mkdir(path.dirname(linkPath), { recursive: true });
+      await writeFile(linkPath, FLATTENED, "utf-8");
+
+      symlinkSpy.mockImplementation((_actual: FsPromises, _target: string, linkArg: string) =>
+        linkArg === linkPath ? Promise.reject(eperm()) : Promise.resolve(undefined),
+      );
+      writeFileSpy.mockImplementation((actual: FsPromises, file: string, ...rest: never[]) =>
+        file === linkPath
+          ? Promise.reject(new Error("simulated restore failure"))
+          : actual.writeFile(file, ...rest),
+      );
+
+      const error = await captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: false, yes: true }),
+      ).then(
+        () => null,
+        (err: unknown) => err as Error,
+      );
+
+      expect(error?.message).toContain("元のファイルの復元にも失敗しました");
+      expect(error?.message).not.toContain("元のファイルは復元しました。");
+      // The content is not recoverable from the filesystem any more, so it has
+      // to be in the message.
+      expect(error?.message).toContain(FLATTENED);
     });
   });
 });

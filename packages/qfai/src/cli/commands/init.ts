@@ -1345,19 +1345,40 @@ async function recreateFlattenedLink(
     await mkdir(path.dirname(linkPath), { recursive: true });
     await symlink(target, linkPath, type);
   } catch (err: unknown) {
-    await writeFile(linkPath, original, "utf-8").catch(() => {
-      // Restoring failed too. The original content goes into the error below
-      // rather than being lost silently.
-    });
+    // The restore can fail on its own — a disk error, a permission change, a
+    // transient I/O fault — and swallowing that reported a restore that did not
+    // happen, on the one path where the operator has to know the file is gone.
+    // Its outcome decides what the message says, and the content goes into the
+    // message when it could not be written back.
+    let restoreError: unknown;
+    try {
+      await writeFile(linkPath, original, "utf-8");
+    } catch (restoreErr: unknown) {
+      restoreError = restoreErr;
+    }
+    const restored =
+      restoreError === undefined
+        ? "元のファイルは復元しました。"
+        : [
+            `元のファイルの復元にも失敗しました: ${describeError(restoreError)}`,
+            `${linkPath} は現在存在しません。元の内容は次のとおりです:`,
+            original,
+          ].join("\n");
     if (isEpermOnWindows(err)) {
       throw new Error(
         [
           `平坦化された symlink の修復に失敗しました (EPERM): ${linkPath}`,
-          "元のファイルは復元しました。",
+          restored,
           "Windows では Developer Mode を有効にする必要があります:",
           "  設定 > システム > 開発者向け > 開発者モード を ON",
           "詳細: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
         ].join("\n"),
+      );
+    }
+    if (restoreError !== undefined) {
+      throw new Error(
+        [`平坦化された symlink の修復に失敗しました: ${linkPath}`, restored].join("\n"),
+        { cause: err },
       );
     }
     throw err;
@@ -1375,12 +1396,21 @@ async function recreateFlattenedLink(
  * and compared through `path.normalize` so a separator difference does not
  * make a flattened link look like user content.
  *
- * **Byte-exact, no `trim()`.** The signature has no surrounding whitespace, so
- * trimming widened the match past it — a wrapper somebody manages by hand as a
- * regular file, written by an editor or `echo` that appends a newline, read as
- * flattened and was deleted without `--force`. Everything that is not the exact
- * signature takes the preserve path, which is the safe direction to be wrong in.
+ * **Byte-exact.** `trim()` widened the match past the signature — a wrapper
+ * somebody manages by hand, written by an editor or `echo` that appends a
+ * newline, read as flattened and was deleted without `--force` — and
+ * `path.normalize` widened it the same way for a different input:
+ * `../../.qfai//assistant/x` and `../../.qfai/assistant/./x` are not the bytes
+ * git writes, but normalize to them. The only difference this tolerates is the
+ * path separator, because git writes `/` and the target is built with
+ * `path.relative`, which yields `\\` on Windows. Everything else takes the
+ * preserve path, which is the safe direction to be wrong in.
  */
+/** Separator-insensitive, and nothing else — see {@link isFlattenedLink}. */
+function toPosixSeparators(value: string): string {
+  return value.split("\\").join("/");
+}
+
 async function isFlattenedLink(linkPath: string, target: string): Promise<boolean> {
   const stats = await safeLstat(linkPath);
   if (stats === undefined || !stats.isFile()) {
@@ -1393,10 +1423,15 @@ async function isFlattenedLink(linkPath: string, target: string): Promise<boolea
   }
   try {
     const content = await readFile(linkPath, "utf-8");
-    return path.normalize(content) === path.normalize(target);
+    return toPosixSeparators(content) === toPosixSeparators(target);
   } catch {
     return false;
   }
+}
+
+/** Message text for an unknown thrown value, without `[object Object]`. */
+function describeError(err: unknown): string {
+  return err instanceof Error ? err.message : JSON.stringify(err);
 }
 
 function isEpermOnWindows(err: unknown): boolean {

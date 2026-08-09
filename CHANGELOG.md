@@ -95,6 +95,21 @@
 
 ### Fixed
 
+- **The flattened-link match tolerates the separator and nothing else.**
+  Dropping `trim()` left `path.normalize`, which widens the same way for a
+  different input: `../../.qfai//assistant/x` and `../../.qfai/assistant/./x`
+  are not the bytes git writes but normalize to them, so a hand-managed wrapper
+  was still deleted without `--force`. Only `\` vs `/` is absorbed, because
+  git writes `/` and the target comes from `path.relative`.
+- **A rollback that could not write says so.** The restore was wrapped in an
+  empty `catch`, so a disk error or permission change during it still produced
+  "元のファイルは復元しました" — on the one path where the operator has to know
+  the file is gone. The restore's own outcome now decides the message, and the
+  content it could not write back is carried in it.
+- **`ENOTDIR` is a type collision, not an absence.** It says a path component
+  exists and is not a directory — `.claude/skills` written as a regular file.
+  Folding it into "not created yet" skipped every wrapper under it and passed a
+  surface the assistant can load nothing from. Only `ENOENT` means absent.
 - **The template root is identified, not just found.** Candidates were tried
   outermost-first, and from `<project>/node_modules/qfai/dist` the outermost is
   `<project>/assets/init` — a consuming project with an unrelated directory of
