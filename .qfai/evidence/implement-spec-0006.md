@@ -5593,3 +5593,71 @@ future round has to guess which was meant.
 It cited the tree as `511be256`; it was actually one commit further along at `4cbfba5c`. All four blobs I
 named matched exactly, so nothing measured is stale — but the base revision in a work order is exactly the
 kind of currency claim the round-7 findings were about, and mine was stale within the hour.
+
+### G4 round 9 — the streak ends, and it ends because the rule was applied to MY instructions
+
+Landed at `6b75d5aa`. One file, test blob `2bff205b → 1e52b7d2`; comment text and one assertion label only.
+`src/core/doctor.ts` `1d8eab08` and `src/cli/main.ts` `27326793` untouched — **ninth** consecutive round with
+no production change. `pnpm ci:lint` exit 0 across all ten members; row `2 passed`; **360 / 477 = 75.5%**
+comment lines, one under the 361 cap.
+
+#### Both of my prescribed fixes would have been the fifth consecutive instance
+
+1. **My wording "two classes are not bounded, both measured" is itself the completeness claim F2 exists to
+   delete.** Writing "two classes" twelve lines above a fix that removes "BOTH" and "two" would have put the
+   same defect in the same docblock. The engineer wrote **"agreement has at least two measured routes"** — a
+   characterisation (the pin bounds divergence; agreement is unbounded) plus two instances, with the list
+   explicitly open.
+2. **My "the interpolated host path — both sides derive one value from `shippedWorkflowsDir()` and cannot
+   differ at all" is FALSE**, and I verified the refutation myself. Production computes
+   `path.join(getInitAssetsDir(), "root", ...WORKFLOWS_DIR_SEGMENTS)` (`workflowsIntegrity.ts:191`); the test
+   helper computes `path.join(shippedGithubDir(), "workflows")` over
+   `path.join(getInitAssetsDir(), "root", ".github")` (`shippedWorkflowFixtures.ts:16-19`). **Only
+   `getInitAssetsDir()` is shared** — the trailing join is stated independently on both sides, which is
+   precisely what requirement 2's DRY refusal exists for. Had my wording shipped, the note would have
+   declared that refusal pointless. Narrowed to "the packaged ROOT".
+
+So the round that ends the streak ends it by **applying the rule to the work order rather than to the
+artifact**. Four rounds of reviewers catching the class in the engineer's output, and the thing actually
+generating it was upstream of the engineer.
+
+#### A third instance, in neither finding, in the text being rewritten
+
+`:182` read *"on `message` the equality pin is the closure"* — an absolute sitting **three lines above** the
+paragraph that refutes it, since a coordinated edit leaves the pin green on a violating message and the
+file's own record carries an ALL-GREEN coordinated re-paste. Now "the **PRIMARY** oracle — not the closure,
+per below". This is the neighbour-consistency clause paying off on its first use.
+
+#### Measurements
+
+The F1 witness reproduced **to the same blobs** (`8c0633e4` / `1d9e89e7`), so the needle was identical:
+`1 failed | 1 passed`, one AssertionError, token 8's own; pin and both content needles GREEN. And the probe
+pins F2 directly — token 8 fires on `report` **in the sentence** (offset 330 Windows / 310 POSIX / 248
+host-elided), **not** in the host path, which is exactly what the old label claimed.
+
+The nit's cited needle did not match `addCheck`'s real signature `addCheck(checks, {…})`, so `7e4788b4` was
+**not reconstructible**; a valid second registration was built instead (`02b03351`), sole failure
+`toHaveLength(1)`. And "the three token observations" is corrected to "the observations" — the measurement
+shows **all eight tokens plus the pin** ran and passed, not three.
+
+#### Method hazard, third occurrence, now general
+
+A bash heredoc **silently collapsed `\` to `\`**, dropping the backslash from token 8's lookbehind class
+and producing a probe that reported the shipped message as **firing**. Two probe runs were wrong before it
+was caught by printing the class bytes. `qa-gatekeeper` hit the same collapse two rounds earlier, and the
+engineer hit it in round 6. **Adopted: any regex or needle in this row is authored with the Write tool or
+`String.raw` and byte-verified — never routed through a shell.**
+
+#### One residual, flagged and not fixed
+
+`:176`'s inherited *"the one move the rule above forbids"* is also a completeness claim, but about what a
+**rule** forbids rather than about a needle's reach — a different family, and outside round 9's two findings.
+Recorded as a named open item rather than silently carried, and deliberately **not** made a round 10: the
+row's code has been at a defensible stop since round 7, and one inherited absolute of a different family
+does not warrant another cycle.
+
+#### Status
+
+The engineer's suggested ledger status was `GREEN`. **Not adopted** — the lifecycle is forward-only and
+`refactor → green` is a backward transition the ledger forbids. The row stays at **`refactor`**, which is
+also the only status with an outbound `review-fix` edge if anything reopens it.
