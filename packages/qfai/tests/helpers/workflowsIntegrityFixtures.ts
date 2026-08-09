@@ -29,6 +29,7 @@ import { appendFile, mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { runInit } from "../../src/cli/commands/init.js";
+import { readInstallProvenance, writeInstallProvenance } from "../../src/shared/provenance.js";
 import { useTempDirPool } from "./shippedWorkflowFixtures.js";
 import { captureStdout } from "./stdout.js";
 
@@ -109,6 +110,29 @@ export async function deleteShippedWorkflow(dir: string, name: string): Promise<
  */
 export async function deleteInstallProvenanceRecord(dir: string): Promise<void> {
   await rm(path.join(dir, ".qfai", "install-provenance.json"), { force: true });
+}
+
+/**
+ * Removes ONE name's entry from the install-provenance record, leaving every
+ * other entry — and every file on disk — untouched. Paired with
+ * `deleteShippedWorkflow` it produces the `absent` state of the
+ * shipped-workflows contract's §3 enum (no entry AND nothing on disk) for a
+ * name the running package still ships, inside a record that stays non-empty.
+ *
+ * Goes through the production reader and writer instead of duplicating the
+ * record path as `deleteInstallProvenanceRecord` above does, since a targeted
+ * edit needs the parsed record anyway. Two scoped consequences:
+ *
+ * - The round trip preserves `workflows` only, that being the shape the reader
+ *   returns. Contract §2 anticipates a second artifact kind and this helper
+ *   would drop one; make it a targeted JSON edit in the change that adds one.
+ * - A name carrying no entry to begin with is a silent no-op, so callers assert
+ *   the POSTCONDITION through `readInstallProvenance` rather than trust this.
+ */
+export async function removeProvenanceEntry(dir: string, name: string): Promise<void> {
+  const record = await readInstallProvenance(dir);
+  const kept = Object.entries(record.workflows).filter(([recorded]) => recorded !== name);
+  await writeInstallProvenance(dir, { workflows: Object.fromEntries(kept) });
 }
 
 /**

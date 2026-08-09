@@ -17,11 +17,18 @@
  *
  * Observed through `createDoctorData` rather than the reader, matching the
  * sibling drift suite: a finding that is produced but never registered would
- * pass a reader-only test.
+ * pass a reader-only test. One assertion in the second row below reads the
+ * reader instead, and says why at its own line.
+ *
+ * Both of §3's entry-LESS states live here, one row each: `adopter-owned`
+ * (no entry, file present) and `absent` (no entry, nothing on disk). What they
+ * share is the observation that decides them — the name has no provenance
+ * entry — which is this file's subject.
  *
  * This file grows row by row; each describe block is one ledger row.
  */
 // QFAI:SPEC-0006:TC-0006-0031
+// QFAI:SPEC-0006:TC-0006-0030
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -29,13 +36,16 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { createDoctorData } from "../../src/core/doctor.js";
+import { diffInstalledShippedWorkflows } from "../../src/core/doctor/workflowsIntegrity.js";
 import { readInstallProvenance } from "../../src/shared/provenance.js";
 import { normalizeNewlines } from "../../src/shared/text.js";
 import { shippedWorkflowPath } from "../helpers/shippedWorkflowFixtures.js";
 import {
   ADOPTER_WORKFLOWS_DIR,
   adopterWorkflowPath,
+  deleteShippedWorkflow,
   editShippedWorkflow,
+  removeProvenanceEntry,
   useAdopterTreePool,
 } from "../helpers/workflowsIntegrityFixtures.js";
 
@@ -239,6 +249,168 @@ describe(
       // at all. Deep equality pins membership, order and length in one shot,
       // and its diff prints whichever entry appeared; a separate length
       // assertion adds no discriminating power.
+      expect
+        .soft(
+          check?.details?.modified,
+          "the recorded, hand-edited file must be the one and only reported entry",
+        )
+        .toEqual([`${ADOPTER_WORKFLOWS_DIR}/${CONTROL_NAME}`]);
+      // The `message` half of the haystack above is only a claim while the
+      // message is non-empty, so it gets its own control alongside `details`.
+      expect
+        .soft(check?.message, "the advisory message must name the recorded stale path")
+        .toContain(`${ADOPTER_WORKFLOWS_DIR}/${CONTROL_NAME}`);
+    });
+  },
+);
+
+/**
+ * The shipped name the row below reduces to `absent`: no provenance entry and
+ * nothing on disk. It is the same file `COLLIDING_NAME` uses in a different
+ * role, because `SHIPPED_WORKFLOW_NAMES` holds exactly two names at this
+ * revision and the other one is this row's live control.
+ *
+ * Reached by stripping a real install, which is a SIMULATION of a state that
+ * arises on its own rather than a contrived tree: contract §1 has names
+ * entering and leaving the shipped list, so an adopter who installed while the
+ * package shipped one workflow and then upgraded to a version shipping two
+ * carries exactly this state for the new name — no entry, no file, record
+ * non-empty — until their next `qfai init`.
+ */
+const ABSENT_NAME = "qfai-tests.yml";
+
+describe(
+  "TC-0006-0030 (TDD-0038): a shipped name with no provenance entry and absent from disk yields no drift finding, while a live entry-bearing stale file is still reported",
+  { timeout: 60000 },
+  () => {
+    // TC-0006-0030 leg (b) — 「drift finding が 0 件 (不在は drift ではない)」 — for
+    // the entry-LESS half of absence. The entry-BEARING half (`declined`: entry
+    // present, file gone) is NOT this row's and is not uncovered either: the
+    // sibling drift suite's second `it` deletes a recorded `qfai-validate.yml`
+    // and pins its silence — measured, not assumed, by the M2 mutation below,
+    // which reddens that `it` and nothing else in that file. Two separate
+    // reader statements answer the two halves, which is why the leg divides here
+    // rather than for tidiness.
+    //
+    // THE SILENCE THIS ROW CLAIMS HAS TWO SUFFICIENT CAUSES, at those two
+    // statements, and the falsifiability record is shaped by that rather than by
+    // preference: the name is outside the comparison set (`recordedNames`), and
+    // its installed file is absent, which `hasDrifted` answers with no drift.
+    // Either one alone leaves the ABSENCE CLAIM passing — measured on M1 (the
+    // comparison set widened past the record's key set) and on M2 — so the
+    // mutation that reddens the claim is COMPOUND (M3 = M1 + M2). What M1
+    // reddens by itself, among this row's assertions, is the `comparedCount`
+    // assertion below, which is why that assertion is here. Needles, blobs and
+    // outputs: `.qfai/evidence/implement-spec-0006.md#tdd-0038`.
+    it("stays silent about the entry-less absent shipped name while reporting the recorded stale one", async () => {
+      const dir = await pool.seedAdopterTree();
+      await deleteShippedWorkflow(dir, ABSENT_NAME);
+      await removeProvenanceEntry(dir, ABSENT_NAME);
+      await editShippedWorkflow(dir, CONTROL_NAME);
+
+      // Guards #1-#3 are PRECONDITIONS on the fixture and stay hard: on a tree
+      // that is not in this state nothing below measures anything. Everything
+      // after them is the row's claim and is `expect.soft`, for the reason the
+      // sibling row above gives at length.
+
+      // Guard #1 — both halves of the record's side, read through the production
+      // reader rather than trusted from the fixture, whose entry removal is a
+      // silent no-op on a name it does not find. The record must ALSO stay
+      // non-empty: an empty one registers no check at all — the
+      // whole-record-empty aggregate the sibling drift suite owns — and every
+      // claim below would then pass against a doctor run that emitted nothing.
+      const recordedNames = Object.keys((await readInstallProvenance(dir)).workflows);
+      expect(
+        recordedNames,
+        "the stripped name must carry no provenance entry, or this is not the `absent` state",
+      ).not.toContain(ABSENT_NAME);
+      expect(
+        recordedNames,
+        "the control must stay recorded, or the record is empty and no check is registered at all",
+      ).toContain(CONTROL_NAME);
+
+      // Guard #2 — the disk side. Present on disk would make the name
+      // `adopter-owned`, which is the row above's state, not this one's.
+      await expect(
+        readFile(adopterWorkflowPath(dir, ABSENT_NAME), "utf-8"),
+        "the stripped name must be gone from disk, or the state is `adopter-owned`, not `absent`",
+      ).rejects.toThrow();
+
+      // Guard #3 — the packaged side STILL SHIPS the name, which removes a
+      // THIRD sufficient cause of the silence: packaged-absent, the `extra`
+      // bucket, whose rule the sibling drift suite's fourth `it` owns. It leaves
+      // exactly the two causes named above. It is NOT what keeps the compound
+      // mutation alive, and the first draft of this comment said it was: M2's
+      // recorded replacement answers on the INSTALLED side, while this guard
+      // constrains the PACKAGED one. Attribution is the whole of its warrant.
+      const packagedCopy = await readFile(shippedWorkflowPath(ABSENT_NAME), "utf-8");
+      expect(
+        packagedCopy.length,
+        "the packaged copy must still exist, or this row measures the `extra` bucket instead of the provenance gate",
+      ).toBeGreaterThan(0);
+
+      // Two observation points. The reader-level one is deliberate in a file
+      // whose header names `createDoctorData`: of the reader's four fields and
+      // the two the emission renders (`workflowsDir`, `modified`),
+      // `comparedCount` is the only one that reports the SIZE of the comparison
+      // set, so it is where "this name was never an operand" is observable.
+      const diff = await diffInstalledShippedWorkflows(dir);
+      const data = await createDoctorData({ startDir: dir, rootExplicit: true });
+      // The finding SET, not the first match: `addCheck` is a bare push with no
+      // dedup, so a `find` would hand back the gated emission while a second
+      // registration named the stripped file.
+      const findings = data.checks.filter((entry) => entry.id === "workflows.integrity");
+      const check = findings[0];
+
+      // The MECHANISM behind the claim, and the assertion M1 reddens on its own
+      // per the block above: the comparison set is the record's key set, so a
+      // name with no entry is never compared. Pinned against
+      // `recordedNames.length`, not against the literal 1 — a literal would pin
+      // the shipped set's cardinality at 2, which contract §1 expects to change,
+      // and the row above refused the same pin for the same reason.
+      expect
+        .soft(
+          diff.comparedCount,
+          "the comparison set must be exactly the recorded names, or a name with no entry is being compared",
+        )
+        .toBe(recordedNames.length);
+
+      // `findings[0]` being defined is entailed by this length assertion, whose
+      // own failure names the empty set, so no separate `toBeDefined()` is kept.
+      //
+      // For TDD-0039, which adds the third emission branch: this tree resolves
+      // the packaged operand, so `status` is `modified`, and a branch keyed on
+      // `status === "skipped_unresolved"` cannot also fire here, since `status`
+      // carries one value per run. A branch that instead registers a check
+      // ALONGSIDE the drift one reddens this assertion — deliberately, and that
+      // is the transition to raise rather than to absorb.
+      expect
+        .soft(findings, "workflows.integrity must be registered exactly once per doctor run")
+        .toHaveLength(1);
+      expect.soft(check?.severity, "the drift advisory is an info-severity finding").toBe("info");
+
+      // The row's named claim, over every rendered field of every registered
+      // finding. The needle is a bare FILE name and the only paths on this
+      // surface are the control's rendered path and the packaged DIRECTORY path;
+      // that neither contains the needle is what the passing run measures.
+      // Payload growth can only produce a false RED here, never a false GREEN.
+      const findingSurface = findings
+        .map(
+          (finding) =>
+            `${finding.title}\n${finding.message}\n${JSON.stringify(finding.details ?? {})}`,
+        )
+        .join("\n");
+      expect
+        .soft(
+          findingSurface,
+          "a shipped name with no provenance entry and nothing on disk must not appear anywhere in any workflows.integrity finding",
+        )
+        .not.toContain(ABSENT_NAME);
+
+      // The live control. Without it a check that named NOTHING would satisfy
+      // the absence claim above and the row would assert nothing. Deep equality
+      // pins membership, order and length at once, and its diff prints whichever
+      // entry appeared.
       expect
         .soft(
           check?.details?.modified,
