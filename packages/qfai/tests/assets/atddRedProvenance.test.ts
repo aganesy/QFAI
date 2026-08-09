@@ -796,9 +796,7 @@ describe.each(TREES)("%s (a gate must be reachable in the order it is listed)", 
     expect(gates.indexOf("P4: Integration")).toBeLessThan(gates.indexOf("P4b:"));
     expect(gates.indexOf("P4b:")).toBeLessThan(gates.indexOf("P6: Runtime"));
     // Branch 3 has no such precondition and stays early.
-    expect(flat(gates)).toContain(
-      "P1d: **Branch 3 rows are handed over once their `DR-*` is written.**",
-    );
+    expect(flat(gates)).toContain("P1d: **Branch 3 rows are judged here, then handed over.**");
   });
 
   it("does not gate a seam-only round trip on a RED that cannot exist yet", async () => {
@@ -1293,7 +1291,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const baseline = flat(
       await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
     );
-    expect(baseline).toContain("**every verdict any reviewer appends**");
+    // Widened again: the checkpoint fields are appended after the reviewers
+    // too, so the rule is the whole gate-completed group.
+    expect(baseline).toContain("**every field written after the hash is taken**");
     expect(baseline).toContain("`qa-gatekeeper` RED / GREEN observation verdicts");
   });
 
@@ -1333,9 +1333,50 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // row has no re-entry edge of its own.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain("## A shared test artifact outlives the row that recorded it");
-    expect(provenance).toContain("marked `shared-artifact re-verify`");
+    expect(provenance).toContain("under `Shared-artifact re-verify`");
     expect(provenance).toContain("**A row whose re-run fails is not re-verified**");
   });
+  it("drops the whole gate-completed group from the audited entry", async () => {
+    // `Checkpoint verification command`/`result` are appended after the
+    // reviewers, so leaving them in made both verdicts stale on every ordinary
+    // item the moment the checkpoint ran.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("**every field written after the hash is taken**");
+    expect(baseline).toContain("`Checkpoint verification command` / `result`");
+    expect(baseline).toContain("The group is the rule, not a list to keep in step by hand");
+  });
+
+  it("records a shared-artifact re-verify on the row that caused it", async () => {
+    // Appending to a `done` row breaks the verdicts that closed it — the audit
+    // hash covers the entry — and `done` has one exit, the upstream reset,
+    // which a sibling editing a fixture is not.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("records that on itself");
+    expect(provenance).toContain("**The earlier rows' entries are not touched**");
+    expect(provenance).toContain("the row that moved the ground under it carries the proof");
+  });
+
+  it("takes the falsifiability revision while the mutation is still applied", async () => {
+    // The mutated tree stops existing at the revert, so step 3c is the only
+    // moment it can be addressed — and item 10 requires the field.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**And `Falsifiability revision`, taken before the revert**");
+  });
+
+  it("gives branch 3 the verdict its success condition names", async () => {
+    // P1b judges branch 1 only and the exception path writes the terminal
+    // status and stops, so a correct branch-3 row was judged by nobody.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("**Branch 3 rows are judged here, then handed over.**");
+    expect(atdd).toContain("hand the row over **with that PASS recorded**");
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "**and only when the entry carries the `qa-gatekeeper` PASS P1d took on that `DR-*`**",
+    );
+  });
+
   it("does not accept a falsifiability trio that no gate has judged", async () => {
     // Step 3c writes the trio and only then routes the gatekeeper, so an
     // interrupted run leaves a trio with no verdict — and step 3b read the

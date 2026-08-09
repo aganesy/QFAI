@@ -389,11 +389,14 @@ See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / �
   before the next branch-1 row's failing test is written, and before P2-P4 build
   any surface. One loop per `TDD-ID`; the nested run is an item cycle, not a
   completion gate (`references/red-provenance.md#what-the-nested-run-owes`).
-- P1d: **Branch 3 rows are handed over once their `DR-*` is written.** Every
-  branch needs a handoff — `/qfai-implement` is the only writer of `Status` /
-  `DR-ID` / `Evidence`. Which branch goes when, and what the blocking
-  `qa-gatekeeper` can judge at each point:
-  `references/red-provenance.md#which-stage-hands-a-row-over`.
+- P1d: **Branch 3 rows are judged here, then handed over.** Route
+  `qa-gatekeeper` on the `DR-*` — the claim is that the obligation genuinely
+  cannot be observed — and hand the row over **with that PASS recorded**. P1b's
+  gatekeeper judges branch 1 only and `/qfai-implement`'s exception path writes
+  `todo -> exception` and stops, so without this a correct branch-3 row reached
+  a terminal status judged by nobody. `/qfai-implement` is the only writer of
+  `Status` / `DR-ID` / `Evidence`, so every branch needs a handoff; which goes
+  when: `references/red-provenance.md#which-stage-hands-a-row-over`.
 - P2: E2E implementation completed.
 - P3: API implementation completed.
 - P4: Integration implementation completed.

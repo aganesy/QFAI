@@ -320,14 +320,17 @@ post-escalation verification review of a user-named fix.
      of file. Ending at any `###` cut the row's own `### Round N` blocks out of
      the subject — and a rework's RED, GREEN and proof live there, so a PASS
      survived every edit to the very evidence it was given for. Then drop
-     **every verdict any reviewer appends** — the `Spec review`,
-     `Code quality review` and `Prototype parity` lines, **and the
-     `qa-gatekeeper` RED / GREEN observation verdicts**, with any lines indented
-     under them. What is left is what the reviewer read. Leaving the
-     observation verdicts in was not a smaller version of the same mistake: the
-     gatekeeper hashes the entry and then writes its PASS into it, so gate item
-     10 recomputed over an entry that had grown by the gatekeeper's own line and
-     called its verdict stale the moment it was recorded.
+     **every field written after the hash is taken** — the whole
+     **gate-completed** group `qfai-implement/SKILL.md` names (`Spec review`,
+     `Code quality review`, `Prototype parity`,
+     `Checkpoint verification command` / `result`) **and the `qa-gatekeeper`
+     RED / GREEN observation verdicts**, with any lines indented under them.
+     What is left is what the reviewer read. The group is the rule, not a list
+     to keep in step by hand: dropping only the two code-review verdicts left
+     the gatekeeper's PASS in — it hashes the entry and then writes into it, so
+     its own verdict was stale on recording — and leaving the checkpoint fields
+     in did the same to **both** reviewers on every ordinary item, the moment
+     the checkpoint ran.
   2. **Normalize.** LF line endings; strip trailing whitespace from every line;
      drop leading and trailing blank lines; end with exactly one newline.
   3. **Serialize.** One record per artifact — the repo-relative path, a NUL

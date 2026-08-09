@@ -294,19 +294,28 @@ written in P2-P4 with every row's obligation in view, not grown one row at a
 time. Where that holds, no later row edits them and the manifests stay true.
 
 **Where a later row does have to edit one, it re-verifies the rows that read
-it.** The editing row already runs its own selector; run the earlier rows'
-selectors in the same pass, and record for each the re-run and its new manifest
-and hash as a `### Round N` block on that row, marked
-`shared-artifact re-verify`. That is the same shape a `test-only replacement`
-takes, and for the same reason: what has to be shown is that the earlier row's
-test still discriminates against the artifact as it now stands. **A row whose
-re-run fails is not re-verified** — it is a regression the editing row
-introduced, and it goes back through `/qfai-implement` as rework rather than
-being recorded as re-verified.
+it — and records that on itself.** The editing row already runs its own
+selector; run the earlier rows' selectors in the same pass and record them in
+**the editing row's** entry, under `Shared-artifact re-verify`: one line per
+earlier row naming its `TDD-ID`, the selector re-run, its result, and the
+artifact's new manifest and hash. **A row whose re-run fails is not
+re-verified** — it is a regression the editing row introduced, and the editing
+row does not reach `done` until it is fixed, exactly as any other failure in
+its own checkpoint.
 
-The completion gate reads the latest block, so a row re-verified this way is
-current. Nothing here lets a `done` row re-observe a RED: the re-run is a
-passing run against an unchanged predicate, which is what a re-verify is.
+**The earlier rows' entries are not touched**, and that is deliberate on two
+counts. There is no legal reopen for them: `done` has one exit, the upstream
+reset, and it requires an approved upstream change — a sibling editing a fixture
+is not one. And their evidence is a record of an observation, not a claim about
+the present: a `RED test hash` addresses the manifest **as it was when that RED
+was taken**, which is the only thing it can honestly say. Appending to them
+would also break the very verdicts that closed them, since the audit hash covers
+the entry.
+
+So the pairing is: the earlier row keeps the observation it made, and the row
+that moved the ground under it carries the proof that the observation still
+holds. The editing row's own reviewers and checkpoint audit that proof, which is
+what makes it evidence rather than an assertion.
 
 ## A spec with no ATDD-owned rows
 

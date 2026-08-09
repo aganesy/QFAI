@@ -488,6 +488,17 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The audited entry drops the whole gate-completed group.** The checkpoint
+  fields are appended after the reviewers, so leaving them in made both
+  verdicts stale on every ordinary item the moment the checkpoint ran.
+- **A shared-artifact re-verify is recorded on the row that caused it.**
+  Appending to a `done` row breaks the verdicts that closed it, and `done` has
+  one exit — the upstream reset — which a sibling editing a fixture is not.
+- **Step 3c records `Falsifiability revision`** before the revert: the mutated
+  tree stops existing there, and gate item 10 requires the field.
+- **Branch 3 is judged before it becomes terminal.** P1b judges branch 1 only
+  and the exception path writes the status and stops, so a correct branch-3
+  row reached `exception` having been judged by nobody.
 - **One content-address procedure, referenced rather than restated.** The
   producer hashed all of `git diff HEAD`, so its `RED revision` and the
   gatekeeper's `Reviewed revision` for the same RED tree could not be matched.
