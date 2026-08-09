@@ -765,3 +765,59 @@ describe("a settled Level survives a later table that has no Level column", () =
     expect(codes).not.toContain("TDDLIST_TC_NOT_COVERED");
   });
 });
+
+describe("an indented code block is not the ledger", () => {
+  it("does not let a sample row discharge a real obligation", async () => {
+    // `maskNonSpecRegions` blanked fenced blocks and HTML comments only, and
+    // `parseAllMarkdownTables` matches `^\s*\|` — so a schema-complete sample
+    // ledger indented four spaces was collected as a real table. A spec with no
+    // ledger rows of its own could satisfy `TDDLIST_TC_NOT_COVERED` from the
+    // sample, and a `todo` row owes neither `Test file` nor `Evidence`, so
+    // `validate --profile full --fail-on error` passed with no test behind it.
+    const { codes } = await bothCommands(
+      [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001 | L1 | AC-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      [
+        "## Example (not the ledger)",
+        "",
+        "    | TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+        "    | ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+        "    | TDD-0001 | TC-0001 | unit | tests/a.test.ts | a | todo | - | - |",
+      ],
+    );
+    expect(codes).toContain("TDDLIST_TC_NOT_COVERED");
+  });
+
+  it("still reads a table indented under a list item", async () => {
+    // Under a bullet, four-space indentation is continuation, not code. The
+    // masking is top-level only so this table stays visible.
+    const { codes } = await bothCommands(
+      [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0001 | L1 | AC-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      [
+        "- Rows for this change request:",
+        "",
+        "    | TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+        "    | ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+        "    | TDD-0001 | TC-0001 | unit | tests/a.test.ts | a | done | - | RED fail / GREEN pass |",
+      ],
+    );
+    expect(codes).not.toContain("TDDLIST_TC_NOT_COVERED");
+  });
+});

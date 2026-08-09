@@ -160,26 +160,45 @@ function maskLineComments(line: string, inComment: boolean): { text: string; ope
   return { text: visible, open };
 }
 
+/** A top-level indented code block: four spaces or a tab, per CommonMark. */
+const INDENTED_CODE_LINE = /^(?: {4}|\t)/;
+
+/** A list item marker, which makes the indentation below it continuation. */
+const LIST_ITEM_LINE = /^\s*(?:[-*+]|\d+[.)])\s/;
+
 /**
- * Blanks the regions of `06_Test-Cases.md` that are not the spec, preserving
- * line count: fenced code blocks and HTML comments.
+ * Blanks the regions of a spec document that are not the spec, preserving line
+ * count: fenced code blocks, HTML comments, and top-level indented code blocks.
  *
- * `06_Test-Cases.md` often documents its own format in a fenced sample or a
- * commented-out block. Without this, an illustrative `## Test Case Table` plus
- * `TC-ID` table inside one is selected as the named section and its example IDs
- * are handed to the validators and the report — and for a heading-less legacy
- * document it flips a previously correct resolution into a wrong one, because
- * the hidden sample outranks the real table.
+ * These documents often illustrate their own format. Without this, an
+ * illustrative `## Test Case Table` plus `TC-ID` table inside one is selected as
+ * the named section and its example IDs are handed to the validators and the
+ * report — and for a heading-less legacy document it flips a previously correct
+ * resolution into a wrong one, because the hidden sample outranks the real
+ * table. In `tdd/test-list.md` the same hole was worse: a schema-complete sample
+ * ledger row in an indented block was collected as a real row, so a spec with no
+ * ledger at all could satisfy `TDDLIST_TC_NOT_COVERED` — and owe no `Test file`
+ * or `Evidence`, because a `todo` row owes neither — and pass
+ * `validate --profile full --fail-on error` with no test behind it.
  *
  * Fence state wins over comment state: `<!--` inside a fenced sample is sample
  * text, not a comment opener, so an unclosed one cannot swallow the rest of the
  * document. Comments are stripped before the fence check on a line, so a fence
  * marker that only appears inside a comment does not open a block either.
+ *
+ * **Indented code is recognised only at the top level.** Under a list item,
+ * four-space indentation is continuation rather than code, and telling the two
+ * apart needs the list's content column. Rather than guess it, a block is code
+ * only when no list is open — which closes the hole a document can be authored
+ * into while never blanking a table someone indented under a bullet.
  */
 export function maskNonSpecRegions(text: string): string {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   let open: { marker: string; length: number } | null = null;
   let inComment = false;
+  let inIndentedCode = false;
+  let listOpen = false;
+  let prevBlank = true;
 
   return lines
     .map((line) => {
@@ -190,6 +209,31 @@ export function maskNonSpecRegions(text: string): string {
         }
         return "";
       }
+
+      const blank = line.trim().length === 0;
+
+      if (inIndentedCode) {
+        // A blank line does not end the block — an indented sample may contain
+        // one — but the first non-blank line at a shallower indent does.
+        if (blank || INDENTED_CODE_LINE.test(line)) {
+          prevBlank = blank;
+          return "";
+        }
+        inIndentedCode = false;
+      } else if (!listOpen && prevBlank && !blank && INDENTED_CODE_LINE.test(line)) {
+        inIndentedCode = true;
+        prevBlank = false;
+        return "";
+      }
+
+      if (LIST_ITEM_LINE.test(line)) {
+        listOpen = true;
+      } else if (!blank && !/^\s/.test(line)) {
+        // A non-blank line at column zero that is not a list item ends the list,
+        // so indentation after it is code again.
+        listOpen = false;
+      }
+      prevBlank = blank;
 
       const masked = maskLineComments(line, inComment);
       inComment = masked.open;

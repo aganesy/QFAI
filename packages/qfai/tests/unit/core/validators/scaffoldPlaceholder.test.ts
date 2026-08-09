@@ -259,3 +259,42 @@ describe("TC-0008-0001", () => {
     expect(await readValidateCycles(root, "spec-0008", "TC-0008-0001")).toBe(0);
   });
 });
+
+describe("a skeleton that moved to its declared home is still a skeleton", () => {
+  it("reports a placeholder under tests/api and tests/e2e", async () => {
+    // `D-SCAFFOLD-FOREIGN-HOME` sends an L4/L5 skeleton to exactly these
+    // directories, and a move without an implementation used to leave every
+    // gate at once: this scan did not reach it, the ATDD scan counted its
+    // annotation as coverage so `QFAI-ATDD-112` and `-123` both cleared, and
+    // the generated `it.skip(...)` is not the `*.todo` form `QFAI-TEST-001`
+    // matches. Following the remediation literally turned a reported
+    // placeholder into a silent one.
+    for (const kind of ["api", "e2e"]) {
+      const dir = path.join(root, "tests", kind, "spec-0008");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(dir, "TC-0008-0001.test.ts"),
+        placeholderBodyFor("TC-0008-0001"),
+        "utf-8",
+      );
+    }
+
+    const issues = await validateScaffoldPlaceholder(root, defaultConfig);
+    const placeholders = issues.filter((i) => i.code === "D-SCAFFOLD-PLACEHOLDER");
+    expect(placeholders.map((i) => i.file).sort()).toEqual([
+      "tests/api/spec-0008/TC-0008-0001.test.ts",
+      "tests/e2e/spec-0008/TC-0008-0001.test.ts",
+    ]);
+  });
+
+  it("leaves a hand-written test in those directories alone", async () => {
+    // Only the scaffold sentinel puts a file in scope, so widening the scan
+    // does not claim tests nobody generated.
+    const dir = path.join(root, "tests", "api", "spec-0008");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "mine.test.ts"), FILLED_BODY, "utf-8");
+
+    const issues = await validateScaffoldPlaceholder(root, defaultConfig);
+    expect(issues.filter((i) => i.code === "D-SCAFFOLD-PLACEHOLDER")).toEqual([]);
+  });
+});

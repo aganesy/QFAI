@@ -127,7 +127,22 @@ export async function validateScaffoldPlaceholder(
   // to `QFAI-ATDD-112`. `atdd/` is still scanned: projects scaffolded before
   // that change have skeletons there, and dropping the directory would stop
   // reporting placeholders that are still on disk.
-  const scaffoldDirs = [path.join(testsDir, "integration"), path.join(testsDir, "atdd")];
+  // `api` and `e2e` are scanned too, though `qfai atdd scaffold` never writes
+  // there: `D-SCAFFOLD-FOREIGN-HOME` tells the operator to move an L4/L5
+  // skeleton to exactly those directories, and a skeleton that moved without
+  // being implemented used to disappear from every gate at once — this scan did
+  // not reach it, the ATDD scan counted its annotation as coverage so
+  // `QFAI-ATDD-112` and `-123` both cleared, and the generated `it.skip(...)`
+  // is not the `*.todo` form `QFAI-TEST-001` matches. Following the remediation
+  // literally turned a reported placeholder into a silent one. Only a file
+  // carrying the scaffold sentinel is reported, so a hand-written test in those
+  // directories is untouched.
+  const scaffoldDirs = [
+    path.join(testsDir, "integration"),
+    path.join(testsDir, "atdd"),
+    path.join(testsDir, "api"),
+    path.join(testsDir, "e2e"),
+  ];
   const threshold = resolveEscalateThreshold(config.atdd?.scaffoldEscalateCycles);
   // Through the configured `paths.testsDir`, like the scan and the scaffold
   // writer. A project that relocated it was told to move the test to a
@@ -212,7 +227,7 @@ export async function validateScaffoldPlaceholder(
           "scaffoldPlaceholder.foreignHome",
           foreignHomeTcIds,
           "change",
-          `Move the test to the directory the TC's \`Level\` names (${dirs.api} for L4, ${dirs.e2e} for L5) and delete this skeleton — or re-file the obligation as CON-API-* / US-*, which is what a TC-* at L4/L5 usually means.`,
+          `Write the real test in the directory the TC's \`Level\` names (${dirs.api} for L4, ${dirs.e2e} for L5) and delete this skeleton — or re-file the obligation as CON-API-* / US-*, which is what a TC-* at L4/L5 usually means. Moving the skeleton itself discharges nothing: it is still a placeholder, and this rule follows it there.`,
         ),
       );
     }

@@ -1604,7 +1604,7 @@ describe("a pre-upgrade L4/L5 skeleton is not told to implement an assertion", (
       const foreign = issues.find((entry) => entry.code === "D-SCAFFOLD-FOREIGN-HOME");
       expect(foreign?.severity).toBe("warning");
       expect(foreign?.refs).toEqual(["TC-0001-0001"]);
-      expect(foreign?.suggested_action).toContain("Move the test");
+      expect(foreign?.suggested_action).toContain("Write the real test");
 
       // The L4 skeleton is not also reported as an unfilled placeholder, and
       // the L3 one still is — the gate keeps working for the rows it owns.

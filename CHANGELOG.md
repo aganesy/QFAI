@@ -475,6 +475,26 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A top-level indented code block is masked before table parsing.** Only
+  fenced blocks and HTML comments were, and `parseAllMarkdownTables` matches
+  `^s*|` — so a schema-complete sample ledger indented four spaces was
+  collected as a real table. A spec with no ledger of its own could satisfy
+  `TDDLIST_TC_NOT_COVERED` from the sample, and a `todo` row owes neither
+  `Test file` nor `Evidence`, so `validate --profile full --fail-on error`
+  passed with no test behind it. Recognised at the top level only: under a list
+  item four-space indentation is continuation, not code.
+- **A scaffold skeleton is followed to the directory the remediation names.**
+  `D-SCAFFOLD-FOREIGN-HOME` tells the operator to move an L4/L5 skeleton to
+  `tests/api/**` or `tests/e2e/**`, and a move without an implementation left
+  every gate at once — this scan did not reach it, the ATDD scan counted its
+  annotation as coverage, and the generated `it.skip(...)` is not the `*.todo`
+  form `QFAI-TEST-001` matches. Both directories are scanned, and the
+  remediation says to write the real test rather than move the skeleton.
+- **An L1/L2 annotation in `tests/integration/**`is not a violation.** The
+Reviewer Gate and`project_memory`said`QFAI-ATDD-123`rejects it, but`resolveTcHomeKind`returns`null` for those levels and the scan continues
+  before the forbidden-placement check — the validator neither counts it nor
+  flags it. A reviewer working from that text would have had an existing,
+  passing annotation deleted.
 - **The declared TC set is read from the authoritative shapes only.** Masking
   fixed the fenced-sample case; an appendix or illustrative table written as
   ordinary markdown _outside_ `## Test Case Table` was still collected, so its
