@@ -109,6 +109,18 @@
 
 ### Fixed
 
+- **An initialised project is recognised without any wrapper left.** The test
+  was "some wrapper survives", so deleting all of them said init had never run
+  and nothing was checked at all — the state where the assistant can load
+  nothing passed every profile most confidently. The READMEs `qfai init` writes
+  and never removes are the marker.
+- **A canonical `SKILL.md` has to be a file.** `access` succeeds on a directory
+  of that name too, and the assistant can load that no better than a missing
+  one — while the profiles that would notice are `prototyping` and `full`.
+- **A canonical type collision has a remedy that works.** `qfai init` skips the
+  existing path (create-only) and `--force` fails on `copyFile` / `mkdir`
+  against a collision, so the printed remedy could not clear the finding. It
+  says to move the canonical path aside first.
 - **An integration surface deleted whole is reported.** The populated test was
   per directory, so removing one entirely made every entry in it read as "not
   created yet" and every profile passed while the assistant could load nothing

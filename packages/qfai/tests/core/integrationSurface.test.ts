@@ -204,7 +204,9 @@ describe("the integration surface is checked for links that did not survive chec
       const agents = path.join(root, ".claude", "agents");
       await mkdir(agents, { recursive: true });
       await writeFile(path.join(agents, "our-own-reviewer.md"), "# ours\n", "utf-8");
-      await writeFile(path.join(agents, "README.md"), "# readme\n", "utf-8");
+      // No `README.md` here: that is one of the markers proving `qfai init`
+      // ran, and this fixture is a project that has not run it — otherwise the
+      // absent `qa-gatekeeper` wrapper is a finding of its own.
 
       expect(await validateIntegrationSurface(root)).toEqual([]);
     });
@@ -486,6 +488,57 @@ describe("a wrapper has to resolve to the right kind of thing", () => {
 
       const found = await finding(root);
       expect(found?.message).toContain("resolves to a directory");
+    });
+  });
+});
+
+describe("an initialised project is recognised without any wrapper left", () => {
+  it("reports the surfaces when every symlink has been deleted", async () => {
+    // `initialised` was "some wrapper survives", so deleting all of them said
+    // the project was never initialised and nothing was checked — the state
+    // where the assistant can load nothing passed every profile most
+    // confidently. `qfai init` writes READMEs it never removes.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      await writeFile(path.join(root, ".agents", "README.md"), "# agents\n", "utf-8");
+      for (const dir of INTEGRATION_SURFACE_DIRS) {
+        await rm(path.join(root, ...dir.split("/")), { recursive: true, force: true });
+      }
+      // The marker `qfai init` left behind is all that remains.
+      await mkdir(path.join(root, ".agents"), { recursive: true });
+      await writeFile(path.join(root, ".agents", "README.md"), "# agents\n", "utf-8");
+
+      const found = await finding(root);
+      expect(found?.message).toContain("integration surface missing");
+    });
+  });
+
+  it("still says nothing when init has left no marker either", async () => {
+    await withProject(async (root) => {
+      await seedCanonical(root, ["qfai-atdd"], []);
+
+      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
+});
+
+describe("a canonical SKILL.md has to be a file", () => {
+  it("reports one replaced by a directory of the same name", async () => {
+    // `access` succeeds on a directory too, and the assistant can load that no
+    // better than a missing file — while the profiles that would notice are
+    // `prototyping` and `full` alone.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const doc = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md");
+      await rm(doc, { force: true });
+      await mkdir(doc, { recursive: true });
+
+      const found = await finding(root);
+      expect(found?.message).toContain("its SKILL.md is not a file");
     });
   });
 });

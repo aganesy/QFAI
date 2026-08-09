@@ -61,6 +61,19 @@ function isMissing(error: unknown): boolean {
   return code === "ENOENT";
 }
 
+/**
+ * Files `qfai init` writes and never removes, used as proof it ran.
+ *
+ * Kept in step with the README set in `cli/commands/init.ts`. Any one of them
+ * is enough: a project with any of the integration surfaces has run init.
+ */
+const INIT_MARKERS: readonly (readonly string[])[] = [
+  [".agents", "README.md"],
+  [".codex", "README.md"],
+  [".claude", "agents", "README.md"],
+  [".github", "agents", "README.md"],
+];
+
 type Broken = {
   /** Repo-relative wrapper path, POSIX-separated so messages match across platforms. */
   relative: string;
@@ -120,6 +133,16 @@ async function skillIdsIn(skillsDir: string): Promise<Set<string>> {
  */
 /** Alias kept for the two call sites that only ask "is it there". */
 const exists = fileExists;
+
+/** `stat`, or `null` when the path is absent. Any other error propagates. */
+async function statOrNull(filePath: string): Promise<Stats | null> {
+  try {
+    return await stat(filePath);
+  } catch (error) {
+    if (isMissing(error)) return null;
+    throw error;
+  }
+}
 
 async function fileExists(filePath: string): Promise<boolean> {
   try {
@@ -244,7 +267,16 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
   // surviving wrapper anywhere is proof init ran, and the canonical document
   // check below is what keeps a newly shipped skill this project has not taken
   // from being reported.
-  const initialised = links.some((link) => link !== null);
+  // Not "some wrapper survives": delete every one of them and that test says
+  // the project was never initialised, so nothing is checked at all — the state
+  // where the assistant can load nothing then passes every profile most
+  // confidently. `qfai init` writes these READMEs beside the wrappers and never
+  // removes them, so they outlive the links they document.
+  const initialised =
+    links.some((link) => link !== null) ||
+    (await Promise.all(INIT_MARKERS.map((marker) => fileExists(path.join(root, ...marker))))).some(
+      Boolean,
+    );
   // Surfaces `qfai init` creates that are not there at all. Reported once each,
   // below, instead of once per wrapper they would have held: a directory
   // deleted whole is one act, and one ref per shipped skill buries that.
@@ -340,11 +372,20 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
     // directory that still holds `references/` and `templates/` while that one
     // file is gone, and then nothing reported it: this rule saw a resolving
     // link, and `skills.integrity` — which would — runs only under `full`.
-    if (wrapper.kind === "skill" && !(await exists(path.join(wrapper.absolute, "SKILL.md")))) {
-      broken.push({
-        relative: wrapper.relative,
-        detail: "resolves, but the directory has no SKILL.md",
-      });
+    if (wrapper.kind === "skill") {
+      // `isFile`, not "exists": `access` succeeds on a directory named
+      // `SKILL.md` too, and the assistant can load that no better than a
+      // missing one.
+      const doc = await statOrNull(path.join(wrapper.absolute, "SKILL.md"));
+      if (doc === null || !doc.isFile()) {
+        broken.push({
+          relative: wrapper.relative,
+          detail:
+            doc === null
+              ? "resolves, but the directory has no SKILL.md"
+              : "resolves, but its SKILL.md is not a file",
+        });
+      }
     }
   }
 
