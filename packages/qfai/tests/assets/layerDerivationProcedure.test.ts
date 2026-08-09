@@ -40,8 +40,28 @@ describe("deriving a TC's layer is a published procedure", () => {
     it(`${tree}: a spanning obligation has one stated resolution`, async () => {
       const catalog = await read(tree, "assistant/catalog/test-layers.md");
       expect(catalog).toContain("**Split the row.** One TC = one oracle = one layer.");
-      expect(catalog).toContain("A multi-valued `Level` cell (`L3/L5`) is **illegal**");
+      expectPhrase(
+        catalog,
+        "A multi-valued `Level` cell (`L3/L5`, `L1/L2`, `L1, L3`) is **illegal**",
+      );
       expect(catalog).toContain("escalate through the Drift Protocol");
+    });
+
+    it(`${tree}: it says what the validators do with an illegal cell`, async () => {
+      // "Nothing consumes it and no validator can route it" was the opposite of
+      // the shipped behaviour, in the file this repository ships as the SSOT
+      // for it: `QFAI-ATDD-112` routes such a cell to the no-`Level` default
+      // and keeps the obligation, and `TDDLIST_UNKNOWN_LEVEL` names it while
+      // the TC stays a coverage target. A reader who believed the old sentence
+      // had to invent the missing answer — and one consumer project's
+      // invention, "an `L3/L5` row normalizes to `L3`", was recorded as a fact
+      // about a value that spec never held.
+      const catalog = await read(tree, "assistant/catalog/test-layers.md");
+      expectPhrase(catalog, "**What a reader does with one: split the row.**");
+      expectPhrase(catalog, 'do not record a normalization that "drops one half"');
+      expectPhrase(catalog, "routes the TC to the same place a TC with no declared `Level` goes");
+      expect(catalog).toContain("TDDLIST_UNKNOWN_LEVEL");
+      expect(flat(catalog)).not.toContain("Nothing consumes it and no validator can route it");
     });
 
     it(`${tree}: the direction of authority is stated as an anti-pattern`, async () => {
@@ -60,7 +80,7 @@ describe("deriving a TC's layer is a published procedure", () => {
 
     it(`${tree}: the derived Level does not move the annotation`, async () => {
       const catalog = await read(tree, "assistant/catalog/test-layers.md");
-      expect(catalog).toContain("### Annotation routing is by ID type, not by `Level`");
+      expect(catalog).toContain("### Annotation routing");
       for (const code of [
         "QFAI-ATDD-111",
         "QFAI-ATDD-112",
@@ -73,12 +93,14 @@ describe("deriving a TC's layer is a published procedure", () => {
       expect(catalog).toContain("**A `TC-*` row's `Level` stays within L1–L3.**");
       expectPhrase(
         catalog,
-        "**An L1/L2 `Level` does not relax `QFAI-ATDD-112`, and the gate does not change the `Level`.**",
+        "**An L1/L2 `Level` carries no `QFAI-ATDD-112` obligation, and the gate does not change the `Level`.**",
       );
-      // The derived Level records the oracle; it must not depend on whether an
-      // integration test happens to exist yet.
-      expect(catalog).toContain("Never rewrite a derived L1/L2 to L3");
+      // The derived Level records the oracle; it must not be rewritten to make
+      // a gate quieter, and the gate it used to trip is no longer ATDD's.
+      // Wrap-tolerant: the sentence is the rule, its wrap column is not.
+      expectPhrase(catalog, "Never rewrite a derived L1/L2 to L3");
       expect(catalog).toContain("depend on implementation order");
+      expect(catalog).toContain("TDDLIST_TC_NOT_COVERED");
     });
 
     it(`${tree}: re-filing an L4/L5 obligation keeps the EX→TC edge satisfiable`, async () => {
@@ -107,7 +129,7 @@ describe("deriving a TC's layer is a published procedure", () => {
       // re-edited in two places every time the catalog's routing changes.
       expectPhrase(
         sdd,
-        "annotation routing is enforced by `.qfai/assistant/catalog/test-layers.md#annotation-routing-is-by-id-type-not-by-level`",
+        "annotation routing is enforced by `.qfai/assistant/catalog/test-layers.md#annotation-routing`",
       );
       expect(sdd).not.toContain("TC→Integration");
       expectPhrase(sdd, "`TC-*`'s `Level` is **not** a constant");

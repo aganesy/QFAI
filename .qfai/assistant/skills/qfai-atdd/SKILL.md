@@ -112,7 +112,7 @@ Use the shared schema.
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - Final completion gate MUST be delegated to an independent `completion-reviewer`.
 - ATDD-specific reviewer checks:
-  - coverage obligations met: E2E covers `US`, API covers `CON-API`, and every `TC` is covered from the directory its declared `Level` routes to;
+  - coverage obligations met: E2E covers `US`, API covers `CON-API`, and every `TC` **that declares `L3`/`L4`/`L5` or no `Level`** is covered from the directory that `Level` routes to. `L1`/`Unit` and `L2`/`Component` owe nothing here (CRITICAL CONSTRAINTS): the ledger covers them. An existing L1/L2 annotation in `tests/integration/**` is not a violation — the validator declines to count it and declines to flag it — so do not require one to be added, and do not require an existing one to be removed;
   - Coverage Depth Matrix is reviewed and no unjustified `X` cells remain;
   - validation evidence exists and `npx qfai validate --profile atdd --fail-on error --spec <spec-id>` passes;
   - Drift Protocol is enforced;
@@ -163,6 +163,13 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
     to: `L3`/`Integration` -> `tests/integration/**`, `L4`/`API` ->
     `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`. A TC with no declared `Level`
     routes to `tests/integration/**`.
+  - **`L1`/`Unit` and `L2`/`Component` owe nothing here.** They are out of this
+    skill's scope (see Scope below), have no mandated directory, and are
+    excluded from `QFAI-ATDD-112`; `QFAI-ATDD-117` (`info`) names them on every
+    run. Their gate is `tdd/test-list.md` under `/qfai-implement`. Do not
+    duplicate an L1/L2 annotation into `tests/integration/**` to quiet a gate —
+    that is the all-integration collapse `catalog/test-layers.md` lists as an
+    anti-pattern, and nothing asks for it.
   - `tests/api/**` must cover all required `CON-API-*`.
 - Forbidden references (a TC annotation outside its declared home):
   - `tests/api/**` must not contain `QFAI:SPEC-XXXX:TC-YYYY` unless that TC
@@ -234,10 +241,21 @@ Turn specs/contracts obligations (`US` / `TC` / `CON-API` / `CON-DB`) into runna
 ## Scaffolding
 
 `npx qfai atdd scaffold --spec <spec-id>` bulk-emits one placeholder test per
-coverage-target `TC-*`, each carrying its `QFAI:SPEC-XXXX:TC-YYYY` annotation.
-Skeletons land in `tests/integration/<spec-id>/` — the directory
+`TC-*` **this skill owns**, each carrying its `QFAI:SPEC-XXXX:TC-YYYY`
+annotation. Skeletons land in `tests/integration/<spec-id>/` — the directory
 `QFAI-ATDD-112` scans — so a filled-in skeleton counts as coverage. It is
 idempotent: existing files are left untouched.
+
+Skeletons are integration-only, so two groups of TC are **skipped**, both named
+on stderr. `L1`/`Unit` and `L2`/`Component`: their skeleton would land in
+`tests/integration/**`, the duplication the Coverage obligations section
+forbids, and `QFAI-ATDD-112` would not count it — filling one in discharges
+nothing. Their ledger row under `/qfai-implement` is where they are owed.
+`L4`/`API` and `L5`/`E2E`: their home is `tests/api/**` / `tests/e2e/**`, so an
+integration skeleton is both uncounted and a forbidden reference
+(`QFAI-ATDD-123`). Author those by hand in their own directory — or re-file the
+obligation as `CON-API-*` / `US-*`, which is what a `TC-*` at L4/L5 usually
+means (`catalog/test-layers.md#annotation-routing`).
 
 A skeleton left in placeholder shape across repeated validate runs escalates
 (`qfai.config.yaml#atdd.scaffoldEscalateCycles`), so scaffolding is a start, not
@@ -273,8 +291,10 @@ Notes:
 - All required `TC` are covered from the directory their declared `Level` routes
   to (`L3`/`Integration` -> `tests/integration/**`, `L4`/`API` ->
   `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`, no declared `Level` ->
-  `tests/integration/**`). Duplicating a TC into a second layer is a
-  not-done condition, not extra credit.
+  `tests/integration/**`). **`L1`/`Unit` and `L2`/`Component` are outside this
+  obligation** — the ledger covers them — so a spec whose TCs are all L1/L2 is
+  done here with no ATDD annotation at all. Duplicating a TC into a second layer
+  is a not-done condition, not extra credit.
 - All required `CON-API` are covered by API tests.
 - All required `CON-DB` are covered by integration tests (`QFAI-ATDD-115`); a contract
   outside the current slice is deferred with `-- x-qfai-status: planned`, not left uncovered.
@@ -465,6 +485,6 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 
 project_memory:
 
-- Coverage obligations stay layer-pinned for US and CON-API: tests/e2e/** must cover all required US; tests/api/\*\* all required CON-API. Each TC is covered from the directory its declared Level routes to (L3/Integration -> tests/integration/**, L4/API -> tests/api/\*\*, L5/E2E -> tests/e2e/\*\*; no declared Level -> tests/integration/\*\*).
+- Coverage obligations stay layer-pinned for US and CON-API: tests/e2e/** must cover all required US; tests/api/\*\* all required CON-API. Each TC declaring L3/L4/L5, or no Level, is covered from the directory that Level routes to (L3/Integration -> tests/integration/**, L4/API -> tests/api/\*\*, L5/E2E -> tests/e2e/\*\*; no declared Level -> tests/integration/\*\*). L1/Unit and L2/Component owe no ATDD annotation — tdd/test-list.md covers them. An existing one in tests/integration/\*\* is neither counted nor flagged, so do not require adding or removing it.
 - Forbidden references guard the test-layer policy: a TC annotation outside its declared home is rejected — tests/api/** must not carry QFAI:SPEC-XXXX:TC-YYYY unless that TC declares L4/API, and tests/e2e/** likewise unless it declares L5/E2E.
 - Floor / ratio signals are planning hints, never gates; legacy scenario.feature / coverage ledger files remain optional inputs.

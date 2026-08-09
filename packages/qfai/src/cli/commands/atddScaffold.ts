@@ -1,8 +1,9 @@
 /**
  * `qfai atdd scaffold --spec <id>` — bulk-emit per-TC test skeletons.
  *
- * For each TC entry in the target spec's Test-Cases catalogue, the
- * command writes a placeholder test file under
+ * For each TC entry in the target spec's Test-Cases catalogue whose declared
+ * `Level` this stage owns — L1/Unit and L2/Component are skipped, and named on
+ * stderr — the command writes a placeholder test file under
  * `<root>/tests/integration/<specId>/<TC-ID>.test.ts` — the directory
  * `QFAI-ATDD-112` scans, so a scaffolded test counts as coverage once its
  * assertions are filled in. Existing files are
@@ -12,9 +13,15 @@
  * escalation warning naming the TC and suggesting manual review.
  */
 
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
+import {
+  atddTestKindDirs,
+  collectTcLevels,
+  resolveAtddHomeKind,
+} from "../../core/atddTraceability.js";
 import {
   buildSkeleton,
   emitSkeleton,
@@ -41,6 +48,27 @@ export type AtddScaffoldOptions = {
   /** Error / warning sink. Defaults to console.error. */
   writeErr?: (message: string) => void;
 };
+
+/**
+ * Declared `Level` per TC, read through the same collector `QFAI-ATDD-112`
+ * uses so the writer and the gate cannot disagree about a TC's layer.
+ *
+ * Fails soft: an unreadable catalogue means no levels, which puts every TC in
+ * scope — the behaviour before this filter existed.
+ */
+async function readDeclaredTcLevels(specDir: string): Promise<Map<string, string>> {
+  try {
+    return collectTcLevels(await readFile(path.join(specDir, "06_Test-Cases.md"), "utf-8"));
+  } catch {
+    return new Map();
+  }
+}
+
+/**
+ * The one directory this writer emits into. `scaffoldDestPath` is
+ * integration-only by contract, so any other home is foreign to it.
+ */
+const SCAFFOLD_HOME_KIND = "integration";
 
 function validateSpecId(specId: string): boolean {
   // Permissive: accept `spec-NNNN` shapes; future renaming is at the
@@ -153,6 +181,67 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
         `(looked under ${path.relative(options.root, specDir).replace(/\\/g, "/") || specDir}).`,
     );
     return 1;
+  }
+
+  // L1/L2 are out of this command's scope, on the same terms as the skill.
+  // The scaffold writes into `tests/integration/<spec-id>/`, and a filled-in
+  // skeleton there is exactly the annotation `qfai-atdd/SKILL.md` now forbids
+  // for a Unit or Component TC — the all-integration collapse
+  // `catalog/test-layers.md` lists as an anti-pattern. Emitting one handed the
+  // operator, from the command itself, the thing the same skill tells them not
+  // to do — and `QFAI-ATDD-112` no longer asks for it either, so the skeleton
+  // discharged nothing.
+  const tcLevels = await readDeclaredTcLevels(specDir);
+  const excludedUnitComponent: string[] = [];
+  const excludedApiE2e: string[] = [];
+  const inScope: TCEntry[] = [];
+  for (const entry of entries) {
+    // One predicate decides both exclusions, so the writer and the gate cannot
+    // read the same cell differently: `null` is "ATDD owes nothing", any home
+    // other than this writer's is a directory it must not emit into, and an
+    // unreadable `Level` lands on the same default the gate uses.
+    const home = resolveAtddHomeKind(tcLevels.get(entry.tcId.toUpperCase()));
+    if (home === null) {
+      excludedUnitComponent.push(entry.tcId);
+    } else if (home !== SCAFFOLD_HOME_KIND) {
+      excludedApiE2e.push(entry.tcId);
+    } else {
+      inScope.push(entry);
+    }
+  }
+  entries = inScope;
+  // Named, not silently dropped: a scaffold run that emits nothing has to say
+  // whether the spec had no TCs or only ones this command does not own.
+  if (excludedUnitComponent.length > 0) {
+    writeErr(
+      `qfai atdd scaffold: skipped ${String(excludedUnitComponent.length)} Unit/Component TC ` +
+        `(${excludedUnitComponent.join(", ")}) — L1/L2 are outside this command's scope and are ` +
+        `gated by tdd/test-list.md under /qfai-implement.`,
+    );
+  }
+  // The writer emits into `<testsDir>/integration/<spec-id>/` only
+  // (`scaffoldDestPath`), so an L4/L5 TC's skeleton would land in a directory
+  // its declared `Level` does not name: not counted towards its api/e2e
+  // coverage, and reported as a forbidden reference by `QFAI-ATDD-123`. The
+  // command would be making validation worse than emitting nothing.
+  if (excludedApiE2e.length > 0) {
+    // The homes are rendered against the configured `paths.testsDir`, which is
+    // what the scaffold writer and the ATDD scan both follow. Naming
+    // `tests/api/**` to a project that relocated `testsDir` sent the operator
+    // to a directory no gate reads, so following the advice left
+    // `QFAI-ATDD-112` unclearable — the same trap `atddTestKindDirs` exists to
+    // close on the validator side.
+    const homes = atddTestKindDirs(testsDirRel);
+    writeErr(
+      `qfai atdd scaffold: skipped ${String(excludedApiE2e.length)} API/E2E TC ` +
+        `(${excludedApiE2e.join(", ")}) — this command writes integration skeletons only, and ` +
+        `an L4/L5 annotation there is uncounted and forbidden (QFAI-ATDD-123). Author them in ` +
+        `${homes.api} or ${homes.e2e}, or re-file the obligation as CON-API-* / US-*.`,
+    );
+  }
+  if (entries.length === 0) {
+    write(`qfai atdd scaffold: ${specId} — 0 TC entries in scope; nothing to emit.`);
+    return 0;
   }
 
   const threshold = resolveEscalateThreshold(config.atdd?.scaffoldEscalateCycles);

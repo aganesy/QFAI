@@ -601,7 +601,14 @@ describe("a forbidden reference is owned by the tests that hold it", () => {
       const scoped = await validateAtddCodeTraceability(root, defaultConfig, {
         specScope: new Set(["0002"]),
       });
-      expect(scoped.map((entry) => entry.code)).toContain("QFAI-ATDD-121");
+      const finding = scoped.find((entry) => entry.code === "QFAI-ATDD-121");
+      expect(finding).toBeDefined();
+      // Through the final filter, not just the validator return value:
+      // `isFindingInSpecScope` re-derives the owners from `relatedFiles`, so a
+      // test that stops at the return value passes while `qfai validate --spec`
+      // still drops the finding.
+      const roots = { root, specsRoot: path.join(root, ".qfai", "specs") };
+      expect(isFindingInSpecScope(finding ?? {}, roots, new Set(["0002"]))).toBe(true);
     });
   });
 

@@ -179,13 +179,15 @@ function owningSpecDirs(
  * finding's location entirely.
  */
 /**
- * Both owners of an unknown `US` / `TC` reference, as spec directories.
+ * Both owners of a finding on a test file, as spec directories.
  *
- * `narrowUnknown` keeps the finding when either the token's spec or the test's
- * own per-spec directory is in scope, and `isFindingInSpecScope` re-derives the
- * owners from `relatedFiles` — an unowned `tests/**` path contributes nothing
- * there. Listing only the token's spec therefore undid the narrowing one layer
- * later: `--spec 0002` saw owner `0001` and dropped the finding again.
+ * `narrowUnknown` and `narrowForbidden` both keep a finding when either the
+ * token's spec or the test's own per-spec directory is in scope, and
+ * `isFindingInSpecScope` re-derives the owners from `relatedFiles` — where an
+ * unowned `tests/**` path contributes nothing. Listing only the token's spec
+ * therefore undid the narrowing one layer later: `--spec 0002` saw owner `0001`
+ * and dropped the finding again. Used by the unknown-reference findings and by
+ * `QFAI-ATDD-121` / `-122` / `-123`, which are misplacements *in* those tests.
  */
 function unknownOwnerDirs(
   file: string,
@@ -254,6 +256,16 @@ type AtddTraceabilitySummary = {
     conApi: string[];
     conDb: string[];
   };
+  /**
+   * `TC-*` refs outside the `QFAI-ATDD-112` obligation because their declared
+   * `Level` is Unit or Component (`QFAI-ATDD-117`).
+   *
+   * Persisted for the same reason `deferred` is: on a project whose TCs are
+   * all L1/L2, `missing.tc: []` would otherwise read as "every TC is covered
+   * by ATDD" to anyone auditing this artifact in CI, when the truth is that
+   * ATDD owes nothing for them and `tdd/test-list.md` is the gate.
+   */
+  excludedUnitComponentTc: string[];
   unknown: Array<{ file: string; token: string }>;
   forbidden: {
     tcInApi: Array<{ file: string; ids: string[] }>;
@@ -333,6 +345,22 @@ export async function validateAtddCodeTraceability(
         "change",
         buildMissingTcFix(grouped, dirs),
         { relatedFiles: tcAttribution.relatedFiles },
+      ),
+    );
+  }
+
+  if (result.unitComponentTcIds.length > 0) {
+    const ids = result.unitComponentTcIds;
+    issues.push(
+      issue(
+        "QFAI-ATDD-117",
+        `宣言 Level が Unit / Component の TC は ATDD の注釈義務対象外です（${String(ids.length)} 件）: ${ids.slice(0, 10).join(", ")}${ids.length > 10 ? ` (他 ${String(ids.length - 10)} 件)` : ""}`,
+        "info",
+        result.specsRoot,
+        "atddCodeTraceability.coverage.unitComponentExcluded",
+        ids,
+        "canonical",
+        "これらは `/qfai-implement` の担当です。`tdd/test-list.md` に行があること（`TDDLIST_TC_NOT_COVERED` が error で検査）で担保してください。ATDD 側の注釈は不要で、置いても違反にはなりません。",
       ),
     );
   }
@@ -439,7 +467,14 @@ export async function validateAtddCodeTraceability(
         // test path — that is what the operator edits — but a `tests/**`
         // path has no spec owner, so without this the finding survived every
         // `--spec` filter.
-        { relatedFiles: owningSpecDirs(forbidden.ids, result.specsRoot, result.declaredSpecDirs) },
+        {
+          relatedFiles: unknownOwnerDirs(
+            forbidden.file,
+            forbidden.ids,
+            result.specsRoot,
+            result.declaredSpecDirs,
+          ),
+        },
       ),
     );
   }
@@ -459,7 +494,14 @@ export async function validateAtddCodeTraceability(
         // test path — that is what the operator edits — but a `tests/**`
         // path has no spec owner, so without this the finding survived every
         // `--spec` filter.
-        { relatedFiles: owningSpecDirs(forbidden.ids, result.specsRoot, result.declaredSpecDirs) },
+        {
+          relatedFiles: unknownOwnerDirs(
+            forbidden.file,
+            forbidden.ids,
+            result.specsRoot,
+            result.declaredSpecDirs,
+          ),
+        },
       ),
     );
   }
@@ -479,7 +521,14 @@ export async function validateAtddCodeTraceability(
         // test path — that is what the operator edits — but a `tests/**`
         // path has no spec owner, so without this the finding survived every
         // `--spec` filter.
-        { relatedFiles: owningSpecDirs(forbidden.ids, result.specsRoot, result.declaredSpecDirs) },
+        {
+          relatedFiles: unknownOwnerDirs(
+            forbidden.file,
+            forbidden.ids,
+            result.specsRoot,
+            result.declaredSpecDirs,
+          ),
+        },
       ),
     );
   }
@@ -676,6 +725,7 @@ async function writeAtddTraceabilityReport(
         left.localeCompare(right),
       ),
     },
+    excludedUnitComponentTc: result.unitComponentTcIds,
     unknown: result.unknown.map((entry) => ({
       file: entry.file,
       token: entry.token,
@@ -735,6 +785,10 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
   lines.push(...toList(summary.deferred.conApi));
   lines.push("- CON-DB (`-- x-qfai-status: planned`, outside QFAI-ATDD-115)");
   lines.push(...toList(summary.deferred.conDb));
+  lines.push(
+    "- TC (declared Level Unit/Component, outside QFAI-ATDD-112 — gated by tdd/test-list.md)",
+  );
+  lines.push(...toList(summary.excludedUnitComponentTc));
   lines.push("");
   lines.push("## Unknown References");
   lines.push("");
