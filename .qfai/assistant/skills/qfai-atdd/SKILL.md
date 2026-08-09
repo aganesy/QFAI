@@ -384,10 +384,10 @@ Template:
   the RED, `qa-gatekeeper` PASS, hand it to `/qfai-implement`, GREEN,
   checkpoint — before the next branch-1 row's failing test is written, and
   before P2-P4 build any surface.
-- P1d: **Branch 2 rows are handed over after P2-P4 and before P6; branch 3
-  rows once their `DR-*` is written.** Every branch needs a handoff, because
-  `/qfai-implement` is the only writer of `Status` / `DR-ID` / `Evidence`
-  (**This skill does not write the ledger**, above).
+- P1d: **Branch 3 rows are handed over once their `DR-*` is written.** Every
+  branch needs a handoff, because `/qfai-implement` is the only writer of
+  `Status` / `DR-ID` / `Evidence` (**This skill does not write the ledger**,
+  above) — including the row this stage will not advance itself.
 
   Which branch goes when, what the blocking `qa-gatekeeper` can judge at each
   point, and why one deliberate RED at a time is not a style preference:
@@ -396,6 +396,11 @@ Template:
 - P2: E2E implementation completed.
 - P3: API implementation completed.
 - P4: Integration implementation completed.
+- P4b: **Branch 2 rows are handed over.** Their mutation needs the surface P2-P4
+  build, and the trio it produces is the row's RED payload — so this gate sits
+  after P4 and before P6, not with P1d. Listing it at P1 order was a gate that
+  could not be met without skipping P2-P4, and skipping it broke Do-not-skip
+  either way.
 - P5: Validation gate passed.
 - P6: Runtime evidence captured.
 - P7: Repo quality gates passed.

@@ -751,3 +751,56 @@ describe.each(TREES)("%s (the handoff survives ledger order and time)", (tree) =
     expect(cross).toContain("in the evidence file the row's `Layer` owns");
   });
 });
+
+describe.each(TREES)("%s (a gate must be reachable in the order it is listed)", (tree) => {
+  it("puts the branch-2 handoff after P4, where its precondition is met", async () => {
+    // P1d required "after P2-P4" while sitting before P2 in a Do-not-skip
+    // list: a run with an ordinary branch-2 row could only wait at a gate
+    // whose precondition needed gates it had not reached, or skip it.
+    const atdd = await read(tree, ATDD);
+    const gates = atdd.slice(atdd.indexOf("## Stage Gates"));
+    expect(gates).toContain("P4b: **Branch 2 rows are handed over.**");
+    expect(gates.indexOf("P4: Integration")).toBeLessThan(gates.indexOf("P4b:"));
+    expect(gates.indexOf("P4b:")).toBeLessThan(gates.indexOf("P6: Runtime"));
+    // Branch 3 has no such precondition and stays early.
+    expect(flat(gates)).toContain(
+      "P1d: **Branch 3 rows are handed over once their `DR-*` is written.**",
+    );
+  });
+
+  it("does not gate a seam-only round trip on a RED that cannot exist yet", async () => {
+    // `/qfai-atdd` calls step 3a before it has a RED — that is what the trip is
+    // for. Continuing into step 3b read the entry as malformed, and the
+    // always-blocking `qa-gatekeeper` had no assertion failure to judge, so the
+    // only reachable verdict was REVISE.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**A seam-only invocation stops here.**");
+    expect(implement).toContain("Do **not** continue to step 3b, and do **not** route");
+    expect(implement).toContain(
+      "The blocking gate applies to the handoff that follows, once that stage has taken the RED against the seam.",
+    );
+  });
+
+  it("asks the RED gate only for what a RED gate can have", async () => {
+    // validate output, coverage reports and runtime evidence are first written
+    // at P5/P6, and this role is blocking at P1b.
+    const gatekeeper = flat(await read(tree, GATEKEEPER));
+    expect(gatekeeper).toContain(
+      "**The three below are required at a completion gate, not at a RED/GREEN observation.**",
+    );
+    expect(gatekeeper).toContain(
+      "At an observation gate the row's own evidence above is the whole input.",
+    );
+    expect(gatekeeper).toContain("judged against what the invoking phase requires");
+  });
+
+  it("addresses an uncommitted RED by content, not by status", async () => {
+    // `git status --porcelain` names paths and states. Edit the file under test
+    // after the RED and the digest is unchanged, so a stale observation passes
+    // the freshness gate the handover depends on.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("it needs a **content** address rather than a status one");
+    expect(provenance).toContain("`git stash create` yields exactly that");
+    expect(provenance).not.toContain("`working-tree+<porcelain digest>`");
+  });
+});

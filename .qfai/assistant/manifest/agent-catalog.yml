@@ -1490,6 +1490,13 @@ agents:
         one: a Unit-only spec never ran `/qfai-atdd`, and a spec whose rows are all
         `E2E` / `API` has no implement file. Either way the gate would stop before
         reading the evidence that does exist.
+        **The three below are required at a completion gate, not at a RED/GREEN
+        observation.** `/qfai-atdd` routes this role as blocking at stage gate P1b, and
+        validate output, coverage reports and runtime evidence are first produced at its
+        P5 and P6 — so requiring them there stopped a fresh run that had a perfectly
+        good RED pair, on artifacts its own ordering says cannot exist yet. At an
+        observation gate the row's own evidence above is the whole input.
+
       - `.qfai/report/validate.log`
       - `.qfai/report/specs-coverage/spec-*.md`
       - Runtime evidence and prototyping evidence artifacts
@@ -1502,7 +1509,10 @@ agents:
 
       ## Stop conditions
 
-      - Required evidence, governing specs, or target artifacts are missing.
+      - Required evidence, governing specs, or target artifacts are missing — judged
+        against what the invoking phase requires, per the note above the last three
+        inputs. At a RED/GREEN observation that is the row's own evidence; at a
+        completion gate it is all of them.
       - The request requires implementation or file editing instead of independent review.
       - The issue falls outside this review domain and must be rerouted to another specialist first.
 

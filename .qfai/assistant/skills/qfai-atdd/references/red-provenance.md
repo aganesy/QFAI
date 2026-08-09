@@ -63,8 +63,16 @@ Take the first that applies, and record which one in the evidence file.
    2. Run the test. An admissible failure is an assertion — or an
       expected-status check — inside this row's own selector, naming the
       predicate the row owns. Record the command and output as the row's RED
-      pair, **and the revision it was observed at** — `git rev-parse HEAD`, or
-      `working-tree+<porcelain digest>` for an uncommitted tree. That address
+      pair, **and the revision it was observed at** — `git rev-parse HEAD` for
+      a clean tree. An uncommitted tree is the ordinary case here, and it needs
+      a **content** address rather than a status one: `git status --porcelain`
+      names the changed paths and their states, so editing the very file under
+      test after the RED leaves the digest identical and a stale observation
+      reads as fresh. Record `working-tree+<hash>` over HEAD **and** the content
+      of the changes on top of it — `git stash create` yields exactly that as a
+      commit object when the tree is dirty, and hashing `git rev-parse HEAD`,
+      `git diff HEAD` and each untracked file's contents together is equivalent.
+      That address
       is not recoverable later: `/qfai-implement` Phase Green changes the tree,
       and its completion gate requires the handed-over RED to name the revision
       it was taken at (`../../qfai-implement/references/evidence-revision.md`).

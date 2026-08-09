@@ -6,6 +6,25 @@
 
 ### Fixed
 
+- **The branch-2 handoff is gate P4b, not part of P1d.** P1d required the
+  surface P2-P4 build while sitting before P2 in a Do-not-skip list, so a run
+  with an ordinary branch-2 row could only wait at a gate whose precondition
+  needed gates it had not reached, or skip one. Branch 3, which has no such
+  precondition, stays at P1d.
+- **A seam-only round trip is not the RED gate.** `/qfai-atdd` calls Phase Red
+  step 3a before it has a RED — that is what the trip is for — but the `red`
+  phase always routes a blocking `qa-gatekeeper`, which had no assertion
+  failure to judge, and step 3b read the row's entry as malformed for lacking
+  the very RED the trip exists to make possible. Step 3a returns after building
+  the seam now, and the blocking gate applies to the handoff that follows.
+- **`qa-gatekeeper`'s completion inputs are conditional on the phase.** It is
+  blocking at stage gate P1b, and validate output, coverage reports and runtime
+  evidence are first produced at P5/P6 — so a fresh run with a perfectly good
+  RED pair stopped on artifacts its own ordering says cannot exist yet.
+- **An uncommitted RED is addressed by content.** `git status --porcelain`
+  names changed paths and their states, so editing the file under test after
+  the RED left the digest identical and a stale observation passed the
+  freshness gate the handover depends on.
 - **Phase Red step 3a covers the seam an HTTP row needs.** It was defined as a
   module, export or signature the test _imports_, but `/qfai-atdd` hands a row
   here precisely when an unregistered route 404s — the same resolution error,
