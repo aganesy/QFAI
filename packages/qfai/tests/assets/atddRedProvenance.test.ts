@@ -32,6 +32,7 @@ const ATDD = "assistant/skills/qfai-atdd/SKILL.md";
 const IMPLEMENT = "assistant/skills/qfai-implement/SKILL.md";
 const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
 const PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
+const REVIEW_FIX = "assistant/skills/qfai-atdd/references/review-fix-rounds.md";
 const GATEKEEPER = "assistant/agents/qa-gatekeeper.md";
 const CATALOG = "assistant/manifest/agent-catalog.yml";
 
@@ -605,7 +606,10 @@ describe.each(TREES)("%s (the contracts the handover has to land in)", (tree) =>
     const revision = flat(
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
-    expect(revision).toContain("One exception, and it is structural");
+    // The carve-out now names both transient observations; the handed-over
+    // RED is one of the two.
+    expect(revision).toContain("Two exceptions, both structural");
+    expect(revision).toContain("A RED `/qfai-atdd` handed over is taken before the production");
     expect(revision).toContain("leaves `Revision` for the GREEN and the two reviews");
   });
 
@@ -1027,8 +1031,8 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
   it("defines the rework path a review-fix row takes through this stage", async () => {
     // Step 3b sends the row back here when the REVISE touches the acceptance
     // test, and the three branches only cover a `todo` row's first handoff.
-    const provenance = flat(await read(tree, PROVENANCE));
-    expect(provenance).toContain("## A `review-fix` row comes back here for a new RED");
+    const provenance = flat(await read(tree, REVIEW_FIX));
+    expect(provenance).toContain("# A `review-fix` row comes back here for a new RED");
     expect(provenance).toContain("A `### Round N` block in");
     expect(provenance).toContain("round-evidence.md");
     expect(provenance).toContain("this stage writes no ledger cell");
@@ -1116,7 +1120,7 @@ describe.each(TREES)("%s (a gate cannot fail on its own bookkeeping)", (tree) =>
     // A REVISE asking for no new behaviour — a selector split, a rename —
     // leaves the corrected test passing, so demanding a fresh RED stranded the
     // row at `review-fix`.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await read(tree, REVIEW_FIX));
     expect(provenance).toContain("**run it and let the result choose the path**");
     expect(provenance).toContain("**It passes.**");
     expect(provenance).toContain("no-new-behaviour");
@@ -1212,7 +1216,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // The REVISE changed the test, so the handoff's `RED test hash` addresses
     // the manifest before the edit and the consumer sends the row back here
     // for a fresh RED — which is this same passing no-round path, for ever.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await read(tree, REVIEW_FIX));
     expect(provenance).toContain("**Re-address the test.**");
     expect(provenance).toContain("marked `test-only replacement` with the reviewer verdict");
   });
@@ -1252,7 +1256,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // A new hash over the old proof says somebody edited the test; it does not
     // say the edited test still fails when the predicate is broken. Clarifying
     // an expectation can weaken an assertion by accident.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await read(tree, REVIEW_FIX));
     expect(provenance).toContain("**Re-take the proof as well, on a row that has one.**");
     // Owed here, performed where the production owners are: this stage owns no
     // agent for a mutation, which the paragraph below it says of the same
@@ -1270,6 +1274,68 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     );
   });
 
+  it("points the RED revision at the one content-address procedure", async () => {
+    // The producer restated a divergent one — all of `git diff HEAD`, no
+    // ledger/evidence exclusion — so its value and the gatekeeper`s for the
+    // same RED tree could not be matched up in the ordinary multi-row loop.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("by the **one** procedure in");
+    expect(provenance).toContain("do not restate it here");
+    expect(provenance).not.toContain(
+      "hash `git rev-parse HEAD`, `git diff HEAD` and the contents of every untracked file",
+    );
+  });
+
+  it("drops every appended verdict from the audited entry, not only the reviews", async () => {
+    // The gatekeeper hashes the entry and then writes its PASS into it, so
+    // item 10 recomputed over an entry grown by the gatekeeper`s own line and
+    // called the verdict stale the moment it was recorded.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("**every verdict any reviewer appends**");
+    expect(baseline).toContain("`qa-gatekeeper` RED / GREEN observation verdicts");
+  });
+
+  it("names both transient observations where the rule is stated", async () => {
+    // The consequences section still said one exception, so applied strictly
+    // it demanded one revision across a mutated item 3 and a reverted 5/7/8.
+    const revision = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(revision).toContain("**Two exceptions, both structural");
+    expect(revision).toContain("`Falsifiability revision` beside the trio");
+    expect(revision).not.toContain("**One exception, and it is structural");
+  });
+
+  it("rejects a commit-only Satisfied-by in the shared procedure too", async () => {
+    // The producer and the gatekeeper both require the symbol; this reference
+    // still offered the commit as an alternative form.
+    const shared = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/red-not-observable.md"),
+    );
+    expect(shared).toContain("never a commit id on its own");
+    expect(shared).not.toContain("or the commit that added it is accepted only");
+  });
+
+  it("asks for one RED test hash per row, not one per round", async () => {
+    // The producer records it once — at the handoff, or at step 3c — and no
+    // phase produces a second, so the cardinality kept a correct row out of
+    // the completion gate. `Revision` is the per-round field.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**One per row**, recorded once");
+    expect(implement).toContain("`Revision` is the field that is per round block");
+  });
+
+  it("re-verifies the rows that read a shared artifact a later row edits", async () => {
+    // P1c closes a row before the next test is written, so a `done` row`s
+    // manifest addresses a fixture a later row may still edit — and a `done`
+    // row has no re-entry edge of its own.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("## A shared test artifact outlives the row that recorded it");
+    expect(provenance).toContain("marked `shared-artifact re-verify`");
+    expect(provenance).toContain("**A row whose re-run fails is not re-verified**");
+  });
   it("does not accept a falsifiability trio that no gate has judged", async () => {
     // Step 3c writes the trio and only then routes the gatekeeper, so an
     // interrupted run leaves a trio with no verdict — and step 3b read the
@@ -1344,7 +1410,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // That form needs a production mutation this stage owns no agent for and
     // cannot hand over: 3b excludes `review-fix` and 3c is reachable only from
     // a `todo` entry.
-    const provenance = flat(await read(tree, PROVENANCE));
+    const provenance = flat(await read(tree, REVIEW_FIX));
     expect(provenance).toContain("take the **no-new-behaviour path**");
     expect(provenance).toContain("**Not falsifiability.**");
   });

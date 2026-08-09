@@ -30,8 +30,12 @@ for the natural RED and let the row proceed to `green` and `done`:
    already satisfies this obligation**.
 
    **The production path and symbol** (`src/api/routes/evaluations.py::register`)
-   **or the commit that added it is accepted only on a `Layer = E2E` /
-   `Layer = API` row handed over by `/qfai-atdd`.** Those surfaces routinely
+   **is accepted only on a `Layer = E2E` / `Layer = API` row handed over by
+   `/qfai-atdd`** — path _and_ symbol, never a commit id on its own. A commit
+   that touched several routes and a helper names no single predicate, so the
+   Oracle Strength Check has no boundary to apply and would take a mutation
+   anywhere inside it; `qa-gatekeeper` REVISEs that form for exactly this
+   reason. A commit recorded alongside the symbol is provenance and is fine. Those surfaces routinely
    have no ledger row — a pre-existing route, or one built outside the ledger —
    so requiring a row id sent every one of them to `exception`, the terminal
    state this procedure exists to avoid. On a `Unit` / `Component` /

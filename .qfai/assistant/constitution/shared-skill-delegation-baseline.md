@@ -319,10 +319,15 @@ post-escalation verification review of a user-named fix.
      heading that **names a `TDD-` id**, or the next `##` / `#` heading, or end
      of file. Ending at any `###` cut the row's own `### Round N` blocks out of
      the subject — and a rework's RED, GREEN and proof live there, so a PASS
-     survived every edit to the very evidence it was given for. Then drop the
-     reviewer-appended fields — the
-     `Spec review`, `Code quality review` and `Prototype parity` lines and any
-     lines indented under them. What is left is what the reviewer read.
+     survived every edit to the very evidence it was given for. Then drop
+     **every verdict any reviewer appends** — the `Spec review`,
+     `Code quality review` and `Prototype parity` lines, **and the
+     `qa-gatekeeper` RED / GREEN observation verdicts**, with any lines indented
+     under them. What is left is what the reviewer read. Leaving the
+     observation verdicts in was not a smaller version of the same mistake: the
+     gatekeeper hashes the entry and then writes its PASS into it, so gate item
+     10 recomputed over an entry that had grown by the gatekeeper's own line and
+     called its verdict stale the moment it was recorded.
   2. **Normalize.** LF line endings; strip trailing whitespace from every line;
      drop leading and trailing blank lines; end with exactly one newline.
   3. **Serialize.** One record per artifact — the repo-relative path, a NUL

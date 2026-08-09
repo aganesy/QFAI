@@ -52,9 +52,27 @@ the placeholders; record the literal commands actually executed in evidence.
 2. The full test suite — `<test runner>` with no file filter and no test-name option.
 3. The project's static gates, when the repository defines them — formatter check, linter, and type
    check.
-4. `npx qfai validate --profile tdd --fail-on error` — qfai is a project dependency, not a global
-   command; a bare `qfai …` is `command not found` (exit 127) on a normal local install, which would
-   fail every checkpoint.
+4. `npx qfai validate --profile tdd --fail-on error --spec <spec-id>` — qfai is a project
+   dependency, not a global command; a bare `qfai …` is `command not found` (exit 127) on a normal
+   local install, which would fail every checkpoint. `--spec` scopes the run to the spec this
+   checkpoint is for: this skill processes one spec at a time, so an unscoped run makes a sibling
+   spec's in-flight failure fail this checkpoint. It also writes
+   `<report>/validate.spec-<id>.json` instead of the shared `validate.json`, so the checkpoint
+   artifact cannot be overwritten by another spec's run.
+   **`--spec` scopes the spec-owned rules only, and this checkpoint still fails on the rest.**
+   `QFAI-TEST-001` names a test file, the `QFAI-TRACE-*` findings **that have no spec
+   owner** are filed against `.qfai/specs/` itself, and the contract validators run
+   regardless of scope —
+   `QFAI-CONTRACT-*` and `QFAI-DB-002` are filed against `.qfai/contracts/**`, which
+   no spec owns. None of the three has a spec owner, so a sibling spec's `it.todo`, a
+   `CAP-*` it has not created yet, or a malformed contract it is mid-way through
+   editing, exits 1 here. **Not the whole `QFAI-TRACE-*` family**: the per-artifact
+   ones are filed against the spec's own `03_Acceptance-Criteria.md` /
+   `04_Business-Rules.md` / `05_Examples.md` / `06_Test-Cases.md` and its ledger, so a
+   sibling's are dropped by the scope filter and never reach this checkpoint —
+   treating them as still-blocking reports a failure this run cannot see. Record the finding, its owning spec and why it
+   is not this checkpoint's work; do **not** drop `--fail-on error`, weaken the profile, or
+   report the checkpoint as passed.
 
 ## Verification command set (per spec)
 

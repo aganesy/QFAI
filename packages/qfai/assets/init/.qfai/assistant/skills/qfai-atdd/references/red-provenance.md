@@ -78,9 +78,14 @@ Take the first that applies, and record which one in the evidence file.
       a **content** address rather than a status one: `git status --porcelain`
       names the changed paths and their states, so editing the very file under
       test after the RED leaves the digest identical and a stale observation
-      reads as fresh. Record `working-tree+<hash>` over HEAD **and** the content
-      of the changes on top of it: hash `git rev-parse HEAD`, `git diff HEAD`
-      and the contents of every untracked file, together. **Not
+      reads as fresh. Record `working-tree+<content hash>` by the **one** procedure in
+      `../../qfai-implement/references/evidence-revision.md` — do not restate
+      it here. It excludes the ledger and `.qfai/evidence/**` and it hashes
+      untracked files through a sorted `path + NUL + blob hash` manifest, and a
+      producer hashing all of `git diff HEAD` instead got a different value from
+      the `qa-gatekeeper` reviewing the same tree — in the ordinary multi-row
+      loop, where the previous row's evidence is already written, the two
+      observations of one RED tree could not be matched up at all. **Not
       `git stash create`** — it has no `-u`, so the tree it builds omits
       untracked files, and a brand-new acceptance test is untracked in exactly
       the case this address exists for.
@@ -275,6 +280,34 @@ Read the row's entry and take the branch it names:
 
 **A branch-2 row whose evidence is not written yet is not a stop, and not a defer either.** P1b fixes every row branch; the mutation needs production code this stage does not own, so `/qfai-implement` performs it at Phase Red step 3c and records it here. Treating the empty trio as a malformed handoff stopped the run on the first such row; deferring it left nobody able to produce the evidence, since the only phase with a production agent was waiting for it.
 
+## A shared test artifact outlives the row that recorded it
+
+P1c closes one row before the next test is written, so the `RED test manifest`
+of a `done` row addresses a fixture, snapshot or helper that a **later** row may
+still edit. The hash then disagrees with the tree, and a `done` row has no
+re-entry edge of its own — so the spec either accepts stale evidence or cannot
+be closed.
+
+**Stabilise first where the row can see it coming.** The artifacts an
+acceptance test owns — fixtures, snapshots, helpers under the test tree — are
+written in P2-P4 with every row's obligation in view, not grown one row at a
+time. Where that holds, no later row edits them and the manifests stay true.
+
+**Where a later row does have to edit one, it re-verifies the rows that read
+it.** The editing row already runs its own selector; run the earlier rows'
+selectors in the same pass, and record for each the re-run and its new manifest
+and hash as a `### Round N` block on that row, marked
+`shared-artifact re-verify`. That is the same shape a `test-only replacement`
+takes, and for the same reason: what has to be shown is that the earlier row's
+test still discriminates against the artifact as it now stands. **A row whose
+re-run fails is not re-verified** — it is a regression the editing row
+introduced, and it goes back through `/qfai-implement` as rework rather than
+being recorded as re-verified.
+
+The completion gate reads the latest block, so a row re-verified this way is
+current. Nothing here lets a `done` row re-observe a RED: the re-run is a
+passing run against an unchanged predicate, which is what a re-verify is.
+
 ## A spec with no ATDD-owned rows
 
 `/qfai-sdd` Phase 2b seeds a ledger row per **coverage-target** `TC-*`, which
@@ -357,81 +390,12 @@ nothing later in the flow can produce the approval retroactively.
 
 ## A `review-fix` row comes back here for a new RED
 
-`/qfai-implement` Phase Red step 3b sends a `review-fix` row back when the
-blocking reviewer's REVISE asks for a change to the acceptance test itself: that
-skill does not author these tests and its `red` phase has no
-`acceptance-test-engineer`. The three branches above define the **first**
-handoff of a `todo` row, so this one needs its own contract.
-
-- **Invocation.** Named by `TDD-ID`, with the reviewer's REVISE and its round
-  number. The row stays at `review-fix` throughout — this stage writes no
-  ledger cell, and `review-fix -> red` is not a transition.
-- **What this stage does.** Correct the test the REVISE names, then **run it and
-  let the result choose the path** — the same first-run check branch 1 makes,
-  for the same reason.
-  - **It fails.** Take that as the fresh RED, exactly as branch 1 does: record
-    the pair, the `RED revision` and the `RED test hash`, and get
-    `qa-gatekeeper` PASS on that run.
-  - **It passes.** Many REVISEs ask for no new behaviour at all — splitting a
-    selector, renaming a test, making an expectation explicit — so the corrected
-    test passes on the first run and there is no RED to take. Demanding one
-    stranded the row at `review-fix`. Record the run and its revision, and
-    take the **no-new-behaviour path** of
-    `../../qfai-implement/references/round-evidence.md`: no round is opened, and
-    the row returns on that basis.
-
-    **Re-address the test.** The REVISE changed the test, so the `RED test hash`
-    recorded at handoff still addresses the manifest before the edit, and the
-    consumer checks it against the current one before the reviews
-    (`../../qfai-implement/SKILL.md`, the field contract) — a mismatch is sent
-    back here for a fresh RED, which is this same passing no-round path, for
-    ever. Recompute the manifest and the hash over the corrected test and
-    **replace** the recorded pair, marked `test-only replacement` with the
-    reviewer verdict that asked for it. That is what the consumer accepts in
-    place of a fresh RED: the reviewer judged that no new production behaviour
-    is owed, so there is no RED to take, and the hash's job — telling "the test
-    moved under the RED" from "only production changed" — is discharged by
-    naming the verdict that moved it.
-
-    **Re-take the proof as well, on a row that has one.** A new hash over the
-    old `Oracle proof` / falsifiability result says only that somebody edited
-    the test; it does not say the _edited_ test still fails when the predicate
-    `Satisfied-by` names is broken. Clarifying an expectation or splitting a
-    selector can weaken an assertion by accident, and the pair would then pass
-    the consumer's check with a proof taken against the assertion that is gone.
-    So the recorded proof is **stale**, and this stage says so rather than
-    re-taking it: the mutation rewrites a production predicate, which is the
-    one thing this stage owns no agent for — the paragraph below says exactly
-    that about the same operation. Mark the proof `stale — test replaced`
-    beside the new manifest and hash, and name it in the handback. Re-running
-    the same mutation under the corrected selector, and the GREEN after it,
-    happen in `/qfai-implement`'s rework, where the production owners are
-    routed and where the fix and the re-review already happen. Production
-    behaviour is unchanged — that is what keeps this a no-round path — and this
-    is the evidence that the corrected test still discriminates, which no hash
-    can carry.
-
-    **Not falsifiability.** That form needs a production mutation, which this
-    stage owns no agent for and cannot hand over either: Phase Red step 3b
-    excludes a `review-fix` row by name and step 3c is reachable only from a
-    `todo` falsifiability entry, so there is nobody to produce the trio and the
-    row would sit at `review-fix` again. A REVISE whose repair genuinely needs
-    new production behaviour is not this case — that one's corrected test fails,
-    and the branch above applies.
-
-- **Where it goes.** A `### Round N` block in
-  `.qfai/evidence/atdd-<spec-id>.md`, keyed to the round the reviewer opened,
-  in the shape `../../qfai-implement/references/round-evidence.md` defines.
-  Not a second `## Ledger rows advanced` entry: that section is the record of
-  a first handoff, and appending to it would read as one.
-- **Handing back.** Return to `/qfai-implement` naming the round. The
-  production fix and the re-review happen there, and the row leaves
-  `review-fix` by that skill's own path. **A proof marked
-  `stale — test replaced` is part of that handback**: the mutation is re-run
-  under the corrected selector there, before the re-review.
-
-A REVISE that does **not** touch the acceptance test never reaches this stage;
-it is production rework and stays where it is.
+A reviewer's REVISE that asks for a change to the acceptance test returns the
+row to this stage: `/qfai-implement` does not author those tests and its `red`
+phase has no `acceptance-test-engineer`. What the corrected test owes — a fresh
+RED when it fails, the no-round path plus a re-addressed manifest and a proof
+marked stale when it passes, and where the round block goes — is in
+`references/review-fix-rounds.md`.
 
 ## Which stage hands a row over
 

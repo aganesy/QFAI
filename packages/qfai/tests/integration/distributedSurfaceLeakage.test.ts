@@ -49,7 +49,11 @@ async function newTempDir(): Promise<string> {
 }
 
 const PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> = [
-  { name: "internal spec id (spec-0010+)", re: /spec-0(0[1-9][0-9]|[1-9][0-9]{2,})/g },
+  // "10 and above" as a value, not as a list of digit shapes: any leading
+  // zeros, then a non-zero digit and at least one more. Enumerating shapes is
+  // what let `spec-9999` and `spec-00100` through different layers of the same
+  // SSOT-synced set.
+  { name: "internal spec id (spec-0010+)", re: /spec-0*[1-9][0-9]+/gi },
   { name: "internal version marker", re: /\bv[0-9]+\.[0-9]+(?:\.[0-9]+)?\b|\bv1\.x\b/g },
   {
     name: "internal trace id (CAP-0010+/DEC/DR/PROT2/OQ)",

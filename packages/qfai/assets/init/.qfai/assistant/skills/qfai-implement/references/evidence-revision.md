@@ -103,13 +103,18 @@ Consequences:
 - An item's four verdicts (gate items 3, 5, 7, 8) MUST all name the **same**
   revision. Verdicts from different revisions do not compose into a ruling about
   one state — the earlier ones ruled on code that no longer exists.
-- **One exception, and it is structural: a RED `/qfai-atdd` handed over.** That
-  RED is taken before the production code exists, so its revision is earlier
-  than the GREEN's by construction — that is the property it is worth having,
-  not decay. Such a row records it as `RED revision` (its own field, beside the
-  RED pair) and leaves `Revision` for the GREEN and the two reviews, which must
-  still agree with each other. Folding both into one field made a correct
-  `observed-red` E2E/API row permanently stale and unable to reach `done`.
+- **Two exceptions, both structural, both above under _A transient
+  observation names its own revision_.** A RED `/qfai-atdd` handed over is
+  taken before the production code exists, so its revision is earlier than the
+  GREEN's by construction; a `falsifiability` row's mutation run is taken
+  against a tree that is reverted before the GREEN, so its revision names a tree
+  that no longer exists. In both, that is the property the observation is worth
+  having, not decay. Each records its own field — `RED revision` beside the RED
+  pair, `Falsifiability revision` beside the trio — and leaves `Revision` for
+  the GREEN and the two reviews, which must still agree with each other. Folding
+  either into `Revision` made a correct row permanently stale and unable to
+  reach `done`: the `observed-red` E2E/API rows first, and every branch-2 row
+  once the gate began reading the mutated tree.
   Everything else about staleness is unchanged: `RED revision` is judged
   against the tree the RED was observed on, and a later commit touching the
   test itself invalidates it the same way.

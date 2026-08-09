@@ -62,7 +62,11 @@ describe("evidence and verdicts carry a revision", () => {
       expect(skill).toContain(
         "`Revision` — the state the observation was made against: `git rev-parse HEAD`, or `working-tree+<content hash>` for an uncommitted tree",
       );
-      expect(skill).toContain("One per round block, and one for the refactor-verify pair");
+      // The cardinality belongs to `Revision`. `RED test hash` carried it for a
+      // while and so asked for a second hash nothing produces.
+      expect(skill).toContain(
+        "`Revision` is the field that is per round block and once more for the refactor-verify pair",
+      );
       expect(skill).toContain(
         "`Spec review` — completion-reviewer result (PASS or REVISE) with its `Reviewed revision`",
       );
