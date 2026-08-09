@@ -1109,16 +1109,19 @@ async function ensureSymlink(
       // is anything else is a file somebody wrote, and `--force` remains the
       // documented way to overwrite one.
       if (!options.dryRun) {
-        await rm(linkPath, { recursive: true, force: true });
+        // Recreate under a rollback, because the removal and the recreate can
+        // fail independently: `symlink` raises EPERM on Windows without
+        // Developer Mode, and a repair that had already deleted the file left
+        // the wrapper *missing* — worse than the flattened state it started
+        // from, and invisible afterwards because `QFAI-LINK-001` treats an
+        // absent wrapper as one that was never created.
+        return await recreateFlattenedLink(linkPath, target, type);
       }
-      // Both the removal above and the `symlink` below are suppressed under
-      // `--dry-run`; saying "repaired" there reported a repair that did not
-      // happen, to the one invocation whose whole purpose is to preview.
-      info(
-        options.dryRun
-          ? `  would repair: ${linkPath} is a flattened symlink`
-          : `  repaired: ${linkPath} was a flattened symlink (recreating)`,
-      );
+      // The removal and the `symlink` are both suppressed under `--dry-run`;
+      // saying "repaired" there reported a repair that did not happen, to the
+      // one invocation whose whole purpose is to preview.
+      info(`  would repair: ${linkPath} is a flattened symlink`);
+      return "created";
     } else {
       // Regular file or directory with content of its own — a customised agent
       // wrapper, or a generated link replaced by a real directory. Preserve it
@@ -1155,6 +1158,48 @@ async function ensureSymlink(
 }
 
 /**
+ * Replaces a flattened link with the real symlink, restoring the file if the
+ * symlink cannot be created.
+ *
+ * Without the rollback the failure mode is strictly worse than the state being
+ * repaired: EPERM on Windows without Developer Mode leaves the wrapper absent,
+ * and an absent wrapper is the one state `QFAI-LINK-001` deliberately treats as
+ * benign — the project that predates a newly shipped skill looks the same. The
+ * flattened file at least announced itself.
+ */
+async function recreateFlattenedLink(
+  linkPath: string,
+  target: string,
+  type: "dir" | "file",
+): Promise<"created"> {
+  const original = await readFile(linkPath, "utf-8");
+  await rm(linkPath, { recursive: true, force: true });
+  try {
+    await mkdir(path.dirname(linkPath), { recursive: true });
+    await symlink(target, linkPath, type);
+  } catch (err: unknown) {
+    await writeFile(linkPath, original, "utf-8").catch(() => {
+      // Restoring failed too. The original content goes into the error below
+      // rather than being lost silently.
+    });
+    if (isEpermOnWindows(err)) {
+      throw new Error(
+        [
+          `平坦化された symlink の修復に失敗しました (EPERM): ${linkPath}`,
+          "元のファイルは復元しました。",
+          "Windows では Developer Mode を有効にする必要があります:",
+          "  設定 > システム > 開発者向け > 開発者モード を ON",
+          "詳細: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
+        ].join("\n"),
+      );
+    }
+    throw err;
+  }
+  info(`  repaired: ${linkPath} was a flattened symlink (recreating)`);
+  return "created";
+}
+
+/**
  * True when `linkPath` is a regular file whose whole content is `target`.
  *
  * That is what `git checkout` writes in place of a symlink when
@@ -1162,6 +1207,12 @@ async function ensureSymlink(
  * newline. Bounded by a size check first so a large user file is never read,
  * and compared through `path.normalize` so a separator difference does not
  * make a flattened link look like user content.
+ *
+ * **Byte-exact, no `trim()`.** The signature has no surrounding whitespace, so
+ * trimming widened the match past it — a wrapper somebody manages by hand as a
+ * regular file, written by an editor or `echo` that appends a newline, read as
+ * flattened and was deleted without `--force`. Everything that is not the exact
+ * signature takes the preserve path, which is the safe direction to be wrong in.
  */
 async function isFlattenedLink(linkPath: string, target: string): Promise<boolean> {
   const stats = await safeLstat(linkPath);
@@ -1175,7 +1226,7 @@ async function isFlattenedLink(linkPath: string, target: string): Promise<boolea
   }
   try {
     const content = await readFile(linkPath, "utf-8");
-    return path.normalize(content.trim()) === path.normalize(target);
+    return path.normalize(content) === path.normalize(target);
   } catch {
     return false;
   }

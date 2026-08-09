@@ -24,6 +24,25 @@
 
 ### Fixed
 
+- **The template root is identified, not just found.** Candidates were tried
+  outermost-first, and from `<project>/node_modules/qfai/dist` the outermost is
+  `<project>/assets/init` — a consuming project with an unrelated directory of
+  that name became the template root. Wrong-but-present is worse than missing:
+  the shipped roster read empty and `QFAI-LINK-001` passed every broken wrapper
+  without looking. Candidates are nearest-first now, and each is confirmed by
+  sentinels the real tree always has.
+- **A hand-managed wrapper is no longer auto-deleted over a trailing newline.**
+  The flattened-link signature git writes carries no surrounding whitespace, so
+  comparing `content.trim()` matched past it — a regular file someone maintains
+  themselves, written by an editor or `echo`, read as flattened and was removed
+  without `--force`. The comparison is byte-exact; everything else takes the
+  preserve path.
+- **A repair that cannot finish restores what it found.** The removal and the
+  recreate fail independently — `symlink` raises `EPERM` on Windows without
+  Developer Mode, the same condition that flattened the checkout — and the
+  wrapper was left _absent_, which `QFAI-LINK-001` treats as benign because a
+  project predating a newly shipped skill looks identical. The flattened file
+  at least announced itself; it is now put back, and the error says so.
 - **`assets/init` resolves from the package's public entry.** `tsup` bundles
   with `splitting: false`, so `dist/index.mjs` sits one level shallower than
   `dist/cli/index.mjs` — a depth the candidate list did not cover. Calling

@@ -112,6 +112,30 @@ describe("qfai init repairs a link a checkout flattened", () => {
     });
   });
 
+  it("preserves a hand-managed file that differs only by a trailing newline", async () => {
+    // The flattened signature git writes has no surrounding whitespace, so
+    // `trim()` widened the match past it: a wrapper somebody manages by hand as
+    // a regular file, written by an editor or `echo` that appends a newline,
+    // read as flattened and was removed without `--force`.
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const linkPath = path.join(root, LINK);
+      const mine = "../../.qfai/assistant/skills/qfai-atdd\n";
+      await rm(linkPath, { recursive: true, force: true });
+      await mkdir(path.dirname(linkPath), { recursive: true });
+      await writeFile(linkPath, mine, "utf-8");
+
+      const stdout = await captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: false, yes: true }),
+      );
+
+      expect(await readFile(linkPath, "utf-8")).toBe(mine);
+      expect((await lstat(linkPath)).isSymbolicLink()).toBe(false);
+      expect(stdout).not.toContain("was a flattened symlink");
+    });
+  });
+
   it("still overwrites a customised wrapper under --force", async () => {
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });

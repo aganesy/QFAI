@@ -12,14 +12,38 @@ import { fileURLToPath } from "node:url";
  * caller that reaches `validateProject` through the library entry rather than
  * the CLI got `Template assets not found` before any validator ran.
  *
+ * **Ordered nearest-first**, because the shallower depths are not the
+ * package's own directory once QFAI is installed: from
+ * `<project>/node_modules/qfai/dist`, the three-level candidate is
+ * `<project>/assets/init`. A consuming project with an unrelated `assets/init`
+ * would otherwise be picked as the template root, and a wrong-but-present
+ * directory is worse than a missing one — `canonicalSkillIds` would read an
+ * empty shipped roster and `QFAI-LINK-001` would pass every broken wrapper
+ * without looking at it.
+ *
  * Exported for the test that pins those depths; `getInitAssetsDir` is the API.
  */
 export function initAssetsCandidates(baseDir: string): string[] {
   return [
-    path.resolve(baseDir, "../../../assets/init"),
-    path.resolve(baseDir, "../../assets/init"),
     path.resolve(baseDir, "../assets/init"),
+    path.resolve(baseDir, "../../assets/init"),
+    path.resolve(baseDir, "../../../assets/init"),
   ];
+}
+
+/**
+ * Files a real `assets/init` tree always has.
+ *
+ * Existence alone does not identify the directory — the name is generic enough
+ * that a consuming project can have one. Both halves of the tree `runInit`
+ * copies are required, so an unrelated `assets/init` is rejected and the search
+ * continues instead of silently rooting the whole template system somewhere
+ * arbitrary.
+ */
+const INIT_ASSETS_SENTINELS = [path.join(".qfai", "assistant"), path.join("root", "DESIGN.md")];
+
+function isInitAssetsDir(candidate: string): boolean {
+  return INIT_ASSETS_SENTINELS.every((sentinel) => existsSync(path.join(candidate, sentinel)));
 }
 
 export function getInitAssetsDir(): string {
@@ -29,7 +53,7 @@ export function getInitAssetsDir(): string {
   const candidates = initAssetsCandidates(baseDir);
 
   for (const candidate of candidates) {
-    if (existsSync(candidate)) {
+    if (isInitAssetsDir(candidate)) {
       return candidate;
     }
   }

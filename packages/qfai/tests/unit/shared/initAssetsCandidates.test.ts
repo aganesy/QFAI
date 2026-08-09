@@ -30,12 +30,21 @@ describe("initAssetsCandidates", () => {
     expect(initAssetsCandidates(baseDir)).toContain(EXPECTED);
   });
 
-  it("orders candidates deepest first so a shallower guess cannot win", () => {
-    // Each is only accepted if it exists, so ordering matters only when more
-    // than one does. Deepest-first keeps the historical resolution unchanged.
-    const candidates = initAssetsCandidates(path.join(PACKAGE_ROOT, "dist", "cli"));
+  it("orders candidates nearest-first, so an outer directory cannot win", () => {
+    // Installed, the outer depths are not this package: from
+    // `<project>/node_modules/qfai/dist`, the three-level candidate is
+    // `<project>/assets/init`. A consuming project with an unrelated
+    // `assets/init` would be adopted as the template root, and a
+    // wrong-but-present directory is worse than a missing one — the shipped
+    // roster reads empty and `QFAI-LINK-001` passes every broken wrapper.
+    const project = path.resolve("/project");
+    const installed = path.join(project, "node_modules", "qfai", "dist");
+    const candidates = initAssetsCandidates(installed);
+    expect(candidates[0]).toBe(path.join(project, "node_modules", "qfai", "assets", "init"));
+    expect(candidates.indexOf(path.join(project, "assets", "init"))).toBeGreaterThan(0);
+    // Nearest-first is the whole property: longest path first.
     expect(candidates.map((entry) => entry.length)).toEqual(
-      [...candidates.map((entry) => entry.length)].sort((left, right) => left - right),
+      [...candidates.map((entry) => entry.length)].sort((left, right) => right - left),
     );
   });
 });
