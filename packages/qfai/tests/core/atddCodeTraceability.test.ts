@@ -437,3 +437,45 @@ async function seedTest(
     "utf-8",
   );
 }
+
+describe("a mistyped TC column still declares its ids", () => {
+  it("keeps QFAI-ATDD-112 owed when the authoritative table cannot be resolved", async () => {
+    // Reading ids from the resolved tables closed the appendix hole but opened
+    // this one: a mistyped header drops the whole table, so `TC-0001` left the
+    // declared set and the ATDD gate stopped asking for it. The ledger side
+    // does not cover the gap — with no `tdd/test-list.md` at all
+    // `TDDLIST_MISSING` is a warning and the check returns early — so
+    // `--profile full --fail-on error` passed with neither a test nor a row.
+    await withProject(async (root) => {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
+      await writeFile(
+        path.join(specDir, "02_User-stories.md"),
+        ["# 02 User stories", "", "## US-0001: title", "- Parent: CAP-0001", ""].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        [
+          "# 06 Test cases",
+          "",
+          "## Test Case Table",
+          "",
+          "| TC Id | Level | AC-Refs | EX-Ref | Steps | Expected |",
+          "| ----- | ----- | ------- | ------ | ----- | -------- |",
+          "| TC-0001 | L3 | AC-0001 | - | s | e |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+      // No integration annotation for TC-0001: the gate has to say so.
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      expect(issues.map((entry) => entry.code)).toContain("QFAI-ATDD-112");
+    });
+  });
+});

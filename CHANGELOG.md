@@ -488,6 +488,21 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **Foreign home is a placement, not a `Level`.** Once `api` and `e2e` are
+  scanned, an L4 skeleton that followed the remediation into `tests/api/**` is
+  in its declared home — its annotation counts, so what it needs is the
+  ordinary placeholder gate and its escalation. Judged by `Level` alone it left
+  the coverage list, hit the `continue`, and sat on the non-escalating foreign
+  warning however many times validate ran: the same silence the move used to
+  produce, one step further along.
+- **A mistyped TC column still declares its ids.** Reading them from the
+  resolved tables closed the appendix hole and opened this one: a header like
+  `TC Id` drops the whole table, so the id left the obligation set and
+  `QFAI-ATDD-112` stopped asking for it. The ledger does not cover the gap —
+  with no `tdd/test-list.md` at all `TDDLIST_MISSING` is a warning and the
+  check returns early — so `--profile full --fail-on error` passed with neither
+  a test nor a row. Tokens in an unresolvable table inside the authoritative
+  section are kept; the header is what `TDDLIST_TC_TABLE_UNRESOLVED` reports.
 - **A top-level indented code block is masked before table parsing.** Only
   fenced blocks and HTML comments were, and `parseAllMarkdownTables` matches
   `^s*|` — so a schema-complete sample ledger indented four spaces was

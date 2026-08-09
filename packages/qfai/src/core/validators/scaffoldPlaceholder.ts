@@ -76,6 +76,19 @@ const TODO_MARKER_RE = /\/\/\s*TODO:\s*implement assertion for\s+(TC-\d{4}-\d{4}
  */
 const SCAFFOLD_FOREIGN_LEVELS = new Set(["l4", "api", "l5", "e2e"]);
 
+/** The scanned root a `Level` routes to. */
+function scaffoldHomeForLevel(level: string | undefined): "api" | "e2e" | "integration" {
+  const normalized = (level ?? "").trim().toLowerCase();
+  if (normalized === "l4" || normalized === "api") return "api";
+  if (normalized === "l5" || normalized === "e2e") return "e2e";
+  return "integration";
+}
+
+/** The home a scanned root represents; `atdd` is the integration one. */
+function scaffoldHomeOf(dirName: string): "api" | "e2e" | "integration" {
+  return dirName === "api" || dirName === "e2e" ? dirName : "integration";
+}
+
 /**
  * Extract the spec id from an atdd-scaffold file path of the shape
  * `<testsRoot>/atdd/<spec-id>/<TC>.test.*`. Returns `null` when the
@@ -83,6 +96,7 @@ const SCAFFOLD_FOREIGN_LEVELS = new Set(["l4", "api", "l5", "e2e"]);
  * to emitting a warning without escalation (graceful degradation
  * rather than dropping the finding entirely).
  */
+
 function extractSpecIdFromScaffoldPath(testsAtddDir: string, filePath: string): string | null {
   const rel = path.relative(testsAtddDir, filePath);
   if (rel.startsWith("..") || path.isAbsolute(rel)) {
@@ -194,12 +208,25 @@ export async function validateScaffoldPlaceholder(
     // scaffold` still generates one — it does not route by `Level` — so the
     // skeleton exists and this is where it stops being a gate.
     const levels = specId === null ? new Map<string, string>() : await tcLevelsForSpec(specId);
+    // Which of the scanned roots this file is actually in. `atdd` is the
+    // scaffold's own output directory and shares the integration home.
+    const actualHome = owningDir === undefined ? null : scaffoldHomeOf(path.basename(owningDir));
     const tcIds: string[] = [];
     const foreignHomeTcIds: string[] = [];
     for (const tcId of allTcIds) {
       const level = levels.get(tcId.toUpperCase());
       if (isOutsideAtddObligation(level)) continue;
-      if (SCAFFOLD_FOREIGN_LEVELS.has((level ?? "").trim().toLowerCase())) {
+      // Foreign is a **placement**, not a `Level`. Once `api` and `e2e` are
+      // scanned, an L4 skeleton that followed the remediation into
+      // `tests/api/**` is in its declared home — its annotation counts, so what
+      // it needs is the ordinary placeholder gate and its escalation. Judging by
+      // `Level` alone left it on the non-escalating foreign warning forever,
+      // which is the same silence the move used to produce.
+      const declaredHome = scaffoldHomeForLevel(level);
+      const isForeign =
+        SCAFFOLD_FOREIGN_LEVELS.has((level ?? "").trim().toLowerCase()) &&
+        (actualHome === null || declaredHome !== actualHome);
+      if (isForeign) {
         foreignHomeTcIds.push(tcId);
         continue;
       }

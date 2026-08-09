@@ -640,6 +640,8 @@ export function collectHeadingTcLevelsFrom(rawTcText: string): Array<[string, st
  * exist. Anything outside them is illustration: a fenced sample, an HTML
  * comment, or an appendix table sitting outside `## Test Case Table`.
  */
+const TC_TOKEN_RE = /\bTC-\d{4}(?:-\d{4})?\b/g;
+
 export function collectDeclaredTcIds(rawTcText: string): Set<string> {
   const ids = new Set(collectHeadingTcIdsFrom(rawTcText));
   // The section, not `resolveTestCaseTables`: that filter is case-exact on the
@@ -651,7 +653,23 @@ export function collectDeclaredTcIds(rawTcText: string): Set<string> {
   const section = extractTestCaseTableSection(masked) ?? masked;
   for (const table of parseAllMarkdownTables(section)) {
     const idIndex = table.headers.findIndex((header) => header.trim().toUpperCase() === "TC-ID");
-    if (idIndex < 0) continue;
+    if (idIndex < 0) {
+      // The header is mistyped — `TC Id`, say — so this table is unresolvable
+      // and `TDDLIST_TC_TABLE_UNRESOLVED` reports it. Its ids are still
+      // **declared**: dropping them removed the obligation entirely, and with
+      // no ledger `TDDLIST_MISSING` is only a warning, so a spec could pass
+      // `--profile full --fail-on error` with neither a test nor a ledger row.
+      // Conservative here, loud there — keeping the tokens preserves the
+      // obligation while the header is what gets fixed.
+      for (const row of table.rows) {
+        for (const value of row) {
+          for (const match of value.matchAll(TC_TOKEN_RE)) {
+            ids.add(match[0].toUpperCase());
+          }
+        }
+      }
+      continue;
+    }
     for (const row of table.rows) {
       const id = /\bTC-\d{4}(?:-\d{4})?\b/.exec((row[idIndex] ?? "").trim())?.[0];
       if (id !== undefined) ids.add(id.toUpperCase());

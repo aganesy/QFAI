@@ -298,3 +298,69 @@ describe("a skeleton that moved to its declared home is still a skeleton", () =>
     expect(issues.filter((i) => i.code === "D-SCAFFOLD-PLACEHOLDER")).toEqual([]);
   });
 });
+
+describe("a skeleton in its declared home is an ordinary placeholder", () => {
+  it("does not park an L4 skeleton under tests/api on the foreign warning", async () => {
+    // `foreignHomeTcIds` was keyed on `Level` alone. Once `api` and `e2e` are
+    // scanned, a skeleton that followed the remediation there is in its home:
+    // its annotation counts, so what it needs is the placeholder gate and its
+    // escalation. Classified foreign it left `tcIds`, hit the `continue`, and
+    // sat on a non-escalating warning however many times validate ran.
+    const specDir = path.join(root, ".qfai", "specs", "spec-0008");
+    await mkdir(specDir, { recursive: true });
+    await writeFile(
+      path.join(specDir, "06_Test-Cases.md"),
+      [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0008-0001 | L4 | AC-0008-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const dir = path.join(root, "tests", "api", "spec-0008");
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      path.join(dir, "TC-0008-0001.test.ts"),
+      placeholderBodyFor("TC-0008-0001"),
+      "utf-8",
+    );
+
+    const issues = await validateScaffoldPlaceholder(root, defaultConfig);
+    expect(issues.map((i) => i.code)).toContain("D-SCAFFOLD-PLACEHOLDER");
+    expect(issues.map((i) => i.code)).not.toContain("D-SCAFFOLD-FOREIGN-HOME");
+  });
+
+  it("still calls an L4 skeleton under tests/integration foreign", async () => {
+    const specDir = path.join(root, ".qfai", "specs", "spec-0008");
+    await mkdir(specDir, { recursive: true });
+    await writeFile(
+      path.join(specDir, "06_Test-Cases.md"),
+      [
+        "# 06 Test Cases",
+        "",
+        "## Test Case Table",
+        "",
+        "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+        "| ----- | ----- | ------- | ------ | ----- | -------- |",
+        "| TC-0008-0001 | L4 | AC-0008-0001 | - | s | e |",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const dir = path.join(root, "tests", "integration", "spec-0008");
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      path.join(dir, "TC-0008-0001.test.ts"),
+      placeholderBodyFor("TC-0008-0001"),
+      "utf-8",
+    );
+
+    const issues = await validateScaffoldPlaceholder(root, defaultConfig);
+    expect(issues.map((i) => i.code)).toContain("D-SCAFFOLD-FOREIGN-HOME");
+  });
+});
