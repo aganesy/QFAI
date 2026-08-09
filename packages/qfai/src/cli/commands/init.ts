@@ -1360,6 +1360,28 @@ async function claimSidecar(linkPath: string): Promise<string> {
   );
 }
 
+/**
+ * Put the sidecar back at `linkPath`, refusing a path somebody else has taken.
+ *
+ * `link` is the primitive that refuses: `EEXIST` rather than replacing, and it
+ * restores the same inode. Where the filesystem has no hard links an exclusive
+ * `wx` write makes the same promise, which needs the content — the caller
+ * passes it when it has already read it. The sidecar survives until one of them
+ * has succeeded, so the content is never only in flight.
+ */
+async function restoreSidecar(sidecar: string, linkPath: string, body?: string): Promise<void> {
+  try {
+    await link(sidecar, linkPath);
+  } catch (linkErr: unknown) {
+    const code = (linkErr as NodeJS.ErrnoException | null)?.code;
+    if (code === "EEXIST") throw linkErr;
+    // `EPERM` / `ENOSYS` / `EXDEV`: no hard links here, not an occupied path.
+    const content = body ?? (await readFile(sidecar, "utf-8"));
+    await writeFile(linkPath, content, { encoding: "utf-8", flag: "wx" });
+  }
+  await rm(sidecar, { recursive: true, force: true });
+}
+
 async function recreateFlattenedLink(
   linkPath: string,
   target: string,
@@ -1380,12 +1402,17 @@ async function recreateFlattenedLink(
   // gone. `wx` refuses a name that is taken, so the loop finds one that is not.
   const sidecar = await claimSidecar(linkPath);
   await rename(linkPath, sidecar);
+  // Both early returns put the file back the same way the rollback does.
+  // `rename` overwrites, so a path another process re-created while this one
+  // was reading would have been destroyed by the very restore that exists to
+  // leave it alone — the atomic claim belongs on every restore, not only the
+  // one after a failed `symlink`.
   const original = await readFile(sidecar, "utf-8").catch(async (readErr: unknown) => {
-    await rename(sidecar, linkPath).catch(() => undefined);
+    await restoreSidecar(sidecar, linkPath).catch(() => undefined);
     throw readErr;
   });
   if (toComparableTarget(original) !== toComparableTarget(target)) {
-    await rename(sidecar, linkPath);
+    await restoreSidecar(sidecar, linkPath);
     return "skipped";
   }
   try {
@@ -1411,16 +1438,7 @@ async function recreateFlattenedLink(
     // succeeded, so the content is never only in flight.
     let restoreError: unknown;
     try {
-      try {
-        await link(sidecar, linkPath);
-      } catch (linkErr: unknown) {
-        const code = (linkErr as NodeJS.ErrnoException | null)?.code;
-        if (code === "EEXIST") throw linkErr;
-        // `EPERM` / `ENOSYS` / `EXDEV`: no hard links here, not an occupied
-        // path. `wx` refuses an existing path in the same breath as creating.
-        await writeFile(linkPath, original, { encoding: "utf-8", flag: "wx" });
-      }
-      await rm(sidecar, { recursive: true, force: true });
+      await restoreSidecar(sidecar, linkPath, original);
     } catch (restoreErr: unknown) {
       restoreError = restoreErr;
     }

@@ -93,6 +93,14 @@ const INIT_MARKER_SIGNATURE = ".qfai/assistant/";
  * checkout that never ran init read as initialised, with all six surfaces then
  * reported missing. All three parts together are init's.
  */
+/**
+ * Ceiling on a file this rule will read looking for the init signature.
+ *
+ * Generous against what init writes — a few hundred bytes — and small enough
+ * that a project's own document at one of these paths costs nothing to decline.
+ */
+const MARKER_MAX_BYTES = 64 * 1024;
+
 const INIT_MARKER_TITLE = /^# QFAI /;
 const INIT_MARKER_SECTION = "## Canonical entrypoint";
 
@@ -349,6 +357,13 @@ async function hasInitSignature(filePath: string): Promise<boolean> {
   if (stats === null || !stats.isFile()) {
     return false;
   }
+  // Bounded, like the flattened-wrapper read. Init writes a short boilerplate
+  // README; a project's own file at that path can be any size, and reading it
+  // whole to look for three substrings slowed every profile in proportion to
+  // somebody else's document — or ended it on a large enough one.
+  if (stats.size > MARKER_MAX_BYTES) {
+    return false;
+  }
   const body = await readFile(filePath, "utf-8").catch((error: unknown) => {
     if (isMissing(error)) return null;
     throw error;
@@ -535,8 +550,18 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       // here points every one of them at an external tree — and when it is
       // empty there are no wrappers to reach the realpath check, so it read as
       // a healthy directory while `qfai init` filled the external location.
+      // Ancestors first, because a dangling one makes the directory itself
+      // answer "absent" — and then the remedy is "re-run `qfai init`", which
+      // cannot create a directory through a broken link. The surface is not
+      // missing; the path to it is.
+      const ancestor = await symlinkAncestor(root, dir);
       const state = await canonicalState(absolute);
-      if (state.kind === "absent") return;
+      if (state.kind === "absent") {
+        if (ancestor !== null) {
+          damagedDirs.set(dir, `an ancestor is a symlink: ${toPosix(ancestor)}`);
+        }
+        return;
+      }
       // A cycle or a dangling link is named for what it is before the plain
       // "it is a symlink" rule below, which would otherwise bury the more
       // specific damage under the more general one.
@@ -562,7 +587,6 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       // lexical path says `.claude`, and the comparison reported a sound
       // surface as a symlink — failing every profile with a remedy that could
       // not apply. Asking each component what it *is* has no such question.
-      const ancestor = await symlinkAncestor(root, dir);
       if (ancestor !== null) {
         damagedDirs.set(dir, `an ancestor is a symlink: ${toPosix(ancestor)}`);
         return;
@@ -657,7 +681,22 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
         // out of `access` and ended `qfai validate` with a stack trace.
         const canonical = await canonicalState(wrapper.canonical);
         if (canonical.kind === "absent") {
-          // Not taken yet. Nothing to report.
+          // Absent, or unreachable through a parent that is a broken link.
+          // `lstat` on `.qfai/assistant/agents/x.md` answers `ENOENT` for both,
+          // so "not taken yet" swallowed a whole surface the assistant cannot
+          // load — with another skill's wrapper still proving init had run.
+          const parent = path.dirname(wrapper.canonical);
+          const parentState = await canonicalState(parent);
+          const parentRelative = toPosix(path.relative(root, parent));
+          if (parentState.kind !== "absent" && parentState.kind !== "present") {
+            if (!damagedCanonicals.has(parentRelative)) {
+              damagedCanonicals.add(parentRelative);
+              broken.push({
+                relative: parentRelative,
+                detail: describeDamage(parentState, "the canonical directory"),
+              });
+            }
+          }
         } else if (canonical.kind === "present") {
           // What it *is*, not merely that it is there. With the wrapper gone
           // there is no resolved target to reach the kind check below, so a
@@ -788,6 +827,28 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
     // but it runs under `full` alone, so `discussion` / `sdd` / `atdd` / `tdd`
     // reported a healthy surface. Reported against the canonical, once, because
     // one document is one thing to repair.
+    // `init` writes the canonical as a real directory or a real file, so a
+    // symlink there is damage whatever it points at. Outside the repository is
+    // the obvious case; **inside** it is the one the resolved-path comparison
+    // cannot see at all — point a canonical at another shipped skill and both
+    // sides converge on that skill, `isInside` is satisfied, and every profile
+    // but `full` reports a healthy surface while the assistant loads the wrong
+    // instructions.
+    const canonicalOwn = await lstatOrNull(wrapper.canonical);
+    if (
+      canonicalOwn?.isSymbolicLink() === true &&
+      !damagedCanonicals.has(wrapper.canonicalRelative)
+    ) {
+      damagedCanonicals.add(wrapper.canonicalRelative);
+      broken.push({
+        relative: wrapper.canonicalRelative,
+        detail:
+          realRoot !== null && canonical !== null && !isInside(realRoot, canonical)
+            ? `canonical document is a symlink out of the project: ${toPosix(canonical)}`
+            : `canonical document is a symlink: ${toPosix(canonical ?? "?")}`,
+      });
+      continue;
+    }
     if (
       realRoot !== null &&
       canonical !== null &&

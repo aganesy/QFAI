@@ -959,10 +959,92 @@ describe("the canonical itself has to be in the project", () => {
         await symlink(path.join(outside, "qa-gatekeeper.md"), canonical, "file");
 
         const found = await finding(root);
-        expect(found?.message).toContain("canonical document resolves outside the project");
+        // The symlink rule reaches it first and says both things: init writes
+        // the canonical as a real file, and this one leaves the project.
+        expect(found?.message).toContain("canonical document is a symlink out of the project");
       } finally {
         await rm(outside, { recursive: true, force: true });
       }
+    });
+  });
+});
+
+describe("a broken link on the way to a surface is not an absent surface", () => {
+  it("names a dangling ancestor instead of reporting the directory missing", async () => {
+    // `canonicalState` on `.claude/skills` answers absent through a dangling
+    // `.claude`, and the remedy — re-run `qfai init` — cannot create a
+    // directory through a broken link.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      await rm(path.join(root, ".claude"), { recursive: true, force: true });
+      await symlink(path.join(root, "nowhere"), path.join(root, ".claude"), "dir");
+
+      const found = await finding(root);
+      expect(found?.message).toContain("an ancestor is a symlink");
+    });
+  });
+
+  it("names a dangling canonical directory instead of skipping the surface", async () => {
+    // `lstat` on each document answers ENOENT through the broken parent, so
+    // "not taken yet" swallowed a whole surface the assistant cannot load.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], ["qa-gatekeeper"]);
+      await wireAll(root, ["qfai-atdd"], ["qa-gatekeeper"]);
+      // The agent wrappers go, and the canonical directory they named becomes
+      // a link to nothing. The skill wrappers stay, so init is still proven.
+      for (const { dir, suffix } of AGENT_INTEGRATION_CONFIGS) {
+        await rm(path.join(root, ...dir.split("/"), "qa-gatekeeper" + suffix), { force: true });
+      }
+      const agentsDir = path.join(root, ".qfai", "assistant", "agents");
+      await rm(agentsDir, { recursive: true, force: true });
+      await symlink(path.join(root, ".qfai", "assistant", "gone"), agentsDir, "dir");
+
+      const found = await finding(root);
+      expect(found?.message).toContain("the canonical directory is a dangling symlink");
+    });
+  });
+
+  it("declines an oversized file at a marker path without reading it", async () => {
+    // A project's own document at one of these paths can be any size, and
+    // reading it whole to look for three substrings cost every profile in
+    // proportion to somebody else's file.
+    await withProject(async (root) => {
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await mkdir(path.join(root, ".agents"), { recursive: true });
+      await writeFile(
+        path.join(root, ".agents", "README.md"),
+        INIT_README_BODY + "x".repeat(64 * 1024),
+        "utf-8",
+      );
+
+      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
+});
+
+describe("a canonical is a real document, not a link to one", () => {
+  it("reports a canonical redirected at another skill in the project", async () => {
+    // Both realpaths converge on the other skill, so the resolved-path
+    // comparison agrees and `isInside` is satisfied — while the assistant
+    // loads the wrong instructions in every profile but `full`.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd", "qfai-verify"], []);
+      await wireAll(root, ["qfai-atdd", "qfai-verify"], []);
+      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      await rm(canonical, { recursive: true, force: true });
+      await symlink(
+        path.join(root, ".qfai", "assistant", "skills", "qfai-verify"),
+        canonical,
+        "dir",
+      );
+
+      const found = await finding(root);
+      expect(found?.message).toContain("canonical document is a symlink");
+      expect(found?.message).not.toContain("out of the project");
     });
   });
 });

@@ -503,6 +503,19 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A canonical is a real document, not a link to one.** Redirected at another
+  skill inside the project, both resolved paths converge and the
+  outside-the-project rule is satisfied — while the assistant loads the wrong
+  instructions in every profile but `full`.
+- **A broken link on the way to a surface is not an absent surface.** A
+  dangling `.claude` made the directory answer absent, and a dangling
+  `.qfai/assistant/agents` made every document answer ENOENT — reported as
+  never taken, with a remedy that cannot create anything through a broken link.
+- **Every restore claims the path atomically**, not only the one after a failed
+  `symlink`: the two early returns used a plain rename.
+- **The marker read is bounded.** A project's own document at one of those
+  paths could be any size, and reading it whole to look for three substrings
+  cost every profile in proportion to it.
 - **The sidecar name is claimed exclusively.** A PID alone is not unique, so a
   second repair in the same process renamed over the file an earlier failed
   one had preserved — and the success path removes the sidecar.
@@ -582,9 +595,9 @@ report` as well, which was computing `done: 1 / open: 0` from the same
   the path — that is what an `EEXIST` from `symlink` means — and the default
   write flag truncated it and put the old flattened content over the top.
 - **A backslash spelling is not a flattened link on POSIX.** The separator
-  tolerance exists because `path.relative` yields ``on Windows; applied
-everywhere it made a hand-maintained`.....qfaiassistant...`match the
-real target and get deleted without`--force`.
+  tolerance exists because `path.relative` yields `\` on Windows; applied
+  everywhere it made a hand-maintained `..\..\.qfai\assistant\skills\...` match
+  the real target and get deleted without `--force`.
 - **An agent wrapper names a regular file, not merely a non-directory.** A
   FIFO, socket or device passed `!isDirectory()` and could pass `access(R_OK)`
   as well, so the assistant either failed to read the document or, on a FIFO,
