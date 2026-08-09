@@ -812,7 +812,82 @@ describe.each(TREES)("%s (a gate must be reachable in the order it is listed)", 
     // the freshness gate the handover depends on.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain("it needs a **content** address rather than a status one");
-    expect(provenance).toContain("`git stash create` yields exactly that");
+    expect(provenance).toContain("**Not `git stash create`**");
     expect(provenance).not.toContain("`working-tree+<porcelain digest>`");
+  });
+});
+
+describe.each(TREES)("%s (a gate must be executable by the routing it declares)", (tree) => {
+  it("routes the RED phase per ledger item, and the gatekeeper conditionally", async () => {
+    // The default `per-invocation` routes each agent once for the whole ledger,
+    // which cannot execute the one-row-at-a-time loop P1b/P1c require. And a
+    // mandatory blocking `qa-gatekeeper` stopped a branch-2-only run before it
+    // could reach the P4b handoff that produces the trio it stopped for.
+    const routing = await read(tree, "assistant/manifest/agent-routing.yml");
+    const red = routing.slice(routing.indexOf("- id: red"));
+    expect(red.slice(0, red.indexOf("- id: implementation"))).toContain(
+      "iteration: per-ledger-item",
+    );
+    expect(flat(routing)).toContain("conditional_agents: [qa-gatekeeper]");
+  });
+
+  it("names the same handoff stage in the skill and in the reference", async () => {
+    // The reference is mandatory reading before a row advances, so a stage name
+    // that disagrees with the Do-not-skip list leaves the order undetermined.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("P4b, after P4 and before P6");
+    expect(provenance).toContain("P4b hands it over in its turn.");
+    expect(provenance).not.toContain("P1d, after P2-P4");
+  });
+
+  it("accepts a plan as the Oracle proof at a RED observation", async () => {
+    // Branch 1's RED precedes the production behaviour, so there is nothing to
+    // mutate — requiring a demonstrated mutation made a correct observed RED
+    // unable to pass P1b and so unable to reach the phase that builds the code.
+    const gatekeeper = flat(await read(tree, GATEKEEPER));
+    expect(gatekeeper).toContain(
+      "**At a RED observation the proof is a plan, and a plan is enough.**",
+    );
+    expect(gatekeeper).toContain(
+      "Require an `Oracle proof` on each item **at a GREEN or completion gate**",
+    );
+  });
+
+  it("states the revision field as a content address in the shared contract", async () => {
+    // The field contract is what the consumer reads; leaving it on porcelain
+    // meant the freshness rule was stated in one place and contradicted in the
+    // one that binds.
+    const revision = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(revision).toContain("Revision: <git rev> | working-tree+<content hash>");
+    expect(revision).toContain("**A `git status --porcelain` digest is not sufficient**");
+    expect(revision).toContain("`git stash create` does not do it either");
+  });
+
+  it("keeps a pre-split row gateable where its evidence actually is", async () => {
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "an `E2E` / `API` row that reached `done` or `review-fix` before this split",
+    );
+    expect(implement).toContain("Accept that anchor for such a row");
+  });
+
+  it("tells a project whose manifest predates the red phase what to do", async () => {
+    // `qfai init --force` leaves `assistant/manifest/**` alone, so the skill
+    // update can arrive without the phase it relies on.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("## A project without the `red` phase");
+    expect(provenance).toContain(
+      "A missing phase is a stale manifest, never the gate not applying",
+    );
+  });
+
+  it("requires a neutral seam response, not an empty one", async () => {
+    // An empty body raises a parse error in a test that decodes JSON before
+    // asserting — a non-assertion failure `red-admissibility.md` rejects.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**Neutral, not empty.**");
+    expect(provenance).toContain("with only the contracted predicate withheld");
   });
 });

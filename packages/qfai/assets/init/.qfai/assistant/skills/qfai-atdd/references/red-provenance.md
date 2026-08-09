@@ -60,6 +60,16 @@ Take the first that applies, and record which one in the evidence file.
       outside its declared set — the requirement is that no assertion in this
       row's selector can pass against the seam.
 
+      **Neutral, not empty.** The seam has to fail the row's predicate while
+      still satisfying what the selector needs to _reach_ it. An empty body
+      raises a parse error in a test that decodes JSON before asserting, and a
+      handler that throws does the same in a server that re-raises — both are
+      non-assertion failures
+      `../../qfai-implement/references/red-admissibility.md` rejects, so the row
+      cannot obtain an admissible RED at all. Return the status, headers and
+      body _shape_ the selector assumes, with only the contracted predicate
+      withheld.
+
    2. Run the test. An admissible failure is an assertion — or an
       expected-status check — inside this row's own selector, naming the
       predicate the row owns. Record the command and output as the row's RED
@@ -69,10 +79,11 @@ Take the first that applies, and record which one in the evidence file.
       names the changed paths and their states, so editing the very file under
       test after the RED leaves the digest identical and a stale observation
       reads as fresh. Record `working-tree+<hash>` over HEAD **and** the content
-      of the changes on top of it — `git stash create` yields exactly that as a
-      commit object when the tree is dirty, and hashing `git rev-parse HEAD`,
-      `git diff HEAD` and each untracked file's contents together is equivalent.
-      That address
+      of the changes on top of it: hash `git rev-parse HEAD`, `git diff HEAD`
+      and the contents of every untracked file, together. **Not
+      `git stash create`** — it has no `-u`, so the tree it builds omits
+      untracked files, and a brand-new acceptance test is untracked in exactly
+      the case this address exists for. That address
       is not recoverable later: `/qfai-implement` Phase Green changes the tree,
       and its completion gate requires the handed-over RED to name the revision
       it was taken at (`../../qfai-implement/references/evidence-revision.md`).
@@ -222,6 +233,20 @@ Read the row's entry and take the branch it names:
 
 **A branch-2 row whose evidence is not written yet is not a stop, and not a defer either.** P1b fixes every row branch; the mutation needs production code this stage does not own, so `/qfai-implement` performs it at Phase Red step 3c and records it here. Treating the empty trio as a malformed handoff stopped the run on the first such row; deferring it left nobody able to produce the evidence, since the only phase with a production agent was waiting for it.
 
+## A project without the `red` phase
+
+`npx qfai init --force` regenerates `assistant/skills/**` and `assistant/agents/**`
+but leaves `assistant/manifest/**` alone: those are the declarative files
+`qfai-configure` owns, and overwriting a project's adjusted agent taxonomy is
+the worse failure. So an existing project can take this skill's update without
+taking the `red` phase the update relies on.
+
+The gate still applies. Route `qa-gatekeeper` for the branch-1 rows by hand at
+P1b, and record in the evidence file that the phase was absent and the routing
+was manual. A missing phase is a stale manifest, never the gate not applying —
+and the same is true of the production owners `qfai-implement`'s red phase
+needs for step 3c.
+
 ## Which stage hands a row over
 
 All three branches are handed to `/qfai-implement`. None of them writes its own
@@ -233,12 +258,12 @@ only of branch-3 rows has to hand them over just as a branch-1 run does.
 | Branch           | Handed over                     | Why then                                                                                                                                                                                                                                            |
 | ---------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `observed-red`   | P1c, one row at a time          | The row ends with a deliberately failing test and no production code, and P5-P8 need a green suite. A second deliberate RED left open elsewhere fails the first row's checkpoint.                                                                   |
-| `falsifiability` | P1d, after P2-P4 and before P6  | The trio is produced by Phase Red **step 3c**, the only step that runs the mutation, and the mutation needs the surface P2-P4 build. The trio is the row's RED payload, so P6 has nothing to capture and P8 nothing to judge until step 3c has run. |
+| `falsifiability` | P4b, after P4 and before P6     | The trio is produced by Phase Red **step 3c**, the only step that runs the mutation, and the mutation needs the surface P2-P4 build. The trio is the row's RED payload, so P6 has nothing to capture and P8 nothing to judge until step 3c has run. |
 | `exception`      | P1d, once the `DR-*` is written | Only `/qfai-implement` can write `todo -> exception`. A run with no branch-1 row otherwise ends with the Decision Record recorded and the ledger untouched.                                                                                         |
 
 A branch-2 row is _passed over_ by `/qfai-implement` when it is not the named
 row — see the note above — which is neither a stop nor a defer of the branch:
-P1d hands it over in its turn.
+P4b hands it over in its turn.
 
 ### What each stage gate owes
 

@@ -9,15 +9,23 @@ something to compare against. This file defines it.
 Every observation records the revision it was made against.
 
 ```
-Revision: <git rev> | working-tree+<porcelain digest>
+Revision: <git rev> | working-tree+<content hash>
 ```
 
 - **`<git rev>`** — the output of `git rev-parse HEAD` at the moment of the
   observation. Preferred: it is exact and someone else can reproduce from it.
-- **`working-tree+<porcelain digest>`** — for an uncommitted tree, the `HEAD`
-  rev plus a short digest of `git status --porcelain`. Not as good, and honest
-  about not being as good: it says "this observation was made against a state
-  that was never committed".
+- **`working-tree+<content hash>`** — for an uncommitted tree, a hash over
+  `git rev-parse HEAD`, `git diff HEAD` and the contents of every untracked
+  file. Not as good as a rev, and honest about not being as good: it says "this
+  observation was made against a state that was never committed".
+
+  **A `git status --porcelain` digest is not sufficient**, which is what this
+  field used to specify. Porcelain names the changed paths and their states, so
+  editing the very file under test after the RED leaves it identical and a stale
+  observation passes the freshness check this field exists for — and a new
+  acceptance test, the ordinary case, is untracked, so its content has to be in
+  the hash explicitly. `git stash create` does not do it either: it has no
+  `-u`, and the tree it builds omits untracked files.
 
 It appears in three places, all carrying the same address:
 

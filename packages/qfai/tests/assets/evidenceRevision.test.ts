@@ -38,9 +38,7 @@ describe("evidence and verdicts carry a revision", () => {
     it(`${tree}: the reviewer response template has the field`, async () => {
       const delegation = await read(tree, DELEGATION);
 
-      expect(delegation).toContain(
-        "Reviewed revision: <git rev> | working-tree+<porcelain digest>",
-      );
+      expect(delegation).toContain("Reviewed revision: <git rev> | working-tree+<content hash>");
       expect(flat(delegation)).toContain("`Reviewed revision` is REQUIRED");
     });
 
@@ -62,7 +60,7 @@ describe("evidence and verdicts carry a revision", () => {
       const skill = flat(await read(tree, SKILL));
 
       expect(skill).toContain(
-        "`Revision` — the state the observation was made against: `git rev-parse HEAD`, or `working-tree+<porcelain digest>` for an uncommitted tree",
+        "`Revision` — the state the observation was made against: `git rev-parse HEAD`, or `working-tree+<content hash>` for an uncommitted tree",
       );
       expect(skill).toContain("One per round block, and one for the refactor-verify pair");
       expect(skill).toContain(

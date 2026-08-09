@@ -283,7 +283,7 @@ Quality bar:
 ```text
 Round: 1 | 2 | 2b
 Result: PASS | REVISE
-Reviewed revision: <git rev> | working-tree+<porcelain digest>
+Reviewed revision: <git rev> | working-tree+<content hash>
 Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
 Findings:
 - <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|none>

@@ -77,6 +77,33 @@
 
 ### Fixed
 
+- **The ATDD `red` phase is routed per ledger item, and its gatekeeper is
+  conditional.** The default `per-invocation` routes each agent once for the
+  whole ledger, which cannot execute the one-row-at-a-time loop P1b/P1c
+  require; and a mandatory blocking `qa-gatekeeper` stopped a branch-2-only run
+  before it could reach the P4b handoff that produces the trio it stopped for.
+- **A plan is an acceptable `Oracle proof` at a RED observation.** Branch 1's
+  RED precedes the production behaviour, so there is nothing to mutate —
+  requiring a demonstrated mutation made a correct observed RED unable to pass
+  P1b, and so unable to reach the phase that builds the code the mutation needs.
+- **The revision field is a content address in the contract that binds.** The
+  rule was corrected in the ATDD reference while `evidence-revision.md` and its
+  consumers still specified a `git status --porcelain` digest. `git stash
+create` is not a substitute either: it has no `-u`, and a new acceptance test
+  — the ordinary case — is untracked.
+- **The handoff stage is named the same in both documents.** The reference is
+  mandatory reading before a row advances and still said P1d for branch 2.
+- **A pre-split `E2E` / `API` row stays gateable.** One that reached `done` or
+  `review-fix` before the per-`Layer` evidence split has its anchor in
+  `implement-<spec-id>.md`, has no ATDD entry to produce, and no legal
+  transition that would let it re-observe a RED. That anchor is accepted.
+- **A project whose manifest predates the `red` phase is told what to do.**
+  `qfai init --force` leaves `assistant/manifest/**` alone, so the skill update
+  can arrive without it. The gate still applies; the routing is manual.
+- **The seam returns a neutral response, not an empty one.** An empty body
+  raises a parse error in a test that decodes JSON before asserting, and a
+  thrown handler does the same in a server that re-raises — both non-assertion
+  failures `red-admissibility.md` rejects.
 - **The branch-2 handoff is gate P4b, not part of P1d.** P1d required the
   surface P2-P4 build while sitting before P2 in a Do-not-skip list, so a run
   with an ordinary branch-2 row could only wait at a gate whose precondition

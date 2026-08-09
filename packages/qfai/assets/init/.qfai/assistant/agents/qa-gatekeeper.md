@@ -32,7 +32,8 @@ the item owns, and nothing downstream re-asks: coverage is annotation presence
 and the Depth Matrix counts case categories. A test that cannot fail otherwise
 clears every gate.
 
-Require an `Oracle proof` on each item and **reject** it when:
+Require an `Oracle proof` on each item **at a GREEN or completion gate**, and
+**reject** it when:
 
 - the mutation is outside the code the item owns — breaking a shared helper
   proves the helper is used, not that this test discriminates;
@@ -40,6 +41,14 @@ Require an `Oracle proof` on each item and **reject** it when:
   export — that is a load failure, not a discriminating failure;
 - the failing output names a selector other than the row's;
 - the recorded command differs from the `GREEN command`.
+
+**At a RED observation the proof is a plan, and a plan is enough.** Branch 1's
+RED is taken before any production behaviour exists, so there is nothing to
+mutate: the item names the predicate it will break and the command it will run.
+Requiring a demonstrated mutation there made a correct observed RED unable to
+pass P1b and so unable to reach Phase Green — the phase that builds the code the
+mutation needs. Judge the plan for whether it names this row's predicate and
+selector; judge the demonstration once the behaviour exists.
 
 `equivalent-mutant` is acceptable **only** when the named contract clause is
 genuinely weaker than the obligation. It is an upstream gap: route it as an

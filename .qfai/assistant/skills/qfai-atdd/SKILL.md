@@ -160,10 +160,8 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
     routes to `tests/integration/**`.
   - `tests/api/**` must cover all required `CON-API-*`.
 - Forbidden references (a TC annotation outside its declared home):
-  - `tests/api/**` must not contain `QFAI:SPEC-XXXX:TC-YYYY` unless that TC
-    declares `Level` `L4`/`API`.
-  - `tests/e2e/**` must not contain `QFAI:SPEC-XXXX:TC-YYYY` unless that TC
-    declares `Level` `L5`/`E2E`.
+  `tests/api/**` and `tests/e2e/**` must not contain `QFAI:SPEC-XXXX:TC-YYYY`
+  unless that TC declares `Level` `L4`/`API` or `L5`/`E2E` respectively.
 - Unknown references (`US/TC/CON-API` not declared) must be treated as errors.
 - **The E2E/API ledger rows this stage feeds are bound by `/qfai-implement`'s lifecycle.** See "Execution Ledger" below: a row advanced on none of the three RED-provenance forms is a lifecycle violation.
 - Floors/ratios are planning signals only, not gates.
@@ -387,7 +385,8 @@ See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / �
 
 ## Stage Gates (Do not skip)
 
-- P0: Plan and obligations checklist prepared.
+- P0: Plan and obligations checklist prepared. A project whose routing has no
+  `red` phase predates it: `references/red-provenance.md#a-project-without-the-red-phase`.
 - P1: Layer assignment validated against `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`.
 - P1b: **A branch is chosen for every row**, provisionally until its handoff.
 - P1c: **A branch 1 row is discharged in that loop** — write the test, take the
