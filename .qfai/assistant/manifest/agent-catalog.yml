@@ -741,7 +741,9 @@ agents:
       - Coverage plan and layer ownership
       - Test-case quality and traceability findings
       - **Coverage Depth Matrix** (per spec, using the template in the depth checklist reference).
-        Destination: `.qfai/evidence/atdd-<spec-id>.md` from the ATDD stage onward. During SDD there is
+        Destination: `.qfai/evidence/coverage-depth-<spec-id>.md` from the ATDD stage onward — its own
+        file, because that path is committed while the rest of `.qfai/evidence/**` is ignored, and the
+        justification behind each `❌` is the input `qa-gatekeeper` reads. During SDD there is
         no evidence artifact that holds it, so report depth gaps as findings instead of producing the
         matrix format.
       - Volume estimate and risk notes
@@ -1429,7 +1431,11 @@ agents:
 
       In addition to traceability-based coverage (US/TC/CON-API existence), verify the **depth** of test cases:
 
-      - Confirm a Coverage Depth Matrix exists (produced by `test-design-analyst`). Missing matrix: REVISE from the ATDD review cycle onward; on an SDD review cycle record it as a finding. See the scope note.
+      - Confirm a Coverage Depth Matrix exists at `.qfai/evidence/coverage-depth-<spec-id>.md` (produced by `test-design-analyst`).
+        Missing matrix: REVISE from the ATDD review cycle onward; on an SDD review cycle record it as a finding. See the scope note.
+        A matrix that exists only inside `.qfai/evidence/atdd-<spec-id>.md` is a **missing** matrix: that file is ignored by the
+        managed `.gitignore` block, so neither it nor the justification for any `❌` reaches a commit, and the "unjustified"
+        judgement cannot be re-made by anyone reading the repository.
       - Check that each US/TC has test cases for at minimum: normal path AND error/failure path.
       - Flag any US/TC that has only normal-path test cases as a coverage gap.
       - Reference: `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`
@@ -1443,8 +1449,8 @@ agents:
       The Coverage Depth Matrix is an **ATDD-stage artifact**: it is defined in
       `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`, listed as an ATDD
       Mandatory Output,
-      and written into `.qfai/evidence/atdd-<spec-id>.md`. `qfai-sdd` neither defines its layout nor
-      ships a section for it, so:
+      and written to `.qfai/evidence/coverage-depth-<spec-id>.md` — a committed path, unlike the rest of
+      `.qfai/evidence/**`. `qfai-sdd` neither defines its layout nor ships a section for it, so:
 
       - Apply this check from the **ATDD review cycle onward**, where
         `.qfai/assistant/skills/qfai-atdd/SKILL.md` lists

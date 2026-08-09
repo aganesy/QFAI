@@ -174,10 +174,19 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 - Legacy `scenario.feature` or coverage ledgers may exist but are not mandatory inputs for completion.
 - Evidence file is required under `.qfai/evidence/`. Stage evidence is
   **regenerable** and is not committed. **Governance records are different**:
-  Change Requests (`.qfai/decisions/CR-*.md`) and durable decision records
-  (`.qfai/evidence/decisions/*.json`) carry user approval, are not
-  regenerable, and stay in version control — the managed `.gitignore` block
-  negates them for that reason.
+  Change Requests (`.qfai/decisions/CR-*.md`), durable decision records
+  (`.qfai/evidence/decisions/*.json`) and the **Coverage Depth Matrix**
+  (`.qfai/evidence/coverage-depth-<spec-id>.md`) are not regenerable and stay
+  in version control — the managed `.gitignore` block negates them for that
+  reason.
+- **The matrix is a governance record, not a log.** Re-running this stage
+  recomputes which cells are `❌`. It does not recompute _why_ an uncoverable
+  obligation was accepted, and that judgement is what discharges the
+  "no unjustified `❌`" gate below. Written only into the stage evidence file it
+  would never reach a commit, so a later reviewer could not tell a justified
+  `❌` from an unjustified one. Write the matrix and one justification per `❌`
+  to `.qfai/evidence/coverage-depth-<spec-id>.md`; the stage evidence file
+  links to it rather than restating it.
 
 ## Completion Contract (Shared)
 
@@ -201,7 +210,7 @@ Turn specs/contracts obligations (`US` / `TC` / `CON-API` / `CON-DB`) into runna
 ## Mandatory Outputs
 
 1. Test Volume Estimate (signal table with evidence)
-2. **Coverage Depth Matrix** (per spec; see `references/test-case-depth-checklist.md`)
+2. **Coverage Depth Matrix**, written to `.qfai/evidence/coverage-depth-<spec-id>.md` (per spec; template and scoring in `references/test-case-depth-checklist.md`). Committed — see CRITICAL CONSTRAINTS.
 3. Coverage obligations checklist (`US` / `TC` / `CON-API`)
 4. Implemented tests per layer (E2E/API/Integration)
 5. Reviewer notes (`PASS` or concrete rework list)
@@ -311,6 +320,10 @@ Required sections:
 - Commands executed + key outputs
 - Test volume estimate
 - Coverage obligations checklist
+- Coverage Depth Matrix — a link to `.qfai/evidence/coverage-depth-<spec-id>.md`
+  and the `✅`/`⚠️`/`❌` totals. The matrix and its per-`❌` justifications live
+  in that file, which is committed; do not restate them here, where they would
+  be lost.
 - Work Orders Summary
 - Execution logs
 - Gaps / Open risks
@@ -334,6 +347,10 @@ Template:
 ## Test volume estimate
 
 ## Coverage obligations checklist
+
+## Coverage Depth Matrix
+
+See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / ⚠️ N / ❌ N.
 
 ## Work Orders Summary
 
