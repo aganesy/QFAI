@@ -5265,7 +5265,10 @@ edits anything:
 - **Basis: absolute comment-line count, and share over NON-BLANK lines, both recorded.** A comment line is
   one whose first non-whitespace characters are `//`, `*` or `/*`.
 - **Caps: 361 comment lines for the test file, 126 for the helper** — the round-6 values, as released.
-- **Round 7 measured: 356 / 496 (71.8% of non-blank) and 90 / 139.** Both under cap.
+- **Round 7 measured: 356 absolute, 356 / 471 = 75.6% of non-blank (356 / 500 = 71.8% of total); helper
+  90 absolute.** Both under cap. *Corrected in place: this line originally read "356 / 496 (71.8% of
+  non-blank)", which quotes a **total-line** denominator under a non-blank label — the same 71.8-vs-75.6
+  confusion two reviewers reported for one file, reproduced inside the definition written to stop it.*
 - **The absolute cap has a known defect, and it is `implementation-reviewer`'s own correction**: it is
   satisfiable by deleting *code* faster than prose, which is exactly what round 7 did — the count fell
   356 from 361 while the **share rose** from 68.8% to 71.8%. So the count is the binding constraint and
@@ -5406,3 +5409,119 @@ rounds shipped a fix containing the class it fixed. So round 8 carries two cheap
 before the commit), and a **self-check over the new paragraphs only, by an agent other than their author**.
 
 Then park at `refactor` awaiting the user's decision on `CR-20260807-0001`.
+
+### G4 round 8 — the last code round, and the first one whose fix did not contain the class it fixed
+
+Landed at `32a4e542`. One file, test blob `2dff562f → 2bff205b`, 45 insertions / 41 deletions.
+`git diff --stat 4cbfba5c 32a4e542` touches nothing else — `packages/qfai/src/**`, both helpers and every
+assertion other than R2's two regexes are untouched. Scope held exactly as the synthesis fixed it.
+
+`pnpm ci:lint` exit 0 (ten members); row `2 passed`; the three `spec0006WorkflowsIntegrity` suites
+`9 passed`; full package suite `4320 passed | 37 skipped`, run twice. Verified independently by the
+orchestrator, not taken on report.
+
+#### R1 was measured rather than reasoned, and the method is the point
+
+My refutation of the token-8 bound was a **construction**: reading the lookbehind class and reasoning that a
+whitespace-containing checkout path would fire the token while both sides of the pin carried it. The
+engineer did not accept that. It copied the package tree to `tmp/r8/my init copy/packages/qfai` with
+`node_modules` junctioned and `tsconfig.base.json` at the checkout root, so **both sides of the pin derive
+the spaced path from `import.meta.url` exactly as a real checkout would**, and ran the row from there:
+
+```
+Tests  1 failed | 1 passed (2)     exactly ONE AssertionError — the token sweep
+Received: "… the copy of the same name in C:\…\tmp\r8\my init copy\packages\qfai\assets\…"
+```
+
+Pin GREEN, token 8 red alone. So the refutation holds **as measured**, and `completion-reviewer`'s
+certification of that bound as "a valid proof" is struck in the file. The note now says the pin bounds the
+risk **only where the two sides can differ** — it holds over the composed sentences, which are token-clean
+and measured so, and bounds nothing over the interpolated host path.
+
+That distinction is worth keeping: a claim I reached by reading a regex was right, and it still needed a
+real run to become evidence. The row has been bitten repeatedly by exactly the gap between those two.
+
+#### R2's widening, re-measured rather than adopted from a cited blob
+
+| mutant (base `27326793`) | needle → replacement | pre-edit | post-edit | `prettier -c` | `eslint` |
+| --- | --- | --- | --- | --- | --- |
+| `e836ae40` | `    case "init":` → `    /* istanbul ignore next */ case "zzz":` + the original line | **2 passed, exit 0, zero AssertionErrors** | RED `['zzz']` | **0** | **0** |
+| `7e307c55` | same → `    /* falls through */ case "zzz":` + original | **2 passed** | RED `['zzz']` | **0** | **0** |
+| `0964f3b3` | same → `    case "init": case "zzz":` | 2 passed | RED `['zzz']` | 1 | 0 |
+| `b7880775` | `    case "atdd":` → `    case "atdd2":` + original | RED `['atdd2']` | RED `['atdd2']` | 0 | 0 |
+| `b0bc981e` | same → `    case "a.b":` + original | count leg `expected 10 to be 11` | unchanged | 0 | 0 |
+| clean `27326793` | — | 2 passed | **2 passed** (no false RED) | — | — |
+
+Both named mitigations pass on `e836ae40`, which is what made the recorded one false; `format:check` is
+**struck**, not reworded. And the engineer proved the label was genuinely *dispatched* rather than arguing
+it: a probe ran `run(["zzz", …])` in a throwaway copy and the init body wrote the whole tree
+(`.agents`, `.claude`, `.codex`, `.github`, `.gitignore`, `.qfai`, `DESIGN.md`, `qfai.config.yaml`) against
+`[]` on the clean tree and `[]` for a control token.
+
+#### Two residuals it disclosed unprompted — the honest cost of the widening I authorised
+
+Neither was on my list, and one is a **new** defect the fix introduced:
+
+- **`f433a280` — `case"zzz":` unspaced still defeats both legs** (`2 passed`). `prettier -c` exits 1 on
+  that form, a measured mitigation for **that form only**.
+- **`2bd40b19` — the count leg now over-fires on prose.** A comment in `main.ts` reading
+  `// In the default case the dispatch prints usage.` reddens leg 2 with `expected 10 to be 11`: a **new
+  false RED that the line anchor had been suppressing**. Latent today, since all ten `case` occurrences are
+  labels, but it is a real cost of taking the widening and it is mine, not the engineer's — I chose the
+  widening over a rewording.
+
+Direction is RED, and the guard's alternative was a sentence saying "a false-GREEN class exists and nothing
+holds it", so the trade stands. But it is a trade, recorded as one.
+
+#### The streak broke, and it broke because the rule was applied to the fix's own output
+
+Three consecutive rounds had shipped a fix containing the class it fixed. Round 8's **first draft did too** —
+its new Block A read "every `case` occurrence that no IDENTIFIER CHARACTER precedes", and `f433a280` sits
+inside that scope while not being reached. That is an unqualified reach claim in the very paragraph written
+to remove one.
+
+**It caught it before commit** and corrected to "SCOPED ON BOTH SIDES: every `case` occurrence that
+whitespace FOLLOWS and no IDENTIFIER CHARACTER precedes". It also weakened its own "it RUNS and PASSES" to
+the measured arrangement, on the ground that *passes* is itself order-dependent — so my instruction's
+wording would have asserted the very thing it calls unmeasured.
+
+That is the standing rule working on its author rather than on a reviewer's target, which is the only place
+it was ever going to pay off.
+
+#### The blob-joinability complaint is resolved, and the resolution is not what I assumed
+
+I had adopted "every blob citation names its base". The engineer established the underlying fact:
+**`git cat-file -t` resolves only the base** — every mutant hash in this row, including the six that predate
+round 8, is `git hash-object` output that was never written to the object database. So a mutant is joinable
+**only** as base + needle, and it verified that join works for all seven of its own
+(`git cat-file -p 27326793` → apply the literal needle → `git hash-object`, all seven print `JOINS`).
+
+It declined to write them with `hash-object -w` unasked, correctly: the objects would be unreachable and
+`gc`-pruned, so `-w` would buy a retrievability that expires. **Base + needle is the convention, not a
+fallback** — which also settles why evictions (a) and (d) were rightly declined: the hashes are join keys,
+and a join key without its base is inert.
+
+#### Comment cap — and my definition was still not self-consistent
+
+| | round 7 | round 8 | cap |
+| --- | --- | --- | --- |
+| absolute, test file | 356 | **358** (+2) | **361** |
+| share over **non-blank** | 356 / 471 = 75.6% | **358 / 475 = 75.4%** | recorded, not capped |
+| share over total | 356 / 496 = 71.8% | 358 / 500 = 71.6% | — |
+| helper | 90 | **untouched** | 126 |
+
+Target hit exactly, and the share **improved on both denominators**, because the widened capture needed a
+two-line reflow so code grew alongside prose.
+
+**Correction to my own definition, which the engineer was right to flag**: the clause declared "share over
+non-blank lines" and then quoted 356/496 — which is over **total** lines — and the helper figure counted the
+trailing newline where 496 did not. That is precisely the 71.8-versus-75.6 split two reviewers reported for
+one file in round 7, reproduced inside the definition written to stop it. **Binding constraint: the absolute
+count. Recorded alongside: the share over non-blank lines.** Both denominators are tabulated above so no
+future round has to guess which was meant.
+
+#### One correction of the engineer's to my order
+
+It cited the tree as `511be256`; it was actually one commit further along at `4cbfba5c`. All four blobs I
+named matched exactly, so nothing measured is stale — but the base revision in a work order is exactly the
+kind of currency claim the round-7 findings were about, and mine was stale within the hour.
