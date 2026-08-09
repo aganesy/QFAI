@@ -92,6 +92,15 @@ export type AtddTraceabilityMissing = {
 
 export type AtddCodeTraceabilityResult = {
   specsRoot: string;
+  /**
+   * The configured tests directory, resolved.
+   *
+   * The bound on the per-spec owner scan. Test paths are absolute, so a
+   * checkout that itself lives under `/srv/integration/spec-0002/repo` has an
+   * ancestor pair that reads exactly like the canonical layout, and a flat
+   * `tests/integration/a.test.ts` inside it was attributed to `0002`.
+   */
+  testsRoot: string;
   contractsApiRoot: string;
   /**
    * Spec number -> the directory `collectSpecEntries` enumerated for it.
@@ -395,6 +404,7 @@ export async function evaluateAtddCodeTraceability(
     declaredSpecDirs: specRefs.declaredSpecDirs,
     unitComponentTcIds: unitComponentTc,
     specsRoot,
+    testsRoot,
     contractsApiRoot,
     specUsIds,
     specTcIds,

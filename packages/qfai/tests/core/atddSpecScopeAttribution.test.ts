@@ -636,6 +636,39 @@ describe("a forbidden reference is owned by the tests that hold it", () => {
     });
   });
 
+  it("does not read a spec number from above the configured tests root", async () => {
+    // The checkout itself lives under a directory pair spelled exactly like
+    // the canonical layout. `entry.file` is absolute, so a flat
+    // `tests/integration/a.test.ts` inside it was attributed to `0002` — the
+    // repo-wide finding vanished from `--spec 0001` and appeared in `0002`'s
+    // run instead. The random temp root the ancestor test uses cannot build
+    // this shape, so it is built explicitly here.
+    const base = await mkdtemp(path.join(os.tmpdir(), "qfai-atdd-ancestor-"));
+    const root = path.join(base, "integration", "spec-0002", "repo");
+    try {
+      await mkdir(root, { recursive: true });
+      await seed(root, SPECS);
+      const testFile = path.join(root, "tests", "integration", "flat.test.ts");
+      await mkdir(path.dirname(testFile), { recursive: true });
+      await writeFile(
+        testFile,
+        ["// QFAI:SPEC-9999:TC-0001", "it('x', () => {});", ""].join("\n"),
+        "utf-8",
+      );
+
+      // `9999` names no spec pack, so this stays repo-wide — including in a
+      // run scoped to the very number the checkout's ancestor happens to spell.
+      for (const scope of ["0001", "0002"]) {
+        const scoped = await validateAtddCodeTraceability(root, defaultConfig, {
+          specScope: new Set([scope]),
+        });
+        expect(scoped.map((entry) => entry.code)).toContain("QFAI-ATDD-102");
+      }
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
+  });
+
   it("keeps looking outwards past a spec-named directory that is not the owner", async () => {
     // `tests/integration/spec-0002/fixtures/spec-0001/**`: the innermost
     // `spec-NNNN` is a fixture named after the spec it stands in for, and

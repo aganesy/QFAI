@@ -41,6 +41,7 @@ function narrowToScope(
   result: AtddCodeTraceabilityResult,
   scope: SpecScope | undefined,
 ): AtddCodeTraceabilityResult {
+  const { testsRoot } = result;
   if (scope === undefined) {
     return result;
   }
@@ -64,7 +65,7 @@ function narrowToScope(
         // of the spec whose tests hold the misplaced annotation — never saw it,
         // and only an unrelated spec's run did. The unknown-reference path
         // already treats that file as `0002`'s; this one has to agree.
-        const own = testPathSpecNumber(entry.file);
+        const own = testPathSpecNumber(entry.file, testsRoot);
         if (own !== null && scope.has(own)) return entry;
         return { ...entry, ids: entry.ids.filter(inScope) };
       })
@@ -102,7 +103,7 @@ function narrowToScope(
       const owners = new Set<string>();
       const fromToken = OWNING_SPEC_RE.exec(entry.token)?.[1];
       if (fromToken !== undefined && declaredSpecs.has(fromToken)) owners.add(fromToken);
-      const fromPath = testPathSpecNumber(entry.file);
+      const fromPath = testPathSpecNumber(entry.file, testsRoot);
       if (fromPath !== null && declaredSpecs.has(fromPath)) owners.add(fromPath);
       if (owners.size === 0) return true;
       return Array.from(owners).some((owner) => scope.has(owner));
@@ -194,9 +195,10 @@ function unknownOwnerDirs(
   refs: readonly string[],
   specsRoot: string,
   declaredSpecs: ReadonlyMap<string, string>,
+  testsRoot: string,
 ): string[] {
   const dirs = owningSpecDirs(refs, specsRoot, declaredSpecs);
-  const fromPath = testPathSpecNumber(file);
+  const fromPath = testPathSpecNumber(file, testsRoot);
   const own = fromPath === null ? undefined : declaredSpecs.get(fromPath);
   return own === undefined || dirs.includes(own) ? dirs : [...dirs, own];
 }
@@ -210,7 +212,21 @@ function unknownOwnerDirs(
  * project that groups its tests differently — has no owner from its path and
  * falls back to the token alone.
  */
-function testPathSpecNumber(file: string): string | null {
+function testPathSpecNumber(file: string, testsRoot: string): string | null {
+  // Bounded to the configured tests directory first. `file` is absolute, so a
+  // checkout that itself lives under `/srv/integration/spec-0002/repo` has an
+  // ancestor pair spelled exactly like the canonical layout, and a flat
+  // `tests/integration/a.test.ts` inside it was read as `0002`'s — moving a
+  // repo-wide finding into one spec's run and out of every other's. Nothing
+  // above the tests root is part of this layout, so nothing above it is read.
+  const relative = path.relative(testsRoot, file);
+  if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) {
+    return null;
+  }
+  return specNumberUnderLayer(relative);
+}
+
+function specNumberUnderLayer(file: string): string | null {
   // Bounded to the layer directory, and read from the **end**: `entry.file` is
   // absolute, so scanning every segment made a checkout that happens to sit
   // under a directory called `spec-0002` claim every test in it. Only
@@ -303,7 +319,14 @@ export async function validateAtddCodeTraceability(
   const dirs = atddTestKindDirs(config.paths.testsDir);
   const issues: Issue[] = [];
 
-  issues.push(...buildUnknownIssues(result.unknown, result.specsRoot, result.declaredSpecDirs));
+  issues.push(
+    ...buildUnknownIssues(
+      result.unknown,
+      result.specsRoot,
+      result.declaredSpecDirs,
+      result.testsRoot,
+    ),
+  );
 
   if (result.missing.us.length > 0) {
     const usAttribution = specAttribution(
@@ -478,6 +501,7 @@ export async function validateAtddCodeTraceability(
             forbidden.ids,
             result.specsRoot,
             result.declaredSpecDirs,
+            result.testsRoot,
           ),
         },
       ),
@@ -505,6 +529,7 @@ export async function validateAtddCodeTraceability(
             forbidden.ids,
             result.specsRoot,
             result.declaredSpecDirs,
+            result.testsRoot,
           ),
         },
       ),
@@ -532,6 +557,7 @@ export async function validateAtddCodeTraceability(
             forbidden.ids,
             result.specsRoot,
             result.declaredSpecDirs,
+            result.testsRoot,
           ),
         },
       ),
@@ -619,6 +645,7 @@ function buildUnknownIssues(
   unknown: AtddUnknownRef[],
   specsRoot: string,
   declaredSpecs: ReadonlyMap<string, string>,
+  testsRoot: string,
 ): Issue[] {
   if (unknown.length === 0) {
     return [];
@@ -655,7 +682,7 @@ function buildUnknownIssues(
           // `file` is the test carrying the typo — what the operator edits —
           // but a `tests/**` path has no spec owner, so without this the
           // finding survived every `--spec` filter.
-          { relatedFiles: unknownOwnerDirs(entry.file, refs, specsRoot, declaredSpecs) },
+          { relatedFiles: unknownOwnerDirs(entry.file, refs, specsRoot, declaredSpecs, testsRoot) },
         );
       }
       if (entry.kind === "tc") {
@@ -668,7 +695,7 @@ function buildUnknownIssues(
           refs,
           "change",
           "spec 側に TC を定義するか、テスト注釈を正しい ID へ修正してください。",
-          { relatedFiles: unknownOwnerDirs(entry.file, refs, specsRoot, declaredSpecs) },
+          { relatedFiles: unknownOwnerDirs(entry.file, refs, specsRoot, declaredSpecs, testsRoot) },
         );
       }
       if (entry.kind === "conDb") {

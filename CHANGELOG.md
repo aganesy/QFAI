@@ -488,6 +488,10 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The owner scan stops at the configured tests root.** Test paths are
+  absolute, so a checkout that itself lives under `/srv/integration/spec-0002/`
+  has an ancestor pair spelled exactly like the canonical layout, and a flat
+  `tests/integration/a.test.ts` inside it was attributed to `0002`.
 - **A spec-named directory that is not the owner no longer ends the search.**
   In `tests/integration/spec-0002/fixtures/spec-0001/**` the innermost
   `spec-NNNN` is a fixture named after the spec it stands in for; stopping
