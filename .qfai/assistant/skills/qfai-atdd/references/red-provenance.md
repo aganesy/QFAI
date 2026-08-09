@@ -286,8 +286,17 @@ not the ledger's writer under any circumstance.
 Zero is a count, not "nothing to do". The US and CON-API coverage obligations
 are this skill's own (Success Criteria) and are discharged by the tests and
 their annotations, not by ledger rows. Report the row count as zero with that
-reason, and raise the missing rows as a request to `/qfai-sdd` — writing them
-here would make this stage a second writer of a single-writer artifact.
+reason and carry on with the obligations.
+
+**Do not raise it as a request for rows.** `/qfai-sdd` Phase 2b seeds one row
+per coverage-target `TC-*`, and the ledger template says in as many words that
+`US-*` and `CON-API-*` are not rows there — so the request returns nothing and
+the spec is handed back and forth for rows no skill may write. Writing them
+here is not the alternative either: that would make this stage a second writer
+of a single-writer artifact. What the completion gate actually requires is
+`QFAI-ATDD-111` / `QFAI-ATDD-113` clean, which the annotations discharge and
+which this stage does own
+(`../../qfai-implement/SKILL.md`, spec completion conditions).
 
 ## A project without the `red` phase
 

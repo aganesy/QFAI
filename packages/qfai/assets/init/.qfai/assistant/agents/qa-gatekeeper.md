@@ -94,11 +94,17 @@ first run. Then require `Satisfied-by`, `Falsifiability command` and
 `Falsifiability result` instead — never both forms, never neither.
 
 **On an `E2E` / `API` row, `Satisfied-by` need not be a sibling `TDD-NNNN`.** A
-production path and symbol, or the commit that added it, is equally valid there
-and is the normal answer for a row whose surface no ledger row owns; rejecting
-it sends every such row to `exception`, the terminal state the path exists to
-avoid. Judge it on whether it answers "what would I mutate to falsify this
-row".
+production **path and symbol** is equally valid there and is the normal answer
+for a row whose surface no ledger row owns; rejecting it sends every such row to
+`exception`, the terminal state the path exists to avoid. Judge it on whether it
+answers "what would I mutate to falsify this row".
+
+**A commit id alone does not answer it — REVISE.** A commit that touched
+several routes and a helper names no single predicate, so the ownership check
+below has no boundary to apply and would accept a mutation anywhere inside it.
+The producer contract requires the symbol for this reason
+(`../skills/qfai-atdd/references/red-provenance.md#the-three-branches-must`); a
+commit recorded **alongside** the path and symbol is provenance and is fine.
 
 **And the mutation may touch it.** The Oracle Strength Check rejects a mutation
 outside the code the item owns, which on an `E2E` / `API` row is every

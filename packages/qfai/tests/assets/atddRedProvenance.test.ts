@@ -1222,6 +1222,41 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(atdd).toContain("an item cycle like P1c's");
   });
 
+  it("puts the audited-evidence hash in the template every reviewer answers with", async () => {
+    // The field is required and recomputed at gate item 10, but the shared
+    // template offered only `Reviewed revision` — so a reviewer answering it
+    // faithfully omitted the hash, and the row could not reach `done` unless
+    // somebody filled it in on the reviewer's behalf.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("Audited evidence hash: <content hash of the evidence read>");
+    expect(baseline).toContain("`Audited evidence hash` is REQUIRED");
+    expect(baseline).toContain("**The reviewer computes it**");
+  });
+
+  it("makes the gatekeeper reject a Satisfied-by that names only a commit", async () => {
+    // The producer forbids the commit-only form; the gatekeeper still called it
+    // equally valid, so the ownership check had no boundary to apply.
+    const gatekeeper = flat(await read(tree, GATEKEEPER));
+    expect(gatekeeper).toContain("**A commit id alone does not answer it — REVISE.**");
+    expect(gatekeeper).not.toContain("or the commit that added it, is equally valid");
+  });
+
+  it("does not gate completion on rows no skill is allowed to write", async () => {
+    // The condition read "every `US-*` has a `Layer = E2E` row". Phase 2b seeds
+    // one row per coverage-target `TC-*` and `/qfai-atdd` may not write the
+    // ledger, so a correct spec was uncompletable and the handoff for the
+    // missing rows returned nothing, for ever. The gate names the rule that
+    // has an owner instead.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("`QFAI-ATDD-111` and `QFAI-ATDD-113` are clean for this spec");
+    expect(implement).not.toContain("has a `Layer = E2E` row whose `US-Refs` names it");
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**Do not raise it as a request for rows.**");
+    expect(provenance).not.toContain("raise the missing rows as a request to `/qfai-sdd`");
+  });
+
   it("points the phase-authored sequencing note at the file the Layer owns", async () => {
     // It named `implement-<spec-id>.md` unconditionally, so an E2E row's
     // phase evidence went there while item 10 looked for the anchor in the

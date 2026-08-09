@@ -488,6 +488,19 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The reviewer response template carries the hash it is judged on.** Every
+  verdict needs an `Audited evidence hash`, but the shared template offered
+  only `Reviewed revision`, so a reviewer answering it faithfully omitted the
+  field and the row could not reach `done`.
+- **The gatekeeper rejects a `Satisfied-by` that names only a commit**, in
+  step with the producer contract: without a symbol the ownership check has no
+  boundary to apply.
+- **Spec completion no longer requires rows no skill may write.** It read
+  "every `US-*` has a `Layer = E2E` row"; Phase 2b seeds one row per
+  coverage-target `TC-*` and `/qfai-atdd` is not a writer of the ledger, so a
+  correct spec was uncompletable and the handoff for the missing rows returned
+  nothing. The gate names `QFAI-ATDD-111` / `QFAI-ATDD-113` — the rules the
+  annotations discharge — instead.
 - **The falsifiability gate sees the mutated tree.** Phase Red step 3c said to
   revert before routing `qa-gatekeeper`, which left it nothing to inspect but
   the restored tree — so it could not check that what broke is the predicate

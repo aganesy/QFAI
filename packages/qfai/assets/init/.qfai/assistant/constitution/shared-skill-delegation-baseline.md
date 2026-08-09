@@ -284,6 +284,7 @@ Quality bar:
 Round: 1 | 2 | 2b
 Result: PASS | REVISE
 Reviewed revision: <git rev> | working-tree+<content hash>
+Audited evidence hash: <content hash of the evidence read>
 Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
 Findings:
 - <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|none>
@@ -297,6 +298,18 @@ Evidence checked:
 
 `Round` is required — the round budget above is counted from it. `2b` is the
 post-escalation verification review of a user-named fix.
+
+- `Audited evidence hash` is REQUIRED wherever the evidence tree is what the
+  verdict is about. `Reviewed revision` excludes `.qfai/evidence/**` — see below
+  for why it has to — so nothing else pins the RED/GREEN output this reviewer
+  read, or the coverage justifications it accepted: edited after a PASS they
+  leave the revision unchanged and the verdict reads as fresh. Hash the row's
+  **phase-authored** entry, meaning the entry with the reviewer-appended fields
+  removed — which is exactly what was read — plus
+  `.qfai/evidence/coverage-depth-<spec-id>.md` where the row has one, in the
+  same `path + NUL + blob hash` manifest form, sorted by path. **The reviewer
+  computes it**, on the evidence it read; an orchestrator filling it in on the
+  reviewer's behalf is recording something nobody audited.
 
 - `Reviewed revision` is REQUIRED. It names the state the verdict describes — a `git rev-parse HEAD`
   value, or `working-tree+<content hash>` when the tree is uncommitted — a hash over
