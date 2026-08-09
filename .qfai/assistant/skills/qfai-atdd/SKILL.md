@@ -288,7 +288,7 @@ Notes:
 - Validation passes: `npx qfai validate --profile atdd --fail-on error`.
 - Repository quality gates (format/lint/type/tests/pack) pass with evidence.
 - Evidence file exists and includes work orders + reviewer notes.
-- Every ledger row this cycle advanced carries one of the three RED-provenance forms — an observed RED pair with its `Oracle proof`, the `Satisfied-by` + falsifiability trio, or a `DR-*` recording why neither was available — and `qa-gatekeeper` has accepted it. The third form is a valid outcome, not a shortfall.
+- Every ledger row this cycle advanced carries one of the three RED-provenance forms — an observed RED pair with its `Oracle proof`, the `Satisfied-by` + falsifiability trio, or a `DR-*` recording why neither was available — and `qa-gatekeeper` has accepted it. The third form is a valid _branch_, and it is **not a completion**: `exception` is a blocking output and needs a user-approved `TDDLIST-001` waiver, or the row is parked and the spec stays open (`references/red-provenance.md#branch-3-does-not-close-a-spec-on-its-own`).
 - Completion is approved by a reviewer who did not implement tests.
 
 ## Not-done criteria
@@ -392,7 +392,8 @@ See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / �
 - P1c: **A branch 1 row is discharged in that loop** — write the test, take the
   RED, `qa-gatekeeper` PASS, hand it to `/qfai-implement`, GREEN, checkpoint —
   before the next branch-1 row's failing test is written, and before P2-P4 build
-  any surface. P1b and P1c are **one loop per `TDD-ID`**.
+  any surface. One loop per `TDD-ID`; the nested run is an item cycle, not a
+  completion gate (`references/red-provenance.md#what-the-nested-run-owes`).
 - P1d: **Branch 3 rows are handed over once their `DR-*` is written.** Every
   branch needs a handoff — `/qfai-implement` is the only writer of `Status` /
   `DR-ID` / `Evidence`. Which branch goes when, and what the blocking

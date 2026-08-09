@@ -260,7 +260,7 @@ after its surface passes on the first run. So:
 - **There is no waiver here.** `todo -> red` still requires an admissible RED,
   and a first-run pass is still not one.
 - **The falsifiability path is the answer, not `exception`.**
-  `references/red-not-observable.md` already defines the substitute — record
+  `red-not-observable.md` already defines the substitute — record
   `Satisfied-by`, mutate the predicate the journey asserts on, watch this row's
   test fail, restore, and record `Falsifiability command` /
   `Falsifiability result` beside the GREEN pair. It was written for an

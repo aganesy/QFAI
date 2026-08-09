@@ -83,12 +83,25 @@ Take the first that applies, and record which one in the evidence file.
       and the contents of every untracked file, together. **Not
       `git stash create`** — it has no `-u`, so the tree it builds omits
       untracked files, and a brand-new acceptance test is untracked in exactly
-      the case this address exists for. That address
+      the case this address exists for.
+
+      **Record the test's own content hash as well.** The working-tree hash
+      covers everything at once, and Phase Green necessarily changes the
+      production files in it — so the reviewer cannot recompute it from the
+      final tree, and cannot tell "only production changed, as it should" from
+      "the acceptance test was edited after the handoff, so the RED is stale".
+      Record `RED test hash` alongside `RED revision`: a hash over the contents
+      of the test files this row's `Selector` names, and nothing else. That one
+      **is** recomputable later — Phase Green does not touch those files — so it
+      is what makes the freshness claim checkable rather than asserted.
+
+      That address
       is not recoverable later: `/qfai-implement` Phase Green changes the tree,
       and its completion gate requires the handed-over RED to name the revision
       it was taken at (`../../qfai-implement/references/evidence-revision.md`).
       A value reconstructed afterwards is a guess, and a guess fails the
       freshness gate exactly as a missing one does.
+
    3. **Get the row's scope approved by `delivery-planner` first.**
       `qfai-implement/SKILL.md` makes it the only authority on whether a
       selector covers a sufficient slice of its obligation, and requires a scope
@@ -246,6 +259,39 @@ P1b, and record in the evidence file that the phase was absent and the routing
 was manual. A missing phase is a stale manifest, never the gate not applying —
 and the same is true of the production owners `qfai-implement`'s red phase
 needs for step 3c.
+
+## What the nested run owes
+
+P1c hands a branch-1 row to `/qfai-implement` and gets it to GREEN and its
+checkpoint **before** P5 and P6. That run is an **item cycle**, not this spec's
+completion: its blocking reviewers judge the row's own RED/GREEN evidence, and
+the completion-gate inputs — `.qfai/report/validate.log`, the coverage reports,
+runtime evidence — are P5/P6 artifacts that do not exist yet and are not owed
+here (`../../../agents/qa-gatekeeper.md`, the note above its last three inputs).
+
+Requiring them would strand the first branch-1 row at `refactor`, which Phase
+Red does not re-select, and P2 would never be reached — the gate blocking on
+artifacts its own ordering produces later.
+
+## Branch 3 does not close a spec on its own
+
+`exception` is a legal terminal status for a row and a legal outcome for this
+stage. It is **not** a completion: `qfai-implement/SKILL.md` lists `exception`
+as a blocking output and forbids declaring completion while one stands, unless
+the row carries a **user-approved accepted-risk waiver** — a `TDDLIST-001` entry
+in `.qfai/waivers.yml`.
+
+So a branch-3 row ends in one of two places, and the stage has to say which:
+
+- **the waiver is obtained** — user approval is a decision this stage asks for,
+  never one it makes. Raise it with the `DR-*` in hand: what could not be
+  observed, why neither branch was available, and what risk is being accepted;
+- **the row is parked and the spec stays open** — recorded as such, not reported
+  as done.
+
+Recording the `DR-*` and handing the row over discharges the _branch_. Treating
+that as closing the spec leaves a spec that can never legally close, because
+nothing later in the flow can produce the approval retroactively.
 
 ## Which stage hands a row over
 

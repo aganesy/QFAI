@@ -174,7 +174,11 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
   it("accepts a valid exception as the third evidence form", async () => {
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("or a `DR-*` recording why neither was available");
-    expect(atdd).toContain("The third form is a valid outcome, not a shortfall");
+    expect(atdd).toContain("The third form is a valid _branch_, and it is **not a completion**");
+    // ...and the qualification that keeps it from reading as "done".
+    expect(flat(await read(tree, PROVENANCE))).toContain(
+      "## Branch 3 does not close a spec on its own",
+    );
   });
 
   it("names the per-stage evidence home in both contracts", async () => {
@@ -889,5 +893,46 @@ describe.each(TREES)("%s (a gate must be executable by the routing it declares)"
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain("**Neutral, not empty.**");
     expect(provenance).toContain("with only the contracted predicate withheld");
+  });
+});
+
+describe.each(TREES)("%s (the nested run and the third branch)", (tree) => {
+  it("says the P1c round trip is an item cycle, not a completion gate", async () => {
+    // `/qfai-implement` PASSes its blocking reviewers before the checkpoint,
+    // and its completion-gate inputs are P5/P6 artifacts. Owing them inside a
+    // P1c handoff stranded the first branch-1 row at `refactor`, which Phase
+    // Red does not re-select, so P2 was never reached.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("## What the nested run owes");
+    expect(provenance).toContain("That run is an **item cycle**, not this spec's completion");
+    expect(flat(await read(tree, ATDD))).toContain(
+      "the nested run is an item cycle, not a completion gate",
+    );
+  });
+
+  it("does not let branch 3 read as a way to close a spec", async () => {
+    // `exception` is a blocking output; completion needs a user-approved
+    // `TDDLIST-001` waiver. "A valid outcome, not a shortfall" read as done, so
+    // a run could record the `DR-*`, hand over, and leave a spec that can never
+    // legally close — nothing later can produce the approval retroactively.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("## Branch 3 does not close a spec on its own");
+    expect(provenance).toContain("user-approved accepted-risk waiver");
+    expect(provenance).toContain("user approval is a decision this stage asks for");
+  });
+
+  it("records a test hash that survives Phase Green", async () => {
+    // The working-tree hash covers the production files Phase Green necessarily changes,
+    // so it cannot be recomputed from the final tree — the reviewer cannot tell
+    // "only production changed" from "the test was edited after the handoff".
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**Record the test's own content hash as well.**");
+    expect(provenance).toContain("`RED test hash` alongside `RED revision`");
+  });
+
+  it("points the falsifiability contract at the sibling file", async () => {
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("`red-not-observable.md` already defines the substitute");
+    expect(ledger).not.toContain("`references/red-not-observable.md` already defines");
   });
 });

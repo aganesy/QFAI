@@ -77,6 +77,24 @@
 
 ### Fixed
 
+- **The P1c round trip is an item cycle, not a completion gate.**
+  `/qfai-implement` PASSes its blocking reviewers before the checkpoint, and
+  those reviewers' completion-gate inputs are P5/P6 artifacts — so the first
+  branch-1 row stranded at `refactor`, which Phase Red does not re-select, and
+  P2 was never reached.
+- **Branch 3 no longer reads as a way to close a spec.** `exception` is a
+  blocking output and completion needs a user-approved `TDDLIST-001` waiver;
+  "a valid outcome, not a shortfall" read as done, so a run could record the
+  `DR-*`, hand over, and leave a spec that can never legally close. The branch
+  ends in the waiver or in a parked row, and the stage has to say which.
+- **The RED address includes a hash of the test itself.** The working-tree hash
+  covers the production files Phase Green necessarily changes, so it cannot be
+  recomputed from the final tree — a reviewer could not tell "only production
+  changed" from "the acceptance test was edited after the handoff". `RED test
+hash` covers the files the row's `Selector` names and nothing else, which
+  Phase Green does not touch.
+- **A falsifiability reference resolved into its own directory.**
+  `references/red-not-observable.md` from inside `references/`.
 - **The ATDD `red` phase is routed per ledger item, and its gatekeeper is
   conditional.** The default `per-invocation` routes each agent once for the
   whole ledger, which cannot execute the one-row-at-a-time loop P1b/P1c
