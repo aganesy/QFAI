@@ -114,7 +114,7 @@ Use the shared schema.
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - Final completion gate MUST be delegated to an independent `completion-reviewer`.
 - ATDD-specific reviewer checks:
-  - coverage obligations met: E2E covers `US`, API covers `CON-API`, and every `TC` is covered from the directory its declared `Level` routes to;
+  - coverage obligations met: E2E covers `US`, API covers `CON-API`, and every `TC` **that declares `L3`/`L4`/`L5` or no `Level`** is covered from the directory that `Level` routes to. `L1`/`Unit` and `L2`/`Component` owe nothing here (CRITICAL CONSTRAINTS): the ledger covers them. An existing L1/L2 annotation in `tests/integration/**` is not a violation — the validator declines to count it and declines to flag it — so do not require one to be added, and do not require an existing one to be removed;
   - Coverage Depth Matrix is reviewed and no unjustified `X` cells remain;
   - validation evidence exists and `npx qfai validate --profile atdd --fail-on error` passes;
   - Drift Protocol is enforced;
@@ -158,6 +158,12 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
     to: `L3`/`Integration` -> `tests/integration/**`, `L4`/`API` ->
     `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`. A TC with no declared `Level`
     routes to `tests/integration/**`.
+  - **`L1`/`Unit` and `L2`/`Component` owe nothing here** — out of this skill's
+    scope, excluded from `QFAI-ATDD-112`, gated by `tdd/test-list.md` under
+    `/qfai-implement`, and named on every run by `QFAI-ATDD-117` (`info`). Do
+    not duplicate an L1/L2 annotation into `tests/integration/**` to quiet a
+    gate: that is the all-integration collapse `catalog/test-layers.md` lists as
+    an anti-pattern.
   - `tests/api/**` must cover all required `CON-API-*`.
 - Forbidden references (a TC annotation outside its declared home):
   `tests/api/**` and `tests/e2e/**` must not contain `QFAI:SPEC-XXXX:TC-YYYY`
@@ -173,14 +179,9 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
   (`.qfai/evidence/coverage-depth-<spec-id>.md`) are not regenerable and stay
   in version control — the managed `.gitignore` block negates them for that
   reason.
-- **The matrix is a governance record, not a log.** Re-running this stage
-  recomputes which cells are `❌`. It does not recompute _why_ an uncoverable
-  obligation was accepted, and that judgement is what discharges the
-  "no unjustified `❌`" gate below. Written only into the stage evidence file it
-  would never reach a commit, so a later reviewer could not tell a justified
-  `❌` from an unjustified one. Write the matrix and one justification per `❌`
-  to `.qfai/evidence/coverage-depth-<spec-id>.md`; the stage evidence file
-  links to it rather than restating it.
+- **The matrix is a governance record, not a log**, so it is committed:
+  `.qfai/evidence/coverage-depth-<spec-id>.md`, one justification per `❌`
+  (`references/test-case-depth-checklist.md#where-the-matrix-lives`).
 
 ## Completion Contract (Shared)
 
@@ -215,8 +216,8 @@ to `exception` has recorded that it did not try branches 1 and 2.
 
 ## Scope (ATDD only)
 
-- In scope: E2E, API, Integration.
-- Out of scope: Unit and Component (`/qfai-implement`).
+In scope: E2E, API, Integration. Out of scope: Unit and Component
+(`/qfai-implement`).
 
 ## Non-goals
 
@@ -227,15 +228,15 @@ to `exception` has recorded that it did not try branches 1 and 2.
 
 1. Test Volume Estimate (signal table with evidence)
 2. **Coverage Depth Matrix**, written to `.qfai/evidence/coverage-depth-<spec-id>.md` (per spec; template and scoring in `references/test-case-depth-checklist.md`). Committed — see CRITICAL CONSTRAINTS.
-3. Coverage obligations checklist (`US` / `TC` / `CON-API`)
-4. Implemented tests per layer (E2E/API/Integration)
-5. Reviewer notes (`PASS` or concrete rework list)
-6. Evidence file: `.qfai/evidence/atdd-<spec-id>.md`
+3. Coverage obligations checklist (`US` / `TC` / `CON-API`), and the implemented tests per layer (E2E/API/Integration)
+4. Reviewer notes (`PASS` or concrete rework list)
+5. Evidence file: `.qfai/evidence/atdd-<spec-id>.md`
 
 ## Volume Signals (mandatory, not gates)
 
-- Signals: E2E = required `US-*`, API = declared `CON-API-*`, Integration = required `TC-*`
-- When signals are low/high, propose options and recommendation; do not fail solely on signal values.
+E2E = required `US-*`, API = declared `CON-API-*`, Integration = required `TC-*`.
+When a signal is low or high, propose options and a recommendation; never fail
+on a signal value alone.
 
 ### Estimator output table (required)
 
@@ -248,10 +249,21 @@ to `exception` has recorded that it did not try branches 1 and 2.
 ## Scaffolding
 
 `npx qfai atdd scaffold --spec <spec-id>` bulk-emits one placeholder test per
-coverage-target `TC-*`, each carrying its `QFAI:SPEC-XXXX:TC-YYYY` annotation.
-Skeletons land in `tests/integration/<spec-id>/` — the directory
+`TC-*` **this skill owns**, each carrying its `QFAI:SPEC-XXXX:TC-YYYY`
+annotation. Skeletons land in `tests/integration/<spec-id>/` — the directory
 `QFAI-ATDD-112` scans — so a filled-in skeleton counts as coverage. It is
 idempotent: existing files are left untouched.
+
+Skeletons are integration-only, so two groups of TC are **skipped**, both named
+on stderr. `L1`/`Unit` and `L2`/`Component`: their skeleton would land in
+`tests/integration/**`, the duplication the Coverage obligations section
+forbids, and `QFAI-ATDD-112` would not count it — filling one in discharges
+nothing. Their ledger row under `/qfai-implement` is where they are owed.
+`L4`/`API` and `L5`/`E2E`: their home is `tests/api/**` / `tests/e2e/**`, so an
+integration skeleton is both uncounted and a forbidden reference
+(`QFAI-ATDD-123`). Author those by hand in their own directory — or re-file the
+obligation as `CON-API-*` / `US-*`, which is what a `TC-*` at L4/L5 usually
+means (`catalog/test-layers.md#annotation-routing`).
 
 A skeleton left in placeholder shape across repeated validate runs escalates
 (`qfai.config.yaml#atdd.scaffoldEscalateCycles`), so scaffolding is a start, not
@@ -279,8 +291,10 @@ Notes:
 - All required `TC` are covered from the directory their declared `Level` routes
   to (`L3`/`Integration` -> `tests/integration/**`, `L4`/`API` ->
   `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`, no declared `Level` ->
-  `tests/integration/**`). Duplicating a TC into a second layer is a
-  not-done condition, not extra credit.
+  `tests/integration/**`). **`L1`/`Unit` and `L2`/`Component` are outside this
+  obligation** — the ledger covers them — so a spec whose TCs are all L1/L2 is
+  done here with no ATDD annotation at all. Duplicating a TC into a second layer
+  is a not-done condition, not extra credit.
 - All required `CON-API` are covered by API tests.
 - All required `CON-DB` are covered by integration tests (`QFAI-ATDD-115`); a contract
   outside the current slice is deferred with `-- x-qfai-status: planned`, not left uncovered.
@@ -309,26 +323,17 @@ Notes:
 
 Create and update: `.qfai/evidence/atdd-<spec-id>.md`
 
-Required sections:
+Required sections: the template below is the list. Two of them carry a contract
+the heading cannot:
 
-- Objective
-- Inputs reviewed (files/paths)
-- Decisions made (with rationale)
-- Work performed (what changed, where)
-- Commands executed + key outputs
-- Test volume estimate
-- Coverage obligations checklist
 - **Ledger rows advanced** — an index table plus one `### TDD-NNNN` section per
   row. Exactly one form per row, never both and never neither; the cell is an
   anchor and the payload goes in the section
   (`references/red-provenance.md#evidence-shape`).
-- Coverage Depth Matrix — a link to `.qfai/evidence/coverage-depth-<spec-id>.md`
-  and the `✅`/`⚠️`/`❌` totals. The matrix and its per-`❌` justifications live
-  in that committed file; restating them here would lose them.
-- Work Orders Summary
-- Execution logs
-- Gaps / Open risks
-- Final status (PASS/FAIL) + who confirmed
+- **Coverage Depth Matrix** — a link to
+  `.qfai/evidence/coverage-depth-<spec-id>.md` and the `✅`/`⚠️`/`❌` totals.
+  The matrix and its per-`❌` justifications live in that committed file;
+  restating them here would lose them.
 
 Template:
 
@@ -371,9 +376,7 @@ See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / �
 
 - **Test Case Depth Analyst**: `test-design-analyst` evaluates test cases using `references/test-case-depth-checklist.md`, produces Coverage Depth Matrix, flags gaps in boundary/error/edge coverage.
 - Test Volume Estimator: compute US/TC/CON signals with evidence.
-- ATDD E2E Implementer: implement required `US` coverage.
-- ATDD API Implementer: implement required `CON-API` coverage.
-- ATDD Integration Implementer: implement required `TC` coverage.
+- ATDD Implementers, one per layer: required `US` coverage in E2E, `CON-API` in API, `TC` in Integration.
 - Reviewer: validate coverage obligations + gate results + Coverage Depth Matrix (non-edit).
 - Runtime Gatekeeper: run suites and capture logs.
 
@@ -439,11 +442,9 @@ If commands cannot be run due to environment limits, request user execution and 
 
 ## DONE Declaration (Mandatory Output)
 
-When declaring DONE, include:
-
-- Referenced inputs (instructions/steering and spec delta)
-- DR-IDs referenced (or "none")
-- Confirmation that no rejected options were reintroduced (or RE-OPEN DR-IDs)
+Include the referenced inputs (instructions/steering and spec delta), the DR-IDs
+referenced (or "none"), and confirmation that no rejected options were
+reintroduced (or the RE-OPEN DR-IDs).
 
 ## FINAL CHECKLIST (Check Last)
 
@@ -493,6 +494,6 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 
 project_memory:
 
-- Coverage obligations stay layer-pinned for US and CON-API: tests/e2e/** must cover all required US; tests/api/\*\* all required CON-API. Each TC is covered from the directory its declared Level routes to (L3/Integration -> tests/integration/**, L4/API -> tests/api/\*\*, L5/E2E -> tests/e2e/\*\*; no declared Level -> tests/integration/\*\*).
+- Coverage obligations stay layer-pinned for US and CON-API: tests/e2e/** must cover all required US; tests/api/\*\* all required CON-API. Each TC declaring L3/L4/L5, or no Level, is covered from the directory that Level routes to (L3/Integration -> tests/integration/**, L4/API -> tests/api/\*\*, L5/E2E -> tests/e2e/\*\*; no declared Level -> tests/integration/\*\*). L1/Unit and L2/Component owe no ATDD annotation — tdd/test-list.md covers them. An existing one in tests/integration/\*\* is neither counted nor flagged, so do not require adding or removing it.
 - Forbidden references guard the test-layer policy: a TC annotation outside its declared home is rejected — tests/api/** must not carry QFAI:SPEC-XXXX:TC-YYYY unless that TC declares L4/API, and tests/e2e/** likewise unless it declares L5/E2E.
 - Floor / ratio signals are planning hints, never gates; legacy scenario.feature / coverage ledger files remain optional inputs.

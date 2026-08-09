@@ -363,3 +363,186 @@ describe("atdd scaffold — per-TC skeleton emission", () => {
     await expect(stat(defaultPath)).rejects.toThrow();
   });
 });
+
+describe("atdd scaffold — Unit and Component TCs are out of scope", () => {
+  async function seed(specDir: string, levels: Array<string | null>): Promise<void> {
+    await mkdir(specDir, { recursive: true });
+    const lines = ["# 06 Test Cases", ""];
+    levels.forEach((level, index) => {
+      lines.push(`## TC-0001-000${String(index + 1)}: case ${String(index + 1)}`, "");
+      lines.push("- EX-Ref: EX-0001-0001", "- AC-Refs: AC-0001-0001");
+      if (level !== null) lines.push(`- Level: ${level}`);
+      lines.push("- Verify something.", "");
+    });
+    await writeFile(path.join(specDir, "06_Test-Cases.md"), lines.join("\n"), "utf-8");
+  }
+
+  it("does not emit a tests/integration skeleton for an L1 TC", async () => {
+    // The skill forbids duplicating an L1/L2 annotation into
+    // `tests/integration/**`, and `QFAI-ATDD-112` no longer counts one — so a
+    // skeleton there was the command handing the operator work that
+    // discharges nothing and violates its own skill.
+    const specId = "spec-0001";
+    const specDir = path.join(root, ".qfai", "specs", specId);
+    await seed(specDir, ["L1", "L3"]);
+
+    const errors: string[] = [];
+    const code = await runAtddScaffold({
+      root,
+      specId,
+      write: () => {},
+      writeErr: (m) => errors.push(m),
+    });
+
+    expect(code).toBe(0);
+    await expect(
+      stat(path.join(root, "tests", "integration", specId, "TC-0001-0001.test.ts")),
+    ).rejects.toThrow();
+    await expect(
+      stat(path.join(root, "tests", "integration", specId, "TC-0001-0002.test.ts")),
+    ).resolves.toBeDefined();
+    expect(errors.join("\n")).toContain("TC-0001-0001");
+    expect(errors.join("\n")).toContain("outside this command's scope");
+  });
+
+  it("still emits for a TC that declares no Level", async () => {
+    // No `Level` routes to integration, which this command owns; the filter
+    // must not swallow the default case.
+    const specId = "spec-0002";
+    const specDir = path.join(root, ".qfai", "specs", specId);
+    await seed(specDir, [null]);
+
+    const code = await runAtddScaffold({ root, specId, write: () => {}, writeErr: () => {} });
+
+    expect(code).toBe(0);
+    await expect(
+      stat(path.join(root, "tests", "integration", specId, "TC-0001-0001.test.ts")),
+    ).resolves.toBeDefined();
+  });
+
+  it("exits 0 and says nothing was in scope when every TC is L1/L2", async () => {
+    // Distinct from "no Test-Case entries found", which is exit 1: the spec
+    // has TCs, they just are not this command's.
+    const specId = "spec-0003";
+    const specDir = path.join(root, ".qfai", "specs", specId);
+    await seed(specDir, ["L1", "component"]);
+
+    const messages: string[] = [];
+    const code = await runAtddScaffold({
+      root,
+      specId,
+      write: (m) => messages.push(m),
+      writeErr: () => {},
+    });
+
+    expect(code).toBe(0);
+    expect(messages.join("\n")).toContain("0 TC entries in scope");
+  });
+});
+
+describe("atdd scaffold — API and E2E TCs are out of scope too", () => {
+  it("does not emit an integration skeleton for an L4 or L5 TC", async () => {
+    // `scaffoldDestPath` is integration-only, so an L4/L5 skeleton lands in a
+    // directory its declared `Level` does not name: uncounted towards its
+    // api/e2e coverage, and a forbidden reference under `QFAI-ATDD-123`.
+    const specId = "spec-0004";
+    const specDir = path.join(root, ".qfai", "specs", specId);
+    await mkdir(specDir, { recursive: true });
+    await writeFile(
+      path.join(specDir, "06_Test-Cases.md"),
+      [
+        "# 06 Test Cases",
+        "",
+        "## TC-0001-0001: api case",
+        "",
+        "- EX-Ref: EX-0001-0001",
+        "- Level: L4",
+        "- Verify something.",
+        "",
+        "## TC-0001-0002: e2e case",
+        "",
+        "- EX-Ref: EX-0001-0001",
+        "- Level: L5",
+        "- Verify something.",
+        "",
+        "## TC-0001-0003: integration case",
+        "",
+        "- EX-Ref: EX-0001-0001",
+        "- Level: L3",
+        "- Verify something.",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const errors: string[] = [];
+    const code = await runAtddScaffold({
+      root,
+      specId,
+      write: () => {},
+      writeErr: (m) => errors.push(m),
+    });
+
+    expect(code).toBe(0);
+    for (const tc of ["TC-0001-0001", "TC-0001-0002"]) {
+      await expect(
+        stat(path.join(root, "tests", "integration", specId, `${tc}.test.ts`)),
+      ).rejects.toThrow();
+    }
+    await expect(
+      stat(path.join(root, "tests", "integration", specId, "TC-0001-0003.test.ts")),
+    ).resolves.toBeDefined();
+    expect(errors.join("\n")).toContain("API/E2E TC");
+    expect(errors.join("\n")).toContain("QFAI-ATDD-123");
+    expect(errors.join("\n")).toContain("tests/api/**");
+    expect(errors.join("\n")).toContain("tests/e2e/**");
+  });
+
+  it.each([
+    ["spec-tests", "spec-tests/api/**", "spec-tests/e2e/**"],
+    [".", "api/**", "e2e/**"],
+  ])(
+    "names the homes a testsDir of %s actually has",
+    async (testsDir, expectedApi, expectedE2e) => {
+      // The scaffold writer and the ATDD scan both follow `paths.testsDir`;
+      // only this advice was pinned to `tests/`. A project that relocated its
+      // tests was sent to a directory no gate reads, so following the
+      // instruction left `QFAI-ATDD-112` unclearable.
+      const specId = "spec-0005";
+      const specDir = path.join(root, ".qfai", "specs", specId);
+      await mkdir(specDir, { recursive: true });
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        [
+          "# 06 Test Cases",
+          "",
+          "## TC-0001-0001: api case",
+          "",
+          "- EX-Ref: EX-0001-0001",
+          "- Level: L4",
+          "- Verify something.",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        ["paths:", `  testsDir: "${testsDir}"`, ""].join("\n"),
+        "utf-8",
+      );
+
+      const errors: string[] = [];
+      await runAtddScaffold({
+        root,
+        specId,
+        write: () => {},
+        writeErr: (m) => errors.push(m),
+      });
+
+      // The whole clause, not the two paths on their own: `spec-tests/api/**`
+      // contains `tests/api/**` as a substring, so a containment check alone
+      // would pass on the very default this is meant to rule out.
+      expect(errors.join("\n")).toContain(`Author them in ${expectedApi} or ${expectedE2e}`);
+    },
+  );
+});

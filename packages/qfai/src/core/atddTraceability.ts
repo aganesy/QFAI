@@ -14,7 +14,13 @@ import {
 } from "./fs.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { resolveSurfaceUnion } from "./prototyping/specResolution.js";
-import { parseAllMarkdownTables } from "./specPackParsers.js";
+import {
+  extractTestCaseTableSection,
+  maskNonSpecRegions,
+  parseAllMarkdownTables,
+  resolveTestCaseTables,
+} from "./specPackParsers.js";
+import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { collectMarkdownItems, uniqueMatches } from "./validators/utils.js";
 
@@ -136,6 +142,15 @@ export type AtddCodeTraceabilityResult = {
    * per declared layer instead of naming `tests/integration/**` for every TC.
    */
   missingTcHomes: Map<string, AtddTestKind>;
+  /**
+   * `TC-*` refs excluded from the `QFAI-ATDD-112` obligation because their
+   * declared `Level` is Unit or Component. Reported at `info`
+   * (`QFAI-ATDD-117`) so the exclusion is visible rather than silent — the
+   * shape a coverage scan must never take, since "nothing owed" and "nothing
+   * scanned" are otherwise indistinguishable. `/qfai-implement`'s ledger gate
+   * (`TDDLIST_TC_NOT_COVERED`) is what covers them.
+   */
+  unitComponentTcIds: string[];
   /** Test files outside the scanned roots; surfaced instead of dropped. */
   skippedTestFiles: string[];
   scan: AtddTraceabilityScan;
@@ -275,6 +290,13 @@ export async function evaluateAtddCodeTraceability(
         pushUnknown(unknown, unknownDedup, file, token, "tc");
       }
       const homeKind = resolveTcHomeKind(tcLevels, ref.spec, `TC-${ref.id}`);
+      if (homeKind === null) {
+        // Unit / Component: no ATDD annotation obligation, and therefore no
+        // forbidden placement either. Annotating a `tests/integration/**` test
+        // with an L1 TC is a project's own choice, not a rule violation — the
+        // rule that owns L1/L2 is `TDDLIST_TC_NOT_COVERED` on the ledger.
+        continue;
+      }
       if (kind === homeKind && known) {
         recordSpecRef(tcRefs, ref.spec, `TC-${ref.id}`, file);
       }
@@ -333,8 +355,10 @@ export async function evaluateAtddCodeTraceability(
   // roots. They contribute nothing to coverage and used to vanish without a
   // diagnostic — which is how `qfai atdd scaffold` could write files that every
   // gate then reported as zero coverage. Probed separately because the main
-  // scan is glob-scoped to the three roots and never sees them.
-  skippedTestFiles.push(...(await collectUncountedTestFiles(root, testsRoot)));
+  // scan is glob-scoped to the three roots and never sees them. `tcLevels` is
+  // passed because "contributes nothing" is not the same as "should be moved":
+  // an L1/L2 annotation is owed to no ATDD directory at all.
+  skippedTestFiles.push(...(await collectUncountedTestFiles(root, testsRoot, tcLevels)));
 
   const missing = buildMissingRefs({
     specUsIds,
@@ -347,9 +371,15 @@ export async function evaluateAtddCodeTraceability(
     apiRefs,
     dbRefs,
   });
+  const { owed: owedTc, unitComponent: unitComponentTc } = partitionMissingTcByObligation(
+    missing.tc,
+    tcLevels,
+  );
+  missing.tc = owedTc;
   const missingTcHomes = buildMissingTcHomes(missing.tc, tcLevels);
 
   return {
+    unitComponentTcIds: unitComponentTc,
     specsRoot,
     contractsApiRoot,
     specUsIds,
@@ -397,7 +427,46 @@ const UNCOUNTED_TEST_DIRS = ["atdd"];
 /** Any QFAI test annotation, in any of its forms. */
 const ANY_QFAI_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:(?:US|TC)-|CON-(?:API|DB)-)/;
 
-async function collectUncountedTestFiles(root: string, testsRoot: string): Promise<string[]> {
+/** Any QFAI annotation whose obligation is fixed by its ID type, not by a `Level`. */
+const LEVEL_INDEPENDENT_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:US-|CON-(?:API|DB)-)/;
+
+/**
+ * Whether a legacy file's annotations are all ones ATDD no longer owes.
+ *
+ * `QFAI-ATDD-105` tells the operator to move the file into
+ * `integration` / `api` / `e2e`, which is right for anything ATDD counts. For a
+ * file carrying nothing but L1/L2 `TC-*` annotations it is wrong twice over: the
+ * TC owes no ATDD annotation at all, so moving it counts towards nothing, and
+ * `catalog/test-layers.md` states outright that an L1/L2 annotation is neither
+ * required nor misplaced wherever it lands. The advice would push a project back
+ * into the all-integration collapse the exclusion exists to undo.
+ *
+ * Conservative on every uncertainty: a `US-*` or `CON-*` annotation is
+ * `Level`-independent and still owed, and an unknown or level-less `TC-*`
+ * resolves to the default home rather than to "no obligation", so only a file
+ * whose every annotation is provably outside ATDD goes quiet.
+ */
+function carriesOnlyExcludedAnnotations(
+  text: string,
+  tcLevels: Map<string, Map<string, string>>,
+): boolean {
+  if (LEVEL_INDEPENDENT_ANNOTATION.test(text)) {
+    return false;
+  }
+  const tcAnnotations = extractSpecScopedAnnotations(text, TC_TEST_ANNOTATION_RE);
+  if (tcAnnotations.length === 0) {
+    return false;
+  }
+  return tcAnnotations.every(
+    (ref) => resolveTcHomeKind(tcLevels, ref.spec, `TC-${ref.id}`) === null,
+  );
+}
+
+async function collectUncountedTestFiles(
+  root: string,
+  testsRoot: string,
+  tcLevels: Map<string, Map<string, string>>,
+): Promise<string[]> {
   const patterns = UNCOUNTED_TEST_DIRS.map(
     (dir) =>
       `${toPosixPath(path.join(testsRoot, dir)).replace(/\/+$/, "")}/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,feature,md,markdown}`,
@@ -416,9 +485,10 @@ async function collectUncountedTestFiles(root: string, testsRoot: string): Promi
   }
   const annotated: string[] = [];
   for (const file of files) {
-    if (ANY_QFAI_ANNOTATION.test(await readSafe(file))) {
-      annotated.push(toPosixPath(path.relative(root, file)));
-    }
+    const text = await readSafe(file);
+    if (!ANY_QFAI_ANNOTATION.test(text)) continue;
+    if (carriesOnlyExcludedAnnotations(text, tcLevels)) continue;
+    annotated.push(toPosixPath(path.relative(root, file)));
   }
   return annotated.sort();
 }
@@ -445,8 +515,16 @@ async function collectSpecRefs(specsRoot: string): Promise<{
       readSafe(entry.testCasesPath),
     ]);
 
-    const usIds = collectShortIds(usText, "US");
-    const tcIds = collectShortIds(tcText, "TC");
+    const usIds = collectShortIds(maskNonSpecRegions(usText), "US");
+    // From the same authoritative shapes `collectTcLevels` reads, not from the
+    // whole document. Two ways that diverged: an id that appears only in a
+    // fenced sample or an HTML comment (masking fixes that), and an id in an
+    // appendix or illustrative table written as ordinary markdown *outside*
+    // `## Test Case Table` — which `resolveTestCaseTables` does not read but
+    // `collectShortIds` did. Either way the id landed in the declared set with
+    // no `Level`, fell through to the integration default, and
+    // `QFAI-ATDD-112` raised a hard error against a TC that does not exist.
+    const tcIds = collectDeclaredTcIds(tcText);
 
     if (usIds.size > 0) {
       us.set(entry.specNumber, usIds);
@@ -471,15 +549,30 @@ async function collectSpecRefs(specsRoot: string): Promise<{
  *
  * Both shipped shapes are read, matching `parseTestCases` in
  * `core/atdd/scaffold.ts`: the heading form (`## TC-NNNN` plus `- Level: L4`
- * meta lines) and the table form. Heading form wins on duplicates; within the
- * table form the first declaration wins. Every `TC-ID` table is scanned, not
+ * meta lines) and the table form. Heading form wins on duplicates; within
+ * either form the first declaration wins. Every `TC-ID` table is scanned, not
  * just the first — a spec may split its catalogue across several tables, and
  * only scanning the first silently dropped the later tables' layers.
  */
-function collectTcLevels(tcText: string): Map<string, string> {
+export function collectTcLevels(rawTcText: string): Map<string, string> {
+  // Fenced samples and HTML comments are not the spec. Without this, a
+  // commented-out old table or a format example declaring `TC-0001` as `L1`
+  // wins under first-declaration-wins and silently removes the real row's
+  // `QFAI-ATDD-112` obligation — a hole that only opened once L1/L2 stopped
+  // being an obligation of their own.
+  const tcText = maskNonSpecRegions(rawTcText);
   const levels = new Map<string, string>();
+  // First-seen, not last: `set` on every pair made the *last* duplicate heading
+  // win here while the ledger gate kept the first, so a TC headed `L1` and then
+  // `L1`-superseded-by-`L3` was excluded from `QFAI-ATDD-112` by one collector
+  // and claimed by `TDDLIST_TC_NOT_COVERED` by the other — owed twice, which is
+  // the two-gates-disagree failure this routing exists to remove. The table pass
+  // below and `resolveTestCaseTables` already resolve duplicates first-seen, so
+  // the heading pass was the one shape out of step.
   for (const [id, level] of collectHeadingTcLevels(tcText)) {
-    levels.set(id, level);
+    if (!levels.has(id)) {
+      levels.set(id, level);
+    }
   }
   for (const [id, level] of collectTableTcLevels(tcText)) {
     if (!levels.has(id)) {
@@ -489,9 +582,21 @@ function collectTcLevels(tcText: string): Map<string, string> {
   return levels;
 }
 
+/**
+ * Table-form levels, read from the same tables `resolveTestCaseTables` reads.
+ *
+ * These two collectors decide the same TC's fate from opposite ends —
+ * `QFAI-ATDD-112` excludes an L1/L2 TC, `TDDLIST_TC_NOT_COVERED` demands a
+ * ledger row for it — so they must agree on which tables are authoritative.
+ * Scanning every table in the document meant an explanatory table above the
+ * `## Test Case Table` heading won under first-declaration-wins: an example
+ * row saying `TC-0001 | L1` excluded the TC from `QFAI-ATDD-112`, while the
+ * section-scoped ledger gate read the real `L3` row and did not claim it
+ * either. Full validation then passed with no test at all.
+ */
 function collectTableTcLevels(tcText: string): Array<[string, string]> {
   const pairs: Array<[string, string]> = [];
-  for (const table of parseAllMarkdownTables(tcText)) {
+  for (const table of resolveTestCaseTables(tcText)) {
     // Header matching is case-insensitive, like the heading-form `- Level:`
     // parser and every `Level` *value* comparison downstream. A case-sensitive
     // match made a table headed `level` fall through to the integration
@@ -511,6 +616,86 @@ function collectTableTcLevels(tcText: string): Array<[string, string]> {
     }
   }
   return pairs;
+}
+
+/**
+ * Heading-form TC levels only (`## TC-0001` + `- Level:`), with non-spec
+ * regions masked.
+ *
+ * Exported for `validateTddList`: its table reader is deliberately
+ * section-scoped, so the heading shape needs collecting separately. Using the
+ * combined `collectTcLevels` there would re-admit every table in the document,
+ * including an Appendix one the section scoping exists to keep out.
+ */
+export function collectHeadingTcLevelsFrom(rawTcText: string): Array<[string, string]> {
+  return collectHeadingTcLevels(maskNonSpecRegions(rawTcText));
+}
+
+/**
+ * The TC ids a spec pack declares, from the shapes that carry authority.
+ *
+ * The union of the heading form and the `TC-ID` column of the tables
+ * `resolveTestCaseTables` admits — the same two passes {@link collectTcLevels}
+ * makes, so the declared set and the level map cannot disagree about which ids
+ * exist. Anything outside them is illustration: a fenced sample, an HTML
+ * comment, or an appendix table sitting outside `## Test Case Table`.
+ */
+const TC_TOKEN_RE = /\bTC-\d{4}(?:-\d{4})?\b/g;
+
+export function collectDeclaredTcIds(rawTcText: string): Set<string> {
+  const ids = new Set(collectHeadingTcIdsFrom(rawTcText));
+  // The section, not `resolveTestCaseTables`: that filter is case-exact on the
+  // `TC-ID` header, and a mistyped `tc-id` must still *declare* its ids — the
+  // ledger reports `TDDLIST_TC_TABLE_UNRESOLVED` and ATDD keeps the default
+  // obligation, so fixing the header clears both. What the section boundary
+  // excludes is the appendix table, which declares nothing.
+  const masked = maskNonSpecRegions(rawTcText);
+  const section = extractTestCaseTableSection(masked) ?? masked;
+  for (const table of parseAllMarkdownTables(section)) {
+    const idIndex = table.headers.findIndex((header) => header.trim().toUpperCase() === "TC-ID");
+    if (idIndex < 0) {
+      // The header is mistyped — `TC Id`, say — so this table is unresolvable
+      // and `TDDLIST_TC_TABLE_UNRESOLVED` reports it. Its ids are still
+      // **declared**: dropping them removed the obligation entirely, and with
+      // no ledger `TDDLIST_MISSING` is only a warning, so a spec could pass
+      // `--profile full --fail-on error` with neither a test nor a ledger row.
+      // Conservative here, loud there — keeping the tokens preserves the
+      // obligation while the header is what gets fixed.
+      for (const row of table.rows) {
+        for (const value of row) {
+          for (const match of value.matchAll(TC_TOKEN_RE)) {
+            ids.add(match[0].toUpperCase());
+          }
+        }
+      }
+      continue;
+    }
+    for (const row of table.rows) {
+      const id = /\bTC-\d{4}(?:-\d{4})?\b/.exec((row[idIndex] ?? "").trim())?.[0];
+      if (id !== undefined) ids.add(id.toUpperCase());
+    }
+  }
+  return ids;
+}
+
+/**
+ * Every heading-form TC id, whether or not the block declares a `Level`.
+ *
+ * `collectHeadingTcLevelsFrom` yields a pair only when a `- Level:` line
+ * follows the heading, so it cannot answer "does this spec declare this TC?" —
+ * a level-less TC is still declared. `validateTddList` needs both questions
+ * answered from the same shape: the id set decides whether a ledger `TC-Refs`
+ * value is known, the level pairs decide whether it is a coverage target.
+ */
+export function collectHeadingTcIdsFrom(rawTcText: string): string[] {
+  const ids: string[] = [];
+  for (const rawLine of maskNonSpecRegions(rawTcText).replace(/\r\n/g, "\n").split("\n")) {
+    const id = TC_HEADING_RE.exec(rawLine.trim())?.[1];
+    if (id !== undefined) {
+      ids.push(id.toUpperCase());
+    }
+  }
+  return ids;
 }
 
 function collectHeadingTcLevels(tcText: string): Array<[string, string]> {
@@ -543,34 +728,134 @@ function collectHeadingTcLevels(tcText: string): Array<[string, string]> {
   return pairs;
 }
 
-/** Test directory a declared `Level` routes its TC obligation to. */
-const LEVEL_TO_TEST_KIND: Record<string, AtddTestKind | undefined> = {
-  l3: "integration",
-  integration: "integration",
-  l4: "api",
-  api: "api",
-  l5: "e2e",
-  e2e: "e2e",
-};
+/**
+ * Test directory a declared `Level` routes its TC obligation to.
+ *
+ * A `Map`, not an object literal, because the key comes out of a spec document.
+ * `Record<string, …>` inherits `Object.prototype`, so a `Level` cell spelled
+ * `constructor` or `__proto__` resolved to an inherited value instead of
+ * `undefined` and never reached {@link DEFAULT_ATDD_HOME_KIND} — the TC was
+ * then neither counted where it was annotated nor accepted there, which is the
+ * two-errors-from-one-correct-action shape this routing exists to remove.
+ */
+const LEVEL_TO_TEST_KIND = new Map<string, AtddTestKind>([
+  ["l3", "integration"],
+  ["integration", "integration"],
+  ["l4", "api"],
+  ["api", "api"],
+  ["l5", "e2e"],
+  ["e2e", "e2e"],
+]);
 
 /**
- * Where a TC's annotation legally lives.
+ * Where a `Level` this file cannot read routes to.
  *
- * Defaults to `integration` — the historical hard-coded answer — so a spec
- * with no `Level` column behaves exactly as before. A TC that declares an
- * API-level obligation routes to `tests/api/**`, which was previously both
- * uncounted and reported as forbidden: two errors from one correct placement.
+ * The historical hard-coded answer, and deliberately the conservative one: a
+ * cell qfai does not understand keeps its obligation rather than discharging
+ * it. If an unreadable cell silently cleared `QFAI-ATDD-112`, `L1/L2` would be
+ * a one-keystroke way to delete any TC from the gate. Reached by a spec with no
+ * `Level` column, by a multi-valued cell (`L3/L5` — illegal, see
+ * `catalog/test-layers.md`) and by a typo alike.
+ */
+const DEFAULT_ATDD_HOME_KIND: AtddTestKind = "integration";
+
+/** The one normalization every `Level` comparison in this module applies. */
+function normalizeLevel(level: string): string {
+  return level.trim().toLowerCase();
+}
+
+/**
+ * `Level` values that carry no ATDD annotation obligation.
+ *
+ * `qfai-atdd/SKILL.md` puts Unit and Component out of its scope, and
+ * `catalog/test-layers.md` gives L1/L2 no mandated directory — only L3-L5 are
+ * directory-pinned, and only those three roots are ever scanned. L1/L2 used to
+ * fall through `LEVEL_TO_TEST_KIND`'s `?? "integration"`, which is the fallback
+ * for a spec with *no* `Level` column, so every declared Unit and Component TC
+ * was reported by `QFAI-ATDD-112` as uncovered in `tests/integration/**` — a
+ * directory its own layer policy says is not its home.
+ *
+ * That was unsatisfiable and unwaivable: `QFAI-ATDD-112` is `error`, and
+ * `QFAI-WAIVER-002` refuses every waiver on an `error` rule. A project that
+ * filed unit tests where `test-layers.md` says to had no exit, and the only
+ * validator-clean path was to duplicate every L1/L2 annotation into
+ * `tests/integration/**` — the all-integration collapse the layer model exists
+ * to prevent.
+ *
+ * These obligations are not unguarded: `tdd/test-list.md` carries a row per
+ * coverage-target TC and `TDDLIST_TC_NOT_COVERED` (`error`) reports a missing
+ * one, which is `/qfai-implement`'s gate and the stage that owns Unit and
+ * Component.
+ *
+ * **One vocabulary, not two.** This is `UNIT_COMPONENT_LAYERS` itself, not a
+ * second copy of its members. The handoff above is the whole safety argument
+ * for dropping the ATDD obligation, and it only holds while the set ATDD stops
+ * owing is the set the ledger starts owing: a spelling in one and not the
+ * other is a `Level` owed by no gate at all, which is the hole this exclusion
+ * was written to avoid opening. Two literals with the same members and two
+ * private normalizations is exactly how `resolveAtddHomeKind` came to have
+ * three answers, so the vocabulary is imported rather than restated. The two
+ * modules still ask different questions of it — "does this owe an ATDD
+ * annotation" here, "is this a ledger coverage target" there — and those
+ * predicates stay separate; only the word list is shared. Both normalize with
+ * `trim().toLowerCase()`, which `tddHelpers` documents as the membership
+ * contract of the set.
+ */
+const NO_ATDD_OBLIGATION_LEVELS = UNIT_COMPONENT_LAYERS;
+
+/**
+ * Where a declared `Level` routes its ATDD annotation obligation, or `null`
+ * when it owes none at all (Unit / Component).
+ *
+ * **The single answer to "what does this `Level` mean for ATDD".** It used to
+ * be three: `resolveTcHomeKind` matched `NO_ATDD_OBLIGATION_LEVELS` against the
+ * raw value, `isOutsideAtddObligation` against a trimmed and lower-cased one,
+ * and `qfai atdd scaffold` kept a third set with a third inline normalization.
+ * One question answered in three places is three chances for the routing rule
+ * and the exclusion rule to disagree about the same cell — which is the defect
+ * class this routing exists to remove, so it must not be reintroduced by the
+ * removal itself.
+ *
+ * `undefined` means the spec declares no `Level` for the TC (no column, no
+ * row): that is not "no obligation", it is the default home.
+ */
+export function resolveAtddHomeKind(level: string | undefined): AtddTestKind | null {
+  if (level === undefined) {
+    return DEFAULT_ATDD_HOME_KIND;
+  }
+  const normalized = normalizeLevel(level);
+  if (NO_ATDD_OBLIGATION_LEVELS.has(normalized)) {
+    return null;
+  }
+  return LEVEL_TO_TEST_KIND.get(normalized) ?? DEFAULT_ATDD_HOME_KIND;
+}
+
+/**
+ * True when a declared `Level` puts the TC outside every ATDD obligation.
+ *
+ * Exported so the rules that fire on ATDD artefacts agree on one answer.
+ * `validateScaffoldPlaceholder` needs it: a skeleton generated for an L1 TC
+ * would otherwise keep escalating to `error` and block
+ * `validate --profile atdd` for a TC that ATDD no longer owes anything for.
+ */
+export function isOutsideAtddObligation(level: string | undefined): boolean {
+  return resolveAtddHomeKind(level) === null;
+}
+
+/**
+ * Where a TC's annotation legally lives, or `null` when the declared `Level`
+ * owes no ATDD annotation at all.
+ *
+ * A TC that declares an API-level obligation routes to `tests/api/**`, which
+ * was previously both uncounted and reported as forbidden: two errors from one
+ * correct placement.
  */
 function resolveTcHomeKind(
   tcLevels: Map<string, Map<string, string>>,
   spec: string,
   tcId: string,
-): AtddTestKind {
-  const level = tcLevels.get(spec)?.get(tcId.toUpperCase());
-  if (level === undefined) {
-    return "integration";
-  }
-  return LEVEL_TO_TEST_KIND[level] ?? "integration";
+): AtddTestKind | null {
+  return resolveAtddHomeKind(tcLevels.get(spec)?.get(tcId.toUpperCase()));
 }
 
 /**
@@ -587,12 +872,45 @@ function buildMissingTcHomes(
     const spec = parsed?.[1];
     const id = parsed?.[2];
     if (spec === undefined || id === undefined) {
-      homes.set(ref, "integration");
+      homes.set(ref, DEFAULT_ATDD_HOME_KIND);
       continue;
     }
-    homes.set(ref, resolveTcHomeKind(tcLevels, spec, `TC-${id}`));
+    // Every ref reaching here has already been filtered to one that owes an
+    // annotation, so `null` cannot occur; fall back rather than assert.
+    homes.set(ref, resolveTcHomeKind(tcLevels, spec, `TC-${id}`) ?? DEFAULT_ATDD_HOME_KIND);
   }
   return homes;
+}
+
+/**
+ * Splits missing TC refs into those that owe an ATDD annotation and those whose
+ * declared `Level` is Unit or Component.
+ *
+ * The second group is reported separately at `info` (`QFAI-ATDD-117`) rather
+ * than dropped: a silent exclusion is indistinguishable from a scan that found
+ * nothing, which is how the previous glob defect went unnoticed for a release.
+ */
+function partitionMissingTcByObligation(
+  missingTc: readonly string[],
+  tcLevels: Map<string, Map<string, string>>,
+): { owed: string[]; unitComponent: string[] } {
+  const owed: string[] = [];
+  const unitComponent: string[] = [];
+  for (const ref of missingTc) {
+    const parsed = MISSING_TC_REF_RE.exec(ref);
+    const spec = parsed?.[1];
+    const id = parsed?.[2];
+    if (spec === undefined || id === undefined) {
+      owed.push(ref);
+      continue;
+    }
+    if (resolveTcHomeKind(tcLevels, spec, `TC-${id}`) === null) {
+      unitComponent.push(ref);
+    } else {
+      owed.push(ref);
+    }
+  }
+  return { owed, unitComponent };
 }
 
 export const PLANNED_CONTRACT_KEY = "x-qfai-status";

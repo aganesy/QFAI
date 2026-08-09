@@ -74,17 +74,21 @@ describe.each(TREES)("%s", (tree) => {
     // matrix landed in free-form body text in the first place.
     const skill = flat(await read(tree, SKILL));
     expect(skill).toContain(
-      "Coverage Depth Matrix — a link to `.qfai/evidence/coverage-depth-<spec-id>.md`",
+      "**Coverage Depth Matrix** — a link to `.qfai/evidence/coverage-depth-<spec-id>.md`",
     );
     expect(skill).toContain("## Coverage Depth Matrix");
   });
 
   it("says why the matrix is not regenerable stage evidence", async () => {
+    // The skill keeps the obligation; the reasoning moved to the checklist that
+    // owns the matrix, under the 500-line ceiling.
     const skill = flat(await read(tree, SKILL));
-    expect(skill).toContain("**The matrix is a governance record, not a log.**");
-    // `_why_`, not `*why*`: prettier normalises markdown emphasis, so pinning
-    // the asterisk form would fail the moment `format:check` ran.
-    expect(skill).toContain("It does not recompute _why_ an uncoverable obligation was accepted");
+    expect(skill).toContain("**The matrix is a governance record, not a log**, so it is committed");
+    const checklist = flat(await read(tree, CHECKLIST));
+    expect(checklist).toContain("## Where the matrix lives");
+    // `*why*`, not `_why_`: prettier normalises markdown emphasis, so pinning
+    // the wrong form would fail the moment `format:check` ran.
+    expect(checklist).toContain("It does not recompute _why_ an uncoverable obligation was");
   });
 
   it("the depth checklist states the home and that a justification must survive", async () => {

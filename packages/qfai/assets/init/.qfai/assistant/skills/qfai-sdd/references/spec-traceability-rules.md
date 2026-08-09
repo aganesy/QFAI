@@ -169,10 +169,14 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - A matrix-shaped `TC-*` (many rejection reasons, a status-code matrix, several independent state transitions) MUST be split across multiple TDD rows before RED begins — one falsifying oracle per row, one row per independently observable boundary. Do not accumulate unrelated boundaries behind a single selector; doing so invalidates the RED observation, because only the first failing assert is ever observed.
 - Coverage is measured as unit/component TC references from `06_Test-Cases.md`
   appearing in TC-Refs. That measures which TCs need a `tdd/test-list.md` row;
-  it says nothing about where the test file lives. Every `TC-*` — including
-  unit/component ones — is still discharged in `tests/integration/**` for
-  `QFAI-ATDD-112` until the scanner supports the per-level routing described as
-  a target state in `catalog/test-layers.md`.
+  it says nothing about where the test file lives. A `TC-*` whose declared
+  `Level` is `L3` routes its `QFAI-ATDD-112` annotation to
+  `tests/integration/**` (`L4` to `tests/api/**`, `L5` to `tests/e2e/**`, no
+  declared `Level` to `tests/integration/**`). **`L1`/`L2` owe no ATDD
+  annotation at all** — they are out of `/qfai-atdd`'s scope and have no
+  mandated directory, so this ledger row is their whole obligation and
+  `TDDLIST_TC_NOT_COVERED` is the gate that enforces it. See
+  `catalog/test-layers.md`.
 - If `06_Test-Cases.md` has no test-case classification column, every TC is treated as a coverage target.
 - `Status=exception` requires a non-empty DR-ID. An `exception` row is not a
   dead end: a Drift Protocol sweep may reset it to `todo` like any other status
@@ -208,7 +212,11 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   several test modules is legitimate. `TDD-ID` uniqueness is the only
   identity constraint.
 - `TDD-ID` must match `TDD-NNNN` and be unique within the spec.
-- Missing `tdd/test-list.md` is a warning; missing DR-ID/Evidence columns is an error.
+- Missing `tdd/test-list.md` is a warning **only when the spec declares no
+  coverage-target TC**. If it declares any, the absent file also raises
+  `TDDLIST_TC_NOT_COVERED` (error) naming them: the obligations do not
+  disappear with the ledger, and `QFAI-ATDD-112` no longer covers L1/L2, so
+  this is their only gate. Missing DR-ID/Evidence columns is an error.
 - The `Evidence` **cell** is checked too, not only the header: on a row at
   `green` / `refactor` / `review-fix` / `done`, an empty-or-dash cell is
   `TDDLIST_EVIDENCE_EMPTY` and a verdict with no command is
