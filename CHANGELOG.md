@@ -109,6 +109,18 @@
 
 ### Fixed
 
+- **An integration surface deleted whole is reported.** The populated test was
+  per directory, so removing one entirely made every entry in it read as "not
+  created yet" and every profile passed while the assistant could load nothing
+  from it. Whether init has run is a property of the project, and the missing
+  directory is reported once — one `rm -r` is one act, and one ref per shipped
+  skill buries that.
+- **A wrapper has to resolve to the right kind of thing.** A canonical agent
+  document replaced by a directory — or a skill directory by a file — leaves
+  the link string correct, so `lstat`, `readlink` and `stat` all succeeded and
+  nothing looked further. The agent surface has no other check outside
+  `prototyping` / `full`, so the narrow profiles passed an agent tree with no
+  markdown in it at all.
 - **A wrapper deleted from a populated surface is reported.** An absent wrapper
   was skipped unconditionally, so removing one from a directory whose siblings
   are all in place left the assistant unable to load that skill with nothing

@@ -1,4 +1,4 @@
-import type { Dirent } from "node:fs";
+import type { Dirent, Stats } from "node:fs";
 import { access, lstat, readdir, readlink, stat } from "node:fs/promises";
 import path from "node:path";
 
@@ -237,26 +237,37 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       }),
     ),
   );
-  // Directories `qfai init` populated, judged by a wrapper it created still
-  // being there. Not "the directory exists": a project that has not taken a
-  // newly shipped skill has neither its wrapper nor its canonical document, and
-  // one that never ran init at all must not be told every wrapper is missing.
-  const populated = new Set(
-    wrappers.filter((_wrapper, index) => links[index] !== null).map((wrapper) => wrapper.dir),
-  );
+  // Has `qfai init` ever run here? Judged across **all** the integration
+  // surfaces, not per directory. Per directory it could not see a directory
+  // deleted whole: every one of its entries then read as "not created yet" and
+  // every profile passed while the assistant could load nothing from it. One
+  // surviving wrapper anywhere is proof init ran, and the canonical document
+  // check below is what keeps a newly shipped skill this project has not taken
+  // from being reported.
+  const initialised = links.some((link) => link !== null);
+  // Surfaces `qfai init` creates that are not there at all. Reported once each,
+  // below, instead of once per wrapper they would have held: a directory
+  // deleted whole is one act, and one ref per shipped skill buries that.
+  const missingDirs = new Set<string>();
+  if (initialised) {
+    for (const dir of INTEGRATION_SURFACE_DIRS) {
+      if ((await readDirOrNull(path.join(root, ...dir.split("/")))) === null) {
+        missingDirs.add(dir);
+      }
+    }
+  }
 
   const broken: Broken[] = [];
 
   for (const [index, wrapper] of wrappers.entries()) {
     const link = links[index] ?? null;
     if (link === null) {
-      // Absent is "not created yet" **only while the surface is unpopulated**.
-      // Once its siblings are in place and the project has the canonical
-      // document, `qfai init` created this wrapper too, so its absence is a
-      // deletion — and nothing else reported it, because
-      // `validateSkillsIntegrity` reads the canonical tree (unchanged) and runs
-      // under `full` alone.
-      if (populated.has(wrapper.dir) && (await exists(wrapper.canonical))) {
+      // Absent is "not created yet" **only before init has run**. Once it has,
+      // and the project has the canonical document, `qfai init` created this
+      // wrapper too, so its absence is a deletion — and nothing else reported
+      // it, because `validateSkillsIntegrity` reads the canonical tree
+      // (unchanged) and runs under `full` alone.
+      if (initialised && !missingDirs.has(wrapper.dir) && (await exists(wrapper.canonical))) {
         broken.push({
           relative: wrapper.relative,
           detail: `missing — ${toPosix(wrapper.dir)} exists and so does the document it wraps`,
@@ -299,11 +310,29 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
     // "re-run `qfai init`", which leaves the wrapper `skipped` because the
     // target string is already correct. That is a `QFAI-LINK-001` an operator
     // cannot clear by following it. Only an absent target is dangling.
+    let target: Stats;
     try {
-      await stat(wrapper.absolute);
+      target = await stat(wrapper.absolute);
     } catch (error) {
       if (!isMissing(error)) throw error;
       broken.push({ relative: wrapper.relative, detail: `dangling -> ${toPosix(wrapper.target)}` });
+      continue;
+    }
+
+    // What it resolves *to*. A canonical agent document replaced by a directory
+    // — or a skill directory by a file — leaves the link string correct, so
+    // `lstat`, `readlink` and `stat` all succeed and nothing looked further.
+    // The agent surface has no other check outside `prototyping` / `full`, so
+    // `discussion` / `sdd` / `atdd` / `tdd` passed an agent tree the assistant
+    // cannot load a single markdown file from.
+    const wantsDirectory = wrapper.kind === "skill";
+    if (wantsDirectory !== target.isDirectory()) {
+      broken.push({
+        relative: wrapper.relative,
+        detail: wantsDirectory
+          ? "resolves to a file, but a skill wrapper names a directory"
+          : "resolves to a directory, but an agent wrapper names a file",
+      });
       continue;
     }
 
@@ -315,6 +344,15 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       broken.push({
         relative: wrapper.relative,
         detail: "resolves, but the directory has no SKILL.md",
+      });
+    }
+  }
+
+  for (const dir of INTEGRATION_SURFACE_DIRS) {
+    if (missingDirs.has(dir)) {
+      broken.push({
+        relative: dir,
+        detail: "integration surface missing — `qfai init` created it and it is gone",
       });
     }
   }

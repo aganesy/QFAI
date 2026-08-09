@@ -56,6 +56,34 @@ async function seedCanonical(root: string, skills: string[], agents: string[]): 
   }
 }
 
+/**
+ * Every wrapper `qfai init` would create, as a real symlink.
+ *
+ * A fixture that wired only `.claude/skills` is a project whose other five
+ * integration surfaces were deleted — true of it, and not the subject of any of
+ * these tests. Each one breaks a single entry after calling this.
+ */
+async function wireAll(root: string, skills: string[], agents: string[]): Promise<void> {
+  for (const dir of SKILL_INTEGRATION_DIRS) {
+    const dirAbsolute = path.join(root, ...dir.split("/"));
+    await mkdir(dirAbsolute, { recursive: true });
+    for (const id of skills) {
+      await symlink(skillTarget(dir, id), path.join(dirAbsolute, id), "dir");
+    }
+  }
+  for (const { dir, suffix } of AGENT_INTEGRATION_CONFIGS) {
+    const dirAbsolute = path.join(root, ...dir.split("/"));
+    await mkdir(dirAbsolute, { recursive: true });
+    for (const name of agents) {
+      await symlink(
+        path.relative(dirAbsolute, path.join(root, ".qfai", "assistant", "agents", `${name}.md`)),
+        path.join(dirAbsolute, `${name}${suffix}`),
+        "file",
+      );
+    }
+  }
+}
+
 /** The link `init` writes for a skill wrapper, as a relative target. */
 const skillTarget = (dir: string, id: string): string =>
   path.join(...dir.split("/").map(() => ".."), ".qfai", "assistant", "skills", id);
@@ -84,8 +112,9 @@ describe("the integration surface is checked for links that did not survive chec
   it("reports a flattened link — a regular file holding the link target", async () => {
     await withProject(async (root) => {
       await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
       const claudeSkills = path.join(root, ".claude", "skills");
-      await mkdir(claudeSkills, { recursive: true });
+      await rm(path.join(claudeSkills, "qfai-atdd"), { force: true });
       // Exactly what git writes when core.symlinks is false.
       const flattened = "../../.qfai/assistant/skills/qfai-atdd";
       await writeFile(path.join(claudeSkills, "qfai-atdd"), flattened, "utf-8");
@@ -103,6 +132,8 @@ describe("the integration surface is checked for links that did not survive chec
     // heuristic let it break silently.
     await withProject(async (root) => {
       await seedCanonical(root, ["web-research"], []);
+      await wireAll(root, ["web-research"], []);
+      await rm(path.join(root, ".claude", "skills", "web-research"), { force: true });
       const claudeSkills = path.join(root, ".claude", "skills");
       await mkdir(claudeSkills, { recursive: true });
       await writeFile(
@@ -121,6 +152,8 @@ describe("the integration surface is checked for links that did not survive chec
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd", "qfai-sdd"], []);
+      await wireAll(root, ["qfai-atdd", "qfai-sdd"], []);
+      await rm(path.join(root, ".claude", "skills", "qfai-sdd"), { force: true });
       const claudeSkills = path.join(root, ".claude", "skills");
       await mkdir(claudeSkills, { recursive: true });
       await symlink(
@@ -128,15 +161,6 @@ describe("the integration surface is checked for links that did not survive chec
         path.join(claudeSkills, "qfai-sdd"),
         "dir",
       );
-      // The other shipped skill is wired correctly, so the only finding is the
-      // mis-pointed link. Leaving it out would also report `qfai-atdd` as a
-      // wrapper deleted from a populated surface, which is a different rule.
-      await symlink(
-        skillTarget(".claude/skills", "qfai-atdd"),
-        path.join(claudeSkills, "qfai-atdd"),
-        "dir",
-      );
-
       const found = await finding(root);
       expect(found?.refs).toEqual([".claude/skills/qfai-sdd"]);
       expect(found?.message).toContain("expected");
@@ -167,13 +191,7 @@ describe("the integration surface is checked for links that did not survive chec
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
-      const claudeSkills = path.join(root, ".claude", "skills");
-      await mkdir(claudeSkills, { recursive: true });
-      await symlink(
-        skillTarget(".claude/skills", "qfai-atdd"),
-        path.join(claudeSkills, "qfai-atdd"),
-        "dir",
-      );
+      await wireAll(root, ["qfai-atdd"], []);
 
       expect(await validateIntegrationSurface(root)).toEqual([]);
     });
@@ -222,21 +240,28 @@ describe("the integration surface is checked for links that did not survive chec
 
   it("reports every broken wrapper, with the rest as relatedFiles", async () => {
     await withProject(async (root) => {
-      await seedCanonical(root, ["qfai-atdd", "qfai-sdd"], ["qa-gatekeeper"]);
-      for (const dir of [".claude/skills", ".agents/skills"]) {
+      const skills = ["qfai-atdd", "qfai-sdd"];
+      await seedCanonical(root, skills, ["qa-gatekeeper"]);
+      for (const dir of SKILL_INTEGRATION_DIRS) {
         const absolute = path.join(root, ...dir.split("/"));
         await mkdir(absolute, { recursive: true });
-        await writeFile(path.join(absolute, "qfai-atdd"), "target", "utf-8");
-        await writeFile(path.join(absolute, "qfai-sdd"), "target", "utf-8");
+        for (const id of skills) {
+          await writeFile(path.join(absolute, id), "target", "utf-8");
+        }
       }
-      const agents = path.join(root, ".claude", "agents");
-      await mkdir(agents, { recursive: true });
-      await writeFile(path.join(agents, "qa-gatekeeper.md"), "target", "utf-8");
+      for (const { dir, suffix } of AGENT_INTEGRATION_CONFIGS) {
+        const absolute = path.join(root, ...dir.split("/"));
+        await mkdir(absolute, { recursive: true });
+        await writeFile(path.join(absolute, `qa-gatekeeper${suffix}`), "target", "utf-8");
+      }
 
+      // Four skill directories x two skills, plus two agent directories.
+      const total =
+        SKILL_INTEGRATION_DIRS.length * skills.length + AGENT_INTEGRATION_CONFIGS.length;
       const found = await finding(root);
-      expect(found?.refs).toHaveLength(5);
-      expect(found?.relatedFiles).toHaveLength(4);
-      expect(found?.message).toContain("5 件");
+      expect(found?.refs).toHaveLength(total);
+      expect(found?.relatedFiles).toHaveLength(total - 1);
+      expect(found?.message).toContain(`${String(total)} 件`);
       // The remediation must not send the operator to `--force`: `qfai init`
       // repairs a flattened link on its own, and preserves anything else.
       expect(found?.suggested_action).toContain("`qfai init` を再実行");
@@ -356,14 +381,9 @@ describe("a wrapper deleted from a populated surface is reported", () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd", "qfai-sdd"], []);
-      const claudeSkills = path.join(root, ".claude", "skills");
-      await mkdir(claudeSkills, { recursive: true });
-      await symlink(
-        skillTarget(".claude/skills", "qfai-atdd"),
-        path.join(claudeSkills, "qfai-atdd"),
-        "dir",
-      );
+      await wireAll(root, ["qfai-atdd", "qfai-sdd"], []);
       // `qfai-sdd` is the one somebody removed.
+      await rm(path.join(root, ".claude", "skills", "qfai-sdd"), { force: true });
 
       const found = await finding(root);
       expect(found?.refs).toEqual([".claude/skills/qfai-sdd"]);
@@ -391,13 +411,7 @@ describe("a skill wrapper is only good if it can be loaded", () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
-      const claudeSkills = path.join(root, ".claude", "skills");
-      await mkdir(claudeSkills, { recursive: true });
-      await symlink(
-        skillTarget(".claude/skills", "qfai-atdd"),
-        path.join(claudeSkills, "qfai-atdd"),
-        "dir",
-      );
+      await wireAll(root, ["qfai-atdd"], []);
       // The skill keeps its other files; only the entry point goes.
       await mkdir(path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "references"), {
         recursive: true,
@@ -406,9 +420,72 @@ describe("a skill wrapper is only good if it can be loaded", () => {
         force: true,
       });
 
+      // One canonical deletion breaks the wrapper in every skill directory,
+      // which is what it does — each of them now points at a directory the
+      // assistant cannot load.
       const found = await finding(root);
-      expect(found?.refs).toEqual([".claude/skills/qfai-atdd"]);
+      expect(found?.refs).toEqual(SKILL_INTEGRATION_DIRS.map((dir) => `${dir}/qfai-atdd`));
       expect(found?.message).toContain("no SKILL.md");
+    });
+  });
+});
+
+describe("a whole integration surface can go missing", () => {
+  it("reports the directory once, not every wrapper it held", async () => {
+    // `populated` was per directory, so a directory deleted whole had every one
+    // of its entries read as "not created yet" and every profile passed while
+    // the assistant could load nothing from it. Reported once: one `rm -r` is
+    // one act, and one ref per shipped skill buries that.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd", "qfai-sdd"], []);
+      await wireAll(root, ["qfai-atdd", "qfai-sdd"], []);
+      await rm(path.join(root, ".claude", "skills"), { recursive: true, force: true });
+
+      const found = await finding(root);
+      expect(found?.refs).toEqual([".claude/skills"]);
+      expect(found?.message).toContain("integration surface missing");
+    });
+  });
+
+  it("says nothing when init has never run", async () => {
+    await withProject(async (root) => {
+      await seedCanonical(root, ["qfai-atdd"], []);
+
+      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
+});
+
+describe("a wrapper has to resolve to the right kind of thing", () => {
+  it("reports an agent wrapper whose canonical document became a directory", async () => {
+    // The link string is still correct, so `lstat`, `readlink` and `stat` all
+    // succeed. The agent surface has no other check outside `prototyping` /
+    // `full`, so the narrow profiles passed an agent tree with no markdown in
+    // it at all.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, [], ["qa-gatekeeper"]);
+      const canonical = path.join(root, ".qfai", "assistant", "agents", "qa-gatekeeper.md");
+      await rm(canonical, { force: true });
+      await mkdir(canonical, { recursive: true });
+      // Wired after the swap, and as a directory link, so the link resolves on
+      // Windows too — the point is what it resolves *to*, not the link type.
+      for (const { dir, suffix } of AGENT_INTEGRATION_CONFIGS) {
+        const dirAbsolute = path.join(root, ...dir.split("/"));
+        await mkdir(dirAbsolute, { recursive: true });
+        await symlink(
+          path.relative(dirAbsolute, canonical),
+          path.join(dirAbsolute, `qa-gatekeeper${suffix}`),
+          "dir",
+        );
+      }
+      for (const dir of SKILL_INTEGRATION_DIRS) {
+        await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
+      }
+
+      const found = await finding(root);
+      expect(found?.message).toContain("resolves to a directory");
     });
   });
 });
