@@ -117,6 +117,12 @@ function narrowToScope(
       us: result.missing.us.filter(inScope),
       tc: result.missing.tc.filter(inScope),
     },
+    // Narrowed on the same terms as `missing.tc`, and for the same reason.
+    // `QFAI-ATDD-117` lists the excluded TCs by id, so carrying the repo-wide
+    // set through made a `--spec 0002` run report spec-0001's L1/L2 TCs — and
+    // the finding is filed at a spec directory, which survives the scope
+    // filter, so the scoped evidence artifact named another spec's ids.
+    unitComponentTcIds: result.unitComponentTcIds.filter(inScope),
     forbidden: {
       tcInApi: narrowForbidden(result.forbidden.tcInApi),
       tcInE2e: narrowForbidden(result.forbidden.tcInE2e),
@@ -369,16 +375,21 @@ export async function validateAtddCodeTraceability(
 
   if (result.unitComponentTcIds.length > 0) {
     const ids = result.unitComponentTcIds;
+    const unitComponentHome = specAttribution(ids, result.specsRoot, result.declaredSpecDirs);
     issues.push(
       issue(
         "QFAI-ATDD-117",
         `宣言 Level が Unit / Component の TC は ATDD の注釈義務対象外です（${String(ids.length)} 件）: ${ids.slice(0, 10).join(", ")}${ids.length > 10 ? ` (他 ${String(ids.length - 10)} 件)` : ""}`,
         "info",
-        result.specsRoot,
+        // The specs these ids name, not the specs root: filed at the root the
+        // finding belongs to every scope, so a scoped run reported it whether
+        // or not the requested spec had any L1/L2 TC of its own.
+        unitComponentHome.file,
         "atddCodeTraceability.coverage.unitComponentExcluded",
         ids,
         "canonical",
         "これらは `/qfai-implement` の担当です。`tdd/test-list.md` に行があること（`TDDLIST_TC_NOT_COVERED` が error で検査）で担保してください。ATDD 側の注釈は不要で、置いても違反にはなりません。",
+        { relatedFiles: unitComponentHome.relatedFiles },
       ),
     );
   }

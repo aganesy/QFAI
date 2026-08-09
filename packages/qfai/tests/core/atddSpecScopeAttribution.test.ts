@@ -25,7 +25,7 @@ import { SCAFFOLD_PLACEHOLDER_MARKER } from "../../src/core/atdd/scaffold.js";
 import { validateAtddCodeTraceability } from "../../src/core/validators/atddCodeTraceability.js";
 import { validateScaffoldPlaceholder } from "../../src/core/validators/scaffoldPlaceholder.js";
 
-type SpecSeed = { specNumber: string; usIds: string[]; tcIds: string[] };
+type SpecSeed = { specNumber: string; usIds: string[]; tcIds: string[]; level?: string };
 
 async function seed(root: string, specs: SpecSeed[]): Promise<void> {
   for (const spec of specs) {
@@ -50,7 +50,7 @@ async function seed(root: string, specs: SpecSeed[]): Promise<void> {
         "",
         "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
         "| ----- | ----- | ------- | ------ | ----- | -------- |",
-        ...spec.tcIds.map((id) => `| ${id} | L3 | AC-0001 | EX-0001 | s | e |`),
+        ...spec.tcIds.map((id) => `| ${id} | ${spec.level ?? "L3"} | AC-0001 | EX-0001 | s | e |`),
         "",
       ].join("\n"),
       "utf-8",
@@ -667,6 +667,25 @@ describe("a forbidden reference is owned by the tests that hold it", () => {
     } finally {
       await rm(base, { recursive: true, force: true });
     }
+  });
+
+  it("does not list a sibling spec's excluded TCs in a scoped run", async () => {
+    // `QFAI-ATDD-117` names the excluded ids, and it was filed at `specsRoot` —
+    // which belongs to every scope — so a `--spec 0002` run reported
+    // spec-0001's L1/L2 TCs whether or not spec-0002 had any of its own.
+    await withProject(async (root) => {
+      await seed(root, [
+        { specNumber: "0001", usIds: ["US-0001"], tcIds: ["TC-0001"], level: "L1" },
+        { specNumber: "0002", usIds: ["US-0001"], tcIds: ["TC-0001"] },
+      ]);
+
+      const scoped = await validateAtddCodeTraceability(root, defaultConfig, {
+        specScope: new Set(["0002"]),
+      });
+      const found = scoped.find((entry) => entry.code === "QFAI-ATDD-117");
+      expect(found?.message ?? "").not.toContain("SPEC-0001");
+      expect(found?.refs ?? []).not.toContain("SPEC-0001:TC-0001");
+    });
   });
 
   it("does not read a spec number from a fixture below the owning directory", async () => {

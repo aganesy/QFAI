@@ -488,6 +488,9 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **`QFAI-ATDD-117` is scoped like the obligations it excludes.** It lists the
+  excluded ids and was filed at `specsRoot`, which belongs to every scope, so
+  a `--spec` run reported a sibling spec's L1/L2 TCs in its own evidence.
 - **The per-spec owner is read positionally, not by pattern search.** The
   layout is exactly `<testsRoot>/<layer>/spec-NNNN/**`; scanning for that shape
   anywhere in the path found it above the checkout and inside fixture
