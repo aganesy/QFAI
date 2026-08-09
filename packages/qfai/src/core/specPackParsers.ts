@@ -228,7 +228,7 @@ function hasTcIdColumn(table: MarkdownTable): boolean {
  * document has no such heading. The section ends at the next heading of the
  * same or a higher level.
  */
-function extractTestCaseTableSection(text: string): string | null {
+export function extractTestCaseTableSection(text: string): string | null {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const start = lines.findIndex((line) => TEST_CASE_TABLE_HEADING.test(line));
   if (start === -1) {

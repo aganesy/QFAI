@@ -194,3 +194,22 @@ describe("the npm README states the routing the package ships", () => {
     expect(readme).toContain("follow `paths.testsDir`");
   });
 });
+
+describe("every mandatory checklist carries the L1/L2 exclusion", () => {
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: Reviewer Gate, DoD and project_memory all state it`, async () => {
+      // The body defines L1/L2 as outside the ATDD obligation, but a
+      // `completion-reviewer` works from the Reviewer Gate and an agent that
+      // never opens the body works from `project_memory`. Both still demanded
+      // "every TC", so an L1/L2-only spec the validator passes read as
+      // not-done — and the repair a reader reaches for is the duplicated
+      // integration annotation `QFAI-ATDD-123` rejects.
+      const atdd = flat(await read(tree, "assistant/skills/qfai-atdd/SKILL.md"));
+      expect(atdd).toContain(
+        "every `TC` **that declares `L3`/`L4`/`L5` or no `Level`** is covered",
+      );
+      expect(atdd).toContain("**`L1`/`Unit` and `L2`/`Component` are outside this obligation**");
+      expect(atdd).toContain("L1/Unit and L2/Component owe no ATDD annotation");
+    });
+  }
+});

@@ -475,6 +475,21 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The declared TC set is read from the authoritative shapes only.** Masking
+  fixed the fenced-sample case; an appendix or illustrative table written as
+  ordinary markdown _outside_ `## Test Case Table` was still collected, so its
+  ids landed in the declared set with no `Level`, fell through to the
+  integration default, and `QFAI-ATDD-112` raised a hard error against a TC
+  that does not exist. The set is the heading form plus the `TC-ID` column of
+  the tables inside that section — the same two passes `collectTcLevels`
+  makes. Scoped to the section rather than to `resolveTestCaseTables`, so a
+  mistyped `tc-id` header still declares its ids and both gates report it.
+- **The L1/L2 exclusion reaches every mandatory checklist.** The body defined
+  it, but the Reviewer Gate, the Definition of Done and `project_memory` still
+  demanded "every TC" — so a `completion-reviewer`, or an agent that never
+  opens the body, judged an L1/L2-only spec the validator passes as not-done,
+  and the repair they would reach for is the duplicated integration annotation
+  `QFAI-ATDD-123` rejects.
 - **A settled `Level` survives a later table that has no `Level` column.** The
   first-declaration-wins guard sat inside the `levelIndex >= 0` branch, so a
   re-listing without that column skipped it and fell through to the

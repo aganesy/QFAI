@@ -14,7 +14,12 @@ import {
 } from "./fs.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { resolveSurfaceUnion } from "./prototyping/specResolution.js";
-import { maskNonSpecRegions, resolveTestCaseTables } from "./specPackParsers.js";
+import {
+  extractTestCaseTableSection,
+  maskNonSpecRegions,
+  parseAllMarkdownTables,
+  resolveTestCaseTables,
+} from "./specPackParsers.js";
 import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
 import { collectMarkdownItems, uniqueMatches } from "./validators/utils.js";
@@ -510,15 +515,16 @@ async function collectSpecRefs(specsRoot: string): Promise<{
       readSafe(entry.testCasesPath),
     ]);
 
-    // Masked, like the `Level` collectors on the same documents. Reading the
-    // raw text kept an id that appears only in a fenced sample or an HTML
-    // comment in the declared set, while `collectTcLevels` — which masks —
-    // saw no `Level` for it. The id then fell through to the integration
-    // default and `QFAI-ATDD-112` raised a hard error against a TC that does
-    // not exist. The declared set and the level map have to be read from the
-    // same text or they can always disagree.
     const usIds = collectShortIds(maskNonSpecRegions(usText), "US");
-    const tcIds = collectShortIds(maskNonSpecRegions(tcText), "TC");
+    // From the same authoritative shapes `collectTcLevels` reads, not from the
+    // whole document. Two ways that diverged: an id that appears only in a
+    // fenced sample or an HTML comment (masking fixes that), and an id in an
+    // appendix or illustrative table written as ordinary markdown *outside*
+    // `## Test Case Table` — which `resolveTestCaseTables` does not read but
+    // `collectShortIds` did. Either way the id landed in the declared set with
+    // no `Level`, fell through to the integration default, and
+    // `QFAI-ATDD-112` raised a hard error against a TC that does not exist.
+    const tcIds = collectDeclaredTcIds(tcText);
 
     if (usIds.size > 0) {
       us.set(entry.specNumber, usIds);
@@ -623,6 +629,35 @@ function collectTableTcLevels(tcText: string): Array<[string, string]> {
  */
 export function collectHeadingTcLevelsFrom(rawTcText: string): Array<[string, string]> {
   return collectHeadingTcLevels(maskNonSpecRegions(rawTcText));
+}
+
+/**
+ * The TC ids a spec pack declares, from the shapes that carry authority.
+ *
+ * The union of the heading form and the `TC-ID` column of the tables
+ * `resolveTestCaseTables` admits — the same two passes {@link collectTcLevels}
+ * makes, so the declared set and the level map cannot disagree about which ids
+ * exist. Anything outside them is illustration: a fenced sample, an HTML
+ * comment, or an appendix table sitting outside `## Test Case Table`.
+ */
+export function collectDeclaredTcIds(rawTcText: string): Set<string> {
+  const ids = new Set(collectHeadingTcIdsFrom(rawTcText));
+  // The section, not `resolveTestCaseTables`: that filter is case-exact on the
+  // `TC-ID` header, and a mistyped `tc-id` must still *declare* its ids — the
+  // ledger reports `TDDLIST_TC_TABLE_UNRESOLVED` and ATDD keeps the default
+  // obligation, so fixing the header clears both. What the section boundary
+  // excludes is the appendix table, which declares nothing.
+  const masked = maskNonSpecRegions(rawTcText);
+  const section = extractTestCaseTableSection(masked) ?? masked;
+  for (const table of parseAllMarkdownTables(section)) {
+    const idIndex = table.headers.findIndex((header) => header.trim().toUpperCase() === "TC-ID");
+    if (idIndex < 0) continue;
+    for (const row of table.rows) {
+      const id = /\bTC-\d{4}(?:-\d{4})?\b/.exec((row[idIndex] ?? "").trim())?.[0];
+      if (id !== undefined) ids.add(id.toUpperCase());
+    }
+  }
+  return ids;
 }
 
 /**
