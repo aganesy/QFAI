@@ -244,9 +244,9 @@ async function runProfileValidators(
       case "prototyping":
         return runPrototypingValidators(root, config, platformOption);
       case "atdd":
-        return runAtddValidators(root, config);
+        return runAtddValidators(root, config, specScope);
       case "tdd":
-        return runTddValidators(root, config);
+        return runTddValidators(root, config, true, true, true, true, specScope);
       case "verify":
       case "full":
         return runFullValidators(root, config, platformOption, specScope);
@@ -382,15 +382,18 @@ async function relaxPrototypingIssuesIfExploration(
 async function runAtddValidators(
   root: string,
   config: ConfigLoadResult["config"],
+  specScope?: SpecScope,
 ): Promise<Issue[]> {
   return [
-    ...(await validateAtddCodeTraceability(root, config)),
+    ...(await validateAtddCodeTraceability(root, config, specScope ? { specScope } : {})),
     // D-SCAFFOLD-PLACEHOLDER (BR-0008-0008): surface unfilled
     // `qfai atdd scaffold` skeletons at severity warning until the
     // operator implements a real assertion. Wired into atdd + full
     // profiles so the documented escalation path is reachable from
     // the validate command surface.
-    ...(await validateScaffoldPlaceholder(root, config)),
+    // Scoped: this validator writes `.qfai/state.json` escalation counters, so
+    // an unscoped scan under `--spec` mutated sibling specs' state.
+    ...(await validateScaffoldPlaceholder(root, config, specScope ? { specScope } : {})),
   ];
 }
 
@@ -407,6 +410,7 @@ async function runTddValidators(
   includeUpstreamGuard = true,
   // `full` runs the sdd profile, which already calls `validateContracts`.
   includeContracts = true,
+  specScope?: SpecScope,
 ): Promise<Issue[]> {
   return [
     ...(await validateTddList(root, config)),
@@ -416,7 +420,9 @@ async function runTddValidators(
     // profile was structurally incapable of observing QFAI-ATDD-111/112/113/
     // 121/122 — the US -> tests/e2e/**, TC -> tests/integration/** and
     // CON-API -> tests/api/** gates it is supposed to satisfy.
-    ...(includeAtddCodeTraceability ? await validateAtddCodeTraceability(root, config) : []),
+    ...(includeAtddCodeTraceability
+      ? await validateAtddCodeTraceability(root, config, specScope ? { specScope } : {})
+      : []),
     ...(includeTraceability
       ? await validateTraceability(root, config, { includeCodeReferences: true })
       : []),
@@ -448,7 +454,7 @@ async function runFullValidators(
     ...(await runSddValidators(root, config, true, false, specScope)),
     ...(await validateReviewArtifacts(root)),
     ...(await runPrototypingValidators(root, config, platformOption)),
-    ...(await runAtddValidators(root, config)),
+    ...(await runAtddValidators(root, config, specScope)),
     ...(await runTddValidators(root, config, false, false, false, false)),
     ...(await validatePrototypingSkill(root, config)),
   ];

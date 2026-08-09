@@ -179,25 +179,45 @@ async function isReadable(filePath: string): Promise<boolean> {
  */
 async function isInitEvidence(wrapper: Wrapper, link: Stats | null | undefined): Promise<boolean> {
   if (link === null || link === undefined) return false;
-  const spelled = (value: string | null): boolean =>
-    value !== null && path.normalize(value) === path.normalize(wrapper.target);
   if (link.isSymbolicLink()) {
-    return spelled(
-      await readlink(wrapper.absolute).catch((error: unknown) => {
-        if (isMissing(error)) return null;
-        throw error;
-      }),
-    );
+    // A link is compared the way the per-wrapper check compares it, so a link
+    // that counts as evidence is exactly a link this rule calls correct.
+    const actual = await readlink(wrapper.absolute).catch((error: unknown) => {
+      if (isMissing(error)) return null;
+      throw error;
+    });
+    return actual !== null && path.normalize(actual) === path.normalize(wrapper.target);
   }
   // The flattened form is a small text file. The ceiling keeps the read off
   // anything that is not link-shaped, exactly as `init.ts` does.
   if (!link.isFile() || link.size > 4096) return false;
-  return spelled(
-    await readFile(wrapper.absolute, "utf-8").catch((error: unknown) => {
-      if (isMissing(error)) return null;
-      throw error;
-    }),
-  );
+  const body = await readFile(wrapper.absolute, "utf-8").catch((error: unknown) => {
+    if (isMissing(error)) return null;
+    throw error;
+  });
+  // Byte-exact, as `init.ts` compares the same signature and for the same
+  // reason. `path.normalize` accepted `../../.qfai/assistant/./skills/<id>` —
+  // not what git writes, but what a project's own note at that path might say —
+  // and one of those made a checkout that never ran init read as initialised.
+  // The only difference tolerated is the separator, and only where
+  // `path.relative` produces the other one.
+  return body !== null && comparableTarget(body) === comparableTarget(wrapper.target);
+}
+
+/** Separator-insensitive on Windows, byte-exact everywhere else. */
+function comparableTarget(value: string): string {
+  return process.platform === "win32" ? value.split("\\").join("/") : value;
+}
+
+/** `lstat`, or `null` when the path is absent or unreachable through a cycle. */
+async function lstatOrNull(filePath: string): Promise<Stats | null> {
+  try {
+    return await lstat(filePath);
+  } catch (error) {
+    if (isMissing(error)) return null;
+    if ((error as NodeJS.ErrnoException | null)?.code === "ELOOP") return null;
+    throw error;
+  }
 }
 
 /**
@@ -228,14 +248,17 @@ async function canonicalState(
 
 /** Whether a README at `filePath` is one `qfai init` wrote. */
 async function hasInitSignature(filePath: string): Promise<boolean> {
-  // A regular file, checked before the read. These paths are create-only, so
-  // whatever the project already had at one of them is still there — and a
-  // directory makes `readFile` throw `EISDIR`, which rejected the whole
-  // `Promise.all` and lost the `QFAI-LINK-001` the other markers would have
-  // produced. A FIFO is worse: the read blocks and the validator never
-  // returns. Anything that is not a regular file is not a marker.
-  const stats = await statOrNull(filePath);
-  if (stats === null || stats === "cycle" || !stats.isFile()) {
+  // A regular file, checked before the read — and checked with `lstat`, not
+  // `stat`. These paths are create-only, so whatever the project already had at
+  // one of them is still there: a directory makes `readFile` throw `EISDIR`,
+  // which rejected the whole `Promise.all` and lost the `QFAI-LINK-001` the
+  // other markers would have produced, and a FIFO blocks the read outright.
+  // `stat` followed a link, so a project's own `.agents/README.md` pointing at
+  // some other file that happens to mention `.qfai/assistant/` read as a marker
+  // init wrote — and a checkout that never ran init was told all six surfaces
+  // were missing. Init writes these as plain files; nothing else is one.
+  const stats = await lstatOrNull(filePath);
+  if (stats === null || !stats.isFile()) {
     return false;
   }
   const body = await readFile(filePath, "utf-8").catch((error: unknown) => {

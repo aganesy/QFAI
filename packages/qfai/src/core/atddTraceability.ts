@@ -92,7 +92,29 @@ export type AtddTraceabilityMissing = {
 
 export type AtddCodeTraceabilityResult = {
   specsRoot: string;
+  /**
+   * The configured tests directory, resolved.
+   *
+   * The bound on the per-spec owner scan. Test paths are absolute, so a
+   * checkout that itself lives under `/srv/integration/spec-0002/repo` has an
+   * ancestor pair that reads exactly like the canonical layout, and a flat
+   * `tests/integration/a.test.ts` inside it was attributed to `0002`.
+   */
+  testsRoot: string;
   contractsApiRoot: string;
+  /**
+   * Spec number -> the directory `collectSpecEntries` enumerated for it.
+   *
+   * Two questions, one map. **Existence** is not the same as `specUsIds.has(n)`:
+   * a spec created moments ago has a directory and empty catalogues, and scope
+   * logic that asks the id maps treats it as nonexistent — so a typo naming it
+   * is handled as repo-wide when that spec's own gate would in fact own it.
+   * **Its path** is the enumerated one, never `spec-${n}` rebuilt from the
+   * number: on a case-sensitive filesystem a `SPEC-0001/` directory is valid and
+   * kept verbatim by `listSpecDirs`, and a synthesised lower-case path would
+   * send the CLI report and the GitHub annotation at a file that is not there.
+   */
+  declaredSpecDirs: Map<string, string>;
   specUsIds: Map<string, Set<string>>;
   specTcIds: Map<string, Set<string>>;
   /**
@@ -379,8 +401,10 @@ export async function evaluateAtddCodeTraceability(
   const missingTcHomes = buildMissingTcHomes(missing.tc, tcLevels);
 
   return {
+    declaredSpecDirs: specRefs.declaredSpecDirs,
     unitComponentTcIds: unitComponentTc,
     specsRoot,
+    testsRoot,
     contractsApiRoot,
     specUsIds,
     specTcIds,
@@ -503,11 +527,14 @@ async function collectSpecRefs(specsRoot: string): Promise<{
   tc: Map<string, Set<string>>;
   /** `spec -> TC-ID -> declared Level`, lower-cased. Absent when no Level column. */
   tcLevels: Map<string, Map<string, string>>;
+  /** Spec number -> the directory enumerated for it. */
+  declaredSpecDirs: Map<string, string>;
 }> {
   const entries = await collectSpecEntries(specsRoot);
   const us = new Map<string, Set<string>>();
   const tc = new Map<string, Set<string>>();
   const tcLevels = new Map<string, Map<string, string>>();
+  const declaredSpecDirs = new Map(entries.map((entry) => [entry.specNumber, entry.dir]));
 
   for (const entry of entries) {
     const [usText, tcText] = await Promise.all([
@@ -539,7 +566,7 @@ async function collectSpecRefs(specsRoot: string): Promise<{
     }
   }
 
-  return { us, tc, tcLevels };
+  return { us, tc, tcLevels, declaredSpecDirs };
 }
 
 /**

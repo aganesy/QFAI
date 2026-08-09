@@ -114,7 +114,7 @@ Use the shared schema.
 - ATDD-specific reviewer checks:
   - coverage obligations met: E2E covers `US`, API covers `CON-API`, and every `TC` **that declares `L3`/`L4`/`L5` or no `Level`** is covered from the directory that `Level` routes to. `L1`/`Unit` and `L2`/`Component` owe nothing here (CRITICAL CONSTRAINTS): the ledger covers them. An existing L1/L2 annotation in `tests/integration/**` is not a violation — the validator declines to count it and declines to flag it — so do not require one to be added, and do not require an existing one to be removed;
   - Coverage Depth Matrix is reviewed and no unjustified `X` cells remain;
-  - validation evidence exists and `npx qfai validate --profile atdd --fail-on error` passes;
+  - validation evidence exists and `npx qfai validate --profile atdd --fail-on error --spec <spec-id>` passes;
   - Drift Protocol is enforced;
   - test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`;
   - coverage floors and ratios are signals, not gates;
@@ -149,7 +149,14 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 - Do NOT declare completion based on unit/component tests.
 - `10_Plan.md` is the primary How SSOT for execution phases.
 - If `10_Plan.md` is missing, stop and run owner planning flow before proceeding.
-- Completion gate is validation with zero errors (`npx qfai validate --profile atdd --fail-on error`).
+- Completion gate is validation with zero errors **for this spec**: `npx qfai validate --profile atdd --fail-on error --spec <spec-id>`. The scope flag is not optional bookkeeping. This skill runs one spec per invocation, and unscoped it reports every other spec's `QFAI-ATDD-111` / `-112` obligations — findings this run cannot act on and must not be blocked by. A `--spec` run also writes `<report>/validate.spec-<id>.json` rather than the shared `validate.json`, so the JSON gate artifact is per spec, and an unknown or unparseable value fails the run (`QFAI-SCOPE-001` / `QFAI-SCOPE-002`) instead of silently widening back to the whole repository. **That is not the same as being parallel-safe.** `<report>/validate.log` and the run-log pointer are shared by every run, scoped or not, and nothing serializes them — so two stages running at once can leave that pointer naming the other one's run. Cite the per-run `<report>/run-*/` directory, or this spec's `validate.spec-<id>.json`, as the Validate Hard Gate evidence; do not cite `validate.log` from a run you shared with another stage.
+- **`--spec` scopes the spec-owned rules only, and the gate still fails on the rest.** Every rule whose finding names a spec is scoped: `QFAI-ATDD-111` (US) and `QFAI-ATDD-112` (TC) by the specs they name, `QFAI-ATDD-101` / `-102` by the spec in the unknown token, `QFAI-ATDD-121` / `-122` / `-123` by the specs whose TCs are misplaced, and `D-SCAFFOLD-PLACEHOLDER` by the spec its skeleton belongs to. A scoped run reports all of those for the requested spec and drops a sibling's. What cannot be scoped **does** fail a scoped gate:
+  - `QFAI-ATDD-113` (`CON-API`) and `QFAI-ATDD-115` (`CON-DB`) are attributed to `.qfai/contracts/**`, which has no spec owner in the model;
+  - a reference, or a scaffold directory, naming a spec number no spec pack has, **and sitting where no spec owns it either**: `--spec` on that number is itself rejected, so nothing would report it otherwise. A file under the canonical `tests/<layer>/spec-NNNN/**` layout is owned by _that_ spec whatever its annotation says, so the same broken reference inside `tests/integration/spec-0002/**` belongs to `--spec 0002` and to no other run — reading it as a repo-wide blocker in a sibling run reports something that run cannot see;
+  - anything else reported against a repo-level path.
+
+  So a sibling spec's uncovered contract exits 1 on this spec's gate. That is a real limit, not a formality. When it happens: record the finding, its owning spec and why it is not this stage's work as a cross-spec obligation in this stage's evidence, and say so in the completion report — do **not** claim the gate passed, weaken the profile, lower `--fail-on`, or waive it. Closing them is the owning spec's next `/qfai-atdd` run. The repo-wide run belongs to `/qfai-verify`, at the end of the stage.
+
 - Coverage obligations are mandatory:
   - `tests/e2e/**` must cover all required `US-*`.
   - Every `TC-*` must be covered from the directory its declared `Level` routes
@@ -291,7 +298,7 @@ Notes:
 - All required `CON-API` are covered by API tests.
 - All required `CON-DB` are covered by integration tests (`QFAI-ATDD-115`); a contract
   outside the current slice is deferred with `-- x-qfai-status: planned`, not left uncovered.
-- Validation passes: `npx qfai validate --profile atdd --fail-on error`.
+- Validation passes for this spec: `npx qfai validate --profile atdd --fail-on error --spec <spec-id>`.
 - Repository quality gates (format/lint/type/tests/pack) pass with evidence.
 - Evidence file exists and includes work orders + reviewer notes.
 - Completion is approved by a reviewer who did not implement tests.
@@ -398,8 +405,12 @@ Before declaring completion:
 2. Run:
 
    ```bash
-   npx qfai validate --profile atdd --fail-on error
+   npx qfai validate --profile atdd --fail-on error --spec <spec-id>
    ```
+
+   `--spec` scopes the gate to the spec this invocation owns. Omitting it makes
+   the gate report obligations belonging to specs this run never touched, which
+   is how a spec with every obligation discharged still fails to close.
 
 3. Run repository standard gates:
    - format check

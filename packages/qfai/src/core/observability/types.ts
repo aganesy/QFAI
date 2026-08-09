@@ -1,6 +1,5 @@
 /**
  * Observability types — metrics, guidance, drift, and capability profiles.
- * SPEC-0032
  */
 
 export type PerIterationMetric = {

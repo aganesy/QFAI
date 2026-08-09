@@ -619,6 +619,45 @@ describe("a project's own entry is not proof init ran", () => {
       await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
     });
   });
+
+  it("does not accept a redundant spelling of the target as init's own", async () => {
+    // `path.normalize` accepted `../../.qfai/assistant/./skills/<id>` — not
+    // what git writes, but what a project's own note at that path might say —
+    // so a checkout that never ran init read as initialised.
+    await withProject(async (root) => {
+      await seedCanonical(root, ["web-research"], []);
+      const dir = path.join(root, ".agents", "skills");
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(dir, "web-research"),
+        "../../.qfai/assistant/./skills/web-research",
+        "utf-8",
+      );
+
+      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
+
+  it("does not accept a symlinked README as a marker init wrote", async () => {
+    // `stat` followed the link, so a project's own `.agents/README.md` pointing
+    // at another file that happens to mention `.qfai/assistant/` read as
+    // init's — and a checkout that never ran init was told all six surfaces
+    // were missing. Init writes these as plain files.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await mkdir(path.join(root, "docs"), { recursive: true });
+      await writeFile(path.join(root, "docs", "agents.md"), INIT_README_BODY, "utf-8");
+      await mkdir(path.join(root, ".agents"), { recursive: true });
+      await symlink(
+        path.join("..", "docs", "agents.md"),
+        path.join(root, ".agents", "README.md"),
+        "file",
+      );
+
+      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
 });
 
 describe("a canonical document can be broken rather than absent", () => {

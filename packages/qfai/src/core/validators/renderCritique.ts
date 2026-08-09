@@ -14,7 +14,7 @@ import {
 import { issue, readSafe } from "./utils.js";
 
 /**
- * Render Critique Loop validator (SPEC-0021).
+ * Render Critique Loop validator.
  *
  * Ensures that prototyping / implement skill prompts and evidence files
  * follow the Render Critique Loop process:
