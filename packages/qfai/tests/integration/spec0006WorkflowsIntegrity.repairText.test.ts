@@ -172,31 +172,32 @@ const COMMAND_TOKENS: RegExp[] = [
   // not add `.` back to silence a path false positive; widen the lookbehind.
   //
   // THE FULL REGISTRY, `report` / `audit` / `doctor` included. An earlier form
-  // dropped those three because compliant prose MIGHT fire on them ("this check
-  // will report the difference") — a narrowing of a NEGATIVE needle to avoid a
-  // false RED, which is the one move the rule at the head of this list forbids.
-  // The three ALL-GREEN violations that used to be cited as the warrant
-  // (`nextActions: ["doctor"]` / `["report"]` / `["audit"]`) were `details`-side
-  // and left this row's reach when the rendered-surface sweep was removed; their
-  // owner is now named at the pin below. What warrants the full registry HERE is
-  // the rule plus the LABEL: on `message` the equality pin is the closure, and
-  // this token is a labelled restatement of requirement 4 standing beside it.
+  // dropped those three because compliant prose might fire on them — a narrowing of
+  // a NEGATIVE needle to avoid a false RED, the one move the rule above forbids. The
+  // `details`-side warrant once cited for them (`nextActions: ["doctor"]` /
+  // `["report"]` / `["audit"]`) left this row's reach with the rendered-surface
+  // sweep, and its owner is named at the pin below. What warrants the registry HERE
+  // is the rule plus the LABEL: on `message` the pin is the PRIMARY oracle — not the
+  // closure, per below — and this token a labelled restatement of requirement 4.
   //
-  // ITS FALSE-RED RISK IS BOUNDED BY THE EQUALITY PIN ONLY WHERE THE TWO SIDES CAN
-  // DIFFER — not the PROOF this note used to claim. Any `message` differing from
-  // `expectedMessage` reddens the pin, and the composed SENTENCES are token-clean
-  // (measured each round), so over them this token can only ADD a labelled failure
-  // beside an existing red. Over the INTERPOLATED HOST PATH it bounds NOTHING, both
-  // sides carrying it identically: measured, the row run from a checkout named `my
-  // init copy` leaves the pin GREEN and reddens this token ALONE (`1 failed`, one
-  // AssertionError, its own), the lookbehind excluding whitespace and the lookahead
-  // blocking only `\`, `/` and `@` — token 1's space-in-path over-fire above, one
-  // segment wider. The sweep-era bound over `title` and `details` failed the same
-  // way; NEITHER IS PINNED HERE, though `details.modified` is, by the drift suite.
+  // ITS FALSE-RED RISK IS BOUNDED PER EDIT, NOT PER SURFACE: the pin reddens exactly
+  // when an edit makes production's message and this file's `expectedMessage`
+  // DIVERGE, so a fire on text only PRODUCTION moved does sit beside that red, while
+  // text the two sides end up carrying IDENTICALLY it does not bound. That is NOT the
+  // proof this note twice claimed — over `message`, then over the SENTENCES — that a
+  // red here cannot stand ALONE: agreement has at least two measured routes. (1) The
+  // packaged ROOT, which both sides reach through one `getInitAssetsDir()` — from a
+  // checkout named `my init copy` the pin stays GREEN and this token reddens ALONE
+  // (`1 failed`, one AssertionError, its own). (2) A COORDINATED reword of the
+  // SENTENCES, GREEN BY CONSTRUCTION: one needle into BOTH sides of base prod
+  // `1d8eab08` + test `2bff205b` (`reports the difference` -> `is a report of the
+  // difference`; mutants `8c0633e4` / `1d9e89e7`) gives `1 failed | 1 passed`, the
+  // ONE AssertionError this token's, pin and requirements 2 and 3 GREEN — a LONE
+  // FALSE RED, on text still meeting all four items (`report` a bare NOUN there).
   //
-  // CONSTRAINT ON THE MESSAGE, recorded as token 1's is: it may not use those
-  // three as BARE WORDS. The shipped text says "reports", which the trailing `\b`
-  // rejects (measured).
+  // WHICH IS WHAT THE CONSTRAINT COSTS — one argument with the above, not a bound
+  // plus an exception: the message may not use those three as BARE WORDS. It says
+  // "reports", which the trailing `\b` rejects (measured), one inflection off (2).
   new RegExp(`(?<![\\\\/@.\\w-])(?:${CLI_SUBCOMMANDS.join("|")})\\b(?![\\\\/@])`, "i"),
 ];
 
@@ -399,22 +400,23 @@ describe(
         .toMatch(/\binstalled\s+file\b(?:\s+\w+){0,3}\s+never\b(?:\s+\w+){0,3}\s+overwritt/i);
 
       // REQUIREMENT 4 — no imperative naming a `qfai` subcommand as the repair —
-      // over `message`, the surface the contract scopes it to. Each token's source
-      // is in the label, and the label admits BOTH known false positives, because
-      // one that omits them MISDESCRIBES its own failure: token 1 fires on a word
-      // straight after the product name, token 8 on a subcommand word standing
-      // alone in the HOST PATH the message interpolates (measured at its note).
+      // over `message`, the surface the contract scopes it to. Each token's source is
+      // in the label, which admits the over-fires WITHOUT COUNTING OR SITING THEM,
+      // since a label narrower than its token MISDESCRIBES its own failure: token 1
+      // on a word after the product name, token 8 on ANY subcommand word alone.
       //
       // ITS HAYSTACK IS `findings[0].message` AND NOTHING ELSE, which the label
       // states: a SECOND registration's message is swept by nothing here, and
-      // `toHaveLength(1)` above is what reddens for it. The three token observations
-      // are not LOST when that happens — measured, they RAN against `findings[0]` and
-      // PASSED; WHICH registration that is stays order-dependent, and UNMEASURED.
+      // `toHaveLength(1)` above is what reddens for it. The observations are not LOST
+      // when that happens — measured on prod `02b03351`, a second command-bearing
+      // registration added to the drift arm: `1 failed | 1 passed`, the SOLE failure
+      // `toHaveLength(1)`, all eight tokens and the pin GREEN against `findings[0]`,
+      // WHICH registration that is stays order-dependent, and UNMEASURED.
       for (const token of COMMAND_TOKENS) {
         expect
           .soft(
             message,
-            `no refresh command exists, so the repair text must name no command — this sweep reads findings[0].message ONLY, so a second registration is held by the length assertion above and not by this one; two KNOWN FALSE POSITIVES are not violations: token 1 fires on a word placed straight after the product name, and token 8 on a subcommand word standing alone inside the interpolated host path: token /${token.source}/ matched`,
+            `no refresh command exists, so the repair text must name no command — this sweep reads findings[0].message ONLY, so a second registration is held by the length assertion above and not by this one; KNOWN FALSE POSITIVES are not violations: token 1 fires on a word placed straight after the product name, and token 8 on any subcommand word standing alone — in the interpolated host path, or in the message's own prose if it ever uses one as a bare word: token /${token.source}/ matched`,
           )
           .not.toMatch(token);
       }
