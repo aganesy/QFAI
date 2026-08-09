@@ -5312,3 +5312,97 @@ on the title plus its following comment. And nothing was shell-routed — vitest
 `node <entry>` with argv arrays and `shell: false`, since the `.bin/*.cmd` shims cannot be spawned without
 `shell: true` on Node 24, which is the thing the no-shell rule forbids. **33 revert verifications, zero
 `restored=false`.**
+
+### Round-7 verification: three lenses, two real conflicts, and a fixed scope for the last code round
+
+All three returned **REVISE**, and the synthesis re-verified the five contested facts itself rather than
+reconciling on authority alone.
+
+**Unanimous and closed — not to be reopened under any framing**: deleting the rendered-surface sweep was
+correct; the closure `173 passed | 14 skipped (187)` holds at the round-7 blobs; round 7 touched zero
+production lines; `ci:lint` (ten members) and `check-types` pass; both evictions and both declines were
+right; `renderFindingSurface`'s deletion was right; `title` is UNOWNED and routed; the `details` residual is
+the disclosed interval gap owned by `TDD-0036`.
+
+#### Conflict 1 — token 8's bound. The repeat went the other way this time
+
+`implementation-reviewer` said the bound is scoped, not absolute. **`completion-reviewer` certified it as
+"a valid proof"** — and the certification is wrong, refutable from the file's own bytes: token 8's
+lookbehind class **excludes whitespace**, so a checkout under `…\my init copy\…` fires the token while both
+sides of the pin carry the same path, leaving the pin green and the token red alone.
+
+Two things make this the round's most consequential finding rather than merely its largest:
+
+1. It was asserted as **"a PROOF, not a measurement"** — the strongest epistemic claim anywhere in the
+   file — and the same docblock records the *analogous* over-fire for token 1 as **measured**, 55 lines
+   above.
+2. **The reviewer whose job is compliance certified it.** A wrong assertion is a defect; a wrong assertion
+   with a compliance sign-off is a defect that has consumed its own defence.
+
+It also fails in the trust-destroying direction: a developer whose checkout sits under a path like that
+gets a red build whose label says "the repair text must name no command" about a message that names none.
+
+#### Conflict 2 — `npx` in the historical command blocks, resolved by authority *and* fact
+
+`implementation-reviewer` wanted `:2434` / `:3223` rewritten. `completion-reviewer` forbade it, having
+verified that `vitest` resolves from `packages/qfai/node_modules/.bin`. **Record accuracy is
+`completion-reviewer`'s domain and it holds the verified fact — the history stays.** This is the third time
+the `npx` slogan has over-fired on compliant work, and the second time a reviewer inherited the over-broad
+form from a work order of mine.
+
+#### Looked like a conflict and was not
+
+`qa-gatekeeper`'s new `case`-guard witness versus the other two lenses' "MINOR-2 mitigation holds". Different
+byte forms: `qa-gatekeeper` reproduced `prettier -c` exit 1 on the *disclosed* same-line form too. Its new
+form supersedes the **generality** of their confirmations, not their measurements. Worth recording as a
+shape, because two reviewers agreeing does not make a claim general.
+
+#### Six claims that could not be true given another lens's measurement
+
+The synthesis found these by cross-checking rather than by reading each review in isolation, which is the
+argument for reconciling three lenses instead of averaging them:
+
+1. **`06_Test-Cases.md:284`** — two reviewers cited it as carrying clause (a) and **both reported it as
+   independently verified**. It is blank; clause (a) is at 285. They copied it out of this file. **The
+   off-by-one originated here and my work order propagated it**, which is how two independent verifications
+   landed on the same false line number.
+2. `completion-reviewer`'s token-8 certification (above).
+3. `implementation-reviewer`'s "production untouched, seventh round" warranted by a **working-tree-vs-HEAD**
+   diff, which cannot support a seven-round claim. Its conclusion survives via a different measurement; its
+   stated warrant does not. Mine had the same defect and is corrected above.
+4. `implementation-reviewer`'s "the precondition is one `case` label per line, held by `format:check`" —
+   refuted by `e836ae40`, which satisfies the precondition and passes both gates.
+5. `qa-gatekeeper`'s endorsement of "the three token observations are LOST" — `completion-reviewer` measured
+   the loop **running and passing** against `findings[0]`; its description is the accurate one.
+6. **Blob-base hazard, recurring.** A recorded pair was taken against a `doctor.ts` base that is no longer
+   current, so the same semantic mutation had to be re-derived. **Every cited mutant blob is unjoinable
+   unless its base is named** — and blob-as-join-key is the exact ground on which evictions (a)/(d) were
+   declined, so the two must be consistent. Adopted: every blob citation names its base.
+
+#### `implementation-reviewer` named two defects in its own instruments
+
+Recorded because it is the right direction of travel and because both are structural, not incidental:
+
+- **The comment cap it released is weaker than it looks.** An absolute count is satisfiable by deleting
+  *code* faster than prose — which is exactly what round 7 did, count falling 361→356 while the **share
+  rose** 68.8%→71.8%. Hence the definition now records both, with the count binding and the share as the
+  honest signal.
+- **The eviction pool was released without a side-constraint, and that is what manufactured the near-miss**
+  the engineer disclosed against itself. Its words: "a licence to delete is not a licence to delete safely
+  … a defect in MY instruction, not in its execution."
+
+#### The stopping-point judgement, adopted
+
+**Round 8 is warranted, narrowly, and is the last code round.** Scope fixed at one engineer commit to the
+test docblock (the two reach claims, ≤ +2 net comment lines, plus a measured two-token regex widening) and
+the record commits already landed. Anything else did not come from this reconciliation.
+
+**The row's code is at a defensible stop and a round 9 would not be accepted for it**: production untouched
+for seven rounds (comment-stripped, baseline `85bb86ce`), the oracle contract-scoped with a real equality
+closure, both residues measured / owned / routed, every gate green under three independent pairs of hands
+with cited mutants reproduced byte-for-byte. **What is not at a stop is the record** — three consecutive
+rounds shipped a fix containing the class it fixed. So round 8 carries two cheap exit conditions: a
+**mechanical currency check** (grep the row's section for any revision hash other than the landing one,
+before the commit), and a **self-check over the new paragraphs only, by an agent other than their author**.
+
+Then park at `refactor` awaiting the user's decision on `CR-20260807-0001`.
