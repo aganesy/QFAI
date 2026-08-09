@@ -210,3 +210,48 @@ describe("the flattened-link probe does not re-stat what the caller holds", () =
     });
   });
 });
+
+describe("a wrapper that changed under the check is not deleted", () => {
+  it("skips when the content no longer matches the flattened signature", async () => {
+    // Between `isFlattenedLink` reading the file and the removal, an editor or
+    // another process can replace it. Deleting on the strength of the earlier
+    // read destroyed that content without `--force`, and the rollback does not
+    // fire when the symlink then succeeds.
+    await withProject(async (root) => {
+      writeFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.writeFile(...args),
+      );
+      symlinkSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.symlink(...args),
+      );
+      readFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.readFile(...args),
+      );
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      const linkPath = path.join(root, LINK);
+      await rm(linkPath, { recursive: true, force: true });
+      await mkdir(path.dirname(linkPath), { recursive: true });
+      await writeFile(linkPath, FLATTENED, "utf-8");
+
+      // The second read — the one immediately before the delete — sees the
+      // content somebody else just wrote.
+      const theirs = "# mine now\n";
+      let reads = 0;
+      readFileSpy.mockImplementation((actual: FsPromises, file: string, ...rest: never[]) => {
+        if (file !== linkPath) return actual.readFile(file, ...rest);
+        reads += 1;
+        return Promise.resolve(reads === 1 ? FLATTENED : theirs);
+      });
+
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      // Read through the real fs: the spy above answers every read.
+      readFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.readFile(...args),
+      );
+      expect(await readFile(linkPath, "utf-8")).toBe(FLATTENED);
+      expect((await lstat(linkPath)).isSymbolicLink()).toBe(false);
+    });
+  });
+});

@@ -67,6 +67,12 @@ function isMissing(error: unknown): boolean {
  *
  * Kept in step with the README set in `cli/commands/init.ts`. Any one of them
  * is enough: a project with any of the integration surfaces has run init.
+ *
+ * **Known gap.** These are create-only, so a project that already had a file at
+ * one of those paths keeps it and init writes no marker there. If it later has
+ * every wrapper deleted as well, this rule reads it as never initialised. A
+ * marker init always owns would close it, which is a change to what init
+ * writes rather than to what this reads.
  */
 /**
  * The line every one of those READMEs carries.
@@ -168,13 +174,28 @@ async function hasInitSignature(filePath: string): Promise<boolean> {
 }
 
 /** `stat`, or `null` when the path is absent. Any other error propagates. */
-async function statOrNull(filePath: string): Promise<Stats | null> {
+async function statOrNull(filePath: string): Promise<Stats | null | "cycle"> {
   try {
     return await stat(filePath);
   } catch (error) {
     if (isMissing(error)) return null;
+    // The same rule the wrapper target follows: a symlink cycle is structural
+    // damage to the thing being inspected, not a filesystem fault to propagate.
+    // Re-thrown here it exited `qfai validate` with a stack trace for a
+    // `SKILL.md` that points at itself.
+    if ((error as NodeJS.ErrnoException | null)?.code === "ELOOP") return "cycle";
     throw error;
   }
+}
+
+/** What a target actually is, for a message that names it. */
+function describeKind(stats: Stats): string {
+  if (stats.isDirectory()) return "directory";
+  if (stats.isFile()) return "file";
+  if (stats.isFIFO()) return "FIFO";
+  if (stats.isSocket()) return "socket";
+  if (stats.isBlockDevice() || stats.isCharacterDevice()) return "device";
+  return "special file";
 }
 
 async function fileExists(filePath: string): Promise<boolean> {
@@ -401,13 +422,18 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
     // The agent surface has no other check outside `prototyping` / `full`, so
     // `discussion` / `sdd` / `atdd` / `tdd` passed an agent tree the assistant
     // cannot load a single markdown file from.
+    // A skill wrapper names a directory; an agent wrapper names a **regular
+    // file**, not merely something that is not a directory. A FIFO, a socket or
+    // a device passes `!isDirectory()` and can pass `access(R_OK)` as well — and
+    // then the assistant either fails to read it or, on a FIFO, blocks.
     const wantsDirectory = wrapper.kind === "skill";
-    if (wantsDirectory !== target.isDirectory()) {
+    const kindMatches = wantsDirectory ? target.isDirectory() : target.isFile();
+    if (!kindMatches) {
       broken.push({
         relative: wrapper.relative,
-        detail: wantsDirectory
-          ? "resolves to a file, but a skill wrapper names a directory"
-          : "resolves to a directory, but an agent wrapper names a file",
+        detail: `resolves to a ${describeKind(target)}, but ${
+          wantsDirectory ? "a skill wrapper names a directory" : "an agent wrapper names a file"
+        }`,
       });
       continue;
     }
@@ -422,13 +448,15 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       // missing one.
       const skillDoc = path.join(wrapper.absolute, "SKILL.md");
       const doc = await statOrNull(skillDoc);
-      if (doc === null || !doc.isFile()) {
+      if (doc === null || doc === "cycle" || !doc.isFile()) {
         broken.push({
           relative: wrapper.relative,
           detail:
             doc === null
               ? "resolves, but the directory has no SKILL.md"
-              : "resolves, but its SKILL.md is not a file",
+              : doc === "cycle"
+                ? "resolves, but its SKILL.md is a symlink cycle"
+                : `resolves, but its SKILL.md is a ${describeKind(doc)}`,
         });
         continue;
       }
@@ -477,6 +505,7 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       "change",
       [
         "`qfai init` を再実行すると、qfai が所有するこれらのパスは symlink として貼り直されます（`--force` は不要）。ただし内容が link target と一致しない通常ファイルは温存されるので、その場合は中身を確認してから退避してください。",
+        "**canonical 側が壊れている場合（`resolves to a …, but …` / `its SKILL.md is …` / `symlink cycle`）は init では直りません。** canonical asset は create-only なので既存パスを skip し、`--force` でも `copyFile` / `mkdir` が型衝突で失敗します。該当する `.qfai/assistant/**` のパスを退避（または削除）してから `qfai init` を実行してください — 中身は失われるので、先に確認してください。",
         "根本原因が clone 時の平坦化である場合は、先に `git config --global core.symlinks true` を設定してください。repo-local 設定は clone に引き継がれないため、これを直さないと次の clone で同じ状態に戻ります。",
         "Windows では Developer Mode の有効化が必要な場合があります。",
       ].join("\n"),

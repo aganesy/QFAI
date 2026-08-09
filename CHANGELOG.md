@@ -503,6 +503,21 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **An agent wrapper names a regular file, not merely a non-directory.** A
+  FIFO, socket or device passed `!isDirectory()` and could pass `access(R_OK)`
+  as well, so the assistant either failed to read the document or, on a FIFO,
+  blocked — with no finding.
+- **A cyclic `SKILL.md` is reported, not propagated.** The wrapper target's own
+  `ELOOP` was already handled as structural damage; the nested probe re-threw
+  it, so `qfai validate` exited with a stack trace.
+- **The remedy names the canonical path.** A canonical type collision is not
+  cleared by re-running init — the copy is create-only and `--force` fails on
+  the collision — so the printed remedy has to say to move it aside first.
+- **A wrapper that changed under the check is not deleted.** Between
+  `isFlattenedLink` reading the file and the removal, an editor or another
+  process can replace it; deleting on the strength of the earlier read
+  destroyed that content without `--force`, and the rollback does not fire when
+  the symlink then succeeds.
 - **The init marker is QFAI's own, not any file at that path.** `.agents/` and
   `.github/agents/` are conventional directories, so a project's own README in
   one of them made `initialised` true and failed every profile of a project

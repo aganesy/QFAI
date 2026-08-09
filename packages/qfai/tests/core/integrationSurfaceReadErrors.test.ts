@@ -195,3 +195,26 @@ describe("a structurally broken target is a finding, not a crash", () => {
     });
   });
 });
+
+describe("a nested SKILL.md is inspected on the same terms as the wrapper", () => {
+  it("reports a cyclic SKILL.md instead of propagating ELOOP", async () => {
+    // The wrapper target's own `ELOOP` is handled as structural damage; the
+    // nested probe re-threw it, so `qfai validate` exited with a stack trace
+    // for a `SKILL.md` that points at itself.
+    await withProject(async (root) => {
+      await seedCanonical(root);
+      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      await mkdir(path.dirname(wrapper), { recursive: true });
+      await symlink("../../.qfai/assistant/skills/qfai-atdd", wrapper, "dir");
+      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      statSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
+        target.endsWith("SKILL.md") ? Promise.reject(errno("ELOOP")) : actual.stat(target, ...rest),
+      );
+      expect(canonical).toBeTruthy();
+
+      const issues = await validateIntegrationSurface(root);
+      expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-001"]);
+      expect(issues[0]?.message).toContain("its SKILL.md is a symlink cycle");
+    });
+  });
+});

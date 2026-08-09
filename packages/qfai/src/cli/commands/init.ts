@@ -1338,8 +1338,17 @@ async function recreateFlattenedLink(
   linkPath: string,
   target: string,
   type: "dir" | "file",
-): Promise<"created"> {
+): Promise<"created" | "skipped"> {
   const original = await readFile(linkPath, "utf-8");
+  // Re-checked here, not only by the caller: between `isFlattenedLink` reading
+  // the file and this line, an editor or another process can replace it with
+  // content of its own. Deleting on the strength of the earlier read destroyed
+  // that content without `--force`, and the rollback below does not fire when
+  // the symlink then succeeds. If it changed, this is no longer a flattened
+  // link and it is not ours to remove.
+  if (toPosixSeparators(original) !== toPosixSeparators(target)) {
+    return "skipped";
+  }
   await rm(linkPath, { recursive: true, force: true });
   try {
     await mkdir(path.dirname(linkPath), { recursive: true });

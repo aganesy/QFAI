@@ -548,7 +548,7 @@ describe("a canonical SKILL.md has to be a file", () => {
       await mkdir(doc, { recursive: true });
 
       const found = await finding(root);
-      expect(found?.message).toContain("its SKILL.md is not a file");
+      expect(found?.message).toContain("its SKILL.md is a directory");
     });
   });
 });
