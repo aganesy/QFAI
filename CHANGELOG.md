@@ -488,6 +488,14 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The per-spec owner is read positionally, not by pattern search.** The
+  layout is exactly `<testsRoot>/<layer>/spec-NNNN/**`; scanning for that shape
+  anywhere in the path found it above the checkout and inside fixture
+  directories, attributing tests to specs that do not own them.
+- **A nonexistent-spec reference is repo-wide only where no spec owns the
+  file**, and the repo-wide `QFAI-TRACE-*` claim is limited to the findings
+  that have no spec owner — the per-artifact ones are dropped by the scope
+  filter before a scoped checkpoint sees them.
 - **The owner scan stops at the configured tests root.** Test paths are
   absolute, so a checkout that itself lives under `/srv/integration/spec-0002/`
   has an ancestor pair spelled exactly like the canonical layout, and a flat

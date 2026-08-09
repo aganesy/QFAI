@@ -213,40 +213,30 @@ function unknownOwnerDirs(
  * falls back to the token alone.
  */
 function testPathSpecNumber(file: string, testsRoot: string): string | null {
-  // Bounded to the configured tests directory first. `file` is absolute, so a
-  // checkout that itself lives under `/srv/integration/spec-0002/repo` has an
-  // ancestor pair spelled exactly like the canonical layout, and a flat
-  // `tests/integration/a.test.ts` inside it was read as `0002`'s — moving a
-  // repo-wide finding into one spec's run and out of every other's. Nothing
-  // above the tests root is part of this layout, so nothing above it is read.
+  // Read positionally, from the tests root down: the layout `qfai atdd
+  // scaffold` writes is exactly `<testsRoot>/<layer>/spec-NNNN/**`, so the
+  // owner is the second segment of the relative path or there is no owner.
+  //
+  // Scanning for the pattern anywhere in the path kept finding it in places
+  // that are not the layout. Absolute paths put it above the checkout
+  // (`/srv/integration/spec-0002/repo/tests/integration/a.test.ts`), and a
+  // fixture directory puts it below (`.../spec-0002/fixtures/api/spec-0001/`)
+  // — either way a test was attributed to a spec that does not own it, so its
+  // own gate stopped seeing its findings and an unrelated spec's run failed on
+  // them. Position is the whole rule; nothing else is this layout.
   const relative = path.relative(testsRoot, file);
   if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) {
     return null;
   }
-  return specNumberUnderLayer(relative);
+  const [layer, spec] = relative.split(/[\\/]/);
+  if (layer === undefined || spec === undefined) {
+    return null;
+  }
+  return LAYER_DIRS.has(layer.toLowerCase()) ? (/^spec-(\d{4})$/i.exec(spec)?.[1] ?? null) : null;
 }
 
-function specNumberUnderLayer(file: string): string | null {
-  // Bounded to the layer directory, and read from the **end**: `entry.file` is
-  // absolute, so scanning every segment made a checkout that happens to sit
-  // under a directory called `spec-0002` claim every test in it. Only
-  // `<anything>/<integration|api|e2e|atdd>/spec-NNNN/**` counts.
-  //
-  // A `spec-NNNN` whose parent is not a layer directory is not the owner, and
-  // it does not end the search either: in
-  // `tests/integration/spec-0002/fixtures/spec-0001/a.test.ts` the innermost
-  // one is a fixture named after the spec it stands in for, and returning
-  // `null` there lost `0002` — the gate that owns the file. Keep walking
-  // outwards; the nearest qualifying directory wins.
-  const segments = file.split(/[\\/]/);
-  const LAYERS = new Set(["integration", "api", "e2e", "atdd"]);
-  for (let index = segments.length - 1; index > 0; index -= 1) {
-    const number = /^spec-(\d{4})$/i.exec(segments[index] ?? "")?.[1];
-    if (number === undefined) continue;
-    if (LAYERS.has((segments[index - 1] ?? "").toLowerCase())) return number;
-  }
-  return null;
-}
+/** The per-layer directories `qfai atdd scaffold` writes under the tests root. */
+const LAYER_DIRS: ReadonlySet<string> = new Set(["integration", "api", "e2e", "atdd"]);
 
 function specAttribution(
   refs: readonly string[],

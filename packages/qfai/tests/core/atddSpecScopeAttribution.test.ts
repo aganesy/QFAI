@@ -669,6 +669,40 @@ describe("a forbidden reference is owned by the tests that hold it", () => {
     }
   });
 
+  it("does not read a spec number from a fixture below the owning directory", async () => {
+    // `tests/integration/spec-0002/fixtures/api/spec-0001/**` — the inner pair
+    // is spelled exactly like the layout, so scanning from the end returned
+    // `0001` and the file's own gate stopped seeing its findings again. The
+    // owner is the second segment from the tests root, or there is none.
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      const testFile = path.join(
+        root,
+        "tests",
+        "integration",
+        "spec-0002",
+        "fixtures",
+        "api",
+        "spec-0001",
+        "a.test.ts",
+      );
+      await mkdir(path.dirname(testFile), { recursive: true });
+      await writeFile(
+        testFile,
+        ["// QFAI:SPEC-0001:TC-9999", "it('x', () => {});", ""].join("\n"),
+        "utf-8",
+      );
+
+      const roots = { root, specsRoot: path.join(root, ".qfai", "specs") };
+      const scoped = await validateAtddCodeTraceability(root, defaultConfig, {
+        specScope: new Set(["0002"]),
+      });
+      const finding = scoped.find((entry) => entry.code === "QFAI-ATDD-102");
+      expect(finding).toBeDefined();
+      expect(isFindingInSpecScope(finding ?? {}, roots, new Set(["0002"]))).toBe(true);
+    });
+  });
+
   it("keeps looking outwards past a spec-named directory that is not the owner", async () => {
     // `tests/integration/spec-0002/fixtures/spec-0001/**`: the innermost
     // `spec-NNNN` is a fixture named after the spec it stands in for, and

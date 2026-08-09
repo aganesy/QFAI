@@ -111,4 +111,26 @@ describe.each(TREES)("%s", (tree) => {
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).not.toContain("QFAI-TEST-001");
   });
+
+  it("does not call a nonexistent-spec reference repo-wide wherever it sits", async () => {
+    // A file under the canonical `tests/<layer>/spec-NNNN/**` layout is owned
+    // by that spec whatever its annotation says, so the same broken reference
+    // is scoped to that spec's run and dropped from every other. Reading it as
+    // a repo-wide blocker made a sibling run report something it cannot see.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("**and sitting where no spec owns it either**");
+    expect(atdd).not.toContain(
+      "naming a spec number no spec pack has: no spec owns it, and `--spec` on that number is itself rejected, so it belongs to every run",
+    );
+  });
+
+  it("limits the repo-wide TRACE claim to the findings that have no spec owner", async () => {
+    // `QFAI-TRACE-104`..`-116` are filed against the spec's own
+    // `03_Acceptance-Criteria.md` / `04_Business-Rules.md` / `05_Examples.md` /
+    // `06_Test-Cases.md`, and `-002` against its ledger, so the scope filter
+    // drops a sibling's before this checkpoint ever sees them.
+    const checkpoint = flat(await read(tree, CHECKPOINT));
+    expect(checkpoint).toContain("`QFAI-TRACE-*` findings **that have no spec owner** are filed");
+    expect(checkpoint).toContain("**Not the whole `QFAI-TRACE-*` family**");
+  });
 });

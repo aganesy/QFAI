@@ -60,12 +60,17 @@ the placeholders; record the literal commands actually executed in evidence.
    `<report>/validate.spec-<id>.json` instead of the shared `validate.json`, so the checkpoint
    artifact cannot be overwritten by another spec's run.
    **`--spec` scopes the spec-owned rules only, and this checkpoint still fails on the rest.**
-   `QFAI-TEST-001` names a test file, the `QFAI-TRACE-*` family is filed against
-   `.qfai/specs/` itself, and the contract validators run regardless of scope —
+   `QFAI-TEST-001` names a test file, the `QFAI-TRACE-*` findings **that have no spec
+   owner** are filed against `.qfai/specs/` itself, and the contract validators run
+   regardless of scope —
    `QFAI-CONTRACT-*` and `QFAI-DB-002` are filed against `.qfai/contracts/**`, which
    no spec owns. None of the three has a spec owner, so a sibling spec's `it.todo`, a
    `CAP-*` it has not created yet, or a malformed contract it is mid-way through
-   editing, exits 1 here. Record the finding, its owning spec and why it
+   editing, exits 1 here. **Not the whole `QFAI-TRACE-*` family**: the per-artifact
+   ones are filed against the spec's own `03_Acceptance-Criteria.md` /
+   `04_Business-Rules.md` / `05_Examples.md` / `06_Test-Cases.md` and its ledger, so a
+   sibling's are dropped by the scope filter and never reach this checkpoint —
+   treating them as still-blocking reports a failure this run cannot see. Record the finding, its owning spec and why it
    is not this checkpoint's work; do **not** drop `--fail-on error`, weaken the profile, or
    report the checkpoint as passed.
 
