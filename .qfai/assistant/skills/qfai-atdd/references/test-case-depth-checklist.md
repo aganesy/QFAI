@@ -79,6 +79,13 @@ case's assertion can fail. A test that cannot fail satisfies every category.
 Reviewers and test-design-analysts MUST produce this matrix for each spec under review.
 Mark each cell: ✅ covered, ⚠️ partial, ❌ missing.
 
+**Home: `.qfai/evidence/coverage-depth-<spec-id>.md`.** That path is negated in
+the managed `.gitignore` block, so the matrix and the justifications below it
+are committed. The rest of `.qfai/evidence/**` is not: a matrix written into
+`atdd-<spec-id>.md` is deleted from history by the ignore rule, and with it
+every reason a `❌` was accepted — which is the input the PASS/REVISE criteria
+below read. Write it once, in its own file, and link it from the stage evidence.
+
 | US/TC ID | Normal path | Error path | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status |
 | -------- | ----------- | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
 | US-0001  | ✅/⚠️/❌    | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌          | ✅/⚠️/❌      | ✅/⚠️/❌        | —      |
@@ -91,9 +98,16 @@ Mark each cell: ✅ covered, ⚠️ partial, ❌ missing.
   category cells are ✅ and whose Oracle strength cell is ❌ is a REVISE: it has
   cases in every category and no evidence that any of them can fail.
 - **REVISE**: Any cell is ❌ without an explicit justification (e.g., Decision Record).
+- **A justification counts only where it survives.** It goes under the matrix in
+  `.qfai/evidence/coverage-depth-<spec-id>.md`, naming the cell, why the
+  obligation is not coverable at this layer, and the `DR-*` or `CR-*` that
+  carries the decision when one exists. A justification recorded anywhere else
+  under `.qfai/evidence/**` is ignored by Git and cannot be read at review time.
 
 ### Usage
 
 - `test-design-analyst`: Produce this matrix when defining coverage obligations. Flag ❌ cells as gaps.
-- `qa-gatekeeper`: Verify the matrix exists and no unjustified ❌ cells remain.
+- `qa-gatekeeper`: Verify the matrix exists and no unjustified ❌ cells remain. Read
+  `.qfai/evidence/coverage-depth-<spec-id>.md`; a matrix that exists only in an
+  uncommitted stage-evidence file is a missing matrix.
 - `completion-reviewer`: Confirm the matrix was reviewed and any ⚠️ cells have rationale.
