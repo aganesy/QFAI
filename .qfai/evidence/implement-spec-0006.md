@@ -5661,3 +5661,114 @@ does not warrant another cycle.
 The engineer's suggested ledger status was `GREEN`. **Not adopted** — the lifecycle is forward-only and
 `refactor → green` is a backward transition the ledger forbids. The row stays at **`refactor`**, which is
 also the only status with an outbound `review-fix` edge if anything reopens it.
+
+---
+
+### TDD-0038
+
+**T1 singleton, group G5. `todo → red → refactor`.** Test and helper landed at `997b405b`; ledger, brief
+and upstream item at `55122ec2`.
+
+- **TC-Refs**: `TC-0006-0030` leg **(b)** only. Anchors `BR-0006-0020` / `AC-0006-0023`. Legs (a) and (c)
+  are `TDD-0032` (at `refactor`) and `TDD-0039` (next).
+- **Test file**: `packages/qfai/tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts` —
+  chosen over `repairText.test.ts` because the predicate **is** the provenance gate and `absent` is the
+  sibling of that file's `adopter-owned` row, both being entry-less states of the shipped-workflows enum.
+  `repairText`'s apparatus (`COMMAND_TOKENS`, the dispatch mirror) is irrelevant here. A second
+  `TC-0006-0030` marker is established practice in this spec (`TC-0006-0019` through `0022` each appear in
+  two files) and `QFAI-ATDD-112` reports only **missing** TCs, so an extra marker can only add coverage.
+- **Selector**: `TC-0006-0030 (TDD-0038): a shipped name with no provenance entry and absent from disk
+  yields no drift finding, while a live entry-bearing stale file is still reported`
+- **Falsifiability**: `RED failure mode: falsifiability`. **Satisfied-by: TDD-0029**, specifically
+  `ec4b8f31 fix(doctor): key the drift comparison on the provenance record` — before it, `bfc14f1b`
+  iterated the packaged directory, and that commit is what makes an entry-less name unvisitable.
+  First run: `Test Files 1 passed (1)` / `Tests 2 passed (2)`, exit 0, both selector lines named, module
+  loading cleanly. Correctly **not** an `exception`, and nothing was weakened to manufacture a RED.
+- **GREEN**: `2 passed`, exit 0.
+- **Refactor verify**: the 19-selector closure at the final bytes —
+  `Test Files 17 passed | 2 skipped (19)` / `Tests 174 passed | 14 skipped (188)`, exit 0. Delta over the
+  173/187 baseline is exactly the new `it`. The 2 skipped are the `describe.skip` placeholders
+  `spec0006DoctorRemediation.test.ts` (8) and `spec0006DoctorRemediationE2E.test.ts` (6).
+- **`pnpm ci:lint`**: exit 0 across all **ten** members, checked without a pipe.
+- **Production change: none.** `workflowsIntegrity.ts` re-verified at blob `851f72c3` after every mutation;
+  `git diff --stat 6ed88267 997b405b -- packages/qfai/src/` empty.
+- **Comment volume**: 239 / 399 non-blank = **59.9%** (was 147/238 = 61.8%); the new block alone is
+  57.1%. Siblings are 59.7% and 62%. The standing brief's target was met on the first attempt, which is
+  the first time in this slice that has happened.
+
+#### The structural finding: an over-determined silence needs a compound mutation
+
+This refines the brief, which asked for "a mutation that reddens it" — singular. The `absent` state is
+answered by **two independent reader statements**: the comparison-set domain
+(`workflowsIntegrity.ts:293`) and `hasDrifted`'s absence answer (`:249-251`). **Each half alone leaves the
+absence claim green**, so no single-site mutation can falsify it.
+
+Every mutant below has base `851f72c3` — which **is** in the object database (`git cat-file -p 851f72c3`) —
+and is joinable only as base + needle. Needle-uniqueness and blob-differs enforced per edit; the driver
+reverted in a `finally` printing `content-identical=true blob=851f72c3…` on all four runs.
+
+| ID | needle → replacement | mutant | Result |
+| --- | --- | --- | --- |
+| M1 | `Object.keys((await readInstallProvenance(root)).workflows)` → `["qfai-tests.yml", ...Object.keys((await readInstallProvenance(root)).workflows)]` | `beebfa68` | `2 failed`; in this row's `it` **one** AssertionError, the `comparedCount` one — **the absence claim stayed green** |
+| M2 | `return false;` → `return installed.kind === "absent";` | `0eeeaf40` | `2 passed` — **reddens nothing in this row** |
+| M3 | M1 then M2 (sequential; the second needle's pre-edit blob is M1's `beebfa68`) | `eeca2e85` | `2 failed`; this row's `it` reports **three** assertions, including the absence claim |
+| M2 | same, against the **sibling** `drift.test.ts` | `0eeeaf40` | `1 failed | 5 passed` — sole failure is TDD-0029's second `it` |
+
+**That last row is the load-bearing one.** It converts the hand-off claim "the entry-bearing half is
+covered elsewhere" from *derived* to **measured** — the mutation this row cannot see is killed by a named
+sibling assertion, not by assumption.
+
+One honest limit on M1, stated by the implementer rather than glossed: for **this** fixture the injected
+domain is set-equal to the packaged-directory listing (measured: the packaged dir holds exactly
+`qfai-tests.yml` and `qfai-validate.yml`), i.e. equal to what the pre-`ec4b8f31` implementation iterated.
+A single needle cannot restore the real pre-`ec4b8f31` form because that needs an added `readdir` import.
+
+#### A discrepancy in the sources I had quoted as one tree
+
+`06_Test-Cases.md:281`'s Setup for leg (b) is `当該 shipped workflow を削除した tree`. Read literally,
+deleting the **file** leaves the provenance **entry**, which is the `declined` state. The ledger `Selector`
+specifies entry-**absent** and file-absent, which is `absent`. **Different production paths** — `declined`
+is visited and answered by `hasDrifted`; `absent` is never visited — so **one fixture cannot satisfy both**,
+and my work order quoted both as though they described the same tree.
+
+Resolved by following the `Selector`, which agrees with the plan notes and `drift.test.ts`. Routed upstream
+as handoff item 14, with the consequence recorded rather than left implicit: **leg (b) is discharged jointly
+by two rows**, and the joint half is the measured M2 result above.
+
+#### The brief's clause 2 earned its keep on the implementer's own first draft
+
+Its guard #3 comment claimed to be what kept the compound mutation reddening. Refuted by the mutation's own
+recorded needle — `installed.kind === "absent"` answers on the **installed** side while guard #3 constrains
+the **packaged** one — a neighbour **four lines away in its own text**. It struck the claim and left the
+correction visible rather than deleting it silently, and demoted three further draft claims with
+unqualified reach ("no single-site mutation exists", "the only assertion with…", "the only surface on
+which…").
+
+That is the neighbour-consistency clause working on first contact, in a fresh row, before any reviewer saw
+it — which is the whole point of writing the brief.
+
+#### New seam, with its limits stated at the site
+
+`removeProvenanceEntry` in `workflowsIntegrityFixtures.ts`, which strips one name's entry through the
+**production** reader/writer rather than duplicating the record path. Two scoped consequences documented
+where it lives: the round trip preserves `workflows` only (the contract's §2 anticipates a second kind), and
+it is a **silent no-op on an unrecorded name**, so callers assert the postcondition.
+
+#### Cross-row: no widening of the `TDD-0039` precondition is needed
+
+This tree resolves the packaged operand, so `status` is `"modified"` and a branch keyed on
+`status === "skipped_unresolved"` cannot co-fire. The one shape that **would** redden this row is a branch
+registering a check **alongside** the drift one — and `toHaveLength(1)` catches that deliberately, with a
+note left at the assertion for `TDD-0039`'s implementer.
+
+#### One item taken on the record rather than re-measured
+
+"No gate type-checks a test file" was taken from the existing measurement recorded in the helper's header
+(`tsc -b --force --listFiles` naming zero files under `tests/`), not from a fresh run. Stated as inherited.
+
+#### And one process defect of mine
+
+The commit message for `55122ec2` is **truncated mid-sentence** at "comments 239/399 = 59.9" because I built
+it with `printf` and the `%` was read as a format specifier. It is pushed, so it is not being amended — the
+full content is this section, which is where it belonged anyway. Commit messages in this slice are built
+with a heredoc from here on.
