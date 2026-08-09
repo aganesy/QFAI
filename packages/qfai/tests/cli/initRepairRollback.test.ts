@@ -22,11 +22,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type FsPromises = typeof fsPromises;
 
-const { symlinkSpy, writeFileSpy, readFileSpy, renameSpy } = vi.hoisted(() => ({
+const { symlinkSpy, writeFileSpy, readFileSpy, renameSpy, linkSpy } = vi.hoisted(() => ({
   symlinkSpy: vi.fn(),
   writeFileSpy: vi.fn(),
   readFileSpy: vi.fn(),
   renameSpy: vi.fn(),
+  linkSpy: vi.fn(),
 }));
 
 vi.mock("node:fs/promises", async () => {
@@ -37,6 +38,7 @@ vi.mock("node:fs/promises", async () => {
     writeFile: (...args: unknown[]) => writeFileSpy(actual, ...args),
     readFile: (...args: unknown[]) => readFileSpy(actual, ...args),
     rename: (...args: unknown[]) => renameSpy(actual, ...args),
+    link: (...args: unknown[]) => linkSpy(actual, ...args),
   };
 });
 
@@ -72,6 +74,7 @@ beforeEach(() => {
     actual.readFile(...args),
   );
   renameSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.rename(...args));
+  linkSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.link(...args));
 });
 
 describe("a repair that cannot finish leaves the file it found", () => {
@@ -125,11 +128,13 @@ describe("a repair that cannot finish leaves the file it found", () => {
       symlinkSpy.mockImplementation((_actual: FsPromises, _target: string, linkArg: string) =>
         linkArg === linkPath ? Promise.reject(eperm()) : Promise.resolve(undefined),
       );
-      // The restore moves the sidecar back, so this is the call that fails.
-      renameSpy.mockImplementation((actual: FsPromises, from: string, to: string) =>
-        to === linkPath
+      // The restore claims the path with `link`, falling back to an exclusive
+      // write; failing both is what leaves the content in the sidecar.
+      linkSpy.mockImplementation(() => Promise.reject(new Error("simulated restore failure")));
+      writeFileSpy.mockImplementation((actual: FsPromises, file: string, ...rest: never[]) =>
+        file === linkPath
           ? Promise.reject(new Error("simulated restore failure"))
-          : actual.rename(from, to),
+          : actual.writeFile(file, ...rest),
       );
 
       const error = await captureStdout(() =>

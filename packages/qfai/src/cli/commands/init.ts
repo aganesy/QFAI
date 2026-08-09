@@ -4,6 +4,7 @@ import {
   access,
   lstat,
   mkdir,
+  link,
   readdir,
   readFile,
   readlink,
@@ -1367,27 +1368,33 @@ async function recreateFlattenedLink(
     // happen, on the one path where the operator has to know the file is gone.
     // Its outcome decides what the message says, and the content goes into the
     // message when it could not be written back.
-    // Put it back by moving the file itself, not by rewriting its bytes: the
-    // sidecar still holds the original, so the restore is a rename and the
-    // content survives even when the rename fails.
+    // Put it back by claiming the path atomically, not by checking that it is
+    // free and then taking it. `rename` overwrites, and between a check and a
+    // rename another process can create its own file here — an `EEXIST` from
+    // `symlink` says one already did. A restore that destroys somebody else's
+    // file is worse than no restore.
     //
-    // Only into a path that is still free. Between the rename aside and the
-    // failed `symlink`, another process can create its own file here — an
-    // `EEXIST` from `symlink` is exactly that — and `rename` would overwrite
-    // it. A restore that destroys somebody else's file is worse than no
-    // restore, so an occupied path leaves the original in the sidecar and the
-    // message names it.
+    // `link` is the primitive that refuses: it fails with `EEXIST` rather than
+    // replacing, and it puts back the same inode the sidecar holds. Where the
+    // filesystem has no hard links, an exclusive `wx` write is the same promise
+    // by different means. Either way the sidecar stays until one of them has
+    // succeeded, so the content is never only in flight.
     let restoreError: unknown;
-    const occupied = (await safeLstat(linkPath)) !== undefined;
-    if (occupied) {
-      restoreError = new Error("path re-occupied");
-    } else {
+    try {
       try {
-        await rename(sidecar, linkPath);
-      } catch (restoreErr: unknown) {
-        restoreError = restoreErr;
+        await link(sidecar, linkPath);
+      } catch (linkErr: unknown) {
+        const code = (linkErr as NodeJS.ErrnoException | null)?.code;
+        if (code === "EEXIST") throw linkErr;
+        // `EPERM` / `ENOSYS` / `EXDEV`: no hard links here, not an occupied
+        // path. `wx` refuses an existing path in the same breath as creating.
+        await writeFile(linkPath, original, { encoding: "utf-8", flag: "wx" });
       }
+      await rm(sidecar, { recursive: true, force: true });
+    } catch (restoreErr: unknown) {
+      restoreError = restoreErr;
     }
+    const occupied = (restoreError as NodeJS.ErrnoException | null)?.code === "EEXIST";
     // Two different failures, and the operator acts on them differently: the
     // path is occupied by a file this process must not touch, or the rename
     // failed for its own reason. Either way the content is on disk, in the

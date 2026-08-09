@@ -291,6 +291,12 @@ async function canonicalKindProblem(wrapper: Wrapper, stats: Stats): Promise<str
   return doc.isFile() ? null : `canonical SKILL.md is a ${describeKind(doc)}`;
 }
 
+/** Whether `candidate` is `base` itself or sits under it. */
+function isInside(base: string, candidate: string): boolean {
+  const relative = path.relative(base, candidate);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
 /** The message for a path that is damaged rather than absent or usable. */
 function describeDamage(state: PathState, subject: string): string {
   switch (state.kind) {
@@ -745,6 +751,27 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       broken.push({
         relative: wrapper.relative,
         detail: `resolves to ${toPosix(here)}, outside the project canonical ${toPosix(canonical)}`,
+      });
+      continue;
+    }
+    // And the canonical itself has to be **in** the project. Replace the
+    // canonical document with a symlink to a readable file of the right kind
+    // outside the repository and both sides of the comparison above follow it
+    // to the same external path, so they agree — while the assistant loads
+    // instructions this project does not own. `skills.integrity` would say so,
+    // but it runs under `full` alone, so `discussion` / `sdd` / `atdd` / `tdd`
+    // reported a healthy surface. Reported against the canonical, once, because
+    // one document is one thing to repair.
+    if (
+      realRoot !== null &&
+      canonical !== null &&
+      !isInside(realRoot, canonical) &&
+      !damagedCanonicals.has(wrapper.canonicalRelative)
+    ) {
+      damagedCanonicals.add(wrapper.canonicalRelative);
+      broken.push({
+        relative: wrapper.canonicalRelative,
+        detail: `canonical document resolves outside the project: ${toPosix(canonical)}`,
       });
       continue;
     }

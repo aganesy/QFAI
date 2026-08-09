@@ -940,6 +940,33 @@ describe("every finding this rule reports has a remedy that changes something", 
   });
 });
 
+describe("the canonical itself has to be in the project", () => {
+  it("reports a canonical that is a symlink to an outside document", async () => {
+    // Both sides of the resolved-path comparison follow it to the same
+    // external path, so they agree — while the assistant loads instructions
+    // this project does not own. `skills.integrity` would say so, but it runs
+    // under `full` alone.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, [], ["qa-gatekeeper"]);
+      await wireAll(root, [], ["qa-gatekeeper"]);
+      const outside = path.join(root, "..", `${path.basename(root)}-theirs`);
+      await mkdir(outside, { recursive: true });
+      await writeFile(path.join(outside, "qa-gatekeeper.md"), "# theirs\n", "utf-8");
+      const canonical = path.join(root, ".qfai", "assistant", "agents", "qa-gatekeeper.md");
+      try {
+        await rm(canonical, { force: true });
+        await symlink(path.join(outside, "qa-gatekeeper.md"), canonical, "file");
+
+        const found = await finding(root);
+        expect(found?.message).toContain("canonical document resolves outside the project");
+      } finally {
+        await rm(outside, { recursive: true, force: true });
+      }
+    });
+  });
+});
+
 describe("a target can resolve and still be unusable", () => {
   it("reports a canonical document that cannot be read", async () => {
     // `stat` reads metadata, which a mode can allow while the body stays shut —

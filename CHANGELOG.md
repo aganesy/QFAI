@@ -503,6 +503,14 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The restore claims the path atomically.** Checking that it is free and
+  then renaming are two operations, and `rename` overwrites — so a file
+  created in between was destroyed by the rollback. `link` refuses an existing
+  path instead, with an exclusive write as the fallback.
+- **A canonical that resolves outside the project is reported.** Replace it
+  with a symlink to a readable file of the right kind and both sides of the
+  resolved-path comparison follow it to the same external path, so they agree
+  while the assistant loads instructions the project does not own.
 - **A symlinked ancestor of an integration directory is named.** `.claude`
   pointing at an external tree leaves `.claude/skills` a plain directory, so
   the probe on the directory said nothing while every relative wrapper under
