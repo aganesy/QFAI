@@ -22,6 +22,77 @@
   target does not resolve. A directory the project does not have is not a
   finding, and entries qfai does not own are left alone.
 
+### Changed
+
+- **The Coverage Depth Matrix has a committed home.** `/qfai-atdd` gates
+  completion on it three times — Mandatory Output 2, a Definition-of-Done
+  condition and a Not-done criterion — and `qa-gatekeeper` REVISEs when it is
+  absent, but nothing said where it goes. The only file the skill mandates
+  writing is `.qfai/evidence/atdd-<spec-id>.md`, whose eleven Required sections
+  had no slot for it and which the managed `.gitignore` block ignores, so the
+  judgement that discharges those gates — why a given `❌` cell is acceptable —
+  was guaranteed never to reach a commit, and "unjustified ❌" was unfalsifiable
+  for every later reader. The matrix and its per-`❌` justifications now go to
+  `.qfai/evidence/coverage-depth-<spec-id>.md`, negated in the managed block
+  alongside Change Requests and decision records; the stage evidence file gains
+  a section that links to it and carries the totals. `qa-gatekeeper` treats a
+  matrix that exists only inside the ignored stage evidence as a missing matrix.
+  Existing projects pick the negation up on the next `qfai init`; no ignore line
+  is removed, so nothing previously tracked becomes untracked.
+- **A governance negation is checked against real gitignore globs, and against
+  the whole file.** Git applies the last matching pattern, so a negation is
+  effective only when no ignore line below it matches the same path — and both
+  checks got that wrong. The root check read the managed block alone, so a
+  project rule appended _after_ the block (`.qfai/evidence/*.md`) won while the
+  check called the negations effective and returned early. The leaf
+  `.qfai/evidence/.gitignore` check compared string prefixes, which sees `*` and
+  `.qfai/evidence/*` but not `*.md` or its double-star form — the patterns that
+  match `coverage-depth-*.md`, `decision-*.md` and `change-request-*.md`
+  exactly. Both now use one matcher that implements the anchoring, directory
+  and star rules, over the whole file. The repair itself was already correct;
+  only the detection short-circuited it.
+- **A duplicated managed block no longer loses the lines only its later copy
+  carries.** A past duplicate-append bug left some projects with two blocks
+  separated by their own entries. `removeManagedBlock` strips all of them but
+  the rebuild read only the first, so a line living exclusively in the later
+  block — `.qfai/state.json`, for one — was deleted and never written back, and
+  local run state became committable on the next `qfai init`. The blocks are
+  merged in document order before the rebuild and collapse to one.
+- **Re-init no longer resurrects an ignore line a project deleted.**
+  `ensureRootGitignoreEntries` rewrote the managed block from the canonical list
+  whenever its freshness check failed — and shipping a new governance negation
+  is exactly what makes it fail. A project that had removed `.qfai/evidence/*`
+  to track its own audit trail got that line back from the very release meant to
+  widen tracking. **Every** block now keeps its own ignore lines and only gains
+  the governance negations it is missing — a block still carrying retired lines
+  is not migrated wholesale either, because age and intent cannot be told apart
+  from the file and a project can carry a retired line _and_ have deleted
+  `.qfai/evidence/*` on purpose. Retired lines are dropped, one has a named
+  successor, and no ignore line is ever re-added. A project with no managed
+  block still gets the full canonical one. If you deleted a line you now want
+  back, add it to the block yourself; `qfai init` will preserve it.
+- **`qfai init` migrates a legacy `.qfai/evidence/.gitignore`.** Earlier
+  versions wrote a per-directory ignore whose first line is `*`. Git applies the
+  deepest matching file, so that `*` beat every root-level negation and the
+  governance records — Change Requests, decision records, and now the Coverage
+  Depth Matrix — stayed ignored however correct the managed block was. The
+  leaf negations are appended to that file when it exists; nothing else in it is
+  touched.
+- **`qfai init --force` regenerates `assistant/agents`, not only
+  `assistant/skills`.** Every other `.qfai/**` path is create-only, so a
+  correction to an agent definition reached new projects and nobody else — an
+  installed repository kept the old reviewer instructions with no command that
+  would update them. `agents/` is generated in the same sense `skills/` is.
+  **`assistant/manifest/` is not touched at all**, `agent-catalog.yml`
+  included: `qfai-configure` is the shipped entrypoint for editing those
+  declarative manifests, so forcing the catalog would replace a taxonomy
+  adjustment made through the supported path, and nothing migrates it back —
+  `--upgrade-assistant-tree` deliberately does not walk `manifest/`. The cost
+  is that `agent-catalog.yml#developer_instructions` can drift from
+  `assistant/agents/*.md` in an installed project; drift is visible and
+  repairable, a silently overwritten taxonomy is neither. `specs/`,
+  `contracts/` and `steering/` stay create-only.
+
 ### Fixed
 
 - **The template root is identified, not just found.** Candidates were tried
