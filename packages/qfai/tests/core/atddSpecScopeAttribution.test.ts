@@ -341,6 +341,36 @@ describe("an unknown US/TC reference is scoped by the spec its token names", () 
     });
   });
 
+  it("keeps a typo in the spec segment inside the owning spec's own tests", async () => {
+    // The token is the thing that was mistyped, so attributing the finding to
+    // it alone hands the report to a spec that has nothing to do with the
+    // file. `qfai atdd scaffold` writes `tests/integration/spec-NNNN/**`, so
+    // the directory names the real owner: the completion gate of the spec that
+    // owns the file has to see its own broken annotation.
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      const testFile = path.join(root, "tests", "integration", "spec-0002", "typo.test.ts");
+      await mkdir(path.dirname(testFile), { recursive: true });
+      await writeFile(
+        testFile,
+        ["// QFAI:SPEC-0001:TC-9999", "it('x', () => {});", ""].join("\n"),
+        "utf-8",
+      );
+
+      const scoped = await validateAtddCodeTraceability(root, defaultConfig, {
+        specScope: new Set(["0002"]),
+      });
+      expect(scoped.map((entry) => entry.code)).toContain("QFAI-ATDD-102");
+
+      // The spec the token names still owns it too — both gates report it,
+      // which is what makes either one able to catch it.
+      const other = await validateAtddCodeTraceability(root, defaultConfig, {
+        specScope: new Set(["0001"]),
+      });
+      expect(other.map((entry) => entry.code)).toContain("QFAI-ATDD-102");
+    });
+  });
+
   it("keeps an unknown contract reference repo-wide", async () => {
     // A `CON-API-*` token names no spec, so there is nothing to attribute it
     // to — the same documented limit `QFAI-ATDD-113` has.

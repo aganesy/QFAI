@@ -91,10 +91,17 @@
 
 ### Fixed
 
-The three layers also scan the same input set now: the word boundaries the
-pre-build lint carried made `spec-9999suffix` invisible to it while the
-post-build guard and the smoke test both caught the `spec-9999` inside it —
-the same distributed content passing one layer and failing another.
+- **An unknown reference has two owners, and either one keeps it in scope.**
+  Attribution used the token alone, but the token is the thing that may be
+  mistyped: a test under `tests/integration/spec-0002/**` annotated
+  `QFAI:SPEC-0001:TC-9999` was attributed to `0001`, so `--spec 0002` — the
+  completion gate of the spec that owns the file — never saw its own broken
+  annotation, and only an unrelated spec's run reported it. A canonical
+  per-spec test directory is an owner too.
+  The three layers also scan the same input set now: the word boundaries the
+  pre-build lint carried made `spec-9999suffix` invisible to it while the
+  post-build guard and the smoke test both caught the `spec-9999` inside it —
+  the same distributed content passing one layer and failing another.
 
 - **The still-blocking families a `--spec` checkpoint names include the
   contracts.** `runTddValidators` runs `validateContracts` regardless of scope,

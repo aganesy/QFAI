@@ -79,9 +79,23 @@ function narrowToScope(
   const narrowUnknown = (entries: AtddUnknownRef[]): AtddUnknownRef[] =>
     entries.filter((entry) => {
       if (entry.kind !== "us" && entry.kind !== "tc") return true;
-      const number = OWNING_SPEC_RE.exec(entry.token)?.[1];
-      if (number === undefined || !declaredSpecs.has(number)) return true;
-      return scope.has(number);
+      // Two owners, and either one in scope keeps the finding.
+      //
+      // The token names one — that is the spec whose gate will report it, which
+      // is why a sibling's typo is dropped from this run. But the **test file**
+      // names one too when it sits in a canonical per-spec directory, and the
+      // token is exactly the thing that may be mistyped: a test under
+      // `tests/integration/spec-0002/**` whose annotation says `SPEC-0001` was
+      // attributed to `0001` alone, so `--spec 0002` — the completion gate of
+      // the spec that owns the file — never saw its own broken annotation and
+      // only an unrelated spec's run reported it.
+      const owners = new Set<string>();
+      const fromToken = OWNING_SPEC_RE.exec(entry.token)?.[1];
+      if (fromToken !== undefined && declaredSpecs.has(fromToken)) owners.add(fromToken);
+      const fromPath = testPathSpecNumber(entry.file);
+      if (fromPath !== null && declaredSpecs.has(fromPath)) owners.add(fromPath);
+      if (owners.size === 0) return true;
+      return Array.from(owners).some((owner) => scope.has(owner));
     });
 
   return {
@@ -154,6 +168,23 @@ function owningSpecDirs(
  * keeps the previous behaviour for a malformed ref rather than dropping the
  * finding's location entirely.
  */
+/**
+ * The spec a canonical per-spec test directory names, e.g. `spec-0002` in
+ * `tests/integration/spec-0002/a.test.ts`.
+ *
+ * `qfai atdd scaffold` writes that layout, so it is the file's own owner
+ * whatever its annotations say. Anything else — a flat test directory, a
+ * project that groups its tests differently — has no owner from its path and
+ * falls back to the token alone.
+ */
+function testPathSpecNumber(file: string): string | null {
+  for (const segment of file.split(/[\\/]/)) {
+    const number = /^spec-(\d{4})$/i.exec(segment)?.[1];
+    if (number !== undefined) return number;
+  }
+  return null;
+}
+
 function specAttribution(
   refs: readonly string[],
   specsRoot: string,
