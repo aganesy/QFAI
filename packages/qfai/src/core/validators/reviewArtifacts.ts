@@ -13,6 +13,17 @@ const ALLOWED_VERSIONS = new Set(["1.0", "2.0"]);
 const ALLOWED_ROSTER_STATUS = new Set(["PASS", "FAIL", "NA"]);
 const ALLOWED_OVERALL_STATUS = new Set(["PASS", "FAIL"]);
 
+/**
+ * The two forms `evidence-revision.md` defines, and nothing else.
+ *
+ * A git rev — abbreviated or full — or `working-tree+` and the SHA-256 the
+ * four-step content-address procedure produces. The length is the point: a
+ * short suffix is what a `git status --porcelain` digest looks like, and that
+ * spelling is forbidden because it does not move when the file under review is
+ * edited, which is the one thing the field exists to detect.
+ */
+const REVISION_FORM = /^(?:[0-9a-f]{7,64}|working-tree\+[0-9a-f]{64})$/i;
+
 export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
   const reviewRoot = path.join(root, ".qfai", "review");
   const issues: Issue[] = [];
@@ -228,6 +239,18 @@ async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
   const revision = parsed.revision;
   if (revision !== undefined && !readString(revision)) {
     violations.push("`revision` は非空文字列が必須です（省略は可）");
+  } else if (typeof revision === "string" && !REVISION_FORM.test(revision.trim())) {
+    // Absence is a warning because existing packs predate the field; a value
+    // that is present is checked, because the form it takes is what makes the
+    // gate mechanical. `working-tree+<porcelain digest>` was the old spelling
+    // and reads as a legitimate value while being exactly the digest that does
+    // not move when the file under review is edited — a stale verdict passing
+    // the freshness check the field exists for.
+    violations.push(
+      "`revision` の形式が不正です。git rev (7-64 hex) か `working-tree+<64 hex>` " +
+        "（content hash）を指定してください。`working-tree+<porcelain digest>` は" +
+        "内容が変わっても動かないため受理しません",
+    );
   }
 
   const missingRevision =

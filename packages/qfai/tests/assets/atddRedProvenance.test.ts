@@ -1197,7 +1197,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
     expect(revision).toContain("**`Audited evidence hash`**");
-    expect(revision).toContain("with the reviewer-appended fields");
+    // What it covers is defined once, in the baseline; this reference points.
+    expect(revision).toContain("the named subject for that observation");
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("`Audited evidence hash` is **recomputed** here");
     expect(implement).toContain(
@@ -1400,6 +1401,40 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(baseline).toContain("**RED observation**");
     expect(baseline).toContain("**GREEN observation**");
     expect(baseline).toContain("**Completion review**");
+  });
+
+  it("states the audit-hash extraction in one place only", async () => {
+    // The reference still described the old whole-section-minus-three-fields
+    // shape, so a reviewer following it got a value neither the baseline nor
+    // gate item 10 would reproduce.
+    const revision = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(revision).toContain("**What it covers is the named subject for that observation**");
+    expect(revision).toContain("Do not restate it here and do not derive it by subtraction");
+    expect(revision).not.toContain(
+      "the entry with the reviewer-appended fields (`Spec review`, `Code quality review`, `Prototype parity`) removed",
+    );
+  });
+
+  it("hashes the obligation reference the row's Layer selects", async () => {
+    // An ATDD-owned row has no `TC-ref`, so naming only that one left its
+    // obligation outside every hash — rewritable to a different requirement
+    // after the PASS without moving a value.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("the obligation reference the row's `Layer` selects");
+    expect(baseline).toContain("an ATDD-owned row has no `TC-ref`");
+  });
+
+  it("puts the shared-artifact block in the completion subject", async () => {
+    // These reviewers are the ones who audit it, so leaving it out let the
+    // re-runs and re-taken proofs be edited without moving either hash.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("the `Shared-artifact re-verify` block when the row has one");
   });
 
   it("keeps the final Revision out of the RED subject", async () => {

@@ -324,7 +324,11 @@ post-escalation verification review of a user-named fix.
      heading line through the line before the next `###` heading that names a
      `TDD-` id, or the next `##` / `#` heading, or end of file — each taking
      only its own fields, in the order the contract lists them:
-     - **RED observation**: `TDD-ID`, `TC-ref`, `RED test hash`, the row's own
+     - **RED observation**: `TDD-ID`, the obligation reference the row's
+       `Layer` selects (`TC-ref`, or `US-ref` on an `E2E` row and `CON-API-ref`
+       on an `API` row — an ATDD-owned row has no `TC-ref`, so naming only that
+       one left its obligation outside every hash and let it be rewritten to a
+       different requirement after the PASS), `RED test hash`, the row's own
        transient revision (`RED revision` or `Falsifiability revision`), and the
        RED pair or the falsifiability trio with `RED failure mode`. **Not
        `Revision`**: that field names the tree the GREEN landed at and does not
@@ -333,9 +337,12 @@ post-escalation verification review of a user-named fix.
      - **GREEN observation**: the RED subject plus `Revision`, the GREEN pair and
        `Oracle proof`.
      - **Completion review** (`completion-reviewer` / `implementation-reviewer`):
-       the GREEN subject plus `Refactor verify command` / `result` and, from every
-       `### Round N` block the row carries, that block's **phase-authored**
-       fields only. `Round N: reviewer verdict` is written by these reviewers
+       the GREEN subject plus `Refactor verify command` / `result`, the
+       `Shared-artifact re-verify` block when the row has one — it records the
+       earlier rows' re-runs and re-taken proofs, which these reviewers are the
+       ones who audit, so leaving it out let it be edited or deleted without
+       moving either hash — and, from every `### Round N` block the row
+       carries, that block's **phase-authored** fields only. `Round N: reviewer verdict` is written by these reviewers
        after they have read the block, so taking the whole block put their own
        line inside what they hashed.
 

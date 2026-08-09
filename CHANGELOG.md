@@ -488,6 +488,17 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The audit-hash extraction is stated in one place.** The reference still
+  described the old whole-section shape, so a reviewer following it produced a
+  value neither the baseline nor gate item 10 would reproduce.
+- **The RED subject hashes the obligation reference the row's `Layer`
+  selects.** An ATDD-owned row has no `TC-ref`, so its obligation sat outside
+  every hash and could be rewritten after the PASS.
+- **The completion subject covers the `Shared-artifact re-verify` block**,
+  which those reviewers are the ones who audit.
+- **`QFAI-REVIEW-009` validates the form of a `revision` that is present.**
+  Any non-empty string passed, so the porcelain digest the reference forbids
+  by name still cleared the machine gate.
 - **The RED subject holds the transient revision, not the final one.**
   `Revision` names the tree the GREEN landed at, so including it put a field
   into the subject that appeared later and made every correct RED PASS stale

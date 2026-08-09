@@ -73,10 +73,29 @@ describe("review pack revision", () => {
   it("accepts the uncommitted-tree form", async () => {
     const issues = await withPack({
       ...baseSummary(),
-      revision: "working-tree+9f2c1ab",
+      // The content hash the four-step procedure produces: SHA-256, 64 hex.
+      revision: "working-tree+" + "a".repeat(64),
     });
 
     expect(issues.filter((i) => i.code === "QFAI-REVIEW-009")).toEqual([]);
+    expect(issues.filter((i) => i.code === "QFAI-REVIEW-007")).toEqual([]);
+  });
+
+  it("rejects the porcelain digest the reference forbids", async () => {
+    // It reads as a legitimate value while being exactly the digest that does
+    // not move when the file under review is edited, so a stale verdict passed
+    // the freshness check this field exists for.
+    const issues = await withPack({ ...baseSummary(), revision: "working-tree+9f2c1ab" });
+    const schema = issues.filter((i) => i.code === "QFAI-REVIEW-007");
+
+    expect(schema).toHaveLength(1);
+    expect(schema[0]?.message).toContain("porcelain digest");
+  });
+
+  it("rejects a value that is neither a rev nor a content hash", async () => {
+    const issues = await withPack({ ...baseSummary(), revision: "yesterday" });
+
+    expect(issues.some((i) => i.code === "QFAI-REVIEW-007")).toBe(true);
   });
 
   it("rejects a present-but-empty revision", async () => {

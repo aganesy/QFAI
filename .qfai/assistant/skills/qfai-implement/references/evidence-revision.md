@@ -58,14 +58,16 @@ SHA-256 of its bytes`, sorted by path in byte order. Join the records with
   justifications they accept — outside every address the gate checks: edited
   after a PASS they leave `Reviewed revision` unchanged, and gate item 10 reads
   the old verdict as fresh. Each reviewer therefore records an **`Audited
-evidence hash`** beside its `Reviewed revision`, over the row's
-  **phase-authored** entry — the entry with the reviewer-appended fields
-  (`Spec review`, `Code quality review`, `Prototype parity`) removed, which is
-  exactly what the reviewer read — plus `coverage-depth-<spec-id>.md` where the
-  row has one. Same manifest form as `RED test hash` (`path + NUL + blob hash`,
-  sorted by path), so the boundary is the same for the reviewer and for whoever
-  recomputes it. Gate item 10 recomputes it; a mismatch means the audited
-  evidence moved after the verdict, and the verdict is not fresh.
+evidence hash`** beside its `Reviewed revision`. **What it covers is the
+  named subject for that observation** — RED, GREEN or completion review —
+  defined once in
+  `constitution/shared-skill-delegation-baseline.md#reviewer-response-template`.
+  Do not restate it here and do not derive it by subtraction: an entry that goes
+  on growing means "the section minus what is written later" is a different
+  value for every reader, and each observation is judged against the fields that
+  existed when it was taken. Gate item 10 recomputes each verdict against its
+  own subject; a mismatch means the audited evidence moved after the verdict,
+  and the verdict is not fresh.
 
   **A `git status --porcelain` digest is not sufficient**, which is what this
   field used to specify. Porcelain names the changed paths and their states, so
