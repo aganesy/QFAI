@@ -255,3 +255,82 @@ describe("a wrapper that changed under the check is not deleted", () => {
     });
   });
 });
+
+describe("the rollback does not overwrite a file created in the gap", () => {
+  it("leaves a concurrently created file alone and reports it instead", async () => {
+    // Between the `rm` and the `symlink`, another process can create its own
+    // file at the path — an `EEXIST` from `symlink` is exactly that. The
+    // default `w` flag truncated it and wrote the old flattened content over
+    // the top, so the repair destroyed the very thing its rollback exists to
+    // protect.
+    await withProject(async (root) => {
+      writeFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.writeFile(...args),
+      );
+      symlinkSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.symlink(...args),
+      );
+      readFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.readFile(...args),
+      );
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      const linkPath = path.join(root, LINK);
+      await rm(linkPath, { recursive: true, force: true });
+      await mkdir(path.dirname(linkPath), { recursive: true });
+      await writeFile(linkPath, FLATTENED, "utf-8");
+
+      // The other process wins the race: it writes its file after the `rm`,
+      // and `symlink` fails with the `EEXIST` that announces it.
+      const theirs = "# written between the rm and the symlink\n";
+      symlinkSpy.mockImplementation(async (actual: FsPromises, ...args: never[]) => {
+        await actual.writeFile(linkPath, theirs, "utf-8");
+        return actual.symlink(...args);
+      });
+
+      const output = await captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: false, yes: true }),
+      ).catch((error: unknown) => (error instanceof Error ? error.message : String(error)));
+
+      expect(await readFile(linkPath, "utf-8")).toBe(theirs);
+      // The operator is told the restore did not happen and given the content.
+      expect(String(output)).toContain(FLATTENED);
+    });
+  });
+});
+
+/**
+ * POSIX only, and not because of a tooling limitation.
+ *
+ * On Windows `path.relative` yields the target *with* backslashes, so a
+ * backslashed file is the native spelling and repairing it is correct. The
+ * scenario only exists where the target is written with `/` and a backslash is
+ * an ordinary character in a filename — which is every other platform. Faking
+ * `process.platform` would not reproduce it either: the target itself would
+ * still be backslashed. CI runs this on ubuntu.
+ */
+describe.skipIf(process.platform === "win32")(
+  "a backslash spelling is not a flattened link on POSIX",
+  () => {
+    it("preserves a file whose only resemblance is a folded separator", async () => {
+      // Folding the separator on POSIX made a hand-maintained
+      // `..\..\.qfai\assistant\skills\...` — a regular file nobody asked init
+      // to own — compare equal to the real link target, so it was deleted
+      // without `--force`.
+      await withProject(async (root) => {
+        await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+        const linkPath = path.join(root, LINK);
+        const backslashed = FLATTENED.split("/").join("\\");
+        await rm(linkPath, { recursive: true, force: true });
+        await mkdir(path.dirname(linkPath), { recursive: true });
+        await writeFile(linkPath, backslashed, "utf-8");
+
+        await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+        expect(await readFile(linkPath, "utf-8")).toBe(backslashed);
+        expect((await lstat(linkPath)).isSymbolicLink()).toBe(false);
+      });
+    });
+  },
+);

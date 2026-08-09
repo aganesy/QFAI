@@ -1346,7 +1346,7 @@ async function recreateFlattenedLink(
   // that content without `--force`, and the rollback below does not fire when
   // the symlink then succeeds. If it changed, this is no longer a flattened
   // link and it is not ours to remove.
-  if (toPosixSeparators(original) !== toPosixSeparators(target)) {
+  if (toComparableTarget(original) !== toComparableTarget(target)) {
     return "skipped";
   }
   await rm(linkPath, { recursive: true, force: true });
@@ -1361,16 +1361,32 @@ async function recreateFlattenedLink(
     // message when it could not be written back.
     let restoreError: unknown;
     try {
-      await writeFile(linkPath, original, "utf-8");
+      // `wx`, not the default `w`: between the `rm` above and the failed
+      // `symlink`, another process can create its own file at this path — an
+      // `EEXIST` from `symlink` is exactly that — and the default flag
+      // truncates it and writes the old flattened content over the top. A
+      // restore that destroys somebody else's file is worse than no restore,
+      // so this writes only into a path that is still free and reports the
+      // rest, content included, for the operator to put back by hand.
+      await writeFile(linkPath, original, { encoding: "utf-8", flag: "wx" });
     } catch (restoreErr: unknown) {
       restoreError = restoreErr;
     }
+    // Two different failures, and the operator acts on them differently: the
+    // path is occupied by a file this process must not touch, or it is empty
+    // and the restore failed for its own reason. Saying "存在しません" for the
+    // first would send them looking for a file that is sitting right there.
+    const occupied = (restoreError as NodeJS.ErrnoException | null)?.code === "EEXIST";
     const restored =
       restoreError === undefined
         ? "元のファイルは復元しました。"
         : [
-            `元のファイルの復元にも失敗しました: ${describeError(restoreError)}`,
-            `${linkPath} は現在存在しません。元の内容は次のとおりです:`,
+            occupied
+              ? `${linkPath} には別プロセスが作成したファイルが存在するため、復元しませんでした（上書きを避けています）。元の内容は次のとおりです:`
+              : [
+                  `元のファイルの復元にも失敗しました: ${describeError(restoreError)}`,
+                  `${linkPath} は現在存在しません。元の内容は次のとおりです:`,
+                ].join("\n"),
             original,
           ].join("\n");
     if (isEpermOnWindows(err)) {
@@ -1411,13 +1427,22 @@ async function recreateFlattenedLink(
  * `path.normalize` widened it the same way for a different input:
  * `../../.qfai//assistant/x` and `../../.qfai/assistant/./x` are not the bytes
  * git writes, but normalize to them. The only difference this tolerates is the
- * path separator, because git writes `/` and the target is built with
- * `path.relative`, which yields `\\` on Windows. Everything else takes the
- * preserve path, which is the safe direction to be wrong in.
+ * path separator, and **only on Windows**, because git writes `/` and the
+ * target is built with `path.relative`, which yields `\\` there. Everything
+ * else takes the preserve path, which is the safe direction to be wrong in.
  */
-/** Separator-insensitive, and nothing else — see {@link isFlattenedLink}. */
-function toPosixSeparators(value: string): string {
-  return value.split("\\").join("/");
+/**
+ * Separator-insensitive on Windows, byte-exact everywhere else — see
+ * {@link isFlattenedLink}.
+ *
+ * On POSIX a backslash is an ordinary character in a filename, and folding it
+ * made a hand-maintained `..\\..\\.qfai\\assistant\\skills\\...` — a regular
+ * file nobody asked init to own — compare equal to the
+ * `../../.qfai/assistant/...` git actually writes, so it was deleted without
+ * `--force`. The tolerance exists for one platform; it applies there only.
+ */
+function toComparableTarget(value: string): string {
+  return process.platform === "win32" ? value.split("\\").join("/") : value;
 }
 
 async function isFlattenedLink(linkPath: string, target: string, known?: Stats): Promise<boolean> {
@@ -1443,7 +1468,7 @@ async function isFlattenedLink(linkPath: string, target: string, known?: Stats):
   // Absence stays `false`: that is a race with something else removing it.
   try {
     const content = await readFile(linkPath, "utf-8");
-    return toPosixSeparators(content) === toPosixSeparators(target);
+    return toComparableTarget(content) === toComparableTarget(target);
   } catch (error: unknown) {
     if ((error as NodeJS.ErrnoException | null)?.code === "ENOENT") {
       return false;

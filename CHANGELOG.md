@@ -503,6 +503,14 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A rollback no longer overwrites a file created in the gap.** Between the
+  removal and the failed `symlink`, another process can create its own file at
+  the path — that is what an `EEXIST` from `symlink` means — and the default
+  write flag truncated it and put the old flattened content over the top.
+- **A backslash spelling is not a flattened link on POSIX.** The separator
+  tolerance exists because `path.relative` yields ``on Windows; applied
+everywhere it made a hand-maintained`.....qfaiassistant...`match the
+real target and get deleted without`--force`.
 - **An agent wrapper names a regular file, not merely a non-directory.** A
   FIFO, socket or device passed `!isDirectory()` and could pass `access(R_OK)`
   as well, so the assistant either failed to read the document or, on a FIFO,
