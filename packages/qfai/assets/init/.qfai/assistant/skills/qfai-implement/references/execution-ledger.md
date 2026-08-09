@@ -192,8 +192,11 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
 - `refactor` -> `review-fix` (a blocking reviewer returned `REVISE`)
 - `review-fix` -> `refactor` (rework complete; re-submit to the reviewer)
 - Any active status -> `exception` (anomaly detected; record DR-ID in DR-ID column)
-- `red` | `green` | `refactor` | `done` | `exception` -> `todo` — **upstream
-  reset**, the only legal reopen, available from every status a row can hold.
+- **Any status** -> `todo` — **upstream reset**, the only legal reopen,
+  available from every status a row can hold, `blocked` and `review-fix`
+  included. This list is the complete one and an unlisted edge is prohibited,
+  so enumerating five sources here forbade the sweep
+  `constitution/drift-protocol.md` step 5 requires of exactly those two.
   Permitted **only** when an approved upstream change (Drift Protocol step 4
   rerun) invalidated the row's obligation. The invalidating CR/DR ID MUST be
   recorded in the `DR-ID` column, and the reset MUST cite it in `Evidence`.
@@ -226,7 +229,7 @@ produce: `"Backward transition prohibited: green -> red"`.
 below return a row to an earlier state, and **three of them are not backward
 transitions** — a resumption, an anomaly exit and the rework edge each restart
 an earlier phase of the row's own cycle with nothing upstream changed. The
-fourth, the approved Change Request reset, **is** the one sanctioned backward
+third, the approved Change Request reset, **is** the one sanctioned backward
 transition: an upstream obligation moved and the row's completed work is
 withdrawn. The column below therefore asks why each edge is _legal_, not why it
 is not backward:

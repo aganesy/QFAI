@@ -82,6 +82,28 @@ describe.each(TREES)("%s", (tree) => {
       expect(ledger).toContain(edge);
     }
   });
+
+  it("says `any status` in the complete list, not only in the summary table", async () => {
+    // The list declares itself complete and prohibits every unlisted edge, so
+    // it is the binding statement — widening only the table below left the
+    // legality of a `blocked` or `review-fix` reset depending on which of the
+    // two a reader reached first.
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("- **Any status** -> `todo` — **upstream reset**");
+    expect(ledger).toContain("`blocked` and `review-fix` included");
+    expect(ledger).not.toContain(
+      "`red` \\| `green` \\| `refactor` \\| `done` \\| `exception` -> `todo` — **upstream",
+    );
+  });
+
+  it("numbers the sanctioned backward transition as the row it actually is", async () => {
+    // The table lists the reset third and `refactor -> red` fourth. Calling the
+    // reset "the fourth" made QA rejection recovery read as the sanctioned
+    // backward transition, and contradicted the paragraph below it.
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("The third, the approved Change Request reset");
+    expect(ledger).toContain("The first, second and fourth rows are **re-entries");
+  });
 });
 
 describe.each(TREES)("%s (the summary cannot license what the list forbids)", (tree) => {

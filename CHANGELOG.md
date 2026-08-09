@@ -23,6 +23,13 @@
 
 ### Fixed
 
+- **The complete transition list says `any status` too.** Widening only the
+  summary table left the list — which declares itself complete and prohibits
+  every unlisted edge — still naming five sources, so whether a `blocked` or
+  `review-fix` reset was legal depended on which of the two a reader reached
+  first. The list also called the approved reset "the fourth" row of a table
+  where it is the third, which read QA rejection recovery as the sanctioned
+  backward transition and contradicted the paragraph below it.
 - **The upstream reset admits every source status.** The lifecycle table
   enumerated five, which read as a complete list — but `drift-protocol.md`
   step 5 sweeps the ledger with `any status -> todo`, so a row at `blocked` or
