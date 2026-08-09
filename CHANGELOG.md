@@ -95,6 +95,15 @@
 
 ### Fixed
 
+- **A `readlink` failure is not a wrong link target.** A transient `EIO` or an
+  `EACCES` reported a healthy wrapper as `points at ?`, and the remedy the
+  finding prints — re-run `qfai init` — calls the same `readlink` and fails the
+  same way. Only an absent link is a link problem.
+- **An unreadable wrapper is not somebody else's file.** `lstat` had already
+  succeeded, so the file is there and small; answering "not the signature" on
+  an ACL or I/O failure put the path in the reassuring `skipped` list and left
+  the flattened wrapper in place, with `QFAI-LINK-001` failing and nothing to
+  act on. Absence stays benign — that is a race with something removing it.
 - **A `stat` failure is not a dangling link.** Every error was reported as
   dangling, including `EACCES` and a transient `EIO` — and the remedy the
   finding prints is "re-run `qfai init`", which leaves the wrapper `skipped`

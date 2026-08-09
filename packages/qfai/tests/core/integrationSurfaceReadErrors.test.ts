@@ -22,11 +22,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type FsPromises = typeof fsPromises;
 
-const { readdirSpy, lstatSpy, accessSpy, statSpy } = vi.hoisted(() => ({
+const { readdirSpy, lstatSpy, accessSpy, statSpy, readlinkSpy } = vi.hoisted(() => ({
   readdirSpy: vi.fn(),
   lstatSpy: vi.fn(),
   accessSpy: vi.fn(),
   statSpy: vi.fn(),
+  readlinkSpy: vi.fn(),
 }));
 
 vi.mock("node:fs/promises", async () => {
@@ -37,6 +38,7 @@ vi.mock("node:fs/promises", async () => {
     lstat: (...args: unknown[]) => lstatSpy(actual, ...args),
     access: (...args: unknown[]) => accessSpy(actual, ...args),
     stat: (...args: unknown[]) => statSpy(actual, ...args),
+    readlink: (...args: unknown[]) => readlinkSpy(actual, ...args),
   };
 });
 
@@ -70,10 +72,14 @@ beforeEach(() => {
   lstatSpy.mockReset();
   accessSpy.mockReset();
   statSpy.mockReset();
+  readlinkSpy.mockReset();
   readdirSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.readdir(...args));
   lstatSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.lstat(...args));
   accessSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.access(...args));
   statSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.stat(...args));
+  readlinkSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+    actual.readlink(...args),
+  );
 });
 
 describe("validateIntegrationSurface read errors", () => {
@@ -142,6 +148,21 @@ describe("validateIntegrationSurface read errors", () => {
       statSpy.mockImplementation(() => Promise.reject(errno("EACCES")));
 
       await expect(validateIntegrationSurface(root)).rejects.toThrow("simulated EACCES");
+    });
+  });
+
+  it("propagates a readlink failure instead of reporting the wrong target", async () => {
+    // A transient EIO reported a healthy wrapper as `points at ?`, and the
+    // remedy the finding prints — re-run `qfai init` — calls the same
+    // `readlink` and fails the same way.
+    await withProject(async (root) => {
+      await seedCanonical(root);
+      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      await mkdir(path.dirname(wrapper), { recursive: true });
+      await symlink("../../.qfai/assistant/skills/qfai-atdd", wrapper, "dir");
+      readlinkSpy.mockImplementation(() => Promise.reject(errno("EIO")));
+
+      await expect(validateIntegrationSurface(root)).rejects.toThrow("simulated EIO");
     });
   });
 

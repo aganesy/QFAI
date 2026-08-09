@@ -234,7 +234,14 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       continue;
     }
 
-    const actual = await readlink(wrapper.absolute).catch(() => null);
+    // Same rule as the probes around it: only an absent link is a link
+    // problem. A transient `EIO` or an `EACCES` reported a healthy wrapper as
+    // `points at ?`, and the remedy the finding prints — re-run `qfai init` —
+    // calls the same `readlink` and fails the same way.
+    const actual = await readlink(wrapper.absolute).catch((error: unknown) => {
+      if (isMissing(error)) return null;
+      throw error;
+    });
     if (actual === null || path.normalize(actual) !== path.normalize(wrapper.target)) {
       // A link that resolves to the wrong canonical document is worse than a
       // dangling one: the assistant loads real instructions, just not these.

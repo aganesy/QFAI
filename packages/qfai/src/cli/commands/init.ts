@@ -1421,11 +1421,20 @@ async function isFlattenedLink(linkPath: string, target: string): Promise<boolea
   if (stats.size > 4096) {
     return false;
   }
+  // A read failure is not "somebody else's file". `lstat` already succeeded,
+  // so the file is there and small; an ACL or a transient I/O fault means the
+  // signature could not be checked, and answering `false` put the path in the
+  // reassuring `skipped` list while leaving a flattened wrapper in place —
+  // `QFAI-LINK-001` then keeps failing with nothing the operator can act on.
+  // Absence stays `false`: that is a race with something else removing it.
   try {
     const content = await readFile(linkPath, "utf-8");
     return toPosixSeparators(content) === toPosixSeparators(target);
-  } catch {
-    return false;
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException | null)?.code === "ENOENT") {
+      return false;
+    }
+    throw error;
   }
 }
 

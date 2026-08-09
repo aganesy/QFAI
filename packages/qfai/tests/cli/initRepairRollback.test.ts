@@ -18,13 +18,14 @@ import { lstat, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type FsPromises = typeof fsPromises;
 
-const { symlinkSpy, writeFileSpy } = vi.hoisted(() => ({
+const { symlinkSpy, writeFileSpy, readFileSpy } = vi.hoisted(() => ({
   symlinkSpy: vi.fn(),
   writeFileSpy: vi.fn(),
+  readFileSpy: vi.fn(),
 }));
 
 vi.mock("node:fs/promises", async () => {
@@ -33,6 +34,7 @@ vi.mock("node:fs/promises", async () => {
     ...actual,
     symlink: (...args: unknown[]) => symlinkSpy(actual, ...args),
     writeFile: (...args: unknown[]) => writeFileSpy(actual, ...args),
+    readFile: (...args: unknown[]) => readFileSpy(actual, ...args),
   };
 });
 
@@ -56,6 +58,18 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
     await rm(root, { recursive: true, force: true });
   }
 }
+
+// Every spy passes through by default; each test overrides only the call whose
+// failure it is about.
+beforeEach(() => {
+  symlinkSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.symlink(...args));
+  writeFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+    actual.writeFile(...args),
+  );
+  readFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+    actual.readFile(...args),
+  );
+});
 
 describe("a repair that cannot finish leaves the file it found", () => {
   it("restores the flattened file when the symlink cannot be created", async () => {
@@ -126,6 +140,39 @@ describe("a repair that cannot finish leaves the file it found", () => {
       // The content is not recoverable from the filesystem any more, so it has
       // to be in the message.
       expect(error?.message).toContain(FLATTENED);
+    });
+  });
+  it("does not file an unreadable wrapper as somebody else's content", async () => {
+    // `lstat` already succeeded, so the file is there and small. Answering
+    // "not the signature" on a read failure put the path in the reassuring
+    // `skipped` list and left the flattened wrapper in place, with
+    // QFAI-LINK-001 failing and nothing to act on.
+    await withProject(async (root) => {
+      writeFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.writeFile(...args),
+      );
+      readFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.readFile(...args),
+      );
+      symlinkSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.symlink(...args),
+      );
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      const linkPath = path.join(root, LINK);
+      await rm(linkPath, { recursive: true, force: true });
+      await mkdir(path.dirname(linkPath), { recursive: true });
+      await writeFile(linkPath, FLATTENED, "utf-8");
+
+      readFileSpy.mockImplementation((actual: FsPromises, file: string, ...rest: never[]) =>
+        file === linkPath
+          ? Promise.reject(Object.assign(new Error("simulated EACCES"), { code: "EACCES" }))
+          : actual.readFile(file, ...rest),
+      );
+
+      await expect(
+        captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true })),
+      ).rejects.toThrow("simulated EACCES");
     });
   });
 });
