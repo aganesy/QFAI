@@ -70,7 +70,7 @@ Take the first that applies, and record which one in the evidence file.
       body _shape_ the selector assumes, with only the contracted predicate
       withheld.
 
-   2. Run the test. An admissible failure is an assertion — or an
+   2. **With the scope approved (step 3), run the test.** An admissible failure is an assertion — or an
       expected-status check — inside this row's own selector, naming the
       predicate the row owns. Record the command and output as the row's RED
       pair, **and the revision it was observed at** — `git rev-parse HEAD` for
@@ -91,7 +91,13 @@ Take the first that applies, and record which one in the evidence file.
       final tree, and cannot tell "only production changed, as it should" from
       "the acceptance test was edited after the handoff, so the RED is stale".
       Record `RED test hash` alongside `RED revision`: a hash over the contents
-      of the files the row's **`Test file`** column names, and nothing else.
+      of the files the row's **`Test file`** column names, plus the
+      acceptance-test-owned artifacts those files read — fixtures, snapshots,
+      expected-value JSON, test helpers. Not the production tree. Limiting it to
+      the test module let an edit to a snapshot or a fixture reshape the
+      assertion after the handoff with the hash unchanged, which is the same
+      stale-RED the field exists to catch; and since the working-tree hash cannot
+      be recomputed from the final tree, nothing else would have caught it.
       Not the `Selector` — that column is a test _name_ in the ordinary case
       (`../../qfai-implement/references/checkpoint-verification.md` runs
       `<Test file> -t '<Selector>'`), so keying the hash on it yields an empty
@@ -106,7 +112,12 @@ Take the first that applies, and record which one in the evidence file.
       out afterwards is a guess, and a guess fails the freshness gate exactly as
       a missing one does.
 
-   3. **Get the row's scope approved by `delivery-planner` first.**
+   3. **Scope approval — obtained before step 2 runs, listed here for the
+      contract it carries.** Take it first: this step requires a scope REVISE to
+      be settled _before_ the RED is submitted, and a REVISE changes the test or
+      its selector — so a RED recorded ahead of approval is evidence for a scope
+      that no longer exists, and its `RED test hash` addresses a file the
+      repair rewrites. Approve, then run.
       `qfai-implement/SKILL.md` makes it the only authority on whether a
       selector covers a sufficient slice of its obligation, and requires a scope
       REVISE to be settled _before_ the RED is submitted. Approving the RED
@@ -310,6 +321,33 @@ So a branch-3 row ends in one of two places, and the stage has to say which:
 Recording the `DR-*` and handing the row over discharges the _branch_. Treating
 that as closing the spec leaves a spec that can never legally close, because
 nothing later in the flow can produce the approval retroactively.
+
+## A `review-fix` row comes back here for a new RED
+
+`/qfai-implement` Phase Red step 3b sends a `review-fix` row back when the
+blocking reviewer's REVISE asks for a change to the acceptance test itself: that
+skill does not author these tests and its `red` phase has no
+`acceptance-test-engineer`. The three branches above define the **first**
+handoff of a `todo` row, so this one needs its own contract.
+
+- **Invocation.** Named by `TDD-ID`, with the reviewer's REVISE and its round
+  number. The row stays at `review-fix` throughout — this stage writes no
+  ledger cell, and `review-fix -> red` is not a transition.
+- **What this stage does.** Correct the test the REVISE names, then take a fresh
+  RED on the corrected selector, exactly as branch 1 does: run it, record the
+  pair, the `RED revision` and the `RED test hash`, and get
+  `qa-gatekeeper` PASS on that run.
+- **Where it goes.** A `### Round N` block in
+  `.qfai/evidence/atdd-<spec-id>.md`, keyed to the round the reviewer opened,
+  in the shape `../../qfai-implement/references/round-evidence.md` defines.
+  Not a second `## Ledger rows advanced` entry: that section is the record of
+  a first handoff, and appending to it would read as one.
+- **Handing back.** Return to `/qfai-implement` naming the round. The
+  production fix and the re-review happen there, and the row leaves
+  `review-fix` by that skill's own path.
+
+A REVISE that does **not** touch the acceptance test never reaches this stage;
+it is production rework and stays where it is.
 
 ## Which stage hands a row over
 

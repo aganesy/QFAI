@@ -91,6 +91,34 @@
 
 ### Fixed
 
+- **Phase Red runs 3a, then 3b, then 3c.** Listed 3c first, an ordered read ran
+  the production mutation and wrote `todo -> red` before 3b had checked the
+  entry's branch, selector and missing fields — advancing the ledger on
+  provenance nobody had verified.
+- **The consumer gate requires and rechecks `RED test hash`.** The producer
+  records it, but the completion contract asked only for `Revision` — which
+  Phase Green makes unrecomputable — so a test edited after the handoff passed
+  gate item 10 exactly as a fresh one did.
+- **A pre-split row is identified by a marker, not by its status.** `done` plus
+  an `implement-` anchor also describes a new `E2E` / `API` row written to the
+  wrong file, so the compatibility clause would have accepted a row that never
+  produced its ATDD handoff.
+- **A `review-fix` row has a defined path back through `/qfai-atdd`.** Phase Red
+  step 3b sends one there when the REVISE touches the acceptance test, and the
+  three branches only cover a `todo` row's first handoff — so the stage had no
+  invocation, evidence shape or return path and the row stayed at `review-fix`.
+- **The uncommitted revision hashes a manifest, not bare contents.** Contents
+  alone collide on a rename or a swap between two files, and with no order or
+  separator defined a second reviewer cannot recompute the same value for the
+  same tree — the one thing the address exists to allow.
+- **`RED test hash` covers what the test reads.** Limited to the `Test file`
+  column, an edit to a snapshot, fixture or helper reshaped the assertion after
+  the handoff with the hash unchanged, and the working-tree hash cannot be
+  recomputed from the final tree to catch it.
+- **Scope approval precedes the RED.** The steps ran the test first and asked
+  `delivery-planner` after, while the same step requires a scope REVISE to be
+  settled _before_ the RED is submitted — so a REVISE left the just-recorded
+  RED as evidence for a scope that no longer existed.
 - **`qfai-implement`'s `red` phase routes `qa-gatekeeper` conditionally.** The
   skill said not to route it for a seam-only invocation; the manifest listed it
   as mandatory. The gate had no RED to judge, could only return REVISE, and the

@@ -15,8 +15,12 @@ Revision: <git rev> | working-tree+<content hash>
 - **`<git rev>`** — the output of `git rev-parse HEAD` at the moment of the
   observation. Preferred: it is exact and someone else can reproduce from it.
 - **`working-tree+<content hash>`** — for an uncommitted tree, a hash over
-  `git rev-parse HEAD`, `git diff HEAD` and the contents of every untracked
-  file. Not as good as a rev, and honest about not being as good: it says "this
+  `git rev-parse HEAD`, `git diff HEAD` and a **manifest** of every untracked
+  file: its path, a NUL byte, and the hash of its contents, sorted by path. Path,
+  boundary and order all have to be in it. Contents alone collide — renaming a
+  file, or swapping the contents of two, leaves the hash unchanged — and with no
+  defined order or separator a second reviewer cannot recompute the same value
+  for the same tree, which is the one thing this address exists to allow. Not as good as a rev, and honest about not being as good: it says "this
   observation was made against a state that was never committed".
 
   **A `git status --porcelain` digest is not sufficient**, which is what this

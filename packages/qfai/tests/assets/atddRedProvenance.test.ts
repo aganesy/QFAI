@@ -507,7 +507,13 @@ describe.each(TREES)("%s (executability of the handed-over row)", (tree) => {
     // submitted. Approving the RED first leaves the planner only "keep the PASS
     // and open a new row", which cannot repair a wrong-granularity handoff.
     const provenance = flat(await read(tree, PROVENANCE));
-    expect(provenance).toContain("**Get the row's scope approved by `delivery-planner` first.**");
+    expect(provenance).toContain(
+      "**Scope approval — obtained before step 2 runs, listed here for the contract it carries.**",
+    );
+    // The ordering is the point: a REVISE changes the test or its selector, so
+    // a RED recorded ahead of approval is evidence for a scope that no longer
+    // exists and its `RED test hash` addresses a file the repair rewrites.
+    expect(provenance).toContain("**With the scope approved (step 3), run the test.**");
 
     const catalog = await read(tree, "assistant/manifest/agent-routing.yml");
     const atddBlock = catalog.slice(catalog.indexOf("- skill: qfai-atdd"));
@@ -977,5 +983,68 @@ describe.each(TREES)("%s (the contracts a row's Layer implies)", (tree) => {
     );
     expect(baseline).toContain("`working-tree+<content hash>` when the tree is uncommitted");
     expect(baseline).toContain("**Not** a `git status --porcelain` digest");
+  });
+});
+
+describe.each(TREES)("%s (each gate reads what the step before it produced)", (tree) => {
+  it("orders Phase Red 3a, 3b, 3c", async () => {
+    // Listed 3c first, an ordered read ran the production mutation and wrote
+    // `todo -> red` before 3b had checked the entry's branch, its selector and
+    // its missing fields — advancing the ledger on unverified provenance.
+    const implement = await read(tree, IMPLEMENT);
+    const [a, b, c] = ["   3a.", "   3b.", "   3c."].map((s) => implement.indexOf(s));
+    expect(a).toBeGreaterThan(-1);
+    expect(a).toBeLessThan(b);
+    expect(b).toBeLessThan(c);
+    expect(flat(implement)).toContain("**Reached from step 3b, never before it.**");
+  });
+
+  it("requires and rechecks the RED test hash at the consumer gate", async () => {
+    // The producer records it; without the consumer recomputing it, a test
+    // edited after the handoff passes gate item 10 exactly as a fresh one does.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**required on a handed-over `E2E` / `API` row**, and checked");
+    expect(implement).toContain("Recompute the hash over the row's `Test file` column");
+  });
+
+  it("identifies a pre-split row by a marker, not by its status", async () => {
+    // `done` plus an old anchor also describes a new E2E/API row written to the
+    // wrong file, which would then be accepted with no ATDD handoff at all.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**Identify it by a marker, not by its status**");
+    expect(implement).toContain("`Pre-split-evidence: implement`");
+    expect(implement).toContain("A row with no marker is judged by the current rule");
+  });
+
+  it("defines the rework path a review-fix row takes through this stage", async () => {
+    // Step 3b sends the row back here when the REVISE touches the acceptance
+    // test, and the three branches only cover a `todo` row's first handoff.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("## A `review-fix` row comes back here for a new RED");
+    expect(provenance).toContain("A `### Round N` block in");
+    expect(provenance).toContain("round-evidence.md");
+    expect(provenance).toContain("this stage writes no ledger cell");
+  });
+
+  it("hashes a manifest of untracked files, not just their contents", async () => {
+    // Contents alone collide on a rename or a swap, and with no order or
+    // separator a second reviewer cannot recompute the same value.
+    const revision = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(revision).toContain("a **manifest** of every untracked file");
+    expect(revision).toContain(
+      "its path, a NUL byte, and the hash of its contents, sorted by path",
+    );
+  });
+
+  it("covers the artifacts the acceptance test reads", async () => {
+    // A snapshot or fixture edit reshapes the assertion after the handoff, and
+    // the working-tree hash cannot be recomputed from the final tree.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain(
+      "plus the acceptance-test-owned artifacts those files read — fixtures, snapshots",
+    );
+    expect(provenance).toContain("Not the production tree.");
   });
 });
