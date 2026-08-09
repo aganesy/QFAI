@@ -176,3 +176,37 @@ describe("a repair that cannot finish leaves the file it found", () => {
     });
   });
 });
+
+describe("the flattened-link probe does not re-stat what the caller holds", () => {
+  it("does not turn a transient lstat failure into somebody else's file", async () => {
+    // `ensureSymlink` has already `lstat`ed the path; re-probing it inside
+    // `isFlattenedLink` let `safeLstat` turn an `EIO` into `undefined`, which
+    // reads as "not the signature" — so init left a flattened wrapper in the
+    // reassuring `skipped` list. The `Stats` is passed through now, so the
+    // second probe cannot fail at all.
+    await withProject(async (root) => {
+      writeFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.writeFile(...args),
+      );
+      readFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.readFile(...args),
+      );
+      symlinkSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.symlink(...args),
+      );
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      const linkPath = path.join(root, LINK);
+      await rm(linkPath, { recursive: true, force: true });
+      await mkdir(path.dirname(linkPath), { recursive: true });
+      await writeFile(linkPath, FLATTENED, "utf-8");
+
+      const stdout = await captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: false, yes: true }),
+      );
+
+      expect(stdout).toContain("was a flattened symlink");
+      expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
+    });
+  });
+});

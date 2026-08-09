@@ -21,9 +21,403 @@
   validators, and reports a qfai-owned entry that is not a symlink or whose
   target does not resolve. A directory the project does not have is not a
   finding, and entries qfai does not own are left alone.
+- **`D-SCAFFOLD-FOREIGN-HOME` (warning)** replaces the placeholder gate for an
+  L4/L5 skeleton a pre-upgrade `qfai atdd scaffold` already wrote into
+  `tests/integration/**`. The command stopped generating those, but the ones on
+  disk kept escalating `D-SCAFFOLD-PLACEHOLDER` and telling the operator to
+  implement an assertion — which discharges nothing, because the TC's declared
+  `Level` routes elsewhere and `QFAI-ATDD-123` rejects the annotation wherever
+  the file sits. The new finding names the move-or-delete remediation and does
+  not escalate: escalation exists to pressure an operator into writing the
+  assertion, which is not what this one needs.
+- **`TDDLIST_COVERAGE_LAYER_MISMATCH` (warning)** reports a coverage-target TC
+  discharged only from a row whose `Layer` contradicts its declared `Level` — a
+  `Level = L1` TC closed by a `Layer = Integration` row alone. Coverage counted
+  any non-API/E2E row, so with L1/L2 out of `QFAI-ATDD-112` nothing asked for
+  the unit test. It is a warning, not an error: every ledger written before this
+  check could carry one (this repository has five), and escalating on the
+  release that introduces the rule is a zero-length window. The row still counts
+  as coverage today; the finding announces the escalation.
+- **`QFAI-ATDD-117` (info)** names the TCs excluded from the annotation
+  obligation on every run. A silent exclusion is indistinguishable from a scan
+  that matched nothing, which is how the JS-only test glob survived a release.
 
 ### Changed
 
+- **`qfai report` counts the test cases `qfai validate` gates.** The gate reads
+  every `TC-ID` table plus the heading form (`## TC-0001` + `- Level: L1`); the
+  report built its own set from the first table alone and skipped the spec
+  outright when that table did not resolve. So a heading-form spec vanished from
+  `## TDD Coverage` while `TDDLIST_TC_NOT_COVERED` demanded a ledger row for
+  every TC in it, and a TC declared in a second table was gated but never
+  counted in `coverage-target TCs:` or `done:`. Both callers now read one
+  collector (`core/testCaseCoverageTargets.ts`). A spec with no
+  `06_Test-Cases.md` is still omitted from the report rather than printed as a
+  zero row.
+- **`TDDLIST_UNKNOWN_LEVEL` no longer reports a superseded declaration.**
+  `unrecognizedLevels` was filled before the first-declaration-wins guard, so a
+  duplicate heading or table row for a TC that already had a `Level` raised the
+  warning for a value nothing reads — with a message ("Unrecognized values are
+  treated as coverage targets, so every such TC becomes a mandatory ledger
+  row") that the guard makes false for exactly that TC. Only the declaration
+  actually in force is reported.
+- **Every ledger row is checked, not only the ones in the first table.** The
+  previous release widened coverage scoring to every schema-shaped table but
+  left the checks that make a row trustworthy — `Status` enum, `Test file`
+  existence, `Evidence`, `Selector`, `Blocked-By`, the `DR-ID` of a parked row,
+  duplicate `TDD-ID`, unknown `TC-Refs` — reading the first table alone. A
+  `Status=done` row in an appended `## CHG-…` table therefore cleared
+  `TDDLIST_TC_NOT_COVERED` while its non-existent `Test file` and empty
+  `Evidence` were never looked at, and full validation passed: the gate accepted
+  a completion claim it had declined to check. All per-row checks now read one
+  iteration of the ledger, so "does this row discharge a TC" and "is this row
+  trustworthy" are asked of the same rows.
+  - **Who it hits.** Only a ledger with more than one schema-shaped table.
+    Rows there now raise what they always raised in the first table. Measured
+    on this repository: 30 further findings, all `warning`
+    (26 `TDDLIST_EVIDENCE_STATUS_ONLY`, 4 `TDDLIST_SELECTOR_UNRESOLVED`), all
+    in one spec's appended table; `error` stays at 0.
+  - `TDDLIST_DUPLICATE_ID` is now ledger-wide rather than per table. An id
+    repeated in an appended table was invisible, and
+    `TDDLIST_EXCEPTION_PARKED` keys its per-row waiver on the `TDD-ID` — so one
+    approved `match.dl_ids` entry silently covered a second row nobody
+    approved.
+  - `TDDLIST_INFO` ("No active items") is keyed on the whole ledger. It was
+    keyed on the first table, so a file whose first table is a bare header and
+    whose `## CHG-…` table holds every row — the shape `/qfai-implement`
+    produces — was reported as empty while it was being worked.
+- **A fenced or commented-out table is no longer read as the ledger.** Check 2
+  took the first Markdown table in the _raw_ file while the coverage reader
+  masks non-spec regions, so a `tdd/test-list.md` whose only schema-shaped table
+  sat inside a fence failed open in both directions at once: the row checks ran
+  against rows inside the fence, and the coverage check — guarded by
+  `if (coverageTables.length > 0)` — skipped itself entirely in the one case
+  where every TC is certainly uncovered. With L1/L2 out of `QFAI-ATDD-112` that
+  made a copy-paste template a complete substitute for a ledger under
+  `validate --profile full --fail-on error`. Such a file now raises
+  `TDDLIST_TABLE_MISSING` (`error`) plus `TDDLIST_TC_NOT_COVERED` naming the
+  ids that owe a row, the same pair an absent file already raised. A real table
+  sitting below a fenced sample is now read correctly rather than being
+  shadowed by the sample.
+- **`qfai report` lists every parked row `qfai validate` names.** Sharing one
+  "can this row carry coverage" predicate between the two commands put the
+  report's `- exception rows:` block behind it too, so a `Status=exception` row
+  on an `API` or `E2E` layer was dropped from the report while
+  `TDDLIST_EXCEPTION_PARKED` still named it — the two commands disagreeing about
+  one row, which is the defect the shared reader exists to remove. The two
+  questions are separate now: `isLedgerRow` ("is this an entry at all", i.e. does
+  it carry a `TDD-ID`) governs the roll-call, and the narrower
+  `isCoverageBearingRow` still governs the arithmetic, so an `API`/`E2E` row
+  appears in `- exception rows:` without discharging any TC. Projects carrying
+  parked API/E2E rows will see them in `qfai report` again.
+- **One list of the layers a `TC-*` may not sit on.** `tddList.ts` and
+  `tddHelpers.ts` each held a private `["api", "e2e"]`, so the rule that rejects
+  the placement (`TDDLIST_OBLIGATION_LAYER_MISMATCH`) and the rule that declines
+  to score coverage from it read different copies of their own vocabulary. They
+  are one exported `TC_FORBIDDEN_LAYERS` now, on the same terms as
+  `UNIT_COMPONENT_LAYERS`: a layer cannot be added to the rejection and left out
+  of the arithmetic. No behaviour changes — the two sets were identical.
+- **A ledger row is checked the same wherever in the ledger it sits.** Widening
+  the coverage reader to every ledger table left the row checks on the first
+  one, so `TDD-ID = x` / `Layer = bogus` produced `TDDLIST_INVALID_ID` +
+  `TDDLIST_UNKNOWN_LAYER` in the first table and **no finding at all** in an
+  appended one — while clearing `TDDLIST_TC_NOT_COVERED` from both. With L1/L2
+  out of `QFAI-ATDD-112` that turned "the ledger picks the obligation up" into a
+  claim one meaningless cell could falsify with nothing on screen to say so.
+  `TDDLIST_INVALID_ID`, `TDDLIST_UNKNOWN_LAYER` and
+  `TDDLIST_OBLIGATION_LAYER_MISMATCH` now run on every table coverage is scored
+  from.
+  - **What is new is the diagnostic, not the verdict.** The same row already
+    counted as coverage in the first table, at `warning`. Refusing to count it
+    would instead escalate `TDDLIST_UNKNOWN_LAYER` into an unwaivable `error`,
+    against the reason it is a warning — ledgers written before the enum existed
+    carry project-specific layer names — and would make a typo stricter than the
+    known-but-wrong layer beside it, which
+    `TDDLIST_COVERAGE_LAYER_MISMATCH` stages with an announced window.
+  - **Who it hits.** Only a ledger with more than one schema-shaped table. A
+    row there that is malformed, or carries `TC-Refs` on an `API`/`E2E` layer,
+    now raises what it always raised in the first table — including one `error`
+    for the forbidden placement. Findings outside the first table are labelled
+    `ledger table N, row M` — the ordinal counts _ledger_ tables, so the shipped
+    template's `## Schema` documentation table does not shift it; a single-table
+    ledger keeps the `row M` label it had. The
+    status, evidence, transition, duplicate-id and test-file checks read every
+    ledger table too. Splitting them — coverage over all tables, execution
+    state over the first — was a fail-open in two halves: a `Status=done` row
+    in an appended `## CHG-…` table cleared the coverage obligation while its
+    non-existent `Test file` and empty `Evidence` were never looked at, so the
+    gate accepted a completion claim it had declined to check. **Upgrading a
+    multi-table ledger can therefore surface new errors on rows that were
+    never validated before.**
+- **An incomplete later ledger table is reported instead of dropped.**
+  `collectLedgerTables` admits only schema-complete tables, so an appended
+  `## CHG-…` section that mistyped one header contributed nothing: its rows
+  vanished from the gate and from `qfai report`, and a `done` row in the first
+  table read as the whole story while the follow-up work sat in a table nobody
+  looked at. A table carrying `TDD-ID` and `TC-Refs` is a ledger attempt, and
+  a missing column in one is now `TDDLIST_REQUIRED_COLUMN_MISSING`. "Ledger
+  attempt" is **either** test, because neither alone is enough: `TDD-ID` and
+  `TC-Refs` together say "ledger" whatever else is absent, and six of the eight
+  required columns say it for a table that mistyped one of those two. Markers
+  alone miss a mistyped marker; a count alone misses a five-column table that
+  keeps both. A documentation table beside the ledger passes neither, so the
+  shipped template's own `## Schema` table stays out. `qfai report` treats an unreadable ledger table the same way
+  it treats an unreadable first one: no counts, and the reason printed instead.
+- **A broken `## Test Case Table` is unresolved even beside heading-form TCs.**
+  One readable `## TC-NNNN` heading discarded the failure, so a document with
+  both shapes and a mistyped `TC-ID` header lost that table's TCs entirely:
+  no level, no coverage target, and no `TDDLIST_TC_TABLE_UNRESOLVED` — while
+  `collectShortIds` still saw them declared, so ATDD asked for the default
+  integration annotation and full validation passed on a test at the wrong
+  layer. A spec that has no such section is still not a fault.
+- **A malformed `TC-Refs` value discharges nothing.** `resolveParentTcId`
+  strips the last segment, so an over-long `TC-0001-0001-0001` resolved to the
+  real `TC-0001-0001` and cleared its obligation — while Check 5 skips a token
+  that fails the `TC-*` shape rather than reporting it, so nothing named the
+  typo either. Only a well-formed reference is counted or resolved — in `qfai
+report` as well, which was computing `done: 1 / open: 0` from the same
+  malformed cell the gate was reporting as uncovered.
+- **A ledger row whose `Layer` is blank or `-` no longer discharges a TC.** Every rule that
+  would police the placement keys on that cell and skips when it is empty —
+  the enum check, the forbidden-layer test, the `Level`/`Layer` crosswalk — so
+  a row carrying an id and a `TC-Refs` and nothing else cleared
+  `TDDLIST_TC_NOT_COVERED` with no test behind it and no rule able to say so.
+  An unknown but real `Layer` still counts, as before: that is a project's own
+  vocabulary and `TDDLIST_UNKNOWN_LAYER` names it. A blank cell and `-` are not
+  vocabulary — the enum check treats both as the same "no claim" placeholder and
+  skips them, so a row carrying either is exempt from every placement rule.
+- **The counts are omitted, not zeroed, when coverage cannot be assessed.**
+  `report --format json` serializes the spec object verbatim, so hiding the
+  numbers in the markdown formatter alone left machine consumers reading
+  progress computed from rows the validator never accepted.
+- **`qfai report` states when coverage cannot be assessed, instead of printing
+  zero.** A report is an audit artifact and `0 done / 0 open` is a claim: it
+  says the spec owes nothing. Printed for a spec whose `06_Test-Cases.md` has
+  no readable `TC-ID` table (`TDDLIST_TC_TABLE_UNRESOLVED`), or whose ledger's
+  first table is missing required columns — where `validate` stops at Check 3
+  and checks nothing else — that claim is unfounded, and beside a failing gate
+  it reads as the gate being wrong. Those specs now print
+  `coverage cannot be assessed: <why>` and no counts.
+- **The parked-row roll-call no longer depends on the coverage set or on a
+  well-formed id.** A spec whose TCs are all L3-L5 ended before the ledger was
+  read, so `qfai report` showed it with no `exception` rows while
+  `TDDLIST_EXCEPTION_PARKED` was listing them; and a first-table row with an
+  empty `TDD-ID` was dropped by the report while the gate reported it by
+  position. Both readers now share one row-shape rule.
+- **Two headings for one test case resolve to the first, on both sides.**
+  `collectTcLevels` wrote every heading pair into the map, so the _last_
+  duplicate heading won there while the ledger gate kept the first — a TC headed
+  `L1` and then `L3` was excluded from `QFAI-ATDD-112` by one collector and
+  claimed by `TDDLIST_TC_NOT_COVERED` by the other, owed twice for one
+  declaration. Both collectors are first-seen now, matching what the table
+  reader and the scaffold parser already do, so either order leaves exactly one
+  gate owning the TC. A heading block with no `- Level:` line declares nothing
+  and no longer consumes the slot.
+- **A blank `Level` is released by the first explicit one.** An unstated `Level`
+  classifies as a coverage target so the TC cannot
+  fall out of the only gate L1/L2 have — but a row that says nothing must not
+  outrank a later row that says `L3`. The ATDD collector ignores a blank cell
+  and takes the `L3`, so a TC whose first table row had a blank `Level` (or
+  whose first table had no `Level` column) owed `QFAI-ATDD-112` **and**
+  `TDDLIST_TC_NOT_COVERED` together, failing full validation on a spec that was
+  correct. Ids admitted by the fallback are tracked and dropped when a later
+  explicit `Level` says they are not coverage; a later explicit _coverage_
+  `Level` replaces the recorded blank, so the `Level`/`Layer` crosswalk reads
+  what the spec states. A TC that nothing later contradicts still stays a
+  coverage target — the fallback itself has not moved.
+  - **Known residual: a TC that declares no `Level` anywhere is still owed by
+    both gates.** `classifyCoverageLevel("")` is a coverage target, so it owes
+    a ledger row; `collectTcLevels` records no level for a blank cell and
+    `resolveAtddHomeKind(undefined)` routes to `tests/integration/**`, so it
+    also owes `QFAI-ATDD-112`. That is not an oversight — narrowing either side
+    would drop an undeclared TC out of a gate, and the fallback exists because
+    an unstated `Level` must not silently leave L1/L2 ungated. It is written
+    down here because the fix above removes the case where a _later_ row
+    contradicts the blank, and it would otherwise read as removing all of them.
+    Declare the `Level` and exactly one gate owns the TC.
+- **`qfai report` reads the ledger `qfai validate` reads.** `collectTddCoverage`
+  parsed the first Markdown table in `tdd/test-list.md` while the gate scores
+  every table carrying the ledger schema, so a `done` L1/L2 row in an appended
+  `## CHG-…` section passed validation and was printed as missing and open. A CI
+  progress figure that contradicts the gate blocking the same branch is worse
+  than none. Both now call one reader in `core/tddHelpers.ts`, which also masks
+  fenced templates and commented-out tables out of the report and applies the
+  same "is this a row that can carry coverage" rule (`TDD-ID` present, `TC-Refs`
+  not on an `API`/`E2E` row). Report figures may move for a ledger with appended
+  tables, a fenced template, or `TC-Refs` on an `API`/`E2E` row.
+- **`qfai atdd scaffold`'s skip guidance follows `paths.testsDir`.** The message
+  naming where an L4/L5 test case belongs was pinned to `tests/api/**` /
+  `tests/e2e/**` while the writer and the ATDD scan both follow the configured
+  directory, so a project that relocated `testsDir` was sent somewhere no gate
+  reads and could not clear `QFAI-ATDD-112` by doing as it was told.
+- **`QFAI-ATDD-105` no longer asks for an L1/L2 annotation to be moved.** The
+  legacy `tests/atdd/**` probe listed every annotated file, and the finding's
+  advice is "move it into integration / api / e2e" — wrong for a file carrying
+  only Unit/Component annotations, which owe no ATDD directory at all and which
+  `catalog/test-layers.md` says are not misplaced wherever they land. Following
+  it walked the project back into the all-integration collapse the exclusion
+  undoes. Only a file whose every annotation is provably outside ATDD goes
+  quiet: one `US-*`, `CON-API-*` or `CON-DB-*` reference, or one `TC-*` with an
+  unknown or absent `Level`, still names the file.
+- **The npm README states the routing the package ships.** `README.md` is in
+  `package.json#files`, so it is the npm landing page, and it still carried the
+  pre-`Level`-routing rules: every `TC` annotated in `tests/integration/**` and
+  a blanket ban on `TC` in `tests/api/**` / `tests/e2e/**`. A reader arriving
+  from npm duplicated L1/L2 into integration and could not place an L4/L5
+  annotation in the home the validator requires. It now carries the routing
+  table, the L1/L2 exclusion and the gate that replaces it, and says the
+  directories follow `paths.testsDir`.
+- **`tdd/test-list.md` is now required for a spec that declares a
+  coverage-target TC.** This is an escalation from warning to error, announced
+  here because it is one. The file used to be optional for every spec: an
+  absent one raised `TDDLIST_MISSING` (`warning`) and the validator returned.
+  With Unit and Component out of `QFAI-ATDD-112` (below) that early return
+  became the last hole — a spec with declared L1/L2 TCs, no tests and no ledger
+  passed `validate --profile full --fail-on error` on a `warning` and an `info`.
+  An absent ledger now also raises `TDDLIST_TC_NOT_COVERED` (`error`), naming
+  every coverage-target TC it leaves without a row.
+  - **Who it hits.** Only a spec that declares at least one coverage-target
+    `Level` — `L1`/`L2`/`Unit`/`Component`, an unrecognized value, or no
+    `Level` column at all — _and_ has no `tdd/test-list.md`. A spec whose TCs
+    are all L3-L5 keeps the warning and gains no error; a spec that already has
+    a ledger is unaffected, and the escalation is per spec, not per project.
+  - **It is not waivable, and it is clearable.** `QFAI-WAIVER-002` refuses
+    every waiver on an `error` rule, so the exit is to seed `tdd/test-list.md`
+    with one row per coverage-target TC (`/qfai-sdd` Phase 2b) and run
+    `/qfai-implement`. That is the same exit the rule has when the file exists;
+    nothing new becomes unsatisfiable.
+  - `TDDLIST_MISSING` now states which of the two cases the spec is in and
+    names the error that follows, so the escalation is visible in the run that
+    first reports it rather than only in these notes. The shipped `/qfai-sdd`
+    reference (`references/spec-traceability-rules.md`) said unconditionally
+    that a missing ledger is a warning, which told the author the gap was
+    non-blocking; it now states the condition.
+- **`catalog/test-layers.md` says what happens to a multi-valued `Level` cell.**
+  It called `L3/L5` illegal and then claimed "nothing consumes it and no
+  validator can route it" — the opposite of the shipped behaviour, in the file
+  that is the SSOT for it. `QFAI-ATDD-112` routes such a cell to the same
+  default a TC with no `Level` gets (`<testsDir>/integration/**`) and keeps the
+  obligation, and `TDDLIST_UNKNOWN_LEVEL` (`warning`) names the cell while the
+  TC stays a coverage target. Both are written down now, with the only fix
+  (split the row) and an explicit statement that nothing normalizes such a cell
+  to one of its own halves — a consumer project had recorded exactly that
+  invented normalization as a fact about a spec value it never held.
+- **One `Level` predicate, one normalization.** `resolveTcHomeKind` matched
+  `NO_ATDD_OBLIGATION_LEVELS` against the raw map value, the exported
+  `isOutsideAtddObligation` matched a trimmed and lower-cased one, and
+  `qfai atdd scaffold` carried a third set with a third inline normalization —
+  one question with three answers, inside the routing whose whole purpose is
+  stopping two rules from disagreeing about one cell. All three now call
+  `resolveAtddHomeKind`, which owns the normalization. The level table is a
+  `Map` rather than an object literal, so a `Level` cell spelled `constructor`
+  or `__proto__` no longer resolves to an inherited `Object.prototype` value:
+  that made the TC uncounted where it was annotated **and** reported as
+  forbidden there — two errors from one correct placement, on a cell whose only
+  fault was a typo. The Unit/Component word list is now one list rather than
+  two: the ATDD side imports `UNIT_COMPONENT_LAYERS` instead of restating its
+  members, since the levels ATDD stops owing have to be exactly the levels the
+  ledger starts owing, and a spelling in one set and not the other is a `Level`
+  owed by no gate at all. A test pins that property at the predicate level, so
+  it survives the constants being split apart again.
+- **First declaration wins between two tables, not only between two shapes.**
+  The heading-wins fix below settled a heading disagreeing with a table row; two
+  tables inside `## Test Case Table` still disagreed. The non-coverage branch
+  `continue`d without recording the id, so a TC declared `L3` by an earlier
+  table and `L1` by a later one was claimed by the ledger gate as well as by
+  `QFAI-ATDD-112`, which reads the `L3` — the same two-gates-disagree failure
+  one level down, and the one an L1/L2 TC can no longer afford now that exactly
+  one gate is meant to own it. A levelled id is recorded whether or not it is a
+  coverage target, so the first declaration wins in both directions.
+- **`catalog/test-layers.md` describes the routing the validator performs.**
+  The "Annotation routing" section still said the derived `Level` does not move
+  the annotation, that every `TC-*` is answered from `tests/integration/**`, and
+  that a `TC-*` in `tests/api/**` or `tests/e2e/**` is rejected outright — the
+  pre-`Level`-routing rules, two paragraphs above the L1/L2 exclusion that
+  contradicts them. A reader following it duplicated L1/L2 into integration and
+  misplaced L4/L5. It now carries the routing table the gate implements, and the
+  crosswalk paragraph above it agrees. The section anchor changed to
+  `#annotation-routing`.
+- **A coverage row needs a `TDD-ID`, and the heading form wins over a table
+  row.** Requiring the ledger schema of a later table left two ways through: a
+  line under a complete header that fills only `TC-Refs` cleared the obligation
+  with no item behind it (and its blank `Layer` slipped past both the E2E/API
+  exclusion and the `Level` crosswalk), and a TC declared `L3` by its heading
+  and `L1` by a table row picked up a ledger obligation on top of its
+  `QFAI-ATDD-112` one — the two gates disagreeing about one TC.
+- **`qfai atdd scaffold` skips `L4`/`L5` TCs as well.** The writer is
+  integration-only, so their skeleton landed in a directory their declared
+  `Level` does not name: uncounted towards api/e2e coverage and reported as a
+  forbidden reference by `QFAI-ATDD-123`. Skipped TCs are named on stderr with
+  what to do instead.
+- **The forbidden-reference bullet is `Level`-relative, not a blanket ban.** It
+  said `tests/api/**` and `tests/e2e/**` "must not carry `TC-*` annotations",
+  so a reader left an L4/L5 TC uncovered: the validator requires the annotation
+  in the directory the TC's own `Level` names. The re-filing advice — a `TC-*`
+  should not be at L4/L5 at all — stays.
+- **Coverage counts real ledger rows only.** The multi-table scan read the raw
+  file and accepted any table with a `TC-Refs` column, so a fenced template or a
+  commented-out old table in `test-list.md` counted a TC as covered, and a stray
+  two-column table headed `TC-Refs` cleared the obligation with no `TDD-ID`, no
+  `Layer` and no `Test file` behind it — clearing the only `error` that still
+  owes an L1/L2 TC. Non-spec regions are masked first, and a table must carry the
+  full ledger schema to contribute.
+- **The two TC readers now read the same tables.** `collectTcLevels` scanned
+  every table in `06_Test-Cases.md` while `resolveTestCaseTables` reads the
+  `## Test Case Table` section, so an illustrative table above the heading won
+  under first-declaration-wins: an example row saying `TC-0001 | L1` excluded
+  the TC from `QFAI-ATDD-112` while the section-scoped ledger gate read the
+  real `L3` row and did not claim it either. Both now read through
+  `resolveTestCaseTables`, which also leaves a mistyped `tc-id` header owed by
+  both gates instead of neither.
+- **`qfai atdd scaffold` skips Unit and Component TCs.** It wrote a skeleton
+  into `tests/integration/<spec-id>/` for every TC, which for an L1/L2 TC is
+  the annotation the same skill forbids and that `QFAI-ATDD-112` no longer
+  counts — so filling it in discharged nothing. Skipped TCs are named on
+  stderr; a spec whose TCs are all L1/L2 exits 0 saying nothing was in scope,
+  which is distinct from the exit-1 no-Test-Case-entries case.
+- **`QFAI-ATDD-112` no longer demands an annotation for a Unit or Component
+  TC.** `LEVEL_TO_TEST_KIND` had keys for `l3`/`l4`/`l5` and none for
+  `l1`/`l2`, so `resolveTcHomeKind` fell through its `?? "integration"` case —
+  the fallback meant for a spec with _no_ `Level` column — and every declared
+  L1/L2 TC was reported as uncovered in `tests/integration/**`. That is not
+  their home: `catalog/test-layers.md` gives L1/L2 no mandated directory and
+  `qfai-atdd/SKILL.md` puts Unit and Component out of its scope. Since the rule
+  is `error` and `QFAI-WAIVER-002` refuses waivers on `error` rules, a project
+  that filed unit tests where the layer policy says to had **no exit** — the
+  only validator-clean path was duplicating every annotation into
+  `tests/integration/**`, which is the all-integration collapse the same
+  catalog lists as an anti-pattern. Measured on one consumer repository: 263
+  findings, 255 L1 + 8 L2, zero L3, against 483 TCs all correctly annotated.
+  L1/L2 stay gated by `tdd/test-list.md` / `TDDLIST_TC_NOT_COVERED` under
+  `/qfai-implement`, the stage that owns them. The no-`Level` default is
+  unchanged, and an L1/L2 annotation that happens to sit in a scanned directory
+  is not reported as forbidden either — the routing rule and the forbidden rule
+  have to agree.
+  - **What the exclusion adds to the output.** A silent exclusion is
+    indistinguishable from a scan that found nothing, so it is stated in three
+    places a consumer may already parse. `QFAI-ATDD-117` is a new `info` finding
+    naming every excluded TC in `refs` — a code that did not exist before, so a
+    consumer keying on rule codes will meet it on upgrade. `summary.json` gains
+    `excludedUnitComponentTc` (rendered under Deferred Coverage in
+    `summary.md`), because `missing.tc: []` alone reads as "ATDD covers every
+    TC". Neither is an `error` and neither changes an exit code.
+  - **`D-SCAFFOLD-PLACEHOLDER` stops blocking on Unit and Component too.**
+    `qfai atdd scaffold` did not route by `Level` before this release, so an
+    upgrading project can already hold an unfilled L1/L2 skeleton under
+    `tests/integration/**`, and an unfilled one escalates to `error` in
+    `--profile atdd|full`. Left alone, the release would have traded
+    `QFAI-ATDD-112` for that — the same unwaivable block under a second code.
+    The validator reads the spec's declared levels and skips TCs outside the
+    ATDD obligation, through the same `isOutsideAtddObligation` the routing
+    uses, so the two rules cannot disagree about one cell.
+- **`TDDLIST_TC_NOT_COVERED` now reads the whole ledger and the whole spec.**
+  Two gaps surfaced once L1/L2 depended on this gate alone. Coverage was scored
+  against the _first_ table in `tdd/test-list.md`, so a ledger that appends a
+  per-change-request section with its own table reported every TC those later
+  tables cover as uncovered. And the known-TC set was seeded from heading-form
+  `- Level:` pairs, so a `## TC-NNNN` block declaring no `Level` counted as
+  undeclared and its own ledger row became a `TDDLIST_UNKNOWN_REF`. A `TC-*` on
+  an E2E/API row still does not count towards coverage, wherever that row lives.
 - **`references/execution-ledger.md` is the only place the ledger's transition
   table is stated.** `qfai-implement/SKILL.md` summarised it four times and
   three of those summaries claimed the re-entry set was a single edge
@@ -109,6 +503,22 @@
 
 ### Fixed
 
+- **The init marker is QFAI's own, not any file at that path.** `.agents/` and
+  `.github/agents/` are conventional directories, so a project's own README in
+  one of them made `initialised` true and failed every profile of a project
+  that never installed QFAI. The marker is the signature `qfai init` writes.
+- **`ELOOP` is a broken target, not a crash.** It says the canonical target is
+  a symlink cycle — structural damage to the thing this rule inspects — and
+  re-throwing it exited `qfai validate` with a stack trace instead of a
+  `QFAI-LINK-001` naming the path to repair.
+- **A target that resolves can still be unreadable.** `stat` reads metadata,
+  which an ACL or a mode can allow while the body stays shut, and the assistant
+  loads the body. Both the agent document and a skill's `SKILL.md` are checked
+  for read access.
+- **The flattened-link probe no longer re-stats what the caller holds.**
+  `ensureSymlink` had already `lstat`ed the path; re-probing let `safeLstat`
+  turn a transient `EIO` into `undefined`, which reads as "somebody else's
+  file" — so init left a flattened wrapper in the reassuring `skipped` list.
 - **An initialised project is recognised without any wrapper left.** The test
   was "some wrapper survives", so deleting all of them said init had never run
   and nothing was checked at all — the state where the assistant can load
@@ -236,6 +646,77 @@
   and changed nothing. The path is one qfai created and owns, and its content is
   the link target, so it is now replaced without `--force` and the repair is
   announced on stdout.
+- **Foreign home is a placement, not a `Level`.** Once `api` and `e2e` are
+  scanned, an L4 skeleton that followed the remediation into `tests/api/**` is
+  in its declared home — its annotation counts, so what it needs is the
+  ordinary placeholder gate and its escalation. Judged by `Level` alone it left
+  the coverage list, hit the `continue`, and sat on the non-escalating foreign
+  warning however many times validate ran: the same silence the move used to
+  produce, one step further along.
+- **A mistyped TC column still declares its ids.** Reading them from the
+  resolved tables closed the appendix hole and opened this one: a header like
+  `TC Id` drops the whole table, so the id left the obligation set and
+  `QFAI-ATDD-112` stopped asking for it. The ledger does not cover the gap —
+  with no `tdd/test-list.md` at all `TDDLIST_MISSING` is a warning and the
+  check returns early — so `--profile full --fail-on error` passed with neither
+  a test nor a row. Tokens in an unresolvable table inside the authoritative
+  section are kept; the header is what `TDDLIST_TC_TABLE_UNRESOLVED` reports.
+- **A top-level indented code block is masked before table parsing.** Only
+  fenced blocks and HTML comments were, and `parseAllMarkdownTables` matches
+  `^s*|` — so a schema-complete sample ledger indented four spaces was
+  collected as a real table. A spec with no ledger of its own could satisfy
+  `TDDLIST_TC_NOT_COVERED` from the sample, and a `todo` row owes neither
+  `Test file` nor `Evidence`, so `validate --profile full --fail-on error`
+  passed with no test behind it. Recognised at the top level only: under a list
+  item four-space indentation is continuation, not code.
+- **A scaffold skeleton is followed to the directory the remediation names.**
+  `D-SCAFFOLD-FOREIGN-HOME` tells the operator to move an L4/L5 skeleton to
+  `tests/api/**` or `tests/e2e/**`, and a move without an implementation left
+  every gate at once — this scan did not reach it, the ATDD scan counted its
+  annotation as coverage, and the generated `it.skip(...)` is not the `*.todo`
+  form `QFAI-TEST-001` matches. Both directories are scanned, and the
+  remediation says to write the real test rather than move the skeleton.
+- **An L1/L2 annotation in `tests/integration/**`is not a violation.** The
+Reviewer Gate and`project_memory`said`QFAI-ATDD-123`rejects it, but`resolveTcHomeKind`returns`null` for those levels and the scan continues
+  before the forbidden-placement check — the validator neither counts it nor
+  flags it. A reviewer working from that text would have had an existing,
+  passing annotation deleted.
+- **The declared TC set is read from the authoritative shapes only.** Masking
+  fixed the fenced-sample case; an appendix or illustrative table written as
+  ordinary markdown _outside_ `## Test Case Table` was still collected, so its
+  ids landed in the declared set with no `Level`, fell through to the
+  integration default, and `QFAI-ATDD-112` raised a hard error against a TC
+  that does not exist. The set is the heading form plus the `TC-ID` column of
+  the tables inside that section — the same two passes `collectTcLevels`
+  makes. Scoped to the section rather than to `resolveTestCaseTables`, so a
+  mistyped `tc-id` header still declares its ids and both gates report it.
+- **The L1/L2 exclusion reaches every mandatory checklist.** The body defined
+  it, but the Reviewer Gate, the Definition of Done and `project_memory` still
+  demanded "every TC" — so a `completion-reviewer`, or an agent that never
+  opens the body, judged an L1/L2-only spec the validator passes as not-done,
+  and the repair they would reach for is the duplicated integration annotation
+  `QFAI-ATDD-123` rejects.
+- **A settled `Level` survives a later table that has no `Level` column.** The
+  first-declaration-wins guard sat inside the `levelIndex >= 0` branch, so a
+  re-listing without that column skipped it and fell through to the
+  column-absent fallback — re-adding an `L3` TC as a Unit/Component target on
+  top of the integration obligation its declaration gives it. The result was
+  `TDDLIST_TC_NOT_COVERED` beside a correct `QFAI-ATDD-112`, and an inflated
+  target count in the report.
+- **The declared-id set is read from the same masked text as the levels.**
+  `collectTcLevels` masks fenced samples and HTML comments; the id collector
+  read the raw document, so an id that appears only in a format example stayed
+  declared with no `Level`, fell through to the integration default, and
+  `QFAI-ATDD-112` raised a hard error against a TC that does not exist.
+- **A ledger table that kept one marker column is a ledger table.** Detection
+  admitted a table carrying both `TDD-ID` and `TC-Refs`, or six of the eight
+  required columns — and a table that drops one marker _and_ two other columns
+  fell between them. `TDD-ID | Layer | Test file | Status | Evidence` can
+  obviously hold ledger rows, so a `done` row in the complete first table and a
+  `todo` row in this one reported no missing column and no outstanding work,
+  and the report published `done: 1 / open: 0` from the first table alone. One
+  marker plus four columns now counts as an attempt, which leaves a
+  `TDD-ID | Status` roll-up read as the summary it is.
 - **The complete transition list says `any status` too.** Widening only the
   summary table left the list — which declares itself complete and prohibits
   every unlisted edge — still naming five sources, so whether a `blocked` or

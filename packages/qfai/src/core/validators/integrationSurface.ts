@@ -1,5 +1,6 @@
+import { constants } from "node:fs";
 import type { Dirent, Stats } from "node:fs";
-import { access, lstat, readdir, readlink, stat } from "node:fs/promises";
+import { access, lstat, readFile, readdir, readlink, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
@@ -67,6 +68,16 @@ function isMissing(error: unknown): boolean {
  * Kept in step with the README set in `cli/commands/init.ts`. Any one of them
  * is enough: a project with any of the integration surfaces has run init.
  */
+/**
+ * The line every one of those READMEs carries.
+ *
+ * `.agents/` and `.github/agents/` are conventional directories a project can
+ * have for its own reasons, and a `README.md` in one of them is not evidence of
+ * anything. Requiring the sentence `qfai init` writes makes the marker QFAI's:
+ * a project that never ran it is not told that all six surfaces are missing.
+ */
+const INIT_MARKER_SIGNATURE = ".qfai/assistant/";
+
 const INIT_MARKERS: readonly (readonly string[])[] = [
   [".agents", "README.md"],
   [".codex", "README.md"],
@@ -133,6 +144,28 @@ async function skillIdsIn(skillsDir: string): Promise<Set<string>> {
  */
 /** Alias kept for the two call sites that only ask "is it there". */
 const exists = fileExists;
+
+/** Whether the file can actually be read, not merely stat'd. */
+async function isReadable(filePath: string): Promise<boolean> {
+  try {
+    await access(filePath, constants.R_OK);
+    return true;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException | null)?.code;
+    if (code === "EACCES" || code === "EPERM") return false;
+    if (isMissing(error)) return false;
+    throw error;
+  }
+}
+
+/** Whether a README at `filePath` is one `qfai init` wrote. */
+async function hasInitSignature(filePath: string): Promise<boolean> {
+  const body = await readFile(filePath, "utf-8").catch((error: unknown) => {
+    if (isMissing(error)) return null;
+    throw error;
+  });
+  return body !== null && body.includes(INIT_MARKER_SIGNATURE);
+}
 
 /** `stat`, or `null` when the path is absent. Any other error propagates. */
 async function statOrNull(filePath: string): Promise<Stats | null> {
@@ -274,9 +307,9 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
   // removes them, so they outlive the links they document.
   const initialised =
     links.some((link) => link !== null) ||
-    (await Promise.all(INIT_MARKERS.map((marker) => fileExists(path.join(root, ...marker))))).some(
-      Boolean,
-    );
+    (
+      await Promise.all(INIT_MARKERS.map((marker) => hasInitSignature(path.join(root, ...marker))))
+    ).some(Boolean);
   // Surfaces `qfai init` creates that are not there at all. Reported once each,
   // below, instead of once per wrapper they would have held: a directory
   // deleted whole is one act, and one ref per shipped skill buries that.
@@ -346,8 +379,19 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
     try {
       target = await stat(wrapper.absolute);
     } catch (error) {
-      if (!isMissing(error)) throw error;
-      broken.push({ relative: wrapper.relative, detail: `dangling -> ${toPosix(wrapper.target)}` });
+      // `ELOOP` is not a filesystem fault to propagate: it says the target is a
+      // symlink cycle, which is structural damage to the very thing this rule
+      // inspects. Re-thrown, `qfai validate` exited with a stack trace instead
+      // of a `QFAI-LINK-001` naming the path to repair.
+      const code = (error as NodeJS.ErrnoException | null)?.code;
+      if (!isMissing(error) && code !== "ELOOP") throw error;
+      broken.push({
+        relative: wrapper.relative,
+        detail:
+          code === "ELOOP"
+            ? `resolves through a symlink cycle -> ${toPosix(wrapper.target)}`
+            : `dangling -> ${toPosix(wrapper.target)}`,
+      });
       continue;
     }
 
@@ -376,7 +420,8 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       // `isFile`, not "exists": `access` succeeds on a directory named
       // `SKILL.md` too, and the assistant can load that no better than a
       // missing one.
-      const doc = await statOrNull(path.join(wrapper.absolute, "SKILL.md"));
+      const skillDoc = path.join(wrapper.absolute, "SKILL.md");
+      const doc = await statOrNull(skillDoc);
       if (doc === null || !doc.isFile()) {
         broken.push({
           relative: wrapper.relative,
@@ -385,7 +430,22 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
               ? "resolves, but the directory has no SKILL.md"
               : "resolves, but its SKILL.md is not a file",
         });
+        continue;
       }
+      if (!(await isReadable(skillDoc))) {
+        broken.push({
+          relative: wrapper.relative,
+          detail: "resolves, but its SKILL.md is unreadable",
+        });
+      }
+    } else if (!(await isReadable(wrapper.absolute))) {
+      // An agent wrapper names the document itself. `stat` reads metadata, which
+      // an ACL or a mode can allow while the body stays closed — and the
+      // assistant loads the body.
+      broken.push({
+        relative: wrapper.relative,
+        detail: "resolves, but the document is unreadable",
+      });
     }
   }
 

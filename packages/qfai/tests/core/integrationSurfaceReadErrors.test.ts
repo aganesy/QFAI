@@ -176,3 +176,22 @@ describe("validateIntegrationSurface read errors", () => {
     });
   });
 });
+
+describe("a structurally broken target is a finding, not a crash", () => {
+  it("reports ELOOP instead of propagating it", async () => {
+    // `ELOOP` says the target is a symlink cycle — structural damage to the
+    // thing this rule inspects, not a transient fault. Re-thrown, `qfai
+    // validate` exited with a stack trace and named nothing to repair.
+    await withProject(async (root) => {
+      await seedCanonical(root);
+      const wrapper = path.join(root, ".claude", "skills", "qfai-atdd");
+      await mkdir(path.dirname(wrapper), { recursive: true });
+      await symlink("../../.qfai/assistant/skills/qfai-atdd", wrapper, "dir");
+      statSpy.mockImplementation(() => Promise.reject(errno("ELOOP")));
+
+      const issues = await validateIntegrationSurface(root);
+      expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-001"]);
+      expect(issues[0]?.message).toContain("symlink cycle");
+    });
+  });
+});

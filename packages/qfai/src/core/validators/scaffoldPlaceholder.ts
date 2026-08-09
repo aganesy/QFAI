@@ -48,6 +48,7 @@ import { readFile } from "node:fs/promises";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { SCAFFOLD_PLACEHOLDER_MARKER } from "../atdd/scaffold.js";
+import { atddTestKindDirs, collectTcLevels, isOutsideAtddObligation } from "../atddTraceability.js";
 import {
   listValidateCycleKeys,
   recordValidateCycle,
@@ -68,12 +69,34 @@ import { issue } from "./utils.js";
 const TODO_MARKER_RE = /\/\/\s*TODO:\s*implement assertion for\s+(TC-\d{4}-\d{4})\b/g;
 
 /**
+ * Declared `Level` values whose home is a directory this writer does not emit
+ * into. Kept in step with `atddScaffold.ts`'s own set: the command stopped
+ * generating these, and this validator has to stop gating the ones it already
+ * generated.
+ */
+const SCAFFOLD_FOREIGN_LEVELS = new Set(["l4", "api", "l5", "e2e"]);
+
+/** The scanned root a `Level` routes to. */
+function scaffoldHomeForLevel(level: string | undefined): "api" | "e2e" | "integration" {
+  const normalized = (level ?? "").trim().toLowerCase();
+  if (normalized === "l4" || normalized === "api") return "api";
+  if (normalized === "l5" || normalized === "e2e") return "e2e";
+  return "integration";
+}
+
+/** The home a scanned root represents; `atdd` is the integration one. */
+function scaffoldHomeOf(dirName: string): "api" | "e2e" | "integration" {
+  return dirName === "api" || dirName === "e2e" ? dirName : "integration";
+}
+
+/**
  * Extract the spec id from an atdd-scaffold file path of the shape
  * `<testsRoot>/atdd/<spec-id>/<TC>.test.*`. Returns `null` when the
  * path does not match the canonical layout — the caller falls back
  * to emitting a warning without escalation (graceful degradation
  * rather than dropping the finding entirely).
  */
+
 function extractSpecIdFromScaffoldPath(testsAtddDir: string, filePath: string): string | null {
   const rel = path.relative(testsAtddDir, filePath);
   if (rel.startsWith("..") || path.isAbsolute(rel)) {
@@ -96,6 +119,19 @@ export async function validateScaffoldPlaceholder(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
+  /** `06_Test-Cases.md` levels per spec, read once per spec and memoised. */
+  const levelCache = new Map<string, Map<string, string>>();
+  const tcLevelsForSpec = async (specId: string): Promise<Map<string, string>> => {
+    const cached = levelCache.get(specId);
+    if (cached) return cached;
+    const specsRoot = resolvePath(root, config, "specsDir");
+    const text = await readFile(path.join(specsRoot, specId, "06_Test-Cases.md"), "utf-8").catch(
+      () => "",
+    );
+    const levels = collectTcLevels(text);
+    levelCache.set(specId, levels);
+    return levels;
+  };
   // Honor `config.paths.testsDir`; default `tests` covers the
   // legacy `tests/atdd/<spec-id>/<TC>.test.*` layout. The atdd
   // subdirectory is fixed by the scaffold contract; only the
@@ -105,8 +141,28 @@ export async function validateScaffoldPlaceholder(
   // to `QFAI-ATDD-112`. `atdd/` is still scanned: projects scaffolded before
   // that change have skeletons there, and dropping the directory would stop
   // reporting placeholders that are still on disk.
-  const scaffoldDirs = [path.join(testsDir, "integration"), path.join(testsDir, "atdd")];
+  // `api` and `e2e` are scanned too, though `qfai atdd scaffold` never writes
+  // there: `D-SCAFFOLD-FOREIGN-HOME` tells the operator to move an L4/L5
+  // skeleton to exactly those directories, and a skeleton that moved without
+  // being implemented used to disappear from every gate at once — this scan did
+  // not reach it, the ATDD scan counted its annotation as coverage so
+  // `QFAI-ATDD-112` and `-123` both cleared, and the generated `it.skip(...)`
+  // is not the `*.todo` form `QFAI-TEST-001` matches. Following the remediation
+  // literally turned a reported placeholder into a silent one. Only a file
+  // carrying the scaffold sentinel is reported, so a hand-written test in those
+  // directories is untouched.
+  const scaffoldDirs = [
+    path.join(testsDir, "integration"),
+    path.join(testsDir, "atdd"),
+    path.join(testsDir, "api"),
+    path.join(testsDir, "e2e"),
+  ];
   const threshold = resolveEscalateThreshold(config.atdd?.scaffoldEscalateCycles);
+  // Through the configured `paths.testsDir`, like the scan and the scaffold
+  // writer. A project that relocated it was told to move the test to a
+  // literal `tests/api/**` that no validator reads, so following the
+  // remediation left `QFAI-ATDD-112` exactly as it was.
+  const dirs = atddTestKindDirs(config.paths.testsDir);
   // Glob for any test extension the project uses. fast-glob
   // returns absolute paths when the pattern is absolute.
   const globPatterns = scaffoldDirs.map((dir) =>
@@ -138,13 +194,74 @@ export async function validateScaffoldPlaceholder(
     if (matches.length === 0) {
       continue;
     }
-    const tcIds = Array.from(
+    const allTcIds = Array.from(
       new Set(matches.map((m) => m[1]).filter((id): id is string => typeof id === "string")),
     );
     const relPath = path.relative(root, file).replace(/\\/g, "/");
     // Resolved against whichever scaffold root actually contains the file.
     const owningDir = scaffoldDirs.find((dir) => path.resolve(file).startsWith(path.resolve(dir)));
     const specId = owningDir ? extractSpecIdFromScaffoldPath(owningDir, file) : null;
+
+    // A TC whose declared `Level` is Unit or Component carries no ATDD
+    // obligation (`QFAI-ATDD-117`), so an unfilled skeleton for it must not
+    // escalate to `error` and block `validate --profile atdd|full`. `qfai atdd
+    // scaffold` still generates one — it does not route by `Level` — so the
+    // skeleton exists and this is where it stops being a gate.
+    const levels = specId === null ? new Map<string, string>() : await tcLevelsForSpec(specId);
+    // Which of the scanned roots this file is actually in. `atdd` is the
+    // scaffold's own output directory and shares the integration home.
+    const actualHome = owningDir === undefined ? null : scaffoldHomeOf(path.basename(owningDir));
+    const tcIds: string[] = [];
+    const foreignHomeTcIds: string[] = [];
+    for (const tcId of allTcIds) {
+      const level = levels.get(tcId.toUpperCase());
+      if (isOutsideAtddObligation(level)) continue;
+      // Foreign is a **placement**, not a `Level`. Once `api` and `e2e` are
+      // scanned, an L4 skeleton that followed the remediation into
+      // `tests/api/**` is in its declared home — its annotation counts, so what
+      // it needs is the ordinary placeholder gate and its escalation. Judging by
+      // `Level` alone left it on the non-escalating foreign warning forever,
+      // which is the same silence the move used to produce.
+      const declaredHome = scaffoldHomeForLevel(level);
+      const isForeign =
+        SCAFFOLD_FOREIGN_LEVELS.has((level ?? "").trim().toLowerCase()) &&
+        (actualHome === null || declaredHome !== actualHome);
+      if (isForeign) {
+        foreignHomeTcIds.push(tcId);
+        continue;
+      }
+      tcIds.push(tcId);
+    }
+
+    // An L4/L5 skeleton that a pre-upgrade `qfai atdd scaffold` already wrote
+    // into `<testsDir>/integration/` is a different problem from an unfilled
+    // one, and the ordinary finding gives it the wrong instruction. Filling in
+    // an assertion there discharges nothing: the TC's declared `Level` routes
+    // to the api / e2e directories `paths.testsDir` resolves, so the annotation stays uncounted by
+    // `QFAI-ATDD-112` and `QFAI-ATDD-123` keeps rejecting it. The remediation
+    // is to move or delete the file, and it does not escalate — escalation
+    // exists to pressure an operator into writing the assertion, which is not
+    // what this one needs.
+    if (foreignHomeTcIds.length > 0) {
+      issues.push(
+        issue(
+          "D-SCAFFOLD-FOREIGN-HOME",
+          `Scaffold skeleton in ${relPath} covers TC whose declared Level routes elsewhere (${foreignHomeTcIds.join(", ")}). ` +
+            "`qfai atdd scaffold` writes integration skeletons only; an L4/L5 annotation here is uncounted by " +
+            "QFAI-ATDD-112 and rejected by QFAI-ATDD-123, so implementing an assertion in this file discharges nothing.",
+          "warning",
+          relPath,
+          "scaffoldPlaceholder.foreignHome",
+          foreignHomeTcIds,
+          "change",
+          `Write the real test in the directory the TC's \`Level\` names (${dirs.api} for L4, ${dirs.e2e} for L5) and delete this skeleton — or re-file the obligation as CON-API-* / US-*, which is what a TC-* at L4/L5 usually means. Moving the skeleton itself discharges nothing: it is still a placeholder, and this rule follows it there.`,
+        ),
+      );
+    }
+
+    if (tcIds.length === 0) {
+      continue;
+    }
     // Advance the validate-only escalation counter PER (spec, TC) —
     // not per file — so a spec-NNNN/TC-NNNN-NNNN that appears in two
     // scaffold files (split assertions) still escalates after the

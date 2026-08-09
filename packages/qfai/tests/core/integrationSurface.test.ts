@@ -20,7 +20,7 @@
  * an `endsWith('.md')` test claimed a project's own agent file.
  */
 
-import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -85,6 +85,16 @@ async function wireAll(root: string, skills: string[], agents: string[]): Promis
 }
 
 /** The link `init` writes for a skill wrapper, as a relative target. */
+/** A README with the signature `qfai init` writes, so it counts as a marker. */
+const INIT_README_BODY = [
+  "# QFAI Agents skills",
+  "",
+  "Skill symlinks point to QFAI's canonical skill documents under:",
+  "",
+  "- .qfai/assistant/skills/",
+  "",
+].join("\n");
+
 const skillTarget = (dir: string, id: string): string =>
   path.join(...dir.split("/").map(() => ".."), ".qfai", "assistant", "skills", id);
 
@@ -502,13 +512,13 @@ describe("an initialised project is recognised without any wrapper left", () => 
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
       await wireAll(root, ["qfai-atdd"], []);
-      await writeFile(path.join(root, ".agents", "README.md"), "# agents\n", "utf-8");
+      await writeFile(path.join(root, ".agents", "README.md"), INIT_README_BODY, "utf-8");
       for (const dir of INTEGRATION_SURFACE_DIRS) {
         await rm(path.join(root, ...dir.split("/")), { recursive: true, force: true });
       }
       // The marker `qfai init` left behind is all that remains.
       await mkdir(path.join(root, ".agents"), { recursive: true });
-      await writeFile(path.join(root, ".agents", "README.md"), "# agents\n", "utf-8");
+      await writeFile(path.join(root, ".agents", "README.md"), INIT_README_BODY, "utf-8");
 
       const found = await finding(root);
       expect(found?.message).toContain("integration surface missing");
@@ -539,6 +549,38 @@ describe("a canonical SKILL.md has to be a file", () => {
 
       const found = await finding(root);
       expect(found?.message).toContain("its SKILL.md is not a file");
+    });
+  });
+});
+
+describe("the init marker has to be QFAI's own", () => {
+  it("ignores a project's own README at one of those paths", async () => {
+    // `.agents/` and `.github/agents/` are conventional directories, and a
+    // README in one is not evidence init ran. Taking mere existence as the
+    // marker failed every profile of a project that never installed QFAI.
+    await withProject(async (root) => {
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await mkdir(path.join(root, ".agents"), { recursive: true });
+      await writeFile(path.join(root, ".agents", "README.md"), "# our agents\n", "utf-8");
+
+      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
+});
+
+describe("a target can resolve and still be unusable", () => {
+  it("reports a canonical document that cannot be read", async () => {
+    // `stat` reads metadata, which a mode can allow while the body stays shut —
+    // and the assistant loads the body.
+    if (process.platform === "win32") return; // chmod does not gate reads here.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, [], ["qa-gatekeeper"]);
+      await wireAll(root, [], ["qa-gatekeeper"]);
+      await chmod(path.join(root, ".qfai", "assistant", "agents", "qa-gatekeeper.md"), 0o000);
+
+      const found = await finding(root);
+      expect(found?.message).toContain("unreadable");
     });
   });
 });

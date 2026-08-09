@@ -1262,7 +1262,7 @@ async function ensureSymlink(
       if (!options.dryRun) {
         await rm(linkPath, { recursive: true, force: true });
       }
-    } else if (await isFlattenedLink(linkPath, target)) {
+    } else if (await isFlattenedLink(linkPath, target, linkStat)) {
       // A regular file whose entire content is the link target: the signature
       // of a checkout that flattened the symlink because `core.symlinks` was
       // false — the Windows default, and not carried by a clone
@@ -1411,8 +1411,13 @@ function toPosixSeparators(value: string): string {
   return value.split("\\").join("/");
 }
 
-async function isFlattenedLink(linkPath: string, target: string): Promise<boolean> {
-  const stats = await safeLstat(linkPath);
+async function isFlattenedLink(linkPath: string, target: string, known?: Stats): Promise<boolean> {
+  // The caller has already `lstat`ed this path, and re-probing it opened a hole
+  // the rest of this function had been closed against: `safeLstat` turns a
+  // transient `EIO` or an `EACCES` into `undefined`, which reads as "somebody
+  // else's file", so init left a flattened wrapper in the reassuring `skipped`
+  // list. Pass the `Stats` it already holds.
+  const stats = known ?? (await safeLstat(linkPath));
   if (stats === undefined || !stats.isFile()) {
     return false;
   }

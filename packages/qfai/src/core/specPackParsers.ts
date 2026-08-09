@@ -160,26 +160,45 @@ function maskLineComments(line: string, inComment: boolean): { text: string; ope
   return { text: visible, open };
 }
 
+/** A top-level indented code block: four spaces or a tab, per CommonMark. */
+const INDENTED_CODE_LINE = /^(?: {4}|\t)/;
+
+/** A list item marker, which makes the indentation below it continuation. */
+const LIST_ITEM_LINE = /^\s*(?:[-*+]|\d+[.)])\s/;
+
 /**
- * Blanks the regions of `06_Test-Cases.md` that are not the spec, preserving
- * line count: fenced code blocks and HTML comments.
+ * Blanks the regions of a spec document that are not the spec, preserving line
+ * count: fenced code blocks, HTML comments, and top-level indented code blocks.
  *
- * `06_Test-Cases.md` often documents its own format in a fenced sample or a
- * commented-out block. Without this, an illustrative `## Test Case Table` plus
- * `TC-ID` table inside one is selected as the named section and its example IDs
- * are handed to the validators and the report — and for a heading-less legacy
- * document it flips a previously correct resolution into a wrong one, because
- * the hidden sample outranks the real table.
+ * These documents often illustrate their own format. Without this, an
+ * illustrative `## Test Case Table` plus `TC-ID` table inside one is selected as
+ * the named section and its example IDs are handed to the validators and the
+ * report — and for a heading-less legacy document it flips a previously correct
+ * resolution into a wrong one, because the hidden sample outranks the real
+ * table. In `tdd/test-list.md` the same hole was worse: a schema-complete sample
+ * ledger row in an indented block was collected as a real row, so a spec with no
+ * ledger at all could satisfy `TDDLIST_TC_NOT_COVERED` — and owe no `Test file`
+ * or `Evidence`, because a `todo` row owes neither — and pass
+ * `validate --profile full --fail-on error` with no test behind it.
  *
  * Fence state wins over comment state: `<!--` inside a fenced sample is sample
  * text, not a comment opener, so an unclosed one cannot swallow the rest of the
  * document. Comments are stripped before the fence check on a line, so a fence
  * marker that only appears inside a comment does not open a block either.
+ *
+ * **Indented code is recognised only at the top level.** Under a list item,
+ * four-space indentation is continuation rather than code, and telling the two
+ * apart needs the list's content column. Rather than guess it, a block is code
+ * only when no list is open — which closes the hole a document can be authored
+ * into while never blanking a table someone indented under a bullet.
  */
-function maskNonSpecRegions(text: string): string {
+export function maskNonSpecRegions(text: string): string {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   let open: { marker: string; length: number } | null = null;
   let inComment = false;
+  let inIndentedCode = false;
+  let listOpen = false;
+  let prevBlank = true;
 
   return lines
     .map((line) => {
@@ -190,6 +209,31 @@ function maskNonSpecRegions(text: string): string {
         }
         return "";
       }
+
+      const blank = line.trim().length === 0;
+
+      if (inIndentedCode) {
+        // A blank line does not end the block — an indented sample may contain
+        // one — but the first non-blank line at a shallower indent does.
+        if (blank || INDENTED_CODE_LINE.test(line)) {
+          prevBlank = blank;
+          return "";
+        }
+        inIndentedCode = false;
+      } else if (!listOpen && prevBlank && !blank && INDENTED_CODE_LINE.test(line)) {
+        inIndentedCode = true;
+        prevBlank = false;
+        return "";
+      }
+
+      if (LIST_ITEM_LINE.test(line)) {
+        listOpen = true;
+      } else if (!blank && !/^\s/.test(line)) {
+        // A non-blank line at column zero that is not a list item ends the list,
+        // so indentation after it is code again.
+        listOpen = false;
+      }
+      prevBlank = blank;
 
       const masked = maskLineComments(line, inComment);
       inComment = masked.open;
@@ -206,6 +250,19 @@ function maskNonSpecRegions(text: string): string {
 
 const TC_ID_HEADER = "TC-ID";
 
+/**
+ * Case-**sensitive**, on purpose: a `TC-Id` / `tc-id` header is a mistyped
+ * column, and `resolveTestCaseTable` surfaces that as `no-tc-id-column` rather
+ * than silently adopting an Appendix table instead.
+ *
+ * The agreement that matters is between the readers, not with the typo:
+ * `atddTraceability.ts#collectTableTcLevels` reads through
+ * `resolveTestCaseTables`, so both gates see the same tables. When the header
+ * is mistyped neither gate resolves it — `validateTddList` reports
+ * `TDDLIST_TC_TABLE_UNRESOLVED` and `QFAI-ATDD-112` sees no declared `Level`
+ * and keeps the default obligation — so the TC is owed by both, not neither,
+ * and fixing the header clears both.
+ */
 function hasTcIdColumn(table: MarkdownTable): boolean {
   return table.headers.some((header) => header.trim() === TC_ID_HEADER);
 }
@@ -215,7 +272,7 @@ function hasTcIdColumn(table: MarkdownTable): boolean {
  * document has no such heading. The section ends at the next heading of the
  * same or a higher level.
  */
-function extractTestCaseTableSection(text: string): string | null {
+export function extractTestCaseTableSection(text: string): string | null {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const start = lines.findIndex((line) => TEST_CASE_TABLE_HEADING.test(line));
   if (start === -1) {
@@ -280,6 +337,42 @@ export function resolveTestCaseTable(rawText: string): TestCaseTableResolution {
   }
 
   return { table: null, reason: allTables.length === 0 ? "no-table" : "no-tc-id-column" };
+}
+
+/**
+ * Every `TC-ID`-bearing table the spec declares, not only the first.
+ *
+ * A spec that splits `06_Test-Cases.md` into several tables — per BR, per AC,
+ * or a migration table beside the authoritative one — was read by two different
+ * rules in two different ways: `atddTraceability.ts#collectTableTcLevels`
+ * iterates `parseAllMarkdownTables`, while `resolveTestCaseTable` returns the
+ * first match. A `TC-*` in the second table was therefore visible to
+ * `QFAI-ATDD-112` and invisible to `TDDLIST_TC_NOT_COVERED`.
+ *
+ * That was survivable while both rules demanded something. It stops being
+ * survivable once L1/L2 is excluded from `QFAI-ATDD-112` and the ledger becomes
+ * the only gate: an L1 TC in a second table would then be owed by neither.
+ *
+ * `resolveTestCaseTable` is unchanged — `reportTddCoverage` and `specPack`
+ * describe a spec's *shape* and want the single authoritative table.
+ */
+/**
+ * True when the document has a `## Test Case Table` section at all.
+ *
+ * A heading-form spec legitimately has none, and its unresolved result is
+ * not a fault. A document that has the section and cannot resolve a table in
+ * it is broken — and if it *also* uses the heading form, the presence of one
+ * readable heading was enough to discard the failure and take the broken
+ * table's TCs with it.
+ */
+export function hasTestCaseTableSection(rawText: string): boolean {
+  return extractTestCaseTableSection(maskNonSpecRegions(rawText)) !== null;
+}
+export function resolveTestCaseTables(rawText: string): MarkdownTable[] {
+  const text = maskNonSpecRegions(rawText);
+  const section = extractTestCaseTableSection(text);
+  const tables = parseAllMarkdownTables(section ?? text);
+  return tables.filter(hasTcIdColumn);
 }
 
 export function parseFirstMarkdownTable(text: string): MarkdownTable | null {
