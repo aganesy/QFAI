@@ -22,10 +22,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type FsPromises = typeof fsPromises;
 
-const { symlinkSpy, writeFileSpy, readFileSpy } = vi.hoisted(() => ({
+const { symlinkSpy, writeFileSpy, readFileSpy, renameSpy } = vi.hoisted(() => ({
   symlinkSpy: vi.fn(),
   writeFileSpy: vi.fn(),
   readFileSpy: vi.fn(),
+  renameSpy: vi.fn(),
 }));
 
 vi.mock("node:fs/promises", async () => {
@@ -35,6 +36,7 @@ vi.mock("node:fs/promises", async () => {
     symlink: (...args: unknown[]) => symlinkSpy(actual, ...args),
     writeFile: (...args: unknown[]) => writeFileSpy(actual, ...args),
     readFile: (...args: unknown[]) => readFileSpy(actual, ...args),
+    rename: (...args: unknown[]) => renameSpy(actual, ...args),
   };
 });
 
@@ -69,6 +71,7 @@ beforeEach(() => {
   readFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
     actual.readFile(...args),
   );
+  renameSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.rename(...args));
 });
 
 describe("a repair that cannot finish leaves the file it found", () => {
@@ -122,10 +125,11 @@ describe("a repair that cannot finish leaves the file it found", () => {
       symlinkSpy.mockImplementation((_actual: FsPromises, _target: string, linkArg: string) =>
         linkArg === linkPath ? Promise.reject(eperm()) : Promise.resolve(undefined),
       );
-      writeFileSpy.mockImplementation((actual: FsPromises, file: string, ...rest: never[]) =>
-        file === linkPath
+      // The restore moves the sidecar back, so this is the call that fails.
+      renameSpy.mockImplementation((actual: FsPromises, from: string, to: string) =>
+        to === linkPath
           ? Promise.reject(new Error("simulated restore failure"))
-          : actual.writeFile(file, ...rest),
+          : actual.rename(from, to),
       );
 
       const error = await captureStdout(() =>
@@ -137,8 +141,10 @@ describe("a repair that cannot finish leaves the file it found", () => {
 
       expect(error?.message).toContain("元のファイルの復元にも失敗しました");
       expect(error?.message).not.toContain("元のファイルは復元しました。");
-      // The content is not recoverable from the filesystem any more, so it has
-      // to be in the message.
+      // The content is on disk in the sidecar, and the message names where —
+      // a path is more use than a copy pasted into an error.
+      expect(error?.message).toContain("元の内容は次の場所に退避してあります");
+      expect(error?.message).toContain(".qfai-repair-");
       expect(error?.message).toContain(FLATTENED);
     });
   });
@@ -234,15 +240,14 @@ describe("a wrapper that changed under the check is not deleted", () => {
       await mkdir(path.dirname(linkPath), { recursive: true });
       await writeFile(linkPath, FLATTENED, "utf-8");
 
-      // The second read — the one immediately before the delete — sees the
-      // content somebody else just wrote.
+      // The repair renames the file aside and reads *that*, so the injection
+      // answers for the sidecar: what it holds is not the flattened signature.
       const theirs = "# mine now\n";
-      let reads = 0;
-      readFileSpy.mockImplementation((actual: FsPromises, file: string, ...rest: never[]) => {
-        if (file !== linkPath) return actual.readFile(file, ...rest);
-        reads += 1;
-        return Promise.resolve(reads === 1 ? FLATTENED : theirs);
-      });
+      readFileSpy.mockImplementation((actual: FsPromises, file: string, ...rest: never[]) =>
+        file.startsWith(`${linkPath}.qfai-repair-`)
+          ? Promise.resolve(theirs)
+          : actual.readFile(file, ...rest),
+      );
 
       await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
 

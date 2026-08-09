@@ -503,6 +503,14 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A symlinked ancestor of an integration directory is named.** `.claude`
+  pointing at an external tree leaves `.claude/skills` a plain directory, so
+  the probe on the directory said nothing while every relative wrapper under
+  it resolved against the external location.
+- **The verified file is moved aside, not deleted by pathname.** Reading and
+  deleting are two operations, so another process could still replace the file
+  in between and lose content the check never saw. The repair renames it aside
+  first and judges what it holds; nothing is removed until the symlink exists.
 - **An integration directory that is a symlink is reported.** The wrappers
   under it carry relative targets, so they resolve against wherever it
   physically is; empty, there were no wrappers to reach the resolved-path

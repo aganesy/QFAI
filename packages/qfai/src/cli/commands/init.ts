@@ -7,6 +7,7 @@ import {
   readdir,
   readFile,
   readlink,
+  rename,
   rm,
   symlink,
   writeFile,
@@ -1339,54 +1340,67 @@ async function recreateFlattenedLink(
   target: string,
   type: "dir" | "file",
 ): Promise<"created" | "skipped"> {
-  const original = await readFile(linkPath, "utf-8");
-  // Re-checked here, not only by the caller: between `isFlattenedLink` reading
-  // the file and this line, an editor or another process can replace it with
-  // content of its own. Deleting on the strength of the earlier read destroyed
-  // that content without `--force`, and the rollback below does not fire when
-  // the symlink then succeeds. If it changed, this is no longer a flattened
-  // link and it is not ours to remove.
+  // Move aside first, then verify what was moved. Reading and then deleting by
+  // pathname are two operations, and between them another process can replace
+  // the file — so the delete destroyed content the check never saw, without
+  // `--force`. `rename` is atomic against the pathname, and afterwards this
+  // process holds the very bytes it is about to judge: if they are not the
+  // flattened signature, the file goes straight back and nothing was ours to
+  // remove. Nothing is deleted until the symlink is in place.
+  const sidecar = `${linkPath}.qfai-repair-${String(process.pid)}`;
+  await rename(linkPath, sidecar);
+  const original = await readFile(sidecar, "utf-8").catch(async (readErr: unknown) => {
+    await rename(sidecar, linkPath).catch(() => undefined);
+    throw readErr;
+  });
   if (toComparableTarget(original) !== toComparableTarget(target)) {
+    await rename(sidecar, linkPath);
     return "skipped";
   }
-  await rm(linkPath, { recursive: true, force: true });
   try {
     await mkdir(path.dirname(linkPath), { recursive: true });
     await symlink(target, linkPath, type);
+    await rm(sidecar, { recursive: true, force: true });
   } catch (err: unknown) {
     // The restore can fail on its own — a disk error, a permission change, a
     // transient I/O fault — and swallowing that reported a restore that did not
     // happen, on the one path where the operator has to know the file is gone.
     // Its outcome decides what the message says, and the content goes into the
     // message when it could not be written back.
+    // Put it back by moving the file itself, not by rewriting its bytes: the
+    // sidecar still holds the original, so the restore is a rename and the
+    // content survives even when the rename fails.
+    //
+    // Only into a path that is still free. Between the rename aside and the
+    // failed `symlink`, another process can create its own file here — an
+    // `EEXIST` from `symlink` is exactly that — and `rename` would overwrite
+    // it. A restore that destroys somebody else's file is worse than no
+    // restore, so an occupied path leaves the original in the sidecar and the
+    // message names it.
     let restoreError: unknown;
-    try {
-      // `wx`, not the default `w`: between the `rm` above and the failed
-      // `symlink`, another process can create its own file at this path — an
-      // `EEXIST` from `symlink` is exactly that — and the default flag
-      // truncates it and writes the old flattened content over the top. A
-      // restore that destroys somebody else's file is worse than no restore,
-      // so this writes only into a path that is still free and reports the
-      // rest, content included, for the operator to put back by hand.
-      await writeFile(linkPath, original, { encoding: "utf-8", flag: "wx" });
-    } catch (restoreErr: unknown) {
-      restoreError = restoreErr;
+    const occupied = (await safeLstat(linkPath)) !== undefined;
+    if (occupied) {
+      restoreError = new Error("path re-occupied");
+    } else {
+      try {
+        await rename(sidecar, linkPath);
+      } catch (restoreErr: unknown) {
+        restoreError = restoreErr;
+      }
     }
     // Two different failures, and the operator acts on them differently: the
-    // path is occupied by a file this process must not touch, or it is empty
-    // and the restore failed for its own reason. Saying "存在しません" for the
-    // first would send them looking for a file that is sitting right there.
-    const occupied = (restoreError as NodeJS.ErrnoException | null)?.code === "EEXIST";
+    // path is occupied by a file this process must not touch, or the rename
+    // failed for its own reason. Either way the content is on disk, in the
+    // sidecar — a path is more use than a copy pasted into an error message.
     const restored =
       restoreError === undefined
         ? "元のファイルは復元しました。"
         : [
             occupied
-              ? `${linkPath} には別プロセスが作成したファイルが存在するため、復元しませんでした（上書きを避けています）。元の内容は次のとおりです:`
-              : [
-                  `元のファイルの復元にも失敗しました: ${describeError(restoreError)}`,
-                  `${linkPath} は現在存在しません。元の内容は次のとおりです:`,
-                ].join("\n"),
+              ? `${linkPath} には別プロセスが作成したファイルが存在するため、復元しませんでした（上書きを避けています）。`
+              : `元のファイルの復元にも失敗しました: ${describeError(restoreError)}`,
+            `元の内容は次の場所に退避してあります: ${sidecar}`,
+            "内容:",
             original,
           ].join("\n");
     if (isEpermOnWindows(err)) {

@@ -493,6 +493,10 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
   // wrapper target and the nested `SKILL.md` already report, one level up, so
   // it is reported the same way: once for the directory, not once per wrapper
   // that cannot be reached through it.
+  // The project root as the filesystem sees it, so a symlinked component
+  // anywhere above an integration directory is visible as a difference rather
+  // than as the root's own spelling.
+  const realRoot = await realpathOrNull(root);
   const damagedDirs = new Map<string, string>();
   await Promise.all(
     INTEGRATION_SURFACE_DIRS.map(async (dir) => {
@@ -515,6 +519,21 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       if (own?.isSymbolicLink() === true) {
         damagedDirs.set(dir, "the integration directory is a symlink");
         return;
+      }
+      // And an **ancestor** of it. `.claude` pointing at an external tree
+      // leaves `.claude/skills` a plain directory, so the check above says
+      // nothing while every relative wrapper under it still resolves against
+      // the external location — reported as dangling or outside-canonical,
+      // with a remedy about moving the integration directory aside that does
+      // not name the path at fault. Comparing the resolved path with the
+      // lexical one catches any component, without walking them by hand.
+      if (realRoot !== null) {
+        const resolved = await realpathOrNull(absolute);
+        const lexical = path.join(realRoot, ...dir.split("/"));
+        if (resolved !== null && resolved !== lexical) {
+          damagedDirs.set(dir, `an ancestor is a symlink: it resolves to ${toPosix(resolved)}`);
+          return;
+        }
       }
       // A regular file where the directory belongs. `lstat` on every wrapper
       // under it raises `ENOTDIR`, which is the same failure the cycle was.
@@ -812,6 +831,7 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       [
         "`qfai init` を再実行すると、qfai が所有するこれらのパスは symlink として貼り直されます（`--force` は不要）。ただし内容が link target と一致しない通常ファイルは温存されるので、その場合は中身を確認してから退避してください。",
         "**integration directory 自体が壊れている場合（`the integration directory is …`）も init では直りません。** 外部 symlink 配下の wrapper は target 文字列が正しいので `ensureSymlink` が skip し、`--force` でも同じ外部ディレクトリの中に貼り直すだけです。cycle では親ディレクトリの作成が `ELOOP` で失敗します。該当する `.claude/skills` などのパスを退避（または削除）してから `qfai init` を実行してください。",
+        "**integration directory の祖先が symlink の場合（`an ancestor is a symlink`）も同様です。** 配下の wrapper は相対 target なので、その祖先が指す先を基準に解決されます。該当する祖先（`.claude` / `.github` など）を実ディレクトリに戻してから `qfai init` を実行してください。",
         "**wrapper が symlink 以外（`directory, not a symlink` / `FIFO` / `socket` / `device`）の場合も init では直りません。** `ensureSymlink` はそれらを `skipped` として温存します。中身を確認できるもの（ディレクトリ）は退避してから `qfai init` を、特殊ファイルは削除してから `qfai init` を実行してください。`--force` は確認なしで削除するので、中身が要るかどうか分からないうちは使わないでください。",
         "**`unreadable` は権限の問題であり、init では直りません。** wrapper の target 文字列は正しいので `ensureSymlink` は skip し、canonical asset は create-only なので上書きもしません。該当ファイルの読み取り権限を戻してください（POSIX: `chmod u+r <path>`、Windows: `icacls <path> /grant <user>:R`）。CI で出た場合は、そのファイルを作成した job の umask / ACL 設定を確認してください。",
         "**canonical 側が壊れている場合（`resolves to a …, but …` / `its SKILL.md is …` / `symlink cycle`）は init では直りません。** canonical asset は create-only なので既存パスを skip し、`--force` でも `copyFile` / `mkdir` が型衝突で失敗します。該当する `.qfai/assistant/**` のパスを退避（または削除）してから `qfai init` を実行してください — 中身は失われるので、先に確認してください。",

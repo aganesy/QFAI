@@ -771,6 +771,27 @@ describe("an integration directory that is a symlink is not a directory", () => 
   });
 });
 
+describe("an ancestor of the surface can be the symlink", () => {
+  it("names the ancestor instead of reporting the wrappers it breaks", async () => {
+    // `.claude` pointing at an external tree leaves `.claude/skills` a plain
+    // directory, so the probe on the directory itself says nothing while every
+    // relative wrapper under it resolves against the external location.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const outside = path.join(root, "elsewhere");
+      await mkdir(path.join(outside, ".claude", "skills"), { recursive: true });
+      await rm(path.join(root, ".claude"), { recursive: true, force: true });
+      await symlink(path.join(outside, ".claude"), path.join(root, ".claude"), "dir");
+
+      const found = await finding(root);
+      expect(found?.message).toContain("an ancestor is a symlink");
+      expect(found?.suggested_action).toContain("integration directory の祖先が symlink");
+    });
+  });
+});
+
 describe("a wrapper replaced by something other than a file", () => {
   it("names the kind it found and gives a remedy that applies", async () => {
     // A FIFO, socket or device is neither a directory nor a regular file, and
@@ -879,8 +900,12 @@ describe("a wrapper can spell the right target and land somewhere else", () => {
         await rm(path.join(root, ".claude"), { recursive: true, force: true });
         await symlink(path.join(outside, ".claude"), path.join(root, ".claude"), "dir");
 
+        // The surface probe reaches it first now, and names the component at
+        // fault rather than the consequence — which is the more useful of the
+        // two. The resolved-path comparison stays as the backstop for a
+        // wrapper that lands elsewhere with every component looking sound.
         const found = await finding(root);
-        expect(found?.message).toContain("outside the project canonical");
+        expect(found?.message).toContain("an ancestor is a symlink");
       } finally {
         await rm(outside, { recursive: true, force: true });
       }
