@@ -503,6 +503,10 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **An unreadable document has a remedy that changes something.** `qfai init`
+  skips both the wrapper (its target string is right) and the canonical asset
+  (create-only), so the generic remedy left the operator with a check that
+  stops every profile and no way to clear it.
 - **A type collision is reported wherever it sits on the path.** An
   integration directory replaced by a regular file raised `ENOTDIR` on every
   wrapper under it, and a canonical ancestor replaced by one did the same on

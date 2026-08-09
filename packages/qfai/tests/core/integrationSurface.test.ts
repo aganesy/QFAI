@@ -843,6 +843,33 @@ describe("a wrapper can spell the right target and land somewhere else", () => {
   });
 });
 
+describe("every finding this rule reports has a remedy that changes something", () => {
+  it("tells the operator how to clear an unreadable document", async () => {
+    // `qfai init` skips both the wrapper (its target string is right) and the
+    // canonical asset (create-only), so following the generic remedy changes
+    // nothing and this new check would stop every profile with no way out.
+    // Asserted from any finding: `suggested_action` is one text for the rule,
+    // and chmod does not gate reads on Windows so the case itself cannot run
+    // there.
+    await withProject(async (root) => {
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const claudeSkills = path.join(root, ".claude", "skills");
+      await rm(path.join(claudeSkills, "qfai-atdd"), { recursive: true, force: true });
+      await writeFile(
+        path.join(claudeSkills, "qfai-atdd"),
+        skillTarget(".claude/skills", "qfai-atdd"),
+        "utf-8",
+      );
+
+      const found = await finding(root);
+      expect(found?.suggested_action).toContain("`unreadable` は権限の問題");
+      expect(found?.suggested_action).toContain("chmod u+r");
+      expect(found?.suggested_action).toContain("icacls");
+    });
+  });
+});
+
 describe("a target can resolve and still be unusable", () => {
   it("reports a canonical document that cannot be read", async () => {
     // `stat` reads metadata, which a mode can allow while the body stays shut —
