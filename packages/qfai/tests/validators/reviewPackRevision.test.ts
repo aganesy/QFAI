@@ -56,6 +56,12 @@ describe("review pack revision", () => {
     // omission visible rather than to invalidate history.
     expect(found[0]?.severity).toBe("warning");
     expect(found[0]?.suggested_action).toContain("evidence-revision.md");
+    // The remedy has to name the form the reference accepts. It said
+    // `working-tree+<porcelain digest>`, which that reference now forbids by
+    // name: porcelain gives paths and states, so re-editing the very file
+    // under review leaves it identical and a stale verdict reads as fresh.
+    expect(found[0]?.suggested_action).toContain("working-tree+<content hash>");
+    expect(found[0]?.suggested_action).not.toContain("porcelain");
   });
 
   it("accepts a git rev", async () => {

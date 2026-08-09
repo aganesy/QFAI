@@ -404,9 +404,9 @@ See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / �
 - P2: E2E implementation completed.
 - P3: API implementation completed.
 - P4: Integration implementation completed.
-- P4b: **Branch 2 rows are handed over**, after P4 and before P6 — their
-  mutation needs the surface P2-P4 build, and the trio it produces is the row's
-  RED payload.
+- P4b: **Branch 2 rows are handed over**, after P4 and before P6 — their mutation
+  needs the surface P2-P4 build, the trio is the row's RED payload, and that nested
+  run is an item cycle like P1c's (`references/red-provenance.md#what-the-nested-run-owes`).
 - P5: Validation gate passed.
 - P6: Runtime evidence captured.
 - P7: Repo quality gates passed.

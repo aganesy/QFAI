@@ -75,7 +75,9 @@ describe("evidence and verdicts carry a revision", () => {
       const skill = flat(await read(tree, SKILL));
 
       expect(skill).toContain(
-        "the item's four sub-agent observations (items 3, 5, 7, 8) all name the **same** revision",
+        // Article-free: the clause now opens a sentence of its own, after the
+        // `Audited evidence hash` rule that addresses what the revision leaves out.
+        "item's four sub-agent observations (items 3, 5, 7, 8) all name the **same** revision",
       );
     });
 

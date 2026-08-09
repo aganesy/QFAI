@@ -241,7 +241,11 @@ async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
             "reviewArtifacts.summaryRevision",
             undefined,
             "canonical",
-            "レビュー対象の状態を `revision` に記録してください（git rev、または未コミット時は `working-tree+<porcelain digest>`）。" +
+            // `porcelain digest` was the old form and is now forbidden by the
+            // reference below: it names the changed paths and their states, so
+            // re-editing the very file under review leaves it identical and a
+            // stale verdict passes the freshness check this field exists for.
+            "レビュー対象の状態を `revision` に記録してください（git rev、または未コミット時は `working-tree+<content hash>` — HEAD・tracked diff・ソート済み untracked manifest の内容ハッシュ）。" +
               "`.qfai/assistant/skills/qfai-implement/references/evidence-revision.md` を参照。",
           ),
         ]

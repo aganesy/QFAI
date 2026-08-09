@@ -219,7 +219,7 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     expect(provenance).toContain(
       "**`Satisfied-by` takes whatever already implements the predicate.**",
     );
-    expect(provenance).toContain("otherwise the production path and symbol");
+    expect(provenance).toContain("otherwise the production **path and symbol**");
   });
 
   it("every qfai-implement reference from the ATDD tree resolves", async () => {
@@ -912,7 +912,7 @@ describe.each(TREES)("%s (the nested run and the third branch)", (tree) => {
     // Red does not re-select, so P2 was never reached.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain("## What the nested run owes");
-    expect(provenance).toContain("That run is an **item cycle**, not this spec's completion");
+    expect(provenance).toContain("Either run is an **item cycle**, not this spec's completion");
     expect(flat(await read(tree, ATDD))).toContain(
       "the nested run is an item cycle, not a completion gate",
     );
@@ -1151,8 +1151,84 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // Steps 4 and 5 are skipped for this row and step 4 is the only place that
     // submits a RED, so the branch advanced the ledger with no verdict at all.
     const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**route `qa-gatekeeper` on that mutation run and wait for PASS**");
+  });
+
+  it("holds the revert until the gatekeeper has seen the mutated tree", async () => {
+    // The step said "capture the failure, revert, re-run" and then "route the
+    // gatekeeper before reverting" — both cannot hold. Reverting first left it
+    // nothing but the restored tree, so it could not check that what broke is
+    // the predicate `Satisfied-by` names.
+    const implement = flat(await read(tree, IMPLEMENT));
+    const order = implement.indexOf("route `qa-gatekeeper` on that mutation run");
+    const revert = implement.indexOf("only then revert and re-run to confirm the tree is green");
+    expect(order).toBeGreaterThan(0);
+    expect(revert).toBeGreaterThan(order);
+    expect(implement).not.toContain("capture the failure, revert, and re-run");
+  });
+
+  it("gives a branch-2 row the test manifest its completion gate recomputes", async () => {
+    // The gate requires `RED test hash` for every handed-over E2E/API row, but
+    // a falsifiability row has no RED pair, so nothing was hashed at handoff.
+    const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain(
-      "**Then route `qa-gatekeeper` on that mutation run and wait for PASS, before reverting and before writing any status.**",
+      "Record the `RED test hash` and its manifest here too, over the same inputs a handed-over RED hashes",
+    );
+    expect(implement).toContain("**Phase Red step 3c records it against the mutation run**");
+  });
+
+  it("addresses the evidence the reviewers audit, which the revision excludes", async () => {
+    // `.qfai/evidence/**` is out of the revision so it stays stable across the
+    // phase's own writes — which also let a PASS survive an edit to the very
+    // RED/GREEN output and coverage justification it ruled on.
+    const revision = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(revision).toContain("**`Audited evidence hash`**");
+    expect(revision).toContain("with the reviewer-appended fields");
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("`Audited evidence hash` is **recomputed** here");
+    expect(implement).toContain(
+      "completion-reviewer result (PASS or REVISE) with its `Reviewed revision` and `Audited evidence hash`",
+    );
+  });
+
+  it("makes Satisfied-by name a predicate a mutation can reach", async () => {
+    // A commit that touches several routes and a helper names no single
+    // predicate, so the gatekeeper's ownership boundary cannot be applied to
+    // it: it either REVISEs a correct mutation or accepts an unrelated one.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("otherwise the production **path and symbol**");
+    expect(provenance).toContain("**A commit id does not**, and is not an alternative form");
+    expect(provenance).not.toContain("or the commit that added it");
+  });
+
+  it("lets a test-only replacement re-address the test it replaced", async () => {
+    // The REVISE changed the test, so the handoff's `RED test hash` addresses
+    // the manifest before the edit and the consumer sends the row back here
+    // for a fresh RED — which is this same passing no-round path, for ever.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**Re-address the test.**");
+    expect(provenance).toContain("marked `test-only replacement` with the reviewer verdict");
+  });
+
+  it("covers the branch-2 handoff with the same item-cycle exemption", async () => {
+    // P4b's nested run also sits before P5/P6, so naming only P1c left the
+    // falsifiability rows stopped by completion inputs their own stage had not
+    // produced yet.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**P4b hands a branch-2 row over on the same terms**");
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("an item cycle like P1c's");
+  });
+
+  it("points the phase-authored sequencing note at the file the Layer owns", async () => {
+    // It named `implement-<spec-id>.md` unconditionally, so an E2E row's
+    // phase evidence went there while item 10 looked for the anchor in the
+    // ATDD file.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "Sequencing note: the phase-authored part of the evidence file **item 10's `Layer` rule selects**",
     );
   });
 

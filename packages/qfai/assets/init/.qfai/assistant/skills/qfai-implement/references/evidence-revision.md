@@ -32,6 +32,22 @@ Revision: <git rev> | working-tree+<content hash>
   those are the record of the observation, not the thing observed. Everything the
   observation is about — production code, tests, fixtures — stays in.
 
+  **What that exclusion costs, and the address that pays it back.** Leaving
+  `.qfai/evidence/**` out keeps the revision stable across the phase's own
+  writes, but it also puts the RED/GREEN output the reviewers audit — and the
+  committed `.qfai/evidence/coverage-depth-<spec-id>.md` whose per-`❌`
+  justifications they accept — outside every address the gate checks: edited
+  after a PASS they leave `Reviewed revision` unchanged, and gate item 10 reads
+  the old verdict as fresh. Each reviewer therefore records an **`Audited
+evidence hash`** beside its `Reviewed revision`, over the row's
+  **phase-authored** entry — the entry with the reviewer-appended fields
+  (`Spec review`, `Code quality review`, `Prototype parity`) removed, which is
+  exactly what the reviewer read — plus `coverage-depth-<spec-id>.md` where the
+  row has one. Same manifest form as `RED test hash` (`path + NUL + blob hash`,
+  sorted by path), so the boundary is the same for the reviewer and for whoever
+  recomputes it. Gate item 10 recomputes it; a mismatch means the audited
+  evidence moved after the verdict, and the verdict is not fresh.
+
   **A `git status --porcelain` digest is not sufficient**, which is what this
   field used to specify. Porcelain names the changed paths and their states, so
   editing the very file under test after the RED leaves it identical and a stale

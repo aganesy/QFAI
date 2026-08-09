@@ -197,10 +197,15 @@ Take the first that applies, and record which one in the evidence file.
    shared reference names a sibling `TDD-NNNN` because that is its usual case,
    but an ATDD surface often has none — a pre-existing route, or one this cycle
    built outside the ledger. Record what actually satisfies it: a `TDD-NNNN`
-   when there is one, otherwise the production path and symbol
-   (`src/api/routes/evaluations.py::register`) or the commit that added it. What
-   the field has to answer is "what would I mutate to falsify this row", and a
-   path answers it as well as a row id does.
+   when there is one, otherwise the production **path and symbol**
+   (`src/api/routes/evaluations.py::register`). What the field has to answer is
+   "what would I mutate to falsify this row", and a path and symbol answer it as
+   well as a row id does. **A commit id does not**, and is not an alternative
+   form: a commit that touches several routes and a helper names no single
+   predicate, so `qa-gatekeeper`'s boundary — owned code is the predicate
+   `Satisfied-by` names — cannot be applied to it, and it either REVISEs a
+   correct mutation or accepts an unrelated one. Add the commit alongside if it
+   helps whoever reads the row later; it does not stand in for the symbol.
 
    **The row still moves `todo -> red -> green`.** Falsifiability _is_ the RED
    for this row — `red-not-observable.md` says so for its own case and
@@ -301,8 +306,11 @@ needs for step 3c.
 ## What the nested run owes
 
 P1c hands a branch-1 row to `/qfai-implement` and gets it to GREEN and its
-checkpoint **before** P5 and P6. That run is an **item cycle**, not this spec's
-completion: its blocking reviewers judge the row's own RED/GREEN evidence, and
+checkpoint **before** P5 and P6; **P4b hands a branch-2 row over on the same
+terms**, and it too sits before P5/P6, so both are covered by everything below.
+Naming only P1c here left the falsifiability rows stopped at `refactor` by the
+completion inputs their own stage had not produced yet. Either run is an **item
+cycle**, not this spec's completion: its blocking reviewers judge the row's own RED/GREEN evidence, and
 the completion-gate inputs — `.qfai/report/validate.log`, the coverage reports,
 runtime evidence — are P5/P6 artifacts that do not exist yet and are not owed
 here. **That applies to every blocking reviewer of the nested run, not only
@@ -362,6 +370,19 @@ handoff of a `todo` row, so this one needs its own contract.
     take the **no-new-behaviour path** of
     `../../qfai-implement/references/round-evidence.md`: no round is opened, and
     the row returns on that basis.
+
+    **Re-address the test.** The REVISE changed the test, so the `RED test hash`
+    recorded at handoff still addresses the manifest before the edit, and the
+    consumer checks it against the current one before the reviews
+    (`../../qfai-implement/SKILL.md`, the field contract) — a mismatch is sent
+    back here for a fresh RED, which is this same passing no-round path, for
+    ever. Recompute the manifest and the hash over the corrected test and
+    **replace** the recorded pair, marked `test-only replacement` with the
+    reviewer verdict that asked for it. That is what the consumer accepts in
+    place of a fresh RED: the reviewer judged that no new production behaviour
+    is owed, so there is no RED to take, and the hash's job — telling "the test
+    moved under the RED" from "only production changed" — is discharged by
+    naming the verdict that moved it.
 
     **Not falsifiability.** That form needs a production mutation, which this
     stage owns no agent for and cannot hand over either: Phase Red step 3b

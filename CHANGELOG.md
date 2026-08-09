@@ -488,6 +488,33 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The falsifiability gate sees the mutated tree.** Phase Red step 3c said to
+  revert before routing `qa-gatekeeper`, which left it nothing to inspect but
+  the restored tree — so it could not check that what broke is the predicate
+  `Satisfied-by` names, the one thing that distinguishes a trio from a test
+  that would pass against anything.
+- **A branch-2 row has the test manifest its completion gate recomputes.**
+  `RED test hash` is required on every handed-over `E2E` / `API` row, but a
+  falsifiability row has no RED pair, so nothing was hashed at handoff. Step 3c
+  records it against the mutation run.
+- **The evidence the reviewers audit has an address of its own.** The revision
+  excludes `.qfai/evidence/**` so it stays stable across the phase's own
+  writes — which also let a PASS survive an edit to the RED/GREEN output and
+  the coverage justifications it ruled on. Each verdict now carries an
+  `Audited evidence hash`, recomputed at the completion gate.
+- **`Satisfied-by` names a predicate a mutation can reach.** A commit id was
+  an accepted form; a commit touching several routes and a helper names no
+  single predicate, so the gatekeeper's ownership boundary could not be
+  applied to it.
+- **A test-only replacement re-addresses the test it replaced.** A REVISE that
+  changes only the acceptance test left `RED test hash` addressing the
+  pre-edit manifest, and the consumer sent the row back for a fresh RED — the
+  same passing no-round path, for ever.
+- **The branch-2 handoff is covered by the item-cycle exemption**, and the
+  phase-authored sequencing note names the evidence file the row's `Layer`
+  owns instead of always the implement file.
+- **`QFAI-REVIEW-009`'s remedy names the content hash**, not the porcelain
+  digest its own reference forbids.
 - **The reviewer's revision excludes the ledger too.** `Revision` is
   phase-authored and `Reviewed revision` is not, and the phases write
   `test-list.md` between them — so hashing all of `git diff HEAD` in the shared
