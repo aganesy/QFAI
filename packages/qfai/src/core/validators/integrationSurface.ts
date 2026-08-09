@@ -118,6 +118,9 @@ async function skillIdsIn(skillsDir: string): Promise<Set<string>> {
  * probe both propagate a non-absence error; the probe that decides membership
  * has to as well, or the guarantee holds everywhere except where it is decided.
  */
+/** Alias kept for the two call sites that only ask "is it there". */
+const exists = fileExists;
+
 async function fileExists(filePath: string): Promise<boolean> {
   try {
     await access(filePath);
@@ -151,29 +154,43 @@ async function agentNamesIn(agentsDir: string): Promise<Set<string>> {
   );
 }
 
-/** The wrapper path and the exact link target `qfai init` writes for it. */
-type Wrapper = { relative: string; absolute: string; target: string };
+/** The wrapper path, the link target `qfai init` writes, and what it wraps. */
+type Wrapper = {
+  relative: string;
+  absolute: string;
+  target: string;
+  /** A skill wrapper points at a directory that must carry a `SKILL.md`. */
+  kind: "skill" | "agent";
+  /** The integration directory this wrapper belongs to, e.g. `.claude/skills`. */
+  dir: string;
+  /** Absolute path of the canonical document, for the "was it ever created" test. */
+  canonical: string;
+};
 
 function wrapperSet(root: string, skills: string[], agents: string[]): Wrapper[] {
   const wrappers: Wrapper[] = [];
 
-  const push = (dir: string, name: string, canonicalRel: string[]): void => {
+  const push = (dir: string, name: string, kind: Wrapper["kind"], canonicalRel: string[]): void => {
     const dirAbsolute = path.join(root, ...dir.split("/"));
+    const canonical = path.join(root, ...canonicalRel);
     wrappers.push({
       relative: `${dir}/${name}`,
       absolute: path.join(dirAbsolute, name),
-      target: path.relative(dirAbsolute, path.join(root, ...canonicalRel)),
+      target: path.relative(dirAbsolute, canonical),
+      kind,
+      dir,
+      canonical,
     });
   };
 
   for (const dir of SKILL_WRAPPER_DIRS) {
     for (const id of skills) {
-      push(dir, id, [".qfai", "assistant", "skills", id]);
+      push(dir, id, "skill", [".qfai", "assistant", "skills", id]);
     }
   }
   for (const { dir, suffix } of AGENT_WRAPPER_DIRS) {
     for (const name of agents) {
-      push(dir, `${name}${suffix}`, [".qfai", "assistant", "agents", `${name}.md`]);
+      push(dir, `${name}${suffix}`, "agent", [".qfai", "assistant", "agents", `${name}.md`]);
     }
   }
   return wrappers;
@@ -209,18 +226,42 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
     return [];
   }
 
+  const wrappers = wrapperSet(root, skills, agents);
+  // A wrapper that exists but cannot be stat'd is a filesystem failure and must
+  // not read as one that was never created.
+  const links = await Promise.all(
+    wrappers.map((wrapper) =>
+      lstat(wrapper.absolute).catch((error: unknown) => {
+        if (isMissing(error)) return null;
+        throw error;
+      }),
+    ),
+  );
+  // Directories `qfai init` populated, judged by a wrapper it created still
+  // being there. Not "the directory exists": a project that has not taken a
+  // newly shipped skill has neither its wrapper nor its canonical document, and
+  // one that never ran init at all must not be told every wrapper is missing.
+  const populated = new Set(
+    wrappers.filter((_wrapper, index) => links[index] !== null).map((wrapper) => wrapper.dir),
+  );
+
   const broken: Broken[] = [];
 
-  for (const wrapper of wrapperSet(root, skills, agents)) {
-    // Same rule as the roster read: absent is "not created yet", and an older
-    // project legitimately predates a newly shipped skill. A wrapper that
-    // exists but cannot be stat'd is a filesystem failure and must not read as
-    // one that was never created.
-    const link = await lstat(wrapper.absolute).catch((error: unknown) => {
-      if (isMissing(error)) return null;
-      throw error;
-    });
+  for (const [index, wrapper] of wrappers.entries()) {
+    const link = links[index] ?? null;
     if (link === null) {
+      // Absent is "not created yet" **only while the surface is unpopulated**.
+      // Once its siblings are in place and the project has the canonical
+      // document, `qfai init` created this wrapper too, so its absence is a
+      // deletion — and nothing else reported it, because
+      // `validateSkillsIntegrity` reads the canonical tree (unchanged) and runs
+      // under `full` alone.
+      if (populated.has(wrapper.dir) && (await exists(wrapper.canonical))) {
+        broken.push({
+          relative: wrapper.relative,
+          detail: `missing — ${toPosix(wrapper.dir)} exists and so does the document it wraps`,
+        });
+      }
       continue;
     }
 
@@ -263,6 +304,18 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
     } catch (error) {
       if (!isMissing(error)) throw error;
       broken.push({ relative: wrapper.relative, detail: `dangling -> ${toPosix(wrapper.target)}` });
+      continue;
+    }
+
+    // A skill is loaded from its `SKILL.md`. The link can resolve to a
+    // directory that still holds `references/` and `templates/` while that one
+    // file is gone, and then nothing reported it: this rule saw a resolving
+    // link, and `skills.integrity` — which would — runs only under `full`.
+    if (wrapper.kind === "skill" && !(await exists(path.join(wrapper.absolute, "SKILL.md")))) {
+      broken.push({
+        relative: wrapper.relative,
+        detail: "resolves, but the directory has no SKILL.md",
+      });
     }
   }
 

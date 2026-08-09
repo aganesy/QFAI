@@ -128,6 +128,14 @@ describe("the integration surface is checked for links that did not survive chec
         path.join(claudeSkills, "qfai-sdd"),
         "dir",
       );
+      // The other shipped skill is wired correctly, so the only finding is the
+      // mis-pointed link. Leaving it out would also report `qfai-atdd` as a
+      // wrapper deleted from a populated surface, which is a different rule.
+      await symlink(
+        skillTarget(".claude/skills", "qfai-atdd"),
+        path.join(claudeSkills, "qfai-atdd"),
+        "dir",
+      );
 
       const found = await finding(root);
       expect(found?.refs).toEqual([".claude/skills/qfai-sdd"]);
@@ -336,6 +344,71 @@ describe("ownership is the roster init ships, not the canonical tree", () => {
 
       const issues = await validateIntegrationSurface(root);
       expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-001"]);
+    });
+  });
+});
+
+describe("a wrapper deleted from a populated surface is reported", () => {
+  it("reports the one that is gone while its siblings remain", async () => {
+    // Nothing else caught this: the canonical tree is untouched, so
+    // `skills.integrity` sees a healthy spec — and it only runs under `full`.
+    // The assistant simply cannot load that skill.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd", "qfai-sdd"], []);
+      const claudeSkills = path.join(root, ".claude", "skills");
+      await mkdir(claudeSkills, { recursive: true });
+      await symlink(
+        skillTarget(".claude/skills", "qfai-atdd"),
+        path.join(claudeSkills, "qfai-atdd"),
+        "dir",
+      );
+      // `qfai-sdd` is the one somebody removed.
+
+      const found = await finding(root);
+      expect(found?.refs).toEqual([".claude/skills/qfai-sdd"]);
+      expect(found?.message).toContain("missing");
+    });
+  });
+
+  it("says nothing about a surface init has not populated", async () => {
+    // A project that never ran `qfai init`, or has not taken a newly shipped
+    // skill, is not missing anything — and must not be told it is.
+    await withProject(async (root) => {
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await mkdir(path.join(root, ".claude", "skills"), { recursive: true });
+
+      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
+});
+
+describe("a skill wrapper is only good if it can be loaded", () => {
+  it("reports a wrapper whose directory has lost its SKILL.md", async () => {
+    // The link resolves — `references/` and `templates/` are still there — so
+    // this rule saw nothing, and `skills.integrity`, which would, runs under
+    // `full` alone. A narrow profile passed a skill the assistant cannot load.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      const claudeSkills = path.join(root, ".claude", "skills");
+      await mkdir(claudeSkills, { recursive: true });
+      await symlink(
+        skillTarget(".claude/skills", "qfai-atdd"),
+        path.join(claudeSkills, "qfai-atdd"),
+        "dir",
+      );
+      // The skill keeps its other files; only the entry point goes.
+      await mkdir(path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "references"), {
+        recursive: true,
+      });
+      await rm(path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md"), {
+        force: true,
+      });
+
+      const found = await finding(root);
+      expect(found?.refs).toEqual([".claude/skills/qfai-atdd"]);
+      expect(found?.message).toContain("no SKILL.md");
     });
   });
 });

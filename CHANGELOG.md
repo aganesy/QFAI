@@ -24,6 +24,20 @@
 
 ### Changed
 
+- **`references/execution-ledger.md` is the only place the ledger's transition
+  table is stated.** `qfai-implement/SKILL.md` summarised it four times and
+  three of those summaries claimed the re-entry set was a single edge
+  (`refactor` -> `red`), so `blocked` -> `todo`, `exception` -> `todo` and the
+  reviewer loop read as illegal to anyone working from the skill — including the
+  `project_memory` line, which is the one most likely to be quoted into a
+  delegated work order. The summaries now state the forward spine, name the
+  reference as the complete list, and say outright not to infer an edge's
+  absence from them. `TDDLIST_EXCEPTION_PARKED` cites the same anchor and says
+  its `exception -> todo` remediation needs no Change Request **when the row's
+  approved obligation is unchanged**, which is what an operator could not tell
+  from the skill alone. When the investigation finds the obligation itself was
+  wrong, that is an upstream change: the row re-enters through the approved
+  Change Request reset under the Drift Protocol instead.
 - **The Coverage Depth Matrix has a committed home.** `/qfai-atdd` gates
   completion on it three times — Mandatory Output 2, a Definition-of-Done
   condition and a Not-done criterion — and `qa-gatekeeper` REVISEs when it is
@@ -95,6 +109,17 @@
 
 ### Fixed
 
+- **A wrapper deleted from a populated surface is reported.** An absent wrapper
+  was skipped unconditionally, so removing one from a directory whose siblings
+  are all in place left the assistant unable to load that skill with nothing
+  saying so — the canonical tree is untouched, so `skills.integrity` sees a
+  healthy spec, and it only runs under `full`. Absence is benign only while the
+  surface is unpopulated, which is also the state of a project that has not
+  taken a newly shipped skill.
+- **A skill wrapper is checked for the file that makes it loadable.** The link
+  can resolve to a directory that still holds `references/` and `templates/`
+  while `SKILL.md` is gone; `stat` succeeded and the rule said nothing, and a
+  narrow profile passed a skill the assistant cannot load.
 - **A `readlink` failure is not a wrong link target.** A transient `EIO` or an
   `EACCES` reported a healthy wrapper as `points at ?`, and the remedy the
   finding prints — re-run `qfai init` — calls the same `readlink` and fails the
@@ -187,7 +212,20 @@
   and changed nothing. The path is one qfai created and owns, and its content is
   the link target, so it is now replaced without `--force` and the repair is
   announced on stdout.
-
+- **The complete transition list says `any status` too.** Widening only the
+  summary table left the list — which declares itself complete and prohibits
+  every unlisted edge — still naming five sources, so whether a `blocked` or
+  `review-fix` reset was legal depended on which of the two a reader reached
+  first. The list also called the approved reset "the fourth" row of a table
+  where it is the third, which read QA rejection recovery as the sanctioned
+  backward transition and contradicted the paragraph below it.
+- **The upstream reset admits every source status.** The lifecycle table
+  enumerated five, which read as a complete list — but `drift-protocol.md`
+  step 5 sweeps the ledger with `any status -> todo`, so a row at `blocked` or
+  `review-fix` when the upstream obligation moved was one the table forbade the
+  Protocol from sweeping, leaving the preflight with nothing legal to do. The
+  enumeration existed to stop an unapproved `review-fix -> todo`; the approval
+  column already does that, and does it without contradicting the Protocol.
 - **`qfai-implement`'s primary spec-completion condition is a list item again.**
   A missing newline joined `- Each item reached \`done\` or valid \`exception\`
   (with DR-ID)`to the tail of the bullet above it, and because the joined line
