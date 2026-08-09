@@ -5271,7 +5271,9 @@ edits anything:
   confusion two reviewers reported for one file, reproduced inside the definition written to stop it.*
 - **The absolute cap has a known defect, and it is `implementation-reviewer`'s own correction**: it is
   satisfiable by deleting *code* faster than prose, which is exactly what round 7 did — the count fell
-  356 from 361 while the **share rose** from 68.8% to 71.8%. So the count is the binding constraint and
+  356 from 361 while the **share rose** from 68.8% to 71.8% **on the total-line basis** (the round-6
+  non-blank figure was never measured, so it is not restated here rather than invented). So the count is
+  the binding constraint and
   the share is recorded alongside it as the honest signal; a future round that improves the count while
   worsening the share has not improved the file.
 
@@ -5388,7 +5390,8 @@ Recorded because it is the right direction of travel and because both are struct
 
 - **The comment cap it released is weaker than it looks.** An absolute count is satisfiable by deleting
   *code* faster than prose — which is exactly what round 7 did, count falling 361→356 while the **share
-  rose** 68.8%→71.8%. Hence the definition now records both, with the count binding and the share as the
+  rose** 68.8%→71.8% **on the total-line basis**. Hence the definition now records both, with the count
+binding and the share as the
   honest signal.
 - **The eviction pool was released without a side-constraint, and that is what manufactured the near-miss**
   the engineer disclosed against itself. Its words: "a licence to delete is not a licence to delete safely
@@ -5409,6 +5412,71 @@ rounds shipped a fix containing the class it fixed. So round 8 carries two cheap
 before the commit), and a **self-check over the new paragraphs only, by an agent other than their author**.
 
 Then park at `refactor` awaiting the user's decision on `CR-20260807-0001`.
+
+### Exit condition (b): the non-author self-check found two more, and the streak is at four
+
+`implementation-reviewer`, which did **not** author round 8's paragraphs, ran the pass the synthesis
+required. It verified everything else in the diff as true — R1's spaced-checkout measurement reproduced
+independently, all six cited blobs joining as base + needle with every claimed outcome, the struck
+`format:check` mitigation, and Block A's corrected scope, which it attacked with **248,366 adversarial
+strings** and could not break (zero in-scope false GREENs, zero cases of count < coverage).
+
+And it found **two more unqualified reach claims, in the paragraphs written to remove unqualified reach
+claims.**
+
+#### F1 — the bound was still an impossibility claim, now inside its narrowed scope
+
+Round 8 narrowed the token-8 bound's scope from `message` to "the composed sentences" and **left the claim
+absolute inside the narrower scope**: "over them this token can only ADD a labelled failure beside an
+existing red."
+
+The refutation is the sharpest single observation of this row: **the pin detects divergence *between* the
+two sides, so a coordinated edit changes both and the pin is green by construction.** Measured — the same
+needle applied to production *and* the test, `reports the difference` → `is a report of the difference`
+(base prod `1d8eab08` + test `2bff205b` → mutants `8c0633e4` + `1d9e89e7`): `1 failed | 1 passed`, **one
+AssertionError, token 8's own**, pin GREEN, both content needles GREEN. The rewording satisfies all four
+contract items, so it is a **lone false RED over the sentences** — exactly what the paragraph declared
+impossible.
+
+**And the disclosure was already in the file, twelve lines below.** The CONSTRAINT paragraph says the
+message "may not use those three as BARE WORDS. The shipped text says 'reports', which the trailing ``
+rejects." A bound that made a lone red impossible would need no such constraint. Two paragraphs of the same
+docblock contradicted each other, and three rounds of review had read past it — because each round checked
+the *new* text against measurement and not against its own neighbours.
+
+#### F2 — the label enumerated the false-positive set as exactly two
+
+"BOTH known false positives" and "two KNOWN FALSE POSITIVES" is a completeness claim; "standing alone
+inside the interpolated host path" pins token 8's to one surface. F1's witness is a **third**, on a
+space-free checkout — so on that red the label would name the host path while the Received value shows the
+fire is on prose. The label misdescribes its own failure, which is the defect those two paragraphs were
+rewritten to prevent.
+
+#### What four consecutive rounds of this actually shows
+
+Not that the reviewers are failing — each round's finding was correct and measured. The pattern is that
+**every round verified its new text against the world and not against the text beside it.** F1's
+contradiction was twelve lines apart in one docblock and survived three independent reviews, a synthesis,
+and my own reading. So the rule needs its second clause, adopted here: **a new reach claim is checked
+against its own neighbours, not only against a measurement** — because a claim can be true of everything
+the round measured and still be refuted by the paragraph under it.
+
+#### The reviewer fixed its own instrument, again
+
+It confirmed the cap defect was in **its** text, gave the measured table
+(round 7: 356 comment / 25 blank / 471 non-blank / 496 content = **75.58%**; round 8: 358 / 25 / 475 / 500 =
+**75.37%**), and set the definition single-basis: **non-blank content lines**, where content lines drop the
+final empty element when the file ends in a newline — which is what killed the artifact behind the helper's
+`90/139` versus the file's `/496`. Round 8 is **358, under the 361 cap**, and the share moved 75.6% → 75.4%,
+so it does not trip the "improved the count while worsening the share" clause.
+
+It also flagged that two figures in this file are **total-line shares labelled as non-blank** and said
+plainly that the correction is its own, not the engineer's. Both are corrected above by naming the basis
+rather than inventing a round-6 non-blank figure that was never measured.
+
+One item it could not re-join and did not pretend to: `7e307c55`, uncited in the file — **not refuted, just
+not re-joined**. And one nit taken into round 9: `findings[0]`'s claim was the only "measured" statement in
+the new text with no witness blob, and it supplied one (`7e4788b4`).
 
 ### G4 round 8 — the last code round, and the first one whose fix did not contain the class it fixed
 
