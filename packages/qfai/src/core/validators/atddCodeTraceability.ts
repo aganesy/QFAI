@@ -169,6 +169,27 @@ function owningSpecDirs(
  * finding's location entirely.
  */
 /**
+ * Both owners of an unknown `US` / `TC` reference, as spec directories.
+ *
+ * `narrowUnknown` keeps the finding when either the token's spec or the test's
+ * own per-spec directory is in scope, and `isFindingInSpecScope` re-derives the
+ * owners from `relatedFiles` — an unowned `tests/**` path contributes nothing
+ * there. Listing only the token's spec therefore undid the narrowing one layer
+ * later: `--spec 0002` saw owner `0001` and dropped the finding again.
+ */
+function unknownOwnerDirs(
+  file: string,
+  refs: readonly string[],
+  specsRoot: string,
+  declaredSpecs: ReadonlyMap<string, string>,
+): string[] {
+  const dirs = owningSpecDirs(refs, specsRoot, declaredSpecs);
+  const fromPath = testPathSpecNumber(file);
+  const own = fromPath === null ? undefined : declaredSpecs.get(fromPath);
+  return own === undefined || dirs.includes(own) ? dirs : [...dirs, own];
+}
+
+/**
  * The spec a canonical per-spec test directory names, e.g. `spec-0002` in
  * `tests/integration/spec-0002/a.test.ts`.
  *
@@ -561,7 +582,7 @@ function buildUnknownIssues(
           // `file` is the test carrying the typo — what the operator edits —
           // but a `tests/**` path has no spec owner, so without this the
           // finding survived every `--spec` filter.
-          { relatedFiles: owningSpecDirs(refs, specsRoot, declaredSpecs) },
+          { relatedFiles: unknownOwnerDirs(entry.file, refs, specsRoot, declaredSpecs) },
         );
       }
       if (entry.kind === "tc") {
@@ -574,7 +595,7 @@ function buildUnknownIssues(
           refs,
           "change",
           "spec 側に TC を定義するか、テスト注釈を正しい ID へ修正してください。",
-          { relatedFiles: owningSpecDirs(refs, specsRoot, declaredSpecs) },
+          { relatedFiles: unknownOwnerDirs(entry.file, refs, specsRoot, declaredSpecs) },
         );
       }
       if (entry.kind === "conDb") {

@@ -91,6 +91,17 @@
 
 ### Fixed
 
+- **An unknown reference is attributed to both of its owners.** `narrowUnknown`
+  keeps the finding when either the token's spec or the test's own per-spec
+  directory is in scope, but `relatedFiles` listed only the token's — and
+  `isFindingInSpecScope` re-derives the owners from there, where an unowned
+  `tests/**` path contributes nothing. The narrowing was undone one layer later.
+- **A shared spec artifact keeps a finding repo-wide.** A path under
+  `specsRoot` but outside any `spec-NNNN` directory — `_policies/**` — is part
+  of the finding, not an auxiliary representative path: the duplicate
+  `QFAI-ID-001` reports between a shared policy and one spec is present for
+  every spec, and attributing it to that one spec hid it from all the others.
+  A path outside `specsRoot` stays auxiliary and grants no membership.
 - **An unknown reference has two owners, and either one keeps it in scope.**
   Attribution used the token alone, but the token is the thing that may be
   mistyped: a test under `tests/integration/spec-0002/**` annotated

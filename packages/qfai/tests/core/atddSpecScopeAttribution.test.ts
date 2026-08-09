@@ -515,3 +515,67 @@ describe("existence is a directory question, not an id question", () => {
     });
   });
 });
+
+describe("a shared spec artifact keeps a finding repo-wide", () => {
+  it("does not let one spec's path drop a duplicate that lives in _policies", async () => {
+    // `QFAI-ID-001` reports a duplicate between a shared `_policies` file and a
+    // `spec-0001` one. The shared file is genuinely part of the finding — the
+    // duplicate is present for every spec — but with `0001` attributed, every
+    // other scope dropped it, so only one spec's run ever showed it.
+    await withProject(async (root) => {
+      const specsRoot = path.join(root, ".qfai", "specs");
+      const finding = {
+        file: path.join(specsRoot, "_policies", "08_Decisions.md"),
+        relatedFiles: [path.join(specsRoot, "spec-0001", "07_Decisions.md")],
+      };
+
+      const roots = { root, specsRoot };
+      expect(isFindingInSpecScope(finding, roots, new Set(["0001"]))).toBe(true);
+      expect(isFindingInSpecScope(finding, roots, new Set(["0002"]))).toBe(true);
+    });
+  });
+
+  it("still lets an attributed finding be scoped when no shared file is named", async () => {
+    // The auxiliary `tests/**` path is not a claim about ownership, so it must
+    // not grant universal membership the way a `_policies` file does.
+    await withProject(async (root) => {
+      const specsRoot = path.join(root, ".qfai", "specs");
+      const finding = {
+        file: path.join(root, "tests", "integration", "typo.test.ts"),
+        relatedFiles: [path.join(specsRoot, "spec-0001")],
+      };
+
+      const roots = { root, specsRoot };
+      expect(isFindingInSpecScope(finding, roots, new Set(["0001"]))).toBe(true);
+      expect(isFindingInSpecScope(finding, roots, new Set(["0002"]))).toBe(false);
+    });
+  });
+});
+
+describe("an unknown reference is attributed to both of its owners", () => {
+  it("lists the test's own spec in relatedFiles, so the scope filter keeps it", async () => {
+    // `narrowUnknown` keeps the finding for `--spec 0002`, and then
+    // `isFindingInSpecScope` re-derives the owners from `relatedFiles` — where
+    // an unowned `tests/**` path contributes nothing. Listing only the token's
+    // spec undid the narrowing one layer later.
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      const testFile = path.join(root, "tests", "integration", "spec-0002", "typo.test.ts");
+      await mkdir(path.dirname(testFile), { recursive: true });
+      await writeFile(
+        testFile,
+        ["// QFAI:SPEC-0001:TC-9999", "it('x', () => {});", ""].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig, {
+        specScope: new Set(["0002"]),
+      });
+      const finding = issues.find((entry) => entry.code === "QFAI-ATDD-102");
+      expect(finding?.relatedFiles).toContain(path.join(root, ".qfai", "specs", "spec-0002"));
+
+      const roots = { root, specsRoot: path.join(root, ".qfai", "specs") };
+      expect(isFindingInSpecScope(finding ?? {}, roots, new Set(["0002"]))).toBe(true);
+    });
+  });
+});
