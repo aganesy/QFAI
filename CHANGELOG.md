@@ -488,6 +488,13 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The copied row identity is checked against the ledger.** Hashing a value
+  the entry already holds proves only that the entry has not changed, and the
+  ledger is excluded from the revision too — so editing `Selector` after the
+  PASS moved nothing.
+- **Branch 3 has a subject of its own.** There is no RED and no GREEN there,
+  so the `DR-*` is the evidence; leaving it out let the pointer be swapped
+  after the PASS for another existing DR with nothing moving.
 - **The falsifiability trio is a round field**, in the RED pair's place, and
   `round-evidence.md` is the only list of which fields take the prefix.
 - **A re-entry rewrites the entry before it is judged again.** After a REVISE

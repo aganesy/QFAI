@@ -1405,6 +1405,27 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(baseline).toContain("**Completion review**");
   });
 
+  it("checks the copied identity against the ledger", async () => {
+    // Hashing a value the entry already holds proves only that the entry has
+    // not changed; the ledger is excluded from the revision too, so editing
+    // `Selector` after the PASS moved nothing.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("**The copy is checked against the ledger, not trusted.**");
+    expect(baseline).toContain("requires them to equal the copy");
+  });
+
+  it("gives branch 3 a subject of its own", async () => {
+    // There is no RED and no GREEN on that branch, so the DR is the evidence —
+    // and leaving it out let the pointer be swapped after the PASS for another
+    // existing `DR-*` with the revision and the hash both unmoved.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("**Branch 3** (`exception`): row identity, the `DR-ID`");
+    expect(baseline).toContain("the verdict to name the `DR-ID` the row currently carries");
+  });
   it("puts the falsifiability trio in the round block it belongs to", async () => {
     // The reference listed only the RED/GREEN pair and step 3c wrote the trio
     // unprefixed, so a normal branch-2 row either lacked the round fields or

@@ -331,6 +331,15 @@ post-escalation verification review of a user-named fix.
        revision unmoved, and a verdict that only ever ran the old selector stood
        as evidence for the new one. Mutable bookkeeping — `Status`, `Evidence` —
        stays out: it moves on its own between observations.
+
+       **The copy is checked against the ledger, not trusted.** Hashing a value
+       the entry already holds proves only that the entry has not changed —
+       edit `Selector` in `test-list.md` after the PASS and the copy, the hash
+       and the revision are all still what they were, because the ledger is
+       excluded from the revision too. Gate item 10 reads the four fields from
+       `test-list.md` and requires them to equal the copy; a difference is the
+       row moving under its own evidence, and the verdict is not fresh.
+
      - **RED observation**: the obligation reference the row's
        `Layer` selects (`TC-ref`, or `US-ref` on an `E2E` row and `CON-API-ref`
        on an `API` row — an ATDD-owned row has no `TC-ref`, so naming only that
@@ -343,6 +352,13 @@ post-escalation verification review of a user-named fix.
        later and made every correct RED PASS stale at GREEN.
      - **GREEN observation**: the RED subject plus `Revision`, the GREEN pair and
        `Oracle proof`.
+     - **Branch 3** (`exception`): row identity, the `DR-ID`, and the `DR-*`
+       artifact it names. There is no RED and no GREEN on this branch — the
+       claim is that neither could be had — so the DR **is** the evidence, and
+       leaving it out of every subject let the pointer be swapped after the PASS
+       for another existing `DR-*`, one already waived perhaps, with the
+       revision and the hash both unmoved. Gate item 10 also requires the
+       verdict to name the `DR-ID` the row currently carries.
      - **Completion review** (`completion-reviewer` / `implementation-reviewer`):
        the GREEN subject plus `Refactor verify command` / `result`, the
        `Shared-artifact re-verify` block when the row has one — it records the
