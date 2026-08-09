@@ -215,14 +215,19 @@ function testPathSpecNumber(file: string): string | null {
   // absolute, so scanning every segment made a checkout that happens to sit
   // under a directory called `spec-0002` claim every test in it. Only
   // `<anything>/<integration|api|e2e|atdd>/spec-NNNN/**` counts.
+  //
+  // A `spec-NNNN` whose parent is not a layer directory is not the owner, and
+  // it does not end the search either: in
+  // `tests/integration/spec-0002/fixtures/spec-0001/a.test.ts` the innermost
+  // one is a fixture named after the spec it stands in for, and returning
+  // `null` there lost `0002` — the gate that owns the file. Keep walking
+  // outwards; the nearest qualifying directory wins.
   const segments = file.split(/[\\/]/);
+  const LAYERS = new Set(["integration", "api", "e2e", "atdd"]);
   for (let index = segments.length - 1; index > 0; index -= 1) {
     const number = /^spec-(\d{4})$/i.exec(segments[index] ?? "")?.[1];
     if (number === undefined) continue;
-    const parent = (segments[index - 1] ?? "").toLowerCase();
-    return parent === "integration" || parent === "api" || parent === "e2e" || parent === "atdd"
-      ? number
-      : null;
+    if (LAYERS.has((segments[index - 1] ?? "").toLowerCase())) return number;
   }
   return null;
 }

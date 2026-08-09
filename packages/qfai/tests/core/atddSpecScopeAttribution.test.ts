@@ -635,4 +635,37 @@ describe("a forbidden reference is owned by the tests that hold it", () => {
       expect(scoped.map((entry) => entry.code)).toContain("QFAI-ATDD-102");
     });
   });
+
+  it("keeps looking outwards past a spec-named directory that is not the owner", async () => {
+    // `tests/integration/spec-0002/fixtures/spec-0001/**`: the innermost
+    // `spec-NNNN` is a fixture named after the spec it stands in for, and
+    // stopping there returned `null` — losing `0002`, the gate that owns the
+    // file, so `--spec 0002` never saw the unknown reference in its own tests.
+    await withProject(async (root) => {
+      await seed(root, SPECS);
+      const testFile = path.join(
+        root,
+        "tests",
+        "integration",
+        "spec-0002",
+        "fixtures",
+        "spec-0001",
+        "a.test.ts",
+      );
+      await mkdir(path.dirname(testFile), { recursive: true });
+      await writeFile(
+        testFile,
+        ["// QFAI:SPEC-0001:TC-9999", "it('x', () => {});", ""].join("\n"),
+        "utf-8",
+      );
+
+      const scoped = await validateAtddCodeTraceability(root, defaultConfig, {
+        specScope: new Set(["0002"]),
+      });
+      const finding = scoped.find((entry) => entry.code === "QFAI-ATDD-102");
+      expect(finding).toBeDefined();
+      const roots = { root, specsRoot: path.join(root, ".qfai", "specs") };
+      expect(isFindingInSpecScope(finding ?? {}, roots, new Set(["0002"]))).toBe(true);
+    });
+  });
 });

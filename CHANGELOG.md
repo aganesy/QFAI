@@ -488,11 +488,15 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
-The forbidden-placement findings (`QFAI-ATDD-121` / `-122` / `-123`) carry
-that owner in `relatedFiles` too. `narrowForbidden` kept them for the right
-scope, but `isFindingInSpecScope` re-derives the owners from `relatedFiles` —
-so `qfai validate --spec 0002` still dropped a misplacement in its own tests,
-and a test that stopped at the validator return value did not show it.
+- **A spec-named directory that is not the owner no longer ends the search.**
+  In `tests/integration/spec-0002/fixtures/spec-0001/**` the innermost
+  `spec-NNNN` is a fixture named after the spec it stands in for; stopping
+  there lost `0002`, so `--spec 0002` dropped findings in its own tests.
+  The forbidden-placement findings (`QFAI-ATDD-121` / `-122` / `-123`) carry
+  that owner in `relatedFiles` too. `narrowForbidden` kept them for the right
+  scope, but `isFindingInSpecScope` re-derives the owners from `relatedFiles` —
+  so `qfai validate --spec 0002` still dropped a misplacement in its own tests,
+  and a test that stopped at the validator return value did not show it.
 
 - **A forbidden reference is owned by the tests that hold it.** The
   unknown-reference path already treats a file under
