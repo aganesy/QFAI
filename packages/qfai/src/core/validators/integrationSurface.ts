@@ -1,6 +1,7 @@
+import { constants } from "node:fs";
 import type { Dirent, Stats } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
-import { access, lstat, open, readFile, readdir, readlink, realpath, stat } from "node:fs/promises";
+import { access, lstat, open, readdir, readlink, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
@@ -101,6 +102,17 @@ const INIT_MARKER_SIGNATURE = ".qfai/assistant/";
  */
 const MARKER_MAX_BYTES = 64 * 1024;
 
+/**
+ * Read-only, and non-blocking where the platform defines it.
+ *
+ * Opening a FIFO for reading blocks until a writer appears. Windows has no
+ * `O_NONBLOCK`, and no FIFOs in this sense either, so plain read-only there.
+ */
+const OPEN_READ_FLAGS =
+  typeof constants.O_NONBLOCK === "number"
+    ? constants.O_RDONLY | constants.O_NONBLOCK
+    : constants.O_RDONLY;
+
 const INIT_MARKER_TITLE = /^# QFAI /;
 const INIT_MARKER_SECTION = "## Canonical entrypoint";
 
@@ -181,7 +193,7 @@ async function skillIdsIn(skillsDir: string): Promise<Set<string>> {
 async function isReadable(filePath: string): Promise<boolean> {
   let handle: FileHandle | undefined;
   try {
-    handle = await open(filePath, "r");
+    handle = await open(filePath, OPEN_READ_FLAGS);
     await handle.read(Buffer.alloc(1), 0, 1, 0);
     return true;
   } catch (error) {
@@ -221,13 +233,11 @@ async function isInitEvidence(wrapper: Wrapper, link: Stats | null | undefined):
     });
     return actual !== null && path.normalize(actual) === path.normalize(wrapper.target);
   }
-  // The flattened form is a small text file. The ceiling keeps the read off
-  // anything that is not link-shaped, exactly as `init.ts` does.
-  if (!link.isFile() || link.size > 4096) return false;
-  const body = await readFile(wrapper.absolute, "utf-8").catch((error: unknown) => {
-    if (isMissing(error)) return null;
-    throw error;
-  });
+  // The flattened form is a small text file, and the ceiling has to bind the
+  // entry that is read rather than the one `lstat` saw — the same reason the
+  // marker probe reads through a handle.
+  if (!link.isFile()) return false;
+  const body = await readPinnedFile(wrapper.absolute, 4096);
   // Byte-exact, as `init.ts` compares the same signature and for the same
   // reason. `path.normalize` accepted `../../.qfai/assistant/./skills/<id>` —
   // not what git writes, but what a project's own note at that path might say —
@@ -325,12 +335,25 @@ async function canonicalKindProblem(wrapper: Wrapper, stats: Stats): Promise<str
  * reasons that are not symlinks — case on a case-insensitive filesystem, most
  * of all — and this question has an exact answer per component.
  */
-async function symlinkAncestor(root: string, dir: string): Promise<string | null> {
+async function unusableAncestor(
+  root: string,
+  dir: string,
+): Promise<{ relative: string; detail: string } | null> {
   const parts = dir.split("/");
   for (let depth = 1; depth < parts.length; depth += 1) {
     const partial = parts.slice(0, depth);
+    const relative = partial.join("/");
     const stats = await lstatOrNull(path.join(root, ...partial));
-    if (stats?.isSymbolicLink() === true) return partial.join("/");
+    // Nothing above exists, so nothing above is damaged — the surface is simply
+    // not created, which is the caller's other branch.
+    if (stats === null) return null;
+    if (stats.isSymbolicLink()) return { relative, detail: `is a symlink` };
+    // A regular file at `.claude` is not a link, but every path under it still
+    // raises `ENOTDIR`. Reported through the leaf, the remedy named a child the
+    // operator cannot reach; the component at fault is this one.
+    if (!stats.isDirectory()) {
+      return { relative, detail: `is a ${describeKind(stats)}, not a directory` };
+    }
   }
   return null;
 }
@@ -369,8 +392,10 @@ async function canonicalLinkProblem(
   realRoot: string | null,
   wrapper: Wrapper,
 ): Promise<string | null> {
-  const ancestor = await symlinkAncestor(root, wrapper.canonicalRelative);
-  if (ancestor !== null) return `a canonical ancestor is a symlink: ${toPosix(ancestor)}`;
+  const ancestor = await unusableAncestor(root, wrapper.canonicalRelative);
+  if (ancestor !== null) {
+    return `a canonical ancestor ${ancestor.detail}: ${toPosix(ancestor.relative)}`;
+  }
   const own = await lstatOrNull(wrapper.canonical);
   if (own?.isSymbolicLink() === true) {
     const resolved = await realpathOrNull(wrapper.canonical);
@@ -424,6 +449,41 @@ async function anyEvidence(probes: readonly (() => Promise<boolean>)[]): Promise
   return false;
 }
 
+/**
+ * A small file's contents, read from the handle its own size was measured on.
+ *
+ * `lstat` then `readFile` are two operations against a **name**, so a ceiling
+ * checked on one entry did not bind the entry that was read: another process
+ * can leave a huge file or a FIFO at the path in between, and the read then
+ * exhausts memory or never returns. One `open`, `fstat` on that handle, and a
+ * bounded read from it — all three about the same inode.
+ *
+ * `O_NONBLOCK` where the platform has it: opening a FIFO for reading blocks
+ * until a writer appears, and the point of the size check is not to be at the
+ * mercy of what is at the path.
+ */
+async function readPinnedFile(filePath: string, maxBytes: number): Promise<string | null> {
+  let handle: FileHandle | undefined;
+  try {
+    handle = await open(filePath, OPEN_READ_FLAGS);
+    const stats = await handle.stat();
+    if (!stats.isFile() || stats.size > maxBytes) return null;
+    const buffer = Buffer.alloc(stats.size);
+    await handle.read(buffer, 0, stats.size, 0);
+    return buffer.toString("utf-8");
+  } catch (error) {
+    if (isMissing(error)) return null;
+    const code = (error as NodeJS.ErrnoException | null)?.code;
+    // A FIFO with no writer answers this instead of blocking, which is the
+    // trade this flag buys; it is not a readable regular file either way.
+    if (code === "ENXIO" || code === "EISDIR" || code === "ENOTDIR" || code === "ELOOP")
+      return null;
+    throw error;
+  } finally {
+    await handle?.close();
+  }
+}
+
 /** Whether a README at `filePath` is one `qfai init` wrote. */
 async function hasInitSignature(filePath: string): Promise<boolean> {
   // A regular file, checked before the read — and checked with `lstat`, not
@@ -435,21 +495,19 @@ async function hasInitSignature(filePath: string): Promise<boolean> {
   // some other file that happens to mention `.qfai/assistant/` read as a marker
   // init wrote — and a checkout that never ran init was told all six surfaces
   // were missing. Init writes these as plain files; nothing else is one.
-  const stats = await lstatOrNull(filePath);
-  if (stats === null || !stats.isFile()) {
+  // Not a symlink, which only `lstat` can answer — `open` follows one, so the
+  // handle below would report the target. A project's own README pointing at a
+  // file that happens to mention the canonical tree is not init's marker.
+  const entry = await lstatOrNull(filePath);
+  if (entry === null || entry.isSymbolicLink()) {
     return false;
   }
-  // Bounded, like the flattened-wrapper read. Init writes a short boilerplate
-  // README; a project's own file at that path can be any size, and reading it
-  // whole to look for three substrings slowed every profile in proportion to
-  // somebody else's document — or ended it on a large enough one.
-  if (stats.size > MARKER_MAX_BYTES) {
-    return false;
-  }
-  const body = await readFile(filePath, "utf-8").catch((error: unknown) => {
-    if (isMissing(error)) return null;
-    throw error;
-  });
+  // Bounded, and pinned to the entry the bound was measured on. Init writes a
+  // short boilerplate README; a project's own file at that path can be any
+  // size, and reading it whole to look for three substrings slowed every
+  // profile in proportion to somebody else's document — or ended it on a large
+  // enough one.
+  const body = await readPinnedFile(filePath, MARKER_MAX_BYTES);
   return (
     body !== null &&
     INIT_MARKER_TITLE.test(body) &&
@@ -636,14 +694,14 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       // answer "absent" — and then the remedy is "re-run `qfai init`", which
       // cannot create a directory through a broken link. The surface is not
       // missing; the path to it is.
-      const ancestor = await symlinkAncestor(root, dir);
+      const ancestor = await unusableAncestor(root, dir);
       // Before anything about the directory itself: when `.claude` is a cycle
       // or points at a non-directory, the probe on `.claude/skills` answers
       // `cycle` / `not-a-directory` too, and naming the child sent the operator
       // at a path they cannot even reach — `ELOOP` / `ENOTDIR` on the way in.
       // The outermost damaged component is the one to repair.
       if (ancestor !== null) {
-        damagedDirs.set(dir, `an ancestor is a symlink: ${toPosix(ancestor)}`);
+        damagedDirs.set(dir, `an ancestor ${ancestor.detail}: ${toPosix(ancestor.relative)}`);
         return;
       }
       const state = await canonicalState(absolute);

@@ -1,10 +1,12 @@
 import path from "node:path";
+import { constants } from "node:fs";
 import type { Dirent, Stats } from "node:fs";
 import {
   access,
   lstat,
   mkdir,
   link,
+  open,
   readdir,
   readFile,
   readlink,
@@ -13,6 +15,7 @@ import {
   symlink,
   writeFile,
 } from "node:fs/promises";
+import type { FileHandle } from "node:fs/promises";
 import { exec as execCb } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -1599,27 +1602,54 @@ async function isFlattenedLink(linkPath: string, target: string, known?: Stats):
   if (stats === undefined || !stats.isFile()) {
     return false;
   }
-  // Generous ceiling: the longest plausible target is well under this, and it
-  // keeps the read off anything that is not a link-shaped file.
-  if (stats.size > 4096) {
-    return false;
-  }
   // A read failure is not "somebody else's file". `lstat` already succeeded,
-  // so the file is there and small; an ACL or a transient I/O fault means the
-  // signature could not be checked, and answering `false` put the path in the
-  // reassuring `skipped` list while leaving a flattened wrapper in place —
-  // `QFAI-LINK-001` then keeps failing with nothing the operator can act on.
-  // Absence stays `false`: that is a race with something else removing it.
+  // so the file is there; an ACL or a transient I/O fault means the signature
+  // could not be checked, and answering `false` put the path in the reassuring
+  // `skipped` list while leaving a flattened wrapper in place — `QFAI-LINK-001`
+  // then keeps failing with nothing the operator can act on. Absence stays
+  // `false`: that is a race with something else removing it.
+  //
+  // The ceiling is applied to the entry that is **read**, not to the one
+  // `lstat` saw. Between them another process can leave a huge file or a FIFO
+  // at the path, and a bound checked on the old inode did not bind the new one
+  // — the read then exhausted memory or never returned. One `open`, `fstat` on
+  // that handle, a bounded read from it.
+  let handle: FileHandle | undefined;
   try {
-    const content = await readFile(linkPath, "utf-8");
-    return toComparableTarget(content) === toComparableTarget(target);
+    handle = await open(linkPath, OPEN_READ_FLAGS);
+    const pinned = await handle.stat();
+    // The longest plausible target is well under this, and it keeps the read
+    // off anything that is not a link-shaped file.
+    if (!pinned.isFile() || pinned.size > 4096) {
+      return false;
+    }
+    const buffer = Buffer.alloc(pinned.size);
+    await handle.read(buffer, 0, pinned.size, 0);
+    return toComparableTarget(buffer.toString("utf-8")) === toComparableTarget(target);
   } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException | null)?.code === "ENOENT") {
+    const code = (error as NodeJS.ErrnoException | null)?.code;
+    // `ENXIO` is what `O_NONBLOCK` returns for a FIFO with no writer, in place
+    // of blocking; neither it nor a directory is a flattened link.
+    if (code === "ENOENT" || code === "ENXIO" || code === "EISDIR") {
       return false;
     }
     throw error;
+  } finally {
+    await handle?.close();
   }
 }
+
+/**
+ * Read-only, non-blocking where the platform defines it.
+ *
+ * Opening a FIFO for reading blocks until a writer appears, and the point of a
+ * size check is not to be at the mercy of what is at the path. Windows has no
+ * `O_NONBLOCK`, and no FIFOs in this sense either.
+ */
+const OPEN_READ_FLAGS =
+  typeof constants.O_NONBLOCK === "number"
+    ? constants.O_RDONLY | constants.O_NONBLOCK
+    : constants.O_RDONLY;
 
 /** Message text for an unknown thrown value, without `[object Object]`. */
 function describeError(err: unknown): string {

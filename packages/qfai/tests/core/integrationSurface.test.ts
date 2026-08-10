@@ -969,6 +969,25 @@ describe("the canonical itself has to be in the project", () => {
   });
 });
 
+describe("an ancestor that is not a directory is named directly", () => {
+  it("reports .claude itself when it is a regular file", async () => {
+    // `symlinkAncestor` only answered for links, so a regular file there was
+    // reported through the unreachable child — and the remedy named a path
+    // `ENOTDIR` keeps the operator out of.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      await writeFile(path.join(root, ".agents", "README.md"), INIT_README_BODY, "utf-8");
+      await rm(path.join(root, ".claude"), { recursive: true, force: true });
+      await writeFile(path.join(root, ".claude"), "not a directory", "utf-8");
+
+      const found = await finding(root);
+      expect(found?.message).toContain("an ancestor is a file, not a directory: .claude");
+    });
+  });
+});
+
 describe("a broken link on the way to a surface is not an absent surface", () => {
   it("names a dangling ancestor instead of reporting the directory missing", async () => {
     // `canonicalState` on `.claude/skills` answers absent through a dangling

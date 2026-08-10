@@ -22,8 +22,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type FsPromises = typeof fsPromises;
 
-const { symlinkSpy, writeFileSpy, readFileSpy, renameSpy, linkSpy, rmSpy, lstatSpy } = vi.hoisted(
-  () => ({
+const { symlinkSpy, writeFileSpy, readFileSpy, renameSpy, linkSpy, rmSpy, lstatSpy, openSpy } =
+  vi.hoisted(() => ({
     symlinkSpy: vi.fn(),
     writeFileSpy: vi.fn(),
     readFileSpy: vi.fn(),
@@ -31,8 +31,8 @@ const { symlinkSpy, writeFileSpy, readFileSpy, renameSpy, linkSpy, rmSpy, lstatS
     linkSpy: vi.fn(),
     rmSpy: vi.fn(),
     lstatSpy: vi.fn(),
-  }),
-);
+    openSpy: vi.fn(),
+  }));
 
 vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<FsPromises>("node:fs/promises");
@@ -45,6 +45,7 @@ vi.mock("node:fs/promises", async () => {
     link: (...args: unknown[]) => linkSpy(actual, ...args),
     rm: (...args: unknown[]) => rmSpy(actual, ...args),
     lstat: (...args: unknown[]) => lstatSpy(actual, ...args),
+    open: (...args: unknown[]) => openSpy(actual, ...args),
   };
 });
 
@@ -83,6 +84,7 @@ beforeEach(() => {
   linkSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.link(...args));
   rmSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.rm(...args));
   lstatSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.lstat(...args));
+  openSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.open(...args));
 });
 
 describe("a repair that cannot finish leaves the file it found", () => {
@@ -183,10 +185,12 @@ describe("a repair that cannot finish leaves the file it found", () => {
       await mkdir(path.dirname(linkPath), { recursive: true });
       await writeFile(linkPath, FLATTENED, "utf-8");
 
-      readFileSpy.mockImplementation((actual: FsPromises, file: string, ...rest: never[]) =>
+      // The signature is read through a handle now, so the failure is injected
+      // where the handle is taken.
+      openSpy.mockImplementation((actual: FsPromises, file: string, ...rest: never[]) =>
         file === linkPath
           ? Promise.reject(Object.assign(new Error("simulated EACCES"), { code: "EACCES" }))
-          : actual.readFile(file, ...rest),
+          : actual.open(file, ...rest),
       );
 
       await expect(

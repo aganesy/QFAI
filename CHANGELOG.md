@@ -505,6 +505,14 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A size ceiling binds the entry that is read.** `lstat` then `readFile` are
+  two operations against a name, so a huge file or a FIFO left at the path in
+  between was read unbounded — one `open`, `fstat` on that handle, and a
+  bounded read from it, with `O_NONBLOCK` so a FIFO answers instead of
+  blocking.
+- **An ancestor that is not a directory is named directly.** The check
+  answered only for symlinks, so a regular file at `.claude` was reported
+  through the child `ENOTDIR` keeps the operator out of.
 - **A claim that never took anything is released.** A failed `rename` left an
   empty sidecar that prune deliberately skips and the next attempt sidesteps,
   so repeated failures piled them up to the ceiling and refused every later
