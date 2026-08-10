@@ -1570,7 +1570,10 @@ describe("a resolving link is a finding, not a reason to stop", () => {
     });
   });
 
-  // POSIX only for the same reason as above: this is the `ENOTDIR` shape.
+  // POSIX only, and for a Windows-specific reason: the agent wrapper is a file
+  // symlink whose target is now a directory, and `stat` answers `EPERM` there.
+  // The mechanism — an unwalkable path found past the sample — is the same one
+  // the canonical-agent test above covers; CI runs the ubuntu lane.
   it.skipIf(process.platform === "win32")(
     "decides from every damaged path, not from the sample the message carries",
     async () => {
@@ -1580,8 +1583,8 @@ describe("a resolving link is a finding, not a reason to stop", () => {
       await withProject(async (root) => {
         if (!(await canCreateSymlink(root))) return;
         const skills = await shippedSkillIds();
-        await seedCanonical(root, skills, []);
-        await wireAll(root, skills, []);
+        await seedCanonical(root, skills, ["completion-reviewer"]);
+        await wireAll(root, skills, ["completion-reviewer"]);
         // Wrappers are walked directory by directory, so flattening two whole
         // directories fills the sample before the damaged canonical is reached
         // through the third.
@@ -1592,18 +1595,18 @@ describe("a resolving link is a finding, not a reason to stop", () => {
             await writeFile(wrapper, `../../.qfai/assistant/skills/${id}`, "utf-8");
           }
         }
-        // The agents tree, reached after every skill wrapper: a regular file
-        // where that directory belongs is the one shape a later `readdir`
-        // cannot survive, and it lands well past the twelfth entry.
-        const agentsDir = path.join(root, ".qfai", "assistant", "agents");
-        await rm(agentsDir, { recursive: true, force: true });
-        await writeFile(agentsDir, "not a directory", "utf-8");
+        // An agent document replaced by a directory: `validateAgentDefinition`
+        // reads that pathname and gets `EISDIR`. Agent wrappers are walked
+        // after every skill wrapper, so it lands well past the twelfth entry.
+        const agentDoc = path.join(root, ".qfai", "assistant", "agents", "completion-reviewer.md");
+        await rm(agentDoc, { force: true });
+        await mkdir(agentDoc, { recursive: true });
 
         const report = await inspectIntegrationSurface(root);
         const message = report.issues[0]?.message ?? "";
         expect(skills.length * 2).toBeGreaterThan(12);
-        expect(message).not.toContain(".qfai/assistant/agents");
-        expect(report.unwalkable).toContain(".qfai/assistant/agents");
+        expect(message).not.toContain("completion-reviewer");
+        expect(report.unwalkable).toContain(".qfai/assistant/agents/completion-reviewer.md");
       });
     },
   );
