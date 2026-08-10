@@ -505,6 +505,21 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **Every wrapper branch checks the canonical, through one helper.** The
+  wrong-target branch reported the mismatch and stopped, so `qfai init`
+  re-pointed the wrapper, left the create-only canonical as it found it, and the
+  operator needed a second run to learn the rest. Three branches diverging on
+  which half they checked is what produced that shape three times; they now ask
+  the same question the same way, and the answer carries its own short-circuit
+  rather than leaving the caller to recover it from a detail string.
+- **A per-entry read error is propagated.** A transient `EIO`, or an ACL on one
+  entry, was answered "not a wrapper" — leaving a retired wrapper the assistant
+  still loads unexamined, the same hole the listing error had one level up. Only
+  a race (`ENOENT`) is a clean `null`.
+- **The copy fallback is bounded.** It also runs when the bounded probe
+  _refused_ the entry, so reading an oversized file whole into memory to copy it
+  back was exactly the exhaustion that probe exists to avoid. It refuses
+  instead, keeps the sidecar, and says where the content is.
 - **A flattened wrapper's canonical is checked for type collisions too.** The
   link check is only one of the two ways a canonical goes wrong: a skill
   directory replaced by a regular file, or an agent document by a directory, is

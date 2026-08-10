@@ -1352,6 +1352,14 @@ async function ensureSymlink(
 /** Names {@link claimSidecar} produces, so prune leaves them alone. */
 const SIDECAR_RE = /\.qfai-repair-\d+(?:-\d+)?$/;
 
+/**
+ * How much of a sidecar the copy fallback will hold in memory.
+ *
+ * The same ceiling the flattened-link probe vets against, so an entry that
+ * probe refused is refused here too rather than read whole.
+ */
+const SIDECAR_COPY_MAX_BYTES = 4096;
+
 async function claimSidecar(linkPath: string): Promise<string> {
   const base = `${linkPath}.qfai-repair-${String(process.pid)}`;
   for (let attempt = 0; attempt < 1000; attempt += 1) {
@@ -1389,6 +1397,24 @@ async function restoreSidecar(sidecar: string, linkPath: string): Promise<void> 
     // invalid sequence with U+FFFD, and the sidecar is removed straight after —
     // so a repair that exists to protect a concurrent write would have
     // corrupted the file it was protecting, irreversibly.
+    //
+    // And bounded, on the same ceiling the caller vets against. This path also
+    // runs when the bounded probe **refused** the entry — an oversized file
+    // another process left at the pathname — and reading it whole into memory
+    // to copy it back was exactly the exhaustion the probe exists to avoid.
+    // Nothing is lost by refusing: the content is in the sidecar, and the
+    // message says where.
+    const original = await stat(sidecar);
+    if (original.size > SIDECAR_COPY_MAX_BYTES) {
+      throw new Error(
+        [
+          `退避したファイルが大きすぎて復元できません（${String(original.size)} bytes）: ${linkPath}`,
+          `このファイルシステムでは hard link を作成できず、内容のコピーは上限 ${String(SIDECAR_COPY_MAX_BYTES)} bytes までに制限しています。`,
+          `元のファイルは次の場所にあります: ${sidecar}`,
+        ].join("\n"),
+        { cause: linkErr },
+      );
+    }
     const content = await readFile(sidecar);
     await writeFile(linkPath, content, { flag: "wx" });
     // Bytes are not the whole file. `writeFile` makes a **new** inode with the
@@ -1401,7 +1427,6 @@ async function restoreSidecar(sidecar: string, linkPath: string): Promise<void> 
     // A restore that could not carry the mode is **not** a restore: the sidecar
     // stays and the failure is reported, because a file whose permissions are
     // now wrong is worse than one the operator is told where to find.
-    const original = await stat(sidecar);
     try {
       await chmod(linkPath, original.mode & 0o7777);
     } catch (modeErr: unknown) {

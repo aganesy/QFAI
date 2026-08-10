@@ -1052,6 +1052,30 @@ describe("what init wrote is still checked after the roster moves on", () => {
     },
   );
 
+  // POSIX only, and not as root: an entry-level ACL is what makes the listing
+  // succeed and this one read fail.
+  it.skipIf(process.platform === "win32" || process.geteuid?.() === 0)(
+    "propagates a per-entry read error rather than calling it not-a-wrapper",
+    async () => {
+      // Answering `null` on a transient `EIO`, or an ACL on this one entry,
+      // left a retired wrapper the assistant still loads unexamined — the same
+      // hole the listing error had one level up.
+      await withProject(async (root) => {
+        if (!(await canCreateSymlink(root))) return;
+        await seedCanonical(root, ["qfai-atdd"], []);
+        await wireAll(root, ["qfai-atdd"], []);
+        const unreadable = path.join(root, ".claude", "skills", "legacy-research");
+        await writeFile(unreadable, "../../.qfai/assistant/skills/legacy-research", "utf-8");
+        await chmod(unreadable, 0o000);
+        try {
+          await expect(validateIntegrationSurface(root)).rejects.toThrow();
+        } finally {
+          await chmod(unreadable, 0o644);
+        }
+      });
+    },
+  );
+
   it("says nothing about a one-line file that is not byte-exactly a target", async () => {
     // Git writes the target for mode `120000` with no trailing newline, so
     // trimming one off made a project's own note indistinguishable from a
@@ -1176,6 +1200,55 @@ describe("a resolving link is a finding, not a reason to stop", () => {
       expect(report.unwalkable).toEqual([]);
     });
   });
+
+  it("reports the canonical when the wrapper points somewhere else", async () => {
+    // `qfai init` re-points the wrapper and leaves the canonical as it found
+    // it, so reporting only the mismatch had the operator clear this finding
+    // and need a second run to learn the rest.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd", "qfai-verify"], []);
+      await wireAll(root, ["qfai-atdd", "qfai-verify"], []);
+      for (const dir of SKILL_INTEGRATION_DIRS) {
+        const wrapper = path.join(root, ...dir.split("/"), "qfai-atdd");
+        await rm(wrapper, { recursive: true, force: true });
+        await symlink(skillTarget(dir, "qfai-verify"), wrapper, "dir");
+      }
+      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      await rm(canonical, { recursive: true, force: true });
+      await writeFile(canonical, "# not a directory\n", "utf-8");
+
+      const found = await finding(root);
+      expect(found?.refs).toContain(".qfai/assistant/skills/qfai-atdd");
+      expect(found?.message).toContain("canonical skill is a file, not a directory");
+    });
+  });
+
+  // POSIX only: this is the `ENOTDIR` shape, which Windows folds into `ENOENT`.
+  it.skipIf(process.platform === "win32")(
+    "carries the short-circuit out of the flattened-wrapper branch",
+    async () => {
+      // The branch detected the non-directory ancestor and reported it, but did
+      // not record it as unwalkable — so `sdd` / `full` walked on into the same
+      // `ENOTDIR` and rejected the run along with the finding.
+      await withProject(async (root) => {
+        if (!(await canCreateSymlink(root))) return;
+        await seedCanonical(root, ["qfai-atdd"], []);
+        await wireAll(root, ["qfai-atdd"], []);
+        for (const dir of SKILL_INTEGRATION_DIRS) {
+          const wrapper = path.join(root, ...dir.split("/"), "qfai-atdd");
+          await rm(wrapper, { recursive: true, force: true });
+          await writeFile(wrapper, skillTarget(dir, "qfai-atdd"), "utf-8");
+        }
+        const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+        await rm(skillsDir, { recursive: true, force: true });
+        await writeFile(skillsDir, "not a directory\n", "utf-8");
+
+        const report = await inspectIntegrationSurface(root);
+        expect(report.unwalkable).toContain(".qfai/assistant/skills");
+      });
+    },
+  );
 
   it("reports a canonical type collision when every wrapper was flattened", async () => {
     // A link is only one of the two ways a canonical goes wrong. A skill

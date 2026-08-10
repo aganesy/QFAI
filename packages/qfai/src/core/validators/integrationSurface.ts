@@ -556,11 +556,19 @@ async function retiredWrappers(root: string, wrappers: readonly Wrapper[]): Prom
  * whole rule exists for.
  */
 async function wrapperTarget(entryPath: string, entry: Dirent): Promise<string | null> {
+  // Only a race is a clean `null`. A transient `EIO`, or an ACL on this one
+  // entry, says the target could not be read — and answering "not a wrapper"
+  // let a retired wrapper the assistant still loads pass unexamined, which is
+  // the same hole the listing error had one level up.
+  const raceOrThrow = (error: unknown): null => {
+    if (isMissing(error)) return null;
+    throw error;
+  };
   if (entry.isSymbolicLink()) {
-    return readlink(entryPath).catch(() => null);
+    return readlink(entryPath).catch(raceOrThrow);
   }
   if (!entry.isFile()) return null;
-  const content = await readPinnedFile(entryPath, 4096).catch(() => null);
+  const content = await readPinnedFile(entryPath, 4096).catch(raceOrThrow);
   if (content === null) return null;
   // **Byte-exact**, the way the init-evidence check reads a flattened wrapper.
   // Git writes the target for mode `120000` with no trailing newline, so
@@ -568,6 +576,51 @@ async function wrapperTarget(entryPath: string, entry: Dirent): Promise<string |
   // newline after it — indistinguishable from a wrapper, and the finding told
   // the operator to delete it. No whitespace anywhere is the whole test.
   return content.length > 0 && !/\s/.test(content) ? content : null;
+}
+
+/**
+ * Everything wrong with a wrapper's canonical, independent of the wrapper.
+ *
+ * The two states are unrelated, and `qfai init` repairs a wrapper while leaving
+ * the canonical exactly as it found it — so a branch that reported the wrapper
+ * and stopped had the operator re-run init, clear the finding, and end with a
+ * healthy link loading the wrong instructions, or with a create-only copy that
+ * cannot succeed against a type collision. Every wrapper branch asks this, and
+ * asks it the same way: three branches diverging on which half they checked is
+ * what produced that shape three times.
+ *
+ * A `not-a-directory` names the component at fault rather than the unreachable
+ * leaf below it, and carries the short-circuit with it: the caller cannot
+ * recover that from the detail string.
+ */
+async function canonicalDamage(
+  root: string,
+  realRoot: string | null,
+  wrapper: Wrapper,
+): Promise<Broken | null> {
+  const link = await canonicalLinkProblem(root, realRoot, wrapper);
+  if (link !== null) {
+    return { relative: wrapper.canonicalRelative, detail: link };
+  }
+  const state = await canonicalState(wrapper.canonical);
+  if (state.kind === "absent") return null;
+  if (state.kind === "present") {
+    const kind = await canonicalKindProblem(wrapper, state.stats);
+    return kind === null ? null : { relative: wrapper.canonicalRelative, detail: kind };
+  }
+  const culprit =
+    state.kind === "not-a-directory"
+      ? await unusableAncestor(root, wrapper.canonicalRelative)
+      : null;
+  const relative = culprit?.relative ?? wrapper.canonicalRelative;
+  return {
+    relative,
+    detail:
+      culprit === null
+        ? describeDamage(state, "canonical document")
+        : `the canonical directory ${culprit.detail}`,
+    unwalkable: blocksWalk(state) ? relative : undefined,
+  };
 }
 
 /** Whether `candidate` is `base` itself or sits under it. */
@@ -1114,17 +1167,10 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
       // create-only copy `qfai init` performs fails on it, so the operator was
       // sent to re-run a command that cannot succeed, with the path at fault
       // never named.
-      const canonicalNow = await canonicalState(wrapper.canonical);
-      const alsoWrong =
-        (await canonicalLinkProblem(root, realRoot, wrapper)) ??
-        (canonicalNow.kind === "present"
-          ? await canonicalKindProblem(wrapper, canonicalNow.stats)
-          : canonicalNow.kind === "absent"
-            ? null
-            : describeDamage(canonicalNow, "canonical document"));
-      if (alsoWrong !== null && !damagedCanonicals.has(wrapper.canonicalRelative)) {
-        damagedCanonicals.add(wrapper.canonicalRelative);
-        broken.push({ relative: wrapper.canonicalRelative, detail: alsoWrong });
+      const alsoWrong = await canonicalDamage(root, realRoot, wrapper);
+      if (alsoWrong !== null && !damagedCanonicals.has(alsoWrong.relative)) {
+        damagedCanonicals.add(alsoWrong.relative);
+        broken.push(alsoWrong);
       }
       continue;
     }
@@ -1144,6 +1190,15 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
         relative: wrapper.relative,
         detail: `points at ${toPosix(actual ?? "?")}, expected ${toPosix(wrapper.target)}`,
       });
+      // And the canonical, for the same reason the flattened branch does: init
+      // re-points the wrapper and leaves the canonical as it found it, so the
+      // operator cleared this finding and needed a second run to learn the
+      // rest.
+      const alsoWrong = await canonicalDamage(root, realRoot, wrapper);
+      if (alsoWrong !== null && !damagedCanonicals.has(alsoWrong.relative)) {
+        damagedCanonicals.add(alsoWrong.relative);
+        broken.push(alsoWrong);
+      }
       continue;
     }
 

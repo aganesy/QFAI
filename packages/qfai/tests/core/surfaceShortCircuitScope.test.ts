@@ -23,12 +23,13 @@ import { validateProject } from "../../src/core/validate.js";
 async function withDamagedCanonical(task: (root: string) => Promise<boolean>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-scope-"));
   try {
-    const skills = path.join(root, ".qfai", "assistant", "skills");
-    await mkdir(skills, { recursive: true });
-    // A regular file where the canonical directory belongs: the one shape a
-    // later `readdir` cannot survive. A symlink, cycle or not, is listed by the
-    // parent with `withFileTypes` and never descended into.
-    await writeFile(path.join(skills, "qfai-atdd"), "not a directory\n", "utf-8");
+    // A regular file where the skills **directory** belongs: the one shape a
+    // later `readdir` cannot survive. A leaf replaced by a file is not — `stat`
+    // succeeds on it and the parent listing skips it — and neither is a
+    // symlink, cycle or not, which `withFileTypes` lists and never descends
+    // into.
+    await mkdir(path.join(root, ".qfai", "assistant"), { recursive: true });
+    await writeFile(path.join(root, ".qfai", "assistant", "skills"), "not a directory\n", "utf-8");
     // Enough of a surface that init counts as having run here.
     await writeFile(
       path.join(root, ".qfai", "assistant", "README.md"),

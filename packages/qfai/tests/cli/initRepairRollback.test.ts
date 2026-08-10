@@ -591,6 +591,55 @@ describe("what was moved aside is what gets checked", () => {
 });
 
 describe("a restore puts back more than the bytes", () => {
+  it("refuses to copy back an oversized sidecar instead of reading it whole", async () => {
+    // This path also runs when the bounded probe *refused* the entry, so
+    // reading it whole into memory to copy it back was exactly the exhaustion
+    // that probe exists to avoid. Nothing is lost: the content is in the
+    // sidecar, and the message says where.
+    await withProject(async (root) => {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      const linkPath = path.join(root, LINK);
+      await rm(linkPath, { recursive: true, force: true });
+      await mkdir(path.dirname(linkPath), { recursive: true });
+      await writeFile(linkPath, FLATTENED, "utf-8");
+
+      // Oversized by the time it is moved aside, and no hard links available.
+      renameSpy.mockImplementation(async (actual: FsPromises, from: string, to: string) => {
+        if (from === linkPath) await actual.writeFile(linkPath, "x".repeat(8192), "utf-8");
+        return actual.rename(from, to);
+      });
+      linkSpy.mockImplementation(() => {
+        const err = new Error("simulated EXDEV") as NodeJS.ErrnoException;
+        err.code = "EXDEV";
+        return Promise.reject(err);
+      });
+      const readsOfSidecar: string[] = [];
+      readFileSpy.mockImplementation((actual: FsPromises, file: string, ...rest: never[]) => {
+        if (file.includes(".qfai-repair-")) readsOfSidecar.push(file);
+        return actual.readFile(file, ...rest);
+      });
+
+      const error = await captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: false, yes: true }),
+      ).then(
+        () => null,
+        (err: unknown) => err as Error,
+      );
+
+      renameSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.rename(...args),
+      );
+      linkSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.link(...args));
+      readFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.readFile(...args),
+      );
+      expect(readsOfSidecar).toEqual([]);
+      expect(error?.message).toContain("退避したファイルが大きすぎて復元できません");
+      expect(error?.message).toContain(".qfai-repair-");
+    });
+  });
+
   it.skipIf(process.platform === "win32")("keeps the mode when it cannot hard-link", async () => {
     // `writeFile` makes a new inode with the umask and the parent's defaults, so
     // a `0600` file came back `0644` and readable by everyone — and the sidecar
