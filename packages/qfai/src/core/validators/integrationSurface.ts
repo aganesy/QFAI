@@ -117,6 +117,16 @@ const INIT_MARKER_TITLE = /^# QFAI /;
 const INIT_MARKER_SECTION = "## Canonical entrypoint";
 
 const INIT_MARKERS: readonly (readonly string[])[] = [
+  // The one marker that cannot be pre-empted. The four below sit in
+  // conventional directories, and `qfai init` writes a README there only when
+  // the path is free — so a project that already had its own at all four ran
+  // init and got no marker at all, and deleting every wrapper afterwards left
+  // the surface reading as never initialised: nothing checked, every profile
+  // passing, and the assistant loading nothing. This one is inside `.qfai/`,
+  // which init owns outright and creates, so there is nothing there to preserve
+  // and no project file to collide with. It also outlives every integration
+  // directory, which is the state the evidence is needed for.
+  [".qfai", "assistant", "README.md"],
   [".agents", "README.md"],
   [".codex", "README.md"],
   [".claude", "agents", "README.md"],
@@ -449,6 +459,79 @@ async function canonicalLinkProblem(
   const docOwn = await lstatOrNull(doc);
   if (docOwn?.isSymbolicLink() === true) return "canonical SKILL.md is a symlink";
   return null;
+}
+
+/**
+ * Wrappers `qfai init` wrote for a skill or agent this package no longer ships.
+ *
+ * The roster is the **current** one, so a wrapper left by a shipped document
+ * since removed or renamed is enumerated by nobody: it still resolves, and the
+ * assistant goes on loading retired instructions while every profile reports a
+ * clean surface. `pruneStaleQfaiWrappers` does not reach it either — it matches
+ * a `qfai-` prefix, and `web-research` is the standing proof that a shipped
+ * name need not have one.
+ *
+ * Identified by what init writes rather than by the name: an entry inside an
+ * integration directory whose target lands under `.qfai/assistant/`. A wrapper
+ * a project made by hand for a canonical of its own answers that description
+ * too — init creates none for those, so it is unmanaged either way, and the
+ * remedy says so rather than assuming which it is.
+ */
+async function retiredWrappers(root: string, wrappers: readonly Wrapper[]): Promise<Broken[]> {
+  const expected = new Map<string, Set<string>>();
+  for (const wrapper of wrappers) {
+    const names = expected.get(wrapper.dir) ?? new Set<string>();
+    names.add(path.posix.basename(wrapper.relative));
+    expected.set(wrapper.dir, names);
+  }
+
+  const assistantRoot = path.join(root, ".qfai", "assistant");
+  const found: Broken[] = [];
+  for (const [dir, names] of expected) {
+    const dirAbsolute = path.join(root, ...dir.split("/"));
+    // A directory that is itself damaged raises `ELOOP` / `ENOTDIR` here, and
+    // that is already reported as damage of its own — listing what is inside it
+    // is not this rule's question, and propagating the error would lose every
+    // finding the run had produced.
+    const entries = await readdir(dirAbsolute, { withFileTypes: true }).catch(() => null);
+    if (entries === null) continue;
+    for (const entry of entries) {
+      if (names.has(entry.name)) continue;
+      const target = await wrapperTarget(path.join(dirAbsolute, entry.name), entry);
+      if (target === null) continue;
+      const resolved = path.resolve(dirAbsolute, target);
+      // The tree itself is not a wrapper target, and a path outside it is
+      // somebody else's link.
+      if (resolved === assistantRoot || !isInside(assistantRoot, resolved)) continue;
+      found.push({
+        relative: `${dir}/${entry.name}`,
+        detail: `resolves into the canonical tree but names ${toPosix(path.relative(root, resolved))}, which this version does not ship — the assistant still loads it`,
+      });
+    }
+  }
+  return found;
+}
+
+/**
+ * The path a wrapper points at, whichever form the checkout left it in, or
+ * `null` when the entry is not a wrapper at all.
+ *
+ * A flattened wrapper is a small regular file holding the target, so both forms
+ * have to answer — reading only symlinks would have declared every wrapper on a
+ * `core.symlinks false` checkout a non-wrapper, which is the one case this
+ * whole rule exists for.
+ */
+async function wrapperTarget(entryPath: string, entry: Dirent): Promise<string | null> {
+  if (entry.isSymbolicLink()) {
+    return readlink(entryPath).catch(() => null);
+  }
+  if (!entry.isFile()) return null;
+  const content = await readPinnedFile(entryPath, 4096).catch(() => null);
+  if (content === null) return null;
+  const trimmed = content.trim();
+  // One line, no whitespace inside it: what git writes for mode `120000`. A
+  // README or any other document in these directories is not a target.
+  return trimmed.length > 0 && !/\s/.test(trimmed) ? trimmed : null;
 }
 
 /** Whether `candidate` is `base` itself or sits under it. */
@@ -1029,8 +1112,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
         // The errno is about the canonical, so that is the path named — the
         // entry is filed under the wrapper because that is what was probed.
         // `ENOENT` is absence, which every later validator already handles.
-        unwalkable:
-          code === "ELOOP" || code === "ENOTDIR" ? wrapper.canonicalRelative : undefined,
+        unwalkable: code === "ELOOP" || code === "ENOTDIR" ? wrapper.canonicalRelative : undefined,
       });
       continue;
     }
@@ -1190,6 +1272,13 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
     }
   }
 
+  // Only once init has run: before that every entry in these directories is the
+  // project's own, and calling one of them retired is a finding it cannot act
+  // on and did not ask for.
+  if (initialised) {
+    broken.push(...(await retiredWrappers(root, wrappers)));
+  }
+
   if (broken.length === 0) {
     return { issues: [], unwalkable: [] };
   }
@@ -1219,6 +1308,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
         "**wrapper が symlink 以外（`directory, not a symlink` / `FIFO` / `socket` / `device`）の場合も init では直りません。** `ensureSymlink` はそれらを `skipped` として温存します。中身を確認できるもの（ディレクトリ）は退避してから `qfai init` を、特殊ファイルは削除してから `qfai init` を実行してください。`--force` は確認なしで削除するので、中身が要るかどうか分からないうちは使わないでください。",
         "**`unreadable` は権限の問題であり、init では直りません。** wrapper の target 文字列は正しいので `ensureSymlink` は skip し、canonical asset は create-only なので上書きもしません。該当ファイルの読み取り権限を戻してください（POSIX: `chmod u+r <path>`、Windows: `icacls <path> /grant <user>:R`）。CI で出た場合は、そのファイルを作成した job の umask / ACL 設定を確認してください。",
         "**canonical 側が壊れている場合（`resolves to a …, but …` / `its SKILL.md is …` / `symlink cycle`）は init では直りません。** canonical asset は create-only なので既存パスを skip し、`--force` でも `copyFile` / `mkdir` が型衝突で失敗します。該当する `.qfai/assistant/**` のパスを退避（または削除）してから `qfai init` を実行してください — 中身は失われるので、先に確認してください。",
+        "**`which this version does not ship` は退役した wrapper です。** アップグレードで削除・改名された skill / agent の wrapper が残っており、解決できてしまうため assistant は今も旧命令を読み込みます。`qfai init` は現行 roster の wrapper しか作らないので再実行では消えません。該当パスを削除してください。プロジェクト独自の canonical に対して手で貼った wrapper も同じ形になります — その場合も qfai の管理外なので、意図的に残すかどうかを決めてください。",
         "根本原因が clone 時の平坦化である場合は、先に `git config --global core.symlinks true` を設定してください。repo-local 設定は clone に引き継がれないため、これを直さないと次の clone で同じ状態に戻ります。",
         "Windows では Developer Mode の有効化が必要な場合があります。",
       ].join("\n"),

@@ -719,7 +719,9 @@ describe("a type collision is reported wherever it sits on the path", () => {
     // The wrapper's target string is right, so the failure surfaces on `stat`.
     // The errno differs by platform — POSIX raises `ENOTDIR`, Windows folds it
     // into `ENOENT` — and only `ENOENT` and `ELOOP` were findings, so on POSIX
-    // this ended the run. Both now report; the wording is what differs.
+    // this ended the run. Both report now, and with the same words: the
+    // ancestor is found by walking the components, so what is said no longer
+    // depends on which errno the platform chose.
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
@@ -730,9 +732,9 @@ describe("a type collision is reported wherever it sits on the path", () => {
 
       const found = await finding(root);
       expect(found?.refs).toContain(".claude/skills/qfai-atdd");
-      if (process.platform !== "win32") {
-        expect(found?.message).toContain("a path component of the canonical is not a directory");
-      }
+      expect(found?.message).toContain("a canonical ancestor is a file, not a directory");
+      // And it names which one, rather than leaving the operator to find it.
+      expect(found?.message).toContain(".qfai/assistant/skills");
     });
   });
 
@@ -995,6 +997,74 @@ describe("an ancestor that is not a directory is named directly", () => {
 
       const found = await finding(root);
       expect(found?.message).toContain("an ancestor is a file, not a directory: .claude");
+    });
+  });
+});
+
+describe("what init wrote is still checked after the roster moves on", () => {
+  it("reports a wrapper for a skill this version no longer ships", async () => {
+    // Wrappers are enumerated from the current roster, so one left by a skill
+    // since removed or renamed is enumerated by nobody — it still resolves, and
+    // the assistant goes on loading retired instructions while every profile
+    // reports a clean surface. `pruneStaleQfaiWrappers` matches a `qfai-`
+    // prefix, and `web-research` shows a shipped name need not have one.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const retiredCanonical = path.join(root, ".qfai", "assistant", "skills", "legacy-research");
+      await mkdir(retiredCanonical, { recursive: true });
+      await writeFile(path.join(retiredCanonical, "SKILL.md"), "# retired\n", "utf-8");
+      const claudeSkills = path.join(root, ".claude", "skills");
+      await symlink(
+        skillTarget(".claude/skills", "legacy-research"),
+        path.join(claudeSkills, "legacy-research"),
+        "dir",
+      );
+
+      const found = await finding(root);
+      expect(found?.refs).toContain(".claude/skills/legacy-research");
+      expect(found?.message).toContain("which this version does not ship");
+    });
+  });
+
+  it("says nothing about an entry that points outside the canonical tree", async () => {
+    // These directories are conventional, and a project's own link in one of
+    // them is not qfai's to report.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const mine = path.join(root, "my-own-skill");
+      await mkdir(mine, { recursive: true });
+      await symlink(
+        path.relative(path.join(root, ".claude", "skills"), mine),
+        path.join(root, ".claude", "skills", "my-own-skill"),
+        "dir",
+      );
+
+      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
+
+  it("recognises init by the marker inside the tree it owns", async () => {
+    // The four conventional READMEs are written only when the path is free, so
+    // a project that already had its own at all four ran init and got no
+    // marker — and deleting every wrapper then read as never initialised:
+    // nothing checked, every profile passing, the assistant loading nothing.
+    await withProject(async (root) => {
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await writeFile(
+        path.join(root, ".qfai", "assistant", "README.md"),
+        INIT_README_BODY,
+        "utf-8",
+      );
+      for (const dir of INTEGRATION_SURFACE_DIRS) {
+        await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
+      }
+
+      const found = await finding(root);
+      expect(found?.message).toContain("missing");
     });
   });
 });

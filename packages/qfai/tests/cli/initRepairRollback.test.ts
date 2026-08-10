@@ -270,7 +270,9 @@ describe("a wrapper that changed under the check is not deleted", () => {
 
       await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
 
-      renameSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.rename(...args));
+      renameSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.rename(...args),
+      );
       expect(await readFile(linkPath, "utf-8")).toBe(theirs);
       expect((await lstat(linkPath)).isSymbolicLink()).toBe(false);
     });

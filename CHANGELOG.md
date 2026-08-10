@@ -505,6 +505,30 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The short-circuit stops only the profiles that walk the damage.**
+  `unwalkable` names paths under `.qfai/assistant/**`, and
+  `validateSkillsIntegrity` / `validateAssistantAssets` are the only validators
+  that open that tree — they run under `verify` / `full` alone. `discussion`,
+  `sdd`, `atdd` and `tdd` were being stopped for damage none of their own
+  validators would have touched, so every independent defect in the spec packs,
+  the ledger and the discussion packs stayed hidden until the surface had been
+  repaired and the run repeated.
+- **`qfai init` leaves a marker inside the tree it owns.** The four README
+  markers sit in conventional directories and are written only when the path is
+  free, so a project that already had its own at all four ran init and got no
+  marker at all — and once every wrapper was deleted the surface read as never
+  initialised: nothing checked, every profile passing, and the assistant loading
+  nothing. `.qfai/assistant/README.md` cannot be pre-empted (init creates that
+  tree) and outlives every integration directory, which is the state the
+  evidence is for.
+- **A wrapper for a skill or agent this version no longer ships is reported.**
+  Wrappers are enumerated from the current roster, so one left behind by a
+  shipped document since removed or renamed was enumerated by nobody: it still
+  resolves, so the assistant went on loading retired instructions while every
+  profile reported a clean surface. `pruneStaleQfaiWrappers` does not reach it
+  either — it matches a `qfai-` prefix, and `web-research` is the standing proof
+  that a shipped name need not have one. Identified by where the target lands
+  rather than by the name, so a flattened checkout is covered too.
 - **The short-circuit is decided by the damage, not by the message.** It was
   read back out of the finding's text, which carries a 12-entry sample — so a
   thirteenth entry holding the only unwalkable path decided nothing, a profile
@@ -520,7 +544,7 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 - **A wrapper whose canonical is not there yet says why.** Point
   `.qfai/assistant/skills` at an existing empty directory and every wrapper
   under it is `ENOENT`, reported as a plain dangling link. The remedy printed
-  for that is "re-run `qfai init`", which writes the canonical *inside* the
+  for that is "re-run `qfai init`", which writes the canonical _inside_ the
   redirect and leaves the correct wrapper target alone: the finding clears and
   the redirect stays. The ancestor is named first.
 - **The moved-aside wrapper is read from the inode it was measured on.**

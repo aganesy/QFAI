@@ -221,6 +221,14 @@ async function buildSpecScopeIssues(
   return issues;
 }
 
+/**
+ * Profiles whose own validators open `.qfai/assistant/**`.
+ *
+ * `validateSkillsIntegrity` and `validateAssistantAssets` are the two that
+ * walk it, and `runFullValidators` is the only place they are called from.
+ */
+const WALKS_ASSISTANT_TREE = new Set<ValidationProfile>(["verify", "full"]);
+
 async function runProfileValidators(
   root: string,
   config: ConfigLoadResult["config"],
@@ -240,7 +248,14 @@ async function runProfileValidators(
   // run fails either way; this decides whether it fails with something the
   // operator can act on. Damage confined to the integration directories is not
   // on that list: nothing downstream opens them.
-  if (surface.unwalkable.length > 0) {
+  //
+  // **And only in the profiles that walk it.** `unwalkable` names paths under
+  // `.qfai/assistant/**`, which `validateSkillsIntegrity` and
+  // `validateAssistantAssets` open and nothing else does — they run under
+  // `verify` / `full` alone. Stopping `discussion`, `sdd`, `atdd` or `tdd`
+  // there hid their own findings, on discussion packs, spec packs, traceability
+  // and the ledger, for damage none of their validators would have touched.
+  if (surface.unwalkable.length > 0 && WALKS_ASSISTANT_TREE.has(profile)) {
     return surface.issues;
   }
   return [...surface.issues, ...(await runProfileOwnValidators())];
