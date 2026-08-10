@@ -1365,19 +1365,24 @@ async function claimSidecar(linkPath: string): Promise<string> {
  *
  * `link` is the primitive that refuses: `EEXIST` rather than replacing, and it
  * restores the same inode. Where the filesystem has no hard links an exclusive
- * `wx` write makes the same promise, which needs the content — the caller
- * passes it when it has already read it. The sidecar survives until one of them
- * has succeeded, so the content is never only in flight.
+ * `wx` write makes the same promise, reading the sidecar back as **bytes**:
+ * the file may not be UTF-8, and a round trip through a string would replace
+ * what it cannot decode. The sidecar survives until one of them has succeeded,
+ * so the content is never only in flight.
  */
-async function restoreSidecar(sidecar: string, linkPath: string, body?: string): Promise<void> {
+async function restoreSidecar(sidecar: string, linkPath: string): Promise<void> {
   try {
     await link(sidecar, linkPath);
   } catch (linkErr: unknown) {
     const code = (linkErr as NodeJS.ErrnoException | null)?.code;
     if (code === "EEXIST") throw linkErr;
     // `EPERM` / `ENOSYS` / `EXDEV`: no hard links here, not an occupied path.
-    const content = body ?? (await readFile(sidecar, "utf-8"));
-    await writeFile(linkPath, content, { encoding: "utf-8", flag: "wx" });
+    // Bytes, not a string. Decoding as UTF-8 and writing back replaces every
+    // invalid sequence with U+FFFD, and the sidecar is removed straight after —
+    // so a repair that exists to protect a concurrent write would have
+    // corrupted the file it was protecting, irreversibly.
+    const content = await readFile(sidecar);
+    await writeFile(linkPath, content, { flag: "wx" });
   }
   await rm(sidecar, { recursive: true, force: true });
 }
@@ -1402,6 +1407,16 @@ async function recreateFlattenedLink(
   // gone. `wx` refuses a name that is taken, so the loop finds one that is not.
   const sidecar = await claimSidecar(linkPath);
   await rename(linkPath, sidecar);
+  // What was actually moved, not what the caller saw a moment ago. Between
+  // `isFlattenedLink` and the rename another process can leave a huge file or a
+  // FIFO at the path, and the caller's 4096-byte check protected an inode that
+  // is no longer there — the read below would have exhausted memory, or blocked
+  // for ever, with the original already moved aside.
+  const moved = await lstat(sidecar);
+  if (!moved.isFile() || moved.size > 4096) {
+    await restoreSidecar(sidecar, linkPath);
+    return "skipped";
+  }
   // Both early returns put the file back the same way the rollback does.
   // `rename` overwrites, so a path another process re-created while this one
   // was reading would have been destroyed by the very restore that exists to
@@ -1455,7 +1470,7 @@ async function recreateFlattenedLink(
     // succeeded, so the content is never only in flight.
     let restoreError: unknown;
     try {
-      await restoreSidecar(sidecar, linkPath, original);
+      await restoreSidecar(sidecar, linkPath);
     } catch (restoreErr: unknown) {
       restoreError = restoreErr;
     }

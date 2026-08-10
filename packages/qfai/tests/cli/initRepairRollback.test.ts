@@ -293,6 +293,50 @@ describe("a sidecar left by an earlier failed repair is not overwritten", () => 
   });
 });
 
+describe("what was moved aside is what gets checked", () => {
+  it("skips an entry that grew past the ceiling between the probe and the rename", async () => {
+    // The caller checked a small regular file; another process left a large one
+    // at the path before the rename, so the unbounded read would have run on an
+    // inode nothing had vetted.
+    await withProject(async (root) => {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      const linkPath = path.join(root, LINK);
+      await rm(linkPath, { recursive: true, force: true });
+      await mkdir(path.dirname(linkPath), { recursive: true });
+      await writeFile(linkPath, FLATTENED, "utf-8");
+
+      // Swap in the oversized file at the moment the repair renames.
+      const theirs = "x".repeat(8192);
+      renameSpy.mockImplementation(async (actual: FsPromises, from: string, to: string) => {
+        if (from === linkPath) await actual.writeFile(linkPath, theirs, "utf-8");
+        return actual.rename(from, to);
+      });
+
+      // The point is that the content is never read: a large enough entry
+      // would exhaust memory, and a FIFO would block for ever, so the outcome
+      // has to come from the check rather than from reading it.
+      const readsOfSidecar: string[] = [];
+      readFileSpy.mockImplementation((actual: FsPromises, file: string, ...rest: never[]) => {
+        if (file.startsWith(`${linkPath}.qfai-repair-`)) readsOfSidecar.push(file);
+        return actual.readFile(file, ...rest);
+      });
+
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      renameSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.rename(...args),
+      );
+      readFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.readFile(...args),
+      );
+      expect(readsOfSidecar).toEqual([]);
+      expect(await readFile(linkPath, "utf-8")).toBe(theirs);
+      expect((await lstat(linkPath)).isSymbolicLink()).toBe(false);
+    });
+  });
+});
+
 describe("the rollback does not overwrite a file created in the gap", () => {
   it("leaves a concurrently created file alone and reports it instead", async () => {
     // Between the `rm` and the `symlink`, another process can create its own

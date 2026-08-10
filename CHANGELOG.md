@@ -19,8 +19,10 @@
   loads no skill and routes no agent, and every gate they define silently stops
   existing. The new rule runs in **every** profile, ahead of the profile's own
   validators, and reports a qfai-owned entry that is not a symlink or whose
-  target does not resolve. A directory the project does not have is not a
-  finding, and entries qfai does not own are left alone.
+  target does not resolve. On a project with no evidence `qfai init` ever ran,
+  an absent directory is not a finding; once there is such evidence, all six
+  integration directories are checked and one deleted whole is reported. Entries
+  qfai does not own are left alone.
 - **`D-SCAFFOLD-FOREIGN-HOME` (warning)** replaces the placeholder gate for an
   L4/L5 skeleton a pre-upgrade `qfai atdd scaffold` already wrote into
   `tests/integration/**`. The command stopped generating those, but the ones on
@@ -503,6 +505,16 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **Every canonical ancestor is searched for damage**, not the immediate
+  parent alone: a dangling `.qfai/assistant` leaves the parent answering
+  absent too, so one level of checking found nothing.
+- **What was moved aside is what gets checked.** The caller's size and kind
+  probe covered an inode that may no longer be at the path, so the read ran on
+  an entry nothing had vetted — a large enough one exhausts memory, a FIFO
+  never returns.
+- **The restore writes bytes, not a decoded string.** A non-UTF-8 file was
+  round-tripped through a string on the fallback path, replacing what it could
+  not decode, and the sidecar was removed straight after.
 - **A canonical ancestor is a real directory too.** `.qfai/assistant/skills`
   redirected inside the project follows through to a real leaf, so the leaf
   check passed and both resolved paths landed in the same place.

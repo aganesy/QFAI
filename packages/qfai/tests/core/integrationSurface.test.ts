@@ -1025,6 +1025,30 @@ describe("a broken link on the way to a surface is not an absent surface", () =>
   });
 });
 
+describe("a broken canonical grandparent is found too", () => {
+  it("names the outermost broken component, not the leaf", async () => {
+    // A dangling `.qfai/assistant` makes every path under it answer ENOENT,
+    // so checking only the immediate parent found nothing and the surface
+    // stayed silent with a valid marker still in place.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      await writeFile(path.join(root, ".agents", "README.md"), INIT_README_BODY, "utf-8");
+      for (const dir of SKILL_INTEGRATION_DIRS) {
+        await rm(path.join(root, ...dir.split("/"), "qfai-atdd"), { recursive: true, force: true });
+      }
+      const assistant = path.join(root, ".qfai", "assistant");
+      await rm(assistant, { recursive: true, force: true });
+      await symlink(path.join(root, ".qfai", "gone"), assistant, "dir");
+
+      const found = await finding(root);
+      expect(found?.message).toContain("the canonical directory is a dangling symlink");
+      expect(found?.refs).toContain(".qfai/assistant");
+    });
+  });
+});
+
 describe("a canonical is a real document, not a link to one", () => {
   it("reports a canonical ancestor redirected inside the project", async () => {
     // Following the ancestor lands on a real leaf, so the leaf check passes,

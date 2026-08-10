@@ -322,6 +322,27 @@ async function symlinkAncestor(root: string, dir: string): Promise<string | null
   return null;
 }
 
+/**
+ * The nearest ancestor of `relative` that exists and is damaged, or `null`.
+ *
+ * Walked from the top, so the outermost broken component is what gets named —
+ * a dangling `.qfai/assistant` makes every path under it answer `ENOENT`, and
+ * naming the leaf would send the operator at a path that is not the problem.
+ */
+async function brokenAncestor(
+  root: string,
+  relative: string,
+): Promise<{ relative: string; state: PathState } | null> {
+  const parts = relative.split("/");
+  for (let depth = 1; depth < parts.length; depth += 1) {
+    const partial = parts.slice(0, depth);
+    const state = await canonicalState(path.join(root, ...partial));
+    if (state.kind === "absent") return null;
+    if (state.kind !== "present") return { relative: partial.join("/"), state };
+  }
+  return null;
+}
+
 /** Whether `candidate` is `base` itself or sits under it. */
 function isInside(base: string, candidate: string): boolean {
   const relative = path.relative(base, candidate);
@@ -701,17 +722,16 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
           // `lstat` on `.qfai/assistant/agents/x.md` answers `ENOENT` for both,
           // so "not taken yet" swallowed a whole surface the assistant cannot
           // load — with another skill's wrapper still proving init had run.
-          const parent = path.dirname(wrapper.canonical);
-          const parentState = await canonicalState(parent);
-          const parentRelative = toPosix(path.relative(root, parent));
-          if (parentState.kind !== "absent" && parentState.kind !== "present") {
-            if (!damagedCanonicals.has(parentRelative)) {
-              damagedCanonicals.add(parentRelative);
-              broken.push({
-                relative: parentRelative,
-                detail: describeDamage(parentState, "the canonical directory"),
-              });
-            }
+          // **Every** ancestor, not the immediate parent alone: a broken
+          // `.qfai/assistant` leaves the parent answering `absent` too, so one
+          // level of checking found nothing and the surface stayed silent.
+          const damagedAncestor = await brokenAncestor(root, wrapper.canonicalRelative);
+          if (damagedAncestor !== null && !damagedCanonicals.has(damagedAncestor.relative)) {
+            damagedCanonicals.add(damagedAncestor.relative);
+            broken.push({
+              relative: damagedAncestor.relative,
+              detail: describeDamage(damagedAncestor.state, "the canonical directory"),
+            });
           }
         } else if (canonical.kind === "present") {
           // What it *is*, not merely that it is there. With the wrapper gone
