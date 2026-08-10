@@ -23,6 +23,15 @@ handoff of a `todo` row, so this one needs its own contract.
     `../../qfai-implement/references/round-evidence.md`: no round is opened, and
     the row returns on that basis.
 
+    **A changed test invalidates the proof — on either branch.** A row whose
+    branch was `falsifiability` carries a proof taken against the _old_ test, and
+    Phase Green step 2a skips the mutation on a RED-not-observable row as
+    already taken, so a fresh RED on the corrected test would go to re-review
+    without anyone checking that it still fails when the predicate breaks. Mark
+    the recorded proof `stale — test replaced` whenever this stage changed the
+    test, whichever branch follows, and `/qfai-implement` re-takes it under the
+    corrected selector before the GREEN.
+
     **Name the new identity in the handback — on either branch.** A REVISE
     can ask for real behaviour _and_ a split selector at once, so the failing
     branch moves the row too; the rule below is not about whether a RED came

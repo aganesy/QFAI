@@ -114,14 +114,20 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
     return issues;
   }
 
-  for (const packDir of reviewPackDirs) {
-    issues.push(...(await validateReviewPack(packDir)));
+  // Newest first (the directory name is a sortable timestamp), and only that
+  // one is held to the current `revision` form. A repository that tracks its
+  // review packs has history written under earlier contracts, and the tree
+  // those verdicts described cannot be reconstructed to compute a content hash
+  // now — so a strict check over all of them made `--fail-on error`
+  // permanently red with no migration available.
+  for (const [index, packDir] of reviewPackDirs.entries()) {
+    issues.push(...(await validateReviewPack(packDir, index === 0)));
   }
 
   return issues;
 }
 
-async function validateReviewPack(reviewPackDir: string): Promise<Issue[]> {
+async function validateReviewPack(reviewPackDir: string, isCurrent: boolean): Promise<Issue[]> {
   const issues: Issue[] = [];
   const reviewRequestPath = path.join(reviewPackDir, "review_request.md");
   const summaryPath = path.join(reviewPackDir, "summary.json");
@@ -164,13 +170,13 @@ async function validateReviewPack(reviewPackDir: string): Promise<Issue[]> {
   }
 
   if (await isFile(summaryPath)) {
-    issues.push(...(await validateSummarySchema(summaryPath)));
+    issues.push(...(await validateSummarySchema(summaryPath, isCurrent)));
   }
 
   return issues;
 }
 
-async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
+async function validateSummarySchema(summaryPath: string, isCurrent: boolean): Promise<Issue[]> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(await readFile(summaryPath, "utf-8"));
@@ -239,19 +245,41 @@ async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
   const revision = parsed.revision;
   if (revision !== undefined && !readString(revision)) {
     violations.push("`revision` は非空文字列が必須です（省略は可）");
-  } else if (typeof revision === "string" && !REVISION_FORM.test(revision.trim())) {
-    // Absence is a warning because existing packs predate the field; a value
-    // that is present is checked, because the form it takes is what makes the
-    // gate mechanical. `working-tree+<porcelain digest>` was the old spelling
-    // and reads as a legitimate value while being exactly the digest that does
-    // not move when the file under review is edited — a stale verdict passing
-    // the freshness check the field exists for.
-    violations.push(
-      "`revision` の形式が不正です。git rev (7-64 hex) か `working-tree+<64 hex>` " +
-        "（content hash）を指定してください。`working-tree+<porcelain digest>` は" +
-        "内容が変わっても動かないため受理しません",
-    );
   }
+  // Absence is a warning because existing packs predate the field; a value that
+  // is present is checked, because the form it takes is what makes the gate
+  // mechanical. `working-tree+<porcelain digest>` was the old spelling and
+  // reads as a legitimate value while being exactly the digest that does not
+  // move when the file under review is edited — a stale verdict passing the
+  // freshness check the field exists for.
+  //
+  // **On the current pack only.** History written under the old contract cannot
+  // be migrated: the tree a past verdict described is not reconstructible, so
+  // there is no content hash to write instead. An error there would leave
+  // `--fail-on error` permanently red for a repository that keeps its packs,
+  // with nothing the operator could do. Older packs get the finding as a
+  // `warning` so the state is still visible.
+  // Only when there is a value to judge: an empty string is already reported
+  // by the schema check above, and saying it twice reads as two problems.
+  const revisionText = readString(revision);
+  const malformedRevision =
+    revisionText !== null && !REVISION_FORM.test(revisionText)
+      ? [
+          issue(
+            isCurrent ? "QFAI-REVIEW-007" : "QFAI-REVIEW-009",
+            "`revision` の形式が不正です。git rev (7-64 hex) か `working-tree+<64 hex>`（content hash）を指定してください。`working-tree+<porcelain digest>` は内容が変わっても動かないため受理しません。" +
+              (isCurrent
+                ? ""
+                : "（過去の review pack のため warning 扱いです。当時の tree は復元できず移行もできません。）"),
+            isCurrent ? "error" : "warning",
+            summaryPath,
+            "reviewArtifacts.summaryRevision",
+            [revisionText],
+            "canonical",
+            "`.qfai/assistant/skills/qfai-implement/references/evidence-revision.md` を参照してください。",
+          ),
+        ]
+      : [];
 
   const missingRevision =
     revision === undefined
@@ -275,11 +303,12 @@ async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
       : [];
 
   if (violations.length === 0) {
-    return missingRevision;
+    return [...missingRevision, ...malformedRevision];
   }
 
   return [
     ...missingRevision,
+    ...malformedRevision,
     issue(
       "QFAI-REVIEW-007",
       `summary.json の最小スキーマを満たしていません: ${violations.join(" / ")}`,

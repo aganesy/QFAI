@@ -488,6 +488,19 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The stage's own review pack is sealed**, and `## Final status` is checked
+  against it: the stage hash covers the evidence but not the verdict.
+- **The RED address cardinality is left to the round contract alone.**
+- **`RED test manifest` carries kind and mode.** After Phase Green the
+  original `RED revision` cannot be recomputed, so this hash is the only thing
+  still watching the test-owned artifacts.
+- **A changed test invalidates the proof on either branch**, not only where
+  the corrected test passes.
+- **A re-verify record names the spec as well as the row.** A `TDD-ID` is
+  unique within a ledger, not across them.
+- **A legacy review pack's revision is a warning, not an error.** The tree a
+  past verdict described cannot be reconstructed, so there is no content hash
+  to migrate to — only the current pack is held to the form.
 - **The same-revision exemption is stated once, for item 3 on every row.** The
   consequences section still listed two special cases, so a reviewer applying
   it rejected the cycle the section above permits.

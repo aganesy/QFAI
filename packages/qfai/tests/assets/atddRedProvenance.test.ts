@@ -1339,7 +1339,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // phase produces a second, so the cardinality kept a correct row out of
     // the completion gate. `Revision` is the per-round field.
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("**Per round block**, beside the RED pair it addresses");
+    expect(implement).toContain("that list is the only statement of it");
     expect(implement).toContain("`Revision` is the field that is per round block");
   });
 
@@ -1415,6 +1415,43 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(baseline).toContain("**Completion review**");
   });
 
+  it("seals the stage's own review pack and checks the status against it", async () => {
+    // The stage hash covers the evidence but not the verdict, so a REVISE
+    // edited to PASS across the response, the summary and the status left
+    // every recomputation unchanged.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("**Seal the P8 pack too**");
+    expect(atdd).toContain("check that `## Final status` says what the sealed pack says");
+  });
+
+  it("leaves the RED address cardinality to the round contract alone", async () => {
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("that list is the only statement of it");
+    expect(implement).not.toContain("**Per round block**, beside the RED pair");
+  });
+
+  it("puts kind and mode in the RED test manifest", async () => {
+    // After Phase Green the original `RED revision` cannot be recomputed, so
+    // this hash is the only thing still watching the test-owned artifacts.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("`path + NUL + kind + NUL + mode + NUL + blob hash`");
+  });
+
+  it("invalidates the proof whenever the test changed, on either branch", async () => {
+    // Phase Green step 2a skips the mutation on a RED-not-observable row as
+    // already taken, so a fresh RED would reach re-review with a proof from
+    // the old test.
+    const reviewFix = flat(await read(tree, REVIEW_FIX));
+    expect(reviewFix).toContain("**A changed test invalidates the proof — on either branch.**");
+  });
+
+  it("names the spec as well as the row in a re-verify record", async () => {
+    // A `TDD-ID` is unique within a ledger, not across them, and one fixture is
+    // read by acceptance tests from several specs.
+    const shared = flat(await read(tree, SHARED_ARTIFACT));
+    expect(shared).toContain("**its spec and `TDD-ID` together**");
+  });
+
   it("states the same-revision exemption once, for item 3", async () => {
     // The consequences section still listed two special cases, so a reviewer
     // applying it rejected the very cycle the section above permits.
@@ -1429,8 +1466,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // Row-level here while the reference said per round meant a producer
     // following this line overwrote round 1's address when round 2 opened.
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("**Per round block**, beside the RED pair it addresses");
-    expect(implement).toContain("Do not restate the cardinality anywhere else");
+    expect(implement).toContain("that list is the only statement of it");
+    expect(implement).not.toContain("**Per round block**, beside the RED pair");
   });
 
   it("names the procedure the pack seal actually uses", async () => {
@@ -1479,7 +1516,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(round).toContain("`Round N: RED revision`");
     expect(round).toContain("`Round N: RED test hash` with its manifest");
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("**Per round block**, beside the RED pair it addresses");
+    expect(implement).toContain("that list is the only statement of it");
   });
 
   it("syncs the identity on the failing review-fix branch too", async () => {

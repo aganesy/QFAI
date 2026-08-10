@@ -113,8 +113,13 @@ Take the first that applies, and record which one in the evidence file.
 
       **Record the manifest, not only the hash.** `RED test manifest` lists the
       repo-relative path of every file that went into it, sorted, one per line —
-      and the hash is taken over `path + NUL + blob hash` in that order, the same
-      shape the revision manifest uses. Naming the _kinds_ of file is not enough:
+      and the hash is taken over `path + NUL + kind + NUL + mode + NUL + blob hash`
+      in that order, the same shape the revision manifest uses. `kind` and `mode`
+      are in it for the reason they are in that one, and more so here: after
+      Phase Green the original `RED revision` cannot be recomputed, so this hash
+      is the only thing still watching the test-owned artifacts — without them a
+      `chmod +x` on an acceptance script, or a file swapped for a symlink with
+      the same payload, changes how the test runs and moves nothing. Naming the _kinds_ of file is not enough:
       the consumer recomputes this before GREEN, and two readers who choose
       different sets get different values from an unchanged tree, so the gate
       either loops or passes an edit it never looked at.

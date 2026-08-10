@@ -92,6 +92,37 @@ describe("review pack revision", () => {
     expect(schema[0]?.message).toContain("porcelain digest");
   });
 
+  it("reports an older pack's legacy revision as a warning", async () => {
+    // The tree a past verdict described is not reconstructible, so there is no
+    // content hash to migrate to — an error would leave `--fail-on error`
+    // permanently red for a repository that keeps its packs.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-rev-"));
+    tempDirs.push(root);
+    const reviewRoot = path.join(root, ".qfai", "review");
+    for (const [stamp, revision] of [
+      ["20260101000000000", "working-tree+9f2c1ab"],
+      ["20260801000000000", "a".repeat(40)],
+    ] as const) {
+      const packDir = path.join(reviewRoot, `review-${stamp}`);
+      await mkdir(packDir, { recursive: true });
+      await writeFile(path.join(packDir, "review_request.md"), "# request\n", "utf-8");
+      await writeFile(path.join(packDir, "R01_completion-reviewer.md"), "# review\n", "utf-8");
+      await writeFile(
+        path.join(packDir, "summary.json"),
+        JSON.stringify({ ...baseSummary(), revision }, null, 2),
+        "utf-8",
+      );
+    }
+
+    const issues = await validateReviewArtifacts(root);
+    expect(issues.filter((i) => i.code === "QFAI-REVIEW-007")).toEqual([]);
+    const legacy = issues.filter(
+      (i) => i.code === "QFAI-REVIEW-009" && i.message.includes("porcelain digest"),
+    );
+    expect(legacy).toHaveLength(1);
+    expect(legacy[0]?.severity).toBe("warning");
+  });
+
   it("rejects a value that is neither a rev nor a content hash", async () => {
     const issues = await withPack({ ...baseSummary(), revision: "yesterday" });
 

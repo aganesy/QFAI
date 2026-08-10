@@ -15,8 +15,12 @@ time. Where that holds, no later row edits them and the manifests stay true.
 it — and records that on itself.** The editing row already runs its own
 selector; run the earlier rows' selectors in the same pass and record them in
 **the editing row's** entry, under `Shared-artifact re-verify`: one line per
-earlier row naming its `TDD-ID`, the selector re-run, its result, and the
-artifact's new manifest and hash.
+earlier row naming **its spec and `TDD-ID` together** (`spec-0002/TDD-0001`) and
+the evidence file that row's anchor points at, then the selector re-run, its
+result, and the artifact's new manifest and hash. A `TDD-ID` is unique within a
+ledger, not across them, and one fixture is read by acceptance tests from
+several specs — named by id alone, a re-verify could clear a hash mismatch on a
+row in the wrong spec, or fail to clear the right one.
 
 **A passing re-run is not enough on a row that has a proof.** Weakening an
 assertion helper, a snapshot or an expected-value fixture leaves the earlier
