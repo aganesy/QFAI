@@ -132,6 +132,34 @@ type Broken = {
 const toPosix = (value: string): string => value.split(path.sep).join("/");
 
 /**
+ * Details that say a path the rest of validation walks is not walkable.
+ *
+ * A profile validator reading the same tree raises `ENOTDIR` / `ELOOP` from its
+ * own `readdir`, and one rejection loses the finding this rule had already
+ * produced — the only one that names the path and how to repair it. The caller
+ * uses this to stop after reporting rather than to hide the error.
+ */
+const STRUCTURAL_DAMAGE = [
+  "the integration directory is",
+  "an ancestor is",
+  "a canonical ancestor",
+  "the canonical directory is",
+  "canonical document is a symlink",
+  "canonical document resolves outside",
+  "canonical skill is a",
+  "a path component",
+];
+
+/** Whether these findings include damage that would break a later `readdir`. */
+export function hasStructuralDamage(issues: readonly Issue[]): boolean {
+  return issues.some(
+    (entry) =>
+      entry.code === "QFAI-LINK-001" &&
+      STRUCTURAL_DAMAGE.some((phrase) => entry.message.includes(phrase)),
+  );
+}
+
+/**
  * The skills `qfai init` would create a wrapper for.
  *
  * **The shipped roster alone**, read from `assets/init` — what init actually
@@ -810,7 +838,13 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       // wrapper too, so its absence is a deletion — and nothing else reported
       // it, because `validateSkillsIntegrity` reads the canonical tree
       // (unchanged) and runs under `full` alone.
-      if (initialised && !missingDirs.has(wrapper.dir)) {
+      // The canonical is checked whether or not its wrapper directory is
+      // there. Gating the whole branch on `!missingDirs.has` meant deleting
+      // all four skill directories skipped every canonical check with them —
+      // and `qfai init` then recreates the wrappers around a canonical it
+      // leaves as it found it, pointing them at whatever it now is. Only the
+      // "this wrapper was deleted" finding depends on the directory existing.
+      if (initialised) {
         // `lstat`, not `access`: `access` follows the link, so a canonical
         // replaced by a dangling symlink answered "absent" and the skill left
         // the check entirely — no wrapper reported, and nothing else looks at
@@ -851,10 +885,12 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
             (await canonicalLinkProblem(root, realRoot, wrapper)) ??
             (await canonicalKindProblem(wrapper, canonical.stats));
           if (wrong === null) {
-            broken.push({
-              relative: wrapper.relative,
-              detail: `missing — ${toPosix(wrapper.dir)} exists and so does the document it wraps`,
-            });
+            if (!missingDirs.has(wrapper.dir)) {
+              broken.push({
+                relative: wrapper.relative,
+                detail: `missing — ${toPosix(wrapper.dir)} exists and so does the document it wraps`,
+              });
+            }
           } else if (!damagedCanonicals.has(wrapper.canonicalRelative)) {
             damagedCanonicals.add(wrapper.canonicalRelative);
             broken.push({ relative: wrapper.canonicalRelative, detail: wrong });

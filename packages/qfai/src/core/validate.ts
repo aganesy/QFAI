@@ -23,7 +23,10 @@ import { validateContracts } from "./validators/contracts.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
-import { validateIntegrationSurface } from "./validators/integrationSurface.js";
+import {
+  hasStructuralDamage,
+  validateIntegrationSurface,
+} from "./validators/integrationSurface.js";
 import { validateDefinedIds } from "./validators/ids.js";
 import { validateReviewArtifacts } from "./validators/reviewArtifacts.js";
 import { validateSpecPacks } from "./validators/specPack.js";
@@ -233,6 +236,14 @@ async function runProfileValidators(
   // so every gate the profile is about was defined by files nothing read. That
   // is not an SDD fact or an ATDD fact; it invalidates the run.
   const surfaceIssues = await validateIntegrationSurface(root);
+  // Structural damage stops here. A profile validator walking the same tree
+  // raises `ENOTDIR` / `ELOOP` from its own `readdir`, and one rejection took
+  // the whole run down — losing the finding above, which is the only one that
+  // names the path and how to repair it. The run fails either way; this decides
+  // whether it fails with something the operator can act on.
+  if (hasStructuralDamage(surfaceIssues)) {
+    return surfaceIssues;
+  }
   return [...surfaceIssues, ...(await runProfileOwnValidators())];
 
   async function runProfileOwnValidators(): Promise<Issue[]> {

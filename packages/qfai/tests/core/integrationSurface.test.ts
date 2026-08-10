@@ -988,6 +988,33 @@ describe("an ancestor that is not a directory is named directly", () => {
   });
 });
 
+describe("a canonical is checked even with its surface gone", () => {
+  it("reports a canonical symlink after every skill directory was deleted", async () => {
+    // Gating the branch on the directory existing skipped every canonical
+    // check with it — and `qfai init` then recreates the wrappers around a
+    // canonical it leaves as it found it.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd", "qfai-verify"], []);
+      await wireAll(root, ["qfai-atdd", "qfai-verify"], []);
+      await writeFile(path.join(root, ".agents", "README.md"), INIT_README_BODY, "utf-8");
+      for (const dir of SKILL_INTEGRATION_DIRS) {
+        await rm(path.join(root, ...dir.split("/")), { recursive: true, force: true });
+      }
+      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      await rm(canonical, { recursive: true, force: true });
+      await symlink(
+        path.join(root, ".qfai", "assistant", "skills", "qfai-verify"),
+        canonical,
+        "dir",
+      );
+
+      const found = await finding(root);
+      expect(found?.message).toContain("canonical document is a symlink");
+    });
+  });
+});
+
 describe("a broken link on the way to a surface is not an absent surface", () => {
   it("names a dangling ancestor instead of reporting the directory missing", async () => {
     // `canonicalState` on `.claude/skills` answers absent through a dangling

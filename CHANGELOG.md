@@ -505,6 +505,14 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **Structural damage stops the run after reporting it.** A profile validator
+  walking the same tree raises `ENOTDIR` from its own `readdir`, and one
+  rejection took the whole run down — losing the only finding that names the
+  path and how to repair it.
+- **A canonical is checked even with its surface gone.** Gating the branch on
+  the wrapper directory existing skipped every canonical check with it, and
+  `qfai init` then recreates the wrappers around a canonical it leaves as it
+  found.
 - **A size ceiling binds the entry that is read.** `lstat` then `readFile` are
   two operations against a name, so a huge file or a FIFO left at the path in
   between was read unbounded — one `open`, `fstat` on that handle, and a
