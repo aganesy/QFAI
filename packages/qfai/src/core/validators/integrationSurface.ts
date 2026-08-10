@@ -149,6 +149,17 @@ type Broken = {
 const toPosix = (value: string): string => value.split(path.sep).join("/");
 
 /**
+ * A sidecar `qfai init` leaves when a repair could not finish.
+ *
+ * Kept in step with the name the repair claims and the prune skips. Those two
+ * and this rule have to agree about it: a sidecar holds the flattened target,
+ * so it reads as a wrapper, and it exists precisely because a repair could not
+ * finish — sometimes making it the only surviving copy of the original. The
+ * remedy printed for a retired wrapper is "delete the path".
+ */
+const SIDECAR_RE = /\.qfai-repair-\d+(?:-\d+)?$/;
+
+/**
  * Whether damage in this state stops a later `readdir` over the path.
  *
  * **Only what actually breaks a walk.** A canonical redirected by a symlink
@@ -497,6 +508,13 @@ async function retiredWrappers(root: string, wrappers: readonly Wrapper[]): Prom
     if (entries === null) continue;
     for (const entry of entries) {
       if (names.has(entry.name)) continue;
+      // A repair sidecar is not a wrapper. It holds the flattened target, so it
+      // reads as one — and it exists precisely because a repair could not
+      // finish, which sometimes makes it the only copy of the original left.
+      // The remedy printed here is "delete the path", so reporting it told the
+      // operator to destroy the content the sidecar was preserving. Same name
+      // test the prune uses, for the same reason.
+      if (SIDECAR_RE.test(entry.name)) continue;
       const target = await wrapperTarget(path.join(dirAbsolute, entry.name), entry);
       if (target === null) continue;
       const resolved = path.resolve(dirAbsolute, target);

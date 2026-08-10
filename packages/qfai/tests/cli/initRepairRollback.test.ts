@@ -416,6 +416,50 @@ describe("a sidecar survives the next run", () => {
 });
 
 describe("what was moved aside is what gets checked", () => {
+  it("declines an entry that was appended to after its size was measured", async () => {
+    // A process holding the inode from before the rename can append after the
+    // `fstat`. Reading only the size just measured took a **prefix**, which
+    // still matched the target — so the repair went ahead and the cleanup
+    // deleted the sidecar with the appended bytes in it.
+    await withProject(async (root) => {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      const linkPath = path.join(root, LINK);
+      await rm(linkPath, { recursive: true, force: true });
+      await mkdir(path.dirname(linkPath), { recursive: true });
+      await writeFile(linkPath, FLATTENED, "utf-8");
+
+      // The append lands between the `fstat` and the read, so the handle
+      // reports the pre-append size: exactly what another process holding this
+      // inode from before the rename produces. The bytes on disk are longer.
+      const appended = `${FLATTENED}\n${"x".repeat(8192)}`;
+      renameSpy.mockImplementation(async (actual: FsPromises, from: string, to: string) => {
+        if (from === linkPath) await actual.writeFile(linkPath, appended, "utf-8");
+        return actual.rename(from, to);
+      });
+      openSpy.mockImplementation(async (actual: FsPromises, target: string, ...rest: never[]) => {
+        const handle = await actual.open(target, ...rest);
+        if (!target.includes(".qfai-repair-")) return handle;
+        const stale = await handle.stat();
+        return Object.create(handle, {
+          stat: {
+            value: () => Promise.resolve({ ...stale, isFile: () => true, size: FLATTENED.length }),
+          },
+        }) as typeof handle;
+      });
+
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      renameSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.rename(...args),
+      );
+      openSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.open(...args));
+      // Put back whole, not truncated to the prefix that matched.
+      expect(await readFile(linkPath, "utf-8")).toBe(appended);
+      expect((await lstat(linkPath)).isSymbolicLink()).toBe(false);
+    });
+  });
+
   it("skips an entry that grew past the ceiling between the probe and the rename", async () => {
     // The caller checked a small regular file; another process left a large one
     // at the path before the rename, so the unbounded read would have run on an
@@ -499,6 +543,38 @@ describe("what was moved aside is what gets checked", () => {
       // had measured.
       expect(readsOfSidecar).toEqual([]);
       expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
+    });
+  });
+});
+
+describe("a restore puts back more than the bytes", () => {
+  it.skipIf(process.platform === "win32")("keeps the mode when it cannot hard-link", async () => {
+    // `writeFile` makes a new inode with the umask and the parent's defaults, so
+    // a `0600` file came back `0644` and readable by everyone — and the sidecar
+    // that still carried the metadata was removed straight after. POSIX only:
+    // Windows has no mode bits for `chmod` to carry.
+    await withProject(async (root) => {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      const linkPath = path.join(root, LINK);
+      await rm(linkPath, { recursive: true, force: true });
+      await mkdir(path.dirname(linkPath), { recursive: true });
+      // Somebody else's private file, at a path init wants to repair.
+      await writeFile(linkPath, "# mine\n", { encoding: "utf-8", mode: 0o600 });
+
+      // No hard links on this filesystem, so the restore falls through to the
+      // exclusive write that creates a fresh inode.
+      linkSpy.mockImplementation(() => {
+        const err = new Error("simulated EXDEV") as NodeJS.ErrnoException;
+        err.code = "EXDEV";
+        return Promise.reject(err);
+      });
+
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      linkSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.link(...args));
+      expect(await readFile(linkPath, "utf-8")).toBe("# mine\n");
+      expect((await lstat(linkPath)).mode & 0o777).toBe(0o600);
     });
   });
 });

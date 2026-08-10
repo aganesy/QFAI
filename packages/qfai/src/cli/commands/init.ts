@@ -3,6 +3,7 @@ import { constants } from "node:fs";
 import type { Dirent, Stats } from "node:fs";
 import {
   access,
+  chmod,
   lstat,
   mkdir,
   link,
@@ -12,6 +13,7 @@ import {
   readlink,
   rename,
   rm,
+  stat,
   symlink,
   writeFile,
 } from "node:fs/promises";
@@ -1389,6 +1391,29 @@ async function restoreSidecar(sidecar: string, linkPath: string): Promise<void> 
     // corrupted the file it was protecting, irreversibly.
     const content = await readFile(sidecar);
     await writeFile(linkPath, content, { flag: "wx" });
+    // Bytes are not the whole file. `writeFile` makes a **new** inode with the
+    // umask and the parent's defaults, so a `0600` file another process left
+    // here came back `0644` and readable by everyone, or lost its executable
+    // bit — and the sidecar that still carried the metadata was removed
+    // straight after. The hard-link path above keeps the mode by construction;
+    // this one has to put it back.
+    //
+    // A restore that could not carry the mode is **not** a restore: the sidecar
+    // stays and the failure is reported, because a file whose permissions are
+    // now wrong is worse than one the operator is told where to find.
+    const original = await stat(sidecar);
+    try {
+      await chmod(linkPath, original.mode & 0o7777);
+    } catch (modeErr: unknown) {
+      throw new Error(
+        [
+          `退避したファイルの内容は復元しましたが、パーミッションを戻せませんでした: ${linkPath}`,
+          `原因: ${describeError(modeErr)}`,
+          `元のファイル（パーミッションを含む）は次の場所にあります: ${sidecar}`,
+        ].join("\n"),
+        { cause: modeErr },
+      );
+    }
   }
   await rm(sidecar, { recursive: true, force: true });
 }
@@ -1640,13 +1665,21 @@ async function readPinnedRegularFile(filePath: string, maxBytes: number): Promis
     // Read to the end, not once: `read` may return fewer bytes than asked for,
     // and the unfilled tail stayed NUL — a correct flattened wrapper then
     // failed its own signature comparison and was left in place.
-    const buffer = Buffer.alloc(pinned.size);
+    //
+    // And to `maxBytes + 1`, not to the size just measured. Another process
+    // holding this inode from before the rename can append after the `fstat`,
+    // and stopping at the old size read a **prefix** — which still matched the
+    // target, so the repair went ahead and the cleanup deleted the sidecar with
+    // the appended bytes in it. One byte past the ceiling is what distinguishes
+    // "this is the whole file" from "this is as much as I asked for".
+    const buffer = Buffer.alloc(maxBytes + 1);
     let filled = 0;
-    while (filled < pinned.size) {
-      const { bytesRead } = await handle.read(buffer, filled, pinned.size - filled, filled);
+    while (filled < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
       if (bytesRead === 0) break;
       filled += bytesRead;
     }
+    if (filled > maxBytes) return null;
     return buffer.subarray(0, filled).toString("utf-8");
   } catch (error: unknown) {
     const code = (error as NodeJS.ErrnoException | null)?.code;

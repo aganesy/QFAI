@@ -222,12 +222,41 @@ async function buildSpecScopeIssues(
 }
 
 /**
- * Profiles whose own validators open `.qfai/assistant/**`.
+ * The parts of the assistant tree a profile's own validators open.
  *
- * `validateSkillsIntegrity` and `validateAssistantAssets` are the two that
- * walk it, and `runFullValidators` is the only place they are called from.
+ * A profile allowlist was not enough: `sdd` runs `validateSkillDocReferences`,
+ * `validateAutopilotPolicy` and `validateStaleReferences`, all of which
+ * `readdir` the configured skills directory — so excluding it by name meant a
+ * non-directory or a cycle there raised `ENOTDIR` / `ELOOP` from one of them
+ * and lost the `QFAI-LINK-001` that names the path and the repair.
+ *
+ * Returned as repo-relative POSIX prefixes, which is how `unwalkable` names
+ * what it found. Profiles absent from this map walk none of the tree, so damage
+ * confined to it is reported and stops nothing.
  */
-const WALKS_ASSISTANT_TREE = new Set<ValidationProfile>(["verify", "full"]);
+function assistantPathsWalkedBy(profile: ValidationProfile, skillsRelative: string): string[] {
+  switch (profile) {
+    // `validateSkillsIntegrity` and `validateAssistantAssets` open the tree
+    // whole, so any damage under it is theirs to walk into.
+    case "verify":
+    case "full":
+      return [".qfai/assistant"];
+    case "sdd":
+      return [skillsRelative];
+    default:
+      return [];
+  }
+}
+
+/** Whether `candidate` is `base` itself or sits under it, both repo-relative POSIX. */
+function isUnder(base: string, candidate: string): boolean {
+  return candidate === base || candidate.startsWith(`${base}/`);
+}
+
+/** An absolute path as `unwalkable` spells it: repo-relative, POSIX separators. */
+function toRepoRelative(root: string, absolute: string): string {
+  return path.relative(root, absolute).split(path.sep).join("/");
+}
 
 async function runProfileValidators(
   root: string,
@@ -249,13 +278,19 @@ async function runProfileValidators(
   // operator can act on. Damage confined to the integration directories is not
   // on that list: nothing downstream opens them.
   //
-  // **And only in the profiles that walk it.** `unwalkable` names paths under
-  // `.qfai/assistant/**`, which `validateSkillsIntegrity` and
-  // `validateAssistantAssets` open and nothing else does — they run under
-  // `verify` / `full` alone. Stopping `discussion`, `sdd`, `atdd` or `tdd`
-  // there hid their own findings, on discussion packs, spec packs, traceability
-  // and the ledger, for damage none of their validators would have touched.
-  if (surface.unwalkable.length > 0 && WALKS_ASSISTANT_TREE.has(profile)) {
+  // **And only where this profile's own validators would walk into it.** The
+  // test is the intersection of `unwalkable` with the paths they open, not the
+  // profile's name: `sdd` reads the configured skills directory from three of
+  // its own validators, so a name-based exclusion left one of them raising
+  // `ENOTDIR` / `ELOOP` and losing the finding above. Damage elsewhere in the
+  // tree stops nothing for `sdd`, and damage anywhere in it stops nothing for
+  // `discussion`, `atdd` or `tdd`, whose findings on discussion packs, spec
+  // packs, traceability and the ledger are independent of it.
+  const walked = assistantPathsWalkedBy(
+    profile,
+    toRepoRelative(root, resolvePath(root, config, "skillsDir")),
+  );
+  if (surface.unwalkable.some((damaged) => walked.some((base) => isUnder(base, damaged)))) {
     return surface.issues;
   }
   return [...surface.issues, ...(await runProfileOwnValidators())];

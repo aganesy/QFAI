@@ -1028,6 +1028,25 @@ describe("what init wrote is still checked after the roster moves on", () => {
     });
   });
 
+  it("says nothing about a repair sidecar, which is not a wrapper", async () => {
+    // It holds the flattened target, so it reads as one — and it exists because
+    // a repair could not finish, which sometimes makes it the only surviving
+    // copy of the original. The remedy printed for a retired wrapper is "delete
+    // the path", so reporting it told the operator to destroy it.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      await writeFile(
+        path.join(root, ".claude", "skills", "qfai-atdd.qfai-repair-4321"),
+        "../../.qfai/assistant/skills/qfai-atdd",
+        "utf-8",
+      );
+
+      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
+
   it("says nothing about an entry that points outside the canonical tree", async () => {
     // These directories are conventional, and a project's own link in one of
     // them is not qfai's to report.

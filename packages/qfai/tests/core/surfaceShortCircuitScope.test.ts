@@ -86,6 +86,20 @@ describe("the short-circuit is scoped to the profiles that walk the damage", () 
     });
   });
 
+  it("stops `sdd`, whose own validators read the skills directory", async () => {
+    // `validateSkillDocReferences`, `validateAutopilotPolicy` and
+    // `validateStaleReferences` all `readdir` the configured skills directory,
+    // so excluding `sdd` by name left one of them raising `ELOOP` and losing
+    // the finding that names the path and the repair.
+    await withDamagedCanonical(async (root) => {
+      const result = await validateProject(root, undefined, { profile: "sdd" });
+      const codes = new Set(result.issues.map((entry) => entry.code));
+
+      expect([...codes]).toEqual(["QFAI-LINK-001"]);
+      return true;
+    });
+  });
+
   it("lets `atdd` report its own findings, which do not touch that tree", async () => {
     await withDamagedCanonical(async (root) => {
       const result = await validateProject(root, undefined, { profile: "atdd" });

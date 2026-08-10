@@ -505,6 +505,28 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The short-circuit tests the paths a profile walks, not its name.** `sdd`
+  runs `validateSkillDocReferences`, `validateAutopilotPolicy` and
+  `validateStaleReferences`, all of which `readdir` the configured skills
+  directory — so excluding it by name left one of them raising `ENOTDIR` /
+  `ELOOP` and losing the `QFAI-LINK-001` that names the path and the repair. The
+  test is now the intersection of the damaged paths with the ones that
+  profile's own validators open.
+- **A repair sidecar is not reported as a retired wrapper.** It holds the
+  flattened target, so it reads as one, and it exists precisely because a repair
+  could not finish — sometimes making it the only surviving copy of the
+  original. The remedy printed for a retired wrapper is "delete the path".
+- **The moved-aside wrapper is read to the ceiling, not to its measured size.**
+  A process holding the inode from before the rename can append after the
+  `fstat`; reading only the size just measured took a prefix, which still
+  matched the target, so the repair went ahead and the cleanup deleted the
+  sidecar with the appended bytes in it.
+- **A fallback restore puts the mode back.** `writeFile` creates a new inode
+  with the umask and the parent's defaults, so a `0600` file another process
+  left at the path came back `0644` — readable by everyone — or lost its
+  executable bit, and the sidecar that still carried the metadata was removed
+  straight after. A restore that cannot carry the mode keeps the sidecar and
+  reports itself as incomplete.
 - **The short-circuit stops only the profiles that walk the damage.**
   `unwalkable` names paths under `.qfai/assistant/**`, and
   `validateSkillsIntegrity` / `validateAssistantAssets` are the only validators
