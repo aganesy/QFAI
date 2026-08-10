@@ -42,9 +42,13 @@ Revision: <git rev> | working-tree+<content hash>
      4 of the procedure below over every file in that `review-<timestamp>/`
      directory, each under its repo-relative path, normalized by step 2. It is
      recorded **outside** the pack, so nothing in the pack hashes itself, and
-     it is inside the row's completion subject, so editing `Result`,
-     `Reviewed revision` or `overall_status` afterwards moves a value gate item
-     10 recomputes. Excluding the pack from the revision without this left an
+     **gate item 10 recomputes it from the pack** and compares — that is the
+     check, and without it the field was a value nobody read. It is **not** in
+     any reviewer's audit subject: the seal is written after the last reviewer
+     has hashed, so putting it there would make that verdict stale on being
+     recorded. Editing `Result`, `Reviewed revision` or `overall_status`
+     afterwards therefore moves the recomputation rather than the stored value,
+     which is what a seal is for. Excluding the pack from the revision without this left an
      edited PASS reading as fresh.
   3. **Serialize.** `HEAD` + NUL + the rev; then `DIFF` + NUL + the SHA-256 of
      the diff bytes; then one record per untracked file,

@@ -364,9 +364,13 @@ post-escalation verification review of a user-named fix.
        row — a spec with no ATDD-owned rows is the ordinary case, and
        `qfai-atdd/SKILL.md` treats zero as a legitimate count): the stage
        evidence file **whole**, under its repo-relative path, plus
-       `.qfai/evidence/coverage-depth-<spec-id>.md` whole. There is no
+       `.qfai/evidence/coverage-depth-<spec-id>.md` whole — **minus the
+       `## Final status` section**, which the P8 reviewer's own answer fills in.
+       Whole-file included it, so writing PASS and the confirmer's name straight
+       after hashing made the verdict stale on being recorded. There is no
        `### <TDD-ID>` section to extract and no per-row boundary to draw, so the
-       file is the subject; step 2 normalizes it, steps 3 and 4 are unchanged.
+       rest of the file is the subject; step 2 normalizes it, steps 3 and 4 are
+       unchanged.
        Without this the final review of such a spec either omitted a required
        field or PASSed with nothing pinning the evidence it read.
      - **Branch 3** (`exception`): row identity, the obligation reference the

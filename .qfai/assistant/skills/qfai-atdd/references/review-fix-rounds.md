@@ -23,7 +23,10 @@ handoff of a `todo` row, so this one needs its own contract.
     `../../qfai-implement/references/round-evidence.md`: no round is opened, and
     the row returns on that basis.
 
-    **Name the new identity in the handback.** Splitting a selector or
+    **Name the new identity in the handback — on either branch.** A REVISE
+    can ask for real behaviour _and_ a split selector at once, so the failing
+    branch moves the row too; the rule below is not about whether a RED came
+    out of it. Splitting a selector or
     renaming a test changes the row's `Selector` or `Test file`, and this stage
     does not write the ledger — so leaving them is a ledger that cannot run the
     corrected test, and letting `/qfai-implement` update the ledger alone leaves

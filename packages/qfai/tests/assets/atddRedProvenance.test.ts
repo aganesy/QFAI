@@ -33,6 +33,7 @@ const IMPLEMENT = "assistant/skills/qfai-implement/SKILL.md";
 const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
 const PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
 const REVIEW_FIX = "assistant/skills/qfai-atdd/references/review-fix-rounds.md";
+const SHARED_ARTIFACT = "assistant/skills/qfai-atdd/references/shared-test-artifacts.md";
 const GATEKEEPER = "assistant/agents/qa-gatekeeper.md";
 const CATALOG = "assistant/manifest/agent-catalog.yml";
 
@@ -1338,7 +1339,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // phase produces a second, so the cardinality kept a correct row out of
     // the completion gate. `Revision` is the per-round field.
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("**One per row**, recorded once");
+    expect(implement).toContain("**One per round block**, beside the RED pair it addresses");
     expect(implement).toContain("`Revision` is the field that is per round block");
   });
 
@@ -1348,8 +1349,10 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // row has no re-entry edge of its own.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain("## A shared test artifact outlives the row that recorded it");
-    expect(provenance).toContain("under `Shared-artifact re-verify`");
-    expect(provenance).toContain("**A row whose re-run fails is not re-verified**");
+    expect(provenance).toContain("references/shared-test-artifacts.md");
+    const shared = flat(await read(tree, SHARED_ARTIFACT));
+    expect(shared).toContain("under `Shared-artifact re-verify`");
+    expect(shared).toContain("**A row whose re-run fails is not re-verified**");
   });
   it("gives the seam a body the selector can decode", async () => {
     // A selector that decodes JSON before asserting raises a parse error on an
@@ -1365,9 +1368,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // A passing re-run says the earlier test still passes; it does not say the
     // test still fails when the predicate it owns is broken, which is what a
     // weakened helper or snapshot takes away.
-    const provenance = flat(await read(tree, PROVENANCE));
-    expect(provenance).toContain("**A passing re-run is not enough on a row that has a proof.**");
-    expect(provenance).toContain("re-run its original mutation");
+    const shared = flat(await read(tree, SHARED_ARTIFACT));
+    expect(shared).toContain("**A passing re-run is not enough on a row that has a proof.**");
+    expect(shared).toContain("re-run its original mutation");
   });
 
   it("names both stale manifests and how to bring them forward", async () => {
@@ -1412,6 +1415,64 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(baseline).toContain("**Completion review**");
   });
 
+  it("keeps a RED revision and hash with the round they describe", async () => {
+    // Each round's RED is taken on its own tree, so one field per row meant a
+    // second round overwrote the first pair's address or inherited it.
+    const round = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/round-evidence.md"),
+    );
+    expect(round).toContain("`Round N: RED revision`");
+    expect(round).toContain("`Round N: RED test hash` with its manifest");
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**One per round block**, beside the RED pair it addresses");
+  });
+
+  it("syncs the identity on the failing review-fix branch too", async () => {
+    // A REVISE can ask for real behaviour and a split selector at once.
+    const reviewFix = flat(await read(tree, REVIEW_FIX));
+    expect(reviewFix).toContain("**Name the new identity in the handback — on either branch.**");
+  });
+
+  it("has the gate recompute the pack seal", async () => {
+    // Without a check the field was a value nobody read; and the seal is
+    // written after the last reviewer hashes, so it cannot be in their subject.
+    const revision = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(revision).toContain("**gate item 10 recomputes it from the pack**");
+    expect(revision).toContain("**not** in any reviewer's audit subject");
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("`Review pack seal` is recomputed here");
+  });
+
+  it("leaves the final status out of the stage subject", async () => {
+    // The P8 reviewer fills it in, so hashing it made the verdict stale on
+    // being recorded.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("**minus the `## Final status` section**");
+  });
+
+  it("stops restating the record shape in the producer reference", async () => {
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**the record shape least of all**");
+    expect(provenance).not.toContain("through a sorted `path + NUL + blob hash` manifest");
+  });
+
+  it("has the exception producer record what P1d will hash", async () => {
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("recorded **before** P1d routes the gate");
+  });
+
+  it("migrates a pre-split row at any status, not two", async () => {
+    // A row interrupted mid-cycle by the upgrade stored evidence there too, and
+    // unmarked it is judged by the current rule whatever its status.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("for **every** `E2E` / `API` row past `todo`");
+    expect(implement).toContain("A row interrupted mid-cycle by the upgrade");
+  });
+
   it("gives a stage review a subject that needs no row", async () => {
     // A spec with no ATDD-owned rows is the ordinary case, and its final
     // review has no `### <TDD-ID>` section to extract.
@@ -1442,7 +1503,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(revision).toContain("**Every RED is one.**");
     expect(revision).toContain("**Item 3 records `RED revision` on every row**");
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("**required on every row with a RED pair**");
+    expect(implement).toContain("**required in every round block with a RED pair**");
   });
 
   it("checks the obligation reference against the ledger as well", async () => {
@@ -1471,7 +1532,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // Updating the ledger alone leaves gate item 10 comparing a changed value
     // with an unchanged one, which it fails by construction.
     const reviewFix = flat(await read(tree, REVIEW_FIX));
-    expect(reviewFix).toContain("**Name the new identity in the handback.**");
+    expect(reviewFix).toContain("**Name the new identity in the handback — on either branch.**");
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain(
       "is written to both the ledger and the entry's identity copy before the re-review**",
@@ -1483,7 +1544,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // later it moves a stored hash and left out it can be repointed.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain("the obligation reference the `Layer` selects");
-    expect(provenance).toContain("Both carry the obligation reference");
+    expect(provenance).toContain(
+      "Every branch carries the row identity and the obligation reference",
+    );
   });
 
   it("puts the replacement proof revision inside a subject", async () => {
@@ -1586,8 +1649,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   it("lets a re-verify entry clear the hash it necessarily breaks", async () => {
     // A shared fixture edited by a later row moves the earlier row's hash by
     // construction, and a `done` row cannot take a fresh RED.
-    const provenance = flat(await read(tree, PROVENANCE));
-    expect(provenance).toContain("**And the consumer has to accept that pairing.**");
+    const shared = flat(await read(tree, SHARED_ARTIFACT));
+    expect(shared).toContain("**And the consumer has to accept that pairing.**");
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain(
       "**unless a later row's `Shared-artifact re-verify` entry names this `TDD-ID`**",
@@ -1883,10 +1946,10 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // Appending to a `done` row breaks the verdicts that closed it — the audit
     // hash covers the entry — and `done` has one exit, the upstream reset,
     // which a sibling editing a fixture is not.
-    const provenance = flat(await read(tree, PROVENANCE));
-    expect(provenance).toContain("records that on itself");
-    expect(provenance).toContain("**The earlier rows' entries are not touched**");
-    expect(provenance).toContain("the row that moved the ground under it carries the proof");
+    const shared = flat(await read(tree, SHARED_ARTIFACT));
+    expect(shared).toContain("records that on itself");
+    expect(shared).toContain("**The earlier rows' entries are not touched**");
+    expect(shared).toContain("the row that moved the ground under it carries the proof");
   });
 
   it("takes the falsifiability revision while the mutation is still applied", async () => {

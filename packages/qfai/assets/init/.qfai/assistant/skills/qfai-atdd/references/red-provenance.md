@@ -85,8 +85,10 @@ Take the first that applies, and record which one in the evidence file.
       test after the RED leaves the digest identical and a stale observation
       reads as fresh. Record `working-tree+<content hash>` by the **one** procedure in
       `../../qfai-implement/references/evidence-revision.md` — do not restate
-      it here. It excludes the ledger and `.qfai/evidence/**` and it hashes
-      untracked files through a sorted `path + NUL + blob hash` manifest, and a
+      it here — **the record shape least of all**: restated as
+      `path + NUL + blob hash` it fell behind the canonical's `kind` and `mode`,
+      and two spellings give a producer and a gatekeeper different addresses for
+      one tree. It excludes the ledger and `.qfai/evidence/**`, and a
       producer hashing all of `git diff HEAD` instead got a different value from
       the `qa-gatekeeper` reviewing the same tree — in the ordinary multi-row
       loop, where the previous row's evidence is already written, the two
@@ -239,11 +241,11 @@ try branches 1 and 2.
 
 Exactly one form per row, never both and never neither:
 
-| Branch         | Recorded                                                                                                                                                                                                                                      |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Observed RED   | Row identity (`Layer`, `Test file`, `Selector`) and the obligation reference the `Layer` selects (`TC-ref` / `US-ref` / `CON-API-ref`), RED command+result, `RED failure mode`, `RED revision`, `qa-gatekeeper` PASS, the `Oracle proof` plan |
-| Falsifiability | Row identity (as above), `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, `RED failure mode: falsifiability`, GREEN pair                                                                                                    |
-| `exception`    | Write `todo -> exception` with the `DR-*` the stage recorded; do not re-derive it, and do not enter Phase Green.                                                                                                                              |
+| Branch         | Recorded                                                                                                                                                                                                                                                                                                                                                                                                       |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Observed RED   | Row identity (`Layer`, `Test file`, `Selector`) and the obligation reference the `Layer` selects (`TC-ref` / `US-ref` / `CON-API-ref`), RED command+result, `RED failure mode`, `RED revision`, `qa-gatekeeper` PASS, the `Oracle proof` plan                                                                                                                                                                  |
+| Falsifiability | Row identity (as above), `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, `RED failure mode: falsifiability`, GREEN pair                                                                                                                                                                                                                                                                     |
+| `exception`    | Row identity (`Layer`, `Test file`, `Selector`) and the obligation reference the `Layer` selects, recorded **before** P1d routes the gate — its audit subject is those plus the `DR-ID` and the DR artifact, so a row without them has nothing reproducible for `qa-gatekeeper` to hash. Then write `todo -> exception` with the `DR-*` the stage recorded; do not re-derive it, and do not enter Phase Green. |
 
 `RED failure mode` is on both rows because the consumer's per-item contract
 requires it before the reviewers run, and neither branch was recording it — an
@@ -252,9 +254,9 @@ field. On an observed RED it is the kind the failure actually was
 (`assertion` | `expected-error`); on branch 2 it is `falsifiability`, which is
 what that form is.
 
-Both carry the obligation reference: the RED subject hashes it and the gatekeeper
-judges at **P1b**, so recorded later it moves a stored hash, and left out it can
-be pointed at another requirement while the original PASS stands.
+Every branch carries the row identity and the obligation reference: the audit
+subject hashes them and the gatekeeper judges before `/qfai-implement` can add
+anything, so recorded later they move a stored hash and left out they can be repointed.
 
 **Where each form lives.** The `## Ledger rows advanced` table is an index: one
 row per `TDD-*`, holding the branch and an anchor. The commands and their output
@@ -298,62 +300,11 @@ Read the row's entry and take the branch it names:
 
 ## A shared test artifact outlives the row that recorded it
 
-P1c closes one row before the next test is written, so the `RED test manifest`
-of a `done` row addresses a fixture, snapshot or helper that a **later** row may
-still edit. The hash then disagrees with the tree, and a `done` row has no
-re-entry edge of its own — so the spec either accepts stale evidence or cannot
-be closed.
-
-**Stabilise first where the row can see it coming.** The artifacts an
-acceptance test owns — fixtures, snapshots, helpers under the test tree — are
-written in P2-P4 with every row's obligation in view, not grown one row at a
-time. Where that holds, no later row edits them and the manifests stay true.
-
-**Where a later row does have to edit one, it re-verifies the rows that read
-it — and records that on itself.** The editing row already runs its own
-selector; run the earlier rows' selectors in the same pass and record them in
-**the editing row's** entry, under `Shared-artifact re-verify`: one line per
-earlier row naming its `TDD-ID`, the selector re-run, its result, and the
-artifact's new manifest and hash.
-
-**A passing re-run is not enough on a row that has a proof.** Weakening an
-assertion helper, a snapshot or an expected-value fixture leaves the earlier
-row's selector passing while making it tautological — and its recorded
-`Oracle proof` was taken against the artifact as it was, so it no longer shows
-what `qa-gatekeeper` requires: that the **current** test fails when the
-predicate the row owns is broken. For each affected row that carries one,
-re-run its original mutation — the one its `Oracle proof` plan or
-`Satisfied-by` names — under the changed artifact, capture the failure, revert,
-and record the restored GREEN, in the same `Shared-artifact re-verify` block.
-A row whose mutation no longer fails the test is the tautology this exists to
-catch, and the editing row does not reach `done` until it is repaired. **A row whose re-run fails is not
-re-verified** — it is a regression the editing row introduced, and the editing
-row does not reach `done` until it is fixed, exactly as any other failure in
-its own checkpoint.
-
-**The earlier rows' entries are not touched**, and that is deliberate on two
-counts. There is no legal reopen for them: `done` has one exit, the upstream
-reset, and it requires an approved upstream change — a sibling editing a fixture
-is not one. And their evidence is a record of an observation, not a claim about
-the present: a `RED test hash` addresses the manifest **as it was when that RED
-was taken**, which is the only thing it can honestly say. Appending to them
-would also break the very verdicts that closed them, since the audit hash covers
-the entry.
-
-**And the consumer has to accept that pairing.** The completion gate
-recomputes `RED test hash` for every handed-over row from the current manifest,
-so an earlier row whose shared artifact was edited mismatches **by
-construction** — and the mismatch route sends it back here for a fresh RED,
-which a `done` row cannot take. A mismatch is cleared instead by a
-`Shared-artifact re-verify` entry on the editing row that names this `TDD-ID`,
-records the re-run and the re-taken proof, and carries the artifact's new
-manifest and hash: that is the evidence the recomputation was looking for, made
-where a row is still open. Without such an entry the mismatch stands.
-
-So the pairing is: the earlier row keeps the observation it made, and the row
-that moved the ground under it carries the proof that the observation still
-holds. The editing row's own reviewers and checkpoint audit that proof, which is
-what makes it evidence rather than an assertion.
+P1c closes one row before the next test is written, so a `done` row’s
+`RED test manifest` addresses a fixture, snapshot or helper a later row may still
+edit — and a `done` row has no re-entry edge of its own. Where those artifacts
+are stabilised, what a later row that must edit one owes the rows that read it,
+and how the resulting hash mismatch is cleared: `references/shared-test-artifacts.md`.
 
 ## A spec with no ATDD-owned rows
 

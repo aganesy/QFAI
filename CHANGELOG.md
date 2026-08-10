@@ -488,6 +488,19 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A RED's revision and hash live in its round block.** Each round's RED is
+  taken on its own tree, so one field per row meant a second round overwrote
+  the first pair's address or inherited it.
+- **The failing review-fix branch syncs the identity too**; a REVISE can ask
+  for real behaviour and a split selector at once.
+- **The pack seal is recomputed by the gate**, and stays out of every
+  reviewer's subject — it is written after the last of them has hashed.
+- **The stage subject stops before `## Final status`**, which the P8 reviewer
+  fills in.
+- **The producer stops restating the untracked record shape.**
+- **The exception producer records what P1d's gate will hash.**
+- **The pre-split migration reads every status**, so a row interrupted
+  mid-cycle by the upgrade can still finish.
 - **A stage review has a subject that needs no row.** A spec with no
   ATDD-owned rows is the ordinary case, and its final review had no
   `### <TDD-ID>` section to hash.
