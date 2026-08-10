@@ -488,6 +488,21 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The same-revision exemption is stated once, for item 3 on every row.** The
+  consequences section still listed two special cases, so a reviewer applying
+  it rejected the cycle the section above permits.
+- **The RED address cardinality is stated once**, per round, where the round
+  contract lives.
+- **The pack seal names the procedure it uses** — the audit hash, not the
+  working-tree revision; "the procedure below" was ambiguous between two that
+  produce different values.
+- **A multi-id obligation column is split before matching the matrix**, so a
+  row with two obligations is not left with no matrix rows at all.
+- **The stage hash is recomputed before completion is declared.** On a spec
+  with no ATDD-owned rows item 10 never runs, so it was written by P8 and read
+  by nobody.
+- **A sibling reference is named as a sibling**, not through a `references/`
+  prefix that resolves to `references/references/`.
 - **A RED's revision and hash live in its round block.** Each round's RED is
   taken on its own tree, so one field per row meant a second round overwrote
   the first pair's address or inherited it.

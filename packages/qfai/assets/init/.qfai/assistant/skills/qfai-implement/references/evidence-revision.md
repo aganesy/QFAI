@@ -38,9 +38,15 @@ Revision: <git rev> | working-tree+<content hash>
      What protects the pack is a **pack seal**, not the audit hash: that one
      addresses the evidence a reviewer _read_, and the pack is what it _wrote_.
      When the last reviewer of a round has stored its response, record the seal
-     in the item's evidence entry as `Review pack seal` — a hash by steps 3 and
-     4 of the procedure below over every file in that `review-<timestamp>/`
-     directory, each under its repo-relative path, normalized by step 2. It is
+     in the item's evidence entry as `Review pack seal` — by the **audit-hash**
+     procedure in
+     `../../../constitution/shared-skill-delegation-baseline.md#reviewer-response-template`,
+     not the working-tree one below: its step 2 normalization (LF, trailing
+     whitespace, leading and trailing blank lines, one final newline), its
+     `path + NUL + SHA-256` record sorted by path, its final hash over the
+     joined records. The subject is every file in that `review-<timestamp>/`
+     directory, each under its repo-relative path. "The procedure below" was
+     ambiguous between the two, and the two produce different values. It is
      recorded **outside** the pack, so nothing in the pack hashes itself, and
      **gate item 10 recomputes it from the pack** and compares — that is the
      check, and without it the field was a value nobody read. It is **not** in
@@ -160,8 +166,13 @@ Consequences:
 - An item's four verdicts (gate items 3, 5, 7, 8) MUST all name the **same**
   revision. Verdicts from different revisions do not compose into a ruling about
   one state — the earlier ones ruled on code that no longer exists.
-- **Two exceptions, both structural, both above under _A transient
-  observation names its own revision_.** A RED `/qfai-atdd` handed over is
+- **The exception is item 3, on every row, above under _A transient
+  observation names its own revision_.** A RED is observed before the code that
+  makes it pass exists, so on an uncommitted tree Phase Green moves the content
+  address by construction — an ordinary `Unit` / `Component` / `Integration`
+  cycle as much as a handed-over one. Listing two special cases here left a
+  reviewer applying this section to reject the very cycle the section above
+  permits. A RED `/qfai-atdd` handed over is
   taken before the production code exists, so its revision is earlier than the
   GREEN's by construction; a `falsifiability` row's mutation run is taken
   against a tree that is reverted before the GREEN, so its revision names a tree

@@ -304,7 +304,7 @@ P1c closes one row before the next test is written, so a `done` row’s
 `RED test manifest` addresses a fixture, snapshot or helper a later row may still
 edit — and a `done` row has no re-entry edge of its own. Where those artifacts
 are stabilised, what a later row that must edit one owes the rows that read it,
-and how the resulting hash mismatch is cleared: `references/shared-test-artifacts.md`.
+and how the resulting hash mismatch is cleared: `shared-test-artifacts.md`.
 
 ## A spec with no ATDD-owned rows
 
@@ -336,7 +336,7 @@ which this stage does own
 project can take this skill's update without the `red` phase it relies on — and
 without the `agent-catalog.yml` role contracts the reviewers read. The gate
 still applies. What is stale, why routing it by hand is not enough on its own,
-and how to bring both files forward: `references/stale-manifest.md`.
+and how to bring both files forward: `stale-manifest.md`.
 
 ## What the nested run owes
 
@@ -388,7 +388,7 @@ row to this stage: `/qfai-implement` does not author those tests and its `red`
 phase has no `acceptance-test-engineer`. What the corrected test owes — a fresh
 RED when it fails, the no-round path plus a re-addressed manifest and a proof
 marked stale when it passes, and where the round block goes — is in
-`references/review-fix-rounds.md`.
+`review-fix-rounds.md`.
 
 ## Which stage hands a row over
 

@@ -417,10 +417,14 @@ post-escalation verification review of a user-named fix.
      a subject with no record for it is a hash that does not move when the DR
      text changes; and
      the part of `.qfai/evidence/coverage-depth-<spec-id>.md` that belongs to
-     this row's obligation — not the file whole, and matched **exactly**: the
-     table rows whose obligation cell equals the reference (`TC-0001` does not
-     match `TC-00011`), plus each justification paragraph whose first line names
-     that same reference. A justification that names no obligation belongs to
+     this row's obligation — not the file whole, and matched **exactly**. A
+     row may legitimately carry several (`TC-Refs: TC-0001, TC-0002`), so split
+     the copied column on commas first and take each id in the order the column
+     lists them; comparing the whole column against a single-id matrix cell
+     matched nothing, and a row with two obligations had no matrix rows in its
+     subject at all. For each id: the table rows whose obligation cell equals it
+     (`TC-0001` does not match `TC-00011`), plus each justification paragraph
+     whose first line names it. A justification that names no obligation belongs to
      none of them and is left out; "everything after the table" was the other
      reading, and two readers taking one each computed different hashes from one
      file. The matrix is one document

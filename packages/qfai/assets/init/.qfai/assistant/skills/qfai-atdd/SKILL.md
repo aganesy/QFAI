@@ -255,12 +255,7 @@ on a signal value alone.
 
 ## Scaffolding
 
-`npx qfai atdd scaffold --spec <spec-id>` bulk-emits one placeholder test per
-`TC-*` **this skill owns**, each carrying its `QFAI:SPEC-XXXX:TC-YYYY`
-annotation, into `tests/integration/<spec-id>/` — the directory
-`QFAI-ATDD-112` scans. It is idempotent. `L1`/`L2` and `L4`/`L5` TCs are
-skipped and named on stderr, and a skeleton left in placeholder shape
-escalates: `references/scaffolding.md`.
+`npx qfai atdd scaffold --spec <spec-id>` bulk-emits one placeholder test per `TC-*` **this skill owns**, each carrying its `QFAI:SPEC-XXXX:TC-YYYY` annotation, into `tests/integration/<spec-id>/` — the directory `QFAI-ATDD-112` scans. It is idempotent. `L1`/`L2` and `L4`/`L5` TCs are skipped and named on stderr, and a skeleton left in placeholder shape escalates: `references/scaffolding.md`.
 
 ## Annotation obligations (mandatory)
 
@@ -296,6 +291,7 @@ Notes:
 - Evidence file exists and includes work orders + reviewer notes.
 - Every ledger row this cycle advanced carries one of the three RED-provenance forms — an observed RED pair with its `Oracle proof`, the `Satisfied-by` + falsifiability trio, or a `DR-*` recording why neither was available — and `qa-gatekeeper` has accepted it. The third form is a valid _branch_, and it is **not a completion**: `exception` is a blocking output and needs a user-approved `TDDLIST-001` waiver, or the row is parked and the spec stays open (`references/red-provenance.md#branch-3-does-not-close-a-spec-on-its-own`).
 - Completion is approved by a reviewer who did not implement tests.
+- **The P8 reviewer's `Audited evidence hash` is recomputed before completion is declared**, from the current stage evidence file and Coverage Depth Matrix, by the stage-review procedure that produced it (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`); a mismatch means the evidence moved after the verdict. On a spec with no ATDD-owned rows `/qfai-implement`'s gate item 10 never runs, so without this the stored hash was written by P8 and read by nobody — and the evidence tree is out of the working-tree revision, so a later edit moved nothing else either.
 
 ## Not-done criteria
 
@@ -383,7 +379,7 @@ See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / �
 - P0: Plan and obligations checklist prepared. A project whose routing has no
   `red` phase predates it: `references/red-provenance.md#a-project-without-the-red-phase`.
 - P1: Layer assignment validated against `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`.
-- P1b: **A branch is chosen for every row**, provisionally until its handoff.
+- P1b: **A branch is chosen for every row**, provisional until its handoff.
 - P1c: **A branch 1 row is discharged in that loop** — write the test, take the
   RED, `qa-gatekeeper` PASS, hand it to `/qfai-implement`, GREEN, checkpoint —
   before the next branch-1 row's failing test is written, and before P2-P4 build

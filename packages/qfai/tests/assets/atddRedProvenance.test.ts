@@ -749,7 +749,7 @@ describe.each(TREES)("%s (the handoff survives ledger order and time)", (tree) =
     const atdd = flat(await read(tree, ATDD));
     // The gate names the rule; the reference carries it, which is what the
     // 500-line ceiling forces and what keeps one statement of it.
-    expect(atdd).toContain("provisionally until its handoff");
+    expect(atdd).toContain("provisional until its handoff");
     expect(flat(await read(tree, PROVENANCE))).toContain("**The choice is provisional");
     expect(flat(await read(tree, PROVENANCE))).toContain(
       "can have no observable RED left by the time that row's turn comes",
@@ -902,7 +902,7 @@ describe.each(TREES)("%s (a gate must be executable by the routing it declares)"
     // as a thing that goes stale; the skill keeps the pointer.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain("## A project without the `red` phase");
-    expect(provenance).toContain("references/stale-manifest.md");
+    expect(provenance).toContain("`stale-manifest.md`");
     const stale = flat(await read(tree, "assistant/skills/qfai-atdd/references/stale-manifest.md"));
     expect(stale).toContain("A missing phase is a stale manifest, never the gate not applying");
   });
@@ -1339,7 +1339,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // phase produces a second, so the cardinality kept a correct row out of
     // the completion gate. `Revision` is the per-round field.
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("**One per round block**, beside the RED pair it addresses");
+    expect(implement).toContain("**Per round block**, beside the RED pair it addresses");
     expect(implement).toContain("`Revision` is the field that is per round block");
   });
 
@@ -1349,7 +1349,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // row has no re-entry edge of its own.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain("## A shared test artifact outlives the row that recorded it");
-    expect(provenance).toContain("references/shared-test-artifacts.md");
+    expect(provenance).toContain("`shared-test-artifacts.md`");
     const shared = flat(await read(tree, SHARED_ARTIFACT));
     expect(shared).toContain("under `Shared-artifact re-verify`");
     expect(shared).toContain("**A row whose re-run fails is not re-verified**");
@@ -1415,6 +1415,61 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(baseline).toContain("**Completion review**");
   });
 
+  it("states the same-revision exemption once, for item 3", async () => {
+    // The consequences section still listed two special cases, so a reviewer
+    // applying it rejected the very cycle the section above permits.
+    const revision = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(revision).toContain("**The exception is item 3, on every row");
+    expect(revision).not.toContain("**Two exceptions, both structural");
+  });
+
+  it("states the RED address cardinality in one place", async () => {
+    // Row-level here while the reference said per round meant a producer
+    // following this line overwrote round 1's address when round 2 opened.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**Per round block**, beside the RED pair it addresses");
+    expect(implement).toContain("Do not restate the cardinality anywhere else");
+  });
+
+  it("names the procedure the pack seal actually uses", async () => {
+    // "The procedure below" was ambiguous between the audit hash and the
+    // working-tree revision, and the two produce different values.
+    const revision = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(revision).toContain("by the **audit-hash** procedure in");
+    expect(revision).toContain("not the working-tree one below");
+  });
+
+  it("splits a multi-id obligation column before matching the matrix", async () => {
+    // Comparing the whole column against a single-id cell matched nothing, so
+    // a row with two obligations had no matrix rows in its subject at all.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("split the copied column on commas first");
+  });
+
+  it("recomputes the stage hash before completion is declared", async () => {
+    // On a spec with no ATDD-owned rows item 10 never runs, so the stored hash
+    // was written by P8 and read by nobody.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain(
+      "**The P8 reviewer's `Audited evidence hash` is recomputed before completion is declared**",
+    );
+  });
+
+  it("names a sibling reference as a sibling", async () => {
+    // From inside `references/`, a `references/…` prefix resolves to
+    // `references/references/…`, which does not exist.
+    const provenance = await read(tree, PROVENANCE);
+    expect(provenance).not.toContain("references/shared-test-artifacts.md");
+    expect(provenance).not.toContain("references/stale-manifest.md");
+    expect(provenance).not.toContain("references/review-fix-rounds.md");
+  });
+
   it("keeps a RED revision and hash with the round they describe", async () => {
     // Each round's RED is taken on its own tree, so one field per row meant a
     // second round overwrote the first pair's address or inherited it.
@@ -1424,7 +1479,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(round).toContain("`Round N: RED revision`");
     expect(round).toContain("`Round N: RED test hash` with its manifest");
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("**One per round block**, beside the RED pair it addresses");
+    expect(implement).toContain("**Per round block**, beside the RED pair it addresses");
   });
 
   it("syncs the identity on the failing review-fix branch too", async () => {
