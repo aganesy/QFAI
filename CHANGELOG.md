@@ -488,6 +488,16 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A stage review has a subject that needs no row.** A spec with no
+  ATDD-owned rows is the ordinary case, and its final review had no
+  `### <TDD-ID>` section to hash.
+- **A finalized review pack is sealed from outside it.** The audit hash
+  addresses what a reviewer read; the pack is what it wrote, so excluding it
+  from the revision left an edited PASS reading as fresh.
+- **Every RED gets its own revision.** A RED precedes the code that makes it
+  pass, so Phase Green moves the address by construction — framing the
+  exemption as two special cases made an ordinary uncommitted cycle stale at
+  GREEN.
 - **The obligation reference is checked against the ledger too.** Changing
   `TC-Refs` alone after the PASS left the entry holding the old copy, so a
   verdict about one requirement stood for another.

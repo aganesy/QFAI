@@ -438,12 +438,10 @@ describe.each(TREES)("%s (executability of the handed-over row)", (tree) => {
     // differs from GREEN's and the reviewers' — the property that RED is worth
     // having. An `observed-red` E2E/API row could not reach `done` at all.
     const implement = flat(await read(tree, IMPLEMENT));
-    // The exemption now covers both transient observations, and the
-    // handed-over RED is named inside it.
-    expect(implement).toContain(
-      "**except an observation that cannot be taken against the final tree**",
-    );
-    expect(implement).toContain("a RED `/qfai-atdd` handed over, taken before the production code");
+    // Generalised: the exemption is item 3 on every row, because a RED always
+    // precedes the code that makes it pass.
+    expect(implement).toContain("**except item 3**");
+    expect(implement).toContain("a RED precedes the code that makes it pass");
     expect(implement).toContain("items 5, 7 and 8 agree among themselves");
   });
 
@@ -608,7 +606,7 @@ describe.each(TREES)("%s (the contracts the handover has to land in)", (tree) =>
     );
     // The carve-out now names both transient observations; the handed-over
     // RED is one of the two.
-    expect(revision).toContain("Two exceptions, both structural");
+    expect(revision).toContain("**Every RED is one.**");
     expect(revision).toContain("A RED `/qfai-atdd` handed over is taken before the production");
     expect(revision).toContain("leaves `Revision` for the GREEN and the two reviews");
   });
@@ -1320,8 +1318,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const revision = flat(
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
-    expect(revision).toContain("**Two exceptions, both structural");
-    expect(revision).toContain("`Falsifiability revision` beside the trio");
+    expect(revision).toContain("**Every RED is one.**");
+    expect(revision).toContain("records `Falsifiability revision` in its place");
     expect(revision).not.toContain("**One exception, and it is structural");
   });
 
@@ -1412,6 +1410,39 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(baseline).toContain("**RED observation**");
     expect(baseline).toContain("**GREEN observation**");
     expect(baseline).toContain("**Completion review**");
+  });
+
+  it("gives a stage review a subject that needs no row", async () => {
+    // A spec with no ATDD-owned rows is the ordinary case, and its final
+    // review has no `### <TDD-ID>` section to extract.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("**Stage review**");
+    expect(baseline).toContain("the stage evidence file **whole**, under its repo-relative path");
+  });
+
+  it("seals the finalized review pack from outside it", async () => {
+    // The audit hash addresses what a reviewer read; the pack is what it wrote,
+    // and excluding the pack from the revision left an edited PASS fresh.
+    const revision = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(revision).toContain("**pack seal**");
+    expect(revision).toContain("recorded **outside** the pack");
+    expect(revision).toContain("`Review pack seal`");
+  });
+
+  it("gives every RED its own revision, not two special cases", async () => {
+    // A RED precedes the code that makes it pass, so Phase Green moves the
+    // content address by construction on any uncommitted row.
+    const revision = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(revision).toContain("**Every RED is one.**");
+    expect(revision).toContain("**Item 3 records `RED revision` on every row**");
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**required on every row with a RED pair**");
   });
 
   it("checks the obligation reference against the ledger as well", async () => {
@@ -1690,7 +1721,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
     expect(revision).toContain("`.qfai/review/**`, from **both** the diff and the untracked list");
-    expect(revision).toContain("What protects the pack instead is `Audited evidence hash`");
+    expect(revision).toContain("What protects the pack is a **pack seal**");
   });
 
   it("hashes only the matrix rows the obligation names", async () => {
@@ -1914,9 +1945,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(implement).toContain(
       "`Falsifiability revision` — **required on a `falsifiability` row**",
     );
-    expect(implement).toContain(
-      "**except an observation that cannot be taken against the final tree**",
-    );
+    expect(implement).toContain("**except item 3**");
     const revision = flat(
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );

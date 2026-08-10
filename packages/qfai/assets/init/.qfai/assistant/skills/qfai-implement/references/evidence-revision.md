@@ -35,8 +35,17 @@ Revision: <git rev> | working-tree+<content hash>
      track `.qfai/review/**`, and then every reviewer answer written into it
      moved the address the previous reviewer had just recorded, so items 7-8
      could not agree on one revision and a correct item never reached `done`.
-     What protects the pack instead is `Audited evidence hash`, which addresses
-     what each reviewer read.
+     What protects the pack is a **pack seal**, not the audit hash: that one
+     addresses the evidence a reviewer _read_, and the pack is what it _wrote_.
+     When the last reviewer of a round has stored its response, record the seal
+     in the item's evidence entry as `Review pack seal` — a hash by steps 3 and
+     4 of the procedure below over every file in that `review-<timestamp>/`
+     directory, each under its repo-relative path, normalized by step 2. It is
+     recorded **outside** the pack, so nothing in the pack hashes itself, and
+     it is inside the row's completion subject, so editing `Result`,
+     `Reviewed revision` or `overall_status` afterwards moves a value gate item
+     10 recomputes. Excluding the pack from the revision without this left an
+     edited PASS reading as fresh.
   3. **Serialize.** `HEAD` + NUL + the rev; then `DIFF` + NUL + the SHA-256 of
      the diff bytes; then one record per untracked file,
      `path + NUL + kind + NUL + mode + NUL + the SHA-256 of its bytes`, sorted
@@ -105,10 +114,16 @@ It appears in three places, all carrying the same address:
 
 ## A transient observation names its own revision
 
-Two exist, and neither can be taken against the tree the reviewers judge: a RED
-`/qfai-atdd` handed over precedes the production code (`RED revision`), and a
-`falsifiability` row's mutation run is taken against a tree that is reverted
-before the GREEN (`Falsifiability revision`). Both are exempt from the
+**Every RED is one.** A RED is observed before the code that makes it pass
+exists — that is what a RED _is_ — so on an uncommitted tree Phase Green's write
+moves the content address by construction, and requiring item 3 to name the same
+`Revision` as items 5, 7 and 8 made an ordinary `Unit` / `Component` /
+`Integration` cycle stale the moment it went green. Framing the exemption as
+two special cases was reading the handed-over RED and the falsifiability
+mutation as exceptions to a rule they are instances of. **Item 3 records
+`RED revision` on every row**; a `falsifiability` row records
+`Falsifiability revision` in its place, because its observation is the mutation
+run and that tree is reverted before the GREEN. Both are exempt from the
 same-revision rule, because the property that makes them worth having is that
 they were taken somewhere else — a mutation run against the final tree would
 prove nothing, since the mutation is not in it. The remaining observations still
