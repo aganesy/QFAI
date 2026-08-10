@@ -304,26 +304,29 @@ there is no leak today; the hazard is that `dist/` after `check-types` is a mixt
 output, and deleting it to "clean up" removes tsup's `dist/cli/index.mjs` barrel that checkpoint step 4
 invokes.
 
-## 14. `TC-0006-0030`'s Setup for leg (b) and the ledger `Selector` describe two different trees
+## 14. `TC-0006-0030` leg (b) does not identify a shipped-workflows state — see `CR-20260810-0001`
 
-Owner: `/qfai-sdd` (the TC's Setup wording). Non-blocking — the row is discharged — but the ambiguity should
-not survive into another spec.
+**Reduced to a pointer, 2026-08-10.** This item was first written as a non-blocking steering note claiming
+the row was discharged and the discrepancy was a one-versus-one mismatch between the TC Setup and the ledger
+`Selector`. A three-lens review of `TDD-0038` overturned both halves, and the finding now lives in
+**`.qfai/decisions/CR-20260810-0001-tc0006-0030-leg-b-state-ambiguity.md`** (`Class: defect`, blocked set
+`TDD-0038, TDD-0039, TDD-0037`).
 
-`06_Test-Cases.md:281` reads: `(b) 当該 shipped workflow を削除した tree`. Read literally, deleting the
-**file** leaves the provenance **entry** in place, which is the `declined` state of the shipped-workflows
-enum. The ledger `Selector` for `TDD-0038` instead specifies `a shipped name with no provenance entry and
-absent from disk`, which is the `absent` state.
+Three corrections to what this item said, all measured:
 
-**These are different production paths**, not two descriptions of one tree: `declined` is visited by the
-comparison and answered by `hasDrifted`, while `absent` is never visited at all because the iteration domain
-is `Object.keys(record.workflows)`. So the Setup and the Selector cannot both be satisfied by one fixture.
+- **It is a four-artifact inconsistency**, not one-versus-one — `06_Test-Cases.md:281`,
+  `03_Acceptance-Criteria.md:240`, `shipped-workflows.md:115,122-123` and `qfai-doctor.md:148` — and this
+  item cited the weaker source on each side, missing that the row's **own anchor** `AC-0006-0023` is the
+  state-agnostic one.
+- **The `drift.test.ts` citation was inverted.** This item claimed that file agreed with the `Selector`'s
+  `absent` reading. It implements the **other** reading: its second `it` deletes a **recorded** file, which
+  is `declined`.
+- **"The row is discharged" was wrong.** Leg (b)'s literal Verify clause `drift finding が 0 件` is asserted
+  by **nothing** — `TDD-0038` asserts `findings` has length 1 on a tree carrying an edited control, and
+  `TDD-0029`'s second `it` also yields a finding. And the joint-discharge attribution carries no
+  traceability marker, because `drift.test.ts` holds only `TC-0006-0027`/`0028`.
 
-Resolved downstream by following the **Selector**, which agrees with two other ledger sources (the plan
-notes and `drift.test.ts`). **Consequence to record rather than leave implicit: leg (b) is discharged jointly
-by two rows.** `TDD-0038` covers the `absent` reading; `TDD-0029`'s second `it` covers the literal Setup
-wording — and that is **measured**, not assumed: the mutation making installed-absence report as drift
-(base `851f72c3` + needle `return false;` → `return installed.kind === "absent";`) reddens nothing in
-`TDD-0038` and kills `TDD-0029`'s second `it` (`1 failed | 5 passed`).
-
-Suggested fix for the owner: split the Setup phrase so each leg names the enum state it means, since the
-enum is the thing the reader dispatches on.
+The decisive fact, which this item never stated: **the two readings have opposite expected payloads.** Under
+`declined`, `BR-0006-0022` requires `details.declined` to enumerate the name; under `absent`, `TDD-0038`
+asserts the name appears nowhere. No single fixture can satisfy both, which is what makes it a defect rather
+than a wording preference.

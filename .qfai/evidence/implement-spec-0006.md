@@ -5680,8 +5680,15 @@ and upstream item at `55122ec2`.
 - **Selector**: `TC-0006-0030 (TDD-0038): a shipped name with no provenance entry and absent from disk
   yields no drift finding, while a live entry-bearing stale file is still reported`
 - **Falsifiability**: `RED failure mode: falsifiability`. **Satisfied-by: TDD-0029**, specifically
-  `ec4b8f31 fix(doctor): key the drift comparison on the provenance record` — before it, `bfc14f1b`
-  iterated the packaged directory, and that commit is what makes an entry-less name unvisitable.
+  `bfc14f1b` — **the `continue` on an undefined installed digest.** *Corrected in place from `ec4b8f31`:*
+  leg (b)'s **outcome** was already satisfied at `bfc14f1b`, whose loop carries
+  `if (packagedDigest === undefined || installedDigest === undefined) { continue; }`, so an installed-absent
+  name was never drift there either. `ec4b8f31` changed the **reason** — it made the state *unvisitable* —
+  not the outcome, measured by a faithful reconstruction of the pre-`ec4b8f31` iteration domain (M5, two
+  edits, base `851f72c3` → `9449e4d1` → `660002e4`), under which the absence claim stays **GREEN**. And the
+  row's test could not have run at `ec4b8f31` at all: `comparedCount` was added later at `2733395a`
+  (`git log -S comparedCount` returns exactly that commit). The row-granularity classification —
+  falsifiability, satisfied by TDD-0029 — is unchanged and correct; both commits are that row's.
   First run: `Test Files 1 passed (1)` / `Tests 2 passed (2)`, exit 0, both selector lines named, module
   loading cleanly. Correctly **not** an `exception`, and nothing was weakened to manufacture a RED.
 - **GREEN**: `2 passed`, exit 0.
@@ -5693,7 +5700,11 @@ and upstream item at `55122ec2`.
 - **Production change: none.** `workflowsIntegrity.ts` re-verified at blob `851f72c3` after every mutation;
   `git diff --stat 6ed88267 997b405b -- packages/qfai/src/` empty.
 - **Comment volume**: 239 / 399 non-blank = **59.9%** (was 147/238 = 61.8%); the new block alone is
-  57.1%. Siblings are 59.7% and 62%. The standing brief's target was met on the first attempt, which is
+  57.1%. *Corrected in place: this said "siblings are 59.7% and 62%", but **62% is this file's OWN
+  pre-change ratio** (147/238 = 61.8%), so the comparison was partly against itself. The real siblings are
+  `drift.test.ts` at 59.7% and `repairText.test.ts` at **75.5%** — the latter being the nine-round row whose
+  volume the standing brief exists to avoid, so the honest band is 59.7% on one side and a row not to
+  imitate on the other.* The standing brief's target was still met on the first attempt, which is
   the first time in this slice that has happened.
 
 #### The structural finding: an over-determined silence needs a compound mutation
@@ -5701,7 +5712,19 @@ and upstream item at `55122ec2`.
 This refines the brief, which asked for "a mutation that reddens it" — singular. The `absent` state is
 answered by **two independent reader statements**: the comparison-set domain
 (`workflowsIntegrity.ts:293`) and `hasDrifted`'s absence answer (`:249-251`). **Each half alone leaves the
-absence claim green**, so no single-site mutation can falsify it.
+absence claim green** — so no single-site mutation **at either of those two answering statements**
+falsifies it. *Corrected in place: this read "so no single-site mutation can falsify it", an unqualified
+universal, and it is **false**. M6 is a single-site, single-file mutation that reddens the row's named
+predicate — needle `  modified.sort();` → the same line preceded by
+`  modified.push(WORKFLOWS_DIR_RELATIVE + "/qfai-tests.yml");`, base `851f72c3` → mutant `0b72f5df`,
+giving `2 failed` with the absence assertion among them and the `comparedCount` assertion notably NOT
+reddening. The premise was measured and true; the inference to a universal ranged over the whole program
+when the measurement ranged over two statements.*
+
+**So the row has two oracle proofs, not one**: **M3** shows the silence is gate-dependent, **M6** shows the
+assertion is live — the smaller, in-owned-code proof `oracle-strength.md` asks for. M6 was found by a
+reviewer, and the claim it killed is one the implementer had already demoted three times in its own draft,
+while mine survived in both the evidence and the ledger cell.
 
 Every mutant below has base `851f72c3` — which **is** in the object database (`git cat-file -p 851f72c3`) —
 and is joinable only as base + needle. Needle-uniqueness and blob-differs enforced per edit; the driver
@@ -5722,6 +5745,36 @@ One honest limit on M1, stated by the implementer rather than glossed: for **thi
 domain is set-equal to the packaged-directory listing (measured: the packaged dir holds exactly
 `qfai-tests.yml` and `qfai-validate.yml`), i.e. equal to what the pre-`ec4b8f31` implementation iterated.
 A single needle cannot restore the real pre-`ec4b8f31` form because that needs an added `readdir` import.
+
+#### The falsifiability trio's command/result pair, which was missing entirely
+
+`references/red-not-observable.md` requires `Satisfied-by` / `Falsifiability command` / `Falsifiability
+result`, and **neither of the last two appeared anywhere in this section.** The sibling `TDD-0032` section
+records its pair explicitly, so this is a within-file inconsistency, not a convention question.
+
+Corroborated structurally, and this is the part worth keeping: **all three reviewers had to invent their own
+invocation, and all three invented different ones.** A record that forces three independent readers to
+reconstruct the command has not recorded it.
+
+- **GREEN command** = **Falsifiability command** =
+  `cd packages/qfai && ./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts`
+- **GREEN result**: `Test Files 1 passed (1)` / `Tests 2 passed (2)`, exit 0, both selector lines named.
+- **Falsifiability result**: the M3 output above; the mutation table stands in for the trio's result under
+  `red-not-observable.md` item 4, and that substitution is now stated rather than assumed.
+
+One fragility with the command: the **M1 needle is unique only because of a parameter name**, so it stops
+resolving if that parameter is renamed. The ledger `Evidence` cell therefore pins the file as well.
+
+#### The carve-out excursion, corrected — it is one cell, not two
+
+I recorded this row as writing `Test file` **and** `Selector`. Measured cell-by-cell across
+`55122ec2~1..55122ec2`: `Test file` **changed** (length 1 → 81, from the `—` placeholder), `Status` changed
+(both authorised), and **`Selector` was byte-equal** — already correct from Phase 2b seeding. So the
+excursion is **one** unauthorised cell, not two.
+
+And it is **not regularised**: `CR-20260807-0002` is `Status: open`, so it authorises nothing yet, and this
+row is a **new** excursion committed under it rather than one of the two it discloses. Disclosed as a third
+instance for that CR to cover, not as an approved act.
 
 #### A discrepancy in the sources I had quoted as one tree
 
