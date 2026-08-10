@@ -14,7 +14,7 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single r
 | Selector  | Test selector(s) for targeted execution — one entry, a comma-separated list, or a glob pattern                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Status    | Current lifecycle status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | DR-ID     | Decision Record / Change Request IDs, comma-separated: a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses. A row swept out of `exception` by `exception -> todo` **keeps** the anomaly's `DR-*` — that is the only record of why it was parked. **A row that enters `exception` again records a new `DR-*` for the new anomaly**, appended, not substituted: the retained one documents an anomaly already resolved, and `TDDLIST_EXCEPTION_MISSING_DR` only asks that the cell be non-empty and its tokens resolvable, so the stale id alone would pass the gate while the current anomaly has no Decision Record at all. Blank otherwise |
-| Evidence  | The RED/GREEN outcome in one word each, plus an anchor into `.qfai/evidence/implement-<spec-id>.md` for this TDD-ID. **Not** the commands and output themselves — see "Evidence cell contract" below                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Evidence  | The RED/GREEN outcome in one word each, plus an anchor into the evidence file this row's `Layer` owns — `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row (see "ATDD-owned rows"). **Not** the commands and output themselves — see "Evidence cell contract" below                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 ## Declared seam column (optional, required for parallel dispatch)
 
@@ -85,7 +85,9 @@ non-TC obligation IDs are inert to it by design.
 
 The `Evidence` cell is a **pointer**, not the payload.
 
-`.qfai/evidence/implement-<spec-id>.md` is the single home for the per-item
+`.qfai/evidence/implement-<spec-id>.md` is the home — for every row this skill
+runs itself; the E2E/API rows use `atdd-<spec-id>.md`, see "ATDD-owned rows"
+below — of the per-item
 evidence contract — the RED/GREEN commands, their output, and the reviewer
 verdicts. The ledger cell records the outcome and says where to read the proof:
 
@@ -270,6 +272,58 @@ is re-submitted.
 
 `review-fix` is not a completion state and appears in the completion-prohibition
 list. Round-by-round evidence rules: `round-evidence.md`.
+
+## ATDD-owned rows
+
+A row whose `Layer` is `E2E`, `API` or `Integration` — Integration among them
+because `QFAI-ATDD-112` covers every `L3` TC, and every TC with no declared
+`Level`, from `tests/integration/**`, and that stage's P4 writes those tests.
+These rows live in this ledger and follow
+every rule above, but their tests are authored by `/qfai-atdd`
+(`qfai-implement/SKILL.md` Non-goals). The two skills
+therefore share one lifecycle, and the ordering that skill works in makes the
+RED question different rather than absent.
+
+`/qfai-atdd` does **not** write production code — `agent-routing.yml` gives its
+implementation phase `acceptance-test-engineer`, who owns acceptance tests, and
+no backend or frontend agent. The surface a journey needs is built by this
+skill's Phase Green, from the RED that stage handed over. What makes the RED
+question different there is ordering, not ownership: the work orders that build
+a spec's surfaces often run before the journey is written, and a test written
+after its surface passes on the first run. So:
+
+- **There is no waiver here.** `todo -> red` still requires an admissible RED,
+  and a first-run pass is still not one.
+- **The falsifiability path is the answer, not `exception`.**
+  `red-not-observable.md` already defines the substitute — record
+  `Satisfied-by`, mutate the predicate the journey asserts on, watch this row's
+  test fail, restore, and record `Falsifiability command` /
+  `Falsifiability result` beside the GREEN pair. It was written for an
+  obligation a sibling row had already satisfied; a journey whose surface the
+  same cycle just built is the same situation with the sibling being the
+  surface work. `qa-gatekeeper` accepts that form, and the row proceeds to
+  `green` and `done`.
+- **`/qfai-atdd` also has a first branch this ledger cannot see**: writing the
+  journey against the tree _before_ the surface exists, which produces an
+  ordinary RED. Its stage gate P1b is where that happens.
+- **The evidence file follows the stage that produced it.**
+  `implement-<spec-id>.md` holds the rows this skill runs itself;
+  `atdd-<spec-id>.md` holds `## Ledger rows advanced` for the E2E/API rows,
+  because that is the stage that ran the commands. The `Evidence` cell is a
+  pointer either way and its anchor names which file. Calling
+  `implement-<spec-id>.md` the single home was true while one stage produced
+  every pair; it stopped being true the moment another stage did.
+  `qfai-implement/SKILL.md`'s completion item 10 reads the same split, so an
+  E2E/API row whose anchor names the ATDD file reaches `done`; items 11 and the
+  matching prohibition condition append the two reviewer verdicts to **that**
+  file. This skill still runs `completion-reviewer` and
+  `implementation-reviewer` for every row it advances — only the RED provenance
+  came from elsewhere.
+- **`exception` is for a row where both are unavailable** — an obligation with
+  no persisted form or no observable surface at L5, recorded with a `DR-*`
+  naming what is missing. It is not the routine outcome of surface-first
+  ordering. A spec whose ATDD rows are all `exception` has recorded that the
+  provenance step was skipped, not that the obligations were unverifiable.
 
 ## Blocked rows
 

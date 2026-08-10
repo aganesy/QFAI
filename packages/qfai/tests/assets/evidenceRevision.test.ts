@@ -38,9 +38,7 @@ describe("evidence and verdicts carry a revision", () => {
     it(`${tree}: the reviewer response template has the field`, async () => {
       const delegation = await read(tree, DELEGATION);
 
-      expect(delegation).toContain(
-        "Reviewed revision: <git rev> | working-tree+<porcelain digest>",
-      );
+      expect(delegation).toContain("Reviewed revision: <git rev> | working-tree+<content hash>");
       expect(flat(delegation)).toContain("`Reviewed revision` is REQUIRED");
     });
 
@@ -62,9 +60,13 @@ describe("evidence and verdicts carry a revision", () => {
       const skill = flat(await read(tree, SKILL));
 
       expect(skill).toContain(
-        "`Revision` — the state the observation was made against: `git rev-parse HEAD`, or `working-tree+<porcelain digest>` for an uncommitted tree",
+        "`Revision` — the state the observation was made against: `git rev-parse HEAD`, or `working-tree+<content hash>` for an uncommitted tree",
       );
-      expect(skill).toContain("One per round block, and one for the refactor-verify pair");
+      // The cardinality belongs to `Revision`. `RED test hash` carried it for a
+      // while and so asked for a second hash nothing produces.
+      expect(skill).toContain(
+        "`Revision` is the field that is per round block and once more for the refactor-verify pair",
+      );
       expect(skill).toContain(
         "`Spec review` — completion-reviewer result (PASS or REVISE) with its `Reviewed revision`",
       );
@@ -77,7 +79,9 @@ describe("evidence and verdicts carry a revision", () => {
       const skill = flat(await read(tree, SKILL));
 
       expect(skill).toContain(
-        "the item's four sub-agent observations (items 3, 5, 7, 8) all name the **same** revision",
+        // Article-free: the clause now opens a sentence of its own, after the
+        // `Audited evidence hash` rule that addresses what the revision leaves out.
+        "item's four sub-agent observations (items 3, 5, 7, 8) all name the **same** revision",
       );
     });
 

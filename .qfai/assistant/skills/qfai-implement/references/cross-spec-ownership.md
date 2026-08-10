@@ -40,7 +40,7 @@ Editing it does not require permission — it requires a record and a re-review.
 
 ## The evidence entry
 
-Per affected spec, in `.qfai/evidence/implement-<spec-id>.md`:
+Per affected spec, in the evidence file the row's `Layer` owns (`.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` row):
 
 | Field                | Meaning                                                       |
 | -------------------- | ------------------------------------------------------------- |

@@ -671,9 +671,21 @@ async function emitLegacyAssistantSteeringSunset(
 // Root .gitignore — QFAI managed block
 // ---------------------------------------------------------------------------
 
-async function ensureRootGitignoreEntries(
+/**
+ * Rewrite the managed `.gitignore` block, adding any governance negation it is
+ * missing.
+ *
+ * Exported because the legacy-review-pack migration needs it: it writes a
+ * governance record under `.qfai/review/`, and an existing repository still
+ * carries the older block whose `.qfai/review/*` would ignore it.
+ */
+export async function ensureRootGitignoreEntries(
   destRoot: string,
   dryRun: boolean,
+  // Where the two progress lines go. `qfai init` writes them to stdout; a
+  // caller emitting JSON there collects them instead, because a stray line
+  // before the document makes it unparseable.
+  report: (line: string) => void = info,
 ): Promise<{ copied: string[]; skipped: string[] }> {
   const gitignorePath = path.join(destRoot, ".gitignore");
 
@@ -726,7 +738,7 @@ async function ensureRootGitignoreEntries(
     : existing;
 
   if (dryRun) {
-    info(`  would update: .gitignore (append QFAI entries)`);
+    report(`  would update: .gitignore (append QFAI entries)`);
     return { copied: [gitignorePath], skipped: [] };
   }
 
@@ -734,7 +746,7 @@ async function ensureRootGitignoreEntries(
   const block = rebuildManagedBlock(managedBlock);
   const content = stripped.length > 0 ? stripped + separator + block : block;
   await writeFile(gitignorePath, content, "utf-8");
-  info("  updated: .gitignore (appended QFAI entries)");
+  report("  updated: .gitignore (appended QFAI entries)");
   return { copied: [gitignorePath], skipped: [] };
 }
 
