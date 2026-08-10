@@ -136,7 +136,18 @@ the first two together with the `Revision` this run was made against, taken the 
 and recomputed at gate item 12: these fields are appended after every reviewer has hashed, so they
 sit in no audit subject, and the revision that would otherwise cover them excludes
 `.qfai/evidence/**`. Without it a recorded FAIL could be edited to PASS on a `done` row and no hash
-anywhere would move. These are per-item fields of the same contract gate item 10
+anywhere would move.
+
+**The spec-level boundary records a seal of its own, and the spec completion conditions recompute
+it.** That boundary has no row, so gate item 12 never runs for it: the seal defined here was
+per-item only, and the full-suite result on a terminal ledger could still be edited from FAIL to
+PASS afterwards with no revision, no `Audited evidence hash` and no pack seal moving. Take it the
+same way — the audit hash over the spec-level `Checkpoint verification command` and
+`Checkpoint verification result` together with the `Revision` that run was made against — record it
+beside them as `Checkpoint verification seal`, and recompute it before spec-level completion is
+declared. A mismatch means the record was edited after the run, and completion is not declared.
+
+These are per-item fields of the same contract gate item 10
 resolves, so writing them to the implement file for a row anchored at the ATDD one splits that row
 across two files and leaves the one the gate reads incomplete. As with RED/GREEN evidence,
 a status without its command is invalid, and evidence from a previous checkpoint MUST NOT be reused.

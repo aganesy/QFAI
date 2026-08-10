@@ -44,6 +44,9 @@ async function writeReviewPack(
 function makeV1Summary(overrides?: Partial<Record<string, unknown>>): Record<string, unknown> {
   return {
     version: "1.0",
+    // Required: which contract wrote this pack. A pack that predates the
+    // strict revision form says "legacy" instead, written once from history.
+    revision_form: "content-hash",
     created_at: "2026-04-01T00:00:00Z",
     target: { kind: "discussion", path: ".qfai/discussion/discussion-20260401000000000" },
     overall_status: "PASS",
@@ -55,6 +58,7 @@ function makeV1Summary(overrides?: Partial<Record<string, unknown>>): Record<str
 function makeV2Summary(overrides?: Partial<Record<string, unknown>>): Record<string, unknown> {
   return {
     version: "2.0",
+    revision_form: "content-hash",
     created_at: "2026-04-01T00:00:00Z",
     target: { kind: "discussion", path: ".qfai/discussion/discussion-20260401000000000" },
     routing_profile: "requirements-heavy",

@@ -121,18 +121,28 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
   return issues;
 }
 
-// The marker a producer under the strict `revision` form writes into its own
-// `summary.json`. Declaring it is what makes the form checkable.
+// Which contract wrote this pack, declared by the pack itself and **required**.
 //
-// Neither rank nor time can answer this. Rank made "held to the contract" mean
-// "newest overall", so a malformed pack written under the current contract
-// stopped being an error the moment any other spec produced one. A timestamp
-// cutoff is no better: the directory stamp carries no timezone, so the same
-// pack classifies differently by region, and any instant chosen is either
-// before the contract shipped — letting packs written that morning under the
-// old instructions count as current — or after it, letting genuinely current
-// packs off. The pack has to say so itself.
+// Neither rank nor time can answer it. Rank made "held to the contract" mean
+// "newest overall", so a malformed pack stopped being an error the moment any
+// other spec produced one. A timestamp cutoff is no better: the directory stamp
+// carries no timezone, so the same pack classifies differently by region, and
+// any instant chosen is either before the contract shipped — letting packs
+// written that morning under the old instructions count as current — or after
+// it, letting genuinely current packs off.
+//
+// And an *optional* marker is no better either: a current producer that omits
+// it downgrades its own check to a warning, so the strict form becomes opt-in
+// and a stale verdict passes `--fail-on error`. So absence is a schema
+// violation like any other missing field, and a pack that predates the form
+// says `legacy` — written once, from the history, the same shape as the
+// `Pre-split-evidence` marker. Until that pass has run the packs are reported
+// rather than accepted, which is the safe direction, and running it is what
+// clears them: one line per pack, which is the migration the previous "cannot
+// be migrated" objection was missing.
 const REVISION_FORM_MARKER = "content-hash";
+const REVISION_FORM_LEGACY = "legacy";
+const ALLOWED_REVISION_FORMS = new Set([REVISION_FORM_MARKER, REVISION_FORM_LEGACY]);
 
 async function validateReviewPack(reviewPackDir: string): Promise<Issue[]> {
   const issues: Issue[] = [];
@@ -267,10 +277,15 @@ async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
   // that keeps its packs with nothing the operator could do. Those get the
   // finding as a `warning` so the state is still visible.
   const revisionForm = readString(parsed.revision_form);
-  if (revisionForm !== null && revisionForm !== REVISION_FORM_MARKER) {
-    violations.push(`\`revision_form\` は "${REVISION_FORM_MARKER}" のみ指定できます（省略は可）`);
+  if (revisionForm === null || !ALLOWED_REVISION_FORMS.has(revisionForm)) {
+    violations.push(
+      `\`revision_form\` は "${REVISION_FORM_MARKER}"（現行契約）または "${REVISION_FORM_LEGACY}"（形式導入前の pack、履歴から一度だけ付与）が必須です`,
+    );
   }
-  const declaresForm = revisionForm === REVISION_FORM_MARKER;
+  // Only an explicit `legacy` excuses a malformed value. Absence does not: it
+  // is a producer that forgot, and letting that pass would make the strict form
+  // opt-in.
+  const declaresForm = revisionForm !== REVISION_FORM_LEGACY;
   // Only when there is a value to judge: an empty string is already reported
   // by the schema check above, and saying it twice reads as two problems.
   const revisionText = readString(revision);
@@ -282,33 +297,13 @@ async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
             "`revision` の形式が不正です。git rev (7-64 hex) か `working-tree+<64 hex>`（content hash）を指定してください。`working-tree+<porcelain digest>` は内容が変わっても動かないため受理しません。" +
               (declaresForm
                 ? ""
-                : `（この pack は \`revision_form: "${REVISION_FORM_MARKER}"\` を宣言していないため warning 扱いです。当時の tree は復元できず移行もできません。）`),
+                : `（この pack は \`revision_form: "${REVISION_FORM_LEGACY}"\` を宣言しているため warning 扱いです。当時の tree は復元できず、移行先の content hash が存在しません。）`),
             declaresForm ? "error" : "warning",
             summaryPath,
             "reviewArtifacts.summaryRevision",
             [revisionText],
             "canonical",
             "`.qfai/assistant/skills/qfai-implement/references/evidence-revision.md` を参照してください。",
-          ),
-        ]
-      : [];
-
-  // A producer under the current contract that forgets the marker would
-  // otherwise silently downgrade its own check, so its absence is reported —
-  // as a warning, because a pack that predates the contract is in exactly the
-  // same state and has no way out of it.
-  const missingForm =
-    revisionText !== null && !declaresForm
-      ? [
-          issue(
-            "QFAI-REVIEW-009",
-            `summary.json に \`revision_form: "${REVISION_FORM_MARKER}"\` がありません。どの契約で書かれた pack か pack 自身から判定できないため、\`revision\` の形式違反は warning に留まります。現行契約の producer は必ず宣言してください。`,
-            "warning",
-            summaryPath,
-            "reviewArtifacts.summaryRevisionForm",
-            undefined,
-            "canonical",
-            "`.qfai/assistant/skills/qfai-implement/references/evidence-revision.md` を参照してください。過去の pack は宣言できないため、この warning は履歴として残ります。",
           ),
         ]
       : [];
@@ -335,12 +330,11 @@ async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
       : [];
 
   if (violations.length === 0) {
-    return [...missingRevision, ...missingForm, ...malformedRevision];
+    return [...missingRevision, ...malformedRevision];
   }
 
   return [
     ...missingRevision,
-    ...missingForm,
     ...malformedRevision,
     issue(
       "QFAI-REVIEW-007",

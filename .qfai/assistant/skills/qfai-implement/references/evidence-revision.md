@@ -121,17 +121,22 @@ It appears in three places, all carrying the same address:
    the RED / GREEN commands and results, and one for the refactor-verify pair.
 3. **The review pack** — `summary.json`'s `revision` field, which is what makes
    the fact machine-checkable (`QFAI-REVIEW-009`). Write
-   `"revision_form": "content-hash"` beside it. That marker is how a pack says
-   which contract produced it, and only a pack that declares it is held to the
-   form as an `error`: the packs already on disk were written before the form
-   existed and cannot be migrated to it — the tree each of their verdicts
-   described is not reconstructible, so there is no content hash to write
-   instead — and holding them to it would leave `validate --fail-on error`
-   permanently red with nothing the operator could do. Neither the pack's age
-   nor its rank among siblings can stand in for the marker: a directory stamp
-   carries no timezone, and "the newest pack" stopped being the current one the
-   moment another spec produced its own. Omitting the marker is itself reported,
-   so a producer cannot quietly downgrade its own check by forgetting it.
+   `"revision_form": "content-hash"` beside it — **required**, not optional.
+   That marker is how a pack says which contract produced it. Neither the pack's
+   age nor its rank among siblings can stand in for it: a directory stamp
+   carries no timezone, and "the newest pack" stops being the current one the
+   moment another spec produces its own. Nor can the marker be optional — a
+   producer that omitted it would downgrade its own check to a warning, which
+   makes the strict form opt-in and lets a stale verdict through
+   `--fail-on error`.
+
+   **A pack written before the form says `"revision_form": "legacy"`, and only
+   that excuses a malformed `revision`** (reported as a warning instead of an
+   error): the tree its verdict described is not reconstructible, so there is no
+   content hash to migrate to. Write those markers **once, from the history**,
+   the same way the `Pre-split-evidence` marker is written — one line per pack
+   already on disk. Until that pass has run those packs are reported rather than
+   accepted, which is the safe direction, and running it is what clears them.
 
 ## A transient observation names its own revision
 

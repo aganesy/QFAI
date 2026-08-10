@@ -347,7 +347,7 @@ The skill may declare "this spec's implementation is complete" only when:
   spec uncompletable (`../qfai-atdd/references/red-provenance.md#a-spec-with-no-atdd-owned-rows`)
 - Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain
-- Checkpoint verification passed at the spec-level boundary (see `#checkpoint-verification`)
+- Checkpoint verification passed at the spec-level boundary (see `#checkpoint-verification`), and its `Checkpoint verification seal` is **recomputed** here over the recorded command, result and revision. That boundary has no row, so gate item 12 never runs for it — without this recomputation the full-suite result on a terminal ledger could be edited from FAIL to PASS afterwards with no revision, no `Audited evidence hash` and no pack seal moving
 - No unresolved Change Request or waiver dependency exists. The gate covers only the
   `.qfai/decisions/CR-*.md` **in scope for this spec**; a CR confined to another spec never blocks
   this one. An in-scope CR is **resolved** only when every condition in

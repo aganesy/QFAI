@@ -2238,16 +2238,32 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(gatekeeper).not.toContain("- `.qfai/report/validate.spec-<id>.json` for the spec");
   });
 
-  it("makes a review pack declare which contract wrote it", async () => {
+  it("makes a review pack declare which contract wrote it, and requires it", async () => {
     // Age cannot say it — a directory stamp has no timezone, and any cutoff
-    // instant misclassifies one side of itself — and rank cannot either, since
-    // "newest" stops being true the moment another spec produces a pack.
+    // instant misclassifies one side of itself — rank cannot either, since
+    // "newest" stops being true the moment another spec produces a pack, and an
+    // optional marker makes the strict form opt-in.
     const evidence = flat(
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
-    expect(evidence).toContain('Write `"revision_form": "content-hash"` beside it');
-    expect(evidence).toContain("only a pack that declares it is held to the form as an `error`");
-    expect(evidence).toContain("Omitting the marker is itself reported");
+    expect(evidence).toContain('`"revision_form": "content-hash"` beside it — **required**');
+    expect(evidence).toContain('**A pack written before the form says `"revision_form": "legacy"`');
+    expect(evidence).toContain("Write those markers **once, from the history**");
+  });
+
+  it("seals the spec-level checkpoint, which no row gate reaches", async () => {
+    // That boundary has no row, so gate item 12 never runs for it — the
+    // full-suite result on a terminal ledger could be edited from FAIL to PASS
+    // afterwards with nothing moving.
+    const checkpoint = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/checkpoint-verification.md"),
+    );
+    expect(checkpoint).toContain("The spec-level boundary records a seal of its own");
+    expect(checkpoint).toContain("recompute it before spec-level completion is declared");
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "Checkpoint verification passed at the spec-level boundary (see `#checkpoint-verification`), and its `Checkpoint verification seal` is **recomputed** here",
+    );
   });
 
   it("exempts every blocking reviewer of the nested run, not just the gatekeeper", async () => {

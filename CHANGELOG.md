@@ -488,6 +488,21 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The `revision_form` marker is required, and only `legacy` excuses a
+  malformed `revision`.** An optional marker made the strict form opt-in: a
+  producer that omitted it downgraded its own check to a warning, so a
+  `working-tree+<porcelain digest>` — the spelling that does not move when the
+  file under review is edited — passed `--fail-on error`. Absence is now a
+  schema violation like any other missing field. A pack that predates the form
+  says `"revision_form": "legacy"`, written once from the history the same way
+  the `Pre-split-evidence` marker is; until that pass has run those packs are
+  reported rather than accepted, and running it is what clears them.
+- **The spec-level checkpoint carries a seal too.** The seal was defined per
+  item, and the spec-level boundary has no row — gate item 12 never runs for it,
+  so the full-suite result on a terminal ledger could be edited from FAIL to
+  PASS afterwards with no revision, no `Audited evidence hash` and no pack seal
+  moving. The spec completion conditions recompute it.
+
 - **A review pack declares which contract wrote it** — `"revision_form":
 "content-hash"` in `summary.json` — and only a pack that declares it is held
   to the strict `revision` form as an error. Neither of the two things that

@@ -1547,9 +1547,14 @@ agents:
         good RED pair, on artifacts its own ordering says cannot exist yet. At an
         observation gate the row's own evidence above is the whole input.
 
-      - `.qfai/report/validate.spec-<id>.json` for the spec under review, or the
-        `<report>/run-*/` directory of the run that produced it. **Not
-        `.qfai/report/validate.log`**: it and the run-log pointer are shared by every
+      - The scoped validate JSON for the spec under review — `validate.spec-<id>.json`
+        **beside the configured `output.validateJsonPath`**, not under a fixed
+        `.qfai/report/` — or the `run-*/` directory of the run that produced it, under
+        the configured `paths.outDir`. Read both from `qfai.config.yaml` the way the
+        SDD and discussion contracts do. A project that moved either output writes its
+        evidence where it said to, and looking for it at the default path reported a
+        missing artifact and stopped completion on a validate run that had succeeded
+        and left everything it owed. **Not `validate.log`**: it and the run-log pointer are shared by every
         run, scoped or not, and nothing serializes them, so a sibling stage validating
         at the same time overwrites what this one wrote — a failing run followed by a
         sibling's success reads as this spec's PASS

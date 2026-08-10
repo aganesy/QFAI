@@ -111,15 +111,16 @@ describe("review pack revision", () => {
     expect(schema[0]?.message).toContain("porcelain digest");
   });
 
-  it("reports a pack that declares no form as a warning", async () => {
+  it("reports a pack marked legacy as a warning", async () => {
     // The tree a past verdict described is not reconstructible, so there is no
     // content hash to migrate to — an error would leave `--fail-on error`
-    // permanently red for a repository that keeps its packs. A pack written
-    // before the marker existed cannot declare it, so it is not held to it.
-    const legacyPack = baseSummary();
-    delete legacyPack.revision_form;
+    // permanently red for a repository that keeps its packs. Only an explicit
+    // `legacy` says so; the marker is written once, from the history.
     const issues = await withPacks([
-      ["20260101000000000", { ...legacyPack, revision: "working-tree+9f2c1ab" }],
+      [
+        "20260101000000000",
+        { ...baseSummary(), revision_form: "legacy", revision: "working-tree+9f2c1ab" },
+      ],
     ]);
 
     expect(issues.filter((i) => i.code === "QFAI-REVIEW-007")).toEqual([]);
@@ -151,16 +152,24 @@ describe("review pack revision", () => {
     expect(issues.filter((i) => i.code === "QFAI-REVIEW-009")).toEqual([]);
   });
 
-  it("reports a producer that wrote a revision but forgot the marker", async () => {
-    // Otherwise forgetting it silently downgrades the producer's own check.
+  it("rejects a pack that declares no form at all", async () => {
+    // An optional marker makes the strict form opt-in: a producer that omits it
+    // downgrades its own check to a warning, and a `working-tree+<porcelain
+    // digest>` then passes `--fail-on error` while not moving when the file
+    // under review is edited.
     const undeclared = baseSummary();
     delete undeclared.revision_form;
-    const issues = await withPack({ ...undeclared, revision: "a".repeat(40) });
-    const found = issues.filter((i) => i.rule === "reviewArtifacts.summaryRevisionForm");
+    const issues = await withPack({ ...undeclared, revision: "working-tree+9f2c1ab" });
+    const errors = issues.filter((i) => i.code === "QFAI-REVIEW-007");
 
-    expect(found).toHaveLength(1);
-    expect(found[0]?.severity).toBe("warning");
-    expect(found[0]?.message).toContain("revision_form");
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors.every((i) => i.severity === "error")).toBe(true);
+    expect(errors.some((i) => i.message.includes("revision_form"))).toBe(true);
+    // And the malformed value is an error too, not the warning an undeclared
+    // pack used to get.
+    expect(
+      issues.some((i) => i.code === "QFAI-REVIEW-009" && i.message.includes("porcelain digest")),
+    ).toBe(false);
   });
 
   it("rejects a revision_form it does not define", async () => {
