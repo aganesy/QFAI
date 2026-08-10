@@ -342,6 +342,25 @@ function describeDamage(state: PathState, subject: string): string {
   }
 }
 
+/**
+ * Whether any probe found proof init ran, with a read error only fatal when
+ * none of them did.
+ *
+ * Every probe still runs — one `Promise.all` rejection used to end `qfai
+ * validate` for the whole project, so an unreadable regular file at one wrapper
+ * path, or an ACL on a create-only README that is not even part of the
+ * integration surface, stopped every profile on a project that could be *proved*
+ * initialised by the wrapper next to it. Evidence answers the question; an error
+ * only means this particular probe could not.
+ */
+async function anyEvidence(probes: readonly (() => Promise<boolean>)[]): Promise<boolean> {
+  const settled = await Promise.allSettled(probes.map((probe) => probe()));
+  if (settled.some((entry) => entry.status === "fulfilled" && entry.value)) return true;
+  const failure = settled.find((entry) => entry.status === "rejected");
+  if (failure !== undefined) throw failure.reason;
+  return false;
+}
+
 /** Whether a README at `filePath` is one `qfai init` wrote. */
 async function hasInitSignature(filePath: string): Promise<boolean> {
   // A regular file, checked before the read — and checked with `lstat`, not
@@ -629,13 +648,10 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
   // directory was reported missing and every profile failed. Only a link init
   // itself would have written counts: a symlink whose target is the one this
   // wrapper names.
-  const initialised =
-    (
-      await Promise.all(wrappers.map((wrapper, index) => isInitEvidence(wrapper, links[index])))
-    ).some(Boolean) ||
-    (
-      await Promise.all(INIT_MARKERS.map((marker) => hasInitSignature(path.join(root, ...marker))))
-    ).some(Boolean);
+  const initialised = await anyEvidence([
+    ...wrappers.map((wrapper, index) => () => isInitEvidence(wrapper, links[index])),
+    ...INIT_MARKERS.map((marker) => () => hasInitSignature(path.join(root, ...marker))),
+  ]);
   // Surfaces `qfai init` creates that are not there at all. Reported once each,
   // below, instead of once per wrapper they would have held: a directory
   // deleted whole is one act, and one ref per shipped skill buries that.
@@ -834,6 +850,20 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
     // sides converge on that skill, `isInside` is satisfied, and every profile
     // but `full` reports a healthy surface while the assistant loads the wrong
     // instructions.
+    // Its ancestors as well. `.qfai/assistant/skills` pointed at another
+    // directory inside the project follows through to a leaf that is a real
+    // entry, so the leaf check below is satisfied — and both resolved paths
+    // land in the same place, inside the project, so neither comparison has
+    // anything to say while every profile but `full` loads the wrong tree.
+    const canonicalAncestor = await symlinkAncestor(root, wrapper.canonicalRelative);
+    if (canonicalAncestor !== null && !damagedCanonicals.has(canonicalAncestor)) {
+      damagedCanonicals.add(canonicalAncestor);
+      broken.push({
+        relative: canonicalAncestor,
+        detail: "a canonical ancestor is a symlink",
+      });
+      continue;
+    }
     const canonicalOwn = await lstatOrNull(wrapper.canonical);
     if (
       canonicalOwn?.isSymbolicLink() === true &&
@@ -896,6 +926,18 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
                 : doc === "not-a-directory"
                   ? "resolves, but a path component above its SKILL.md is not a directory"
                   : `resolves, but its SKILL.md is a ${describeKind(doc)}`,
+        });
+        continue;
+      }
+      // A real file, like the directory holding it is a real directory. Init
+      // writes it that way, so a symlink is damage wherever it points — and
+      // pointing it at another skill's document inside the project is the case
+      // no resolved-path comparison can see, since both sides land there.
+      const docOwn = await lstatOrNull(skillDoc);
+      if (docOwn?.isSymbolicLink() === true) {
+        broken.push({
+          relative: wrapper.relative,
+          detail: "resolves, but its SKILL.md is a symlink",
         });
         continue;
       }

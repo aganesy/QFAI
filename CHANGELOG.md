@@ -503,6 +503,16 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A canonical ancestor is a real directory too.** `.qfai/assistant/skills`
+  redirected inside the project follows through to a real leaf, so the leaf
+  check passed and both resolved paths landed in the same place.
+- **A `SKILL.md` is a real file wherever a link would land**, which is the
+  case no resolved-path comparison can see.
+- **Proof that init ran outweighs a probe that could not read.** One
+  unreadable candidate rejected the whole evidence pass and stopped every
+  profile on a project the wrapper beside it already proved initialised.
+- **A restore that fails during the read path is reported**, with the sidecar
+  named — re-throwing the read error alone made the original look simply lost.
 - **A canonical is a real document, not a link to one.** Redirected at another
   skill inside the project, both resolved paths converge and the
   outside-the-project rule is satisfied — while the assistant loads the wrong

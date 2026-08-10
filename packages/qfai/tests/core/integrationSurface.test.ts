@@ -1026,6 +1026,68 @@ describe("a broken link on the way to a surface is not an absent surface", () =>
 });
 
 describe("a canonical is a real document, not a link to one", () => {
+  it("reports a canonical ancestor redirected inside the project", async () => {
+    // Following the ancestor lands on a real leaf, so the leaf check passes,
+    // and both resolved paths land in the same place inside the project — so
+    // neither comparison has anything to say.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+      const elsewhere = path.join(root, ".qfai", "assistant", "skills-real");
+      await mkdir(path.join(elsewhere, "qfai-atdd"), { recursive: true });
+      await writeFile(path.join(elsewhere, "qfai-atdd", "SKILL.md"), "# moved", "utf-8");
+      await rm(skillsDir, { recursive: true, force: true });
+      await symlink(elsewhere, skillsDir, "dir");
+
+      const found = await finding(root);
+      expect(found?.message).toContain("a canonical ancestor is a symlink");
+    });
+  });
+
+  it("reports a SKILL.md redirected at another document in the project", async () => {
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd", "qfai-verify"], []);
+      await wireAll(root, ["qfai-atdd", "qfai-verify"], []);
+      const doc = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md");
+      await rm(doc, { force: true });
+      await symlink(
+        path.join(root, ".qfai", "assistant", "skills", "qfai-verify", "SKILL.md"),
+        doc,
+        "file",
+      );
+
+      const found = await finding(root);
+      expect(found?.message).toContain("its SKILL.md is a symlink");
+    });
+  });
+});
+
+describe("proof that init ran outweighs a probe that could not read", () => {
+  it("does not end the run when one evidence candidate is unreadable", async () => {
+    // A wrapper path holding an unreadable regular file, or an ACL on a
+    // create-only README, stopped every profile on a project the wrapper next
+    // to it already proves initialised.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd", "qfai-verify"], []);
+      await wireAll(root, ["qfai-atdd", "qfai-verify"], []);
+      // `qfai-verify`'s wrapper in one directory is replaced by a directory,
+      // which `isInitEvidence` reads by trying to read a file: EISDIR, not
+      // ENOENT. The other wrappers still prove init ran.
+      const wrapper = path.join(root, ".claude", "skills", "qfai-verify");
+      await rm(wrapper, { recursive: true, force: true });
+      await mkdir(wrapper, { recursive: true });
+
+      const found = await finding(root);
+      expect(found?.message).toContain("directory, not a symlink");
+    });
+  });
+});
+
+describe("a canonical redirected outside the project", () => {
   it("reports a canonical redirected at another skill in the project", async () => {
     // Both realpaths converge on the other skill, so the resolved-path
     // comparison agrees and `isInside` is satisfied — while the assistant
@@ -1066,7 +1128,9 @@ describe("a nested SKILL.md is in the project too", () => {
         await symlink(path.join(outside, "SKILL.md"), doc, "file");
 
         const found = await finding(root);
-        expect(found?.message).toContain("its SKILL.md resolves outside the project");
+        // The symlink rule reaches it first: init writes this as a real file,
+        // so a link is damage before the question of where it lands.
+        expect(found?.message).toContain("its SKILL.md is a symlink");
       } finally {
         await rm(outside, { recursive: true, force: true });
       }

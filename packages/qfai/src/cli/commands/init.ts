@@ -1408,8 +1408,25 @@ async function recreateFlattenedLink(
   // leave it alone — the atomic claim belongs on every restore, not only the
   // one after a failed `symlink`.
   const original = await readFile(sidecar, "utf-8").catch(async (readErr: unknown) => {
-    await restoreSidecar(sidecar, linkPath).catch(() => undefined);
-    throw readErr;
+    // A failed restore here is not a detail to swallow. The wrapper is gone
+    // from its pathname and lives in the sidecar, and re-throwing the read
+    // error alone told the operator neither of those — so the original looked
+    // simply lost. Same shape as the rollback below: what happened, and where
+    // the content is.
+    const restoreErr = await restoreSidecar(sidecar, linkPath).then(
+      () => null,
+      (err: unknown) => err,
+    );
+    if (restoreErr === null) throw readErr;
+    throw new Error(
+      [
+        `平坦化された symlink の修復に失敗しました: ${linkPath}`,
+        `退避したファイルの読み取りに失敗しました: ${describeError(readErr)}`,
+        `復元にも失敗しました: ${describeError(restoreErr)}`,
+        `元のファイルは次の場所にあります: ${sidecar}`,
+      ].join("\n"),
+      { cause: readErr },
+    );
   });
   if (toComparableTarget(original) !== toComparableTarget(target)) {
     await restoreSidecar(sidecar, linkPath);
