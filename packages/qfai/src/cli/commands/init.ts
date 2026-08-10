@@ -1409,13 +1409,42 @@ async function recreateFlattenedLink(
   // that said the content was preserved would be describing a file that is
   // gone. `wx` refuses a name that is taken, so the loop finds one that is not.
   const sidecar = await claimSidecar(linkPath);
-  await rename(linkPath, sidecar);
+  try {
+    await rename(linkPath, sidecar);
+  } catch (renameErr: unknown) {
+    // Nothing has moved, so the claim is a stray empty file — and it is one
+    // prune deliberately leaves alone, while the next attempt sidesteps it with
+    // a numbered name. Repeated failures would pile them up to the 1000-name
+    // ceiling and refuse every later repair.
+    await rm(sidecar, { force: true }).catch(() => undefined);
+    throw renameErr;
+  }
   // What was actually moved, not what the caller saw a moment ago. Between
   // `isFlattenedLink` and the rename another process can leave a huge file or a
   // FIFO at the path, and the caller's 4096-byte check protected an inode that
   // is no longer there — the read below would have exhausted memory, or blocked
   // for ever, with the original already moved aside.
-  const moved = await lstat(sidecar);
+  //
+  // Inside the rollback, because by now the wrapper *has* moved: a permission
+  // change or a transient `EIO` on this probe left the pathname empty and the
+  // original in the sidecar, with nothing said about either — worse than the
+  // flattened state the repair started from.
+  const moved = await lstat(sidecar).catch(async (statErr: unknown) => {
+    const restoreErr = await restoreSidecar(sidecar, linkPath).then(
+      () => null,
+      (err: unknown) => err,
+    );
+    if (restoreErr === null) throw statErr;
+    throw new Error(
+      [
+        `平坦化された symlink の修復に失敗しました: ${linkPath}`,
+        `退避したファイルの検査に失敗しました: ${describeError(statErr)}`,
+        `復元にも失敗しました: ${describeError(restoreErr)}`,
+        `元のファイルは次の場所にあります: ${sidecar}`,
+      ].join("\n"),
+      { cause: statErr },
+    );
+  });
   if (!moved.isFile() || moved.size > 4096) {
     await restoreSidecar(sidecar, linkPath);
     return "skipped";

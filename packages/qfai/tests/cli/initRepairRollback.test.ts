@@ -14,7 +14,7 @@
  */
 
 import type * as fsPromises from "node:fs/promises";
-import { lstat, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -22,14 +22,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type FsPromises = typeof fsPromises;
 
-const { symlinkSpy, writeFileSpy, readFileSpy, renameSpy, linkSpy, rmSpy } = vi.hoisted(() => ({
-  symlinkSpy: vi.fn(),
-  writeFileSpy: vi.fn(),
-  readFileSpy: vi.fn(),
-  renameSpy: vi.fn(),
-  linkSpy: vi.fn(),
-  rmSpy: vi.fn(),
-}));
+const { symlinkSpy, writeFileSpy, readFileSpy, renameSpy, linkSpy, rmSpy, lstatSpy } = vi.hoisted(
+  () => ({
+    symlinkSpy: vi.fn(),
+    writeFileSpy: vi.fn(),
+    readFileSpy: vi.fn(),
+    renameSpy: vi.fn(),
+    linkSpy: vi.fn(),
+    rmSpy: vi.fn(),
+    lstatSpy: vi.fn(),
+  }),
+);
 
 vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<FsPromises>("node:fs/promises");
@@ -41,6 +44,7 @@ vi.mock("node:fs/promises", async () => {
     rename: (...args: unknown[]) => renameSpy(actual, ...args),
     link: (...args: unknown[]) => linkSpy(actual, ...args),
     rm: (...args: unknown[]) => rmSpy(actual, ...args),
+    lstat: (...args: unknown[]) => lstatSpy(actual, ...args),
   };
 });
 
@@ -78,6 +82,7 @@ beforeEach(() => {
   renameSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.rename(...args));
   linkSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.link(...args));
   rmSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.rm(...args));
+  lstatSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.lstat(...args));
 });
 
 describe("a repair that cannot finish leaves the file it found", () => {
@@ -292,6 +297,66 @@ describe("a sidecar left by an earlier failed repair is not overwritten", () => 
 
       expect(await readFile(stranded, "utf-8")).toBe(strandedContent);
       expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
+    });
+  });
+});
+
+describe("a claim that never took anything is released", () => {
+  it("removes the empty sidecar when the rename fails", async () => {
+    // Prune deliberately leaves these alone and the next attempt sidesteps the
+    // name, so repeated failures would pile them up to the ceiling and refuse
+    // every later repair.
+    await withProject(async (root) => {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      const linkPath = path.join(root, LINK);
+      await rm(linkPath, { recursive: true, force: true });
+      await mkdir(path.dirname(linkPath), { recursive: true });
+      await writeFile(linkPath, FLATTENED, "utf-8");
+
+      renameSpy.mockImplementation((actual: FsPromises, from: string, to: string) =>
+        from === linkPath
+          ? Promise.reject(new Error("simulated rename failure"))
+          : actual.rename(from, to),
+      );
+
+      await captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: false, yes: true }),
+      ).catch(() => undefined);
+
+      renameSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.rename(...args),
+      );
+      const leftovers = (await readdir(path.dirname(linkPath))).filter((name) =>
+        name.includes(".qfai-repair-"),
+      );
+      expect(leftovers).toEqual([]);
+    });
+  });
+
+  it("restores the wrapper when the post-move probe fails", async () => {
+    // By then the wrapper has moved, so an error here left the pathname empty
+    // and the original in the sidecar with nothing said about either.
+    await withProject(async (root) => {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      const linkPath = path.join(root, LINK);
+      await rm(linkPath, { recursive: true, force: true });
+      await mkdir(path.dirname(linkPath), { recursive: true });
+      await writeFile(linkPath, FLATTENED, "utf-8");
+
+      lstatSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
+        target.includes(".qfai-repair-")
+          ? Promise.reject(new Error("simulated probe failure"))
+          : actual.lstat(target, ...rest),
+      );
+
+      await captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: false, yes: true }),
+      ).catch(() => undefined);
+
+      lstatSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.lstat(...args));
+      expect(await readFile(linkPath, "utf-8")).toBe(FLATTENED);
     });
   });
 });

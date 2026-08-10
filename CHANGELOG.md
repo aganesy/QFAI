@@ -505,6 +505,13 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A claim that never took anything is released.** A failed `rename` left an
+  empty sidecar that prune deliberately skips and the next attempt sidesteps,
+  so repeated failures piled them up to the ceiling and refused every later
+  repair.
+- **The post-move probe is inside the rollback.** By then the wrapper has
+  moved, so a permission change or a transient `EIO` there left the pathname
+  empty and the original in the sidecar with nothing said about either.
 - **A repair sidecar is not pruned as a stale wrapper.** It is named after the
   wrapper it holds, so it matched the `qfai-` prefix — and prune runs first, so
   a `--force` re-run deleted the file an earlier failed repair preserved.
