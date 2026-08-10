@@ -4,6 +4,7 @@ import path from "node:path";
 import { createDoctorData, type DoctorProfile } from "../../core/doctor.js";
 import { cleanStaleReviewPacks } from "../../core/doctor/cleanReviewPacks.js";
 import { runAutoremediate } from "../../core/doctor/autoremediate.js";
+import { ensureRootGitignoreEntries } from "./init.js";
 import { findConfigRoot, loadConfig } from "../../core/config.js";
 import { info } from "../lib/logger.js";
 
@@ -111,6 +112,15 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
     // --autoremediate` would see clean + config-fill run but never the
     // install they were expecting. The diagnostic pass below also receives
     // `skillProfile`, so the two stay in lockstep on the same option.
+    // Before it, so the record the legacy-review-pack migration writes is not
+    // ignored: an existing repository still carries the older managed block,
+    // whose `.qfai/review/*` would keep `.legacy-packs` out of every commit —
+    // and every legacy claim is then uncorroborated in CI and in the next
+    // clone. `runAutoremediate` lives in core and this helper in the CLI, so
+    // the call belongs here rather than the import belonging there.
+    if (!isCi) {
+      await ensureRootGitignoreEntries(resolvedRoot, Boolean(options.dryRun));
+    }
     const summary = await runAutoremediate({
       root: resolvedRoot,
       dryRun: Boolean(options.dryRun),

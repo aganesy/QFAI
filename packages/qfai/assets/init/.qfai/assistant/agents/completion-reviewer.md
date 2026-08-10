@@ -26,7 +26,7 @@ tools: [Read, Glob, Grep, Bash]
 - Validation evidence and gate results
 - `.qfai/specs/<spec-id>/tdd/test-list.md` — the ledger, for the row under review
 - The per-item evidence file that row's `Layer` owns: `.qfai/evidence/implement-<spec-id>.md`,
-  or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` row
+  or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row
 
 **Validate evidence is a completion-gate input, not an item-cycle one.** When
 this role is routed inside an item cycle — `/qfai-atdd` stage gate P1c hands a

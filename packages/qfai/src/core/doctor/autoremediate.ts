@@ -197,6 +197,12 @@ export async function runAutoremediate(
   // history fails `--fail-on error` on adoption, for a condition no producer
   // can go back and fix. Additive and idempotent, so a repeat run is a no-op
   // and a pack that forgets its marker *after* the migration is not excused.
+  // The managed `.gitignore` block is refreshed by the caller before this runs
+  // (`doctor.ts`): an existing repository still carries the older one, whose
+  // `.qfai/review/*` would ignore the record written below, so it never reaches
+  // a commit and every legacy claim is uncorroborated again in CI and in the
+  // next clone. It is done there rather than here because this module is core
+  // and that helper is CLI — importing it the other way is a cycle.
   const migration = await migrateLegacyReviewPacks(options.root, {
     ...(options.dryRun ? { dryRun: true } : {}),
   });

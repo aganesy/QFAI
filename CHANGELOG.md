@@ -488,6 +488,14 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Added
 
+- **`qfai doctor --autoremediate` writes both halves of the legacy migration**
+  — the `.legacy-packs` record _and_ `revision_form: "legacy"` in each pack that
+  declares no form. The validator relaxes only when both agree, so writing the
+  record alone left every pack a blocking `QFAI-REVIEW-007`: the state the
+  migration exists to clear. It refreshes the managed `.gitignore` block first,
+  because an existing repository still carries the older one, whose
+  `.qfai/review/*` would keep the record out of every commit and leave every
+  legacy claim uncorroborated in CI and in the next clone.
 - **`qfai doctor --autoremediate` records the review packs that predate
   `revision_form`.** Without it, taking a version that requires the marker turns
   every pack already on disk into a blocking `QFAI-REVIEW-007` — a repository
@@ -498,6 +506,14 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The Integration alignment reaches the two places it had missed.** Phase Red
+  step 2 still held back only `E2E` / `API` from `todo -> red`, so an
+  Integration row advanced before step 3b could verify its handoff — and the
+  next run selects only `todo` and `review-fix`, leaving a `red` row with no RED
+  behind it. The mandatory-writer contract, the execution ledger and both
+  reviewers' inputs still sent only `E2E` / `API` evidence to the ATDD file, so
+  a correct Integration handoff put its provenance in one file and its GREEN,
+  refactor pair and verdicts in another.
 - **`Layer = Integration` rows are on the same side of the split as their
   tests.** `QFAI-ATDD-112` covers every `L3` TC — and every TC with no declared
   `Level` — from `tests/integration/**`, and `/qfai-atdd`'s P4 writes those
@@ -556,14 +572,6 @@ report` as well, which was computing `done: 1 / open: 0` from the same
   paste or a transposed digit passes the form check and names no tree at all. A
   warning, not an error: a shallow clone or an unfetched branch answers the same
   way, and the check says nothing at all outside a git work tree.
-- **No commit id is recorded beside a seal.** A commit id does not exist until
-  its content is fixed, so a field naming "the commit that contains this field"
-  cannot be written — appending the id changes the content and therefore the id,
-  and `--amend` is forbidden here without explicit instruction. Every round
-  would have failed to produce a required field. The recomputation finds the
-  committed value from history instead (`git log -p -- <evidence file>`), the
-  same way the `Pre-split-evidence` pass finds the commit that last advanced a
-  row.
 - **A `legacy` claim is corroborated against the migration record.** The field
   is exactly as writable as the `revision` it excuses, so a current producer
   with a broken value could downgrade its own finding by typing `legacy`. Only a
@@ -583,14 +591,6 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 - **Two seal references resolve.** `references/evidence-revision.md` does not
   exist under `qfai-atdd`, and `../qfai-implement/references/…` from inside
   `qfai-implement/references/` names a directory twice.
-- **A seal's expected value is fixed by committing it**, and every
-  recomputation compares against the committed copy. Storing it beside the thing
-  it seals protected nothing: both live in the evidence tree, which no
-  reviewer's audit subject covers and the working-tree revision excludes, so one
-  pass could edit the pack, recompute the seal, rewrite the status and leave
-  every recomputation agreeing. The rule is stated once, in
-  `evidence-revision.md`, and the pack seal and both checkpoint seals point at
-  it.
 - **An item's `Review pack seal` names the pack and the round it covers.** A
   spec has several packs and a blocking REVISE opens more, so a bare hash left
   the gate unable to say which directory to recompute over — it either checked

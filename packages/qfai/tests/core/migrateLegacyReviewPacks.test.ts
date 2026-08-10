@@ -79,23 +79,11 @@ describe("legacy review pack migration", () => {
     const before = await validateReviewArtifacts(root);
     expect(before.some((i) => i.code === "QFAI-REVIEW-007")).toBe(true);
 
-    await migrateLegacyReviewPacks(root);
-    // The pack still has to say `legacy`; the manifest is what makes that claim
-    // believable, so the migration writes both halves of the same fact.
-    const packSummary = path.join(
-      root,
-      ".qfai",
-      "review",
-      "review-20260101000000000",
-      "summary.json",
-    );
-    const parsed: unknown = JSON.parse(await readFile(packSummary, "utf-8"));
-    expect(typeof parsed === "object" && parsed !== null).toBe(true);
-    await writeFile(
-      packSummary,
-      JSON.stringify({ ...(parsed as object), revision_form: "legacy" }, null, 2),
-      "utf-8",
-    );
+    // Both halves of the same fact, written by the migration: the manifest, and
+    // the pack marker the validator checks it against. Writing only one left
+    // every pack a blocking finding — the state this exists to clear.
+    const result = await migrateLegacyReviewPacks(root);
+    expect(result.marked).toEqual(["review-20260101000000000"]);
 
     const after = await validateReviewArtifacts(root);
     expect(after.some((i) => i.code === "QFAI-REVIEW-007")).toBe(false);

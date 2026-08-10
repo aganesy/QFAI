@@ -19,6 +19,8 @@ const HEADER = [
 export type LegacyPackMigration = {
   /** Pack names added by this run. Empty on a repeat run. */
   added: string[];
+  /** Packs whose `summary.json` gained `revision_form: "legacy"`. */
+  marked: string[];
   /** Pack names already recorded. */
   existing: string[];
   /** Absolute path of the manifest, whether or not it was written. */
@@ -56,12 +58,26 @@ export async function migrateLegacyReviewPacks(
     added.push(packName);
   }
 
-  if (added.length > 0 && options.dryRun !== true) {
-    const body = [...HEADER, ...[...existing, ...added].sort((a, b) => a.localeCompare(b)), ""];
-    await writeFile(manifestPath, body.join("\n"), "utf-8");
+  // Both halves of the same fact, or neither is any use. The validator relaxes
+  // only on `revision_form === "legacy"` **and** a manifest that agrees, so a
+  // migration that wrote the manifest alone left every pack a blocking
+  // `QFAI-REVIEW-007` — exactly the state it exists to clear.
+  const marked: string[] = [];
+  if (options.dryRun !== true) {
+    if (added.length > 0) {
+      const body = [...HEADER, ...[...existing, ...added].sort((a, b) => a.localeCompare(b)), ""];
+      await writeFile(manifestPath, body.join("\n"), "utf-8");
+    }
+    for (const packName of [...existing, ...added]) {
+      if (await markPackLegacy(path.join(reviewRoot, packName, "summary.json"))) {
+        marked.push(packName);
+      }
+    }
+  } else {
+    marked.push(...added);
   }
 
-  return { added, existing, manifestPath };
+  return { added, marked, existing, manifestPath };
 }
 
 async function listPackNames(reviewRoot: string): Promise<string[]> {
@@ -97,6 +113,31 @@ async function readManifest(manifestPath: string): Promise<string[]> {
  * recorded: it cannot be a current producer's output, and leaving it out would
  * make the very packs that most need the record miss it.
  */
+/**
+ * Add `revision_form: "legacy"` to a pack that declares no form.
+ *
+ * Only when the field is absent: a pack that already says `content-hash` was
+ * written by a current producer and is not this migration's to reclassify, and
+ * one that already says `legacy` needs nothing. An unreadable or unparseable
+ * summary is left alone — there is nothing here that can safely rewrite it.
+ */
+async function markPackLegacy(summaryPath: string): Promise<boolean> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(summaryPath, "utf-8"));
+  } catch {
+    return false;
+  }
+  if (typeof parsed !== "object" || parsed === null) return false;
+  const record = parsed as Record<string, unknown>;
+  if (typeof record.revision_form === "string" && record.revision_form.trim().length > 0) {
+    return false;
+  }
+  const body = JSON.stringify({ ...record, revision_form: "legacy" }, null, 2);
+  await writeFile(summaryPath, `${body}\n`, "utf-8");
+  return true;
+}
+
 async function declaresRevisionForm(summaryPath: string): Promise<boolean> {
   try {
     const parsed: unknown = JSON.parse(await readFile(summaryPath, "utf-8"));

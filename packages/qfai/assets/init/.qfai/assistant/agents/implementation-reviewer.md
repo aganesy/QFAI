@@ -33,7 +33,7 @@ tools: [Read, Glob, Grep, Bash]
 - `.qfai/contracts/api/**` and `.qfai/contracts/db/**`
 - `.qfai/specs/<spec-id>/tdd/test-list.md` — the ledger, for the row under review
 - The per-item evidence file that row's `Layer` owns: `.qfai/evidence/implement-<spec-id>.md`,
-  or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` row
+  or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row
 
 **The last two are what the `Audited evidence hash` is computed over.** This
 role records that hash itself, over the row's phase-authored fields — and those

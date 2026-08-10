@@ -665,7 +665,15 @@ async function emitLegacyAssistantSteeringSunset(
 // Root .gitignore — QFAI managed block
 // ---------------------------------------------------------------------------
 
-async function ensureRootGitignoreEntries(
+/**
+ * Rewrite the managed `.gitignore` block, adding any governance negation it is
+ * missing.
+ *
+ * Exported because the legacy-review-pack migration needs it: it writes a
+ * governance record under `.qfai/review/`, and an existing repository still
+ * carries the older block whose `.qfai/review/*` would ignore it.
+ */
+export async function ensureRootGitignoreEntries(
   destRoot: string,
   dryRun: boolean,
 ): Promise<{ copied: string[]; skipped: string[] }> {

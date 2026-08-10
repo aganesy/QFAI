@@ -105,7 +105,7 @@ describe.each(TREES)("%s", (tree) => {
     // The heading is short so one anchor serves every reference to it; the
     // layers it covers are named in the first line of its body.
     expect(ledger).toContain("## ATDD-owned rows");
-    expect(ledger).toContain("A row whose `Layer` is `E2E` or `API`.");
+    expect(ledger).toContain("A row whose `Layer` is `E2E`, `API` or `Integration`");
     expect(ledger).toContain("**There is no waiver here.**");
     expect(ledger).toContain("**The falsifiability path is the answer, not `exception`.**");
     expect(ledger).toContain(
@@ -309,7 +309,7 @@ describe.each(TREES)("%s (ownership and gate alignment)", (tree) => {
     // missing or malformed was parked at `red` with no RED behind it — and an
     // `exception` row reached its DR only after an illegal `red` hop.
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("not yet for an `E2E` / `API` row");
+    expect(implement).toContain("not yet for an `E2E` / `API` / `Integration` row");
     expect(implement).toContain("`exception` writes `todo -> exception`");
     expect(implement).toContain("leaves the row at `todo` and stops with a handoff note");
   });
@@ -2408,6 +2408,30 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(implement).toContain(
       "`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row",
     );
+  });
+
+  it("keeps an Integration row at todo until its handoff is verified", async () => {
+    // Step 2 held back only E2E/API, so an Integration row advanced to `red`
+    // before step 3b could stop it — and the next run picks up only `todo` and
+    // `review-fix`, leaving a `red` row with no RED behind it.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("not yet for an `E2E` / `API` / `Integration` row");
+  });
+
+  it("sends an Integration row's evidence to the file its provenance is in", async () => {
+    // The writer contract still sent only E2E/API to the ATDD file, so the
+    // GREEN, the refactor pair and the verdicts landed in the other one and
+    // item 10 read half an entry from each.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row, whose RED provenance",
+    );
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("A row whose `Layer` is `E2E`, `API` or `Integration`");
+    for (const agent of ["completion-reviewer", "implementation-reviewer"]) {
+      const reviewer = flat(await read(tree, `assistant/agents/${agent}.md`));
+      expect(reviewer).toContain("for an `E2E` / `API` / `Integration` row");
+    }
   });
 
   it("exempts every blocking reviewer of the nested run, not just the gatekeeper", async () => {
