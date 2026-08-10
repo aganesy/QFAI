@@ -5846,3 +5846,76 @@ review fan-out do not run concurrently.** The review is the one that can close a
 the row is genuinely started — the correct shape is the one the skill already names for an interrupted
 `review-fix` row: resume it rather than re-issue it, because a row left mid-phase by an interrupted session
 is otherwise never picked up. Recorded here so the resumption is not mistaken for a fresh start.
+
+#### TDD-0038 review fixes landed at `e1ce8747`, and three more instructions of mine were refused
+
+Three test artifacts changed; `workflowsIntegrity.ts` still `851f72c3` and **no production file in the
+commit**. Row GREEN at final bytes (`10 passed` across the three `spec0006WorkflowsIntegrity` suites);
+closure widened to **37 file selectors** — every suite importing the changed helper plus every doctor /
+shipped-workflow / provenance suite — giving `348 passed | 14 skipped (362)`, exit 0; `pnpm ci:lint` exit 0
+across all ten members, unpiped with `$?` read directly.
+
+**My instruction A4 would have shipped a new false statement.** I said guard #1 "closes a false RED, not a
+vacuity" and to narrow it to the row's absence claim. Measured (M5, chain
+`fded5ed1 → f8f5f4ba → c5f391dc`): of six claims, **two** pass under an empty record — the absence sweep
+*and* the `comparedCount` cardinality check, because with an empty record both of its sides collapse to 0 and
+it **self-satisfies**. Narrowing the vacuity to the absence claim alone implies the cardinality claim
+reddens; it does not. The shipped text names **both** vacuities and records "2 passed / 4 red". That is the
+**third** instruction of mine that would have created the very class the round was closing.
+
+**My comment-share note was wrong, and it was the note correcting an earlier wrong one.** The file was
+already at **59.9%**, not 62%, so the band was not "59.7 and a row not to imitate" — it was already at the
+sibling's value with **no slack at all**. It landed **60.8% (248/408, +9 lines)** while replacing four
+derived statements with their measurements.
+
+**Ruling, recorded in the brief**: the sibling band is a **target, not a cap**, and a measurement that
+replaces a derivation is **not padding**. The one hard cap is the absolute 361 on `repairText.test.ts`,
+which exists because that file reached 75% and took two rounds to pay down. Deleting a measurement to hit a
+share would trade accuracy for a number, which is the opposite of what the brief asks for.
+
+**A1 was one instance of a two-instance defect.** The same field miscount lived at `:226` in the TDD-0033
+row, which was not in my list; fixing only mine would have left the file contradicting itself on the same
+measurement.
+
+**And finding B had a fourth lossy path the precondition cannot close**: `extractWorkflows` drops any entry
+missing one of its three validated fields and drops per-entry extras, so a **present, parseable, non-empty**
+record can still lose data through the round trip — invisible to an empty-keys precondition. The JSDoc now
+states the loss as a **property of the route** ("keeps only what the reader RETURNS and drops the rest") with
+the header reading "what that route costs, **at least**", rather than as a closed list. That is the
+exhaustiveness lesson applied to the fix for an exhaustiveness defect.
+
+##### `M4`: a single-site mutation the doubling does not catch — a neighbour does
+
+Base `851f72c3` → mutant `27313598`, needle `  for (const name of recordedNames) {` →
+`  for (const name of [...recordedNames, "qfai-tests.yml"]) {`. TDD-0038's row goes **fully green** — the
+entry-less name *is* an operand and `comparedCount` still equals `recordedNames.length`, which is the direct
+proof that the assertion pins reported **size**, not membership. It reddens the **neighbouring TDD-0033 row**
+instead, because that row's collision is present on disk, so once it becomes an operand it drifts and is
+named.
+
+So the row's coverage picture is now: `M1`/`M2` bound the two answering statements, `M3` shows the silence is
+gate-dependent, `M6` shows the assertion is live, and **`M4` shows one gate can be removed with this row
+staying green and a sibling catching it.** Four proofs and one measured hand-off, where the record originally
+claimed a single structural fact.
+
+##### The harness clause that leaked a mutant, now in the brief
+
+Brief §2 said the mutation loop "reverts in a `try/finally` that prints its verification". **For a multi-edit
+mutation that print is not evidence.** The implementer's first `M5` run printed *"matches base"* for **both**
+edits and still left edit 1's mutation in the tree, because edit 2's captured "before" already **contained**
+edit 1's mutation, so a forward-order restore reinstated it. `git status` caught it; the print did not.
+
+Fixed in the brief: **restore in reverse order, and anchor the printed check on the HEAD blob** rather than on
+the per-edit "before". The failure is silent in exactly the way the `tail`-pipe one is.
+
+**Bounded contamination check, because this affects earlier work**: the only multi-edit mutations recorded in
+this slice are TDD-0038's `M3` and the reviewer's `M5`. `M3`'s pair was **independently reproduced by
+`qa-gatekeeper`** from base + needle, so its result is corroborated by a second harness rather than resting on
+the defective print. No other recorded measurement is multi-edit.
+
+##### Two follow-ups, routed rather than smuggled
+
+1. **The precondition throw has no CI witness.** My instruction was "no new assertion", so nothing exercises
+   it except `M6`. A witness needs its **own ledger row** — a fixture-helper precondition test — not an
+   assertion slipped into a row whose obligation is leg (b). Recorded for `delivery-planner`.
+2. The brief's §2 clause is fixed above, and §8's ruling is recorded, so neither is owed.

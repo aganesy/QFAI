@@ -58,6 +58,13 @@ Both harness checks are required and catch **disjoint** modes: needle-uniqueness
 mutation loop **reverts in a `try/finally` that prints its verification** — two drivers crashed mid-run and
 left a mutant in the tree, and the printed line is what caught both. Nothing else would have.
 
+**For a MULTI-EDIT mutation the printed verification is not evidence, and this cost a leaked mutant.** An
+implementer's two-edit run printed "matches base" for **both** edits and still left edit 1's mutation in the
+tree: edit 2's captured "before" already contained edit 1's mutation, so a forward-order restore reinstated
+it. `git status` caught it; the print did not. **Restore in reverse order, and anchor the printed check on
+the HEAD blob rather than on the per-edit "before".** The failure is silent in exactly the way the
+`tail`-pipe one is.
+
 Whitespace is part of a mutation's identity: a needle including versus excluding its trailing newline gives
 different blobs, and a literal tab versus a `\t` escape gives different blobs. State which.
 
@@ -124,6 +131,16 @@ compiler catches something there is false.** One such claim shipped and was caug
   `vitest` is a package-level dep, so Node's upward walk misses it even from a nested worktree.
 
 ## 8. Comment volume
+
+**Ruling, after this was got wrong twice: the sibling band is a TARGET, not a cap, and a measurement that
+replaces a derivation is not padding.** The one hard cap in this slice is the absolute count on
+`repairText.test.ts` (361), which exists because that file reached 75% and needed two rounds to pay down.
+Elsewhere, ~60% is where to aim. When a round replaces derived statements with their measurements — which is
+what §1 demands — the line count goes **up**, and enforcing a ratio against that trades accuracy for a
+number. Record both figures and say which way each moved; do not delete a measurement to hit a share.
+
+I got the comparison itself wrong twice: once citing a file's **own** pre-change ratio as a sibling's, and
+once citing "59.7 and 62" when the file under discussion was already at 59.9 and had no slack at all.
 
 `TDD-0032` reached **75%** comment share against siblings at **60-62%**, and paying it down cost two extra
 rounds. Match the siblings. Keep the **rule**, move the **derivation** to the evidence file — with one
