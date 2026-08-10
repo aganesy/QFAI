@@ -1028,6 +1028,24 @@ describe("what init wrote is still checked after the roster moves on", () => {
     });
   });
 
+  it("says nothing about a one-line file that is not byte-exactly a target", async () => {
+    // Git writes the target for mode `120000` with no trailing newline, so
+    // trimming one off made a project's own note indistinguishable from a
+    // wrapper — and the finding told the operator to delete it.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      await writeFile(
+        path.join(root, ".claude", "skills", "note.txt"),
+        "../../.qfai/assistant/skills/legacy-research\n",
+        "utf-8",
+      );
+
+      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
+
   it("says nothing about a repair sidecar, which is not a wrapper", async () => {
     // It holds the flattened target, so it reads as one — and it exists because
     // a repair could not finish, which sometimes makes it the only surviving
@@ -1135,7 +1153,11 @@ describe("a resolving link is a finding, not a reason to stop", () => {
     });
   });
 
-  it("reports structural damage for a cycle on a canonical", async () => {
+  it("does not stop the profile for a cycle on a canonical leaf", async () => {
+    // The walks over this tree list a directory with `withFileTypes` and
+    // descend only into `isDirectory()` entries, so a symlink leaf — cycle or
+    // not — is listed and skipped and no `ELOOP` ever comes out. Treating it as
+    // unwalkable hid every unrelated finding behind a link to repair first.
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
@@ -1148,7 +1170,62 @@ describe("a resolving link is a finding, not a reason to stop", () => {
 
       const report = await inspectIntegrationSurface(root);
       expect(report.issues.map((entry) => entry.code)).toContain("QFAI-LINK-001");
-      expect(report.unwalkable).toContain(".qfai/assistant/skills/qfai-atdd");
+      expect(report.unwalkable).toEqual([]);
+    });
+  });
+
+  // POSIX only: this is the `ENOTDIR` shape, and Windows folds that errno into
+  // `ENOENT`, which reads as absence. CI runs the ubuntu lane.
+  it.skipIf(process.platform === "win32")(
+    "stops the profile for a regular file where a canonical directory belongs",
+    async () => {
+      // That is the one shape `readdir` cannot survive: it gets as far as the
+      // call and raises `ENOTDIR`.
+      await withProject(async (root) => {
+        if (!(await canCreateSymlink(root))) return;
+        await seedCanonical(root, ["qfai-atdd"], []);
+        await wireAll(root, ["qfai-atdd"], []);
+        const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+        await rm(skillsDir, { recursive: true, force: true });
+        await writeFile(skillsDir, "not a directory\n", "utf-8");
+
+        const report = await inspectIntegrationSurface(root);
+        // Named at the component that is not a directory, not at the leaf below
+        // it: the leaf is not the path a walk fails on.
+        expect(report.unwalkable).toContain(".qfai/assistant/skills");
+      });
+    },
+  );
+
+  it("reports the canonical too when the wrapper was flattened", async () => {
+    // `qfai init` repairs a flattened wrapper on its own and leaves the
+    // canonical as it found it, so reporting only the wrapper had the operator
+    // clear the finding and end with a healthy symlink loading the wrong
+    // instructions.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd", "qfai-verify"], []);
+      await wireAll(root, ["qfai-atdd", "qfai-verify"], []);
+      // Every wrapper for this skill, not one: a checkout flattens them all,
+      // and leaving one real symlink meant its branch reported the canonical
+      // and the gap never showed.
+      for (const dir of SKILL_INTEGRATION_DIRS) {
+        const wrapper = path.join(root, ...dir.split("/"), "qfai-atdd");
+        await rm(wrapper, { recursive: true, force: true });
+        await writeFile(wrapper, skillTarget(dir, "qfai-atdd"), "utf-8");
+      }
+      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      await rm(canonical, { recursive: true, force: true });
+      await symlink(
+        path.join(root, ".qfai", "assistant", "skills", "qfai-verify"),
+        canonical,
+        "dir",
+      );
+
+      const found = await finding(root);
+      expect(found?.refs).toContain(".claude/skills/qfai-atdd");
+      expect(found?.refs).toContain(".qfai/assistant/skills/qfai-atdd");
+      expect(found?.message).toContain("canonical document is a symlink");
     });
   });
 
@@ -1171,39 +1248,43 @@ describe("a resolving link is a finding, not a reason to stop", () => {
     });
   });
 
-  it("decides from every damaged path, not from the sample the message carries", async () => {
-    // The message holds a 12-entry sample. Reading the decision out of it meant
-    // a thirteenth entry — the only unwalkable one — decided nothing, and a
-    // profile validator then walked into the `ENOTDIR` and lost the finding.
-    await withProject(async (root) => {
-      if (!(await canCreateSymlink(root))) return;
-      const skills = await shippedSkillIds();
-      await seedCanonical(root, skills, []);
-      await wireAll(root, skills, []);
-      // Wrappers are walked directory by directory, so flattening two whole
-      // directories fills the sample before the damaged canonical is reached
-      // through the third.
-      for (const dir of [".claude/skills", ".agents/skills"]) {
-        for (const id of skills) {
-          const wrapper = path.join(root, ...dir.split("/"), id);
-          await rm(wrapper, { recursive: true, force: true });
-          await writeFile(wrapper, `../../.qfai/assistant/skills/${id}`, "utf-8");
+  // POSIX only for the same reason as above: this is the `ENOTDIR` shape.
+  it.skipIf(process.platform === "win32")(
+    "decides from every damaged path, not from the sample the message carries",
+    async () => {
+      // The message holds a 12-entry sample. Reading the decision out of it meant
+      // a thirteenth entry — the only unwalkable one — decided nothing, and a
+      // profile validator then walked into the `ENOTDIR` and lost the finding.
+      await withProject(async (root) => {
+        if (!(await canCreateSymlink(root))) return;
+        const skills = await shippedSkillIds();
+        await seedCanonical(root, skills, []);
+        await wireAll(root, skills, []);
+        // Wrappers are walked directory by directory, so flattening two whole
+        // directories fills the sample before the damaged canonical is reached
+        // through the third.
+        for (const dir of [".claude/skills", ".agents/skills"]) {
+          for (const id of skills) {
+            const wrapper = path.join(root, ...dir.split("/"), id);
+            await rm(wrapper, { recursive: true, force: true });
+            await writeFile(wrapper, `../../.qfai/assistant/skills/${id}`, "utf-8");
+          }
         }
-      }
-      const damaged = skills[0] ?? "";
-      const canonical = path.join(root, ".qfai", "assistant", "skills", damaged);
-      const loop = path.join(root, ".qfai", "assistant", "skills", "loop");
-      await rm(canonical, { recursive: true, force: true });
-      await symlink(loop, canonical, "dir");
-      await symlink(canonical, loop, "dir");
+        // A regular file where the canonical directory belongs: the one shape a
+        // later `readdir` cannot survive.
+        const damaged = skills[0] ?? "";
+        const canonical = path.join(root, ".qfai", "assistant", "skills", damaged);
+        await rm(canonical, { recursive: true, force: true });
+        await writeFile(canonical, "not a directory", "utf-8");
 
-      const report = await inspectIntegrationSurface(root);
-      const message = report.issues[0]?.message ?? "";
-      expect(skills.length * 2).toBeGreaterThan(12);
-      expect(message).not.toContain("symlink cycle");
-      expect(report.unwalkable).toContain(`.qfai/assistant/skills/${damaged}`);
-    });
-  });
+        const report = await inspectIntegrationSurface(root);
+        const message = report.issues[0]?.message ?? "";
+        expect(skills.length * 2).toBeGreaterThan(12);
+        expect(message).not.toContain("not a directory");
+        expect(report.unwalkable.length).toBeGreaterThan(0);
+      });
+    },
+  );
 });
 
 describe("a canonical is checked even with its surface gone", () => {

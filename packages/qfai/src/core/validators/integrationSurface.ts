@@ -162,15 +162,21 @@ const SIDECAR_RE = /\.qfai-repair-\d+(?:-\d+)?$/;
 /**
  * Whether damage in this state stops a later `readdir` over the path.
  *
- * **Only what actually breaks a walk.** A canonical redirected by a symlink
- * that resolves is a serious finding and a `readdir` over it succeeds, so
- * short-circuiting on it hid every unrelated spec, contract and test defect
- * until the operator had repaired the link and run again. A dangling one reads
- * as absence, which every validator already handles. Cycles and non-directory
- * components are the two a later walk cannot survive.
+ * **Only what actually breaks a walk**, which is narrower than it looks. The
+ * walks over this tree list a directory with `withFileTypes` and descend only
+ * into `isDirectory()` entries, and they probe the root with an `access` that
+ * swallows every error — so a symlink, cycle or not, is listed and skipped, and
+ * a cycle at the root answers "absent". A **regular file where a directory
+ * belongs** is the one shape that gets as far as `readdir` and raises
+ * `ENOTDIR`.
+ *
+ * Everything wider than that hid unrelated spec, contract and test defects
+ * behind a link the operator had to repair first: a resolving redirect, a
+ * dangling link that reads as absence, a cycle on a leaf the parent listing
+ * never follows.
  */
 function blocksWalk(state: PathState): boolean {
-  return state.kind === "cycle" || state.kind === "not-a-directory";
+  return state.kind === "not-a-directory";
 }
 
 /**
@@ -546,10 +552,12 @@ async function wrapperTarget(entryPath: string, entry: Dirent): Promise<string |
   if (!entry.isFile()) return null;
   const content = await readPinnedFile(entryPath, 4096).catch(() => null);
   if (content === null) return null;
-  const trimmed = content.trim();
-  // One line, no whitespace inside it: what git writes for mode `120000`. A
-  // README or any other document in these directories is not a target.
-  return trimmed.length > 0 && !/\s/.test(trimmed) ? trimmed : null;
+  // **Byte-exact**, the way the init-evidence check reads a flattened wrapper.
+  // Git writes the target for mode `120000` with no trailing newline, so
+  // trimming one off made a project's own one-line note — a path with a
+  // newline after it — indistinguishable from a wrapper, and the finding told
+  // the operator to delete it. No whitespace anywhere is the whole test.
+  return content.length > 0 && !/\s/.test(content) ? content : null;
 }
 
 /** Whether `candidate` is `base` itself or sits under it. */
@@ -1068,6 +1076,16 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
           ? `regular file (${String(link.size)} bytes), not a symlink`
           : `${describeKind(link)}, not a symlink`,
       });
+      // And the canonical too, before moving on. `qfai init` repairs a
+      // flattened wrapper on its own, and it leaves the canonical exactly as it
+      // found it — so reporting only the wrapper had the operator re-run init,
+      // clear the finding, and end with a healthy symlink loading the wrong
+      // instructions. The canonical's state does not depend on the wrapper's.
+      const alsoWrong = await canonicalLinkProblem(root, realRoot, wrapper);
+      if (alsoWrong !== null && !damagedCanonicals.has(wrapper.canonicalRelative)) {
+        damagedCanonicals.add(wrapper.canonicalRelative);
+        broken.push({ relative: wrapper.canonicalRelative, detail: alsoWrong });
+      }
       continue;
     }
 
@@ -1127,10 +1145,18 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
               : code === "ENOTDIR"
                 ? `a path component of the canonical is not a directory -> ${toPosix(wrapper.target)}`
                 : `dangling -> ${toPosix(wrapper.target)}`,
-        // The errno is about the canonical, so that is the path named — the
-        // entry is filed under the wrapper because that is what was probed.
-        // `ENOENT` is absence, which every later validator already handles.
-        unwalkable: code === "ELOOP" || code === "ENOTDIR" ? wrapper.canonicalRelative : undefined,
+        // `ENOTDIR` alone, and named at the component that is not a directory
+        // rather than at the leaf. That errno says a component above the leaf
+        // is a regular file, which is the one shape a later `readdir` cannot
+        // survive. `ELOOP` is a symlink: the walks over this tree list it with
+        // `withFileTypes` and never descend into it, and one at the walk root
+        // answers "absent" through their `access` probe. `ENOENT` is absence,
+        // which they already handle.
+        unwalkable:
+          code === "ENOTDIR"
+            ? ((await unusableAncestor(root, wrapper.canonicalRelative))?.relative ??
+              wrapper.canonicalRelative)
+            : undefined,
       });
       continue;
     }

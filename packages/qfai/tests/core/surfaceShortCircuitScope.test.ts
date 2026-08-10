@@ -12,7 +12,7 @@
  * until the surface had been repaired and the run repeated.
  */
 
-import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -25,16 +25,10 @@ async function withDamagedCanonical(task: (root: string) => Promise<boolean>): P
   try {
     const skills = path.join(root, ".qfai", "assistant", "skills");
     await mkdir(skills, { recursive: true });
-    // Real symlinks need Developer Mode or elevation on Windows; without them
-    // the scenario cannot be built at all.
-    const canonical = path.join(skills, "qfai-atdd");
-    const loop = path.join(skills, "loop");
-    try {
-      await symlink(loop, canonical, "dir");
-      await symlink(canonical, loop, "dir");
-    } catch {
-      return;
-    }
+    // A regular file where the canonical directory belongs: the one shape a
+    // later `readdir` cannot survive. A symlink, cycle or not, is listed by the
+    // parent with `withFileTypes` and never descended into.
+    await writeFile(path.join(skills, "qfai-atdd"), "not a directory\n", "utf-8");
     // Enough of a surface that init counts as having run here.
     await writeFile(
       path.join(root, ".qfai", "assistant", "README.md"),
@@ -72,33 +66,89 @@ async function withDamagedCanonical(task: (root: string) => Promise<boolean>): P
   }
 }
 
+describe("the short-circuit follows the configured skills directory", () => {
+  it.skipIf(process.platform === "win32")(
+    "does not stop `full` for damage outside the tree it walks",
+    async () => {
+      // `validateSkillsIntegrity` and `validateAssistantAssets` open the tree the
+      // configuration names. A project that moved `paths.skillsDir` has its old
+      // canonical walked by nobody, so pinning `.qfai/assistant` stopped `full`
+      // for damage sitting outside every walk it performs.
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-scope-"));
+      try {
+        const moved = path.join(root, "assistant-tree", "skills");
+        await mkdir(moved, { recursive: true });
+        await writeFile(
+          path.join(root, "qfai.config.yaml"),
+          ["paths:", "  skillsDir: assistant-tree/skills", ""].join("\n"),
+          "utf-8",
+        );
+        // The abandoned default location holds the damage.
+        const stale = path.join(root, ".qfai", "assistant", "skills");
+        await mkdir(path.dirname(stale), { recursive: true });
+        await writeFile(stale, "not a directory\n", "utf-8");
+        await writeFile(
+          path.join(root, ".qfai", "assistant", "README.md"),
+          [
+            "# QFAI assistant tree",
+            "",
+            "## Canonical entrypoint",
+            "",
+            "- .qfai/assistant/skills/",
+            "",
+          ].join("\n"),
+          "utf-8",
+        );
+
+        const result = await validateProject(root, undefined, { profile: "full" });
+        const codes = new Set(result.issues.map((entry) => entry.code));
+
+        // The surface finding is still reported; it is just no longer a reason to
+        // say nothing about everything else.
+        expect(codes.has("QFAI-LINK-001")).toBe(true);
+        expect(codes.size).toBeGreaterThan(1);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+});
+
 describe("the short-circuit is scoped to the profiles that walk the damage", () => {
-  it("stops `full`, which opens the canonical tree", async () => {
-    await withDamagedCanonical(async (root) => {
-      const result = await validateProject(root, undefined, { profile: "full" });
-      const codes = new Set(result.issues.map((entry) => entry.code));
+  // POSIX only: the scenario is the ENOTDIR shape, and Windows folds that
+  // errno into ENOENT, which reads as absence. CI runs the ubuntu lane.
+  it.skipIf(process.platform === "win32")(
+    "stops `full`, which opens the canonical tree",
+    async () => {
+      await withDamagedCanonical(async (root) => {
+        const result = await validateProject(root, undefined, { profile: "full" });
+        const codes = new Set(result.issues.map((entry) => entry.code));
 
-      expect(codes.has("QFAI-LINK-001")).toBe(true);
-      // Nothing else ran: the finding that names the path and the repair is the
-      // whole output, rather than a stack trace from somebody else's `readdir`.
-      expect([...codes]).toEqual(["QFAI-LINK-001"]);
-      return true;
-    });
-  });
+        expect(codes.has("QFAI-LINK-001")).toBe(true);
+        // Nothing else ran: the finding that names the path and the repair is the
+        // whole output, rather than a stack trace from somebody else's `readdir`.
+        expect([...codes]).toEqual(["QFAI-LINK-001"]);
+        return true;
+      });
+    },
+  );
 
-  it("stops `sdd`, whose own validators read the skills directory", async () => {
-    // `validateSkillDocReferences`, `validateAutopilotPolicy` and
-    // `validateStaleReferences` all `readdir` the configured skills directory,
-    // so excluding `sdd` by name left one of them raising `ELOOP` and losing
-    // the finding that names the path and the repair.
-    await withDamagedCanonical(async (root) => {
-      const result = await validateProject(root, undefined, { profile: "sdd" });
-      const codes = new Set(result.issues.map((entry) => entry.code));
+  it.skipIf(process.platform === "win32")(
+    "stops `sdd`, whose own validators read the skills directory",
+    async () => {
+      // `validateSkillDocReferences`, `validateAutopilotPolicy` and
+      // `validateStaleReferences` all `readdir` the configured skills directory,
+      // so excluding `sdd` by name left one of them raising `ELOOP` and losing
+      // the finding that names the path and the repair.
+      await withDamagedCanonical(async (root) => {
+        const result = await validateProject(root, undefined, { profile: "sdd" });
+        const codes = new Set(result.issues.map((entry) => entry.code));
 
-      expect([...codes]).toEqual(["QFAI-LINK-001"]);
-      return true;
-    });
-  });
+        expect([...codes]).toEqual(["QFAI-LINK-001"]);
+        return true;
+      });
+    },
+  );
 
   it("lets `atdd` report its own findings, which do not touch that tree", async () => {
     await withDamagedCanonical(async (root) => {

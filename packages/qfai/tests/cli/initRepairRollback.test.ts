@@ -416,6 +416,49 @@ describe("a sidecar survives the next run", () => {
 });
 
 describe("what was moved aside is what gets checked", () => {
+  it("keeps the sidecar when its content changed before the cleanup", async () => {
+    // The handle that vetted the content closes when the read returns, and a
+    // process holding the inode from before the rename can append in the window
+    // that follows. Deleting on the strength of the earlier read discarded
+    // bytes nothing had seen — and the symlink now standing in that path means
+    // they cannot be recovered.
+    await withProject(async (root) => {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      const linkPath = path.join(root, LINK);
+      await rm(linkPath, { recursive: true, force: true });
+      await mkdir(path.dirname(linkPath), { recursive: true });
+      await writeFile(linkPath, FLATTENED, "utf-8");
+
+      // The append lands after the repair has read and vetted the sidecar,
+      // while the symlink is being created.
+      let sidecarPath: string | undefined;
+      symlinkSpy.mockImplementation(async (actual: FsPromises, ...args: never[]) => {
+        if (sidecarPath !== undefined) {
+          await actual.writeFile(sidecarPath, `${FLATTENED}\nappended\n`, "utf-8");
+        }
+        return actual.symlink(...args);
+      });
+      renameSpy.mockImplementation(async (actual: FsPromises, from: string, to: string) => {
+        if (to.includes(".qfai-repair-")) sidecarPath = to;
+        return actual.rename(from, to);
+      });
+
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      symlinkSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.symlink(...args),
+      );
+      renameSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.rename(...args),
+      );
+      // The repair stands, and the changed content is still on disk.
+      expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
+      expect(sidecarPath).toBeDefined();
+      expect(await readFile(sidecarPath ?? "", "utf-8")).toBe(`${FLATTENED}\nappended\n`);
+    });
+  });
+
   it("declines an entry that was appended to after its size was measured", async () => {
     // A process holding the inode from before the rename can append after the
     // `fstat`. Reading only the size just measured took a **prefix**, which

@@ -505,6 +505,32 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **Only a non-directory component stops the run.** The walks over the
+  assistant tree list a directory with `withFileTypes` and descend only into
+  `isDirectory()` entries, and they probe the root with an `access` that
+  swallows every error — so a symlink, cycle or not, is listed and skipped, and
+  a cycle at the root reads as absent. A regular file where a directory belongs
+  is the one shape that reaches `readdir` and raises `ENOTDIR`. Treating a leaf
+  cycle as unwalkable hid every unrelated finding behind a link the operator had
+  to repair first, and the finding now names the component at fault rather than
+  the leaf below it.
+- **`full` and `verify` follow the configured skills directory.** They pinned
+  `.qfai/assistant` while the validators that walk it read `paths.skillsDir`, so
+  a project that moved it had the run stopped for damage sitting outside every
+  walk it performs.
+- **A flattened wrapper no longer hides the canonical.** The two are
+  independent, and `qfai init` repairs the wrapper while leaving the canonical
+  as it found it — so reporting only the wrapper had the operator clear the
+  finding and end with a healthy symlink loading the wrong instructions.
+- **A retired wrapper is matched byte-exactly.** Git writes the target for mode
+  `120000` with no trailing newline; trimming one off made a project's own
+  one-line note indistinguishable from a wrapper, failed every profile, and told
+  the operator to delete it.
+- **The sidecar is re-read before the cleanup deletes it.** The handle that
+  vetted its content closes when the read returns, and a process holding that
+  inode from before the rename can append in the window that follows — so the
+  delete discarded bytes nothing had seen, with the new symlink standing where
+  they had been. Content that changed keeps the sidecar, and says so.
 - **The short-circuit tests the paths a profile walks, not its name.** `sdd`
   runs `validateSkillDocReferences`, `validateAutopilotPolicy` and
   `validateStaleReferences`, all of which `readdir` the configured skills

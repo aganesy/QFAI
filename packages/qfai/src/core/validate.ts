@@ -237,10 +237,15 @@ async function buildSpecScopeIssues(
 function assistantPathsWalkedBy(profile: ValidationProfile, skillsRelative: string): string[] {
   switch (profile) {
     // `validateSkillsIntegrity` and `validateAssistantAssets` open the tree
-    // whole, so any damage under it is theirs to walk into.
+    // whole — the tree the **configuration** names, not a fixed path. A project
+    // that moved `paths.skillsDir` has its old canonical walked by nobody, so
+    // pinning `.qfai/assistant` stopped `full` for damage sitting outside every
+    // walk it performs.
     case "verify":
-    case "full":
-      return [".qfai/assistant"];
+    case "full": {
+      const assistantRoot = skillsRelative.split("/").slice(0, -1).join("/");
+      return [assistantRoot === "" ? skillsRelative : assistantRoot];
+    }
     case "sdd":
       return [skillsRelative];
     default:

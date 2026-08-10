@@ -1562,6 +1562,20 @@ async function recreateFlattenedLink(
   // failing. Inside it, the rollback ran against a path the new symlink already
   // occupies, so the restore raised `EEXIST` and `init` reported a repair that
   // had in fact succeeded, blaming Developer Mode on Windows.
+  // Re-read before deleting, on the same terms. The handle that vetted the
+  // content was closed when the read returned, and a process holding this inode
+  // from before the rename can append in the window that follows — so a delete
+  // on the strength of the earlier read discarded bytes nothing had seen, and
+  // the symlink now standing in its place means they cannot be recovered.
+  // Anything but the same target still there is left where it is, and named.
+  const stillOurs = await readPinnedRegularFile(sidecar, 4096).catch(() => null);
+  if (stillOurs === null || toComparableTarget(stillOurs) !== toComparableTarget(target)) {
+    info(
+      `  note: 修復は成功しましたが、退避ファイルの内容が検査時から変わっていたため削除していません: ${sidecar}`,
+    );
+    info(`  repaired: ${linkPath} was a flattened symlink (recreating)`);
+    return "created";
+  }
   try {
     await rm(sidecar, { recursive: true, force: true });
   } catch (cleanupErr: unknown) {
