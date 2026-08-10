@@ -1414,6 +1414,39 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(baseline).toContain("**Completion review**");
   });
 
+  it("checks the obligation reference against the ledger as well", async () => {
+    // Change `TC-Refs` alone after the PASS and the entry still holds the old
+    // copy, so nothing recomputes differently — a verdict about one
+    // requirement standing for another.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("the four identity fields **and the obligation reference**");
+    expect(baseline).toContain("The obligation is on that list for the same reason branch 3's is");
+  });
+
+  it("matches the matrix rows an obligation names exactly", async () => {
+    // "Everything after the table" was the other reading, and two readers
+    // taking one each computed different hashes from one file.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("matched **exactly**");
+    expect(baseline).toContain("`TC-0001` does not match `TC-00011`");
+    expect(baseline).toContain("A justification that names no obligation belongs to none of them");
+  });
+
+  it("syncs the row identity a review-fix moved", async () => {
+    // Updating the ledger alone leaves gate item 10 comparing a changed value
+    // with an unchanged one, which it fails by construction.
+    const reviewFix = flat(await read(tree, REVIEW_FIX));
+    expect(reviewFix).toContain("**Name the new identity in the handback.**");
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "is written to both the ledger and the entry's identity copy before the re-review**",
+    );
+  });
+
   it("records the obligation reference in the handoff shape", async () => {
     // The RED subject hashes it and the gatekeeper judges at P1b, so recorded
     // later it moves a stored hash and left out it can be repointed.
@@ -1576,7 +1609,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const baseline = flat(
       await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
     );
-    expect(baseline).toContain("**The copy is checked against the ledger, not trusted.**");
+    expect(baseline).toContain("**The copy is checked against the ledger, not trusted**");
     expect(baseline).toContain("requires them to equal the copy");
   });
 
@@ -1667,7 +1700,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const baseline = flat(
       await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
     );
-    expect(baseline).toContain("that name this row's obligation reference — not the file whole");
+    expect(baseline).toContain("that belongs to this row's obligation — not the file whole");
     expect(baseline).toContain("a `done` row has no re-review path to clear that");
   });
 

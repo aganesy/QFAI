@@ -488,6 +488,15 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The obligation reference is checked against the ledger too.** Changing
+  `TC-Refs` alone after the PASS left the entry holding the old copy, so a
+  verdict about one requirement stood for another.
+- **The matrix extraction matches an obligation exactly**, table row and
+  justification alike — "everything after the table" was the other reading,
+  and two readers taking one each computed different hashes from one file.
+- **A review-fix that moves the test syncs both the ledger and the copy.**
+  Updating one alone leaves gate item 10 comparing a changed value with an
+  unchanged one, which it fails by construction.
 - **The handoff records the obligation reference the RED subject hashes.** The
   gatekeeper judges at P1b, so recording it later moves a stored hash and
   leaving it out lets the reference be repointed.

@@ -23,6 +23,15 @@ handoff of a `todo` row, so this one needs its own contract.
     `../../qfai-implement/references/round-evidence.md`: no round is opened, and
     the row returns on that basis.
 
+    **Name the new identity in the handback.** Splitting a selector or
+    renaming a test changes the row's `Selector` or `Test file`, and this stage
+    does not write the ledger — so leaving them is a ledger that cannot run the
+    corrected test, and letting `/qfai-implement` update the ledger alone leaves
+    the evidence entry's identity copy disagreeing with it, which gate item 10
+    fails by construction. Hand back the new values; `/qfai-implement` writes
+    them to **both** the ledger and the entry's copy before the re-review, so
+    the check compares two updated values rather than one.
+
     **Re-address the test.** The REVISE changed the test, so the `RED test hash`
     recorded at handoff still addresses the manifest before the edit, and the
     consumer checks it against the current one before the reviews

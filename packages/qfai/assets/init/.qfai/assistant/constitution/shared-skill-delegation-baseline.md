@@ -332,13 +332,18 @@ post-escalation verification review of a user-named fix.
        as evidence for the new one. Mutable bookkeeping — `Status`, `Evidence` —
        stays out: it moves on its own between observations.
 
-       **The copy is checked against the ledger, not trusted.** Hashing a value
+       **The copy is checked against the ledger, not trusted** — the four
+       identity fields **and the obligation reference**. Hashing a value
        the entry already holds proves only that the entry has not changed —
        edit `Selector` in `test-list.md` after the PASS and the copy, the hash
        and the revision are all still what they were, because the ledger is
        excluded from the revision too. Gate item 10 reads the four fields from
        `test-list.md` and requires them to equal the copy; a difference is the
-       row moving under its own evidence, and the verdict is not fresh.
+       row moving under its own evidence, and the verdict is not fresh. The
+       obligation is on that list for the same reason branch 3's is: change
+       `TC-Refs` / `US-Refs` / `CON-API-Refs` alone after the PASS and the entry
+       still holds the old copy, so nothing recomputes differently and a verdict
+       about one requirement stands for another.
 
      - **RED observation**: the obligation reference the row's
        `Layer` selects (`TC-ref`, or `US-ref` on an `E2E` row and `CON-API-ref`
@@ -398,8 +403,14 @@ post-escalation verification review of a user-named fix.
      repo-relative path — the subject says the DR is that branch's evidence, and
      a subject with no record for it is a hash that does not move when the DR
      text changes; and
-     the **rows of** `.qfai/evidence/coverage-depth-<spec-id>.md` that name this
-     row's obligation reference — not the file whole. The matrix is one document
+     the part of `.qfai/evidence/coverage-depth-<spec-id>.md` that belongs to
+     this row's obligation — not the file whole, and matched **exactly**: the
+     table rows whose obligation cell equals the reference (`TC-0001` does not
+     match `TC-00011`), plus each justification paragraph whose first line names
+     that same reference. A justification that names no obligation belongs to
+     none of them and is left out; "everything after the table" was the other
+     reading, and two readers taking one each computed different hashes from one
+     file. The matrix is one document
      for the spec and a later `/qfai-atdd` run recomputes it, so hashing all of
      it made every existing verdict stale when an unrelated obligation's cell
      moved, and a `done` row has no re-review path to clear that. Take the table
