@@ -120,7 +120,18 @@ It appears in three places, all carrying the same address:
 2. **The per-item evidence contract** — one `Revision` per round block, beside
    the RED / GREEN commands and results, and one for the refactor-verify pair.
 3. **The review pack** — `summary.json`'s `revision` field, which is what makes
-   the fact machine-checkable (`QFAI-REVIEW-009`).
+   the fact machine-checkable (`QFAI-REVIEW-009`). Write
+   `"revision_form": "content-hash"` beside it. That marker is how a pack says
+   which contract produced it, and only a pack that declares it is held to the
+   form as an `error`: the packs already on disk were written before the form
+   existed and cannot be migrated to it — the tree each of their verdicts
+   described is not reconstructible, so there is no content hash to write
+   instead — and holding them to it would leave `validate --fail-on error`
+   permanently red with nothing the operator could do. Neither the pack's age
+   nor its rank among siblings can stand in for the marker: a directory stamp
+   carries no timezone, and "the newest pack" stopped being the current one the
+   moment another spec produced its own. Omitting the marker is itself reported,
+   so a producer cannot quietly downgrade its own check by forgetting it.
 
 ## A transient observation names its own revision
 

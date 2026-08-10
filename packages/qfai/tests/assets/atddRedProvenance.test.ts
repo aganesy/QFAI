@@ -1716,9 +1716,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // failure.
     const gatekeeper = flat(await read(tree, GATEKEEPER));
     expect(gatekeeper).toContain(
-      "`.qfai/report/validate.spec-<id>.json` for the spec under review",
+      "The scoped validate JSON for the spec under review — `validate.spec-<id>.json`",
     );
-    expect(gatekeeper).toContain("**Not `.qfai/report/validate.log`**");
+    expect(gatekeeper).toContain("**Not `validate.log`**");
   });
 
   it("observes falsifiability per selector entry", async () => {
@@ -2167,7 +2167,10 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // From `qfai-implement/references/` a bare `constitution/...` resolves to
     // `qfai-implement/references/constitution/...`, which does not exist, so a
     // producer could not reach the extraction rule and hashed its own range.
-    const evidence = await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md");
+    const evidence = await read(
+      tree,
+      "assistant/skills/qfai-implement/references/evidence-revision.md",
+    );
     expect(flat(evidence)).toContain(
       "`../../../constitution/shared-skill-delegation-baseline.md#reviewer-response-template`",
     );
@@ -2182,15 +2185,69 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // row's result could go from FAIL to PASS with nothing moving.
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("`Checkpoint verification seal`");
-    expect(implement).toContain("is **recomputed** here over the recorded command, result and revision");
+    expect(implement).toContain(
+      "is **recomputed** here over the recorded command, result and revision",
+    );
     const checkpoint = flat(
       await read(tree, "assistant/skills/qfai-implement/references/checkpoint-verification.md"),
     );
     expect(checkpoint).toContain("taken the moment the run ends");
-    const baseline = flat(await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"));
-    expect(baseline).toContain(
-      "**A field written after every reviewer is in no subject at all**",
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
     );
+    expect(baseline).toContain("**A field written after every reviewer is in no subject at all**");
+  });
+
+  it("puts the falsifiability addresses in the round block at step 3c too", async () => {
+    // Step 3c still called `RED test hash` and `Falsifiability revision`
+    // row-level while the round contract put them in each round's block, so a
+    // blocking REVISE that opened Round 2 on a branch-2 row either overwrote
+    // Round 1's addresses or reused them for a mutation run they were not taken
+    // on.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "as `Round N:` fields of the round this mutation belongs to, never row-level",
+    );
+    expect(implement).not.toContain(
+      "row-level `RED failure mode: falsifiability`, `RED test hash` and its manifest, and `Falsifiability revision`",
+    );
+  });
+
+  it("gives a stage with no rows somewhere to record a shared-artifact re-verify", async () => {
+    // A fresh spec can own no ATDD row and still edit a fixture a completed
+    // spec's handed-over rows read. Tied to an "editing row" there was nowhere
+    // to put the re-run, so the earlier row's hash stayed mismatched with
+    // nothing able to clear it — or the change was accepted unverified.
+    const shared = flat(await read(tree, SHARED_ARTIFACT));
+    expect(shared).toContain("When this stage has no row of its own, the record is stage-level");
+    expect(shared).toContain("`## Shared-artifact re-verify` in the stage evidence file");
+    // And a consumer is told to read both places, or the block would be written
+    // and never consulted.
+    expect(shared).toContain("A consumer clearing a mismatch reads **both** places");
+  });
+
+  it("reads the validate evidence from the configured output paths", async () => {
+    // A project that moved `output.validateJsonPath` or `paths.outDir` writes
+    // its evidence where it said to, and looking at the default path reported a
+    // missing artifact and stopped completion on a validate run that had
+    // succeeded.
+    const gatekeeper = flat(await read(tree, GATEKEEPER));
+    expect(gatekeeper).toContain("beside the configured `output.validateJsonPath`");
+    expect(gatekeeper).toContain("under the configured `paths.outDir`");
+    expect(gatekeeper).toContain("Read both from `qfai.config.yaml`");
+    expect(gatekeeper).not.toContain("- `.qfai/report/validate.spec-<id>.json` for the spec");
+  });
+
+  it("makes a review pack declare which contract wrote it", async () => {
+    // Age cannot say it — a directory stamp has no timezone, and any cutoff
+    // instant misclassifies one side of itself — and rank cannot either, since
+    // "newest" stops being true the moment another spec produces a pack.
+    const evidence = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(evidence).toContain('Write `"revision_form": "content-hash"` beside it');
+    expect(evidence).toContain("only a pack that declares it is held to the form as an `error`");
+    expect(evidence).toContain("Omitting the marker is itself reported");
   });
 
   it("exempts every blocking reviewer of the nested run, not just the gatekeeper", async () => {

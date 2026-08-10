@@ -18,8 +18,12 @@ const tempDirs: string[] = [];
 
 type Summary = Record<string, unknown>;
 
+// A pack written under the current contract declares which one produced it.
+// That declaration — not the pack's age, and not its rank among siblings — is
+// what holds it to the strict `revision` form.
 const baseSummary = (): Summary => ({
   version: "1.0",
+  revision_form: "content-hash",
   created_at: "2026-08-01T00:00:00Z",
   target: { kind: "spec", path: ".qfai/specs/spec-0001" },
   overall_status: "PASS",
@@ -31,8 +35,6 @@ async function withPack(
 ): Promise<Awaited<ReturnType<typeof validateReviewArtifacts>>> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-rev-"));
   tempDirs.push(root);
-  // Stamped after the strict form shipped, so this pack is held to it. Which
-  // packs are is read from the pack's own name, never from its rank.
   const packDir = path.join(root, ".qfai", "review", "review-20260815000000000");
   await mkdir(packDir, { recursive: true });
   await writeFile(path.join(packDir, "review_request.md"), "# request\n", "utf-8");
@@ -42,20 +44,16 @@ async function withPack(
 }
 
 async function withPacks(
-  packs: readonly (readonly [string, string])[],
+  packs: readonly (readonly [string, Summary])[],
 ): Promise<Awaited<ReturnType<typeof validateReviewArtifacts>>> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-rev-"));
   tempDirs.push(root);
-  for (const [stamp, revision] of packs) {
+  for (const [stamp, summary] of packs) {
     const packDir = path.join(root, ".qfai", "review", `review-${stamp}`);
     await mkdir(packDir, { recursive: true });
     await writeFile(path.join(packDir, "review_request.md"), "# request\n", "utf-8");
     await writeFile(path.join(packDir, "R01_completion-reviewer.md"), "# review\n", "utf-8");
-    await writeFile(
-      path.join(packDir, "summary.json"),
-      JSON.stringify({ ...baseSummary(), revision }, null, 2),
-      "utf-8",
-    );
+    await writeFile(path.join(packDir, "summary.json"), JSON.stringify(summary, null, 2), "utf-8");
   }
   return validateReviewArtifacts(root);
 }
@@ -113,11 +111,16 @@ describe("review pack revision", () => {
     expect(schema[0]?.message).toContain("porcelain digest");
   });
 
-  it("reports a pack written before the strict form as a warning", async () => {
+  it("reports a pack that declares no form as a warning", async () => {
     // The tree a past verdict described is not reconstructible, so there is no
     // content hash to migrate to — an error would leave `--fail-on error`
-    // permanently red for a repository that keeps its packs.
-    const issues = await withPacks([["20260101000000000", "working-tree+9f2c1ab"]]);
+    // permanently red for a repository that keeps its packs. A pack written
+    // before the marker existed cannot declare it, so it is not held to it.
+    const legacyPack = baseSummary();
+    delete legacyPack.revision_form;
+    const issues = await withPacks([
+      ["20260101000000000", { ...legacyPack, revision: "working-tree+9f2c1ab" }],
+    ]);
 
     expect(issues.filter((i) => i.code === "QFAI-REVIEW-007")).toEqual([]);
     const legacy = issues.filter(
@@ -127,15 +130,17 @@ describe("review pack revision", () => {
     expect(legacy[0]?.severity).toBe("warning");
   });
 
-  it("keeps a current pack an error when a newer pack exists", async () => {
-    // Which contract a pack was written under is a property of the pack — the
-    // timestamp in its own name — not of its rank among siblings. Deciding it
-    // by "newest overall" meant a malformed pack written under the current
-    // contract stopped being an error the moment any other spec produced one,
-    // and `--fail-on error` accepted a stale current verdict.
+  it("reports a declared pack as an error whatever its age or rank", async () => {
+    // Neither rank nor time can decide this. "Newest overall" meant a malformed
+    // pack written under the current contract stopped being an error the moment
+    // any other spec produced one; a timestamp cutoff misclassifies the hours
+    // between the contract shipping and the boundary chosen for it, and the
+    // directory stamp carries no timezone at all. Here the malformed pack is
+    // both the oldest on disk and stamped well before any plausible cutoff, and
+    // it is an error because it says which contract wrote it.
     const issues = await withPacks([
-      ["20260815000000000", "working-tree+9f2c1ab"],
-      ["20260820000000000", "a".repeat(40)],
+      ["20250101000000000", { ...baseSummary(), revision: "working-tree+9f2c1ab" }],
+      ["20260820000000000", { ...baseSummary(), revision: "a".repeat(40) }],
     ]);
 
     const current = issues.filter(
@@ -144,6 +149,28 @@ describe("review pack revision", () => {
     expect(current).toHaveLength(1);
     expect(current[0]?.severity).toBe("error");
     expect(issues.filter((i) => i.code === "QFAI-REVIEW-009")).toEqual([]);
+  });
+
+  it("reports a producer that wrote a revision but forgot the marker", async () => {
+    // Otherwise forgetting it silently downgrades the producer's own check.
+    const undeclared = baseSummary();
+    delete undeclared.revision_form;
+    const issues = await withPack({ ...undeclared, revision: "a".repeat(40) });
+    const found = issues.filter((i) => i.rule === "reviewArtifacts.summaryRevisionForm");
+
+    expect(found).toHaveLength(1);
+    expect(found[0]?.severity).toBe("warning");
+    expect(found[0]?.message).toContain("revision_form");
+  });
+
+  it("rejects a revision_form it does not define", async () => {
+    const issues = await withPack({
+      ...baseSummary(),
+      revision_form: "porcelain",
+      revision: "a".repeat(40),
+    });
+
+    expect(issues.some((i) => i.code === "QFAI-REVIEW-007")).toBe(true);
   });
 
   it("rejects a value that is neither a rev nor a content hash", async () => {

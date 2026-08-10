@@ -118,7 +118,9 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
       // SKILL.md carries the pointer only; both rework paths are stated in the
       // reference, so the two-path rule is asserted there.
       const skill = await read(relativePath, "SKILL.md");
-      expect(flat(skill)).toContain("Numbering, cardinality and the two rework paths are that reference");
+      expect(flat(skill)).toContain(
+        "Numbering, cardinality and the two rework paths are that reference",
+      );
 
       const reference = await read(relativePath, "references/round-evidence.md");
       expect(flat(reference)).toContain(

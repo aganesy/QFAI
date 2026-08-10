@@ -488,6 +488,35 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A review pack declares which contract wrote it** — `"revision_form":
+"content-hash"` in `summary.json` — and only a pack that declares it is held
+  to the strict `revision` form as an error. Neither of the two things that
+  could stand in for a declaration works: rank made "current" mean "newest
+  overall", so a malformed pack stopped being an error the moment another spec
+  produced one, and a timestamp cutoff misclassifies by construction — the
+  directory stamp carries no timezone, and any instant chosen either predates
+  the contract (letting that morning's old-contract packs count as current) or
+  postdates it (letting genuinely current packs off). Omitting the marker is
+  reported in its own right, so a producer cannot quietly downgrade its own
+  check by forgetting it.
+- **A stage with no ledger row can still record a shared-artifact re-verify.**
+  A fresh spec owns no ATDD row and still creates and edits the fixtures a
+  completed spec's handed-over rows read. With the record tied to an "editing
+  row" there was nowhere to put the re-run: the earlier row's `RED test hash`
+  stayed mismatched with nothing able to clear it, or the change was accepted
+  unverified. The stage evidence file carries a `## Shared-artifact re-verify`
+  block with the same identity and the same proof rule, and a consumer clearing
+  a mismatch reads both places.
+- **`qa-gatekeeper` reads the validate evidence from the configured outputs.**
+  The scoped JSON goes beside `output.validateJsonPath` and the run directory
+  under `paths.outDir`; pinning `.qfai/report/**` stopped completion on a
+  project that had moved either, reporting a missing artifact for a validate
+  run that had succeeded and left everything it owed.
+- **Phase Red step 3c puts the falsifiability addresses in the round block.**
+  It still called `RED test hash` and `Falsifiability revision` row-level while
+  the round contract put them in each round's block, so a blocking REVISE that
+  opened Round 2 on a `falsifiability` row either overwrote Round 1's addresses
+  or reused them for a mutation run they were not taken on.
 - **Which contract a review pack was written under is read from the pack**, not
   from its rank among siblings. "Held to the strict `revision` form" meant
   "newest overall", so a malformed pack written under the current contract
@@ -506,7 +535,7 @@ report` as well, which was computing `done: 1 / open: 0` from the same
   and the only place that exists on a spec with no ATDD-owned rows), when the
   last reviewer response lands and before the stage writes its verdict.
 - **The checkpoint record carries a seal of its own.** `Checkpoint verification
-  command` / `result` are appended after every reviewer has hashed, so they sit
+command` / `result` are appended after every reviewer has hashed, so they sit
   in no audit subject; the working-tree revision excludes `.qfai/evidence/**`
   and the pack seal covers only the pack. A row already at `done` could have its
   checkpoint result edited from FAIL to PASS with nothing moving anywhere.

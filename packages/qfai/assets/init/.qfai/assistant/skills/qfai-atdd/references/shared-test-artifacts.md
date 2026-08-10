@@ -22,6 +22,22 @@ ledger, not across them, and one fixture is read by acceptance tests from
 several specs — named by id alone, a re-verify could clear a hash mismatch on a
 row in the wrong spec, or fail to clear the right one.
 
+**When this stage has no row of its own, the record is stage-level.** A fresh
+spec is the ordinary case here and can own no ATDD row at all, while still
+creating and editing the fixtures a completed spec's handed-over rows read. With
+the record tied to an "editing row" there was nowhere to put it: the re-run was
+made and had no home, so the earlier row's `RED test hash` stayed mismatched
+with nothing able to clear it, or the change was accepted unverified. Write the
+same lines under `## Shared-artifact re-verify` in the stage evidence file
+(`.qfai/evidence/coverage-depth-<spec-id>.md`, beside `## Final status`), with
+the same identity — spec and `TDD-ID` together — and the same "a passing re-run
+is not enough on a row that has a proof" rule below. A consumer clearing a
+mismatch reads **both** places: the editing row's entry when one exists, and the
+stage block of any stage that touched the artifact. `/qfai-implement`'s gate
+item 10 does not run on a spec with no rows, so this block is checked where the
+stage's own pack seal is: it is inside the sealed stage evidence, so a record
+added after the fact moves the seal.
+
 **A passing re-run is not enough on a row that has a proof.** Weakening an
 assertion helper, a snapshot or an expected-value fixture leaves the earlier
 row's selector passing while making it tautological — and its recorded

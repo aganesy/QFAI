@@ -115,31 +115,26 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
   }
 
   for (const packDir of reviewPackDirs) {
-    issues.push(...(await validateReviewPack(packDir, predatesStrictRevisionForm(packDir))));
+    issues.push(...(await validateReviewPack(packDir)));
   }
 
   return issues;
 }
 
-// Whether a pack was written before the strict `revision` form was required.
-// This is a property of the pack itself — the timestamp in its own directory
-// name — and not its rank among siblings: ranking made "held to the contract"
-// mean "newest overall", so a malformed pack written under the current
-// contract stopped being an error the moment any other spec produced one, and
-// `--fail-on error` accepted a stale current verdict.
+// The marker a producer under the strict `revision` form writes into its own
+// `summary.json`. Declaring it is what makes the form checkable.
 //
-// A pack stamped before this could not have satisfied the form, and cannot be
-// migrated to it: the tree its verdict described is no longer reconstructible,
-// so there is no content hash to write instead.
-const STRICT_REVISION_FORM_SINCE = "20260810000000000";
+// Neither rank nor time can answer this. Rank made "held to the contract" mean
+// "newest overall", so a malformed pack written under the current contract
+// stopped being an error the moment any other spec produced one. A timestamp
+// cutoff is no better: the directory stamp carries no timezone, so the same
+// pack classifies differently by region, and any instant chosen is either
+// before the contract shipped — letting packs written that morning under the
+// old instructions count as current — or after it, letting genuinely current
+// packs off. The pack has to say so itself.
+const REVISION_FORM_MARKER = "content-hash";
 
-function predatesStrictRevisionForm(reviewPackDir: string): boolean {
-  const stamp = REVIEW_PACK_DIR_RE.exec(path.basename(reviewPackDir))?.[1];
-  // An unreadable stamp establishes nothing, so the pack is held to the form.
-  return stamp !== undefined && stamp < STRICT_REVISION_FORM_SINCE;
-}
-
-async function validateReviewPack(reviewPackDir: string, predatesForm: boolean): Promise<Issue[]> {
+async function validateReviewPack(reviewPackDir: string): Promise<Issue[]> {
   const issues: Issue[] = [];
   const reviewRequestPath = path.join(reviewPackDir, "review_request.md");
   const summaryPath = path.join(reviewPackDir, "summary.json");
@@ -182,13 +177,13 @@ async function validateReviewPack(reviewPackDir: string, predatesForm: boolean):
   }
 
   if (await isFile(summaryPath)) {
-    issues.push(...(await validateSummarySchema(summaryPath, predatesForm)));
+    issues.push(...(await validateSummarySchema(summaryPath)));
   }
 
   return issues;
 }
 
-async function validateSummarySchema(summaryPath: string, predatesForm: boolean): Promise<Issue[]> {
+async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(await readFile(summaryPath, "utf-8"));
@@ -265,12 +260,17 @@ async function validateSummarySchema(summaryPath: string, predatesForm: boolean)
   // move when the file under review is edited — a stale verdict passing the
   // freshness check the field exists for.
   //
-  // **Unless the pack predates the form** (see `predatesStrictRevisionForm`):
-  // that history cannot be migrated, because the tree a past verdict described
-  // is not reconstructible, so there is no content hash to write instead. An
+  // **Unless the pack does not declare the form** (`revision_form`). History
+  // written before it cannot be migrated: the tree a past verdict described is
+  // not reconstructible, so there is no content hash to write instead, and an
   // error there would leave `--fail-on error` permanently red for a repository
-  // that keeps its packs, with nothing the operator could do. Those get the
+  // that keeps its packs with nothing the operator could do. Those get the
   // finding as a `warning` so the state is still visible.
+  const revisionForm = readString(parsed.revision_form);
+  if (revisionForm !== null && revisionForm !== REVISION_FORM_MARKER) {
+    violations.push(`\`revision_form\` は "${REVISION_FORM_MARKER}" のみ指定できます（省略は可）`);
+  }
+  const declaresForm = revisionForm === REVISION_FORM_MARKER;
   // Only when there is a value to judge: an empty string is already reported
   // by the schema check above, and saying it twice reads as two problems.
   const revisionText = readString(revision);
@@ -278,17 +278,37 @@ async function validateSummarySchema(summaryPath: string, predatesForm: boolean)
     revisionText !== null && !REVISION_FORM.test(revisionText)
       ? [
           issue(
-            predatesForm ? "QFAI-REVIEW-009" : "QFAI-REVIEW-007",
+            declaresForm ? "QFAI-REVIEW-007" : "QFAI-REVIEW-009",
             "`revision` の形式が不正です。git rev (7-64 hex) か `working-tree+<64 hex>`（content hash）を指定してください。`working-tree+<porcelain digest>` は内容が変わっても動かないため受理しません。" +
-              (predatesForm
-                ? "（この形式が必須になる前に作成された review pack のため warning 扱いです。当時の tree は復元できず移行もできません。）"
-                : ""),
-            predatesForm ? "warning" : "error",
+              (declaresForm
+                ? ""
+                : `（この pack は \`revision_form: "${REVISION_FORM_MARKER}"\` を宣言していないため warning 扱いです。当時の tree は復元できず移行もできません。）`),
+            declaresForm ? "error" : "warning",
             summaryPath,
             "reviewArtifacts.summaryRevision",
             [revisionText],
             "canonical",
             "`.qfai/assistant/skills/qfai-implement/references/evidence-revision.md` を参照してください。",
+          ),
+        ]
+      : [];
+
+  // A producer under the current contract that forgets the marker would
+  // otherwise silently downgrade its own check, so its absence is reported —
+  // as a warning, because a pack that predates the contract is in exactly the
+  // same state and has no way out of it.
+  const missingForm =
+    revisionText !== null && !declaresForm
+      ? [
+          issue(
+            "QFAI-REVIEW-009",
+            `summary.json に \`revision_form: "${REVISION_FORM_MARKER}"\` がありません。どの契約で書かれた pack か pack 自身から判定できないため、\`revision\` の形式違反は warning に留まります。現行契約の producer は必ず宣言してください。`,
+            "warning",
+            summaryPath,
+            "reviewArtifacts.summaryRevisionForm",
+            undefined,
+            "canonical",
+            "`.qfai/assistant/skills/qfai-implement/references/evidence-revision.md` を参照してください。過去の pack は宣言できないため、この warning は履歴として残ります。",
           ),
         ]
       : [];
@@ -315,11 +335,12 @@ async function validateSummarySchema(summaryPath: string, predatesForm: boolean)
       : [];
 
   if (violations.length === 0) {
-    return [...missingRevision, ...malformedRevision];
+    return [...missingRevision, ...missingForm, ...malformedRevision];
   }
 
   return [
     ...missingRevision,
+    ...missingForm,
     ...malformedRevision,
     issue(
       "QFAI-REVIEW-007",
