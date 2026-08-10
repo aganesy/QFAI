@@ -23,10 +23,7 @@ import { validateContracts } from "./validators/contracts.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
-import {
-  hasStructuralDamage,
-  validateIntegrationSurface,
-} from "./validators/integrationSurface.js";
+import { inspectIntegrationSurface } from "./validators/integrationSurface.js";
 import { validateDefinedIds } from "./validators/ids.js";
 import { validateReviewArtifacts } from "./validators/reviewArtifacts.js";
 import { validateSpecPacks } from "./validators/specPack.js";
@@ -235,16 +232,18 @@ async function runProfileValidators(
   // integration link means the assistant loaded no skill and routed no agent,
   // so every gate the profile is about was defined by files nothing read. That
   // is not an SDD fact or an ATDD fact; it invalidates the run.
-  const surfaceIssues = await validateIntegrationSurface(root);
-  // Structural damage stops here. A profile validator walking the same tree
-  // raises `ENOTDIR` / `ELOOP` from its own `readdir`, and one rejection took
-  // the whole run down — losing the finding above, which is the only one that
-  // names the path and how to repair it. The run fails either way; this decides
-  // whether it fails with something the operator can act on.
-  if (hasStructuralDamage(surfaceIssues)) {
-    return surfaceIssues;
+  const surface = await inspectIntegrationSurface(root);
+  // Damage on a path the profile validators themselves walk stops here. One of
+  // them reading the same tree raises `ENOTDIR` / `ELOOP` from its own
+  // `readdir`, and one rejection took the whole run down — losing the finding
+  // above, which is the only one that names the path and how to repair it. The
+  // run fails either way; this decides whether it fails with something the
+  // operator can act on. Damage confined to the integration directories is not
+  // on that list: nothing downstream opens them.
+  if (surface.unwalkable.length > 0) {
+    return surface.issues;
   }
-  return [...surfaceIssues, ...(await runProfileOwnValidators())];
+  return [...surface.issues, ...(await runProfileOwnValidators())];
 
   async function runProfileOwnValidators(): Promise<Issue[]> {
     switch (profile) {

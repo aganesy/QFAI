@@ -20,16 +20,17 @@
  * an `endsWith('.md')` test claimed a project's own agent file.
  */
 
-import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
 import { AGENT_INTEGRATION_CONFIGS, SKILL_INTEGRATION_DIRS } from "../../src/cli/commands/init.js";
 import {
   INTEGRATION_SURFACE_DIRS,
-  hasStructuralDamage,
+  inspectIntegrationSurface,
   validateIntegrationSurface,
 } from "../../src/core/validators/integrationSurface.js";
 
@@ -122,6 +123,15 @@ async function canCreateSymlink(root: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** The roster the validator builds wrappers from — the shipped one, not the project's. */
+async function shippedSkillIds(): Promise<string[]> {
+  const shipped = path.join(
+    fileURLToPath(new URL("../../assets/init/.qfai/assistant/skills", import.meta.url)),
+  );
+  const entries = await readdir(shipped, { withFileTypes: true });
+  return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
 }
 
 const finding = async (root: string) =>
@@ -989,6 +999,31 @@ describe("an ancestor that is not a directory is named directly", () => {
   });
 });
 
+describe("a link that does not resolve still says why", () => {
+  it("names the ancestor symlink when the canonical is not there yet", async () => {
+    // Point `.qfai/assistant/skills` at an existing empty directory and every
+    // wrapper under it is `ENOENT` — reported as plain `dangling` and skipped
+    // before anything looked at the ancestor. The remedy printed for a dangling
+    // link is "re-run `qfai init`", which writes the canonical *inside* the
+    // redirect and leaves the correct wrapper target alone: the finding clears
+    // and the redirect stays.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+      const elsewhere = path.join(root, "elsewhere");
+      await mkdir(elsewhere, { recursive: true });
+      await rm(skillsDir, { recursive: true, force: true });
+      await symlink(elsewhere, skillsDir, "dir");
+
+      const entry = await finding(root);
+      expect(entry?.message).toContain("a canonical ancestor is a symlink");
+      expect(entry?.message).not.toContain("dangling ->");
+    });
+  });
+});
+
 describe("a resolving link is a finding, not a reason to stop", () => {
   it("does not report structural damage for a canonical that resolves", async () => {
     // A `readdir` over it succeeds, so short-circuiting the profile hid every
@@ -1005,13 +1040,33 @@ describe("a resolving link is a finding, not a reason to stop", () => {
         "dir",
       );
 
-      const issues = await validateIntegrationSurface(root);
-      expect(issues.map((entry) => entry.code)).toContain("QFAI-LINK-001");
-      expect(hasStructuralDamage(issues)).toBe(false);
+      const report = await inspectIntegrationSurface(root);
+      expect(report.issues.map((entry) => entry.code)).toContain("QFAI-LINK-001");
+      expect(report.unwalkable).toEqual([]);
     });
   });
 
-  it("reports structural damage for a cycle", async () => {
+  it("reports structural damage for a cycle on a canonical", async () => {
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      const loop = path.join(root, ".qfai", "assistant", "skills", "loop");
+      await rm(canonical, { recursive: true, force: true });
+      await symlink(loop, canonical, "dir");
+      await symlink(canonical, loop, "dir");
+
+      const report = await inspectIntegrationSurface(root);
+      expect(report.issues.map((entry) => entry.code)).toContain("QFAI-LINK-001");
+      expect(report.unwalkable).toContain(".qfai/assistant/skills/qfai-atdd");
+    });
+  });
+
+  it("does not stop the profile for a cycle on an integration directory", async () => {
+    // `.claude/skills` is read here and by nothing downstream, so a cycle on it
+    // stops no later walk. Short-circuiting on it hid the spec, contract and
+    // test defects sitting alongside it until the link had been repaired.
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
@@ -1021,7 +1076,43 @@ describe("a resolving link is a finding, not a reason to stop", () => {
       await symlink(path.join(root, ".claude", "loop"), claudeSkills, "dir");
       await symlink(claudeSkills, path.join(root, ".claude", "loop"), "dir");
 
-      expect(hasStructuralDamage(await validateIntegrationSurface(root))).toBe(true);
+      const report = await inspectIntegrationSurface(root);
+      expect(report.issues.map((entry) => entry.code)).toContain("QFAI-LINK-001");
+      expect(report.unwalkable).toEqual([]);
+    });
+  });
+
+  it("decides from every damaged path, not from the sample the message carries", async () => {
+    // The message holds a 12-entry sample. Reading the decision out of it meant
+    // a thirteenth entry — the only unwalkable one — decided nothing, and a
+    // profile validator then walked into the `ENOTDIR` and lost the finding.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      const skills = await shippedSkillIds();
+      await seedCanonical(root, skills, []);
+      await wireAll(root, skills, []);
+      // Wrappers are walked directory by directory, so flattening two whole
+      // directories fills the sample before the damaged canonical is reached
+      // through the third.
+      for (const dir of [".claude/skills", ".agents/skills"]) {
+        for (const id of skills) {
+          const wrapper = path.join(root, ...dir.split("/"), id);
+          await rm(wrapper, { recursive: true, force: true });
+          await writeFile(wrapper, `../../.qfai/assistant/skills/${id}`, "utf-8");
+        }
+      }
+      const damaged = skills[0] ?? "";
+      const canonical = path.join(root, ".qfai", "assistant", "skills", damaged);
+      const loop = path.join(root, ".qfai", "assistant", "skills", "loop");
+      await rm(canonical, { recursive: true, force: true });
+      await symlink(loop, canonical, "dir");
+      await symlink(canonical, loop, "dir");
+
+      const report = await inspectIntegrationSurface(root);
+      const message = report.issues[0]?.message ?? "";
+      expect(skills.length * 2).toBeGreaterThan(12);
+      expect(message).not.toContain("symlink cycle");
+      expect(report.unwalkable).toContain(`.qfai/assistant/skills/${damaged}`);
     });
   });
 });

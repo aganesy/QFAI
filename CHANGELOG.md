@@ -505,6 +505,31 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The short-circuit is decided by the damage, not by the message.** It was
+  read back out of the finding's text, which carries a 12-entry sample — so a
+  thirteenth entry holding the only unwalkable path decided nothing, a profile
+  validator walked into the `ENOTDIR` and the run ended with a stack trace
+  instead of the finding that names the path. Each site now records the
+  canonical it cannot walk as it sees the errno, and `inspectIntegrationSurface`
+  hands that list to the caller.
+- **Damage confined to an integration directory no longer stops the profile.**
+  `.claude/skills` and its siblings are read by this validator and by nothing
+  downstream, so a cycle on one of them breaks no later `readdir` — and
+  stopping there hid every spec, contract and test defect sitting alongside it
+  until the operator had repaired the link and run again.
+- **A wrapper whose canonical is not there yet says why.** Point
+  `.qfai/assistant/skills` at an existing empty directory and every wrapper
+  under it is `ENOENT`, reported as a plain dangling link. The remedy printed
+  for that is "re-run `qfai init`", which writes the canonical *inside* the
+  redirect and leaves the correct wrapper target alone: the finding clears and
+  the redirect stays. The ancestor is named first.
+- **The moved-aside wrapper is read from the inode it was measured on.**
+  Checking it with `lstat` and reading it by pathname are two operations on two
+  possibly different inodes: another process replacing the sidecar in between,
+  or growing it through an fd held from before the rename, left the read
+  unbounded — memory exhausted, or blocked for ever on a FIFO — with the
+  original already moved aside and the pathname empty. One `open`, `fstat` on
+  that handle, a bounded read from it, shared with the flattened-link probe.
 - **Only damage that breaks a walk stops the run.** A canonical redirected by
   a link that resolves is a finding a `readdir` survives, so short-circuiting
   on it hid every unrelated spec, contract and test defect.

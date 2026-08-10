@@ -257,22 +257,21 @@ describe("a wrapper that changed under the check is not deleted", () => {
       await mkdir(path.dirname(linkPath), { recursive: true });
       await writeFile(linkPath, FLATTENED, "utf-8");
 
-      // The repair renames the file aside and reads *that*, so the injection
-      // answers for the sidecar: what it holds is not the flattened signature.
+      // The repair renames the file aside and reads *that*, so the content is
+      // replaced under the sidecar pathname the moment the rename lands: what
+      // it holds is no longer the flattened signature. Injected through the
+      // filesystem rather than through the read call, because the read is now
+      // pinned to the inode it measured — which is the point.
       const theirs = "# mine now\n";
-      readFileSpy.mockImplementation((actual: FsPromises, file: string, ...rest: never[]) =>
-        file.startsWith(`${linkPath}.qfai-repair-`)
-          ? Promise.resolve(theirs)
-          : actual.readFile(file, ...rest),
-      );
+      renameSpy.mockImplementation(async (actual: FsPromises, from: string, to: string) => {
+        await actual.rename(from, to);
+        if (to.includes(".qfai-repair-")) await actual.writeFile(to, theirs, "utf-8");
+      });
 
       await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
 
-      // Read through the real fs: the spy above answers every read.
-      readFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
-        actual.readFile(...args),
-      );
-      expect(await readFile(linkPath, "utf-8")).toBe(FLATTENED);
+      renameSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.rename(...args));
+      expect(await readFile(linkPath, "utf-8")).toBe(theirs);
       expect((await lstat(linkPath)).isSymbolicLink()).toBe(false);
     });
   });
@@ -349,17 +348,19 @@ describe("a claim that never took anything is released", () => {
       await mkdir(path.dirname(linkPath), { recursive: true });
       await writeFile(linkPath, FLATTENED, "utf-8");
 
-      lstatSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
+      // The probe is the `open` that pins the moved inode; the kind and the
+      // ceiling are read from that handle, so this is where it can fail.
+      openSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
         target.includes(".qfai-repair-")
           ? Promise.reject(new Error("simulated probe failure"))
-          : actual.lstat(target, ...rest),
+          : actual.open(target, ...rest),
       );
 
       await captureStdout(() =>
         runInit({ dir: root, force: false, dryRun: false, yes: true }),
       ).catch(() => undefined);
 
-      lstatSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.lstat(...args));
+      openSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.open(...args));
       expect(await readFile(linkPath, "utf-8")).toBe(FLATTENED);
     });
   });
@@ -452,6 +453,50 @@ describe("what was moved aside is what gets checked", () => {
       expect(readsOfSidecar).toEqual([]);
       expect(await readFile(linkPath, "utf-8")).toBe(theirs);
       expect((await lstat(linkPath)).isSymbolicLink()).toBe(false);
+    });
+  });
+
+  it("reads the sidecar from the inode it measured, not from the pathname", async () => {
+    // The kind and the ceiling were checked with `lstat` and the content then
+    // read by pathname — two operations on two possibly different inodes.
+    // Replace the sidecar between them and the read ran on something nothing
+    // had vetted, with the original already moved aside.
+    await withProject(async (root) => {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      const linkPath = path.join(root, LINK);
+      await rm(linkPath, { recursive: true, force: true });
+      await mkdir(path.dirname(linkPath), { recursive: true });
+      await writeFile(linkPath, FLATTENED, "utf-8");
+
+      // The gap only exists where the kind and the ceiling come from an `lstat`
+      // and the content from a later `readFile`: replace the sidecar the moment
+      // that `lstat` answers and the read runs on an inode nothing vetted.
+      // Pinned to the measured handle, this injection never fires at all.
+      lstatSpy.mockImplementation(async (actual: FsPromises, target: string, ...rest: never[]) => {
+        const stats = await actual.lstat(target, ...rest);
+        if (target.includes(".qfai-repair-")) {
+          await actual.rm(target, { force: true });
+          await actual.writeFile(target, "x".repeat(8192), "utf-8");
+        }
+        return stats;
+      });
+      const readsOfSidecar: string[] = [];
+      readFileSpy.mockImplementation((actual: FsPromises, file: string, ...rest: never[]) => {
+        if (file.includes(".qfai-repair-")) readsOfSidecar.push(file);
+        return actual.readFile(file, ...rest);
+      });
+
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      lstatSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.lstat(...args));
+      readFileSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.readFile(...args),
+      );
+      // Nothing read it by pathname, and the repair finished on the entry it
+      // had measured.
+      expect(readsOfSidecar).toEqual([]);
+      expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
     });
   });
 });

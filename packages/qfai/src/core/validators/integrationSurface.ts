@@ -127,38 +127,49 @@ type Broken = {
   /** Repo-relative wrapper path, POSIX-separated so messages match across platforms. */
   relative: string;
   detail: string;
+  /**
+   * The canonical path a later `readdir` cannot survive, when this damage is
+   * one of those. Set where the damage is found, from the errno the probe
+   * actually saw — not derived afterwards from the wording, and not from
+   * `relative`, which names the wrapper for damage that sits on the canonical.
+   */
+  unwalkable?: string | undefined;
 };
 
 const toPosix = (value: string): string => value.split(path.sep).join("/");
 
 /**
- * Details that say a path the rest of validation walks is not walkable.
- *
- * A profile validator reading the same tree raises `ENOTDIR` / `ELOOP` from its
- * own `readdir`, and one rejection loses the finding this rule had already
- * produced — the only one that names the path and how to repair it. The caller
- * uses this to stop after reporting rather than to hide the error.
+ * Whether damage in this state stops a later `readdir` over the path.
  *
  * **Only what actually breaks a walk.** A canonical redirected by a symlink
  * that resolves is a serious finding and a `readdir` over it succeeds, so
  * short-circuiting on it hid every unrelated spec, contract and test defect
- * until the operator had repaired the link and run again. Cycles, dangling
- * links and non-directory components are the ones a later walk cannot survive.
+ * until the operator had repaired the link and run again. A dangling one reads
+ * as absence, which every validator already handles. Cycles and non-directory
+ * components are the two a later walk cannot survive.
  */
-const STRUCTURAL_DAMAGE = [
-  "is a symlink cycle",
-  "is a dangling symlink",
-  "not a directory",
-  "a path component",
-];
+function blocksWalk(state: PathState): boolean {
+  return state.kind === "cycle" || state.kind === "not-a-directory";
+}
 
-/** Whether these findings include damage that would break a later `readdir`. */
-export function hasStructuralDamage(issues: readonly Issue[]): boolean {
-  return issues.some(
-    (entry) =>
-      entry.code === "QFAI-LINK-001" &&
-      STRUCTURAL_DAMAGE.some((phrase) => entry.message.includes(phrase)),
-  );
+/**
+ * Canonical paths the rest of validation cannot walk.
+ *
+ * A profile validator reading the same tree raises `ENOTDIR` / `ELOOP` from its
+ * own `readdir`, and one rejection loses the finding already produced here —
+ * the only one that names the path and how to repair it. The caller uses this
+ * to stop after reporting rather than to hide the error.
+ *
+ * Read from the **whole** damage list, and from a flag each site sets when it
+ * sees the errno. Deciding it afterwards from the issue message read a
+ * 12-entry sample, so a thirteenth entry holding the only unwalkable path
+ * decided nothing; deciding it from the wording matched damage on
+ * `.claude/skills`, which is read here and walked by nobody afterwards, and
+ * short-circuiting on that hid every spec, contract and test defect sitting
+ * alongside it.
+ */
+function unwalkablePaths(broken: readonly Broken[]): string[] {
+  return broken.flatMap((entry) => (entry.unwalkable === undefined ? [] : [entry.unwalkable]));
 }
 
 /**
@@ -710,11 +721,26 @@ function wrapperSet(root: string, skills: string[], agents: string[]): Wrapper[]
  * legitimately predates a newly shipped skill, and `qfai init` creates it. What
  * is reported is a wrapper that exists and cannot do its job.
  */
+export type IntegrationSurfaceReport = {
+  issues: Issue[];
+  /**
+   * Canonical paths a later `readdir` cannot survive. Non-empty means the
+   * caller must stop after reporting these findings rather than walk into the
+   * exception. Read from the full damage list, never from the issue message.
+   */
+  unwalkable: string[];
+};
+
+/** The findings alone, for callers that do not decide whether to continue. */
 export async function validateIntegrationSurface(root: string): Promise<Issue[]> {
+  return (await inspectIntegrationSurface(root)).issues;
+}
+
+export async function inspectIntegrationSurface(root: string): Promise<IntegrationSurfaceReport> {
   const [skills, agents] = await Promise.all([canonicalSkillIds(), canonicalAgentNames()]);
   if (skills.length === 0 && agents.length === 0) {
     // No canonical tree — nothing to wrap, so nothing to be broken.
-    return [];
+    return { issues: [], unwalkable: [] };
   }
 
   const wrappers = wrapperSet(root, skills, agents);
@@ -885,6 +911,7 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
             broken.push({
               relative: damagedAncestor.relative,
               detail: describeDamage(damagedAncestor.state, "the canonical directory"),
+              unwalkable: blocksWalk(damagedAncestor.state) ? damagedAncestor.relative : undefined,
             });
           }
         } else if (canonical.kind === "present") {
@@ -922,6 +949,7 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
           broken.push({
             relative: wrapper.canonicalRelative,
             detail: describeDamage(canonical, "canonical document"),
+            unwalkable: blocksWalk(canonical) ? wrapper.canonicalRelative : undefined,
           });
         }
       }
@@ -979,14 +1007,30 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       // wrapper is as broken as one whose target is missing.
       const code = (error as NodeJS.ErrnoException | null)?.code;
       if (!isMissing(error) && code !== "ELOOP" && code !== "ENOTDIR") throw error;
+      // The link failing to resolve does not mean the canonical path is
+      // otherwise sound. Point `.qfai/assistant/skills` at an existing empty
+      // directory and every wrapper under it is `ENOENT` — plain "dangling",
+      // reported and `continue`d before anything looked at the ancestor. The
+      // remedy printed for it is "re-run `qfai init`", which recreates the
+      // canonical **inside the redirect** and leaves the wrapper's correct
+      // target string untouched: the finding clears while the redirect stays.
+      // So say the ancestor first, wherever it is found.
+      const linkProblem = await canonicalLinkProblem(root, realRoot, wrapper);
       broken.push({
         relative: wrapper.relative,
         detail:
-          code === "ELOOP"
-            ? `resolves through a symlink cycle -> ${toPosix(wrapper.target)}`
-            : code === "ENOTDIR"
-              ? `a path component of the canonical is not a directory -> ${toPosix(wrapper.target)}`
-              : `dangling -> ${toPosix(wrapper.target)}`,
+          linkProblem !== null
+            ? `${linkProblem} -> ${toPosix(wrapper.target)}`
+            : code === "ELOOP"
+              ? `resolves through a symlink cycle -> ${toPosix(wrapper.target)}`
+              : code === "ENOTDIR"
+                ? `a path component of the canonical is not a directory -> ${toPosix(wrapper.target)}`
+                : `dangling -> ${toPosix(wrapper.target)}`,
+        // The errno is about the canonical, so that is the path named — the
+        // entry is filed under the wrapper because that is what was probed.
+        // `ENOENT` is absence, which every later validator already handles.
+        unwalkable:
+          code === "ELOOP" || code === "ENOTDIR" ? wrapper.canonicalRelative : undefined,
       });
       continue;
     }
@@ -1147,14 +1191,19 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
   }
 
   if (broken.length === 0) {
-    return [];
+    return { issues: [], unwalkable: [] };
   }
 
   const sample = broken.slice(0, 12).map((entry) => `${entry.relative} (${entry.detail})`);
   const overflow =
     broken.length > sample.length ? ` (他 ${String(broken.length - sample.length)} 件)` : "";
 
-  return [
+  // The sample is what the operator reads; `unwalkable` is what the caller
+  // acts on, and it is computed over every entry — including the ones the
+  // sample drops.
+  const unwalkable = unwalkablePaths(broken);
+
+  const issues = [
     issue(
       "QFAI-LINK-001",
       `assistant 統合ディレクトリの symlink が壊れています（${String(broken.length)} 件）。skill / agent はこの経路でしか読み込まれないため、これらは現在まったく適用されていません: ${sample.join(", ")}${overflow}`,
@@ -1176,4 +1225,6 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       { relatedFiles: broken.slice(1).map((entry) => entry.relative) },
     ),
   ];
+
+  return { issues, unwalkable };
 }

@@ -1425,39 +1425,26 @@ async function recreateFlattenedLink(
   // What was actually moved, not what the caller saw a moment ago. Between
   // `isFlattenedLink` and the rename another process can leave a huge file or a
   // FIFO at the path, and the caller's 4096-byte check protected an inode that
-  // is no longer there — the read below would have exhausted memory, or blocked
-  // for ever, with the original already moved aside.
+  // is no longer there.
+  //
+  // One `open`, `fstat` on that handle, a bounded read from it. Checking the
+  // entry with `lstat` and then reading it by pathname were two operations on
+  // two possibly different inodes: another process replacing the sidecar in
+  // between, or growing it through an fd it held from before the rename, left
+  // the read unbounded — memory exhausted, or blocked for ever on a FIFO —
+  // with the original already moved aside and the pathname empty.
   //
   // Inside the rollback, because by now the wrapper *has* moved: a permission
-  // change or a transient `EIO` on this probe left the pathname empty and the
-  // original in the sidecar, with nothing said about either — worse than the
-  // flattened state the repair started from.
-  const moved = await lstat(sidecar).catch(async (statErr: unknown) => {
-    const restoreErr = await restoreSidecar(sidecar, linkPath).then(
-      () => null,
-      (err: unknown) => err,
-    );
-    if (restoreErr === null) throw statErr;
-    throw new Error(
-      [
-        `平坦化された symlink の修復に失敗しました: ${linkPath}`,
-        `退避したファイルの検査に失敗しました: ${describeError(statErr)}`,
-        `復元にも失敗しました: ${describeError(restoreErr)}`,
-        `元のファイルは次の場所にあります: ${sidecar}`,
-      ].join("\n"),
-      { cause: statErr },
-    );
-  });
-  if (!moved.isFile() || moved.size > 4096) {
-    await restoreSidecar(sidecar, linkPath);
-    return "skipped";
-  }
+  // change or a transient `EIO` here left the pathname empty and the original
+  // in the sidecar, with nothing said about either — worse than the flattened
+  // state the repair started from.
+  //
   // Both early returns put the file back the same way the rollback does.
   // `rename` overwrites, so a path another process re-created while this one
   // was reading would have been destroyed by the very restore that exists to
   // leave it alone — the atomic claim belongs on every restore, not only the
   // one after a failed `symlink`.
-  const original = await readFile(sidecar, "utf-8").catch(async (readErr: unknown) => {
+  const original = await readPinnedRegularFile(sidecar, 4096).catch(async (readErr: unknown) => {
     // A failed restore here is not a detail to swallow. The wrapper is gone
     // from its pathname and lives in the sidecar, and re-throwing the read
     // error alone told the operator neither of those — so the original looked
@@ -1478,7 +1465,9 @@ async function recreateFlattenedLink(
       { cause: readErr },
     );
   });
-  if (toComparableTarget(original) !== toComparableTarget(target)) {
+  // `null` is the kind or the ceiling failing on the inode actually opened —
+  // the same answer the caller's own check gave, taken again on what moved.
+  if (original === null || toComparableTarget(original) !== toComparableTarget(target)) {
     await restoreSidecar(sidecar, linkPath);
     return "skipped";
   }
@@ -1614,14 +1603,39 @@ async function isFlattenedLink(linkPath: string, target: string, known?: Stats):
   // at the path, and a bound checked on the old inode did not bind the new one
   // — the read then exhausted memory or never returned. One `open`, `fstat` on
   // that handle, a bounded read from it.
+  try {
+    const content = await readPinnedRegularFile(linkPath, 4096);
+    return content !== null && toComparableTarget(content) === toComparableTarget(target);
+  } catch (error: unknown) {
+    // Absence stays `false`: that is a race with something else removing it,
+    // not a statement about what the entry holds.
+    if ((error as NodeJS.ErrnoException | null)?.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+/**
+ * The bytes of a regular file no larger than `maxBytes`, read from the inode
+ * the size was measured on, or `null` when the entry is not one.
+ *
+ * **The ceiling binds the entry that is read**, not the one a previous
+ * `lstat` saw. Those are two pathname operations, and between them another
+ * process can replace the path with a huge file or a FIFO — a bound checked on
+ * the old inode does not bind the new one, and the read then exhausted memory
+ * or never returned. One `open`, `fstat` on that handle, a bounded read from
+ * it.
+ *
+ * A read fault is thrown rather than answered `null`: an ACL or a transient
+ * `EIO` says the content could not be checked, and reporting that as "not a
+ * bounded regular file" is a decision nobody made.
+ */
+async function readPinnedRegularFile(filePath: string, maxBytes: number): Promise<string | null> {
   let handle: FileHandle | undefined;
   try {
-    handle = await open(linkPath, OPEN_READ_FLAGS);
+    handle = await open(filePath, OPEN_READ_FLAGS);
     const pinned = await handle.stat();
-    // The longest plausible target is well under this, and it keeps the read
-    // off anything that is not a link-shaped file.
-    if (!pinned.isFile() || pinned.size > 4096) {
-      return false;
+    if (!pinned.isFile() || pinned.size > maxBytes) {
+      return null;
     }
     // Read to the end, not once: `read` may return fewer bytes than asked for,
     // and the unfilled tail stayed NUL — a correct flattened wrapper then
@@ -1633,15 +1647,13 @@ async function isFlattenedLink(linkPath: string, target: string, known?: Stats):
       if (bytesRead === 0) break;
       filled += bytesRead;
     }
-    const content = buffer.subarray(0, filled).toString("utf-8");
-    return toComparableTarget(content) === toComparableTarget(target);
+    return buffer.subarray(0, filled).toString("utf-8");
   } catch (error: unknown) {
     const code = (error as NodeJS.ErrnoException | null)?.code;
     // `ENXIO` is what `O_NONBLOCK` returns for a FIFO with no writer, in place
-    // of blocking; neither it nor a directory is a flattened link.
-    if (code === "ENOENT" || code === "ENXIO" || code === "EISDIR") {
-      return false;
-    }
+    // of blocking. Neither it nor a directory is a bounded regular file, and
+    // `open` is simply where that shows up instead of `fstat`.
+    if (code === "ENXIO" || code === "EISDIR") return null;
     throw error;
   } finally {
     await handle?.close();
