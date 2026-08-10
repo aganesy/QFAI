@@ -602,6 +602,24 @@ async function wrapperTarget(entryPath: string, entry: Dirent): Promise<string |
  * leaf below it, and carries the short-circuit with it: the caller cannot
  * recover that from the detail string.
  */
+/**
+ * Whether the document a later validator opens would stop it.
+ *
+ * They read `<canonical>/SKILL.md` (or the agent file) by pathname, so a cycle
+ * gives them `ELOOP`, a directory `EISDIR`, and an ACL an `EACCES` — each
+ * ending the run and taking the repairable finding with it. Absence they
+ * handle, and so does a link that resolves to something readable.
+ */
+async function documentBlocksWalk(wrapper: Wrapper): Promise<boolean> {
+  const doc =
+    wrapper.kind === "skill" ? path.join(wrapper.canonical, "SKILL.md") : wrapper.canonical;
+  const state = await statOrNull(doc);
+  if (state === null) return false;
+  if (typeof state === "string") return true;
+  if (!state.isFile()) return true;
+  return !(await isReadable(doc));
+}
+
 async function canonicalDamage(
   root: string,
   realRoot: string | null,
@@ -617,7 +635,15 @@ async function canonicalDamage(
       ? await unusableAncestor(root, wrapper.canonicalRelative)
       : null;
   const relative = culprit?.relative ?? wrapper.canonicalRelative;
-  const unwalkable = blocksWalk(state) ? relative : undefined;
+  // **Per tree, because the readers differ.** The skills tree is `readdir`ed —
+  // a regular file where the directory belongs raises `ENOTDIR` there and takes
+  // the run with it. The agents tree is not: `validateAgentDefinition` opens
+  // each document by path and its `access` probe answers "absent" for the same
+  // shape, so stopping on it hid every unrelated finding for damage nothing
+  // walks into. What does stop that reader is the **document** being the wrong
+  // type or unreadable, which is decided below.
+  const ancestorBlocks = wrapper.kind !== "agent" || culprit === null;
+  const unwalkable = blocksWalk(state) && ancestorBlocks ? relative : undefined;
 
   // A leaf that is itself damaged is described by its state, not by the generic
   // "is a symlink" the link probe would give: a dangling canonical and a
@@ -651,7 +677,15 @@ async function canonicalDamage(
 
   const link = await canonicalLinkProblem(root, realRoot, wrapper);
   if (link !== null) {
-    return { relative: wrapper.canonicalRelative, detail: link, unwalkable };
+    // The short-circuit above came from the **parent** state, which is healthy
+    // when only the nested `SKILL.md` is a link. A cycling one gives
+    // `validateSkillDocReferences` an `ELOOP` on the same pathname, so ask the
+    // document itself rather than inheriting an answer about its directory.
+    return {
+      relative: wrapper.canonicalRelative,
+      detail: link,
+      unwalkable: (await documentBlocksWalk(wrapper)) ? wrapper.canonicalRelative : unwalkable,
+    };
   }
   if (state.kind === "absent") return null;
   {
@@ -745,7 +779,7 @@ async function readPinnedFile(filePath: string, maxBytes: number): Promise<strin
     handle = await open(filePath, OPEN_READ_FLAGS);
     const stats = await handle.stat();
     if (!stats.isFile() || stats.size > maxBytes) return null;
-    return await readFully(handle, stats.size);
+    return await readFully(handle, maxBytes);
   } catch (error) {
     if (isMissing(error)) return null;
     const code = (error as NodeJS.ErrnoException | null)?.code;
@@ -768,14 +802,26 @@ async function readPinnedFile(filePath: string, maxBytes: number): Promise<strin
  * comparison, and an initialised project read as never initialised, so its
  * broken surface went unchecked.
  */
-async function readFully(handle: FileHandle, size: number): Promise<string> {
-  const buffer = Buffer.alloc(size);
+/**
+ * The whole file, or `null` when it runs past `maxBytes`.
+ *
+ * Read to `maxBytes + 1`, not to the size just measured. Another process
+ * holding this inode can append after the `fstat`, and stopping at the old
+ * size returned a **prefix** — which, matching a canonical-shaped target, had a
+ * file with its own content after it reported as a qfai wrapper, failing every
+ * profile and telling the operator to delete it. One byte past the ceiling is
+ * what separates "this is the whole file" from "this is as much as I asked
+ * for".
+ */
+async function readFully(handle: FileHandle, maxBytes: number): Promise<string | null> {
+  const buffer = Buffer.alloc(maxBytes + 1);
   let filled = 0;
-  while (filled < size) {
-    const { bytesRead } = await handle.read(buffer, filled, size - filled, filled);
+  while (filled < buffer.length) {
+    const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
     if (bytesRead === 0) break;
     filled += bytesRead;
   }
+  if (filled > maxBytes) return null;
   return buffer.subarray(0, filled).toString("utf-8");
 }
 
@@ -1422,6 +1468,10 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
       broken.push({
         relative: wrapper.relative,
         detail: "resolves, but the document is unreadable",
+        // `validateAgentDefinition` confirms the file exists and then reads the
+        // same pathname, so this ends the run under every profile that routes
+        // agents — taking the repairable finding with it.
+        unwalkable: wrapper.canonicalRelative,
       });
     }
   }

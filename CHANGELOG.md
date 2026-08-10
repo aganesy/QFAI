@@ -505,6 +505,24 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The short-circuit is decided per tree, because the readers differ.** The
+  skills tree is `readdir`ed, so a regular file where the directory belongs
+  raises `ENOTDIR` and takes the run with it; the agents tree is not — each
+  document is opened by path and the same shape reads as absence. Treating both
+  alike stopped `full` on damage nothing walks into. What does stop the agent
+  reader is the _document_ being the wrong type or unreadable, and that is what
+  is recorded now.
+- **A nested `SKILL.md` decides its own short-circuit.** With only the document
+  a symlink, the parent directory is healthy — so the answer inherited from it
+  was "keep going", while `validateSkillDocReferences` opened the same pathname
+  and got `ELOOP`.
+- **An unreadable canonical agent stops the profiles that route agents.**
+  `validateAgentDefinition` confirms the file exists and then reads it, so an
+  ACL ended the run and took the repairable finding with it.
+- **A retired-wrapper candidate is read to the ceiling and confirmed at EOF.**
+  Reading only the size just measured returned a prefix, so an append through an
+  fd held from before the `fstat` could leave a canonical-shaped target matching
+  — and the finding tells the operator to delete the file.
 - **The absent-wrapper branch asks the same question as every other.** It
   checked link and type only, so with all four wrappers for a skill deleted a
   canonical that was unreadable, or reachable only through a resolving symlink,

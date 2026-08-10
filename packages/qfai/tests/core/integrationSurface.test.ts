@@ -1076,6 +1076,26 @@ describe("what init wrote is still checked after the roster moves on", () => {
     },
   );
 
+  it("declines a retired-wrapper candidate that runs past the ceiling", async () => {
+    // A canonical-shaped target followed by content of its own is not a
+    // wrapper. The read is bounded to `maxBytes + 1` and confirms EOF, so the
+    // answer does not depend on the size measured a moment earlier — an append
+    // through an fd held from before the `fstat` would otherwise have left a
+    // matching prefix, and the finding tells the operator to delete the file.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      await writeFile(
+        path.join(root, ".claude", "skills", "legacy-research"),
+        `../../.qfai/assistant/skills/legacy-research${"x".repeat(8192)}`,
+        "utf-8",
+      );
+
+      await expect(validateIntegrationSurface(root)).resolves.toEqual([]);
+    });
+  });
+
   it("says nothing about a one-line file that is not byte-exactly a target", async () => {
     // Git writes the target for mode `120000` with no trailing newline, so
     // trimming one off made a project's own note indistinguishable from a
@@ -1407,6 +1427,53 @@ describe("a resolving link is a finding, not a reason to stop", () => {
       expect(report.unwalkable).toEqual([]);
     });
   });
+
+  it("stops the profile for a SKILL.md symlink cycle behind a broken wrapper", async () => {
+    // The parent directory is healthy, so the short-circuit computed from its
+    // state was undefined — while the later readers open the same `SKILL.md`
+    // and get `ELOOP`.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      for (const dir of SKILL_INTEGRATION_DIRS) {
+        const wrapper = path.join(root, ...dir.split("/"), "qfai-atdd");
+        await rm(wrapper, { recursive: true, force: true });
+        await writeFile(wrapper, skillTarget(dir, "qfai-atdd"), "utf-8");
+      }
+      const canonicalDir = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      const doc = path.join(canonicalDir, "SKILL.md");
+      const loop = path.join(canonicalDir, "loop.md");
+      await rm(doc, { force: true });
+      await symlink(loop, doc, "file");
+      await symlink(doc, loop, "file");
+
+      const report = await inspectIntegrationSurface(root);
+      expect(report.unwalkable).toContain(".qfai/assistant/skills/qfai-atdd");
+    });
+  });
+
+  // POSIX only, and not as root: an ACL is what closes the document.
+  it.skipIf(process.platform === "win32" || process.geteuid?.() === 0)(
+    "stops the profile for an unreadable canonical agent",
+    async () => {
+      // `validateAgentDefinition` confirms the file exists and then reads the
+      // same pathname, so the run ends under every profile that routes agents.
+      await withProject(async (root) => {
+        if (!(await canCreateSymlink(root))) return;
+        await seedCanonical(root, [], ["completion-reviewer"]);
+        await wireAll(root, [], ["completion-reviewer"]);
+        const doc = path.join(root, ".qfai", "assistant", "agents", "completion-reviewer.md");
+        await chmod(doc, 0o000);
+        try {
+          const report = await inspectIntegrationSurface(root);
+          expect(report.unwalkable).toContain(".qfai/assistant/agents/completion-reviewer.md");
+        } finally {
+          await chmod(doc, 0o644);
+        }
+      });
+    },
+  );
 
   it("does not stop the profile for a cycle on a canonical leaf", async () => {
     // The walks over this tree list a directory with `withFileTypes` and
