@@ -90,7 +90,24 @@ describe("legacy review pack migration", () => {
     expect(after.some((i) => i.code === "QFAI-REVIEW-009")).toBe(true);
   });
 
-  it("is additive and idempotent", async () => {
+  it("does not classify again once the record exists", async () => {
+    // A pack written *after* the migration that forgets its marker must stay a
+    // blocking finding. Re-classifying on every run recorded it and then marked
+    // it `legacy`, which is the downgrade the corroboration exists to prevent.
+    const root = await newRoot();
+    await seedPack(root, "20260101000000000", undeclared);
+    await migrateLegacyReviewPacks(root);
+
+    await seedPack(root, "20260301000000000", undeclared);
+    const second = await migrateLegacyReviewPacks(root);
+
+    expect(second.added).toEqual([]);
+    expect(second.marked).toEqual([]);
+    const written = await readFile(path.join(root, ".qfai", "review", ".legacy-packs"), "utf-8");
+    expect(written).not.toContain("review-20260301000000000");
+  });
+
+  it("leaves an existing record alone", async () => {
     const root = await newRoot();
     await seedPack(root, "20260101000000000", undeclared);
     await mkdir(path.join(root, ".qfai", "review"), { recursive: true });
@@ -103,12 +120,12 @@ describe("legacy review pack migration", () => {
     await migrateLegacyReviewPacks(root);
     const second = await migrateLegacyReviewPacks(root);
 
-    // A repeat run adds nothing, and a name an operator recorded by hand is
-    // never dropped.
+    // The record already existed, so the snapshot had been taken: nothing is
+    // classified again, and the name an operator recorded by hand is untouched.
     expect(second.added).toEqual([]);
     const written = await readFile(path.join(root, ".qfai", "review", ".legacy-packs"), "utf-8");
     expect(written).toContain("review-19990101000000000");
-    expect(written).toContain("review-20260101000000000");
+    expect(written).not.toContain("review-20260101000000000");
   });
 
   it("writes nothing under dry-run", async () => {

@@ -51,11 +51,20 @@ export async function migrateLegacyReviewPacks(
   const manifestPath = path.join(root, LEGACY_MANIFEST_REL);
   const existing = await readManifest(manifestPath);
 
+  // **The first run is the snapshot, and only the first.** Re-classifying on
+  // every invocation meant a pack written *after* the migration that forgot its
+  // marker was recorded and then marked `legacy` — turning a blocking
+  // `QFAI-REVIEW-007` into a warning, which is the opposite of what this
+  // corroboration is for. Once the record exists, it is a historical fact and
+  // this stops adding to it; a pack that belongs on it and is missing is added
+  // by hand, which is a visible edit to a governance record.
+  const alreadyMigrated = existing.length > 0 || (await manifestExists(manifestPath));
   const added: string[] = [];
-  for (const packName of await listPackNames(reviewRoot)) {
-    if (existing.includes(packName)) continue;
-    if (await declaresRevisionForm(path.join(reviewRoot, packName, "summary.json"))) continue;
-    added.push(packName);
+  if (!alreadyMigrated) {
+    for (const packName of await listPackNames(reviewRoot)) {
+      if (await declaresRevisionForm(path.join(reviewRoot, packName, "summary.json"))) continue;
+      added.push(packName);
+    }
   }
 
   // Both halves of the same fact, or neither is any use. The validator relaxes
@@ -68,6 +77,8 @@ export async function migrateLegacyReviewPacks(
       const body = [...HEADER, ...[...existing, ...added].sort((a, b) => a.localeCompare(b)), ""];
       await writeFile(manifestPath, body.join("\n"), "utf-8");
     }
+    // Only what the record lists: marking a pack it does not name would be the
+    // same downgrade by another route.
     for (const packName of [...existing, ...added]) {
       if (await markPackLegacy(path.join(reviewRoot, packName, "summary.json"))) {
         marked.push(packName);
@@ -89,6 +100,17 @@ async function listPackNames(reviewRoot: string): Promise<string[]> {
       .sort((left, right) => left.localeCompare(right));
   } catch (error: unknown) {
     if (isEnoent(error)) return [];
+    throw error;
+  }
+}
+
+/** Whether the record exists at all, even empty: an empty one is still a snapshot taken. */
+async function manifestExists(manifestPath: string): Promise<boolean> {
+  try {
+    await readFile(manifestPath, "utf-8");
+    return true;
+  } catch (error: unknown) {
+    if (isEnoent(error)) return false;
     throw error;
   }
 }

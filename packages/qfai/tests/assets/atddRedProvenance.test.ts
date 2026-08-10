@@ -588,7 +588,7 @@ describe.each(TREES)("%s (natural RED and the shared falsifiability gate)", (tre
 
     const gatekeeper = flat(await read(tree, GATEKEEPER));
     expect(gatekeeper).toContain(
-      "**On an `E2E` / `API` row, `Satisfied-by` need not be a sibling `TDD-NNNN`.**",
+      "**On an `E2E` / `API` / `Integration` row, `Satisfied-by` need not be a sibling `TDD-NNNN`.**",
     );
     expect(gatekeeper).toContain("On any other row the sibling row is still required");
   });
@@ -1017,7 +1017,9 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
     // The producer records it; without the consumer recomputing it, a test
     // edited after the handoff passes gate item 10 exactly as a fresh one does.
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("**required on a handed-over `E2E` / `API` row**, and checked");
+    expect(implement).toContain(
+      "**required on a handed-over `E2E` / `API` / `Integration` row**, and checked",
+    );
     expect(implement).toContain("Recompute it over the **same inputs the producer hashed**");
     // Recomputing over `Test file` alone yields a different value for every row
     // that reads a fixture, so an unchanged row failed the gate every pass.
@@ -2432,6 +2434,19 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
       const reviewer = flat(await read(tree, `assistant/agents/${agent}.md`));
       expect(reviewer).toContain("for an `E2E` / `API` / `Integration` row");
     }
+  });
+
+  it("routes the Integration gatekeeper at the file its provenance is in", async () => {
+    // The input branch still sent only E2E/API to the ATDD file, so P1b/P4b on
+    // a correct Integration row either stopped for missing evidence or audited
+    // the wrong file. The ownership boundary follows it: the production-path
+    // `Satisfied-by` and the mutation-scope exception are the same three layers.
+    const gatekeeper = flat(await read(tree, GATEKEEPER));
+    expect(gatekeeper).toContain("for a `Layer = E2E` / `Layer = API` / `Layer = Integration` row");
+    expect(gatekeeper).toContain(
+      "**On an `E2E` / `API` / `Integration` row, `Satisfied-by` need not be a sibling",
+    );
+    expect(gatekeeper).toContain("which on an `E2E` / `API` / `Integration` row is every");
   });
 
   it("exempts every blocking reviewer of the nested run, not just the gatekeeper", async () => {

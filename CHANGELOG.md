@@ -506,6 +506,25 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The legacy migration classifies once, on the first run.** Re-scanning on
+  every `doctor --autoremediate` meant a pack written _after_ the migration that
+  forgot its marker was recorded and then marked `legacy` — turning a blocking
+  `QFAI-REVIEW-007` into a warning, which is the downgrade the corroboration
+  exists to prevent. Once the record exists it is a historical fact; adding to it
+  is a visible edit to a governance record.
+- **`doctor --format json` stays parseable through the migration.** The
+  `.gitignore` helper wrote its progress line straight to stdout, ahead of the
+  document, on exactly the adoption path that needs it.
+- **`qa-gatekeeper` follows Integration to the ATDD file, with the ownership
+  boundary that goes with it.** Its input branch still read Integration evidence
+  from the implement file, so P1b / P4b either stopped a correct row for missing
+  evidence or audited the wrong one — and the production-path `Satisfied-by` and
+  the mutation-scope exception were still `E2E` / `API` only, sending a normal
+  branch-2 Integration row to `exception`.
+- **An Integration row's `RED test hash` is recomputed at completion.** Item 10
+  had already taken Integration into the handoff while the field itself was
+  still required and rechecked for `E2E` / `API` alone, so a test or fixture
+  edited after the handoff carried stale provenance to `done`.
 - **The Integration alignment reaches the two places it had missed.** Phase Red
   step 2 still held back only `E2E` / `API` from `todo -> red`, so an
   Integration row advanced before step 3b could verify its handoff — and the

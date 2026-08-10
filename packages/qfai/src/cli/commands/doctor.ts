@@ -119,7 +119,9 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
     // clone. `runAutoremediate` lives in core and this helper in the CLI, so
     // the call belongs here rather than the import belonging there.
     if (!isCi) {
-      await ensureRootGitignoreEntries(resolvedRoot, Boolean(options.dryRun));
+      await ensureRootGitignoreEntries(resolvedRoot, Boolean(options.dryRun), (line) =>
+        sideEffectLines.push(line),
+      );
     }
     const summary = await runAutoremediate({
       root: resolvedRoot,
