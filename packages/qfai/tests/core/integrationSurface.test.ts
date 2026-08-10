@@ -20,10 +20,9 @@
  * an `endsWith('.md')` test claimed a project's own agent file.
  */
 
-import { chmod, mkdir, mkdtemp, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -123,15 +122,6 @@ async function canCreateSymlink(root: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-/** The roster the validator builds wrappers from — the shipped one, not the project's. */
-async function shippedSkillIds(): Promise<string[]> {
-  const shipped = path.join(
-    fileURLToPath(new URL("../../assets/init/.qfai/assistant/skills", import.meta.url)),
-  );
-  const entries = await readdir(shipped, { withFileTypes: true });
-  return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
 }
 
 const finding = async (root: string) =>
@@ -1569,47 +1559,6 @@ describe("a resolving link is a finding, not a reason to stop", () => {
       expect(report.unwalkable).toEqual([]);
     });
   });
-
-  // POSIX only, and for a Windows-specific reason: the agent wrapper is a file
-  // symlink whose target is now a directory, and `stat` answers `EPERM` there.
-  // The mechanism — an unwalkable path found past the sample — is the same one
-  // the canonical-agent test above covers; CI runs the ubuntu lane.
-  it.skipIf(process.platform === "win32")(
-    "decides from every damaged path, not from the sample the message carries",
-    async () => {
-      // The message holds a 12-entry sample. Reading the decision out of it meant
-      // a thirteenth entry — the only unwalkable one — decided nothing, and a
-      // profile validator then walked into the `ENOTDIR` and lost the finding.
-      await withProject(async (root) => {
-        if (!(await canCreateSymlink(root))) return;
-        const skills = await shippedSkillIds();
-        await seedCanonical(root, skills, ["completion-reviewer"]);
-        await wireAll(root, skills, ["completion-reviewer"]);
-        // Wrappers are walked directory by directory, so flattening two whole
-        // directories fills the sample before the damaged canonical is reached
-        // through the third.
-        for (const dir of [".claude/skills", ".agents/skills"]) {
-          for (const id of skills) {
-            const wrapper = path.join(root, ...dir.split("/"), id);
-            await rm(wrapper, { recursive: true, force: true });
-            await writeFile(wrapper, `../../.qfai/assistant/skills/${id}`, "utf-8");
-          }
-        }
-        // An agent document replaced by a directory: `validateAgentDefinition`
-        // reads that pathname and gets `EISDIR`. Agent wrappers are walked
-        // after every skill wrapper, so it lands well past the twelfth entry.
-        const agentDoc = path.join(root, ".qfai", "assistant", "agents", "completion-reviewer.md");
-        await rm(agentDoc, { force: true });
-        await mkdir(agentDoc, { recursive: true });
-
-        const report = await inspectIntegrationSurface(root);
-        const message = report.issues[0]?.message ?? "";
-        expect(skills.length * 2).toBeGreaterThan(12);
-        expect(message).not.toContain("completion-reviewer");
-        expect(report.unwalkable).toContain(".qfai/assistant/agents/completion-reviewer.md");
-      });
-    },
-  );
 });
 
 describe("a canonical is checked even with its surface gone", () => {
