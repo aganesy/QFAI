@@ -284,7 +284,7 @@ Quality bar:
 Round: 1 | 2 | 2b
 Result: PASS | REVISE
 Reviewed revision: <git rev> | working-tree+<content hash>
-Audited evidence hash: <content hash of the evidence read>
+Audited evidence hash: <content hash of the evidence read>   # one line per TDD-ID on a T1 group
 Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
 Findings:
 - <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|none>
@@ -350,8 +350,11 @@ post-escalation verification review of a user-named fix.
        `Revision`**: that field names the tree the GREEN landed at and does not
        exist yet, so including it put a field into the subject that appeared
        later and made every correct RED PASS stale at GREEN.
-     - **GREEN observation**: the RED subject plus `Revision`, the GREEN pair and
-       `Oracle proof`.
+     - **GREEN observation**: the RED subject plus `Revision`, the GREEN pair,
+       `Oracle proof` and, where the row has one, `Replacement proof revision` —
+       it addresses the tree a re-taken proof ran against, and `.qfai/evidence/**`
+       is out of the working-tree revision, so a subject without it let that
+       proof be attributed to a tree it never ran on.
      - **Branch 3** (`exception`): row identity, the obligation reference the
        row's `Layer` selects, the `DR-ID`, and the `DR-*` artifact it names. The
        obligation is what the DR says cannot be observed, so a subject without
@@ -385,8 +388,12 @@ post-escalation verification review of a user-named fix.
      drop leading and trailing blank lines; end with exactly one newline.
   3. **Serialize.** One record per artifact — the repo-relative path, a NUL
      byte, then the SHA-256 of that artifact's normalized bytes — sorted by
-     path, joined with newlines. Two artifacts: the extracted section, recorded
-     under the evidence file's path, and
+     path, joined with newlines. **This is the audit hash, not the working-tree
+     revision**: that one has its own four steps, including the untracked
+     record's `kind` and `mode`, in
+     `../skills/qfai-implement/references/evidence-revision.md`, and restating
+     it here is how the two came to disagree. Two artifacts: the extracted
+     section, recorded under the evidence file's path, and
      on a branch-3 row the `DR-*` artifact the row names, whole, under its
      repo-relative path — the subject says the DR is that branch's evidence, and
      a subject with no record for it is a hash that does not move when the DR
@@ -401,18 +408,28 @@ post-escalation verification review of a user-named fix.
      in the matrix contributes nothing.
   4. **Hash.** SHA-256 of that record list; record the hex digest.
 
+  **A T1 coherent group is one pass and several rows** (`volume-policy.md`).
+  One hash over a representative would leave the other members' evidence free to
+  change after the PASS, and a private concatenation of their sections has no
+  defined member order or record shape for gate item 10 to reproduce. Record
+  **one `Audited evidence hash` per `TDD-ID` in the group**, each by these four
+  steps over that row's own subject, listed in the verdict beside the id it
+  belongs to. Nothing about a group is special then; it is the single-row rule
+  applied as many times as the group has members.
+
   Gate item 10 runs the same four steps. A row with no coverage-depth file, or
   none whose matrix names its obligation, has one record rather than a
   placeholder — an absent artifact contributes nothing, not a name with an empty
   hash.
 
 - `Reviewed revision` is REQUIRED. It names the state the verdict describes — a `git rev-parse HEAD`
-  value, or `working-tree+<content hash>` when the tree is uncommitted — a hash over
-  `git rev-parse HEAD`, `git diff HEAD` and a **manifest** of every untracked
-  file — its path, a NUL byte, and the hash of its contents, sorted by path.
-  Path, boundary and order are all part of it: contents alone do not move when a
-  file is renamed or two swap contents, and with no defined order a second
-  reviewer cannot recompute the value this verdict is pinned to.
+  value, or `working-tree+<content hash>` when the tree is uncommitted, computed by
+  the four-step procedure in `../skills/qfai-implement/references/evidence-revision.md`:
+  collect, exclude, serialize, hash. **Do not restate it**: it was restated here as
+  `path + NUL + hash`, the canonical since gained the untracked record's `kind`
+  and `mode`, and the two spellings gave producer and reviewer different
+  addresses for one tree on any run with an untracked file in it — which a new
+  acceptance test is.
   **The ledger, the evidence tree and the review pack are excluded**, exactly
   as that contract says — `.qfai/specs/*/tdd/test-list.md`, `.qfai/evidence/**`
   and `.qfai/review/**`. The pack is on the list because a project may

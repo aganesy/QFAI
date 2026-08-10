@@ -488,6 +488,16 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The handoff records the obligation reference the RED subject hashes.** The
+  gatekeeper judges at P1b, so recording it later moves a stored hash and
+  leaving it out lets the reference be repointed.
+- **`Replacement proof revision` is inside a subject**, so the proof cannot be
+  attributed to a tree it never ran on.
+- **The baseline stops restating the working-tree serialization.** Restated as
+  `path + NUL + hash`, it fell behind the canonical's `kind` and `mode`, and
+  the two spellings gave one tree two addresses.
+- **A T1 coherent group is hashed per member.** One hash over a representative
+  left the other members' evidence free to change after the PASS.
 - **A replacement proof gets its own revision.** Overwriting `RED revision` on
   an `observed-red` row hashed the natural RED's pair with a later mutation's
   tree as one observation.

@@ -166,7 +166,7 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     // phase, because there is no production code to mutate until then.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain(
-      "| Observed RED | Row identity (`Layer`, `Test file`, `Selector`), RED command+result, `RED failure mode`, `RED revision`, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
+      "RED command+result, `RED failure mode`, `RED revision`, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
     );
     expect(provenance).toContain("A natural RED is not a substitute");
     expect(provenance).toContain("branch 1 names the mutation it intends");
@@ -765,7 +765,7 @@ describe.each(TREES)("%s (the handoff survives ledger order and time)", (tree) =
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain("**and the revision it was observed at**");
     expect(provenance).toContain(
-      "| Observed RED | Row identity (`Layer`, `Test file`, `Selector`),",
+      "| Observed RED | Row identity (`Layer`, `Test file`, `Selector`) and the obligation reference",
     );
   });
 
@@ -1091,14 +1091,17 @@ describe.each(TREES)("%s (a gate cannot fail on its own bookkeeping)", (tree) =>
     expect(implement).toContain("Recompute it over the **same inputs the producer hashed**");
   });
 
-  it("carries the untracked manifest into the shared reviewer contract", async () => {
+  it("points the shared reviewer contract at the one serialization", async () => {
+    // It used to restate the manifest as `path + NUL + hash`. The canonical
+    // then gained the untracked record's `kind` and `mode`, and the two
+    // spellings gave producer and reviewer different addresses for one tree.
     const baseline = flat(
       await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
     );
-    expect(baseline).toContain("a **manifest** of every untracked file");
     expect(baseline).toContain(
-      "its path, a NUL byte, and the hash of its contents, sorted by path",
+      "the four-step procedure in `../skills/qfai-implement/references/evidence-revision.md`",
     );
+    expect(baseline).toContain("**Do not restate it**");
   });
 
   it("lets a handed-over row's mutation touch the predicate it names", async () => {
@@ -1409,6 +1412,49 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(baseline).toContain("**RED observation**");
     expect(baseline).toContain("**GREEN observation**");
     expect(baseline).toContain("**Completion review**");
+  });
+
+  it("records the obligation reference in the handoff shape", async () => {
+    // The RED subject hashes it and the gatekeeper judges at P1b, so recorded
+    // later it moves a stored hash and left out it can be repointed.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("the obligation reference the `Layer` selects");
+    expect(provenance).toContain("Both carry the obligation reference");
+  });
+
+  it("puts the replacement proof revision inside a subject", async () => {
+    // `.qfai/evidence/**` is out of the working-tree revision, so a subject
+    // without it let the proof be attributed to a tree it never ran on.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("where the row has one, `Replacement proof revision`");
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("also carries `Replacement proof revision`");
+  });
+
+  it("stops restating the working-tree serialization in the baseline", async () => {
+    // Restated as `path + NUL + hash`, it fell behind the canonical's `kind`
+    // and `mode` — two spellings, two addresses for one tree.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("**Do not restate it**");
+    expect(baseline).toContain("../skills/qfai-implement/references/evidence-revision.md");
+    expect(baseline).not.toContain(
+      "a **manifest** of every untracked file — its path, a NUL byte, and the hash of its contents",
+    );
+  });
+
+  it("hashes a T1 group per member", async () => {
+    // One hash over a representative leaves the other members' evidence free to
+    // change after the PASS, and a private concatenation has no order the gate
+    // can reproduce.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("**A T1 coherent group is one pass and several rows**");
+    expect(baseline).toContain("one `Audited evidence hash` per `TDD-ID` in the group");
   });
 
   it("keeps a replacement proof's revision out of RED revision", async () => {

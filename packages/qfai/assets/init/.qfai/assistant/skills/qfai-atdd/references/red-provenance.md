@@ -239,11 +239,11 @@ try branches 1 and 2.
 
 Exactly one form per row, never both and never neither:
 
-| Branch         | Recorded                                                                                                                                               |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Observed RED   | Row identity (`Layer`, `Test file`, `Selector`), RED command+result, `RED failure mode`, `RED revision`, `qa-gatekeeper` PASS, the `Oracle proof` plan |
-| Falsifiability | Row identity (as above), `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, `RED failure mode: falsifiability`, GREEN pair             |
-| `exception`    | Write `todo -> exception` with the `DR-*` the stage recorded; do not re-derive it, and do not enter Phase Green.                                       |
+| Branch         | Recorded                                                                                                                                                                                                                                      |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Observed RED   | Row identity (`Layer`, `Test file`, `Selector`) and the obligation reference the `Layer` selects (`TC-ref` / `US-ref` / `CON-API-ref`), RED command+result, `RED failure mode`, `RED revision`, `qa-gatekeeper` PASS, the `Oracle proof` plan |
+| Falsifiability | Row identity (as above), `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, `RED failure mode: falsifiability`, GREEN pair                                                                                                    |
+| `exception`    | Write `todo -> exception` with the `DR-*` the stage recorded; do not re-derive it, and do not enter Phase Green.                                                                                                                              |
 
 `RED failure mode` is on both rows because the consumer's per-item contract
 requires it before the reviewers run, and neither branch was recording it — an
@@ -251,6 +251,10 @@ otherwise correct ATDD-owned row reached the completion gate missing a mandatory
 field. On an observed RED it is the kind the failure actually was
 (`assertion` | `expected-error`); on branch 2 it is `falsifiability`, which is
 what that form is.
+
+Both carry the obligation reference: the RED subject hashes it and the gatekeeper
+judges at **P1b**, so recorded later it moves a stored hash, and left out it can
+be pointed at another requirement while the original PASS stands.
 
 **Where each form lives.** The `## Ledger rows advanced` table is an index: one
 row per `TDD-*`, holding the branch and an anchor. The commands and their output
