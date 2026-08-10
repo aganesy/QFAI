@@ -343,6 +343,35 @@ async function brokenAncestor(
   return null;
 }
 
+/**
+ * A canonical reachable only through a symlink — its own, an ancestor's, or its
+ * `SKILL.md`'s — or `null` when every one of them is a real entry.
+ *
+ * `init` writes all three as real directories and real files, so a link is
+ * damage wherever it points. A resolving one is the case no path comparison
+ * catches: both sides follow it to the same place.
+ */
+async function canonicalLinkProblem(
+  root: string,
+  realRoot: string | null,
+  wrapper: Wrapper,
+): Promise<string | null> {
+  const ancestor = await symlinkAncestor(root, wrapper.canonicalRelative);
+  if (ancestor !== null) return `a canonical ancestor is a symlink: ${toPosix(ancestor)}`;
+  const own = await lstatOrNull(wrapper.canonical);
+  if (own?.isSymbolicLink() === true) {
+    const resolved = await realpathOrNull(wrapper.canonical);
+    return realRoot !== null && resolved !== null && !isInside(realRoot, resolved)
+      ? `canonical document is a symlink out of the project: ${toPosix(resolved)}`
+      : `canonical document is a symlink: ${toPosix(resolved ?? "?")}`;
+  }
+  if (wrapper.kind !== "skill") return null;
+  const doc = path.join(wrapper.canonical, "SKILL.md");
+  const docOwn = await lstatOrNull(doc);
+  if (docOwn?.isSymbolicLink() === true) return "canonical SKILL.md is a symlink";
+  return null;
+}
+
 /** Whether `candidate` is `base` itself or sits under it. */
 function isInside(base: string, candidate: string): boolean {
   const relative = path.relative(base, candidate);
@@ -740,7 +769,16 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
           // document replaced by a directory — was reported as a plain missing
           // wrapper, and the remedy it printed (`qfai init`) cannot recreate
           // the wrapper while the collision stands.
-          const wrong = await canonicalKindProblem(wrapper, canonical.stats);
+          // The same integrity the wrapper branch applies, not the kind check
+          // alone. With no wrapper to resolve through, a canonical directory,
+          // one of its ancestors or its `SKILL.md` replaced by a **resolving**
+          // symlink read as a plain missing wrapper — and `qfai init` then
+          // creates a wrapper pointing at it, since create-only leaves the
+          // canonical as it found it. Three rounds of findings have been this
+          // check existing in one branch and not the other; it has one home.
+          const wrong =
+            (await canonicalLinkProblem(root, realRoot, wrapper)) ??
+            (await canonicalKindProblem(wrapper, canonical.stats));
           if (wrong === null) {
             broken.push({
               relative: wrapper.relative,
@@ -870,33 +908,13 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
     // sides converge on that skill, `isInside` is satisfied, and every profile
     // but `full` reports a healthy surface while the assistant loads the wrong
     // instructions.
-    // Its ancestors as well. `.qfai/assistant/skills` pointed at another
-    // directory inside the project follows through to a leaf that is a real
-    // entry, so the leaf check below is satisfied — and both resolved paths
-    // land in the same place, inside the project, so neither comparison has
-    // anything to say while every profile but `full` loads the wrong tree.
-    const canonicalAncestor = await symlinkAncestor(root, wrapper.canonicalRelative);
-    if (canonicalAncestor !== null && !damagedCanonicals.has(canonicalAncestor)) {
-      damagedCanonicals.add(canonicalAncestor);
-      broken.push({
-        relative: canonicalAncestor,
-        detail: "a canonical ancestor is a symlink",
-      });
-      continue;
-    }
-    const canonicalOwn = await lstatOrNull(wrapper.canonical);
-    if (
-      canonicalOwn?.isSymbolicLink() === true &&
-      !damagedCanonicals.has(wrapper.canonicalRelative)
-    ) {
+    // Its ancestors and its `SKILL.md` as well, by the one helper the absent
+    // branch uses: the same check living in two places is what kept letting a
+    // link through on whichever side had not been updated yet.
+    const linkProblem = await canonicalLinkProblem(root, realRoot, wrapper);
+    if (linkProblem !== null && !damagedCanonicals.has(wrapper.canonicalRelative)) {
       damagedCanonicals.add(wrapper.canonicalRelative);
-      broken.push({
-        relative: wrapper.canonicalRelative,
-        detail:
-          realRoot !== null && canonical !== null && !isInside(realRoot, canonical)
-            ? `canonical document is a symlink out of the project: ${toPosix(canonical)}`
-            : `canonical document is a symlink: ${toPosix(canonical ?? "?")}`,
-      });
+      broken.push({ relative: wrapper.canonicalRelative, detail: linkProblem });
       continue;
     }
     if (

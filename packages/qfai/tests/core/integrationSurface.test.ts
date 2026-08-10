@@ -1025,6 +1025,34 @@ describe("a broken link on the way to a surface is not an absent surface", () =>
   });
 });
 
+describe("the canonical integrity check does not depend on a wrapper", () => {
+  it("reports a resolving canonical symlink when the wrappers are gone", async () => {
+    // With no wrapper to resolve through, a canonical redirected at another
+    // shipped skill read as a plain missing wrapper — and `qfai init` then
+    // creates a wrapper pointing at it, since create-only leaves the canonical
+    // as it found it.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd", "qfai-verify"], []);
+      await wireAll(root, ["qfai-atdd", "qfai-verify"], []);
+      for (const dir of SKILL_INTEGRATION_DIRS) {
+        await rm(path.join(root, ...dir.split("/"), "qfai-atdd"), { recursive: true, force: true });
+      }
+      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      await rm(canonical, { recursive: true, force: true });
+      await symlink(
+        path.join(root, ".qfai", "assistant", "skills", "qfai-verify"),
+        canonical,
+        "dir",
+      );
+
+      const found = await finding(root);
+      expect(found?.message).toContain("canonical document is a symlink");
+      expect(found?.message).not.toContain("and so does the document it wraps");
+    });
+  });
+});
+
 describe("a broken canonical grandparent is found too", () => {
   it("names the outermost broken component, not the leaf", async () => {
     // A dangling `.qfai/assistant` makes every path under it answer ENOENT,

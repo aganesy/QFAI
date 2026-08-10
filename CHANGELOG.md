@@ -505,6 +505,11 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The canonical integrity check does not depend on a wrapper.** With no
+  wrapper to resolve through, a canonical, an ancestor or a `SKILL.md`
+  replaced by a resolving symlink read as a plain missing wrapper — and
+  `qfai init` then creates a wrapper pointing at it, since create-only leaves
+  the canonical as it found it. Both branches call one helper now.
 - **Every canonical ancestor is searched for damage**, not the immediate
   parent alone: a dangling `.qfai/assistant` leaves the parent answering
   absent too, so one level of checking found nothing.
