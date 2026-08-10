@@ -157,6 +157,42 @@ describe("the short-circuit does not reach a sibling of the skills directory", (
   );
 });
 
+describe("the agents tree is walked by the profiles that read it", () => {
+  it("stops `full` when a canonical agent is not a regular file", async () => {
+    // `validateAgentDefinition` opens the agent pathname directly, so a
+    // directory gives it `EISDIR` and a FIFO blocks it — either way taking the
+    // repairable finding down with the run.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-agents-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "assistant", "skills"), { recursive: true });
+      const agents = path.join(root, ".qfai", "assistant", "agents");
+      await mkdir(agents, { recursive: true });
+      await writeFile(path.join(agents, "README.md"), "# readme\n", "utf-8");
+      // The document the roster names, replaced by a directory.
+      await mkdir(path.join(agents, "completion-reviewer.md"), { recursive: true });
+      await writeFile(
+        path.join(root, ".qfai", "assistant", "README.md"),
+        [
+          "# QFAI assistant tree",
+          "",
+          "## Canonical entrypoint",
+          "",
+          "- .qfai/assistant/skills/",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const result = await validateProject(root, undefined, { profile: "full" });
+      const codes = new Set(result.issues.map((entry) => entry.code));
+
+      expect([...codes]).toEqual(["QFAI-LINK-001"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("the short-circuit is scoped to the profiles that walk the damage", () => {
   // POSIX only: the scenario is the ENOTDIR shape, and Windows folds that
   // errno into ENOENT, which reads as absence. CI runs the ubuntu lane.

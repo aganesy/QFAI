@@ -246,12 +246,24 @@ function assistantPathsWalkedBy(profile: ValidationProfile, skillsRelative: stri
     // assistant tree they reach.
     case "verify":
     case "full":
+      // Plus the agents tree, which `validateAgentDefinition` opens by
+      // pathname: a canonical agent replaced by a directory gives it `EISDIR`
+      // and a FIFO blocks it, either way taking the finding down with the run.
+      return [skillsRelative, AGENTS_RELATIVE];
+    case "prototyping":
+    case "saas-package":
+      // These run `validateAgentDefinition` too, and nothing that opens the
+      // skills tree.
+      return [AGENTS_RELATIVE];
     case "sdd":
       return [skillsRelative];
     default:
       return [];
   }
 }
+
+/** The canonical agent tree, which `validateAgentDefinition` opens by pathname. */
+const AGENTS_RELATIVE = ".qfai/assistant/agents";
 
 /** Whether `candidate` is `base` itself or sits under it, both repo-relative POSIX. */
 function isUnder(base: string, candidate: string): boolean {

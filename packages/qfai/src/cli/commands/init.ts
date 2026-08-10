@@ -13,7 +13,6 @@ import {
   readlink,
   rename,
   rm,
-  stat,
   symlink,
   writeFile,
 } from "node:fs/promises";
@@ -1409,9 +1408,8 @@ async function restoreSidecar(sidecar: string, linkPath: string): Promise<void> 
     // possibly different inodes, so a sidecar replaced or grown between them
     // was read unbounded anyway — the very exhaustion the ceiling is for, with
     // the wrapper's pathname still empty.
-    const original = await stat(sidecar);
-    const content = await readPinnedRegularFileBytes(sidecar, SIDECAR_COPY_MAX_BYTES);
-    if (content === null) {
+    const original = await readPinnedRegularFileBytes(sidecar, SIDECAR_COPY_MAX_BYTES);
+    if (original === null) {
       throw new Error(
         [
           `退避したファイルを復元できません（種別が変わったか、上限 ${String(SIDECAR_COPY_MAX_BYTES)} bytes を超えています）: ${linkPath}`,
@@ -1421,7 +1419,7 @@ async function restoreSidecar(sidecar: string, linkPath: string): Promise<void> 
         { cause: linkErr },
       );
     }
-    await writeFile(linkPath, content, { flag: "wx" });
+    await writeFile(linkPath, original.content, { flag: "wx" });
     // Bytes are not the whole file. `writeFile` makes a **new** inode with the
     // umask and the parent's defaults, so a `0600` file another process left
     // here came back `0644` and readable by everyone, or lost its executable
@@ -1433,7 +1431,7 @@ async function restoreSidecar(sidecar: string, linkPath: string): Promise<void> 
     // stays and the failure is reported, because a file whose permissions are
     // now wrong is worse than one the operator is told where to find.
     try {
-      await chmod(linkPath, original.mode & 0o7777);
+      await chmod(linkPath, original.mode);
     } catch (modeErr: unknown) {
       // Take the destination back out. This fallback created it exclusively, so
       // it is ours to remove — and leaving it is the harm the mode was being
@@ -1761,7 +1759,7 @@ async function readPinnedRegularFile(filePath: string, maxBytes: number): Promis
 async function readPinnedRegularFileBytes(
   filePath: string,
   maxBytes: number,
-): Promise<Buffer | null> {
+): Promise<{ content: Buffer; mode: number } | null> {
   let handle: FileHandle | undefined;
   try {
     handle = await open(filePath, OPEN_READ_FLAGS);
@@ -1775,7 +1773,11 @@ async function readPinnedRegularFileBytes(
       filled += bytesRead;
     }
     if (filled > maxBytes) return null;
-    return Buffer.from(buffer.subarray(0, filled));
+    // The mode comes from this `fstat`, not from a separate `stat` on the
+    // pathname. Two operations could land on two inodes: content read from a
+    // replacement that somebody made `0600` for a reason, restored under the
+    // `0644` the old entry carried, and readable by everyone.
+    return { content: Buffer.from(buffer.subarray(0, filled)), mode: pinned.mode & 0o7777 };
   } catch (error: unknown) {
     const code = (error as NodeJS.ErrnoException | null)?.code;
     if (code === "ENXIO" || code === "EISDIR") return null;

@@ -505,6 +505,26 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The absent-wrapper branch asks the same question as every other.** It
+  checked link and type only, so with all four wrappers for a skill deleted a
+  canonical that was unreadable, or reachable only through a resolving symlink,
+  passed clean — and the profile then read the same document and ended the run
+  on its own error. There is one helper now, and one place that decides the
+  short-circuit.
+- **A document whose type a later `readFile` cannot survive stops the run.** A
+  `SKILL.md` that is a cycle, a directory or a FIFO gives
+  `validateSkillDocReferences` an `ELOOP` / `EISDIR` — or blocks it — taking the
+  repairable finding with it. Absence does not: every validator handles a
+  missing file, so "has no SKILL.md" is still reported and still lets the rest
+  of the profile run.
+- **A non-file canonical agent stops the profiles that read it.**
+  `validateAgentDefinition` opens the agent pathname directly and runs under
+  `prototyping` / `saas-package` / `full` / `verify`, none of which the
+  skills-only short-circuit covered.
+- **The restored mode comes from the handle the content was read on.** A `stat`
+  on the pathname and a read on another inode could disagree, so content a
+  process had just made `0600` was restored under the `0644` the old entry
+  carried — readable by everyone — and the sidecar removed straight after.
 - **The canonical state is read before the link problem, so every answer
   carries the short-circuit.** A wrapper that was flattened _and_ whose skills
   root is a regular file reported the ancestor without marking it unwalkable,

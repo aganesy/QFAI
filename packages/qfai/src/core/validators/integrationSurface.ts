@@ -619,14 +619,54 @@ async function canonicalDamage(
   const relative = culprit?.relative ?? wrapper.canonicalRelative;
   const unwalkable = blocksWalk(state) ? relative : undefined;
 
+  // A leaf that is itself damaged is described by its state, not by the generic
+  // "is a symlink" the link probe would give: a dangling canonical and a
+  // resolving redirect are different repairs, and the specific wording is the
+  // one an operator can act on.
+  if (state.kind !== "absent" && state.kind !== "present") {
+    return {
+      relative,
+      detail:
+        culprit === null
+          ? describeDamage(state, "canonical document")
+          : `the canonical directory ${culprit.detail}`,
+      unwalkable,
+    };
+  }
+
+  // An absent leaf asks about its ancestors first. A **broken** one — dangling,
+  // cycling — is both the more specific answer and the one that dedupes: the
+  // link probe would report "an ancestor is a symlink" once per skill and per
+  // agent under it, naming a repair for a path that is not the problem.
+  if (state.kind === "absent") {
+    const damaged = await brokenAncestor(root, wrapper.canonicalRelative);
+    if (damaged !== null) {
+      return {
+        relative: damaged.relative,
+        detail: describeDamage(damaged.state, "the canonical directory"),
+        unwalkable: blocksWalk(damaged.state) ? damaged.relative : undefined,
+      };
+    }
+  }
+
   const link = await canonicalLinkProblem(root, realRoot, wrapper);
   if (link !== null) {
     return { relative: wrapper.canonicalRelative, detail: link, unwalkable };
   }
   if (state.kind === "absent") return null;
-  if (state.kind === "present") {
+  {
     const kind = await canonicalKindProblem(wrapper, state.stats);
-    if (kind !== null) return { relative: wrapper.canonicalRelative, detail: kind, unwalkable };
+    if (kind !== null) {
+      return {
+        relative: wrapper.canonicalRelative,
+        detail: kind,
+        // A wrong **type** on the document a later validator reads is not
+        // survivable: `readFile` gives `EISDIR` on a directory, `ELOOP` on a
+        // cycle, and blocks on a FIFO. Absence is: every validator handles a
+        // missing file, so "has no SKILL.md" is not a reason to stop.
+        unwalkable: kind.includes("has no SKILL.md") ? unwalkable : wrapper.canonicalRelative,
+      };
+    }
     // Readable, the same question the healthy-wrapper branch asks. A canonical
     // an ACL or a mode keeps shut is not repaired by `qfai init` — the copy is
     // create-only — so reporting the wrapper alone had the operator re-run it
@@ -644,14 +684,7 @@ async function canonicalDamage(
     }
     return null;
   }
-  return {
-    relative,
-    detail:
-      culprit === null
-        ? describeDamage(state, "canonical document")
-        : `the canonical directory ${culprit.detail}`,
-    unwalkable,
-  };
+  return null;
 }
 
 /** Whether `candidate` is `base` itself or sits under it. */
@@ -1099,76 +1132,26 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
         // the check entirely — no wrapper reported, and nothing else looks at
         // the canonical tree outside `full`. A cycle was worse: `ELOOP` came
         // out of `access` and ended `qfai validate` with a stack trace.
-        const canonical = await canonicalState(wrapper.canonical);
-        if (canonical.kind === "absent") {
-          // Absent, or unreachable through a parent that is a broken link.
-          // `lstat` on `.qfai/assistant/agents/x.md` answers `ENOENT` for both,
-          // so "not taken yet" swallowed a whole surface the assistant cannot
-          // load — with another skill's wrapper still proving init had run.
-          // **Every** ancestor, not the immediate parent alone: a broken
-          // `.qfai/assistant` leaves the parent answering `absent` too, so one
-          // level of checking found nothing and the surface stayed silent.
-          const damagedAncestor = await brokenAncestor(root, wrapper.canonicalRelative);
-          if (damagedAncestor !== null && !damagedCanonicals.has(damagedAncestor.relative)) {
-            damagedCanonicals.add(damagedAncestor.relative);
+        // The same helper the wrapper branches use. Four rounds of findings
+        // have been "this check exists in one branch and not the other", so
+        // there is one place that asks the whole question — link, ancestor,
+        // kind, readability — and one place that decides the short-circuit.
+        const damage = await canonicalDamage(root, realRoot, wrapper);
+        if (damage === null) {
+          // Nothing wrong with the canonical, so the wrapper is simply gone.
+          // Absent is "not created yet" only before init has run, and it has.
+          const stillAbsent = (await canonicalState(wrapper.canonical)).kind === "absent";
+          if (!stillAbsent && !missingDirs.has(wrapper.dir)) {
             broken.push({
-              relative: damagedAncestor.relative,
-              detail: describeDamage(damagedAncestor.state, "the canonical directory"),
-              unwalkable: blocksWalk(damagedAncestor.state) ? damagedAncestor.relative : undefined,
+              relative: wrapper.relative,
+              detail: `missing — ${toPosix(wrapper.dir)} exists and so does the document it wraps`,
             });
           }
-        } else if (canonical.kind === "present") {
-          // What it *is*, not merely that it is there. With the wrapper gone
-          // there is no resolved target to reach the kind check below, so a
-          // canonical skill directory replaced by a regular file — or an agent
-          // document replaced by a directory — was reported as a plain missing
-          // wrapper, and the remedy it printed (`qfai init`) cannot recreate
-          // the wrapper while the collision stands.
-          // The same integrity the wrapper branch applies, not the kind check
-          // alone. With no wrapper to resolve through, a canonical directory,
-          // one of its ancestors or its `SKILL.md` replaced by a **resolving**
-          // symlink read as a plain missing wrapper — and `qfai init` then
-          // creates a wrapper pointing at it, since create-only leaves the
-          // canonical as it found it. Three rounds of findings have been this
-          // check existing in one branch and not the other; it has one home.
-          const wrong =
-            (await canonicalLinkProblem(root, realRoot, wrapper)) ??
-            (await canonicalKindProblem(wrapper, canonical.stats));
-          if (wrong === null) {
-            if (!missingDirs.has(wrapper.dir)) {
-              broken.push({
-                relative: wrapper.relative,
-                detail: `missing — ${toPosix(wrapper.dir)} exists and so does the document it wraps`,
-              });
-            }
-          } else if (!damagedCanonicals.has(wrapper.canonicalRelative)) {
-            damagedCanonicals.add(wrapper.canonicalRelative);
-            broken.push({ relative: wrapper.canonicalRelative, detail: wrong });
-          }
-        } else {
-          // `not-a-directory` on the leaf means some component **above** it is
-          // a regular file — the leaf itself is unreachable, not damaged. Naming
-          // it recorded one finding per skill and per agent, each pointing at a
-          // path the operator cannot even move aside (`ENOTDIR` again), while
-          // the one path at fault went unnamed. Report that component, once.
-          const culprit =
-            canonical.kind === "not-a-directory"
-              ? await unusableAncestor(root, wrapper.canonicalRelative)
-              : null;
-          const relative = culprit?.relative ?? wrapper.canonicalRelative;
-          if (!damagedCanonicals.has(relative)) {
-            // Once per canonical, not once per wrapper: four wrappers name the
-            // same document, and one damaged document is one thing to repair.
-            damagedCanonicals.add(relative);
-            broken.push({
-              relative,
-              detail:
-                culprit === null
-                  ? describeDamage(canonical, "canonical document")
-                  : `the canonical directory ${culprit.detail}`,
-              unwalkable: blocksWalk(canonical) ? relative : undefined,
-            });
-          }
+        } else if (!damagedCanonicals.has(damage.relative)) {
+          // Once per canonical, not once per wrapper: four wrappers name the
+          // same document, and one damaged document is one thing to repair.
+          damagedCanonicals.add(damage.relative);
+          broken.push(damage);
         }
       }
       continue;
@@ -1387,6 +1370,11 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
                 : doc === "not-a-directory"
                   ? "resolves, but a path component above its SKILL.md is not a directory"
                   : `resolves, but its SKILL.md is a ${describeKind(doc)}`,
+          // `validateSkillDocReferences` and `validateAutopilotPolicy` read this
+          // pathname directly, so a cycle gives them `ELOOP`, a directory
+          // `EISDIR`, and a FIFO blocks — each taking this finding down with the
+          // run. Absence they handle, so it is not a reason to stop.
+          unwalkable: doc === null ? undefined : wrapper.canonicalRelative,
         });
         continue;
       }

@@ -1328,6 +1328,86 @@ describe("a resolving link is a finding, not a reason to stop", () => {
     },
   );
 
+  it("reports a resolving canonical ancestor with every wrapper gone", async () => {
+    // The leaves are absent, so the broken-ancestor probe finds nothing — and
+    // the integration directories exist, so no missing-directory finding either.
+    // A surface where no skill can load passed clean.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      const elsewhere = path.join(root, "elsewhere");
+      await mkdir(elsewhere, { recursive: true });
+      const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+      await rm(skillsDir, { recursive: true, force: true });
+      await symlink(elsewhere, skillsDir, "dir");
+      for (const dir of INTEGRATION_SURFACE_DIRS) {
+        await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
+      }
+      await writeFile(path.join(root, ".agents", "README.md"), INIT_README_BODY, "utf-8");
+
+      const found = await finding(root);
+      expect(found?.message).toContain("a canonical ancestor is a symlink");
+    });
+  });
+
+  // POSIX only, and not as root: an ACL is what makes the document unreadable.
+  it.skipIf(process.platform === "win32" || process.geteuid?.() === 0)(
+    "stops the profile for an unreadable canonical with every wrapper gone",
+    async () => {
+      // The absent-wrapper branch checked link and type only, so `sdd` / `full`
+      // went on to read the same document and ended the run on its own error.
+      await withProject(async (root) => {
+        if (!(await canCreateSymlink(root))) return;
+        await seedCanonical(root, ["qfai-atdd"], []);
+        for (const dir of INTEGRATION_SURFACE_DIRS) {
+          await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
+        }
+        await writeFile(path.join(root, ".agents", "README.md"), INIT_README_BODY, "utf-8");
+        const doc = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md");
+        await chmod(doc, 0o000);
+        try {
+          const report = await inspectIntegrationSurface(root);
+          expect(report.unwalkable).toContain(".qfai/assistant/skills/qfai-atdd");
+        } finally {
+          await chmod(doc, 0o644);
+        }
+      });
+    },
+  );
+
+  it("stops the profile for a SKILL.md that is not a regular file", async () => {
+    // `validateSkillDocReferences` and `validateAutopilotPolicy` read this
+    // pathname directly: a directory gives them `EISDIR`, taking the finding
+    // down with the run.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const doc = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md");
+      await rm(doc, { force: true });
+      await mkdir(doc, { recursive: true });
+
+      const report = await inspectIntegrationSurface(root);
+      expect(report.unwalkable).toContain(".qfai/assistant/skills/qfai-atdd");
+    });
+  });
+
+  it("does not stop the profile for a directory that merely has no SKILL.md", async () => {
+    // Absence every validator handles; stopping on it would hide the rest.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      await rm(path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md"), {
+        force: true,
+      });
+
+      const report = await inspectIntegrationSurface(root);
+      expect(report.issues.map((entry) => entry.code)).toContain("QFAI-LINK-001");
+      expect(report.unwalkable).toEqual([]);
+    });
+  });
+
   it("does not stop the profile for a cycle on a canonical leaf", async () => {
     // The walks over this tree list a directory with `withFileTypes` and
     // descend only into `isDirectory()` entries, so a symlink leaf — cycle or
