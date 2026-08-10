@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
@@ -116,7 +117,7 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
 
   const legacyPacks = await readLegacyManifest(reviewRoot);
   for (const packDir of reviewPackDirs) {
-    issues.push(...(await validateReviewPack(packDir, legacyPacks)));
+    issues.push(...(await validateReviewPack(packDir, legacyPacks, root)));
   }
 
   return issues;
@@ -146,6 +147,46 @@ async function readLegacyManifest(reviewRoot: string): Promise<ReadonlySet<strin
 
 const LEGACY_MANIFEST = ".legacy-packs";
 
+/** A `revision` that is a git rev rather than the uncommitted-tree form. */
+const GIT_REV_FORM = /^[0-9a-f]{7,64}$/i;
+
+/**
+ * Whether `rev` names a commit in the repository at `root`.
+ *
+ * `null` when the question cannot be asked — git missing, not a work tree — so
+ * the caller says nothing rather than reporting a project that exports its
+ * source as a tarball.
+ *
+ * **A negative answer is a warning, not an error.** A shallow clone, a fetch
+ * that never took the branch, or a worktree created after the verdict all
+ * produce "not found" for a rev that is perfectly real somewhere else, and
+ * failing the gate on that would block work for a condition the operator did
+ * not create and often cannot fix locally. What it does catch is the value that
+ * names no commit anywhere — a placeholder, a truncated paste, a digit
+ * transposed — which is the case the form check alone accepts.
+ */
+function commitExists(root: string, rev: string): boolean | null {
+  try {
+    execFileSync("git", ["rev-parse", "--is-inside-work-tree"], {
+      cwd: root,
+      encoding: "utf-8",
+      stdio: ["ignore", "ignore", "ignore"],
+    });
+  } catch {
+    return null;
+  }
+  try {
+    execFileSync("git", ["cat-file", "-e", `${rev}^{commit}`], {
+      cwd: root,
+      encoding: "utf-8",
+      stdio: ["ignore", "ignore", "ignore"],
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Which contract wrote this pack, declared by the pack itself and **required**.
 //
 // Neither rank nor time can answer it. Rank made "held to the contract" mean
@@ -172,6 +213,7 @@ const ALLOWED_REVISION_FORMS = new Set([REVISION_FORM_MARKER, REVISION_FORM_LEGA
 async function validateReviewPack(
   reviewPackDir: string,
   legacyPacks: ReadonlySet<string>,
+  root: string,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const reviewRequestPath = path.join(reviewPackDir, "review_request.md");
@@ -215,7 +257,7 @@ async function validateReviewPack(
   }
 
   if (await isFile(summaryPath)) {
-    issues.push(...(await validateSummarySchema(summaryPath, legacyPacks)));
+    issues.push(...(await validateSummarySchema(summaryPath, legacyPacks, root)));
   }
 
   return issues;
@@ -224,6 +266,7 @@ async function validateReviewPack(
 async function validateSummarySchema(
   summaryPath: string,
   legacyPacks: ReadonlySet<string>,
+  root: string,
 ): Promise<Issue[]> {
   let parsed: unknown;
   try {
@@ -333,6 +376,30 @@ async function validateSummarySchema(
   // Only when there is a value to judge: an empty string is already reported
   // by the schema check above, and saying it twice reads as two problems.
   const revisionText = readString(revision);
+  // The form says the value is shaped like an address; this says it is one. A
+  // placeholder, a truncated paste or a transposed digit passes the regex and
+  // names no tree at all, so the verdict it carries cannot be reproduced by
+  // anyone. Only the git-rev form is checkable here: recomputing the
+  // uncommitted-tree hash would mean reimplementing the producer's four-step
+  // procedure in the validator, and a mismatch there is indistinguishable from
+  // the ordinary post-verdict drift the seals already cover.
+  const unresolvableRevision =
+    revisionText !== null && GIT_REV_FORM.test(revisionText)
+      ? commitExists(root, revisionText) === false
+        ? [
+            issue(
+              "QFAI-REVIEW-009",
+              `\`revision\` (${revisionText}) はこのリポジトリの commit に解決できません。判定対象の tree を再現できません。`,
+              "warning",
+              summaryPath,
+              "reviewArtifacts.summaryRevisionResolves",
+              [revisionText],
+              "canonical",
+              "shallow clone や未 fetch のブランチでも同じ結果になるため warning です。値そのものが誤っている場合は、判定時の `git rev-parse HEAD` を記録し直してください。",
+            ),
+          ]
+        : []
+      : [];
   const malformedRevision =
     revisionText !== null && !REVISION_FORM.test(revisionText)
       ? [
@@ -382,12 +449,13 @@ async function validateSummarySchema(
       : [];
 
   if (violations.length === 0) {
-    return [...missingRevision, ...malformedRevision];
+    return [...missingRevision, ...malformedRevision, ...unresolvableRevision];
   }
 
   return [
     ...missingRevision,
     ...malformedRevision,
+    ...unresolvableRevision,
     issue(
       "QFAI-REVIEW-007",
       `summary.json の最小スキーマを満たしていません: ${violations.join(" / ")}`,

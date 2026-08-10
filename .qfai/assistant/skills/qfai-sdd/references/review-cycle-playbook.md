@@ -27,6 +27,10 @@ Use this file when you need the detailed review-cycle mechanics for `/qfai-sdd`.
 
 - `target.kind` must be `"spec"` for SDD review packs.
 - Accepted serialized reviewer statuses are `PASS`, `FAIL`, and `NA`.
+- `revision_form: "content-hash"` and `revision` are written like every other pack producer does:
+  the state these verdicts describe, as a git rev or `working-tree+<content hash>`
+  (`../../qfai-implement/references/evidence-revision.md`). A pack written without them fails the
+  repo-wide `/qfai-verify --fail-on error` even where the per-item profile passed.
 
 ## Guardrails
 

@@ -322,44 +322,44 @@ post-escalation verification review of a user-named fix.
      soon as the phase wrote on. **Three subjects, from the row's
      `### <TDD-ID>` section** of the evidence file its `Layer` owns — the
      heading line through the line before the next `###` heading that names a
-     `TDD-` id, or the next `##` / `#` heading, or end of file — each taking
+     `TDD-` id, or the next `##` / `#` heading, or end of file, **counting only
+     headings outside a fenced block** (` ``` ` / `~~~`, closed at that length or
+     longer; a body that would close its own fence gets a longer one). Every
+     recorded output is fenced for this reason: a test asserting on Markdown
+     prints `## ...` of its own, and a boundary that took it dropped the GREEN,
+     the `Oracle proof` and the round evidence out of the subject. Each takes
      only its own fields, in the order the contract lists them:
      - **Row identity, in all three**: `TDD-ID`, `Layer`, `Test file` and
-       `Selector` — copied from the ledger into the entry, because the ledger
-       is excluded from the revision. Without them, changing `Selector` after a
-       PASS to another valid test in the same file left every hash and every
-       revision unmoved, and a verdict that only ever ran the old selector stood
-       as evidence for the new one. Mutable bookkeeping — `Status`, `Evidence` —
-       stays out: it moves on its own between observations.
+       `Selector` — copied from the ledger, which the revision excludes.
+       Without them, changing `Selector` after a PASS to another valid test in
+       the same file left every hash and revision unmoved, and a verdict that
+       only ran the old selector stood as evidence for the new one. Mutable
+       bookkeeping — `Status`, `Evidence` — stays out: it moves on its own.
 
        **The copy is checked against the ledger, not trusted** — the four
-       identity fields **and the obligation reference**. Hashing a value
-       the entry already holds proves only that the entry has not changed —
-       edit `Selector` in `test-list.md` after the PASS and the copy, the hash
-       and the revision are all still what they were, because the ledger is
-       excluded from the revision too. Gate item 10 reads the four fields from
+       identity fields **and the obligation reference**. Hashing a value the
+       entry already holds proves only that the entry has not changed: edit
+       `Selector` in `test-list.md` after the PASS and copy, hash and revision
+       are all unmoved. Gate item 10 reads the four fields from
        `test-list.md` and requires them to equal the copy; a difference is the
        row moving under its own evidence, and the verdict is not fresh. The
-       obligation is on that list for the same reason branch 3's is: change
-       `TC-Refs` / `US-Refs` / `CON-API-Refs` alone after the PASS and the entry
-       still holds the old copy, so nothing recomputes differently and a verdict
-       about one requirement stands for another.
+       obligation is on that list for the same reason: change `TC-Refs` /
+       `US-Refs` / `CON-API-Refs` alone after the PASS and the entry still holds
+       the old copy, so a verdict about one requirement stands for another.
 
      - **RED observation**: the obligation reference the row's
-       `Layer` selects (`TC-ref`, or `US-ref` on an `E2E` row and `CON-API-ref`
-       on an `API` row — an ATDD-owned row has no `TC-ref`, so naming only that
-       one left its obligation outside every hash and let it be rewritten to a
-       different requirement after the PASS), `RED test hash`, the row's own
+       `Layer` selects (`TC-ref`, or `US-ref` on `E2E` and `CON-API-ref` on
+       `API` — an ATDD-owned row has no `TC-ref`, so naming only that one left
+       its obligation outside every hash), `RED test hash`, the row's own
        transient revision (`RED revision` or `Falsifiability revision`), and the
        RED pair or the falsifiability trio with `RED failure mode`. **Not
-       `Revision`**: that field names the tree the GREEN landed at and does not
-       exist yet, so including it put a field into the subject that appeared
-       later and made every correct RED PASS stale at GREEN.
+       `Revision`**: it names the tree the GREEN landed at and does not exist
+       yet, so including it made every correct RED PASS stale at GREEN.
      - **GREEN observation**: the RED subject plus `Revision`, the GREEN pair,
        `Oracle proof` and, where the row has one, `Replacement proof revision` —
-       it addresses the tree a re-taken proof ran against, and `.qfai/evidence/**`
-       is out of the working-tree revision, so a subject without it let that
-       proof be attributed to a tree it never ran on.
+       it addresses the tree a re-taken proof ran against, which the revision
+       does not reach, so a subject without it let that proof be attributed to a
+       tree it never ran on.
      - **Stage review** (a `completion-reviewer` judging a stage rather than a
        row — a spec with no ATDD-owned rows is the ordinary case, and
        `qfai-atdd/SKILL.md` treats zero as a legitimate count): the stage

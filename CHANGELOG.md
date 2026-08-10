@@ -488,6 +488,32 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A seal says what it catches, and the escalation stops.** Three homes for the
+  expected value each fell to the same move — beside the artifact, in a commit,
+  in the newest commit introducing the line — and a committed copy is not even
+  available: stage evidence is regenerable and deliberately not committed
+  (`.qfai/evidence/*` is ignored, with only the governance records negated back
+  in), so requiring one would have stopped every completion. A seal catches
+  drift between recording and recomputation, which is what happens; it does not
+  catch an author rewriting the artifact and the seal together, and nothing
+  recorded in the repository can. That is stated once, in place of a fourth
+  mechanism.
+- **The audit boundary counts only headings outside a fenced block.** Recorded
+  output is arbitrary — a test asserting on Markdown prints `## …` of its own —
+  and a boundary that took it ended the section there, dropping the GREEN, the
+  `Oracle proof` and the round evidence out of the subject.
+- **The legacy migration record is tracked by default.** `.qfai/review/*` is
+  ignored, so the manifest that corroborates a `legacy` claim was untracked and
+  the pack the claim excuses could add itself to it — which is the
+  self-declaration the corroboration exists to replace.
+- **Every pack producer names the revision fields.** The `qfai-implement` layout
+  and both review-cycle playbooks omitted them, so a pack written by following
+  them passed its own profile and then failed the repo-wide
+  `/qfai-verify --fail-on error`.
+- **A git rev is checked against the repository.** A placeholder, a truncated
+  paste or a transposed digit passes the form check and names no tree at all. A
+  warning, not an error: a shallow clone or an unfetched branch answers the same
+  way, and the check says nothing at all outside a git work tree.
 - **No commit id is recorded beside a seal.** A commit id does not exist until
   its content is fixed, so a field naming "the commit that contains this field"
   cannot be written — appending the id changes the content and therefore the id,

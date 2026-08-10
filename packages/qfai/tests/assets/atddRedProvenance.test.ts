@@ -1606,7 +1606,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
       await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
     );
     expect(baseline).toContain("the four identity fields **and the obligation reference**");
-    expect(baseline).toContain("The obligation is on that list for the same reason branch 3's is");
+    expect(baseline).toContain("The obligation is on that list for the same reason");
   });
 
   it("matches the matrix rows an obligation names exactly", async () => {
@@ -2148,7 +2148,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("record it **outside the pack** in the stage evidence file's");
     expect(atdd).toContain("`Review pack seal:`");
-    expect(atdd).toContain("compare it with the value **as committed**");
+    expect(atdd).toContain("compare it with the **recorded** value");
     // And the reference has to resolve from where it is written.
     expect(atdd).toContain("`../qfai-implement/references/evidence-revision.md`");
     expect(atdd).toContain("The recording and the recomputation must be two moments");
@@ -2268,29 +2268,6 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     );
   });
 
-  it("fixes every seal's expected value by committing it", async () => {
-    // The expected value sat beside the thing it sealed, both in an evidence
-    // tree no reviewer subject covers and the working-tree revision excludes —
-    // so one pass could edit the pack, recompute the seal, rewrite the status,
-    // and leave every recomputation agreeing.
-    const evidence = flat(
-      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
-    );
-    expect(evidence).toContain(
-      "**The expected value is fixed by committing it, and the recomputation compares against the committed copy.**",
-    );
-    expect(evidence).toContain("**No commit id is recorded beside the seal.**");
-    expect(evidence).toContain("git log -p -- <evidence file>");
-    const atdd = flat(await read(tree, ATDD));
-    expect(atdd).toContain("compare it with the value **as committed**");
-    const checkpoint = flat(
-      await read(tree, "assistant/skills/qfai-implement/references/checkpoint-verification.md"),
-    );
-    expect(checkpoint).toContain(
-      "Both seals — per item and per spec — are fixed by committing them",
-    );
-  });
-
   it("names the pack and the round each item seal covers", async () => {
     // A spec has several packs and a blocking REVISE opens more, so a bare hash
     // left the gate unable to say which directory to recompute over.
@@ -2318,6 +2295,46 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
       "**A mutation-only request wins over even that, and moves no row.**",
     );
     expect(implement).toContain("Two places hold such an entry and both clear it");
+  });
+
+  it("says what a seal catches and what it does not", async () => {
+    // Three homes for the expected value each fell to the same move, and a
+    // committed copy is not available either: stage evidence is regenerable and
+    // deliberately not committed, so requiring one would stop every completion.
+    const evidence = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(evidence).toContain("**What a seal does and does not catch — say it once, plainly.**");
+    expect(evidence).toContain("do not add a fourth mechanism");
+    expect(evidence).not.toContain("git log -p -- <evidence file>");
+  });
+
+  it("counts only headings outside a fenced block", async () => {
+    // Recorded output is arbitrary: a test asserting on Markdown prints its own
+    // `## ...`, and a boundary that took it dropped the GREEN, the proof and
+    // the round evidence out of the audit subject.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("**counting only headings outside a fenced block**");
+    expect(baseline).toContain("Every recorded output is fenced for this reason");
+  });
+
+  it("requires the revision fields of every pack producer, not just one", async () => {
+    // A pack written by the SDD or implement layout passed its own profile and
+    // then failed the repo-wide run.
+    const layout = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/review-artifact-layout.md"),
+    );
+    expect(layout).toContain('**`revision_form: "content-hash"`** and **`revision`**');
+    const playbook = flat(
+      await read(tree, "assistant/skills/qfai-sdd/references/review-cycle-playbook.md"),
+    );
+    expect(playbook).toContain("written like every other pack producer does");
+    const discussion = flat(
+      await read(tree, "assistant/skills/qfai-discussion/references/review-cycle-playbook.md"),
+    );
+    expect(discussion).toContain("are written here too");
   });
 
   it("exempts every blocking reviewer of the nested run, not just the gatekeeper", async () => {

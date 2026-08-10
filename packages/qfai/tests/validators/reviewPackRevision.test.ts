@@ -6,6 +6,7 @@
  * the schema — packs written before it exist — but its absence is reported, and
  * a present-but-malformed value is an error like any other.
  */
+import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -230,6 +231,44 @@ describe("review pack revision", () => {
     expect(
       issues.some((i) => i.code === "QFAI-REVIEW-007" && i.message.includes("porcelain digest")),
     ).toBe(true);
+  });
+
+  it("says nothing about a rev when the root is not a git work tree", async () => {
+    // A project that exports its source as a tarball must not fail here.
+    const issues = await withPack({ ...baseSummary(), revision: "0".repeat(40) });
+
+    expect(issues.filter((i) => i.rule === "reviewArtifacts.summaryRevisionResolves")).toEqual([]);
+  });
+
+  it("reports a git rev that names no commit in this repository", async () => {
+    // The form says the value is shaped like an address; this says it is one. A
+    // placeholder or a transposed digit passes the regex and names no tree at
+    // all, so the verdict it carries cannot be reproduced by anyone.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-rev-git-"));
+    tempDirs.push(root);
+    for (const args of [
+      ["init"],
+      ["config", "user.email", "t@example.com"],
+      ["config", "user.name", "t"],
+    ]) {
+      execFileSync("git", args, { cwd: root, stdio: ["ignore", "ignore", "ignore"] });
+    }
+    const packDir = path.join(root, ".qfai", "review", "review-20260815000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(path.join(packDir, "review_request.md"), "# request\n", "utf-8");
+    await writeFile(path.join(packDir, "R01_completion-reviewer.md"), "# review\n", "utf-8");
+    await writeFile(
+      path.join(packDir, "summary.json"),
+      JSON.stringify({ ...baseSummary(), revision: "0".repeat(40) }, null, 2),
+      "utf-8",
+    );
+
+    const issues = await validateReviewArtifacts(root);
+    const found = issues.filter((i) => i.rule === "reviewArtifacts.summaryRevisionResolves");
+
+    expect(found).toHaveLength(1);
+    // A warning: a shallow clone or an unfetched branch answers the same way.
+    expect(found[0]?.severity).toBe("warning");
   });
 
   it("rejects a revision_form it does not define", async () => {

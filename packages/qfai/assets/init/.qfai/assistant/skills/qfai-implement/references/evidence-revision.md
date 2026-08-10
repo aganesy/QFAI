@@ -63,29 +63,27 @@ Revision: <git rev> | working-tree+<content hash>
      bare hash left the gate unable to say which directory to recompute over —
      it either checked another round's pack or stopped a correct item.
 
-     **The expected value is fixed by committing it, and the recomputation
-     compares against the committed copy.** This is the one rule that makes any
-     seal in this file worth recording, and it applies to every one of them.
-     Storing the expected value beside the thing it seals protects nothing: both
-     live in the evidence tree, which is outside every reviewer's audit subject
-     _and_ outside the working-tree revision, so one pass could edit the pack,
-     recompute the seal, rewrite the status and leave every recomputation
-     agreeing. So: write the seal and **commit it** in the commit that closes
-     the round. The recomputation then reads the expected value out of git
-     rather than out of the working tree — from the newest commit whose hunk
-     introduces this round's seal line, which `git log -p -- <evidence file>`
-     gives, the same way the `Pre-split-evidence` marker pass finds the commit
-     that last advanced a row. Changing the value afterwards means rewriting
-     that commit, which is a different act with a different trace, and one this
-     repository's own rules already forbid without explicit instruction.
+     **What a seal does and does not catch — say it once, plainly.** It is
+     recorded at one moment and recomputed at another, and it catches every
+     change between them: a pack edited after the round closed, a checkpoint
+     result edited after a row reached `done`, a stage evidence file edited
+     after the verdict. That is drift, and drift is what actually happens.
 
-     **No commit id is recorded beside the seal.** A commit id does not exist
-     until its content is fixed, so a field naming "the commit that contains
-     this field" cannot be written — appending the id changes the content and
-     therefore the id. Every round would have failed to produce a required
-     field, and `--amend` is not the way out: this repository forbids it
-     without explicit instruction. The history is the record; nothing points
-     at it.
+     It does **not** catch an author who rewrites the sealed artifact and the
+     seal together in one consistent pass. Nothing recorded in the repository
+     can: the expected value has to live somewhere, and wherever that is, the
+     same hand can update it. Three successive homes were tried and each fell to
+     the same move — beside the artifact, in a commit, in the newest commit that
+     introduces the line — and a fourth would fall too. **Committing the seal is
+     not the answer either**, and not available: stage evidence is regenerable
+     and deliberately not committed (`.qfai/evidence/*` is ignored, with only
+     the governance records negated back in), so a rule requiring a committed
+     copy of `implement-<spec-id>.md` would have stopped every completion.
+
+     A consistent rewrite is caught where consistent rewrites are caught: by
+     review of the change itself, against a history the seals make legible.
+     Recording it is what makes an inconsistent one impossible to miss; do not
+     read it as more than that, and do not add a fourth mechanism.
 
   3. **Serialize.** `HEAD` + NUL + the rev; then `DIFF` + NUL + the SHA-256 of
      the diff bytes; then one record per untracked file,
