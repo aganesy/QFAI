@@ -488,6 +488,20 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **`Round 1: Revision` is taken from the restored tree.** It is the address
+  items 5, 7 and 8 share, and the revert moves it by construction — the
+  mutated tree already has `Falsifiability revision`.
+- **A `Shared-artifact re-verify` entry clears the hash it necessarily
+  breaks.** A later row editing a shared fixture moves an earlier `done` row's
+  `RED test hash`, and that row cannot take a fresh RED.
+- **The reviewer contract lists the same three exclusions**, review pack
+  included.
+- **The branch-3 `DR-*` is a record in the serialization**, not only a name in
+  the subject.
+- **The producer records the row identity the reviewers hash**, in both the
+  field contract and the ATDD handoff shape.
+- **An untracked record carries kind and mode.** An uncommitted `chmod +x` on
+  a new script left the address unmoved.
 - **The copied row identity is checked against the ledger.** Hashing a value
   the entry already holds proves only that the entry has not changed, and the
   ledger is excluded from the revision too — so editing `Selector` after the

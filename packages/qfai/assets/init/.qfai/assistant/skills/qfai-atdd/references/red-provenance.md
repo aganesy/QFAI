@@ -239,11 +239,11 @@ try branches 1 and 2.
 
 Exactly one form per row, never both and never neither:
 
-| Branch         | Recorded                                                                                                          |
-| -------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Observed RED   | RED command+result, `RED failure mode`, `RED revision`, `qa-gatekeeper` PASS, the `Oracle proof` plan             |
-| Falsifiability | `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, `RED failure mode: falsifiability`, GREEN pair |
-| `exception`    | Write `todo -> exception` with the `DR-*` the stage recorded; do not re-derive it, and do not enter Phase Green.  |
+| Branch         | Recorded                                                                                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Observed RED   | Row identity (`Layer`, `Test file`, `Selector`), RED command+result, `RED failure mode`, `RED revision`, `qa-gatekeeper` PASS, the `Oracle proof` plan |
+| Falsifiability | Row identity (as above), `Satisfied-by`, `Falsifiability command`, `Falsifiability result`, `RED failure mode: falsifiability`, GREEN pair             |
+| `exception`    | Write `todo -> exception` with the `DR-*` the stage recorded; do not re-derive it, and do not enter Phase Green.                                       |
 
 `RED failure mode` is on both rows because the consumer's per-item contract
 requires it before the reviewers run, and neither branch was recording it — an
@@ -335,6 +335,16 @@ the present: a `RED test hash` addresses the manifest **as it was when that RED
 was taken**, which is the only thing it can honestly say. Appending to them
 would also break the very verdicts that closed them, since the audit hash covers
 the entry.
+
+**And the consumer has to accept that pairing.** The completion gate
+recomputes `RED test hash` for every handed-over row from the current manifest,
+so an earlier row whose shared artifact was edited mismatches **by
+construction** — and the mismatch route sends it back here for a fresh RED,
+which a `done` row cannot take. A mismatch is cleared instead by a
+`Shared-artifact re-verify` entry on the editing row that names this `TDD-ID`,
+records the re-run and the re-taken proof, and carries the artifact's new
+manifest and hash: that is the evidence the recomputation was looking for, made
+where a row is still open. Without such an entry the mismatch stands.
 
 So the pairing is: the earlier row keeps the observation it made, and the row
 that moved the ground under it carries the proof that the observation still

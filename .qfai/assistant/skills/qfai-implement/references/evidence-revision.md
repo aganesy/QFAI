@@ -38,8 +38,14 @@ Revision: <git rev> | working-tree+<content hash>
      What protects the pack instead is `Audited evidence hash`, which addresses
      what each reviewer read.
   3. **Serialize.** `HEAD` + NUL + the rev; then `DIFF` + NUL + the SHA-256 of
-     the diff bytes; then one record per untracked file, `path + NUL + the
-SHA-256 of its bytes`, sorted by path in byte order. Join the records with
+     the diff bytes; then one record per untracked file,
+     `path + NUL + kind + NUL + mode + NUL + the SHA-256 of its bytes`, sorted
+     by path in byte order. `kind` is `file` / `symlink` / `dir` and `mode` is
+     the octal permission bits: a tracked diff carries a mode change, and
+     without these an uncommitted `chmod +x` on a new script left the address
+     unmoved — same bytes, different behaviour under test, CI and packaging,
+     with a reviewer PASS taken before it still reading as fresh.
+     Join the records with
      `\n`. Path, boundary and order are all in it on purpose: contents alone
      collide — renaming a file, or swapping the contents of two, leaves the hash
      unchanged.

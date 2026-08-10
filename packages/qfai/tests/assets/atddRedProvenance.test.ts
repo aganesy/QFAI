@@ -166,7 +166,7 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     // phase, because there is no production code to mutate until then.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain(
-      "| Observed RED | RED command+result, `RED failure mode`, `RED revision`, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
+      "| Observed RED | Row identity (`Layer`, `Test file`, `Selector`), RED command+result, `RED failure mode`, `RED revision`, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
     );
     expect(provenance).toContain("A natural RED is not a substitute");
     expect(provenance).toContain("branch 1 names the mutation it intends");
@@ -764,7 +764,9 @@ describe.each(TREES)("%s (the handoff survives ledger order and time)", (tree) =
     // so the required field was a guess or absent.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain("**and the revision it was observed at**");
-    expect(provenance).toContain("| Observed RED | RED command+result, `RED failure mode`,");
+    expect(provenance).toContain(
+      "| Observed RED | Row identity (`Layer`, `Test file`, `Selector`),",
+    );
   });
 
   it("hands a review-fix acceptance test back to the skill that owns it", async () => {
@@ -1137,7 +1139,11 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const baseline = flat(
       await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
     );
-    expect(baseline).toContain("**The ledger and the evidence tree are excluded**");
+    // The review pack joined the list once a tracked pack was shown to move
+    // the address between reviewers.
+    expect(baseline).toContain(
+      "**The ledger, the evidence tree and the review pack are excluded**",
+    );
   });
 
   it("records the manifest the test hash was taken over", async () => {
@@ -1403,6 +1409,65 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(baseline).toContain("**RED observation**");
     expect(baseline).toContain("**GREEN observation**");
     expect(baseline).toContain("**Completion review**");
+  });
+
+  it("takes Round 1: Revision from the restored tree, not the mutated one", async () => {
+    // `Revision` is the address items 5, 7 and 8 share, and the revert moves it
+    // by construction on an uncommitted tree — the mutated tree has its own
+    // field.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("`Round 1: Revision` is written from **that** run");
+    expect(implement).toContain("The mutated tree has its own field.");
+  });
+
+  it("lets a re-verify entry clear the hash it necessarily breaks", async () => {
+    // A shared fixture edited by a later row moves the earlier row's hash by
+    // construction, and a `done` row cannot take a fresh RED.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("**And the consumer has to accept that pairing.**");
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "**unless a later row's `Shared-artifact re-verify` entry names this `TDD-ID`**",
+    );
+  });
+
+  it("lists the same three exclusions in the reviewer contract", async () => {
+    // Storing R01 moves the address R02 computes where the pack is tracked.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain(
+      "**The ledger, the evidence tree and the review pack are excluded**",
+    );
+  });
+
+  it("serializes the branch-3 DR as a record of its own", async () => {
+    // A subject that names the DR but a serialization that has no record for it
+    // is a hash that does not move when the DR text changes.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain("on a branch-3 row the `DR-*` artifact the row names, whole");
+  });
+
+  it("has the producer record the identity the reviewers hash", async () => {
+    // The producer wrote only `TDD-ID` and the obligation reference, so a row
+    // built to contract had no identity record to hash.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "`TDD-ID`, `Layer`, `Test file`, `Selector` — the row identity, copied from `test-list.md`",
+    );
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("Row identity (`Layer`, `Test file`, `Selector`)");
+  });
+
+  it("carries mode and kind in an untracked record", async () => {
+    // An uncommitted `chmod +x` on a new script left the address unmoved: same
+    // bytes, different behaviour under test, CI and packaging.
+    const revision = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(revision).toContain("`path + NUL + kind + NUL + mode + NUL + the SHA-256 of its bytes`");
   });
 
   it("checks the copied identity against the ledger", async () => {

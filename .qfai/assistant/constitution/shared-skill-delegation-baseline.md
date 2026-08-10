@@ -382,6 +382,10 @@ post-escalation verification review of a user-named fix.
      byte, then the SHA-256 of that artifact's normalized bytes — sorted by
      path, joined with newlines. Two artifacts: the extracted section, recorded
      under the evidence file's path, and
+     on a branch-3 row the `DR-*` artifact the row names, whole, under its
+     repo-relative path — the subject says the DR is that branch's evidence, and
+     a subject with no record for it is a hash that does not move when the DR
+     text changes; and
      the **rows of** `.qfai/evidence/coverage-depth-<spec-id>.md` that name this
      row's obligation reference — not the file whole. The matrix is one document
      for the spec and a later `/qfai-atdd` run recomputes it, so hashing all of
@@ -404,8 +408,12 @@ post-escalation verification review of a user-named fix.
   Path, boundary and order are all part of it: contents alone do not move when a
   file is renamed or two swap contents, and with no defined order a second
   reviewer cannot recompute the value this verdict is pinned to.
-  **The ledger and the evidence tree are excluded**, exactly as that contract
-  says: the phases write `test-list.md` and `.qfai/evidence/**` between the
+  **The ledger, the evidence tree and the review pack are excluded**, exactly
+  as that contract says — `.qfai/specs/*/tdd/test-list.md`, `.qfai/evidence/**`
+  and `.qfai/review/**`. The pack is on the list because a project may
+  legitimately track it, and then storing R01 moves the address R02 computes,
+  so items 7-8 could not PASS on one revision. The phases write `test-list.md`
+  and `.qfai/evidence/**` between the
   GREEN and the reviews, so hashing all of `git diff HEAD` here produced a
   `Reviewed revision` that could never equal the phase-authored `Revision` —
   and gate item 10 wants them equal. `references/evidence-revision.md` is the
