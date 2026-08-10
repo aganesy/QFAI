@@ -1430,10 +1430,24 @@ async function restoreSidecar(sidecar: string, linkPath: string): Promise<void> 
     try {
       await chmod(linkPath, original.mode & 0o7777);
     } catch (modeErr: unknown) {
+      // Take the destination back out. This fallback created it exclusively, so
+      // it is ours to remove — and leaving it is the harm the mode was being
+      // restored to prevent: a `0600` file put back as `0644` is readable by
+      // everyone, and reporting that while leaving it there fixes nothing. The
+      // sidecar keeps the content and the permissions.
+      const removeErr = await rm(linkPath, { force: true }).then(
+        () => null,
+        (err: unknown) => err,
+      );
       throw new Error(
         [
-          `退避したファイルの内容は復元しましたが、パーミッションを戻せませんでした: ${linkPath}`,
+          `退避したファイルのパーミッションを復元できなかったため、復元を取り消しました: ${linkPath}`,
           `原因: ${describeError(modeErr)}`,
+          ...(removeErr === null
+            ? []
+            : [
+                `作成済みの復元先を削除できませんでした（権限が元と異なります）: ${describeError(removeErr)}`,
+              ]),
           `元のファイル（パーミッションを含む）は次の場所にあります: ${sidecar}`,
         ].join("\n"),
         { cause: modeErr },

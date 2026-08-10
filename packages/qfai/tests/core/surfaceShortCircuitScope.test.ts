@@ -115,6 +115,48 @@ describe("the short-circuit follows the configured skills directory", () => {
   );
 });
 
+describe("the short-circuit does not reach a sibling of the skills directory", () => {
+  // POSIX only: the ENOTDIR shape, which Windows folds into ENOENT.
+  it.skipIf(process.platform === "win32")(
+    "lets `full` run when only the agents tree is a regular file",
+    async () => {
+      // `validateSkillsIntegrity` and `validateAssistantAssets` walk the skills
+      // directory, not its parent, and a missing agent is an ordinary finding
+      // rather than an exception — so damage confined to the sibling stops
+      // nothing, and the spec packs and ledger are still reported.
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-scope-"));
+      try {
+        await mkdir(path.join(root, ".qfai", "assistant", "skills"), { recursive: true });
+        await writeFile(
+          path.join(root, ".qfai", "assistant", "agents"),
+          "not a directory\n",
+          "utf-8",
+        );
+        await writeFile(
+          path.join(root, ".qfai", "assistant", "README.md"),
+          [
+            "# QFAI assistant tree",
+            "",
+            "## Canonical entrypoint",
+            "",
+            "- .qfai/assistant/skills/",
+            "",
+          ].join("\n"),
+          "utf-8",
+        );
+
+        const result = await validateProject(root, undefined, { profile: "full" });
+        const codes = new Set(result.issues.map((entry) => entry.code));
+
+        expect(codes.has("QFAI-LINK-001")).toBe(true);
+        expect(codes.size).toBeGreaterThan(1);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+});
+
 describe("the short-circuit is scoped to the profiles that walk the damage", () => {
   // POSIX only: the scenario is the ENOTDIR shape, and Windows folds that
   // errno into ENOENT, which reads as absence. CI runs the ubuntu lane.

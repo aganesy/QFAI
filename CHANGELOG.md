@@ -505,6 +505,21 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A create-only copy treats a dangling symlink at the destination as
+  occupied.** `access` follows the link, so a dangling one answered "free" and
+  `copyFile` then wrote _through_ it — resolving the symlink and creating its
+  target — which turned `qfai init` into a writer of fixed content at whatever
+  path the link named, including one outside the project.
+- **A restore that cannot carry the mode takes its destination back out.**
+  Reporting a wrong-permission restore while leaving it in place fixes nothing:
+  a `0600` file put back as `0644` is readable by everyone. The fallback created
+  it exclusively, so it is removed, and the sidecar keeps both the content and
+  the permissions.
+- **The short-circuit does not reach a sibling of the skills directory.**
+  `validateSkillsIntegrity` and `validateAssistantAssets` walk the configured
+  skills directory, not its parent, so a regular file at
+  `.qfai/assistant/agents` stopped `full` on a tree they never open — while a
+  missing agent is an ordinary finding rather than an exception.
 - **Every wrapper branch checks the canonical, through one helper.** The
   wrong-target branch reported the mismatch and stopped, so `qfai init`
   re-pointed the wrapper, left the create-only canonical as it found it, and the

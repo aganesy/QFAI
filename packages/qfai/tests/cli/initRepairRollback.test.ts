@@ -22,17 +22,27 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type FsPromises = typeof fsPromises;
 
-const { symlinkSpy, writeFileSpy, readFileSpy, renameSpy, linkSpy, rmSpy, lstatSpy, openSpy } =
-  vi.hoisted(() => ({
-    symlinkSpy: vi.fn(),
-    writeFileSpy: vi.fn(),
-    readFileSpy: vi.fn(),
-    renameSpy: vi.fn(),
-    linkSpy: vi.fn(),
-    rmSpy: vi.fn(),
-    lstatSpy: vi.fn(),
-    openSpy: vi.fn(),
-  }));
+const {
+  symlinkSpy,
+  writeFileSpy,
+  readFileSpy,
+  renameSpy,
+  linkSpy,
+  rmSpy,
+  lstatSpy,
+  openSpy,
+  chmodSpy,
+} = vi.hoisted(() => ({
+  symlinkSpy: vi.fn(),
+  writeFileSpy: vi.fn(),
+  readFileSpy: vi.fn(),
+  renameSpy: vi.fn(),
+  linkSpy: vi.fn(),
+  rmSpy: vi.fn(),
+  lstatSpy: vi.fn(),
+  openSpy: vi.fn(),
+  chmodSpy: vi.fn(),
+}));
 
 vi.mock("node:fs/promises", async () => {
   const actual = await vi.importActual<FsPromises>("node:fs/promises");
@@ -46,6 +56,7 @@ vi.mock("node:fs/promises", async () => {
     rm: (...args: unknown[]) => rmSpy(actual, ...args),
     lstat: (...args: unknown[]) => lstatSpy(actual, ...args),
     open: (...args: unknown[]) => openSpy(actual, ...args),
+    chmod: (...args: unknown[]) => chmodSpy(actual, ...args),
   };
 });
 
@@ -85,6 +96,7 @@ beforeEach(() => {
   rmSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.rm(...args));
   lstatSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.lstat(...args));
   openSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.open(...args));
+  chmodSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.chmod(...args));
 });
 
 describe("a repair that cannot finish leaves the file it found", () => {
@@ -669,6 +681,46 @@ describe("a restore puts back more than the bytes", () => {
       expect((await lstat(linkPath)).mode & 0o777).toBe(0o600);
     });
   });
+
+  it.skipIf(process.platform === "win32")(
+    "takes the destination back out when the mode cannot be restored",
+    async () => {
+      // Reporting a wrong-permission restore while leaving it in place fixes
+      // nothing: a `0600` file put back as `0644` is readable by everyone. The
+      // fallback created the destination exclusively, so it is ours to remove,
+      // and the sidecar keeps both the content and the permissions.
+      await withProject(async (root) => {
+        await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+        const linkPath = path.join(root, LINK);
+        await rm(linkPath, { recursive: true, force: true });
+        await mkdir(path.dirname(linkPath), { recursive: true });
+        await writeFile(linkPath, "# mine\n", { encoding: "utf-8", mode: 0o600 });
+
+        linkSpy.mockImplementation(() => {
+          const err = new Error("simulated EXDEV") as NodeJS.ErrnoException;
+          err.code = "EXDEV";
+          return Promise.reject(err);
+        });
+        chmodSpy.mockImplementation(() => Promise.reject(new Error("simulated chmod failure")));
+
+        const error = await captureStdout(() =>
+          runInit({ dir: root, force: false, dryRun: false, yes: true }),
+        ).then(
+          () => null,
+          (err: unknown) => err as Error,
+        );
+
+        linkSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.link(...args));
+        chmodSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+          actual.chmod(...args),
+        );
+        expect(error?.message).toContain("復元を取り消しました");
+        // Nothing with the wrong permissions was left behind.
+        await expect(lstat(linkPath)).rejects.toThrow();
+      });
+    },
+  );
 });
 
 describe("the rollback does not overwrite a file created in the gap", () => {

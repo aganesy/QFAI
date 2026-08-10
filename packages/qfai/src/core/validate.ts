@@ -236,16 +236,16 @@ async function buildSpecScopeIssues(
  */
 function assistantPathsWalkedBy(profile: ValidationProfile, skillsRelative: string): string[] {
   switch (profile) {
-    // `validateSkillsIntegrity` and `validateAssistantAssets` open the tree
-    // whole — the tree the **configuration** names, not a fixed path. A project
-    // that moved `paths.skillsDir` has its old canonical walked by nobody, so
-    // pinning `.qfai/assistant` stopped `full` for damage sitting outside every
-    // walk it performs.
+    // `validateSkillsIntegrity` and `validateAssistantAssets` walk the
+    // **skills** directory the configuration names — the same one `sdd` walks,
+    // and nothing wider. Returning its parent matched a sibling's damage too:
+    // a regular file at `.qfai/assistant/agents` stopped `full` on a tree those
+    // validators never open, while `validateAgentDefinition` turns a missing
+    // agent into an ordinary finding rather than an exception. The extra
+    // profiles here differ in what else they run, not in how far into the
+    // assistant tree they reach.
     case "verify":
-    case "full": {
-      const assistantRoot = skillsRelative.split("/").slice(0, -1).join("/");
-      return [assistantRoot === "" ? skillsRelative : assistantRoot];
-    }
+    case "full":
     case "sdd":
       return [skillsRelative];
     default:
