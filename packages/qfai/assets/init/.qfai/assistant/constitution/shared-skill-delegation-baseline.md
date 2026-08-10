@@ -352,8 +352,13 @@ post-escalation verification review of a user-named fix.
        later and made every correct RED PASS stale at GREEN.
      - **GREEN observation**: the RED subject plus `Revision`, the GREEN pair and
        `Oracle proof`.
-     - **Branch 3** (`exception`): row identity, the `DR-ID`, and the `DR-*`
-       artifact it names. There is no RED and no GREEN on this branch — the
+     - **Branch 3** (`exception`): row identity, the obligation reference the
+       row's `Layer` selects, the `DR-ID`, and the `DR-*` artifact it names. The
+       obligation is what the DR says cannot be observed, so a subject without
+       it let the reference be pointed at a different requirement after the PASS
+       — the ledger is out of the revision, and item 10's identity check covers
+       four fields, so nothing moved. Item 10 checks this one against the ledger
+       as well. There is no RED and no GREEN on this branch — the
        claim is that neither could be had — so the DR **is** the evidence, and
        leaving it out of every subject let the pointer be swapped after the PASS
        for another existing `DR-*`, one already waived perhaps, with the

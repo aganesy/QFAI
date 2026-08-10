@@ -41,7 +41,12 @@ Revision: <git rev> | working-tree+<content hash>
      the diff bytes; then one record per untracked file,
      `path + NUL + kind + NUL + mode + NUL + the SHA-256 of its bytes`, sorted
      by path in byte order. `kind` is `file` / `symlink` / `dir` and `mode` is
-     the octal permission bits: a tracked diff carries a mode change, and
+     the octal permission bits. **On a `symlink` the bytes are the link's own
+     payload** — what `readlink` returns — never the target's contents: the two
+     are both defensible readings, so producer and reviewer could compute
+     different addresses for one tree, and a dangling link has no second reading
+     at all. On a `dir` the hash is over the empty string; the entries under it
+     are records of their own. The point of `mode`: a tracked diff carries a mode change, and
      without these an uncommitted `chmod +x` on a new script left the address
      unmoved — same bytes, different behaviour under test, CI and packaging,
      with a reviewer PASS taken before it still reading as fresh.

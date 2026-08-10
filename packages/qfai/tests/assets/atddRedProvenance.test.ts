@@ -1411,6 +1411,59 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(baseline).toContain("**Completion review**");
   });
 
+  it("keeps a replacement proof's revision out of RED revision", async () => {
+    // On an `observed-red` row the RED is the natural failure the round block
+    // still describes, so overwriting its revision with the tree a later
+    // mutation ran against hashed two trees as one observation.
+    const reviewFix = flat(await read(tree, REVIEW_FIX));
+    expect(reviewFix).toContain("`Replacement proof revision`");
+    expect(reviewFix).toContain("**not over `RED revision`**");
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("Leave `RED revision` alone**");
+  });
+
+  it("puts the obligation reference in the branch-3 subject", async () => {
+    // The obligation is what the DR says cannot be observed, so a subject
+    // without it let the reference be pointed at a different requirement after
+    // the PASS with nothing moving.
+    const baseline = flat(
+      await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+    );
+    expect(baseline).toContain(
+      "**Branch 3** (`exception`): row identity, the obligation reference the row's `Layer` selects",
+    );
+  });
+
+  it("says which bytes an untracked symlink contributes", async () => {
+    // Link payload and target contents are both defensible readings, so the
+    // two sides could compute different addresses — and a dangling link has no
+    // second reading at all.
+    const revision = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(revision).toContain("**On a `symlink` the bytes are the link's own payload**");
+    expect(revision).toContain("never the target's contents");
+  });
+
+  it("points the completion gate at this spec's own validate artifact", async () => {
+    // `validate.log` and the run-log pointer are shared by every run and
+    // nothing serializes them, so a sibling's success overwrites this run's
+    // failure.
+    const gatekeeper = flat(await read(tree, GATEKEEPER));
+    expect(gatekeeper).toContain(
+      "`.qfai/report/validate.spec-<id>.json` for the spec under review",
+    );
+    expect(gatekeeper).toContain("**Not `.qfai/report/validate.log`**");
+  });
+
+  it("observes falsifiability per selector entry", async () => {
+    // A `Selector` may hold a list or a glob, and one aggregate run shows the
+    // first entry failing while the rest are unobserved.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("run **each entry of** this row's `Selector` separately");
+    expect(implement).toContain("Record the trio per entry, or split the row before the handoff");
+  });
+
   it("takes Round 1: Revision from the restored tree, not the mutated one", async () => {
     // `Revision` is the address items 5, 7 and 8 share, and the revert moves it
     // by construction on an uncommitted tree — the mutated tree has its own
@@ -1488,7 +1541,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const baseline = flat(
       await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
     );
-    expect(baseline).toContain("**Branch 3** (`exception`): row identity, the `DR-ID`");
+    expect(baseline).toContain(
+      "**Branch 3** (`exception`): row identity, the obligation reference",
+    );
     expect(baseline).toContain("the verdict to name the `DR-ID` the row currently carries");
   });
   it("puts the falsifiability trio in the round block it belongs to", async () => {
@@ -1520,9 +1575,12 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // the tree before it — which is not what the gatekeeper judged.
     const reviewFix = flat(await read(tree, REVIEW_FIX));
     expect(reviewFix).toContain("is recorded **by the stage that runs it**");
-    expect(reviewFix).toContain("hand it over stale");
+    expect(reviewFix).toContain("hand it over empty");
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("**write the re-taken proof and the transient revision");
+    // The field is named now, so the consumer sentence names it too.
+    expect(implement).toContain(
+      "**write the re-taken proof and, in `Replacement proof revision`, the tree it ran against",
+    );
   });
 
   it("gives the stale manifest a remediation that exists", async () => {

@@ -1547,7 +1547,12 @@ agents:
         good RED pair, on artifacts its own ordering says cannot exist yet. At an
         observation gate the row's own evidence above is the whole input.
 
-      - `.qfai/report/validate.log`
+      - `.qfai/report/validate.spec-<id>.json` for the spec under review, or the
+        `<report>/run-*/` directory of the run that produced it. **Not
+        `.qfai/report/validate.log`**: it and the run-log pointer are shared by every
+        run, scoped or not, and nothing serializes them, so a sibling stage validating
+        at the same time overwrites what this one wrote — a failing run followed by a
+        sibling's success reads as this spec's PASS
       - `.qfai/report/specs-coverage/spec-*.md`
       - Runtime evidence and prototyping evidence artifacts
 

@@ -488,6 +488,17 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A replacement proof gets its own revision.** Overwriting `RED revision` on
+  an `observed-red` row hashed the natural RED's pair with a later mutation's
+  tree as one observation.
+- **Branch 3 hashes the obligation it says cannot be observed**, so the
+  reference cannot be pointed at a different requirement after the PASS.
+- **An untracked symlink contributes its own payload**, never the target's
+  contents — a dangling link has no second reading at all.
+- **The completion gate reads this spec's validate artifact**, not the shared
+  `validate.log` a sibling run overwrites.
+- **Falsifiability is observed per selector entry**, as a RED already is: one
+  aggregate run leaves every entry after the first unobserved.
 - **`Round 1: Revision` is taken from the restored tree.** It is the address
   items 5, 7 and 8 share, and the revert moves it by construction — the
   mutated tree already has `Falsifiability revision`.

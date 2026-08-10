@@ -42,10 +42,16 @@ handoff of a `todo` row, so this one needs its own contract.
     test as it was. `evidence-revision.md` makes a later change to the test
     invalidate exactly that evidence, so leaving them alone either stalls the
     repair for ever or pairs an old observation with a new test hash. The revision of the tree that proof ran against is recorded **by the stage
-    that runs it** — this one owns no production mutation, so it cannot know it.
-    Mark the field `test-only replacement` with the verdict that asked for it
-    and hand it over stale; `/qfai-implement` writes the value when it re-takes
-    the proof, exactly as step 3c does on a first pass. Recording it here would
+    that runs it**, in a field of its own — `Replacement proof revision` — and
+    **not over `RED revision`**. On an `observed-red` row that RED is the
+    natural failure taken before the production code existed, and the round
+    block still describes it; overwriting its revision with the tree a later
+    mutation ran against made the RED subject hash a pair and a revision from
+    two different trees as one observation, and the pre-edit RED then stood as
+    evidence for the current test. Mark the field `test-only replacement` with
+    the verdict that asked for it and hand it over empty; `/qfai-implement`
+    writes the value when it re-takes the proof, exactly as step 3c does on a
+    first pass — this stage owns no production mutation, so it cannot know it. Recording it here would
     have named the tree **before** the mutation, which is not what the
     gatekeeper judged. That is
     what ties the replacement to the observation a consumer can check: one
