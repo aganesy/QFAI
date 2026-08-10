@@ -10,9 +10,11 @@
  * drift suite, but the pin SUBSUMES it, so a change to that clause reddens both
  * rows — accepted: one message, one emission site.
  *
- * Leg (a) of TC-0006-0030 only: leg (b) (an absent shipped name is not drift)
- * is TDD-0038's, leg (c) (an unresolvable packaged copy skips at `info`) is
- * TDD-0039's — both `todo`, neither missing.
+ * Leg (a) of TC-0006-0030 only; the other legs are ledger rows, not gaps. Leg
+ * (b) (an absent shipped name is not drift) divides by the record — TDD-0038
+ * takes the entry-LESS half, the sibling drift suite's second `it` the
+ * entry-BEARING (`declined`) one — and leg (c) (an unresolvable packaged copy
+ * skips at `info`) is TDD-0039's.
  *
  * TWO NEEDLE RULES, cited by number below:
  *   1. A NEEDLE SPANNING MORE THAN ONE WORD MUST BOUND ITS GAPS IN WORDS

@@ -121,16 +121,36 @@ export async function deleteInstallProvenanceRecord(dir: string): Promise<void> 
  *
  * Goes through the production reader and writer instead of duplicating the
  * record path as `deleteInstallProvenanceRecord` above does, since a targeted
- * edit needs the parsed record anyway. Two scoped consequences:
+ * edit needs the parsed record anyway. What that route costs, at least:
  *
- * - The round trip preserves `workflows` only, that being the shape the reader
- *   returns. Contract §2 anticipates a second artifact kind and this helper
- *   would drop one; make it a targeted JSON edit in the change that adds one.
+ * - The round trip keeps only what the reader RETURNS and drops the rest: any
+ *   top-level key beside `workflows` (contract §2 anticipates a second artifact
+ *   kind — make this a targeted JSON edit in the change that adds one), and any
+ *   per-entry field outside the three the reader validates, an entry missing
+ *   one of which the reader drops whole.
  * - A name carrying no entry to begin with is a silent no-op, so callers assert
  *   the POSTCONDITION through `readInstallProvenance` rather than trust this.
+ * - Whatever the reader treats as unusable — a record MISSING, UNREADABLE,
+ *   MALFORMED or carrying no valid `workflows` object — arrives here as an EMPTY
+ *   record, that reader being fail-safe by contract, and the write would then
+ *   replace the adopter's file with `{"workflows": {}}`: destruction shaped like
+ *   a no-op, against this module's safe direction. Measured before the
+ *   precondition below existed, on a record holding `{ not json`: the call
+ *   SUCCEEDED and left the pretty-printed empty record in its place, with no
+ *   throw anywhere on the path. Emptiness is the only observable those states
+ *   share once the reader has run, so the precondition keys on it and refuses
+ *   empty-and-valid along with them, where the round trip changes nothing
+ *   anyway. No shipped assertion covers the throw; that measurement is its
+ *   only witness.
  */
 export async function removeProvenanceEntry(dir: string, name: string): Promise<void> {
   const record = await readInstallProvenance(dir);
+  if (Object.keys(record.workflows).length === 0) {
+    throw new Error(
+      `removeProvenanceEntry: the install-provenance record at ${dir} holds no entries ` +
+        `(missing, unreadable, malformed or empty) — rewriting it would destroy it`,
+    );
+  }
   const kept = Object.entries(record.workflows).filter(([recorded]) => recorded !== name);
   await writeInstallProvenance(dir, { workflows: Object.fromEntries(kept) });
 }

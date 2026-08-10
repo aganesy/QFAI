@@ -223,13 +223,13 @@ describe(
       // finding: `title`, `message`, and the serialized `details` of each. A
       // bare filename is a safe needle, and the haystack stays forward-safe as
       // the payload grows, because growth can only produce a false RED, never
-      // a false GREEN. Of the reader's four-key result: `workflowsDir` is
-      // `.github/workflows`; `packagedDir` is a DIRECTORY path and cannot
-      // carry a filename; `modified` holds recorded names only, and this one
-      // is unrecorded (guard #1); and a future `declined` bucket cannot carry
-      // it either, since `resolveWorkflowCopySet` marks a name declined only
-      // when a record entry EXISTS and the file is absent, while an
-      // adopter-owned collision has no entry at all.
+      // a false GREEN. Of the reader's five fields, the three that can carry a
+      // name at all: `workflowsDir` is `.github/workflows`; `packagedDir` is a
+      // DIRECTORY path and cannot carry a filename; `modified` holds recorded
+      // names only, and this one is unrecorded (guard #1). A `declined` bucket
+      // added later could not carry it either, since `resolveWorkflowCopySet`
+      // marks a name declined only when a record entry EXISTS and the file is
+      // absent, while an adopter-owned collision has no entry at all.
       const findingSurface = findings
         .map(
           (finding) =>
@@ -317,8 +317,13 @@ describe(
       // reader rather than trusted from the fixture, whose entry removal is a
       // silent no-op on a name it does not find. The record must ALSO stay
       // non-empty: an empty one registers no check at all — the
-      // whole-record-empty aggregate the sibling drift suite owns — and every
-      // claim below would then pass against a doctor run that emitted nothing.
+      // whole-record-empty aggregate the sibling drift suite owns. What that
+      // costs is measured, and it is mostly a FALSE RED rather than a vacuity:
+      // of this row's six claims exactly TWO pass against a doctor run that
+      // emitted nothing — the absence sweep, on an empty haystack, and the
+      // cardinality check, both sides collapsed to 0 — while the four that read
+      // the finding redden for a reason the row does not name (measured 2 passed
+      // / 4 red; this comment asserted "every claim below" until it was run).
       const recordedNames = Object.keys((await readInstallProvenance(dir)).workflows);
       expect(
         recordedNames,
@@ -350,28 +355,33 @@ describe(
       ).toBeGreaterThan(0);
 
       // Two observation points. The reader-level one is deliberate in a file
-      // whose header names `createDoctorData`: of the reader's four fields and
-      // the two the emission renders (`workflowsDir`, `modified`),
-      // `comparedCount` is the only one that reports the SIZE of the comparison
-      // set, so it is where "this name was never an operand" is observable.
+      // whose header names `createDoctorData`: of the reader's FIVE fields the
+      // emission renders three (`workflowsDir` and `modified` through `details`,
+      // `packagedDir` interpolated into the message), none of which reports the
+      // SIZE of the comparison set — `comparedCount` alone does. This block read
+      // "four fields and the two the emission renders"; both counts were wrong.
       const diff = await diffInstalledShippedWorkflows(dir);
       const data = await createDoctorData({ startDir: dir, rootExplicit: true });
       // The finding SET, not the first match: `addCheck` is a bare push with no
-      // dedup, so a `find` would hand back the gated emission while a second
-      // registration named the stripped file.
+      // dedup, so a `find` would hand back the gated emission alone while a
+      // second, ungated registration named the stripped file.
       const findings = data.checks.filter((entry) => entry.id === "workflows.integrity");
       const check = findings[0];
 
-      // The MECHANISM behind the claim, and the assertion M1 reddens on its own
-      // per the block above: the comparison set is the record's key set, so a
-      // name with no entry is never compared. Pinned against
-      // `recordedNames.length`, not against the literal 1 — a literal would pin
-      // the shipped set's cardinality at 2, which contract §1 expects to change,
-      // and the row above refused the same pin for the same reason.
+      // The REPORTED SIZE of the comparison set — a cardinality check and not
+      // set identity, which `WorkflowsIntegrityDiff` cannot express at all (no
+      // operand list on its surface), so strengthening this would mean widening
+      // the reader first. It therefore catches a widening that flows into
+      // `comparedCount` (M1) and measurably not one that leaves the count at
+      // `recordedNames.length` while adding an operand: under M4 the entry-less
+      // name IS compared and every assertion in this row stays green, the row
+      // above killing that mutant instead, its collision being present on disk.
+      // Pinned against `recordedNames.length`, not the literal 1: that would pin
+      // the shipped set's cardinality at 2, which contract §1 expects to change.
       expect
         .soft(
           diff.comparedCount,
-          "the comparison set must be exactly the recorded names, or a name with no entry is being compared",
+          "the reported comparison-set size must equal the recorded-name count, or a name with no entry was counted into it",
         )
         .toBe(recordedNames.length);
 
@@ -407,10 +417,9 @@ describe(
         )
         .not.toContain(ABSENT_NAME);
 
-      // The live control. Without it a check that named NOTHING would satisfy
-      // the absence claim above and the row would assert nothing. Deep equality
-      // pins membership, order and length at once, and its diff prints whichever
-      // entry appeared.
+      // The live control, for the reason the row above gives at length: without
+      // it a check that named NOTHING would satisfy the absence claim. Deep
+      // equality pins membership, order and length at once.
       expect
         .soft(
           check?.details?.modified,
