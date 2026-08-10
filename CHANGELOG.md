@@ -505,6 +505,24 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The canonical state is read before the link problem, so every answer
+  carries the short-circuit.** A wrapper that was flattened _and_ whose skills
+  root is a regular file reported the ancestor without marking it unwalkable,
+  and the profile then walked into the same `ENOTDIR` the finding was about.
+- **A broken wrapper's canonical is checked for readability too.** An ACL or a
+  mode that keeps the document shut is not repaired by `qfai init` — the copy is
+  create-only — so reporting the wrapper alone had the operator re-run it and
+  learn nothing. An unreadable document also stops the profile:
+  `validateSkillDocReferences` re-throws its own `readFile` error, which would
+  take the finding down with it.
+- **A damaged integration directory is not enumerated for retired wrappers.**
+  When it is a symlink that resolves, `readdir` follows the redirect and lists
+  somebody else's tree — and the remedy printed for a retired wrapper is "delete
+  the path", which through that redirect deletes a file outside the project.
+- **The restore's copy is a bounded read of the inode it measured.** A ceiling
+  checked by `stat` and a read taken by pathname are two operations on two
+  possibly different inodes, so a sidecar replaced between them was read
+  unbounded anyway.
 - **A create-only copy treats a dangling symlink at the destination as
   occupied.** `access` follows the link, so a dangling one answered "free" and
   `copyFile` then wrote _through_ it — resolving the symlink and creating its

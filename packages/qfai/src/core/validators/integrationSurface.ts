@@ -494,9 +494,18 @@ async function canonicalLinkProblem(
  * too — init creates none for those, so it is unmanaged either way, and the
  * remedy says so rather than assuming which it is.
  */
-async function retiredWrappers(root: string, wrappers: readonly Wrapper[]): Promise<Broken[]> {
+async function retiredWrappers(
+  root: string,
+  wrappers: readonly Wrapper[],
+  damagedDirs: ReadonlyMap<string, string>,
+): Promise<Broken[]> {
   const expected = new Map<string, Set<string>>();
   for (const wrapper of wrappers) {
+    // A directory already reported as damaged is not enumerated. When it is a
+    // symlink that resolves, `readdir` follows the redirect and lists somebody
+    // else s tree — and the remedy printed for a retired wrapper is delete the
+    // path, which through that redirect deletes a file outside the project.
+    if (damagedDirs.has(wrapper.dir)) continue;
     const names = expected.get(wrapper.dir) ?? new Set<string>();
     names.add(path.posix.basename(wrapper.relative));
     expected.set(wrapper.dir, names);
@@ -598,28 +607,50 @@ async function canonicalDamage(
   realRoot: string | null,
   wrapper: Wrapper,
 ): Promise<Broken | null> {
-  const link = await canonicalLinkProblem(root, realRoot, wrapper);
-  if (link !== null) {
-    return { relative: wrapper.canonicalRelative, detail: link };
-  }
+  // The state first, so the short-circuit is decided once for every answer
+  // below it. Returning on the link problem before this left a wrapper that is
+  // *also* flattened reporting the ancestor without marking it unwalkable, and
+  // the profile then walked into the same `ENOTDIR` that finding was about.
   const state = await canonicalState(wrapper.canonical);
-  if (state.kind === "absent") return null;
-  if (state.kind === "present") {
-    const kind = await canonicalKindProblem(wrapper, state.stats);
-    return kind === null ? null : { relative: wrapper.canonicalRelative, detail: kind };
-  }
   const culprit =
     state.kind === "not-a-directory"
       ? await unusableAncestor(root, wrapper.canonicalRelative)
       : null;
   const relative = culprit?.relative ?? wrapper.canonicalRelative;
+  const unwalkable = blocksWalk(state) ? relative : undefined;
+
+  const link = await canonicalLinkProblem(root, realRoot, wrapper);
+  if (link !== null) {
+    return { relative: wrapper.canonicalRelative, detail: link, unwalkable };
+  }
+  if (state.kind === "absent") return null;
+  if (state.kind === "present") {
+    const kind = await canonicalKindProblem(wrapper, state.stats);
+    if (kind !== null) return { relative: wrapper.canonicalRelative, detail: kind, unwalkable };
+    // Readable, the same question the healthy-wrapper branch asks. A canonical
+    // an ACL or a mode keeps shut is not repaired by `qfai init` — the copy is
+    // create-only — so reporting the wrapper alone had the operator re-run it
+    // and learn nothing about what is still broken. And an unreadable document
+    // stops the profile: `validateSkillDocReferences` re-throws its own
+    // `readFile` error, which would take this finding down with it.
+    const doc =
+      wrapper.kind === "skill" ? path.join(wrapper.canonical, "SKILL.md") : wrapper.canonical;
+    if (!(await isReadable(doc))) {
+      return {
+        relative: wrapper.canonicalRelative,
+        detail: "resolves, but the document is unreadable",
+        unwalkable: wrapper.canonicalRelative,
+      };
+    }
+    return null;
+  }
   return {
     relative,
     detail:
       culprit === null
         ? describeDamage(state, "canonical document")
         : `the canonical directory ${culprit.detail}`,
-    unwalkable: blocksWalk(state) ? relative : undefined,
+    unwalkable,
   };
 }
 
@@ -1389,6 +1420,11 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
         broken.push({
           relative: wrapper.relative,
           detail: "resolves, but its SKILL.md is unreadable",
+          // And stop here. `validateSkillDocReferences` re-throws its own
+          // `readFile` error on the same document, which would reject the whole
+          // run and take this finding — the only one that names the path — with
+          // it.
+          unwalkable: wrapper.canonicalRelative,
         });
       }
     } else if (!(await isReadable(wrapper.absolute))) {
@@ -1415,7 +1451,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
   // project's own, and calling one of them retired is a finding it cannot act
   // on and did not ask for.
   if (initialised) {
-    broken.push(...(await retiredWrappers(root, wrappers)));
+    broken.push(...(await retiredWrappers(root, wrappers, damagedDirs)));
   }
 
   if (broken.length === 0) {

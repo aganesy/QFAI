@@ -647,7 +647,7 @@ describe("a restore puts back more than the bytes", () => {
         actual.readFile(...args),
       );
       expect(readsOfSidecar).toEqual([]);
-      expect(error?.message).toContain("退避したファイルが大きすぎて復元できません");
+      expect(error?.message).toContain("退避したファイルを復元できません");
       expect(error?.message).toContain(".qfai-repair-");
     });
   });
@@ -663,21 +663,32 @@ describe("a restore puts back more than the bytes", () => {
       const linkPath = path.join(root, LINK);
       await rm(linkPath, { recursive: true, force: true });
       await mkdir(path.dirname(linkPath), { recursive: true });
-      // Somebody else's private file, at a path init wants to repair.
-      await writeFile(linkPath, "# mine\n", { encoding: "utf-8", mode: 0o600 });
+      // A flattened wrapper — so the repair actually runs — that somebody left
+      // private. Content the repair does not recognise is skipped outright, and
+      // then none of this path is exercised at all.
+      await writeFile(linkPath, FLATTENED, { encoding: "utf-8", mode: 0o600 });
 
-      // No hard links on this filesystem, so the restore falls through to the
-      // exclusive write that creates a fresh inode.
+      // The recreate fails, which is what sends the repair through its restore;
+      // and no hard links here, so that restore falls through to the exclusive
+      // write which creates a fresh inode.
+      symlinkSpy.mockImplementation((_actual: FsPromises, _target: string, linkArg: string) =>
+        linkArg === linkPath ? Promise.reject(eperm()) : Promise.resolve(undefined),
+      );
       linkSpy.mockImplementation(() => {
         const err = new Error("simulated EXDEV") as NodeJS.ErrnoException;
         err.code = "EXDEV";
         return Promise.reject(err);
       });
 
-      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+      await expect(
+        captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true })),
+      ).rejects.toThrow("EPERM");
 
+      symlinkSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+        actual.symlink(...args),
+      );
       linkSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.link(...args));
-      expect(await readFile(linkPath, "utf-8")).toBe("# mine\n");
+      expect(await readFile(linkPath, "utf-8")).toBe(FLATTENED);
       expect((await lstat(linkPath)).mode & 0o777).toBe(0o600);
     });
   });
@@ -695,8 +706,11 @@ describe("a restore puts back more than the bytes", () => {
         const linkPath = path.join(root, LINK);
         await rm(linkPath, { recursive: true, force: true });
         await mkdir(path.dirname(linkPath), { recursive: true });
-        await writeFile(linkPath, "# mine\n", { encoding: "utf-8", mode: 0o600 });
+        await writeFile(linkPath, FLATTENED, { encoding: "utf-8", mode: 0o600 });
 
+        symlinkSpy.mockImplementation((_actual: FsPromises, _target: string, linkArg: string) =>
+          linkArg === linkPath ? Promise.reject(eperm()) : Promise.resolve(undefined),
+        );
         linkSpy.mockImplementation(() => {
           const err = new Error("simulated EXDEV") as NodeJS.ErrnoException;
           err.code = "EXDEV";
@@ -711,6 +725,9 @@ describe("a restore puts back more than the bytes", () => {
           (err: unknown) => err as Error,
         );
 
+        symlinkSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
+          actual.symlink(...args),
+        );
         linkSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.link(...args));
         chmodSpy.mockImplementation((actual: FsPromises, ...args: never[]) =>
           actual.chmod(...args),

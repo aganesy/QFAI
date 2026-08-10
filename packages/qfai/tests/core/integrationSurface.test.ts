@@ -1094,6 +1094,32 @@ describe("what init wrote is still checked after the roster moves on", () => {
     });
   });
 
+  it("does not enumerate an integration directory already reported as damaged", async () => {
+    // A resolvable redirect makes `readdir` list somebody else s tree, and the
+    // remedy printed for a retired wrapper is "delete the path" — which through
+    // that redirect deletes a file outside the project.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const outside = path.join(root, "outside");
+      await mkdir(outside, { recursive: true });
+      await writeFile(
+        path.join(outside, "legacy-research"),
+        "../../.qfai/assistant/skills/legacy-research",
+        "utf-8",
+      );
+      const claudeSkills = path.join(root, ".claude", "skills");
+      await rm(claudeSkills, { recursive: true, force: true });
+      await symlink(outside, claudeSkills, "dir");
+
+      const found = await finding(root);
+      // The directory itself is reported; what is inside the redirect is not.
+      expect(found?.message).toContain(".claude/skills");
+      expect(found?.message).not.toContain("legacy-research");
+    });
+  });
+
   it("says nothing about a repair sidecar, which is not a wrapper", async () => {
     // It holds the flattened target, so it reads as one — and it exists because
     // a repair could not finish, which sometimes makes it the only surviving

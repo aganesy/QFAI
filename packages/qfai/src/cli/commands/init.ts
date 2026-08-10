@@ -1404,18 +1404,23 @@ async function restoreSidecar(sidecar: string, linkPath: string): Promise<void> 
     // to copy it back was exactly the exhaustion the probe exists to avoid.
     // Nothing is lost by refusing: the content is in the sidecar, and the
     // message says where.
+    // Pinned to one handle, like every other read of this file. A ceiling
+    // checked by `stat` and a read taken by pathname are two operations on two
+    // possibly different inodes, so a sidecar replaced or grown between them
+    // was read unbounded anyway — the very exhaustion the ceiling is for, with
+    // the wrapper's pathname still empty.
     const original = await stat(sidecar);
-    if (original.size > SIDECAR_COPY_MAX_BYTES) {
+    const content = await readPinnedRegularFileBytes(sidecar, SIDECAR_COPY_MAX_BYTES);
+    if (content === null) {
       throw new Error(
         [
-          `退避したファイルが大きすぎて復元できません（${String(original.size)} bytes）: ${linkPath}`,
-          `このファイルシステムでは hard link を作成できず、内容のコピーは上限 ${String(SIDECAR_COPY_MAX_BYTES)} bytes までに制限しています。`,
+          `退避したファイルを復元できません（種別が変わったか、上限 ${String(SIDECAR_COPY_MAX_BYTES)} bytes を超えています）: ${linkPath}`,
+          `このファイルシステムでは hard link を作成できず、内容のコピーはその上限までに制限しています。`,
           `元のファイルは次の場所にあります: ${sidecar}`,
         ].join("\n"),
         { cause: linkErr },
       );
     }
-    const content = await readFile(sidecar);
     await writeFile(linkPath, content, { flag: "wx" });
     // Bytes are not the whole file. `writeFile` makes a **new** inode with the
     // umask and the parent's defaults, so a `0600` file another process left
@@ -1739,6 +1744,40 @@ async function readPinnedRegularFile(filePath: string, maxBytes: number): Promis
     // `ENXIO` is what `O_NONBLOCK` returns for a FIFO with no writer, in place
     // of blocking. Neither it nor a directory is a bounded regular file, and
     // `open` is simply where that shows up instead of `fstat`.
+    if (code === "ENXIO" || code === "EISDIR") return null;
+    throw error;
+  } finally {
+    await handle?.close();
+  }
+}
+
+/**
+ * The same read, returning the bytes.
+ *
+ * The restore copy writes back what it read, and decoding as UTF-8 first
+ * replaces every invalid sequence with U+FFFD — irreversibly, since the sidecar
+ * is removed straight after.
+ */
+async function readPinnedRegularFileBytes(
+  filePath: string,
+  maxBytes: number,
+): Promise<Buffer | null> {
+  let handle: FileHandle | undefined;
+  try {
+    handle = await open(filePath, OPEN_READ_FLAGS);
+    const pinned = await handle.stat();
+    if (!pinned.isFile() || pinned.size > maxBytes) return null;
+    const buffer = Buffer.alloc(maxBytes + 1);
+    let filled = 0;
+    while (filled < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
+      if (bytesRead === 0) break;
+      filled += bytesRead;
+    }
+    if (filled > maxBytes) return null;
+    return Buffer.from(buffer.subarray(0, filled));
+  } catch (error: unknown) {
+    const code = (error as NodeJS.ErrnoException | null)?.code;
     if (code === "ENXIO" || code === "EISDIR") return null;
     throw error;
   } finally {
