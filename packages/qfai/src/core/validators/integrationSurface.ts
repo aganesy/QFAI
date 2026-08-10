@@ -1,6 +1,6 @@
-import { constants } from "node:fs";
 import type { Dirent, Stats } from "node:fs";
-import { access, lstat, readFile, readdir, readlink, realpath, stat } from "node:fs/promises";
+import type { FileHandle } from "node:fs/promises";
+import { access, lstat, open, readFile, readdir, readlink, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
@@ -168,16 +168,29 @@ async function skillIdsIn(skillsDir: string): Promise<Set<string>> {
  * probe both propagate a non-absence error; the probe that decides membership
  * has to as well, or the guarantee holds everywhere except where it is decided.
  */
-/** Whether the file can actually be read, not merely stat'd. */
+/**
+ * Whether the file can actually be read, by reading it.
+ *
+ * `access(R_OK)` consults the POSIX mode bits and **not** a Windows ACL, so a
+ * document an ACL denies answered "readable" while the assistant's own read
+ * failed — and the remedy this rule prints for that state is an `icacls`
+ * command. Opening it is the only question whose answer matches what the
+ * assistant will experience. One byte is enough and costs nothing on a document
+ * that is fine.
+ */
 async function isReadable(filePath: string): Promise<boolean> {
+  let handle: FileHandle | undefined;
   try {
-    await access(filePath, constants.R_OK);
+    handle = await open(filePath, "r");
+    await handle.read(Buffer.alloc(1), 0, 1, 0);
     return true;
   } catch (error) {
     const code = (error as NodeJS.ErrnoException | null)?.code;
     if (code === "EACCES" || code === "EPERM") return false;
     if (isMissing(error)) return false;
     throw error;
+  } finally {
+    await handle?.close();
   }
 }
 
@@ -624,13 +637,17 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       // cannot create a directory through a broken link. The surface is not
       // missing; the path to it is.
       const ancestor = await symlinkAncestor(root, dir);
-      const state = await canonicalState(absolute);
-      if (state.kind === "absent") {
-        if (ancestor !== null) {
-          damagedDirs.set(dir, `an ancestor is a symlink: ${toPosix(ancestor)}`);
-        }
+      // Before anything about the directory itself: when `.claude` is a cycle
+      // or points at a non-directory, the probe on `.claude/skills` answers
+      // `cycle` / `not-a-directory` too, and naming the child sent the operator
+      // at a path they cannot even reach — `ELOOP` / `ENOTDIR` on the way in.
+      // The outermost damaged component is the one to repair.
+      if (ancestor !== null) {
+        damagedDirs.set(dir, `an ancestor is a symlink: ${toPosix(ancestor)}`);
         return;
       }
+      const state = await canonicalState(absolute);
+      if (state.kind === "absent") return;
       // A cycle or a dangling link is named for what it is before the plain
       // "it is a symlink" rule below, which would otherwise bury the more
       // specific damage under the more general one.
@@ -656,10 +673,6 @@ export async function validateIntegrationSurface(root: string): Promise<Issue[]>
       // lexical path says `.claude`, and the comparison reported a sound
       // surface as a symlink — failing every profile with a remedy that could
       // not apply. Asking each component what it *is* has no such question.
-      if (ancestor !== null) {
-        damagedDirs.set(dir, `an ancestor is a symlink: ${toPosix(ancestor)}`);
-        return;
-      }
       // A regular file where the directory belongs. `lstat` on every wrapper
       // under it raises `ENOTDIR`, which is the same failure the cycle was.
       if (!state.stats.isDirectory()) {

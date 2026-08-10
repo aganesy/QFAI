@@ -1344,6 +1344,9 @@ async function ensureSymlink(
  * makes the claim and the test one operation; the counter only has to produce
  * candidates, not guarantee anything by itself.
  */
+/** Names {@link claimSidecar} produces, so prune leaves them alone. */
+const SIDECAR_RE = /\.qfai-repair-\d+(?:-\d+)?$/;
+
 async function claimSidecar(linkPath: string): Promise<string> {
   const base = `${linkPath}.qfai-repair-${String(process.pid)}`;
   for (let attempt = 0; attempt < 1000; attempt += 1) {
@@ -1450,7 +1453,6 @@ async function recreateFlattenedLink(
   try {
     await mkdir(path.dirname(linkPath), { recursive: true });
     await symlink(target, linkPath, type);
-    await rm(sidecar, { recursive: true, force: true });
   } catch (err: unknown) {
     // The restore can fail on its own — a disk error, a permission change, a
     // transient I/O fault — and swallowing that reported a restore that did not
@@ -1508,6 +1510,18 @@ async function recreateFlattenedLink(
       );
     }
     throw err;
+  }
+  // Outside the try: the symlink is in place, so this is cleanup, and a failure
+  // here — an ACL, an antivirus hold, a transient I/O error — is not the repair
+  // failing. Inside it, the rollback ran against a path the new symlink already
+  // occupies, so the restore raised `EEXIST` and `init` reported a repair that
+  // had in fact succeeded, blaming Developer Mode on Windows.
+  try {
+    await rm(sidecar, { recursive: true, force: true });
+  } catch (cleanupErr: unknown) {
+    info(
+      `  note: 修復は成功しましたが退避ファイルを削除できませんでした: ${sidecar} (${describeError(cleanupErr)})`,
+    );
   }
   info(`  repaired: ${linkPath} was a flattened symlink (recreating)`);
   return "created";
@@ -1685,6 +1699,14 @@ async function pruneStaleQfaiWrappers(
     const entries = await readdir(fullDir, { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.name.startsWith("qfai-")) {
+        continue;
+      }
+      // A repair sidecar is not a stale wrapper. It is named after the wrapper
+      // it holds — `qfai-atdd.qfai-repair-1234` — so it matches this prefix,
+      // and prune runs before the repair does: a `--force` re-run would delete
+      // the very file an earlier failed repair preserved, which is the one
+      // case the sidecar exists for.
+      if (SIDECAR_RE.test(entry.name)) {
         continue;
       }
       const entryPath = path.join(fullDir, entry.name);

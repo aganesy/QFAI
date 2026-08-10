@@ -22,12 +22,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type FsPromises = typeof fsPromises;
 
-const { symlinkSpy, writeFileSpy, readFileSpy, renameSpy, linkSpy } = vi.hoisted(() => ({
+const { symlinkSpy, writeFileSpy, readFileSpy, renameSpy, linkSpy, rmSpy } = vi.hoisted(() => ({
   symlinkSpy: vi.fn(),
   writeFileSpy: vi.fn(),
   readFileSpy: vi.fn(),
   renameSpy: vi.fn(),
   linkSpy: vi.fn(),
+  rmSpy: vi.fn(),
 }));
 
 vi.mock("node:fs/promises", async () => {
@@ -39,6 +40,7 @@ vi.mock("node:fs/promises", async () => {
     readFile: (...args: unknown[]) => readFileSpy(actual, ...args),
     rename: (...args: unknown[]) => renameSpy(actual, ...args),
     link: (...args: unknown[]) => linkSpy(actual, ...args),
+    rm: (...args: unknown[]) => rmSpy(actual, ...args),
   };
 });
 
@@ -75,6 +77,7 @@ beforeEach(() => {
   );
   renameSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.rename(...args));
   linkSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.link(...args));
+  rmSpy.mockImplementation((actual: FsPromises, ...args: never[]) => actual.rm(...args));
 });
 
 describe("a repair that cannot finish leaves the file it found", () => {
@@ -288,6 +291,53 @@ describe("a sidecar left by an earlier failed repair is not overwritten", () => 
       await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
 
       expect(await readFile(stranded, "utf-8")).toBe(strandedContent);
+      expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
+    });
+  });
+});
+
+describe("a sidecar survives the next run", () => {
+  it("is not pruned as a stale qfai- wrapper", async () => {
+    // It is named after the wrapper it holds, so it matches the prune prefix —
+    // and prune runs before the repair, so a `--force` re-run deleted the very
+    // file an earlier failed repair preserved.
+    await withProject(async (root) => {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      const linkPath = path.join(root, LINK);
+      const stranded = linkPath + ".qfai-repair-" + String(process.pid);
+      const strandedContent = "# preserved by an earlier run";
+      await rm(linkPath, { recursive: true, force: true });
+      await mkdir(path.dirname(linkPath), { recursive: true });
+      await writeFile(linkPath, FLATTENED, "utf-8");
+      await writeFile(stranded, strandedContent, "utf-8");
+
+      await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+
+      expect(await readFile(stranded, "utf-8")).toBe(strandedContent);
+    });
+  });
+
+  it("does not turn a cleanup failure into a failed repair", async () => {
+    // The symlink is in place, so removing the sidecar is cleanup. Inside the
+    // rollback try it ran against a path the new symlink already occupies, so
+    // the restore raised EEXIST and init reported a repair that had succeeded.
+    await withProject(async (root) => {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      const linkPath = path.join(root, LINK);
+      await rm(linkPath, { recursive: true, force: true });
+      await mkdir(path.dirname(linkPath), { recursive: true });
+      await writeFile(linkPath, FLATTENED, "utf-8");
+
+      rmSpy.mockImplementation((actual: FsPromises, target: string, ...rest: never[]) =>
+        target.startsWith(linkPath + ".qfai-repair-")
+          ? Promise.reject(new Error("simulated cleanup failure"))
+          : actual.rm(target, ...rest),
+      );
+
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
       expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
     });
   });

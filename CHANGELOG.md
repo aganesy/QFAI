@@ -505,6 +505,18 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A repair sidecar is not pruned as a stale wrapper.** It is named after the
+  wrapper it holds, so it matched the `qfai-` prefix — and prune runs first, so
+  a `--force` re-run deleted the file an earlier failed repair preserved.
+- **A cleanup failure is not a failed repair.** Removing the sidecar sat inside
+  the rollback `try`, so an ACL or antivirus hold sent a successful repair down
+  the restore path — where the new symlink already occupies the name.
+- **Readability is answered by opening the file.** `access(R_OK)` does not
+  consult a Windows ACL, so a document an ACL denies read as fine while the
+  assistant's own read failed.
+- **A broken integration ancestor is reported instead of its child.** With
+  `.claude` a cycle, the probe on `.claude/skills` answered cycle too and named
+  a path the operator cannot reach.
 - **The canonical integrity check does not depend on a wrapper.** With no
   wrapper to resolve through, a canonical, an ancestor or a `SKILL.md`
   replaced by a resolving symlink read as a plain missing wrapper — and
