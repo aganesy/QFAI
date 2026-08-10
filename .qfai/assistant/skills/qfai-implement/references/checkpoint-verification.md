@@ -130,8 +130,13 @@ one-file-per-spec contract holds: a spec never has this boundary in both files.
 Record a **per-item** result in the evidence file the row's `Layer` owns (the spec-level boundary
 above has no row, and its own rule is stated there) —
 `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API`
-row — using the two per-item evidence fields `Checkpoint verification command` and
-`Checkpoint verification result`. These are per-item fields of the same contract gate item 10
+row — using the per-item evidence fields `Checkpoint verification command`,
+`Checkpoint verification result` and `Checkpoint verification seal`. The seal is the audit hash over
+the first two together with the `Revision` this run was made against, taken the moment the run ends
+and recomputed at gate item 12: these fields are appended after every reviewer has hashed, so they
+sit in no audit subject, and the revision that would otherwise cover them excludes
+`.qfai/evidence/**`. Without it a recorded FAIL could be edited to PASS on a `done` row and no hash
+anywhere would move. These are per-item fields of the same contract gate item 10
 resolves, so writing them to the implement file for a row anchored at the ATDD one splits that row
 across two files and leaves the one the gate reads incomplete. As with RED/GREEN evidence,
 a status without its command is invalid, and evidence from a previous checkpoint MUST NOT be reused.

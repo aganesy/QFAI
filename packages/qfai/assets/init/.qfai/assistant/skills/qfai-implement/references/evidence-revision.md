@@ -97,7 +97,7 @@ Revision: <git rev> | working-tree+<content hash>
 evidence hash`** beside its `Reviewed revision`. **What it covers is the
   named subject for that observation** — RED, GREEN or completion review —
   defined once in
-  `constitution/shared-skill-delegation-baseline.md#reviewer-response-template`.
+  `../../../constitution/shared-skill-delegation-baseline.md#reviewer-response-template`.
   Do not restate it here and do not derive it by subtraction: an entry that goes
   on growing means "the section minus what is written later" is a different
   value for every reader, and each observation is judged against the fields that
@@ -116,7 +116,7 @@ evidence hash`** beside its `Reviewed revision`. **What it covers is the
 It appears in three places, all carrying the same address:
 
 1. **Reviewer responses** — as `Reviewed revision`, per
-   `constitution/shared-skill-delegation-baseline.md#reviewer-response-template`.
+   `../../../constitution/shared-skill-delegation-baseline.md#reviewer-response-template`.
 2. **The per-item evidence contract** — one `Revision` per round block, beside
    the RED / GREEN commands and results, and one for the refactor-verify pair.
 3. **The review pack** — `summary.json`'s `revision` field, which is what makes
@@ -147,7 +147,7 @@ identical timestamps. The revision is the only thing that survives the question
 "which code did this verdict actually rule on?".
 
 Reviewers and `qa-gatekeeper` are dispatched against the **integrated** tree by
-design — `constitution/workflow.md`'s worktree-separation rule constrains
+design — `../../../constitution/workflow.md`'s worktree-separation rule constrains
 implementers, not reviewers — so the tree a reviewer reads is legitimately
 allowed to move under it. A fully independent reviewer reading a tree that is
 being edited mid-review produces a verdict that is honest, independent and

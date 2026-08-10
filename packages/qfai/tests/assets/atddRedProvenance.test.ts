@@ -1421,7 +1421,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // every recomputation unchanged.
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("**Seal the P8 pack too**");
-    expect(atdd).toContain("check that `## Final status` says what the sealed pack says");
+    expect(atdd).toContain("check that `## Final status` says what that pack says");
   });
 
   it("leaves the RED address cardinality to the round contract alone", async () => {
@@ -2137,6 +2137,60 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const provenance = flat(await read(tree, REVIEW_FIX));
     expect(provenance).toContain("take the **no-new-behaviour path**");
     expect(provenance).toContain("**Not falsifiability.**");
+  });
+
+  it("stores the P8 pack seal outside the pack and compares it at completion", async () => {
+    // Sealing the pack and checking the status against it said nothing about
+    // where the expected seal lives or what it is compared with. On a spec with
+    // no ATDD-owned rows there is no item evidence entry to hold it, and a
+    // value computed from the pack at completion always matches itself — so
+    // editing the response, the summary and the status together still passed.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("record it **outside the pack** in the stage evidence file's");
+    expect(atdd).toContain("`Review pack seal:`");
+    expect(atdd).toContain("compare it with the **recorded** value");
+    expect(atdd).toContain("The recording and the recomputation must be two moments");
+  });
+
+  it("leaves the RED addresses out of the row-level field list", async () => {
+    // The list still named them as recorded once for the row while
+    // `round-evidence.md` put them in each round's block, so a REVISE that
+    // opened Round 2 either overwrote Round 1's address or reused it.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("The **row-level** fields do not: `TDD-ID` and `TC-ref`");
+    expect(implement).not.toContain(
+      "`TDD-ID`, `TC-ref`, `RED test hash`, `RED revision` and `Falsifiability revision` are recorded once for the row",
+    );
+  });
+
+  it("points the audit-subject reference at a path that resolves", async () => {
+    // From `qfai-implement/references/` a bare `constitution/...` resolves to
+    // `qfai-implement/references/constitution/...`, which does not exist, so a
+    // producer could not reach the extraction rule and hashed its own range.
+    const evidence = await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md");
+    expect(flat(evidence)).toContain(
+      "`../../../constitution/shared-skill-delegation-baseline.md#reviewer-response-template`",
+    );
+    for (const match of evidence.matchAll(/`(\.{0,2}[^`\s]*constitution\/[^`\s]+)`/g)) {
+      expect(match[1]?.startsWith("../../../constitution/")).toBe(true);
+    }
+  });
+
+  it("seals the checkpoint record, which no audit subject covers", async () => {
+    // It is appended after every reviewer has hashed, the revision excludes
+    // `.qfai/evidence/**` and the pack seal covers only the pack — so a `done`
+    // row's result could go from FAIL to PASS with nothing moving.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("`Checkpoint verification seal`");
+    expect(implement).toContain("is **recomputed** here over the recorded command, result and revision");
+    const checkpoint = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/checkpoint-verification.md"),
+    );
+    expect(checkpoint).toContain("taken the moment the run ends");
+    const baseline = flat(await read(tree, "assistant/constitution/shared-skill-delegation-baseline.md"));
+    expect(baseline).toContain(
+      "**A field written after every reviewer is in no subject at all**",
+    );
   });
 
   it("exempts every blocking reviewer of the nested run, not just the gatekeeper", async () => {

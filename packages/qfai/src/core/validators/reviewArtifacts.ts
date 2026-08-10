@@ -114,20 +114,32 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
     return issues;
   }
 
-  // Newest first (the directory name is a sortable timestamp), and only that
-  // one is held to the current `revision` form. A repository that tracks its
-  // review packs has history written under earlier contracts, and the tree
-  // those verdicts described cannot be reconstructed to compute a content hash
-  // now — so a strict check over all of them made `--fail-on error`
-  // permanently red with no migration available.
-  for (const [index, packDir] of reviewPackDirs.entries()) {
-    issues.push(...(await validateReviewPack(packDir, index === 0)));
+  for (const packDir of reviewPackDirs) {
+    issues.push(...(await validateReviewPack(packDir, predatesStrictRevisionForm(packDir))));
   }
 
   return issues;
 }
 
-async function validateReviewPack(reviewPackDir: string, isCurrent: boolean): Promise<Issue[]> {
+// Whether a pack was written before the strict `revision` form was required.
+// This is a property of the pack itself — the timestamp in its own directory
+// name — and not its rank among siblings: ranking made "held to the contract"
+// mean "newest overall", so a malformed pack written under the current
+// contract stopped being an error the moment any other spec produced one, and
+// `--fail-on error` accepted a stale current verdict.
+//
+// A pack stamped before this could not have satisfied the form, and cannot be
+// migrated to it: the tree its verdict described is no longer reconstructible,
+// so there is no content hash to write instead.
+const STRICT_REVISION_FORM_SINCE = "20260810000000000";
+
+function predatesStrictRevisionForm(reviewPackDir: string): boolean {
+  const stamp = REVIEW_PACK_DIR_RE.exec(path.basename(reviewPackDir))?.[1];
+  // An unreadable stamp establishes nothing, so the pack is held to the form.
+  return stamp !== undefined && stamp < STRICT_REVISION_FORM_SINCE;
+}
+
+async function validateReviewPack(reviewPackDir: string, predatesForm: boolean): Promise<Issue[]> {
   const issues: Issue[] = [];
   const reviewRequestPath = path.join(reviewPackDir, "review_request.md");
   const summaryPath = path.join(reviewPackDir, "summary.json");
@@ -170,13 +182,13 @@ async function validateReviewPack(reviewPackDir: string, isCurrent: boolean): Pr
   }
 
   if (await isFile(summaryPath)) {
-    issues.push(...(await validateSummarySchema(summaryPath, isCurrent)));
+    issues.push(...(await validateSummarySchema(summaryPath, predatesForm)));
   }
 
   return issues;
 }
 
-async function validateSummarySchema(summaryPath: string, isCurrent: boolean): Promise<Issue[]> {
+async function validateSummarySchema(summaryPath: string, predatesForm: boolean): Promise<Issue[]> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(await readFile(summaryPath, "utf-8"));
@@ -253,12 +265,12 @@ async function validateSummarySchema(summaryPath: string, isCurrent: boolean): P
   // move when the file under review is edited — a stale verdict passing the
   // freshness check the field exists for.
   //
-  // **On the current pack only.** History written under the old contract cannot
-  // be migrated: the tree a past verdict described is not reconstructible, so
-  // there is no content hash to write instead. An error there would leave
-  // `--fail-on error` permanently red for a repository that keeps its packs,
-  // with nothing the operator could do. Older packs get the finding as a
-  // `warning` so the state is still visible.
+  // **Unless the pack predates the form** (see `predatesStrictRevisionForm`):
+  // that history cannot be migrated, because the tree a past verdict described
+  // is not reconstructible, so there is no content hash to write instead. An
+  // error there would leave `--fail-on error` permanently red for a repository
+  // that keeps its packs, with nothing the operator could do. Those get the
+  // finding as a `warning` so the state is still visible.
   // Only when there is a value to judge: an empty string is already reported
   // by the schema check above, and saying it twice reads as two problems.
   const revisionText = readString(revision);
@@ -266,12 +278,12 @@ async function validateSummarySchema(summaryPath: string, isCurrent: boolean): P
     revisionText !== null && !REVISION_FORM.test(revisionText)
       ? [
           issue(
-            isCurrent ? "QFAI-REVIEW-007" : "QFAI-REVIEW-009",
+            predatesForm ? "QFAI-REVIEW-009" : "QFAI-REVIEW-007",
             "`revision` の形式が不正です。git rev (7-64 hex) か `working-tree+<64 hex>`（content hash）を指定してください。`working-tree+<porcelain digest>` は内容が変わっても動かないため受理しません。" +
-              (isCurrent
-                ? ""
-                : "（過去の review pack のため warning 扱いです。当時の tree は復元できず移行もできません。）"),
-            isCurrent ? "error" : "warning",
+              (predatesForm
+                ? "（この形式が必須になる前に作成された review pack のため warning 扱いです。当時の tree は復元できず移行もできません。）"
+                : ""),
+            predatesForm ? "warning" : "error",
             summaryPath,
             "reviewArtifacts.summaryRevision",
             [revisionText],

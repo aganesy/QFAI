@@ -400,7 +400,10 @@ post-escalation verification review of a user-named fix.
      which is what makes a verdict re-checkable at all: gate item 10 recomputes
      each one against its own list. **When in doubt about a new field, ask which
      observation could have read it**; that is the whole rule, and it is why the
-     subjects are named rather than derived by subtraction.
+     subjects are named rather than derived by subtraction. **A field written
+     after every reviewer is in no subject at all** — the checkpoint pair, which
+     the revision and the pack seal both miss — so it carries a seal of its own,
+     taken as it is written and recomputed by the gate that reads it.
 
   2. **Normalize.** LF line endings; strip trailing whitespace from every line;
      drop leading and trailing blank lines; end with exactly one newline.

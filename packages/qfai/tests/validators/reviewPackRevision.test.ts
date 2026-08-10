@@ -31,11 +31,32 @@ async function withPack(
 ): Promise<Awaited<ReturnType<typeof validateReviewArtifacts>>> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-rev-"));
   tempDirs.push(root);
-  const packDir = path.join(root, ".qfai", "review", "review-20260801000000000");
+  // Stamped after the strict form shipped, so this pack is held to it. Which
+  // packs are is read from the pack's own name, never from its rank.
+  const packDir = path.join(root, ".qfai", "review", "review-20260815000000000");
   await mkdir(packDir, { recursive: true });
   await writeFile(path.join(packDir, "review_request.md"), "# request\n", "utf-8");
   await writeFile(path.join(packDir, "R01_completion-reviewer.md"), "# review\n", "utf-8");
   await writeFile(path.join(packDir, "summary.json"), JSON.stringify(summary, null, 2), "utf-8");
+  return validateReviewArtifacts(root);
+}
+
+async function withPacks(
+  packs: readonly (readonly [string, string])[],
+): Promise<Awaited<ReturnType<typeof validateReviewArtifacts>>> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-rev-"));
+  tempDirs.push(root);
+  for (const [stamp, revision] of packs) {
+    const packDir = path.join(root, ".qfai", "review", `review-${stamp}`);
+    await mkdir(packDir, { recursive: true });
+    await writeFile(path.join(packDir, "review_request.md"), "# request\n", "utf-8");
+    await writeFile(path.join(packDir, "R01_completion-reviewer.md"), "# review\n", "utf-8");
+    await writeFile(
+      path.join(packDir, "summary.json"),
+      JSON.stringify({ ...baseSummary(), revision }, null, 2),
+      "utf-8",
+    );
+  }
   return validateReviewArtifacts(root);
 }
 
@@ -92,35 +113,37 @@ describe("review pack revision", () => {
     expect(schema[0]?.message).toContain("porcelain digest");
   });
 
-  it("reports an older pack's legacy revision as a warning", async () => {
+  it("reports a pack written before the strict form as a warning", async () => {
     // The tree a past verdict described is not reconstructible, so there is no
     // content hash to migrate to — an error would leave `--fail-on error`
     // permanently red for a repository that keeps its packs.
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-rev-"));
-    tempDirs.push(root);
-    const reviewRoot = path.join(root, ".qfai", "review");
-    for (const [stamp, revision] of [
-      ["20260101000000000", "working-tree+9f2c1ab"],
-      ["20260801000000000", "a".repeat(40)],
-    ] as const) {
-      const packDir = path.join(reviewRoot, `review-${stamp}`);
-      await mkdir(packDir, { recursive: true });
-      await writeFile(path.join(packDir, "review_request.md"), "# request\n", "utf-8");
-      await writeFile(path.join(packDir, "R01_completion-reviewer.md"), "# review\n", "utf-8");
-      await writeFile(
-        path.join(packDir, "summary.json"),
-        JSON.stringify({ ...baseSummary(), revision }, null, 2),
-        "utf-8",
-      );
-    }
+    const issues = await withPacks([["20260101000000000", "working-tree+9f2c1ab"]]);
 
-    const issues = await validateReviewArtifacts(root);
     expect(issues.filter((i) => i.code === "QFAI-REVIEW-007")).toEqual([]);
     const legacy = issues.filter(
       (i) => i.code === "QFAI-REVIEW-009" && i.message.includes("porcelain digest"),
     );
     expect(legacy).toHaveLength(1);
     expect(legacy[0]?.severity).toBe("warning");
+  });
+
+  it("keeps a current pack an error when a newer pack exists", async () => {
+    // Which contract a pack was written under is a property of the pack — the
+    // timestamp in its own name — not of its rank among siblings. Deciding it
+    // by "newest overall" meant a malformed pack written under the current
+    // contract stopped being an error the moment any other spec produced one,
+    // and `--fail-on error` accepted a stale current verdict.
+    const issues = await withPacks([
+      ["20260815000000000", "working-tree+9f2c1ab"],
+      ["20260820000000000", "a".repeat(40)],
+    ]);
+
+    const current = issues.filter(
+      (i) => i.code === "QFAI-REVIEW-007" && i.message.includes("porcelain digest"),
+    );
+    expect(current).toHaveLength(1);
+    expect(current[0]?.severity).toBe("error");
+    expect(issues.filter((i) => i.code === "QFAI-REVIEW-009")).toEqual([]);
   });
 
   it("rejects a value that is neither a rev nor a content hash", async () => {

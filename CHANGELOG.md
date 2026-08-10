@@ -488,6 +488,40 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **Which contract a review pack was written under is read from the pack**, not
+  from its rank among siblings. "Held to the strict `revision` form" meant
+  "newest overall", so a malformed pack written under the current contract
+  stopped being an error the moment any other spec produced one, and
+  `validate --fail-on error` accepted a stale current verdict. The timestamp in
+  the pack's own directory name decides it: a pack stamped before the form
+  shipped could not have satisfied it and cannot be migrated to it, and reports
+  a warning; every pack stamped after is an error. An unreadable stamp
+  establishes nothing, so it is held to the form.
+- **The P8 pack seal has a place to live and something to compare against.**
+  The criterion said to seal the pack and check the status against it, but not
+  where the expected seal is stored or what the recomputation is compared with —
+  and a value taken from the pack at completion always matches itself, whatever
+  was edited in between. It is recorded outside the pack, in the stage evidence
+  file's `## Final status` (the one section excluded from the P8 audit subject,
+  and the only place that exists on a spec with no ATDD-owned rows), when the
+  last reviewer response lands and before the stage writes its verdict.
+- **The checkpoint record carries a seal of its own.** `Checkpoint verification
+  command` / `result` are appended after every reviewer has hashed, so they sit
+  in no audit subject; the working-tree revision excludes `.qfai/evidence/**`
+  and the pack seal covers only the pack. A row already at `done` could have its
+  checkpoint result edited from FAIL to PASS with nothing moving anywhere.
+  `Checkpoint verification seal` is taken as the run ends and recomputed at gate
+  item 12.
+- **The RED addresses are out of the row-level field list.** It still named
+  `RED test hash`, `RED revision` and `Falsifiability revision` as recorded once
+  for the row while the round contract put them in each round's block, so a
+  blocking REVISE that opened Round 2 either overwrote Round 1's address or
+  reused it for a RED it was not taken on.
+- **The audit-subject references resolve.** From
+  `qfai-implement/references/`, a bare `constitution/...` names
+  `qfai-implement/references/constitution/...`, which does not exist — so a
+  producer following it could not reach the extraction rule and hashed a range
+  of its own, staling a correct verdict.
 - **The stage's own review pack is sealed**, and `## Final status` is checked
   against it: the stage hash covers the evidence but not the verdict.
 - **The RED address cardinality is left to the round contract alone.**
