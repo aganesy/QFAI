@@ -5772,3 +5772,24 @@ The commit message for `55122ec2` is **truncated mid-sentence** at "comments 239
 it with `printf` and the `%` was read as a format specifier. It is pushed, so it is not being amended — the
 full content is this section, which is where it belonged anyway. Commit messages in this slice are built
 with a heredoc from here on.
+
+#### TDD-0039 first dispatch stalled, and the row is left resumable at `red`
+
+The implementation agent stalled with no progress for 600s. Its last emitted line was *"Let me measure the
+sibling comment shares first, so I can size this row's prose"* — i.e. it was still in the reading phase.
+
+**Verified before anything else, because a stalled agent can leave a partial tree**: `git status` empty,
+HEAD at `c1edbaef`, and both production blobs at their expected values (`doctor.ts 1d8eab08`,
+`workflowsIntegrity.ts 851f72c3`). Nothing was written and nothing needs repair.
+
+**Likely cause: my own concurrency.** I dispatched four agents at once — one implementer in the main tree
+plus three reviewers running full vitest suites in junctioned worktrees. That is the fourth
+concurrency-related incident in this run, and unlike the previous three it damaged nothing; it only wasted
+a dispatch. The others were: two reviewers contending for one worktree, a `rm -rf` following symlinks into
+the shared store, and a gate junctioning with a cwd-relative target. **Adopted: an implementer and a
+review fan-out do not run concurrently.** The review is the one that can close a row, so it goes first.
+
+**The ledger row stays at `red`.** `red → todo` would be a backward transition the lifecycle forbids, and
+the row is genuinely started — the correct shape is the one the skill already names for an interrupted
+`review-fix` row: resume it rather than re-issue it, because a row left mid-phase by an interrupted session
+is otherwise never picked up. Recorded here so the resumption is not mistaken for a fresh start.
