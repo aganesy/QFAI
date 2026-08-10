@@ -66,13 +66,14 @@ afterEach(async () => {
 });
 
 describe("review pack revision", () => {
-  it("reports a summary.json with no revision", async () => {
-    const issues = await withPack(baseSummary());
+  it("reports a legacy summary.json with no revision", async () => {
+    const issues = await withPack({ ...baseSummary(), revision_form: "legacy" });
     const found = issues.filter((i) => i.code === "QFAI-REVIEW-009");
 
     expect(found).toHaveLength(1);
-    // A warning: existing packs predate the field, and the point is to make the
-    // omission visible rather than to invalidate history.
+    // A warning on a pack that predates the field: the point is to make the
+    // omission visible rather than to invalidate history. A pack that declares
+    // the current contract gets an error instead — see below.
     expect(found[0]?.severity).toBe("warning");
     expect(found[0]?.suggested_action).toContain("evidence-revision.md");
     // The remedy has to name the form the reference accepts. It said
@@ -172,6 +173,25 @@ describe("review pack revision", () => {
     ).toBe(false);
   });
 
+  it("rejects a current pack that names no revision at all", async () => {
+    // Strictly worse than a malformed one: there is no tree to check and the
+    // form check never runs, so a warning made the field optional in practice.
+    const issues = await withPack(baseSummary());
+    const found = issues.filter((i) => i.rule === "reviewArtifacts.summaryRevision");
+
+    expect(found).toHaveLength(1);
+    expect(found[0]?.code).toBe("QFAI-REVIEW-007");
+    expect(found[0]?.severity).toBe("error");
+  });
+
+  it("keeps a legacy pack's missing revision a warning", async () => {
+    const issues = await withPack({ ...baseSummary(), revision_form: "legacy" });
+    const found = issues.filter((i) => i.rule === "reviewArtifacts.summaryRevision");
+
+    expect(found).toHaveLength(1);
+    expect(found[0]?.severity).toBe("warning");
+  });
+
   it("rejects a revision_form it does not define", async () => {
     const issues = await withPack({
       ...baseSummary(),
@@ -205,7 +225,7 @@ describe("review pack revision", () => {
   it("still reports the missing revision alongside other schema errors", async () => {
     // The two findings are independent; a pack with a broken roster must not
     // hide the fact that it also names no revision.
-    const broken = baseSummary();
+    const broken = { ...baseSummary(), revision_form: "legacy" };
     delete broken.overall_status;
     const issues = await withPack(broken);
 

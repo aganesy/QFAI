@@ -1,5 +1,6 @@
 {
   "version": "2.0",
+  "revision_form": "content-hash",
   "created_at": "YYYY-MM-DDThh:mm:ssZ",
   "target": {
     "kind": "discussion",

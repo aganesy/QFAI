@@ -308,13 +308,21 @@ async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
         ]
       : [];
 
+  // Absence is judged by the same declaration as the form. A pack that says it
+  // was written under the current contract and then names no revision at all is
+  // strictly worse than one whose value is malformed — there is no tree to
+  // check, and the form check never runs — so letting it through as a warning
+  // made the whole field optional in practice.
   const missingRevision =
     revision === undefined
       ? [
           issue(
-            "QFAI-REVIEW-009",
-            "summary.json に `revision` がありません。判定がどの状態に対するものか特定できず、後続コミットによる無効化もできません。",
-            "warning",
+            declaresForm ? "QFAI-REVIEW-007" : "QFAI-REVIEW-009",
+            "summary.json に `revision` がありません。判定がどの状態に対するものか特定できず、後続コミットによる無効化もできません。" +
+              (declaresForm
+                ? ""
+                : `（この pack は \`revision_form: "${REVISION_FORM_LEGACY}"\` を宣言しているため warning 扱いです。）`),
+            declaresForm ? "error" : "warning",
             summaryPath,
             "reviewArtifacts.summaryRevision",
             undefined,

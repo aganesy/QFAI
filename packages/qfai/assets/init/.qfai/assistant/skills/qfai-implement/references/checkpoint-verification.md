@@ -147,6 +147,15 @@ same way — the audit hash over the spec-level `Checkpoint verification command
 beside them as `Checkpoint verification seal`, and recompute it before spec-level completion is
 declared. A mismatch means the record was edited after the run, and completion is not declared.
 
+**Both seals — per item and per spec — are fixed by committing them**, and both recomputations
+compare against the committed copy. `../qfai-implement/references/evidence-revision.md` states that
+rule once, for every seal in this contract, and the reason applies here exactly: the seal sits
+beside the mutable pair it seals, in an evidence tree that no reviewer subject covers and the
+working-tree revision excludes, so one pass could flip `FAIL` to `PASS`, recompute the seal from the
+edited pair and the same unchanged `Revision`, and leave the recomputation agreeing. Commit the
+command, the result and the seal together, record that commit id beside them as
+`Checkpoint verification seal commit`, and read the expected value with `git show <commit>:<path>`.
+
 These are per-item fields of the same contract gate item 10
 resolves, so writing them to the implement file for a row anchored at the ATDD one splits that row
 across two files and leaves the one the gate reads incomplete. As with RED/GREEN evidence,

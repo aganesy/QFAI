@@ -488,6 +488,29 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A seal's expected value is fixed by committing it**, and every
+  recomputation compares against the committed copy. Storing it beside the thing
+  it seals protected nothing: both live in the evidence tree, which no
+  reviewer's audit subject covers and the working-tree revision excludes, so one
+  pass could edit the pack, recompute the seal, rewrite the status and leave
+  every recomputation agreeing. The rule is stated once, in
+  `evidence-revision.md`, and the pack seal and both checkpoint seals point at
+  it.
+- **An item's `Review pack seal` names the pack and the round it covers.** A
+  spec has several packs and a blocking REVISE opens more, so a bare hash left
+  the gate unable to say which directory to recompute over — it either checked
+  another round's pack or stopped a correct item.
+- **A current pack that names no `revision` at all is an error.** It declares
+  the contract and then gives nothing to check: strictly worse than a malformed
+  value, since the form check never runs either. Only an explicit `legacy` keeps
+  it a warning.
+- **A zero-row ATDD stage hands its shared-artifact mutation to the production
+  owner.** No phase there edits production code, and the rows being re-verified
+  are already `done`, so `/qfai-implement`'s named-row, `todo` and `review-fix`
+  entry paths do not reach them: the stage could only breach its own Non-goals
+  or leave the fixture's hash mismatch permanently unclearable. The handoff is a
+  mutation-only request that applies, captures, reverts and returns — without
+  reopening the row.
 - **The `revision_form` marker is required, and only `legacy` excuses a
   malformed `revision`.** An optional marker made the strict form opt-in: a
   producer that omitted it downgraded its own check to a warning, so a

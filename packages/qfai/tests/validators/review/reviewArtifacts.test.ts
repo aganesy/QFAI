@@ -47,6 +47,9 @@ function makeV1Summary(overrides?: Partial<Record<string, unknown>>): Record<str
     // Required: which contract wrote this pack. A pack that predates the
     // strict revision form says "legacy" instead, written once from history.
     revision_form: "content-hash",
+    // Required alongside it: a pack that declares the current contract and then
+    // names no tree at all cannot be re-checked by anything.
+    revision: "55af6834f0",
     created_at: "2026-04-01T00:00:00Z",
     target: { kind: "discussion", path: ".qfai/discussion/discussion-20260401000000000" },
     overall_status: "PASS",
@@ -59,6 +62,9 @@ function makeV2Summary(overrides?: Partial<Record<string, unknown>>): Record<str
   return {
     version: "2.0",
     revision_form: "content-hash",
+    // Required alongside it: a pack that declares the current contract and then
+    // names no tree at all cannot be re-checked by anything.
+    revision: "55af6834f0",
     created_at: "2026-04-01T00:00:00Z",
     target: { kind: "discussion", path: ".qfai/discussion/discussion-20260401000000000" },
     routing_profile: "requirements-heavy",
@@ -92,8 +98,7 @@ describe("validateReviewArtifacts — summary.json schema", () => {
     await writeReviewPack(root, "review-20260401000000000", makeV1Summary({ version: "3.0" }));
     const issues = await validateReviewArtifacts(root);
     const schemaErrors = issues.filter((i) => i.code === "QFAI-REVIEW-007");
-    expect(schemaErrors.length).toBeGreaterThan(0);
-    expect(schemaErrors[0]?.message).toContain("version");
+    expect(schemaErrors.some((i) => i.message.includes("version"))).toBe(true);
   });
 
   it("rejects v1.0 with empty roster", async () => {

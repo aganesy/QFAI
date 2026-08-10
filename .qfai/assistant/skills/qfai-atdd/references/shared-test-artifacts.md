@@ -48,7 +48,25 @@ re-run its original mutation — the one its `Oracle proof` plan or
 `Satisfied-by` names — under the changed artifact, capture the failure, revert,
 and record the restored GREEN, in the same `Shared-artifact re-verify` block.
 A row whose mutation no longer fails the test is the tautology this exists to
-catch, and the editing row does not reach `done` until it is repaired. **A row whose re-run fails is not
+catch, and the editing row does not reach `done` until it is repaired.
+
+**This stage owns no production agent, so on a zero-row stage the mutation is
+handed over.** Every phase here authors tests; none edits production code, and
+the rows being re-verified are already `done`, so `/qfai-implement`'s named-row,
+`todo` and `review-fix` entry paths do not reach them either. Left as written,
+the stage had two ways out and both were wrong: edit production in breach of its
+own Non-goals, or leave the shared fixture's mismatch permanently unclearable.
+So define the handoff explicitly, and keep it transient: hand
+`/qfai-implement` a **mutation-only request** naming, per affected row, its
+`spec/TDD-ID`, the mutation its `Oracle proof` plan or `Satisfied-by` names, and
+the selector to run under the changed artifact. That skill applies the mutation,
+captures the failure, **reverts it in the same step** and returns the pair. It
+does **not** reopen the row: the status stays `done`, no round block is opened,
+and nothing is written to that row's evidence — the returned proof is recorded
+here, in this stage's `Shared-artifact re-verify` block, like every other line
+in it. A `done` row has no legal transition that would let it re-observe
+anything, which is exactly why the proof belongs to the stage that moved the
+artifact rather than to the row that owns the test. **A row whose re-run fails is not
 re-verified** — it is a regression the editing row introduced, and the editing
 row does not reach `done` until it is fixed, exactly as any other failure in
 its own checkpoint.

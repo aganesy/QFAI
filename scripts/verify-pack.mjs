@@ -567,6 +567,9 @@ writeFileSync(
   JSON.stringify(
     {
       version: "2.0",
+      // Which contract wrote this pack. Required, and this fixture is written
+      // by the current one.
+      revision_form: "content-hash",
       created_at: "2026-02-16T00:00:00.000Z",
       target: {
         kind: "discussion",

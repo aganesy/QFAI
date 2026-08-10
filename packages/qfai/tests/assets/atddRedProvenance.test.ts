@@ -2148,7 +2148,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("record it **outside the pack** in the stage evidence file's");
     expect(atdd).toContain("`Review pack seal:`");
-    expect(atdd).toContain("compare it with the **recorded** value");
+    expect(atdd).toContain("compare it with the value **as committed**");
     expect(atdd).toContain("The recording and the recomputation must be two moments");
   });
 
@@ -2264,6 +2264,51 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(implement).toContain(
       "Checkpoint verification passed at the spec-level boundary (see `#checkpoint-verification`), and its `Checkpoint verification seal` is **recomputed** here",
     );
+  });
+
+  it("fixes every seal's expected value by committing it", async () => {
+    // The expected value sat beside the thing it sealed, both in an evidence
+    // tree no reviewer subject covers and the working-tree revision excludes —
+    // so one pass could edit the pack, recompute the seal, rewrite the status,
+    // and leave every recomputation agreeing.
+    const evidence = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(evidence).toContain(
+      "**The expected value is fixed by committing it, and the recomputation compares against the committed copy.**",
+    );
+    expect(evidence).toContain("git show <commit>:<path>");
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("compare it with the value **as committed**");
+    const checkpoint = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/checkpoint-verification.md"),
+    );
+    expect(checkpoint).toContain(
+      "Both seals — per item and per spec — are fixed by committing them",
+    );
+  });
+
+  it("names the pack and the round each item seal covers", async () => {
+    // A spec has several packs and a blocking REVISE opens more, so a bare hash
+    // left the gate unable to say which directory to recompute over.
+    const evidence = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(evidence).toContain("**Record it per round, and name the pack it seals**");
+    expect(evidence).toContain("`Round N: Review pack seal`");
+  });
+
+  it("hands the zero-row mutation to the production owner", async () => {
+    // No phase here edits production, and the rows being re-verified are
+    // already at `done`, so the entry paths of `/qfai-implement` do not reach
+    // them: the stage could only break ownership or leave the mismatch
+    // permanently unclearable.
+    const shared = flat(await read(tree, SHARED_ARTIFACT));
+    expect(shared).toContain(
+      "**This stage owns no production agent, so on a zero-row stage the mutation is handed over.**",
+    );
+    expect(shared).toContain("mutation-only request");
+    expect(shared).toContain("It does **not** reopen the row");
   });
 
   it("exempts every blocking reviewer of the nested run, not just the gatekeeper", async () => {

@@ -56,6 +56,27 @@ Revision: <git rev> | working-tree+<content hash>
      afterwards therefore moves the recomputation rather than the stored value,
      which is what a seal is for. Excluding the pack from the revision without this left an
      edited PASS reading as fresh.
+
+     **Record it per round, and name the pack it seals**: `Round N: Review pack`
+     (the `review-<timestamp>/` directory) and `Round N: Review pack seal`
+     beside it. A spec has several packs and a blocking REVISE opens more, so a
+     bare hash left the gate unable to say which directory to recompute over —
+     it either checked another round's pack or stopped a correct item.
+
+     **The expected value is fixed by committing it, and the recomputation
+     compares against the committed copy.** This is the one rule that makes any
+     seal in this file worth recording, and it applies to every one of them.
+     Storing the expected value beside the thing it seals protects nothing: both
+     live in the evidence tree, which is outside every reviewer's audit subject
+     _and_ outside the working-tree revision, so one pass could edit the pack,
+     recompute the seal, rewrite the status and leave every recomputation
+     agreeing. So: write the seal, commit it in the commit that closes the
+     round, and record that commit id beside it as `Round N: Seal commit`. The
+     recomputation reads the expected value with `git show <commit>:<path>`, not
+     from the working tree. Changing it afterwards means rewriting a commit,
+     which is a different act with a different trace — and the one this
+     repository's own rules already forbid without explicit instruction.
+
   3. **Serialize.** `HEAD` + NUL + the rev; then `DIFF` + NUL + the SHA-256 of
      the diff bytes; then one record per untracked file,
      `path + NUL + kind + NUL + mode + NUL + the SHA-256 of its bytes`, sorted
