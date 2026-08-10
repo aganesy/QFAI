@@ -60,7 +60,7 @@ handoff of a `todo` row, so this one needs its own contract.
     **The transient revision moves with it.** `RED revision` on an
     `observed-red` row, and `Falsifiability revision` on a `falsifiability` one,
     address the tree the observation was taken against — which included the
-    test as it was. `evidence-revision.md` makes a later change to the test
+    test as it was. `../../qfai-implement/references/evidence-revision.md` makes a later change to the test
     invalidate exactly that evidence, so leaving them alone either stalls the
     repair for ever or pairs an old observation with a new test hash. The revision of the tree that proof ran against is recorded **by the stage
     that runs it**, in a field of its own — `Replacement proof revision` — and

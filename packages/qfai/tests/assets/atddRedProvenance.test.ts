@@ -167,7 +167,7 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     // phase, because there is no production code to mutate until then.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain(
-      "RED command+result, `RED failure mode`, `RED revision`, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
+      "RED command+result, `RED failure mode`, `RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
     );
     expect(provenance).toContain("A natural RED is not a substitute");
     expect(provenance).toContain("branch 1 names the mutation it intends");
@@ -2335,6 +2335,38 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
       await read(tree, "assistant/skills/qfai-discussion/references/review-cycle-playbook.md"),
     );
     expect(discussion).toContain("are written here too");
+  });
+
+  it("lists the RED addresses every branch of the evidence shape owes", async () => {
+    // The table defines the canonical entry, and the consumer stops a handoff
+    // that is missing any of these as malformed — so a producer following it
+    // could not complete P1c or P4b.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain(
+      "`RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS",
+    );
+    expect(provenance).toContain(
+      "**`Falsifiability revision`**, **`qa-gatekeeper` PASS**, GREEN pair",
+    );
+  });
+
+  it("gives the item-cycle reviewer the artifacts it is asked to judge", async () => {
+    // Without the ledger and the evidence home its Layer selects, the role
+    // cannot identify the row under review and falls into its own Stop
+    // condition on a correct one.
+    const reviewer = flat(await read(tree, "assistant/agents/completion-reviewer.md"));
+    expect(reviewer).toContain("the ledger, for the row under review");
+    expect(reviewer).toContain("The two inputs above are what makes that possible");
+  });
+
+  it("says that omitting either revision field violates the current contract", async () => {
+    // A producer reading "required" and then omitting both got a blocking
+    // error, not the older-pack treatment the wording implied.
+    const layout = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/review-artifact-layout.md"),
+    );
+    expect(layout).toContain("**omitting either is a current-contract violation**");
+    expect(layout).toContain(".qfai/review/.legacy-packs");
   });
 
   it("exempts every blocking reviewer of the nested run, not just the gatekeeper", async () => {

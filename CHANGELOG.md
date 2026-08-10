@@ -488,6 +488,24 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The evidence-shape table lists every field the consumer gate requires.**
+  `RED test hash` and its manifest were missing from the observed-RED branch,
+  and those plus `Falsifiability revision` and the `qa-gatekeeper` PASS from the
+  falsifiability one — so a producer following the canonical table wrote a
+  handoff `/qfai-implement` rejects as malformed, and P1c / P4b could not
+  complete.
+- **The item-cycle reviewer is given the artifacts it judges.** Told to judge
+  the row's own phase-authored evidence, `completion-reviewer` had neither the
+  ledger nor the evidence home the row's `Layer` selects among its inputs — so
+  it could not identify the artifact and fell into its own Stop condition on a
+  correct row.
+- **Omitting a revision field is a current-contract violation, not an older
+  pack.** The layout said both were required and then described the omission as
+  the legacy case; only `revision_form: "legacy"`, corroborated by the migration
+  record, marks a pack as predating the form.
+- **The git probe runs once per repository and once per rev.** It was two
+  synchronous spawns per pack, so a repository that keeps its history paid them
+  on every full run, growing with the number of packs.
 - **A seal says what it catches, and the escalation stops.** Three homes for the
   expected value each fell to the same move — beside the artifact, in a commit,
   in the newest commit introducing the line — and a committed copy is not even

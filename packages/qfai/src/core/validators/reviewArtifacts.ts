@@ -116,8 +116,9 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
   }
 
   const legacyPacks = await readLegacyManifest(reviewRoot);
+  const revisions = makeRevisionProbe(root);
   for (const packDir of reviewPackDirs) {
-    issues.push(...(await validateReviewPack(packDir, legacyPacks, root)));
+    issues.push(...(await validateReviewPack(packDir, legacyPacks, revisions)));
   }
 
   return issues;
@@ -151,11 +152,11 @@ const LEGACY_MANIFEST = ".legacy-packs";
 const GIT_REV_FORM = /^[0-9a-f]{7,64}$/i;
 
 /**
- * Whether `rev` names a commit in the repository at `root`.
+ * Whether a `rev` names a commit in the repository at `root`, asked once each.
  *
- * `null` when the question cannot be asked — git missing, not a work tree — so
- * the caller says nothing rather than reporting a project that exports its
- * source as a tarball.
+ * `commitExists` answers `null` when the question cannot be asked — git
+ * missing, not a work tree — so the caller says nothing rather than reporting a
+ * project that exports its source as a tarball.
  *
  * **A negative answer is a warning, not an error.** A shallow clone, a fetch
  * that never took the branch, or a worktree created after the verdict all
@@ -164,27 +165,45 @@ const GIT_REV_FORM = /^[0-9a-f]{7,64}$/i;
  * not create and often cannot fix locally. What it does catch is the value that
  * names no commit anywhere — a placeholder, a truncated paste, a digit
  * transposed — which is the case the form check alone accepts.
+ *
+ * One `git` probe per run and per distinct rev, not per pack.
+ *
+ * `validateReviewArtifacts` walks every `review-*` directory, so a repository
+ * that keeps its history spawned two synchronous processes per pack — around
+ * 2.2s for a hundred of them, growing with the history, on every full run. The
+ * work-tree answer is asked once; each rev is asked once and remembered.
+ *
+ * Held per call rather than in module state: a validator that cached across
+ * runs would answer for the wrong repository in a process that validates two.
  */
-function commitExists(root: string, rev: string): boolean | null {
-  try {
-    execFileSync("git", ["rev-parse", "--is-inside-work-tree"], {
-      cwd: root,
-      encoding: "utf-8",
-      stdio: ["ignore", "ignore", "ignore"],
-    });
-  } catch {
-    return null;
-  }
-  try {
-    execFileSync("git", ["cat-file", "-e", `${rev}^{commit}`], {
-      cwd: root,
-      encoding: "utf-8",
-      stdio: ["ignore", "ignore", "ignore"],
-    });
-    return true;
-  } catch {
-    return false;
-  }
+type RevisionProbe = { commitExists: (rev: string) => boolean | null };
+
+function makeRevisionProbe(root: string): RevisionProbe {
+  let insideWorkTree: boolean | null = null;
+  const seen = new Map<string, boolean>();
+  const git = (args: string[]): boolean => {
+    try {
+      execFileSync("git", args, {
+        cwd: root,
+        encoding: "utf-8",
+        stdio: ["ignore", "ignore", "ignore"],
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  return {
+    commitExists(rev: string): boolean | null {
+      insideWorkTree ??= git(["rev-parse", "--is-inside-work-tree"]);
+      if (!insideWorkTree) return null;
+      const cached = seen.get(rev);
+      if (cached !== undefined) return cached;
+      const found = git(["cat-file", "-e", `${rev}^{commit}`]);
+      seen.set(rev, found);
+      return found;
+    },
+  };
 }
 
 // Which contract wrote this pack, declared by the pack itself and **required**.
@@ -213,7 +232,7 @@ const ALLOWED_REVISION_FORMS = new Set([REVISION_FORM_MARKER, REVISION_FORM_LEGA
 async function validateReviewPack(
   reviewPackDir: string,
   legacyPacks: ReadonlySet<string>,
-  root: string,
+  revisions: RevisionProbe,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const reviewRequestPath = path.join(reviewPackDir, "review_request.md");
@@ -257,7 +276,7 @@ async function validateReviewPack(
   }
 
   if (await isFile(summaryPath)) {
-    issues.push(...(await validateSummarySchema(summaryPath, legacyPacks, root)));
+    issues.push(...(await validateSummarySchema(summaryPath, legacyPacks, revisions)));
   }
 
   return issues;
@@ -266,7 +285,7 @@ async function validateReviewPack(
 async function validateSummarySchema(
   summaryPath: string,
   legacyPacks: ReadonlySet<string>,
-  root: string,
+  revisions: RevisionProbe,
 ): Promise<Issue[]> {
   let parsed: unknown;
   try {
@@ -385,7 +404,7 @@ async function validateSummarySchema(
   // the ordinary post-verdict drift the seals already cover.
   const unresolvableRevision =
     revisionText !== null && GIT_REV_FORM.test(revisionText)
-      ? commitExists(root, revisionText) === false
+      ? revisions.commitExists(revisionText) === false
         ? [
             issue(
               "QFAI-REVIEW-009",
