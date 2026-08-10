@@ -148,13 +148,13 @@ beside them as `Checkpoint verification seal`, and recompute it before spec-leve
 declared. A mismatch means the record was edited after the run, and completion is not declared.
 
 **Both seals — per item and per spec — are fixed by committing them**, and both recomputations
-compare against the committed copy. `../qfai-implement/references/evidence-revision.md` states that
+compare against the committed copy. `evidence-revision.md` states that
 rule once, for every seal in this contract, and the reason applies here exactly: the seal sits
 beside the mutable pair it seals, in an evidence tree that no reviewer subject covers and the
 working-tree revision excludes, so one pass could flip `FAIL` to `PASS`, recompute the seal from the
 edited pair and the same unchanged `Revision`, and leave the recomputation agreeing. Commit the
-command, the result and the seal together, record that commit id beside them as
-`Checkpoint verification seal commit`, and read the expected value with `git show <commit>:<path>`.
+command, the result and the seal together, and read the expected value back out of git history rather than from the working tree — no commit id
+is recorded beside them, because a field naming the commit that contains it cannot be written.
 
 These are per-item fields of the same contract gate item 10
 resolves, so writing them to the implement file for a row anchored at the ATDD one splits that row

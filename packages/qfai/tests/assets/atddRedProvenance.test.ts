@@ -1745,7 +1745,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(shared).toContain("**And the consumer has to accept that pairing.**");
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain(
-      "**unless a later row's `Shared-artifact re-verify` entry names this `TDD-ID`**",
+      "**unless a `Shared-artifact re-verify` entry names this row — its spec and `TDD-ID` together —",
     );
   });
 
@@ -2149,6 +2149,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(atdd).toContain("record it **outside the pack** in the stage evidence file's");
     expect(atdd).toContain("`Review pack seal:`");
     expect(atdd).toContain("compare it with the value **as committed**");
+    // And the reference has to resolve from where it is written.
+    expect(atdd).toContain("`../qfai-implement/references/evidence-revision.md`");
     expect(atdd).toContain("The recording and the recomputation must be two moments");
   });
 
@@ -2277,7 +2279,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(evidence).toContain(
       "**The expected value is fixed by committing it, and the recomputation compares against the committed copy.**",
     );
-    expect(evidence).toContain("git show <commit>:<path>");
+    expect(evidence).toContain("**No commit id is recorded beside the seal.**");
+    expect(evidence).toContain("git log -p -- <evidence file>");
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("compare it with the value **as committed**");
     const checkpoint = flat(
@@ -2309,6 +2312,12 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     );
     expect(shared).toContain("mutation-only request");
     expect(shared).toContain("It does **not** reopen the row");
+    // And the consumer has an entry that accepts it without moving the row.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "**A mutation-only request wins over even that, and moves no row.**",
+    );
+    expect(implement).toContain("Two places hold such an entry and both clear it");
   });
 
   it("exempts every blocking reviewer of the nested run, not just the gatekeeper", async () => {

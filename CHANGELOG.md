@@ -488,6 +488,33 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **No commit id is recorded beside a seal.** A commit id does not exist until
+  its content is fixed, so a field naming "the commit that contains this field"
+  cannot be written — appending the id changes the content and therefore the id,
+  and `--amend` is forbidden here without explicit instruction. Every round
+  would have failed to produce a required field. The recomputation finds the
+  committed value from history instead (`git log -p -- <evidence file>`), the
+  same way the `Pre-split-evidence` pass finds the commit that last advanced a
+  row.
+- **A `legacy` claim is corroborated against the migration record.** The field
+  is exactly as writable as the `revision` it excuses, so a current producer
+  with a broken value could downgrade its own finding by typing `legacy`. Only a
+  pack listed in `.qfai/review/.legacy-packs` — written once by the migration
+  pass — is believed; an uncorroborated claim is an error, and the value it
+  tried to excuse is judged as a current pack's.
+- **The mutation-only handoff has a receiver.** It was defined on the producer
+  side only, and every `/qfai-implement` entry path selects a `todo`, a named or
+  a `review-fix` row — none of which a `done` row can be — so the request had
+  nowhere to land and the requesting stage could never complete. Phase Red now
+  answers it read-only: apply, capture, revert, return, and write nothing to the
+  ledger or to that row's evidence.
+- **Gate item 10 accepts a stage-level re-verify.** The mismatch exception named
+  only "a later row's entry", so a spec with no ATDD-owned rows — the ordinary
+  case for a fresh spec that edits a shared fixture — had nowhere its re-verify
+  would be read, and a correctly re-verified consumer stayed stale for ever.
+- **Two seal references resolve.** `references/evidence-revision.md` does not
+  exist under `qfai-atdd`, and `../qfai-implement/references/…` from inside
+  `qfai-implement/references/` names a directory twice.
 - **A seal's expected value is fixed by committing it**, and every
   recomputation compares against the committed copy. Storing it beside the thing
   it seals protected nothing: both live in the evidence tree, which no

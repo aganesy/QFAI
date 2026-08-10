@@ -37,6 +37,14 @@ async function withPack(
   tempDirs.push(root);
   const packDir = path.join(root, ".qfai", "review", "review-20260815000000000");
   await mkdir(packDir, { recursive: true });
+  // A `legacy` claim is only believed when the migration record agrees, so the
+  // fixture records this pack. Tests about an uncorroborated claim write their
+  // own manifest through `withPacks`.
+  await writeFile(
+    path.join(root, ".qfai", "review", ".legacy-packs"),
+    "review-20260815000000000\n",
+    "utf-8",
+  );
   await writeFile(path.join(packDir, "review_request.md"), "# request\n", "utf-8");
   await writeFile(path.join(packDir, "R01_completion-reviewer.md"), "# review\n", "utf-8");
   await writeFile(path.join(packDir, "summary.json"), JSON.stringify(summary, null, 2), "utf-8");
@@ -45,9 +53,18 @@ async function withPack(
 
 async function withPacks(
   packs: readonly (readonly [string, Summary])[],
+  legacyManifest?: readonly string[],
 ): Promise<Awaited<ReturnType<typeof validateReviewArtifacts>>> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-rev-"));
   tempDirs.push(root);
+  if (legacyManifest !== undefined) {
+    await mkdir(path.join(root, ".qfai", "review"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai", "review", ".legacy-packs"),
+      legacyManifest.map((name) => `${name}\n`).join(""),
+      "utf-8",
+    );
+  }
   for (const [stamp, summary] of packs) {
     const packDir = path.join(root, ".qfai", "review", `review-${stamp}`);
     await mkdir(packDir, { recursive: true });
@@ -117,12 +134,15 @@ describe("review pack revision", () => {
     // content hash to migrate to — an error would leave `--fail-on error`
     // permanently red for a repository that keeps its packs. Only an explicit
     // `legacy` says so; the marker is written once, from the history.
-    const issues = await withPacks([
+    const issues = await withPacks(
       [
-        "20260101000000000",
-        { ...baseSummary(), revision_form: "legacy", revision: "working-tree+9f2c1ab" },
+        [
+          "20260101000000000",
+          { ...baseSummary(), revision_form: "legacy", revision: "working-tree+9f2c1ab" },
+        ],
       ],
-    ]);
+      ["review-20260101000000000"],
+    );
 
     expect(issues.filter((i) => i.code === "QFAI-REVIEW-007")).toEqual([]);
     const legacy = issues.filter(
@@ -190,6 +210,26 @@ describe("review pack revision", () => {
 
     expect(found).toHaveLength(1);
     expect(found[0]?.severity).toBe("warning");
+  });
+
+  it("rejects a legacy claim the migration record does not corroborate", async () => {
+    // The field is exactly as writable as the `revision` it excuses, so a
+    // current producer with a broken value could downgrade its own finding by
+    // typing `legacy`. The migration pass records which packs predate the form.
+    const issues = await withPacks([
+      [
+        "20260101000000000",
+        { ...baseSummary(), revision_form: "legacy", revision: "working-tree+9f2c1ab" },
+      ],
+    ]);
+
+    expect(
+      issues.some((i) => i.code === "QFAI-REVIEW-007" && i.message.includes(".legacy-packs")),
+    ).toBe(true);
+    // And the value it tried to excuse is judged as a current pack's.
+    expect(
+      issues.some((i) => i.code === "QFAI-REVIEW-007" && i.message.includes("porcelain digest")),
+    ).toBe(true);
   });
 
   it("rejects a revision_form it does not define", async () => {

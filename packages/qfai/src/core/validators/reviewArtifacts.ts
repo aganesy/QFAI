@@ -114,12 +114,37 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
     return issues;
   }
 
+  const legacyPacks = await readLegacyManifest(reviewRoot);
   for (const packDir of reviewPackDirs) {
-    issues.push(...(await validateReviewPack(packDir)));
+    issues.push(...(await validateReviewPack(packDir, legacyPacks)));
   }
 
   return issues;
 }
+
+/**
+ * The packs a migration pass recorded as predating the strict `revision` form.
+ *
+ * One name per line in `.qfai/review/.legacy-packs`, `#` comments and blanks
+ * ignored. Absent means no pack has been migrated, which is the same as an
+ * empty list.
+ */
+async function readLegacyManifest(reviewRoot: string): Promise<ReadonlySet<string>> {
+  try {
+    const content = await readFile(path.join(reviewRoot, LEGACY_MANIFEST), "utf-8");
+    return new Set(
+      content
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0 && !line.startsWith("#")),
+    );
+  } catch (err: unknown) {
+    if (!isEnoent(err)) throw err;
+    return new Set();
+  }
+}
+
+const LEGACY_MANIFEST = ".legacy-packs";
 
 // Which contract wrote this pack, declared by the pack itself and **required**.
 //
@@ -144,7 +169,10 @@ const REVISION_FORM_MARKER = "content-hash";
 const REVISION_FORM_LEGACY = "legacy";
 const ALLOWED_REVISION_FORMS = new Set([REVISION_FORM_MARKER, REVISION_FORM_LEGACY]);
 
-async function validateReviewPack(reviewPackDir: string): Promise<Issue[]> {
+async function validateReviewPack(
+  reviewPackDir: string,
+  legacyPacks: ReadonlySet<string>,
+): Promise<Issue[]> {
   const issues: Issue[] = [];
   const reviewRequestPath = path.join(reviewPackDir, "review_request.md");
   const summaryPath = path.join(reviewPackDir, "summary.json");
@@ -187,13 +215,16 @@ async function validateReviewPack(reviewPackDir: string): Promise<Issue[]> {
   }
 
   if (await isFile(summaryPath)) {
-    issues.push(...(await validateSummarySchema(summaryPath)));
+    issues.push(...(await validateSummarySchema(summaryPath, legacyPacks)));
   }
 
   return issues;
 }
 
-async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
+async function validateSummarySchema(
+  summaryPath: string,
+  legacyPacks: ReadonlySet<string>,
+): Promise<Issue[]> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(await readFile(summaryPath, "utf-8"));
@@ -282,10 +313,23 @@ async function validateSummarySchema(summaryPath: string): Promise<Issue[]> {
       `\`revision_form\` は "${REVISION_FORM_MARKER}"（現行契約）または "${REVISION_FORM_LEGACY}"（形式導入前の pack、履歴から一度だけ付与）が必須です`,
     );
   }
-  // Only an explicit `legacy` excuses a malformed value. Absence does not: it
-  // is a producer that forgot, and letting that pass would make the strict form
-  // opt-in.
-  const declaresForm = revisionForm !== REVISION_FORM_LEGACY;
+  // Only an explicit `legacy` excuses a malformed value — **and only when the
+  // migration record agrees**. Absence does not excuse it: that is a producer
+  // that forgot, and letting it pass would make the strict form opt-in. Nor
+  // does the pack's own word: a self-declaration is exactly as writable as the
+  // `revision` it excuses, so a current producer with a broken value — or an
+  // edited pack — could downgrade its own finding by typing `legacy`. The
+  // migration pass records which packs predate the form, once, in a file of its
+  // own that a reviewer reads as a whole.
+  const packName = path.basename(path.dirname(summaryPath));
+  const claimsLegacy = revisionForm === REVISION_FORM_LEGACY;
+  const migrated = claimsLegacy && legacyPacks.has(packName);
+  if (claimsLegacy && !migrated) {
+    violations.push(
+      `\`revision_form: "${REVISION_FORM_LEGACY}"\` を宣言していますが、\`.qfai/review/${LEGACY_MANIFEST}\` に ${packName} が記録されていません。移行記録にない pack の自己申告は受理しません`,
+    );
+  }
+  const declaresForm = !migrated;
   // Only when there is a value to judge: an empty string is already reported
   // by the schema check above, and saying it twice reads as two problems.
   const revisionText = readString(revision);
