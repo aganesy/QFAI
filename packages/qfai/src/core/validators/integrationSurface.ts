@@ -509,8 +509,18 @@ async function retiredWrappers(root: string, wrappers: readonly Wrapper[]): Prom
     // A directory that is itself damaged raises `ELOOP` / `ENOTDIR` here, and
     // that is already reported as damage of its own — listing what is inside it
     // is not this rule's question, and propagating the error would lose every
-    // finding the run had produced.
-    const entries = await readdir(dirAbsolute, { withFileTypes: true }).catch(() => null);
+    // finding the run had produced. Absence is the same: nothing to enumerate.
+    //
+    // **Only those.** Swallowing every error let an `EACCES` — a POSIX
+    // execute-only directory, where the `lstat` on each known wrapper succeeds
+    // and the listing does not — pass validation with no retired wrapper
+    // examined at all, while the assistant went on loading them. An error that
+    // leaves the listing incomplete is not a clean answer and is re-thrown.
+    const entries = await readdir(dirAbsolute, { withFileTypes: true }).catch((error: unknown) => {
+      const code = (error as NodeJS.ErrnoException | null)?.code;
+      if (isMissing(error) || code === "ELOOP" || code === "ENOTDIR") return null;
+      throw error;
+    });
     if (entries === null) continue;
     for (const entry of entries) {
       if (names.has(entry.name)) continue;
@@ -1051,15 +1061,30 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
             damagedCanonicals.add(wrapper.canonicalRelative);
             broken.push({ relative: wrapper.canonicalRelative, detail: wrong });
           }
-        } else if (!damagedCanonicals.has(wrapper.canonicalRelative)) {
-          // Once per canonical, not once per wrapper: four wrappers name the
-          // same document, and one damaged document is one thing to repair.
-          damagedCanonicals.add(wrapper.canonicalRelative);
-          broken.push({
-            relative: wrapper.canonicalRelative,
-            detail: describeDamage(canonical, "canonical document"),
-            unwalkable: blocksWalk(canonical) ? wrapper.canonicalRelative : undefined,
-          });
+        } else {
+          // `not-a-directory` on the leaf means some component **above** it is
+          // a regular file — the leaf itself is unreachable, not damaged. Naming
+          // it recorded one finding per skill and per agent, each pointing at a
+          // path the operator cannot even move aside (`ENOTDIR` again), while
+          // the one path at fault went unnamed. Report that component, once.
+          const culprit =
+            canonical.kind === "not-a-directory"
+              ? await unusableAncestor(root, wrapper.canonicalRelative)
+              : null;
+          const relative = culprit?.relative ?? wrapper.canonicalRelative;
+          if (!damagedCanonicals.has(relative)) {
+            // Once per canonical, not once per wrapper: four wrappers name the
+            // same document, and one damaged document is one thing to repair.
+            damagedCanonicals.add(relative);
+            broken.push({
+              relative,
+              detail:
+                culprit === null
+                  ? describeDamage(canonical, "canonical document")
+                  : `the canonical directory ${culprit.detail}`,
+              unwalkable: blocksWalk(canonical) ? relative : undefined,
+            });
+          }
         }
       }
       continue;
@@ -1081,7 +1106,22 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
       // found it — so reporting only the wrapper had the operator re-run init,
       // clear the finding, and end with a healthy symlink loading the wrong
       // instructions. The canonical's state does not depend on the wrapper's.
-      const alsoWrong = await canonicalLinkProblem(root, realRoot, wrapper);
+      //
+      // **Both checks, the pair the absent-wrapper branch uses.** A link is only
+      // one of the two ways a canonical goes wrong: a skill directory replaced
+      // by a regular file, or an agent document by a directory, is a type
+      // collision that `canonicalLinkProblem` says nothing about — and the
+      // create-only copy `qfai init` performs fails on it, so the operator was
+      // sent to re-run a command that cannot succeed, with the path at fault
+      // never named.
+      const canonicalNow = await canonicalState(wrapper.canonical);
+      const alsoWrong =
+        (await canonicalLinkProblem(root, realRoot, wrapper)) ??
+        (canonicalNow.kind === "present"
+          ? await canonicalKindProblem(wrapper, canonicalNow.stats)
+          : canonicalNow.kind === "absent"
+            ? null
+            : describeDamage(canonicalNow, "canonical document"));
       if (alsoWrong !== null && !damagedCanonicals.has(wrapper.canonicalRelative)) {
         damagedCanonicals.add(wrapper.canonicalRelative);
         broken.push({ relative: wrapper.canonicalRelative, detail: alsoWrong });

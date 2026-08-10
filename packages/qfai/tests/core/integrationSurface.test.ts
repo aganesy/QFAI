@@ -1028,6 +1028,30 @@ describe("what init wrote is still checked after the roster moves on", () => {
     });
   });
 
+  // POSIX only, and not as root: `chmod` is what makes the directory
+  // searchable but not listable, and root ignores it.
+  it.skipIf(process.platform === "win32" || process.geteuid?.() === 0)(
+    "propagates a listing error instead of passing with nothing examined",
+    async () => {
+      // An execute-only directory answers every `lstat` on a known wrapper and
+      // refuses the listing, so swallowing the error passed validation with no
+      // retired wrapper examined at all — while the assistant went on loading
+      // them.
+      await withProject(async (root) => {
+        if (!(await canCreateSymlink(root))) return;
+        await seedCanonical(root, ["qfai-atdd"], []);
+        await wireAll(root, ["qfai-atdd"], []);
+        const claudeSkills = path.join(root, ".claude", "skills");
+        await chmod(claudeSkills, 0o111);
+        try {
+          await expect(validateIntegrationSurface(root)).rejects.toThrow();
+        } finally {
+          await chmod(claudeSkills, 0o755);
+        }
+      });
+    },
+  );
+
   it("says nothing about a one-line file that is not byte-exactly a target", async () => {
     // Git writes the target for mode `120000` with no trailing newline, so
     // trimming one off made a project's own note indistinguishable from a
@@ -1153,6 +1177,58 @@ describe("a resolving link is a finding, not a reason to stop", () => {
     });
   });
 
+  it("reports a canonical type collision when every wrapper was flattened", async () => {
+    // A link is only one of the two ways a canonical goes wrong. A skill
+    // directory replaced by a regular file is a type collision that the link
+    // check says nothing about — and the create-only copy `qfai init` performs
+    // fails on it, so the operator was sent to re-run a command that cannot
+    // succeed, with the path at fault never named.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      for (const dir of SKILL_INTEGRATION_DIRS) {
+        const wrapper = path.join(root, ...dir.split("/"), "qfai-atdd");
+        await rm(wrapper, { recursive: true, force: true });
+        await writeFile(wrapper, skillTarget(dir, "qfai-atdd"), "utf-8");
+      }
+      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      await rm(canonical, { recursive: true, force: true });
+      await writeFile(canonical, "# not a directory\n", "utf-8");
+
+      const found = await finding(root);
+      expect(found?.refs).toContain(".qfai/assistant/skills/qfai-atdd");
+      expect(found?.message).toContain("canonical skill is a file, not a directory");
+    });
+  });
+
+  // POSIX only: this is the `ENOTDIR` shape, which Windows folds into `ENOENT`.
+  it.skipIf(process.platform === "win32")(
+    "names the non-directory ancestor, not each unreachable leaf",
+    async () => {
+      // `not-a-directory` on the leaf means a component above it is a regular
+      // file: the leaf is unreachable, not damaged. Naming it recorded one
+      // finding per skill and per agent, each pointing at a path the operator
+      // cannot even move aside — `ENOTDIR` again — while the one path at fault
+      // went unnamed.
+      await withProject(async (root) => {
+        if (!(await canCreateSymlink(root))) return;
+        await seedCanonical(root, ["qfai-atdd"], []);
+        const assistant = path.join(root, ".qfai", "assistant");
+        await rm(assistant, { recursive: true, force: true });
+        await writeFile(assistant, "not a directory\n", "utf-8");
+        for (const dir of INTEGRATION_SURFACE_DIRS) {
+          await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
+        }
+        await writeFile(path.join(root, ".agents", "README.md"), INIT_README_BODY, "utf-8");
+
+        const report = await inspectIntegrationSurface(root);
+        expect(report.unwalkable).toEqual([".qfai/assistant"]);
+        expect(report.issues[0]?.refs).toEqual([".qfai/assistant"]);
+      });
+    },
+  );
+
   it("does not stop the profile for a cycle on a canonical leaf", async () => {
     // The walks over this tree list a directory with `withFileTypes` and
     // descend only into `isDirectory()` entries, so a symlink leaf — cycle or
@@ -1270,18 +1346,18 @@ describe("a resolving link is a finding, not a reason to stop", () => {
             await writeFile(wrapper, `../../.qfai/assistant/skills/${id}`, "utf-8");
           }
         }
-        // A regular file where the canonical directory belongs: the one shape a
-        // later `readdir` cannot survive.
-        const damaged = skills[0] ?? "";
-        const canonical = path.join(root, ".qfai", "assistant", "skills", damaged);
-        await rm(canonical, { recursive: true, force: true });
-        await writeFile(canonical, "not a directory", "utf-8");
+        // The agents tree, reached after every skill wrapper: a regular file
+        // where that directory belongs is the one shape a later `readdir`
+        // cannot survive, and it lands well past the twelfth entry.
+        const agentsDir = path.join(root, ".qfai", "assistant", "agents");
+        await rm(agentsDir, { recursive: true, force: true });
+        await writeFile(agentsDir, "not a directory", "utf-8");
 
         const report = await inspectIntegrationSurface(root);
         const message = report.issues[0]?.message ?? "";
         expect(skills.length * 2).toBeGreaterThan(12);
-        expect(message).not.toContain("not a directory");
-        expect(report.unwalkable.length).toBeGreaterThan(0);
+        expect(message).not.toContain(".qfai/assistant/agents");
+        expect(report.unwalkable).toContain(".qfai/assistant/agents");
       });
     },
   );

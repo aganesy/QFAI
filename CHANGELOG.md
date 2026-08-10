@@ -505,6 +505,22 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **A flattened wrapper's canonical is checked for type collisions too.** The
+  link check is only one of the two ways a canonical goes wrong: a skill
+  directory replaced by a regular file, or an agent document by a directory, is
+  a collision it says nothing about — and the create-only copy `qfai init`
+  performs fails on it, so the operator was sent to re-run a command that cannot
+  succeed with the path at fault never named.
+- **A non-directory ancestor is reported as itself, once.** `not-a-directory` on
+  a canonical leaf means a component above it is a regular file, so the leaf is
+  unreachable rather than damaged. Naming the leaf recorded one finding per
+  skill and per agent, each pointing at a path the operator cannot even move
+  aside — `ENOTDIR` again — while the one path at fault went unnamed.
+- **A listing error is propagated instead of passing silently.** An
+  execute-only directory answers every `lstat` on a known wrapper and refuses
+  the listing, so swallowing it passed validation with no retired wrapper
+  examined at all, while the assistant went on loading them. Only the damage
+  already reported elsewhere — `ELOOP`, `ENOTDIR`, absence — is skipped.
 - **Only a non-directory component stops the run.** The walks over the
   assistant tree list a directory with `withFileTypes` and descend only into
   `isDirectory()` entries, and they probe the root with an `access` that
