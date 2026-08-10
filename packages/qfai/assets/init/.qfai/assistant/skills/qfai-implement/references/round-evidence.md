@@ -8,9 +8,21 @@ Per-round fields of the `qfai-implement` evidence contract. The skill's
 One block per RED/GREEN cycle. Round 1 is the original cycle; each blocking
 reviewer `REVISE` that requires new production behaviour adds a round.
 
+- `Round N: Revision` — the state this round's observations were made
+  against (`evidence-revision.md`)
+- `Round N: RED revision` — the tree that round's RED was observed on, and
+  `Round N: RED test hash` with its manifest. Each round's RED is taken on its
+  own tree, so holding one of each for the row meant a second round either
+  overwrote the first pair's address or inherited it — neither of which any
+  reader can audit
 - `Round N: RED command` — the exact command executed to observe failure
 - `Round N: RED result` — the failure output (result completeness is
   best-effort; truncated output is acceptable)
+- `Round N: Satisfied-by` / `Falsifiability command` / `Falsifiability result`
+  — **in place of the RED pair** on a `falsifiability` row. It is that row's
+  RED observation, so it sits where the RED pair sits and takes the same prefix;
+  writing it unprefixed left the completion gate unable to find the round it
+  belongs to
 - `Round N: GREEN command` — the exact command executed to observe success
 - `Round N: GREEN result` — the success output
 - `Round N: reviewer verdict` — the verdict that closed the round (`PASS`, or
@@ -25,9 +37,13 @@ requires new production behaviour adds a round. A `REVISE` that needs none
 `Refactor verify` pair instead. Rounds are numbered and repeatable, not appended
 as free prose.
 
-Every field in a round block carries the `Round N:` prefix — `Round N: RED
-command` / `Round N: RED result` / `Round N: GREEN command` / `Round N: GREEN
-result` / `Round N: reviewer verdict`.
+Every field in a round block carries the `Round N:` prefix, and **this list
+is the whole of it** — `Revision`, the RED pair (or the falsifiability trio in
+its place), the GREEN pair, the reviewer verdict. Row-level fields are not round
+fields and take no prefix: `TDD-ID`, the obligation reference, `Test file`,
+`Selector`, `Layer`, and the refactor-verify pair. `RED revision`,
+`RED test hash` and `Falsifiability revision` were on that list until a
+second round showed they describe a round's RED, not the row's.
 
 ## Single-round items
 

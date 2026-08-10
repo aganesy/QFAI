@@ -3,6 +3,20 @@
 This checklist ensures test cases cover not only happy paths but also boundary values, error paths, edge cases, and combinatorial scenarios.
 Reviewers MUST use this checklist when evaluating test case completeness during ATDD and SDD review gates.
 
+## Where the matrix lives
+
+Re-running `/qfai-atdd` recomputes which cells are `❌`. It does not recompute
+_why_ an uncoverable obligation was accepted, and that judgement is what
+discharges the "no unjustified `❌`" gate — so the matrix is a **governance
+record**, not a regenerable log.
+
+Written only into the stage evidence file it would never reach a commit (stage
+evidence is regenerable and uncommitted), and a later reviewer could not tell a
+justified `❌` from an unjustified one. Write the matrix and one justification
+per `❌` to `.qfai/evidence/coverage-depth-<spec-id>.md`, which the managed
+`.gitignore` block negates for exactly this reason. The stage evidence file
+links to it rather than restating it.
+
 ## 1. Equivalence Partitioning (同値分割)
 
 For each input parameter or condition:

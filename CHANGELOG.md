@@ -486,8 +486,916 @@ report` as well, which was computing `done: 1 / open: 0` from the same
   repairable, a silently overwritten taxonomy is neither. `specs/`,
   `contracts/` and `steering/` stay create-only.
 
+### Added
+
+- **`qfai doctor --autoremediate` writes both halves of the legacy migration**
+  — the `.legacy-packs` record _and_ `revision_form: "legacy"` in each pack that
+  declares no form. The validator relaxes only when both agree, so writing the
+  record alone left every pack a blocking `QFAI-REVIEW-007`: the state the
+  migration exists to clear. It refreshes the managed `.gitignore` block first,
+  because an existing repository still carries the older one, whose
+  `.qfai/review/*` would keep the record out of every commit and leave every
+  legacy claim uncorroborated in CI and in the next clone.
+- **`qfai doctor --autoremediate` records the review packs that predate
+  `revision_form`.** Without it, taking a version that requires the marker turns
+  every pack already on disk into a blocking `QFAI-REVIEW-007` — a repository
+  that keeps its review history fails `--fail-on error` on adoption, for a
+  condition no producer can go back and fix. The migration is additive and
+  idempotent: a repeat run is a no-op, a name recorded by hand is never dropped,
+  and a pack that forgets its marker _after_ the migration is still an error.
+
 ### Fixed
 
+- **The legacy migration classifies once, on the first run.** Re-scanning on
+  every `doctor --autoremediate` meant a pack written _after_ the migration that
+  forgot its marker was recorded and then marked `legacy` — turning a blocking
+  `QFAI-REVIEW-007` into a warning, which is the downgrade the corroboration
+  exists to prevent. Once the record exists it is a historical fact; adding to it
+  is a visible edit to a governance record.
+- **`doctor --format json` stays parseable through the migration.** The
+  `.gitignore` helper wrote its progress line straight to stdout, ahead of the
+  document, on exactly the adoption path that needs it.
+- **`qa-gatekeeper` follows Integration to the ATDD file, with the ownership
+  boundary that goes with it.** Its input branch still read Integration evidence
+  from the implement file, so P1b / P4b either stopped a correct row for missing
+  evidence or audited the wrong one — and the production-path `Satisfied-by` and
+  the mutation-scope exception were still `E2E` / `API` only, sending a normal
+  branch-2 Integration row to `exception`.
+- **An Integration row's `RED test hash` is recomputed at completion.** Item 10
+  had already taken Integration into the handoff while the field itself was
+  still required and rechecked for `E2E` / `API` alone, so a test or fixture
+  edited after the handoff carried stale provenance to `done`.
+- **The Integration alignment reaches the two places it had missed.** Phase Red
+  step 2 still held back only `E2E` / `API` from `todo -> red`, so an
+  Integration row advanced before step 3b could verify its handoff — and the
+  next run selects only `todo` and `review-fix`, leaving a `red` row with no RED
+  behind it. The mandatory-writer contract, the execution ledger and both
+  reviewers' inputs still sent only `E2E` / `API` evidence to the ATDD file, so
+  a correct Integration handoff put its provenance in one file and its GREEN,
+  refactor pair and verdicts in another.
+- **`Layer = Integration` rows are on the same side of the split as their
+  tests.** `QFAI-ATDD-112` covers every `L3` TC — and every TC with no declared
+  `Level` — from `tests/integration/**`, and `/qfai-atdd`'s P4 writes those
+  tests; but the ledger handoff named only `E2E` and `API`. `/qfai-implement`
+  therefore treated them as self-owned and demanded a fresh RED for a test
+  already made green, so the row either grew a duplicate test or went to
+  `exception` as an unexpected pass. The provenance, the handoff and the
+  evidence home now follow the same three layers.
+- **`implementation-reviewer` is given the subject it hashes.** It records its
+  own `Audited evidence hash` over the row's phase-authored fields, and those
+  live in an evidence file the diff of changed files does not carry — so without
+  the ledger and the evidence home the row's `Layer` selects, the hash goes
+  missing and gate items 10-11 stop, or the orchestrator computes it and breaks
+  the one rule that makes it worth having.
+- **The evidence-shape table lists every field the consumer gate requires.**
+  `RED test hash` and its manifest were missing from the observed-RED branch,
+  and those plus `Falsifiability revision` and the `qa-gatekeeper` PASS from the
+  falsifiability one — so a producer following the canonical table wrote a
+  handoff `/qfai-implement` rejects as malformed, and P1c / P4b could not
+  complete.
+- **The item-cycle reviewer is given the artifacts it judges.** Told to judge
+  the row's own phase-authored evidence, `completion-reviewer` had neither the
+  ledger nor the evidence home the row's `Layer` selects among its inputs — so
+  it could not identify the artifact and fell into its own Stop condition on a
+  correct row.
+- **Omitting a revision field is a current-contract violation, not an older
+  pack.** The layout said both were required and then described the omission as
+  the legacy case; only `revision_form: "legacy"`, corroborated by the migration
+  record, marks a pack as predating the form.
+- **The git probe runs once per repository and once per rev.** It was two
+  synchronous spawns per pack, so a repository that keeps its history paid them
+  on every full run, growing with the number of packs.
+- **A seal says what it catches, and the escalation stops.** Three homes for the
+  expected value each fell to the same move — beside the artifact, in a commit,
+  in the newest commit introducing the line — and a committed copy is not even
+  available: stage evidence is regenerable and deliberately not committed
+  (`.qfai/evidence/*` is ignored, with only the governance records negated back
+  in), so requiring one would have stopped every completion. A seal catches
+  drift between recording and recomputation, which is what happens; it does not
+  catch an author rewriting the artifact and the seal together, and nothing
+  recorded in the repository can. That is stated once, in place of a fourth
+  mechanism.
+- **The audit boundary counts only headings outside a fenced block.** Recorded
+  output is arbitrary — a test asserting on Markdown prints `## …` of its own —
+  and a boundary that took it ended the section there, dropping the GREEN, the
+  `Oracle proof` and the round evidence out of the subject.
+- **The legacy migration record is tracked by default.** `.qfai/review/*` is
+  ignored, so the manifest that corroborates a `legacy` claim was untracked and
+  the pack the claim excuses could add itself to it — which is the
+  self-declaration the corroboration exists to replace.
+- **Every pack producer names the revision fields.** The `qfai-implement` layout
+  and both review-cycle playbooks omitted them, so a pack written by following
+  them passed its own profile and then failed the repo-wide
+  `/qfai-verify --fail-on error`.
+- **A git rev is checked against the repository.** A placeholder, a truncated
+  paste or a transposed digit passes the form check and names no tree at all. A
+  warning, not an error: a shallow clone or an unfetched branch answers the same
+  way, and the check says nothing at all outside a git work tree.
+- **A `legacy` claim is corroborated against the migration record.** The field
+  is exactly as writable as the `revision` it excuses, so a current producer
+  with a broken value could downgrade its own finding by typing `legacy`. Only a
+  pack listed in `.qfai/review/.legacy-packs` — written once by the migration
+  pass — is believed; an uncorroborated claim is an error, and the value it
+  tried to excuse is judged as a current pack's.
+- **The mutation-only handoff has a receiver.** It was defined on the producer
+  side only, and every `/qfai-implement` entry path selects a `todo`, a named or
+  a `review-fix` row — none of which a `done` row can be — so the request had
+  nowhere to land and the requesting stage could never complete. Phase Red now
+  answers it read-only: apply, capture, revert, return, and write nothing to the
+  ledger or to that row's evidence.
+- **Gate item 10 accepts a stage-level re-verify.** The mismatch exception named
+  only "a later row's entry", so a spec with no ATDD-owned rows — the ordinary
+  case for a fresh spec that edits a shared fixture — had nowhere its re-verify
+  would be read, and a correctly re-verified consumer stayed stale for ever.
+- **Two seal references resolve.** `references/evidence-revision.md` does not
+  exist under `qfai-atdd`, and `../qfai-implement/references/…` from inside
+  `qfai-implement/references/` names a directory twice.
+- **An item's `Review pack seal` names the pack and the round it covers.** A
+  spec has several packs and a blocking REVISE opens more, so a bare hash left
+  the gate unable to say which directory to recompute over — it either checked
+  another round's pack or stopped a correct item.
+- **A current pack that names no `revision` at all is an error.** It declares
+  the contract and then gives nothing to check: strictly worse than a malformed
+  value, since the form check never runs either. Only an explicit `legacy` keeps
+  it a warning.
+- **A zero-row ATDD stage hands its shared-artifact mutation to the production
+  owner.** No phase there edits production code, and the rows being re-verified
+  are already `done`, so `/qfai-implement`'s named-row, `todo` and `review-fix`
+  entry paths do not reach them: the stage could only breach its own Non-goals
+  or leave the fixture's hash mismatch permanently unclearable. The handoff is a
+  mutation-only request that applies, captures, reverts and returns — without
+  reopening the row.
+- **The `revision_form` marker is required, and only `legacy` excuses a
+  malformed `revision`.** An optional marker made the strict form opt-in: a
+  producer that omitted it downgraded its own check to a warning, so a
+  `working-tree+<porcelain digest>` — the spelling that does not move when the
+  file under review is edited — passed `--fail-on error`. Absence is now a
+  schema violation like any other missing field. A pack that predates the form
+  says `"revision_form": "legacy"`, written once from the history the same way
+  the `Pre-split-evidence` marker is; until that pass has run those packs are
+  reported rather than accepted, and running it is what clears them.
+- **The spec-level checkpoint carries a seal too.** The seal was defined per
+  item, and the spec-level boundary has no row — gate item 12 never runs for it,
+  so the full-suite result on a terminal ledger could be edited from FAIL to
+  PASS afterwards with no revision, no `Audited evidence hash` and no pack seal
+  moving. The spec completion conditions recompute it.
+
+- **A review pack declares which contract wrote it** — `"revision_form":
+"content-hash"` in `summary.json` — and only a pack that declares it is held
+  to the strict `revision` form as an error. Neither of the two things that
+  could stand in for a declaration works: rank made "current" mean "newest
+  overall", so a malformed pack stopped being an error the moment another spec
+  produced one, and a timestamp cutoff misclassifies by construction — the
+  directory stamp carries no timezone, and any instant chosen either predates
+  the contract (letting that morning's old-contract packs count as current) or
+  postdates it (letting genuinely current packs off). Omitting the marker is
+  reported in its own right, so a producer cannot quietly downgrade its own
+  check by forgetting it.
+- **A stage with no ledger row can still record a shared-artifact re-verify.**
+  A fresh spec owns no ATDD row and still creates and edits the fixtures a
+  completed spec's handed-over rows read. With the record tied to an "editing
+  row" there was nowhere to put the re-run: the earlier row's `RED test hash`
+  stayed mismatched with nothing able to clear it, or the change was accepted
+  unverified. The stage evidence file carries a `## Shared-artifact re-verify`
+  block with the same identity and the same proof rule, and a consumer clearing
+  a mismatch reads both places.
+- **`qa-gatekeeper` reads the validate evidence from the configured outputs.**
+  The scoped JSON goes beside `output.validateJsonPath` and the run directory
+  under `paths.outDir`; pinning `.qfai/report/**` stopped completion on a
+  project that had moved either, reporting a missing artifact for a validate
+  run that had succeeded and left everything it owed.
+- **Phase Red step 3c puts the falsifiability addresses in the round block.**
+  It still called `RED test hash` and `Falsifiability revision` row-level while
+  the round contract put them in each round's block, so a blocking REVISE that
+  opened Round 2 on a `falsifiability` row either overwrote Round 1's addresses
+  or reused them for a mutation run they were not taken on.
+- **Which contract a review pack was written under is read from the pack**, not
+  from its rank among siblings. "Held to the strict `revision` form" meant
+  "newest overall", so a malformed pack written under the current contract
+  stopped being an error the moment any other spec produced one, and
+  `validate --fail-on error` accepted a stale current verdict. The timestamp in
+  the pack's own directory name decides it: a pack stamped before the form
+  shipped could not have satisfied it and cannot be migrated to it, and reports
+  a warning; every pack stamped after is an error. An unreadable stamp
+  establishes nothing, so it is held to the form.
+- **The P8 pack seal has a place to live and something to compare against.**
+  The criterion said to seal the pack and check the status against it, but not
+  where the expected seal is stored or what the recomputation is compared with —
+  and a value taken from the pack at completion always matches itself, whatever
+  was edited in between. It is recorded outside the pack, in the stage evidence
+  file's `## Final status` (the one section excluded from the P8 audit subject,
+  and the only place that exists on a spec with no ATDD-owned rows), when the
+  last reviewer response lands and before the stage writes its verdict.
+- **The checkpoint record carries a seal of its own.** `Checkpoint verification
+command` / `result` are appended after every reviewer has hashed, so they sit
+  in no audit subject; the working-tree revision excludes `.qfai/evidence/**`
+  and the pack seal covers only the pack. A row already at `done` could have its
+  checkpoint result edited from FAIL to PASS with nothing moving anywhere.
+  `Checkpoint verification seal` is taken as the run ends and recomputed at gate
+  item 12.
+- **The RED addresses are out of the row-level field list.** It still named
+  `RED test hash`, `RED revision` and `Falsifiability revision` as recorded once
+  for the row while the round contract put them in each round's block, so a
+  blocking REVISE that opened Round 2 either overwrote Round 1's address or
+  reused it for a RED it was not taken on.
+- **The audit-subject references resolve.** From
+  `qfai-implement/references/`, a bare `constitution/...` names
+  `qfai-implement/references/constitution/...`, which does not exist — so a
+  producer following it could not reach the extraction rule and hashed a range
+  of its own, staling a correct verdict.
+- **The stage's own review pack is sealed**, and `## Final status` is checked
+  against it: the stage hash covers the evidence but not the verdict.
+- **The RED address cardinality is left to the round contract alone.**
+- **`RED test manifest` carries kind and mode.** After Phase Green the
+  original `RED revision` cannot be recomputed, so this hash is the only thing
+  still watching the test-owned artifacts.
+- **A changed test invalidates the proof on either branch**, not only where
+  the corrected test passes.
+- **A re-verify record names the spec as well as the row.** A `TDD-ID` is
+  unique within a ledger, not across them.
+- **A legacy review pack's revision is a warning, not an error.** The tree a
+  past verdict described cannot be reconstructed, so there is no content hash
+  to migrate to — only the current pack is held to the form.
+- **The same-revision exemption is stated once, for item 3 on every row.** The
+  consequences section still listed two special cases, so a reviewer applying
+  it rejected the cycle the section above permits.
+- **The RED address cardinality is stated once**, per round, where the round
+  contract lives.
+- **The pack seal names the procedure it uses** — the audit hash, not the
+  working-tree revision; "the procedure below" was ambiguous between two that
+  produce different values.
+- **A multi-id obligation column is split before matching the matrix**, so a
+  row with two obligations is not left with no matrix rows at all.
+- **The stage hash is recomputed before completion is declared.** On a spec
+  with no ATDD-owned rows item 10 never runs, so it was written by P8 and read
+  by nobody.
+- **A sibling reference is named as a sibling**, not through a `references/`
+  prefix that resolves to `references/references/`.
+- **A RED's revision and hash live in its round block.** Each round's RED is
+  taken on its own tree, so one field per row meant a second round overwrote
+  the first pair's address or inherited it.
+- **The failing review-fix branch syncs the identity too**; a REVISE can ask
+  for real behaviour and a split selector at once.
+- **The pack seal is recomputed by the gate**, and stays out of every
+  reviewer's subject — it is written after the last of them has hashed.
+- **The stage subject stops before `## Final status`**, which the P8 reviewer
+  fills in.
+- **The producer stops restating the untracked record shape.**
+- **The exception producer records what P1d's gate will hash.**
+- **The pre-split migration reads every status**, so a row interrupted
+  mid-cycle by the upgrade can still finish.
+- **A stage review has a subject that needs no row.** A spec with no
+  ATDD-owned rows is the ordinary case, and its final review had no
+  `### <TDD-ID>` section to hash.
+- **A finalized review pack is sealed from outside it.** The audit hash
+  addresses what a reviewer read; the pack is what it wrote, so excluding it
+  from the revision left an edited PASS reading as fresh.
+- **Every RED gets its own revision.** A RED precedes the code that makes it
+  pass, so Phase Green moves the address by construction — framing the
+  exemption as two special cases made an ordinary uncommitted cycle stale at
+  GREEN.
+- **The obligation reference is checked against the ledger too.** Changing
+  `TC-Refs` alone after the PASS left the entry holding the old copy, so a
+  verdict about one requirement stood for another.
+- **The matrix extraction matches an obligation exactly**, table row and
+  justification alike — "everything after the table" was the other reading,
+  and two readers taking one each computed different hashes from one file.
+- **A review-fix that moves the test syncs both the ledger and the copy.**
+  Updating one alone leaves gate item 10 comparing a changed value with an
+  unchanged one, which it fails by construction.
+- **The handoff records the obligation reference the RED subject hashes.** The
+  gatekeeper judges at P1b, so recording it later moves a stored hash and
+  leaving it out lets the reference be repointed.
+- **`Replacement proof revision` is inside a subject**, so the proof cannot be
+  attributed to a tree it never ran on.
+- **The baseline stops restating the working-tree serialization.** Restated as
+  `path + NUL + hash`, it fell behind the canonical's `kind` and `mode`, and
+  the two spellings gave one tree two addresses.
+- **A T1 coherent group is hashed per member.** One hash over a representative
+  left the other members' evidence free to change after the PASS.
+- **A replacement proof gets its own revision.** Overwriting `RED revision` on
+  an `observed-red` row hashed the natural RED's pair with a later mutation's
+  tree as one observation.
+- **Branch 3 hashes the obligation it says cannot be observed**, so the
+  reference cannot be pointed at a different requirement after the PASS.
+- **An untracked symlink contributes its own payload**, never the target's
+  contents — a dangling link has no second reading at all.
+- **The completion gate reads this spec's validate artifact**, not the shared
+  `validate.log` a sibling run overwrites.
+- **Falsifiability is observed per selector entry**, as a RED already is: one
+  aggregate run leaves every entry after the first unobserved.
+- **`Round 1: Revision` is taken from the restored tree.** It is the address
+  items 5, 7 and 8 share, and the revert moves it by construction — the
+  mutated tree already has `Falsifiability revision`.
+- **A `Shared-artifact re-verify` entry clears the hash it necessarily
+  breaks.** A later row editing a shared fixture moves an earlier `done` row's
+  `RED test hash`, and that row cannot take a fresh RED.
+- **The reviewer contract lists the same three exclusions**, review pack
+  included.
+- **The branch-3 `DR-*` is a record in the serialization**, not only a name in
+  the subject.
+- **The producer records the row identity the reviewers hash**, in both the
+  field contract and the ATDD handoff shape.
+- **An untracked record carries kind and mode.** An uncommitted `chmod +x` on
+  a new script left the address unmoved.
+- **The copied row identity is checked against the ledger.** Hashing a value
+  the entry already holds proves only that the entry has not changed, and the
+  ledger is excluded from the revision too — so editing `Selector` after the
+  PASS moved nothing.
+- **Branch 3 has a subject of its own.** There is no RED and no GREEN there,
+  so the `DR-*` is the evidence; leaving it out let the pointer be swapped
+  after the PASS for another existing DR with nothing moving.
+- **The falsifiability trio is a round field**, in the RED pair's place, and
+  `round-evidence.md` is the only list of which fields take the prefix.
+- **A re-entry rewrites the entry before it is judged again.** After a REVISE
+  the mutation or the test has usually changed, so hashing the previous entry
+  recorded a PASS describing neither run.
+- **The replacement revision is recorded where the proof is run.** `/qfai-atdd`
+  owns no mutation, so it could only have named the tree before it.
+- **The stale-manifest remediation is one that exists.** `/qfai-configure`
+  edits what the project has; it does not reconcile against the package, and
+  no such migration exists.
+- **Row identity is in every observation subject.** The ledger is excluded
+  from the revision, so changing `Selector` after a PASS to another valid test
+  in the same file moved nothing.
+- **The review pack is excluded from the working-tree revision.** A project
+  may legitimately track `.qfai/review/**`, and then every reviewer answer
+  written into it moved the address the previous reviewer had just recorded.
+- **Only the matrix rows an obligation names are hashed.** The coverage-depth
+  matrix is one document for the spec and a later run recomputes it, so
+  hashing it whole made every existing verdict stale when an unrelated
+  obligation's cell moved — with no re-review path for a `done` row.
+- **The audit-hash extraction is stated in one place.** The reference still
+  described the old whole-section shape, so a reviewer following it produced a
+  value neither the baseline nor gate item 10 would reproduce.
+- **The RED subject hashes the obligation reference the row's `Layer`
+  selects.** An ATDD-owned row has no `TC-ref`, so its obligation sat outside
+  every hash and could be rewritten after the PASS.
+- **The completion subject covers the `Shared-artifact re-verify` block**,
+  which those reviewers are the ones who audit.
+- **`QFAI-REVIEW-009` validates the form of a `revision` that is present.**
+  Any non-empty string passed, so the porcelain digest the reference forbids
+  by name still cleared the machine gate.
+- **The RED subject holds the transient revision, not the final one.**
+  `Revision` names the tree the GREEN landed at, so including it put a field
+  into the subject that appeared later and made every correct RED PASS stale
+  at GREEN.
+- **The completion subject takes a round block's phase-authored fields only.**
+  Those reviewers write `Round N: reviewer verdict` into the block after
+  reading it, so the whole block put their own line inside what they hashed.
+- **The pre-split anchor is accepted only from a marked row.** Status and
+  anchor cannot tell a legacy row from one written to the wrong file after the
+  split, so accepting it unmarked let a row that never produced an ATDD
+  handoff pass the gate as complete.
+- **Each observation hashes the fields it could read.** Subtracting a list of
+  later-written fields only moved the problem to the next field added: the RED
+  gatekeeper hashes an entry with no GREEN in it yet, so its PASS went stale as
+  soon as the phase wrote on. Three named subjects instead.
+- **The seam returns a schema-compatible neutral body**, not an empty one — a
+  selector that decodes JSON first raises a parse error, which the
+  admissibility rule rejects.
+- **A weakened shared artifact re-takes the proof**, not just a passing re-run:
+  a passing test is not a discriminating one.
+- **Both stale manifests are named**, with a remediation — `agent-catalog.yml`
+  carries the reviewer contracts, so an old one REVISEs correct handoffs.
+- **A replaced test moves its transient revision**, and a fresh RED after a
+  REVISE opens round `N+1` rather than the round the reviewer closed.
+- **Step 3c writes the whole entry before the gate hashes it**, and reverts
+  the mutation whatever the verdict — a REVISE left the broken predicate in
+  the working tree for the next run to break again.
+- **The `Round N:` prefix is scoped to the per-round fields.** It swept in
+  `RED test hash`, `RED revision` and `Falsifiability revision`, which are
+  recorded once for the row.
+- **A re-taken proof reads the field its own branch wrote** — `Oracle proof`
+  on an `observed-red` row, which has no `Satisfied-by`.
+- **The handoff records `RED failure mode`**, which the consumer requires
+  before the reviewers run and neither branch was writing.
+- **The working-tree address has one serialization** — collect, exclude,
+  serialize, hash — so producer and reviewer cannot get different values for
+  the same tree.
+- **The audited entry drops the whole gate-completed group.** The checkpoint
+  fields are appended after the reviewers, so leaving them in made both
+  verdicts stale on every ordinary item the moment the checkpoint ran.
+- **A shared-artifact re-verify is recorded on the row that caused it.**
+  Appending to a `done` row breaks the verdicts that closed it, and `done` has
+  one exit — the upstream reset — which a sibling editing a fixture is not.
+- **Step 3c records `Falsifiability revision`** before the revert: the mutated
+  tree stops existing there, and gate item 10 requires the field.
+- **Branch 3 is judged before it becomes terminal.** P1b judges branch 1 only
+  and the exception path writes the status and stops, so a correct branch-3
+  row reached `exception` having been judged by nobody.
+- **One content-address procedure, referenced rather than restated.** The
+  producer hashed all of `git diff HEAD`, so its `RED revision` and the
+  gatekeeper's `Reviewed revision` for the same RED tree could not be matched.
+- **The audited entry drops every appended verdict**, including the
+  `qa-gatekeeper` observation verdicts — the gatekeeper hashes the entry and
+  then writes into it, so its own verdict went stale on recording.
+- **Both transient observations are named where the rule is stated**, not only
+  the handed-over RED.
+- **The shared `Satisfied-by` procedure requires the symbol too**, in step
+  with the producer and the gatekeeper.
+- **`RED test hash` is one per row**, not per round: nothing produces a
+  second, and the cardinality belongs to `Revision`.
+- **A shared test artifact a later row edits re-verifies the rows that read
+  it** — a `done` row's manifest addressed a fixture that could still change,
+  and a `done` row has no re-entry edge of its own.
+- **The re-taken proof is performed where the production owners are.** The
+  `/qfai-atdd` stage owns no agent for a mutation — the paragraph below the
+  instruction said exactly that — so it marks the proof stale and the handback
+  re-takes it in `/qfai-implement`'s rework.
+- **The audited-evidence hash covers the row's `### Round N` blocks.** Ending
+  the extraction at any `###` cut them out, and a rework's RED, GREEN and
+  proof live there — so a PASS survived every edit to the evidence it was
+  given for.
+- **A falsifiability trio with no gatekeeper PASS is not a complete handoff.**
+  Step 3c writes the trio and only then routes the gate, so an interrupted run
+  left a trio no gate had judged, and step 3b advanced the row on it.
+- **A test-only replacement re-takes its mutation proof.** A new hash over the
+  old proof says somebody edited the test; it does not say the edited test
+  still fails when the predicate is broken.
+- **`Audited evidence hash` has one recomputable procedure** — extract,
+  normalize, serialize, hash — because the subject is part of a file and a
+  file-level manifest alone left two readers free to hash different extents.
+- **The mutation run names its own revision.** The gate reads the mutated tree
+  before the revert, so item 3 observes a tree that is deliberately thrown
+  away while the GREEN and both reviews see the restored one; one revision
+  across all four made every correct branch-2 row permanently stale.
+- **The reviewer response template carries the hash it is judged on.** Every
+  verdict needs an `Audited evidence hash`, but the shared template offered
+  only `Reviewed revision`, so a reviewer answering it faithfully omitted the
+  field and the row could not reach `done`.
+- **The gatekeeper rejects a `Satisfied-by` that names only a commit**, in
+  step with the producer contract: without a symbol the ownership check has no
+  boundary to apply.
+- **Spec completion no longer requires rows no skill may write.** It read
+  "every `US-*` has a `Layer = E2E` row"; Phase 2b seeds one row per
+  coverage-target `TC-*` and `/qfai-atdd` is not a writer of the ledger, so a
+  correct spec was uncompletable and the handoff for the missing rows returned
+  nothing. The gate names `QFAI-ATDD-111` / `QFAI-ATDD-113` — the rules the
+  annotations discharge — instead.
+- **The falsifiability gate sees the mutated tree.** Phase Red step 3c said to
+  revert before routing `qa-gatekeeper`, which left it nothing to inspect but
+  the restored tree — so it could not check that what broke is the predicate
+  `Satisfied-by` names, the one thing that distinguishes a trio from a test
+  that would pass against anything.
+- **A branch-2 row has the test manifest its completion gate recomputes.**
+  `RED test hash` is required on every handed-over `E2E` / `API` row, but a
+  falsifiability row has no RED pair, so nothing was hashed at handoff. Step 3c
+  records it against the mutation run.
+- **The evidence the reviewers audit has an address of its own.** The revision
+  excludes `.qfai/evidence/**` so it stays stable across the phase's own
+  writes — which also let a PASS survive an edit to the RED/GREEN output and
+  the coverage justifications it ruled on. Each verdict now carries an
+  `Audited evidence hash`, recomputed at the completion gate.
+- **`Satisfied-by` names a predicate a mutation can reach.** A commit id was
+  an accepted form; a commit touching several routes and a helper names no
+  single predicate, so the gatekeeper's ownership boundary could not be
+  applied to it.
+- **A test-only replacement re-addresses the test it replaced.** A REVISE that
+  changes only the acceptance test left `RED test hash` addressing the
+  pre-edit manifest, and the consumer sent the row back for a fresh RED — the
+  same passing no-round path, for ever.
+- **The branch-2 handoff is covered by the item-cycle exemption**, and the
+  phase-authored sequencing note names the evidence file the row's `Layer`
+  owns instead of always the implement file.
+- **`QFAI-REVIEW-009`'s remedy names the content hash**, not the porcelain
+  digest its own reference forbids.
+- **The reviewer's revision excludes the ledger too.** `Revision` is
+  phase-authored and `Reviewed revision` is not, and the phases write
+  `test-list.md` between them — so hashing all of `git diff HEAD` in the shared
+  contract made the two permanently unequal while item 10 wants them equal.
+- **The RED test hash records the manifest it was taken over.** Naming only the
+  _kinds_ of file left two readers free to choose different sets from an
+  unchanged tree, so the consumer's recomputation either looped or passed an
+  edit it never looked at.
+- **The migration finds its commit from the patch, not from `-S`.** The id is
+  on both sides of a status-only change, so `git log -S` walks back to the
+  commit that _added_ the row and the marker lands on the wrong one.
+- **Branch 2's mutation is submitted to the gate before the transition.**
+  Steps 4 and 5 are skipped for an `E2E` / `API` row and step 4 is the only
+  place that submits a RED, so the branch advanced the ledger with no
+  observation verdict at all — and the gatekeeper is conditional in that phase,
+  so nothing selected it by default.
+- **A passing `review-fix` row takes the no-round path, not falsifiability.**
+  That form needs a production mutation this stage owns no agent for and cannot
+  hand over: step 3b excludes a `review-fix` row by name and 3c is reachable
+  only from a `todo` entry, so the row would sit at `review-fix` again.
+- **Every blocking reviewer of the nested run is exempt, not just the
+  gatekeeper.** `completion-reviewer` is mandatory and blocking there too and
+  requires validate evidence, so exempting one left the first branch-1 row
+  stopped at the same gate for a different reason.
+- **The revision hash excludes the ledger and the evidence.** Phase Green
+  writes `green` and Refactor writes `refactor` into `test-list.md` between the
+  observations, and gate item 10 wants one revision across the GREEN and both
+  reviews — so a hash over all of `git diff HEAD` moved on its own bookkeeping
+  and no uncommitted item could reach `done`.
+- **The pre-split marker has a migration that writes it.** Nothing did, so no
+  row ever carried it and the compatibility clause it gates was unreachable.
+  It is written once from the history, and until then those rows are judged by
+  the current rule — reported rather than silently accepted.
+- **The consumer recomputes the test hash over the producer's inputs.** It
+  recomputed over `Test file` alone while the producer hashed the artifacts the
+  test reads, so every row with a fixture or a snapshot failed the gate
+  unchanged and was sent back on each pass.
+- **The shared reviewer contract carries the untracked manifest.** It still
+  said "the contents of every untracked file", so a reviewer following it
+  computed a value the consumer could not reproduce.
+- **A handed-over row's mutation may touch the predicate it names.** The Oracle
+  Strength Check rejects a mutation outside the code the item owns, and an
+  `E2E` / `API` row owns no production surface — so no branch-2 row could
+  produce falsifiability evidence that passes.
+- **Branch 3 has a verdict the observation gate can return.** Judged by the two
+  evidence forms a genuine branch-3 row can only be REVISE, and skipping the
+  gate leaves the stage's completion condition unmet: it could not close
+  either way. The `DR-*` and the unavailability of both branches are what that
+  verdict judges.
+- **A corrected test that passes on its first run is reclassified.** A REVISE
+  asking for no new behaviour — a selector split, a rename, an expectation made
+  explicit — leaves the test passing, and demanding a fresh RED stranded the
+  row at `review-fix`.
+- **Phase Red runs 3a, then 3b, then 3c.** Listed 3c first, an ordered read ran
+  the production mutation and wrote `todo -> red` before 3b had checked the
+  entry's branch, selector and missing fields — advancing the ledger on
+  provenance nobody had verified.
+- **The consumer gate requires and rechecks `RED test hash`.** The producer
+  records it, but the completion contract asked only for `Revision` — which
+  Phase Green makes unrecomputable — so a test edited after the handoff passed
+  gate item 10 exactly as a fresh one did.
+- **A pre-split row is identified by a marker, not by its status.** `done` plus
+  an `implement-` anchor also describes a new `E2E` / `API` row written to the
+  wrong file, so the compatibility clause would have accepted a row that never
+  produced its ATDD handoff.
+- **A `review-fix` row has a defined path back through `/qfai-atdd`.** Phase Red
+  step 3b sends one there when the REVISE touches the acceptance test, and the
+  three branches only cover a `todo` row's first handoff — so the stage had no
+  invocation, evidence shape or return path and the row stayed at `review-fix`.
+- **The uncommitted revision hashes a manifest, not bare contents.** Contents
+  alone collide on a rename or a swap between two files, and with no order or
+  separator defined a second reviewer cannot recompute the same value for the
+  same tree — the one thing the address exists to allow.
+- **`RED test hash` covers what the test reads.** Limited to the `Test file`
+  column, an edit to a snapshot, fixture or helper reshaped the assertion after
+  the handoff with the hash unchanged, and the working-tree hash cannot be
+  recomputed from the final tree to catch it.
+- **Scope approval precedes the RED.** The steps ran the test first and asked
+  `delivery-planner` after, while the same step requires a scope REVISE to be
+  settled _before_ the RED is submitted — so a REVISE left the just-recorded
+  RED as evidence for a scope that no longer existed.
+- **`qfai-implement`'s `red` phase routes `qa-gatekeeper` conditionally.** The
+  skill said not to route it for a seam-only invocation; the manifest listed it
+  as mandatory. The gate had no RED to judge, could only return REVISE, and the
+  round trip stopped on the contradiction.
+- **The RED test hash is keyed on `Test file`, not `Selector`.** `Selector` is a
+  test name in the ordinary case, so hashing "the files it names" produced an
+  empty or guessed value and detected no post-handoff edit.
+- **Planner scope authority follows the row's obligation column.** It was
+  defined as "a sufficient slice of its `TC-*` obligation", but an `E2E` row
+  owes `US-Refs` and an `API` row owes `CON-API-Refs` — and the role's required
+  inputs listed neither document, so a blocking gate asked it to judge
+  something it could not read.
+- **Zero ATDD-owned rows is a count, not "nothing to do".** `/qfai-sdd` seeds a
+  row per coverage-target `TC-*`, which excludes L4/L5, and this skill cannot
+  write the ledger — so a fresh spec legitimately has none. Reading that as no
+  work skipped the US and CON-API obligations that are this skill's own.
+- **The reviewer revision description follows the field contract.** It still
+  specified a `git status --porcelain` digest, so a reviewer following it could
+  read a stale PASS as fresh.
+- **The P1c round trip is an item cycle, not a completion gate.**
+  `/qfai-implement` PASSes its blocking reviewers before the checkpoint, and
+  those reviewers' completion-gate inputs are P5/P6 artifacts — so the first
+  branch-1 row stranded at `refactor`, which Phase Red does not re-select, and
+  P2 was never reached.
+- **Branch 3 no longer reads as a way to close a spec.** `exception` is a
+  blocking output and completion needs a user-approved `TDDLIST-001` waiver;
+  "a valid outcome, not a shortfall" read as done, so a run could record the
+  `DR-*`, hand over, and leave a spec that can never legally close. The branch
+  ends in the waiver or in a parked row, and the stage has to say which.
+- **The RED address includes a hash of the test itself.** The working-tree hash
+  covers the production files Phase Green necessarily changes, so it cannot be
+  recomputed from the final tree — a reviewer could not tell "only production
+  changed" from "the acceptance test was edited after the handoff". `RED test
+hash` covers the files the row's `Selector` names and nothing else, which
+  Phase Green does not touch.
+- **A falsifiability reference resolved into its own directory.**
+  `references/red-not-observable.md` from inside `references/`.
+- **The ATDD `red` phase is routed per ledger item, and its gatekeeper is
+  conditional.** The default `per-invocation` routes each agent once for the
+  whole ledger, which cannot execute the one-row-at-a-time loop P1b/P1c
+  require; and a mandatory blocking `qa-gatekeeper` stopped a branch-2-only run
+  before it could reach the P4b handoff that produces the trio it stopped for.
+- **A plan is an acceptable `Oracle proof` at a RED observation.** Branch 1's
+  RED precedes the production behaviour, so there is nothing to mutate —
+  requiring a demonstrated mutation made a correct observed RED unable to pass
+  P1b, and so unable to reach the phase that builds the code the mutation needs.
+- **The revision field is a content address in the contract that binds.** The
+  rule was corrected in the ATDD reference while `evidence-revision.md` and its
+  consumers still specified a `git status --porcelain` digest. `git stash
+create` is not a substitute either: it has no `-u`, and a new acceptance test
+  — the ordinary case — is untracked.
+- **The handoff stage is named the same in both documents.** The reference is
+  mandatory reading before a row advances and still said P1d for branch 2.
+- **A pre-split `E2E` / `API` row stays gateable.** One that reached `done` or
+  `review-fix` before the per-`Layer` evidence split has its anchor in
+  `implement-<spec-id>.md`, has no ATDD entry to produce, and no legal
+  transition that would let it re-observe a RED. That anchor is accepted.
+- **A project whose manifest predates the `red` phase is told what to do.**
+  `qfai init --force` leaves `assistant/manifest/**` alone, so the skill update
+  can arrive without it. The gate still applies; the routing is manual.
+- **The seam returns a neutral response, not an empty one.** An empty body
+  raises a parse error in a test that decodes JSON before asserting, and a
+  thrown handler does the same in a server that re-raises — both non-assertion
+  failures `red-admissibility.md` rejects.
+- **The branch-2 handoff is gate P4b, not part of P1d.** P1d required the
+  surface P2-P4 build while sitting before P2 in a Do-not-skip list, so a run
+  with an ordinary branch-2 row could only wait at a gate whose precondition
+  needed gates it had not reached, or skip one. Branch 3, which has no such
+  precondition, stays at P1d.
+- **A seam-only round trip is not the RED gate.** `/qfai-atdd` calls Phase Red
+  step 3a before it has a RED — that is what the trip is for — but the `red`
+  phase always routes a blocking `qa-gatekeeper`, which had no assertion
+  failure to judge, and step 3b read the row's entry as malformed for lacking
+  the very RED the trip exists to make possible. Step 3a returns after building
+  the seam now, and the blocking gate applies to the handoff that follows.
+- **`qa-gatekeeper`'s completion inputs are conditional on the phase.** It is
+  blocking at stage gate P1b, and validate output, coverage reports and runtime
+  evidence are first produced at P5/P6 — so a fresh run with a perfectly good
+  RED pair stopped on artifacts its own ordering says cannot exist yet.
+- **An uncommitted RED is addressed by content.** `git status --porcelain`
+  names changed paths and their states, so editing the file under test after
+  the RED left the digest identical and a stale observation passed the
+  freshness gate the handover depends on.
+- **Phase Red step 3a covers the seam an HTTP row needs.** It was defined as a
+  module, export or signature the test _imports_, but `/qfai-atdd` hands a row
+  here precisely when an unregistered route 404s — the same resolution error,
+  reached a different way. Following the step as written left the test 404ing
+  with nowhere to go. The step now names the registered route as a seam, and
+  requires a status the row does not contract for, so the route resolves and
+  the assertion still fails.
+- **A checkpoint reference pointed inside the ATDD skill.**
+  `../qfai-implement/...` from `qfai-atdd/references/` resolves to
+  `qfai-atdd/qfai-implement/...`; every other reference in that file already
+  used `../../`.
+- **Every branch is handed over; only the timing differs.** `/qfai-atdd` said
+  branch 2 and branch 3 rows needed no round-trip, but `/qfai-implement` is the
+  only writer of `Status` / `DR-ID` / `Evidence` — and branch 2's mutation is run
+  by its Phase Red step 3c. A run with no branch-1 row therefore ended with the
+  falsifiability trio never produced (P6 and P8 unpassable) or the Decision
+  Record written and the ledger untouched. New stage gate P1d hands both over:
+  branch 2 after P2-P4 build the surface and before P6, branch 3 once its `DR-*`
+  exists.
+- **P1b and P1c are one loop per `TDD-ID`.** P1b required branch 1 "discharged in
+  full" before P1c, while P1c takes each row through GREEN before the next
+  failing test is written — following P1b left several deliberate REDs open at
+  once, and the first row's full-suite checkpoint failed on them. The two gates
+  now read as choose, discharge, next row. The scheduling contract moved to
+  `red-provenance.md#which-stage-hands-a-row-over`, which owns the branches it
+  schedules.
+- **The spec-level checkpoint boundary has a defined home.** Its rule read and
+  wrote `implement-<spec-id>.md`, but a spec whose every row is `E2E` / `API`
+  never has that file — so a terminal ATDD-only ledger judged the boundary
+  unrecorded on every re-run, or wrote a second evidence file and broke the
+  one-file-per-spec contract. The boundary has no `Layer` to route by, so it
+  goes to the implement file when it exists and to the ATDD file when it does
+  not, by the same rule on read and on write.
+- **Two broken references in the skills.** P1's layer catalog resolved from no
+  root (`catalog/test-layers.md` → `.qfai/assistant/catalog/test-layers.md`), and
+  `#atdd-owned-rows` named an anchor the parenthesised heading did not generate.
+  The heading is short now, so one anchor serves every reference to it.
+- **Phase Red selects the row P1c named.** It took the first `todo` row
+  regardless, so a branch-2 row above the named one was processed first — and
+  its full-suite checkpoint ran against a tree still holding the named row's
+  deliberate RED, failed, and left that row at `refactor`, which step 1 does
+  not re-select. A named `TDD-ID` now wins over ledger order.
+- **The branch is re-checked at each row's handoff.** Fixing every row's
+  branch at P1b goes stale once rows are taken one at a time: an earlier
+  branch-1 row's production code can satisfy a later row's predicate, leaving
+  a row recorded as `observed-red` with no observable RED and no
+  re-classification step. The P1b choice is provisional; the branch is taken
+  from a run against the tree as it stands at handoff.
+- **`/qfai-atdd` records `RED revision` when it takes the RED.** The
+  completion gate requires it on a handed-over RED and the producer recorded
+  no revision at all — an uncommitted tree's address cannot be recovered once
+  Phase Green has changed the tree, so the required field was a guess or
+  missing, and a guess fails the freshness gate exactly as a gap does.
+- **A `review-fix` on an `E2E` / `API` row hands its test back.**
+  `/qfai-implement` does not author acceptance tests and its `red` phase has
+  no `acceptance-test-engineer`, so a REVISE asking for a test change left the
+  row at `review-fix` or had a production agent edit a test it does not own.
+  The corrected test and its new RED come from `/qfai-atdd`; the production
+  fix and the re-review stay here.
+- **Cross-spec obligations follow the row's `Layer` too.**
+  `cross-spec-ownership.md` still wrote `## Cross-spec obligations` to
+  `implement-<spec-id>.md`, so an unresolved obligation was invisible in the
+  file gate item 10 reads for an `E2E` / `API` row.
+- **The production-path form of `Satisfied-by` is scoped to handed-over rows.**
+  Widening it for every row let an ordinary `Unit` / `Component` /
+  `Integration` row reach `done` with no production change and no sibling —
+  `qfai-implement/SKILL.md` Phase Red step 5 sends exactly that case to
+  `exception`, so the shared reference and the gatekeeper were contradicting
+  the skill body they serve.
+- **P1b gates the rows that have evidence at P1b.** The `red` phase's
+  `qa-gatekeeper` is mandatory and blocking, and a branch 2 row's payload is
+  the falsifiability trio — which by the same gate's own rule does not exist
+  until P6. A run whose rows are all branch 2 had nothing submittable and
+  could not pass P1b to reach P6. It judges the branch 1 rows there; branch 2
+  rows are judged when their trio lands.
+- **A RED-gate REVISE reruns whoever wrote the production edit.** The seam and
+  the mutation are written by the production owners in that phase, and a
+  `qa-gatekeeper` REVISE there is usually about one of them —
+  `failed-agents-only` re-judged an unchanged artifact and returned the same
+  REVISE, so the row never left `red`. The phase uses
+  `changed-scope-dependents`.
+- **Someone is routed to every step that touches production code.** The
+  implement `red` phase had `qa-gatekeeper` alone and the orchestrator may not
+  implement, so neither step 3a's minimal seam nor the falsifiability mutation
+  had an agent able to perform it — a new-surface row could not reach an
+  admissible RED at all. `frontend-engineer` / `backend-engineer` are
+  conditional agents of that phase now.
+- **Phase Red step 3c performs the first falsifiability mutation.** The
+  preconditions were circular: step 3b deferred a branch-2 row until its trio
+  existed, and Phase Green step 2a refused to repeat a mutation it assumed had
+  already run — so nobody performed the first one and an ordinary
+  first-run-pass row could not leave `todo`. 3c applies it, records the trio in
+  the row's ATDD entry, and writes `todo -> red`; it is that row's
+  `Oracle proof` and 2a still does not repeat it.
+- **A natural RED keeps its scope and RED gates.** The path into branch 1
+  skipped steps 1 and 3-4 as "for a surface that does not exist", which also
+  dropped `delivery-planner`'s scope approval and the `qa-gatekeeper` PASS the
+  handover table then requires. Only the seam is skipped.
+- **Checkpoint evidence follows the row's `Layer`.** `checkpoint-verification.md`
+  still wrote its two per-item fields to `implement-<spec-id>.md`, splitting an
+  `E2E` / `API` row across two files and leaving the one gate item 10 reads
+  incomplete.
+- **`qa-gatekeeper` requires the evidence file the row's `Layer` owns, and only
+  that one.** Requiring both made the Stop condition fire on a spec that
+  legitimately has one: a Unit-only spec never ran `/qfai-atdd`, and a spec
+  whose rows are all `E2E` / `API` has no implement file. Either way the gate
+  stopped before reading the evidence that does exist.
+- **`execution-ledger.md` has an `### Allowed transitions` heading**, so the
+  anchor two documents cite resolves instead of landing at the top of the file.
+- **`RED revision` is a field, so that exemption can be recorded.** Declaring
+  it in the completion gate was not enough: the per-item contract stores one
+  `Revision` per round and `evidence-revision.md` calls any observation naming
+  a different revision stale, so a correct `observed-red` row stayed
+  permanently stale whatever the gate said. The handed-over RED records its own
+  revision; `Revision` covers the GREEN and the two reviews, which must still
+  agree with each other.
+- **P1c takes branch-1 rows one at a time.** Writing every branch-1 failing
+  test and then handing the batch over cannot work: each row's checkpoint runs
+  the full suite, so a second deliberate RED left open elsewhere fails the
+  first row's checkpoint — and that row is then stranded at `refactor`, which
+  Phase Red does not re-select. RED, handoff, GREEN and checkpoint complete for
+  one row before the next one's test is written.
+- **Branch 2's mutation is applied by `/qfai-implement`.** It rewrites a
+  production predicate, and this stage's `evidence` phase is
+  `devops-ci-engineer` and `qa-gatekeeper` — neither owns production source,
+  the same boundary branch 1 states two branches earlier. Following the old
+  text meant editing production code out of ownership; refusing to meant a stop
+  with no falsifiability trio. The row is handed over naming the predicate to
+  break, and records the pair that comes back.
+- **The handed-over RED is exempt from the same-revision rule.** Completion item
+  10 asked the item's four sub-agent observations for one revision. A branch-1
+  RED is taken before the production code exists, so its revision necessarily
+  differs from the GREEN's and the reviewers' — that is the property the RED is
+  worth having, and demanding one revision made an `observed-red` E2E/API row
+  unable to reach `done` at all.
+- **`Satisfied-by` accepts what actually satisfies the row, in the shared
+  contract too.** `red-provenance.md` required the production path and symbol
+  for an ATDD surface no ledger row owns, while `red-not-observable.md` called
+  a sibling `TDD-NNNN` the only legal value and `qa-gatekeeper.md` called a
+  sibling row the only legitimate absence — so the form one document mandates
+  was rejected by the gate that judges it, and every such row stopped. All
+  three now ask the same question of the field: what would I mutate to falsify
+  this row.
+- **A natural RED on an existing surface has a step to enter branch 1 at.**
+  Branch 2's first-run check correctly sends an already-failing row to branch
+  1, but branch 1 opens by asking for a seam for a surface that does not exist
+  and confirms the RED "before any production code exists" — neither true
+  here, so a row that observed a real defect had nowhere to go. It enters at
+  step 2, and what `qa-gatekeeper` confirms is a failure observed against the
+  tree before the fix.
+- **The GREEN is submitted after the `Oracle proof`, not before it.**
+  `qa-gatekeeper` requires a proof on every item and the `build` phase is
+  blocking, so a GREEN submitted before step 2a produced one is a REVISE by
+  construction — and that REVISE blocks the step meant to produce the proof.
+  Step 2 takes the passing run, step 2a takes the proof, and the two are
+  submitted together.
+- **A scope REVISE in the ATDD `red` phase reruns the agents it invalidates.**
+  `failed-agents-only` re-ran `delivery-planner` alone, against a selector
+  nobody had changed — so it returned the same REVISE, or the previous
+  `qa-gatekeeper` PASS stood over a test that had since been split. The phase
+  uses `changed-scope-dependents`.
+- **Phase Green runs the `Oracle proof`.** Branch 1 records the mutation it
+  intends; there is nothing to mutate until Phase Green builds the surface, and
+  the phase had no step for it. Completion item 5 wants the command and its real
+  failing output, so a handed-over row arrived at the gate with a plan and no
+  run. New step 2a applies the mutation, captures the failure, and reverts it
+  immediately. A falsifiability row already has one and must not repeat it.
+- **The mandatory `## Evidence` section follows the row's `Layer` too.** Items
+  10-11 pointed an `E2E` / `API` row at `atdd-<spec-id>.md` while the section
+  below still created `implement-<spec-id>.md` and called it the single home for
+  every row — so following it split one row across two files and left the file
+  the gate reads incomplete.
+- **The minimal seam is requested, not written, by `/qfai-atdd`.** Branch 1 told
+  it to register the route or add the export, which is production code its
+  `red` phase has no agent for — the same ownership breach the branch forbids
+  two steps later. It is asked of `/qfai-implement` Phase Red step 3a instead.
+- **Branch 2 is chosen from a first-run pass, not from surface existence.** A
+  surface that exists can still be wrong, and a correct test against a buggy one
+  fails naturally — an observed RED. Keying on existence sent that real defect to
+  `exception` or to a stop, because the mutation cannot run against an
+  already-failing test and there is no GREEN to restore to.
+- **A branch-2 row is deferred by step 3b, not treated as a malformed handoff.**
+  Phase Red always takes the first `todo` row, and branch 2 records its evidence
+  at the ATDD stage's P6 — after the P1c handover. Stopping on it meant a
+  branch-2 row above the branch-1 rows blocked them from Phase Green, so their
+  tests stayed red, ATDD never passed P5-P8, and P6 never happened. P1c also
+  names the rows it hands over.
+- **`delivery-planner` approves the slice before the RED gate.**
+  `qfai-implement` makes it the only authority on whether a selector covers a
+  sufficient slice and requires a scope REVISE settled _before_ the RED is
+  submitted. The ATDD `red` phase took the `qa-gatekeeper` PASS first, leaving
+  the planner only "keep the PASS and open a new row" — which cannot repair a
+  handoff taken at the wrong granularity. It is now mandatory and blocking in
+  that phase.
+- **The handover is verified before the status moves.** Phase Red step 2 wrote
+  `todo -> red` unconditionally, so a row whose ATDD entry was missing or
+  malformed was parked at `red` with no RED behind it, and an `exception` row
+  reached its `DR-*` only after an illegal `red` hop. An `E2E` / `API` row's
+  transition is now decided by step 3b: `observed-red` and `falsifiability`
+  write `red`, `exception` writes `exception` and skips Phase Green, and an
+  unusable entry leaves the row at `todo`.
+- **The completion gate can see the ATDD evidence file.** Item 10 required every
+  row's `Evidence` anchor to resolve into `implement-<spec-id>.md`, so an
+  `E2E` / `API` row pointing at `atdd-<spec-id>.md` — where this release puts
+  its RED provenance — could not reach `done` however correct its evidence was.
+  The gate now reads the evidence file the row's `Layer` owns, and the reviewer
+  verdicts are appended to that file. `/qfai-implement` still runs both
+  reviewers for every row it advances.
+- **`/qfai-atdd` no longer told to write production code.** Branch 1 ended
+  "build the surface and re-run for GREEN", but `agent-routing.yml` gives that
+  stage `acceptance-test-engineer` and no backend or frontend agent — so it
+  either wrote code it does not own or stopped with no GREEN. It now records the
+  RED, gets `qa-gatekeeper` PASS **before any production code exists** (the
+  blocking confirmation `qfai-implement` requires, which cannot honestly be
+  sought after the surface is built), and hands over; `/qfai-implement` Phase
+  Green builds the surface and takes the GREEN.
+- **The execution ledger is a mandatory `/qfai-atdd` input.** Neither the
+  preflight priority list nor the Read Set Contract named
+  `tdd/test-list.md`, so a default-mode run could not enumerate the
+  `Layer = E2E` / `Layer = API` rows it owes evidence for — and step 3b then
+  stopped on a missing handoff for every one of them. It is read, never written.
+- **The observed-RED submission has a routing phase to go to.** Branch 1 says
+  to submit the RED to `qa-gatekeeper` at routing phase `red`, and
+  `agent-routing.yml` gave `qfai-atdd` only `coverage` / `implementation` /
+  `evidence` / `review` — the phase named belonged to `/qfai-implement`. A
+  blocking `red` phase now sits before `implementation`, which is the only
+  place it can sit: after the surfaces are built there is no RED left to
+  confirm.
+- **Branch 1 rows hand over before the gates that need a green tree (P1c).**
+  Branch 1 ends with a deliberately failing test and no production code, while
+  P5-P8 require the suite and the repo quality gates to pass — so the stage
+  could not finish its own gates. The handover to `/qfai-implement` is now an
+  explicit stage gate rather than a next-action at the end.
+- **P1b no longer demands evidence branch 2 cannot have yet.** It required RED
+  provenance "established" for every row while the same sentence deferred branch
+  2's mutation run to P6. P1b is now "branch chosen for every row, branch 1
+  discharged in full", and a branch 2 row legally leaves it with its branch
+  recorded and no evidence.
+- **A `review-fix` row does not replay the handover.** Phase Red selects it
+  first and keeps its status, so step 3b would have re-read the original ATDD
+  entry and written `todo -> red` from a row that is not at `todo`. It now
+  applies to `todo` rows only; rework goes through `round-evidence.md`.
+- **The layer-owned evidence file is named everywhere the row is written.** Gate
+  item 10 was not enough on its own: the orchestrator override and the ledger's
+  `Evidence` column definition both still said `implement-<spec-id>.md`
+  unconditionally, so following either produced a pointer item 10 rejects.
+- **Step 3b's reference resolves.** `qfai-atdd/references/red-provenance.md`
+  read from `qfai-implement/SKILL.md` points at
+  `qfai-implement/qfai-atdd/...`, which does not exist — the mandatory handover
+  contract was unreachable from the step that requires it.
+- **`/qfai-implement` Phase Red consumes the ATDD provenance instead of
+  re-observing it.** The handover was declared but not executable: steps 4 and 5
+  re-run the row's test and watch it fail, and by the time that skill reaches an
+  `E2E` / `API` row the surface exists, so the run passes and step 5 classifies
+  it as an anomaly bound for `exception` — the terminal state the falsifiability
+  branch exists to avoid, reached through the branch itself. New step 3b verifies
+  and carries over the recorded branch; a missing or malformed entry stops with a
+  handoff note rather than inventing a RED.
+- **The ATDD minimal seam must not answer with the contracted status.** Branch 1
+  said to register the route "with the declared status, an empty body". When the
+  row's predicate _is_ the status — `201` on create, `204` on delete, `403` on a
+  refusal — that passes the assertion the moment the seam exists, so there is no
+  RED left to observe and the behaviour was implemented before the test failed.
+  The seam now answers with a not-implemented sentinel outside the contract's
+  declared set.
+- **ATDD evidence keeps its payload out of the table cell.** `## Ledger rows
+advanced` asked for RED/GREEN commands, output and the falsifiability result
+  inside a GFM cell — the same container defect the implement ledger had. Real
+  output is multi-line and carries bare `|`, so it either truncated the proof
+  `qa-gatekeeper` requires or broke the table below it. The table is now an
+  index; each row's payload lives under its own `### TDD-NNNN` heading in fenced
+  blocks.
 - **`QFAI-ATDD-117` is scoped like the obligations it excludes.** It lists the
   excluded ids and was filed at `specsRoot`, which belongs to every scope, so
   a `--spec` run reported a sibling spec's L1/L2 TCs in its own evidence.
@@ -736,6 +1644,32 @@ is a two-space continuation, markdown rendered the condition as trailing prose
 inside a bullet about the`QFAI-ATDD-111`/`QFAI-ATDD-113`hard gate. The
 words were all still there, so nothing flagged it — while the clause had no
 line of its own, and downstream Decision Records that cite it by`file:line`pointed at a line it does not occupy.`tests/assets/swallowedListItem.test.ts`now scans the shipped`assistant/\*\*` tree for a list marker stranded mid-line.
+
+### Changed
+
+- **`/qfai-atdd` now has RED discipline for the ledger rows it feeds.**
+  `qfai-implement/SKILL.md` states the split — `Layer = E2E` and `Layer = API`
+  rows are tracked in its ledger, their tests authored in `/qfai-atdd` — and its
+  Phase Red requires an admissible failure confirmed before production code
+  exists. `qfai-atdd/SKILL.md` contained no occurrence of `RED`, `red`, `green`,
+  `refactor`, `exception` or `test-list.md`, and its stage gates ran
+  plan → layer → E2E → API → integration → validate → runtime → repo gates →
+  reviewer with no failing-test step. Since `todo` has exactly two exits and
+  `todo -> red` needs a RED the stage order makes unobservable, `exception` was
+  the only terminal state such a row could reach: on one consumer repository all
+  13 remaining `todo` rows were ATDD-owned, and the ledger closed at 95
+  `exception` against 21 `done`. The skill now names the ledger it feeds and
+  states that it **does not write it** — `/qfai-implement` remains the single
+  writer of every `Status` / `DR-ID` / `Evidence` cell, as the Drift Protocol
+  grants; what `/qfai-atdd` owes is the evidence those cells point at, in
+  `.qfai/evidence/atdd-<spec-id>.md`. It adds stage gate **P1b** (RED observed,
+  and `qa-gatekeeper`-confirmed, before P2-P4 build any surface) and documents
+  three ordered branches in
+  `references/red-provenance.md` — observed RED, falsifiability via the existing
+  `red-not-observable.md` path, and `exception` with a `DR-*` only when both are
+  unavailable. `qa-gatekeeper` accepts the falsifiability form for these rows as
+  expected evidence and REVISEs an `exception` whose only stated reason is that
+  the surface came first.
 
 ## [1.10.0] - 2026-08-03
 

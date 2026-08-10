@@ -56,9 +56,15 @@ describe.each(ROUTING_FILES)("%s — qfai-implement routing", (rel) => {
     const phases = await implementPhases(rel);
     const red = phases.find((p) => p.id === "red");
     expect(red, "no `red` phase: the RED observation has nowhere to happen").toBeDefined();
-    expect(red?.mandatory_agents ?? []).toContain("qa-gatekeeper");
-    // Mandatory-but-not-blocking is the state `build` was already in, and it is
-    // what let the row proceed to Green with RED unconfirmed.
+    // Conditional, not mandatory: `/qfai-atdd` invokes this phase for step 3a
+    // alone when a new surface needs its seam, and that trip has no RED for the
+    // gate to judge — listed as mandatory it could only return REVISE and the
+    // round trip stopped. It is present in the phase either way.
+    expect(red?.conditional_agents ?? []).toContain("qa-gatekeeper");
+    expect(red?.mandatory_agents ?? []).not.toContain("qa-gatekeeper");
+    // Blocking is the part that matters: mandatory-but-not-blocking is the
+    // state `build` was already in, and it is what let the row proceed to Green
+    // with RED unconfirmed. When a RED *is* submitted, this verdict decides.
     expect(red?.blocking_agents ?? []).toContain("qa-gatekeeper");
   });
 

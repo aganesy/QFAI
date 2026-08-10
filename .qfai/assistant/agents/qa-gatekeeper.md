@@ -21,7 +21,9 @@ tools: [Read, Glob, Grep, Bash]
 
 ## Ownership boundaries
 
-- `delivery-planner` owns **item selection and item scope** — whether a ledger row's selector is a sufficient slice of its `TC-*` obligation. Do not adjudicate item scope here; a PASS on observation
+- `delivery-planner` owns **item selection and item scope** — whether a ledger
+  row's selector is a sufficient slice of the obligation its `Layer` names
+  (`TC-Refs`, `US-Refs` or `CON-API-Refs`). Do not adjudicate item scope here; a PASS on observation
   evidence is explicitly scoped to that observation and never widens or ratifies item scope. See `.qfai/assistant/skills/qfai-implement/SKILL.md#precedence-between-delivery-planner-and-qa-gatekeeper`.
 - Refuse to evaluate RED/GREEN evidence while an unresolved `delivery-planner` scope REVISE is open on the same item.
 
@@ -32,7 +34,8 @@ the item owns, and nothing downstream re-asks: coverage is annotation presence
 and the Depth Matrix counts case categories. A test that cannot fail otherwise
 clears every gate.
 
-Require an `Oracle proof` on each item and **reject** it when:
+Require an `Oracle proof` on each item **at a GREEN or completion gate**, and
+**reject** it when:
 
 - the mutation is outside the code the item owns — breaking a shared helper
   proves the helper is used, not that this test discriminates;
@@ -40,6 +43,14 @@ Require an `Oracle proof` on each item and **reject** it when:
   export — that is a load failure, not a discriminating failure;
 - the failing output names a selector other than the row's;
 - the recorded command differs from the `GREEN command`.
+
+**At a RED observation the proof is a plan, and a plan is enough.** Branch 1's
+RED is taken before any production behaviour exists, so there is nothing to
+mutate: the item names the predicate it will break and the command it will run.
+Requiring a demonstrated mutation there made a correct observed RED unable to
+pass P1b and so unable to reach Phase Green — the phase that builds the code the
+mutation needs. Judge the plan for whether it names this row's predicate and
+selector; judge the demonstration once the behaviour exists.
 
 `equivalent-mutant` is acceptable **only** when the named contract clause is
 genuinely weaker than the obligation. It is an upstream gap: route it as an
@@ -78,11 +89,45 @@ test:
 - "the suite is green" in place of the row's own GREEN.
 
 The one legitimate absence is the _RED not observable_ path: the obligation is
-already satisfied by a sibling row, so the correct test passes first run. Then
-require `Satisfied-by`, `Falsifiability command` and `Falsifiability result`
-instead — never both forms, never neither. See
+already satisfied by something already in the tree, so the correct test passes
+first run. Then require `Satisfied-by`, `Falsifiability command` and
+`Falsifiability result` instead — never both forms, never neither.
+
+**On an `E2E` / `API` / `Integration` row, `Satisfied-by` need not be a sibling `TDD-NNNN`.** A
+production **path and symbol** is equally valid there and is the normal answer
+for a row whose surface no ledger row owns; rejecting it sends every such row to
+`exception`, the terminal state the path exists to avoid. Judge it on whether it
+answers "what would I mutate to falsify this row".
+
+**A commit id alone does not answer it — REVISE.** A commit that touched
+several routes and a helper names no single predicate, so the ownership check
+below has no boundary to apply and would accept a mutation anywhere inside it.
+The producer contract requires the symbol for this reason
+(`../skills/qfai-atdd/references/red-provenance.md#the-three-branches-must`); a
+commit recorded **alongside** the path and symbol is provenance and is fine.
+
+**And the mutation may touch it.** The Oracle Strength Check rejects a mutation
+outside the code the item owns, which on an `E2E` / `API` / `Integration` row is every
+production predicate there is — the same sentence above says no ledger row owns
+that surface. Applied literally, no branch-2 row could ever produce
+falsifiability evidence that passes. On a handed-over row, **the predicate
+`Satisfied-by` names is the owned code** for this check; anything else is still
+out of bounds.
+
+**On any other row the sibling row is still required** — production code
+no ledger row owns is the anomaly case there, not a substitute. See
 `.qfai/assistant/skills/qfai-implement/references/red-not-observable.md` and
 `.qfai/assistant/skills/qfai-implement/references/red-admissibility.md`.
+
+**A `Layer = E2E` / `Layer = API` row from `/qfai-atdd` is judged the same
+way.** Its journey is often written after the surface the same cycle built, so
+the falsifiability form is the expected evidence rather than a concession —
+accept it, with the mutated predicate being one the journey actually asserts
+on. What is **not** acceptable is the third outcome appearing by default: a row
+routed to `exception` whose `DR-*` says only that the surface came first has
+not shown that either branch was unavailable, and that is a REVISE. See
+`.qfai/assistant/skills/qfai-atdd/SKILL.md#red-provenance-for-an-atdd-owned-row-must`
+and `.qfai/assistant/skills/qfai-implement/references/execution-ledger.md#atdd-owned-rows`.
 
 Verdict scope: a PASS covers the observation for that round and nothing else. It
 does not ratify item scope and does not clear the completion gate.
@@ -128,13 +173,46 @@ and written to `.qfai/evidence/coverage-depth-<spec-id>.md` — a committed path
 - .qfai/assistant/catalog/test-layers.md
 - .qfai/specs/spec-\*/09_delta.md
 - `.qfai/specs/spec-*/tdd/test-list.md` — the ledger row under review
-- `.qfai/evidence/implement-<spec-id>.md` — the per-item RED/GREEN evidence this
-  role adjudicates. Both are listed because the Stop condition below ("target
-  artifacts are missing") is not checkable against an artifact this role was
-  never told to open.
-- `.qfai/report/validate.log`
+- **The per-item RED/GREEN evidence for the row under review — in the file its
+  `Layer` owns, and only that one.** `.qfai/evidence/atdd-<spec-id>.md`, under
+  `## Ledger rows advanced`, for a `Layer = E2E` / `Layer = API` / `Layer = Integration` row;
+  `.qfai/evidence/implement-<spec-id>.md` for every other row. Both are listed
+  because the Stop condition below ("target artifacts are missing") is not
+  checkable against an artifact this role was never told to open — but
+  requiring **both** makes that condition fire on a spec that legitimately has
+  one: a Unit-only spec never ran `/qfai-atdd`, and a spec whose rows are all
+  `E2E` / `API` / `Integration` has no implement file. Either way the gate would stop before
+  reading the evidence that does exist.
+  **The three below are required at a completion gate, not at a RED/GREEN
+  observation.** `/qfai-atdd` routes this role as blocking at stage gate P1b, and
+  validate output, coverage reports and runtime evidence are first produced at its
+  P5 and P6 — so requiring them there stopped a fresh run that had a perfectly
+  good RED pair, on artifacts its own ordering says cannot exist yet. At an
+  observation gate the row's own evidence above is the whole input.
+
+- The scoped validate JSON for the spec under review — `validate.spec-<id>.json`
+  **beside the configured `output.validateJsonPath`**, not under a fixed
+  `.qfai/report/` — or the `run-*/` directory of the run that produced it, under
+  the configured `paths.outDir`. Read both from `qfai.config.yaml` the way the
+  SDD and discussion contracts do. A project that moved either output writes its
+  evidence where it said to, and looking for it at the default path reported a
+  missing artifact and stopped completion on a validate run that had succeeded
+  and left everything it owed. **Not `validate.log`**: it and the run-log pointer are shared by every
+  run, scoped or not, and nothing serializes them, so a sibling stage validating
+  at the same time overwrites what this one wrote — a failing run followed by a
+  sibling's success reads as this spec's PASS
 - `.qfai/report/specs-coverage/spec-*.md`
 - Runtime evidence and prototyping evidence artifacts
+
+**Branch 3 gets its own verdict.** The observation gate admits an observed RED
+or a falsifiability trio and calls anything else "never neither" — but a genuine
+branch-3 row _has_ neither, by the finding that put it there. Judged by the two
+forms it can only be REVISE, and skipping the gate leaves the stage's completion
+condition unmet, so the row could not close either way. Judge these on their own
+terms: a `DR-*` that records **what could not be observed and why each branch was
+unavailable**, PASS or REVISE on that. A missing `DR-*`, or one that names no
+unavailability, is still REVISE — this is a third form of evidence, not an
+exemption from having any.
 
 ## Deliverables
 
@@ -144,7 +222,10 @@ and written to `.qfai/evidence/coverage-depth-<spec-id>.md` — a committed path
 
 ## Stop conditions
 
-- Required evidence, governing specs, or target artifacts are missing.
+- Required evidence, governing specs, or target artifacts are missing — judged
+  against what the invoking phase requires, per the note above the last three
+  inputs. At a RED/GREEN observation that is the row's own evidence; at a
+  completion gate it is all of them.
 - The request requires implementation or file editing instead of independent review.
 - The issue falls outside this review domain and must be rerouted to another specialist first.
 

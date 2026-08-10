@@ -20,7 +20,13 @@ must be written to a review pack, not left in conversation. There is exactly **o
   `TDD-ID` in `review_request.md`.
 - Minimum `summary.json` shape (`version: "2.0"`):
   `version`, `created_at`, `target.{kind,path}`, `routing_profile`, `overall_status` (`PASS|FAIL`),
-  and `reviewers[]` where each entry is `{ reviewer, status: PASS|FAIL|NA, feedback_count }`.
+  `reviewers[]` where each entry is `{ reviewer, status: PASS|FAIL|NA, feedback_count }`,
+  **`revision_form: "content-hash"`** and **`revision`** — the state these verdicts describe, as a
+  git rev or `working-tree+<content hash>` by the procedure in
+  `evidence-revision.md`. Both are required, and **omitting either is a current-contract violation**, not a way to be read as
+  older: a pack that declares the contract and names no tree cannot be re-checked, and one that
+  declares no form at all is a producer that forgot. Only `revision_form: "legacy"`, corroborated by
+  `.qfai/review/.legacy-packs`, marks a pack as predating the form.
   A `REVISE` verdict during iteration is written as `status: "FAIL"` here — see
   `shared-skill-delegation-baseline.md#verdict-vocabulary`.
 - Each additional review round creates a **new** `review-<timestamp>/` pack. Do not append
