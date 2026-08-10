@@ -505,6 +505,12 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **Only damage that breaks a walk stops the run.** A canonical redirected by
+  a link that resolves is a finding a `readdir` survives, so short-circuiting
+  on it hid every unrelated spec, contract and test defect.
+- **A bounded read runs to the end.** `read` may return fewer bytes than
+  asked for, and the unfilled tail stayed NUL — a correct flattened wrapper or
+  the one surviving marker then failed its own signature comparison.
 - **Structural damage stops the run after reporting it.** A profile validator
   walking the same tree raises `ENOTDIR` from its own `readdir`, and one
   rejection took the whole run down — losing the only finding that names the

@@ -138,15 +138,17 @@ const toPosix = (value: string): string => value.split(path.sep).join("/");
  * own `readdir`, and one rejection loses the finding this rule had already
  * produced — the only one that names the path and how to repair it. The caller
  * uses this to stop after reporting rather than to hide the error.
+ *
+ * **Only what actually breaks a walk.** A canonical redirected by a symlink
+ * that resolves is a serious finding and a `readdir` over it succeeds, so
+ * short-circuiting on it hid every unrelated spec, contract and test defect
+ * until the operator had repaired the link and run again. Cycles, dangling
+ * links and non-directory components are the ones a later walk cannot survive.
  */
 const STRUCTURAL_DAMAGE = [
-  "the integration directory is",
-  "an ancestor is",
-  "a canonical ancestor",
-  "the canonical directory is",
-  "canonical document is a symlink",
-  "canonical document resolves outside",
-  "canonical skill is a",
+  "is a symlink cycle",
+  "is a dangling symlink",
+  "not a directory",
   "a path component",
 ];
 
@@ -496,9 +498,7 @@ async function readPinnedFile(filePath: string, maxBytes: number): Promise<strin
     handle = await open(filePath, OPEN_READ_FLAGS);
     const stats = await handle.stat();
     if (!stats.isFile() || stats.size > maxBytes) return null;
-    const buffer = Buffer.alloc(stats.size);
-    await handle.read(buffer, 0, stats.size, 0);
-    return buffer.toString("utf-8");
+    return await readFully(handle, stats.size);
   } catch (error) {
     if (isMissing(error)) return null;
     const code = (error as NodeJS.ErrnoException | null)?.code;
@@ -510,6 +510,26 @@ async function readPinnedFile(filePath: string, maxBytes: number): Promise<strin
   } finally {
     await handle?.close();
   }
+}
+
+/**
+ * The whole file, however many reads that takes.
+ *
+ * `read` may return fewer bytes than asked for — a network filesystem is the
+ * usual reason — and a single call left the tail of the buffer as NUL. A
+ * flattened wrapper or the one surviving marker then failed its signature
+ * comparison, and an initialised project read as never initialised, so its
+ * broken surface went unchecked.
+ */
+async function readFully(handle: FileHandle, size: number): Promise<string> {
+  const buffer = Buffer.alloc(size);
+  let filled = 0;
+  while (filled < size) {
+    const { bytesRead } = await handle.read(buffer, filled, size - filled, filled);
+    if (bytesRead === 0) break;
+    filled += bytesRead;
+  }
+  return buffer.subarray(0, filled).toString("utf-8");
 }
 
 /** Whether a README at `filePath` is one `qfai init` wrote. */

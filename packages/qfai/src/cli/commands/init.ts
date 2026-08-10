@@ -1623,9 +1623,18 @@ async function isFlattenedLink(linkPath: string, target: string, known?: Stats):
     if (!pinned.isFile() || pinned.size > 4096) {
       return false;
     }
+    // Read to the end, not once: `read` may return fewer bytes than asked for,
+    // and the unfilled tail stayed NUL — a correct flattened wrapper then
+    // failed its own signature comparison and was left in place.
     const buffer = Buffer.alloc(pinned.size);
-    await handle.read(buffer, 0, pinned.size, 0);
-    return toComparableTarget(buffer.toString("utf-8")) === toComparableTarget(target);
+    let filled = 0;
+    while (filled < pinned.size) {
+      const { bytesRead } = await handle.read(buffer, filled, pinned.size - filled, filled);
+      if (bytesRead === 0) break;
+      filled += bytesRead;
+    }
+    const content = buffer.subarray(0, filled).toString("utf-8");
+    return toComparableTarget(content) === toComparableTarget(target);
   } catch (error: unknown) {
     const code = (error as NodeJS.ErrnoException | null)?.code;
     // `ENXIO` is what `O_NONBLOCK` returns for a FIFO with no writer, in place

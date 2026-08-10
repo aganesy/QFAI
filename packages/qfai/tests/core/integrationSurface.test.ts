@@ -29,6 +29,7 @@ import { describe, expect, it } from "vitest";
 import { AGENT_INTEGRATION_CONFIGS, SKILL_INTEGRATION_DIRS } from "../../src/cli/commands/init.js";
 import {
   INTEGRATION_SURFACE_DIRS,
+  hasStructuralDamage,
   validateIntegrationSurface,
 } from "../../src/core/validators/integrationSurface.js";
 
@@ -984,6 +985,43 @@ describe("an ancestor that is not a directory is named directly", () => {
 
       const found = await finding(root);
       expect(found?.message).toContain("an ancestor is a file, not a directory: .claude");
+    });
+  });
+});
+
+describe("a resolving link is a finding, not a reason to stop", () => {
+  it("does not report structural damage for a canonical that resolves", async () => {
+    // A `readdir` over it succeeds, so short-circuiting the profile hid every
+    // unrelated spec, contract and test defect until the link was repaired.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd", "qfai-verify"], []);
+      await wireAll(root, ["qfai-atdd", "qfai-verify"], []);
+      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      await rm(canonical, { recursive: true, force: true });
+      await symlink(
+        path.join(root, ".qfai", "assistant", "skills", "qfai-verify"),
+        canonical,
+        "dir",
+      );
+
+      const issues = await validateIntegrationSurface(root);
+      expect(issues.map((entry) => entry.code)).toContain("QFAI-LINK-001");
+      expect(hasStructuralDamage(issues)).toBe(false);
+    });
+  });
+
+  it("reports structural damage for a cycle", async () => {
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await seedCanonical(root, ["qfai-atdd"], []);
+      await wireAll(root, ["qfai-atdd"], []);
+      const claudeSkills = path.join(root, ".claude", "skills");
+      await rm(claudeSkills, { recursive: true, force: true });
+      await symlink(path.join(root, ".claude", "loop"), claudeSkills, "dir");
+      await symlink(claudeSkills, path.join(root, ".claude", "loop"), "dir");
+
+      expect(hasStructuralDamage(await validateIntegrationSurface(root))).toBe(true);
     });
   });
 });
