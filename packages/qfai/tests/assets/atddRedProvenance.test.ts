@@ -49,7 +49,7 @@ describe.each(TREES)("%s", (tree) => {
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("## Execution Ledger: the rows this skill feeds");
     expect(atdd).toContain("`.qfai/specs/<spec-id>/tdd/test-list.md`");
-    expect(atdd).toContain("`Layer = E2E` and `Layer = API` rows");
+    expect(atdd).toContain("`Layer = E2E`, `Layer = API` and `Layer = Integration` rows");
   });
 
   it("states that it produces evidence, not ledger cells, and whose lifecycle applies", async () => {
@@ -361,7 +361,7 @@ describe.each(TREES)("%s (ownership and gate alignment)", (tree) => {
     // then stops on a missing handoff for every one of them.
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain(
-      "`.qfai/specs/<spec-id>/tdd/test-list.md` (the execution ledger — enumerate the `Layer = E2E` / `Layer = API` rows",
+      "`.qfai/specs/<spec-id>/tdd/test-list.md` (the execution ledger — enumerate the `Layer = E2E` / `Layer = API` / `Layer = Integration` rows",
     );
     expect(atdd).toContain("`.qfai/specs/<spec-id>/tdd/test-list.md` — read, never written.");
   });
@@ -382,7 +382,9 @@ describe.each(TREES)("%s (reachability and sequencing)", (tree) => {
     // status. 3b did not check, so it would replay the original handoff — and
     // write `todo -> red` from a row that is not at `todo`.
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("A `todo` `E2E` / `API` row consumes the provenance");
+    expect(implement).toContain(
+      "A `todo` `E2E` / `API` / `Integration` row consumes the provenance",
+    );
     expect(implement).toContain("A `review-fix` row does **not** come here");
     expect(implement).toContain("references/round-evidence.md");
   });
@@ -2367,6 +2369,45 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     );
     expect(layout).toContain("**omitting either is a current-contract violation**");
     expect(layout).toContain(".qfai/review/.legacy-packs");
+  });
+
+  it("gives the implementation reviewer the subject it hashes", async () => {
+    // It records its own `Audited evidence hash` over the row s phase-authored
+    // fields, and those live in an evidence file the diff does not carry.
+    const reviewer = flat(await read(tree, "assistant/agents/implementation-reviewer.md"));
+    expect(reviewer).toContain("the ledger, for the row under review");
+    expect(reviewer).toContain(
+      "**The last two are what the `Audited evidence hash` is computed over.**",
+    );
+  });
+
+  it("names an executable migration for packs that predate the marker", async () => {
+    // Without one, taking this version turns every pack already on disk into a
+    // blocking finding no producer can go back and fix.
+    const evidence = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(evidence).toContain("`npx qfai doctor --autoremediate` does it");
+  });
+
+  it("puts Integration rows on the same side of the split as their tests", async () => {
+    // `QFAI-ATDD-112` covers every L3 and undeclared-Level TC from
+    // `tests/integration/**` and P4 writes those tests, so a self-owned
+    // Integration row had /qfai-implement demand a fresh RED for a test already
+    // green — a duplicate test, or `exception` as an unexpected pass.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain(
+      "**`Layer = E2E`, `Layer = API` and `Layer = Integration` rows are tracked there",
+    );
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "A `todo` `E2E` / `API` / `Integration` row consumes the provenance",
+    );
+    // And the evidence home follows the same split, so the row is not split
+    // across two files.
+    expect(implement).toContain(
+      "`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row",
+    );
   });
 
   it("exempts every blocking reviewer of the nested run, not just the gatekeeper", async () => {

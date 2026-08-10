@@ -163,9 +163,11 @@ It appears in three places, all carrying the same address:
    listed in `.qfai/review/.legacy-packs`_, and only that excuses a malformed
    `revision`** (reported as a warning instead of an
    error): the tree its verdict described is not reconstructible, so there is no
-   content hash to migrate to. Write those markers **once, from the history**,
-   the same way the `Pre-split-evidence` marker is written — one line per pack
-   already on disk, in that manifest. The pack's own word is not enough on its
+   content hash to migrate to. Write those markers **once, from the history** —
+   `npx qfai doctor --autoremediate` does it: it records every pack already on
+   disk that does not declare the form, additively and idempotently, so a repeat
+   run is a no-op and a pack that forgets its marker _afterwards_ is not
+   excused. The pack's own word is not enough on its
    own: it is exactly as writable as the `revision` it excuses, so a current
    producer with a broken value could downgrade its own finding by typing
    `legacy`. The manifest is one file a reviewer reads whole, and adding a pack

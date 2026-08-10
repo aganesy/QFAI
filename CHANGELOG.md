@@ -486,8 +486,32 @@ report` as well, which was computing `done: 1 / open: 0` from the same
   repairable, a silently overwritten taxonomy is neither. `specs/`,
   `contracts/` and `steering/` stay create-only.
 
+### Added
+
+- **`qfai doctor --autoremediate` records the review packs that predate
+  `revision_form`.** Without it, taking a version that requires the marker turns
+  every pack already on disk into a blocking `QFAI-REVIEW-007` — a repository
+  that keeps its review history fails `--fail-on error` on adoption, for a
+  condition no producer can go back and fix. The migration is additive and
+  idempotent: a repeat run is a no-op, a name recorded by hand is never dropped,
+  and a pack that forgets its marker _after_ the migration is still an error.
+
 ### Fixed
 
+- **`Layer = Integration` rows are on the same side of the split as their
+  tests.** `QFAI-ATDD-112` covers every `L3` TC — and every TC with no declared
+  `Level` — from `tests/integration/**`, and `/qfai-atdd`'s P4 writes those
+  tests; but the ledger handoff named only `E2E` and `API`. `/qfai-implement`
+  therefore treated them as self-owned and demanded a fresh RED for a test
+  already made green, so the row either grew a duplicate test or went to
+  `exception` as an unexpected pass. The provenance, the handoff and the
+  evidence home now follow the same three layers.
+- **`implementation-reviewer` is given the subject it hashes.** It records its
+  own `Audited evidence hash` over the row's phase-authored fields, and those
+  live in an evidence file the diff of changed files does not carry — so without
+  the ledger and the evidence home the row's `Layer` selects, the hash goes
+  missing and gate items 10-11 stop, or the orchestrator computes it and breaks
+  the one rule that makes it worth having.
 - **The evidence-shape table lists every field the consumer gate requires.**
   `RED test hash` and its manifest were missing from the observed-RED branch,
   and those plus `Falsifiability revision` and the `qa-gatekeeper` PASS from the

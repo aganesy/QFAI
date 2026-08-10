@@ -1,9 +1,10 @@
 # RED Provenance for an ATDD-owned Ledger Row
 
 `.qfai/specs/<spec-id>/tdd/test-list.md` is `/qfai-implement`'s execution
-ledger, and `qfai-implement/SKILL.md` states the split: **`Layer = E2E` and
-`Layer = API` rows are tracked there, but their tests are authored here.** This
-skill therefore writes into a ledger whose status lifecycle it does not define.
+ledger, and `qfai-implement/SKILL.md` states the split: **`Layer = E2E`,
+`Layer = API` and `Layer = Integration` rows are tracked there, but their tests
+are authored here.** This skill therefore writes into a ledger whose status
+lifecycle it does not define.
 
 ## What this skill produces
 
