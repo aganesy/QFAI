@@ -137,10 +137,11 @@ column count valid — a corruption no validator can see.
 `Status` is `green`, `refactor`, `review-fix` or `done` — the statuses that
 assert a cycle has run:
 
-| Finding                        | Fires when                                                          | Severity |
-| ------------------------------ | ------------------------------------------------------------------- | -------- |
-| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)   | error    |
-| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command | warning  |
+| Finding                              | Fires when                                                                              | Severity |
+| ------------------------------------ | --------------------------------------------------------------------------------------- | -------- |
+| `TDDLIST_EVIDENCE_EMPTY`             | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | error    |
+| `TDDLIST_EVIDENCE_STATUS_ONLY`       | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning  |
+| `TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED` | an `evidence at` pointer names the wrong owner/file/item, or its file/heading is absent | error    |
 
 A command is recognised by shape, not from a list of known runners, so the rule
 holds on any stack: a program name followed by an argument carrying a flag, a
@@ -162,7 +163,9 @@ with the routed reviewer (`qfai-implement/SKILL.md` "Evidence hard rules").
 
 A pointer cell satisfies these rules: the `evidence at <path>` form carries a
 path, which is one of the command shapes the gate accepts. The rules reject a
-bare verdict, not a pointer.
+bare verdict, not a pointer. The pointer is also resolved against the file its
+row `Layer` owns; a file that exists only on the machine that produced it does
+not satisfy the gate on a fresh clone.
 
 ## Selector granularity (MUST)
 

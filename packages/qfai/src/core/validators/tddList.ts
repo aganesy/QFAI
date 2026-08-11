@@ -255,6 +255,54 @@ function hasCommandShape(evidence: string): boolean {
   return EVIDENCE_KNOWN_RUNNER.test(evidence) || EVIDENCE_COMMAND_SHAPE.test(evidence);
 }
 
+/** The canonical repo-relative pointer stored in an Evidence cell. */
+const EVIDENCE_ANCHOR_PATTERN =
+  /(?:^|[\s`(])(\.qfai\/evidence\/(?:implement|atdd)-spec-\d{4}\.md)#([a-z0-9][a-z0-9-]*)(?=$|[\s`),.;])/gi;
+
+/** A cell claiming a pointer must not pass merely because its syntax is malformed. */
+const EVIDENCE_POINTER_CLAIM = /\bevidence\s+at\b/i;
+
+interface EvidenceAnchor {
+  file: string;
+  fragment: string;
+}
+
+function collectEvidenceAnchors(evidence: string): EvidenceAnchor[] {
+  const anchors: EvidenceAnchor[] = [];
+  for (const match of evidence.matchAll(EVIDENCE_ANCHOR_PATTERN)) {
+    const file = match[1];
+    const fragment = match[2];
+    if (file && fragment) {
+      anchors.push({ file, fragment: fragment.toLowerCase() });
+    }
+  }
+  return anchors;
+}
+
+/** GitHub-style heading anchors, including duplicate-heading suffixes. */
+function markdownHeadingAnchors(markdown: string): Set<string> {
+  const occurrences = new Map<string, number>();
+  const anchors = new Set<string>();
+  for (const match of markdown.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)) {
+    const base = (match[1] ?? "")
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, "")
+      .trim()
+      .replace(/\s+/g, "-");
+    const seen = occurrences.get(base) ?? 0;
+    occurrences.set(base, seen + 1);
+    anchors.add(seen === 0 ? base : `${base}-${seen}`);
+  }
+  return anchors;
+}
+
+function expectedEvidenceFile(specNumber: string, layer: string, evidence: string): string {
+  const atddOwned = new Set(["integration", "api", "e2e"]).has(layer.toLowerCase());
+  const preSplit = /\bPre-split-evidence:\s*implement\b/i.test(evidence);
+  const owner = atddOwned && !preSplit ? "atdd" : "implement";
+  return `.qfai/evidence/${owner}-spec-${specNumber}.md`;
+}
+
 /**
  * Test directories a `Layer` value implies. `null` means the layer has no
  * mandated directory, so no consistency claim is made about it.
@@ -1278,6 +1326,53 @@ async function validateSpecTddList(
         ),
       );
       continue;
+    }
+
+    const anchors = collectEvidenceAnchors(evidence);
+    const expectedFile = expectedEvidenceFile(specNumber, cell(ref, "Layer"), evidence);
+    const expectedFragment = tddId.toLowerCase();
+    const malformedClaim = EVIDENCE_POINTER_CLAIM.test(evidence) && anchors.length === 0;
+    let anchorFailure = malformedClaim
+      ? "the pointer is not a canonical .qfai/evidence/<owner>-spec-NNNN.md#tdd-NNNN anchor"
+      : "";
+    let relatedFile: string | undefined;
+
+    for (const anchor of anchors) {
+      relatedFile = anchor.file;
+      if (anchor.file !== expectedFile) {
+        anchorFailure = `the row's Layer owns ${expectedFile}, not ${anchor.file}`;
+        break;
+      }
+      if (anchor.fragment !== expectedFragment) {
+        anchorFailure = `the row is ${tddId}, not #${anchor.fragment}`;
+        break;
+      }
+      const evidencePath = path.join(root, anchor.file);
+      if (!(await exists(evidencePath))) {
+        anchorFailure = `${anchor.file} does not exist`;
+        break;
+      }
+      const headings = markdownHeadingAnchors(await readSafe(evidencePath));
+      if (!headings.has(anchor.fragment)) {
+        anchorFailure = `${anchor.file} has no #${anchor.fragment} heading`;
+        break;
+      }
+    }
+
+    if (anchorFailure.length > 0) {
+      issues.push(
+        issue(
+          "TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED",
+          `Evidence anchor does not resolve for spec-${specNumber} ${rowLabel}, Status=${status}: ${anchorFailure}`,
+          "error",
+          relPath,
+          "tddList.evidenceAnchorResolves",
+          relatedFile ? [relatedFile] : undefined,
+          "change",
+          `Evidence 列を \`${expectedFile}#${expectedFragment}\` に向け、そのファイルに \`### ${tddId}\` セクションを追加してください。`,
+          relatedFile ? { relatedFiles: [relatedFile] } : undefined,
+        ),
+      );
     }
 
     // Only a cell that *claims a verdict* can be status-only evidence. A cell

@@ -523,6 +523,13 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **Per-item TDD evidence survives `qfai init` and is checked on a fresh clone.**
+  The managed `.gitignore` block now re-includes
+  `.qfai/evidence/implement-*.md` and `.qfai/evidence/atdd-*.md`, so the files
+  required by gate item 10 are committed instead of existing only on the
+  machine that ran the test. `TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED` (error) also
+  rejects an `evidence at` pointer when it names the wrong layer-owned file or
+  TDD item, or when the referenced file or Markdown heading is absent.
 - **The short-circuit is decided per tree, because the readers differ.** The
   skills tree is `readdir`ed, so a regular file where the directory belongs
   raises `ENOTDIR` and takes the run with it; the agents tree is not — each

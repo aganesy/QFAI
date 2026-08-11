@@ -36,11 +36,13 @@ const HEADER = `# TDD Execution Ledger
 | TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |
 | ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |`;
 
-function ledger(rows: Array<{ status: string; evidence: string; tddId?: string }>): string {
+function ledger(
+  rows: Array<{ status: string; evidence: string; tddId?: string; layer?: string }>,
+): string {
   const body = rows
     .map(
       (r, i) =>
-        `| ${r.tddId ?? `TDD-000${i + 1}`} | TC-0001 | Unit | ${TEST_FILE} | sample | ${r.status} | - | ${r.evidence} |`,
+        `| ${r.tddId ?? `TDD-000${i + 1}`} | TC-0001 | ${r.layer ?? "Unit"} | ${TEST_FILE} | sample | ${r.status} | - | ${r.evidence} |`,
     )
     .join("\n");
   return `${HEADER}\n${body}\n`;
@@ -59,7 +61,11 @@ async function withProject(fn: (root: string) => Promise<void>): Promise<void> {
   }
 }
 
-async function runOn(root: string, testList: string): Promise<string[]> {
+async function runOn(
+  root: string,
+  testList: string,
+  evidenceFiles: Readonly<Record<string, string>> = {},
+): Promise<string[]> {
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
   await mkdir(path.join(specDir, "tdd"), { recursive: true });
   await mkdir(path.join(root, ".qfai", "specs", "_policies"), { recursive: true });
@@ -72,6 +78,11 @@ async function runOn(root: string, testList: string): Promise<string[]> {
     await writeFile(path.join(specDir, name), body, "utf-8");
   }
   await writeFile(path.join(specDir, "tdd", "test-list.md"), testList, "utf-8");
+  for (const [relativePath, content] of Object.entries(evidenceFiles)) {
+    const evidencePath = path.join(root, relativePath);
+    await mkdir(path.dirname(evidencePath), { recursive: true });
+    await writeFile(evidencePath, content, "utf-8");
+  }
   const testPath = path.join(root, TEST_FILE);
   await mkdir(path.dirname(testPath), { recursive: true });
   await writeFile(testPath, "// test\n", "utf-8");
@@ -228,6 +239,94 @@ describe("TDDLIST_EVIDENCE_STATUS_ONLY", () => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: "-" }]));
       expect(codes).toContain("TDDLIST_EVIDENCE_EMPTY");
       expect(codes).not.toContain("TDDLIST_EVIDENCE_STATUS_ONLY");
+    });
+  });
+});
+
+describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
+  const IMPLEMENT_POINTER =
+    "RED fail / GREEN pass — evidence at `.qfai/evidence/implement-spec-0001.md#tdd-0001`";
+
+  it("errors when the evidence file does not exist", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]));
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("errors when the evidence file has no matching heading", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": "# Evidence\n\n### TDD-0002\n",
+      });
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("accepts an anchor that resolves to the row's evidence heading", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": "# Evidence\n\n### TDD-0001\n",
+      });
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("resolves integration rows against their ATDD evidence file", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+        { ".qfai/evidence/atdd-spec-0001.md": "# ATDD Evidence\n\n### TDD-0001\n" },
+      );
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("rejects an existing evidence entry owned by the wrong layer", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+      const codes = await runOn(root, ledger([{ status: "done", evidence: pointer }]), {
+        ".qfai/evidence/atdd-spec-0001.md": "# ATDD Evidence\n\n### TDD-0001\n",
+      });
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("rejects an anchor that resolves to a different TDD item", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "RED fail / GREEN pass — evidence at `.qfai/evidence/implement-spec-0001.md#tdd-0002`";
+      const codes = await runOn(root, ledger([{ status: "done", evidence: pointer }]), {
+        ".qfai/evidence/implement-spec-0001.md": "# Evidence\n\n### TDD-0002\n",
+      });
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("rejects an evidence-at claim without a fragment", async () => {
+    await withProject(async (root) => {
+      const pointer = "RED fail / GREEN pass — evidence at `.qfai/evidence/implement-spec-0001.md`";
+      const codes = await runOn(root, ledger([{ status: "done", evidence: pointer }]), {
+        ".qfai/evidence/implement-spec-0001.md": "# Evidence\n\n### TDD-0001\n",
+      });
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("accepts a marked pre-split integration row in implementation evidence", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "RED fail / GREEN pass — Pre-split-evidence: implement; evidence at `.qfai/evidence/implement-spec-0001.md#tdd-0001`";
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+        { ".qfai/evidence/implement-spec-0001.md": "# Evidence\n\n### TDD-0001\n" },
+      );
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
     });
   });
 });
