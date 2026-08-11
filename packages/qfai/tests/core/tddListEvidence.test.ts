@@ -263,6 +263,20 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
     });
   });
 
+  for (const [label, hiddenHeading] of [
+    ["fenced sample", "```md\n### TDD-0001\n```"],
+    ["HTML comment", "<!--\n### TDD-0001\n-->"],
+  ] as const) {
+    it(`does not resolve a heading that exists only in a ${label}`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": `# Evidence\n\n${hiddenHeading}\n`,
+        });
+        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      });
+    });
+  }
+
   it("accepts an anchor that resolves to the row's evidence heading", async () => {
     await withProject(async (root) => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
@@ -317,13 +331,26 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
     });
   });
 
-  it("accepts a marked pre-split integration row in implementation evidence", async () => {
+  it("rejects a marked integration row in implementation evidence", async () => {
     await withProject(async (root) => {
       const pointer =
         "RED fail / GREEN pass — Pre-split-evidence: implement; evidence at `.qfai/evidence/implement-spec-0001.md#tdd-0001`";
       const codes = await runOn(
         root,
         ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+        { ".qfai/evidence/implement-spec-0001.md": "# Evidence\n\n### TDD-0001\n" },
+      );
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("keeps the pre-split compatibility marker for E2E rows", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "RED fail / GREEN pass — Pre-split-evidence: implement; evidence at `.qfai/evidence/implement-spec-0001.md#tdd-0001`";
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: pointer, layer: "E2E" }]),
         { ".qfai/evidence/implement-spec-0001.md": "# Evidence\n\n### TDD-0001\n" },
       );
       expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");

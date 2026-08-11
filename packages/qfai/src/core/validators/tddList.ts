@@ -283,7 +283,7 @@ function collectEvidenceAnchors(evidence: string): EvidenceAnchor[] {
 function markdownHeadingAnchors(markdown: string): Set<string> {
   const occurrences = new Map<string, number>();
   const anchors = new Set<string>();
-  for (const match of markdown.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)) {
+  for (const match of maskNonSpecRegions(markdown).matchAll(/^#{1,6}\s+(.+?)\s*$/gm)) {
     const base = (match[1] ?? "")
       .toLowerCase()
       .replace(/[^\w\s-]/g, "")
@@ -296,9 +296,15 @@ function markdownHeadingAnchors(markdown: string): Set<string> {
   return anchors;
 }
 
+const ATDD_OWNED_LAYERS = new Set(["integration", "api", "e2e"]);
+const PRE_SPLIT_IMPLEMENT_LAYERS = new Set(["api", "e2e"]);
+
 function expectedEvidenceFile(specNumber: string, layer: string, evidence: string): string {
-  const atddOwned = new Set(["integration", "api", "e2e"]).has(layer.toLowerCase());
-  const preSplit = /\bPre-split-evidence:\s*implement\b/i.test(evidence);
+  const normalizedLayer = layer.toLowerCase();
+  const atddOwned = ATDD_OWNED_LAYERS.has(normalizedLayer);
+  const preSplit =
+    PRE_SPLIT_IMPLEMENT_LAYERS.has(normalizedLayer) &&
+    /\bPre-split-evidence:\s*implement\b/i.test(evidence);
   const owner = atddOwned && !preSplit ? "atdd" : "implement";
   return `.qfai/evidence/${owner}-spec-${specNumber}.md`;
 }
@@ -1305,6 +1311,9 @@ async function validateSpecTddList(
   // the one machine gate `qfai-implement`'s FINAL CHECKLIST names. That made
   // `error: 0` an actively misleading signal for the two SKILL.md hard rules
   // encoded below, which until now only a human reading the prose could apply.
+  // A single per-spec evidence file can serve hundreds of ledger rows. Cache
+  // both parsed headings and missing files so validation reads each path once.
+  const evidenceHeadingCache = new Map<string, ReadonlySet<string> | null>();
   for (const ref of ledgerRows()) {
     const status = cell(ref, "Status").toLowerCase();
     if (!EVIDENCE_CHECK_STATUSES.has(status)) continue;
@@ -1347,13 +1356,19 @@ async function validateSpecTddList(
         anchorFailure = `the row is ${tddId}, not #${anchor.fragment}`;
         break;
       }
-      const evidencePath = path.join(root, anchor.file);
-      if (!(await exists(evidencePath))) {
+      let headings = evidenceHeadingCache.get(anchor.file);
+      if (headings === undefined) {
+        const evidencePath = path.join(root, anchor.file);
+        headings = (await exists(evidencePath))
+          ? markdownHeadingAnchors(await readSafe(evidencePath))
+          : null;
+        evidenceHeadingCache.set(anchor.file, headings);
+      }
+      if (headings === null) {
         anchorFailure = `${anchor.file} does not exist`;
         break;
       }
-      const headings = markdownHeadingAnchors(await readSafe(evidencePath));
-      if (!headings.has(anchor.fragment)) {
+      if (!headings?.has(anchor.fragment)) {
         anchorFailure = `${anchor.file} has no #${anchor.fragment} heading`;
         break;
       }
