@@ -6020,3 +6020,108 @@ times in this file.
 measurement. What is recorded: the literal 15-token command and its measured result are the only reproducible
 pair; every "19-selector" figure is that list plus four named files, and **future rows write the literal
 command**. Added to the standing brief.
+
+---
+
+### TDD-0031
+
+**T1, group G6 — reviewed with `TDD-0040`. `todo → red → refactor`.** Landed at `c111555f`.
+
+- **TC-Refs**: `TC-0006-0029` Verify items **1 and 2** only (severity `info`; `shouldFailDoctor` false).
+  Item 3, the renderer's bucket placement, is `TDD-0040`. Anchor `AC-0006-0022`.
+- **Test file**: `packages/qfai/tests/integration/spec0006WorkflowsIntegrity.exitCode.test.ts` (new).
+- **Falsifiability**, with **two** `Satisfied-by` rows because the two claims have different owners: claim 1 by
+  **`TDD-0029`**, which landed the drift arm's `info` emission; claim 2 by **`TDD-0007`** (`TC-0006-0007`,
+  currently `exception`, 2026-04-14) — that branch **predates this slice entirely**.
+- **Falsifiability command** = **GREEN command**, file-scoped, no `-t`, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.exitCode.test.ts`
+- **Falsifiability result** (first run, before any mutation): `Tests 1 passed (1)`, exit 0. **GREEN**: same.
+- **Production change: none.** All three blobs verified byte-identical after the mutation runs —
+  `core/doctor.ts` `ee31f4dd`, `cli/commands/doctor.ts` `a2a92ca0`, `core/doctor/workflowsIntegrity.ts`
+  `bad123d7`.
+- **Closure**, as a **literal command** with full paths and no bare stems: the 20 doctor / shipped-workflow /
+  provenance file selectors, giving `Test Files 18 passed | 2 skipped (20)` /
+  `Tests 87 passed | 14 skipped (101)`, exit 0.
+- **Comment volume**: `132/185 = 71.4%` (from 145/198, so −13 absolute and −1.8pp); helper `163/231 = 70.6%`.
+  Above the 59.7 / 60.8 sibling pair — but **132 is the lowest absolute in the five-file family** (drift 314,
+  repairText 362, provenanceGate 248, unresolvedPackaged 199), so the share is a ratio artifact of only 53 code
+  lines. The absolute count binds, and the ~52 lines needed to reach 60% are the two mutation measurements and
+  a scope justification, which is the trade the volume rule forbids.
+
+#### No production surface was needed, and the argument is scoped rather than absolute
+
+I had invited a request to widen production surface to observe `shouldFailDoctor`, which is not exported. It
+was not needed: `runDoctor` computes `shouldFailDoctor(...) ? 1 : 0` at one call site, both non-early returns
+return that same `const`, and **`? 1 : 0` is injective on booleans** — so `exitCode === 0` *is* the `false`
+verdict. Stated with its limit rather than as a universal: a **third** return yields a literal `0` without
+consulting the predicate (the `--autoremediate` CI-off path), and guard #4 rules that path out **by
+measurement**, not by argument.
+
+#### Four mutants, and my prediction was half wrong
+
+Needles authored with the Write tool, never through a shell; needle-uniqueness and blob-differs per edit;
+restore in reverse order anchored on the HEAD text **and** blob captured before any edit, with the check
+printed — all four printed `MATCHES HEAD BLOB`. The M1/M2 needle spans the `if` condition because
+`id: "workflows.integrity",` plus `severity: "info",` is **not unique**: the `skipped_unresolved` arm repeats
+both lines verbatim, which is a direct consequence of the arm `TDD-0039` added one row earlier.
+
+| ID  | Base       | Replacement           | Mutant     | Result                                                                            |
+| --- | ---------- | --------------------- | ---------- | --------------------------------------------------------------------------------- |
+| M1  | `ee31f4dd` | `severity: "error",`  | `c663a9b4` | **kills both claims** — `expected 'error' to be 'info'` and `expected 1 to be +0` |
+| M2  | `ee31f4dd` | `severity: "warning"` | `8af2a6cc` | **kills claim 1 only**; exit code still 0                                          |
+| M3  | `a2a92ca0` | `return true;`        | `f3853988` | **kills claim 2 only**                                                             |
+| M4  | `a2a92ca0` | `return false;`       | `0d5bb2c3` | **SURVIVES**                                                                       |
+
+**My prediction was half wrong, and the correction matters.** I said an `info → warning` mutation would "very
+likely leave `shouldFailDoctor` false and your assertion green" — true of the **exit-code** assertion, but M2
+is killed by the **severity** assertion, so the row as a whole kills it. **The equivalent mutant is therefore
+scoped to claim 2 alone, not to the row** — the difference between a row with a weak oracle and a row with one
+weak claim among two.
+
+`Oracle proof: equivalent-mutant` for **claim 2**, naming the weaker clause: `TC-0006-0029`'s own closing note,
+that `--fail-on error` reads `summary.error > 0` only, so `info` and `warning` are indistinguishable on the exit
+code. Discriminating owner: `TC-0006-0032` / `TC-0006-0033` = `TDD-0034` / `TDD-0035` (G7, `todo`). Nothing was
+strengthened past the contract.
+
+#### A second one-sidedness, found by measuring instead of assuming — and it has no owner
+
+`M4` survives not only this row but **the entire 20-file doctor closure**, reproducing the clean run's figures
+exactly. So **no suite observes the `--fail-on error` branch returning `true`** — the direction that turns a
+real error into a non-zero exit, on the **default** failure mode. Raised as **`CR-20260811-0001`**
+(`Class: defect`) with **no owner and an empty blocked set**, because every candidate row asserts the direction
+the mutant preserves: `TC-0006-0033` sits on the `--fail-on warning` branch, and `TC-0006-0029` and
+`TC-0006-0007` both assert the passing direction. Assigning it would have created the appearance of coverage
+without the substance — which is the defect class the CR is about.
+
+#### Three corrections to my work order
+
+1. **`doctor.ts:293` does not exist.** `cli/commands/doctor.ts` is **230** lines; the comment I cited is in the
+   *other* `doctor.ts` — `core/doctor.ts:293`. I conflated two same-named files, and a reviewer had already
+   flagged exactly that ambiguity as a nit two rows back, which I did not act on.
+2. The prediction correction above.
+3. **A counter discrepancy worth resolving rather than carrying**: the implementer's counter reproduces the
+   brief's band exactly (drift `314/526 = 59.7%`, provenanceGate `248/408 = 60.8%`) but **not** `TDD-0038`'s
+   ledger cell, which records `239/399 = 59.9%` for the same file. Both are true at **different revisions** —
+   that file gained the precondition throw afterwards — so it is a **currency** artifact, not a contradiction,
+   and it is the same class as the line-citation rule: **a ratio recorded without its revision is a currency
+   claim.**
+
+#### Seam handed to `TDD-0040`
+
+`runDoctorText(dir, failOn) → { exitCode, stdout }` in the shared helper. The `stdout` half exists **for that
+row**, and this row deliberately asserts only the **bare check id** against it — never an `[info]` tag, never a
+group header — so `TDD-0040` owns the rendering claims outright. Two knowingly-deferred parameters: `format` is
+fixed to `"text"` (the TC's Action) and there is no `outPath`.
+
+#### And I broke `ci:lint` twice more, from two files of my own
+
+`pnpm format:check` failed on the **ledger** I committed at `c99837c2` — one space, the `Status` column padded
+to 9 where the column is 10 — and because `&&` short-circuits, **members 2-10 never ran**. Then the CR I minted
+for the finding above failed **MD040** (a fence with no language: the same rule I fixed in a steering file two
+days earlier) and then prettier. Three breakages, two files, all mine, in one sitting.
+
+That is the **fourth and fifth** time `.qfai/` prose of mine has reddened a whole-tree gate. The brief already
+said to run both formatters after writing such a file; what it did not say is that I keep writing **and
+committing** in one motion and running the gate afterwards. Made operational: the sequence is
+**write → `prettier -w` → `lint:md` → only then `git add`**, with the count recorded so the rule carries its
+own evidence.

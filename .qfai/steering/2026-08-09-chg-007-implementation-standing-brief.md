@@ -99,6 +99,13 @@ both. After writing any steering file, run `pnpm exec prettier -w` **and** `pnpm
 Fixing one whole-tree gate over a directory is not evidence about the other; that mistake cost two separate
 incidents.
 
+**The sequence is write, then `prettier -w`, then `lint:md`, and only then `git add`.** Stated as a
+sequence because the earlier wording ("run both formatters after writing") was followed by three more
+breakages: a ledger cell padded one space short of its column, then a new CR failing MD040 and prettier in
+turn. Five whole-tree gate failures now trace to `.qfai/` prose, and every one was written **and
+committed** in one motion with the gate run afterwards. Note also that `&&` short-circuits, so a
+`format:check` failure means members 2-10 **never ran** and their status is unknown, not green.
+
 Also: **an insertion edits two sentences.** A superseding block inserted mid-sentence left one sentence
 without a terminator and its tail orphaned 25 lines lower, and no gate saw it.
 
