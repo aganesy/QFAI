@@ -418,8 +418,8 @@ review is requested.
 
 **Gate-completed (appended after items 7-8 return PASS):**
 
-- `Spec review` — completion-reviewer result (PASS or REVISE) with its `Reviewed revision` and `Audited evidence hash` (`references/evidence-revision.md`)
-- `Code quality review` — implementation-reviewer result (PASS or REVISE) with its `Reviewed revision` and `Audited evidence hash`
+- `Spec review` — completion-reviewer result (PASS or REVISE), recorded with the unambiguous sibling fields `Spec reviewed revision`, `Spec audited evidence hash`, `Spec review pack`, and `Spec review pack seal`. The revision and audit hash must be the values in the sealed pack's PASS response, and gate item 10 recomputes both the evidence hash and the whole-pack seal (`references/evidence-revision.md`)
+- `Code quality review` — implementation-reviewer result (PASS or REVISE), with the parallel sibling fields `Code quality reviewed revision`, `Code quality audited evidence hash`, `Code quality review pack`, and `Code quality review pack seal`, checked the same way. Do not use two unlabeled `Reviewed revision` / `Audited evidence hash` pairs: the completion gate cannot tell which reviewer owns which pair
 - `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE)
 - `Checkpoint verification command` — the exact command set executed at the checkpoint boundary
 - `Checkpoint verification result` — the outcome of that command set (PASS only when every command exits 0) — and `Checkpoint verification seal`, the audit hash over these two fields together with the `Revision` the checkpoint ran against, taken by whoever ran it the moment the run ends. The three are appended after every reviewer has hashed, so they are in no audit subject by construction; the revision excludes `.qfai/evidence/**`, and the review pack seal covers only the pack. Without a seal of their own, a row already at `done` could have its checkpoint result edited from FAIL to PASS with no revision, no `Audited evidence hash` and no pack seal moving, and item 12 would accept it

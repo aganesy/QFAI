@@ -1237,7 +1237,10 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("`Audited evidence hash` is **recomputed** here");
     expect(implement).toContain(
-      "completion-reviewer result (PASS or REVISE) with its `Reviewed revision` and `Audited evidence hash`",
+      "`Spec reviewed revision`, `Spec audited evidence hash`, `Spec review pack`, and `Spec review pack seal`",
+    );
+    expect(implement).toContain(
+      "gate item 10 recomputes both the evidence hash and the whole-pack seal",
     );
   });
 

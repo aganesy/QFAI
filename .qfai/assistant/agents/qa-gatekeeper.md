@@ -153,8 +153,9 @@ In addition to traceability-based coverage (US/TC/CON-API existence), verify the
 The Coverage Depth Matrix is an **ATDD-stage artifact**: it is defined in
 `.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md`, listed as an ATDD
 Mandatory Output,
-and written to `.qfai/evidence/coverage-depth-<spec-id>.md` — a committed path, unlike the rest of
-`.qfai/evidence/**`. `qfai-sdd` neither defines its layout nor ships a section for it, so:
+and written to `.qfai/evidence/coverage-depth-<spec-id>.md` — a committed governance path alongside
+`implement-<spec-id>.md` and `atdd-<spec-id>.md`. Only run-scoped evidence remains ignored.
+`qfai-sdd` neither defines the matrix layout nor ships a section for it, so:
 
 - Apply this check from the **ATDD review cycle onward**, where
   `.qfai/assistant/skills/qfai-atdd/SKILL.md` lists

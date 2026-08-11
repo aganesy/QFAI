@@ -1,4 +1,5 @@
-import { stat } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { lstat, readFile, readlink, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
@@ -292,7 +293,7 @@ interface MarkdownEvidenceIndex {
 function markdownEvidenceIndex(markdown: string): MarkdownEvidenceIndex {
   const normalized = markdown.replace(/\r\n/g, "\n");
   const originalLines = normalized.split("\n");
-  const visibleLines = maskNonSpecRegions(normalized).split("\n");
+  const visibleLines = maskEvidenceRegions(normalized).split("\n");
   const headings = visibleLines.flatMap((line, lineIndex) => {
     const match = /^(#{1,6})\s+(.+?)\s*$/.exec(line);
     return match ? [{ level: match[1]?.length ?? 6, title: match[2] ?? "", lineIndex }] : [];
@@ -313,12 +314,41 @@ function markdownEvidenceIndex(markdown: string): MarkdownEvidenceIndex {
     anchors.add(anchor);
 
     const nextPeer = headings.slice(index + 1).find((candidate) => {
-      return candidate.level <= heading.level;
+      return /^TDD-\d{4}\b/i.test(candidate.title) || candidate.level <= heading.level;
     });
     const endLine = nextPeer?.lineIndex ?? originalLines.length;
     sections.set(anchor, originalLines.slice(heading.lineIndex + 1, endLine).join("\n"));
   }
   return { anchors, sections };
+}
+
+/**
+ * Evidence fields may own a fenced payload indented beneath a list item.
+ * CommonMark treats that indentation as list continuation, while the general
+ * spec masker deliberately preserves list continuations. For evidence field
+ * discovery the fence is still payload, so labels printed inside it must not
+ * become sibling fields.
+ */
+function maskEvidenceRegions(markdown: string): string {
+  const lines = maskNonSpecRegions(markdown).split("\n");
+  let open: { marker: string; length: number } | null = null;
+  return lines
+    .map((line) => {
+      if (open !== null) {
+        const closing = /^\s*(`{3,}|~{3,})\s*$/.exec(line)?.[1];
+        if (closing && closing.charAt(0) === open.marker && closing.length >= open.length) {
+          open = null;
+        }
+        return "";
+      }
+      const opening = /^\s*(`{3,}|~{3,})[^\r\n]*$/.exec(line)?.[1];
+      if (opening) {
+        open = { marker: opening.charAt(0), length: opening.length };
+        return "";
+      }
+      return line;
+    })
+    .join("\n");
 }
 
 function fencedEvidenceValue(lines: readonly string[], startLine: number): string | null {
@@ -341,41 +371,268 @@ function fencedEvidenceValue(lines: readonly string[], startLine: number): strin
   return null;
 }
 
-function evidenceFieldValue(section: string, field: string): string | null {
+interface EvidenceFieldOccurrence {
+  round: number | null;
+  value: string;
+}
+
+function evidenceFieldOccurrences(section: string, field: string): EvidenceFieldOccurrence[] {
   const normalized = section.replace(/\r\n/g, "\n");
   const originalLines = normalized.split("\n");
-  const visibleLines = maskNonSpecRegions(normalized).split("\n");
+  const visibleLines = maskEvidenceRegions(normalized).split("\n");
   const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const bulletPattern = new RegExp(
-    `^\\s*(?:[-*][ \\t]+)?(?:\\*\\*)?(?:Round[ \\t]+\\d+:[ \\t]*)?${escaped}(?:\\*\\*)?[ \\t]*:[ \\t]*(.*)$`,
+    `^\\s*(?:[-*][ \\t]+)?(?:\\*\\*)?(?:Round[ \\t]+(\\d+):[ \\t]*)?${escaped}(?:\\*\\*)?[ \\t]*:[ \\t]*(.*)$`,
     "i",
   );
+  const occurrences: EvidenceFieldOccurrence[] = [];
 
   for (const [lineIndex, visibleLine] of visibleLines.entries()) {
     if (/^\s*\|/.test(visibleLine)) {
       const cells = splitMarkdownRow(visibleLine);
       for (let cellIndex = 0; cellIndex < cells.length - 1; cellIndex += 1) {
-        const label = (cells[cellIndex] ?? "")
-          .replace(/^\*\*|\*\*$/g, "")
-          .replace(/^Round\s+\d+:\s*/i, "")
-          .trim();
+        const rawLabel = (cells[cellIndex] ?? "").replace(/^\*\*|\*\*$/g, "").trim();
+        const roundMatch = /^Round\s+(\d+):\s*(.*)$/i.exec(rawLabel);
+        const label = (roundMatch?.[2] ?? rawLabel).trim();
         if (label.toLowerCase() !== field.toLowerCase()) continue;
         const value = (cells[cellIndex + 1] ?? "").trim().replace(/^`([^`]*)`$/, "$1");
-        return value.length > 0 ? value : fencedEvidenceValue(originalLines, lineIndex + 1);
+        const resolved =
+          value.length > 0 ? value : fencedEvidenceValue(originalLines, lineIndex + 1);
+        if (resolved !== null) {
+          occurrences.push({
+            round: roundMatch?.[1] ? Number(roundMatch[1]) : null,
+            value: resolved,
+          });
+        }
       }
       continue;
     }
 
     const match = bulletPattern.exec(visibleLine);
     if (!match) continue;
-    const value = (match[1] ?? "").trim().replace(/^`([^`]*)`$/, "$1");
-    return value.length > 0 ? value : fencedEvidenceValue(originalLines, lineIndex + 1);
+    const value = (match[2] ?? "").trim().replace(/^`([^`]*)`$/, "$1");
+    const resolved = value.length > 0 ? value : fencedEvidenceValue(originalLines, lineIndex + 1);
+    if (resolved !== null) {
+      occurrences.push({ round: match[1] ? Number(match[1]) : null, value: resolved });
+    }
   }
-  return null;
+  return occurrences;
 }
 
-function hasEvidenceField(section: string, field: string): boolean {
-  return evidenceFieldValue(section, field) !== null;
+function rowEvidenceFieldValue(section: string, field: string): string | null {
+  return (
+    evidenceFieldOccurrences(section, field)
+      .filter(({ round }) => round === null)
+      .at(-1)?.value ?? null
+  );
+}
+
+function roundEvidenceFieldValue(section: string, round: number, field: string): string | null {
+  return (
+    evidenceFieldOccurrences(section, field)
+      .filter((occurrence) => occurrence.round === round)
+      .at(-1)?.value ?? null
+  );
+}
+
+function evidenceRoundNumbers(section: string): number[] {
+  const normalized = maskEvidenceRegions(section.replace(/\r\n/g, "\n"));
+  const rounds = new Set<number>();
+  for (const line of normalized.split("\n")) {
+    const match = /(?:^|\|)\s*(?:[-*][ \t]+)?(?:\*\*)?Round[ \t]+(\d+):/i.exec(line);
+    if (match?.[1]) rounds.add(Number(match[1]));
+  }
+  return [...rounds].sort((left, right) => left - right);
+}
+
+function isExecutedEvidenceCommand(value: string): boolean {
+  return (
+    hasCommandShape(value) &&
+    !/^\s*(?:skipped|not[ -]?run|never[ -]?run|did\s+not\s+run|was\s+not\s+run|n\/a|none)(?:\s*$|\s*[:—-])/i.test(
+      value,
+    )
+  );
+}
+
+function isPassingEvidenceResult(value: string): boolean {
+  const withoutZeroFailures = value.replace(/\b0\s+(?:failed|failures?|errors?)\b/gi, "");
+  if (/\b(?:not|never|did\s+not)\s+(?:pass(?:ed|ing)?|succeed(?:ed)?)\b/i.test(value)) {
+    return false;
+  }
+  if (/\b(?:fail(?:ed|ure|ures)?|error|not[ -]?run|skipped)\b/i.test(withoutZeroFailures)) {
+    return false;
+  }
+  return /\b(?:pass(?:ed|ing)?|success(?:ful|fully)?|succeeded|ok)\b|\bexit(?:ed)?\s+0\b/i.test(
+    value,
+  );
+}
+
+function isFailingEvidenceResult(value: string): boolean {
+  const withoutZeroFailures = value.replace(/\b0\s+(?:failed|failures?|errors?)\b/gi, "");
+  if (/\b(?:not|never|did\s+not)\s+(?:fail(?:ed)?|error)\b/i.test(value)) return false;
+  return /\b(?:fail(?:ed|ure|ures)?|error|expected[ -]?error)\b|\bexit(?:ed)?\s+[1-9]\d*\b/i.test(
+    withoutZeroFailures,
+  );
+}
+
+const SHA256_VALUE = /^(?:sha256:)?[a-f0-9]{64}$/i;
+
+function sha256(value: string | Buffer): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function bareSha256(value: string): string {
+  return value.replace(/^sha256:/i, "").toLowerCase();
+}
+
+function exactLineField(content: string, field: string, value: string): boolean {
+  const escapedField = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapedValue = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^${escapedField}:\\s*${escapedValue}\\s*$`, "im").test(content);
+}
+
+function normalizeAuditArtifact(value: string): string {
+  const lines = value
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+$/g, ""));
+  while (lines[0]?.trim().length === 0) lines.shift();
+  while (lines.at(-1)?.trim().length === 0) lines.pop();
+  return `${lines.join("\n")}\n`;
+}
+
+function phaseAuthoredEvidence(section: string, tddId: string): string {
+  const normalized = section.replace(/\r\n/g, "\n");
+  const originalLines = normalized.split("\n");
+  const visibleLines = maskEvidenceRegions(normalized).split("\n");
+  const gateField =
+    /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Checkpoint verification (?:command|result|seal))(?:\*\*)?\s*(?::|\|)/i;
+  const boundary = visibleLines.findIndex((line) => gateField.test(line));
+  const authored = originalLines
+    .slice(0, boundary < 0 ? originalLines.length : boundary)
+    .join("\n");
+  return normalizeAuditArtifact(`### ${tddId}\n${authored}`);
+}
+
+function completedEvidenceAuditHash(evidenceFile: string, section: string, tddId: string): string {
+  const artifactHash = sha256(phaseAuthoredEvidence(section, tddId));
+  return sha256(`${evidenceFile}\0${artifactHash}`);
+}
+
+function checkpointEvidenceSeal(revision: string, command: string, result: string): string {
+  return sha256(
+    normalizeAuditArtifact(
+      `Revision: ${revision}\nCheckpoint verification command: ${command}\nCheckpoint verification result: ${result}`,
+    ),
+  );
+}
+
+function safeRepoRelativePath(value: string): string | null {
+  const normalized = value.replace(/\\/g, "/").replace(/^\.\//, "");
+  if (
+    normalized.length === 0 ||
+    path.posix.isAbsolute(normalized) ||
+    normalized.split("/").some((part) => part === "..")
+  ) {
+    return null;
+  }
+  return normalized;
+}
+
+async function artifactRecord(root: string, relativePath: string): Promise<string | null> {
+  const safePath = safeRepoRelativePath(relativePath);
+  if (safePath === null) return null;
+  const absolute = path.join(root, ...safePath.split("/"));
+  let metadata;
+  try {
+    metadata = await lstat(absolute);
+  } catch {
+    return null;
+  }
+  const kind = metadata.isSymbolicLink() ? "symlink" : metadata.isDirectory() ? "dir" : "file";
+  let bytes: Buffer;
+  try {
+    bytes =
+      kind === "symlink"
+        ? Buffer.from(await readlink(absolute), "utf8")
+        : kind === "dir"
+          ? Buffer.alloc(0)
+          : await readFile(absolute);
+  } catch {
+    return null;
+  }
+  const mode = (metadata.mode & 0o777).toString(8).padStart(3, "0");
+  return `${safePath}\0${kind}\0${mode}\0${sha256(bytes)}`;
+}
+
+async function redTestManifestHash(root: string, manifest: string): Promise<string | null> {
+  const paths = manifest
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim().replace(/^[-*]\s+/, ""))
+    .filter((line) => line.length > 0);
+  if (
+    paths.length === 0 ||
+    new Set(paths).size !== paths.length ||
+    paths.some(
+      (entry, index) =>
+        index > 0 && Buffer.from(paths[index - 1] ?? "").compare(Buffer.from(entry)) > 0,
+    )
+  ) {
+    return null;
+  }
+  const records: string[] = [];
+  for (const entry of paths) {
+    const record = await artifactRecord(root, entry);
+    if (record === null) return null;
+    records.push(record);
+  }
+  return sha256(records.join("\n"));
+}
+
+async function collectReviewPackFiles(
+  root: string,
+  packPath: string,
+): Promise<Array<{ relativePath: string; content: string }> | null> {
+  const safePack = safeRepoRelativePath(packPath);
+  if (safePack === null || !safePack.startsWith(".qfai/review/review-")) return null;
+  const absolutePack = path.join(root, ...safePack.split("/"));
+  try {
+    if (!(await lstat(absolutePack)).isDirectory()) return null;
+  } catch {
+    return null;
+  }
+  const files: Array<{ relativePath: string; content: string }> = [];
+  async function walk(directory: string, relativeDirectory: string): Promise<boolean> {
+    try {
+      for (const entry of await readdir(directory, { withFileTypes: true })) {
+        const absolute = path.join(directory, entry.name);
+        const relative = `${relativeDirectory}/${entry.name}`;
+        if (entry.isSymbolicLink()) return false;
+        if (entry.isDirectory()) {
+          if (!(await walk(absolute, relative))) return false;
+        } else if (entry.isFile()) {
+          files.push({ relativePath: relative, content: await readFile(absolute, "utf8") });
+        } else {
+          return false;
+        }
+      }
+    } catch {
+      return false;
+    }
+    return true;
+  }
+  if (!(await walk(absolutePack, safePack)) || files.length === 0) return null;
+  return files.sort((left, right) =>
+    Buffer.from(left.relativePath).compare(Buffer.from(right.relativePath)),
+  );
+}
+
+function reviewPackSeal(files: ReadonlyArray<{ relativePath: string; content: string }>): string {
+  const records = files.map(
+    ({ relativePath, content }) => `${relativePath}\0${sha256(normalizeAuditArtifact(content))}`,
+  );
+  return sha256(records.join("\n"));
 }
 
 interface CompletedEvidenceExpectation {
@@ -393,23 +650,33 @@ function missingCompletedEvidenceFields(
   expected: CompletedEvidenceExpectation,
 ): string[] {
   const normalizedLayer = expected.layer.toLowerCase();
-  const required = [
+  const requiredRowFields = [
     "TDD-ID",
     "Layer",
     "Test file",
     "Selector",
     expected.obligationField,
-    "Revision",
     "RED failure mode",
-    "GREEN command",
-    "GREEN result",
     "Refactor verify command",
     "Refactor verify result",
     "qa-gatekeeper",
     "Spec review",
+    "Spec reviewed revision",
+    "Spec audited evidence hash",
+    "Spec review pack",
+    "Spec review pack seal",
     "Code quality review",
+    "Code quality reviewed revision",
+    "Code quality audited evidence hash",
+    "Code quality review pack",
+    "Code quality review pack seal",
+    "Checkpoint verification command",
+    "Checkpoint verification result",
+    "Checkpoint verification seal",
   ];
-  const missing = required.filter((field) => !hasEvidenceField(section, field));
+  const missing = requiredRowFields.filter(
+    (field) => rowEvidenceFieldValue(section, field) === null,
+  );
   for (const [field, value, caseInsensitive = false] of [
     ["TDD-ID", expected.tddId, true],
     ["Layer", expected.layer, true],
@@ -417,7 +684,7 @@ function missingCompletedEvidenceFields(
     ["Selector", expected.selector],
     [expected.obligationField, expected.obligationValue, true],
   ] as const) {
-    const actual = evidenceFieldValue(section, field);
+    const actual = rowEvidenceFieldValue(section, field);
     if (actual === null) continue;
     const normalize = (candidate: string): string =>
       caseInsensitive ? candidate.toLowerCase() : candidate;
@@ -425,44 +692,278 @@ function missingCompletedEvidenceFields(
       missing.push(`${field} matching ledger value "${value}"`);
     }
   }
+  if (EVIDENCE_PLACEHOLDER.test(expected.obligationValue)) {
+    missing.push(`${expected.obligationField} naming a real ledger obligation`);
+  }
   for (const field of ["qa-gatekeeper", "Spec review", "Code quality review"] as const) {
-    const verdict = evidenceFieldValue(section, field);
+    const verdict = rowEvidenceFieldValue(section, field);
     if (verdict !== null && verdict.toUpperCase() !== "PASS") {
       missing.push(`${field}: PASS`);
     }
   }
-  const observedRedFields = ["RED command", "RED result", "RED revision"] as const;
-  const falsifiabilityFields = [
-    "Satisfied-by",
-    "Falsifiability command",
-    "Falsifiability result",
-    "Falsifiability revision",
-  ] as const;
-  const observedRedPresent = observedRedFields.filter((field) => hasEvidenceField(section, field));
-  const falsifiabilityPresent = falsifiabilityFields.filter((field) =>
-    hasEvidenceField(section, field),
-  );
-  const observedRed = observedRedPresent.length === observedRedFields.length;
-  const falsifiability = falsifiabilityPresent.length === falsifiabilityFields.length;
-  const validObservedRed = observedRed && falsifiabilityPresent.length === 0;
-  const validFalsifiability = falsifiability && observedRedPresent.length === 0;
-  if (validObservedRed === validFalsifiability) {
-    missing.push("exactly one of RED command/result/revision or falsifiability proof");
+  const rounds = evidenceRoundNumbers(section);
+  if (rounds.length === 0 || rounds[0] !== 1) missing.push("Round 1 evidence block");
+  if (rounds.some((round, index) => round !== index + 1)) {
+    missing.push("continuous evidence rounds starting at Round 1");
   }
-  const failureMode = evidenceFieldValue(section, "RED failure mode")?.toLowerCase();
-  if (validObservedRed && failureMode !== "assertion" && failureMode !== "expected-error") {
-    missing.push("RED failure mode: assertion or expected-error for observed RED");
+
+  const failureMode = rowEvidenceFieldValue(section, "RED failure mode")?.toLowerCase();
+  let latestRevision: string | null = null;
+  for (const round of rounds) {
+    const revision = roundEvidenceFieldValue(section, round, "Revision");
+    const greenCommand = roundEvidenceFieldValue(section, round, "GREEN command");
+    const greenResult = roundEvidenceFieldValue(section, round, "GREEN result");
+    if (revision === null) missing.push(`Round ${round}: Revision`);
+    if (greenCommand === null) missing.push(`Round ${round}: GREEN command`);
+    if (greenResult === null) missing.push(`Round ${round}: GREEN result`);
+    if (greenCommand !== null && !isExecutedEvidenceCommand(greenCommand)) {
+      missing.push(`Round ${round}: executable GREEN command`);
+    }
+    if (greenResult !== null && !isPassingEvidenceResult(greenResult)) {
+      missing.push(`Round ${round}: passing GREEN result`);
+    }
+
+    const observedRedFields = ["RED command", "RED result", "RED revision"] as const;
+    const falsifiabilityFields = [
+      "Satisfied-by",
+      "Falsifiability command",
+      "Falsifiability result",
+      "Falsifiability revision",
+    ] as const;
+    const observedValues = observedRedFields.map((field) =>
+      roundEvidenceFieldValue(section, round, field),
+    );
+    const falsifiabilityValues = falsifiabilityFields.map((field) =>
+      roundEvidenceFieldValue(section, round, field),
+    );
+    const observedPresent = observedValues.filter((value) => value !== null).length;
+    const falsifiabilityPresent = falsifiabilityValues.filter((value) => value !== null).length;
+    const validObservedRed =
+      observedPresent === observedRedFields.length && falsifiabilityPresent === 0;
+    const validFalsifiability =
+      falsifiabilityPresent === falsifiabilityFields.length && observedPresent === 0;
+    if (validObservedRed === validFalsifiability) {
+      missing.push(
+        `Round ${round}: exactly one complete RED command/result/revision or falsifiability proof`,
+      );
+    }
+    const redCommand = observedValues[0];
+    const redResult = observedValues[1];
+    if (
+      validObservedRed &&
+      typeof redCommand === "string" &&
+      !isExecutedEvidenceCommand(redCommand)
+    ) {
+      missing.push(`Round ${round}: executable RED command`);
+    }
+    if (validObservedRed && typeof redResult === "string" && !isFailingEvidenceResult(redResult)) {
+      missing.push(`Round ${round}: failing RED result`);
+    }
+    const falsifiabilityCommand = falsifiabilityValues[1];
+    const falsifiabilityResult = falsifiabilityValues[2];
+    if (
+      validFalsifiability &&
+      typeof falsifiabilityCommand === "string" &&
+      !isExecutedEvidenceCommand(falsifiabilityCommand)
+    ) {
+      missing.push(`Round ${round}: executable falsifiability command`);
+    }
+    if (
+      validFalsifiability &&
+      typeof falsifiabilityResult === "string" &&
+      !isFailingEvidenceResult(falsifiabilityResult)
+    ) {
+      missing.push(`Round ${round}: failing falsifiability result`);
+    }
+    if (validObservedRed && failureMode !== "assertion" && failureMode !== "expected-error") {
+      missing.push("RED failure mode: assertion or expected-error for observed RED");
+    }
+    if (validFalsifiability && failureMode !== "falsifiability") {
+      missing.push("RED failure mode: falsifiability for falsifiability proof");
+    }
+    if (ATDD_OWNED_LAYERS.has(normalizedLayer)) {
+      const redHash = roundEvidenceFieldValue(section, round, "RED test hash");
+      const redManifest = roundEvidenceFieldValue(section, round, "RED test manifest");
+      if (redHash === null) missing.push(`Round ${round}: RED test hash`);
+      if (redManifest === null) missing.push(`Round ${round}: RED test manifest`);
+      if (redHash !== null && !SHA256_VALUE.test(redHash)) {
+        missing.push(`Round ${round}: valid RED test hash`);
+      }
+    }
+    if (!validFalsifiability && rowEvidenceFieldValue(section, "Oracle proof") === null) {
+      missing.push("Oracle proof");
+    }
+    if (round < (rounds.at(-1) ?? round)) {
+      const verdict = roundEvidenceFieldValue(section, round, "reviewer verdict");
+      if (verdict === null || !/^REVISE\b/i.test(verdict)) {
+        missing.push(`Round ${round}: reviewer verdict opening the next round`);
+      }
+    }
+    latestRevision = revision;
   }
-  if (validFalsifiability && failureMode !== "falsifiability") {
-    missing.push("RED failure mode: falsifiability for falsifiability proof");
+
+  const refactorCommand = rowEvidenceFieldValue(section, "Refactor verify command");
+  const refactorResult = rowEvidenceFieldValue(section, "Refactor verify result");
+  if (refactorCommand !== null && !isExecutedEvidenceCommand(refactorCommand)) {
+    missing.push("executable Refactor verify command");
   }
-  if (ATDD_OWNED_LAYERS.has(normalizedLayer) && !hasEvidenceField(section, "RED test hash")) {
-    missing.push("RED test hash");
+  if (refactorResult !== null && !isPassingEvidenceResult(refactorResult)) {
+    missing.push("passing Refactor verify result");
   }
-  if (!validFalsifiability && !hasEvidenceField(section, "Oracle proof")) {
-    missing.push("Oracle proof");
+  const checkpointCommand = rowEvidenceFieldValue(section, "Checkpoint verification command");
+  const checkpointResult = rowEvidenceFieldValue(section, "Checkpoint verification result");
+  if (checkpointCommand !== null && !isExecutedEvidenceCommand(checkpointCommand)) {
+    missing.push("executable Checkpoint verification command");
+  }
+  if (checkpointResult !== null && !isPassingEvidenceResult(checkpointResult)) {
+    missing.push("Checkpoint verification result: PASS");
+  }
+
+  for (const prefix of ["Spec", "Code quality"] as const) {
+    const reviewedRevision = rowEvidenceFieldValue(section, `${prefix} reviewed revision`);
+    const auditedHash = rowEvidenceFieldValue(section, `${prefix} audited evidence hash`);
+    const pack = rowEvidenceFieldValue(section, `${prefix} review pack`);
+    const packSeal = rowEvidenceFieldValue(section, `${prefix} review pack seal`);
+    if (
+      reviewedRevision !== null &&
+      latestRevision !== null &&
+      reviewedRevision !== latestRevision
+    ) {
+      missing.push(`${prefix} reviewed revision matching latest Revision`);
+    }
+    if (auditedHash !== null && !SHA256_VALUE.test(auditedHash)) {
+      missing.push(`${prefix} audited evidence hash: sha256`);
+    }
+    if (pack !== null && !/^\.qfai\/review\/review-\d{17}$/.test(pack)) {
+      missing.push(
+        `${prefix} review pack: canonical .qfai/review/review-<17-digit timestamp> path`,
+      );
+    }
+    if (packSeal !== null && !SHA256_VALUE.test(packSeal)) {
+      missing.push(`${prefix} review pack seal: sha256`);
+    }
+  }
+  const checkpointSeal = rowEvidenceFieldValue(section, "Checkpoint verification seal");
+  if (checkpointSeal !== null && !SHA256_VALUE.test(checkpointSeal)) {
+    missing.push("Checkpoint verification seal: sha256");
   }
   return missing;
+}
+
+async function invalidCompletedEvidenceArtifacts(
+  root: string,
+  evidenceFile: string,
+  section: string,
+  expected: CompletedEvidenceExpectation,
+): Promise<string[]> {
+  const invalid: string[] = [];
+  const rounds = evidenceRoundNumbers(section);
+  if (ATDD_OWNED_LAYERS.has(expected.layer.toLowerCase())) {
+    for (const round of rounds) {
+      const manifest = roundEvidenceFieldValue(section, round, "RED test manifest");
+      const recorded = roundEvidenceFieldValue(section, round, "RED test hash");
+      if (manifest === null || recorded === null || !SHA256_VALUE.test(recorded)) continue;
+      const manifestPaths = manifest
+        .replace(/\r\n/g, "\n")
+        .split("\n")
+        .map((line) => line.trim().replace(/^[-*]\s+/, ""))
+        .filter((line) => line.length > 0);
+      const computed = await redTestManifestHash(root, manifest);
+      if (!manifestPaths.includes(expected.testFile) || computed === null) {
+        invalid.push(`Round ${round}: valid RED test manifest including ${expected.testFile}`);
+      } else if (bareSha256(recorded) !== computed) {
+        invalid.push(`Round ${round}: RED test hash matching its manifest`);
+      }
+    }
+  }
+
+  const expectedAuditHash = completedEvidenceAuditHash(evidenceFile, section, expected.tddId);
+  const latestRound = rounds.at(-1);
+  const revision =
+    latestRound === undefined ? null : roundEvidenceFieldValue(section, latestRound, "Revision");
+  for (const prefix of ["Spec", "Code quality"] as const) {
+    const expectedRole = prefix === "Spec" ? "completion-reviewer" : "implementation-reviewer";
+    const auditedHash = rowEvidenceFieldValue(section, `${prefix} audited evidence hash`);
+    const packPath = rowEvidenceFieldValue(section, `${prefix} review pack`);
+    const packSeal = rowEvidenceFieldValue(section, `${prefix} review pack seal`);
+    if (auditedHash !== null && SHA256_VALUE.test(auditedHash)) {
+      if (bareSha256(auditedHash) !== expectedAuditHash) {
+        invalid.push(`${prefix} audited evidence hash matching phase-authored evidence`);
+      }
+    }
+    if (packPath === null || packSeal === null || !SHA256_VALUE.test(packSeal)) continue;
+    const packFiles = await collectReviewPackFiles(root, packPath);
+    if (packFiles === null) {
+      invalid.push(`${prefix} review pack resolving to regular files`);
+      continue;
+    }
+    if (reviewPackSeal(packFiles) !== bareSha256(packSeal)) {
+      invalid.push(`${prefix} review pack seal matching pack contents`);
+    }
+    const recordedRevision = rowEvidenceFieldValue(section, `${prefix} reviewed revision`);
+    const request = packFiles.find(
+      ({ relativePath }) => relativePath === `${packPath}/review_request.md`,
+    );
+    const summary = packFiles.find(
+      ({ relativePath }) => relativePath === `${packPath}/summary.json`,
+    );
+    const response = packFiles.find(({ relativePath }) => {
+      const name = path.posix.basename(relativePath);
+      return new RegExp(
+        `^R\\d{2}_${expectedRole.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}\\.md$`,
+      ).test(name);
+    });
+    const responseBody = response?.content ?? "";
+    let summaryMatches = false;
+    if (summary !== undefined && recordedRevision !== null) {
+      try {
+        const parsed = JSON.parse(summary.content) as Record<string, unknown>;
+        summaryMatches =
+          parsed["overall_status"] === "PASS" &&
+          parsed["revision"] === recordedRevision &&
+          Array.isArray(parsed["reviewers"]) &&
+          parsed["reviewers"].some(
+            (reviewer) =>
+              typeof reviewer === "object" &&
+              reviewer !== null &&
+              (reviewer as Record<string, unknown>)["reviewer"] === expectedRole &&
+              (reviewer as Record<string, unknown>)["status"] === "PASS",
+          );
+      } catch {
+        summaryMatches = false;
+      }
+    }
+    if (
+      request === undefined ||
+      response === undefined ||
+      !summaryMatches ||
+      !/^Result:\s*PASS\s*$/im.test(responseBody) ||
+      recordedRevision === null ||
+      !exactLineField(responseBody, "Reviewed revision", recordedRevision) ||
+      auditedHash === null ||
+      !exactLineField(responseBody, "Audited evidence hash", auditedHash)
+    ) {
+      invalid.push(
+        `${prefix} review pack carrying request, summary, and named reviewer PASS provenance`,
+      );
+    }
+  }
+
+  const checkpointCommand = rowEvidenceFieldValue(section, "Checkpoint verification command");
+  const checkpointResult = rowEvidenceFieldValue(section, "Checkpoint verification result");
+  const checkpointSeal = rowEvidenceFieldValue(section, "Checkpoint verification seal");
+  if (
+    revision !== null &&
+    checkpointCommand !== null &&
+    checkpointResult !== null &&
+    checkpointSeal !== null &&
+    SHA256_VALUE.test(checkpointSeal) &&
+    bareSha256(checkpointSeal) !==
+      checkpointEvidenceSeal(revision, checkpointCommand, checkpointResult)
+  ) {
+    invalid.push("Checkpoint verification seal matching command, result, and Revision");
+  }
+  return invalid;
 }
 
 const ATDD_OWNED_LAYERS = new Set(["integration", "api", "e2e"]);
@@ -1556,17 +2057,19 @@ async function validateSpecTddList(
             : normalizedLayer === "api"
               ? "CON-API-Refs"
               : "TC-Refs";
-        const missing = missingCompletedEvidenceFields(
-          evidenceIndex.sections.get(anchor.fragment) ?? "",
-          {
-            tddId,
-            layer,
-            testFile: cell(ref, "Test file"),
-            selector: cell(ref, "Selector"),
-            obligationField,
-            obligationValue: cell(ref, obligationColumn),
-          },
-        );
+        const section = evidenceIndex.sections.get(anchor.fragment) ?? "";
+        const expectation = {
+          tddId,
+          layer,
+          testFile: cell(ref, "Test file"),
+          selector: cell(ref, "Selector"),
+          obligationField,
+          obligationValue: cell(ref, obligationColumn),
+        } satisfies CompletedEvidenceExpectation;
+        const missing = [
+          ...missingCompletedEvidenceFields(section, expectation),
+          ...(await invalidCompletedEvidenceArtifacts(root, anchor.file, section, expectation)),
+        ];
         if (missing.length > 0) {
           anchorFailure = `${anchor.file}#${anchor.fragment} is missing completed evidence fields: ${missing.join(", ")}`;
           break;
