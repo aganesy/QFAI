@@ -25,7 +25,8 @@ import { QFAI_GITIGNORE_MARKER, QFAI_GITIGNORE_BLOCK } from "../../src/core/giti
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const INIT_ASSETS = path.join(repoRoot, "packages", "qfai", "assets", "init");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
-const SKILL = "assistant/skills/qfai-configure/SKILL.md";
+const CONFIGURE_SKILL = "assistant/skills/qfai-configure/SKILL.md";
+const VERIFY_SKILL = "assistant/skills/qfai-verify/SKILL.md";
 
 /** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
 const flat = (s: string): string => s.replace(/\s+/g, " ");
@@ -53,7 +54,7 @@ describe("the evidence-ignore claim matches what qfai init actually ships", () =
 
   for (const tree of QFAI_TREES) {
     it(`${tree}: the skill names the root block, not a directory-local file`, async () => {
-      const skill = await read(tree, SKILL);
+      const skill = await read(tree, CONFIGURE_SKILL);
       expect(flat(skill)).not.toContain("it ships with a local `.gitignore`");
       expect(flat(skill)).toContain(
         "The mechanism is the QFAI-managed block `npx qfai init` writes into the **project root** `.gitignore`",
@@ -66,8 +67,26 @@ describe("the evidence-ignore claim matches what qfai init actually ships", () =
     it(`${tree}: the marker quoted in the skill is the one the code writes`, async () => {
       // Quoting it is what makes the block findable; a stale copy sends the
       // operator hunting for a block that is not there under that name.
-      const skill = await read(tree, SKILL);
+      const skill = await read(tree, CONFIGURE_SKILL);
       expect(skill).toContain(QFAI_GITIGNORE_MARKER);
+    });
+
+    it(`${tree}: distinguishes local run evidence from committed item evidence`, async () => {
+      const configure = await read(tree, CONFIGURE_SKILL);
+      const verify = await read(tree, VERIFY_SKILL);
+
+      expect(flat(configure)).toContain(
+        "The run-scoped `.qfai/evidence/configure-<run-id>.md` remains local and ignored",
+      );
+      expect(flat(verify)).toContain(
+        "The run-scoped `.qfai/evidence/verify-<spec-id>.md` remains local and ignored",
+      );
+      for (const skill of [configure, verify]) {
+        expect(flat(skill)).toContain(
+          "Durable per-item `implement-*.md` and `atdd-*.md` governance records are committed",
+        );
+        expect(skill).not.toContain("Do NOT commit evidence files");
+      }
     });
   }
 });

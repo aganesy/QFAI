@@ -315,23 +315,41 @@ function markdownEvidenceIndex(markdown: string): MarkdownEvidenceIndex {
   return { anchors, sections };
 }
 
-function hasEvidenceField(section: string, field: string): boolean {
+function evidenceFieldValue(section: string, field: string): string | null {
   const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(
-    `^\\s*(?:[-*]\\s+|\\|\\s*)?(?:\\*\\*)?(?:Round\\s+\\d+:\\s*)?${escaped}(?:\\*\\*)?\\s*(?::|\\|)\\s*(?!\\|)(?=\\S)`,
+  const match = new RegExp(
+    `^\\s*(?:[-*]\\s+|\\|\\s*)?(?:\\*\\*)?(?:Round\\s+\\d+:\\s*)?${escaped}(?:\\*\\*)?\\s*(?::|\\|)\\s*(?!\\|)([^\\r\\n|]+)`,
     "im",
-  ).test(section);
+  ).exec(section);
+  const value = match?.[1]?.trim().replace(/^`([^`]*)`$/, "$1") ?? "";
+  return value.length > 0 ? value : null;
+}
+
+function hasEvidenceField(section: string, field: string): boolean {
+  return evidenceFieldValue(section, field) !== null;
+}
+
+interface CompletedEvidenceExpectation {
+  tddId: string;
+  layer: string;
+  testFile: string;
+  selector: string;
+  obligationField: "TC-ref" | "US-ref" | "CON-API-ref";
+  obligationValue: string;
 }
 
 /** Minimum phase and review evidence required once a row reaches `done`. */
-function missingCompletedEvidenceFields(section: string, layer: string): string[] {
-  const normalizedLayer = layer.toLowerCase();
+function missingCompletedEvidenceFields(
+  section: string,
+  expected: CompletedEvidenceExpectation,
+): string[] {
+  const normalizedLayer = expected.layer.toLowerCase();
   const required = [
     "TDD-ID",
     "Layer",
     "Test file",
     "Selector",
-    normalizedLayer === "e2e" ? "US-ref" : normalizedLayer === "api" ? "CON-API-ref" : "TC-ref",
+    expected.obligationField,
     "Revision",
     "RED failure mode",
     "GREEN command",
@@ -342,6 +360,27 @@ function missingCompletedEvidenceFields(section: string, layer: string): string[
     "Code quality review",
   ];
   const missing = required.filter((field) => !hasEvidenceField(section, field));
+  for (const [field, value, caseInsensitive = false] of [
+    ["TDD-ID", expected.tddId, true],
+    ["Layer", expected.layer, true],
+    ["Test file", expected.testFile],
+    ["Selector", expected.selector],
+    [expected.obligationField, expected.obligationValue, true],
+  ] as const) {
+    const actual = evidenceFieldValue(section, field);
+    if (actual === null) continue;
+    const normalize = (candidate: string): string =>
+      caseInsensitive ? candidate.toLowerCase() : candidate;
+    if (normalize(actual) !== normalize(value)) {
+      missing.push(`${field} matching ledger value "${value}"`);
+    }
+  }
+  for (const field of ["Spec review", "Code quality review"] as const) {
+    const verdict = evidenceFieldValue(section, field);
+    if (verdict !== null && verdict.toUpperCase() !== "PASS") {
+      missing.push(`${field}: PASS`);
+    }
+  }
   const observedRed =
     hasEvidenceField(section, "RED command") &&
     hasEvidenceField(section, "RED result") &&
@@ -351,8 +390,8 @@ function missingCompletedEvidenceFields(section: string, layer: string): string[
     hasEvidenceField(section, "Falsifiability command") &&
     hasEvidenceField(section, "Falsifiability result") &&
     hasEvidenceField(section, "Falsifiability revision");
-  if (!observedRed && !falsifiability) {
-    missing.push("RED command/result/revision or falsifiability proof");
+  if (observedRed === falsifiability) {
+    missing.push("exactly one of RED command/result/revision or falsifiability proof");
   }
   if (ATDD_OWNED_LAYERS.has(normalizedLayer) && !hasEvidenceField(section, "RED test hash")) {
     missing.push("RED test hash");
@@ -1440,9 +1479,30 @@ async function validateSpecTddList(
         break;
       }
       if (status === "done") {
+        const layer = cell(ref, "Layer");
+        const normalizedLayer = layer.toLowerCase();
+        const obligationField =
+          normalizedLayer === "e2e"
+            ? "US-ref"
+            : normalizedLayer === "api"
+              ? "CON-API-ref"
+              : "TC-ref";
+        const obligationColumn =
+          normalizedLayer === "e2e"
+            ? "US-Refs"
+            : normalizedLayer === "api"
+              ? "CON-API-Refs"
+              : "TC-Refs";
         const missing = missingCompletedEvidenceFields(
           evidenceIndex.sections.get(anchor.fragment) ?? "",
-          cell(ref, "Layer"),
+          {
+            tddId,
+            layer,
+            testFile: cell(ref, "Test file"),
+            selector: cell(ref, "Selector"),
+            obligationField,
+            obligationValue: cell(ref, obligationColumn),
+          },
         );
         if (missing.length > 0) {
           anchorFailure = `${anchor.file}#${anchor.fragment} is missing completed evidence fields: ${missing.join(", ")}`;

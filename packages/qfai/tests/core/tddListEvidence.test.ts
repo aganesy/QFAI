@@ -33,17 +33,27 @@ const TC_TABLE = `# 06 Test Cases
 
 const HEADER = `# TDD Execution Ledger
 
-| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |
-| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |`;
+| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs |
+| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- | ------- | ------------ |`;
 
 function ledger(
-  rows: Array<{ status: string; evidence: string; tddId?: string; layer?: string }>,
+  rows: Array<{
+    status: string;
+    evidence: string;
+    tddId?: string;
+    layer?: string;
+    testFile?: string;
+    selector?: string;
+    tcRefs?: string;
+    usRefs?: string;
+    conApiRefs?: string;
+  }>,
 ): string {
   const body = rows
-    .map(
-      (r, i) =>
-        `| ${r.tddId ?? `TDD-000${i + 1}`} | TC-0001 | ${r.layer ?? "Unit"} | ${TEST_FILE} | sample | ${r.status} | - | ${r.evidence} |`,
-    )
+    .map((r, i) => {
+      const layer = r.layer ?? "Unit";
+      return `| ${r.tddId ?? `TDD-000${i + 1}`} | ${r.tcRefs ?? (layer === "E2E" || layer === "API" ? "-" : "TC-0001")} | ${layer} | ${r.testFile ?? TEST_FILE} | ${r.selector ?? "sample"} | ${r.status} | - | ${r.evidence} | ${r.usRefs ?? (layer === "E2E" ? "US-0001" : "-")} | ${r.conApiRefs ?? (layer === "API" ? "CON-API-0001" : "-")} |`;
+    })
     .join("\n");
   return `${HEADER}\n${body}\n`;
 }
@@ -247,8 +257,13 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
   const IMPLEMENT_POINTER =
     "RED fail / GREEN pass — evidence at `.qfai/evidence/implement-spec-0001.md#tdd-0001`";
 
-  function completeEntry(layer: "Unit" | "Integration" | "E2E"): string {
-    const obligation = layer === "E2E" ? "US-ref: US-0001" : "TC-ref: TC-0001";
+  function completeEntry(layer: "Unit" | "Integration" | "API" | "E2E"): string {
+    const obligation =
+      layer === "E2E"
+        ? "US-ref: US-0001"
+        : layer === "API"
+          ? "CON-API-ref: CON-API-0001"
+          : "TC-ref: TC-0001";
     return `# Evidence
 
 ### TDD-0001
@@ -308,6 +323,84 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
     await withProject(async (root) => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit"),
+      });
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  for (const [label, from, to] of [
+    ["TDD-ID", "TDD-ID: TDD-0001", "TDD-ID: TDD-9999"],
+    ["Layer", "Layer: Unit", "Layer: Component"],
+    ["Test file", `Test file: ${TEST_FILE}`, "Test file: tests/unit/other.test.ts"],
+    ["Selector", "Selector: sample", "Selector: another sample"],
+    ["obligation", "TC-ref: TC-0001", "TC-ref: TC-9999"],
+  ] as const) {
+    it(`rejects a completed evidence ${label} that disagrees with the ledger row`, async () => {
+      await withProject(async (root) => {
+        const evidence = completeEntry("Unit").replace(from, to);
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": evidence,
+        });
+        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      });
+    });
+  }
+
+  for (const field of ["Spec review", "Code quality review"] as const) {
+    it(`rejects a completed evidence ${field} verdict other than PASS`, async () => {
+      await withProject(async (root) => {
+        const evidence = completeEntry("Unit").replace(`${field}: PASS`, `${field}: REVISE`);
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": evidence,
+        });
+        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      });
+    });
+  }
+
+  for (const [layer, field, from, to] of [
+    ["E2E", "US-ref", "US-ref: US-0001", "US-ref: US-9999"],
+    ["API", "CON-API-ref", "CON-API-ref: CON-API-0001", "CON-API-ref: CON-API-9999"],
+  ] as const) {
+    it(`rejects a completed ${layer} evidence ${field} that disagrees with its ledger column`, async () => {
+      await withProject(async (root) => {
+        const pointer =
+          "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+        const evidence = completeEntry(layer).replace(from, to);
+        const codes = await runOn(root, ledger([{ status: "done", evidence: pointer, layer }]), {
+          ".qfai/evidence/atdd-spec-0001.md": evidence,
+        });
+        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      });
+    });
+  }
+
+  it("rejects completed evidence that records both observed RED and falsifiability proof", async () => {
+    await withProject(async (root) => {
+      const evidence = `${completeEntry("Unit")}
+- Satisfied-by: existing-test
+- Falsifiability command: npm test -- sample
+- Falsifiability result: mutation failed
+- Falsifiability revision: fedcba
+`;
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
+      });
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("accepts completed evidence with falsifiability proof and no observed RED", async () => {
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit")
+        .replace(/- Round 1: RED (?:command|result|revision):.*\n/g, "")
+        .replace("- Oracle proof: equivalent-mutant\n", "").concat(`- Satisfied-by: existing-test
+- Falsifiability command: npm test -- sample
+- Falsifiability result: mutation failed
+- Falsifiability revision: fedcba
+`);
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
       });
       expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
     });
