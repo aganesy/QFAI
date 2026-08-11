@@ -279,21 +279,88 @@ function collectEvidenceAnchors(evidence: string): EvidenceAnchor[] {
   return anchors;
 }
 
-/** GitHub-style heading anchors, including duplicate-heading suffixes. */
-function markdownHeadingAnchors(markdown: string): Set<string> {
+interface MarkdownEvidenceIndex {
+  anchors: ReadonlySet<string>;
+  sections: ReadonlyMap<string, string>;
+}
+
+/** GitHub-style heading anchors and their visible sections. */
+function markdownEvidenceIndex(markdown: string): MarkdownEvidenceIndex {
+  const visible = maskNonSpecRegions(markdown);
+  const headings = Array.from(visible.matchAll(/^(#{1,6})\s+(.+?)\s*$/gm));
   const occurrences = new Map<string, number>();
   const anchors = new Set<string>();
-  for (const match of maskNonSpecRegions(markdown).matchAll(/^#{1,6}\s+(.+?)\s*$/gm)) {
-    const base = (match[1] ?? "")
+  const sections = new Map<string, string>();
+
+  for (const [index, match] of headings.entries()) {
+    const base = (match[2] ?? "")
       .toLowerCase()
       .replace(/[^\w\s-]/g, "")
       .trim()
       .replace(/\s+/g, "-");
     const seen = occurrences.get(base) ?? 0;
     occurrences.set(base, seen + 1);
-    anchors.add(seen === 0 ? base : `${base}-${seen}`);
+    const anchor = seen === 0 ? base : `${base}-${seen}`;
+    anchors.add(anchor);
+
+    const level = match[1]?.length ?? 6;
+    const start = match.index + match[0].length;
+    const nextPeer = headings.slice(index + 1).find((candidate) => {
+      const candidateLevel = candidate[1]?.length ?? 6;
+      return candidateLevel <= level;
+    });
+    const end = nextPeer?.index ?? visible.length;
+    sections.set(anchor, visible.slice(start, end));
   }
-  return anchors;
+  return { anchors, sections };
+}
+
+function hasEvidenceField(section: string, field: string): boolean {
+  const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(
+    `^\\s*(?:[-*]\\s+|\\|\\s*)?(?:\\*\\*)?(?:Round\\s+\\d+:\\s*)?${escaped}(?:\\*\\*)?\\s*(?::|\\|)\\s*(?!\\|)(?=\\S)`,
+    "im",
+  ).test(section);
+}
+
+/** Minimum phase and review evidence required once a row reaches `done`. */
+function missingCompletedEvidenceFields(section: string, layer: string): string[] {
+  const normalizedLayer = layer.toLowerCase();
+  const required = [
+    "TDD-ID",
+    "Layer",
+    "Test file",
+    "Selector",
+    normalizedLayer === "e2e" ? "US-ref" : normalizedLayer === "api" ? "CON-API-ref" : "TC-ref",
+    "Revision",
+    "RED failure mode",
+    "GREEN command",
+    "GREEN result",
+    "Refactor verify command",
+    "Refactor verify result",
+    "Spec review",
+    "Code quality review",
+  ];
+  const missing = required.filter((field) => !hasEvidenceField(section, field));
+  const observedRed =
+    hasEvidenceField(section, "RED command") &&
+    hasEvidenceField(section, "RED result") &&
+    hasEvidenceField(section, "RED revision");
+  const falsifiability =
+    hasEvidenceField(section, "Satisfied-by") &&
+    hasEvidenceField(section, "Falsifiability command") &&
+    hasEvidenceField(section, "Falsifiability result") &&
+    hasEvidenceField(section, "Falsifiability revision");
+  if (!observedRed && !falsifiability) {
+    missing.push("RED command/result/revision or falsifiability proof");
+  }
+  if (ATDD_OWNED_LAYERS.has(normalizedLayer) && !hasEvidenceField(section, "RED test hash")) {
+    missing.push("RED test hash");
+  }
+  if (!falsifiability && !hasEvidenceField(section, "Oracle proof")) {
+    missing.push("Oracle proof");
+  }
+  return missing;
 }
 
 const ATDD_OWNED_LAYERS = new Set(["integration", "api", "e2e"]);
@@ -1312,8 +1379,8 @@ async function validateSpecTddList(
   // `error: 0` an actively misleading signal for the two SKILL.md hard rules
   // encoded below, which until now only a human reading the prose could apply.
   // A single per-spec evidence file can serve hundreds of ledger rows. Cache
-  // both parsed headings and missing files so validation reads each path once.
-  const evidenceHeadingCache = new Map<string, ReadonlySet<string> | null>();
+  // its parsed sections (and a missing-file sentinel) so each path is read once.
+  const evidenceIndexCache = new Map<string, MarkdownEvidenceIndex | null>();
   for (const ref of ledgerRows()) {
     const status = cell(ref, "Status").toLowerCase();
     if (!EVIDENCE_CHECK_STATUSES.has(status)) continue;
@@ -1356,21 +1423,31 @@ async function validateSpecTddList(
         anchorFailure = `the row is ${tddId}, not #${anchor.fragment}`;
         break;
       }
-      let headings = evidenceHeadingCache.get(anchor.file);
-      if (headings === undefined) {
+      let evidenceIndex = evidenceIndexCache.get(anchor.file);
+      if (evidenceIndex === undefined) {
         const evidencePath = path.join(root, anchor.file);
-        headings = (await exists(evidencePath))
-          ? markdownHeadingAnchors(await readSafe(evidencePath))
+        evidenceIndex = (await exists(evidencePath))
+          ? markdownEvidenceIndex(await readSafe(evidencePath))
           : null;
-        evidenceHeadingCache.set(anchor.file, headings);
+        evidenceIndexCache.set(anchor.file, evidenceIndex);
       }
-      if (headings === null) {
+      if (evidenceIndex === null) {
         anchorFailure = `${anchor.file} does not exist`;
         break;
       }
-      if (!headings?.has(anchor.fragment)) {
+      if (!evidenceIndex.anchors.has(anchor.fragment)) {
         anchorFailure = `${anchor.file} has no #${anchor.fragment} heading`;
         break;
+      }
+      if (status === "done") {
+        const missing = missingCompletedEvidenceFields(
+          evidenceIndex.sections.get(anchor.fragment) ?? "",
+          cell(ref, "Layer"),
+        );
+        if (missing.length > 0) {
+          anchorFailure = `${anchor.file}#${anchor.fragment} is missing completed evidence fields: ${missing.join(", ")}`;
+          break;
+        }
       }
     }
 

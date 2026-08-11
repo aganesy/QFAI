@@ -354,4 +354,28 @@ describe("a legacy evidence negation loses to a later glob too", () => {
       expect(lines.lastIndexOf("!decision-*.md")).toBeGreaterThan(lastMd);
     });
   });
+
+  it("re-appends when a later canonical-name glob re-ignores per-item evidence", async () => {
+    await withProject(async (root) => {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const legacy = path.join(root, ".qfai", "evidence", ".gitignore");
+      await mkdir(path.dirname(legacy), { recursive: true });
+      await writeFile(
+        legacy,
+        ["*", "!implement-*.md", "!atdd-*.md", "implement-spec-*.md", "atdd-spec-*.md", ""].join(
+          NL,
+        ),
+        "utf-8",
+      );
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const lines = (await readFile(legacy, "utf-8")).split(NL).map((line) => line.trimEnd());
+      expect(lines.lastIndexOf("!implement-*.md")).toBeGreaterThan(
+        lines.lastIndexOf("implement-spec-*.md"),
+      );
+      expect(lines.lastIndexOf("!atdd-*.md")).toBeGreaterThan(lines.lastIndexOf("atdd-spec-*.md"));
+    });
+  });
 });

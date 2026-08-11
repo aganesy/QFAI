@@ -247,6 +247,33 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
   const IMPLEMENT_POINTER =
     "RED fail / GREEN pass — evidence at `.qfai/evidence/implement-spec-0001.md#tdd-0001`";
 
+  function completeEntry(layer: "Unit" | "Integration" | "E2E"): string {
+    const obligation = layer === "E2E" ? "US-ref: US-0001" : "TC-ref: TC-0001";
+    return `# Evidence
+
+### TDD-0001
+
+- TDD-ID: TDD-0001
+- Layer: ${layer}
+- Test file: tests/unit/sample.test.ts
+- Selector: sample
+- ${obligation}
+- Round 1: Revision: abc123
+- Round 1: RED revision: def456
+- Round 1: RED test hash: sha256:red
+- RED failure mode: assertion
+- Round 1: RED command: npm test
+- Round 1: RED result: 1 failed
+- Round 1: GREEN command: npm test
+- Round 1: GREEN result: 1 passed
+- Refactor verify command: npm test
+- Refactor verify result: 1 passed
+- Oracle proof: equivalent-mutant
+- Spec review: PASS
+- Code quality review: PASS
+`;
+  }
+
   it("errors when the evidence file does not exist", async () => {
     await withProject(async (root) => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]));
@@ -280,9 +307,18 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
   it("accepts an anchor that resolves to the row's evidence heading", async () => {
     await withProject(async (root) => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
-        ".qfai/evidence/implement-spec-0001.md": "# Evidence\n\n### TDD-0001\n",
+        ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit"),
       });
       expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("rejects a matching heading whose completed evidence section is empty", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": "# Evidence\n\n### TDD-0001\n",
+      });
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
     });
   });
 
@@ -293,7 +329,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
       const codes = await runOn(
         root,
         ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
-        { ".qfai/evidence/atdd-spec-0001.md": "# ATDD Evidence\n\n### TDD-0001\n" },
+        { ".qfai/evidence/atdd-spec-0001.md": completeEntry("Integration") },
       );
       expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
     });
@@ -351,7 +387,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
       const codes = await runOn(
         root,
         ledger([{ status: "done", evidence: pointer, layer: "E2E" }]),
-        { ".qfai/evidence/implement-spec-0001.md": "# Evidence\n\n### TDD-0001\n" },
+        { ".qfai/evidence/implement-spec-0001.md": completeEntry("E2E") },
       );
       expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
     });
