@@ -11,7 +11,7 @@
 - Approved option: `-`
 - Applied at: `-`
 - Superseded by: `-`
-- Blocked set: `spec-0006 TDD-0038, TDD-0039, TDD-0037`
+- Blocked set: `spec-0006 TDD-0038, TDD-0037`
 
 ## Context
 
@@ -99,3 +99,21 @@ joint-discharge workaround lacks a traceability marker.
 This is the **third** time in this slice that a defect-class upstream finding was first routed to a weaker
 instrument. Handoff item 14 is being reduced to a pointer at this CR, with its "the row is discharged"
 claim and its inverted `drift.test.ts` citation removed.
+
+## Blocked set narrowed 2026-08-11: `TDD-0039` is separable, measured
+
+It was first listed on the ground that it shares `TC-0006-0030` with the ambiguous leg. **That reasoning was
+wrong, and sharing a TC is not sharing an axis.**
+
+Measured at `workflowsIntegrity.ts:276-285`: leg (c)'s condition is
+`resolvePackagedWorkflowsDir() === undefined`, and its early return fires **before the provenance record is
+read at all** and before any per-name comparison. So leg (c) turns on a **packaged-side** resolution failure,
+while this CR's ambiguity is entirely about which **adopter-side** state (`absent` vs `declined`) leg (b)
+means. No option A/B/C changes leg (c)'s fixture, its expected severity, or its expected `modified` list.
+
+`TDD-0038` and `TDD-0037` stay blocked: `TDD-0038` implements the `absent` reading and Option C would require
+it rewritten to assert the inverse, and `TDD-0037` owns `TC-0006-0035`, whose boundary with leg (b) is one of
+the things this CR must settle.
+
+Recorded because over-scoping a blocked set stalls work for nothing, and because the first version of this
+line was written from _which TC a row cites_ rather than from _what its code path depends on_.
