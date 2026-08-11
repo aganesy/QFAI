@@ -104,22 +104,26 @@ const WORKFLOWS_DIR_RELATIVE = WORKFLOWS_DIR_SEGMENTS.join("/");
 export type WorkflowsIntegrityStatus = "ok" | "modified" | "skipped_unresolved";
 
 /**
- * ONE member has no consumer at this revision, and that is deliberate rather
- * than leftover: `status === "skipped_unresolved"` is claimed by the
- * unresolvable-packaged-copy skip of BR-0006-0020, a later obligation of this
- * same check (TDD-0039). The claim is recorded here because it constrains what
- * may be done to the member — delete it rather than widen it if its rule is
- * dropped; the longer argument is version controlled at
- * `.qfai/evidence/implement-spec-0006.md`.
+ * EVERY member of this type is consumed at this revision, and the paragraph that
+ * opened here recorded the one that was not — corrected in place rather than
+ * appended to, because a reader who stops at the first sentence would otherwise
+ * be told the opposite of what the code does. `status === "skipped_unresolved"`
+ * was claimed-but-unconsumed, held for the unresolvable-packaged-copy skip of
+ * BR-0006-0020; TDD-0039 landed that skip, so `doctor.ts` now reads the member on
+ * an arm of its own and the claim is discharged rather than pending.
  *
- * `packagedDir` LEFT that list and the departure is worth stating, because the
- * consumer is not the one this comment used to predict: the drift advisory's
- * MESSAGE names it as the packaged source path to copy from, per the required
- * message content of `.qfai/contracts/cli/qfai-doctor.md`. Its `details` slot
- * (BR-0006-0022) is still outstanding and is owned by TDD-0036 / TC-0006-0034,
- * named here for the same reason `skipped_unresolved` names its claimant: the
- * field is consumed while that payload obligation is not, the two are separate,
- * and landing the payload does not put the field back on the unconsumed list.
+ * What that paragraph CONSTRAINED still holds, and the arm is now what enforces
+ * it: widening this status widens the skip, so a second route into
+ * `skipped_unresolved` must be one BR-0006-0020's skip is true of. The longer
+ * argument is version controlled at `.qfai/evidence/implement-spec-0006.md`.
+ *
+ * `packagedDir` left that list one row EARLIER, and its departure is still worth
+ * stating, because the consumer is not the one this comment used to predict: the
+ * drift advisory's MESSAGE names it as the packaged source path to copy from, per
+ * the required message content of `.qfai/contracts/cli/qfai-doctor.md`. Its
+ * `details` slot (BR-0006-0022) is still outstanding and is owned by TDD-0036 /
+ * TC-0006-0034 — the field is consumed while that payload obligation is not, the
+ * two are separate, and landing the payload does not make the field newly read.
  *
  * THE CONVENTION THAT ROW INHERITS, stated before it lands rather than after:
  * `details` will then carry `packagedDir` beside `workflowsDir`, which puts an
@@ -133,9 +137,13 @@ export type WorkflowsIntegrityStatus = "ok" | "modified" | "skipped_unresolved";
  * meaning depends on the reader's cwd, and absolutizing `workflowsDir` puts the
  * host layout into a machine surface that today has none.
  *
- * (`status === "ok"` IS consumed: the override leg of the drift suite asserts
- * it. So is `comparedCount`, which gates that same `ok` emission — do not add
- * either to this list.)
+ * PER MEMBER, so that the opening claim is checkable rather than taken on trust:
+ * `status === "ok"` gates the content-identical emission and the drift suite's
+ * override leg asserts it; `"modified"` and `"skipped_unresolved"` gate the other
+ * two arms; `comparedCount` is the `ok` arm's second conjunct; `workflowsDir` is
+ * in all three `details` payloads; `packagedDir` is in the drift message. There is
+ * no unconsumed member left to add to, so a claim that some member is held for a
+ * later row now has to be MEASURED against `doctor.ts` before it is written here.
  */
 export type WorkflowsIntegrityDiff = {
   status: WorkflowsIntegrityStatus;

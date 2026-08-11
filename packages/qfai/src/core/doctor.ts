@@ -117,6 +117,23 @@ function isDefaultSkillCreatedPath(key: ConfigPathKey, relPath: string): boolean
   return DEFAULT_SKILL_CREATED_PATH_KEYS.has(key) && relPath === defaultConfig.paths[key];
 }
 
+/**
+ * `title` of every `workflows.integrity` emission.
+ *
+ * Extracted on the schedule its own call sites set: the drift branch's comment
+ * held two literal copies with "extract both into a module constant when the
+ * third copy arrives with the next emission branch", and TDD-0039's unresolved
+ * skip is that branch. The four `skills.integrity` copies below are left inline —
+ * different check, and this constant is not theirs to share.
+ *
+ * A LITERAL, and it must stay one. `TDD-0030` pins it with `toBe` against a
+ * test-owned `.github/workflows` and records why deriving it from
+ * `WorkflowsIntegrityDiff.workflowsDir` was rejected: that makes the assertion
+ * check production against itself under the coordinated edit that moves the title
+ * and the payload together.
+ */
+const WORKFLOWS_INTEGRITY_TITLE = "Workflows integrity (.github/workflows)";
+
 export async function createDoctorData(options: CreateDoctorDataOptions): Promise<DoctorData> {
   const startDir = path.resolve(options.startDir);
   const checks: DoctorCheck[] = [];
@@ -253,12 +270,15 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   addCheck(checks, await buildAgentFrontmatterCheck(root));
 
   // Installed shipped-workflow drift. `modified` is emitted as the `info`
-  // advisory below and the content-identical `ok` state as the `ok` check after
-  // it; every status without a branch below registers nothing, so no check here
-  // claims behavior nothing has verified. At this revision the only such status
-  // is the unresolved-packaged-copy skip, whose emission is a separate
-  // obligation — the invariant is stated as the general rule rather than as
-  // that one status so it survives the status gaining a branch.
+  // advisory below, the content-identical `ok` state as the `ok` check after it,
+  // and the unresolved-packaged-copy skip as the `info` skip after that.
+  //
+  // The chain is now TOTAL over `WorkflowsIntegrityStatus`, whose three members
+  // each have an arm — where it previously stated the general rule "every status
+  // without a branch registers nothing" because the skip had no arm yet. The
+  // stronger form is worth having explicitly: a fourth status added to that union
+  // would fall through this chain silently, and the union is the only place a
+  // reader can see that it must not.
   //
   // Severity is `info` deliberately, and unlike the skills-integrity branch
   // above it is NOT `warning`: `shouldFailDoctor` counts `warning + error`
@@ -292,6 +312,13 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   // with an empty `modified`, at which point silence is no longer what that
   // status produces, while the unreachability is unaffected.
   //
+  // That moment has arrived — the skip arm below is TDD-0039's — and the two
+  // halves of the sentence above landed as predicted: silence is no longer what
+  // the status produces, and the conjunct is still unreachable, because `status`
+  // still carries one value per run. So it is NOT this row that pays for it: the
+  // state needs a reader reporting `modified` with an unresolved operand, which no
+  // row has opened.
+  //
   // Kept as an EQUIVALENT MUTANT by construction, and recorded as one rather
   // than as covered code: deleting it leaves this file's behaviour, `tsc -b` and
   // `eslint` all unchanged (measured — it is not load-bearing for lint either),
@@ -308,12 +335,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     addCheck(checks, {
       id: "workflows.integrity",
       severity: "info",
-      // Two literal copies of this title, left unextracted on purpose: the
-      // `skills.integrity` branch chain directly above carries FOUR copies of
-      // its own, so two is this file's convention and a lone constant here would
-      // be the odd one out. Extract both into a module constant when the third
-      // copy arrives with the next emission branch.
-      title: "Workflows integrity (.github/workflows)",
+      title: WORKFLOWS_INTEGRITY_TITLE,
       // `title` has no consumer in the text renderer — it prints
       // `[severity] id: message` — so the prose has to live in `message`,
       // including all four items the contract requires of it: the stale paths,
@@ -441,8 +463,70 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     addCheck(checks, {
       id: "workflows.integrity",
       severity: "ok",
-      title: "Workflows integrity (.github/workflows)",
+      title: WORKFLOWS_INTEGRITY_TITLE,
       message: "installed shipped workflow(s) match the packaged copy",
+      details: { workflowsDir: workflowsDiff.workflowsDir },
+    });
+  } else if (workflowsDiff.status === "skipped_unresolved") {
+    // BR-0006-0020's closing clause — 「package 同梱 copy を解決できない場合は
+    // severity `info` で skip する」 (TC-0006-0030 leg (c) / AC-0006-0023). The
+    // packaged operand could not be resolved, so nothing was compared and nothing
+    // may be claimed about the adopter's files in either direction.
+    //
+    // The shape is the sibling's: the `skills.integrity` chain above emits its own
+    // unresolvable-assets skip at `info` with only its directory in `details`,
+    // from the same `getInitAssetsDir` throw. Same cause, same severity, same
+    // payload width.
+    //
+    // GATED ON `status` ALONE, which is this row's decision rather than its
+    // omission. Both arms above carry a count conjunct and the `ok` one exists
+    // because review caught that arm making a positive claim about a tree it had
+    // never opened, so the question is whether a status-only gate reproduces that.
+    // It does not, and the mirror conjunct would introduce the inverse defect:
+    //   - `ok` is the reader's FALL-THROUGH value, produced both by "compared
+    //     names, all matched" and by "compared nothing"; the count is what
+    //     separates them. `skipped_unresolved` is returned from exactly ONE site,
+    //     the reader's early return on an unresolvable operand, with `modified:
+    //     []`, `comparedCount: 0` and `packagedDir: undefined` all constant there
+    //     — so no second tree arrives here to be mis-described.
+    //   - the EXCLUDED tree is what matters, more than the ambiguity.
+    //     `comparedCount > 0` excludes a tree the contract requires to be SILENT.
+    //     A conjunct here (`packagedDir === undefined`, `comparedCount === 0`)
+    //     would exclude a tree BR-0006-0020 requires to SKIP: a reader that ever
+    //     reported this status with a resolved-but-unusable operand would fall
+    //     through all three arms and emit nothing, which is precisely the defect
+    //     this row closes, reintroduced one state along.
+    // Neither conjunct is reachable at this revision either, and the drift arm
+    // above already carries one unreachable conjunct with no oracle; a second
+    // would be a second untestable predicate on the same emission.
+    //
+    // EXCLUSIVITY holds twice over, and TDD-0032's and TDD-0038's
+    // `toHaveLength(1)` pins depend on it: `status` carries one value per run, so
+    // no two arms' status tests can both be true, and `else if` makes that
+    // structural rather than value-dependent. The chain form is the belt and not
+    // the load — measured, converting this arm to a standalone `if` leaves both of
+    // those suites green — so keep it anyway rather than resting the pins on the
+    // reader continuing to return one status per run.
+    //
+    // `details` carries `workflowsDir` and NOTHING else, the same width as the
+    // `ok` arm: `modified: []` would claim nothing is stale about a tree that was
+    // never compared, `packagedDir` is `undefined` here by construction, and
+    // `declined` is part of BR-0006-0022's payload for the DRIFT finding, owned by
+    // TDD-0036. This arm adds no key of its own, so it decides nothing for that
+    // row.
+    //
+    // `message` is English to match the two arms above — one check id, one
+    // operator — and interpolates NOTHING: the only operand this state has is the
+    // unresolved packaged directory, and rendering it would print the literal
+    // `undefined`. Its WORDING is not contract-fixed, the emission table having no
+    // row for this state, so TDD-0039 pins non-emptiness and the absence of a
+    // drift claim and leaves the text editable.
+    addCheck(checks, {
+      id: "workflows.integrity",
+      severity: "info",
+      title: WORKFLOWS_INTEGRITY_TITLE,
+      message:
+        "the packaged shipped-workflow copy could not be resolved, so installed shipped workflow(s) were not compared and no drift is reported",
       details: { workflowsDir: workflowsDiff.workflowsDir },
     });
   }
