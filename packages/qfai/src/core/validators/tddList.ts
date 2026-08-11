@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { Dirent } from "node:fs";
 import { lstat, readFile, readlink, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
@@ -501,13 +502,30 @@ function normalizeAuditArtifact(value: string): string {
   return `${lines.join("\n")}\n`;
 }
 
+const GATE_COMPLETED_EVIDENCE_FIELD =
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity|Checkpoint verification (?:command|result|seal))(?:\*\*)?\s*(?::|\|)/i;
+
+const PHASE_AUTHORED_EVIDENCE_FIELD =
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?(?:TDD-ID|Layer|Test file|Selector|TC-ref|US-ref|CON-API-ref|Revision|RED revision|Replacement proof revision|RED test hash|RED test manifest|RED command|RED result|GREEN command|GREEN result|Satisfied-by|Falsifiability command|Falsifiability result|Falsifiability revision|reviewer verdict|RED failure mode|Refactor verify command|Refactor verify result|Oracle proof|qa-gatekeeper|Shared-artifact re-verify)(?:\*\*)?\s*(?::|\|)/i;
+
+function hasPhaseAuthoredFieldAfterGate(section: string): boolean {
+  const visibleLines = maskEvidenceRegions(section.replace(/\r\n/g, "\n")).split("\n");
+  const boundary = visibleLines.findIndex((line) => GATE_COMPLETED_EVIDENCE_FIELD.test(line));
+  if (boundary < 0) return false;
+  return visibleLines
+    .slice(boundary + 1)
+    .some(
+      (line) =>
+        PHASE_AUTHORED_EVIDENCE_FIELD.test(line) ||
+        /^\s*#{1,6}\s+Shared-artifact re-verify\b/i.test(line),
+    );
+}
+
 function phaseAuthoredEvidence(section: string, tddId: string): string {
   const normalized = section.replace(/\r\n/g, "\n");
   const originalLines = normalized.split("\n");
   const visibleLines = maskEvidenceRegions(normalized).split("\n");
-  const gateField =
-    /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Checkpoint verification (?:command|result|seal))(?:\*\*)?\s*(?::|\|)/i;
-  const boundary = visibleLines.findIndex((line) => gateField.test(line));
+  const boundary = visibleLines.findIndex((line) => GATE_COMPLETED_EVIDENCE_FIELD.test(line));
   const authored = originalLines
     .slice(0, boundary < 0 ? originalLines.length : boundary)
     .join("\n");
@@ -636,12 +654,117 @@ function reviewPackSeal(files: ReadonlyArray<{ relativePath: string; content: st
 }
 
 interface CompletedEvidenceExpectation {
+  specNumber: string;
   tddId: string;
   layer: string;
   testFile: string;
   selector: string;
   obligationField: "TC-ref" | "US-ref" | "CON-API-ref";
   obligationValue: string;
+  preSplit: boolean;
+}
+
+function sharedArtifactReverifySections(content: string, target: string): string[] {
+  const normalized = content.replace(/\r\n/g, "\n");
+  const originalLines = normalized.split("\n");
+  const visibleLines = maskEvidenceRegions(normalized).split("\n");
+  const sections: string[] = [];
+  let inReverifyBlock = false;
+
+  for (let index = 0; index < visibleLines.length; index += 1) {
+    const heading = /^\s*(#{1,6})\s+(.+?)\s*$/.exec(visibleLines[index] ?? "");
+    if (heading === null) continue;
+    const level = heading[1]?.length ?? 0;
+    const title = (heading[2] ?? "").trim();
+    if (level === 2) {
+      inReverifyBlock = title.toLowerCase() === "shared-artifact re-verify";
+      continue;
+    }
+    if (!inReverifyBlock || level !== 3 || title.toLowerCase() !== target.toLowerCase()) {
+      continue;
+    }
+    let end = index + 1;
+    while (end < visibleLines.length) {
+      const nextHeading = /^\s*(#{1,6})\s+/.exec(visibleLines[end] ?? "");
+      if (nextHeading !== null && (nextHeading[1]?.length ?? 7) <= 3) break;
+      end += 1;
+    }
+    sections.push(originalLines.slice(index + 1, end).join("\n"));
+  }
+  return sections;
+}
+
+async function hasCurrentSharedArtifactReverify(
+  root: string,
+  evidenceFile: string,
+  expected: CompletedEvidenceExpectation,
+): Promise<boolean> {
+  const evidenceDir = path.join(root, ".qfai", "evidence");
+  let entries: Dirent[];
+  try {
+    entries = await readdir(evidenceDir, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+  const target = `spec-${expected.specNumber}/${expected.tddId}`;
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
+    let content: string;
+    try {
+      content = await readFile(path.join(evidenceDir, entry.name), "utf8");
+    } catch {
+      continue;
+    }
+    for (const section of sharedArtifactReverifySections(content, target)) {
+      const recordedFile = rowEvidenceFieldValue(section, "Evidence file");
+      const revision = rowEvidenceFieldValue(section, "Revision");
+      const selector = rowEvidenceFieldValue(section, "Selector");
+      const reverifyCommand = rowEvidenceFieldValue(section, "Re-verify command");
+      const reverifyResult = rowEvidenceFieldValue(section, "Re-verify result");
+      const proofCommand = rowEvidenceFieldValue(section, "Proof command");
+      const proofResult = rowEvidenceFieldValue(section, "Proof result");
+      const restoredCommand = rowEvidenceFieldValue(section, "Restored GREEN command");
+      const restoredResult = rowEvidenceFieldValue(section, "Restored GREEN result");
+      const manifest = rowEvidenceFieldValue(section, "RED test manifest");
+      const recordedHash = rowEvidenceFieldValue(section, "RED test hash");
+      if (
+        recordedFile !== evidenceFile ||
+        revision === null ||
+        selector !== expected.selector ||
+        reverifyCommand === null ||
+        !isExecutedEvidenceCommand(reverifyCommand) ||
+        reverifyResult === null ||
+        !isPassingEvidenceResult(reverifyResult) ||
+        proofCommand === null ||
+        !isExecutedEvidenceCommand(proofCommand) ||
+        proofResult === null ||
+        !isFailingEvidenceResult(proofResult) ||
+        restoredCommand === null ||
+        !isExecutedEvidenceCommand(restoredCommand) ||
+        restoredResult === null ||
+        !isPassingEvidenceResult(restoredResult) ||
+        manifest === null ||
+        recordedHash === null ||
+        !SHA256_VALUE.test(recordedHash)
+      ) {
+        continue;
+      }
+      const manifestPaths = manifest
+        .replace(/\r\n/g, "\n")
+        .split("\n")
+        .map((line) => line.trim().replace(/^[-*]\s+/, ""))
+        .filter((line) => line.length > 0);
+      const computed = await redTestManifestHash(root, manifest);
+      if (
+        manifestPaths.includes(expected.testFile) &&
+        computed !== null &&
+        bareSha256(recordedHash) === computed
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 /** Minimum phase and review evidence required once a row reaches `done`. */
@@ -705,6 +828,9 @@ function missingCompletedEvidenceFields(
   if (rounds.length === 0 || rounds[0] !== 1) missing.push("Round 1 evidence block");
   if (rounds.some((round, index) => round !== index + 1)) {
     missing.push("continuous evidence rounds starting at Round 1");
+  }
+  if (hasPhaseAuthoredFieldAfterGate(section)) {
+    missing.push("all phase-authored fields before review and checkpoint fields");
   }
 
   const failureMode = rowEvidenceFieldValue(section, "RED failure mode")?.toLowerCase();
@@ -781,7 +907,7 @@ function missingCompletedEvidenceFields(
     if (validFalsifiability && failureMode !== "falsifiability") {
       missing.push("RED failure mode: falsifiability for falsifiability proof");
     }
-    if (ATDD_OWNED_LAYERS.has(normalizedLayer)) {
+    if (ATDD_OWNED_LAYERS.has(normalizedLayer) && !expected.preSplit) {
       const redHash = roundEvidenceFieldValue(section, round, "RED test hash");
       const redManifest = roundEvidenceFieldValue(section, round, "RED test manifest");
       if (redHash === null) missing.push(`Round ${round}: RED test hash`);
@@ -858,21 +984,27 @@ async function invalidCompletedEvidenceArtifacts(
 ): Promise<string[]> {
   const invalid: string[] = [];
   const rounds = evidenceRoundNumbers(section);
-  if (ATDD_OWNED_LAYERS.has(expected.layer.toLowerCase())) {
-    for (const round of rounds) {
+  if (ATDD_OWNED_LAYERS.has(expected.layer.toLowerCase()) && !expected.preSplit) {
+    const latestRound = rounds.at(-1);
+    if (latestRound !== undefined) {
+      const round = latestRound;
       const manifest = roundEvidenceFieldValue(section, round, "RED test manifest");
       const recorded = roundEvidenceFieldValue(section, round, "RED test hash");
-      if (manifest === null || recorded === null || !SHA256_VALUE.test(recorded)) continue;
-      const manifestPaths = manifest
-        .replace(/\r\n/g, "\n")
-        .split("\n")
-        .map((line) => line.trim().replace(/^[-*]\s+/, ""))
-        .filter((line) => line.length > 0);
-      const computed = await redTestManifestHash(root, manifest);
-      if (!manifestPaths.includes(expected.testFile) || computed === null) {
-        invalid.push(`Round ${round}: valid RED test manifest including ${expected.testFile}`);
-      } else if (bareSha256(recorded) !== computed) {
-        invalid.push(`Round ${round}: RED test hash matching its manifest`);
+      if (manifest !== null && recorded !== null && SHA256_VALUE.test(recorded)) {
+        const manifestPaths = manifest
+          .replace(/\r\n/g, "\n")
+          .split("\n")
+          .map((line) => line.trim().replace(/^[-*]\s+/, ""))
+          .filter((line) => line.length > 0);
+        const computed = await redTestManifestHash(root, manifest);
+        if (!manifestPaths.includes(expected.testFile) || computed === null) {
+          invalid.push(`Round ${round}: valid RED test manifest including ${expected.testFile}`);
+        } else if (
+          bareSha256(recorded) !== computed &&
+          !(await hasCurrentSharedArtifactReverify(root, evidenceFile, expected))
+        ) {
+          invalid.push(`Round ${round}: RED test hash matching its manifest`);
+        }
       }
     }
   }
@@ -892,6 +1024,19 @@ async function invalidCompletedEvidenceArtifacts(
       }
     }
     if (packPath === null || packSeal === null || !SHA256_VALUE.test(packSeal)) continue;
+    const safePackPath = safeRepoRelativePath(packPath);
+    if (safePackPath === null) continue;
+    try {
+      await lstat(path.join(root, ...safePackPath.split("/")));
+    } catch (error) {
+      // Review packs are intentionally local-only. A fresh clone retains the
+      // committed verdict, revision, audit hash, path and seal, but not the pack
+      // directory itself. Recompute the pack-specific checks whenever it is
+      // present; its absence alone is not a portable completion failure.
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
+      invalid.push(`${prefix} review pack path readable when present`);
+      continue;
+    }
     const packFiles = await collectReviewPackFiles(root, packPath);
     if (packFiles === null) {
       invalid.push(`${prefix} review pack resolving to regular files`);
@@ -921,6 +1066,11 @@ async function invalidCompletedEvidenceArtifacts(
         summaryMatches =
           parsed["overall_status"] === "PASS" &&
           parsed["revision"] === recordedRevision &&
+          typeof parsed["target"] === "object" &&
+          parsed["target"] !== null &&
+          (parsed["target"] as Record<string, unknown>)["kind"] === "spec" &&
+          (parsed["target"] as Record<string, unknown>)["path"] ===
+            `.qfai/specs/spec-${expected.specNumber}` &&
           Array.isArray(parsed["reviewers"]) &&
           parsed["reviewers"].some(
             (reviewer) =>
@@ -935,6 +1085,7 @@ async function invalidCompletedEvidenceArtifacts(
     }
     if (
       request === undefined ||
+      !exactLineField(request.content, "TDD-ID", expected.tddId) ||
       response === undefined ||
       !summaryMatches ||
       !/^Result:\s*PASS\s*$/im.test(responseBody) ||
@@ -969,12 +1120,17 @@ async function invalidCompletedEvidenceArtifacts(
 const ATDD_OWNED_LAYERS = new Set(["integration", "api", "e2e"]);
 const PRE_SPLIT_IMPLEMENT_LAYERS = new Set(["api", "e2e"]);
 
+function usesPreSplitEvidence(layer: string, evidence: string): boolean {
+  return (
+    PRE_SPLIT_IMPLEMENT_LAYERS.has(layer.toLowerCase()) &&
+    /\bPre-split-evidence:\s*implement\b/i.test(evidence)
+  );
+}
+
 function expectedEvidenceFile(specNumber: string, layer: string, evidence: string): string {
   const normalizedLayer = layer.toLowerCase();
   const atddOwned = ATDD_OWNED_LAYERS.has(normalizedLayer);
-  const preSplit =
-    PRE_SPLIT_IMPLEMENT_LAYERS.has(normalizedLayer) &&
-    /\bPre-split-evidence:\s*implement\b/i.test(evidence);
+  const preSplit = usesPreSplitEvidence(layer, evidence);
   const owner = atddOwned && !preSplit ? "atdd" : "implement";
   return `.qfai/evidence/${owner}-spec-${specNumber}.md`;
 }
@@ -2059,12 +2215,14 @@ async function validateSpecTddList(
               : "TC-Refs";
         const section = evidenceIndex.sections.get(anchor.fragment) ?? "";
         const expectation = {
+          specNumber,
           tddId,
           layer,
           testFile: cell(ref, "Test file"),
           selector: cell(ref, "Selector"),
           obligationField,
           obligationValue: cell(ref, obligationColumn),
+          preSplit: usesPreSplitEvidence(layer, evidence),
         } satisfies CompletedEvidenceExpectation;
         const missing = [
           ...missingCompletedEvidenceFields(section, expectation),

@@ -22,6 +22,18 @@ ledger, not across them, and one fixture is read by acceptance tests from
 several specs — named by id alone, a re-verify could clear a hash mismatch on a
 row in the wrong spec, or fail to clear the right one.
 
+**The machine-readable form is fixed.** Under the `## Shared-artifact re-verify`
+heading, write one `### spec-NNNN/TDD-NNNN` subsection per consumer, with these
+fields: `Evidence file`, `Revision`, `Selector`, `Re-verify command`,
+`Re-verify result`, `Proof command`, `Proof result`, `Restored GREEN command`,
+`Restored GREEN result`, `RED test manifest`, and `RED test hash`. Both GREEN
+results are PASS outcomes, the proof result is the observed failure, and every
+command is the exact command executed. Gate item 10 accepts a moved current
+manifest only when this complete subsection targets the same spec/item,
+evidence file and selector, and its manifest/hash recompute from the current
+artifacts. Prose mentioning a re-run, or a subsection for another item, clears
+nothing.
+
 **When this stage has no row of its own, the record is stage-level.** A fresh
 spec is the ordinary case here and can own no ATDD row at all, while still
 creating and editing the fixtures a completed spec's handed-over rows read. With

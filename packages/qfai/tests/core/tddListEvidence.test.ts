@@ -80,7 +80,11 @@ async function materializeEvidence(
   root: string,
   evidenceFile: string,
   rawContent: string,
-  requestOnlyPassRole?: string,
+  options: {
+    requestOnlyPassRole?: string;
+    reviewRequestTddId?: string;
+    summaryTargetPath?: string;
+  } = {},
 ): Promise<string> {
   const testPath = path.join(root, TEST_FILE);
   const metadata = await lstat(testPath);
@@ -102,17 +106,31 @@ async function materializeEvidence(
     const passRecord = `Result: PASS\nReviewed revision: abc123\nAudited evidence hash: ${auditHash}\n`;
     await writeFile(
       path.join(packDir, "review_request.md"),
-      requestOnlyPassRole === role ? `TDD-ID: TDD-0001\n${passRecord}` : "TDD-ID: TDD-0001\n",
+      options.requestOnlyPassRole === role
+        ? `TDD-ID: ${options.reviewRequestTddId ?? "TDD-0001"}\n${passRecord}`
+        : `TDD-ID: ${options.reviewRequestTddId ?? "TDD-0001"}\n`,
       "utf8",
     );
     await writeFile(
       path.join(packDir, `R01_${role}.md`),
-      requestOnlyPassRole === role ? "Result: REVISE\n" : passRecord,
+      options.requestOnlyPassRole === role ? "Result: REVISE\n" : passRecord,
       "utf8",
     );
     await writeFile(
       path.join(packDir, "summary.json"),
-      `${JSON.stringify({ overall_status: "PASS", revision: "abc123", reviewers: [{ reviewer: role, status: "PASS" }] }, null, 2)}\n`,
+      `${JSON.stringify(
+        {
+          overall_status: "PASS",
+          revision: "abc123",
+          target: {
+            kind: "spec",
+            path: options.summaryTargetPath ?? ".qfai/specs/spec-0001",
+          },
+          reviewers: [{ reviewer: role, status: "PASS" }],
+        },
+        null,
+        2,
+      )}\n`,
       "utf8",
     );
     content = content.replaceAll(placeholder, await packSeal(root, packPath));
@@ -171,7 +189,12 @@ async function runOn(
   root: string,
   testList: string,
   evidenceFiles: Readonly<Record<string, string>> = {},
-  requestOnlyPassRole?: string,
+  options: {
+    requestOnlyPassRole?: string;
+    reviewRequestTddId?: string;
+    summaryTargetPath?: string;
+    omitReviewPacks?: boolean;
+  } = {},
 ): Promise<string[]> {
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
   await mkdir(path.join(specDir, "tdd"), { recursive: true });
@@ -193,9 +216,12 @@ async function runOn(
     await mkdir(path.dirname(evidencePath), { recursive: true });
     await writeFile(
       evidencePath,
-      await materializeEvidence(root, relativePath, content, requestOnlyPassRole),
+      await materializeEvidence(root, relativePath, content, options),
       "utf-8",
     );
+  }
+  if (options.omitReviewPacks === true) {
+    await rm(path.join(root, ".qfai", "review"), { recursive: true, force: true });
   }
 
   const issues = await validateTddList(root, defaultConfig);
@@ -595,14 +621,16 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
 
   it("rejects a latest round that borrows required fields from an earlier round", async () => {
     await withProject(async (root) => {
-      const evidence = completeEntry("Unit").concat(`
-- Round 1: reviewer verdict: REVISE — update behavior
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        `- Round 1: reviewer verdict: REVISE — update behavior
 - Round 2: Revision: abc123
 - Round 2: RED revision: def789
 - Round 2: RED command: npm test
 - Round 2: GREEN command: npm test
 - Round 2: GREEN result: 1 passed
-`);
+- Refactor verify command: npm test`,
+      );
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
@@ -642,11 +670,52 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
         root,
         ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
         { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
-        "completion-reviewer",
+        { requestOnlyPassRole: "completion-reviewer" },
       );
       expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
     });
   });
+
+  it("accepts committed evidence when local-only review packs are absent in a fresh clone", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
+        { omitReviewPacks: true },
+      );
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("rejects phase-authored fields placed after review fields", async () => {
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit")
+        .replace("- Spec review: PASS\n", "")
+        .replace("- Round 1: Revision: abc123", "- Spec review: PASS\n- Round 1: Revision: abc123");
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
+      });
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  for (const [label, options] of [
+    ["review request TDD-ID", { reviewRequestTddId: "TDD-9999" }],
+    ["summary target spec", { summaryTargetPath: ".qfai/specs/spec-9999" }],
+  ] as const) {
+    it(`rejects a review pack whose ${label} targets another item`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(
+          root,
+          ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+          { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
+          options,
+        );
+        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      });
+    });
+  }
 
   it("rejects an ATDD-owned RED hash without a manifest", async () => {
     await withProject(async (root) => {
@@ -678,6 +747,96 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
         {
           ".qfai/evidence/atdd-spec-0001.md": evidence,
         },
+      );
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("validates the current manifest without rehashing an earlier round against later bytes", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+      const evidence = completeEntry("Integration")
+        .replace("{{RED_TEST_HASH}}", "f".repeat(64))
+        .replace(
+          "- Refactor verify command: npm test",
+          `- Round 1: reviewer verdict: REVISE — update the shared fixture
+- Round 2: Revision: abc123
+- Round 2: RED revision: def789
+- Round 2: RED test hash: {{RED_TEST_HASH}}
+- Round 2: RED test manifest: tests/unit/sample.test.ts
+- Round 2: RED command: npm test
+- Round 2: RED result: 1 failed
+- Round 2: GREEN command: npm test
+- Round 2: GREEN result: 1 passed
+- Refactor verify command: npm test`,
+        );
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+        { ".qfai/evidence/atdd-spec-0001.md": evidence },
+      );
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("accepts a canonical shared-artifact re-verify for a changed current manifest", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+      const evidence = completeEntry("Integration").replace("{{RED_TEST_HASH}}", "f".repeat(64))
+        .concat(`
+## Shared-artifact re-verify
+
+### spec-0001/TDD-0001
+
+- Evidence file: .qfai/evidence/atdd-spec-0001.md
+- Revision: abc123
+- Selector: sample
+- Re-verify command: npm test -- sample
+- Re-verify result: PASS
+- Proof command: npm test -- sample --mutated
+- Proof result: 1 failed
+- Restored GREEN command: npm test -- sample
+- Restored GREEN result: PASS
+- RED test manifest: tests/unit/sample.test.ts
+- RED test hash: {{RED_TEST_HASH}}
+`);
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+        { ".qfai/evidence/atdd-spec-0001.md": evidence },
+      );
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("rejects a shared-artifact re-verify whose proof does not fail", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+      const evidence = completeEntry("Integration").replace("{{RED_TEST_HASH}}", "f".repeat(64))
+        .concat(`
+## Shared-artifact re-verify
+
+### spec-0001/TDD-0001
+
+- Evidence file: .qfai/evidence/atdd-spec-0001.md
+- Revision: abc123
+- Selector: sample
+- Re-verify command: npm test -- sample
+- Re-verify result: PASS
+- Proof command: npm test -- sample --mutated
+- Proof result: PASS
+- Restored GREEN command: npm test -- sample
+- Restored GREEN result: PASS
+- RED test manifest: tests/unit/sample.test.ts
+- RED test hash: {{RED_TEST_HASH}}
+`);
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+        { ".qfai/evidence/atdd-spec-0001.md": evidence },
       );
       expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
     });
@@ -738,13 +897,19 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
             .replace(/- Round 1: RED (?:command|result|revision):.*\n/g, "")
             .replace("- RED failure mode: assertion", "- RED failure mode: falsifiability")
             .replace("- Oracle proof: equivalent-mutant\n", "")
-            .concat(`- Round 1: Satisfied-by: existing-test
+            .replace(
+              "- Refactor verify command: npm test",
+              `- Round 1: Satisfied-by: existing-test
 - Round 1: Falsifiability command: npm test -- sample
 - Round 1: Falsifiability result: mutation failed
 - Round 1: Falsifiability revision: fedcba
-`);
+- Refactor verify command: npm test`,
+            );
         }
-        evidence += extraField;
+        evidence = evidence.replace(
+          "- Refactor verify command: npm test",
+          `${extraField}- Refactor verify command: npm test`,
+        );
         const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
           ".qfai/evidence/implement-spec-0001.md": evidence,
         });
@@ -786,11 +951,14 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
       const evidence = completeEntry("Unit")
         .replace(/- Round 1: RED (?:command|result|revision):.*\n/g, "")
         .replace("- Oracle proof: equivalent-mutant\n", "")
-        .concat(`- Round 1: Satisfied-by: existing-test
+        .replace(
+          "- Refactor verify command: npm test",
+          `- Round 1: Satisfied-by: existing-test
 - Round 1: Falsifiability command: npm test -- sample
 - Round 1: Falsifiability result: mutation failed
 - Round 1: Falsifiability revision: fedcba
-`);
+- Refactor verify command: npm test`,
+        );
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
@@ -844,12 +1012,14 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
 
   it("rejects completed evidence that records both observed RED and falsifiability proof", async () => {
     await withProject(async (root) => {
-      const evidence = `${completeEntry("Unit")}
-- Round 1: Satisfied-by: existing-test
+      const evidence = completeEntry("Unit").replace(
+        "- Refactor verify command: npm test",
+        `- Round 1: Satisfied-by: existing-test
 - Round 1: Falsifiability command: npm test -- sample
 - Round 1: Falsifiability result: mutation failed
 - Round 1: Falsifiability revision: fedcba
-`;
+- Refactor verify command: npm test`,
+      );
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
@@ -863,11 +1033,14 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
         .replace(/- Round 1: RED (?:command|result|revision):.*\n/g, "")
         .replace("- RED failure mode: assertion", "- RED failure mode: falsifiability")
         .replace("- Oracle proof: equivalent-mutant\n", "")
-        .concat(`- Round 1: Satisfied-by: existing-test
+        .replace(
+          "- Refactor verify command: npm test",
+          `- Round 1: Satisfied-by: existing-test
 - Round 1: Falsifiability command: npm test -- sample
 - Round 1: Falsifiability result: mutation failed
 - Round 1: Falsifiability revision: fedcba
-`);
+- Refactor verify command: npm test`,
+        );
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
@@ -950,6 +1123,23 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
         root,
         ledger([{ status: "done", evidence: pointer, layer: "E2E" }]),
         { ".qfai/evidence/implement-spec-0001.md": completeEntry("E2E") },
+      );
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("does not require the current ATDD manifest from a pre-split E2E row", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "RED fail / GREEN pass — Pre-split-evidence: implement; evidence at `.qfai/evidence/implement-spec-0001.md#tdd-0001`";
+      const evidence = completeEntry("E2E").replace(
+        /^- Round 1: RED test (?:hash|manifest):.*\n/gm,
+        "",
+      );
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: pointer, layer: "E2E" }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
       );
       expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
     });

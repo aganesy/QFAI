@@ -31,6 +31,13 @@ must be written to a review pack, not left in conversation. There is exactly **o
   `shared-skill-delegation-baseline.md#verdict-vocabulary`.
 - Each additional review round creates a **new** `review-<timestamp>/` pack. Do not append
   ad-hoc per-round filenames inside an existing pack.
+- Review packs are local-only by default and therefore are absent in an ordinary fresh clone.
+  The producer still creates and validates the pack before closing the row. At a later validation,
+  gate item 10 recomputes the pack seal and its request/summary/response bindings whenever the
+  named directory is present; when the exact directory is absent, it validates the committed
+  verdict, revision, audited-evidence hash, canonical pack path, recorded seal and checkpoint
+  instead. A pack path that exists but is malformed is always an error — deleting or renaming
+  files inside a present pack is not the fresh-clone case.
 - Review artifacts are checked only by the full-scan profiles. Neither `--profile tdd` nor
   `--profile sdd` reports `QFAI-REVIEW-*`, so a malformed or missing `summary.json` passes both.
   Run `npx qfai validate --profile verify --fail-on error` (or the default full scan,

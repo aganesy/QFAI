@@ -918,6 +918,8 @@ describe.each(TREES)("%s (a gate must be executable by the routing it declares)"
     // Gateable, but only once the marker identifies it as legacy: the sentence
     // now names the marker rather than "such a row".
     expect(implement).toContain("its implement anchor is accepted");
+    expect(implement).toContain("historical completed-artifact contract");
+    expect(implement).toContain("do not retroactively require the ATDD-only");
   });
 
   it("tells a project whose manifest predates the red phase what to do", async () => {
@@ -1773,6 +1775,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // construction, and a `done` row cannot take a fresh RED.
     const shared = flat(await read(tree, SHARED_ARTIFACT));
     expect(shared).toContain("**And the consumer has to accept that pairing.**");
+    expect(shared).toContain("**The machine-readable form is fixed.**");
+    expect(shared).toContain("`Restored GREEN result`, `RED test manifest`, and `RED test hash`");
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain(
       "**unless a `Shared-artifact re-verify` entry names this row — its spec and `TDD-ID` together —",
@@ -2357,6 +2361,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
       await read(tree, "assistant/skills/qfai-implement/references/review-artifact-layout.md"),
     );
     expect(layout).toContain('**`revision_form: "content-hash"`** and **`revision`**');
+    expect(layout).toContain("Review packs are local-only by default");
+    expect(layout).toContain("when the exact directory is absent");
     const playbook = flat(
       await read(tree, "assistant/skills/qfai-sdd/references/review-cycle-playbook.md"),
     );

@@ -322,10 +322,9 @@ An item in `test-list.md` may transition to `done` only when ALL of the followin
 11. The item's evidence file (item 10) is appended with both reviewer verdicts after items 7-8 returned PASS — this skill runs those reviewers for every row it advances, including the ones whose RED came from `/qfai-atdd`
 12. Checkpoint verification passed (see `#checkpoint-verification`), and its `Checkpoint verification seal` is **recomputed** here over the recorded command, result and revision — a mismatch means the checkpoint record was edited after the run, and nothing else in the entry would have moved. The **full** suite is required here only when the item sits on a checkpoint boundary; a row between boundaries satisfies this with the narrow relevant suite from Phase: Refactor step 2, which is also what items 6, 7 and 8 are evaluated against.
 
-Sequencing note: the phase-authored part of the evidence file **item 10's `Layer` rule selects** is
-written **before** items 7-8, because it is what the reviewers audit — naming only
-`implement-<spec-id>.md` here split an `E2E` row in two. The verdict fields are appended **after** items 7-8, and a phase-authored evidence file
-whose only gap is those fields is NOT a blocking finding at review time (`Per-item evidence contract`).
+**Portable item-10 verification.** `Pre-split-evidence: implement` selects the historical completed-artifact contract as well as its file owner: do not retroactively require the ATDD-only manifest/hash. For current evidence use only the latest round, the canonical shared-artifact block, and the local-only review-pack rules in `references/review-artifact-layout.md`.
+
+Sequencing note: the phase-authored part of the evidence file **item 10's `Layer` rule selects** is written **before** items 7-8, because it is what the reviewers audit — naming only `implement-<spec-id>.md` here split an `E2E` row in two. The verdict fields are appended **after** items 7-8, and a phase-authored evidence file whose only gap is those fields is NOT a blocking finding at review time (`Per-item evidence contract`).
 
 ### Review artifact layout (MUST)
 
