@@ -521,6 +521,13 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // `undefined`. Its WORDING is not contract-fixed, the emission table having no
     // row for this state, so TDD-0039 pins non-emptiness and the absence of a
     // drift claim and leaves the text editable.
+    //
+    // It also carries no command token, which is measured rather than asserted:
+    // under the mutation that makes this arm fire in TDD-0032's fixture, all eight
+    // of that row's tokens pass on this text. BR-0006-0020 scopes the no-command
+    // rule to the DRIFT finding's body, so no oracle holds it here — but that row's
+    // sweeps do read this message under that mutation, so an edit adding a `qfai`
+    // subcommand to it would surface there and not here.
     addCheck(checks, {
       id: "workflows.integrity",
       severity: "info",

@@ -160,62 +160,60 @@ describe(
       const findings = data.checks.filter((entry) => entry.id === "workflows.integrity");
       const check = findings[0];
 
-      // `?? ""` so every message assertion below reddens with ITS OWN LABEL on
-      // an ABSENT emission instead of with a type complaint: `toMatch` and
-      // `toContain` both reject a non-string receiver BEFORE `.not` is consulted,
-      // and a `TypeError` carries no custom message — measured at RED, where
-      // `check?.message` produced the unlabelled
+      // `?? ""` so every message assertion below reddens with ITS OWN LABEL on an
+      // ABSENT emission rather than with a type complaint: `toMatch` and
+      // `toContain` reject a non-string receiver BEFORE `.not` is consulted, and a
+      // `TypeError` carries no custom message — measured at RED, where
+      // `check?.message` produced a bare
       // `.toMatch() expects to receive a string, but got undefined`.
       //
-      // What that costs is stated rather than hidden: absence collapses into the
-      // empty string, so the two negative sweeps below PASS VACUOUSLY when
-      // nothing is registered (both did at RED), and their falsifiability comes
-      // from the mutation record, not from the RED. Absence itself is named by
-      // the registration and severity claims, and the empty string is reddened by
-      // the renderer-slot claim at the end.
+      // The cost, stated rather than hidden: absence collapses into the empty
+      // string, so the two negative sweeps below PASSED VACUOUSLY at RED and their
+      // falsifiability comes from the mutation record, not from it. Absence is
+      // named by the registration and severity claims, the empty string by the
+      // renderer-slot claim at the end.
       const messageText = check?.message ?? "";
 
-      // The check is REGISTERED, exactly once. Leg (c) says the check skips —
-      // not that it disappears — so silence is a violation, and this is the
-      // assertion that reddened at RED (nothing was emitted at all: the drift
-      // branch requires `status === "modified"` and the `ok` branch
-      // `status === "ok"`, so this state fell through both).
+      // The check is REGISTERED, exactly once. Leg (c) says the check SKIPS, not
+      // that it disappears, so silence is a violation — and this is the assertion
+      // that reddened at RED with `expected [] to have a length of 1`, the drift
+      // arm requiring `status === "modified"` and the `ok` arm `"ok"`, so the state
+      // fell through both.
       //
-      // The count is also this row's own MUTUAL-EXCLUSIVITY pin, in the one
-      // direction it can be pinned from here: a second branch firing in THIS
-      // state reddens it. The opposite direction — the new branch firing
-      // ALONGSIDE the drift one in a DRIFTED tree — cannot be observed in this
-      // fixture at all, and it is not unowned: TDD-0038's and TDD-0032's own
-      // length pins are what redden for it, TDD-0038's comment naming that
-      // transition before this row landed.
+      // The count is also this row's MUTUAL-EXCLUSIVITY pin in the one direction
+      // observable from here: a second registration in THIS state reddens it. The
+      // other direction — the new arm firing ALONGSIDE the drift one in a DRIFTED
+      // tree — is unobservable in this fixture and is not unowned: TDD-0038's and
+      // TDD-0032's own length pins redden for it, TDD-0038's comment having named
+      // that transition before this row landed.
       expect
         .soft(findings, "workflows.integrity must be registered exactly once per doctor run")
         .toHaveLength(1);
 
-      // Severity, verbatim from leg (c) 「severity `info` で skip し」.
-      // `toBe("info")`, not `not.toBe("ok")`: the exact value is what the leg
-      // states, and it is the same severity the drift finding carries — which is
-      // the collision this row's steering entry recorded against TDD-0032's
-      // guard #2, and the reason that guard's comment moved in this commit.
+      // Severity, verbatim from leg (c) 「severity `info` で skip し」. `toBe`
+      // rather than `not.toBe("ok")`: the exact value is what the leg states, and
+      // it COLLIDES with the drift finding's — the collision this row's steering
+      // entry recorded against TDD-0032's guard #2, whose scope comment this commit
+      // corrects.
       //
-      // The EXIT-CODE consequence of `info` is deliberately not asserted here.
-      // `shouldFailDoctor` counts `warning + error`, and a fresh `runInit` tree
-      // carries unrelated warnings, so an exit-code pin in this row would
-      // measure a fixture artefact; TDD-0031 / TDD-0034 / TDD-0035 own it.
+      // The EXIT-CODE consequence of `info` is deliberately not asserted here:
+      // `shouldFailDoctor` counts `warning + error` and a fresh `runInit` tree
+      // carries unrelated warnings, so a pin here would measure a fixture artefact.
+      // TDD-0031 / TDD-0034 / TDD-0035 own it.
       expect
         .soft(check?.severity, "an unresolvable packaged copy is an info-severity skip")
         .toBe("info");
 
       // 「drift として報告しない」, first half: the PAYLOAD carries no drift list.
       //
-      // Absence of the ONE key, and deliberately NOT a key-set `toEqual`.
+      // Absence of the ONE key, deliberately NOT a key-set `toEqual`:
       // BR-0006-0022's four-key payload is TDD-0036's to pin and that row is
-      // `todo`; a key-set pin here would decide its shape from outside it. What
-      // this line does own is the reason an EMPTY list is as wrong as a full
-      // one: `modified: []` is a positive claim that nothing is stale, made
-      // about a tree that was never compared — the same class as the empty-record
-      // `ok` emission that TDD-0030 had to gate on `comparedCount > 0`, and false
-      // here in particular, since guard #1 measured a stale file.
+      // `todo`, so a key-set pin here would decide its shape from outside it. What
+      // this line owns is why an EMPTY list is as wrong as a full one —
+      // `modified: []` claims nothing is stale about a tree that was never
+      // compared, the same class as the empty-record `ok` emission TDD-0030 had to
+      // gate on `comparedCount > 0`, and false here in particular because guard #1
+      // measured a stale file.
       expect
         .soft(
           check?.details?.["modified"],
@@ -224,12 +222,12 @@ describe(
         .toBeUndefined();
 
       // 「drift として報告しない」, second half: no rendered field names the stale
-      // file. The needle is the bare FILE name, and the surface is every rendered
-      // field of EVERY registered finding, so payload growth can only produce a
-      // false RED here, never a false GREEN. It overlaps the payload claim above
-      // WITHOUT subsuming it, measured in both directions: a non-empty `modified`
-      // reddens both, `modified: []` reddens only the line above, and a message
-      // naming the file in prose reddens only this one.
+      // file. The needle is the bare FILE name over every rendered field of EVERY
+      // registered finding, so payload growth can only produce a false RED here,
+      // never a false GREEN. It OVERLAPS the payload claim above without subsuming
+      // it, and all three directions are measured rather than argued: a non-empty
+      // `modified` reddens both, `modified: []` reddens only the line above, and a
+      // message naming the file in prose reddens only this one.
       const findingSurface = findings
         .map(
           (finding) =>
@@ -243,16 +241,15 @@ describe(
         )
         .not.toContain(STALE_NAME);
 
-      // 「drift として報告しない」, third half — the one the two above miss: a
-      // message that asserts a DIFFERENCE while naming no file (the shape a
-      // drift-branch copy-paste produces, whose `modified.join(", ")` renders
-      // empty).
+      // 「drift として報告しない」, third half — the one the two above miss, and it
+      // is not hypothetical: a drift-arm copy-paste asserts a DIFFERENCE while
+      // naming no file, its `modified.join(", ")` rendering empty.
       //
-      // Over-broad ON PURPOSE and admitted in the label: a skip message that used
-      // the word "differ" even to DENY a difference reddens this line. A negative
-      // sweep can only fail in the false-RED direction, so breadth here cannot
-      // admit a violation, while narrowing it could — the rule the repair-text
-      // row's eight tokens are built from.
+      // Over-broad ON PURPOSE and admitted in the label: a skip message using the
+      // word "differ" even to DENY a difference reddens this line. A negative sweep
+      // fails only in the false-RED direction, so breadth cannot admit a violation
+      // while narrowing could — the rule the repair-text row's eight tokens are
+      // built from.
       expect
         .soft(
           messageText,
@@ -275,16 +272,16 @@ describe(
 
       // The renderer slot is non-empty. `formatDoctorText` prints
       // `[severity] id: message` and nothing else, so an empty message prints the
-      // bare line `[info] workflows.integrity:` — and it would also make the two
-      // sweeps above vacuous on their message half.
+      // bare line `[info] workflows.integrity:` — and it is what keeps the two
+      // sweeps above from being vacuous on their message half.
       //
-      // NON-EMPTINESS ONLY, and that ceiling is deliberate: the contract's
-      // emission table has no row for this state, and BR-0006-0020 fixes its
-      // SEVERITY without fixing its wording. A content pin here would encode a
-      // reviewer-originated obligation as a hard assertion, which the drift
-      // protocol forbids in exactly those terms. The wording constraint that DOES
-      // exist — the no-command rule — is scoped by BR-0006-0020 to the drift
-      // finding's body, so it is not restated here either.
+      // NON-EMPTINESS ONLY, and the ceiling is deliberate: the contract's emission
+      // table has no row for this state and BR-0006-0020 fixes the SEVERITY without
+      // fixing the wording, so a content pin here would encode a
+      // reviewer-originated obligation as a hard assertion — which the drift
+      // protocol forbids in those terms. The wording rule that does exist, no
+      // command token, is scoped by BR-0006-0020 to the drift finding's body and is
+      // not restated here.
       expect
         .soft(
           messageText,

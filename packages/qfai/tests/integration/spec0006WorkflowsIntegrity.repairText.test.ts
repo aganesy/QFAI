@@ -230,17 +230,17 @@ describe(
         "the drift advisory must be registered, or there is no message to inspect",
       ).toBeDefined();
 
-      // Guard #2 closes a VACUITY OF THE TOKEN SWEEPS AND THE REGISTRATION PIN,
-      // and only that: severity `ok` means the content-identical emission is
-      // under inspection, whose message names no command either.
+      // Guard #2 closes a VACUITY OF THE TOKEN SWEEPS AND THE REGISTRATION PIN
+      // FOR THE `ok` EMISSION, and TDD-0039 shrank that scope: its skip is a third
+      // registration of this id at the drift finding's own `info`, which
+      // `not.toBe("ok")` cannot separate. Measured with the packaged directory
+      // forced unresolved — both guards, the pin and all eight tokens pass on the
+      // skip's message; requirement 2, requirement 3 and the equality pin redden.
       //
-      // `not.toBe("ok")` and deliberately NOT `toBe("info")`. `toBe` is the
-      // stronger form and the surplus — the `info`-versus-`warning` distinction —
-      // is claimed by TDD-0029 (`severity` asserted as `info`) and by
-      // TDD-0031 / TDD-0034 (the exit-code invariance legs). Pinning it here
-      // would make this row redden under a mutation it says nothing about and
-      // abort its own claim block before the message was ever read. The weak
-      // form closes the vacuity mode and nothing more.
+      // `not.toBe("ok")` and deliberately NOT `toBe("info")`: the strong form
+      // reddens on that skip too and would abort this row's claim block under a
+      // mutation it says nothing about, and the `info`-versus-`warning` surplus is
+      // TDD-0029's and TDD-0031 / TDD-0034's.
       expect(
         check?.severity,
         "the DRIFT emission must be the one under inspection, not the content-identical `ok` one whose message names no command either",
