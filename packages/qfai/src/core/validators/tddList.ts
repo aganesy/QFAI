@@ -4,7 +4,11 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
-import { maskNonSpecRegions, parseFirstMarkdownTable } from "../specPackParsers.js";
+import {
+  maskNonSpecRegions,
+  parseFirstMarkdownTable,
+  splitMarkdownRow,
+} from "../specPackParsers.js";
 import {
   EXCEPTION_PARKED_CODE,
   EXCEPTION_PARKED_RULE_ID,
@@ -286,14 +290,19 @@ interface MarkdownEvidenceIndex {
 
 /** GitHub-style heading anchors and their visible sections. */
 function markdownEvidenceIndex(markdown: string): MarkdownEvidenceIndex {
-  const visible = maskNonSpecRegions(markdown);
-  const headings = Array.from(visible.matchAll(/^(#{1,6})\s+(.+?)\s*$/gm));
+  const normalized = markdown.replace(/\r\n/g, "\n");
+  const originalLines = normalized.split("\n");
+  const visibleLines = maskNonSpecRegions(normalized).split("\n");
+  const headings = visibleLines.flatMap((line, lineIndex) => {
+    const match = /^(#{1,6})\s+(.+?)\s*$/.exec(line);
+    return match ? [{ level: match[1]?.length ?? 6, title: match[2] ?? "", lineIndex }] : [];
+  });
   const occurrences = new Map<string, number>();
   const anchors = new Set<string>();
   const sections = new Map<string, string>();
 
-  for (const [index, match] of headings.entries()) {
-    const base = (match[2] ?? "")
+  for (const [index, heading] of headings.entries()) {
+    const base = heading.title
       .toLowerCase()
       .replace(/[^\w\s-]/g, "")
       .trim()
@@ -303,26 +312,66 @@ function markdownEvidenceIndex(markdown: string): MarkdownEvidenceIndex {
     const anchor = seen === 0 ? base : `${base}-${seen}`;
     anchors.add(anchor);
 
-    const level = match[1]?.length ?? 6;
-    const start = match.index + match[0].length;
     const nextPeer = headings.slice(index + 1).find((candidate) => {
-      const candidateLevel = candidate[1]?.length ?? 6;
-      return candidateLevel <= level;
+      return candidate.level <= heading.level;
     });
-    const end = nextPeer?.index ?? visible.length;
-    sections.set(anchor, visible.slice(start, end));
+    const endLine = nextPeer?.lineIndex ?? originalLines.length;
+    sections.set(anchor, originalLines.slice(heading.lineIndex + 1, endLine).join("\n"));
   }
   return { anchors, sections };
 }
 
+function fencedEvidenceValue(lines: readonly string[], startLine: number): string | null {
+  let cursor = startLine;
+  while (cursor < lines.length && (lines[cursor] ?? "").trim().length === 0) cursor += 1;
+  const opening = /^\s*(`{3,}|~{3,})[^\r\n]*$/.exec(lines[cursor] ?? "");
+  const marker = opening?.[1];
+  if (!marker) return null;
+
+  const content: string[] = [];
+  for (cursor += 1; cursor < lines.length; cursor += 1) {
+    const line = lines[cursor] ?? "";
+    const closing = /^\s*(`{3,}|~{3,})\s*$/.exec(line)?.[1];
+    if (closing?.charAt(0) === marker.charAt(0) && closing.length >= marker.length) {
+      const value = content.join("\n").trim();
+      return value.length > 0 ? value : null;
+    }
+    content.push(line);
+  }
+  return null;
+}
+
 function evidenceFieldValue(section: string, field: string): string | null {
+  const normalized = section.replace(/\r\n/g, "\n");
+  const originalLines = normalized.split("\n");
+  const visibleLines = maskNonSpecRegions(normalized).split("\n");
   const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = new RegExp(
-    `^\\s*(?:[-*]\\s+|\\|\\s*)?(?:\\*\\*)?(?:Round\\s+\\d+:\\s*)?${escaped}(?:\\*\\*)?\\s*(?::|\\|)\\s*(?!\\|)([^\\r\\n|]+)`,
-    "im",
-  ).exec(section);
-  const value = match?.[1]?.trim().replace(/^`([^`]*)`$/, "$1") ?? "";
-  return value.length > 0 ? value : null;
+  const bulletPattern = new RegExp(
+    `^\\s*(?:[-*][ \\t]+)?(?:\\*\\*)?(?:Round[ \\t]+\\d+:[ \\t]*)?${escaped}(?:\\*\\*)?[ \\t]*:[ \\t]*(.*)$`,
+    "i",
+  );
+
+  for (const [lineIndex, visibleLine] of visibleLines.entries()) {
+    if (/^\s*\|/.test(visibleLine)) {
+      const cells = splitMarkdownRow(visibleLine);
+      for (let cellIndex = 0; cellIndex < cells.length - 1; cellIndex += 1) {
+        const label = (cells[cellIndex] ?? "")
+          .replace(/^\*\*|\*\*$/g, "")
+          .replace(/^Round\s+\d+:\s*/i, "")
+          .trim();
+        if (label.toLowerCase() !== field.toLowerCase()) continue;
+        const value = (cells[cellIndex + 1] ?? "").trim().replace(/^`([^`]*)`$/, "$1");
+        return value.length > 0 ? value : fencedEvidenceValue(originalLines, lineIndex + 1);
+      }
+      continue;
+    }
+
+    const match = bulletPattern.exec(visibleLine);
+    if (!match) continue;
+    const value = (match[1] ?? "").trim().replace(/^`([^`]*)`$/, "$1");
+    return value.length > 0 ? value : fencedEvidenceValue(originalLines, lineIndex + 1);
+  }
+  return null;
 }
 
 function hasEvidenceField(section: string, field: string): boolean {
@@ -356,6 +405,7 @@ function missingCompletedEvidenceFields(
     "GREEN result",
     "Refactor verify command",
     "Refactor verify result",
+    "qa-gatekeeper",
     "Spec review",
     "Code quality review",
   ];
@@ -375,28 +425,41 @@ function missingCompletedEvidenceFields(
       missing.push(`${field} matching ledger value "${value}"`);
     }
   }
-  for (const field of ["Spec review", "Code quality review"] as const) {
+  for (const field of ["qa-gatekeeper", "Spec review", "Code quality review"] as const) {
     const verdict = evidenceFieldValue(section, field);
     if (verdict !== null && verdict.toUpperCase() !== "PASS") {
       missing.push(`${field}: PASS`);
     }
   }
-  const observedRed =
-    hasEvidenceField(section, "RED command") &&
-    hasEvidenceField(section, "RED result") &&
-    hasEvidenceField(section, "RED revision");
-  const falsifiability =
-    hasEvidenceField(section, "Satisfied-by") &&
-    hasEvidenceField(section, "Falsifiability command") &&
-    hasEvidenceField(section, "Falsifiability result") &&
-    hasEvidenceField(section, "Falsifiability revision");
-  if (observedRed === falsifiability) {
+  const observedRedFields = ["RED command", "RED result", "RED revision"] as const;
+  const falsifiabilityFields = [
+    "Satisfied-by",
+    "Falsifiability command",
+    "Falsifiability result",
+    "Falsifiability revision",
+  ] as const;
+  const observedRedPresent = observedRedFields.filter((field) => hasEvidenceField(section, field));
+  const falsifiabilityPresent = falsifiabilityFields.filter((field) =>
+    hasEvidenceField(section, field),
+  );
+  const observedRed = observedRedPresent.length === observedRedFields.length;
+  const falsifiability = falsifiabilityPresent.length === falsifiabilityFields.length;
+  const validObservedRed = observedRed && falsifiabilityPresent.length === 0;
+  const validFalsifiability = falsifiability && observedRedPresent.length === 0;
+  if (validObservedRed === validFalsifiability) {
     missing.push("exactly one of RED command/result/revision or falsifiability proof");
+  }
+  const failureMode = evidenceFieldValue(section, "RED failure mode")?.toLowerCase();
+  if (validObservedRed && failureMode !== "assertion" && failureMode !== "expected-error") {
+    missing.push("RED failure mode: assertion or expected-error for observed RED");
+  }
+  if (validFalsifiability && failureMode !== "falsifiability") {
+    missing.push("RED failure mode: falsifiability for falsifiability proof");
   }
   if (ATDD_OWNED_LAYERS.has(normalizedLayer) && !hasEvidenceField(section, "RED test hash")) {
     missing.push("RED test hash");
   }
-  if (!falsifiability && !hasEvidenceField(section, "Oracle proof")) {
+  if (!validFalsifiability && !hasEvidenceField(section, "Oracle proof")) {
     missing.push("Oracle proof");
   }
   return missing;

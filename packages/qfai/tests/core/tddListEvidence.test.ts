@@ -284,6 +284,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
 - Refactor verify command: npm test
 - Refactor verify result: 1 passed
 - Oracle proof: equivalent-mutant
+- qa-gatekeeper: PASS
 - Spec review: PASS
 - Code quality review: PASS
 `;
@@ -358,6 +359,173 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
     });
   }
 
+  for (const verdict of ["", "REVISE"] as const) {
+    it(`rejects completed evidence with qa-gatekeeper verdict ${verdict || "missing"}`, async () => {
+      await withProject(async (root) => {
+        const evidence = completeEntry("Unit").replace(
+          `- qa-gatekeeper: PASS\n`,
+          verdict ? `- qa-gatekeeper: ${verdict}\n` : "",
+        );
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": evidence,
+        });
+        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      });
+    });
+  }
+
+  it("accepts command and result payloads in canonical fenced blocks", async () => {
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit")
+        .replace(
+          "- Round 1: RED command: npm test",
+          "- Round 1: RED command:\n```sh\nnpm test\n```",
+        )
+        .replace(
+          "- Round 1: RED result: 1 failed",
+          "- Round 1: RED result:\n```text\n1 failed\n```",
+        )
+        .replace(
+          "- Round 1: GREEN command: npm test",
+          "- Round 1: GREEN command:\n```sh\nnpm test\n```",
+        )
+        .replace(
+          "- Round 1: GREEN result: 1 passed",
+          "- Round 1: GREEN result:\n```text\n1 passed\n```",
+        );
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
+      });
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("does not treat an empty field followed by another field as fenced evidence", async () => {
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Round 1: GREEN result: 1 passed",
+        "- Round 1: GREEN result:",
+      );
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
+      });
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("does not count a field label embedded inside fenced output", async () => {
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit")
+        .replace("- qa-gatekeeper: PASS\n", "")
+        .replace(
+          "- Round 1: RED result: 1 failed",
+          "- Round 1: RED result:\n```text\n1 failed\n- qa-gatekeeper: PASS\n```",
+        );
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
+      });
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  for (const [branch, extraField] of [
+    ["observed RED", "- Satisfied-by: existing-test\n"],
+    ["falsifiability", "- Round 1: RED command: npm test\n"],
+  ] as const) {
+    it(`rejects a partial ${branch === "observed RED" ? "falsifiability" : "observed RED"} form beside complete ${branch}`, async () => {
+      await withProject(async (root) => {
+        let evidence = completeEntry("Unit");
+        if (branch === "falsifiability") {
+          evidence = evidence
+            .replace(/- Round 1: RED (?:command|result|revision):.*\n/g, "")
+            .replace("- RED failure mode: assertion", "- RED failure mode: falsifiability")
+            .replace("- Oracle proof: equivalent-mutant\n", "")
+            .concat(`- Satisfied-by: existing-test
+- Falsifiability command: npm test -- sample
+- Falsifiability result: mutation failed
+- Falsifiability revision: fedcba
+`);
+        }
+        evidence += extraField;
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": evidence,
+        });
+        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      });
+    });
+  }
+
+  for (const failureMode of ["import-error", "falsifiability"] as const) {
+    it(`rejects observed RED failure mode ${failureMode}`, async () => {
+      await withProject(async (root) => {
+        const evidence = completeEntry("Unit").replace(
+          "RED failure mode: assertion",
+          `RED failure mode: ${failureMode}`,
+        );
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": evidence,
+        });
+        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      });
+    });
+  }
+
+  it("accepts expected-error as an observed RED failure mode", async () => {
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "RED failure mode: assertion",
+        "RED failure mode: expected-error",
+      );
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
+      });
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("rejects assertion failure mode on a falsifiability entry", async () => {
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit")
+        .replace(/- Round 1: RED (?:command|result|revision):.*\n/g, "")
+        .replace("- Oracle proof: equivalent-mutant\n", "").concat(`- Satisfied-by: existing-test
+- Falsifiability command: npm test -- sample
+- Falsifiability result: mutation failed
+- Falsifiability revision: fedcba
+`);
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
+      });
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("accepts a selector containing an unescaped pipe in bullet evidence", async () => {
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace("Selector: sample", "Selector: foo|bar");
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER, selector: "foo\\|bar" }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("accepts a selector containing an escaped pipe in table evidence", async () => {
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Selector: sample",
+        "| Selector | foo\\|bar |",
+      );
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER, selector: "foo\\|bar" }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+      );
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
   for (const [layer, field, from, to] of [
     ["E2E", "US-ref", "US-ref: US-0001", "US-ref: US-9999"],
     ["API", "CON-API-ref", "CON-API-ref: CON-API-0001", "CON-API-ref: CON-API-9999"],
@@ -394,6 +562,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
     await withProject(async (root) => {
       const evidence = completeEntry("Unit")
         .replace(/- Round 1: RED (?:command|result|revision):.*\n/g, "")
+        .replace("- RED failure mode: assertion", "- RED failure mode: falsifiability")
         .replace("- Oracle proof: equivalent-mutant\n", "").concat(`- Satisfied-by: existing-test
 - Falsifiability command: npm test -- sample
 - Falsifiability result: mutation failed
