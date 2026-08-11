@@ -233,9 +233,9 @@ describe(
       // Guard #2 closes a VACUITY OF THE TOKEN SWEEPS AND THE REGISTRATION PIN
       // FOR THE `ok` EMISSION, and TDD-0039 shrank that scope: its skip is a third
       // registration of this id at the drift finding's own `info`, which
-      // `not.toBe("ok")` cannot separate. Measured with the packaged directory
-      // forced unresolved — both guards, the pin and all eight tokens pass on the
-      // skip's message; requirement 2, requirement 3 and the equality pin redden.
+      // `not.toBe("ok")` cannot separate. Measured with the packaged directory forced
+      // unresolved — both guards, the REGISTRATION pin and all eight tokens pass on
+      // the skip's message; requirement 2, requirement 3 and the equality pin redden.
       //
       // `not.toBe("ok")` and deliberately NOT `toBe("info")`: the strong form
       // reddens on that skip too and would abort this row's claim block under a

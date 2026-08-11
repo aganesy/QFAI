@@ -101,6 +101,13 @@ const WORKFLOWS_DIR_SEGMENTS = [".github", "workflows"] as const;
 /** The same location as the root-relative POSIX string carried in results. */
 const WORKFLOWS_DIR_RELATIVE = WORKFLOWS_DIR_SEGMENTS.join("/");
 
+/**
+ * Adding a member here is a `doctor.ts` change too: its `workflows.integrity`
+ * chain is an `if`/`else if` over these three literals, so a fourth would fall
+ * through it and register NOTHING, silently — no compile error, because nothing
+ * switches exhaustively on this type, and no failing test. Give it an arm there,
+ * or record why silence is right for it.
+ */
 export type WorkflowsIntegrityStatus = "ok" | "modified" | "skipped_unresolved";
 
 /**
@@ -137,11 +144,16 @@ export type WorkflowsIntegrityStatus = "ok" | "modified" | "skipped_unresolved";
  * meaning depends on the reader's cwd, and absolutizing `workflowsDir` puts the
  * host layout into a machine surface that today has none.
  *
- * PER MEMBER, so that the opening claim is checkable rather than taken on trust:
- * `status === "ok"` gates the content-identical emission and the drift suite's
- * override leg asserts it; `"modified"` and `"skipped_unresolved"` gate the other
- * two arms; `comparedCount` is the `ok` arm's second conjunct; `workflowsDir` is
- * in all three `details` payloads; `packagedDir` is in the drift message. There is
+ * PER MEMBER — all FIVE of them, so that the opening claim is checkable rather than
+ * taken on trust. `status === "ok"` gates the content-identical emission and the
+ * drift suite's override leg asserts it; the status LITERALS `"modified"` and
+ * `"skipped_unresolved"` gate the other two arms; the `modified` FIELD — distinct
+ * from that literal, and omitted from this list while the only `modified` token in
+ * it was the literal, which is the omission this list was written to prevent — is
+ * the drift arm's `modified.length > 0` conjunct, the file list its message
+ * interpolates, and its `details.modified`; `comparedCount` is the `ok` arm's second
+ * conjunct; `workflowsDir` is in all three `details` payloads; `packagedDir` is in
+ * the drift message. There is
  * no unconsumed member left to add to, so a claim that some member is held for a
  * later row now has to be MEASURED against `doctor.ts` before it is written here.
  */

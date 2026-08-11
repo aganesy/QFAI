@@ -273,12 +273,21 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   // advisory below, the content-identical `ok` state as the `ok` check after it,
   // and the unresolved-packaged-copy skip as the `info` skip after that.
   //
-  // The chain is now TOTAL over `WorkflowsIntegrityStatus`, whose three members
-  // each have an arm — where it previously stated the general rule "every status
-  // without a branch registers nothing" because the skip had no arm yet. The
-  // stronger form is worth having explicitly: a fourth status added to that union
-  // would fall through this chain silently, and the union is the only place a
-  // reader can see that it must not.
+  // The chain is now TOTAL AT ITS STATUS TESTS over `WorkflowsIntegrityStatus`,
+  // whose three members each have an arm — where it previously stated the general
+  // rule "every status without a branch registers nothing" because the skip had no
+  // arm yet. Scoped to the STATUS TESTS on purpose, because DISPATCH is not total:
+  // the `modified.length > 0` paragraph below says why, a `modified` status whose
+  // `modified` list is empty matching this arm's status test and still registering
+  // nothing. (Named rather than counted in lines — "the conjunct 16 lines below" was
+  // true when written and this commit moved it to 18.)
+  //
+  // The stronger form is worth having explicitly: a fourth status added to that
+  // union would fall through this chain silently, and the declaration of
+  // `WorkflowsIntegrityStatus` now carries a note saying so. Corrected where it
+  // lived — this read "the union is the only place a reader can see that it must
+  // not", which was false when written, that declaration having carried no comment
+  // at all.
   //
   // Severity is `info` deliberately, and unlike the skills-integrity branch
   // above it is NOT `warning`: `shouldFailDoctor` counts `warning + error`
@@ -496,11 +505,16 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     //     reported this status with a resolved-but-unusable operand would fall
     //     through all three arms and emit nothing, which is precisely the defect
     //     this row closes, reintroduced one state along.
-    // And neither conjunct could be FALSE at this revision — the state that would
-    // falsify either is the unreachable one above — so neither would have an
-    // oracle. The drift arm already carries one such predicate, recorded there as
-    // an equivalent mutant; a second would be a second untestable one on the same
-    // emission.
+    // And neither conjunct could be FALSE at this revision, so neither would have an
+    // oracle: falsifying one needs a reader that returns `skipped_unresolved` with a
+    // RESOLVED `packagedDir` or a non-zero `comparedCount`, and the single producing
+    // site sets both constants. Corrected in place — this said "the state that would
+    // falsify either is the unreachable one above", which names the DRIFT arm's
+    // unreachable state (`modified` reported with an unresolved operand); that is a
+    // different state on the other side of the chain, and it falsifies neither of
+    // these two conjuncts. The drift arm does already carry one such predicate,
+    // recorded there as an equivalent mutant; a second would be a second untestable
+    // one on the same emission.
     //
     // EXCLUSIVITY holds twice over, and TDD-0032's and TDD-0038's
     // `toHaveLength(1)` pins depend on it: `status` carries one value per run, so
@@ -520,9 +534,22 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // `message` is English to match the two arms above — one check id, one
     // operator — and interpolates NOTHING: the only operand this state has is the
     // unresolved packaged directory, and rendering it would print the literal
-    // `undefined`. Its WORDING is not contract-fixed, the emission table having no
-    // row for this state, so TDD-0039 pins non-emptiness and the absence of a
-    // drift claim and leaves the text editable.
+    // `undefined`.
+    //
+    // Its WORDING is not contract-fixed, the emission table having no row for this
+    // state — but "leaves the text editable", which stood here, is wrong about what
+    // TDD-0039 leaves. FOUR pins hold this string, enumerated so an editor knows
+    // which one will redden: `/\S/` for non-emptiness (the renderer prints
+    // `[severity] id: message` and nothing else); `details.modified` must stay
+    // `undefined`; and two NEGATIVE sweeps over this text — drift vocabulary
+    // (`differ`, `stale`, `outdated`, `out of date`, `mismatch`, `drifted`) and the
+    // literal `undefined`. Both sweeps are broader than the contract deliberately: a
+    // negative sweep fails only in the FALSE-RED direction, so breadth cannot admit a
+    // violation while narrowing could — hence a COMPLIANT rewording can redden, the
+    // same warning the drift arm above carries about its three needles. The bare noun
+    // `drift` is excluded from the vocabulary sweep for one reason only: THIS text
+    // denies drift using it. Reword that denial and re-read the needle before
+    // widening it.
     //
     // It also carries no command token, which is measured rather than asserted:
     // under the mutation that makes this arm fire in TDD-0032's fixture, all eight

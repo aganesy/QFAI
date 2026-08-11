@@ -5,10 +5,21 @@
  * TC-0006-0030 leg (c) — Setup 「install 済み package 側の shipped copy を解決でき
  * ない tree」, Verify 「check が severity `info` で skip し、drift として報告しな
  * い」 — which is BR-0006-0020's closing clause (「package 同梱 copy を解決できない
- * 場合は severity `info` で skip する」) under AC-0006-0023. The other two legs are
- * ledger rows, not gaps: leg (a) is TDD-0032's repair-text suite, and leg (b)
- * divides between TDD-0038 (the entry-LESS half) and the drift suite's second
- * `it` (the entry-BEARING one).
+ * 場合は severity `info` で skip する」) under AC-0006-0023. Leg (a) is TDD-0032's
+ * repair-text suite. LEG (b) IS NOT COVERED, and an earlier version of this header
+ * claimed it was, divided between two owners: `CR-20260810-0001` (`Class: defect`,
+ * `open`) measured its literal Verify clause 「drift finding が 0 件」 as asserted by
+ * NOTHING, and the drift-suite half of that division has no `TC-0006-0030` marker to
+ * carry the attribution — `drift.test.ts:19-20` declares `TC-0006-0027`/`0028` only.
+ *
+ * Leg (c) runs anyway because it is SEPARABLE, not because that CR is settled: it
+ * turns on PACKAGED-side resolution, and the early return of
+ * `diffInstalledShippedWorkflows` fires before the provenance record is read at all,
+ * while the CR's ambiguity is entirely over which ADOPTER-side state leg (b) means.
+ * No option in it changes this leg's fixture, severity or expected `modified` list.
+ * That CR measures the return at `workflowsIntegrity.ts:284-293` with the record read
+ * at `:301`, anchored to `a67ed0c7`; THIS commit inserts 12 lines above it —
+ * measured, now `:296-305` and `:313` — so follow the SYMBOL, not the number.
  *
  * ## Why the packaged resolver is MOCKED here
  *
@@ -19,9 +30,8 @@
  * Real unresolvability is a broken or partial install of the package the suite is
  * running FROM, and arranging it for real means deleting the packaged assets out
  * from under every other suite in the same run. The mock is the seam, and the
- * argument has already bought one in this repository:
- * `tests/core/specLayoutCaseExact.test.ts` fakes `fs.access` for the states its
- * host filesystem cannot produce, and says so in the same place.
+ * precedent is `tests/core/specLayoutCaseExact.test.ts`, which fakes `fs.access`
+ * for the states its host filesystem cannot produce and says so in the same place.
  *
  * SCOPED, because a module mock is a whole-file instrument:
  *
@@ -115,10 +125,8 @@ describe(
       // GUARDS #1-#2 are PRECONDITIONS on the fixture and stay hard: on a tree
       // that is not in this state nothing below measures anything. Everything
       // after them is this row's claim and is `expect.soft`, for the reason the
-      // sibling provenance-gate suite gives at length — under hard asserts only
-      // the FIRST failure is observed, so a mutation reddening an earlier claim
-      // aborts the run before the later ones execute and they read as covered
-      // while never having been exercised.
+      // sibling provenance-gate suite gives at length — hard asserts observe only
+      // the FIRST failure, so later claims read as covered without having executed.
 
       // Guard #1 — with the REAL resolver this tree reports drift. It closes
       // three vacuity modes at once, which is why it is a single `toContain`
@@ -161,24 +169,25 @@ describe(
       const check = findings[0];
 
       // `?? ""` so every message assertion below reddens with ITS OWN LABEL on an
-      // ABSENT emission rather than with a type complaint: `toMatch` and
-      // `toContain` reject a non-string receiver BEFORE `.not` is consulted, and a
-      // `TypeError` carries no custom message — measured at RED, where
-      // `check?.message` produced a bare
-      // `.toMatch() expects to receive a string, but got undefined`.
+      // ABSENT emission rather than with a type complaint: `toMatch` and `toContain`
+      // reject a non-string receiver BEFORE `.not` is consulted and a `TypeError`
+      // carries no custom message — measured at RED, where `check?.message` produced a
+      // bare `.toMatch() expects to receive a string, but got undefined`.
       //
-      // The cost, stated rather than hidden: absence collapses into the empty
-      // string, so the two negative sweeps below PASSED VACUOUSLY at RED and their
-      // falsifiability comes from the mutation record, not from it. Absence is
-      // named by the registration and severity claims, the empty string by the
-      // renderer-slot claim at the end.
+      // The cost, stated rather than hidden: FOUR of the seven assertions below PASSED
+      // VACUOUSLY at RED — not two, as this said — for two distinct reasons. (i) the
+      // `?? ""` collapse feeds both message sweeps the empty string; (ii) absence
+      // itself satisfies the claim, the optional chain yielding `undefined` for the
+      // payload one and an empty `findings` array joining to an empty surface for the
+      // filename one. Their falsifiability comes from the mutation record, not that
+      // run; absence is named by the registration and severity claims and the empty
+      // string by the renderer-slot claim — the three that reddened.
       const messageText = check?.message ?? "";
 
       // The check is REGISTERED, exactly once. Leg (c) says the check SKIPS, not
       // that it disappears, so silence is a violation — and this is the assertion
-      // that reddened at RED with `expected [] to have a length of 1`, the drift
-      // arm requiring `status === "modified"` and the `ok` arm `"ok"`, so the state
-      // fell through both.
+      // that reddened at RED with `expected [] to have a length of 1`, the state
+      // having fallen through both pre-existing arms' status tests.
       //
       // The count is also this row's MUTUAL-EXCLUSIVITY pin in the one direction
       // observable from here: a second registration in THIS state reddens it. The
@@ -245,17 +254,30 @@ describe(
       // is not hypothetical: a drift-arm copy-paste asserts a DIFFERENCE while
       // naming no file, its `modified.join(", ")` rendering empty.
       //
-      // Over-broad ON PURPOSE and admitted in the label: a skip message using the
-      // word "differ" even to DENY a difference reddens this line. A negative sweep
-      // fails only in the false-RED direction, so breadth cannot admit a violation
-      // while narrowing could — the rule the repair-text row's eight tokens are
-      // built from.
+      // A DRIFT-VOCABULARY sweep and no longer a `differ` one: `/\bdiffer/i` alone
+      // left two measured surviving mutants, both reporting drift in prose ("out of
+      // date", "found stale") that needle does not contain. This line is leg (c)'s
+      // only oracle against a prose drift claim, so it sweeps the vocabulary.
+      //
+      // Over-broad ON PURPOSE and admitted in the label — the discipline, not a
+      // concession. A negative sweep fails only in the FALSE-RED direction, so
+      // breadth cannot admit a violation while narrowing could; `differ` already
+      // reddens compliant wordings that DENY a difference, and broadening adds more
+      // of that and no false GREEN. It pins no content either, so the wording ceiling
+      // at the end of this block does not reach it.
+      //
+      // The bare noun `drift` is EXCLUDED, measured: this arm's compliant message ends
+      // "…and no drift is reported", so `/\bdrift/i` reddens the CURRENT text — an
+      // actual RED, not a tolerable false-RED risk — and carving that denial out of
+      // the needle would pin its wording, i.e. the content pin the ceiling bars.
+      // `drifted` is in, no denial here using the participle. Named gap: a positive
+      // claim on the noun alone survives, leaving the two claims above against it.
       expect
         .soft(
           messageText,
-          "a skip must not state that installed workflows differ from the packaged copy — this sweep is deliberately broad and a compliant rewording that uses the word `differ` will redden it",
+          "a skip must not state in any words that installed workflows are out of step with the packaged copy — this sweep is deliberately broad over drift vocabulary (`differ`, `stale`, `outdated`, `out of date`, `mismatch`, `drifted`), so a compliant rewording using any of them will redden it, which is the only direction a negative sweep can fail in",
         )
-        .not.toMatch(/\bdiffer/i);
+        .not.toMatch(/\b(?:differ|stale|outdated|mismatch|drifted|out[ -]of[ -]date)/i);
 
       // The unresolved operand must not be RENDERED. In this state
       // `packagedDir` is `undefined` BY CONSTRUCTION — the reader's early return
@@ -277,11 +299,11 @@ describe(
       //
       // NON-EMPTINESS ONLY, and the ceiling is deliberate: the contract's emission
       // table has no row for this state and BR-0006-0020 fixes the SEVERITY without
-      // fixing the wording, so a content pin here would encode a
-      // reviewer-originated obligation as a hard assertion — which the drift
-      // protocol forbids in those terms. The wording rule that does exist, no
-      // command token, is scoped by BR-0006-0020 to the drift finding's body and is
-      // not restated here.
+      // fixing the wording, so a POSITIVE content pin here would encode a
+      // reviewer-originated obligation as a hard assertion — which the drift protocol
+      // forbids in those terms. It does not reach the negative sweeps above, which
+      // fix nothing the message must say. The one wording rule that does exist, no
+      // command token, is scoped by BR-0006-0020 to the drift finding's body.
       expect
         .soft(
           messageText,
