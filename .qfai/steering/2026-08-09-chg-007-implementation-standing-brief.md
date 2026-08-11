@@ -162,6 +162,12 @@ the final empty element. An absolute cap alone is satisfiable by deleting _code_
   any other revision hash before committing.
 - **A "supersedes every earlier table" clause voids later figures too.** One such clause left the record with
   no current closure measurement anywhere. Scope superseding clauses to the rows and rounds they cover.
+- **A closure is recorded as a literal command, never as a count of selectors.** "19 selectors" was carried
+  forward nine times in one evidence file with no literal command behind it; three reviewers reconstructing it
+  produced three different lists, one containing a bare `drift` token that matches nine extra files. Write the
+  command, use full paths, and never a bare stem.
+- **A line citation is a currency claim.** Anchoring it to a revision is not enough — an edit above it in the
+  same commit invalidates it. Cite the **symbol** and keep the number with its anchor beside it.
 - **`vitest -t` is a regex.** An unescaped `(TDD-NNNN)` silently **skips and exits 0**, satisfying a
   literal reading of "GREEN = exit 0" with zero tests executed. Admissible only when `failed >= 1` (RED) or
   `passed >= 1` (GREEN); record the selector line, not only the count. ~89 hazard-shaped selectors remain

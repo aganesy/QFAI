@@ -5286,7 +5286,10 @@ edits anything:
 
 - **Basis: absolute comment-line count, and share over NON-BLANK lines, both recorded.** A comment line is
   one whose first non-whitespace characters are `//`, `*` or `/*`.
-- **Caps: 361 comment lines for the test file, 126 for the helper** — the round-6 values, as released.
+- **Caps: 362 comment lines for `repairText.test.ts`, 126 for the helper.** *Corrected from 361: measured
+  under the classifier this definition itself specifies, that file is **362/479 both before and after**
+  round 8, so the published cap was off by one the day it was written and would have failed its own file.
+  Found by a reconciling reviewer and reproduced by the engineer.*
 - **Round 7 measured: 356 absolute, 356 / 471 = 75.6% of non-blank (356 / 500 = 71.8% of total); helper
   90 absolute.** Both under cap. *Corrected in place: this line originally read "356 / 496 (71.8% of
   non-blank)", which quotes a **total-line** denominator under a non-blank label — the same 71.8-vs-75.6
@@ -5941,3 +5944,79 @@ the defective print. No other recorded measurement is multi-edit.
    it except `M6`. A witness needs its **own ledger row** — a fixture-helper precondition test — not an
    assertion slipped into a row whose obligation is leg (b). Recorded for `delivery-planner`.
 2. The brief's §2 clause is fixed above, and §8's ruling is recorded, so neither is owed.
+
+#### TDD-0039 review fixes landed at `04e0a4f2` — four refusals, one of which would have broken the build
+
+Non-comment delta across the whole commit is **two lines** (E1's needle and its label), verified by stripping
+comment lines and comparing sequences: `doctor.ts` `63b79ddb → ee31f4dd` with 1296 non-comment lines
+identical, `workflowsIntegrity.ts` `484756e0 → bad123d7` with 88 identical, `repairText.test.ts` 117
+identical. `pnpm ci:lint` exit 0 unpiped across all ten members; four `spec0006WorkflowsIntegrity.*` suites
+`11 passed`, file-path selectors so the `-t` regex hazard cannot arise.
+
+**My "at minimum" term list contained a term that reddens the compliant build**, and I verified the refutation
+myself: the shipped emission ends `…were not compared and no drift is reported`, so bare `/\bdrift/i` fires on
+**compliant production output** — measured `True`, while `/\bdrifted/i` measures `False`. That is not the
+tolerable false-RED the breadth argument licenses; it is a red on correct code. The only ways to take the term
+were to reword an honest denial to satisfy a crude sweep, or to carve the denial out of the needle — which
+pins the denial's wording and **is** the positive content pin the recorded ceiling bars. The shipped needle is
+`/\b(?:differ|stale|outdated|mismatch|drifted|out[ -]of[ -]date)/i`, and the residual gap (a positive claim on
+the **noun** `drift`) is named in the file with the payload and filename claims recorded as what still stands
+against it.
+
+**A defect one line from the text I pointed at, of the class that item was closing.** The preamble said "the
+conjunct **16 lines** below" — true at `a67ed0c7`, and the engineer's own 6-line insertion moved it to 18. A
+distance claim invalidated by the edit sitting on top of it, replaced with the conjunct's **name**. That is
+brief §1 clause 2 catching a defect the fix itself created, inside the same hunk.
+
+**The citations I ordered would have gone stale inside the commit.** `284-293` is right at `a67ed0c7` — the
+engineer re-measured all five anchors independently — but its edits insert **12 lines above them**, so they
+are now `296-305` and `:313`. Its solution is better than what I asked for: cite the **symbol**
+`diffInstalledShippedWorkflows`, keep the number with its anchor, and state the measured shift. **Anchoring a
+line number does not stop a reader following a stale one**, which is the part my rule missed.
+
+**And I overstated my own CR.** I told it that `drift.test.ts` lacking a `TC-0006-0030` marker meant the
+marker was absent generally. `provenanceGate.test.ts:30-31` **does** declare it — only the drift-suite half
+lacks one, which is what `CR-20260810-0001` itself says. Two smaller ones: "the pin" is at `:237` not `:238`,
+and the clause I called "both `modified` tokens" contains exactly **one**.
+
+##### The surviving mutants, and the kills
+
+Needle (single occurrence asserted), the compliant skip message; base is `doctor.ts`:
+
+| Witness | Replacement theme | Base | Mutant | Result |
+| --- | --- | --- | --- | --- |
+| W1 | "are out of date relative to the packaged copy" | `63b79ddb` | `69429c5e` | **SURVIVED**, exit 0 |
+| W2 | "were found stale" | `63b79ddb` | `c2671c6d` | **SURVIVED**, exit 0 |
+| W1 | same | `ee31f4dd` | `f271f0dd` | **KILLED**, exit 1 |
+| W2 | same | `ee31f4dd` | `7dad11f8` | **KILLED**, exit 1 |
+
+Each kill reddened **exactly one** assertion — the drift-vocabulary label — with every other soft claim green,
+so the kill is attributable to the broadening alone. A 15-case term probe returned **0 mismatches**. The
+mutant hashes differ between phases because the base differs, which is the concrete demonstration of why
+base + needle is the join key rather than the hash.
+
+##### The comment overage, ruled rather than absorbed
+
+The row's file moved **65.3% → 67.9%** (+22 lines), roughly 7 points above the sibling band, and the engineer
+escalated it instead of quietly trimming: the +22 are the **four records this round mandated** into that file
+— the CR refutation, the four-vacuity correction, the needle rationale with its drift-noun measurement, and
+the false-RED discipline in the label — net of five trims it did make.
+
+**Ruling: accept 67.9%, and record the overage rather than delete a record.** §8 says a measurement replacing
+a derivation is not padding, and all four are measurements or refutations of measured claims. Trimming one to
+hit a share is exactly the trade §8 forbids. The honest artifact is a file 7 points over its band with the
+reason stated, not a file at 60% missing a refutation of an open CR.
+
+##### O2: the "19-selector closure" has no literal command on record
+
+Three reviewers reconstructing it produced **three different lists**, and one contained a bare `drift` token
+which matches **nine extra files** and yields a different test count. Measured: the canonical block in this
+file is **15 full-path tokens** and contains no bare token, with its own measured pair
+(`163 passed | 14 skipped (177)`). So "19 selectors" is a **description carried forward**, not a command —
+the same defect class as the falsifiability command that was missing entirely, and it has been cited nine
+times in this file.
+
+**Not reconstructed here**, because writing a 19-token command I did not run would be a fabricated
+measurement. What is recorded: the literal 15-token command and its measured result are the only reproducible
+pair; every "19-selector" figure is that list plus four named files, and **future rows write the literal
+command**. Added to the standing brief.
