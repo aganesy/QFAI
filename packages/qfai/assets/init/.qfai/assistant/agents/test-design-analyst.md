@@ -59,8 +59,9 @@ At both stages: when business rules (BR-\*) exist, verify each BR has at least o
 - Test-case quality and traceability findings
 - **Coverage Depth Matrix** (per spec, using the template in the depth checklist reference).
   Destination: `.qfai/evidence/coverage-depth-<spec-id>.md` from the ATDD stage onward — its own
-  file, because that path is committed while the rest of `.qfai/evidence/**` is ignored, and the
-  justification behind each `❌` is the input `qa-gatekeeper` reads. During SDD there is
+  file, because it has its own committed governance lifecycle separate from the committed
+  per-item TDD evidence, and the justification behind each `❌` is the input `qa-gatekeeper`
+  reads. During SDD there is
   no evidence artifact that holds it, so report depth gaps as findings instead of producing the
   matrix format.
 - Volume estimate and risk notes

@@ -36,6 +36,8 @@ const REVIEW_FIX = "assistant/skills/qfai-atdd/references/review-fix-rounds.md";
 const SHARED_ARTIFACT = "assistant/skills/qfai-atdd/references/shared-test-artifacts.md";
 const GATEKEEPER = "assistant/agents/qa-gatekeeper.md";
 const CATALOG = "assistant/manifest/agent-catalog.yml";
+const DRIFT = "assistant/constitution/drift-protocol.md";
+const DEPTH = "assistant/skills/qfai-atdd/references/test-case-depth-checklist.md";
 
 const flat = (s: string): string => s.replace(/\s+/g, " ");
 
@@ -56,6 +58,27 @@ describe.each(TREES)("%s", (tree) => {
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("**This skill does not write the ledger.**");
     expect(atdd).toContain("references/execution-ledger.md#allowed-transitions");
+  });
+
+  it("commits the per-item evidence that fresh-clone ledger anchors resolve", async () => {
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain(
+      "The per-item evidence file `.qfai/evidence/atdd-<spec-id>.md` is required and committed",
+    );
+    expect(atdd).toContain("validation must resolve them on a fresh clone");
+
+    const drift = flat(await read(tree, DRIFT));
+    expect(drift).toContain("**Durable per-item TDD evidence**");
+    expect(drift).toContain("`.qfai/evidence/implement-<spec-id>.md`");
+    expect(drift).toContain("`.qfai/evidence/atdd-<spec-id>.md`");
+
+    const depth = flat(await read(tree, DEPTH));
+    expect(depth).toContain("The per-item `atdd-<spec-id>.md` is committed too");
+    expect(depth).not.toContain("`atdd-<spec-id>.md` is deleted from history");
+
+    const catalog = flat(await read(tree, CATALOG));
+    expect(catalog).toContain("live in a committed per-item evidence file");
+    expect(catalog).not.toContain("live in an evidence file that is normally ignored");
   });
 
   it("points at the reference and names the three branches in order", async () => {
@@ -2302,9 +2325,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   });
 
   it("says what a seal catches and what it does not", async () => {
-    // Three homes for the expected value each fell to the same move, and a
-    // committed copy is not available either: stage evidence is regenerable and
-    // deliberately not committed, so requiring one would stop every completion.
+    // A committed per-item record still cannot make its own seal authoritative:
+    // the same authority can edit the record and its seal before the next commit.
+    // A fourth seal location would therefore repeat the same trust-boundary flaw.
     const evidence = flat(
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );

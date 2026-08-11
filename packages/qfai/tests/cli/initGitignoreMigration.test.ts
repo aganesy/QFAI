@@ -13,6 +13,7 @@
  *    however correct the managed block was.
  */
 
+import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -123,6 +124,8 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
       for (const negation of [
         "!change-request-*.md",
         "!decision-*.md",
+        "!implement-*.md",
+        "!atdd-*.md",
         "!coverage-depth-*.md",
         "!decisions/",
         "!decisions/**",
@@ -132,6 +135,18 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
       // The rest of the file is the project's; the `*` stays.
       expect(after).toContain("*");
       expect(after).toContain("!README.md");
+
+      // The root negations cannot override this deeper file. Prove the migrated
+      // legacy rules make both durable per-item evidence homes visible to Git.
+      expect(spawnSync("git", ["init", "--quiet"], { cwd: root }).status).toBe(0);
+      for (const name of ["implement-spec-0001.md", "atdd-spec-0001.md"]) {
+        await writeFile(path.join(root, ".qfai", "evidence", name), "# evidence\n", "utf-8");
+        expect(
+          spawnSync("git", ["check-ignore", "--quiet", "--no-index", `.qfai/evidence/${name}`], {
+            cwd: root,
+          }).status,
+        ).toBe(1);
+      }
     });
   });
 
