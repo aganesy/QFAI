@@ -105,7 +105,12 @@ claim and its inverted `drift.test.ts` citation removed.
 It was first listed on the ground that it shares `TC-0006-0030` with the ambiguous leg. **That reasoning was
 wrong, and sharing a TC is not sharing an axis.**
 
-Measured at `workflowsIntegrity.ts:276-285`: leg (c)'s condition is
+Measured at **`workflowsIntegrity.ts:284-293` as of `a67ed0c7`** — the resolve at `:284`, the guard at
+`:285`, the `skipped_unresolved` return at `:287`, its closing brace at `:293`, and `readInstallProvenance`
+at `:301`. _Corrected: this first cited `:276-285`, and the implementer's own currency note cited
+`:281-290`; both were wrong, and a reconciling reviewer had to measure the file to settle it. A line
+citation without a revision anchor is a currency claim, which is the class this slice has repeatedly paid
+for._ Leg (c)'s condition is
 `resolvePackagedWorkflowsDir() === undefined`, and its early return fires **before the provenance record is
 read at all** and before any per-name comparison. So leg (c) turns on a **packaged-side** resolution failure,
 while this CR's ambiguity is entirely about which **adopter-side** state (`absent` vs `declined`) leg (b)
@@ -114,6 +119,13 @@ means. No option A/B/C changes leg (c)'s fixture, its expected severity, or its 
 `TDD-0038` and `TDD-0037` stay blocked: `TDD-0038` implements the `absent` reading and Option C would require
 it rewritten to assert the inverse, and `TDD-0037` owns `TC-0006-0035`, whose boundary with leg (b) is one of
 the things this CR must settle.
+
+**What the narrowing released, stated precisely** — `completion-reviewer` upheld the substantive conclusion
+while ruling the record imprecise. `drift-protocol.md#when-drift-is-detected` is read here at **leg
+granularity**, not TC granularity: an open `Class: defect` finding blocks the legs whose meaning it
+governs, not every row citing the same TC. So the narrowing released `TDD-0039`'s **editing and its route
+to `green`** — it released nothing about leg (b), and it does **not** make `TC-0006-0030` discharged. The
+row's own anchor `AC-0006-0023` (`03_Acceptance-Criteria.md`) is unaffected by any option A/B/C.
 
 Recorded because over-scoping a blocked set stalls work for nothing, and because the first version of this
 line was written from _which TC a row cites_ rather than from _what its code path depends on_.

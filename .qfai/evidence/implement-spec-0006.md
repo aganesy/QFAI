@@ -4228,6 +4228,28 @@ the two needle rules (`71-74`, keep-verbatim) out of the header; the keep-list o
 > at `"modified"` so the `ok` else-if is false too and nothing is emitted at all. The second is the
 > better proof of the two, because it lives in the code this row's item owns rather than in a sibling
 > row's reader.
+
+**Corrected 2026-08-11 — the reaching set is now ONE, not two, and this quotation is superseded.**
+`TDD-0039` landed the `info` skip arm at `a67ed0c7`, so an **unresolvable packaged directory no longer
+produces absence**: it emits. Measured by the implementer and reproduced independently by all three
+round-review lenses from the same needle (`workflowsIntegrity.ts` base, `return path.join(getInitAssetsDir(),
+"root", ...WORKFLOWS_DIR_SEGMENTS);` → `return undefined;`, mutant `bb107634`) — guard #1 stays green under it
+and three assertions of `TDD-0039`'s own row separate the two emissions instead.
+
+So **guard #1's reaching set is the gate-condition inversion alone**, which the quotation above already calls
+the better proof "because it lives in the code this row's item owns". The in-file comment was corrected by
+the implementer in the same commit; this block is the evidence-side half, which the implementer was correctly
+forbidden from writing, and it is the **hard precondition** the tier-escalation entry recorded before
+`TDD-0039` started.
+
+**The prediction recorded before the change held.** `TDD-0032`'s file was predicted GREEN because its fixture
+drives a genuinely modified file, so `status === "modified"` and the new arm cannot co-fire — measured green.
+Recording that it held is the point of having written it down; had it gone red it would have been a finding,
+not a fix-up.
+
+**Guard #2's scope also moved and is corrected where it lives**: `not.toBe("ok")` can no longer separate the
+drift finding from the skip finding, because both are now `info`. Three of `TDD-0039`'s assertions carry that
+separation, and the equality pin remains the only thing separating them inside `TDD-0032`.
 >
 > What does NOT reach it is forcing the COMPARISON to report no drift: that converts the finding into
 > the content-identical `ok` emission (gated on `comparedCount > 0`, satisfied here), so it lands on
