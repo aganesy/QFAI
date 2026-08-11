@@ -23,6 +23,7 @@ import { validateContracts } from "./validators/contracts.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
+import { inspectIntegrationSurface } from "./validators/integrationSurface.js";
 import { validateDefinedIds } from "./validators/ids.js";
 import { validateReviewArtifacts } from "./validators/reviewArtifacts.js";
 import { validateSpecPacks } from "./validators/specPack.js";
@@ -220,6 +221,60 @@ async function buildSpecScopeIssues(
   return issues;
 }
 
+/**
+ * The parts of the assistant tree a profile's own validators open.
+ *
+ * A profile allowlist was not enough: `sdd` runs `validateSkillDocReferences`,
+ * `validateAutopilotPolicy` and `validateStaleReferences`, all of which
+ * `readdir` the configured skills directory — so excluding it by name meant a
+ * non-directory or a cycle there raised `ENOTDIR` / `ELOOP` from one of them
+ * and lost the `QFAI-LINK-001` that names the path and the repair.
+ *
+ * Returned as repo-relative POSIX prefixes, which is how `unwalkable` names
+ * what it found. Profiles absent from this map walk none of the tree, so damage
+ * confined to it is reported and stops nothing.
+ */
+function assistantPathsWalkedBy(profile: ValidationProfile, skillsRelative: string): string[] {
+  switch (profile) {
+    // `validateSkillsIntegrity` and `validateAssistantAssets` walk the
+    // **skills** directory the configuration names — the same one `sdd` walks,
+    // and nothing wider. Returning its parent matched a sibling's damage too:
+    // a regular file at `.qfai/assistant/agents` stopped `full` on a tree those
+    // validators never open, while `validateAgentDefinition` turns a missing
+    // agent into an ordinary finding rather than an exception. The extra
+    // profiles here differ in what else they run, not in how far into the
+    // assistant tree they reach.
+    case "verify":
+    case "full":
+      // Plus the agents tree, which `validateAgentDefinition` opens by
+      // pathname: a canonical agent replaced by a directory gives it `EISDIR`
+      // and a FIFO blocks it, either way taking the finding down with the run.
+      return [skillsRelative, AGENTS_RELATIVE];
+    case "prototyping":
+    case "saas-package":
+      // These run `validateAgentDefinition` too, and nothing that opens the
+      // skills tree.
+      return [AGENTS_RELATIVE];
+    case "sdd":
+      return [skillsRelative];
+    default:
+      return [];
+  }
+}
+
+/** The canonical agent tree, which `validateAgentDefinition` opens by pathname. */
+const AGENTS_RELATIVE = ".qfai/assistant/agents";
+
+/** Whether `candidate` is `base` itself or sits under it, both repo-relative POSIX. */
+function isUnder(base: string, candidate: string): boolean {
+  return candidate === base || candidate.startsWith(`${base}/`);
+}
+
+/** An absolute path as `unwalkable` spells it: repo-relative, POSIX separators. */
+function toRepoRelative(root: string, absolute: string): string {
+  return path.relative(root, absolute).split(path.sep).join("/");
+}
+
 async function runProfileValidators(
   root: string,
   config: ConfigLoadResult["config"],
@@ -227,22 +282,54 @@ async function runProfileValidators(
   platformOption?: string,
   specScope?: SpecScope,
 ): Promise<Issue[]> {
-  switch (profile) {
-    case "discussion":
-      return runDiscussionValidators(root, config);
-    case "sdd":
-      return runSddValidators(root, config, false, true, specScope);
-    case "prototyping":
-      return runPrototypingValidators(root, config, platformOption);
-    case "atdd":
-      return runAtddValidators(root, config, specScope);
-    case "tdd":
-      return runTddValidators(root, config, true, true, true, true, specScope);
-    case "verify":
-    case "full":
-      return runFullValidators(root, config, platformOption, specScope);
-    case "saas-package":
-      return runSaasPackage(root, config, platformOption);
+  // Runs in every profile, ahead of the profile's own validators. A broken
+  // integration link means the assistant loaded no skill and routed no agent,
+  // so every gate the profile is about was defined by files nothing read. That
+  // is not an SDD fact or an ATDD fact; it invalidates the run.
+  const surface = await inspectIntegrationSurface(root);
+  // Damage on a path the profile validators themselves walk stops here. One of
+  // them reading the same tree raises `ENOTDIR` / `ELOOP` from its own
+  // `readdir`, and one rejection took the whole run down — losing the finding
+  // above, which is the only one that names the path and how to repair it. The
+  // run fails either way; this decides whether it fails with something the
+  // operator can act on. Damage confined to the integration directories is not
+  // on that list: nothing downstream opens them.
+  //
+  // **And only where this profile's own validators would walk into it.** The
+  // test is the intersection of `unwalkable` with the paths they open, not the
+  // profile's name: `sdd` reads the configured skills directory from three of
+  // its own validators, so a name-based exclusion left one of them raising
+  // `ENOTDIR` / `ELOOP` and losing the finding above. Damage elsewhere in the
+  // tree stops nothing for `sdd`, and damage anywhere in it stops nothing for
+  // `discussion`, `atdd` or `tdd`, whose findings on discussion packs, spec
+  // packs, traceability and the ledger are independent of it.
+  const walked = assistantPathsWalkedBy(
+    profile,
+    toRepoRelative(root, resolvePath(root, config, "skillsDir")),
+  );
+  if (surface.unwalkable.some((damaged) => walked.some((base) => isUnder(base, damaged)))) {
+    return surface.issues;
+  }
+  return [...surface.issues, ...(await runProfileOwnValidators())];
+
+  async function runProfileOwnValidators(): Promise<Issue[]> {
+    switch (profile) {
+      case "discussion":
+        return runDiscussionValidators(root, config);
+      case "sdd":
+        return runSddValidators(root, config, false, true, specScope);
+      case "prototyping":
+        return runPrototypingValidators(root, config, platformOption);
+      case "atdd":
+        return runAtddValidators(root, config, specScope);
+      case "tdd":
+        return runTddValidators(root, config, true, true, true, true, specScope);
+      case "verify":
+      case "full":
+        return runFullValidators(root, config, platformOption, specScope);
+      case "saas-package":
+        return runSaasPackage(root, config, platformOption);
+    }
   }
 }
 

@@ -6,6 +6,23 @@
 
 ### Added
 
+- **`QFAI-LINK-001` (error) — the assistant integration surface is checked.**
+  `qfai init` builds `.claude/skills`, `.agents/skills`, `.codex/skills`,
+  `.github/skills`, `.claude/agents` and `.github/agents` entirely out of
+  symlinks, and pins their precondition (`core.symlinks true`) into repo-local
+  git config. `.git/config` is not cloned, so on any machine whose system or
+  global config says `core.symlinks = false` — the Windows default — a fresh
+  clone materialises every one of them as a small text file holding the link
+  target. Nothing noticed: `qfai validate` never read those directories, and
+  `qfai doctor`'s `skills.integrity` / `agents.frontmatter` both read the
+  canonical `.qfai/assistant/**` tree, which is unaffected. The assistant then
+  loads no skill and routes no agent, and every gate they define silently stops
+  existing. The new rule runs in **every** profile, ahead of the profile's own
+  validators, and reports a qfai-owned entry that is not a symlink or whose
+  target does not resolve. On a project with no evidence `qfai init` ever ran,
+  an absent directory is not a finding; once there is such evidence, all six
+  integration directories are checked and one deleted whole is reported. Entries
+  qfai does not own are left alone.
 - **`D-SCAFFOLD-FOREIGN-HOME` (warning)** replaces the placeholder gate for an
   L4/L5 skeleton a pre-upgrade `qfai atdd scaffold` already wrote into
   `tests/integration/**`. The command stopped generating those, but the ones on
@@ -506,6 +523,523 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
+- **The short-circuit is decided per tree, because the readers differ.** The
+  skills tree is `readdir`ed, so a regular file where the directory belongs
+  raises `ENOTDIR` and takes the run with it; the agents tree is not — each
+  document is opened by path and the same shape reads as absence. Treating both
+  alike stopped `full` on damage nothing walks into. What does stop the agent
+  reader is the _document_ being the wrong type or unreadable, and that is what
+  is recorded now.
+- **A nested `SKILL.md` decides its own short-circuit.** With only the document
+  a symlink, the parent directory is healthy — so the answer inherited from it
+  was "keep going", while `validateSkillDocReferences` opened the same pathname
+  and got `ELOOP`.
+- **An unreadable canonical agent stops the profiles that route agents.**
+  `validateAgentDefinition` confirms the file exists and then reads it, so an
+  ACL ended the run and took the repairable finding with it.
+- **A retired-wrapper candidate is read to the ceiling and confirmed at EOF.**
+  Reading only the size just measured returned a prefix, so an append through an
+  fd held from before the `fstat` could leave a canonical-shaped target matching
+  — and the finding tells the operator to delete the file.
+- **The absent-wrapper branch asks the same question as every other.** It
+  checked link and type only, so with all four wrappers for a skill deleted a
+  canonical that was unreadable, or reachable only through a resolving symlink,
+  passed clean — and the profile then read the same document and ended the run
+  on its own error. There is one helper now, and one place that decides the
+  short-circuit.
+- **A document whose type a later `readFile` cannot survive stops the run.** A
+  `SKILL.md` that is a cycle, a directory or a FIFO gives
+  `validateSkillDocReferences` an `ELOOP` / `EISDIR` — or blocks it — taking the
+  repairable finding with it. Absence does not: every validator handles a
+  missing file, so "has no SKILL.md" is still reported and still lets the rest
+  of the profile run.
+- **A non-file canonical agent stops the profiles that read it.**
+  `validateAgentDefinition` opens the agent pathname directly and runs under
+  `prototyping` / `saas-package` / `full` / `verify`, none of which the
+  skills-only short-circuit covered.
+- **The restored mode comes from the handle the content was read on.** A `stat`
+  on the pathname and a read on another inode could disagree, so content a
+  process had just made `0600` was restored under the `0644` the old entry
+  carried — readable by everyone — and the sidecar removed straight after.
+- **The canonical state is read before the link problem, so every answer
+  carries the short-circuit.** A wrapper that was flattened _and_ whose skills
+  root is a regular file reported the ancestor without marking it unwalkable,
+  and the profile then walked into the same `ENOTDIR` the finding was about.
+- **A broken wrapper's canonical is checked for readability too.** An ACL or a
+  mode that keeps the document shut is not repaired by `qfai init` — the copy is
+  create-only — so reporting the wrapper alone had the operator re-run it and
+  learn nothing. An unreadable document also stops the profile:
+  `validateSkillDocReferences` re-throws its own `readFile` error, which would
+  take the finding down with it.
+- **A damaged integration directory is not enumerated for retired wrappers.**
+  When it is a symlink that resolves, `readdir` follows the redirect and lists
+  somebody else's tree — and the remedy printed for a retired wrapper is "delete
+  the path", which through that redirect deletes a file outside the project.
+- **The restore's copy is a bounded read of the inode it measured.** A ceiling
+  checked by `stat` and a read taken by pathname are two operations on two
+  possibly different inodes, so a sidecar replaced between them was read
+  unbounded anyway.
+- **A create-only copy treats a dangling symlink at the destination as
+  occupied.** `access` follows the link, so a dangling one answered "free" and
+  `copyFile` then wrote _through_ it — resolving the symlink and creating its
+  target — which turned `qfai init` into a writer of fixed content at whatever
+  path the link named, including one outside the project.
+- **A restore that cannot carry the mode takes its destination back out.**
+  Reporting a wrong-permission restore while leaving it in place fixes nothing:
+  a `0600` file put back as `0644` is readable by everyone. The fallback created
+  it exclusively, so it is removed, and the sidecar keeps both the content and
+  the permissions.
+- **The short-circuit does not reach a sibling of the skills directory.**
+  `validateSkillsIntegrity` and `validateAssistantAssets` walk the configured
+  skills directory, not its parent, so a regular file at
+  `.qfai/assistant/agents` stopped `full` on a tree they never open — while a
+  missing agent is an ordinary finding rather than an exception.
+- **Every wrapper branch checks the canonical, through one helper.** The
+  wrong-target branch reported the mismatch and stopped, so `qfai init`
+  re-pointed the wrapper, left the create-only canonical as it found it, and the
+  operator needed a second run to learn the rest. Three branches diverging on
+  which half they checked is what produced that shape three times; they now ask
+  the same question the same way, and the answer carries its own short-circuit
+  rather than leaving the caller to recover it from a detail string.
+- **A per-entry read error is propagated.** A transient `EIO`, or an ACL on one
+  entry, was answered "not a wrapper" — leaving a retired wrapper the assistant
+  still loads unexamined, the same hole the listing error had one level up. Only
+  a race (`ENOENT`) is a clean `null`.
+- **The copy fallback is bounded.** It also runs when the bounded probe
+  _refused_ the entry, so reading an oversized file whole into memory to copy it
+  back was exactly the exhaustion that probe exists to avoid. It refuses
+  instead, keeps the sidecar, and says where the content is.
+- **A flattened wrapper's canonical is checked for type collisions too.** The
+  link check is only one of the two ways a canonical goes wrong: a skill
+  directory replaced by a regular file, or an agent document by a directory, is
+  a collision it says nothing about — and the create-only copy `qfai init`
+  performs fails on it, so the operator was sent to re-run a command that cannot
+  succeed with the path at fault never named.
+- **A non-directory ancestor is reported as itself, once.** `not-a-directory` on
+  a canonical leaf means a component above it is a regular file, so the leaf is
+  unreachable rather than damaged. Naming the leaf recorded one finding per
+  skill and per agent, each pointing at a path the operator cannot even move
+  aside — `ENOTDIR` again — while the one path at fault went unnamed.
+- **A listing error is propagated instead of passing silently.** An
+  execute-only directory answers every `lstat` on a known wrapper and refuses
+  the listing, so swallowing it passed validation with no retired wrapper
+  examined at all, while the assistant went on loading them. Only the damage
+  already reported elsewhere — `ELOOP`, `ENOTDIR`, absence — is skipped.
+- **Only a non-directory component stops the run.** The walks over the
+  assistant tree list a directory with `withFileTypes` and descend only into
+  `isDirectory()` entries, and they probe the root with an `access` that
+  swallows every error — so a symlink, cycle or not, is listed and skipped, and
+  a cycle at the root reads as absent. A regular file where a directory belongs
+  is the one shape that reaches `readdir` and raises `ENOTDIR`. Treating a leaf
+  cycle as unwalkable hid every unrelated finding behind a link the operator had
+  to repair first, and the finding now names the component at fault rather than
+  the leaf below it.
+- **`full` and `verify` follow the configured skills directory.** They pinned
+  `.qfai/assistant` while the validators that walk it read `paths.skillsDir`, so
+  a project that moved it had the run stopped for damage sitting outside every
+  walk it performs.
+- **A flattened wrapper no longer hides the canonical.** The two are
+  independent, and `qfai init` repairs the wrapper while leaving the canonical
+  as it found it — so reporting only the wrapper had the operator clear the
+  finding and end with a healthy symlink loading the wrong instructions.
+- **A retired wrapper is matched byte-exactly.** Git writes the target for mode
+  `120000` with no trailing newline; trimming one off made a project's own
+  one-line note indistinguishable from a wrapper, failed every profile, and told
+  the operator to delete it.
+- **The sidecar is re-read before the cleanup deletes it.** The handle that
+  vetted its content closes when the read returns, and a process holding that
+  inode from before the rename can append in the window that follows — so the
+  delete discarded bytes nothing had seen, with the new symlink standing where
+  they had been. Content that changed keeps the sidecar, and says so.
+- **The short-circuit tests the paths a profile walks, not its name.** `sdd`
+  runs `validateSkillDocReferences`, `validateAutopilotPolicy` and
+  `validateStaleReferences`, all of which `readdir` the configured skills
+  directory — so excluding it by name left one of them raising `ENOTDIR` /
+  `ELOOP` and losing the `QFAI-LINK-001` that names the path and the repair. The
+  test is now the intersection of the damaged paths with the ones that
+  profile's own validators open.
+- **A repair sidecar is not reported as a retired wrapper.** It holds the
+  flattened target, so it reads as one, and it exists precisely because a repair
+  could not finish — sometimes making it the only surviving copy of the
+  original. The remedy printed for a retired wrapper is "delete the path".
+- **The moved-aside wrapper is read to the ceiling, not to its measured size.**
+  A process holding the inode from before the rename can append after the
+  `fstat`; reading only the size just measured took a prefix, which still
+  matched the target, so the repair went ahead and the cleanup deleted the
+  sidecar with the appended bytes in it.
+- **A fallback restore puts the mode back.** `writeFile` creates a new inode
+  with the umask and the parent's defaults, so a `0600` file another process
+  left at the path came back `0644` — readable by everyone — or lost its
+  executable bit, and the sidecar that still carried the metadata was removed
+  straight after. A restore that cannot carry the mode keeps the sidecar and
+  reports itself as incomplete.
+- **The short-circuit stops only the profiles that walk the damage.**
+  `unwalkable` names paths under `.qfai/assistant/**`, and
+  `validateSkillsIntegrity` / `validateAssistantAssets` are the only validators
+  that open that tree — they run under `verify` / `full` alone. `discussion`,
+  `sdd`, `atdd` and `tdd` were being stopped for damage none of their own
+  validators would have touched, so every independent defect in the spec packs,
+  the ledger and the discussion packs stayed hidden until the surface had been
+  repaired and the run repeated.
+- **`qfai init` leaves a marker inside the tree it owns.** The four README
+  markers sit in conventional directories and are written only when the path is
+  free, so a project that already had its own at all four ran init and got no
+  marker at all — and once every wrapper was deleted the surface read as never
+  initialised: nothing checked, every profile passing, and the assistant loading
+  nothing. `.qfai/assistant/README.md` cannot be pre-empted (init creates that
+  tree) and outlives every integration directory, which is the state the
+  evidence is for.
+- **A wrapper for a skill or agent this version no longer ships is reported.**
+  Wrappers are enumerated from the current roster, so one left behind by a
+  shipped document since removed or renamed was enumerated by nobody: it still
+  resolves, so the assistant went on loading retired instructions while every
+  profile reported a clean surface. `pruneStaleQfaiWrappers` does not reach it
+  either — it matches a `qfai-` prefix, and `web-research` is the standing proof
+  that a shipped name need not have one. Identified by where the target lands
+  rather than by the name, so a flattened checkout is covered too.
+- **The short-circuit is decided by the damage, not by the message.** It was
+  read back out of the finding's text, which carries a 12-entry sample — so a
+  thirteenth entry holding the only unwalkable path decided nothing, a profile
+  validator walked into the `ENOTDIR` and the run ended with a stack trace
+  instead of the finding that names the path. Each site now records the
+  canonical it cannot walk as it sees the errno, and `inspectIntegrationSurface`
+  hands that list to the caller.
+- **Damage confined to an integration directory no longer stops the profile.**
+  `.claude/skills` and its siblings are read by this validator and by nothing
+  downstream, so a cycle on one of them breaks no later `readdir` — and
+  stopping there hid every spec, contract and test defect sitting alongside it
+  until the operator had repaired the link and run again.
+- **A wrapper whose canonical is not there yet says why.** Point
+  `.qfai/assistant/skills` at an existing empty directory and every wrapper
+  under it is `ENOENT`, reported as a plain dangling link. The remedy printed
+  for that is "re-run `qfai init`", which writes the canonical _inside_ the
+  redirect and leaves the correct wrapper target alone: the finding clears and
+  the redirect stays. The ancestor is named first.
+- **The moved-aside wrapper is read from the inode it was measured on.**
+  Checking it with `lstat` and reading it by pathname are two operations on two
+  possibly different inodes: another process replacing the sidecar in between,
+  or growing it through an fd held from before the rename, left the read
+  unbounded — memory exhausted, or blocked for ever on a FIFO — with the
+  original already moved aside and the pathname empty. One `open`, `fstat` on
+  that handle, a bounded read from it, shared with the flattened-link probe.
+- **Only damage that breaks a walk stops the run.** A canonical redirected by
+  a link that resolves is a finding a `readdir` survives, so short-circuiting
+  on it hid every unrelated spec, contract and test defect.
+- **A bounded read runs to the end.** `read` may return fewer bytes than
+  asked for, and the unfilled tail stayed NUL — a correct flattened wrapper or
+  the one surviving marker then failed its own signature comparison.
+- **Structural damage stops the run after reporting it.** A profile validator
+  walking the same tree raises `ENOTDIR` from its own `readdir`, and one
+  rejection took the whole run down — losing the only finding that names the
+  path and how to repair it.
+- **A canonical is checked even with its surface gone.** Gating the branch on
+  the wrapper directory existing skipped every canonical check with it, and
+  `qfai init` then recreates the wrappers around a canonical it leaves as it
+  found.
+- **A size ceiling binds the entry that is read.** `lstat` then `readFile` are
+  two operations against a name, so a huge file or a FIFO left at the path in
+  between was read unbounded — one `open`, `fstat` on that handle, and a
+  bounded read from it, with `O_NONBLOCK` so a FIFO answers instead of
+  blocking.
+- **An ancestor that is not a directory is named directly.** The check
+  answered only for symlinks, so a regular file at `.claude` was reported
+  through the child `ENOTDIR` keeps the operator out of.
+- **A claim that never took anything is released.** A failed `rename` left an
+  empty sidecar that prune deliberately skips and the next attempt sidesteps,
+  so repeated failures piled them up to the ceiling and refused every later
+  repair.
+- **The post-move probe is inside the rollback.** By then the wrapper has
+  moved, so a permission change or a transient `EIO` there left the pathname
+  empty and the original in the sidecar with nothing said about either.
+- **A repair sidecar is not pruned as a stale wrapper.** It is named after the
+  wrapper it holds, so it matched the `qfai-` prefix — and prune runs first, so
+  a `--force` re-run deleted the file an earlier failed repair preserved.
+- **A cleanup failure is not a failed repair.** Removing the sidecar sat inside
+  the rollback `try`, so an ACL or antivirus hold sent a successful repair down
+  the restore path — where the new symlink already occupies the name.
+- **Readability is answered by opening the file.** `access(R_OK)` does not
+  consult a Windows ACL, so a document an ACL denies read as fine while the
+  assistant's own read failed.
+- **A broken integration ancestor is reported instead of its child.** With
+  `.claude` a cycle, the probe on `.claude/skills` answered cycle too and named
+  a path the operator cannot reach.
+- **The canonical integrity check does not depend on a wrapper.** With no
+  wrapper to resolve through, a canonical, an ancestor or a `SKILL.md`
+  replaced by a resolving symlink read as a plain missing wrapper — and
+  `qfai init` then creates a wrapper pointing at it, since create-only leaves
+  the canonical as it found it. Both branches call one helper now.
+- **Every canonical ancestor is searched for damage**, not the immediate
+  parent alone: a dangling `.qfai/assistant` leaves the parent answering
+  absent too, so one level of checking found nothing.
+- **What was moved aside is what gets checked.** The caller's size and kind
+  probe covered an inode that may no longer be at the path, so the read ran on
+  an entry nothing had vetted — a large enough one exhausts memory, a FIFO
+  never returns.
+- **The restore writes bytes, not a decoded string.** A non-UTF-8 file was
+  round-tripped through a string on the fallback path, replacing what it could
+  not decode, and the sidecar was removed straight after.
+- **A canonical ancestor is a real directory too.** `.qfai/assistant/skills`
+  redirected inside the project follows through to a real leaf, so the leaf
+  check passed and both resolved paths landed in the same place.
+- **A `SKILL.md` is a real file wherever a link would land**, which is the
+  case no resolved-path comparison can see.
+- **Proof that init ran outweighs a probe that could not read.** One
+  unreadable candidate rejected the whole evidence pass and stopped every
+  profile on a project the wrapper beside it already proved initialised.
+- **A restore that fails during the read path is reported**, with the sidecar
+  named — re-throwing the read error alone made the original look simply lost.
+- **A canonical is a real document, not a link to one.** Redirected at another
+  skill inside the project, both resolved paths converge and the
+  outside-the-project rule is satisfied — while the assistant loads the wrong
+  instructions in every profile but `full`.
+- **A broken link on the way to a surface is not an absent surface.** A
+  dangling `.claude` made the directory answer absent, and a dangling
+  `.qfai/assistant/agents` made every document answer ENOENT — reported as
+  never taken, with a remedy that cannot create anything through a broken link.
+- **Every restore claims the path atomically**, not only the one after a failed
+  `symlink`: the two early returns used a plain rename.
+- **The marker read is bounded.** A project's own document at one of those
+  paths could be any size, and reading it whole to look for three substrings
+  cost every profile in proportion to it.
+- **The sidecar name is claimed exclusively.** A PID alone is not unique, so a
+  second repair in the same process renamed over the file an earlier failed
+  one had preserved — and the success path removes the sidecar.
+- **A nested `SKILL.md` has to resolve inside the project**, like the
+  directory holding it.
+- **Ancestors are checked component by component.** Comparing a resolved path
+  with a built one reported a sound surface as a symlink wherever the
+  filesystem is case-insensitive and the directory was created as `.Claude`.
+- **`ENOTDIR` on a marker path does not end the run.** A marker ancestor
+  written as a regular file lost the finding the other markers and wrappers
+  still had.
+- **The restore claims the path atomically.** Checking that it is free and
+  then renaming are two operations, and `rename` overwrites — so a file
+  created in between was destroyed by the rollback. `link` refuses an existing
+  path instead, with an exclusive write as the fallback.
+- **A canonical that resolves outside the project is reported.** Replace it
+  with a symlink to a readable file of the right kind and both sides of the
+  resolved-path comparison follow it to the same external path, so they agree
+  while the assistant loads instructions the project does not own.
+- **A symlinked ancestor of an integration directory is named.** `.claude`
+  pointing at an external tree leaves `.claude/skills` a plain directory, so
+  the probe on the directory said nothing while every relative wrapper under
+  it resolved against the external location.
+- **The verified file is moved aside, not deleted by pathname.** Reading and
+  deleting are two operations, so another process could still replace the file
+  in between and lose content the check never saw. The repair renames it aside
+  first and judges what it holds; nothing is removed until the symlink exists.
+- **An integration directory that is a symlink is reported.** The wrappers
+  under it carry relative targets, so they resolve against wherever it
+  physically is; empty, there were no wrappers to reach the resolved-path
+  check and it read as healthy while `qfai init` filled the external location.
+- **A wrapper replaced by something other than a file names its kind**, and
+  the remedy covers it — `qfai init` preserves a directory or a special file,
+  and "inspect the content first" does not apply to a FIFO.
+- **An unreadable document has a remedy that changes something.** `qfai init`
+  skips both the wrapper (its target string is right) and the canonical asset
+  (create-only), so the generic remedy left the operator with a check that
+  stops every profile and no way to clear it.
+- **A type collision is reported wherever it sits on the path.** An
+  integration directory replaced by a regular file raised `ENOTDIR` on every
+  wrapper under it, and a canonical ancestor replaced by one did the same on
+  the target — both ended the run instead of reporting. An absent wrapper now
+  also names what the canonical actually is, which is the state `qfai init`
+  cannot repair on its own.
+- **A cyclic integration directory is reported, not thrown.** `lstat` on
+  every wrapper under it raises `ELOOP`, and propagating that ended
+  `qfai validate` with a stack trace instead of a finding.
+- **An init marker is matched on a full signature.** One mention of
+  `.qfai/assistant/` is what a project documenting its own QFAI tree writes,
+  and it made a checkout that never ran init read as initialised.
+- **A flattened wrapper is matched byte-exactly.** `path.normalize` accepted
+  `../../.qfai/assistant/./skills/<id>` — not what git writes — so a project's
+  own note at that path made a checkout that never ran init read as
+  initialised.
+- **An init marker is `lstat`ed.** `stat` followed the link, so a project's
+  own `README.md` pointing at another file that mentions `.qfai/assistant/`
+  read as a marker init wrote.
+- **Only an entry init itself wrote counts as proof it ran.** These
+  directories are conventional and a shipped skill id can be a name a project
+  chose, so a project's own `.agents/skills/web-research` made a checkout that
+  never ran `qfai init` read as initialised — and its own directory was then
+  reported as a broken qfai link, with every other surface reported missing.
+- **A broken canonical document is reported, not skipped.** `access` follows
+  the link, so a canonical replaced by a dangling symlink answered "absent"
+  and its skill left the check altogether; a cycle propagated `ELOOP` and
+  ended `qfai validate` with a stack trace.
+- **An init marker must be a regular file.** These paths are create-only, so
+  whatever the project already had survives; a directory made `readFile` throw
+  `EISDIR` and reject the whole probe, losing the finding a valid marker
+  beside it would have produced, and a FIFO would block the validator.
+- **A wrapper is checked by where it lands, not by what it spells.** The
+  target is relative and the wrapper directory can itself be a symlink, so an
+  outside tree with a canonical-shaped path at the same offset passed every
+  check while the assistant loaded instructions that are not the project's.
+- **A rollback no longer overwrites a file created in the gap.** Between the
+  removal and the failed `symlink`, another process can create its own file at
+  the path — that is what an `EEXIST` from `symlink` means — and the default
+  write flag truncated it and put the old flattened content over the top.
+- **A backslash spelling is not a flattened link on POSIX.** The separator
+  tolerance exists because `path.relative` yields `\` on Windows; applied
+  everywhere it made a hand-maintained `..\..\.qfai\assistant\skills\...` match
+  the real target and get deleted without `--force`.
+- **An agent wrapper names a regular file, not merely a non-directory.** A
+  FIFO, socket or device passed `!isDirectory()` and could pass `access(R_OK)`
+  as well, so the assistant either failed to read the document or, on a FIFO,
+  blocked — with no finding.
+- **A cyclic `SKILL.md` is reported, not propagated.** The wrapper target's own
+  `ELOOP` was already handled as structural damage; the nested probe re-threw
+  it, so `qfai validate` exited with a stack trace.
+- **The remedy names the canonical path.** A canonical type collision is not
+  cleared by re-running init — the copy is create-only and `--force` fails on
+  the collision — so the printed remedy has to say to move it aside first.
+- **A wrapper that changed under the check is not deleted.** Between
+  `isFlattenedLink` reading the file and the removal, an editor or another
+  process can replace it; deleting on the strength of the earlier read
+  destroyed that content without `--force`, and the rollback does not fire when
+  the symlink then succeeds.
+- **The init marker is QFAI's own, not any file at that path.** `.agents/` and
+  `.github/agents/` are conventional directories, so a project's own README in
+  one of them made `initialised` true and failed every profile of a project
+  that never installed QFAI. The marker is the signature `qfai init` writes.
+- **`ELOOP` is a broken target, not a crash.** It says the canonical target is
+  a symlink cycle — structural damage to the thing this rule inspects — and
+  re-throwing it exited `qfai validate` with a stack trace instead of a
+  `QFAI-LINK-001` naming the path to repair.
+- **A target that resolves can still be unreadable.** `stat` reads metadata,
+  which an ACL or a mode can allow while the body stays shut, and the assistant
+  loads the body. Both the agent document and a skill's `SKILL.md` are checked
+  for read access.
+- **The flattened-link probe no longer re-stats what the caller holds.**
+  `ensureSymlink` had already `lstat`ed the path; re-probing let `safeLstat`
+  turn a transient `EIO` into `undefined`, which reads as "somebody else's
+  file" — so init left a flattened wrapper in the reassuring `skipped` list.
+- **An initialised project is recognised without any wrapper left.** The test
+  was "some wrapper survives", so deleting all of them said init had never run
+  and nothing was checked at all — the state where the assistant can load
+  nothing passed every profile most confidently. The READMEs `qfai init` writes
+  and never removes are the marker.
+- **A canonical `SKILL.md` has to be a file.** `access` succeeds on a directory
+  of that name too, and the assistant can load that no better than a missing
+  one — while the profiles that would notice are `prototyping` and `full`.
+- **A canonical type collision has a remedy that works.** `qfai init` skips the
+  existing path (create-only) and `--force` fails on `copyFile` / `mkdir`
+  against a collision, so the printed remedy could not clear the finding. It
+  says to move the canonical path aside first.
+- **An integration surface deleted whole is reported.** The populated test was
+  per directory, so removing one entirely made every entry in it read as "not
+  created yet" and every profile passed while the assistant could load nothing
+  from it. Whether init has run is a property of the project, and the missing
+  directory is reported once — one `rm -r` is one act, and one ref per shipped
+  skill buries that.
+- **A wrapper has to resolve to the right kind of thing.** A canonical agent
+  document replaced by a directory — or a skill directory by a file — leaves
+  the link string correct, so `lstat`, `readlink` and `stat` all succeeded and
+  nothing looked further. The agent surface has no other check outside
+  `prototyping` / `full`, so the narrow profiles passed an agent tree with no
+  markdown in it at all.
+- **A wrapper deleted from a populated surface is reported.** An absent wrapper
+  was skipped unconditionally, so removing one from a directory whose siblings
+  are all in place left the assistant unable to load that skill with nothing
+  saying so — the canonical tree is untouched, so `skills.integrity` sees a
+  healthy spec, and it only runs under `full`. Absence is benign only while the
+  surface is unpopulated, which is also the state of a project that has not
+  taken a newly shipped skill.
+- **A skill wrapper is checked for the file that makes it loadable.** The link
+  can resolve to a directory that still holds `references/` and `templates/`
+  while `SKILL.md` is gone; `stat` succeeded and the rule said nothing, and a
+  narrow profile passed a skill the assistant cannot load.
+- **A `readlink` failure is not a wrong link target.** A transient `EIO` or an
+  `EACCES` reported a healthy wrapper as `points at ?`, and the remedy the
+  finding prints — re-run `qfai init` — calls the same `readlink` and fails the
+  same way. Only an absent link is a link problem.
+- **An unreadable wrapper is not somebody else's file.** `lstat` had already
+  succeeded, so the file is there and small; answering "not the signature" on
+  an ACL or I/O failure put the path in the reassuring `skipped` list and left
+  the flattened wrapper in place, with `QFAI-LINK-001` failing and nothing to
+  act on. Absence stays benign — that is a race with something removing it.
+- **A `stat` failure is not a dangling link.** Every error was reported as
+  dangling, including `EACCES` and a transient `EIO` — and the remedy the
+  finding prints is "re-run `qfai init`", which leaves the wrapper `skipped`
+  because the target string is already correct. That was a `QFAI-LINK-001` an
+  operator could not clear by following it. Only an absent target is dangling.
+- **Ownership is the shipped roster, without the project intersection.** The
+  intersection went one step too far: a shipped skill whose canonical
+  `SKILL.md` was deleted by mistake, wrapper still in place, dropped out of
+  scope and its dangling wrapper passed every profile — precisely the state the
+  rule exists to report. A retired skill is already excluded by not being
+  shipped, and a skill this project has not taken yet is skipped by its wrapper
+  being absent.
+- **The flattened-link match tolerates the separator and nothing else.**
+  Dropping `trim()` left `path.normalize`, which widens the same way for a
+  different input: `../../.qfai//assistant/x` and `../../.qfai/assistant/./x`
+  are not the bytes git writes but normalize to them, so a hand-managed wrapper
+  was still deleted without `--force`. Only `\` vs `/` is absorbed, because
+  git writes `/` and the target comes from `path.relative`.
+- **A rollback that could not write says so.** The restore was wrapped in an
+  empty `catch`, so a disk error or permission change during it still produced
+  "元のファイルは復元しました" — on the one path where the operator has to know
+  the file is gone. The restore's own outcome now decides the message, and the
+  content it could not write back is carried in it.
+- **`ENOTDIR` is a type collision, not an absence.** It says a path component
+  exists and is not a directory — `.claude/skills` written as a regular file.
+  Folding it into "not created yet" skipped every wrapper under it and passed a
+  surface the assistant can load nothing from. Only `ENOENT` means absent.
+- **The template root is identified, not just found.** Candidates were tried
+  outermost-first, and from `<project>/node_modules/qfai/dist` the outermost is
+  `<project>/assets/init` — a consuming project with an unrelated directory of
+  that name became the template root. Wrong-but-present is worse than missing:
+  the shipped roster read empty and `QFAI-LINK-001` passed every broken wrapper
+  without looking. Candidates are nearest-first now, and each is confirmed by
+  sentinels the real tree always has.
+- **A hand-managed wrapper is no longer auto-deleted over a trailing newline.**
+  The flattened-link signature git writes carries no surrounding whitespace, so
+  comparing `content.trim()` matched past it — a regular file someone maintains
+  themselves, written by an editor or `echo`, read as flattened and was removed
+  without `--force`. The comparison is byte-exact; everything else takes the
+  preserve path.
+- **A repair that cannot finish restores what it found.** The removal and the
+  recreate fail independently — `symlink` raises `EPERM` on Windows without
+  Developer Mode, the same condition that flattened the checkout — and the
+  wrapper was left _absent_, which `QFAI-LINK-001` treats as benign because a
+  project predating a newly shipped skill looks identical. The flattened file
+  at least announced itself; it is now put back, and the error says so.
+- **`assets/init` resolves from the package's public entry.** `tsup` bundles
+  with `splitting: false`, so `dist/index.mjs` sits one level shallower than
+  `dist/cli/index.mjs` — a depth the candidate list did not cover. Calling
+  `validateProject` through the library entry therefore searched
+  `<parent-of-package>/assets/init` and threw `Template assets not found`
+  before any validator ran; the CLI was unaffected, which is why it went
+  unnoticed. `QFAI-LINK-001` made this reachable by reading the shipped roster.
+- **The membership probe propagates a read error too.** `readdir` and the
+  wrapper `lstat` were fixed to distinguish absence from failure, but the
+  `SKILL.md` probe that decides whether a skill is in the roster still folded
+  every error into `false` — dropping the skill, and with it the only canonical
+  entry, into the early return that passes a broken surface with no finding.
+- **Ownership of an integration wrapper is the roster `qfai init` ships.** It
+  was every directory in the project's own canonical tree, but
+  `.qfai/assistant/skills/<own>/SKILL.md` is an allowed project-owned location
+  and init enumerates what to wrap from the package assets, never from the
+  project — so a hand-published `.claude/skills/my-skill` was reported as a
+  broken qfai link in every profile. The roster is the shipped set alone — see
+  the shipped-roster entry above for why the project intersection was dropped.
+- **A failing filesystem no longer reads as a healthy surface.** The roster read
+  and the wrapper probe folded every error into "absent", and absent is the
+  benign case — an empty roster takes the early return, an absent wrapper is
+  skipped. `EACCES` on the canonical tree therefore produced a clean
+  `QFAI-LINK-001` pass at exactly the moment the assistant could load nothing.
+  Only `ENOENT` / `ENOTDIR` mean absent; everything else propagates.
+- **`qfai init --dry-run` no longer reports a repair it did not make.** The
+  removal and the recreate are both suppressed under `--dry-run`, but the
+  flattened-link log said `repaired` unconditionally — to the one invocation
+  whose whole purpose is to preview. It says `would repair` there now.
+- **`qfai init` repairs a flattened link instead of skipping it.**
+  `ensureSymlink` returned `"skipped"` for any existing non-symlink unless
+  `--force` was passed, and skipped paths print as a plain list — so the one
+  command that could repair the surface reported the broken entry as preserved
+  and changed nothing. The path is one qfai created and owns, and its content is
+  the link target, so it is now replaced without `--force` and the repair is
+  announced on stdout.
 - **The legacy migration classifies once, on the first run.** Re-scanning on
   every `doctor --autoremediate` meant a pack written _after_ the migration that
   forgot its marker was recorded and then marked `legacy` — turning a blocking
