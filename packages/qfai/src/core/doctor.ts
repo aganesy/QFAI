@@ -496,9 +496,11 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     //     reported this status with a resolved-but-unusable operand would fall
     //     through all three arms and emit nothing, which is precisely the defect
     //     this row closes, reintroduced one state along.
-    // Neither conjunct is reachable at this revision either, and the drift arm
-    // above already carries one unreachable conjunct with no oracle; a second
-    // would be a second untestable predicate on the same emission.
+    // And neither conjunct could be FALSE at this revision — the state that would
+    // falsify either is the unreachable one above — so neither would have an
+    // oracle. The drift arm already carries one such predicate, recorded there as
+    // an equivalent mutant; a second would be a second untestable one on the same
+    // emission.
     //
     // EXCLUSIVITY holds twice over, and TDD-0032's and TDD-0038's
     // `toHaveLength(1)` pins depend on it: `status` carries one value per run, so
