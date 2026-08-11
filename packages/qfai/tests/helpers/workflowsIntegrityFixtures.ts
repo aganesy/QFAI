@@ -28,6 +28,7 @@
 import { appendFile, mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 
+import { runDoctor } from "../../src/cli/commands/doctor.js";
 import { runInit } from "../../src/cli/commands/init.js";
 import { readInstallProvenance, writeInstallProvenance } from "../../src/shared/provenance.js";
 import { useTempDirPool } from "./shippedWorkflowFixtures.js";
@@ -179,4 +180,64 @@ export async function makeShippedWorkflowUnreadable(dir: string, name: string): 
   const target = adopterWorkflowPath(dir, name);
   await rm(target, { force: true });
   await mkdir(target, { recursive: true });
+}
+
+/** One `runDoctor` invocation's exit code paired with everything it wrote to stdout. */
+export type DoctorTextRun = { exitCode: number; stdout: string };
+
+/**
+ * Runs `qfai doctor --format text` over an adopter tree and hands back both of
+ * the surfaces the invocation produces: the exit code it returns and the text it
+ * rendered.
+ *
+ * ## Why this is how `shouldFailDoctor` is observed
+ *
+ * `shouldFailDoctor` is module-private in `src/cli/commands/doctor.ts` and this
+ * helper deliberately does NOT ask for it to be exported. Its verdict is already
+ * observable through the exported `runDoctor`, whose returned number is
+ * `shouldFailDoctor(data.summary, options.failOn) ? 1 : 0` — one call site, one
+ * `const exitCode`, and `? 1 : 0` is injective on booleans, so `exitCode === 0`
+ * and a `false` verdict are the same observation. Widening the production surface
+ * to reach a function whose whole output is already on an exported return value
+ * would buy nothing.
+ *
+ * Scoped rather than absolute, because `runDoctor` has THREE `return` statements
+ * (measured on `c66c502a`: `:148`, `:212`, `:216`; follow the symbols, an edit
+ * above any of them moves the numbers). Two of them return that one `exitCode`.
+ * The third is the `--autoremediate` CI-off early return, which returns a literal
+ * `0` WITHOUT consulting `shouldFailDoctor` at all — a false verdict and that
+ * early return are indistinguishable from the exit code alone. This helper never
+ * sets `autoremediate`, which is what keeps that path out of reach; callers that
+ * depend on the distinction should also guard on `stdout` carrying the rendered
+ * `summary:` line, which only the diagnostic pass emits.
+ *
+ * `stdout` is captured rather than left to leak into the reporter because
+ * `runDoctor` renders through `cli/lib/logger`'s `info`, i.e.
+ * `process.stdout.write`, which is exactly what `captureStdout` swaps out. It is
+ * returned rather than discarded so the rendered text is available to the row
+ * that owns 2-group placement.
+ *
+ * `format: "text"` is fixed here, not a parameter: it is what TC-0006-0029's
+ * Action names, and a `json` run renders a different document with the same exit
+ * code. Add the parameter in the row that needs the other format.
+ *
+ * The `-1` seed fails in the SAFE DIRECTION, which this module's header explains
+ * is the only direction available in a tree nothing type-checks: `runDoctor`
+ * returns `0` or `1`, so a caller asserting either value FAILS on an assignment
+ * that never happened instead of passing on a stale zero.
+ */
+export async function runDoctorText(
+  dir: string,
+  failOn?: "warning" | "error",
+): Promise<DoctorTextRun> {
+  let exitCode = -1;
+  const stdout = await captureStdout(async () => {
+    exitCode = await runDoctor({
+      root: dir,
+      rootExplicit: true,
+      format: "text",
+      ...(failOn ? { failOn } : {}),
+    });
+  });
+  return { exitCode, stdout };
 }
