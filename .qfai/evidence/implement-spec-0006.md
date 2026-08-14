@@ -6125,3 +6125,210 @@ said to run both formatters after writing such a file; what it did not say is th
 committing** in one motion and running the gate afterwards. Made operational: the sequence is
 **write → `prettier -w` → `lint:md` → only then `git add`**, with the count recorded so the rule carries its
 own evidence.
+
+### TDD-0040
+
+**T1, group G6 — reviewed with `TDD-0031`. `todo → red → refactor`.** Not landed at the time of writing:
+every figure below is measured against HEAD `66ea6416` with the row artifact still untracked.
+
+- **TC-Refs**: `TC-0006-0029` Verify item **3** only — 「text renderer が当該 finding を "warnings advisory
+  of drift" group に配置する」. Items 1 and 2 are `TDD-0031`'s. Anchor `AC-0006-0022`. The TC's prose names
+  the bucket differently from the rendered literal (`== advisory findings (drift, non-blocking by
+  default) ==`); the row needles the **literal** and asserts none of the TC's prose as text.
+- **Test file**: `packages/qfai/tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts`
+  (new; final blob `df88dc26`). A new file rather than a second `describe` in the sibling, and the
+  reason is not stylistic: `TDD-0031`'s landed docblock carries a measurement whose premise is that its
+  file holds exactly one test ("this file holds ONE test, so BOTH mutations report `Tests 1 failed
+  (1)`"). Appending would falsify a sentence inside `qa-gatekeeper`-passed evidence for a row already
+  at `refactor`, and would require deleting the sentence that records how this TC's three bullets were
+  split across G6's two rows.
+- **Falsifiability**, with **two** `Satisfied-by` rows because the predicate is split across two
+  modules, both verified by `git log -L` on the exact lines rather than by inspection:
+  **`TDD-0018`** (`59747460`, "spec-0006 CHG-005 — doctor probe order rebuild + 2-group summary") landed
+  `formatDoctorText`'s two group filters, under which an `info` finding whose id is not
+  `skills.integrity` is admitted to `advisoryGroup` and structurally excluded from `errorGroup` — with
+  **no id-based special case**, unlike `skills.integrity`; and **`TDD-0029`** (`bfc14f1b`, round-2 fix
+  `ec4b8f31`) landed the drift arm's `severity: "info"`. So the obligation was already satisfied by
+  landed code and the row is on the `red-not-observable.md` path — predicted at Stage 0 of this round
+  and then **measured**, not asserted.
+- **Falsifiability command** = **GREEN command**, file-scoped, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts`
+- **Falsifiability result**: **seven mutations, zero survivors** (table below). **GREEN**: run 1 of 9
+  with the predicate intact and before any mutation, and again as run 9 of 9 after the last revert —
+  `Test Files 1 passed (1)` / `Tests 1 passed (1)`, exit 0, the line naming this row's own selector.
+- **RED failure mode**: `falsifiability`. No RED pair is recorded — the two forms are exclusive — and no
+  separate `Oracle proof` either, per the same reference's item-4 waiver.
+- **Production change: none.** Item 4 **waived**, not dodged, and the waiver is proved rather than
+  claimed: all three doctor blobs re-verified byte-identical to HEAD after every one of the nine runs —
+  `cli/commands/doctor.ts` `a2a92ca0`, `core/doctor.ts` `ee31f4dd`, `core/doctor/workflowsIntegrity.ts`
+  `bad123d7` — and `git diff --stat HEAD -- packages/qfai/src` empty. The shared helper was **not**
+  widened and no production symbol was exported: `runDoctorText` already returned `stdout`, which its
+  own docblock says exists "so the rendered text is available to the row that owns 2-group placement".
+- **Closure**: the 22-selector doctor / shipped-workflow / provenance closure gives
+  `Test Files 20 passed | 2 skipped (22)` / `Tests 177 passed | 14 skipped (191)`, exit 0. The delta
+  against the previous row's 20-selector figures is **accounted for by measurement, not by arithmetic
+  on paper**: the same closure minus this row's file gives `19 passed | 2 skipped (21)` /
+  `176 passed | 14 skipped (190)`, so this row contributes exactly `+1` file and `+1` test and nothing
+  else moved.
+- **Comment volume**: `174/266 = 65.4%` at blob `df88dc26` (pre-refactor bytes were `161/253`). Stated
+  with its blob, because a ratio recorded without its revision is a currency claim — the correction the
+  previous row had to make.
+- **Gates at the final bytes**: `prettier -c` on the row artifact, `pnpm check-types`, `pnpm lint` — all
+  exit 0, each reported individually rather than through `ci:lint`, whose ten `&&`-chained members hide
+  every member after the first failure.
+- **Cross-spec ownership: none**, and measured rather than deduced twice over. This row touched no
+  production file at all, so the question has no subject on the production side; the grep was still run,
+  over all 18 `.qfai/specs/spec-*/tdd/test-list.md` ledgers, for the three doctor production paths, the
+  fixture helper and `advisoryBucket` — hits in spec-0006 only.
+- **Instrument caveat**: `packages/qfai/dist/cli/index.mjs` is dated 2026-08-08 against a `src` tree last
+  modified 2026-08-11, so the built launcher was deliberately **not** used as a measurement instrument
+  for this row's observations. It was used only for `qfai validate`, whose cited checks live in
+  `src/core/validators/tddList.ts` (last changed 2026-08-03) and `atddTraceability.ts`; no production
+  file changed this round, so the binary covers them.
+
+#### Seven mutants, zero survivors — and two of my own predictions were measured wrong
+
+Needle uniqueness was asserted before every replacement and each intermediate blob recorded; reverts
+were verified by blob equality, not by a clean run alone. `qa-gatekeeper` independently **re-applied six
+of the seven** from the recorded base/replacement text and reproduced every intermediate blob hash
+exactly, which is itself evidence the transcript is a measurement rather than a narration. M6 was not
+re-applied, and is recorded as unverified-by-the-gate because it is a guard-liveness probe rather than a
+claim oracle.
+
+| ID  | Base       | Replacement                                    | Mutant     | Result                                                                                   |
+| --- | ---------- | ---------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------- |
+| M1  | `a2a92ca0` | drop `info` from the `advisoryGroup` filter     | `f656dd5f` | kills at **Guard #3 only** — `expected [] to have a length of 1 but got +0`               |
+| M2  | `a2a92ca0` | route the id into `errorGroup` (naive routing)  | `64ddd0d8` | kills **C1** (`expected 12 to be greater than 14`) **+ C3**                              |
+| M3  | `ee31f4dd` | drift arm `severity: "info"` → `"error"`        | `c663a9b4` | kills **C1 + C3 + C4** (`expected 'error' to be 'info'`); cli blob unchanged in the run   |
+| M4  | `a2a92ca0` | widen `errorGroup` to admit `info` (double render) | `f66e1db9` | kills at **Guard #3 only** — `expected [ 15, 25 ] to have a length of 1 but got 2`    |
+| M5  | `a2a92ca0` | hardcode `[warning]` in the advisory loop only  | `22a31b11` | kills **C4 only** — `expected 'warning' to be 'info'`. Perfect isolation                 |
+| M6  | `a2a92ca0` | swap the two group header literals              | `db4c30d6` | Guard #4 fires (`expected 11 to be greater than 14`) — **guard liveness, not an oracle**  |
+| M7  | `a2a92ca0` | hoist a `summary:` line above the advisory bucket | `6fb3fde5` | kills **C2 only** — `expected 22 to be less than 14`. Perfect isolation                |
+
+**My two predictions that were wrong, stated as corrections rather than folded away.** I supplied M1 as
+claim 1's oracle and M4 as claim 2's, and both are killed at **guard** level instead:
+
+1. **M1.** My phrasing — "the finding leaves the bucket entirely" — was right, and "entirely" is
+   precisely why it is Guard #3 and not C1 that discriminates: with the finding rendered on **zero**
+   lines the guard aborts before C1's index comparison ever executes. Claim 1's claim-level oracles are
+   M2 and M3.
+2. **M4.** I predicted "the positive half alone stays green and only this claim reddens". Measured: the
+   double render trips Guard #3 (`[ 15, 25 ]`, two occurrences) and **nothing else reddens** — C3's
+   between-headers slice is evaluated only after the guard has already aborted. Claim 2's claim-level
+   oracle is M7 (its upper delimiter) with M2 covering the complement half.
+
+So the row has **three** independent claim-level oracles — C1 (routing), C2 (upper delimiter), C4
+(rendered tag) — plus a measured-live Guard #3, not four. The mutation set is what establishes that; a
+count taken from the docblock would have said four.
+
+#### C3 is not a second oracle, and the row's own docblock overstated it
+
+Given Guard #3 (the finding renders on exactly one line), C3 is **entailed** by C1: a single occurrence
+below the advisory header cannot also lie between the headers. `qa-gatekeeper` and
+`implementation-reviewer` reached this independently, and the file's own C3 comment already said so
+while its header paragraph claimed "four different mutations". C3 stays for legibility — it prints the
+offending line under M2 — but it is not counted as an independent oracle. Recorded here as an advisory
+docblock-accuracy defect rather than fixed in place, because the header sentence is quoted in this
+round's gatekeeper observations.
+
+#### The checkpoint's step-1 `-t '<Selector>'` command selects nothing in this slice, and exits 0
+
+`references/checkpoint-verification.md` step 1 prescribes `<runner> <Test file> -t '<Selector>'`, and
+vitest treats `-t` as a **regex**. Every selector in this slice contains `(TDD-00NN)`, which vitest
+reads as a capture group, so the pattern stops matching the literal parenthesised `describe` title.
+Measured on **both** G6 rows: the full-selector form reports `Tests 1 skipped (1)` with **exit 0** — a
+command that establishes nothing while reporting success. That is why this row's GREEN and
+falsifiability command is the **file-scoped** form with no `-t`, the same choice `TDD-0031` recorded.
+Advisory, `Traces to: none`, and it applies to every row of this slice rather than to this one.
+
+#### Group review returned REVISE — on two record defects, neither in the test code
+
+Both blocking reviewers returned `REVISE` for group G6, and both said explicitly that the delivered test
+code and the `Satisfied-by` path are sound and need no change. The three blocking findings are all
+**record** defects:
+
+1. **`TC-0006-0029`'s coverage annotation was missing** (`completion-reviewer`). `qfai validate
+   --profile tdd --fail-on error` exits 1 at `counts: info=4 warning=353 error=2`, and `QFAI-ATDD-112`
+   named `SPEC-0006:TC-0006-0029` among 94 unreferenced TCs. Root-caused by measurement rather than
+   inference: the ATDD scanner's globs (`.qfai/report/atdd-traceability/summary.json#scan`) are
+   `tests/{e2e,api,integration}/**` resolved against the **repository root**, `matchedFileCount: 2`, so
+   the `// QFAI:SPEC-0006:TC-0006-0029` marker inside `packages/qfai/tests/integration/**` is invisible
+   to it. The annotation surface it does read is the root `tests/integration/qfai-traceability.md`,
+   whose `## CHG-007` section listed `TC-0006-0027`, `-0028`, `-0030`, `-0031` and **not** `-0029`.
+   Attributable: the omission is `TDD-0031`'s, which landed at `c111555f` without it, and `TDD-0040`
+   shares the TC. **Not** the pre-existing baseline — the sibling TCs of the same slice are all present.
+
+   **Repaired in this round, and the repair is measured on the parsed finding rather than on `counts`.**
+   One line added, `- QFAI:SPEC-0006:TC-0006-0029`, in numeric order inside that `## CHG-007` section;
+   nothing else touched, `git diff --stat -- packages/qfai/src` empty. Before: `QFAI-ATDD-112` named
+   **94** distinct TCs and `TC-0006-0029` was among them. After: **93**, and it is not. `counts` is
+   **identical either way** (`info=4 warning=353 error=2`, exit 1), which is the reason the parsed TC
+   list is the load-bearing number here and a `counts` diff would have shown nothing. `prettier -c` exit
+   0 on the first run, `lint:md` exit 0, neither re-run. `tests/e2e/qfai-traceability.md` needs nothing,
+   checked rather than assumed on two independent grounds: `atddTraceability.ts` `LEVEL_TO_TEST_KIND`
+   (`:547`) has no `unit` key and `resolveTcHomeKind` (`:573`) falls through to `"integration"`, so the
+   obligation is discharged only under `tests/integration/**`; and that file holds `US-*` ids
+   exclusively (214 lines, zero `TC-` entries), so a `TC-` line there would be foreign to it.
+2. **`TDD-0031`'s `Selector` cell overclaims and does not resolve** (`completion-reviewer` and
+   `implementation-reviewer`, independently). It reads "TC-0006-0029: drift advisory severity/group +
+   --fail-on error exit-code invariance", which claims the **group** half — Verify bullet 3 — that its
+   own test file explicitly disclaims, and it matches no `describe` title in that file, so
+   `qfai validate` emits `TDDLIST_SELECTOR_UNRESOLVED` on spec-0006 row 31. That warning is the `+1`
+   in `warning=353` against the slice's recorded 352 baseline, so it is new and attributable, not
+   inherited. Severity is **warning**: it does not itself fail `--fail-on error`.
+3. **`TDD-0040`'s `Test file` cell is still `—`** (`qa-gatekeeper` bookkeeping).
+
+Findings 2 and 3 cannot be repaired without writing the `Selector` and `Test file` cells, which
+`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist` does **not** grant this stage —
+the carve-out is `Status` / `DR-ID` / `Evidence` only. That is exactly the deadlock
+**`CR-20260807-0002`** was minted for, and it is still `Status: open`. Its own text states the
+consequence: "every other row of this slice continues its micro-cycle normally; only the transition to
+`done` waits." So G6 is held at `review-fix` pending that decision, and the excursion was **not** taken
+a third time — `completion-reviewer` has already ruled twice in this slice that "compelled is not
+authorised".
+
+The residual `error=2` after finding 1 is repaired is the pre-existing baseline recorded at Stage 0
+(`QFAI-ATDD-111`, 20 `US-*` without an E2E row; `QFAI-ATDD-112` over the remaining unreferenced TCs,
+including `TC-0006-0032`..`-0035`, whose rows are still `todo`). It is `CR-20260807-0001`'s subject and
+is not this row's to clear.
+
+#### The gate that finding 1 tripped cannot enforce itself — minted as a CR, not left here
+
+Repairing finding 1 exposed something worse than the missing line. The root `tests/{e2e,integration}/qfai-traceability.md`
+files are the only surface `QFAI-ATDD-112` reads, and **nothing structurally couples a line in them to
+the `// QFAI:SPEC-NNNN:TC-NNNN-NNNN` marker in the test that actually discharges the TC** — the markers
+live under `packages/qfai/tests/**`, which the scanner's root-relative globs cannot reach
+(`matchedFileCount: 2`). So the annotation file asserts coverage rather than evidencing it, in both
+directions: `TDD-0031` shipped GREEN with a real test and no annotation, and an annotation with no test
+would pass just as quietly. That is the failure mode this slice keeps finding by measurement, now
+sitting in the gate meant to catch it.
+
+Filed as **`CR-20260814-0001`** (`Class: defect`) rather than recorded here, because a reviewer already
+ruled once in this slice that routing a CR proposal into an evidence file and never minting one "puts it
+nowhere" — the defect this very note would otherwise repeat. It is raised with **no owner**: fixing it
+means changing the scan globs in `packages/qfai/src/core/atddTraceability.ts`, which is production code
+and would surface a large latent backlog, so the option choice is the user's and not a row's.
+
+#### The carve-out deadlock is now total for this row, and it is measured rather than argued
+
+`CR-20260807-0002` describes a deadlock in which a row cannot legally hold the status the carve-out
+**does** authorise without also writing a cell it does **not**. Writing this row's `Status` reproduced it
+on a third row, and the measurement is unambiguous:
+
+- With `Status = review-fix` and the seeded `Test file = —`, `qfai validate --profile tdd` moves
+  `error=2 → error=3`, the new one being `TDDLIST_TEST_FILE_MISSING` at **error** severity —
+  `Test file "—" not found for spec-0006 (row 40)`.
+- `TEST_FILE_CHECK_STATUSES` is `{green, refactor, review-fix, done}`, so the error fires at **every**
+  status this row could honestly hold. It completed GREEN, so `red` is no longer true of it — and a
+  backward transition is prohibited in any case.
+
+So there is no honest resting status for `TDD-0040` that keeps the repository gate at its measured
+baseline. The excursion was **not** taken a third time: `completion-reviewer` has ruled twice in this
+slice that "compelled is not authorised", and taking it after minting `CR-20260807-0002` would make the
+CR pointless — which is the behaviour that CR's own provenance line criticises. The row therefore rests
+at `review-fix` with the new error disclosed, and the `error=2 → 3` regression against the Stage 0
+baseline is **owned by this round** and named here rather than left for the checkpoint to discover.
+
+`TDD-0029` and `TDD-0033` are the two rows that took the excursion earlier in this slice, which is why
+they sit at a checked status without tripping the same error. That asymmetry is the clearest statement of
+the problem: the rows that broke the rule are green, and the row that kept it is red.
