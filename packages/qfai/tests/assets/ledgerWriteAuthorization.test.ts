@@ -26,7 +26,9 @@
  * around them is rationale and will be reworded; the cell names and
  * `selectorResolves` are the load-bearing tokens, and the writable enumeration
  * is asserted as a bounded slice so that adding a column to it fails here
- * rather than merely adding text.
+ * rather than merely adding text. A condition is asserted contiguous with the
+ * cell it qualifies: split into fragments, the pair passes with the two bodies
+ * swapped, which is a different and nonsensical authorisation.
  *
  * Not covered here, deliberately: the two trees being byte-identical.
  * `tests/scripts/syncInitStaleDetection.test.ts` runs
@@ -45,7 +47,10 @@ import { describe, expect, it } from "vitest";
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
-const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
+/** The SSOT tree. `.qfai/` is its byte-identical mirror; see the docblock. */
+const ASSET_TREE = "packages/qfai/assets/init/.qfai";
+
+const TREES = [ASSET_TREE, ".qfai"];
 const DRIFT = "assistant/constitution/drift-protocol.md";
 const SKILL = "assistant/skills/qfai-implement/SKILL.md";
 const TRACE = "assistant/skills/qfai-sdd/references/spec-traceability-rules.md";
@@ -133,19 +138,28 @@ describe.each(TREES)("%s", (tree) => {
     expect(rule).toContain("the `Selector` cell, only while");
   });
 
-  it("states both conditions, including the polarity of the selector one", async () => {
+  it("binds each condition to the cell it qualifies", async () => {
     const rule = ruleRegion(await read(tree, DRIFT));
+    // Each bullet is asserted as one contiguous string, cell name included.
+    // Asserted as independent fragments these two cases pass with the bodies
+    // swapped — a cross-wired rule authorises a different, nonsensical set of
+    // writes — because every fragment still occurs somewhere in the region.
+    //
     // Condition 1: the seeded cell is a placeholder, so filling it destroys
-    // nothing. A `Test file` bullet that survived without this would authorise
-    // overwriting a path an earlier phase chose.
-    expect(rule).toContain("the seeded value is empty or a dash");
-    expect(rule).toContain("placeholder");
+    // nothing. Detached from `Test file`, this would authorise overwriting a
+    // path an earlier phase chose.
+    expect(rule).toContain(
+      "the `Test file` cell, only while the seeded value is empty or a dash placeholder",
+    );
     // Condition 2: named after the validator predicate, so a reviewer can run
-    // the check instead of judging it. `is false` carries the polarity —
-    // inverted, the rule would authorise rewriting selectors that already work.
-    expect(rule).toContain("does not resolve against");
-    expect(rule).toContain("`selectorResolves`");
-    expect(rule).toContain("predicate is false");
+    // the check instead of judging it.
+    expect(rule).toContain(
+      "the `Selector` cell, only while the seeded value does not resolve against",
+    );
+    // `is false` carries the polarity, kept contiguous with the predicate it
+    // qualifies — inverted, the rule would authorise rewriting selectors that
+    // already work.
+    expect(rule).toContain("`selectorResolves` predicate is false");
   });
 
   it("keeps both conditions machine-checkable and one-way", async () => {
@@ -194,17 +208,89 @@ describe.each(TREES)("%s", (tree) => {
     );
     expect(skill).toContain("final Status, DR-ID and Evidence values");
   });
+});
 
-  it("records the ownership split where the schema is defined", async () => {
-    expect(await read(tree, TRACE)).toContain("**Ownership split.**");
+/**
+ * Tree-independent, for the reason the docblock gives: the mirror is
+ * byte-identical, so reading the SSOT once is the whole fact. Asserting the
+ * same prose against both trees doubles the executions without adding an
+ * outcome — the second copy can only differ if `--check` is already failing.
+ * The `describe.each` block above predates that reasoning; new prose cases go
+ * here rather than growing it further.
+ */
+describe("the skills spell the carve-out the same way the protocol does", () => {
+  it("states in Non-goals which cells are unconditional and which are not", async () => {
+    // Bounded to Non-goals: `unconditionally` and both cell names occur in the
+    // Completion section too, so a document-wide search could not tell a
+    // corrected Non-goals entry from an uncorrected one.
+    const skill = await read(ASSET_TREE, SKILL);
+    const start = skill.indexOf("## Non-goals");
+    const end = skill.indexOf("## Execution Ledger: test-list.md");
+    expect(start, "the Non-goals heading moved").toBeGreaterThanOrEqual(0);
+    expect(end, "the section after Non-goals moved").toBeGreaterThan(start);
+    const nonGoals = skill.slice(start, end);
+    // The entry used to state the three-cell rule as exhaustive, which
+    // contradicted the protocol it cites. Both halves are asserted contiguous
+    // with their cell lists so that widening one silently is not possible.
+    expect(nonGoals).toContain(
+      "`Status` / `DR-ID` / `Evidence` cells are carved out unconditionally",
+    );
+    expect(nonGoals).toContain("its `Test file` / `Selector` cells conditionally");
+  });
+
+  it("states in Completion that the two conditional cells are written on sight", async () => {
+    // The completion step is where a stage that deferred its ledger writes
+    // would try to write all five cells at once. Recording that the two
+    // conditional cells are already covered *and* that their condition is
+    // one-way is what makes the deferral visibly wrong.
+    const skill = await read(ASSET_TREE, SKILL);
+    const heading = "### Completion";
+    expect(skill, "the Completion heading moved").toContain(heading);
+    const completion = skill.slice(skill.indexOf(heading));
+    expect(completion).toContain(
+      "final Status, DR-ID and Evidence values — the three cells the Drift Protocol carve-out covers unconditionally",
+    );
+    expect(completion).toContain(
+      "`Test file` and `Selector` are covered too, but only while their stated condition still holds",
+    );
+  });
+
+  it("enumerates the owned cells where the schema is defined, not just the heading", async () => {
+    // Asserting `**Ownership split.**` alone is blind to what the bullet says:
+    // the pre-correction text claimed the three cells and "nothing else", and
+    // the heading-only assertion passed either way.
+    const trace = await read(ASSET_TREE, TRACE);
+    const start = trace.indexOf("**Ownership split.**");
+    const end = trace.indexOf("- `Evidence` is a **pointer**");
+    expect(start, "the ownership-split bullet moved").toBeGreaterThanOrEqual(0);
+    expect(end, "the bullet closing the ownership split moved").toBeGreaterThan(start);
+    const split = trace.slice(start, end);
+
+    expect(split).toContain("owns the `Status`, `DR-ID` and `Evidence` cells unconditionally");
+    // Each conditional cell contiguous with its own condition, for the same
+    // reason as the protocol case above: swapped bodies must not read green.
+    expect(split).toContain("`Test file` while the seeded value is empty or a dash placeholder");
+    expect(split).toContain(
+      "`Selector` while the seeded value does not resolve against the row's named test file",
+    );
+
+    // The exclusion is what keeps this a split rather than a licence. Bounded
+    // before slicing, as above: on a miss the -1 would search a region that
+    // happens to name every column.
+    const closing = split.indexOf("It owns nothing else");
+    expect(closing, "the sentence closing the owned enumeration moved").toBeGreaterThan(0);
+    const owned = split.slice(0, closing);
+    for (const column of ["TC-Refs", "Layer", "US-Refs", "CON-API-Refs"]) {
+      expect(owned, `${column} must not be owned downstream`).not.toContain(`\`${column}\``);
+      expect(split, `${column} must be named as staying upstream`).toContain(`\`${column}\``);
+    }
+    expect(split).toContain("stay upstream");
   });
 });
 
 describe("the stated conditions are the ones the shipped validator implements", () => {
   // Tree-independent: the mirror is byte-identical (see the docblock), so the
   // asset copy is read once rather than asserting the same source fact twice.
-  const ASSET_TREE = "packages/qfai/assets/init/.qfai";
-
   const validator = async (): Promise<string> => readFile(path.join(repoRoot, VALIDATOR), "utf-8");
 
   it("names a predicate that exists", async () => {

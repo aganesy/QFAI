@@ -124,6 +124,16 @@ identity. Decomposing an existing obligation across rows stays in remit for the
 executing stage; minting a new obligation id does not, and that line is
 unchanged.
 
+One limit is worth stating, because the `Selector` condition is narrower than it
+reads. `selectorResolves` is deliberately lenient: it accepts verbatim
+containment, then containment of the selector's last identifier-shaped token. So
+a `Selector` that is materially wrong — one that misdescribes which obligations
+its row covers — but happens to share a trailing token with its test file still
+**resolves**, the condition is false, and this carve-out does **not** authorise
+repairing it. That is the conservative direction and it is intended: only a
+selector the runner's own file could not match is repairable here, and a merely
+misdescribing one stays an upstream change.
+
 ### Why the Decision Record is on this list
 
 A downstream stage cannot always avoid needing one. `qfai-implement` Phase Red
