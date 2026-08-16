@@ -55,8 +55,17 @@
  *
  * A hard failure aborts the `it`, so a hard claim would make its successors read
  * as covered without executing. That matters concretely here: the four claims
- * are killed by FOUR different mutations and the evidence for that is only
- * obtainable while they fail separately and are reported separately.
+ * resolve to THREE independent claim-level oracles — C1 (the routing), C2 (the
+ * upper delimiter) and C4 (the rendered severity tag), each with at least one
+ * measured mutation that kills it while the other two stay green — and that
+ * separation is only obtainable while they fail separately and are reported
+ * separately.
+ *
+ * C3 is the one that is NOT a fourth oracle: given Guard #3 it is ENTAILED by
+ * C1, because a single rendered occurrence below the advisory header cannot also
+ * lie between the headers. It earns its place by printing the offending line
+ * when the routing breaks, not by discriminating a mutation the others survive;
+ * the derivation is on the claim itself, below.
  *
  * The guards are hard because each one is a precondition under which the claims
  * mean anything, and every one of them is INVARIANT under the mutations that

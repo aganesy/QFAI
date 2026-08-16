@@ -90,7 +90,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 ## Non-goals
 
-- Writing spec artifacts other than this skill's own `tdd/test-list.md` ledger (use `/qfai-sdd`). The ledger's `Status` / `DR-ID` / `Evidence` cells are carved out unconditionally by the Drift Protocol, and its `Test file` / `Selector` cells conditionally — a placeholder may be filled, and a selector that does not resolve against the row's named test file may be repaired, but neither may be rewritten once it holds a resolving value (`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`, which states both conditions); its rows, and the columns carrying their obligation identity, are still upstream.
+- Writing spec artifacts other than this skill's own `tdd/test-list.md` ledger (use `/qfai-sdd`). The ledger's `Status` / `DR-ID` / `Evidence` cells are carved out unconditionally by the Drift Protocol, and its `Test file` / `Selector` cells conditionally — a placeholder may be filled, and a selector that does not resolve against the row's named test file may be repaired, but neither may be rewritten once its condition has ceased to hold, i.e. a `Test file` that names a path and a `Selector` that resolves (`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`, which states both conditions); its rows, and the columns carrying their obligation identity, are still upstream.
 - Writing acceptance tests (use `/qfai-atdd`). `Layer = E2E` / `Layer = API` ledger rows are tracked here but their tests are authored there.
 - Running validation gates (use `/qfai-verify`).
 - Parallel execution across multiple **specs** simultaneously. (Item-level parallelism _within_ one spec is a separate question, governed by

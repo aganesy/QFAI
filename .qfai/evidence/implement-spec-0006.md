@@ -6256,6 +6256,17 @@ offending line under M2 — but it is not counted as an independent oracle. Reco
 docblock-accuracy defect rather than fixed in place, because the header sentence is quoted in this
 round's gatekeeper observations.
 
+> **Superseded at round 3: it was fixed in place.** The deferral ground above did not survive being
+> restated three rounds running — `implementation-reviewer` ruled in round 2 that it does not hold, and
+> in round 3 that two artifacts of the same round disagreeing about the row's own oracle count is worse
+> than a quoted sentence going out of date. The docblock now states **three** claim-level oracles
+> (C1 routing, C2 upper delimiter, C4 rendered tag) and names C3 as entailed by C1 under Guard #3, kept
+> for failure legibility rather than counted as an oracle. Comment-only; `Tests 1 passed (1)`, exit 0,
+> and `tests/assets/` unmoved at 54 files / 773 tests. The engineer also declined the obvious rewrite
+> "each killed by a different mutation" because the measured matrix does not support it — M3 kills C1
+> and C4 together — so the sentence says "at least one measured mutation that kills it while the other
+> two stay green", which is what was actually measured.
+
 #### The checkpoint's step-1 `-t '<Selector>'` command selects nothing in this slice, and exits 0
 
 `references/checkpoint-verification.md` step 1 prescribes `<runner> <Test file> -t '<Selector>'`, and
@@ -6267,6 +6278,14 @@ falsifiability command is the **file-scoped** form with no `-t`, the same choice
 Advisory, `Traces to: none`, and it applies to every row of this slice rather than to this one.
 
 #### Group review returned REVISE — on two record defects, neither in the test code
+
+> **Round-1 narrative, superseded. Read `#### G6 round 2` and `#### G6 round 3` for the disposition.**
+> Three statements below were true when written and are false at HEAD: the carve-out now names **five**
+> cells (three unconditional, two conditional), `CR-20260807-0002` is `approved` with `Applied at`
+> populated, and the reason G6 sat at `review-fix` after round 2 was `CR-20260817-0001`'s neighbourhood
+> of record defects, not `-0002`. Kept in the present tense rather than rewritten because it records what
+> the round actually knew; a round narrative that is silently back-dated stops being evidence of the
+> round.
 
 Both blocking reviewers returned `REVISE` for group G6, and both said explicitly that the delivered test
 code and the `Satisfied-by` path are sound and need no change. The three blocking findings are all
@@ -6505,6 +6524,16 @@ by `cmp` against a `tmp/` backup **and** `git hash-object` rather than by a clea
 | Completion step reverted (`qfai-implement/SKILL.md`)                | `124c11bd` → `8c2f16b0` → `124c11bd` | 1 failed / 26 passed |
 | Ownership split reverted (`spec-traceability-rules.md`)             | `03bb927f` → `305a151d` → `03bb927f` | 1 failed / 26 passed |
 
+**Blob currency, stated because a blob without its revision is the same currency claim this slice has
+been corrected for twice.** `fd734ea8` is the `drift-protocol.md` blob **as it stood when the mutation
+proofs were taken**, i.e. the `git diff` pre-image of `31d944a6`. The file has moved twice since: the
+`selectorResolves` leniency paragraph landed at `31d944a6`, and the round-3 correction of the `one-way`
+clause landed after it. The proofs are therefore valid **at the intermediate state they name and not at
+HEAD**, and what carries them forward is not the blob but the suite: `tests/assets/` was re-run green
+after each subsequent edit, so the cases the mutants killed still execute against the current text. A
+re-proof against the HEAD blob was not taken, and saying so is more useful than a table that implies one
+was.
+
 Two of those deserve their own line. The ownership-split mutant's blob `305a151d` is the **pre-image in
 `git diff`'s own header**, so the mutation is a byte-exact reconstruction of the shipped file before the
 correction rather than an approximation of it — and the heading-only assertion that used to stand there
@@ -6549,3 +6578,95 @@ three files it mutated (`qfai-implement/SKILL.md`, `spec-traceability-rules.md`)
 corrections at the time, so a `checkout` restore would have silently destroyed them. It used `tmp/` backups
 and `cmp` instead. An operational rule that is written down, handed forward, and then observed preventing
 the exact loss it was written for is worth more than the incident that produced it.
+
+#### G6 close — gate-completed fields for both rows
+
+Round 3 returned `PASS` from **both** blocking reviewers with **zero** blocking findings, and the
+spec-level-boundary checkpoint passed. These are the gate-completed fields the per-item evidence contract
+defers until the reviews have run; they apply to `TDD-0031` and `TDD-0040` jointly, because G6 is a T1
+group and every member transitions in the same ledger write.
+
+- **Spec review** (`completion-reviewer`): **PASS**, reviewed revision `14dd41d0`, working tree clean at
+  review start. It re-measured rather than inherited: the gate counts, the `QFAI-ATDD-112` TC list, the
+  `TDDLIST_*` counts for spec-0006, the exhaustiveness of the edited-asset list against
+  `git diff --stat 66ea6416..HEAD -- packages/qfai/assets/`, and the `Cross-spec obligations` verdict
+  across all 18 ledgers.
+- **Code quality review** (`implementation-reviewer`): **PASS**, reviewed revision `14dd41d0`. It
+  re-applied the condition-swap mutation itself to confirm the round-3 contiguity fix kills what survived
+  at 26/26 in round 2, and checked the new leniency paragraph against
+  `packages/qfai/src/core/validators/tddList.ts` rather than against the prose.
+- **Prototype parity** (`product-surface-reviewer`): **not applicable.** Neither row affects UI or
+  rendered product surface; the "rendering" this slice concerns is `qfai doctor`'s text output, which is
+  CLI diagnostic output governed by `.qfai/contracts/cli/qfai-doctor.md`.
+- **Checkpoint verification command**: the full set, run at the boundary — `check-branch-version-pin.sh`
+  (skips, branch unpinned), `check-no-internal-version-leakage.sh` (twice, pre- and post-build),
+  `pnpm -C packages/qfai test` (full suite, no narrower substitute), `pnpm format:check`, `pnpm lint`,
+  `pnpm lint:md`, `pnpm check-types`, `pnpm sync:ssot && git diff --exit-code .qfai/ qfai.config.yaml`,
+  `pnpm build`, `check-build-warnings.mjs`, the four remaining `ci:lint` members, `pnpm ci:lint` as a
+  final confirmation of the whole ten-member chain, and
+  `node packages/qfai/dist/cli/index.mjs validate --profile tdd --fail-on error --root .`.
+- **Checkpoint verification result**: **PASS**. Full suite `4336 passed | 37 skipped`. Every command exits
+  0 except `validate`, whose exit 1 is structurally unavoidable against a standing `error=2` baseline.
+  Counts `info=4 warning=352 error=2` — **delta 0 / 0 / 0** against the Stage 0 baseline, checked three
+  independent ways: the `counts:` line of the as-found run, the `counts:` line of a **freshly rebuilt**
+  run, and the `git diff` of `.qfai/report/validate.log`, in which the `errors:` and `warnings:` lines do
+  not appear as changed at all. `TDDLIST_TEST_FILE_MISSING = 0`, spec-0006 `TDDLIST_SELECTOR_UNRESOLVED
+  = 0`, `QFAI-TEST-001 = 0`.
+
+Worth recording because it was found rather than assumed: the checkpoint discovered `packages/qfai/dist`
+was **stale** — built 2026-08-08 against a `src` tree last changed 2026-08-11 — and rebuilt it rather than
+measuring through it, then re-ran `validate` and the leakage guard on the fresh build. The counts agreed
+on both builds. A checkpoint measured through a stale binary is the failure mode this slice has been
+correcting all round; the reviewer closed it without being asked.
+
+#### Item 10: the four observations name three revisions, and the substance is measured, not asserted
+
+Gate item 10 requires an item's four sub-agent observations (gate items 3, 5, 7, 8) to name the **same**
+revision. They do not, and carrying that forward silently is exactly what `references/evidence-revision.md`
+forbids, so it is discharged by measurement instead:
+
+| Observation                             | `TDD-0031`             | `TDD-0040`             |
+| --------------------------------------- | ---------------------- | ---------------------- |
+| items 3 / 5 (RED-substitute, GREEN)      | `c111555f` / `66ea6416` | `456bdfdb` / `e3c77ac0` |
+| items 7 / 8 (both blocking reviewers)    | round 3, `14dd41d0`     | round 3, `14dd41d0`     |
+
+What makes the older observations still valid at the closing revision, each checked:
+
+- **Production is byte-identical.** `git diff --stat c66c502a..HEAD -- packages/qfai/src` is empty, and so
+  is the working-tree diff. `cli/commands/doctor.ts` is `a2a92ca0` and `core/doctor.ts` is `ee31f4dd` —
+  the same blobs every RED-substitute, GREEN and mutation observation in this group named.
+- **`TDD-0031`'s test file is byte-unchanged** since it landed: blob `238549e4`, the same one round 2's
+  `completion-reviewer` cited.
+- **`TDD-0040`'s test file changed, and the change is disclosed rather than glossed**: `+11 / −2`,
+  blob `df88dc26 → 0863f853`, **comment-only** — the docblock oracle-count correction. No assertion, no
+  guard, no fixture, no import moved. That is why the older GREEN still holds rather than needing re-anchoring.
+- **Both suites re-run at the closing state**: `Test Files 2 passed (2)` / `Tests 2 passed (2)`, exit 0,
+  each line naming its own row's selector.
+- The shared helper `tests/helpers/workflowsIntegrityFixtures.ts` last changed at `c111555f` and is
+  untouched since.
+
+So no commit between the earliest observation and the closing revision touched a file any observation
+covered, except one comment block whose change cannot affect a verdict. The rows close with three
+revisions named and the gap accounted for, which is the form the rule asks for — not one revision claimed
+by re-dating the others.
+
+#### What the two rows do NOT close, named so it is not discovered later
+
+- **`AC-0006-0022` clause 3 has no `TC`.** `completion-reviewer` measured that the AC carries three
+  Then/And clauses and that `TC-0006-0029` — its only TC — covers clauses 1 and 2. Clause 3
+  (「`qfai validate` はこの drift について finding を 1 件も emit しない」) is named by no TC in the pack.
+  That is an AC → TC gap owned by `/qfai-sdd`, not by these rows, whose obligation is the TC. Gating G6 on
+  it would gate the rows on an obligation they do not carry.
+- **`catalog/test-layers.md` contradicts itself on L1 location.** The normative crosswalk says L1/L2 have
+  no mandated directory ("project convention"), and the shipped validator agrees
+  (`LAYER_TEST_DIRS.unit = null`, so no `TDDLIST_LAYER_PATH_MISMATCH` is emitted), but a later section
+  states "Location rule: `tests/unit/**`". Both rows are compliant under the governing text. The catalog
+  is internally inconsistent; owner is `/qfai-sdd`, and the asset SSOT needs the same edit.
+- **`CR-20260817-0001`** (open) — the per-row checkpoint command that selects nothing and exits 0.
+- **`CR-20260814-0001`** (approved Option A, not applied) — the ATDD scanner reading annotation files
+  nothing couples to the test markers.
+- **`CR-20260811-0001`** (open, no owner) — no test observes the true direction of `shouldFailDoctor`'s
+  `--fail-on error` branch.
+
+None of these blocks the two rows. All of them block the **spec**, and they are listed here so the
+spec-level completion gate reads them from the evidence rather than rediscovering them.

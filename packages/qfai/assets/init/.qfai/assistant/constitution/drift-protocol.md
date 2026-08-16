@@ -51,7 +51,9 @@ case required reading the agent roster and reasoning backwards from it.
 
   Both conditions are machine-checkable, so a reviewer verifies the precondition
   instead of taking the writing stage's word for it, and both are one-way: once
-  a cell holds a resolving value, rewriting it is no longer covered. Every other
+  the condition that authorised the write has ceased to hold — a `Test file` that
+  names a path, a `Selector` that resolves — rewriting it is no longer covered.
+  Every other
   column of that file — `TC-Refs`, `Layer`, `US-Refs`, `CON-API-Refs` — and
   every other file under `.qfai/specs/**`, stays upstream SSOT: adding, removing
   or re-scoping a row is an upstream change and takes the

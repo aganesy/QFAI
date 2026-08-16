@@ -9,7 +9,7 @@
 - Approved by: `user (aganesy)` — via the /qfai-implement G6 stage gate: AskUserQuestion
 - Approved at: `2026-08-17T00:00:00Z`
 - Approved option: `A`
-- Applied at: `2026-08-17T00:00:00Z` (`8bf2dfd0`)
+- Applied at: `2026-08-17T00:00:00Z` (`8bf2dfd0` + `31d944a6`; the first was incomplete, see Resolution)
 - Superseded by: `-`
 
 ## Context
@@ -143,23 +143,51 @@ Under Option B or C, no artifact changes and this CR closes with the chosen opti
 
 ## Resolution
 
-**Option A, applied at `8bf2dfd0`.** The whitelist in
-`packages/qfai/assets/init/.qfai/assistant/constitution/drift-protocol.md` — the SSOT, mirrored to the
-root copy by `sync:ssot`, both verified byte-identical — now names `Test file` and `Selector` as
+**Option A, applied across two commits: `8bf2dfd0` then `31d944a6`.** The first was incomplete and a
+reviewer caught it; both are named here because `Applied at` pointing at only the first is the record
+defect this CR's own subject matter is about.
+
+`8bf2dfd0` — the whitelist in
+`packages/qfai/assets/init/.qfai/assistant/constitution/drift-protocol.md`, the SSOT, mirrored to the
+root copy by `sync:ssot` and verified byte-identical, now names `Test file` and `Selector` as
 writable **only while** their stated condition holds, alongside the three unconditional cells. A new
-a new subsection titled "Why Test file and Selector are conditional" carries the rationale. The file is
+subsection titled "Why Test file and Selector are conditional" carries the rationale. The file is
 inside the distributed surface, so it names no internal spec or decision id, and
 `check-no-internal-version-leakage.sh` is green.
 
-Coverage per step 3: `packages/qfai/tests/assets/ledgerWriteAuthorization.test.ts`, 15 → 26 tests, which
-already owned the three-cell whitelist and was extended rather than duplicated. It pins both conditions
-including their polarity, the machine-checkable and one-way properties, and an exclusion case that
-slices the writable enumeration only and asserts `TC-Refs` / `Layer` / `US-Refs` / `CON-API-Refs` are
-absent from it while still named as staying upstream. A tree-independent block ties the prose to the
-shipped validator: `selectorResolves` still exists, both cited rule ids are still emitted, and the
-rationale's four statuses are parsed from `TEST_FILE_CHECK_STATUSES` rather than string-matched, so
+`31d944a6` — **what `8bf2dfd0` left undone.** The rule is restated in two other shipped documents, and
+`8bf2dfd0` changed neither, so the approved intent was not delivered at the point of use: an agent
+reading `skills/qfai-implement/SKILL.md`'s Non-goals — the operative list an executing stage consults
+before deciding it may not write a cell — still saw the three-cell rule stated as exhaustive, citing the
+anchor that by then named five. `skills/qfai-sdd/references/spec-traceability-rules.md`, the
+Ownership-split SSOT for the ledger schema, still said "and nothing else". Both corrected and mirrored,
+plus a paragraph in the rationale naming `selectorResolves`'s deliberate leniency and its consequence.
+The `## Approved actions` step list above names none of that, and following an incomplete plan
+faithfully still leaves an inconsistent artifact — which is why the scope of the fix was set by grepping
+every tree for restatements rather than by the reviewer's finding list.
+
+Coverage per step 3: `packages/qfai/tests/assets/ledgerWriteAuthorization.test.ts`, 15 → **27** tests,
+which already owned the three-cell whitelist and was extended rather than duplicated. It pins an
+exclusion case that slices the writable enumeration only and asserts `TC-Refs` / `Layer` / `US-Refs` /
+`CON-API-Refs` are absent from it while still named as staying upstream. A tree-independent block ties
+the prose to the shipped validator: `selectorResolves` still exists, both cited rule ids are still
+emitted, and the rationale's four statuses are parsed from `TEST_FILE_CHECK_STATUSES` rather than
+string-matched, so
 reformatting does not break it. Non-vacuity was shown by two mutations, each failing exactly the two
 asset-tree cases while the unmutated root copy passed, then restored to the pre-mutation blob.
+
+**The coverage delivered at `8bf2dfd0` did not in fact pin both conditions, and the correction belongs
+here rather than only in the evidence.** An earlier draft of this Resolution claimed it pinned "both
+conditions including their polarity". A round-2 `implementation-reviewer` measured otherwise: swapping
+the two condition bodies — giving `Test file` the `selectorResolves` condition and `Selector` the
+placeholder condition — left the suite green at 26/26. The cause was structural rather than an
+oversight: five independent `toContain`s over one flattened region are satisfied by any arrangement of
+fragments drawn from it. `31d944a6` fixed it by contiguity — each condition is now asserted as one
+string carrying **both** the cell it qualifies and its condition — and four mutants now die, each in
+exactly one case, every restore verified by `cmp` against a backup and `git hash-object`. So the claim
+is true at `31d944a6` and was false at `8bf2dfd0`, and saying so is the point: a Resolution that
+described the intended state rather than the delivered one is the same defect class as the shipped
+sentences this CR's own application left stale.
 
 Byte-identity of the two trees is deliberately **not** re-asserted here: `sync-init-to-root.mjs --check`
 already compares mirrored paths with `Buffer.equals` in both directions, and

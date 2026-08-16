@@ -88,7 +88,7 @@ function ruleRegion(drift: string): string {
 }
 
 describe.each(TREES)("%s", (tree) => {
-  it("names the ledger and its three writable cells in the whitelist", async () => {
+  it("names the ledger and its three unconditional cells in the whitelist", async () => {
     const drift = await read(tree, DRIFT);
     const start = drift.indexOf("## Allowed exceptions");
     const end = drift.indexOf("## When drift is detected");
