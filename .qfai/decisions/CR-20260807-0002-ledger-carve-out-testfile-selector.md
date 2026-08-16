@@ -147,8 +147,9 @@ Under Option B or C, no artifact changes and this CR closes with the chosen opti
 `packages/qfai/assets/init/.qfai/assistant/constitution/drift-protocol.md` — the SSOT, mirrored to the
 root copy by `sync:ssot`, both verified byte-identical — now names `Test file` and `Selector` as
 writable **only while** their stated condition holds, alongside the three unconditional cells. A new
-`### Why \`Test file\` and \`Selector\` are conditional`subsection carries the rationale. The file is
-inside the distributed surface, so it names no internal spec or decision id and`check-no-internal-version-leakage.sh` is green.
+a new subsection titled "Why Test file and Selector are conditional" carries the rationale. The file is
+inside the distributed surface, so it names no internal spec or decision id, and
+`check-no-internal-version-leakage.sh` is green.
 
 Coverage per step 3: `packages/qfai/tests/assets/ledgerWriteAuthorization.test.ts`, 15 → 26 tests, which
 already owned the three-cell whitelist and was extended rather than duplicated. It pins both conditions

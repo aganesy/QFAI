@@ -439,8 +439,33 @@ than the shipped-name Set; the test helper does import `runInit` from it, which 
 and creates no obligation, because the cross-spec trigger is *editing* and a `src/**` module never
 appears in a `Test file` column. (Corrected after round 2: the earlier wording said "not imported at
 all", which `completion-reviewer` correctly flagged as false twice — the first correction landed only
-in the narrative and left this sentence, the one a reviewer actually checks, standing.) The shipped asset tree is a read-only operand: no file added, none removed, no
-byte changed.
+in the narrative and left this sentence, the one a reviewer actually checks, standing.)
+
+The shipped asset tree is a read-only operand **for the workflows-detection surface this spec owns**:
+under `packages/qfai/assets/init/root/.github/workflows/` no file was added, none removed, no byte
+changed. It is **not** untouched overall, and naming that here is the whole point of this section —
+`completion-reviewer` flagged the unqualified sentence as false at round 2, the third recurrence of this
+defect class in this file. G6 edited three governance documents inside the asset tree, each under
+`CR-20260807-0002` Option A, each authored in the asset tree as SSOT and mirrored to its root copy by
+`sync:ssot`:
+
+- `assistant/constitution/drift-protocol.md` — the carve-out widening itself, at `8bf2dfd0`.
+- `assistant/skills/qfai-implement/SKILL.md` and
+  `assistant/skills/qfai-sdd/references/spec-traceability-rules.md` — the round-3 rework, correcting
+  three sentences that still stated the old three-cell rule as exhaustive while citing the anchor that
+  now names five.
+
+All three sit inside the distributed surface (`package.json#files` → `assets/`) and reach every adopter
+through `qfai init`, and this branch carries no version pin, so an adopter-visible shipped-asset change
+is exactly what a later auditor needs disclosed at the site that answers "did this round touch anything
+outside its lane".
+
+The section's verdict is unchanged, and `completion-reviewer` re-measured it rather than inheriting it:
+parsing the `Test file` column of all 18 ledgers for those assets, for the guarding suite
+`packages/qfai/tests/assets/ledgerWriteAuthorization.test.ts`, for both G6 test files, for the fixture
+helper, for the three doctor production modules and for `tests/integration/qfai-traceability.md` returns
+hits on spec-0006's own rows `TDD-0031` / `TDD-0040` and nowhere else. No other spec's `done` row
+certifies anything this round edited, so **None** stands.
 
 ## G1 (TDD-0029) — engineer PASS, reviews NOT RUN, row parked at `refactor`
 
@@ -6383,3 +6408,144 @@ copy, the guard-label ordering and the `AC-0006-0025` citation nit are all `Trac
 drift protocol forbids pinning a reviewer-originated obligation as a hard assertion, and the docblock
 sentences among them are quoted verbatim in round 1's gatekeeper observations, so rewriting them now
 would invalidate passed evidence to fix a legibility complaint.
+
+#### G6 round 3 — the CR was applied where it was written, not where it is read
+
+Round 2 returned `REVISE` from both blocking reviewers again, with three blocking findings. None was about
+the test code; all three were consequences of **applying `CR-20260807-0002` incompletely**, and the two
+that matter most were found by `implementation-reviewer`:
+
+1. `packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md` still stated the old
+   three-cell rule as an exhaustive prohibition, twice — in **Non-goals**, which is the operative list an
+   executing stage reads before deciding it may not write a cell, and in the Completion step. Both cite
+   the very anchor that now names five cells.
+2. `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`, the
+   Ownership-split SSOT for the ledger schema, still said `/qfai-implement` owns three cells
+   "**and nothing else**" — an explicit exhaustiveness claim, false at HEAD, citing the anchor it
+   contradicts.
+3. This file's `## Cross-spec obligations` section still ended "The shipped asset tree is a read-only
+   operand: no file added, none removed, no byte changed", which `8bf2dfd0` falsified by changing 53 lines
+   of a file inside the distributed surface.
+
+**The failure was following a plan instead of checking the delivered state.** The CR's own
+`## Approved actions` names four steps — edit `drift-protocol.md`, mirror, add tests, fill the CR fields —
+and all four were done. But the rule is *restated* in two other shipped documents, and this repository's
+own `.agents/rules/distributed-surface.md` states the governing discipline in terms that cover it exactly:
+an invariant written in N places is updated in all N. An incomplete plan followed faithfully still leaves
+an inconsistent artifact, and the approved intent was **not delivered at the point of use** — an agent
+obeying Non-goals would still have refused to fill a `Test file` placeholder, which is the deadlock the
+user approved Option A to remove.
+
+**Remediation, and it was scoped by measurement rather than by the finding list.** Rather than fixing the
+two files the reviewers named, the whole tree was grepped for every restatement of the three-cell rule
+(`packages/qfai/assets`, `.qfai`, `.claude`, `.agents`, `.codex`, `.github`). The result matched the
+reviewers' set exactly — three sentences in two files — so nothing further was owed, and that is now a
+measured statement rather than an assumption. Topology checked at the same time: `.claude/`, `.agents/`,
+`.codex/` and `.github/` all **symlink** their `qfai-*` skill directories to `.qfai/assistant/skills/`, so
+there is exactly one real copy per tree and the asset SSOT plus `sync:ssot` reaches every tool surface.
+
+**The operational rule from round 2 was applied, and it worked.** After editing shipped prose the suite
+was run, not just the formatters: `tests/assets/` gives `Test Files 54 passed (54)` / `Tests 772 passed
+(772)`, exit 0. The Completion-step sentence was deliberately reworded so its pinned prefix
+(`final Status, DR-ID and Evidence values`) survives verbatim — only the appositive after the em dash
+changed — which is why the existing case still passes rather than needing repair. That is the difference
+between round 2 and round 3 on the identical class of edit.
+
+**Also repaired in this round**, each a record defect and none moving a gate:
+
+- The `## Cross-spec obligations` sentence, rescoped to the workflows asset subtree it was true of, with
+  the three governance documents this group edited named at the site a reviewer actually reads. The
+  section's verdict is unchanged — `completion-reviewer` re-measured `None` across all 18 ledgers rather
+  than inheriting it.
+- Both rows' `Evidence` cells, which still asserted the pre-repair state ("waits on `CR-20260807-0002`
+  (open)") after `d70b7d92` had written the cells and the CR had been approved and applied. `Evidence` is
+  granted unconditionally, so no authority question arose; the cells were simply false.
+- Two mangled code spans in `CR-20260807-0002`'s `## Resolution`, where backslash-escaped backticks inside
+  a code span do not escape in CommonMark and rendered literally. Neither `prettier` nor `lint:md` reads
+  that, which is why a reviewer caught it and no gate did.
+
+#### One cross-cutting defect was routed, not absorbed: `CR-20260817-0001`
+
+`implementation-reviewer` measured that `references/checkpoint-verification.md` step 1's per-row command,
+`<runner> <Test file> -t '<Selector>'`, **selects nothing and exits 0** for this repository's own selector
+convention: `vitest -t` is a regex and `(TDD-NNNN)` is read as a capture group. Both G6 rows reproduce it
+as `Tests 1 skipped (1)`, exit 0 — a verification indistinguishable from a real pass at the point its
+result is consumed. Counted, not estimated: **211 of 633 selectors repo-wide carry regex metacharacters**,
+18 of 40 in spec-0006.
+
+The sharpest part of the finding is what this slice's own repair did to it. Before `d70b7d92`, row 31's
+selector was visibly broken and `TDDLIST_SELECTOR_UNRESOLVED` flagged it; the authorised repair removed
+that warning while the command still selects nothing. **Gate cleanliness improved and detectability fell.**
+Minted as `CR-20260817-0001` (`Class: defect`, no blocked set) with three options, recommending the
+file-scoped form with no `-t` — which is the command every row of this slice actually ran and recorded.
+
+#### A surviving mutant in the coverage this round added, killed by measurement
+
+`implementation-reviewer` did not only read the new coverage — it mutated it, and found a survivor:
+**swapping the two condition bodies** in the shipped whitelist (giving `Test file` the
+`selectorResolves`-is-false condition and `Selector` the placeholder condition) left the suite at
+`Tests 26 passed (26)`. A cross-wired rule authorises a different and nonsensical set of writes and reads
+green. The cause was structural rather than an oversight: the case issued five independent `toContain`s
+over one flattened region, none anchored to a cell name, so the region satisfied any set of fragments
+drawn from it regardless of how they were arranged. Its positive control was recorded too — four other
+mutations each died in exactly one case — so this was one weak case, not a weak suite.
+
+The fix is contiguity, not more assertions: each condition is now asserted as **one string containing both
+the cell it qualifies and its condition**. Adding a sixth fragment would not have helped; binding subject
+to predicate is what makes the assertion express the rule rather than its vocabulary. The same shape was
+applied pre-emptively to the ownership-split case, which carries a structurally identical pairing.
+
+Four mutants now die, each in exactly one case, asset tree only, root mirror green, every restore verified
+by `cmp` against a `tmp/` backup **and** `git hash-object` rather than by a clean run:
+
+| Mutation                                                          | Baseline → mutant → restored | Suite               |
+| ----------------------------------------------------------------- | ---------------------------- | ------------------- |
+| swap the two condition bodies (`drift-protocol.md`)                 | `fd734ea8` → `3a615490` → `fd734ea8` | 1 failed / 26 passed |
+| Non-goals reverted to pre-correction (`qfai-implement/SKILL.md`)    | `124c11bd` → `c0b429a0` → `124c11bd` | 1 failed / 26 passed |
+| Completion step reverted (`qfai-implement/SKILL.md`)                | `124c11bd` → `8c2f16b0` → `124c11bd` | 1 failed / 26 passed |
+| Ownership split reverted (`spec-traceability-rules.md`)             | `03bb927f` → `305a151d` → `03bb927f` | 1 failed / 26 passed |
+
+Two of those deserve their own line. The ownership-split mutant's blob `305a151d` is the **pre-image in
+`git diff`'s own header**, so the mutation is a byte-exact reconstruction of the shipped file before the
+correction rather than an approximation of it — and the heading-only assertion that used to stand there
+would have passed on all of it, because `**Ownership split.**` survives the revert. And the Completion-step
+mutant left the **pre-existing** case green in both tree executions, because that case pins a prefix the
+pre-correction text also contains: direct evidence that the new case covers ground the preserved one
+structurally cannot, which is why the preserved case was kept rather than replaced.
+
+The reviewer's growth nit was answered by construction rather than accepted: the ownership-split case
+**moved** out of `describe.each(TREES)` into a tree-independent block reading the asset SSOT once, because
+`sync-init-to-root.mjs --check` already proves byte-identity with `Buffer.equals` in both directions, so a
+second execution against the mirror can only differ when that check is already failing. Net movement is
+`772 → 773` tests over 54 unchanged files: `−2` from the move, `+3` new.
+
+Disclosed as a residual: the new assertions pin longer strings than the ones they replace, so rewording
+these specific sentences will now fail here. That is the intended trade — these sentences **are** the rule,
+not the rationale around it — and the file's docblock now says so, which is the honest form of the
+brittleness rather than a hidden one.
+
+#### The rule is now honest about its own reach
+
+The reviewer also established that `selectorResolves` is **deliberately lenient** (verbatim containment,
+then containment of the selector's last identifier-shaped token), so a `Selector` that is materially wrong
+but shares a trailing token with its file still resolves — the condition is false and the widened
+carve-out does **not** authorise repairing it. That is the conservative direction and is not a defect, but
+it bounds Option A: round 2's actual complaint about row 31 was an *overclaim*, repairable only because it
+coincided with non-resolution. The milder deadlock survives for a future row.
+
+Rather than leave that implicit in a rule that would otherwise read as broader than it is, one paragraph
+was added to the shipped rationale naming the leniency and stating the consequence: only a selector the
+runner's own file could not match is repairable under the carve-out, and a merely misdescribing one stays
+an upstream change. Zero behavioural cost, and it is the difference between a rule that is correct and a
+rule that is also honest about what it does not reach. `tests/assets/` stayed at
+`54 files / 773 tests`, exit 0, and `sync-init-to-root.mjs --check` reports no drift — the suite run
+being the round-2 lesson applied for the second time in this round.
+
+#### `git checkout --` was named as a hazard and the naming paid for itself
+
+Round 2 recorded, from a near-miss, that `git checkout -- <file>` restores from HEAD/index rather than the
+working tree. That rule was handed to the engineer with this round's brief, and it mattered: two of the
+three files it mutated (`qfai-implement/SKILL.md`, `spec-traceability-rules.md`) carried **uncommitted**
+corrections at the time, so a `checkout` restore would have silently destroyed them. It used `tmp/` backups
+and `cmp` instead. An operational rule that is written down, handed forward, and then observed preventing
+the exact loss it was written for is worth more than the incident that produced it.
