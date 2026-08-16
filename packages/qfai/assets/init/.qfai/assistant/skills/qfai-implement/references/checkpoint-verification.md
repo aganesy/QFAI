@@ -70,6 +70,35 @@ reports zero `QFAI-TEST-001` findings. Any non-zero exit is a FAIL: for a per-it
 item stays at `refactor`, the failure is fixed, and the whole set is re-run. A partial run is not a
 pass.
 
+### The one substitution: a measured delta for step 4
+
+Step 4 alone MAY be judged on a **measured delta** instead of on exit 0, and only when all five of the
+following hold. This exists for the case where the profile already reports findings that no row in the
+slice can discharge — a validate run cannot exit 0 against a standing error, so without this the gate
+would hold every row of every slice hostage to work outside it.
+
+1. The baseline — the counts **and** the finding IDs — was captured before the slice's first code
+   change and recorded in the slice's evidence **before any row started**. A baseline written after the
+   fact is not a baseline.
+2. Step 4 reports zero `QFAI-TEST-001` findings. This clause is never substituted.
+3. The aggregate does not worsen: no severity count is higher than the baseline's.
+4. **No row's `TC-*` re-enters the unreferenced-TC list.** Stated as re-entry rather than as departure,
+   because departure is undischargeable for a sibling: when one `TC-*` is split across several rows,
+   the first row to discharge it removes it from the list and every sibling then satisfies a departure
+   clause vacuously. Re-entry is checkable for every row, and it pairs with the row-level obligation the
+   validator already enforces — that a row's `Selector` resolves in its own `Test file`.
+5. **Every finding the baseline holds open is unattributable to the row being closed** — it names an
+   obligation that row does not carry. Read per row, not per spec: a finding naming another row's
+   obligation in the same spec, or an obligation owned by an upstream phase, does not block this row.
+   What it does forbid is the case it exists for — closing a row while a baseline finding names **that
+   row's own** obligation.
+
+Clause 5 is the load-bearing one. It is also the one to state carefully in the evidence: name each
+baseline finding, name whose obligation it is, and say why that is not the row's. A slice that cannot
+answer that per row has not earned the substitution.
+
+The substitution applies to step 4 and nothing else. Every other command in the set still has to exit 0.
+
 **A fix invalidates the reviewer PASS that preceded it.** The per-item boundary sits after
 `completion-reviewer` and `implementation-reviewer` returned PASS (Phase: Refactor, steps 4-5), so
 those verdicts were given against the pre-fix test and production code. Whenever the fix changes

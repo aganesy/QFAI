@@ -2497,7 +2497,7 @@ command and exits **1**, which is `CR-20260807-0001`'s open question and the rea
 | TDD-0029 | TC-0006-0027 | T2   | refactor | G1 (solo)      | 1, 2, 2b |
 | TDD-0033 | TC-0006-0031 | T2   | refactor | G3 (solo)      | 1, rework, verification |
 
-Both rows have all three required reviewers reported PASS on their final round. Neither is `done`:
+Both rows have their `completion-reviewer` and `qa-gatekeeper` verdicts on their final round. **Corrected after a later audit**: this sentence originally claimed all three reviewers PASSed, which is false for `TDD-0033` — its `implementation-reviewer` verdict is REVISE with no later PASS anywhere in this file. Neither is `done`:
 `references/checkpoint-verification.md#pass-criteria` keeps an item at `refactor` while step 4 exits
 non-zero, and step 4's two errors are the subject of `CR-20260807-0001`, which is `open`. Both rows are
 named in that CR's blocked set.
@@ -5826,6 +5826,13 @@ And it is **not regularised**: `CR-20260807-0002` is `Status: open`, so it autho
 row is a **new** excursion committed under it rather than one of the two it discloses. Disclosed as a third
 instance for that CR to cover, not as an approved act.
 
+> **Superseded 2026-08-17: it is regularised now.** `CR-20260807-0002` is `approved` (Option A) and
+> applied at `8bf2dfd0` + `31d944a6`. A `completion-reviewer` audit checked this row's write against the
+> five-cell carve-out as it now reads and found it inside: the seeded `Test file` was `—`, which is the
+> stated condition, and the `Selector` was left byte-unchanged. The paragraph above is kept because it
+> records what the row knew when it was written — the third disclosed instance is what made the CR
+> concrete enough to approve.
+
 #### A discrepancy in the sources I had quoted as one tree
 
 `06_Test-Cases.md:281`'s Setup for leg (b) is `当該 shipped workflow を削除した tree`. Read literally,
@@ -6670,3 +6677,81 @@ by re-dating the others.
 
 None of these blocks the two rows. All of them block the **spec**, and they are listed here so the
 spec-level completion gate reads them from the evidence rather than rediscovering them.
+
+## The six parked rows are not closable, and the reason is not the checkpoint
+
+`CR-20260807-0001` Option A was approved and applied, and a `completion-reviewer` audit measured **all
+five** conditions of the substitution against all six parked rows: they hold. Baseline captured pre-slice
+with both finding IDs (`:243-257`), `QFAI-TEST-001` = 0, aggregate identical on every axis, no row's
+`TC-*` re-entered the unreferenced list, and every baseline finding is unattributable to any of the six —
+`QFAI-ATDD-111`'s only spec-0006 member is `US-0006-0011`, whose owner the ledger itself names as
+`/qfai-sdd` Phase 2b, and `QFAI-ATDD-112`'s four spec-0006 members map to `TDD-0034`..`TDD-0037`, all
+still `todo`.
+
+The auditor also checked the one way the transition itself could violate clause 3, rather than assuming
+it could not: in `packages/qfai/src/core/validators/tddList.ts` the literal `"done"` appears only in the
+allowed-status list and in two status sets that **already contain `refactor`**, so `refactor → done` is
+validator-neutral for this profile.
+
+**So step 4 was never the real blocker, and unblocking it revealed what was underneath: the
+reviewer-verdict record.** Verdict: `REVISE`, none of the six closable.
+
+| Row        | Why not closable                                                                              |
+| ---------- | --------------------------------------------------------------------------------------------- |
+| `TDD-0029` | all three PASSed, then `f7743ce9` added a new unconditionally-reached `it` and rewrote production docstrings — no re-review |
+| `TDD-0030` | `implementation-reviewer`'s last verdict is REVISE, no later PASS; the rework at `2733395a` changed production |
+| `TDD-0032` | last recorded verdicts are **all three REVISE** (round 7); rounds 8 and 9 landed after them, round 9 including an assertion label |
+| `TDD-0033` | `implementation-reviewer` REVISE with no later PASS anywhere in the file                       |
+| `TDD-0038` | no `completion-reviewer` / `implementation-reviewer` verdict at all, post-fix bytes at `e1ce8747` unreviewed — **and** still in `CR-20260810-0001`'s blocked set |
+| `TDD-0039` | same verdict gap, post-fix bytes at `04e0a4f2` unreviewed — but **not** blocked by that CR      |
+
+The governing rule is this repository's own, and it is the one the slice wrote down:
+`checkpoint-verification.md` — "A fix invalidates the reviewer PASS that preceded it… obtain a fresh PASS
+**before** re-running the command set." Four of the six carry exactly that shape: a PASS, then bytes.
+
+### A correction to the audit, because it turned on a manifest line the audit read one way and the manifest explains the other
+
+The audit found (its F2/F4/F13) that `qa-gatekeeper` has no `review`-phase verdict for several rows and
+for group G6, and treated that as a missing blocking reviewer, since
+`.qfai/assistant/manifest/agent-routing.yml` lists three `blocking_agents` for the `review` phase. The
+comment immediately above that list says why the third is there:
+
+> `qa-gatekeeper` stays listed because the completion gate **re-reads its verdicts here**; its RED/GREEN
+> observations were already made in `red` and `build`.
+
+So `qa-gatekeeper` does not issue a separate `review`-phase verdict; its blocking role is discharged by
+the `red` and `build` verdicts being re-read at the gate. **G6 is therefore not short a reviewer**:
+`qa-gatekeeper` returned PASS in `red` (`satisfied-by-legitimate`) and in `build` (`green-confirmed`) for
+`TDD-0040`, and the corresponding pair for `TDD-0031`, all recorded. The audit's F13 is withdrawn on that
+ground, and the same correction narrows F2 and F4: what those rows owe is `completion-reviewer` and
+`implementation-reviewer` on their **current** bytes, not a third verdict that the routing does not ask
+for.
+
+Recorded rather than quietly dropped, because the audit was right about the substance and wrong about one
+citation, and an audit corrected on a citation is still the reason six rows did not close today.
+
+### The audit's advisories, dispositioned
+
+- **Which reading of clause 5 is in force** (its F9): the **still-open-at-the-checkpoint** reading, and it
+  is stated here once as the clause requires. Under the alternative — evaluating against the baseline
+  *snapshot* — the baseline's `QFAI-ATDD-112` named `TC-0006-0027`..`0035`, i.e. the own `TC-*` of every
+  one of the six rows, and not one could ever close; it would also make clause 4's deliberate choice of
+  re-entry over departure pointless. The owner chose the per-row attribution reading and this is its
+  temporal half.
+- **Clause 1's ID capture** (F10): complete for `QFAI-ATDD-111`, counts-only for three specs under
+  `QFAI-ATDD-112`. The auditor re-derived the unlisted sets live and they match the recorded counts
+  exactly, so nothing turns on it here; left as-is rather than back-filling a pre-slice record after the
+  fact, which is the defect clause 1 exists to prevent.
+- **Two stale record claims** (F12) — corrected in place: the sentence calling `CR-20260807-0002` `open`,
+  and the roll-up claiming all three reviewers PASSed for `TDD-0033`.
+- **`CR-20260807-0001`'s own step 3** (F11): test coverage for the new pass-criteria clauses is owed by
+  this stage and is not a per-row gate. Tracked, not waived.
+- **`TDD-0039` and `CR-20260810-0001`**: the auditor ruled the CR does not block it, on three grounds —
+  the narrowing removed it from the `Blocked set` field; the narrowing's stated rule of decision reads
+  the drift protocol at **leg** granularity rather than TC granularity, and `TDD-0039` owns leg (c) while
+  the CR governs leg (b); and substantively, leg (c) fires on
+  `resolvePackagedWorkflowsDir() === undefined` before the provenance record is read at all, so no option
+  changes its fixture, severity or expected list. The narrowing's literal words release "editing and its
+  route to `green`", which the auditor read as describing the row's state when written rather than as a
+  ceiling. Its own recommendation for putting that beyond argument — one line in the CR naming `done`
+  explicitly — is noted and not taken here, because amending an open CR's narrowing is the owner's act.

@@ -5,11 +5,11 @@
 - Raised by: `/qfai-implement orchestrator, on a blocking completion-reviewer finding (the executing stage may not relax its own shipped pass criterion)`
 - Raised at: `2026-08-07T15:10:00Z`
 - Class: `intent`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (aganesy)` — via the /qfai-implement G6 close: AskUserQuestion, two rounds
+- Approved at: `2026-08-17T00:00:00Z`
+- Approved option: `A`, with clauses (d) and (e) resolved by the owner — see Resolution
+- Applied at: `2026-08-17T00:00:00Z`
 - Superseded by: `-`
 
 ## Why this exists
@@ -185,10 +185,68 @@ Under Option A:
 
 Under Option B or C, no artifact changes and this CR closes with the chosen option recorded.
 
+### Applied 2026-08-17 — Option A, with both owner sub-decisions taken
+
+**Option A approved**, and the two branches this CR explicitly left to the owner were both put to the
+user rather than settled by the executing stage:
+
+- **Clause (d) is weakened to "no row's `TC-*` re-enters the unreferenced-TC list."** The CR's own
+  self-disclosure was the reason: departure is undischargeable for a sibling row, because when one
+  `TC-*` is split across several rows the first row to discharge it removes it from the list and every
+  sibling then satisfies a departure clause **vacuously**. `TDD-0038` and `TDD-0039` both carry
+  `TC-0006-0030`, which `TDD-0032` had already removed. Re-entry is checkable for every row, and it
+  pairs with a property the validator already enforces — that a row's `Selector` resolves in its own
+  `Test file`.
+- **Clause (e) is read per row, not per spec.** A baseline finding that names another row's obligation,
+  or an obligation owned by an upstream phase, does not block the row being closed; what it forbids is
+  closing a row while a baseline finding names **that row's own** obligation.
+
+The per-spec reading was measured before it was rejected, and the measurement is why it was rejected:
+`QFAI-ATDD-111` names `SPEC-0006:US-0006-0011` and `QFAI-ATDD-112` names `SPEC-0006:TC-0006-0032`
+through `-0035`. Under the literal per-spec reading **no row of spec-0006 could ever close**, because
+`US-0006-0011` has no `Layer = E2E` row and creating one mints a new obligation ID — `/qfai-sdd`
+Phase 2b work that this slice has no means to perform. The clause would then have blocked every row on
+an error the slice cannot cause and cannot fix, which is the outcome this CR's own recommendation says
+Option A exists to avoid.
+
+### Where it was applied
+
+`packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/references/checkpoint-verification.md`
+— the asset tree is the SSOT and the root copy is a byte-identical mirror produced by `sync:ssot`
+(`sync-init-to-root.mjs --check`: no drift). A new subsection under `## Pass criteria`, headed
+"The one substitution: a measured delta for step 4", states the five conditions with (d) and (e) in
+their resolved form, names clause 5 as load-bearing, and requires the evidence to answer it **per row**:
+name each baseline finding, name whose obligation it is, and say why it is not the row's. The file is
+inside the distributed surface, so it names no internal spec or decision id;
+`check-no-internal-version-leakage.sh` is green.
+
+Scope of the substitution is stated explicitly in the text: it applies to **step 4 and nothing else**.
+Every other command in the set still has to exit 0, and clause 2 (`QFAI-TEST-001` = 0) is never
+substituted.
+
+### What it releases, and the disclosure that comes with it
+
+Six rows of spec-0006 — `TDD-0029`, `TDD-0030`, `TDD-0032`, `TDD-0033`, `TDD-0038`, `TDD-0039` — had
+completed their micro-cycles with their required reviewers reporting PASS and were held at `refactor`
+by this criterion alone.
+
+**Disclosure, because the order of events matters and burying it would repeat the defect class this
+slice keeps finding.** Group G6 (`TDD-0031`, `TDD-0040`) was transitioned to `done` earlier in the same
+session under exactly the criterion this CR proposes, while this CR was still `open`. The executing
+stage took the criterion from the slice's Stage 0 record without noticing that six sibling rows were
+parked for precisely that reason — an inconsistent ledger, and one the stage could not repair itself,
+since `done -> refactor` is a prohibited backward transition. It was disclosed to the user, who
+directed that this approval legitimises those two rows retroactively. The sequence is recorded here
+rather than in an evidence file so that an auditor reading the CR sees it without having to find the
+narrative.
+
 ## Resolution
 
-Pending. To be filled by the owner with: the option chosen, the artifact revision that applied it (if
-any), and the disposition of each row in the blocked set.
+Applied. Option A with clause (d) weakened to non-re-entry and clause (e) read per row, both as
+directed by the owner. The pass-criteria substitution is in the shipped reference and mirrored; the
+baseline it operates against (`QFAI-ATDD-111`, `QFAI-ATDD-112`, `info=4 warning=352 error=2`) is the
+one recorded in `.qfai/evidence/implement-spec-0006.md` at Stage 0, before the slice's first row
+started, which is what clause 1 requires.
 
 ## Notes
 
@@ -197,3 +255,8 @@ Two smaller reference-level defects surfaced alongside this one and are **not** 
 say "11-point gate", and `volume-policy.md` says checkpoint-per-group where
 `checkpoint-verification.md` says per-item with "no every-N rule". The orchestrator ruled for
 `checkpoint-verification.md` on both as the dedicated SSOT and the stricter reading.
+
+Both remain open at the time this CR was applied, and both are still unaddressed: applying Option A
+edited `checkpoint-verification.md` without touching either discrepancy, deliberately, because the
+scope of an approved option is what was approved. They are recorded here so the next reader of this
+file does not conclude from its `applied` status that the neighbourhood is clean.
