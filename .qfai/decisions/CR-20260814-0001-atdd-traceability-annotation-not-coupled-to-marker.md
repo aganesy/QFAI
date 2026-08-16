@@ -5,10 +5,10 @@
 - Raised by: `/qfai-implement, spec-0006 TDD-0040 (group G6) — found by measuring the scanner's own scan record while repairing a blocking finding`
 - Raised at: `2026-08-14T10:45:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
+- Status: `approved`
+- Approved by: `user (aganesy)` — via the /qfai-implement G6 stage gate: AskUserQuestion
+- Approved at: `2026-08-17T00:00:00Z`
+- Approved option: `A`
 - Applied at: `-`
 - Superseded by: `-`
 - Blocked set: `(none — no in-flight row depends on this; TDD-0031 / TDD-0040's own annotation debt is already repaired)`
@@ -157,4 +157,16 @@ this CR closes with the chosen option and the documentation edit recorded.
 
 ## Resolution
 
-Pending. To be filled by the owner with the option chosen and, if A or B, the revision that applied it.
+**Option A approved 2026-08-17; not yet applied.** The approval decides the direction only. Its own
+`## Approved actions` sets the mode to `confirm-only` for the decision and routes the implementation
+through a normal `/qfai-sdd` + `/qfai-implement` cycle, because it changes production behaviour that
+adopters observe. The user's stated priority at the same gate was to finish the in-flight spec-0006 rows
+first, so the implementation is sequenced after them rather than folded into this slice — which also
+keeps the `QFAI-ATDD-112` baseline stable while rows are still being measured against it. Step 1 of the
+plan, measuring the per-spec delta of the widened globs, is the next action and is read-only.
+
+**Scope question, flagged rather than decided here.** This CR was raised from a spec-0006 row, but its
+subject is a repo-wide validator, its `Blocked set` is empty, and its effect spans every spec. Whether it
+counts as "in scope for spec-0006" for that spec's completion gate — where an `approved` CR with an empty
+`Applied at` reads as unresolved — is a `completion-reviewer` call, not the executing stage's, and it is
+recorded here so the question is not settled by the stage that benefits from the answer.

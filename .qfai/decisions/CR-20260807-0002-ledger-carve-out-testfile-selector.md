@@ -5,11 +5,11 @@
 - Raised by: `/qfai-implement orchestrator, disclosing its own carve-out excursions on two rows after completion-reviewer ruled twice that "compelled is not authorised"`
 - Raised at: `2026-08-07T19:30:00Z`
 - Class: `intent`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (aganesy)` — via the /qfai-implement G6 stage gate: AskUserQuestion
+- Approved at: `2026-08-17T00:00:00Z`
+- Approved option: `A`
+- Applied at: `2026-08-17T00:00:00Z` (`8bf2dfd0`)
 - Superseded by: `-`
 
 ## Context
@@ -143,4 +143,36 @@ Under Option B or C, no artifact changes and this CR closes with the chosen opti
 
 ## Resolution
 
-Pending. To be filled by the owner with the option chosen and, if A, the revision that applied it.
+**Option A, applied at `8bf2dfd0`.** The whitelist in
+`packages/qfai/assets/init/.qfai/assistant/constitution/drift-protocol.md` — the SSOT, mirrored to the
+root copy by `sync:ssot`, both verified byte-identical — now names `Test file` and `Selector` as
+writable **only while** their stated condition holds, alongside the three unconditional cells. A new
+`### Why \`Test file\` and \`Selector\` are conditional`subsection carries the rationale. The file is
+inside the distributed surface, so it names no internal spec or decision id and`check-no-internal-version-leakage.sh` is green.
+
+Coverage per step 3: `packages/qfai/tests/assets/ledgerWriteAuthorization.test.ts`, 15 → 26 tests, which
+already owned the three-cell whitelist and was extended rather than duplicated. It pins both conditions
+including their polarity, the machine-checkable and one-way properties, and an exclusion case that
+slices the writable enumeration only and asserts `TC-Refs` / `Layer` / `US-Refs` / `CON-API-Refs` are
+absent from it while still named as staying upstream. A tree-independent block ties the prose to the
+shipped validator: `selectorResolves` still exists, both cited rule ids are still emitted, and the
+rationale's four statuses are parsed from `TEST_FILE_CHECK_STATUSES` rather than string-matched, so
+reformatting does not break it. Non-vacuity was shown by two mutations, each failing exactly the two
+asset-tree cases while the unmutated root copy passed, then restored to the pre-mutation blob.
+
+Byte-identity of the two trees is deliberately **not** re-asserted here: `sync-init-to-root.mjs --check`
+already compares mirrored paths with `Buffer.equals` in both directions, and
+`packages/qfai/tests/scripts/syncInitStaleDetection.test.ts` covers it. A second spelling would be the
+weaker one.
+
+**Two process defects surfaced while applying this and are recorded rather than absorbed.** First, the
+prose edit broke four assertions in the suite above and the applying stage did not notice: it had run
+`prettier`, `lint:md` and the leakage guard, but not the tests. A shipped-prose edit needs the suite,
+not just the formatters. Second, `git checkout --` restores from HEAD/index, not the working tree, so a
+mutation-proof revert during the same session reverted the still-uncommitted edit; it was recovered
+bit-exact from the root mirror, which had not been touched. Commit before running a mutation proof.
+
+Immediate effect on the rows that raised this: `TDD-0040`'s `Test file` placeholder and `TDD-0031`'s
+unresolvable `Selector` were both filled under the new conditions, taking the repository gate from
+`error=3 warning=353` back to the slice's recorded Stage 0 baseline of `error=2 warning=352` —
+`TDDLIST_TEST_FILE_MISSING` and spec-0006's `TDDLIST_SELECTOR_UNRESOLVED` both cleared.

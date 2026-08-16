@@ -6332,3 +6332,54 @@ baseline is **owned by this round** and named here rather than left for the chec
 `TDD-0029` and `TDD-0033` are the two rows that took the excursion earlier in this slice, which is why
 they sit at a checked status without tripping the same error. That asymmetry is the clearest statement of
 the problem: the rows that broke the rule are green, and the row that kept it is red.
+
+#### G6 round 2 — review rework, and every repair is a record repair
+
+`review-fix` rework for the group, opened by the round-1 `REVISE` from both blocking reviewers. No test
+and no production code changed in this round: both reviewers stated the delivered test code is sound,
+and re-running the suites confirmed it rather than assumed it.
+
+**The blocker was a user decision, and it was put to the user rather than worked around.**
+`CR-20260807-0002` (`Status: open` at round 1) was the only thing standing between the group and `done`,
+because two of the three blocking findings needed cells the carve-out did not grant. The excursion the
+two earlier rows of this slice took was **not** taken a third time. The user approved **Option A** at the
+stage gate, applied at `8bf2dfd0`.
+
+| Round-1 blocking finding                                  | Disposition in round 2                                                  |
+| --------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `TC-0006-0029`'s ATDD annotation missing                    | repaired before the gate decision; `QFAI-ATDD-112` named-TC list 94 → 93 |
+| `TDD-0031`'s `Selector` overclaims and does not resolve      | repaired under the widened carve-out; set to its `describe` title verbatim |
+| `TDD-0040`'s `Test file` still a dash placeholder            | repaired under the widened carve-out                                     |
+
+**Measured effect on the repository gate**, `node packages/qfai/dist/cli/index.mjs validate --profile tdd
+--fail-on error --root .`:
+
+- round 1, after the `Status` write: `info=4 warning=353 error=3` — the extra error being
+  `TDDLIST_TEST_FILE_MISSING` on row 40, which the evidence above records as the total deadlock.
+- round 2, after both cells: `info=4 warning=352 error=2`, and the two residual errors are
+  `QFAI-ATDD-111` / `QFAI-ATDD-112` alone. That is **exactly** the Stage 0 baseline this slice recorded
+  before it started. `TDDLIST_TEST_FILE_MISSING` count 0; spec-0006 `TDDLIST_SELECTOR_UNRESOLVED` count 0.
+
+So the group leaves round 2 having introduced no new gate finding of any severity, which is the criterion
+the checkpoint is judged against.
+
+**A defect of mine, found by the agent I delegated the coverage to and not by me.** Editing the shipped
+constitution broke four assertions in `packages/qfai/tests/assets/ledgerWriteAuthorization.test.ts`,
+which pinned the previous "`Evidence` cells only" spelling across both mirrored trees. I had run
+`prettier`, `lint:md` and the distributed-surface leakage guard, and concluded the edit was safe. None of
+those three reads a test. **A shipped-prose edit needs the suite run, not just the formatters** — the
+same shape as the operational rule this slice already carries for `.qfai/` prose, one artifact class
+over. The suite is repaired and extended 15 → 26 tests in the same commit that made the change.
+
+**A second hazard, worth carrying forward.** `git checkout -- <file>` restores from HEAD/index, not from
+the working tree, so a mutation-proof revert taken while the rule edit was still uncommitted reverted the
+edit itself. It was recovered bit-exact from the root mirror, which the mutation had not touched, and the
+next mutation used a scratchpad backup instead. Made operational: **commit before running a mutation
+proof**, because on this branch the working tree routinely holds hours of uncommitted governance edits.
+
+**Not repaired, and deliberately so**: the advisory findings from round 1 stay advisory. The docblock's
+"four different mutations" overstatement, the `-t '<Selector>'` regex hazard, the `STALE_NAME` fourth
+copy, the guard-label ordering and the `AC-0006-0025` citation nit are all `Traces to: none`; the
+drift protocol forbids pinning a reviewer-originated obligation as a hard assertion, and the docblock
+sentences among them are quoted verbatim in round 1's gatekeeper observations, so rewriting them now
+would invalidate passed evidence to fix a legibility complaint.
