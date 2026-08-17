@@ -254,20 +254,60 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Check all jobs passed
+      # The verdict is DERIVED from the serialized needs map and never from a
+      # hand-written list of job names. The body this replaced compared six names
+      # in a shell condition, so a seventh job could be wired into `needs:` above
+      # and this gate would pass while ignoring it — adding a lane cost two edits
+      # and one of them was silent to omit.
+      #
+      # Node rather than jq: the runner image ships both, but the accepting-set
+      # rule below is ALSO executed as a test over synthetic needs maps, and Node
+      # is the one interpreter guaranteed to exist wherever this repository's
+      # tests run. The rule is measured, not read.
+      #
+      # The heredoc is QUOTED (`<<'NODE'`), which is load-bearing twice over: bash
+      # performs no expansion inside it, so the bytes GitHub executes are the
+      # bytes the test extracts and runs, and no `$` or backtick in the program
+      # can be rewritten by the shell on the way in. An unquoted heredoc would
+      # make the executed text and the tested text differ silently.
+      - name: Derive the verdict from the serialized needs map
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
-          echo "lint:                ${{ needs.lint.result }}"
-          echo "check-types:         ${{ needs['check-types'].result }}"
-          echo "check-types-future:  ${{ needs['check-types-future'].result }}"
-          echo "test:                ${{ needs.test.result }}"
-          echo "scanner-coverage:    ${{ needs['scanner-coverage'].result }}"
-          echo "build:               ${{ needs.build.result }}"
-          if [[ "${{ needs.lint.result }}" != "success" ||
-                "${{ needs['check-types'].result }}" != "success" ||
-                "${{ needs['check-types-future'].result }}" != "success" ||
-                "${{ needs.test.result }}" != "success" ||
-                "${{ needs['scanner-coverage'].result }}" != "success" ||
-                "${{ needs.build.result }}" != "success" ]]; then
-            echo "::error::One or more CI jobs failed."
-            exit 1
-          fi
+          cat > "${RUNNER_TEMP}/ci-verdict.mjs" <<'NODE'
+          // The accepting set is CLOSED: a state token absent from this set fails
+          // the verdict, so an unrecognized state never degrades to success.
+          // `skipped` accepts because change detection produces an all-skipped run
+          // on a documentation-only pull request, and "nothing needed running" is
+          // not the same claim as "nothing was verified" — it is the second that
+          // must never pass, and an empty needs map is how it would arrive.
+          const ACCEPTING = new Set(["success", "skipped"]);
+
+          const needs = JSON.parse(process.env.NEEDS_JSON ?? "{}");
+          const entries = Object.entries(needs);
+
+          // An empty map is REJECTED. Unreachable while `needs:` is non-empty, but
+          // the direction still has to be chosen, and accepting "no evidence" is
+          // exactly the degradation this job exists to prevent.
+          if (entries.length === 0) {
+            console.log("::error::The verdict received an empty needs map, so no job result was observed.");
+            process.exit(1);
+          }
+
+          let rejected = 0;
+          for (const [name, need] of entries) {
+            // A need with no `result` reads as the literal below rather than as
+            // `undefined`, so the log line stays legible and the accepting-set
+            // test rejects it for the same reason any other unknown token is
+            // rejected: it is not in the set.
+            const result = need?.result ?? "(no result)";
+            console.log(`${name}: ${result}`);
+            if (!ACCEPTING.has(result)) {
+              console.log(`::error::CI job ${name} concluded ${result}.`);
+              rejected += 1;
+            }
+          }
+
+          process.exit(rejected === 0 ? 0 : 1);
+          NODE
+          node "${RUNNER_TEMP}/ci-verdict.mjs"
