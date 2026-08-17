@@ -129,6 +129,36 @@ Choose A, B or C. Nothing in flight is blocked. The question is whether the per-
 should stop depending on a regex matching a literal, and if so whether by dropping the narrowing (A) or by
 escaping it (B).
 
+## Cost refinement, measured 2026-08-17 before any edit
+
+Option A is **not** a one-file documentation change. The defective prescription is pinned by a
+shipped-prose test, `packages/qfai/tests/assets/implementCheckpointVerification.test.ts`, whose
+assertions include:
+
+```ts
+it("passes the selector through the runner's test-name option", async () => {
+  expect(reference).toContain("<test runner> <Test file> -t '<Selector>'");
+  expect(reference).toContain('exits 1 with "No test files');
+});
+expect(reference).toContain("**b. The unit of selection.**");
+expect(reference).toContain("go test ./<dir of Test file> -run '<Selector>'");
+```
+
+So the test does not merely reference the step — **its `it` title asserts the very behaviour this CR
+calls defective**, and four of its `toContain` needles are strings Option A removes. Applying Option A
+therefore changes the shipped reference _and_ this test, and the two must land in one commit or the
+suite is red between them.
+
+That is worth stating rather than discovering: it is the same shape as an earlier incident in this
+slice, where a shipped-prose edit passed `prettier`, `lint:md` and the leakage guard while leaving four
+assertions red, because none of those three gates reads a test. Here the coupling was found by grepping
+`packages/qfai/tests/**` for the step's own strings **before** editing.
+
+It also sharpens the option comparison. Option C — accept the gap and document the surface as a manual
+ledger — now means leaving a test in place whose title asserts a prescription the repository has
+measured to be wrong. Option B (escape the selector) keeps the `-t` form and so keeps most of those
+assertions, at the cost this CR already states.
+
 ## Approved actions (owner skill rerun plan)
 
 Mode: **`confirm-only`** under Option A; a normal `/qfai-sdd` + `/qfai-implement` cycle under B or C,
