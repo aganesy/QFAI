@@ -166,6 +166,23 @@ export type WorkflowsIntegrityDiff = {
   /** Root-relative POSIX paths of the drifted files, sorted by codepoint. */
   modified: string[];
   /**
+   * Root-relative POSIX paths of the recorded names whose installed file is
+   * ABSENT, sorted by codepoint — the `declined` row of the shipped-workflows
+   * state enum (§3): an entry present, the file deliberately removed.
+   *
+   * Reported as PAYLOAD and never as a trigger. `status` is keyed on `modified`
+   * alone, so a tree whose recorded names were all removed stays `ok` and emits
+   * nothing, which is what §3's "never reported again" requires. This field
+   * exists so that an operator reading a finding raised for some OTHER name can
+   * see that QFAI knows the missing file is missing and is leaving it alone.
+   *
+   * Populated from the same `digestFile` the drift comparison uses, so "absent"
+   * has one definition in this module rather than two: a present-but-unreadable
+   * file is `unreadable`, not `absent`, and stays in the drift bucket where the
+   * conservative direction puts it.
+   */
+  declined: string[];
+  /**
    * How many recorded names were compared — the SIZE OF THE COMPARISON SET,
    * not a count of matches and not a count of drifted files. Zero means this
    * reader examined nothing.
@@ -300,33 +317,57 @@ export async function diffInstalledShippedWorkflows(
       workflowsDir: WORKFLOWS_DIR_RELATIVE,
       packagedDir: undefined,
       modified: [],
+      declined: [],
       comparedCount: 0,
     };
   }
 
   const installedDir = path.join(root, ...WORKFLOWS_DIR_SEGMENTS);
   const modified: string[] = [];
+  const declined: string[] = [];
   // The recorded names, and nothing else. A name with no entry is never
   // visited, which is what makes `adopter-owned` and `absent` unreachable
   // here instead of filtered. Only presence is consumed — `entry.sha256` has
   // a different digest basis and is deliberately not read.
   const recordedNames = Object.keys((await readInstallProvenance(root)).workflows);
   for (const name of recordedNames) {
-    if (await hasDrifted(path.join(packagedDir, name), path.join(installedDir, name))) {
+    const installedPath = path.join(installedDir, name);
+
+    // The `declined` split happens BEFORE the drift comparison, and it has to:
+    // `hasDrifted` answers `false` for an absent installed file, so a name
+    // classified only by that predicate is indistinguishable from one whose
+    // bytes match. This reads `digestFile` a second time for names that are
+    // present — two extra reads on the shipped set — which is the cost of
+    // leaving `hasDrifted` untouched. Restructuring it into a classifier would
+    // be the single-read form and is deliberately not done here: it is the
+    // larger production change, and this row's obligation is a payload key.
+    if ((await digestFile(installedPath)).kind === "absent") {
+      declined.push(`${WORKFLOWS_DIR_RELATIVE}/${name}`);
+      continue;
+    }
+
+    if (await hasDrifted(path.join(packagedDir, name), installedPath)) {
       modified.push(`${WORKFLOWS_DIR_RELATIVE}/${name}`);
     }
   }
 
   // Plain codepoint sort: `details.modified` is a public JSON surface, and
   // `localeCompare` without an explicit locale reorders against the host
-  // default. The sibling diff sorts the same way.
+  // default. The sibling diff sorts the same way. `declined` is the same kind
+  // of surface and sorts identically.
   modified.sort();
+  declined.sort();
 
+  // `status` reads `modified` ALONE. A declined-only tree therefore stays `ok`
+  // and emits nothing — the shipped-workflows contract §3 says a declined name
+  // is never reported again, so promoting it to a trigger here would report it
+  // forever. TC-0006-0035 is the boundary that pins this.
   return {
     status: modified.length > 0 ? "modified" : "ok",
     workflowsDir: WORKFLOWS_DIR_RELATIVE,
     packagedDir,
     modified,
+    declined,
     comparedCount: recordedNames.length,
   };
 }

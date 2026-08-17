@@ -434,9 +434,22 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
         `installed shipped workflow(s) differ from the packaged copy: ${workflowsDiff.modified.join(", ")}. ` +
         `Manual repair: replace each listed file with the copy of the same name in ${workflowsDiff.packagedDir}. ` +
         `The installed file is never overwritten by QFAI: this finding reports the difference and writes nothing.`,
+      // BR-0006-0022's payload. `declined` is carried here and NOWHERE in
+      // `message`: the message's repair instruction tells the operator to replace
+      // each listed file with the packaged copy, and a declined file listed there
+      // would instruct them to undo a removal this check has promised never to
+      // undo. `packagedDir` appears in both, and that is not a duplication to
+      // collapse — the message needs it as prose the operator copies from, and
+      // `details` needs it as a machine-readable field a JSON consumer can read
+      // without parsing English.
+      //
+      // This branch is gated on `packagedDir !== undefined`, so the field is a
+      // string here and the `string | undefined` on the diff does not leak out.
       details: {
         workflowsDir: workflowsDiff.workflowsDir,
         modified: workflowsDiff.modified,
+        declined: workflowsDiff.declined,
+        packagedDir: workflowsDiff.packagedDir,
       },
     });
   } else if (workflowsDiff.status === "ok" && workflowsDiff.comparedCount > 0) {

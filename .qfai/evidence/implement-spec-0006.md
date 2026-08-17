@@ -7397,6 +7397,136 @@ exactly the distinction `.qfai/steering/2026-08-17-chg-007-spec-0006-review-clos
 the ledger has no column for. Recording it here is the only place a reader can learn it. Do not read
 these two rows' `refactor` as "waiting on an external gate"; read it as "reviews not run".
 
+
+## G8 / G9: `declined` lands in the payload, and the boundary keeps it out of the trigger
+
+The only rows in this slice that changed production code. `TDD-0036` had a genuine RED; `TDD-0037` is
+the boundary that pins what `TDD-0036`'s change deliberately did **not** do.
+
+### TDD-0036
+
+- **TC-Refs**: `TC-0006-0034` (AC-0006-0026 / EX-0006-0027). **Layer**: Integration, as declared.
+- **Test file**: `packages/qfai/tests/integration/spec0006WorkflowsIntegrity.declined.test.ts` (new;
+  also carries `TDD-0037`).
+- **Revision**: `13c06411` plus this round's work.
+- **RED failure mode**: `assertion` — a genuine RED, admissible under
+  `references/red-admissibility.md`: two assertion failures inside this row's own test, not a load or
+  fixture error.
+- **RED command**, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts`
+- **RED result**: `Tests 1 failed (1)`, exit 1, with exactly two claims red:
+  - CLAIM 1 (key set): `expected [ 'modified', 'workflowsDir' ] to deeply equal [ 'declined', 'modified', …(2) ]`
+  - CLAIM 3 (`declined` names the deleted file): `expected undefined to deeply equal [ Array(1) ]`
+- **Production change**, minimal and in two files:
+  - `src/core/doctor/workflowsIntegrity.ts` — `WorkflowsIntegrityDiff` gains `declined: string[]`,
+    populated in the reader's loop by testing `(await digestFile(installedPath)).kind === "absent"`
+    BEFORE the drift comparison, sorted by codepoint like its sibling, and returned `[]` from the
+    `skipped_unresolved` early return.
+  - `src/core/doctor.ts` — the drift arm's `details` gains `declined` and `packagedDir`.
+- **Why the split happens before `hasDrifted` rather than inside it.** `hasDrifted` answers `false` for
+  an absent installed file, so a name classified only by that predicate is indistinguishable from one
+  whose bytes match — the absence is invisible downstream. Reading `digestFile` again costs two extra
+  reads on the shipped set, and the single-read alternative is to restructure `hasDrifted` into a
+  classifier. That was **rejected as too large for this row's obligation**, which is a payload key, and
+  it would also invalidate `TDD-0038`'s recorded oracle needles, which anchor on `hasDrifted`'s early
+  `return false;`. Recorded in the production comment so the trade is visible where the cost is paid.
+- **`digestFile` and not `exists`**, deliberately: a present-but-unreadable file is `unreadable`, not
+  `absent`, and must stay in the drift bucket where the conservative direction puts it. Using a
+  different absence test would give this module two definitions of `absent`.
+- **A sibling row left a note addressed to this one, and it is answered.** `TDD-0030`'s ok-arm
+  assertion says the row landing `packagedDir` and `declined` "will be looking at this line", and that
+  loosening it to `toContain` would make a deleted property stop being pinned silently. It was **not**
+  loosened: it governs the `ok` emission and this payload change is on the `info` emission. `TDD-0037`
+  then pins the ok arm from the other side, so the property is now asserted by two rows.
+- **GREEN command / result**: the same file-scoped command — `Tests 1 passed (1)`, exit 0 (before
+  `TDD-0037` was added; `Tests 2 passed (2)` after).
+- **`tsc --noEmit` exit 0.** Recorded because nothing type-checks a test file in this repository, so a
+  production type change needs its own check rather than inheriting one from the suite.
+- **Regression scope, measured rather than reasoned.** `WorkflowsIntegrityDiff` is read by six rows'
+  suites, so the change was run against the whole package, not just the closure: the 14-file doctor
+  closure is `Test Files 14 passed (14)` / `Tests 70 passed (70)`, and the FULL package suite is
+  `Test Files 425 passed | 8 skipped (433)` / `Tests 4345 passed | 37 skipped (4382)`, exit 0.
+- **Oracle proof — targeted at the claims the RED did NOT exercise.** The RED reddened CLAIMs 1 and 3.
+  CLAIMs 2, 4 and 5 were already green before the production change, so the RED says nothing about
+  whether they are live. One mutation each, and each reddens exactly one claim:
+
+| id    | base file                   | mutant blob | needle -> replacement                                                        | reddens |
+| ----- | --------------------------- | ----------- | ---------------------------------------------------------------------------- | ------- |
+| `M-A` | `src/core/doctor.ts`        | `043d5c27`  | the message template's `workflowsDiff.modified.join(", ")` -> `[...modified, ...declined].join(", ")` | CLAIM 4 |
+| `M-B` | `src/core/doctor.ts`        | `ea19166f`  | `modified: workflowsDiff.modified,` -> `modified: [],` (needle extended by the following `declined:` line, which is what makes it unique) | CLAIM 2 |
+| `M-C` | `src/cli/commands/doctor.ts`| `f3853988`  | `    return summary.error > 0;` -> `    return true;`                          | CLAIM 5 |
+
+  Every needle was measured to occur **exactly once** before it was applied. Each run is
+  `Tests 1 failed (1)`, exit 1, with the named claim's label in the failure and no other.
+- **Restore point was a byte SNAPSHOT of the working tree, not `HEAD`.** This row's production change
+  is uncommitted while its mutations run, so `git checkout HEAD -- <path>` would have silently reverted
+  the change under test and the suite would have failed for that reason instead of the mutation's.
+  Restoration was verified by byte comparison against the snapshot after every mutation, and
+  `git status --short -- packages/qfai/src` printed at the end — expected NON-empty here, carrying the
+  row's own change and nothing else.
+
+### TDD-0037
+
+- **TC-Refs**: `TC-0006-0035` (AC-0006-0026 / EX-0006-0028), the boundary for `TC-0006-0034`.
+  **Layer**: Integration, as declared. Same file as `TDD-0036`.
+- **RED failure mode**: `falsifiability`. **Satisfied-by**: `TDD-0036` — its production change keyed
+  `status` on `modified` alone **on purpose**, so a declined-only tree was already silent the moment the
+  change landed. The test passed on its first run. Gate item 4 waived.
+- **Fixture derives the deletion set from the record**, not from a literal list: a hard-coded pair stops
+  covering the tree the day the package ships a third workflow, and this row's claim is that the
+  `changed` bucket is EMPTY — a name the fixture forgot to delete would drift or match, and the row
+  would be measuring a tree other than the one it names.
+- **Falsifiability mutations**, base `13c06411`-plus-this-round's-working-tree:
+
+| id   | file                                  | mutant blob | mutation                                                                 | effect |
+| ---- | ------------------------------------- | ----------- | ------------------------------------------------------------------------ | ------ |
+| `G1` | `src/core/doctor/workflowsIntegrity.ts` | `3607056b` | `status: modified.length > 0` -> `modified.length + declined.length > 0`   | kills the row at GUARD #4 |
+| `G2` | `src/core/doctor.ts`                  | `e88bc009`  | the `ok` arm's `details` gains `declined: workflowsDiff.declined`          | kills CLAIM 2 |
+| `G3` | `src/core/doctor.ts`                  | `54716d1f`  | the `ok` arm's `severity: "ok"` -> `"info"`                                | kills CLAIM 1 |
+
+  All three leave `TDD-0036` green — `Tests 1 failed | 1 passed (2)` in every case — so the pair is
+  genuinely two rows and not two views of one predicate.
+- **`G1` is a weaker kill than it looks, and that is recorded rather than glossed.** It is the mutation
+  the row exists to forbid — promoting `declined` to a finding trigger — but it reddens **Guard #4**
+  (`workflows.integrity must be registered exactly once`, got 0), not a claim. The claims never
+  executed. So `G1` shows the row is falsifiable; `G2` and `G3` are what show the CLAIMS are live.
+- **`G1` also exposed a real hole in the emission chain**, which is worth naming even though no row
+  owns it: with `status: "modified"` and an empty `modified`, the drift arm's `modified.length > 0`
+  gate is false and the `ok` arm's `status === "ok"` test is false too, so **nothing is registered at
+  all** — not the finding, not the check. The state is unreachable while `status` is derived from
+  `modified` alone, which is exactly what this row pins, so the hole is guarded rather than fixed. An
+  observation with no owner, named rather than assigned to a row that does not cover it.
+- **CLAIM 3 (exit code 0) is NOT separately proven for this row.** Its mechanism is the one `M-C`
+  reddened on `TDD-0036`, but no run measured it here, and borrowing a sibling's measurement is the
+  kind of currency claim this file has already been corrected for once. It is labelled in the test and
+  is outside the TC's Assert list; it is asserted because the check remains registered on this arm and
+  this row is the only one positioned to see an `ok` reaching the exit-code aggregation.
+- **GREEN command / result**: the file-scoped command — `Tests 2 passed (2)`, exit 0. Full package
+  suite after both rows: `Test Files 425 passed | 8 skipped (433)` /
+  `Tests 4346 passed | 37 skipped (4383)`, exit 0.
+
+### Traceability, and a step that was missed once
+
+`QFAI-ATDD-112` requires each TC to be referenced from the directory its declared Level names, and the
+trace marker in the test file is **not sufficient on its own** — the TC also has to appear in
+`tests/integration/qfai-traceability.md`. That was done for `TC-0006-0032` / `TC-0006-0033` and
+**forgotten** for `TC-0006-0034` / `TC-0006-0035`; the omission was caught by re-reading the validator's
+own output rather than by assuming the markers had done the job. With both registered, **no `SPEC-0006`
+TC remains in the unreferenced list at all** — the residue belongs to spec-0003, 0008, 0015 and 0017.
+
+`validate --profile tdd --fail-on error` is `info=4 warning=352 error=2`, the Stage 0 baseline exactly.
+`ci:lint` exits 0 across all ten members, checked by redirect rather than through a pipe.
+
+### Gate items NOT satisfied for these two rows
+
+As with `TDD-0034` / `TDD-0035`: **the two blocking reviewer verdicts were not obtained**, because this
+session does not spawn delegated agents. That gap matters more here than it did there — these are the
+only rows in the slice that changed production code, and `implementation-reviewer` is the gate written
+for exactly that case. Everything else is measured above, including a full-package regression run and a
+type check.
+
+`Status` is `refactor`, not `done`: implemented, not review-closed.
+
 ## The drift path's digest basis has no oracle — measured properly, and the record's warrant was wrong
 
 `TDD-0030`'s `drift.test.ts` carries a disclosure that the comparison basis is newline-**normalized**
