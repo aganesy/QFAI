@@ -9,9 +9,9 @@
 - Approved by: `user (aganesy)` — via the /qfai-implement spec-0006 closure gate: AskUserQuestion
 - Approved at: `2026-08-17T00:00:00Z`
 - Approved option: `A` — split leg (b) by state
-- Applied at: `-` (owner pass pending: the edit is upstream SSOT and belongs to /qfai-sdd)
+- Applied at: `2026-08-17T00:00:00Z` (`1f60a486`)
 - Superseded by: `-`
-- Blocked set: `spec-0006 TDD-0038, TDD-0037`
+- Blocked set: `(released 2026-08-17 by the Option A application at 1f60a486 — was: spec-0006 TDD-0038, TDD-0037)`
 
 ## Context
 
@@ -129,3 +129,55 @@ row's own anchor `AC-0006-0023` (`03_Acceptance-Criteria.md`) is unaffected by a
 
 Recorded because over-scoping a blocked set stalls work for nothing, and because the first version of this
 line was written from _which TC a row cites_ rather than from _what its code path depends on_.
+
+## Resolution
+
+**Option A, applied at `1f60a486`** through a narrow `/qfai-sdd` owner-phase rerun. Two
+`UPDATE:MODIFY` operations, no id created, renumbered or removed; recorded in
+`spec-0006/09_delta.md` as `OP-016` / `OP-017`. `sdd validate --spec spec-0006` exits 0 at
+`error=0`.
+
+`TC-0006-0030`'s Setup now names the enum state each leg means, leg (b) is a per-name claim about
+the `absent` state, and a boundary paragraph points `declined` at its real owners. `AC-0006-0023`'s
+state-agnostic `And` — the clause this CR named as capable of regenerating the ambiguity — is split
+the same way and re-homes the spec-0003 / REQ-0020 ownership deferral pointer that leg (b) used to
+carry.
+
+### Three rulings taken against this CR's own text, each measured rather than argued
+
+1. **No new TC or TDD id**, against Option A's hedge that the split would "likely" need one for the
+   literal zero-finding case. `declined` is already owned by `TC-0006-0034` and `TC-0006-0035` with
+   ledger rows `TDD-0036` / `TDD-0037` at `todo`, and the zero-**check** case is the empty
+   provenance-record tree — a different fixture series. Minting an id would give one production
+   predicate two owners, which is a traceability defect rather than added coverage.
+   `test-design-analyst` and `architecture-reviewer` reached this independently.
+2. **Not "an `absent` tree emits no finding at all"**, which is this CR's own phrasing.
+   `TDD-0038`'s landed fixture seeds a control stale file and asserts `findings` has length 1 at
+   `severity === "info"`, so that wording contradicts the very test this CR requires to stand
+   unchanged.
+3. **The `ok` severity claim stays out of leg (b).** Read from production rather than from prose: a
+   declined tree keeps `comparedCount > 0`, so `status` resolves to `"ok"` and one check registers at
+   severity `ok`. True of `TC-0006-0035`'s declined-only tree; false of `TC-0006-0034`'s mixed tree,
+   where the same check is `info`. An unscoped claim would have been false.
+
+### What the review caught, and one defect of the applying stage
+
+Both routed reviewers returned `REVISE` independently, five blocking findings, all folded in: an
+**MD013 breakage caught by character count** (the drafted Setup line was 405 chars and leg (b) 287,
+against a 200 limit — the applied text peaks at 90); a cross-reference naming `TC-0006-0028` as the
+_owner_ of the zero-check case when its Setup is the content-identical tree, rewritten as an
+exclusion; and a `declined` clause that **restated** `AC-0006-0026`'s payload obligation instead of
+pointing at it, creating a second SSOT for one predicate — the same defect class this CR was raised
+to close — with a parenthetical that was both self-contradictory and false against the code.
+
+The applying stage also wrote an `AC` → `BR` reference, which `TRACE_DOWNSTREAM_REF` rejected:
+references run lower-to-upper only, so an `AC` may not cite a `BR`. Removed; the same-layer
+`AC-0006-0026` pointer stands.
+
+### Carried forward, outside this CR's anchor
+
+`AC-0006-0026` and `BR-0006-0022` both state that a declined-only tree emits no finding at all. That
+is **false against the code** by the same measurement as ruling 3 — an `ok` check registers.
+`TC-0006-0035` already says `ok`, so the TC is right and its two parents are wrong. `TDD-0037`
+implements against them. Recorded in
+`.qfai/steering/2026-08-08-chg-007-spec-0006-upstream-handoff.md` under `## Open questions`.
