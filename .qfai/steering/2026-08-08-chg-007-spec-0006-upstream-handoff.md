@@ -3,7 +3,7 @@ id: 2026-08-08-chg-007-spec-0006-upstream-handoff
 status: active
 kind: handoff
 created: 2026-08-08
-updated: 2026-08-08
+updated: 2026-08-17
 scope: spec-0006
 blocking: false
 promote-to: null
@@ -21,6 +21,62 @@ reasons live only in `.qfai/evidence/implement-spec-0006.md` and in reviewer pro
 **gitignored**, so "routed upstream" was unverifiable from version control. This entry is the handle.
 Every item below is a measurement made during the slice, not a hypothesis, and none of them is
 dischargeable by `/qfai-implement`.
+
+## State of the task
+
+spec-0006's CHG-007 slice has **twelve** ledger rows. Two are `done` (`TDD-0031`, `TDD-0040`, group
+G6, closed 2026-08-17). Six sit at `refactor` with their micro-cycles complete — `TDD-0029`,
+`TDD-0030`, `TDD-0032`, `TDD-0033`, `TDD-0038`, `TDD-0039` — and a 2026-08-17 review closure returned
+`REVISE` on all six with **seventeen** findings, every one a record defect and not one a code defect:
+reviewers re-measured each row green at HEAD. Four `todo` rows remain (`TDD-0034`..`TDD-0037`).
+
+Three of this entry's items have since been discharged: item 14 (`TC-0006-0030` leg (b)) by
+`CR-20260810-0001` Option A, applied 2026-08-17; item 7's two Change Requests are both approved and
+applied. Items 1-6 and 8-13 stand.
+
+## Next single action
+
+Rebuild the six parked rows' per-item evidence **at HEAD** and re-review them. The findings are not
+seventeen separate defects: they are one defect repeated — rows were reworked without refreshing their
+per-item evidence, and the corrections landed under sibling `##` headings outside the anchor each
+ledger `Evidence` cell points at. `TDD-0039` is the limit case, with no per-item section at all.
+
+## Constraints to preserve
+
+- **Edit a false statement where it lives.** Appending a correction elsewhere leaves the false sentence
+  standing, and a reader who stops at the first one is misled exactly as much.
+- **A closure is a literal command, never a count of selectors**, with full paths and no bare stems.
+- **`vitest -t` is a regex.** A selector containing `(TDD-NNNN)` selects nothing and exits 0. Use the
+  file-scoped form. Tracked as `CR-20260817-0001`.
+- **Cap parallel suite execution.** Ten agents running `vitest` concurrently produced a false
+  nondeterminism report against sound code; run serially it is deterministic four times out of four.
+- **A shipped-prose edit needs the suite, not just the formatters** — `prettier`, `lint:md` and the
+  leakage guard read no test.
+- Do not read `refactor` as review-closed. `Status` spells both states the same way.
+
+## Open questions
+
+- `AC-0006-0026` and `BR-0006-0022` both state that a declined-only tree emits no finding at all. That
+  is **false against the code**: `comparedCount > 0` still registers one check at severity `ok`.
+  `TC-0006-0035` already says `ok`, so the TC is right and its AC/BR parents are wrong. Owner is
+  `/qfai-sdd`; it blocks nothing today but `TDD-0037` implements against it.
+- The literal zero-check case (no `workflows.integrity` check registered at all, on an empty provenance
+  record) is asserted by a landed `it` under `TDD-0030` but stated in no TC's Verify. Candidate home:
+  one bullet on `TC-0006-0028`.
+- Whether `CR-20260814-0001` — repo-wide, raised from a spec-0006 row, `approved` but not applied —
+  counts as in scope for this spec's completion gate. Flagged for `completion-reviewer`, deliberately
+  not settled by the executing stage.
+
+## References to consult first
+
+- `.qfai/steering/2026-08-09-chg-007-implementation-standing-brief.md` — the operating rules this slice
+  paid nine rework rounds to learn. Read it before writing any evidence or mutation.
+- `.qfai/steering/2026-08-17-chg-007-spec-0006-review-closure-scope.md` — why the remaining work was
+  estimated at four rows and is ten.
+- `.qfai/evidence/implement-spec-0006.md` — per-row evidence; note that several rows' corrections sit
+  outside their anchors, which is itself the defect under repair.
+- `.qfai/contracts/cli/shipped-workflows.md` §3 — the closed state enum (`absent`, `adopter-owned`,
+  `modified`, `declined`) that item 14 turned on.
 
 ## 1. `qfai-doctor.md` is stale in three ways, in one file
 

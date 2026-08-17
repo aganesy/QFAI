@@ -278,13 +278,31 @@ TC-0006-0033 (`--fail-on warning` leg) である。
 **Type:** error
 **AC Refs:** AC-0006-0023
 
-Setup: (a) drift 検出状態の tree、(b) 当該 shipped workflow を削除した tree、(c) install 済み package 側の shipped copy を解決できない tree の 3 フィクスチャ。
+Setup: (a) provenance entry を持つ shipped workflow を 1 つ手編集した drift 検出状態の tree、
+(b) shipped name の 1 つが `absent` state — provenance record に当該 name の entry が無く、adopter の
+workflows directory にも file が無い — であり、対照として provenance entry を持つ stale file を 1 つ
+併置した tree、(c) install 済み package 側の shipped copy を解決できない tree の 3 フィクスチャ。
+state 名は `CLI-WFSET` §3 の closed enum に従う (`absent` と `declined` は別 state であり、報告の
+され方も別である)。
 Action: 各フィクスチャで `qfai doctor` を実行する。
 Verify:
 
-- (a) message body に「install 済み package 内の copy で置き換える」手動 repair が含まれ、refresh command / CLI verb / flag を示す token は 1 つも含まれない
-- (b) drift finding が 0 件 (不在は drift ではない; declined / missing の分類は spec-0003 / REQ-0020 側)
+- (a) message body に「install 済み package 内の copy で置き換える」手動 repair が含まれ、refresh
+  command / CLI verb / flag を示す token は 1 つも含まれない
+- (b) `absent` の name は `workflows.integrity` finding の title / message / `details` のいずれにも
+  現れない (不在は drift ではない)。同じ tree の対照 stale file は `details.modified` に報告され、
+  check は severity `info` で 1 度だけ registered される
 - (c) check が severity `info` で skip し、drift として報告しない
+
+注: leg (b) が主張するのは「check が 1 件も出ない」ことではなく「`absent` の name が drift として
+数えられない」ことである。`workflows.integrity` check 自体が 1 件も registered されないのは provenance
+record が空で比較対象が 0 件の tree であり、それは本 TC の 3 フィクスチャのいずれでもない
+(TC-0006-0028 の fixture 系列)。
+
+境界 (declined との分界): provenance entry が残ったまま file だけが削除された `declined` は `absent`
+とは別 state であり、本 TC の対象外である。owner は AC-0006-0026 / BR-0006-0022 配下の TC-0006-0034
+(drift finding が出る tree では `details.declined` が当該 name を列挙する) と TC-0006-0035 (`modified`
+が 0 件で declined だけの tree) である。
 
 ## TC-0006-0010: Coverage Placeholder for EX-0006-0003
 

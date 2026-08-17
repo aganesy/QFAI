@@ -232,12 +232,19 @@ Scenario: drift finding は advisory であり exit code を変えない (bounda
 
 ```gherkin
 # AC-0006-0023
-Scenario: repair text は手動手順のみを名指しし、不在 / 解決不能は drift ではない (error/boundary)
+Scenario: repair text は手動手順のみを名指しし、absent / declined / 解決不能は drift ではない (error/boundary)
   Given `workflows.integrity` が drift を検出した状態
   When finding の message body を検査する
   Then body は「install 済み package 内の copy で当該ファイルを置き換える」手動 repair を名指しする
   And body は refresh command / CLI verb / flag を 1 つも名指ししない
-  And adopter tree に当該 shipped workflow が存在しない場合、drift finding は emit されない (不在の declined / missing 分類は spec-0003 / REQ-0020 の ownership contract 側の責務)
+  And provenance entry を持たず disk にも存在しない `absent` state の shipped name は、drift finding に
+    1 度も現れない (never-installed は「削除された」ではない。同じ tree に entry を持つ stale file が
+    併置されていれば、報告されるのはそちらだけである)
+  And provenance entry を持ち install 後に削除された `declined` state は `absent` とは別 state であり、
+    本 AC の対象外である。その報告のされ方は AC-0006-0026 が owner である
+  And `absent` と `declined` を「不在」として同一視しない。どちらの name を missing / 意図的削除として
+    ownership 上どう扱うかの分類は spec-0003 / REQ-0020 の ownership contract 側の責務であり、本 AC の
+    対象外である
   And install 済み package 側の shipped copy を解決できない場合、check は severity `info` で skip する
 ```
 

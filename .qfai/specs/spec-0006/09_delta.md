@@ -150,3 +150,48 @@
   - **`details.declined` ownership.** `declined` の _定義と分類_ は spec-0003 / REQ-0020 owned のまま。本 spec が引き受けたのは doctor 出力に _現れること_ だけで、これは `qfai doctor` の出力形であり `CLI-DOC` の owning spec に一致する。
   - REQ-0022 の copy-down 文 (01_Spec.md `## Relevant Requirements`) は upstream 文言のため未編集。同文は `--fail-on error` のみに言及するが、spec 側はそれより強い不変条件を主張しているだけで矛盾しない。
 - Source: review round 2 findings R1 / R7 / R8 (`R04_architecture-reviewer-round2.md`)
+
+## 2026-08-17 — CR-20260810-0001 Option A — TC-0006-0030 leg (b) state split (spec-0006)
+
+- Change Request: `.qfai/decisions/CR-20260810-0001-tc0006-0030-leg-b-state-ambiguity.md` — `Class: defect`, `Approved option: A`, approved by `user (aganesy)` via the /qfai-implement spec-0006 closure gate
+- Operation: UPDATE:MODIFY ×2 (no ID created, renumbered or removed; no AskUserQuestion-gated operation, since UPDATE:MODIFY on an active spec with total subject overlap is append-first by default)
+- Local ID ranges added: **none** — see the `newRowNeeded` ruling below
+- Approved By: `user (aganesy)` (the CR itself; the triage op needs no separate approval)
+
+### Operations
+
+| Op ID  | Op Type       | Target                                                       | Closes           | Summary                                                                                                                                                   |
+| ------ | ------------- | ------------------------------------------------------------ | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OP-016 | UPDATE:MODIFY | 06_Test-Cases.md (TC-0006-0030 Setup + leg (b) + 2 新規段落) | CR-20260810-0001 | leg (b) が `CLI-WFSET` §3 の closed enum のどの state を指すかを `absent` と名指しし、`declined` との境界と owner (TC-0006-0034 / TC-0006-0035) を明記    |
+| OP-017 | UPDATE:MODIFY | 03_Acceptance-Criteria.md (AC-0006-0023)                     | CR-20260810-0001 | state 非依存だった 3 番目の `And` を `absent` / `declined` の 2 節に分け、両者を「不在」として同一視しない旨と ownership 分類の deferral pointer を再配置 |
+
+### Notes
+
+- **`newRowNeeded`: no — ruled independently by `test-design-analyst` and `architecture-reviewer`, both
+  against the drafter.** Option A's text hedged that the split would "likely" need one new TDD row for the
+  literal zero-finding case. It does not. `declined` の報告は既に `TC-0006-0034` (mixed tree で
+  `details.declined` が name を列挙する) と `TC-0006-0035` (declined だけの tree) が owner であり、ledger
+  行 `TDD-0036` / `TDD-0037` が `todo` で存在する。そして「`workflows.integrity` check が 1 件も
+  registered されない」ケースは `declined` ではなく **provenance record が空の tree** であって、別の
+  fixture 系列に属する。ID を新設すれば 1 つの production predicate に owner が 2 つできる — 追加の
+  coverage ではなく traceability の欠陥である。
+- **Option A の "an `absent` tree emits no finding at all" は採らなかった。** 3 者が独立に反証した:
+  `TDD-0038` の landed fixture は対照の stale file を併置し `findings` 長 1 と `severity === "info"` を
+  assert しているため、「finding が 1 件も出ない」と書くと landed test と矛盾する — CR 自身が課した
+  「`TDD-0038` は無変更で成立すること」に反する。leg (b) は per-name の主張
+  (「`absent` の name が drift として数えられない」) に修正した。
+- **`ok` severity の主張は leg (b) に置かなかった。** production を読んだ上での測定: declined tree では
+  `comparedCount > 0` のまま `status: "ok"` となり check は severity `ok` で 1 件 registered される。
+  これは `TC-0006-0035` が既に述べていることであり、`TC-0006-0034` の mixed tree では同じ check が
+  `info` になるため、無条件に書けば偽になる。
+- **AC から BR への参照は 1 度書いて validator に弾かれ、削除した。** `TRACE_DOWNSTREAM_REF` — 参照方向は
+  下位→上位のみで、`AC` から `BR-0006-0022` を指すのは禁止。`AC-0006-0026` への同層参照のみ残した。
+- **Review**: `completion-reviewer` と `architecture-reviewer` が独立に REVISE を返し、5 件の blocking を
+  すべて反映した — MD013 違反 (新 Setup 行 405 字 / leg (b) 287 字、上限 200)、`TC-0006-0028` を zero-check
+  ケースの owner と書いた誤った cross-reference (所有ではなく除外として書き直した)、`declined` 節が
+  `AC-0006-0026` の payload 義務を再記述して 2 つ目の SSOT を作っていた点、その括弧内が自己矛盾かつ
+  コードに対して偽だった点。適用後の最長行は 90 / 88 字。
+- **持ち越し (本 CR の anchor 外、`.qfai/steering/2026-08-08-chg-007-spec-0006-upstream-handoff.md` に記録)**:
+  `AC-0006-0026` と `BR-0006-0022` はいずれも declined だけの tree で「finding 自体が emit されない」と
+  述べるが、これはコードに対して偽である (`ok` の check が 1 件出る)。`TC-0006-0035` は正しく `ok` と
+  書いているので、TC が正で親の AC / BR が誤っている。`TDD-0037` はこの AC / BR に対して実装される。
