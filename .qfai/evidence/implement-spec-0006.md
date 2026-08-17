@@ -6964,3 +6964,54 @@ mutant.** `TC-0006-0029` cannot tell `info` from `warning` because `--fail-on er
 `summary.error` alone; under `--fail-on warning` a `warning` severity would make
 `summary.warning + summary.error > 0` true and exit 1, failing this TC. The TC says so itself. So G7 is
 not queue-clearing — it closes a measured oracle gap that has been open since `TDD-0031`.
+## The drift path's digest basis has no oracle — measured properly, and the record's warrant was wrong
+
+`TDD-0030`'s `drift.test.ts` carries a disclosure that the comparison basis is newline-**normalized**
+content and that nothing discriminates it from a raw-byte basis. A round-3 `implementation-reviewer`
+measured the sentence false. Re-measuring settled something narrower and more useful: **the sentence's
+conclusion is true and its warrant is false**, and the two probes answer different questions.
+
+Harness at `tmp/digest-basis-probe/harness.mjs` (needles literal in the file, uniqueness asserted
+before each write, blob-differs asserted after, restore from byte backups inside `finally` printing
+against the HEAD blob constant). Baseline at `49c2f945`: row `6 passed`, `tests/unit/shared/text.test.ts`
+`4 passed`, the 12-selector closure `67 passed`, all exit 0.
+
+| Probe | Mutation                                                            | Blobs                   | row      | text unit             | closure                  |
+| ----- | ------------------------------------------------------------------- | ----------------------- | -------- | --------------------- | ------------------------ |
+| A     | `normalizeNewlines` body → `return text;` (`src/shared/text.ts`)      | `1ab8a835` → `96328a68` | 6 passed | **2 failed / 2 passed** | **2 failed / 65 passed** |
+| B     | drop the call from `digestNormalizedText` only (`workflowsIntegrity.ts`) | `bad123d7` → `b68ea8a2` | 6 passed | 4 passed              | **67 passed — SURVIVES** |
+
+**Why the distinction is the whole finding.** Probe A reduces the shared helper, so it necessarily
+reddens the helper's **own** unit tests — `expected 'a\r\nb\r\n' to be 'a\nb\n'` and
+`expected 'a\r\r\nb' to be 'a\r\nb'`. Those two failures say nothing about the drift path; they say
+`normalizeNewlines` is tested, which it is. Probe B leaves the helper and its tests intact and changes
+**only what the drift comparison computes** — and nothing anywhere notices. So the claim "no test
+discriminates the basis" is **true of the drift path**, and the reduction the record offered as its
+witness is not a witness for it.
+
+Scope named rather than left absolute: B was run against the 12-selector closure enumerated in the
+harness, not against the whole repository. What is established is that **no test in that closure**
+discriminates the basis.
+
+The row already discloses why it cannot close the gap itself — `TC-0006-0030`'s Setup asks for a
+byte-identical revert, and a byte-identical fixture answers the same way under both bases **by
+construction**. Closing it needs a fixture whose two sides differ in line endings only, which is a
+change to the TC's Setup and therefore upstream. That disposition stands; only its warrant changes.
+
+### The measurement exists because an agent crashed and left the mutant in the tree
+
+The delegated engineer died mid-run on a network error (`ENOTFOUND`) immediately after saying it would
+"measure the call-site mutation too, since that is the point the note is really making". Its `finally`
+never ran, so `packages/qfai/src/core/doctor/workflowsIntegrity.ts` was left at `b68ea8a2` — probe B's
+mutant, uncommitted, in a tree that would otherwise have looked ready to commit.
+
+`git status` caught it; nothing else would have. The standing brief already records this class from two
+**driver** crashes and prescribes the printed `finally` check — worth adding that **an agent-level crash
+defeats that prescription entirely**, because the harness never reaches its own `finally`. The check that
+survives is external: `git status --short` and `git diff --stat -- packages/qfai/src` before trusting any
+tree a mutation run has touched, whether or not the run reported success. Restored with
+`git checkout HEAD -- <path>`, which is safe **here specifically** because that file carried no
+uncommitted work other than the mutant — the general prohibition on `git checkout --` stands.
+
+And the crashed agent's instinct was right: the call-site probe is the one the note needed, and it is
+the measurement above.

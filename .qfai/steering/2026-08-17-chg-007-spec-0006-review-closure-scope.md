@@ -99,6 +99,13 @@ is the measurement of what ignoring it costs at scale.
   after that verdict went six rounds stale. This round found four more instances of the same shape.
 - **A CR's `Approved actions` list is a starting point, not a scope.** Verify the delivered state.
 - **Cap parallel suite execution.** Reviews and audits can fan out; suite runs should not.
+- **An agent-level crash defeats a `finally`-based restore.** A delegated engineer died on a network
+  error mid-mutation and left the mutant in the tree; its harness never reached its own `finally`, so the
+  printed verification the standing brief prescribes — which caught two earlier _driver_ crashes — could
+  not fire at all. The check that survives is external: run `git status --short` and
+  `git diff --stat -- packages/qfai/src` before trusting any tree a mutation run has touched, **whether
+  or not the run reported success**. A run that reports nothing at all is exactly the case where the tree
+  is most likely dirty.
 - **The evidence file is CRLF in the working tree.** A multi-line needle joined with \n matches
   nothing under `.qfai/evidence/`, and the script reports `0 occurrences` — which reads as “already
   fixed” rather than as “wrong line endings”, the same silent shape as the shell-expansion hazard.
