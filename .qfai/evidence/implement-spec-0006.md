@@ -6924,3 +6924,43 @@ citation, and an audit corrected on a citation is still the reason six rows did 
   route to `green`", which the auditor read as describing the row's state when written rather than as a
   ceiling. Its own recommendation for putting that beyond argument — one line in the CR naming `done`
   explicitly — is noted and not taken here, because amending an open CR's narrowing is the owner's act.
+
+## Hard precondition on G7 (`TDD-0034` / `TDD-0035`), recorded before their work starts
+
+`TC-0006-0032` requires a fixture in which `workflows.integrity` reports drift **and no other check
+returns `warning` or `error`** — `summary.warning === 0` and `summary.error === 0` — so that
+`--fail-on warning` exits 0. Two facts measured at `3a9250bf` make that precondition load-bearing
+rather than incidental:
+
+1. **`summarize` has no exclusions.** `packages/qfai/src/core/doctor.ts` `summarize` is
+   `summary[check.severity] += 1` over every registered check. The `skills.integrity` special-casing
+   that exists in the renderer and in the exit-code aggregation is **not** in the summary, so a
+   `skills.integrity` warning counts toward `summary.warning` like any other.
+2. **`shouldFailDoctor`'s warning branch reads the total**: `return summary.warning + summary.error > 0`
+   — not a per-check or per-id test. So exit 0 under `--fail-on warning` requires **zero** warnings
+   across the whole run, not merely that the drift finding is not one.
+
+The doctor has four `severity: "warning"` emission sites: `skills.integrity`, `agents.frontmatter`
+(twice — missing canonical agent directory, and no agent markdown files), and
+`prototyping.targetUrl` (no `targetUrl` configured). **`prototyping.targetUrl` is the risk**: it fires
+on the absence of configuration, which is the default state of a bare adopter tree.
+
+**What is NOT yet measured, and must be before either row is written**: what
+`useAdopterTreePool().seedAdopterTree()` actually emits. No test in this slice asserts
+`summary.warning` on an adopter tree at all — `TDD-0031`'s guard #3 scopes itself to `severity ===
+"error"` on purpose — so the fixture's warning profile is unknown rather than known-clean. Two
+outcomes and both are actionable:
+
+- the seeded tree already emits zero warnings, and `TC-0006-0032`'s Setup is satisfiable as written;
+- or it emits one or more, and the row must either configure them away or the Setup is unachievable
+  against this fixture — which would be an upstream finding, not an implementation choice.
+
+Recorded now because discovering it mid-cycle is how a row acquires a rework round, and because
+`TC-0006-0033`'s control needs the complementary fixture — the same tree plus **exactly one** unrelated
+warning — which cannot be constructed without knowing the baseline count first.
+
+Worth stating alongside: **`TDD-0034` is the row that finally kills `TDD-0031`'s recorded equivalent
+mutant.** `TC-0006-0029` cannot tell `info` from `warning` because `--fail-on error` reads
+`summary.error` alone; under `--fail-on warning` a `warning` severity would make
+`summary.warning + summary.error > 0` true and exit 1, failing this TC. The TC says so itself. So G7 is
+not queue-clearing — it closes a measured oracle gap that has been open since `TDD-0031`.
