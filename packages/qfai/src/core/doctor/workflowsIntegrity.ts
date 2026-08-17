@@ -128,34 +128,42 @@ export type WorkflowsIntegrityStatus = "ok" | "modified" | "skipped_unresolved";
  * stating, because the consumer is not the one this comment used to predict: the
  * drift advisory's MESSAGE names it as the packaged source path to copy from, per
  * the required message content of `.qfai/contracts/cli/qfai-doctor.md`. Its
- * `details` slot (BR-0006-0022) is still outstanding and is owned by TDD-0036 /
- * TC-0006-0034 — the field is consumed while that payload obligation is not, the
- * two are separate, and landing the payload does not make the field newly read.
+ * `details` slot (BR-0006-0022) has since landed with TDD-0036 / TC-0006-0034, so
+ * the field now has TWO consumers, and the older sentence here — which said the
+ * slot was "still outstanding" — was true when written and false from that commit
+ * onward. It is corrected rather than annotated, because this paragraph's whole
+ * job is to be the checkable inventory.
  *
- * THE CONVENTION THAT ROW INHERITS, stated before it lands rather than after:
- * `details` will then carry `packagedDir` beside `workflowsDir`, which puts an
- * ABSOLUTE NATIVE path next to a ROOT-RELATIVE POSIX one in a single JSON
- * object. That mix is intended and is keyed to the ROOT the path belongs to,
- * not to the key it sits under — in-tree paths are root-relative POSIX so the
- * payload is stable across machines and platforms, and the packaged path is
- * absolute and native because it has no shared root to be relative to and is
- * meant to be pasted into a copy command unmodified. Do not "normalize" the two
- * to one form: relativizing the packaged path degrades to a `../..` chain whose
- * meaning depends on the reader's cwd, and absolutizing `workflowsDir` puts the
- * host layout into a machine surface that today has none.
+ * THE CONVENTION THAT ROW LANDED: `details` carries `packagedDir` beside
+ * `workflowsDir`, which puts an ABSOLUTE NATIVE path next to a ROOT-RELATIVE
+ * POSIX one in a single JSON object. That mix is intended and is keyed to the
+ * ROOT the path belongs to, not to the key it sits under — in-tree paths are
+ * root-relative POSIX so the payload is stable across machines and platforms, and
+ * the packaged path is absolute and native because it has no shared root to be
+ * relative to and is meant to be pasted into a copy command unmodified. Do not
+ * "normalize" the two to one form: relativizing the packaged path degrades to a
+ * `../..` chain whose meaning depends on the reader's cwd, and absolutizing
+ * `workflowsDir` puts the host layout into a machine surface that today has none.
  *
- * PER MEMBER — all FIVE of them, so that the opening claim is checkable rather than
+ * PER MEMBER — all SIX of them, so that the opening claim is checkable rather than
  * taken on trust. `status === "ok"` gates the content-identical emission and the
  * drift suite's override leg asserts it; the status LITERALS `"modified"` and
  * `"skipped_unresolved"` gate the other two arms; the `modified` FIELD — distinct
  * from that literal, and omitted from this list while the only `modified` token in
  * it was the literal, which is the omission this list was written to prevent — is
  * the drift arm's `modified.length > 0` conjunct, the file list its message
- * interpolates, and its `details.modified`; `comparedCount` is the `ok` arm's second
- * conjunct; `workflowsDir` is in all three `details` payloads; `packagedDir` is in
- * the drift message. There is
- * no unconsumed member left to add to, so a claim that some member is held for a
- * later row now has to be MEASURED against `doctor.ts` before it is written here.
+ * interpolates, and its `details.modified`; `declined` is the drift arm's
+ * `details.declined` and nothing else, deliberately: it appears in no message and
+ * on no other arm; `comparedCount` is the `ok` arm's second conjunct;
+ * `workflowsDir` is in all three `details` payloads; `packagedDir` is in the drift
+ * message AND in the drift arm's `details`. There is no unconsumed member left to
+ * add to, so a claim that some member is held for a later row now has to be
+ * MEASURED against `doctor.ts` before it is written here.
+ *
+ * The count in that first sentence is the part that rots. It said FIVE while the
+ * type declared six and the enumeration skipped the member that had just been
+ * added — by the row that added it. Adding a member to this type means editing
+ * the count and the enumeration in the same change; a reviewer found this one.
  */
 export type WorkflowsIntegrityDiff = {
   status: WorkflowsIntegrityStatus;
@@ -172,9 +180,14 @@ export type WorkflowsIntegrityDiff = {
    *
    * Reported as PAYLOAD and never as a trigger. `status` is keyed on `modified`
    * alone, so a tree whose recorded names were all removed stays `ok` and emits
-   * nothing, which is what §3's "never reported again" requires. This field
-   * exists so that an operator reading a finding raised for some OTHER name can
-   * see that QFAI knows the missing file is missing and is leaving it alone.
+   * NO DRIFT FINDING — the `ok` check itself is still registered, which
+   * TC-0006-0035 pins with a guard. (An earlier draft of this sentence said it
+   * "emits nothing", which is measurably false: the run prints
+   * `[ok] workflows.integrity: installed shipped workflow(s) match the packaged
+   * copy`.) Reporting no drift finding is what §3's "never reported again"
+   * requires. This field exists so that an operator reading a finding raised for
+   * some OTHER name can see that QFAI knows the missing file is missing and is
+   * leaving it alone.
    *
    * Populated from the same `digestFile` the drift comparison uses, so "absent"
    * has one definition in this module rather than two: a present-but-unreadable
@@ -205,8 +218,15 @@ export type WorkflowsIntegrityDiff = {
    * Not narrowed to "names that resolved to `installed`", which would be the
    * stronger-looking predicate and is wrong: a tree whose recorded files were
    * all deliberately removed has zero `installed` names, and BR-0006-0022
-   * requires severity `ok` there — truthfully, because QFAI did compare every
+   * requires severity `ok` there — truthfully, because QFAI EXAMINED every
    * recorded name and found nothing stale.
+   *
+   * "Examined" and no longer "compared", because the two stopped being the same
+   * thing when `declined` landed: a declined name is classified and `continue`d
+   * BEFORE the drift comparison, so this count decomposes as compared + declined
+   * rather than being compared alone. The count itself is unchanged — it is
+   * `recordedNames.length` either way — and the distinction matters only to a
+   * reader deciding what the number licenses them to claim.
    */
   comparedCount: number;
 };
@@ -336,11 +356,11 @@ export async function diffInstalledShippedWorkflows(
     // The `declined` split happens BEFORE the drift comparison, and it has to:
     // `hasDrifted` answers `false` for an absent installed file, so a name
     // classified only by that predicate is indistinguishable from one whose
-    // bytes match. This reads `digestFile` a second time for names that are
-    // present — two extra reads on the shipped set — which is the cost of
-    // leaving `hasDrifted` untouched. Restructuring it into a classifier would
-    // be the single-read form and is deliberately not done here: it is the
-    // larger production change, and this row's obligation is a payload key.
+    // bytes match. This reads `digestFile` a second time for every name that is
+    // present, which is the cost of leaving `hasDrifted` untouched.
+    // Restructuring it into a classifier would be the single-read form and is
+    // deliberately not done here: it is the larger production change, and this
+    // row's obligation is a payload key.
     if ((await digestFile(installedPath)).kind === "absent") {
       declined.push(`${WORKFLOWS_DIR_RELATIVE}/${name}`);
       continue;

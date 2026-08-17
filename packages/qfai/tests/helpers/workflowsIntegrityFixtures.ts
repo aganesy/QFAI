@@ -97,44 +97,36 @@ export async function deleteShippedWorkflow(dir: string, name: string): Promise<
 }
 
 /**
- * The doctor checks a bare `qfai init` tree leaves at `warning`. MEASURED on a
- * freshly seeded tree, not reasoned about: five, on an install that reported
- * success.
+ * The subset of the bare-install warnings a caller may ask to LEAVE standing.
  *
- * This list exists because `--fail-on warning` reads `summary.warning +
- * summary.error`, a whole-run total with no per-check exclusions, so a row
- * asserting exit 0 on that flag needs every OTHER warning gone. `qfai init` alone
- * does not deliver that state — the opposite of what "a clean tree" suggests.
- *
- * Enumerated rather than discovered at run time, and the difference is
- * load-bearing. A helper that filtered the live run for `severity === "warning"`
- * and silenced whatever it found would keep working when a later release adds a
- * sixth warning — and would silently change what the fixture MEANS, because the
- * control row's "exactly one unrelated warning" would then be one of an unknown
- * set. With a literal list, a sixth warning breaks a caller's guard instead.
- */
-export const BARE_INIT_WARNING_IDS = [
-  "paths.srcDir",
-  "paths.testsDir",
-  "paths.outDir",
-  "output.validateJson",
-  "traceability.testGlobs",
-] as const;
-
-/**
- * The subset of `BARE_INIT_WARNING_IDS` a caller may ask to LEAVE warning.
- *
- * Narrower than the full list, and not by preference. `output.validateJson`
+ * Narrower than the full five, and not by preference. `output.validateJson`
  * resolves under `paths.outDir`, so quieting the former creates the directory the
  * latter looks for: the two cannot be varied independently, and offering
  * `paths.outDir` here would hand back a tree with a warning count the caller did
  * not ask for. These three each answer a distinct probe with no shared operand.
+ *
+ * A `BARE_INIT_WARNING_IDS` constant stood here listing all five, with a docblock
+ * arguing that a literal list makes a sixth default warning break a caller's
+ * guard. It was deleted: nothing read it, `quietUnrelatedWarnings` hard-codes its
+ * five repairs, and the guard that would actually break is the callers'
+ * `failingIdsOtherThanDrift(...)` assertion, which never referenced it. The
+ * argument was sound and the code did not implement it, which is worse than not
+ * making the argument. The measured list survives as prose below.
  */
 export type LeavableWarningId = "paths.srcDir" | "paths.testsDir" | "traceability.testGlobs";
 
 /**
  * Brings a seeded adopter tree to `summary.warning === 0`, optionally leaving
  * exactly ONE named warning standing.
+ *
+ * The five warnings a bare `qfai init` tree leaves at `warning`, MEASURED on a
+ * freshly seeded tree rather than reasoned about: `paths.srcDir`,
+ * `paths.testsDir`, `paths.outDir`, `output.validateJson` and
+ * `traceability.testGlobs` — on an install that reported success. They matter
+ * because `--fail-on warning` reads `summary.warning + summary.error`, a whole-run
+ * total with no per-check exclusions, so a row asserting exit 0 on that flag needs
+ * every OTHER warning gone. `qfai init` alone does not deliver that state, which
+ * is the opposite of what "a clean tree" suggests.
  *
  * Each repair is the minimum the check's own condition asks for, read from
  * `src/core/doctor.ts` rather than guessed:
