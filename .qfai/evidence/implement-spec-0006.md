@@ -1350,6 +1350,35 @@ cannot distinguish two rounds whose entry names and statuses are identical.
   `core/doctor.ts` `ee31f4dd`, `cli/commands/doctor.ts` `a2a92ca0`. The 6 is this row's four `it`s
   plus TDD-0030's two in the same file — the two rows share `drift.test.ts`, so a file-scoped count
   is not a per-row count, and the earlier `3` was never re-derived after either addition.
+- **Oracle proof, re-measured 2026-08-17 against the reader blob now shipping.** The row's recorded
+  mutations were applied to `workflowsIntegrity.ts` blobs `3eedae5f`, `bc869be5` and `9145c1da`, none
+  of which is HEAD's, so no recorded mutation showed these assertions still live against `bad123d7`.
+  **The needle site is textually unchanged** at `workflowsIntegrity.ts:269-271`, so both recorded legs
+  were re-derived rather than substituted. Shared needle, **excluding** its trailing newline:
+  `if (packaged.kind === "absent" || installed.kind === "absent") { return false; }`.
+
+| ID  | Base       | Replacement of `return false;`     | Mutant     | Result                                                                          |
+| --- | ---------- | ---------------------------------- | ---------- | --------------------------------------------------------------------------------- |
+| M2a | `bad123d7` | `return packaged.kind === "absent";` | `7805f1c3` | `Tests 2 failed \| 4 passed (6)` — the override `it` at `:177:76` and the `extra`-bucket `it` at `:243:9` |
+| M2b | `bad123d7` | `return installed.kind === "absent";` | `99f1e177` | `Tests 1 failed \| 5 passed (6)` — the unreadable/deleted `it` at `:145:9`      |
+
+  Two facts the re-measurement establishes that the old record could not:
+
+  1. **The per-leg discrimination the M2 split was made to show is still live** at `bad123d7`: M2a and
+     M2b kill **different** `it`s. `TC-0006-0027`'s own first `it` stayed green under both, correctly —
+     it runs against the real packaged tree where every recorded name is present, so neither mutation
+     can reach it.
+  2. **The carried residual is still live, and is now measured rather than asserted.** The record's M2a
+     count was `1 failed | 2 passed (3)` in the three-test era; it is `2 failed` now, and the second
+     failure is exactly the residual this file already disclosed — the override `it` leans incidentally
+     on packaged-absent-not-drift, because neither of its packaged trees carries `qfai-validate.yml`.
+
+  Line numbers moved uniformly (`:163:76` → `:177:76`, `:230:9` → `:243:9`, `:131:9` → `:145:9`) with
+  the same assertions, labels and received values — which is what a **currency** shift looks like as
+  distinct from a behavioural one. Needle-uniqueness asserted before each write and blob-differs after;
+  restores from byte backups under `tmp/`, never `git checkout --`, each printing `MATCHES HEAD BLOB`
+  against the HEAD blob constant rather than a per-edit "before". `git diff --stat -- packages/qfai/src`
+  empty at the end.
 
 
 ## Round-2 verdicts, and the measurement that settles the one blocking finding
@@ -6050,6 +6079,72 @@ the defective print. No other recorded measurement is multi-edit.
    it except `M6`. A witness needs its **own ledger row** — a fixture-helper precondition test — not an
    assertion slipped into a row whose obligation is leg (b). Recorded for `delivery-planner`.
 2. The brief's §2 clause is fixed above, and §8's ruling is recorded, so neither is owed.
+
+### TDD-0039
+
+**T2, escalated from T1 and reviewed alone (group G5). `todo → red → refactor`.** Section created
+2026-08-17: the row had **no per-item block at all**, its ledger `Evidence` cell carried the payload as
+a ~1,900-character narrative, and the anchor that cell points at resolved to nothing. The cell is
+specified as a pointer, so the payload is moved here and the fields below are the row's record.
+
+- **TC-Refs**: `TC-0006-0030` leg **(c)** only — an unresolvable packaged workflows directory. Legs (a)
+  and (b) are `TDD-0032` and `TDD-0038`. Anchor `AC-0006-0023` / `BR-0006-0020`.
+- **Test file**: `packages/qfai/tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts`,
+  blob `d30fe881` at HEAD.
+- **Revision**: the row's landing revision is `04e0a4f2`; the file has not moved since. Production at
+  the 2026-08-17 measurement: `core/doctor.ts` `ee31f4dd`, `core/doctor/workflowsIntegrity.ts`
+  `bad123d7`, `cli/commands/doctor.ts` `a2a92ca0`.
+- **RED failure mode**: `assertion`. This row is on the **genuine RED** path, not the falsifiability
+  substitute: `skipped_unresolved` emitted nothing at all before it, so the arm had to be written.
+  **Disclosed rather than glossed**: the original RED's verbatim command and output were never captured
+  in this file. What is recorded below re-measures that state at the current bytes by reproducing it,
+  which is stronger evidence than a transcript of a destroyed tree would now be, but it is a
+  reconstruction and is labelled as one.
+- **RED, re-measured 2026-08-17 (K1 below)**: falsifying the arm's status test returns the tree to the
+  pre-row state, and the row's test fails with `expected [] to have a length of 1 but got +0` — the
+  same assertion the test file's own comment records as its original RED.
+- **GREEN command**, file-scoped with no `-t`, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts`
+- **GREEN result**, at the current bytes with production intact: `Test Files 1 passed (1)` /
+  `Tests 1 passed (1)`, exit 0.
+- **Refactor verify command**: the same command. **Result**: identical, re-run after both mutations
+  below were reverted and each production file re-hashed to its HEAD blob.
+- **Closure**, as a literal command with full paths and no bare stems, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.drift.test.ts tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts tests/integration/spec0006WorkflowsIntegrity.exitCode.test.ts tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts tests/integration/spec0006DoctorProbeOrder.test.ts tests/cli/doctor.test.ts tests/cli/doctorConfigSeverity.test.ts tests/integration/doctorSpec0006.test.ts tests/e2e/spec0006DoctorProbeOrderE2E.test.ts`
+  → `Test Files 11 passed (11)` / `Tests 63 passed (63)`, exit 0.
+
+#### Oracle proof, re-measured 2026-08-17 against the emitter blob now shipping
+
+The row's recorded ten mutants and four witnesses were taken against superseded blobs, so no recorded
+mutation showed its assertions still live against `ee31f4dd`. Two fresh kills, isolating different
+claims. Both hard guards — #1 that the real resolver drifts, #2 that the reader returns
+`skipped_unresolved` with an empty `modified` — **passed in both runs**, so the fixture was provably in
+leg (c)'s state and each failure is attributable to the mutated emission arm rather than to a broken
+tree.
+
+| ID  | Base       | Needle → replacement                                                          | Mutant     | Result                                                                                     |
+| --- | ---------- | ------------------------------------------------------------------------------ | ---------- | -------------------------------------------------------------------------------------------- |
+| K1  | `ee31f4dd` | `} else if (workflowsDiff.status === "skipped_unresolved") {` → `… === "ok") {` | `0d15cf3e` | `Tests 1 failed (1)`; **three** soft claims redden — registration `:200:10`, severity `:214:10`, renderer slot `:312:10` |
+| K2  | `ee31f4dd` | `severity: "info",` → `severity: "warning",` in the skip emission                | `5f0d561b` | `Tests 1 failed (1)`; **C4 alone** — `expected 'warning' to be 'info'` at `:214:10`          |
+
+K2's needle spans the emission's `title` and `message` lines as well, because `severity: "info",` alone
+is **not unique** in `core/doctor.ts` — several emission sites carry it. Uniqueness was asserted
+(`split(needle).length === 2`) before each write and blob-differs after; both needles **exclude** their
+trailing newline. Restores came from byte backups under `tmp/`, never from `git checkout --`, and each
+printed its verification against the **HEAD blob constant** rather than a per-edit "before" —
+`MATCHES HEAD BLOB` on all four. Mutant hashes are `git hash-object` output that never entered the
+object database, so each is joinable only as base + needle.
+
+**What the pair establishes that neither does alone.** K1 reproduces the pre-row state — the arm never
+fires — and reddens registration, severity and the renderer slot together. K2 leaves the arm firing and
+moves only its severity, and reddens **one** assertion. So `BR-0006-0020`'s closing severity clause is
+**independently falsifiable**, not merely entailed by the registration claim. K1 also confirms the
+accounting in the test's own `?? ""` comment: the four assertions that are vacuous at RED (payload,
+filename sweep, vocabulary sweep, `undefined` sweep) pass under it, and their falsifiability comes from
+the mutation record rather than from that run.
+
+**Equivalent mutant, carried from the row's own record**: M8 — the `else-if` is not load-bearing,
+because exclusivity is carried by `status` being single-valued. Recorded, not closed.
 
 #### TDD-0039 review fixes landed at `04e0a4f2` — four refusals, one of which would have broken the build
 
