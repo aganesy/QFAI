@@ -94,3 +94,10 @@ is the measurement of what ignoring it costs at scale.
   after that verdict went six rounds stale. This round found four more instances of the same shape.
 - **A CR's `Approved actions` list is a starting point, not a scope.** Verify the delivered state.
 - **Cap parallel suite execution.** Reviews and audits can fan out; suite runs should not.
+- **`.qfai/evidence/**`is CRLF in the working tree.** A multi-line needle joined with`\n`matches
+nothing there and the script reports`0 occurrences`— which reads as "already fixed" rather than as
+"wrong line endings", and is the same silent shape as the shell-expansion hazard. Detect the file's
+EOL and build the needle against it. The standing brief already says whitespace is part of a needle's
+identity for **mutations**; it holds for evidence edits too, and git's commit-time normalisation is
+what hides it (the committed bytes are LF, so a needle derived from`git show` will not match the
+  working tree).

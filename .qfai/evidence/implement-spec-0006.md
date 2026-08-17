@@ -3144,6 +3144,15 @@ Base = the after-blobs of `2733395a`
 `workflowsIntegrityFixtures.ts 9d3e6ae7`). Every row: needle-uniqueness asserted (exactly one
 occurrence), blob-differs asserted, file-scoped run, no `-t`.
 
+> **Base currency, recorded 2026-08-17.** That base is no longer the row's bytes: `drift.test.ts` is
+> `1d0e16a5` at HEAD, moved by the single commit `ef336208` (see the round block below). An auditor
+> reproducing R1-R12 from this table starts from `fccd8dee` and will not match the current file. The
+> production halves are unchanged in kind but not in value — `workflowsIntegrity.ts` is `bad123d7` and
+> `core/doctor.ts` is `ee31f4dd` at HEAD, both moved by later rows' work (`TDD-0032`, `TDD-0038`,
+> `TDD-0039`). `ef336208`'s message claims "M4b/M5b/M9 blobs refreshed against the new base"; that
+> refresh exists **only in the commit message** and never reached this table, which is the defect being
+> named rather than repaired here — a re-derivation belongs to the row's re-review, not to a note.
+
 **Command for every row below**, which the rework RED did not restate:
 
 ```
@@ -3173,6 +3182,35 @@ is the assertion list: **C3, C4, C6** observed under the shipped `toContain` gua
 restored exact-list guard, because guard #2 throws before the claim block executes. That is the
 measurement the standing rule rests on, and it now carries a needle, a replacement and a blob so an
 auditor can reproduce it.
+
+#### Round `ef336208` — behaviour-preserving rework, recorded 2026-08-17 because it was recorded nowhere
+
+`round-evidence.md` gives a behaviour-preserving rework its own path: no RED/GREEN pair, but a
+**refreshed** `Refactor verify` pair and a `Round N: reviewer verdict` trigger line. Neither existed.
+`grep -n ef336208 .qfai/evidence/implement-spec-0006.md` returned nothing before this block, so the
+row's newest recorded state was `2733395a` while its bytes had moved past it.
+
+- **Revision**: `ef336208` (2026-08-08), and it is the row's **landing** revision — measured:
+  `git log 2733395a..HEAD -- .../spec0006WorkflowsIntegrity.drift.test.ts` returns exactly this one
+  commit, and the file has been byte-stable since.
+- **Blobs**: `drift.test.ts` `fccd8dee` → `1d0e16a5`. One file, `+41 / −9`, **comment-only** — no
+  assertion, guard, fixture or import moved, which is why the path is behaviour-preserving and no
+  RED/GREEN pair is owed.
+- **What it changed**: two reviewer riders. C7's assertion pins both `title` and
+  `details.workflowsDir` to a test-owned constant, and the comment now names the export a later reader
+  would need first in order to make the DRY substitution — a checkable tripwire rather than a
+  prohibition on an edit the reader may not realise they are making. C1's warrant is corrected: it had
+  claimed the other six failures name no cause, and `completion-reviewer` produced the counterexample
+  (`expected [] to have a length of 1 but got +0` does name one), so C1 is recorded as **at the margin**
+  of that standard, with the delta named as locality rather than uniqueness.
+- **Refactor verify command**, file-scoped with no `-t`, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.drift.test.ts`
+- **Refactor verify result**, measured 2026-08-17 at HEAD: `Test Files 1 passed (1)` /
+  `Tests 6 passed (6)`, exit 0. The 6 is this row's `it`s plus `TDD-0029`'s in the shared file, so it
+  is a file count and not a per-row count.
+- **Reviewer verdict trigger**: none was recorded, and that is the finding. The round's own commit
+  message carries the reviewer riders it implements, but no verdict follows it in this file. The row
+  re-enters review at the 2026-08-17 closure for exactly that reason.
 
 #### The three riders `completion-reviewer` added, adopted
 
