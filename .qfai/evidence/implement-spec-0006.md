@@ -7199,6 +7199,18 @@ The doctor has four `severity: "warning"` emission sites: `skills.integrity`, `a
 `prototyping.targetUrl` (no `targetUrl` configured). **`prototyping.targetUrl` is the risk**: it fires
 on the absence of configuration, which is the default state of a bare adopter tree.
 
+> **Both halves of that paragraph are wrong, and the measurement below is what corrected them.** The
+> enumeration is not four but at least nine: `paths.<key>` emits `warning` for every configured path
+> that does not exist and is not a default skill-created path, `output.validateJson` emits one when the
+> report has not been run, and `traceability.testGlobs` emits one on an empty glob list. And
+> `prototyping.targetUrl` is **not** among the warnings a default run produces — it is registered under
+> the prototyping profile, so it never fired on the tree this precondition was about. Naming it as
+> "the risk" was a guess dressed as an inventory, and it pointed away from all five real ones.
+> The lesson is narrow and mechanical: **an emission-site enumeration read off the source by eye is a
+> hypothesis; the warning profile of a fixture is obtained by running the fixture.** Recording the
+> precondition was still worth it — the row would otherwise have discovered this mid-cycle — but what
+> made it actionable was the run, not the reading.
+
 **What is NOT yet measured, and must be before either row is written**: what
 `useAdopterTreePool().seedAdopterTree()` actually emits. No test in this slice asserts
 `summary.warning` on an adopter tree at all — `TDD-0031`'s guard #3 scopes itself to `severity ===
@@ -7218,6 +7230,173 @@ mutant.** `TC-0006-0029` cannot tell `info` from `warning` because `--fail-on er
 `summary.error` alone; under `--fail-on warning` a `warning` severity would make
 `summary.warning + summary.error > 0` true and exit 1, failing this TC. The TC says so itself. So G7 is
 not queue-clearing — it closes a measured oracle gap that has been open since `TDD-0031`.
+
+## G7 precondition discharged by measurement, with a fixture recipe
+
+Measured on a tree seeded exactly as `useAdopterTreePool().seedAdopterTree()` seeds one — `runInit`
+into an empty directory, `yes: true`, no `preInit` — and then run through the real CLI
+(`dist/cli/index.mjs doctor --format json`, `dist` verified newer than every file under `src`):
+
+```text
+bare seeded tree:  summary {"ok":9,"info":4,"warning":5,"error":0}
+  [warning] paths.outDir          outDir is missing
+  [warning] paths.srcDir          srcDir is missing
+  [warning] paths.testsDir        testsDir is missing
+  [warning] output.validateJson   validate.json is missing
+  [warning] traceability.testGlobs  testFileGlobs is empty
+```
+
+So `TC-0006-0032`'s Setup is **not** satisfied by a seeded tree: `qfai init` reports success and leaves
+five warnings standing. The precondition's two outcomes were "satisfiable as written" or "unachievable
+against this fixture"; the answer is the third one neither branch named — **satisfiable, but only with
+a repair step, and every repair is minimal and reads off the check's own condition**:
+
+| warning                  | condition in `src/core/doctor.ts`   | minimal repair                        |
+| ------------------------ | ----------------------------------- | ------------------------------------- |
+| `paths.srcDir`           | `exists(resolved)`                  | `mkdir src`                           |
+| `paths.testsDir`         | `exists(resolved)`                  | `mkdir tests`                         |
+| `paths.outDir`           | `exists(resolved)`                  | `mkdir .qfai/report`                  |
+| `output.validateJson`    | `exists(validateJsonAbs)`           | write `.qfai/report/validate.json`    |
+| `traceability.testGlobs` | `globs.length === 0`                | one non-matching glob entry           |
+
+Three things measured about that table rather than assumed:
+
+- **`output.validateJson` reads existence only**, so the file's CONTENT is out of scope and `{}` is
+  enough. Confirmed by running the suite with `{}` written: `summary.warning` is 0. A fixture that
+  synthesised a plausible-looking report would invite a later reader to trust its numbers.
+- **`traceability.testGlobs` does not need the glob to match anything.** With globs present it warns
+  again only when scenario files exist and none match; a tree with no `.qfai/specs` has no scenarios.
+- **`paths.outDir` and `output.validateJson` cannot be varied independently** — the validate.json path
+  resolves under `outDir`, so writing the file creates the directory. That is why the helper's
+  `leaveWarning` type admits only the three that have no shared operand.
+
+With the repair applied: `summary {"ok":14,"info":4,"warning":0,"error":0}`. Adding the hand edit on
+top: `{"ok":13,"info":5,"warning":0,"error":0}`, `workflows.integrity` at `info`, and
+`doctor --format json --fail-on warning` **exit 0**. Leaving `tests/` out instead:
+`{"ok":12,"info":5,"warning":1,"error":0}` with the single warning `paths.testsDir` and **exit 1**,
+the advisory still `info`. Both TCs' Asserts were therefore observable before either test was written.
+
+### TDD-0034
+
+- **TC-Refs**: `TC-0006-0032` (AC-0006-0025 / EX-0006-0025). **Layer**: Unit as the TC declares; the
+  file sits in `tests/integration/` because that is where this slice's two other `unit`-declared rows
+  live (`TDD-0031`, `TDD-0040`) and `QFAI-ATDD-112` accepts their TC as referenced from there. Placing
+  it by precedent rather than by the word, and the precedent is measured, not assumed.
+- **Test file**: `packages/qfai/tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts`
+  (new; also carries `TDD-0035`). Helper added: `quietUnrelatedWarnings` in
+  `tests/helpers/workflowsIntegrityFixtures.ts`.
+- **Revision**: `6d81eaae` plus this round's uncommitted test-only work; no production file was touched
+  in either direction, verified by `git status --short -- packages/qfai/src` reporting clean after the
+  mutation runs below.
+- **RED failure mode**: `falsifiability`. **Satisfied-by**: `TDD-0029` — the drift arm was written for
+  `TC-0006-0027` and keyed on the provenance record at `ec4b8f31` (`git log -S 'id: "workflows.integrity"'`,
+  first commit on `src/core/doctor.ts`). The test passed on its first run, which
+  `references/red-not-observable.md` classifies as the obligation-already-satisfied case: not an
+  anomaly, not an `exception`, and not a licence to weaken a correct test until it fails. Gate item 4
+  (minimal production code) is **waived** on this path.
+- **Falsifiability command**, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts`
+  with the mutation below applied.
+- **Falsifiability mutation `F1`** — base `6d81eaae:packages/qfai/src/core/doctor.ts` (blob `ee31f4dd`,
+  cited because a MUTANT has no revision that determines it), mutant blob `8af2a6cc`. Needle, measured
+  **unique** (the naive three-line form occurs **twice** — the `skipped_unresolved` arm is byte-identical
+  down to `title: WORKFLOWS_INTEGRITY_TITLE`, so the needle is extended by the following comment line,
+  which is the measured discriminator):
+
+```text
+      id: "workflows.integrity",
+      severity: "info",
+      title: WORKFLOWS_INTEGRITY_TITLE,
+      // `title` has no consumer in the text renderer — it prints
+```
+
+  Replacement: the same four lines with `severity: "info"` -> `severity: "warning"`.
+- **Falsifiability result**: `Tests 2 failed (2)` in the file, exit 1. Three soft assertions redden and
+  they are named rather than counted: this row's exit-code claim, this row's `summary.warning` claim,
+  and `TDD-0035`'s severity claim.
+- **This is the row that kills `TDD-0031`'s recorded equivalent mutant, and the kill is measured per
+  assertion.** Under `F1`, `TDD-0031` fails on its SEVERITY claim (`expected 'warning' to be 'info'`,
+  `exitCode.test.ts:185`) and its exit-code claim stays **green** — exactly what its docblock recorded,
+  because `--fail-on error` reads `summary.error` alone. `TDD-0034`'s exit-code claim is the one that
+  reddens. So the mutant that was invisible to `TC-0006-0029`'s exit-code assertion is now visible,
+  and `DR-0006-0004`'s `info`-versus-`warning` choice is discriminated.
+- **Reach of `F1`, stated because it is NOT site-local and the standing brief forbids leaving that
+  implicit.** Over the 13-file closure: `Tests 7 failed | 62 passed (69)`, reddening seven tests in five
+  files — `TDD-0029`, `TDD-0031`, `TDD-0033`, `TDD-0034`, `TDD-0035`, `TDD-0038`, `TDD-0040`. Six rows
+  read the same emission arm's severity, so `F1` is a shared-predicate mutation. What is unique to this
+  row is not the severity observation but its **exit-code consequence under `--fail-on warning`**, which
+  no other test in the closure asserts.
+- **GREEN command / result** (predicate intact, after the restore verified clean):
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts`
+  -> `Tests 2 passed (2)`, exit 0.
+- **Closure**, as a literal command with full paths, from `packages/qfai` — the 12-path doctor closure
+  plus this new file:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts tests/integration/spec0006WorkflowsIntegrity.drift.test.ts tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts tests/integration/spec0006WorkflowsIntegrity.exitCode.test.ts tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts tests/integration/spec0006DoctorProbeOrder.test.ts tests/cli/doctor.test.ts tests/cli/doctorConfigSeverity.test.ts tests/integration/doctorSpec0006.test.ts tests/e2e/spec0006DoctorProbeOrderE2E.test.ts tests/unit/shared/text.test.ts`
+  -> `Test Files 13 passed (13)` / `Tests 69 passed (69)`, exit 0.
+- **What this row's `summary.info >= 1` claim does NOT discriminate**, recorded so no reader mistakes it
+  for an oracle: the bare install already contributes four `info` checks (`paths.specsDir`,
+  `paths.contractsDir`, `paths.discussionDir`, `guardrails.present`), so the claim holds at 4 with the
+  advisory absent or re-severitied. It is asserted because the TC asks for it. The discriminating claim
+  is `summary.warning`.
+- **Guard #3 is scoped to OTHER check ids on purpose.** The whole-summary form is also true on this
+  fixture and IS asserted — as a claim. It cannot also be the guard: it reddens under `F1`, and a hard
+  guard that reddens aborts the `it` before the claims execute, leaving the oracle unmeasurable.
+  `TDD-0031`'s guard #3 makes the same move one severity along.
+
+### TDD-0035
+
+- **TC-Refs**: `TC-0006-0033` (AC-0006-0025 / EX-0006-0026), the control for `TC-0006-0032`. **Layer**:
+  Unit as declared; same file, same placement argument as `TDD-0034`.
+- **Revision / Satisfied-by / RED failure mode**: as `TDD-0034` — `falsifiability`, `Satisfied-by`
+  `TDD-0029`, gate item 4 waived, no production change.
+- **Falsifiability mutation `F2`** — base `6d81eaae:packages/qfai/src/cli/commands/doctor.ts` (blob
+  `a2a92ca0`), mutant blob `f3697037`. Needle, measured **unique**, one line:
+
+```text
+  return summary.warning + summary.error > 0;
+```
+
+  Replacement: `  return summary.error > 0;` — the warning branch of `shouldFailDoctor` stops counting
+  warnings.
+- **Falsifiability result**: `Tests 1 failed | 1 passed (2)`, exit 1. **Exactly one** assertion reddens —
+  this row's exit-code claim — and `TDD-0034` stays green, because it asserts exit 0 either way. So `F1`
+  and `F2` are **disjoint on this file**: each row has a mutation the other survives, which is what makes
+  the pair a control rather than two views of one predicate.
+- **Reach of `F2`**: over the 13-file closure, `Tests 2 failed | 67 passed (69)` — this row and
+  `tests/cli/doctor.test.ts` "fails with --fail-on warning when warnings exist".
+- **So `F2` alone does not establish that this row is non-redundant, and that is recorded rather than
+  glossed.** A shipped test already covers "`--fail-on warning` catches a warning". What this row adds is
+  the CONJUNCTION the TC asks for: the flag catches an unrelated warning **while a drift advisory is
+  present and stays `info`** — the fixture no other test builds. The second claim (severity still `info`)
+  is what carries that half, and it reddens under `F1`.
+- **GREEN command / result**: the same file-scoped command as `TDD-0034` — `Tests 2 passed (2)`, exit 0.
+  Same 13-file closure: `Test Files 13 passed (13)` / `Tests 69 passed (69)`, exit 0.
+- **Guard #3 asserts the id LIST, not a count.** A count of 1 is also satisfied by some other check
+  having gone `warning` while `paths.testsDir` was quietly created, and then exit 1 would be attributed
+  to the wrong cause. `toEqual(["paths.testsDir"])` fixes the cause.
+
+### Restoration was verified externally, not in a `finally`
+
+Both mutations ran through a harness that, after each restore, runs `git checkout HEAD -- <path>` and
+then `git diff --exit-code -- <path>` and **exits non-zero if the file is not clean**, followed by a
+final `git status --short -- packages/qfai/src`. That is the standing consequence recorded earlier in
+this slice: an agent- or process-level crash defeats a `finally`, which is how a mutant was once left in
+the tree here. Both checks reported clean.
+
+### Gate items NOT satisfied for these two rows, stated plainly
+
+**The two blocking reviewer verdicts (`implementation-reviewer`, `completion-reviewer`) were not
+obtained.** This session is operating under an instruction not to spawn delegated agents, and those
+gates are agent-delivered. Every other gate item is measured above: the correct test was written first
+and proven falsifiable by mutation, GREEN was observed with the predicate intact, refactor was verified
+(the file-scoped run is identical before and after the restore), the closure passes, `ci:lint` exits 0
+across all ten members, and no production file changed.
+
+So these rows are **implemented, not review-closed**, and their `Status` is `refactor` — which is
+exactly the distinction `.qfai/steering/2026-08-17-chg-007-spec-0006-review-closure-scope.md` §1 found
+the ledger has no column for. Recording it here is the only place a reader can learn it. Do not read
+these two rows' `refactor` as "waiting on an external gate"; read it as "reviews not run".
+
 ## The drift path's digest basis has no oracle — measured properly, and the record's warrant was wrong
 
 `TDD-0030`'s `drift.test.ts` carries a disclosure that the comparison basis is newline-**normalized**

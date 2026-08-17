@@ -25,7 +25,7 @@
  * `isolate: true` default holds, and neither config file pins it. Every other
  * suite in this family calls the pool factory at its own top level.
  */
-import { appendFile, mkdir, rm } from "node:fs/promises";
+import { appendFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { runDoctor } from "../../src/cli/commands/doctor.js";
@@ -94,6 +94,101 @@ export async function editShippedWorkflow(dir: string, name: string): Promise<vo
 /** Removes an installed shipped workflow from the adopter tree. */
 export async function deleteShippedWorkflow(dir: string, name: string): Promise<void> {
   await rm(adopterWorkflowPath(dir, name), { force: true });
+}
+
+/**
+ * The doctor checks a bare `qfai init` tree leaves at `warning`. MEASURED on a
+ * freshly seeded tree, not reasoned about: five, on an install that reported
+ * success.
+ *
+ * This list exists because `--fail-on warning` reads `summary.warning +
+ * summary.error`, a whole-run total with no per-check exclusions, so a row
+ * asserting exit 0 on that flag needs every OTHER warning gone. `qfai init` alone
+ * does not deliver that state — the opposite of what "a clean tree" suggests.
+ *
+ * Enumerated rather than discovered at run time, and the difference is
+ * load-bearing. A helper that filtered the live run for `severity === "warning"`
+ * and silenced whatever it found would keep working when a later release adds a
+ * sixth warning — and would silently change what the fixture MEANS, because the
+ * control row's "exactly one unrelated warning" would then be one of an unknown
+ * set. With a literal list, a sixth warning breaks a caller's guard instead.
+ */
+export const BARE_INIT_WARNING_IDS = [
+  "paths.srcDir",
+  "paths.testsDir",
+  "paths.outDir",
+  "output.validateJson",
+  "traceability.testGlobs",
+] as const;
+
+/**
+ * The subset of `BARE_INIT_WARNING_IDS` a caller may ask to LEAVE warning.
+ *
+ * Narrower than the full list, and not by preference. `output.validateJson`
+ * resolves under `paths.outDir`, so quieting the former creates the directory the
+ * latter looks for: the two cannot be varied independently, and offering
+ * `paths.outDir` here would hand back a tree with a warning count the caller did
+ * not ask for. These three each answer a distinct probe with no shared operand.
+ */
+export type LeavableWarningId = "paths.srcDir" | "paths.testsDir" | "traceability.testGlobs";
+
+/**
+ * Brings a seeded adopter tree to `summary.warning === 0`, optionally leaving
+ * exactly ONE named warning standing.
+ *
+ * Each repair is the minimum the check's own condition asks for, read from
+ * `src/core/doctor.ts` rather than guessed:
+ *
+ * - `paths.*` tests `exists(resolved)`, so an empty directory answers it;
+ * - `output.validateJson` tests `exists(validateJsonAbs)` and nothing else, so
+ *   file CONTENT is out of scope — `{}` is written rather than a synthesized
+ *   report, because a fixture that fabricates a plausible-looking validate.json
+ *   invites a later reader to trust its numbers;
+ * - `traceability.testGlobs` warns on `globs.length === 0`; with globs present the
+ *   check only warns again when scenario files exist AND none match, and a tree
+ *   with no `.qfai/specs` has no scenarios. So a non-empty list suffices and it
+ *   does not have to match a real file.
+ *
+ * The config edit asserts its needle occurs exactly once and THROWS otherwise.
+ * Nothing type-checks this tree and a silent no-op here would surface as a row
+ * failing for a fixture reason with the fixture reported as applied — so it fails
+ * loudly at the edit instead of quietly at the assertion.
+ */
+export async function quietUnrelatedWarnings(
+  dir: string,
+  options?: { leaveWarning?: LeavableWarningId },
+): Promise<void> {
+  const leave = options?.leaveWarning;
+
+  if (leave !== "paths.srcDir") {
+    await mkdir(path.join(dir, "src"), { recursive: true });
+  }
+  if (leave !== "paths.testsDir") {
+    await mkdir(path.join(dir, "tests"), { recursive: true });
+  }
+
+  // `paths.outDir` and `output.validateJson` in one step, in that order: the
+  // second cannot be satisfied without the first, which is why neither is
+  // `LeavableWarningId`.
+  await mkdir(path.join(dir, ".qfai", "report"), { recursive: true });
+  await writeFile(path.join(dir, ".qfai", "report", "validate.json"), "{}", "utf-8");
+
+  if (leave !== "traceability.testGlobs") {
+    const configPath = path.join(dir, "qfai.config.yaml");
+    const config = await readFile(configPath, "utf-8");
+    const needle = "    testFileGlobs: []";
+    const occurrences = config.split(needle).length - 1;
+    if (occurrences !== 1) {
+      throw new Error(
+        `quietUnrelatedWarnings: expected exactly 1 "${needle}" in ${configPath}, found ${occurrences}`,
+      );
+    }
+    await writeFile(
+      configPath,
+      config.replace(needle, () => "    testFileGlobs:\n      - tests/**/*.test.ts"),
+      "utf-8",
+    );
+  }
 }
 
 /**
