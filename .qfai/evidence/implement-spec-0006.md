@@ -1256,7 +1256,13 @@ was used anywhere in round 2 — file-scoped runs only, per the corrected guard.
 
 ### TDD-0029
 
-**Round 1: `refactor` → `review-fix`. Round 2: rework, re-review pending.**
+**Round 1: `refactor` → `review-fix`. Round 2: rework, verdicts delivered. Round 2b (`6c7cc2d9`) and a
+final source pass (`f7743ce9`) followed, and `f7743ce9` added a fourth `it` — so this row's bytes moved
+after its last verdict and it re-enters review on 2026-08-17.**
+_Corrected 2026-08-17: this line read “re-review pending”, which stopped being true two rounds before
+the row's bytes stopped moving. The corrected sequence is below; the later rounds live under sibling
+`##` headings rather than under this anchor, which is the locality defect this row was already flagged
+for._
 
 - **TC-Refs**: TC-0006-0027 — anchor AC-0006-0021 / BR-0006-0018. Tier **T2**, reviewed alone (group G1).
 - **Test file**: `packages/qfai/tests/integration/spec0006WorkflowsIntegrity.drift.test.ts`
@@ -1324,7 +1330,26 @@ cannot distinguish two rounds whose entry names and statuses are identical.
   (`info=4 warning=352 error=2`) with `QFAI-TEST-001` at 0 and `TC-0006-0027` out of the
   `QFAI-ATDD-112` list. PASS under the slice's three-part criterion, whose **route** is itself an
   open blocking finding routed to the user (spec review F3).
-- **Round 2: verdicts** — pending.
+- **Round 2: verdicts** — delivered, not pending. `implementation-reviewer` **PASS**, and
+  `qa-gatekeeper` **PASS** on the observation gate; `completion-reviewer` returned REVISE and its
+  blockers were discharged at round 2b. Both live under the sibling heading
+  `## Round-2 verdicts, and the measurement that settles the one blocking finding`.
+  _Corrected 2026-08-17: this line read “pending” and was false from the moment the very next
+  section was written. It is the locality defect round 2 already raised against this row — the field
+  holds prose while the literal lives outside the subsection the ledger's anchor points at._
+- **Round 2b (`6c7cc2d9`) and the final source pass (`f7743ce9`)** landed after those verdicts, and
+  neither carries `Round N:`-prefixed fields under this anchor; they sit at the sibling headings
+  `## Round-2b verification: PASS — B1 discharged, with three record errors of mine still to clear`
+  and `## Final source pass: two false docstring claims struck, the guard hoisted`. `f7743ce9` is the
+  material one: it added a **fourth unconditionally-reached `it`** to this row's describe and rewrote
+  production docstrings, so the round-2 verdicts do not cover the bytes this row now ships.
+- **Measurement at HEAD, 2026-08-17**, file-scoped with no `-t`, run from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.drift.test.ts`
+  → `Test Files 1 passed (1)` / `Tests 6 passed (6)`, exit 0. Blobs at that run: test file
+  `drift.test.ts` `1d0e16a5`; production `core/doctor/workflowsIntegrity.ts` `bad123d7`,
+  `core/doctor.ts` `ee31f4dd`, `cli/commands/doctor.ts` `a2a92ca0`. The 6 is this row's four `it`s
+  plus TDD-0030's two in the same file — the two rows share `drift.test.ts`, so a file-scoped count
+  is not a per-row count, and the earlier `3` was never re-derived after either addition.
 
 
 ## Round-2 verdicts, and the measurement that settles the one blocking finding
@@ -2517,7 +2542,7 @@ round 7 removed assertions rather than tests. The full serial suite figure below
 
 | Scope | Result |
 | --- | --- |
-| TDD-0029 selector, file-scoped, no `-t` | `Tests 3 passed (3)`, exit 0 |
+| TDD-0029 selector, file-scoped, no `-t` | `Tests 3 passed (3)`, exit 0 **at G3** — **corrected 2026-08-17, the figure is stale**: `f7743ce9` added a fourth unconditionally-reached `it` to this row's describe and TDD-0030's describe later added two more to the same file, so the same command now gives `Tests 6 passed (6)`, exit 0 |
 | TDD-0033 selector, file-scoped, no `-t` | `Tests 1 passed (1)`, exit 0 |
 | `tests/unit/shared/text.test.ts` | `Tests 4 passed (4)`, exit 0 |
 | Wide closure, 18 selectors | `Test Files 16 passed \| 2 skipped (18)` / `Tests 169 passed \| 14 skipped (183)`, exit 0 |
@@ -3228,7 +3253,7 @@ cycles.** *Header corrected in place: it read "`completion-reviewer` PASS at `85
 review live" for six rounds, so a reader who stopped here got 7 August. `completion-reviewer`'s round-1
 PASS was **six rounds stale** and was re-run at round 6 — it returned REVISE, and its findings are the B1-B10
 set recorded below. The `Revision:` field immediately following is round 1's and is retained as history;
-the current revision is `152dc587` (code and record).* **Currency rule, adopted after this field went
+the current revision is `152dc587` (code and record).* **Corrected 2026-08-17, and the correction is the rule's own subject.** That claim was already two rounds stale when written — round 8 (`32a4e542`) and round 9 (`6b75d5aa`) landed after it — and it is now five commits stale, because the row's test file moved three more times under *sibling* work: `e1ce8747`, `2e0016e7` and `04e0a4f2`, all TDD-0038 / TDD-0039 discharging a cross-row precondition on this row's guards. Measured: `spec0006WorkflowsIntegrity.repairText.test.ts` is blob `1e52b7d2` at `6b75d5aa` and `49f488ff` at HEAD. **The landing revision for this row's record is `04e0a4f2`**, not `152dc587`. Worth naming as a class rather than a slip: the currency rule stated in the next sentence assumes a row's bytes move only in that row's own rounds, and here they moved in another row's.* **Currency rule, adopted after this field went
 stale twice: a revision claim advances with the round, and this field names the *landing* revision by
 rule rather than by whatever value was true when it was written. Round 8 runs a mechanical check — grep
 this section for any revision hash other than the landing one — before its commit.*
