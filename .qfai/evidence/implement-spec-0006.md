@@ -1381,6 +1381,38 @@ cannot distinguish two rounds whose entry names and statuses are identical.
   empty at the end.
 
 
+#### Authoritative record at `ccb17b9e` — Option A form
+
+> **Scope of this block, stated because an unscoped superseding clause once voided later figures in
+> this file.** It governs **this row only**, and only for the fields it names: `Revision`, GREEN,
+> `Refactor verify`, closure, and the currency of the Oracle proof. Everything above it stays as the
+> record of the round that wrote it — each of those figures was true at the revision it names, and none
+> is being called false. What changed is the rule: `CR-20260817-0002` Option A records the revision and
+> derives the blob, because a written blob diverges from its source when rows share files. Blob
+> enumerations above are therefore historical, not wrong.
+
+- **Revision**: `ccb17b9e`. It is the last commit that changed any file these observations cover; this
+  block lands in a record-only commit, which `references/evidence-revision.md` states does not stale an
+  observation, since it covers no file any observation ran against.
+- **GREEN command**, file-scoped with no `-t` (`-t` is a regex — `CR-20260817-0001`), from
+  `packages/qfai`: `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.drift.test.ts`
+- **GREEN result**: `Tests 6 passed (6)`, exit 0.
+- **Refactor verify command / result**: the same command, re-run after every change this round landed —
+  `Tests 6 passed (6)`, exit 0. Identical to GREEN because nothing this round touched an assertion.
+- **Closure**, as a literal command with full paths and no bare stems, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.drift.test.ts tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts tests/integration/spec0006WorkflowsIntegrity.exitCode.test.ts tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts tests/integration/spec0006DoctorProbeOrder.test.ts tests/cli/doctor.test.ts tests/cli/doctorConfigSeverity.test.ts tests/integration/doctorSpec0006.test.ts tests/e2e/spec0006DoctorProbeOrderE2E.test.ts tests/unit/shared/text.test.ts`
+  → `Test Files 12 passed (12)` / `Tests 67 passed (67)`, exit 0.
+- **Gate**: `validate --profile tdd --fail-on error` gives `info=4 warning=352 error=2` — the Stage 0
+  baseline exactly, so the step-4 substitution's clause 3 holds. `ci:lint` exits 0 across all ten
+  members, checked by redirect rather than through a pipe.
+- **Oracle proof — re-cited, not re-run.** `M2a` and `M2b` were re-derived earlier this round against
+  the reader as it then stood, and a needle triage has since confirmed both needles still occur
+  **exactly once** in `core/doctor/workflowsIntegrity.ts` at this revision. Under Option A that is
+  sufficient: the record's join key is base revision + needle text, and both halves hold. The mutant
+  hashes stay written because no revision determines them.
+- The file holds six tests and four of the `it`s are this row's; the other two are `TDD-0030`'s. A
+  file-scoped count is a file count.
+
 ## Round-2 verdicts, and the measurement that settles the one blocking finding
 
 ### `implementation-reviewer`: PASS
@@ -2094,6 +2126,47 @@ record that it is unfilled.
   (`info=4 warning=352 error=2`), `QFAI-TEST-001` = 0, `TC-0006-0031` out of the `QFAI-ATDD-112` list.
   PASS under the slice criterion, whose route remains `CR-20260807-0001`'s open question.
 
+#### Authoritative record at `ccb17b9e` — Option A form
+
+> **Scope of this block, stated because an unscoped superseding clause once voided later figures in
+> this file.** It governs **this row only**, and only for the fields it names: `Revision`, GREEN,
+> `Refactor verify`, closure, and the currency of the Oracle proof. Everything above it stays as the
+> record of the round that wrote it — each of those figures was true at the revision it names, and none
+> is being called false. What changed is the rule: `CR-20260817-0002` Option A records the revision and
+> derives the blob, because a written blob diverges from its source when rows share files. Blob
+> enumerations above are therefore historical, not wrong.
+
+- **Revision**: `ccb17b9e`. It is the last commit that changed any file these observations cover; this
+  block lands in a record-only commit, which `references/evidence-revision.md` states does not stale an
+  observation, since it covers no file any observation ran against.
+- **GREEN command**, file-scoped with no `-t` (`-t` is a regex — `CR-20260817-0001`), from
+  `packages/qfai`: `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts`
+- **GREEN result**: `Tests 2 passed (2)`, exit 0.
+- **Refactor verify command / result**: the same command, re-run after every change this round landed —
+  `Tests 2 passed (2)`, exit 0. Identical to GREEN because nothing this round touched an assertion.
+- **Closure**, as a literal command with full paths and no bare stems, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.drift.test.ts tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts tests/integration/spec0006WorkflowsIntegrity.exitCode.test.ts tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts tests/integration/spec0006DoctorProbeOrder.test.ts tests/cli/doctor.test.ts tests/cli/doctorConfigSeverity.test.ts tests/integration/doctorSpec0006.test.ts tests/e2e/spec0006DoctorProbeOrderE2E.test.ts tests/unit/shared/text.test.ts`
+  → `Test Files 12 passed (12)` / `Tests 67 passed (67)`, exit 0.
+- **Gate**: `validate --profile tdd --fail-on error` gives `info=4 warning=352 error=2` — the Stage 0
+  baseline exactly, so the step-4 substitution's clause 3 holds. `ci:lint` exits 0 across all ten
+  members, checked by redirect rather than through a pipe.
+- **Oracle proof — a defect Option A does not reach, named rather than re-cited.** A triage found that
+  **six of this row's seven mutations record no needle at all**: they are recorded as *intent*
+  ("provenance gate removed", "joined paths dropped from the `message` template"), which makes
+  "does the needle still resolve" unanswerable as written. That is a reproducibility gap, not a
+  currency one, and re-citing by revision cannot close it.
+  - Unique anchors at this revision **do** exist for `M3`, `M4`, `M5` and `M6`, and for `M1a`'s
+    comparison-set domain — so the review's claim that no textual-identity substitute was available
+    on the emitter side is **measured false**.
+  - `M3`'s substitute was **run**, not merely derived: it reddens this row's live control on the
+    deep-equality assertion the record names. It also reddens `TDD-0038`'s identically-worded sibling
+    in the same file, which is why the record's older single-test figure is a **pre-`TDD-0038` file
+    count** rather than a per-row one.
+  - `M1b` is **inherently multi-edit** — restoring the pre-fix form needs an added import — and this
+    file already says so at another row. Any equivalent is multi-edit too.
+  - `M6`'s recorded literal was **never unique**, at its base or now. Same class as `TDD-0030`'s two.
+- The file holds two tests; the other is `TDD-0038`'s.
+
 ### Oracle proof: three mutations, because one leaves two assertions unexercised
 
 | Mutation | Blob chain | Reddens |
@@ -2806,6 +2879,47 @@ Closed set of what remains, per `completion-reviewer`'s ruling:
   (spec-0006 down from 9 to 6). Step 4 exits 1 on the two baseline cross-spec errors —
   `CR-20260807-0001`'s open question, identical to the other two rows.
 
+#### Authoritative record at `ccb17b9e` — Option A form
+
+> **Scope of this block, stated because an unscoped superseding clause once voided later figures in
+> this file.** It governs **this row only**, and only for the fields it names: `Revision`, GREEN,
+> `Refactor verify`, closure, and the currency of the Oracle proof. Everything above it stays as the
+> record of the round that wrote it — each of those figures was true at the revision it names, and none
+> is being called false. What changed is the rule: `CR-20260817-0002` Option A records the revision and
+> derives the blob, because a written blob diverges from its source when rows share files. Blob
+> enumerations above are therefore historical, not wrong.
+
+- **Revision**: `ccb17b9e`. It is the last commit that changed any file these observations cover; this
+  block lands in a record-only commit, which `references/evidence-revision.md` states does not stale an
+  observation, since it covers no file any observation ran against.
+- **GREEN command**, file-scoped with no `-t` (`-t` is a regex — `CR-20260817-0001`), from
+  `packages/qfai`: `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.drift.test.ts`
+- **GREEN result**: `Tests 6 passed (6)`, exit 0.
+- **Refactor verify command / result**: the same command, re-run after every change this round landed —
+  `Tests 6 passed (6)`, exit 0. Identical to GREEN because nothing this round touched an assertion.
+- **Closure**, as a literal command with full paths and no bare stems, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.drift.test.ts tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts tests/integration/spec0006WorkflowsIntegrity.exitCode.test.ts tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts tests/integration/spec0006DoctorProbeOrder.test.ts tests/cli/doctor.test.ts tests/cli/doctorConfigSeverity.test.ts tests/integration/doctorSpec0006.test.ts tests/e2e/spec0006DoctorProbeOrderE2E.test.ts tests/unit/shared/text.test.ts`
+  → `Test Files 12 passed (12)` / `Tests 67 passed (67)`, exit 0.
+- **Gate**: `validate --profile tdd --fail-on error` gives `info=4 warning=352 error=2` — the Stage 0
+  baseline exactly, so the step-4 substitution's clause 3 holds. `ci:lint` exits 0 across all ten
+  members, checked by redirect rather than through a pipe.
+- **Oracle proof — triaged mutation by mutation, and two findings survive Option A.** Of the fourteen
+  rework mutants, **eight resolve unchanged** at this revision and need only re-citing. The rest:
+  - `R4` / `R4b` are **broken as recorded**: the needle's literal is now the module constant
+    `WORKFLOWS_INTEGRITY_TITLE`, read by three emission arms, so the mutation is no longer
+    site-local. Re-derived and measured; the equivalent reddens **this row's title assertion alone**,
+    with the two sibling suites green, so the extraction changed the mutation's **kind** and not its
+    reach. The extracting commit is `48c7930e`, measured with `git log -S`; an earlier review
+    attributed it to `2e0016e7`, whose hunk on that file is comment-only.
+  - `G2-R7` / `R8` **moved**: their needles gained a second occurrence at the same commit. Current
+    unique needles were derived by extending each upward by one line, and both reproduce the recorded
+    result — `G2-R7` the length claim alone, `R8` the key-set claim alone.
+  - **`R9` and `G2-R10` were never unique, at their recorded base or now** — three and ten
+    occurrences respectively, at both. So the table's blanket sentence that every row asserted
+    needle-uniqueness was **false when written** for those two. Option A does not reach this: it is a
+    needle defect, not a citation defect. Unique needles now exist for both, derived the same way, and
+    both reproduce their recorded results.
+
 ### Oracle proof: ten per-assertion mutants plus two clause-level
 
 **Count corrected from "nine".** The table below carries `C1`-`C7` (seven claim assertions) plus
@@ -3419,6 +3533,37 @@ this section for any revision hash other than the landing one — before its com
   `QFAI-TEST-001` = 0, `TC-0006-0030` out of the `QFAI-ATDD-112` list — spec-0006's set is down from 6
   to 5. Step 4 exits 1 on the two cross-spec errors alone, so the row stays at `refactor` under
   `CR-20260807-0001`, whose blocked set names it.
+
+#### Authoritative record at `ccb17b9e` — Option A form
+
+> **Scope of this block, stated because an unscoped superseding clause once voided later figures in
+> this file.** It governs **this row only**, and only for the fields it names: `Revision`, GREEN,
+> `Refactor verify`, closure, and the currency of the Oracle proof. Everything above it stays as the
+> record of the round that wrote it — each of those figures was true at the revision it names, and none
+> is being called false. What changed is the rule: `CR-20260817-0002` Option A records the revision and
+> derives the blob, because a written blob diverges from its source when rows share files. Blob
+> enumerations above are therefore historical, not wrong.
+
+- **Revision**: `ccb17b9e`. It is the last commit that changed any file these observations cover; this
+  block lands in a record-only commit, which `references/evidence-revision.md` states does not stale an
+  observation, since it covers no file any observation ran against.
+- **GREEN command**, file-scoped with no `-t` (`-t` is a regex — `CR-20260817-0001`), from
+  `packages/qfai`: `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts`
+- **GREEN result**: `Tests 2 passed (2)`, exit 0.
+- **Refactor verify command / result**: the same command, re-run after every change this round landed —
+  `Tests 2 passed (2)`, exit 0. Identical to GREEN because nothing this round touched an assertion.
+- **Closure**, as a literal command with full paths and no bare stems, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.drift.test.ts tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts tests/integration/spec0006WorkflowsIntegrity.exitCode.test.ts tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts tests/integration/spec0006DoctorProbeOrder.test.ts tests/cli/doctor.test.ts tests/cli/doctorConfigSeverity.test.ts tests/integration/doctorSpec0006.test.ts tests/e2e/spec0006DoctorProbeOrderE2E.test.ts tests/unit/shared/text.test.ts`
+  → `Test Files 12 passed (12)` / `Tests 67 passed (67)`, exit 0.
+- **Gate**: `validate --profile tdd --fail-on error` gives `info=4 warning=352 error=2` — the Stage 0
+  baseline exactly, so the step-4 substitution's clause 3 holds. `ci:lint` exits 0 across all ten
+  members, checked by redirect rather than through a pipe.
+- **Oracle proof — re-cited.** The row's mutation needles resolve at this revision; the base-blob
+  citations above are historical under Option A.
+- **Comment budget**: 362 lines by the single-basis count (`^[[:space:]]*(//|/\*|\*)`), unchanged
+  across this round's two docblock corrections. The cap is 361, so the file remains one over by that
+  classifier and did **not** grow; both corrected paragraphs were laid out to an exact line budget
+  after a first draft measured 363, rather than estimated.
 
 ### Carve-out excursion, disclosed (review finding M1)
 
@@ -6116,6 +6261,44 @@ the defective print. No other recorded measurement is multi-edit.
    assertion slipped into a row whose obligation is leg (b). Recorded for `delivery-planner`.
 2. The brief's §2 clause is fixed above, and §8's ruling is recorded, so neither is owed.
 
+#### Authoritative record at `ccb17b9e` — Option A form
+
+> **Scope of this block, stated because an unscoped superseding clause once voided later figures in
+> this file.** It governs **this row only**, and only for the fields it names: `Revision`, GREEN,
+> `Refactor verify`, closure, and the currency of the Oracle proof. Everything above it stays as the
+> record of the round that wrote it — each of those figures was true at the revision it names, and none
+> is being called false. What changed is the rule: `CR-20260817-0002` Option A records the revision and
+> derives the blob, because a written blob diverges from its source when rows share files. Blob
+> enumerations above are therefore historical, not wrong.
+
+- **Revision**: `ccb17b9e`. It is the last commit that changed any file these observations cover; this
+  block lands in a record-only commit, which `references/evidence-revision.md` states does not stale an
+  observation, since it covers no file any observation ran against.
+- **GREEN command**, file-scoped with no `-t` (`-t` is a regex — `CR-20260817-0001`), from
+  `packages/qfai`: `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts`
+- **GREEN result**: `Tests 2 passed (2)`, exit 0.
+- **Refactor verify command / result**: the same command, re-run after every change this round landed —
+  `Tests 2 passed (2)`, exit 0. Identical to GREEN because nothing this round touched an assertion.
+- **Closure**, as a literal command with full paths and no bare stems, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.drift.test.ts tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts tests/integration/spec0006WorkflowsIntegrity.exitCode.test.ts tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts tests/integration/spec0006DoctorProbeOrder.test.ts tests/cli/doctor.test.ts tests/cli/doctorConfigSeverity.test.ts tests/integration/doctorSpec0006.test.ts tests/e2e/spec0006DoctorProbeOrderE2E.test.ts tests/unit/shared/text.test.ts`
+  → `Test Files 12 passed (12)` / `Tests 67 passed (67)`, exit 0.
+- **Gate**: `validate --profile tdd --fail-on error` gives `info=4 warning=352 error=2` — the Stage 0
+  baseline exactly, so the step-4 substitution's clause 3 holds. `ci:lint` exits 0 across all ten
+  members, checked by redirect rather than through a pipe.
+- **Oracle proof — the cleanest case for Option A in this slice: re-cited, nothing re-run.** All five
+  mutations (`M1`, `M2`, `M3`, `M4`, `M6`) have needles that still occur **exactly once** at this
+  revision, even though the base blob they were recorded against is superseded. `M6`'s replacement
+  still references a constant that is present, so it still compiles. `M3` is multi-edit — restore in
+  reverse order.
+- **Line citations replaced by symbols.** Two citations in this section had drifted under insertions
+  above them: the comparison-set domain and `hasDrifted`'s absence answer. A line number is a currency
+  claim; follow the **symbol** — `Object.keys((await readInstallProvenance(root)).workflows)` for the
+  domain, and `hasDrifted`'s early `return false;` for the absence answer.
+- **Positive precedent, worth naming.** This row's *test docblock* records no blob and no base revision
+  of its own — it is already a pointer into this section rather than a copy. Under Option A it needed
+  no edit at all, and it is the shape the rule asks for.
+- The file holds two tests; the other is `TDD-0033`'s.
+
 ### TDD-0039
 
 **T2, escalated from T1 and reviewed alone (group G5). `todo → red → refactor`.** Section created
@@ -6259,6 +6442,41 @@ pair; every "19-selector" figure is that list plus four named files, and **futur
 command**. Added to the standing brief.
 
 ---
+
+#### Authoritative record at `ccb17b9e` — Option A form
+
+> **Scope of this block, stated because an unscoped superseding clause once voided later figures in
+> this file.** It governs **this row only**, and only for the fields it names: `Revision`, GREEN,
+> `Refactor verify`, closure, and the currency of the Oracle proof. Everything above it stays as the
+> record of the round that wrote it — each of those figures was true at the revision it names, and none
+> is being called false. What changed is the rule: `CR-20260817-0002` Option A records the revision and
+> derives the blob, because a written blob diverges from its source when rows share files. Blob
+> enumerations above are therefore historical, not wrong.
+
+- **Revision**: `ccb17b9e`. It is the last commit that changed any file these observations cover; this
+  block lands in a record-only commit, which `references/evidence-revision.md` states does not stale an
+  observation, since it covers no file any observation ran against.
+- **GREEN command**, file-scoped with no `-t` (`-t` is a regex — `CR-20260817-0001`), from
+  `packages/qfai`: `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts`
+- **GREEN result**: `Tests 1 passed (1)`, exit 0.
+- **Refactor verify command / result**: the same command, re-run after every change this round landed —
+  `Tests 1 passed (1)`, exit 0. Identical to GREEN because nothing this round touched an assertion.
+- **Closure**, as a literal command with full paths and no bare stems, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.drift.test.ts tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts tests/integration/spec0006WorkflowsIntegrity.exitCode.test.ts tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts tests/integration/spec0006DoctorProbeOrder.test.ts tests/cli/doctor.test.ts tests/cli/doctorConfigSeverity.test.ts tests/integration/doctorSpec0006.test.ts tests/e2e/spec0006DoctorProbeOrderE2E.test.ts tests/unit/shared/text.test.ts`
+  → `Test Files 12 passed (12)` / `Tests 67 passed (67)`, exit 0.
+- **Gate**: `validate --profile tdd --fail-on error` gives `info=4 warning=352 error=2` — the Stage 0
+  baseline exactly, so the step-4 substitution's clause 3 holds. `ci:lint` exits 0 across all ten
+  members, checked by redirect rather than through a pipe.
+- **Oracle proof — re-cited; all needles resolve.** `K1`, `K2` and the two prose witnesses hold at this
+  revision. `K2`'s recorded bare literal is not unique on its own, and the record already says the
+  needle spans the `title` and `message` lines; in that form it is unique. `M8` is an equivalent-mutant
+  note rather than a mutation, so it has no needle.
+- **The two false statements this section carried were exactly what Option A removes.** They were
+  test-file blob claims, written in one breath with two production blob claims. The production pair
+  was still true; the test-file pair broke — and it broke under a **sibling's** comment-only commit,
+  not under anything this row did. Both are gone rather than corrected, which is the point of the
+  rule: replacing them with the revision makes the record indifferent to which citation a later commit
+  happens to touch.
 
 ### TDD-0031
 

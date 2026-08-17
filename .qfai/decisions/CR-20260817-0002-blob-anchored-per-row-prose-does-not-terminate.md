@@ -5,11 +5,11 @@
 - Raised by: `/qfai-implement orchestrator, after fixing all 17 findings of one review round and measuring 43 in the next`
 - Raised at: `2026-08-17T00:00:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `resolved`
+- Approved by: `user` — "推奨の案で進めてください" (proceed with the recommended option), which is **A with C as the landing discipline**, since that is what the recommendation said
+- Approved at: `2026-08-17T00:00:00Z`
+- Approved option: `A`, with `C` adopted for the six rows already in flight
+- Applied at: `2026-08-18` — the contract at `729eb2ca`; the six rows' records in the child of `ccb17b9e` on this branch (`git log --format=%h --reverse ccb17b9e..HEAD | head -1`)
 - Superseded by: `-`
 - Blocked set: `spec-0006 TDD-0029, TDD-0030, TDD-0032, TDD-0033, TDD-0038, TDD-0039`
 
@@ -148,10 +148,64 @@ shipped-asset change; the in-flight record repair is `/qfai-implement`'s.
    coverage pinning the new wording.
 2. Repair the six rows' records once, atomically, writing every anchor in the commit that closes them.
 3. Re-derive the five structurally-broken oracle needles against the current source, naming for each
-   whether the mutation is still site-local — `2e0016e7` extracted `WORKFLOWS_INTEGRITY_TITLE`, so two of
-   them now move three emission sites at once and are no longer the mutation they were.
+   whether the mutation is still site-local.
+   > **Correction, measured after this CR was filed.** The commit that extracted
+   > `WORKFLOWS_INTEGRITY_TITLE` is **`48c7930e`**, found with `git log -S`; the `2e0016e7` written here
+   > was wrong — its hunk on that file is comment-only. And the consequence stated here was too strong:
+   > three emission arms do read the constant, so the mutation is no longer site-local, but re-deriving
+   > and running the equivalent reddens **`TDD-0030`'s title assertion alone**, with both sibling suites
+   > green. The extraction changed the mutation's _kind_, not its reach.
 4. Fill this CR's `Status`, `Approved option`, `Approved by/at`, `Applied at` and `## Resolution`.
 
 ## Resolution
 
-Pending.
+**Option A applied at `729eb2ca`; Option C applied to the six in-flight rows in the child of
+`ccb17b9e`.**
+
+### What Option A changed
+
+`references/evidence-revision.md` (asset SSOT, mirrored by `sync:ssot`) gained
+`## Blobs are derived — cite the revision, not the hash`, which states the rule, gives the
+shared-file mechanism as the reason, and carves out the one case no revision determines — a **mutant**
+blob, recorded as base revision + literal needle + literal replacement. Three `it`s were added to
+`packages/qfai/tests/assets/evidenceRevision.test.ts` across both mirrored trees to pin it.
+
+A second edit was needed that the options section had not anticipated. The staleness rule read
+"a commit that changes any file the observation covered invalidates it", and under a literal reading a
+row's own record-writing commit invalidated the record it was writing — so no shared-file group could
+ever be simultaneously current, including under Option C. The bullet now says what it always meant: a
+commit that changes **only the record** covers no file any observation ran against, so it does not
+stale one. "Measure at the tip, then commit the record and the `done` transition together." Without
+that clause Option C is not merely awkward, it is unsatisfiable.
+
+### What Option C delivered, and the two defects it did not reach
+
+All six rows closed in one commit, each with an authoritative block **inside** its own
+`### TDD-NNNN` section — inside, because the ledger's `Evidence` anchor points there and a correction
+filed under a sibling heading is a correction the reader never sees. The blocks carry the revision,
+the file-scoped GREEN command and result, the Refactor verify, the closure as a literal command, and
+the gate counts, all measured at `ccb17b9e`.
+
+The six `Evidence` cells were rewritten as the pointers the cell is specified to be. That was not
+tidying: **every one of the six carried derived counts of file contents, and every one was stale** —
+`closure 63 passed`, `360/477 comment lines`, `closure 19 selectors 174 passed`, `GREEN 1 passed`.
+Correcting them in place would have re-created the defect class one commit later, which is this CR's
+whole finding. The counts now exist once per row, at the tip.
+
+Two residual defects are **needle** defects, which Option A does not reach and this CR should not be
+read as closing. They are recorded in the rows' own blocks:
+
+- **Needles that were never unique**, at their recorded base or at HEAD: `TDD-0030`'s `R9` (three
+  occurrences) and `G2-R10` (ten), and `TDD-0033`'s `M6`. So the table's blanket sentence that every
+  row asserted needle-uniqueness was false when written for those three. Unique needles now exist for
+  all three and reproduce their recorded results.
+- **Mutations recorded as intent rather than as text**: six of `TDD-0033`'s seven. "Does the needle
+  still resolve?" is unanswerable when there is no needle. Unique anchors were derived for `M3`, `M4`,
+  `M5`, `M6` and `M1a`'s domain, and `M3`'s was run rather than only derived.
+
+### The triage vindicated A on its own terms
+
+`TDD-0038` is the clean case: its base blob is superseded, and **all five** of its needles still
+resolve uniquely at `ccb17b9e`. Nothing needed re-running — only re-citing. That is the whole claim of
+Option A in one row: the join key that survives commits is revision + needle text, and the blob was
+never carrying information the revision did not already fix.

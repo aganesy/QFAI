@@ -60,8 +60,15 @@ Every one of the seventeen findings is a record defect. Not one is a code defect
 - Figures age silently: `GREEN 3 passed` where the file now holds six tests; a closure count superseded
   five times; a mutation table whose base blob is no longer the row's bytes.
 
-`TDD-0039` is the limit case: its `Evidence` cell is a ~1,900-character narrative **carrying the payload**,
-and its anchor `#tdd-0039` resolves to nothing at all. The cell is specified as a pointer.
+`TDD-0039` was the limit case: its `Evidence` cell was a ~1,900-character narrative **carrying the
+payload**, and its anchor `#tdd-0039` resolved to nothing at all. The cell is specified as a pointer.
+
+> **Both halves are closed, and the dates matter for reading this entry.** The missing heading was
+> added at `3a9250bf`, which is _after_ this entry was written at `c9d73e9c` — so the sentence above
+> was true when written and went stale under my own fix. It is kept in the past tense rather than
+> deleted, because the finding is what justifies the consequence below it. The cell itself became a
+> pointer when the six rows closed under `CR-20260817-0002` Option C; all six anchors now resolve,
+> checked by matching the heading pattern against the ledger's six IDs rather than by eye.
 
 The standing brief already names the fix — "a false statement is edited where it lives" — and this round
 is the measurement of what ignoring it costs at scale.
@@ -126,6 +133,26 @@ is the measurement of what ignoring it costs at scale.
   reported success against text nobody could see. `node -p "JSON.stringify(line)"` is what exposed it.
   Author needles from a JSON byte dump, not from a render. This is the same family as the two hazards
   below and above it: the failure is silent and the command exits 0.
+- **A ledger `Evidence` cell must not carry a derived count of file contents.** All six rows closed
+  this round had one — a closure count, a comment-line ratio, a selector count, a per-file test count —
+  and all six were stale. The cell is a pointer; counts belong in the row's per-item block, where they
+  can be re-measured at the tip in one place. A count copied into a second location is a second thing
+  to keep current, and the copy is the one nobody re-measures.
+- **Close a shared-file group in one commit.** Rows sharing a test file cannot all be current under
+  incremental closure: each row's landing commit stales the siblings' citations. Measure at the tip,
+  then land every record and every `done` transition together. `CR-20260817-0002` records the
+  arithmetic; the enabling clause is that a record-only commit covers no file any observation ran
+  against, so it does not stale one.
+- **`String.replace` with a string replacement interprets `$` in the replacement**, and this entry is
+  where that bit. A paragraph being inserted contained a regex anchor followed by a closing code-span
+  backtick; that two-character sequence means _everything before the match_, so the writer spliced the
+  whole preceding file into the middle of a sentence — silently, exit 0. **Pass a function**, which
+  makes the text literal. This is the seventh instance in this slice of the same root cause: a needle
+  or a replacement handed to something that interprets it. Authoring the script as a file fixes the
+  _shell_ half of that family and not this half.
+  - What caught it was a check that looked pointless: a no-op pair asserting the front-matter date
+    still occurred exactly once. It reported **two**. Keep the redundant invariant — in a silent
+    failure class, the only thing that fires is a count nobody expected to change.
 - **The evidence file is CRLF in the working tree.** A multi-line needle joined with \n matches
   nothing under `.qfai/evidence/`, and the script reports `0 occurrences` — which reads as “already
   fixed” rather than as “wrong line endings”, the same silent shape as the shell-expansion hazard.
