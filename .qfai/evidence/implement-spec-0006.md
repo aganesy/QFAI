@@ -7285,7 +7285,12 @@ the advisory still `info`. Both TCs' Asserts were therefore observable before ei
 - **Test file**: `packages/qfai/tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts`
   (new; also carries `TDD-0035`). Helper added: `quietUnrelatedWarnings` in
   `tests/helpers/workflowsIntegrityFixtures.ts`.
-- **Revision**: `6d81eaae` plus this round's uncommitted test-only work; no production file was touched
+- **Revision**: `13c06411` — the commit these two rows LANDED in, and the one a reader should check
+  out. An earlier draft said "`6d81eaae` plus this round's uncommitted test-only work", which named
+  a base and a tree state rather than a revision, and went stale inside the very commit that
+  advanced the row. `references/evidence-revision.md` admits two forms, `<git rev>` and
+  `working-tree+<porcelain digest>`; "plus this round's work" is neither, and once the tree is clean
+  it addresses nothing. No production file was touched
   in either direction, verified by `git status --short -- packages/qfai/src` reporting clean after the
   mutation runs below.
 - **RED failure mode**: `falsifiability`. **Satisfied-by**: `TDD-0029` — the drift arm was written for
@@ -7343,11 +7348,41 @@ the advisory still `info`. Both TCs' Asserts were therefore observable before ei
   guard that reddens aborts the `it` before the claims execute, leaving the oracle unmeasurable.
   `TDD-0031`'s guard #3 makes the same move one severity along.
 
+
+#### Rework record at `f357d77a` — the fields the completion review found absent
+
+> Governs **this row only**, and only the fields it names. Everything above it stands as the record
+> of the round that wrote it.
+
+- **Revision**: `f357d77a` — the commit that landed the code half of the review rework, and the last
+  commit to change any file these observations cover. The record itself lands in a record-only
+  commit, which `references/evidence-revision.md` states does not stale an observation.
+- **Refactor verify command**, from `packages/qfai` — the field was ABSENT from this row, and prose
+  describing a mutation restore was standing in for it, which is a different observation:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts`
+- **Refactor verify result**: `Tests 2 passed (2)`, exit 0 — identical to GREEN, because the rework
+  changed only comments and prose.
+- **Closure**, as a literal command with full paths and no bare stems, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts tests/integration/spec0006WorkflowsIntegrity.drift.test.ts tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts tests/integration/spec0006WorkflowsIntegrity.exitCode.test.ts tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts tests/integration/spec0006DoctorProbeOrder.test.ts tests/cli/doctor.test.ts tests/cli/doctorConfigSeverity.test.ts tests/integration/doctorSpec0006.test.ts tests/e2e/spec0006DoctorProbeOrderE2E.test.ts tests/unit/shared/text.test.ts`
+  → `Test Files 14 passed (14)` / `Tests 71 passed (71)`, exit 0. Fourteen paths and not thirteen:
+  `declined.test.ts` reads the same production module, so it is inside the reverse-dependency
+  closure whether or not it existed when the row first ran.
+- **Gate**: `ci:lint` exits 0 across all ten members, checked by redirect rather than through a pipe.
+  `validate --profile tdd --fail-on error` gives `info=4 warning=364 error=2`. **That is no longer
+  the Stage 0 baseline of `warning=352`, and the difference is not this slice's**: spec-0017's first
+  change added a test file that 12 rows' selectors falsely resolve against, filed as
+  `CR-20260818-0001`. `error` is unchanged at 2.
+
 ### TDD-0035
 
 - **TC-Refs**: `TC-0006-0033` (AC-0006-0025 / EX-0006-0026), the control for `TC-0006-0032`. **Layer**:
   Unit as declared; same file, same placement argument as `TDD-0034`.
-- **Revision / Satisfied-by / RED failure mode**: as `TDD-0034` — `falsifiability`, `Satisfied-by`
+- **Revision**: `13c06411`, the commit this row landed in.
+- **Falsifiability command**, stated here rather than inherited, because the trio is three fields and
+  a cross-reference is not one of them — from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts`
+  with mutation `F2` applied.
+- **Satisfied-by / RED failure mode**: as `TDD-0034` — `falsifiability`, `Satisfied-by`
   `TDD-0029`, gate item 4 waived, no production change.
 - **Falsifiability mutation `F2`** — base `6d81eaae:packages/qfai/src/cli/commands/doctor.ts` (blob
   `a2a92ca0`), mutant blob `f3697037`. Needle, measured **unique**, one line:
@@ -7375,6 +7410,31 @@ the advisory still `info`. Both TCs' Asserts were therefore observable before ei
   having gone `warning` while `paths.testsDir` was quietly created, and then exit 1 would be attributed
   to the wrong cause. `toEqual(["paths.testsDir"])` fixes the cause.
 
+
+#### Rework record at `f357d77a` — the fields the completion review found absent
+
+> Governs **this row only**, and only the fields it names. Everything above it stands as the record
+> of the round that wrote it.
+
+- **Revision**: `f357d77a` — the commit that landed the code half of the review rework, and the last
+  commit to change any file these observations cover. The record itself lands in a record-only
+  commit, which `references/evidence-revision.md` states does not stale an observation.
+- **Refactor verify command**, from `packages/qfai` — the field was ABSENT from this row, and prose
+  describing a mutation restore was standing in for it, which is a different observation:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts`
+- **Refactor verify result**: `Tests 2 passed (2)`, exit 0 — identical to GREEN, because the rework
+  changed only comments and prose.
+- **Closure**, as a literal command with full paths and no bare stems, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts tests/integration/spec0006WorkflowsIntegrity.drift.test.ts tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts tests/integration/spec0006WorkflowsIntegrity.exitCode.test.ts tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts tests/integration/spec0006DoctorProbeOrder.test.ts tests/cli/doctor.test.ts tests/cli/doctorConfigSeverity.test.ts tests/integration/doctorSpec0006.test.ts tests/e2e/spec0006DoctorProbeOrderE2E.test.ts tests/unit/shared/text.test.ts`
+  → `Test Files 14 passed (14)` / `Tests 71 passed (71)`, exit 0. Fourteen paths and not thirteen:
+  `declined.test.ts` reads the same production module, so it is inside the reverse-dependency
+  closure whether or not it existed when the row first ran.
+- **Gate**: `ci:lint` exits 0 across all ten members, checked by redirect rather than through a pipe.
+  `validate --profile tdd --fail-on error` gives `info=4 warning=364 error=2`. **That is no longer
+  the Stage 0 baseline of `warning=352`, and the difference is not this slice's**: spec-0017's first
+  change added a test file that 12 rows' selectors falsely resolve against, filed as
+  `CR-20260818-0001`. `error` is unchanged at 2.
+
 ### Restoration was verified externally, not in a `finally`
 
 Both mutations ran through a harness that, after each restore, runs `git checkout HEAD -- <path>` and
@@ -7385,17 +7445,32 @@ the tree here. Both checks reported clean.
 
 ### Gate items NOT satisfied for these two rows, stated plainly
 
-**The two blocking reviewer verdicts (`implementation-reviewer`, `completion-reviewer`) were not
-obtained.** This session is operating under an instruction not to spawn delegated agents, and those
-gates are agent-delivered. Every other gate item is measured above: the correct test was written first
-and proven falsifiable by mutation, GREEN was observed with the predicate intact, refactor was verified
-(the file-scoped run is identical before and after the restore), the closure passes, `ci:lint` exits 0
-across all ten members, and no production file changed.
+**Three blocking agent verdicts were not obtained, not two.** `implementation-reviewer` and
+`completion-reviewer` are the two this section originally named. The third is **`qa-gatekeeper`**,
+which `manifest/agent-routing.yml` lists as a blocking agent in the `red` and `build` phases and
+which `SKILL.md` names as the authority in gate items 3 and 5. It was blocked by the same constraint
+— this session did not spawn delegated agents at the time these rows landed — and the earlier
+sentence named one consequence of that constraint and not the other. Under-stating the gap by a
+third is the same class of defect as over-stating a result.
 
-So these rows are **implemented, not review-closed**, and their `Status` is `refactor` — which is
-exactly the distinction `.qfai/steering/2026-08-17-chg-007-spec-0006-review-closure-scope.md` §1 found
-the ledger has no column for. Recording it here is the only place a reader can learn it. Do not read
-these two rows' `refactor` as "waiting on an external gate"; read it as "reviews not run".
+**Both reviewers have since reported, and both rows PASS on the implementation side.**
+`implementation-reviewer` returned PASS for `TDD-0034` (one Minor) and PASS for `TDD-0035`, having
+re-applied `F1` and `F2` from its own snapshots and reproduced this record's per-claim results.
+`completion-reviewer` returned REVISE on record grounds, and its findings are applied in this
+section and in the block below it. `qa-gatekeeper` was still not run.
+
+**What IS measured, stated as a list rather than as "everything else".** The sentence that stood
+here said every other gate item was measured, which was false while item 3's `qa-gatekeeper`
+confirmation was missing. Measured: the test's admissibility, GREEN with the predicate intact, the
+`Refactor verify` pair, the closure as a literal command, `ci:lint` across all ten members, and the
+`validate` counts — each recorded in the authoritative block for its row. Not measured: gate items 3
+and 5 (`qa-gatekeeper`), gate item 7 and 8 (the two reviewers, at the time of landing), and gate item
+10's same-revision clause, which cannot hold while zero of the four sub-agent observations exist.
+
+So these two rows are **implemented, not review-closed**, and their `Status` is `refactor` — which is
+exactly the distinction `.qfai/steering/2026-08-17-chg-007-spec-0006-review-closure-scope.md` §1
+found the ledger has no column for. Recording it here is the only place a reader can learn it. Do
+not read that `refactor` as "waiting on an external gate"; read it as "reviews not run".
 
 
 ## G8 / G9: `declined` lands in the payload, and the boundary keeps it out of the trigger
@@ -7408,7 +7483,8 @@ the boundary that pins what `TDD-0036`'s change deliberately did **not** do.
 - **TC-Refs**: `TC-0006-0034` (AC-0006-0026 / EX-0006-0027). **Layer**: Integration, as declared.
 - **Test file**: `packages/qfai/tests/integration/spec0006WorkflowsIntegrity.declined.test.ts` (new;
   also carries `TDD-0037`).
-- **Revision**: `13c06411` plus this round's work.
+- **Revision**: `3dbeeef6` — the commit this row LANDED in. The earlier "`13c06411` plus this
+  round's work" named a base, not a revision, and the block stating it is inside `3dbeeef6` itself.
 - **RED failure mode**: `assertion` — a genuine RED, admissible under
   `references/red-admissibility.md`: two assertion failures inside this row's own test, not a load or
   fixture error.
@@ -7443,27 +7519,82 @@ the boundary that pins what `TDD-0036`'s change deliberately did **not** do.
 - **`tsc --noEmit` exit 0.** Recorded because nothing type-checks a test file in this repository, so a
   production type change needs its own check rather than inheriting one from the suite.
 - **Regression scope, measured rather than reasoned.** `WorkflowsIntegrityDiff` is read by six rows'
-  suites, so the change was run against the whole package, not just the closure: the 14-file doctor
-  closure is `Test Files 14 passed (14)` / `Tests 70 passed (70)`, and the FULL package suite is
-  `Test Files 425 passed | 8 skipped (433)` / `Tests 4345 passed | 37 skipped (4382)`, exit 0.
+  suites, so the change was run against the whole package and not just the closure. Both figures
+  below were **wrong when this bullet was first written** and are corrected here rather than in a
+  later section: the closure was recorded as a count of files (`the 14-file doctor closure`) instead
+  of a literal command, which the standing brief forbids precisely because a reader then has to
+  reconstruct the list; and both totals predated `TDD-0037`'s test, which joined the same file in the
+  same commit. The literal command and the current results are in the authoritative block at the end
+  of this section. Re-measured at `f357d77a`: closure `Test Files 14 passed (14)` /
+  `Tests 71 passed (71)`; FULL package suite `Test Files 426 passed | 8 skipped (434)` /
+  `Tests 4351 passed | 37 skipped (4388)`, exit 0. The earlier `70` and `4345 (4382)` are superseded,
+  not disputed — each was true before the sibling row's test existed.
 - **Oracle proof — targeted at the claims the RED did NOT exercise.** The RED reddened CLAIMs 1 and 3.
   CLAIMs 2, 4 and 5 were already green before the production change, so the RED says nothing about
   whether they are live. One mutation each, and each reddens exactly one claim:
 
 | id    | base file                   | mutant blob | needle -> replacement                                                        | reddens |
 | ----- | --------------------------- | ----------- | ---------------------------------------------------------------------------- | ------- |
-| `M-A` | `src/core/doctor.ts`        | `043d5c27`  | the message template's `workflowsDiff.modified.join(", ")` -> `[...modified, ...declined].join(", ")` | CLAIM 4 |
-| `M-B` | `src/core/doctor.ts`        | `ea19166f`  | `modified: workflowsDiff.modified,` -> `modified: [],` (needle extended by the following `declined:` line, which is what makes it unique) | CLAIM 2 |
+| `M-A` | `src/core/doctor.ts`        | `043d5c27`  | `${workflowsDiff.modified.join(", ")}` -> `${[...workflowsDiff.modified, ...workflowsDiff.declined].join(", ")}` in the message template | CLAIM 4 |
+| `M-B` | `src/core/doctor.ts`        | `ea19166f`  | `modified: workflowsDiff.modified,` -> `modified: [],`, with the needle extended by the following `declined:` line | CLAIM 2 |
 | `M-C` | `src/cli/commands/doctor.ts`| `f3853988`  | `    return summary.error > 0;` -> `    return true;`                          | CLAIM 5 |
 
-  Every needle was measured to occur **exactly once** before it was applied. Each run is
-  `Tests 1 failed (1)`, exit 1, with the named claim's label in the failure and no other.
+  Every needle was measured to occur **exactly once** before it was applied, and each run reddens the
+  named claim and no other. Two corrections a reviewer measured, kept here beside what they correct:
+
+  - **`M-A`'s replacement was recorded in an abbreviated form that does not run.** It read
+    `[...modified, ...declined]`, and neither is a bound identifier at that site — the file
+    destructures `workflowsDiff` nowhere, so the abbreviation would throw `ReferenceError` inside
+    `createDoctorData`, before any claim executed, and could not have produced the recorded
+    single-claim result. The harness ran the qualified form; the table now carries it. An
+    abbreviation in a needle or a replacement is not an abbreviation, it is a different string.
+  - **`M-B`'s uniqueness warrant was false.** The extension by the following `declined:` line was
+    described as "what makes it unique"; measured, the un-extended
+    `        modified: workflowsDiff.modified,` occurs **exactly once** on its own. The extension is
+    harmless and the conclusion held; the reason given for it did not. Same true-conclusion,
+    false-warrant shape this file was corrected for at `2a9a2995`, two rows away from a correctly
+    measured instance in the same section.
+
+  **Per-run tally, corrected.** Each run was recorded as `Tests 1 failed (1)`. At `f357d77a` each of
+  `M-A` / `M-B` / `G2` / `G3` gives `Tests 1 failed | 1 passed (2)` — the file gained `TDD-0037`'s
+  test in the same commit, so the one-test figure was superseded on arrival.
+
+  **Independently reproduced.** An `implementation-reviewer` re-applied all seven recorded mutations
+  (`M-A`, `M-B`, `F1`, `F2`, `G1`, `G2`, `G3`) from its own byte snapshots, measured each needle
+  unique at first application, verified `git diff --exit-code -- packages/qfai/src` clean after every
+  one, and reported every reddening claim matching this record — including that `F1` reddens
+  `TDD-0031`'s severity claim while its exit-code claim stays green.
 - **Restore point was a byte SNAPSHOT of the working tree, not `HEAD`.** This row's production change
   is uncommitted while its mutations run, so `git checkout HEAD -- <path>` would have silently reverted
   the change under test and the suite would have failed for that reason instead of the mutation's.
   Restoration was verified by byte comparison against the snapshot after every mutation, and
   `git status --short -- packages/qfai/src` printed at the end — expected NON-empty here, carrying the
   row's own change and nothing else.
+
+
+#### Rework record at `f357d77a` — the fields the completion review found absent
+
+> Governs **this row only**, and only the fields it names. Everything above it stands as the record
+> of the round that wrote it.
+
+- **Revision**: `f357d77a` — the commit that landed the code half of the review rework, and the last
+  commit to change any file these observations cover. The record itself lands in a record-only
+  commit, which `references/evidence-revision.md` states does not stale an observation.
+- **Refactor verify command**, from `packages/qfai` — the field was ABSENT from this row, and prose
+  describing a mutation restore was standing in for it, which is a different observation:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts`
+- **Refactor verify result**: `Tests 2 passed (2)`, exit 0 — identical to GREEN, because the rework
+  changed only comments and prose.
+- **Closure**, as a literal command with full paths and no bare stems, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts tests/integration/spec0006WorkflowsIntegrity.drift.test.ts tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts tests/integration/spec0006WorkflowsIntegrity.exitCode.test.ts tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts tests/integration/spec0006DoctorProbeOrder.test.ts tests/cli/doctor.test.ts tests/cli/doctorConfigSeverity.test.ts tests/integration/doctorSpec0006.test.ts tests/e2e/spec0006DoctorProbeOrderE2E.test.ts tests/unit/shared/text.test.ts`
+  → `Test Files 14 passed (14)` / `Tests 71 passed (71)`, exit 0. Fourteen paths and not thirteen:
+  `declined.test.ts` reads the same production module, so it is inside the reverse-dependency
+  closure whether or not it existed when the row first ran.
+- **Gate**: `ci:lint` exits 0 across all ten members, checked by redirect rather than through a pipe.
+  `validate --profile tdd --fail-on error` gives `info=4 warning=364 error=2`. **That is no longer
+  the Stage 0 baseline of `warning=352`, and the difference is not this slice's**: spec-0017's first
+  change added a test file that 12 rows' selectors falsely resolve against, filed as
+  `CR-20260818-0001`. `error` is unchanged at 2.
 
 ### TDD-0037
 
@@ -7502,8 +7633,44 @@ the boundary that pins what `TDD-0036`'s change deliberately did **not** do.
   is outside the TC's Assert list; it is asserted because the check remains registered on this arm and
   this row is the only one positioned to see an `ok` reaching the exit-code aggregation.
 - **GREEN command / result**: the file-scoped command — `Tests 2 passed (2)`, exit 0. Full package
-  suite after both rows: `Test Files 425 passed | 8 skipped (433)` /
-  `Tests 4346 passed | 37 skipped (4383)`, exit 0.
+  suite after both rows, re-measured at `f357d77a`: `Test Files 426 passed | 8 skipped (434)` /
+  `Tests 4351 passed | 37 skipped (4388)`, exit 0. The earlier `4346 (4383)` is superseded by the
+  five tests spec-0017's first change added to an unrelated project.
+- **The `absent`-versus-`unreadable` boundary of this row's split has its only oracle in a SIBLING
+  suite**, which a reviewer measured and which is worth a reader knowing. Mutating
+  `.kind === "absent"` to `.kind !== "digest"` — folding an unreadable file into `declined` — reddens
+  **neither** test in this file; it reddens `TDD-0038`'s exact-list assertion in
+  `drift.test.ts`. The property is covered, and it is not covered here. If that suite is ever
+  narrowed, this field loses its only oracle for that boundary.
+
+
+#### Rework record at `f357d77a` — the fields the completion review found absent
+
+> Governs **this row only**, and only the fields it names. Everything above it stands as the record
+> of the round that wrote it.
+
+- **Revision**: `f357d77a` — the commit that landed the code half of the review rework, and the last
+  commit to change any file these observations cover. The record itself lands in a record-only
+  commit, which `references/evidence-revision.md` states does not stale an observation.
+- **Refactor verify command**, from `packages/qfai` — the field was ABSENT from this row, and prose
+  describing a mutation restore was standing in for it, which is a different observation:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts`
+- **Refactor verify result**: `Tests 2 passed (2)`, exit 0 — identical to GREEN, because the rework
+  changed only comments and prose.
+- **Closure**, as a literal command with full paths and no bare stems, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts tests/integration/spec0006WorkflowsIntegrity.drift.test.ts tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts tests/integration/spec0006WorkflowsIntegrity.exitCode.test.ts tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts tests/integration/spec0006DoctorProbeOrder.test.ts tests/cli/doctor.test.ts tests/cli/doctorConfigSeverity.test.ts tests/integration/doctorSpec0006.test.ts tests/e2e/spec0006DoctorProbeOrderE2E.test.ts tests/unit/shared/text.test.ts`
+  → `Test Files 14 passed (14)` / `Tests 71 passed (71)`, exit 0. Fourteen paths and not thirteen:
+  `declined.test.ts` reads the same production module, so it is inside the reverse-dependency
+  closure whether or not it existed when the row first ran.
+- **Gate**: `ci:lint` exits 0 across all ten members, checked by redirect rather than through a pipe.
+  `validate --profile tdd --fail-on error` gives `info=4 warning=364 error=2`. **That is no longer
+  the Stage 0 baseline of `warning=352`, and the difference is not this slice's**: spec-0017's first
+  change added a test file that 12 rows' selectors falsely resolve against, filed as
+  `CR-20260818-0001`. `error` is unchanged at 2.
+- **Falsifiability command**, the third field of the trio and previously absent — from
+  `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts`
+  with `G1`, `G2` or `G3` applied in turn.
 
 ### Traceability, and a step that was missed once
 
@@ -7519,13 +7686,36 @@ TC remains in the unreferenced list at all** — the residue belongs to spec-000
 
 ### Gate items NOT satisfied for these two rows
 
-As with `TDD-0034` / `TDD-0035`: **the two blocking reviewer verdicts were not obtained**, because this
-session does not spawn delegated agents. That gap matters more here than it did there — these are the
-only rows in the slice that changed production code, and `implementation-reviewer` is the gate written
-for exactly that case. Everything else is measured above, including a full-package regression run and a
-type check.
+**Three blocking agent verdicts were not obtained, not two.** `implementation-reviewer` and
+`completion-reviewer` are the two this section originally named. The third is **`qa-gatekeeper`**,
+which `manifest/agent-routing.yml` lists as a blocking agent in the `red` and `build` phases and
+which `SKILL.md` names as the authority in gate items 3 and 5. It was blocked by the same constraint
+— this session did not spawn delegated agents at the time these rows landed — and the earlier
+sentence named one consequence of that constraint and not the other. Under-stating the gap by a
+third is the same class of defect as over-stating a result.
 
-`Status` is `refactor`, not `done`: implemented, not review-closed.
+**The gap mattered more here than on the previous pair**, because these are the only rows in the
+slice that changed production code and `implementation-reviewer` is the gate written for that case.
+It has since run: `TDD-0037` **PASS**, `TDD-0036` **REVISE** with two blocking findings, both
+comment-only and both correct — the type docblock's per-member inventory said FIVE while the type
+declared six and skipped `declined`, and the `declined` field's own docstring said a declined-only
+tree "emits nothing" when the `ok` check is still registered. Fixed at `f357d77a`, in the file
+where they lived. `qa-gatekeeper` was still not run, and for `TDD-0036` that is the sharpest of the
+three absences: it has a genuine RED, item 3 has no falsifiability substitute on that path, and a
+first-hand confirmation of the destroyed RED state is exactly what is missing.
+
+**What IS measured, stated as a list rather than as "everything else".** The sentence that stood
+here said every other gate item was measured, which was false while item 3's `qa-gatekeeper`
+confirmation was missing. Measured: the test's admissibility, GREEN with the predicate intact, the
+`Refactor verify` pair, the closure as a literal command, `ci:lint` across all ten members, and the
+`validate` counts — each recorded in the authoritative block for its row. Not measured: gate items 3
+and 5 (`qa-gatekeeper`), gate item 7 and 8 (the two reviewers, at the time of landing), and gate item
+10's same-revision clause, which cannot hold while zero of the four sub-agent observations exist.
+
+So these two rows are **implemented, not review-closed**, and their `Status` is `refactor` — which is
+exactly the distinction `.qfai/steering/2026-08-17-chg-007-spec-0006-review-closure-scope.md` §1
+found the ledger has no column for. Recording it here is the only place a reader can learn it. Do
+not read that `refactor` as "waiting on an external gate"; read it as "reviews not run".
 
 ## The drift path's digest basis has no oracle — measured properly, and the record's warrant was wrong
 
