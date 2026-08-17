@@ -97,8 +97,12 @@ describe(
       expect(modified, "details.modified must name the stale file's relative path").toContain(
         `${ADOPTER_WORKFLOWS_DIR}/qfai-tests.yml`,
       );
-      // The TC Verify says the check fires for one file. Without this pin an
-      // implementation that reported every installed workflow would pass.
+      // Warranted by the TC's SETUP for leg (a) — 「provenance entry を持つ shipped
+      // workflow を 1 つ手編集した」, exactly one file edited, which is what this
+      // assertion's own label already says — and NOT by its Verify. The Verify's
+      // 「1 件」 bounds EMISSIONS of the check, not the cardinality of `modified`,
+      // and the registration pin above is where that reading belongs. Without this
+      // pin an implementation that reported every installed workflow would pass.
       expect(modified?.length, "exactly one installed workflow was edited").toBe(1);
 
       expect(
@@ -107,7 +111,7 @@ describe(
       ).toContain(`${ADOPTER_WORKFLOWS_DIR}/qfai-tests.yml`);
       expect(
         check?.message,
-        "the message is the only human surface (title has no consumer), so it must read as prose",
+        "the message is the only human surface in the TEXT renderer, so it must read as prose",
       ).toMatch(/differ from the packaged copy/);
     });
 
@@ -439,13 +443,29 @@ describe(
         .soft(check?.message, "the ok message must read as prose, not as an empty renderer slot")
         .toMatch(/match the packaged copy/);
       // `toBe` on the whole title, NOT `toContain(ADOPTER_WORKFLOWS_DIR)`. The
-      // containment form had a surviving mutant: the title is a HARDCODED
-      // literal at the emission site while `details.workflowsDir` is derived
-      // from the reader, and retitling only the literal to
+      // containment form had a surviving mutant: the title is emission-side and
+      // literal while `details.workflowsDir` is derived from the reader, and
+      // retitling only that string to
       // `Workflows integrity (.github/workflows-old)` left the suite green,
       // because the mutated string still CONTAINS `.github/workflows`. Substring
       // containment cannot see a suffix being appended to the thing it looks
       // for.
+      //
+      // WHERE THAT STRING LIVES NOW, corrected: it is no longer a HARDCODED
+      // literal at the emission site, as this comment claimed. `48c7930e`
+      // extracted it to the module constant `WORKFLOWS_INTEGRITY_TITLE` in
+      // `src/core/doctor.ts` — follow the SYMBOL, not a line number — and all
+      // THREE `workflows.integrity` emission arms (drift, `ok`, unresolved skip)
+      // read it, so the retitling mutation now moves three titles at once and is
+      // no longer site-local.
+      //
+      // ITS ORACLE SIGNATURE IS UNCHANGED, measured at HEAD's bytes rather than
+      // argued: with the constant mutated to the same `-old` string above, the
+      // three-file run of this file, `unresolvedPackaged.test.ts` and
+      // `repairText.test.ts` gives `1 failed | 8 passed` with the single
+      // AssertionError this assertion's, both other suites GREEN — neither pins
+      // `title` content. The extraction changed the mutation's KIND, not its
+      // reach.
       //
       // The alternative — building the expected value out of
       // `check.details.workflowsDir` — was rejected: it has the same substring

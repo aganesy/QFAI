@@ -283,16 +283,23 @@ describe(
   "TC-0006-0030 (TDD-0038): a shipped name with no provenance entry and absent from disk yields no drift finding, while a live entry-bearing stale file is still reported",
   { timeout: 60000 },
   () => {
-    // TC-0006-0030 leg (b) — 「drift finding が 0 件 (不在は drift ではない)」 — for
-    // the entry-LESS half of absence. The entry-BEARING half (`declined`: entry
-    // present, file gone) is NOT this row's and is not uncovered either: the
-    // sibling drift suite's second `it` deletes a recorded `qfai-validate.yml`
-    // and pins its silence — measured, not assumed, by the M2 mutation below,
-    // which reddens that `it` and nothing else in that file. Two separate
-    // reader statements answer the two halves, which is why the leg divides here
-    // rather than for tidiness.
+    // TC-0006-0030 leg (b), re-quoted after `CR-20260810-0001` Option A reworded it
+    // — 「`absent` の name は `workflows.integrity` finding の title / message /
+    // `details` のいずれにも現れない (不在は drift ではない)。同じ tree の対照 stale
+    // file は `details.modified` に報告され、check は severity `info` で 1 度だけ
+    // registered される」. That is this row's tree exactly — `absent` plus a
+    // co-located entry-bearing control — so the leg no longer DIVIDES and this row
+    // is the whole of it. The pre-CR quotation stood here (「drift finding が 0 件」,
+    // split between two owners) and named nothing this row asserts.
     //
-    // THE SILENCE THIS ROW CLAIMS HAS TWO SUFFICIENT CAUSES, at those two
+    // `declined` (entry present, file gone) is a different state, OUTSIDE this TC by
+    // its own 境界 clause, which names TC-0006-0034 / TC-0006-0035 as the owners. The
+    // sibling drift suite's second `it` still deletes a recorded `qfai-validate.yml`
+    // and pins its silence — measured, not assumed, by the M2 mutation below, which
+    // reddens that `it` and nothing else in that file — but it does so under its own
+    // row's boundary (TC-0006-0027), not as a half of this leg.
+    //
+    // THE SILENCE THIS ROW CLAIMS HAS TWO SUFFICIENT CAUSES, at two separate reader
     // statements, and the falsifiability record is shaped by that rather than by
     // preference: the name is outside the comparison set (`recordedNames`), and
     // its installed file is absent, which `hasDrifted` answers with no drift.

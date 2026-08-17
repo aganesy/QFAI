@@ -10,11 +10,10 @@
  * drift suite, but the pin SUBSUMES it, so a change to that clause reddens both
  * rows — accepted: one message, one emission site.
  *
- * Leg (a) of TC-0006-0030 only; the other legs are ledger rows, not gaps. Leg
- * (b) (an absent shipped name is not drift) divides by the record — TDD-0038
- * takes the entry-LESS half, the sibling drift suite's second `it` the
- * entry-BEARING (`declined`) one — and leg (c) (an unresolvable packaged copy
- * skips at `info`) is TDD-0039's.
+ * Leg (a) of TC-0006-0030 only; the other legs are ledger rows, not gaps. Leg (b) is the `absent`
+ * STATE — no provenance entry, no file, an entry-bearing stale file co-located as its control — and
+ * is TDD-0038's whole; `declined` is a different state OUTSIDE this TC, owned by TC-0006-0034 /
+ * TC-0006-0035. Leg (c) (unresolvable packaged copy, `info` skip) is TDD-0039's.
  *
  * TWO NEEDLE RULES, cited by number below:
  *   1. A NEEDLE SPANNING MORE THAN ONE WORD MUST BOUND ITS GAPS IN WORDS
@@ -24,8 +23,9 @@
  * A positive needle fails RED when over-tight, a negative sweep when
  * over-broad; which side an oracle sits on decides how tight to make it.
  *
- * Observed through `createDoctorData`, matching both sibling suites: the message
- * is composed at the registration site, so the reader cannot see it. Each
+ * Observed through `createDoctorData`, matching every other suite in this family (a
+ * count stood here and went stale as the family grew — the property is what holds): the
+ * message is composed at the registration site, so the reader cannot see it. Each
  * describe block is one ledger row; the round-by-round derivation — witnesses,
  * measurements, mutant blobs — is in `.qfai/evidence/implement-spec-0006.md`.
  */

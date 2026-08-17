@@ -6,20 +6,27 @@
  * ない tree」, Verify 「check が severity `info` で skip し、drift として報告しな
  * い」 — which is BR-0006-0020's closing clause (「package 同梱 copy を解決できない
  * 場合は severity `info` で skip する」) under AC-0006-0023. Leg (a) is TDD-0032's
- * repair-text suite. LEG (b) IS NOT COVERED, and an earlier version of this header
- * claimed it was, divided between two owners: `CR-20260810-0001` (`Class: defect`,
- * `open`) measured its literal Verify clause 「drift finding が 0 件」 as asserted by
- * NOTHING, and the drift-suite half of that division has no `TC-0006-0030` marker to
- * carry the attribution — `drift.test.ts:19-20` declares `TC-0006-0027`/`0028` only.
+ * repair-text suite. LEG (b) IS COVERED: `TDD-0038` in `provenanceGate.test.ts` owns it
+ * whole, and that file declares the `TC-0006-0030` marker at its own `:31` — grep the
+ * markers, three files carry one. This header said the opposite (leg (b) NOT COVERED,
+ * its drift-suite half carrying no marker to attribute it) and both halves of that are
+ * false at these bytes; the division it described is gone as well, `CR-20260810-0001`
+ * Option A having reworded leg (b) into the `absent` STATE, which does not divide by the
+ * record. `declined` is outside this TC now, with `TC-0006-0034` / `TC-0006-0035` named
+ * as its owners.
  *
- * Leg (c) runs anyway because it is SEPARABLE, not because that CR is settled: it
- * turns on PACKAGED-side resolution, and the early return of
- * `diffInstalledShippedWorkflows` fires before the provenance record is read at all,
- * while the CR's ambiguity is entirely over which ADOPTER-side state leg (b) means.
- * No option in it changes this leg's fixture, severity or expected `modified` list.
- * That CR measures the return at `workflowsIntegrity.ts:284-293` with the record read
- * at `:301`, anchored to `a67ed0c7`; THIS commit inserts 12 lines above it —
- * measured, now `:296-305` and `:313` — so follow the SYMBOL, not the number.
+ * That CR is `Status: approved`, `Approved option: A`, `Applied at 1f60a486`, and its
+ * blocked set (`TDD-0038`, `TDD-0037`) is released. This header called it
+ * `Class: defect`, `open`, which it was when written.
+ *
+ * Leg (c) is unaffected by it, and BY CONSTRUCTION rather than because the CR has since
+ * been settled: this leg fires on `resolvePackagedWorkflowsDir() === undefined`, and
+ * that early return in `diffInstalledShippedWorkflows` precedes the provenance record
+ * read ENTIRELY, so no ADOPTER-side state — which is the whole of what the CR's three
+ * options (A, B, C) chose between — can reach this leg's fixture, its severity or its
+ * expected `modified` list. Follow the SYMBOL, not the number: the CR measured that
+ * return at `workflowsIntegrity.ts:284-293` with the record read at `:301`, anchored to
+ * `a67ed0c7`, and it is `:296-305` and `:313` as measured at these bytes.
  *
  * ## Why the packaged resolver is MOCKED here
  *
