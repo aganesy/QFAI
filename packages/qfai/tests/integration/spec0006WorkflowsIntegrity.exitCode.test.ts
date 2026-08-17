@@ -176,9 +176,10 @@ describe(
 
       // CLAIM, Verify bullet 1 — 「finding が `severity: 'info'` で含まれる」.
       // Observed at the registration site rather than in the rendered text, matching
-      // all four sibling suites: severity is decided at `addCheck`, so a finding the
+      // every other suite in this family: severity is decided at `addCheck`, so a finding the
       // reader reports but nobody registers must fail here instead of passing on the
-      // reader.
+      // reader. (A count stood where "every other suite" now does; it went stale as the
+      // family grew, which is why the property is named instead.)
       expect
         .soft(check?.severity, "an installed shipped-workflow drift finding is an info advisory")
         .toBe("info");

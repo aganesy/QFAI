@@ -53,7 +53,8 @@
  * assertion below filters on the `workflows.integrity` id instead of counting or
  * sweeping the whole `checks` array.
  *
- * Observed through `createDoctorData`, matching all three sibling suites: the
+ * Observed through `createDoctorData`, matching every other suite in this family (a
+ * count stood here and went stale as the family grew — the property is what holds): the
  * severity and the payload are decided at the registration site, so a skip the
  * reader reports but nobody registers must fail here rather than pass on the
  * reader. The reader is read too, but only in the guards.
