@@ -5,11 +5,11 @@
 - Raised by: `implementation-reviewer, spec-0006 group G6 round 2 — measured on both rows of the group`
 - Raised at: `2026-08-17T00:00:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `orchestrator (/qfai-implement)` — under the user's standing instruction to process every blocker with its own judgment; NOT a user decision on these options
+- Approved at: `2026-08-17T00:00:00Z`
+- Approved option: `A`
+- Applied at: `2026-08-17T00:00:00Z` (`570aa79b`)
 - Superseded by: `-`
 - Blocked set: `(none — no row is blocked; the defect makes a verification weaker than it reads, it does not stop work)`
 
@@ -174,4 +174,47 @@ Under Option A:
 
 ## Resolution
 
-Pending. To be filled by the owner with the option chosen and, if applied, the revision that applied it.
+**Option A, applied at `570aa79b`** — the doc and the test that pinned it, in one commit, as the cost
+refinement above required.
+
+**Who approved this, stated plainly because it differs from every other CR in this slice.** Five CRs
+here were decided by the user through AskUserQuestion. This one was not: the user's instruction was to
+process every blocker with the orchestrator's own judgment and complete the implementation, and this CR
+sat in the way of that. So the option choice is the executing stage's. It is recorded in the `Approved
+by` field rather than dressed as a user decision, because a reader auditing which choices the user made
+and which the machine made needs the field to answer that, and a uniform-looking record would not.
+
+What the choice rested on, all of it already measured in this CR: the file-scoped form is the one every
+row of this slice actually ran and recorded, so Option A makes the prescription and the practice the
+same command; Option B keeps a hand-copied escaping rule on the critical path of a verification whose
+whole purpose is not to depend on one; Option C would have left a test in place whose title asserts a
+prescription the repository has measured to be wrong.
+
+### Applied
+
+`packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/references/checkpoint-verification.md`
+(asset SSOT, mirrored by `sync:ssot`; `sync-init-to-root.mjs --check` reports no drift and the two
+copies are byte-identical). Step 1 now prescribes `<test runner> <Test file>` and demotes the name
+option to an optional narrowing that carries the mechanism (`reads as a capture group, not as
+characters`), the silence (`exits 0`), and the admissibility rule that a skipped count is not a pass.
+The package-selecting-runner guidance survives; only its `-run` flag goes.
+
+`packages/qfai/tests/assets/implementCheckpointVerification.test.ts` — the coupled half.
+`it("passes the selector through the runner's test-name option")` became
+`it("prescribes the file-scoped run and demotes the name option behind its regex caveat")`, and it now
+pins the new prescription, the _absence_ of the old command form, and both load-bearing halves of the
+caveat. A `not.toContain("-run '<Selector>'")` was added so a partial revert cannot leave the
+package case on the old form. Non-vacuity was checked by resolving every positive needle at an offset
+and confirming both negatives absent, in **both** mirrored copies — identical offsets in each, which
+also witnesses that the copies agree byte-for-byte at those points.
+
+### One deviation from the prepared script, and one method note
+
+The prepared replacement wrote `*regular expression*`; prettier normalises markdown emphasis to `_`, so
+`prettier -c` exited **1** on exactly that line. Fixed at the SSOT and re-synced; the second run exited 0. Reported rather than silently corrected: a gate that failed once and passed after a change is
+two runs, not one.
+
+Carried forward as a hazard: **the Read tool renders control bytes invisibly.** A needle typed from Read
+output silently lost a literal `ESC` present in the file, and the Edit tool matched it anyway — so a
+"successful" edit landed against text nobody could see. `node -p "JSON.stringify(line)"` is what
+exposed it. Author needles from a JSON byte dump, not from a render.
