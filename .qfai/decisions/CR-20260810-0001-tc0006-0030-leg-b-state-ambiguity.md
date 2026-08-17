@@ -5,11 +5,11 @@
 - Raised by: `/qfai-implement orchestrator, after a three-lens review of TDD-0038 ruled that routing this to a steering note was the wrong instrument and the third recurrence of that class`
 - Raised at: `2026-08-10T00:00:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (aganesy)` — via the /qfai-implement spec-0006 closure gate: AskUserQuestion
+- Approved at: `2026-08-17T00:00:00Z`
+- Approved option: `A` — split leg (b) by state
+- Applied at: `-` (owner pass pending: the edit is upstream SSOT and belongs to /qfai-sdd)
 - Superseded by: `-`
 - Blocked set: `spec-0006 TDD-0038, TDD-0037`
 
