@@ -60,6 +60,38 @@ shape the rule's docblock explicitly anticipates ("a test file typically hosts m
 row the file grows makes a further false positive more likely, so the signal gets worse exactly as
 the spec makes progress.
 
+## A second instance, measured independently, and it cuts the other way
+
+`qa-gatekeeper` measured the same predicate against four spec-0006 rows whose tests **do** exist, and
+found that **none** of the four `Selector` cells appears verbatim in its test file. Each is reported
+as resolved on one common word:
+
+| row        | resolves via  | occurrences of that token in the file |
+| ---------- | ------------- | ------------------------------------- |
+| `TDD-0034` | `warning`     | 38                                    |
+| `TDD-0035` | `control`     | 5                                     |
+| `TDD-0036` | `packagedDir` | 6                                     |
+| `TDD-0037` | `finding`     | 21                                    |
+
+The first instance in this CR is **noise** — twelve warnings about rows that have not started. This
+one is the opposite failure and it is worse:
+
+- `TDDLIST_SELECTOR_UNRESOLVED` does **not** fire on any of the four, so the validator reports four
+  materially wrong selectors as correct.
+- The drift-protocol carve-out authorises `/qfai-implement` to rewrite a `Selector` **only while**
+  `selectorResolves` is false. Here it is falsely **true**, so the carve-out **withholds** the
+  permission that would let the executing stage repair the cells. The leniency that
+  `drift-protocol.md` defends as failing conservatively fails conservatively only when it is
+  conservative _about the right thing_: it is designed to withhold permission from a **misdescribing**
+  selector, and it also withholds it from a **wrong** one.
+- This slice already repaired exactly this defect once, on `TDD-0031`, by writing the describe title
+  verbatim into the cell under `CR-20260807-0002` Option A. Four rows later it recurred, because
+  nothing detects it.
+
+So the recommendation below is unchanged in direction but stronger in force: whichever option is
+taken, the predicate's leniency is now measured to produce both a false accusation and a false
+acquittal, from the same fallback.
+
 ## What this is not
 
 Not a claim that `selectorResolves` is wrong everywhere. `constitution/drift-protocol.md` (lines

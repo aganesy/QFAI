@@ -7572,6 +7572,68 @@ the boundary that pins what `TDD-0036`'s change deliberately did **not** do.
   row's own change and nothing else.
 
 
+
+#### RED re-entry at `5ea28793` — the falsifiability substitute `qa-gatekeeper` required
+
+> `SKILL.md`'s lifecycle allows exactly one backward move: `refactor` -> `red` after a
+> `qa-gatekeeper` `REVISE` on a row's RED/GREEN evidence. That is the transition this block records.
+> The row re-entered `red`, obtained the observation below, re-verified GREEN, and returned to
+> `refactor`. The ledger holds current state rather than a history, so the re-entry is recorded here.
+
+**What was wrong with the recorded RED.** It gave two matcher messages and **no locations**.
+`references/red-admissibility.md` § "Recording it" excludes exactly that from the truncation
+allowance: "The recorded result must retain the assertion message **and its location**. Truncate the
+stack tail, never the assertion line." This same file applies that form 170 lines earlier, recording
+`exitCode.test.ts:185` for a sibling row. The form was known and not applied at the one place the
+reference mandates it.
+
+**And it cannot be re-observed.** The production change is committed at `3dbeeef6`, so the RED state
+is destroyed. `SKILL.md` disposes of the alternative in terms that leave no discretion: a combined
+post-hoc submission "leaves nothing but the implementer's own account of a destroyed state — the
+self-attestation this gate exists to prevent". The reviewer's read-only corroboration from
+`3dbeeef6^` — zero occurrences of `declined` in the reader, a two-key drift payload, every import
+resolving — establishes the record is internally consistent to the byte, and consistency is not an
+observation. So the substitute below is the evidence, not the narrative above it.
+
+**The substitute also closes a second gap the same gatekeeper found.** The original oracle set was
+"targeted at the claims the RED did NOT exercise" — `M-A`/`M-B`/`M-C` for CLAIMs 4/2/5 — which left
+**CLAIMs 1 and 3, the row's actual obligation, with no mutation at all** and only the destroyed RED
+behind them. One run closes both.
+
+- **Falsifiability command**, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts`
+- **Mutation `M-D`** — base revision `5ea28793`, file `src/core/doctor.ts`, mutant blob `ed3abfb0`.
+  Needle measured to occur **exactly once**; `declined` is dropped from the drift arm's payload and
+  nothing else changes:
+
+```text
+needle
+        modified: workflowsDiff.modified,
+        declined: workflowsDiff.declined,
+        packagedDir: workflowsDiff.packagedDir,
+replacement
+        modified: workflowsDiff.modified,
+        packagedDir: workflowsDiff.packagedDir,
+```
+
+- **Falsifiability result**: `Tests 1 failed | 1 passed (2)`, exit 1, with **both** assertion messages
+  and **both locations** retained — which is the whole point of re-running it:
+
+```text
+AssertionError: the drift payload carries exactly workflowsDir, modified, declined and packagedDir
+  — a fifth key is a compatibility event on a public JSON surface
+  ❯ tests/integration/spec0006WorkflowsIntegrity.declined.test.ts:157:10
+
+AssertionError: `declined` must name the deleted file: expected undefined to deeply equal [ Array(1) ]
+  ❯ tests/integration/spec0006WorkflowsIntegrity.declined.test.ts:173:10
+```
+
+  The two reddened claims are CLAIM 1 and CLAIM 3 — the same two the destroyed RED reddened, and the
+  two the earlier oracle set skipped. `TDD-0037` stays green under `M-D`, which is what makes the
+  mutation this row's and not the pair's.
+- **GREEN re-verified after restore**: `Tests 2 passed (2)`, exit 0. Restoration was byte-compared
+  against a snapshot and confirmed with `git diff --exit-code -- packages/qfai/src/core/doctor.ts`.
+
 #### Rework record at `f357d77a` — the fields the completion review found absent
 
 > Governs **this row only**, and only the fields it names. Everything above it stands as the record
@@ -7607,13 +7669,54 @@ the boundary that pins what `TDD-0036`'s change deliberately did **not** do.
   covering the tree the day the package ships a third workflow, and this row's claim is that the
   `changed` bucket is EMPTY — a name the fixture forgot to delete would drift or match, and the row
   would be measuring a tree other than the one it names.
-- **Falsifiability mutations**, base `13c06411`-plus-this-round's-working-tree:
+- **Falsifiability mutations**, base revision `3dbeeef6` — the commit this row landed in. The
+  earlier "`13c06411`-plus-this-round's-working-tree" is neither admissible form, and it stood on
+  the one row where the mutation IS the RED, so an unaddressable base makes the item-3 substitute
+  unreproducible rather than merely untidy. Needle occurrence counts below were re-measured at
+  `5ea28793`.
 
 | id   | file                                  | mutant blob | mutation                                                                 | effect |
 | ---- | ------------------------------------- | ----------- | ------------------------------------------------------------------------ | ------ |
 | `G1` | `src/core/doctor/workflowsIntegrity.ts` | `3607056b` | `status: modified.length > 0` -> `modified.length + declined.length > 0`   | kills the row at GUARD #4 |
-| `G2` | `src/core/doctor.ts`                  | `e88bc009`  | the `ok` arm's `details` gains `declined: workflowsDiff.declined`          | kills CLAIM 2 |
-| `G3` | `src/core/doctor.ts`                  | `54716d1f`  | the `ok` arm's `severity: "ok"` -> `"info"`                                | kills CLAIM 1 |
+| `G2` | `src/core/doctor.ts`                  | `e88bc009`  | two-line needle, see below                                                | kills CLAIM 2 |
+| `G3` | `src/core/doctor.ts`                  | `54716d1f`  | two-line needle, see below                                                | kills CLAIM 1 |
+
+  **`G2` and `G3` were recorded as DESCRIPTIONS, and the needles those descriptions imply are not
+  unique.** Measured at `5ea28793` in `src/core/doctor.ts`: the bare `      severity: "ok",` occurs
+  **ten** times, and `      details: { workflowsDir: workflowsDiff.workflowsDir },` occurs **twice**
+  (the `ok` arm and the `skipped_unresolved` arm). Applied as written, either would mutate more than
+  one site. The mutations that actually ran used TWO-LINE needles, each measured to occur **exactly
+  once**, and those are the reproducible record:
+
+```text
+G1  needle (workflowsIntegrity.ts, 1 occurrence)
+    status: modified.length > 0 ? "modified" : "ok",
+G1  replacement
+    status: modified.length + declined.length > 0 ? "modified" : "ok",
+
+G2  needle (doctor.ts, 1 occurrence)
+      message: "installed shipped workflow(s) match the packaged copy",
+      details: { workflowsDir: workflowsDiff.workflowsDir },
+G2  replacement
+      message: "installed shipped workflow(s) match the packaged copy",
+      details: { workflowsDir: workflowsDiff.workflowsDir, declined: workflowsDiff.declined },
+
+G3  needle (doctor.ts, 1 occurrence)
+      id: "workflows.integrity",
+      severity: "ok",
+G3  replacement
+      id: "workflows.integrity",
+      severity: "info",
+```
+
+  On the falsifiability path the mutation IS the RED, so this was not a formatting defect: an
+  unreproducible mutation is an unreproducible item-3 substitute and an unreproducible item-5 oracle
+  from one cause. The one-line `G1` was reproducible as recorded and is unchanged.
+
+- **Falsifiability result**: `Tests 1 failed | 1 passed (2)`, exit 1, for each of `G1`, `G2` and `G3`
+  independently. The field was previously unlabelled — the substance was in the table and in the
+  sentence below it, and the rework note called the command "the third field of the trio" while the
+  result field was in fact the one missing. Labelled now.
 
   All three leave `TDD-0036` green — `Tests 1 failed | 1 passed (2)` in every case — so the pair is
   genuinely two rows and not two views of one predicate.
@@ -7716,6 +7819,35 @@ So these two rows are **implemented, not review-closed**, and their `Status` is 
 exactly the distinction `.qfai/steering/2026-08-17-chg-007-spec-0006-review-closure-scope.md` §1
 found the ledger has no column for. Recording it here is the only place a reader can learn it. Do
 not read that `refactor` as "waiting on an external gate"; read it as "reviews not run".
+
+## Two conditions spec-0006 cannot satisfy from inside its own rows
+
+Both were measured by `qa-gatekeeper` in the round-2 gate and are recorded here because they belong
+to the spec rather than to any row, and because a reader looking at a ledger of `done` rows would
+otherwise conclude the spec is finished.
+
+**1. No `E2E` row exists at all.** `US-0006-0011` is the parent user story of both `AC-0006-0025` and
+`AC-0006-0026` — the two criteria the G7/G8/G9 rows implement — and it appears in today's
+`QFAI-ATDD-111` error list as a US with no E2E reference. `tdd/test-list.md` has no `Layer = E2E` row,
+so `SKILL.md`'s spec-completion condition on that surface has **no owner**. This is one of the two
+standing errors in the Stage 0 baseline, so no row here caused it and no row here can discharge it;
+what changes is that it is now named as a completion blocker rather than as background noise.
+
+**2. Item 10's same-revision clause was unevaluable, not merely unmet.** The gate requires the four
+sub-agent observations to name the **same** revision. Until this round no review pack existed for any
+of the four rows — the verdicts lived only as prose here, which `SKILL.md` § `Review artifact layout
+(MUST)` forbids in terms — so there was nothing for the clause to compare. Eight packs now exist
+under `.qfai/review/`, two rounds for each of the four rows, each naming the revision its round
+measured at: `3dbeeef6` for round 1 and `5ea28793` for round 2. Written after the fact and labelled
+as such inside each `review_request.md`, because a pack backdated silently would be worse than the
+gap it fills.
+
+They are **untracked**, and that is the repository's convention rather than an oversight:
+`.gitignore:61` excludes `.qfai/review/*`, and of the 27 packs already on disk exactly zero are
+tracked — only the directory's `README.md` is. So the packs satisfy `qfai validate` locally and do not
+travel with the branch. Recorded rather than quietly overridden: force-adding eight packs would be a
+unilateral change to a repository-wide convention, and the currency caveat a reader needs is that a
+reviewer on another machine will not find them.
 
 ## The drift path's digest basis has no oracle — measured properly, and the record's warrant was wrong
 
