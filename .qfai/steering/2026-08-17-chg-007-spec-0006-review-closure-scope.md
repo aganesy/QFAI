@@ -67,9 +67,14 @@ is the measurement of what ignoring it costs at scale.
 
 ## 4. Four defects of the orchestrator's own, recorded because three were already written down
 
-1. **A needle routed through a shell.** A `python -c` string with backticks was expanded by bash as
-   command substitution and wrote a mangled sentence into the evidence. The standing brief's §3 says
-   exactly this, from three prior incidents in this slice. Author with the Write tool or a script file.
+1. **A needle routed through a shell — three times in one session, after reading the rule that forbids
+   it.** First a `python -c` string whose backticks bash expanded as command substitution, writing a
+   mangled sentence into the evidence. Then two `node -e` invocations in a row while trying to fix the
+   consequences: one collapsed an escape sequence to a literal newline, the other left a `**` inside a
+   bolded span so prettier reflowed the bullet into nonsense. The standing brief's §3 already recorded
+   three prior instances in this slice; this makes six. **The rule is not "escape carefully", it is
+   "author the script as a file".** Every one of the three failures is silent — the command exits 0 and
+   writes something plausible — which is why re-reading the rule did not prevent the second and third.
 2. **A shipped-prose edit made without running the suite.** `prettier`, `lint:md` and the leakage guard
    all passed; none of them reads a test. Four assertions in
    `packages/qfai/tests/assets/ledgerWriteAuthorization.test.ts` were red and the edit shipped anyway.
@@ -94,10 +99,10 @@ is the measurement of what ignoring it costs at scale.
   after that verdict went six rounds stale. This round found four more instances of the same shape.
 - **A CR's `Approved actions` list is a starting point, not a scope.** Verify the delivered state.
 - **Cap parallel suite execution.** Reviews and audits can fan out; suite runs should not.
-- **`.qfai/evidence/**`is CRLF in the working tree.** A multi-line needle joined with`\n`matches
-nothing there and the script reports`0 occurrences`— which reads as "already fixed" rather than as
-"wrong line endings", and is the same silent shape as the shell-expansion hazard. Detect the file's
-EOL and build the needle against it. The standing brief already says whitespace is part of a needle's
-identity for **mutations**; it holds for evidence edits too, and git's commit-time normalisation is
-what hides it (the committed bytes are LF, so a needle derived from`git show` will not match the
-  working tree).
+- **The evidence file is CRLF in the working tree.** A multi-line needle joined with \n matches
+  nothing under `.qfai/evidence/`, and the script reports `0 occurrences` — which reads as “already
+  fixed” rather than as “wrong line endings”, the same silent shape as the shell-expansion hazard.
+  Detect the file EOL and build the needle against it. The standing brief already says whitespace is
+  part of a needle's identity for mutations; it holds for evidence edits too, and git's commit-time
+  normalisation is what hides it — the committed bytes are LF, so a needle derived from `git show`
+  will not match the working tree.
