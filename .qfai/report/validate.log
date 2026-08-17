@@ -3,22 +3,22 @@
 This file is written by every `qfai validate` run and always points at the newest
 run-log directory. Do not edit it by hand; do not pipe stdout into it.
 
-- run_id: run-20260818081602527
-- started_at: 2026-08-17T23:16:02.527Z
+- run_id: run-20260818085114360
+- started_at: 2026-08-17T23:51:14.360Z
 - command: /qfai-validate
 - status: fail
 - errors: 2
-- warnings: 391
-- run_log: .qfai/report/run-20260818081602527
+- warnings: 364
+- run_log: .qfai/report/run-20260818085114360
 
 # Validate Run Summary
 
-- run_id: run-20260818081602527
-- started_at: 2026-08-17T23:16:02.527Z
+- run_id: run-20260818085114360
+- started_at: 2026-08-17T23:51:14.360Z
 - status: fail
-- report_dir: .qfai/report/run-20260818081602527
+- report_dir: .qfai/report/run-20260818085114360
 - errors: 2
-- warnings: 391
+- warnings: 364
 
 ## Top Errors
 
@@ -27,8 +27,8 @@ run-log directory. Do not edit it by hand; do not pipe stdout into it.
 
 ## Top Warnings
 
-- QFAI-EX-105 (.qfai/specs/spec-0001/06_Test-Cases.md): 06_Test-Cases.md の Level が test-layer policy 外です: L-struct。policy が許可する層: api, component, e2e, integration, unit
-- QFAI-TRIAGE-001 (.qfai/specs/spec-0002/09_delta.md): delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
-- QFAI-EX-105 (.qfai/specs/spec-0004/06_Test-Cases.md): 06_Test-Cases.md の Level が test-layer policy 外です: ssot-guard, validators。policy が許可する層: api, component, e2e, integration, unit
-- QFAI-TRIAGE-001 (.qfai/specs/spec-0005/09_delta.md): delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
-- QFAI-TRIAGE-001 (.qfai/specs/spec-0007/09_delta.md): delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
+- TDDLIST_UNKNOWN_LEVEL (.qfai/specs/spec-0001/06_Test-Cases.md): Unrecognized Level value(s) in 06_Test-Cases.md for spec-0001: L-struct. Accepted — coverage targets: L1, L2, component, unit; non-coverage: L3, L4, L5, acceptance, api, e2e, integration, system. Unrecognized values are treated as coverage targets, so every such TC becomes a mandatory ledger row
+- TDDLIST_EXCEPTION_PARKED (.qfai/specs/spec-0001/tdd/test-list.md): TDD item "TDD-0001" in spec-0001 is parked at Status=exception (DR-ID DR-0001-0002). Resolve it (`exception -> todo`), or record the accepted risk as a `TDDLIST_EXCEPTION_PARKED` waiver in `.qfai/waivers.yml` naming this row in `match.dl_ids`
+- TDDLIST_EXCEPTION_PARKED (.qfai/specs/spec-0001/tdd/test-list.md): TDD item "TDD-0002" in spec-0001 is parked at Status=exception (DR-ID DR-0001-0002). Resolve it (`exception -> todo`), or record the accepted risk as a `TDDLIST_EXCEPTION_PARKED` waiver in `.qfai/waivers.yml` naming this row in `match.dl_ids`
+- TDDLIST_EXCEPTION_PARKED (.qfai/specs/spec-0001/tdd/test-list.md): TDD item "TDD-0003" in spec-0001 is parked at Status=exception (DR-ID DR-0001-0002). Resolve it (`exception -> todo`), or record the accepted risk as a `TDDLIST_EXCEPTION_PARKED` waiver in `.qfai/waivers.yml` naming this row in `match.dl_ids`
+- TDDLIST_EXCEPTION_PARKED (.qfai/specs/spec-0001/tdd/test-list.md): TDD item "TDD-0004" in spec-0001 is parked at Status=exception (DR-ID DR-0001-0002). Resolve it (`exception -> todo`), or record the accepted risk as a `TDDLIST_EXCEPTION_PARKED` waiver in `.qfai/waivers.yml` naming this row in `match.dl_ids`

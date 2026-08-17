@@ -1,6 +1,7 @@
 /**
  * The drift finding's `details` payload carries `declined` alongside `modified`,
- * and a declined-only tree still emits nothing at all.
+ * and a declined-only tree still raises no drift finding — the `ok` check itself
+ * stays registered, which the boundary row asserts.
  *
  * TC-0006-0034 (AC-0006-0026 / EX-0006-0027) — Setup 「temp dir に init した adopter
  * tree で、provenance entry を持つ shipped workflow の 1 つを手編集し (modified)、別の
@@ -117,7 +118,7 @@ describe(
       // Guard #1 — the fixture really is in the two-state configuration this row
       // needs, and BOTH halves are checked. Drift alone would leave `declined`
       // empty and every claim about it vacuously satisfiable; a deletion alone
-      // would emit no finding at all (which is TC-0006-0035's subject, not this
+      // would emit no drift finding (which is TC-0006-0035's subject, not this
       // row's). The deleted name keeps its provenance entry — `deleteShippedWorkflow`
       // removes the file only — which is what makes it `declined` rather than
       // `absent` under `resolveWorkflowFileState`.
@@ -202,7 +203,7 @@ describe(
 );
 
 describe(
-  "TC-0006-0035 (TDD-0037): a declined-only tree emits no finding at all",
+  "TC-0006-0035 (TDD-0037): a declined-only tree emits no drift finding",
   { timeout: 60000 },
   () => {
     it("reports severity ok with no drift finding and no declined key in the payload", async () => {

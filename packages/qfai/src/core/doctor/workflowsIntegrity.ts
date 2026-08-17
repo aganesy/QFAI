@@ -145,8 +145,13 @@ export type WorkflowsIntegrityStatus = "ok" | "modified" | "skipped_unresolved";
  * `../..` chain whose meaning depends on the reader's cwd, and absolutizing
  * `workflowsDir` puts the host layout into a machine surface that today has none.
  *
- * PER MEMBER — all SIX of them, so that the opening claim is checkable rather than
- * taken on trust. `status === "ok"` gates the content-identical emission and the
+ * PER MEMBER, in declaration order, so that the opening claim is checkable rather
+ * than taken on trust. A numeral stood here — "all FIVE of them", then "all SIX" —
+ * and it is gone: a count at one site plus a prose rule telling future editors to
+ * keep it in sync is a second thing to maintain and exactly the mechanism that let
+ * the enumeration skip a member. The list is now its own inventory, so a missing
+ * member is visible by reading it against the type.
+ * `status === "ok"` gates the content-identical emission and the
  * drift suite's override leg asserts it; the status LITERALS `"modified"` and
  * `"skipped_unresolved"` gate the other two arms; the `modified` FIELD — distinct
  * from that literal, and omitted from this list while the only `modified` token in
@@ -160,10 +165,12 @@ export type WorkflowsIntegrityStatus = "ok" | "modified" | "skipped_unresolved";
  * add to, so a claim that some member is held for a later row now has to be
  * MEASURED against `doctor.ts` before it is written here.
  *
- * The count in that first sentence is the part that rots. It said FIVE while the
- * type declared six and the enumeration skipped the member that had just been
- * added — by the row that added it. Adding a member to this type means editing
- * the count and the enumeration in the same change; a reviewer found this one.
+ * The count that used to open that paragraph is what rotted: it said FIVE while
+ * the type declared six and the enumeration skipped the member that had just been
+ * added — by the row that added it. A reviewer found it; a second reviewer pointed
+ * out that replacing the numeral beats prescribing that editors keep it current.
+ * Adding a member to this type now means adding a clause to the enumeration, and
+ * nothing else.
  */
 export type WorkflowsIntegrityDiff = {
   status: WorkflowsIntegrityStatus;
@@ -379,9 +386,11 @@ export async function diffInstalledShippedWorkflows(
   declined.sort();
 
   // `status` reads `modified` ALONE. A declined-only tree therefore stays `ok`
-  // and emits nothing — the shipped-workflows contract §3 says a declined name
-  // is never reported again, so promoting it to a trigger here would report it
-  // forever. TC-0006-0035 is the boundary that pins this.
+  // and emits NO DRIFT FINDING — the `ok` check itself is still registered; see
+  // the `declined` field's docstring above, which carries the measurement. The
+  // shipped-workflows contract §3 says a declined name is never reported again,
+  // so promoting it to a trigger here would report it forever. TC-0006-0035 is
+  // the boundary that pins this.
   return {
     status: modified.length > 0 ? "modified" : "ok",
     workflowsDir: WORKFLOWS_DIR_RELATIVE,

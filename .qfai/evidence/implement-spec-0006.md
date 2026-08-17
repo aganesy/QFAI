@@ -7302,8 +7302,17 @@ the advisory still `info`. Both TCs' Asserts were therefore observable before ei
 - **Falsifiability command**, from `packages/qfai`:
   `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts`
   with the mutation below applied.
-- **Falsifiability mutation `F1`** — base `6d81eaae:packages/qfai/src/core/doctor.ts` (blob `ee31f4dd`,
-  cited because a MUTANT has no revision that determines it), mutant blob `8af2a6cc`. Needle, measured
+- **Falsifiability mutation `F1`** — base revision `6d81eaae`, file `src/core/doctor.ts`, mutant blob
+  `8af2a6cc`. The base blob `ee31f4dd` used to be cited here "because a MUTANT has no revision that
+  determines it", and that warrant was **false twice over**: `ee31f4dd` is the BASE, not the mutant,
+  and revision `6d81eaae` does determine it. `CR-20260817-0002` Option A grants the exception to the
+  mutant blob alone and says so — "the base half still follows the rule above: name the revision, not
+  the base blob". Two reviewers caught it independently.
+  **Currency**: at `d3f4318a` that file is `d1615ab0` (TDD-0036 added `declined` / `packagedDir` to
+  the same emission arm) and the same needle yields `7c376acb`, not `8af2a6cc`. The needle is still
+  unique and the `severity: "info"` line `F1` mutates is untouched by that change, so the kill
+  stands — but a reader reproducing at HEAD gets a different blob than the one recorded. Needle,
+  measured
   **unique** (the naive three-line form occurs **twice** — the `skipped_unresolved` arm is byte-identical
   down to `title: WORKFLOWS_INTEGRITY_TITLE`, so the needle is extended by the following comment line,
   which is the measured discriminator):
@@ -7392,7 +7401,9 @@ the advisory still `info`. Both TCs' Asserts were therefore observable before ei
 ```
 
   Replacement: `  return summary.error > 0;` — the warning branch of `shouldFailDoctor` stops counting
-  warnings.
+  warnings. The base is recorded above as a blob (`a2a92ca0`) beside its revision; the blob is
+  redundant under Option A and is kept only because `src/cli/commands/doctor.ts` has not moved since,
+  so it happens to be current. Prefer the revision.
 - **Falsifiability result**: `Tests 1 failed | 1 passed (2)`, exit 1. **Exactly one** assertion reddens —
   this row's exit-code claim — and `TDD-0034` stays green, because it asserts exit 0 either way. So `F1`
   and `F2` are **disjoint on this file**: each row has a mutation the other survives, which is what makes
@@ -7453,19 +7464,29 @@ which `SKILL.md` names as the authority in gate items 3 and 5. It was blocked by
 sentence named one consequence of that constraint and not the other. Under-stating the gap by a
 third is the same class of defect as over-stating a result.
 
-**Both reviewers have since reported, and both rows PASS on the implementation side.**
-`implementation-reviewer` returned PASS for `TDD-0034` (one Minor) and PASS for `TDD-0035`, having
-re-applied `F1` and `F2` from its own snapshots and reproduced this record's per-claim results.
-`completion-reviewer` returned REVISE on record grounds, and its findings are applied in this
-section and in the block below it. `qa-gatekeeper` was still not run.
+**Where the three blocking agents stand, at `d3f4318a`.** Stated as a table because the prose form
+of this paragraph has now been wrong twice in opposite directions — first claiming two agents when
+there are three, then claiming `qa-gatekeeper` had not run after it had.
 
-**What IS measured, stated as a list rather than as "everything else".** The sentence that stood
-here said every other gate item was measured, which was false while item 3's `qa-gatekeeper`
-confirmation was missing. Measured: the test's admissibility, GREEN with the predicate intact, the
-`Refactor verify` pair, the closure as a literal command, `ci:lint` across all ten members, and the
-`validate` counts — each recorded in the authoritative block for its row. Not measured: gate items 3
-and 5 (`qa-gatekeeper`), gate item 7 and 8 (the two reviewers, at the time of landing), and gate item
-10's same-revision clause, which cannot hold while zero of the four sub-agent observations exist.
+| gate agent | round 1 (`3dbeeef6`) | round 2 (`5ea28793`) | round 3 (`d3f4318a`) |
+| ---------- | -------------------- | -------------------- | -------------------- |
+| `implementation-reviewer` | PASS / PASS / REVISE / PASS | — | PASS / PASS / REVISE / REVISE |
+| `completion-reviewer` | REVISE, all four | — | REVISE, all four |
+| `qa-gatekeeper` | — | PASS / PASS / BLOCK / BLOCK | PASS / PASS / PASS / BLOCK |
+
+(columns in `TDD-0034` / `0035` / `0036` / `0037` order.)
+
+**What that leaves.** Items 3 and 5 have a `qa-gatekeeper` observation for three of the four rows.
+Items 7 and 8 have observations for all four, but the standing verdicts are REVISE. **Item 10 is the
+binding one**: it compares the revision each observation names, and they name four different ones
+today — `13c06411` / `3dbeeef6` for the round blocks, `f357d77a` for the rework blocks, `5ea28793`
+for `M-D` and the round-2 packs. It is no longer unevaluable, which it was before any pack existed;
+it is evaluable and currently false.
+
+`qa-gatekeeper` returned **PASS on items 3 and 5** for both of these rows, in rounds 2 and 3, having
+reproduced `F1` and `F2` from their recorded bases and confirmed the trio is complete and exclusive.
+`implementation-reviewer` returned PASS for both in both rounds. `completion-reviewer` stands at
+REVISE on record grounds, and its round-3 findings are applied in this section and the blocks below.
 
 So these two rows are **implemented, not review-closed**, and their `Status` is `refactor` — which is
 exactly the distinction `.qfai/steering/2026-08-17-chg-007-spec-0006-review-closure-scope.md` §1
@@ -7600,7 +7621,15 @@ observation. So the substitute below is the evidence, not the narrative above it
 **CLAIMs 1 and 3, the row's actual obligation, with no mutation at all** and only the destroyed RED
 behind them. One run closes both.
 
-- **Falsifiability command**, from `packages/qfai`:
+> **Label correction, because the first draft of this block put the row on two paths at once.** The
+> fields below were headed `Falsifiability command` / `Falsifiability result`. Those belong to
+> `red-not-observable.md`'s trio and this row is **not** on that path — it wrote its own production
+> code, item 4 is not waived, and it has no `Satisfied-by` and cannot have one. What `M-D` is, under
+> the per-item evidence contract, is an **`Oracle proof`**: the smallest production change that makes
+> this item's test fail again, its command and its failing output, reverted immediately. A
+> `qa-gatekeeper` named the mislabelling; the substance was never in question.
+
+- **`Oracle proof` command**, from `packages/qfai`:
   `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts`
 - **Mutation `M-D`** — base revision `5ea28793`, file `src/core/doctor.ts`, mutant blob `ed3abfb0`.
   Needle measured to occur **exactly once**; `declined` is dropped from the drift arm's payload and
@@ -7616,7 +7645,7 @@ replacement
         packagedDir: workflowsDiff.packagedDir,
 ```
 
-- **Falsifiability result**: `Tests 1 failed | 1 passed (2)`, exit 1, with **both** assertion messages
+- **`Oracle proof` result**: `Tests 1 failed | 1 passed (2)`, exit 1, with **both** assertion messages
   and **both locations** retained — which is the whole point of re-running it:
 
 ```text
@@ -7713,10 +7742,35 @@ G3  replacement
   unreproducible mutation is an unreproducible item-3 substitute and an unreproducible item-5 oracle
   from one cause. The one-line `G1` was reproducible as recorded and is unchanged.
 
-- **Falsifiability result**: `Tests 1 failed | 1 passed (2)`, exit 1, for each of `G1`, `G2` and `G3`
-  independently. The field was previously unlabelled — the substance was in the table and in the
-  sentence below it, and the rework note called the command "the third field of the trio" while the
-  result field was in fact the one missing. Labelled now.
+- **Falsifiability result** — re-run at `d3f4318a` and recorded per mutation with the **assertion
+  message and its location**, which a bare `Tests 1 failed | 1 passed (2)` does not carry.
+  `red-admissibility.md` § "Recording it" excludes exactly that from the truncation allowance, and on
+  the falsifiability path the mutation IS the RED, so the count alone left this row's item-3
+  substitute unverifiable. **The insufficiency is demonstrated on this very row**: `G1` reddens a
+  GUARD, not a claim, and `Tests 1 failed` cannot tell that apart from `G2`/`G3`'s claim-level kills.
+
+```text
+G1  mutant 69cea6c6 at d3f4318a   Tests 1 failed | 1 passed (2), exit 1
+    AssertionError: workflows.integrity must be registered exactly once per doctor run:
+      expected [] to have a length of 1 but got +0
+    ❯ tests/integration/spec0006WorkflowsIntegrity.declined.test.ts:259:9   <- GUARD #4, not a claim
+
+G2  mutant e88bc009               Tests 1 failed | 1 passed (2), exit 1
+    AssertionError: the ok payload carries `workflowsDir` only — `declined` is drift-finding
+      payload and must not leak onto the silent arm: expected [ 'declined', 'workflowsDir' ] ...
+    ❯ tests/integration/spec0006WorkflowsIntegrity.declined.test.ts:283:10  <- CLAIM 2
+
+G3  mutant 54716d1f               Tests 1 failed | 1 passed (2), exit 1
+    AssertionError: a declined name is never reported again — §3 — so a tree that has only
+      declined names is `ok`: expected 'info' to be 'ok'
+    ❯ tests/integration/spec0006WorkflowsIntegrity.declined.test.ts:271:10  <- CLAIM 1
+```
+
+  **`G1`'s blob moved and `G2`/`G3`'s did not.** `G1` mutates `workflowsIntegrity.ts`, which
+  `f357d77a` changed (comment-only), so at `d3f4318a` the same needle yields `69cea6c6` where the
+  table records `3607056b` from base `3dbeeef6`. `G2`/`G3` mutate `doctor.ts`, unmoved since
+  `5ea28793`, so both reproduce their recorded blobs exactly. Recorded rather than silently
+  re-stamped: a reader reproducing at HEAD needs to know which of the three will disagree.
 
   All three leave `TDD-0036` green — `Tests 1 failed | 1 passed (2)` in every case — so the pair is
   genuinely two rows and not two views of one predicate.
@@ -7739,6 +7793,11 @@ G3  replacement
   suite after both rows, re-measured at `f357d77a`: `Test Files 426 passed | 8 skipped (434)` /
   `Tests 4351 passed | 37 skipped (4388)`, exit 0. The earlier `4346 (4383)` is superseded by the
   five tests spec-0017's first change added to an unrelated project.
+- **Revision**: `d3f4318a` — this row's round block carried no `Revision` bullet at all while the
+  other three did, so its two observations named two different revisions with nothing to reconcile
+  them. `references/evidence-revision.md` § "The field" asks for one per round block; this is it.
+  The falsifiability mutations' own bases are recorded per mutation above, which is the level at
+  which they differ.
 - **The `absent`-versus-`unreadable` boundary of this row's split has its only oracle in a SIBLING
   suite**, which a reviewer measured and which is worth a reader knowing. Mutating
   `.kind === "absent"` to `.kind !== "digest"` — folding an unreadable file into `declined` — reddens
@@ -7784,8 +7843,20 @@ trace marker in the test file is **not sufficient on its own** — the TC also h
 own output rather than by assuming the markers had done the job. With both registered, **no `SPEC-0006`
 TC remains in the unreferenced list at all** — the residue belongs to spec-0003, 0008, 0015 and 0017.
 
-`validate --profile tdd --fail-on error` is `info=4 warning=352 error=2`, the Stage 0 baseline exactly.
+`validate --profile tdd --fail-on error` was `info=4 warning=352 error=2` — the Stage 0 baseline —
+when this paragraph was written. **Superseded**: at `d3f4318a` it is `info=4 warning=364 error=2`,
+and the twelve added warnings are spec-0017's, filed as `CR-20260818-0001`. `error` is unchanged at
+2. Corrected here rather than in a later section, because the supersession convention this file
+applies to its suite counts was simply not applied to this one.
+
 `ci:lint` exits 0 across all ten members, checked by redirect rather than through a pipe.
+
+**`validate --profile verify --fail-on error`** — recorded because it is the ONLY profile that
+reports `QFAI-REVIEW-*`, so neither `--profile tdd` nor `--profile sdd` can see whether a review
+pack is well-formed. At `d3f4318a` it returns **zero** `QFAI-REVIEW` findings over the eight packs
+under `.qfai/review/`: `review-20260818060001000` … `review-20260818060004000` (round 1) and
+`review-20260818080001000` … `review-20260818080004000` (round 2). Previously this claim existed
+only in a commit message, which is not the record an auditor reads.
 
 ### Gate items NOT satisfied for these two rows
 
@@ -7802,18 +7873,34 @@ slice that changed production code and `implementation-reviewer` is the gate wri
 It has since run: `TDD-0037` **PASS**, `TDD-0036` **REVISE** with two blocking findings, both
 comment-only and both correct — the type docblock's per-member inventory said FIVE while the type
 declared six and skipped `declined`, and the `declined` field's own docstring said a declined-only
-tree "emits nothing" when the `ok` check is still registered. Fixed at `f357d77a`, in the file
-where they lived. `qa-gatekeeper` was still not run, and for `TDD-0036` that is the sharpest of the
-three absences: it has a genuine RED, item 3 has no falsifiability substitute on that path, and a
-first-hand confirmation of the destroyed RED state is exactly what is missing.
+tree "emits nothing" when the `ok` check is still registered. Fixed at `f357d77a` — but at only ONE
+of the two sites that sentence occupied, which round 3 then found in the same file 200 lines away
+and which is corrected at the round-3 revision.
 
-**What IS measured, stated as a list rather than as "everything else".** The sentence that stood
-here said every other gate item was measured, which was false while item 3's `qa-gatekeeper`
-confirmation was missing. Measured: the test's admissibility, GREEN with the predicate intact, the
-`Refactor verify` pair, the closure as a literal command, `ci:lint` across all ten members, and the
-`validate` counts — each recorded in the authoritative block for its row. Not measured: gate items 3
-and 5 (`qa-gatekeeper`), gate item 7 and 8 (the two reviewers, at the time of landing), and gate item
-10's same-revision clause, which cannot hold while zero of the four sub-agent observations exist.
+**Where the three blocking agents stand, at `d3f4318a`.** Stated as a table because the prose form
+of this paragraph has now been wrong twice in opposite directions — first claiming two agents when
+there are three, then claiming `qa-gatekeeper` had not run after it had.
+
+| gate agent | round 1 (`3dbeeef6`) | round 2 (`5ea28793`) | round 3 (`d3f4318a`) |
+| ---------- | -------------------- | -------------------- | -------------------- |
+| `implementation-reviewer` | PASS / PASS / REVISE / PASS | — | PASS / PASS / REVISE / REVISE |
+| `completion-reviewer` | REVISE, all four | — | REVISE, all four |
+| `qa-gatekeeper` | — | PASS / PASS / BLOCK / BLOCK | PASS / PASS / PASS / BLOCK |
+
+(columns in `TDD-0034` / `0035` / `0036` / `0037` order.)
+
+**What that leaves.** Items 3 and 5 have a `qa-gatekeeper` observation for three of the four rows.
+Items 7 and 8 have observations for all four, but the standing verdicts are REVISE. **Item 10 is the
+binding one**: it compares the revision each observation names, and they name four different ones
+today — `13c06411` / `3dbeeef6` for the round blocks, `f357d77a` for the rework blocks, `5ea28793`
+for `M-D` and the round-2 packs. It is no longer unevaluable, which it was before any pack existed;
+it is evaluable and currently false.
+
+**`TDD-0036`'s item 3 is discharged and `TDD-0037`'s is not.** The gatekeeper required a substitute
+for `TDD-0036`'s unrecoverable RED; `M-D` below is it, and round 3 confirmed it independently —
+needle unique at three revisions, mutant blob reproduced, both cited locations landing inside this
+row's own selector, and the hard guard above them unaffected so the claims genuinely executed.
+`TDD-0037` remains blocked on the granularity of its own falsifiability results, addressed below.
 
 So these two rows are **implemented, not review-closed**, and their `Status` is `refactor` — which is
 exactly the distinction `.qfai/steering/2026-08-17-chg-007-spec-0006-review-closure-scope.md` §1
@@ -7842,12 +7929,28 @@ measured at: `3dbeeef6` for round 1 and `5ea28793` for round 2. Written after th
 as such inside each `review_request.md`, because a pack backdated silently would be worse than the
 gap it fills.
 
-They are **untracked**, and that is the repository's convention rather than an oversight:
-`.gitignore:61` excludes `.qfai/review/*`, and of the 27 packs already on disk exactly zero are
-tracked — only the directory's `README.md` is. So the packs satisfy `qfai validate` locally and do not
-travel with the branch. Recorded rather than quietly overridden: force-adding eight packs would be a
-unilateral change to a repository-wide convention, and the currency caveat a reader needs is that a
-reviewer on another machine will not find them.
+They are **untracked**, and the warrant first written here for that was **false**. It claimed the
+repository has a convention against tracking packs, inferred from `.gitignore:61` plus the fact that
+of 27 existing packs exactly zero are tracked. A reviewer refuted it by measuring the siblings:
+
+| ignored path | `.gitignore` line | files tracked |
+| ------------ | ----------------- | ------------- |
+| `.qfai/discussion/*` | 60 | **137** |
+| `.qfai/evidence/*` | 59 | **15** |
+| `.qfai/report/*` | 57 | **5** |
+| `.qfai/review/*` | 61 | 1 (`README.md`) |
+
+The convention is the **opposite**: ignore-by-default governance directories here are force-added,
+including `.qfai/evidence/*`, which holds this very file. `.gitignore:61` proves no more about
+intent than `.gitignore:59` does, and `src/core/validators/reviewArtifacts.ts` says so in its own
+comment — those directories "hold governance records that a project may legitimately want tracked,
+and failing validation for tracking your own audit trail is the wrong answer."
+
+So the honest statement is: **`.qfai/review/` has no precedent either way**, tracking the packs is
+the user's call rather than an agent's, and the consequence worth putting to them is that a reviewer
+on another machine cannot see the artifact that discharges gate items 7-9. The packs stay untracked
+until that call is made. Third occurrence in this file of a true conclusion resting on a false
+warrant, after `2a9a2995` and `M-B`.
 
 ## The drift path's digest basis has no oracle — measured properly, and the record's warrant was wrong
 
