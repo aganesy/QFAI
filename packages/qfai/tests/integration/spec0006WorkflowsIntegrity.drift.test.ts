@@ -471,15 +471,29 @@ describe(
 
       // NOT COVERED BY THIS ROW — BR-0006-0018's 改行正規化 clause.
       //
-      // The rule says the comparison basis is newline-NORMALIZED content, and
-      // no test in this repository can currently tell that basis from a
-      // raw-byte one: reducing `normalizeNewlines` to `return text;` reddens
-      // nothing, including the full closure this slice runs (measured, not
-      // assumed). This row cannot close it either, and not by omission — the
-      // TC's Setup asks for a byte-identical revert, and a byte-identical
-      // fixture answers the same way under both bases BY CONSTRUCTION. Closing
-      // it needs a fixture whose two sides differ in line endings ONLY, which is
-      // a change to the TC's Setup.
+      // The rule says the comparison basis is newline-NORMALIZED content, and NO
+      // TEST IN THE DOCTOR CLOSURE DISCRIMINATES THAT BASIS FROM A RAW-BYTE ONE.
+      // Scope stated deliberately: the twelve selectors this slice runs, nothing
+      // wider — no suite outside them was measured.
+      //
+      // The warrant is the CALL-SITE mutation, the only probe that isolates the
+      // question. Drop `normalizeNewlines(...)` from `digestNormalizedText` in
+      // `src/core/doctor/workflowsIntegrity.ts` (`bad123d7` -> `b68ea8a2`) and this
+      // row stays at `6 passed`, the closure at `67 passed`, every exit code 0 —
+      // the mutant SURVIVES.
+      //
+      // Do NOT re-derive that from the obvious probe. Reducing `normalizeNewlines`
+      // ITSELF to `return text;` (`src/shared/text.ts`, `1ab8a835` -> `96328a68`)
+      // gives `2 failed | 65 passed`, but both failures are that function's own unit
+      // tests in `tests/unit/shared/text.test.ts` (`expected 'a\r\nb\r\n' to be
+      // 'a\nb\n'`) — inside the closure, and silent about the drift path. That red
+      // says the FUNCTION is covered; it never says the drift comparison calls it.
+      //
+      // This row cannot close the clause either, and not by omission — the TC's
+      // Setup asks for a byte-identical revert, and a byte-identical fixture answers
+      // the same way under both bases BY CONSTRUCTION. Closing it needs a fixture
+      // whose two sides differ in line endings ONLY, which is a change to the TC's
+      // Setup.
       //
       // The handle for that hand-off is the evidence anchor
       // `.qfai/evidence/implement-spec-0006.md#tdd-0030`, which records the

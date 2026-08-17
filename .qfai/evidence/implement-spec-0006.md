@@ -1627,7 +1627,23 @@ worth more than either finding alone.
 Reducing `normalizeNewlines` to `return text;` in the new `src/shared/text.ts` reddens **nothing**: the
 row's file gives `Tests 3 passed (3)` and the full 16-file closure gives
 `14 passed | 2 skipped (16)` / `163 passed | 14 skipped (177)`, exit 0 — identical to clean, with the
-mutated blob verified before *and* after each run. **The extraction relocated the unfalsifiable code;
+mutated blob verified before *and* after each run.
+
+> **Corrected 2026-08-17: that mutation does redden something, and the finding's conclusion survives
+> anyway on a different witness.** Re-measured at `49c2f945`, the same reduction gives
+> `2 failed | 65 passed` over a 12-selector closure, exit 1 — it reddens `normalizeNewlines`' **own**
+> unit tests in `tests/unit/shared/text.test.ts` (`expected 'a\r\nb\r\n' to be 'a\nb\n'` and
+> `expected 'a\r\r\nb' to be 'a\r\nb'`). Those tests were added by `6c7cc2d9`, the very commit that
+> created the `src/shared/text.ts` this sentence calls "new", so the claim was fragile at its own
+> revision even though its 16-file closure did not include them.
+>
+> **What is true, measured by the probe that isolates the question**: dropping the call from
+> `digestNormalizedText` only — leaving the helper and its tests intact and changing just what the drift
+> comparison computes — **survives** the closure at `67 passed`, exit 0. So no test in the doctor closure
+> discriminates the basis, which is F5's actual conclusion; the reduction it offered as the witness
+> proves that the FUNCTION is covered and never that the drift comparison calls it. Full measurement:
+> `## The drift path's digest basis has no oracle` below. F5's disposition — route to `/qfai-sdd` to
+> tighten a TC — is unchanged. **The extraction relocated the unfalsifiable code;
 it did not make BR-0006-0018 falsifiable.** The behaviour is real (packaged CRLF vs installed LF →
 `status ok`, `modified []`), just unasserted. Disposition unchanged: routing to `/qfai-sdd` to tighten
 a TC is correct, because writing the assertion here would be reviewer-originated scope.

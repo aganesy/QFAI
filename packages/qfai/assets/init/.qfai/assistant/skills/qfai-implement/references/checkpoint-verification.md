@@ -19,32 +19,38 @@ No other point is a checkpoint boundary. There is no "every N items" rule.
 Run all of the following from the repository root, in order. Substitute the project's own runner for
 the placeholders; record the literal commands actually executed in evidence.
 
-1. The item's own test — the ledger's `Test file` **plus** the runner's test-name option applied to
-   the ledger's `Selector`. Two runner-specific decisions, and both must be made from the ledger row:
+1. The item's own test — the ledger's `Test file`, run **file-scoped, with no test-name option**:
 
-   **a. The name option.** The `Selector` is a test NAME, and every common runner takes a name
-   through a flag, not a positional argument: a positional is a file filter. Vitest and Jest use
-   `-t`, pytest uses `-k`, `go test` uses `-run`. Passing the selector positionally
-   (`<test runner> '<Selector>'`) exits 1 with "No test files found", so the checkpoint would fail
-   on every item and none could leave `refactor`.
+   ```bash
+   <test runner> <Test file>
+   ```
 
-   **b. The unit of selection.** What goes in front of the name option is whatever the runner
-   selects by, which is not always a file:
-   - **File-selecting runners** (vitest, jest, pytest) take the `Test file` itself:
+   **Why the name option is not prescribed here.** Narrowing the run to the ledger's `Selector` is
+   the obvious move and an earlier form of this step required it. Do not, unless you have checked
+   that your runner matches the selector **literally**. Vitest's and Jest's `-t` take a _regular
+   expression_, and a `Selector` written in the common `TC-NNNN-NNNN (TDD-NNNN): title` shape
+   contains `(` and `)` — which the matcher reads as a capture group, not as characters. The pattern
+   then matches nothing, the runner reports `Tests 1 skipped (1)`, and it **exits 0**: a checkpoint
+   that establishes nothing while reporting success. Nothing downstream distinguishes it from a real
+   pass, because the exit code is what the surrounding procedure reads.
 
-     ```bash
-     <test runner> <Test file> -t '<Selector>'
-     ```
+   The file-scoped form cannot fail that way. It over-runs when several rows share one file, which is
+   the safe direction — it can only execute more than the row, never less.
 
-   - **Package-selecting runners** (`go test`) take a package. `go help test` documents the usage
-     as `go test [build/test flags] [packages] [build/test flags & test binary flags]`, and it
-     compiles the package's sources together with the matching `*_test.go` files. Handing it a lone
-     file switches it into file mode and drops the rest of the package from the build, so the item's
-     test normally fails on undefined symbols. Derive the package from the `Test file`'s directory:
+   **If you do narrow**, escape the selector for your runner's matcher, record the literal command,
+   and check that the run actually selected something: `passed >= 1` for a GREEN, `failed >= 1` for a
+   RED. A skipped count is not a pass.
 
-     ```bash
-     go test ./<dir of Test file> -run '<Selector>'
-     ```
+   **The unit of selection is not always a file.** Package-selecting runners (`go test`) take a
+   package, not a path. `go help test` documents the usage as
+   `go test [build/test flags] [packages] [build/test flags & test binary flags]`, and it compiles
+   the package's sources together with the matching `*_test.go` files. Handing it a lone file
+   switches it into file mode and drops the rest of the package from the build, so the item's test
+   normally fails on undefined symbols. Derive the package from the `Test file`'s directory:
+
+   ```bash
+   go test ./<dir of Test file>
+   ```
 
    Record the literal command actually run either way. If a project's runner selects by something
    else again, derive that unit from `Test file` in the same manner and say so in the evidence.

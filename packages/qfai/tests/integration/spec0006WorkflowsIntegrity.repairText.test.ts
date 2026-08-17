@@ -76,16 +76,13 @@ function escapeForRegExp(value: string): string {
 
 /**
  * Every `qfai` subcommand in `src/cli/main.ts`'s dispatch, with NO omissions —
- * enforced by the second `it` in this row's describe block, because the failure
- * direction of a stale hand-mirror is a FALSE GREEN: a subcommand present in the
- * dispatch and missing here silently narrows tokens 7 and 8. Mirrored rather
- * than imported to keep this row's zero-production-change record; the guard
- * supplies what the import would have. "NO omissions" is that guard's MEASURED
- * reach and not a hope, SCOPED ON BOTH SIDES: every `case` occurrence that
- * whitespace FOLLOWS and no IDENTIFIER CHARACTER precedes, whatever else does and
- * whether or not the label parses. What falls outside that, and the over-fire it
- * costs, are at its leg 2 with the mutants for both. Tokens 7 and 8 take the FULL
- * REGISTRY; token 8's note carries the constraint that puts on the message.
+ * enforced by the second `it` in this row's describe block, whose own note carries
+ * the failure direction and why this is a text scan, not an import. "NO omissions"
+ * is that guard's MEASURED reach and not a hope, SCOPED ON BOTH SIDES: every `case`
+ * occurrence that whitespace FOLLOWS and no IDENTIFIER CHARACTER precedes, whatever
+ * else does and whether or not the label parses; what falls outside that, and the
+ * over-fire it costs, sit at its leg 2 with the mutants for both. Tokens 7 and 8 take
+ * the FULL REGISTRY; token 8's note carries the constraint that puts on the message.
  */
 const CLI_SUBCOMMANDS = [
   "init",
@@ -119,20 +116,21 @@ const CLI_SUBCOMMANDS = [
  * lookahead: a path occurrence is always PRECEDED by `/`, `\`, `@`, `.` or `-`
  * (`…/assets/init/root`, `qfai-validate.yml`), an imperative never is. Its
  * lookahead deliberately does NOT exempt `.`, which is the fix rather than an
- * oversight — see the token's own note below. Measured clean on the Windows
- * path, the POSIX path, `qfai-validate.yml` and the pnpm store form
- * (`node_modules/.pnpm/qfai@1.9.0/node_modules/qfai/assets/init/root`); measured
- * FIRING on `re-run init to restore it` and `re-run init.` (tokens 7 AND 8) and
- * on `To repair, validate.` and `If you prefer, init the tree again.` (token 8
- * alone, which is what earns it its place beside token 7).
+ * oversight — see the token's own note below. Clean on `qfai-validate.yml` and on
+ * every path form in the sweep below; FIRING on `re-run init to restore it` and
+ * `re-run init.` (tokens 7 AND 8) and on `To repair, validate.` and `If you
+ * prefer, init the tree again.` (token 8 alone, which earns it its place beside 7).
  *
- * The other tokens are anchored so that a path SEGMENT BOUNDARY cannot satisfy
- * them — `\s` after `qfai`, a word boundary for the package managers, leading
- * whitespace before a flag. That is narrower than "a path cannot satisfy them",
- * which is false and was measured to be false: a checkout path containing a
- * SPACE fires token 1. An over-fire only, in the FALSE-RED direction, and
- * invisible in CI, which runs a space-free checkout path. The derivation is in
- * the evidence file rather than here.
+ * A SEGMENT BOUNDARY SATISFIES TOKENS 2 AND 6, AND NO OTHERS. A path separator is a
+ * NON-WORD character, so `\b` is precisely the anchor a boundary supplies:
+ * `…/npx/qfai/assets/init/root/…` fires `/\bnpx\b/i` and `…/refresh-tools/qfai/…`
+ * fires `/\brefresh/i`, POSIX and Windows form alike. The rest hold on something a
+ * separator is NOT — whitespace inside the match (1, 3, 7), `^` or whitespace before
+ * the dash (4, 5), token 8's lookbehind — and are clean on `npm/install`,
+ * `qfai/init`, `run/doctor`, `--force` and `-x` as segments and on the ordinary
+ * POSIX, Windows and pnpm-store forms. A SPACE opens two more: `qfai checkout` fires
+ * token 1, `my init copy` fires token 8. All are over-fires in the FALSE-RED
+ * direction only, invisible in CI, whose checkout path carries neither.
  *
  * The first token over-approximates the contract's "no imperative naming a
  * `qfai` subcommand": it also matches ordinary prose such as "QFAI will not
@@ -248,13 +246,12 @@ describe(
 
       const message = check?.message;
 
-      // Every assertion from here down is this row's claim and is `expect.soft`.
-      // Under hard asserts only the FIRST failure is observed, so a mutation
-      // reddening an earlier assertion aborts the run before the later ones
-      // execute and they read as covered while never having been exercised. The
-      // token sweep below makes that concrete: one inserted command string
-      // reddens three tokens at once, and only `expect.soft` lets all three be
-      // seen.
+      // WHY `expect.soft`, the scope having been set at guard #1 above: under hard
+      // asserts only the FIRST failure is observed, so a mutation reddening an
+      // earlier assertion aborts the run before the later ones execute and they read
+      // as covered while never having been exercised. The token sweep below makes
+      // that concrete — one inserted command string reddens three tokens at once,
+      // and only `expect.soft` lets all three be seen.
       expect
         .soft(findings, "workflows.integrity must be registered exactly once per doctor run")
         .toHaveLength(1);
@@ -291,7 +288,7 @@ describe(
       // `qfai<TAB>report` passes this row whole. Contract widening is routed
       // upstream; nothing here waits on it.
       //
-      // WHAT THAT LEAVES, split by OWNER rather than by mechanism:
+      // WHO OWNS THE TWO UNSWEPT FIELDS, and what each ownership does NOT reach:
       //   - `details` is BR-0006-0022's closed four-key payload, TDD-0036's to pin.
       //     Every constructible violation needs an EXTRA key — `nextActions: ["qfai
       //     init --force"]`, the shape `skills.integrity` actually ships, and its
@@ -301,11 +298,15 @@ describe(
       //     then `t`; `\n` and `\r\n` behave identically — measured). TDD-0036 is
       //     `todo`, so the class is UNCOVERED IN THE INTERVAL: deliberate, and with
       //     a named owner rather than a silent gap.
-      //   - `title` is UNOWNED, and naming that is the point of this note. A tab
-      //     inside its VALUE carries a command with no key-set change, so TDD-0036's
-      //     `toEqual` will not reach it either and no key-set pin can. It is outside
-      //     the contract as written, which is why it is recorded and raised upstream
-      //     instead of asserted.
+      //   - `title` is OWNED AT THE SHARED CONSTANT, not by any key-set pin.
+      //     `2e0016e7` extracted `WORKFLOWS_INTEGRITY_TITLE` into `src/core/doctor.ts`
+      //     and all three emissions read it, so TDD-0030's `toBe` on the `ok` title
+      //     reaches every one: this note's own vector, a tab-carried `qfai<TAB>report`
+      //     in that constant (`ee31f4dd` -> `5020e38a`), reddens drift `1 failed | 5
+      //     passed` (that `toBe` the sole failure) and the closure `1 failed | 66
+      //     passed`. One edit narrower survives — the value re-inlined at the DRIFT
+      //     branch ALONE (`-> fe1ac218`) leaves drift, this row and the closure GREEN,
+      //     and no `toEqual` over keys can see a value.
       const expectedMessage =
         `installed shipped workflow(s) differ from the packaged copy: ${ADOPTER_STALE_PATH}. ` +
         `Manual repair: replace each listed file with the copy of the same name in ${shippedWorkflowsDir()}. ` +
@@ -436,10 +437,9 @@ describe(
     // COVERAGE, not set equality: a member the dispatch has dropped only widens a
     // negative sweep (false RED at worst), while a dispatch label missing from the
     // mirror loses coverage silently. Scanning source TEXT rather than importing a
-    // registry keeps this row's zero-production-change record, and it is idiomatic
-    // in this slice — `tests/integration/shippedWorkflowOwnership.test.ts`, a
-    // sibling inside this row's own refactor closure, asserts over
-    // `src/cli/commands/init.ts` text the same way. `main.ts` holds exactly ONE
+    // registry keeps this row's zero-production-change record, and is idiomatic in
+    // this slice — sibling `tests/integration/shippedWorkflowOwnership.test.ts`
+    // asserts over `src/cli/commands/init.ts` text the same way. `main.ts` holds ONE
     // `switch`, so extracting every `case "…":` is unambiguous; a second switch
     // would over-collect, which is again the safe direction.
     it("this row's CLI_SUBCOMMANDS mirror covers every subcommand in the dispatch", async () => {
