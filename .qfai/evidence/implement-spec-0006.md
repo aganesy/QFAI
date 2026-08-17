@@ -3241,6 +3241,9 @@ row's newest recorded state was `2733395a` while its bytes had moved past it.
 - **Blobs**: `drift.test.ts` `fccd8dee` → `1d0e16a5`. One file, `+41 / −9`, **comment-only** — no
   assertion, guard, fixture or import moved, which is why the path is behaviour-preserving and no
   RED/GREEN pair is owed.
+  *(Blob currency, 2026-08-17: `1d0e16a5` was this file at `ef336208` and is no longer current —
+  `570aa79b` corrected the digest-basis warrant in it, giving `f36b46b3`. What that round was is
+  unchanged; what moved is the file, under a later and unrelated correction.)*
 - **What it changed**: two reviewer riders. C7's assertion pins both `title` and
   `details.workflowsDir` to a test-owned constant, and the comment now names the export a later reader
   would need first in order to make the DRY substitution — a checkable tripwire rather than a
@@ -3386,12 +3389,29 @@ this section for any revision hash other than the landing one — before its com
   figure through five reworks. `references/round-evidence.md:61-63` requires the pair to be **fresh** —
   "the pre-rework pair is stale evidence" — and present-but-stale is worse than absent because it reads as
   current. Reproduced independently by `completion-reviewer` and `qa-gatekeeper` at `ac902339`.*
-  **Result at round 7 (`152dc587`, test blob `2dff562f`) — the revision the row landed at**:
+  **Result at round 7 (`152dc587`, test blob `2dff562f`)** — labelled *the revision the row landed
+  at* when written, and **that label is corrected 2026-08-17: it was not**:
   `Test Files 17 passed | 2 skipped (19)` / `Tests 173 passed | 14 skipped (187)`, exit 0. The figure is
   numerically **identical** to round 6 because round 7 removed *assertions*, not tests — a distinction the
   count alone cannot establish, so it is carried by the structural check `qa-gatekeeper` named: `it()` = 2
   and `describe()` = 1 in both `0d2f9f75` and `2dff562f`, with assertion sites falling 12 → 10.
   Independently reproduced at these blobs by all three round-7 lenses.
+  **Result at the row's actual landing bytes, measured 2026-08-17 at `447ac585`** — the pair this
+  field owed and did not have. Rounds 8 (`32a4e542`) and 9 (`6b75d5aa`) landed after round 7, then
+  three *sibling* commits moved this row's file again while discharging a cross-row precondition on
+  its guards (`e1ce8747`, `2e0016e7`, `04e0a4f2`), and a fourth corrected two false docblock claims
+  in it (`570aa79b`). Test blob `2dff562f` → **`1d497422`**. Command, literal, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts`
+  → `Test Files 1 passed (1)` / `Tests 2 passed (2)`, exit 0. Closure, the 12 selectors this slice
+  now runs → `Test Files 12 passed (12)` / `Tests 67 passed (67)`, exit 0.
+
+  *Why this is the same defect twice, stated so the pattern is visible rather than the instance:* the
+  field was already corrected once for carrying round 1's figure through five reworks, with the note
+  that "present-but-stale is worse than absent because it reads as current". The correction then
+  added a **new** currency claim — *the revision the row landed at* — which went stale by the same
+  mechanism two rounds later, and then went stale a second time under commits belonging to **other
+  rows**. A landing-revision claim is only safe once the row is `done`; before that it is a
+  prediction, and this row's bytes have moved five times since it was made.
 - **Checkpoint verification**: `pnpm format:check` 0, `pnpm lint` 0, `pnpm check-types` 0,
   `pnpm -C packages/qfai lint:shipping` 0 — all four independently re-run by `completion-reviewer`, plus
   `lint:md`. Serial full suite at `a2fd86bc`: `Tests 4319 passed | 37 skipped (4356)`, zero failures.
