@@ -3,7 +3,7 @@ id: 2026-08-17-chg-007-spec-0006-review-closure-scope
 status: active
 kind: scope-up
 created: 2026-08-17
-updated: 2026-08-17
+updated: 2026-08-18
 scope: spec-0006
 blocking: false
 promote-to: null
@@ -14,6 +14,7 @@ links:
   - CR-20260810-0001
   - CR-20260814-0001
   - CR-20260817-0001
+  - CR-20260817-0002
 ---
 
 # `refactor` did not mean what the ledger implied, and unblocking step 4 is what showed it
@@ -65,7 +66,12 @@ and its anchor `#tdd-0039` resolves to nothing at all. The cell is specified as 
 The standing brief already names the fix — "a false statement is edited where it lives" — and this round
 is the measurement of what ignoring it costs at scale.
 
-## 4. Four defects of the orchestrator's own, recorded because three were already written down
+## 4. Five defects of the orchestrator's own, recorded because three were already written down
+
+> Count corrected from four to five as the review rounds progressed. The count itself is the point: two of
+> the five are the **same class** (a change applied where it was written and not where it is read), and the
+> second instance was found only after the first had been written down. A defect class survives being
+> recorded; it stops when the scoping rule changes.
 
 1. **A needle routed through a shell — three times in one session, after reading the rule that forbids
    it.** First a `python -c` string whose backticks bash expanded as command substitution, writing a
@@ -85,7 +91,16 @@ is the measurement of what ignoring it costs at scale.
    have refused the write the user had just authorised. **Following an incomplete plan faithfully still
    leaves an inconsistent artifact.** Scope a CR application by grepping every tree for restatements, not
    by its step list — `.agents/rules/distributed-surface.md` already states the governing discipline.
-4. **Ten agents running `vitest` concurrently produced a false nondeterminism report.** A reviewer
+4. **A Change Request applied to the spec but not to the prose quoting the spec — the same class as (3),
+   third instance.** `CR-20260810-0001` Option A reworded `TC-0006-0030`'s leg (b). Four test docblocks
+   **quote** that TC, and all four went stale the moment the rewording landed:
+   `provenanceGate.test.ts:286` still quotes the pre-CR string as its governing obligation;
+   `unresolvedPackaged.test.ts:9-18` asserts "LEG (b) IS NOT COVERED" and that the CR is `open`, both
+   false; `repairText.test.ts:13-14` carries the pre-CR partition claim. **Applying a CR to an obligation
+   stales every artifact that quotes it**, and the quoting artifacts are exactly where a reader looks
+   first. The scoping rule from (3) — grep every tree for restatements — has to include _quotations of the
+   obligation_, not only restatements of the rule.
+5. **Ten agents running `vitest` concurrently produced a false nondeterminism report.** A reviewer
    reported the six-suite closure as flaky; run serially it is `Tests 13 passed (13)` four times out of
    four. `useAdopterTreePool` builds real temp trees, so heavy parallel dispatch contends on the
    filesystem. **Cap concurrent suite-running agents.** The failure mode is a defect report against
