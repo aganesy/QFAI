@@ -2022,6 +2022,17 @@ record that it is unfilled.
 - **Revision**: `c181c0e5`; per-artifact blobs — new test `ec9809c7`, helper `49d9ddb0`. Production
   **unchanged**: `workflowsIntegrity.ts 39ae80f2`, `doctor.ts b44e1824`, `provenance.ts` and `init.ts`
   never opened.
+  _Currency note added 2026-08-17, and the correction is narrower than the finding that prompted it._
+  A review reported that this block "names revisions that no longer exist"; **measured, both revisions
+  exist** (`git rev-parse --verify` on `c181c0e5` and `921ad1fe` both resolve), and `39ae80f2` **was**
+  `workflowsIntegrity.ts` at `c181c0e5` — the anchoring is correct for the revision it names. What is
+  stale is the **bytes**: production is `bad123d7` at HEAD, moved by three later commits, and this row's
+  test file is `8133a875` rather than `ec9809c7`. So the observation is accurately anchored and no
+  longer current, which is a different defect from a dangling reference and takes a different fix — a
+  re-observation at the current bytes, not a corrected hash. Measured at HEAD, file-scoped, no `-t`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts`
+  → `Test Files 1 passed (1)` / `Tests 2 passed (2)`, exit 0. The 2 is this row's `it` plus TDD-0038's
+  in the same file.
 - **RED failure mode**: `falsifiability`. **Satisfied-by**: `TDD-0029` (round-2 commit `ec4b8f31`,
   `workflowsIntegrity.ts:228`). No production code written at any point — the behaviour already exists,
   which is the price this file accepted when option A was adopted.
