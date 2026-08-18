@@ -145,12 +145,19 @@ export type WorkflowsIntegrityStatus = "ok" | "modified" | "skipped_unresolved";
  * `../..` chain whose meaning depends on the reader's cwd, and absolutizing
  * `workflowsDir` puts the host layout into a machine surface that today has none.
  *
- * PER MEMBER, in declaration order, so that the opening claim is checkable rather
- * than taken on trust. A numeral stood here — "all FIVE of them", then "all SIX" —
- * and it is gone: a count at one site plus a prose rule telling future editors to
- * keep it in sync is a second thing to maintain and exactly the mechanism that let
- * the enumeration skip a member. The list is now its own inventory, so a missing
- * member is visible by reading it against the type.
+ * PER MEMBER, so that the opening claim is checkable rather than taken on trust.
+ * A numeral stood here — "all FIVE of them", then "all SIX" — and it is gone,
+ * because a count is a second thing to maintain and the one that rotted. The list
+ * is its own inventory: read it against the type and a missing member shows up as
+ * a member with no clause.
+ *
+ * It said "in declaration order" for exactly one revision, and that was false —
+ * this enumeration and the type below disagree on order, and the object literal
+ * the reader returns disagrees with both. A reviewer caught it. Worth leaving the
+ * scar visible: the first repair swapped an unverifiable count for an unverifiable
+ * navigational claim, in the paragraph whose entire job is to be checkable. Order
+ * is deliberately not asserted now, because asserting it would re-introduce the
+ * sync obligation the numeral's removal was meant to end.
  * `status === "ok"` gates the content-identical emission and the
  * drift suite's override leg asserts it; the status LITERALS `"modified"` and
  * `"skipped_unresolved"` gate the other two arms; the `modified` FIELD — distinct
@@ -165,10 +172,13 @@ export type WorkflowsIntegrityStatus = "ok" | "modified" | "skipped_unresolved";
  * add to, so a claim that some member is held for a later row now has to be
  * MEASURED against `doctor.ts` before it is written here.
  *
- * The count that used to open that paragraph is what rotted: it said FIVE while
- * the type declared six and the enumeration skipped the member that had just been
- * added — by the row that added it. A reviewer found it; a second reviewer pointed
- * out that replacing the numeral beats prescribing that editors keep it current.
+ * The history, corrected because an earlier draft of it was wrong. When the
+ * enumeration skipped a member, the count stood ALONE — there was no prose rule
+ * telling editors to keep count and list in sync. That rule arrived with the FIRST
+ * repair, on top of the count, and the second repair removed both. Saying the
+ * count-plus-rule pair caused the skip inverted the order of events, in a block
+ * whose next paragraph had it right.
+ *
  * Adding a member to this type now means adding a clause to the enumeration, and
  * nothing else.
  */
