@@ -189,6 +189,27 @@ jobs:
             --format github \
             --root .
 
+      - name: QFAI self-validate this repo (dogfooding — full profile)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Folded in from the repository's own copy of the shipped validate
+          # workflow, which this change deletes. That copy was never a mirror of
+          # this job: it ran the `full` profile while the steps above run `tdd`
+          # and `sdd`, so deleting it without this step would have dropped
+          # coverage rather than removed a duplicate.
+          #
+          # The LOCAL binary, not a resolver. The root manifest declares no
+          # dependency on the package and provides no local binary, so `npx qfai`
+          # from here resolves to the PUBLISHED release — CI would validate a
+          # version nobody is reviewing. That is why the run was folded in rather
+          # than repointed at the shipped workflow file.
+          node packages/qfai/dist/cli/index.mjs validate \
+            --profile full \
+            --fail-on error \
+            --format github \
+            --root .
+
       - name: Run qfai validate gate (fail on error)
         shell: bash
         run: |

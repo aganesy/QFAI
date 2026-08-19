@@ -1046,3 +1046,166 @@ item-12 checkpoint is not attempted: step 2 asks for an unfiltered whole-suite r
 giving, and step 4's clause 3 reads a total that `CR-20260818-0006` is about. `CR-20260820-0003` is
 open against `BR-0017-0047`'s and `TC-0017-0060`'s scope; the row is implemented against the intent,
 not the literal text.
+
+## Change 7 — retiring the duplicate validate workflow (TDD-0071, TDD-0072, TDD-0073)
+
+`10_Plan.md` step 7: delete `.github/workflows/qfai-validate.yml` and fold its full-profile run into
+`build` as a named item of that job's verification set. Base revision `d8e58fe0`.
+
+**Precondition checked before starting.** `BR-0017-0061` and `DR-0017-0005` edge 4 require the
+structural contract gate over the shipped set to exist at or before this change.
+`packages/qfai/tests/integration/shippedWorkflowShapeGate.test.ts` is present and wired into `ci:lint`
+as `lint:workflow-shape`, and its own run reports that the declared shape "pins all nine contract
+dimensions, and every one of them is actually diffed". The gate is in an ancestor change, so the edge
+holds.
+
+### The copy was never a mirror, which is why deleting it needed the fold first
+
+The repository shipped a validate workflow to adopters and kept its own copy. The copy ran
+`--profile full`; the `build` job ran `tdd` and `sdd`. Deleting the copy on its own would therefore
+have dropped the full profile rather than removed a duplicate — a coverage loss disguised as cleanup.
+
+`BR-0017-0059` also rules out the cheaper alternative. Repointing at the shipped workflow file would
+resolve the CLI through the package name, and the root manifest declares no dependency on
+`packages/qfai` and provides no local binary — so it would reach the **published** release. CI would
+validate a version nobody is reviewing. `TDD-0072` asserts both halves: the folded step uses
+`node packages/qfai/dist/cli/index.mjs`, and no own workflow reaches the package through `npx` /
+`pnpm dlx` / `yarn dlx` / `bunx`. It also asserts the WARRANT — that the root manifest really declares
+no such dependency — so if that ever changes, the row fails rather than keeping a stale reason.
+
+### The folded run already exits 1, and that is not this change's doing
+
+Measured before writing the step, so the fold could not be claimed green when it is not:
+
+```text
+node packages/qfai/dist/cli/index.mjs validate --profile full --fail-on error --root .
+  -> exit 1, counts: info=3 warning=404 error=2
+```
+
+The two errors are `QFAI-ATDD-111` and `QFAI-ATDD-112`, **the same two ids** the `--profile tdd` step
+immediately above it already reports. So the folded step adds no new failure mode: the job it joins
+was already failing at an earlier step for the same reason, and those two aggregates are what
+`CR-20260807-0001` (pre-existing cross-spec errors) is about. `--profile full` introduces no third
+error id — the `full`-only gates, `QFAI-TEST-001` among them, pass.
+
+Stating it that way rather than "the fold is green" is the point. It is not green. It is *no worse*,
+which is a different and weaker claim, and the only one the measurement supports.
+
+### `on:` is read under two keys, deliberately
+
+`on` is a boolean in YAML 1.1, so a parser following that schema yields the key `true` rather than the
+string `"on"`. The parser this repository uses follows YAML 1.2 and yields `"on"`. The row reads both,
+because a claim whose correctness depends on which schema a dependency chose is a claim that breaks
+silently on a version bump — and silently is the failure mode this whole spec is written against.
+
+### The enumeration lives in the test, and that is what makes removal a blocker
+
+`BR-0017-0060` asks that the folded run "become an item of the `build` job's enumerated verification
+set, so removing it later is a release blocker rather than a cleanup". A set derived from the workflow
+would agree with the workflow by construction and assert nothing, so `TDD-0073` holds the six
+verification step names as **literals**:
+
+```text
+Run build & pack verification
+Sanity grep — no internal spec IDs or version markers leak (post-build)
+QFAI self-validate this repo (dogfooding — TDD gates)
+QFAI self-validate this repo (dogfooding — SDD gates)
+QFAI self-validate this repo (dogfooding — full profile)      <- folded in by this change
+Run qfai validate gate (fail on error)
+```
+
+And each of them must be able to FAIL. The job already carries a step that cannot — the optional
+report, which ends in `|| true` — and the difference between the two kinds is the entire reason for
+enumerating them. Oracle `R7` and `R8` are the pair that separates the two halves: a step made
+toothless reddens only the can-fail claim, a step renamed out of the set reddens only the membership
+claim.
+
+### RED and GREEN
+
+- **RED command**, from `packages/qfai`:
+  `pnpm exec vitest run tests/scripts/ownWorkflowTopology.test.ts`
+- **RED result**: `Tests 3 failed | 9 passed (12)`, exit 1 — each of the three new rows on an
+  assertion inside its own `describe`, no load error. The nine that pass are changes 1 and 4's rows;
+  `TDD-0030`'s test is still withheld under `CR-20260820-0001`, which is why the file holds twelve
+  tests rather than thirteen.
+- **GREEN result**: same command, `Tests 12 passed (12)`.
+
+### What was deleted, and what was not
+
+```text
+.github/workflows/qfai-validate.yml                             deleted (the own copy)
+packages/qfai/assets/init/root/.github/workflows/qfai-validate.yml   untouched (what adopters get)
+```
+
+Two workflows remain in the own tree: `ci.yml` and `release.yml`. `ci:lint` is 0 across all eleven
+members after the deletion, which includes the hygiene lane over the own tree and the shipped-set
+shape gate over the packaged one.
+
+### Oracle proof — ten rounds
+
+| id | row | mutant | reddens |
+| --- | --- | --- | --- |
+| `R1` | TDD-0071 | `c547fea4` | `:636:12` — the duplicate workflow must be absent; `:644:8` — exactly one workflow may run on a pull request |
+| `R2` | TDD-0071 | `59a36a19` | `:644:8` — exactly one workflow may run on a pull request |
+| `R3` | TDD-0072, TDD-0073 | `c99370d0` | `:659:8` — the build job must carry exactly one full-profile validate run |
+| `R4` | TDD-0072 | `4aa32f13` | `:672:58` — the folded run must fail the job, target the repo root, and use the local binary |
+| `R5` | TDD-0072 | `f4528e2d` | `:672:58` — the folded run must fail the job, target the repo root, and use the local binary; `:689:8` — a resolver-based invocation would reach the published package |
+| `R6` | TDD-0072 | `eeb6bb7b` | `:672:58` — the folded run must fail the job, target the repo root, and use the local binary |
+| `R7` | TDD-0073 | `4bf5e3d6` | `:749:8` — an enumerated verification that cannot fail is not a verification |
+| `R8` | TDD-0073 | `62191dd0` | `:732:8` — every enumerated verification must be present in the build job |
+| `R9` | TDD-0072 | `85cc47c1` | `:708:8` — the root manifest declaring a dependency on qfai would change why a repoint is unsafe |
+| `R10-control` | (control) | `fb6ccd00` | **nothing new** |
+
+`R9` is the round that mutates the ROOT manifest rather than a workflow. `TDD-0072`'s rejection of a
+resolver-based invocation rests on the root declaring no dependency on the package; `R9` adds one, and
+the warrant claim reddens while nothing else does.
+
+### The suite
+
+| script | test files | tests | wall clock |
+| --- | --- | --- | --- |
+| `test:core` | 122 passed (122) | 1587 passed | 2 skipped (1589) | 94.2s |
+| `test:unit` | 43 passed (43) | 266 passed (266) | 9.8s |
+| `test:validators` | 46 passed (46) | 351 passed (351) | 15.8s |
+| `test:integration` | 124 passed | 4 skipped (128) | 862 passed | 19 skipped (881) | 64.3s |
+| `test:e2e` | 73 passed | 4 skipped (77) | 889 passed | 16 skipped (905) | 32.1s |
+| `test:cli` | 11 passed (11) | 321 passed (321) | 169.5s |
+| `test:scripts` | 10 passed (10) | 100 passed (100) | 9.3s |
+
+Total 395.0s, every one green. No timing claim is made from this table, for the reasons recorded
+under change 6.
+
+### The validate delta, and what the NEXT commit will cost
+
+`validate --profile tdd --fail-on error --root .` reports `info=4 warning=374 error=2`, exit 1.
+Warning is DOWN three from change 6, because `TDDLIST_STALE_STATUS` fires on a `todo` row whose
+selector resolves and three such rows became `refactor`. `TDDLIST_EVIDENCE_STATUS_ONLY` stays at 96:
+these Evidence cells lead with their command, per change 6.
+
+That number was measured with the next commit’s test file moved OUT of the tree, and the reason is
+worth recording. With `tests/assets/actionPinBumpOwner.test.ts` present, warning reads 381 — seven
+added, and only TWO of them are its own rows:
+
+```text
+TDD-0074, TDD-0075   its own rows, correctly reported as todo with a resolving selector
+TDD-0025, TDD-0033   FALSE: their selectors name describes that file does not contain
+TDD-0034, TDD-0035   FALSE
+TDD-0066             FALSE
+```
+
+Five of seven are false positives, and the mechanism is the one `CR-20260818-0001` is open against:
+the resolution check is satisfied by the test FILE existing, so every row pointing at a shared file
+inherits a resolving selector it does not have. Thirteen `spec-0017` rows point at that one file, so
+the same file will keep manufacturing false positives as its rows land one change at a time.
+
+This is the second time this slice has measured that mechanism — change 4 recorded a new file taking
+the count from 16 to 36 with 23 false. Recorded here rather than absorbed, because a count that moves
+for a reason nobody attributes is how a 374-warning baseline becomes unreadable.
+
+### Gate items NOT satisfied
+
+The three blocking agent verdicts were not obtained, so `Status` is `refactor` for all three rows.
+`TDD-0074` and `TDD-0075` are NOT in this commit: `BR-0017-0061` also requires a recorded
+justification for the deletion, whose satisfying artifact the ledger places in `07_Decisions.md`, and
+that is a separate piece of authoring rather than a line in this diff. The item-12 checkpoint is not
+attempted for the reasons recorded under changes 3 through 6.

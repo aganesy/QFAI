@@ -46,6 +46,9 @@
 // QFAI:SPEC-0017:TC-0017-0028
 // QFAI:SPEC-0017:TC-0017-0029
 // QFAI:SPEC-0017:TC-0017-0031
+// QFAI:SPEC-0017:TC-0017-0071
+// QFAI:SPEC-0017:TC-0017-0072
+// QFAI:SPEC-0017:TC-0017-0073
 
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -553,5 +556,196 @@ describe("TC-0017-0031 (TDD-0031): the shared definition never enters the shippe
     expect
       .soft(backstop, "the sibling static backstop this row relies on is gone — re-home the claim")
       .toContain('const allowedRootGithubEntries = new Set(["workflows"]);');
+  });
+});
+
+// ── change 7: the duplicate validate workflow is retired and its run folded ──
+//
+// The repository shipped a validate workflow to adopters AND kept its own copy of it.
+// The copy was never a mirror — it ran `--profile full` while the repository's own CI ran
+// `tdd` and `sdd` — so deleting it would have dropped coverage rather than removed a
+// duplicate. `BR-0017-0059` is what makes the deletion safe: the full-profile run moves
+// into the `build` job first.
+//
+// Why the fold and not a repoint at the shipped file: the root manifest declares no
+// dependency on the package and provides no local binary, so `npx qfai` from the root
+// resolves to the PUBLISHED package. That inverts the dogfooding — CI would validate a
+// release instead of the change under review.
+
+const DUPLICATE_WORKFLOW = "qfai-validate.yml";
+const BUILD_JOB = "build";
+const LOCAL_BINARY = "node packages/qfai/dist/cli/index.mjs";
+
+/**
+ * Every workflow file in the repository's own tree.
+ *
+ * Read from the directory rather than from a list, so a workflow added later is covered by
+ * `TC-0017-0071` without anyone remembering to register it.
+ */
+function ownWorkflowFiles(): string[] {
+  return readdirSync(WORKFLOWS_DIR)
+    .filter((name) => name.endsWith(".yml") || name.endsWith(".yaml"))
+    .sort();
+}
+
+/**
+ * The parsed trigger block of one workflow.
+ *
+ * `on` is read under BOTH keys deliberately. It is a boolean in YAML 1.1, so a parser
+ * following that schema yields the key `true` rather than the string `"on"`. This parser
+ * follows YAML 1.2 and gives `"on"`, but a row whose correctness depends on which schema
+ * the parser chose is a row that breaks silently on a dependency bump — and silently is the
+ * failure mode this whole spec is written against.
+ */
+function triggersOf(file: string): Record<string, unknown> {
+  const doc: unknown = parseYaml(readFileSync(path.join(WORKFLOWS_DIR, file), "utf-8"));
+  if (!isRecord(doc)) {
+    throw new Error(`${file} does not parse as a mapping`);
+  }
+  const under = doc["on"] ?? doc[String(true)] ?? (doc as Record<string, unknown>)["true"];
+  return isRecord(under) ? under : {};
+}
+
+/** The `build` job's steps, narrowed. */
+function buildJobSteps(): Record<string, unknown>[] {
+  const doc: unknown = parseYaml(readFileSync(CI_WORKFLOW, "utf-8"));
+  if (!isRecord(doc) || !isRecord(doc["jobs"]) || !isRecord(doc["jobs"][BUILD_JOB])) {
+    throw new Error(`ci.yml declares no \`${BUILD_JOB}\` job`);
+  }
+  const steps = doc["jobs"][BUILD_JOB]["steps"];
+  if (!Array.isArray(steps)) {
+    throw new Error(`ci.yml's \`${BUILD_JOB}\` job declares no steps`);
+  }
+  return steps.filter(isRecord);
+}
+
+const stepName = (step: Record<string, unknown>): string =>
+  typeof step["name"] === "string" ? step["name"] : "(unnamed)";
+
+const stepRun = (step: Record<string, unknown>): string =>
+  typeof step["run"] === "string" ? step["run"] : "";
+
+describe("TC-0017-0071 (TDD-0071): exactly one workflow is triggered by a pull request", () => {
+  it("has removed the duplicate and leaves a single pull-request-triggered workflow", () => {
+    const files = ownWorkflowFiles();
+
+    // CLAIM 1 — the duplicate is gone. Named as a literal: the row is about THIS file, and
+    // a name derived from the directory it was deleted from would be vacuous.
+    expect
+      .soft(files, `${DUPLICATE_WORKFLOW} duplicated a workflow this repository also ships`)
+      .not.toContain(DUPLICATE_WORKFLOW);
+
+    // CLAIM 2 — and exactly one workflow remains pull-request-triggered. Asserted over the
+    // PARSED trigger block, so a `pull_request` appearing in a comment or in a job name does
+    // not count, and one nested under `on:` does.
+    const triggered = files.filter((file) => "pull_request" in triggersOf(file));
+    expect
+      .soft(triggered, "exactly one workflow may run on a pull request")
+      .toEqual([path.basename(CI_WORKFLOW)]);
+  });
+});
+
+describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the published one", () => {
+  it("runs the full profile from the build job against the repository root, via the built binary", () => {
+    const steps = buildJobSteps();
+    const fullProfile = steps.filter((step) => /--profile\s+full\b/.test(stepRun(step)));
+
+    // CLAIM 1 — the run exists, exactly once, in the build job.
+    expect
+      .soft(
+        fullProfile.map(stepName),
+        "the build job must carry exactly one full-profile validate run",
+      )
+      .toHaveLength(1);
+    if (fullProfile.length !== 1) return;
+    const run = stepRun(fullProfile[0]);
+
+    // CLAIM 2 — it fails the job, targets the repository root, and uses the LOCAL binary.
+    // The binary is the half that matters: the root manifest declares no dependency on the
+    // package, so any resolution through the package name would reach the published release
+    // instead of the build under review.
+    for (const [needle, why] of [
+      ["--fail-on error", "the folded run must fail the job, not merely report"],
+      ["--root .", "the folded run must validate the repository root"],
+      [LOCAL_BINARY, "the folded run must invoke the locally built binary"],
+    ] as const) {
+      expect.soft(run, `${why}: ${JSON.stringify(run)}`).toContain(needle);
+    }
+
+    // CLAIM 3 — and no own workflow reaches the package through a resolver that would find
+    // the published one. This is the rejected alternative, asserted rather than described.
+    const published: string[] = [];
+    for (const file of ownWorkflowFiles()) {
+      const text = readFileSync(path.join(WORKFLOWS_DIR, file), "utf-8");
+      for (const [index, line] of text.split(/\r?\n/).entries()) {
+        if (line.trimStart().startsWith("#")) continue;
+        if (/\b(?:npx|pnpm\s+dlx|yarn\s+dlx|bunx)\s+qfai\b/.test(line)) {
+          published.push(`${file}:${index + 1}: ${line.trim()}`);
+        }
+      }
+    }
+    expect
+      .soft(published, "a resolver-based invocation would reach the published package")
+      .toEqual([]);
+
+    // The warrant for CLAIM 3, asserted so the reason cannot rot: the root manifest really
+    // does not depend on the package. If that ever changes, CLAIM 3's rationale changes with
+    // it and this row should be revisited rather than silently kept.
+    const rootManifest: unknown = JSON.parse(
+      readFileSync(path.join(REPO_ROOT, "package.json"), "utf-8"),
+    );
+    const declared = isRecord(rootManifest)
+      ? {
+          ...(isRecord(rootManifest["dependencies"]) ? rootManifest["dependencies"] : {}),
+          ...(isRecord(rootManifest["devDependencies"]) ? rootManifest["devDependencies"] : {}),
+        }
+      : {};
+    expect
+      .soft(
+        Object.keys(declared).filter((name) => name === "qfai"),
+        "the root manifest declaring a dependency on qfai would change why a repoint is unsafe",
+      )
+      .toEqual([]);
+  });
+});
+
+describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verification set", () => {
+  it("enumerates the build job's verifications and requires each of them, the folded run included", () => {
+    // THE enumeration. Keeping it here, as literals, is what makes removing any member a
+    // failing test rather than a tidy diff — which is precisely what `BR-0017-0060` asks
+    // for ("removing it later is a release blocker rather than a cleanup"). A set derived
+    // from the workflow would agree with the workflow by construction and assert nothing.
+    const REQUIRED = [
+      "Run build & pack verification",
+      "Sanity grep — no internal spec IDs or version markers leak (post-build)",
+      "QFAI self-validate this repo (dogfooding — TDD gates)",
+      "QFAI self-validate this repo (dogfooding — SDD gates)",
+      "QFAI self-validate this repo (dogfooding — full profile)",
+      "Run qfai validate gate (fail on error)",
+    ] as const;
+
+    const steps = buildJobSteps();
+    const present = steps.map(stepName);
+    const absent = REQUIRED.filter((name) => !present.includes(name));
+    expect
+      .soft(absent, "every enumerated verification must be present in the build job")
+      .toEqual([]);
+
+    // And each of them must be able to FAIL. A step that cannot fail is not a verification,
+    // however it is named — the job already carries one such step on purpose (the optional
+    // report, which ends in `|| true`), and the difference between the two kinds is the
+    // whole point of enumerating them.
+    const toothless = steps
+      .filter((step) => REQUIRED.includes(stepName(step) as (typeof REQUIRED)[number]))
+      .filter(
+        (step) =>
+          step["continue-on-error"] === true ||
+          /\|\|\s*true\b/.test(stepRun(step)) ||
+          /\|\|\s*:\s*$/m.test(stepRun(step)),
+      )
+      .map(stepName);
+    expect
+      .soft(toothless, "an enumerated verification that cannot fail is not a verification")
+      .toEqual([]);
   });
 });
