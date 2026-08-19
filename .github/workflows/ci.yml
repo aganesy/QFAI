@@ -14,12 +14,6 @@ on:
 permissions:
   contents: read
 
-# ── Node version configuration ──────────────────────────────────────
-# Change these values to update the shared Node version for non-matrix jobs.
-# - NODE_LTS: used by lint, check-types, check-types-future, build
-env:
-  NODE_LTS: "20.19"
-
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -52,17 +46,9 @@ jobs:
           # is invoked from a fork or a non-PR event.
           git fetch --no-tags --depth=1 origin main || true
         shell: bash
-      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
-        run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: ${{ env.NODE_LTS }}
-          cache: pnpm
-      - name: Re-shim pnpm against toolcache Node
-        run: corepack prepare pnpm@9.12.3 --activate
-        shell: bash
-      - run: pnpm install --frozen-lockfile
+      # The four-step toolchain preamble, defined once in
+      # `.github/actions/setup/action.yml`. It stood inline here six times.
+      - uses: ./.github/actions/setup
       - name: Run lint gate
         run: pnpm ci:lint
       - name: Sanity grep — no internal spec IDs or version markers leak
@@ -79,17 +65,9 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
-        run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: ${{ env.NODE_LTS }}
-          cache: pnpm
-      - name: Re-shim pnpm against toolcache Node
-        run: corepack prepare pnpm@9.12.3 --activate
-        shell: bash
-      - run: pnpm install --frozen-lockfile
+      # The four-step toolchain preamble, defined once in
+      # `.github/actions/setup/action.yml`. It stood inline here six times.
+      - uses: ./.github/actions/setup
       - name: Run type check
         run: pnpm check-types
 
@@ -101,17 +79,9 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
-        run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: ${{ env.NODE_LTS }}
-          cache: pnpm
-      - name: Re-shim pnpm against toolcache Node
-        run: corepack prepare pnpm@9.12.3 --activate
-        shell: bash
-      - run: pnpm install --frozen-lockfile
+      # The four-step toolchain preamble, defined once in
+      # `.github/actions/setup/action.yml`. It stood inline here six times.
+      - uses: ./.github/actions/setup
       - name: Run future TypeScript compatibility check
         run: pnpm check-types:future
 
@@ -127,17 +97,9 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
-        run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: ${{ env.NODE_LTS }}
-          cache: pnpm
-      - name: Re-shim pnpm against toolcache Node
-        run: corepack prepare pnpm@9.12.3 --activate
-        shell: bash
-      - run: pnpm install --frozen-lockfile
+      # The four-step toolchain preamble, defined once in
+      # `.github/actions/setup/action.yml`. It stood inline here six times.
+      - uses: ./.github/actions/setup
       # The e2e AND integration slices contain tests that exec the built
       # CLI at `packages/qfai/dist/cli/index.{cjs,mjs}` (e.g.
       # spec0010DiscussionMockAndPointerE2E, spec0008AtddScaffold,
@@ -165,17 +127,9 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
-        run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: ${{ env.NODE_LTS }}
-          cache: pnpm
-      - name: Re-shim pnpm against toolcache Node
-        run: corepack prepare pnpm@9.12.3 --activate
-        shell: bash
-      - run: pnpm install --frozen-lockfile
+      # The four-step toolchain preamble, defined once in
+      # `.github/actions/setup/action.yml`. It stood inline here six times.
+      - uses: ./.github/actions/setup
       - name: Run scanner coverage gate
         run: pnpm ci:coverage
 
@@ -187,17 +141,9 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
-        run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: ${{ env.NODE_LTS }}
-          cache: pnpm
-      - name: Re-shim pnpm against toolcache Node
-        run: corepack prepare pnpm@9.12.3 --activate
-        shell: bash
-      - run: pnpm install --frozen-lockfile
+      # The four-step toolchain preamble, defined once in
+      # `.github/actions/setup/action.yml`. It stood inline here six times.
+      - uses: ./.github/actions/setup
 
       - name: Run build & pack verification
         run: pnpm ci:build-verify

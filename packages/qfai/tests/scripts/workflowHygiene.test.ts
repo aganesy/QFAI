@@ -322,10 +322,21 @@ describe("TC-0017-0022 (TDD-0022): every action reference is a full-SHA pin", ()
     // of that form would demand the un-pinned tree back. The scan is comment-blind
     // on purpose — its docblock records that the class escaped a file-scoped scan
     // once — so a literal here reddens a sibling row for prose.
+    // A LOCAL reference (`./.github/actions/setup`) is exempt, and this is the
+    // same exemption the lane itself carries rather than a weakening of the row.
+    // A local path resolves inside the repository at the same commit, which is
+    // the property pinning buys — so there is nothing a SHA would add, and
+    // demanding one would reject the composite action this repository's own
+    // toolchain preamble now lives in. Added when change 4 introduced the first
+    // such reference; the lane had it from the start and the row did not, which
+    // is how the gap surfaced.
     expect
       .soft(
-        uses.filter((u) => !/@[0-9a-f]{40}$/.test(u.uses)).map((u) => `${u.where} -> ${u.uses}`),
-        "every action reference must be pinned to a full commit SHA, so what runs cannot change under a tag move",
+        uses
+          .filter((u) => !u.uses.startsWith("./"))
+          .filter((u) => !/@[0-9a-f]{40}$/.test(u.uses))
+          .map((u) => `${u.where} -> ${u.uses}`),
+        "every non-local action reference must be pinned to a full commit SHA, so what runs cannot change under a tag move",
       )
       .toEqual([]);
   });

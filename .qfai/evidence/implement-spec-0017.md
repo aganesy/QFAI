@@ -517,3 +517,164 @@ item-12 checkpoint is not attempted, and now for two reasons rather than one:
    names which project holds the failure — but it is not the command the reference asks for, and
    substituting it silently would be the kind of near-miss this slice has been repeatedly corrected
    for. Recorded as unmet.
+
+## Change 4 — the shared setup definition (TDD-0027, TDD-0028, TDD-0029, TDD-0031)
+
+`10_Plan.md` step 4: extract the preamble duplicated six times into
+`.github/actions/setup/action.yml` and consume it from every toolchain job. Base revision `28b7a8e2`.
+**TDD-0030 is NOT in this change** — it is blocked by `CR-20260820-0001`, filed from a conflict this
+change surfaced. See below.
+
+### The preamble was six byte-identical copies, measured
+
+```text
+identical 11-line preamble blocks in ci.yml   6
+actions/setup-node references                 6
+corepack enable                               6
+pnpm install --frozen-lockfile                6
+```
+
+After: each is 0, and `uses: ./.github/actions/setup` appears 6 times. Verified inside the rewiring
+script rather than afterwards, so a partial extraction could not have been committed.
+
+### Composite action, and the two things the definition adds rather than carries over
+
+A reusable workflow was rejected: it is dispatched per job and that overhead runs against the cost
+objective the whole spec serves. `BR-0017-0024`'s obligation is single-definition, so the mechanism
+may change later; a second definition may not.
+
+- **`cache-dependency-path` is new.** `BR-0017-0026` names both the package-manager cache AND an
+  explicit cache-dependency path; the inline preamble had only the first. Without it `setup-node`
+  guesses from the working directory — right today, silently wrong the moment a second lockfile
+  appears. `R4` is the mutation that proves the row sees it.
+- **`node-version-file` replaces a literal.** The old `NODE_LTS: "20.19"` had a comment three lines
+  above it listing which jobs used it — and that list was already one job out of date. A literal
+  cannot make a stale version comment impossible however carefully it is commented, which is what
+  `BR-0017-0027` asks for.
+
+The step ORDER is asserted, not just the membership, and the reason is mechanical: `setup-node`
+installs its own Node ahead of the one step 1's corepack was activated against, so a re-shim placed
+BEFORE it would be a no-op and the install would run on whatever pnpm the runner image shipped.
+
+### The Node version source, and the trade recorded rather than hidden
+
+`node-version-file: package.json`, which resolves through `engines.node` (`>=20.19.0`). The plan chose
+this and recorded why the alternative was not available: pinning exactly needs a root-level
+`.node-version`, and no agent may create a root file on its own authority.
+
+The consequence is real and is not glossed: the resolved version becomes **latest satisfying** rather
+than the previously pinned `20.19`, which today means Node 24. The risk is bounded by measurement
+rather than by argument — this repository's whole test suite passes on Node 24 locally, which is the
+version this environment runs.
+
+### The conflict this change surfaced, filed as `CR-20260820-0001`
+
+`TDD-0030` cannot pass, and not because of anything change 4 did or left undone. Three statements
+cannot all hold:
+
+1. `BR-0017-0027` is **tree-wide**: "no workflow-level Node version literal may remain … in this
+   tree", and `TC-0017-0030`'s oracle repeats the scope.
+2. `10_Plan.md`'s file table scopes `release.yml` to "checkout flags and SHA pins only".
+3. `release.yml` carries **two** workflow-level Node literals: `NODE_LTS: "20.19"` for the gate job
+   and `NODE_PUBLISH: "24"` for the publish job.
+
+And the publish job is the hard half rather than merely out of scope. Its literal encodes a **measured
+npm constraint** that `engines.node` does not express and is not about: trusted publishing needs
+npm >= 11.5.1, and the documented Node minimum is not enough because `npm@latest` carries its own
+engine range, so the install fails `EBADENGINE` before the version check runs. Pointing that job at
+`engines.node` would launder an npm requirement through a field that means something else — on the one
+workflow whose failure mode is an irreversible publish.
+
+There is a coincidence worth naming and not relying on: `>=20.19.0` as latest-satisfying is Node 24
+today, which is what `NODE_PUBLISH` asks for. That is today's arithmetic, not a guarantee — the
+comment says "track the current LTS major" and the range says "anything at or above 20.19", and those
+diverge silently the moment a newer major ships.
+
+`TDD-0030` stays `todo`, and **its test is withheld rather than committed red.** Making it pass would
+have meant choosing one of the CR's three options on my own authority, and the option that looks
+cheapest — point the publish job at the file — is the one that discards a measured constraint.
+
+Withheld and not merely failing, for two reasons that are both mechanical. `ci:gate` runs the whole
+package suite, so a committed red test reds every pull request. And `it.todo` is not the escape:
+`QFAI-TEST-001` gates on `.todo` stubs under the full validate profile, so that route trades a red
+test for a red validate. A `todo` row with no test is also simply the consistent state.
+
+The oracle is not lost. It is written down here and in the CR, ready to paste back: read each own
+workflow's top-level `env` block from the PARSED document — so "workflow-level" is decided by YAML
+structure rather than by indentation that looks right — and assert that no key matching `/node/i`
+holds a value starting with a digit. The trace marker for `TC-0017-0030` is withheld with it, because
+registering a TC whose test does not exist would claim coverage `QFAI-ATDD-112` reads as present.
+
+### RED
+
+- **RED command**, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/scripts/ownWorkflowTopology.test.ts`
+- **RED result**: `Tests 4 failed | 6 passed (10)`, exit 1 — `TDD-0027`, `TDD-0028`, `TDD-0029` and
+  `TDD-0030`, each on an assertion inside its own `describe`, no load error. The seam was a composite
+  action with `steps: []`, which is present enough to parse and empty enough to fail every shape
+  claim.
+- **`TDD-0031` passed at RED**, structurally: the definition was already absent from the shipped tree
+  before change 4 put it anywhere. The row is a regression guard, so `RED failure mode:
+  falsifiability` with `R5`.
+
+### GREEN
+
+- **GREEN command / result**: the same command — `Tests 9 passed | 1 failed (10)`, the one failure
+  being `TDD-0030` on `release.yml` alone. Stated that way rather than as a clean pass, because it is
+  not one: change 4's four rows are green and the fifth is blocked.
+- **The whole `scripts` project**: `Test Files 1 failed | 7 passed (8)` — same single failure.
+
+### Two test corrections change 4 forced, both measured before applying
+
+- **`TDD-0022` (change 2's row) rejected the first LOCAL reference.** `uses: ./.github/actions/setup`
+  is not a 40-hex SHA, and the row demanded one of every reference. The hygiene LANE already exempts
+  `./…` and records why — a local path resolves inside the repository at the same commit, which is the
+  property pinning buys — and the row did not. A co-change, not a weakening: the same exemption, for
+  the same reason, added where it was missing. The gap surfaced only because change 4 introduced the
+  first such reference, which is worth noting: the lane and its row had disagreed since change 3 and
+  nothing could see it.
+- **`TDD-0030` over-asserted, and I narrowed it to its own oracle.** The first draft grepped the text
+  for any `node-version:` literal and so blamed `qfai-validate.yml`'s STEP-level `node-version: "20"`.
+  The rule and the oracle both say **workflow-level**. It now reads the parsed document's top-level
+  `env` block, so "workflow-level" is decided by YAML structure rather than by indentation that looks
+  right. Over-asserting would have been the reviewer-originated-obligation move the drift protocol
+  forbids — demanding more than the rule asks and blaming a file it does not govern.
+
+### Oracle proof
+
+| id | row | mutant | reddens |
+| --- | --- | --- | --- |
+| `R1` | TDD-0027 | `02d177cb` | `:407:8` — a second frozen-lockfile literal returns to ci.yml |
+| `R2` | TDD-0028 | `39044dd2` | `:435:8` `:445:14` — one job restates the preamble inline (and `:407:8`, because restoring the preamble restores its install line) |
+| `R3` | TDD-0029 | `c7a49d84` | **nothing new** — a comment-only edit to the re-shim step, the control |
+| `R4` | TDD-0029 | `8c95ae3a` | `:482:8` — the explicit cache-dependency path is dropped |
+| `R5` | TDD-0031 | (a planted directory, not a file mutation) | `:554:8` — a composite action appears under the shipped asset tree |
+
+Every run also shows `TDD-0030` red at `:526:8`. That is the standing `release.yml` failure and not an
+effect of any mutation — which is exactly why `R3` matters: a control that reddens nothing NEW is what
+distinguishes "the row sees this" from "the suite was already red". Without it, four mutations against
+an already-red suite would prove less than they appear to.
+
+`R5` creates a directory under `packages/qfai/assets/init/root/.github/` and removes it. The removal is
+verified by `git status` over `packages/qfai/assets`, not by a `finally` alone — a crash defeats a
+`finally`, which this repository has recorded happening.
+
+### `TC-0017-0031`'s second half is cited, not duplicated
+
+The oracle also asks that "pack verification still throws on a non-workflows child".
+`scripts/verify-pack.mjs` resolves the repository root from its own location and packs THIS repo, so
+it cannot be pointed at a fixture. The repository already answered that: spec-0003's
+`shippedWorkflowTopology.test.ts` carries a static backstop pinning the `allowedRootGithubEntries`
+allow-list and its throw path — and its own comment names this exact case, "an `actions/` directory
+stays a hard pack failure". That sibling row anticipated this change.
+
+So this row asserts the new half (absence from the shipped tree, by walking it rather than probing one
+expected path) and asserts that the backstop is still there to be relied on. Duplicating the pack-time
+claim would have created a second site for one obligation, which is the class this slice has spent
+several rounds correcting.
+
+### Gate items NOT satisfied
+
+The three blocking agent verdicts were not obtained. `Status` is `refactor` for the four rows that
+landed. The item-12 checkpoint is not attempted: step 2 needs a clean whole-suite run this machine is
+not currently giving, and step 4's clause 3 reads a total `CR-20260818-0006` is about.

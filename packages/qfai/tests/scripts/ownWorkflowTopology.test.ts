@@ -42,9 +42,13 @@
 // QFAI:SPEC-0017:TC-0017-0003
 // QFAI:SPEC-0017:TC-0017-0004
 // QFAI:SPEC-0017:TC-0017-0005
+// QFAI:SPEC-0017:TC-0017-0027
+// QFAI:SPEC-0017:TC-0017-0028
+// QFAI:SPEC-0017:TC-0017-0029
+// QFAI:SPEC-0017:TC-0017-0031
 
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -59,7 +63,8 @@ const REPO_ROOT = path.resolve(
   "..",
   "..",
 );
-const CI_WORKFLOW = path.join(REPO_ROOT, ".github", "workflows", "ci.yml");
+const WORKFLOWS_DIR = path.join(REPO_ROOT, ".github", "workflows");
+const CI_WORKFLOW = path.join(WORKFLOWS_DIR, "ci.yml");
 
 /**
  * The aggregate verdict's job key. A LITERAL, and it has to stay one: the key is
@@ -328,5 +333,225 @@ describe("TC-0017-0005 (TDD-0005): an unrecognized need state fails closed", () 
         "an empty needs map means nothing was observed, which is not success",
       )
       .toBe(1);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// Change 4 — the shared setup definition.
+//
+// The preamble was duplicated six times in `ci.yml`: enable the corepack shim,
+// set up Node, re-shim pnpm against the toolcache Node, install with a frozen
+// lockfile. `BR-0017-0024`'s obligation is SINGLE-DEFINITION, and a
+// repository-internal composite action is the mechanism that satisfies it today
+// — a reusable workflow was rejected because per-job dispatch overhead
+// contradicts the cost objective this whole spec exists to serve.
+// ───────────────────────────────────────────────────────────────────────────
+
+const SETUP_ACTION_REL = ".github/actions/setup/action.yml";
+const SETUP_ACTION = path.join(REPO_ROOT, SETUP_ACTION_REL);
+const SETUP_USES = "./.github/actions/setup";
+const FROZEN_INSTALL = "pnpm install --frozen-lockfile";
+
+/** The composite action, narrowed from its parsed document. */
+function setupActionSteps(): Record<string, unknown>[] {
+  const parsed: unknown = parseYaml(readFileSync(SETUP_ACTION, "utf-8"));
+  if (!isRecord(parsed) || !isRecord(parsed["runs"])) {
+    throw new Error(`${SETUP_ACTION_REL} did not parse to a document with a runs block`);
+  }
+  const steps = parsed["runs"]["steps"];
+  if (!Array.isArray(steps)) {
+    throw new Error(`${SETUP_ACTION_REL} declares no runs.steps list`);
+  }
+  return steps.filter(isRecord);
+}
+
+/**
+ * The `ci.yml` jobs that need the toolchain, derived rather than listed: a job
+ * needs it exactly when one of its steps runs a `pnpm` command.
+ *
+ * Derived on purpose. A hard-coded list would stop covering the tree the day a
+ * job is added, and this row's whole point is that EVERY such job consumes the
+ * one definition — a claim a stale list cannot make.
+ */
+function toolchainJobs(): { id: string; job: Record<string, unknown> }[] {
+  const doc: unknown = parseYaml(readFileSync(CI_WORKFLOW, "utf-8"));
+  if (!isRecord(doc) || !isRecord(doc["jobs"])) throw new Error("ci.yml has no jobs mapping");
+  const out: { id: string; job: Record<string, unknown> }[] = [];
+  for (const [id, job] of Object.entries(doc["jobs"])) {
+    if (!isRecord(job)) continue;
+    const steps = Array.isArray(job["steps"]) ? job["steps"] : [];
+    const usesPnpm = steps.some(
+      (step) => isRecord(step) && typeof step["run"] === "string" && step["run"].includes("pnpm"),
+    );
+    if (usesPnpm) out.push({ id, job });
+  }
+  return out;
+}
+
+function ciWorkflowText(): string {
+  return readFileSync(CI_WORKFLOW, "utf-8");
+}
+
+describe("TC-0017-0027 (TDD-0027): the frozen-lockfile literal appears once, in one definition", () => {
+  it("holds zero occurrences in ci.yml and exactly one in the shared definition", () => {
+    // Counted over the RAW TEXT rather than the parsed document, because the
+    // obligation is about the literal appearing once anywhere — a second copy in
+    // a comment would still be a second copy to keep in sync, which is the
+    // failure single-definition exists to prevent.
+    const ciCount = ciWorkflowText().split(FROZEN_INSTALL).length - 1;
+    const actionCount = readFileSync(SETUP_ACTION, "utf-8").split(FROZEN_INSTALL).length - 1;
+
+    expect
+      .soft(ciCount, "the own-CI workflow must not restate the frozen-lockfile install at all")
+      .toBe(0);
+    expect.soft(actionCount, "and the shared definition must state it exactly once").toBe(1);
+  });
+});
+
+describe("TC-0017-0028 (TDD-0028): no toolchain job restates a preamble step inline", () => {
+  it("consumes the shared definition from every toolchain job and inlines none of its steps", () => {
+    const jobs = toolchainJobs();
+
+    // Guard — the derivation found jobs. On an empty list every claim below holds
+    // by iterating nothing.
+    expect(jobs.length, "ci.yml must declare jobs that need the toolchain").toBeGreaterThan(0);
+
+    // CLAIM 1 — each of them consumes the definition, reported as the ID list of
+    // the ones that do not. A count would say a job is missing; the list says
+    // which.
+    expect
+      .soft(
+        jobs
+          .filter(
+            ({ job }) =>
+              !(Array.isArray(job["steps"]) ? job["steps"] : []).some(
+                (step) => isRecord(step) && step["uses"] === SETUP_USES,
+              ),
+          )
+          .map(({ id }) => id),
+        `every toolchain job must consume ${SETUP_USES} rather than restating the preamble`,
+      )
+      .toEqual([]);
+
+    // CLAIM 2 — and none of the preamble's steps survives inline anywhere in
+    // ci.yml. Each token is a distinct half of the preamble, so a partial
+    // extraction that left one behind is named rather than lumped into a single
+    // pass/fail.
+    const text = ciWorkflowText();
+    for (const token of ["corepack enable", "corepack prepare", "actions/setup-node@"]) {
+      expect
+        .soft(text, `ci.yml must not restate the preamble step \`${token}\` inline`)
+        .not.toContain(token);
+    }
+  });
+});
+
+describe("TC-0017-0029 (TDD-0029): the shared definition keeps its four-step order and the re-shim", () => {
+  it("runs shim, Node setup with cache and dependency path, re-shim, frozen install — in that order", () => {
+    const steps = setupActionSteps();
+
+    // CLAIM 1 — four steps, in order. The ORDER is the assertion, not the
+    // membership: the re-shim exists because `setup-node` replaces the Node the
+    // first shim was activated against, so a re-shim that ran BEFORE the Node
+    // setup would be a no-op and the install would use the wrong pnpm.
+    expect.soft(steps.length, "the definition has exactly four steps").toBe(4);
+
+    const runOf = (i: number): string =>
+      typeof steps[i]?.["run"] === "string" ? (steps[i]["run"] as string) : "";
+    expect.soft(runOf(0), "step 1 enables the package-manager shim").toContain("corepack enable");
+    expect
+      .soft(steps[1]?.["uses"], "step 2 sets Node up")
+      .toMatch(/^actions\/setup-node@[0-9a-f]{40}$/);
+    expect
+      .soft(runOf(2), "step 3 re-shims the package manager against the toolcache Node")
+      .toContain("corepack prepare");
+    expect.soft(runOf(3), "step 4 installs with a frozen lockfile").toContain(FROZEN_INSTALL);
+
+    // CLAIM 2 — the Node step carries the package-manager cache AND an EXPLICIT
+    // cache-dependency path. `BR-0017-0026` names both; today's inline preamble
+    // has only the first, so the explicit path is new here rather than carried
+    // over, and asserting it is what stops the extraction from silently dropping
+    // half the rule.
+    const nodeWith = isRecord(steps[1]?.["with"])
+      ? (steps[1]["with"] as Record<string, unknown>)
+      : {};
+    expect.soft(nodeWith["cache"], "the Node step caches the package manager").toBe("pnpm");
+    expect
+      .soft(nodeWith["cache-dependency-path"], "and names its cache-dependency path explicitly")
+      .toBeDefined();
+  });
+});
+
+// ── TC-0017-0030 (TDD-0030) is deliberately NOT written here ───────────────
+//
+// The row asserts that no workflow-level Node version literal survives anywhere
+// in the own workflows tree. `ci.yml` satisfies it after change 4; `release.yml`
+// does not, and cannot be made to without choosing between three options that
+// `CR-20260820-0001` puts to the spec's owner — one of which would launder a
+// measured npm engine constraint through `engines.node`, on the workflow whose
+// failure mode is an irreversible publish.
+//
+// So the assertions are withheld rather than committed red. `ci:gate` runs the
+// whole package suite, so a red test here reds every pull request; and `it.todo`
+// is not the escape, because `QFAI-TEST-001` gates on `.todo` stubs under the
+// full validate profile. A `todo` row with no test is also simply the honest
+// state.
+//
+// The oracle is written down in `.qfai/evidence/implement-spec-0017.md` under
+// change 4, ready to paste back when the CR resolves: read each own workflow's
+// top-level `env` block from the PARSED document (not by grepping text, so
+// "workflow-level" is decided by YAML structure), and assert that no key
+// matching /node/i holds a value starting with a digit.
+
+describe("TC-0017-0031 (TDD-0031): the shared definition never enters the shipped asset tree", () => {
+  it("is absent under the packaged asset tree, whose non-workflows rejection a sibling row already pins", () => {
+    // CLAIM — absent from the shipped tree. Walked rather than probed at one path:
+    // the obligation is that the definition lives OUTSIDE `assets/init/**`, and a
+    // check of one expected location would miss a copy placed anywhere else.
+    const assetsInit = path.join(REPO_ROOT, "packages", "qfai", "assets", "init");
+    const found: string[] = [];
+    const walk = (dir: string): void => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) {
+          if (e.name === "actions") found.push(path.relative(REPO_ROOT, p).replace(/\\/g, "/"));
+          walk(p);
+        } else if (e.name === "action.yml" || e.name === "action.yaml") {
+          found.push(path.relative(REPO_ROOT, p).replace(/\\/g, "/"));
+        }
+      }
+    };
+    walk(assetsInit);
+    expect
+      .soft(
+        found,
+        "no composite action or actions/ directory may exist under the shipped asset tree",
+      )
+      .toEqual([]);
+
+    // The TC's second half — "pack verification still throws on a non-workflows
+    // child" — is NOT re-asserted here, and that is a citation rather than a gap.
+    // `verify-pack.mjs` resolves the repository root from its own location and
+    // packs THIS repo, so it cannot be pointed at a fixture; the repository
+    // already answered that with a static backstop in
+    // `tests/integration/shippedWorkflowTopology.test.ts`, whose own comment names
+    // this exact case — "an `actions/` directory stays a hard pack failure".
+    // Duplicating it here would create a second site for one claim, which is the
+    // class this spec has been correcting all slice. Asserted instead: that the
+    // backstop is still there to be relied on.
+    const backstop = readFileSync(
+      path.join(
+        REPO_ROOT,
+        "packages",
+        "qfai",
+        "tests",
+        "integration",
+        "shippedWorkflowTopology.test.ts",
+      ),
+      "utf-8",
+    );
+    expect
+      .soft(backstop, "the sibling static backstop this row relies on is gone — re-home the claim")
+      .toContain('const allowedRootGithubEntries = new Set(["workflows"]);');
   });
 });

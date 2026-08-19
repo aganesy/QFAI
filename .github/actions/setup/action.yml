@@ -1,0 +1,78 @@
+name: "Set up the QFAI toolchain"
+description: >-
+  Enables the corepack shim, sets Node up with the pnpm cache, re-shims pnpm
+  against the toolcache Node, and installs with a frozen lockfile. The single
+  definition of the preamble every toolchain job in this repository needs.
+
+# ── Why this exists, and why it is a composite action ─────────────────────────
+#
+# This preamble was duplicated six times in `ci.yml`. Six copies of a four-step
+# sequence is six places for a version or a flag to drift, and the drift is
+# invisible until one job behaves differently from its neighbours.
+#
+# A composite action rather than a reusable workflow: a reusable workflow is
+# dispatched per job, and that overhead runs directly against the cost objective
+# this whole change set exists to serve. The obligation is SINGLE-DEFINITION, so
+# swapping the mechanism later is legal; adding a second definition is not.
+#
+# It lives in `.github/actions/`, deliberately OUTSIDE
+# `packages/qfai/assets/init/**`. Pack verification allow-lists `workflows` as
+# the only child of the shipped `.github/`, so a copy placed there would be a
+# hard pack failure — and, more to the point, this repository's toolchain is not
+# an adopter's to inherit.
+
+runs:
+  using: composite
+  steps:
+    # ── 1. Shim, before Node ──────────────────────────────────────────────────
+    # `setup-node`'s `cache: pnpm` needs a `pnpm` binary on PATH to compute the
+    # store path, so corepack has to be enabled first. This ordering is not
+    # cosmetic: with the steps reversed the cache key cannot be derived and the
+    # setup step fails.
+    - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
+      run: corepack enable
+      shell: bash
+
+    # ── 2. Node, from a FILE ──────────────────────────────────────────────────
+    # `node-version-file` and never a literal. The rule this satisfies exists so
+    # that a stale version comment becomes structurally impossible in this tree,
+    # and a literal cannot deliver that however carefully it is commented — the
+    # `NODE_LTS: "20.19"` workflow-level value this replaced had a comment three
+    # lines above it listing which jobs used it, which is exactly the kind of
+    # thing that rots.
+    #
+    # The file is `package.json`, whose `engines.node` is already the
+    # repository's declared floor. The trade is recorded rather than hidden: the
+    # resolved version becomes "latest satisfying the range" instead of the
+    # previously pinned `20.19`. Pinning exactly would need a root-level
+    # `.node-version`, which no agent may create without explicit approval, so
+    # the already-present file is what this uses. The risk is bounded by
+    # measurement — this repository's whole test suite passes on Node 24 locally,
+    # which is what the range resolves to today.
+    #
+    # `cache-dependency-path` is stated explicitly. Without it `setup-node`
+    # guesses from the working directory, which is right today and silently wrong
+    # the moment a second lockfile appears anywhere in the tree.
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      with:
+        node-version-file: package.json
+        cache: pnpm
+        cache-dependency-path: pnpm-lock.yaml
+
+    # ── 3. Re-shim, AFTER Node ────────────────────────────────────────────────
+    # `setup-node` installs its own Node into the toolcache and puts it ahead of
+    # the one step 1's corepack was activated against, so the pnpm shim from step
+    # 1 no longer resolves. Without this step the install runs on whatever pnpm
+    # the runner image happened to ship. A re-shim placed BEFORE step 2 would be
+    # a no-op — which is why the four-step ORDER is pinned by a test and not just
+    # the membership.
+    - name: Re-shim pnpm against toolcache Node
+      run: corepack prepare pnpm@9.12.3 --activate
+      shell: bash
+
+    # ── 4. Install ────────────────────────────────────────────────────────────
+    # The frozen-lockfile literal, and this is the one place it appears in the
+    # own CI tree. A copy anywhere else is a second thing to keep in sync.
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+      shell: bash
