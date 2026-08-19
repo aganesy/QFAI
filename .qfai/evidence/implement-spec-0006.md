@@ -7363,9 +7363,12 @@ the advisory still `info`. Both TCs' Asserts were therefore observable before ei
 > Governs **this row only**, and only the fields it names. Everything above it stands as the record
 > of the round that wrote it.
 
-- **Revision**: `f357d77a` — the commit that landed the code half of the review rework, and the last
-  commit to change any file these observations cover. The record itself lands in a record-only
-  commit, which `references/evidence-revision.md` states does not stale an observation.
+- **Revision**: `f357d77a` — the commit that landed the code half of the review rework. It was also
+  described here as "the last commit to change any file these observations cover", and that stopped
+  being true at `1da38e12`, which changed `declined.test.ts` — path 1 of the 14-path closure this
+  very block records. The claim is withdrawn rather than re-dated: **the current figures for this
+  row are in the step-2 re-measurement block below**, and this block stands as the record of the
+  round that wrote it.
 - **Refactor verify command**, from `packages/qfai` — the field was ABSENT from this row, and prose
   describing a mutation restore was standing in for it, which is a different observation:
   `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts`
@@ -7381,6 +7384,86 @@ the advisory still `info`. Both TCs' Asserts were therefore observable before ei
   the Stage 0 baseline of `warning=352`, and the difference is not this slice's**: spec-0017's first
   change added a test file that 12 rows' selectors falsely resolve against, filed as
   `CR-20260818-0001`. `error` is unchanged at 2.
+
+
+#### Step-2 re-measurement at `6be8de00` — one revision for every figure
+
+> **Why a new block instead of edits to the ones above.** Three rounds of repair each staled their
+> own repair: the commit carrying a currency note changed a file the note covered. The blocks above
+> are the record of the rounds that wrote them and each names a revision that was current then;
+> overwriting them would destroy the trail the reviewers have been reading. Item 10 asks for one
+> revision across the four observations, so it gets a block that names one.
+>
+> This block lands in a **record-only** commit. `references/evidence-revision.md` states that such a
+> commit covers no file any observation ran against, so it does not stale one — which is the only
+> ordering under which everything here can be simultaneously current.
+
+- **Revision**: `6be8de00`. It is the tip established by step 1 of the sequence the round-4
+  completion review prescribed: every remaining source edit in one commit, nothing else, then
+  re-measure. Working tree clean before and after every run below;
+  `git status --short -- packages/qfai/src` empty throughout, verified externally rather than in a
+  `finally`.
+- **GREEN command**, file-scoped, no `-t` (`-t` is a regex — `CR-20260817-0001`), from
+  `packages/qfai`: `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts`
+- **GREEN result**: `Tests 2 passed (2)`, exit 0.
+- **Refactor verify command / result**: the same command, re-run after the step-1 edit landed —
+  `Tests 2 passed (2)`, exit 0. Identical to GREEN, because step 1 changed only comments.
+- **Closure**, as a literal command with full paths and no bare stems, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts tests/integration/spec0006WorkflowsIntegrity.drift.test.ts tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts tests/integration/spec0006WorkflowsIntegrity.exitCode.test.ts tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts tests/integration/spec0006DoctorProbeOrder.test.ts tests/cli/doctor.test.ts tests/cli/doctorConfigSeverity.test.ts tests/integration/doctorSpec0006.test.ts tests/e2e/spec0006DoctorProbeOrderE2E.test.ts tests/unit/shared/text.test.ts`
+  → `Test Files 14 passed (14)` / `Tests 71 passed (71)`, exit 0.
+- **Oracle / falsifiability re-measured at this revision**, with mutant blob, assertion message and
+  **location** — the location because `red-admissibility.md` excludes it from the truncation
+  allowance, and because five of this slice's recorded locations went off by one when a docblock
+  gained a line. Restamping by arithmetic was ruled out; these were run.
+
+```text
+F1  base 6be8de00  mutant 7c376acb  Tests 2 failed (2), exit 1
+    failOnWarning.test.ts:188:10  an info advisory must not change the exit code under
+                                  `--fail-on warning`  [this row, CLAIM 1]
+    failOnWarning.test.ts:198:10  the drift advisory must not land in the warning bucket
+                                  [this row, CLAIM 2 — the discriminating one]
+    failOnWarning.test.ts:276:10  the advisory stays an info advisory in the presence of an
+                                  unrelated warning  [TDD-0035's claim, same mutation]
+```
+
+  `F1`'s reach is unchanged and still not site-local: it moves the shared emission arm, so six rows
+  read it. What is unique to this row remains the exit-code consequence under `--fail-on warning`.
+- **Item 12, the per-item checkpoint, run in full and reported honestly — it FAILS, and not on
+  anything this row owns.** The command set is four steps and the substitution applies to step 4
+  only:
+
+  1. the row's own test, file-scoped, no `-t` — **exit 0** (above);
+  2. the FULL package suite, `./node_modules/.bin/vitest run` with no filter —
+     `Test Files 426 passed | 8 skipped (434)` / `Tests 4351 passed | 37 skipped (4388)`, **exit 0**;
+  3. the static gates — `pnpm ci:lint` **exit 0** across all ten members (redirected, never piped),
+     and `tsc --noEmit -p tsconfig.json` **exit 0**;
+  4. `validate --profile tdd --fail-on error` — `info=4 warning=364 error=2`, exit 1.
+
+  Step 4 is judged on the measured-delta substitution, and **four of its five clauses hold**:
+  clause 1 (a baseline with counts AND finding IDs, captured before any G1 code — recorded in this
+  file's `## Checkpoint step-4 baseline` section), clause 2 (`QFAI-TEST-001` = 0, measured), clause 4
+  (no `TC-*` re-entry — zero `SPEC-0006:TC-*` remain in the `QFAI-ATDD-112` list, all nine departed),
+  and clause 5 (both standing errors name obligations no row here carries: `QFAI-ATDD-111`'s
+  `SPEC-0006:US-0006-0011` is a `/qfai-sdd` Phase 2b obligation this skill may not create, and
+  `QFAI-ATDD-112`'s residue is spec-0003 / 0008 / 0015 / 0017).
+
+  **Clause 3 fails**: `warning` is 364 against a baseline of 352. The delta is attributed rather than
+  reported as a total — `TDDLIST_STALE_STATUS` is 16, split spec-0003 **1**, spec-0012 **3**,
+  spec-0017 **12**, spec-0006 **0**. The four in the baseline's share are the spec-0003/0012 ones; the
+  entire delta is spec-0017's, and `CR-20260818-0001` measures all twelve as FALSE positives. So this
+  row is held out of `done` by twelve warnings that belong to another spec, are individually wrong,
+  and that no row here can discharge. Filed as `CR-20260818-0006`, which also records why clause 3
+  and clause 5 cannot both be right: clause 5 is explicitly per-row and anticipates exactly this
+  case, while clause 3 is an unattributed repository-wide total.
+
+  Per the reference, a partial run is not a pass. **The checkpoint FAILS and the row stays
+  `refactor`.** Recorded as a gate result rather than waived, because waiving a clause on my own
+  judgement is the move the whole gate exists to prevent.
+- **`validate --profile verify --fail-on error`**: zero `QFAI-REVIEW` findings over every pack under
+  `.qfai/review/review-20260818*` — one per round per row, naming `3dbeeef6`, `5ea28793`,
+  `d3f4318a` and `1da38e12`. Deliberately no count: a pack tally is a file-content derivative and
+  this slice has already had two numerals rot, one of them in a paragraph about keeping records
+  current. Recorded at all because this is the only profile that reports `QFAI-REVIEW-*`.
 
 ### TDD-0035
 
@@ -7427,9 +7510,12 @@ the advisory still `info`. Both TCs' Asserts were therefore observable before ei
 > Governs **this row only**, and only the fields it names. Everything above it stands as the record
 > of the round that wrote it.
 
-- **Revision**: `f357d77a` — the commit that landed the code half of the review rework, and the last
-  commit to change any file these observations cover. The record itself lands in a record-only
-  commit, which `references/evidence-revision.md` states does not stale an observation.
+- **Revision**: `f357d77a` — the commit that landed the code half of the review rework. It was also
+  described here as "the last commit to change any file these observations cover", and that stopped
+  being true at `1da38e12`, which changed `declined.test.ts` — path 1 of the 14-path closure this
+  very block records. The claim is withdrawn rather than re-dated: **the current figures for this
+  row are in the step-2 re-measurement block below**, and this block stands as the record of the
+  round that wrote it.
 - **Refactor verify command**, from `packages/qfai` — the field was ABSENT from this row, and prose
   describing a mutation restore was standing in for it, which is a different observation:
   `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts`
@@ -7445,6 +7531,83 @@ the advisory still `info`. Both TCs' Asserts were therefore observable before ei
   the Stage 0 baseline of `warning=352`, and the difference is not this slice's**: spec-0017's first
   change added a test file that 12 rows' selectors falsely resolve against, filed as
   `CR-20260818-0001`. `error` is unchanged at 2.
+
+
+#### Step-2 re-measurement at `6be8de00` — one revision for every figure
+
+> **Why a new block instead of edits to the ones above.** Three rounds of repair each staled their
+> own repair: the commit carrying a currency note changed a file the note covered. The blocks above
+> are the record of the rounds that wrote them and each names a revision that was current then;
+> overwriting them would destroy the trail the reviewers have been reading. Item 10 asks for one
+> revision across the four observations, so it gets a block that names one.
+>
+> This block lands in a **record-only** commit. `references/evidence-revision.md` states that such a
+> commit covers no file any observation ran against, so it does not stale one — which is the only
+> ordering under which everything here can be simultaneously current.
+
+- **Revision**: `6be8de00`. It is the tip established by step 1 of the sequence the round-4
+  completion review prescribed: every remaining source edit in one commit, nothing else, then
+  re-measure. Working tree clean before and after every run below;
+  `git status --short -- packages/qfai/src` empty throughout, verified externally rather than in a
+  `finally`.
+- **GREEN command**, file-scoped, no `-t` (`-t` is a regex — `CR-20260817-0001`), from
+  `packages/qfai`: `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts`
+- **GREEN result**: `Tests 2 passed (2)`, exit 0.
+- **Refactor verify command / result**: the same command, re-run after the step-1 edit landed —
+  `Tests 2 passed (2)`, exit 0. Identical to GREEN, because step 1 changed only comments.
+- **Closure**, as a literal command with full paths and no bare stems, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts tests/integration/spec0006WorkflowsIntegrity.drift.test.ts tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts tests/integration/spec0006WorkflowsIntegrity.exitCode.test.ts tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts tests/integration/spec0006DoctorProbeOrder.test.ts tests/cli/doctor.test.ts tests/cli/doctorConfigSeverity.test.ts tests/integration/doctorSpec0006.test.ts tests/e2e/spec0006DoctorProbeOrderE2E.test.ts tests/unit/shared/text.test.ts`
+  → `Test Files 14 passed (14)` / `Tests 71 passed (71)`, exit 0.
+- **Oracle / falsifiability re-measured at this revision**:
+
+```text
+F2  base 6be8de00  mutant f3697037  Tests 1 failed | 1 passed (2), exit 1
+    failOnWarning.test.ts:266:10  `--fail-on warning` must exit 1 on an unrelated warning, or
+                                  TC-0006-0032's exit 0 is satisfied by a flag that catches
+                                  nothing  [this row, CLAIM 1]
+
+F1  base 6be8de00  mutant 7c376acb  also reddens this row at
+    failOnWarning.test.ts:276:10  the advisory stays an info advisory ...  [this row, CLAIM 2]
+```
+
+  `F1` and `F2` remain disjoint: each row has a mutation the other survives, which is what makes
+  this a control rather than a second view of one predicate.
+- **Item 12, the per-item checkpoint, run in full and reported honestly — it FAILS, and not on
+  anything this row owns.** The command set is four steps and the substitution applies to step 4
+  only:
+
+  1. the row's own test, file-scoped, no `-t` — **exit 0** (above);
+  2. the FULL package suite, `./node_modules/.bin/vitest run` with no filter —
+     `Test Files 426 passed | 8 skipped (434)` / `Tests 4351 passed | 37 skipped (4388)`, **exit 0**;
+  3. the static gates — `pnpm ci:lint` **exit 0** across all ten members (redirected, never piped),
+     and `tsc --noEmit -p tsconfig.json` **exit 0**;
+  4. `validate --profile tdd --fail-on error` — `info=4 warning=364 error=2`, exit 1.
+
+  Step 4 is judged on the measured-delta substitution, and **four of its five clauses hold**:
+  clause 1 (a baseline with counts AND finding IDs, captured before any G1 code — recorded in this
+  file's `## Checkpoint step-4 baseline` section), clause 2 (`QFAI-TEST-001` = 0, measured), clause 4
+  (no `TC-*` re-entry — zero `SPEC-0006:TC-*` remain in the `QFAI-ATDD-112` list, all nine departed),
+  and clause 5 (both standing errors name obligations no row here carries: `QFAI-ATDD-111`'s
+  `SPEC-0006:US-0006-0011` is a `/qfai-sdd` Phase 2b obligation this skill may not create, and
+  `QFAI-ATDD-112`'s residue is spec-0003 / 0008 / 0015 / 0017).
+
+  **Clause 3 fails**: `warning` is 364 against a baseline of 352. The delta is attributed rather than
+  reported as a total — `TDDLIST_STALE_STATUS` is 16, split spec-0003 **1**, spec-0012 **3**,
+  spec-0017 **12**, spec-0006 **0**. The four in the baseline's share are the spec-0003/0012 ones; the
+  entire delta is spec-0017's, and `CR-20260818-0001` measures all twelve as FALSE positives. So this
+  row is held out of `done` by twelve warnings that belong to another spec, are individually wrong,
+  and that no row here can discharge. Filed as `CR-20260818-0006`, which also records why clause 3
+  and clause 5 cannot both be right: clause 5 is explicitly per-row and anticipates exactly this
+  case, while clause 3 is an unattributed repository-wide total.
+
+  Per the reference, a partial run is not a pass. **The checkpoint FAILS and the row stays
+  `refactor`.** Recorded as a gate result rather than waived, because waiving a clause on my own
+  judgement is the move the whole gate exists to prevent.
+- **`validate --profile verify --fail-on error`**: zero `QFAI-REVIEW` findings over every pack under
+  `.qfai/review/review-20260818*` — one per round per row, naming `3dbeeef6`, `5ea28793`,
+  `d3f4318a` and `1da38e12`. Deliberately no count: a pack tally is a file-content derivative and
+  this slice has already had two numerals rot, one of them in a paragraph about keeping records
+  current. Recorded at all because this is the only profile that reports `QFAI-REVIEW-*`.
 
 ### Restoration was verified externally, not in a `finally`
 
@@ -7476,12 +7639,20 @@ there are three, then claiming `qa-gatekeeper` had not run after it had.
 
 (columns in `TDD-0034` / `0035` / `0036` / `0037` order.)
 
-**What that leaves.** Items 3 and 5 have a `qa-gatekeeper` observation for three of the four rows.
-Items 7 and 8 have observations for all four, but the standing verdicts are REVISE. **Item 10 is the
-binding one**: it compares the revision each observation names, and they name four different ones
-today — `13c06411` / `3dbeeef6` for the round blocks, `f357d77a` for the rework blocks, `5ea28793`
-for `M-D` and the round-2 packs. It is no longer unevaluable, which it was before any pack existed;
-it is evaluable and currently false.
+**What that leaves.** Every one of the three blocking agents has an observation for every one of
+the four rows — round 2 for `qa-gatekeeper`, rounds 1 and 3 for the other two. Counting them is not
+the question; **item 10 is**, and it asks whether the observations name the SAME revision.
+
+They do not. Five revisions are in play, and the enumeration is exhaustive rather than illustrative:
+`13c06411` and `3dbeeef6` for the round blocks, `f357d77a` for the rework blocks, `5ea28793` for
+`M-D` and the round-2 packs, `d3f4318a` for round 3 and for `G1`/`G2`/`G3`. So item 10 is no longer
+unevaluable — which it was before any pack existed — it is evaluable and false.
+
+> An earlier draft of this paragraph said "three of the four rows" and "four different ones", and the
+> table directly above it falsifies both. It was written in the commit that introduced the table, to
+> replace a prose form that had been wrong twice. Recorded rather than silently swapped: a table does
+> not stop prose beneath it from contradicting it, and the reviewer who caught this had caught the
+> two earlier versions as well.
 
 `qa-gatekeeper` returned **PASS on items 3 and 5** for both of these rows, in rounds 2 and 3, having
 reproduced `F1` and `F2` from their recorded bases and confirmed the trio is complete and exclusive.
@@ -7668,9 +7839,12 @@ AssertionError: `declined` must name the deleted file: expected undefined to dee
 > Governs **this row only**, and only the fields it names. Everything above it stands as the record
 > of the round that wrote it.
 
-- **Revision**: `f357d77a` — the commit that landed the code half of the review rework, and the last
-  commit to change any file these observations cover. The record itself lands in a record-only
-  commit, which `references/evidence-revision.md` states does not stale an observation.
+- **Revision**: `f357d77a` — the commit that landed the code half of the review rework. It was also
+  described here as "the last commit to change any file these observations cover", and that stopped
+  being true at `1da38e12`, which changed `declined.test.ts` — path 1 of the 14-path closure this
+  very block records. The claim is withdrawn rather than re-dated: **the current figures for this
+  row are in the step-2 re-measurement block below**, and this block stands as the record of the
+  round that wrote it.
 - **Refactor verify command**, from `packages/qfai` — the field was ABSENT from this row, and prose
   describing a mutation restore was standing in for it, which is a different observation:
   `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts`
@@ -7686,6 +7860,92 @@ AssertionError: `declined` must name the deleted file: expected undefined to dee
   the Stage 0 baseline of `warning=352`, and the difference is not this slice's**: spec-0017's first
   change added a test file that 12 rows' selectors falsely resolve against, filed as
   `CR-20260818-0001`. `error` is unchanged at 2.
+
+
+#### Step-2 re-measurement at `6be8de00` — one revision for every figure
+
+> **Why a new block instead of edits to the ones above.** Three rounds of repair each staled their
+> own repair: the commit carrying a currency note changed a file the note covered. The blocks above
+> are the record of the rounds that wrote them and each names a revision that was current then;
+> overwriting them would destroy the trail the reviewers have been reading. Item 10 asks for one
+> revision across the four observations, so it gets a block that names one.
+>
+> This block lands in a **record-only** commit. `references/evidence-revision.md` states that such a
+> commit covers no file any observation ran against, so it does not stale one — which is the only
+> ordering under which everything here can be simultaneously current.
+
+- **Revision**: `6be8de00`. It is the tip established by step 1 of the sequence the round-4
+  completion review prescribed: every remaining source edit in one commit, nothing else, then
+  re-measure. Working tree clean before and after every run below;
+  `git status --short -- packages/qfai/src` empty throughout, verified externally rather than in a
+  `finally`.
+- **GREEN command**, file-scoped, no `-t` (`-t` is a regex — `CR-20260817-0001`), from
+  `packages/qfai`: `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts`
+- **GREEN result**: `Tests 2 passed (2)`, exit 0.
+- **Refactor verify command / result**: the same command, re-run after the step-1 edit landed —
+  `Tests 2 passed (2)`, exit 0. Identical to GREEN, because step 1 changed only comments.
+- **Closure**, as a literal command with full paths and no bare stems, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts tests/integration/spec0006WorkflowsIntegrity.drift.test.ts tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts tests/integration/spec0006WorkflowsIntegrity.exitCode.test.ts tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts tests/integration/spec0006DoctorProbeOrder.test.ts tests/cli/doctor.test.ts tests/cli/doctorConfigSeverity.test.ts tests/integration/doctorSpec0006.test.ts tests/e2e/spec0006DoctorProbeOrderE2E.test.ts tests/unit/shared/text.test.ts`
+  → `Test Files 14 passed (14)` / `Tests 71 passed (71)`, exit 0.
+- **`Oracle proof` re-measured at this revision** — all four mutations, each with its location:
+
+```text
+M-D  base 6be8de00  mutant ed3abfb0  Tests 1 failed | 1 passed (2), exit 1
+     declined.test.ts:158:10  the drift payload carries exactly workflowsDir, modified,
+                              declined and packagedDir            [CLAIM 1]
+     declined.test.ts:174:10  `declined` must name the deleted file  [CLAIM 3]
+
+M-A  base 6be8de00  mutant 043d5c27  Tests 1 failed | 1 passed (2), exit 1
+     declined.test.ts:186:14  the repair instruction must not list the declined file  [CLAIM 4]
+
+M-B  base 6be8de00  mutant ea19166f  Tests 1 failed | 1 passed (2), exit 1
+     declined.test.ts:166:10  `modified` must name the hand-edited file  [CLAIM 2]
+
+M-C  base 6be8de00  mutant f3853988  Tests 2 failed (2), exit 1
+     declined.test.ts:200:10  adding `declined` to the payload must not change the exit code
+                              [CLAIM 5]
+     declined.test.ts:293:78  an ok check must not change the exit code
+                              [TDD-0037's CLAIM 3 — see that row]
+```
+
+  `M-D` remains the substitute for this row's unrecoverable natural RED and the `Oracle proof` for
+  CLAIMs 1 and 3; `M-A`/`M-B`/`M-C` carry CLAIMs 4/2/5. All five claims have a mutation.
+- **Item 12, the per-item checkpoint, run in full and reported honestly — it FAILS, and not on
+  anything this row owns.** The command set is four steps and the substitution applies to step 4
+  only:
+
+  1. the row's own test, file-scoped, no `-t` — **exit 0** (above);
+  2. the FULL package suite, `./node_modules/.bin/vitest run` with no filter —
+     `Test Files 426 passed | 8 skipped (434)` / `Tests 4351 passed | 37 skipped (4388)`, **exit 0**;
+  3. the static gates — `pnpm ci:lint` **exit 0** across all ten members (redirected, never piped),
+     and `tsc --noEmit -p tsconfig.json` **exit 0**;
+  4. `validate --profile tdd --fail-on error` — `info=4 warning=364 error=2`, exit 1.
+
+  Step 4 is judged on the measured-delta substitution, and **four of its five clauses hold**:
+  clause 1 (a baseline with counts AND finding IDs, captured before any G1 code — recorded in this
+  file's `## Checkpoint step-4 baseline` section), clause 2 (`QFAI-TEST-001` = 0, measured), clause 4
+  (no `TC-*` re-entry — zero `SPEC-0006:TC-*` remain in the `QFAI-ATDD-112` list, all nine departed),
+  and clause 5 (both standing errors name obligations no row here carries: `QFAI-ATDD-111`'s
+  `SPEC-0006:US-0006-0011` is a `/qfai-sdd` Phase 2b obligation this skill may not create, and
+  `QFAI-ATDD-112`'s residue is spec-0003 / 0008 / 0015 / 0017).
+
+  **Clause 3 fails**: `warning` is 364 against a baseline of 352. The delta is attributed rather than
+  reported as a total — `TDDLIST_STALE_STATUS` is 16, split spec-0003 **1**, spec-0012 **3**,
+  spec-0017 **12**, spec-0006 **0**. The four in the baseline's share are the spec-0003/0012 ones; the
+  entire delta is spec-0017's, and `CR-20260818-0001` measures all twelve as FALSE positives. So this
+  row is held out of `done` by twelve warnings that belong to another spec, are individually wrong,
+  and that no row here can discharge. Filed as `CR-20260818-0006`, which also records why clause 3
+  and clause 5 cannot both be right: clause 5 is explicitly per-row and anticipates exactly this
+  case, while clause 3 is an unattributed repository-wide total.
+
+  Per the reference, a partial run is not a pass. **The checkpoint FAILS and the row stays
+  `refactor`.** Recorded as a gate result rather than waived, because waiving a clause on my own
+  judgement is the move the whole gate exists to prevent.
+- **`validate --profile verify --fail-on error`**: zero `QFAI-REVIEW` findings over every pack under
+  `.qfai/review/review-20260818*` — one per round per row, naming `3dbeeef6`, `5ea28793`,
+  `d3f4318a` and `1da38e12`. Deliberately no count: a pack tally is a file-content derivative and
+  this slice has already had two numerals rot, one of them in a paragraph about keeping records
+  current. Recorded at all because this is the only profile that reports `QFAI-REVIEW-*`.
 
 ### TDD-0037
 
@@ -7790,7 +8050,9 @@ G3  mutant 54716d1f               Tests 1 failed | 1 passed (2), exit 1
   is outside the TC's Assert list; it is asserted because the check remains registered on this arm and
   this row is the only one positioned to see an `ok` reaching the exit-code aggregation.
 - **GREEN command / result**: the file-scoped command — `Tests 2 passed (2)`, exit 0. Full package
-  suite after both rows, re-measured at `f357d77a`: `Test Files 426 passed | 8 skipped (434)` /
+  suite after both rows, re-measured at `6be8de00` (it read `f357d77a` while this block's `Revision`
+  said `d3f4318a`, so the block asserted one revision and one of its observations named another):
+  `Test Files 426 passed | 8 skipped (434)` /
   `Tests 4351 passed | 37 skipped (4388)`, exit 0. The earlier `4346 (4383)` is superseded by the
   five tests spec-0017's first change added to an unrelated project.
 - **Revision**: `d3f4318a` — this row's round block carried no `Revision` bullet at all while the
@@ -7811,9 +8073,12 @@ G3  mutant 54716d1f               Tests 1 failed | 1 passed (2), exit 1
 > Governs **this row only**, and only the fields it names. Everything above it stands as the record
 > of the round that wrote it.
 
-- **Revision**: `f357d77a` — the commit that landed the code half of the review rework, and the last
-  commit to change any file these observations cover. The record itself lands in a record-only
-  commit, which `references/evidence-revision.md` states does not stale an observation.
+- **Revision**: `f357d77a` — the commit that landed the code half of the review rework. It was also
+  described here as "the last commit to change any file these observations cover", and that stopped
+  being true at `1da38e12`, which changed `declined.test.ts` — path 1 of the 14-path closure this
+  very block records. The claim is withdrawn rather than re-dated: **the current figures for this
+  row are in the step-2 re-measurement block below**, and this block stands as the record of the
+  round that wrote it.
 - **Refactor verify command**, from `packages/qfai` — the field was ABSENT from this row, and prose
   describing a mutation restore was standing in for it, which is a different observation:
   `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts`
@@ -7834,6 +8099,106 @@ G3  mutant 54716d1f               Tests 1 failed | 1 passed (2), exit 1
   `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts`
   with `G1`, `G2` or `G3` applied in turn.
 
+
+#### Step-2 re-measurement at `6be8de00` — one revision for every figure
+
+> **Why a new block instead of edits to the ones above.** Three rounds of repair each staled their
+> own repair: the commit carrying a currency note changed a file the note covered. The blocks above
+> are the record of the rounds that wrote them and each names a revision that was current then;
+> overwriting them would destroy the trail the reviewers have been reading. Item 10 asks for one
+> revision across the four observations, so it gets a block that names one.
+>
+> This block lands in a **record-only** commit. `references/evidence-revision.md` states that such a
+> commit covers no file any observation ran against, so it does not stale one — which is the only
+> ordering under which everything here can be simultaneously current.
+
+- **Revision**: `6be8de00`. It is the tip established by step 1 of the sequence the round-4
+  completion review prescribed: every remaining source edit in one commit, nothing else, then
+  re-measure. Working tree clean before and after every run below;
+  `git status --short -- packages/qfai/src` empty throughout, verified externally rather than in a
+  `finally`.
+- **GREEN command**, file-scoped, no `-t` (`-t` is a regex — `CR-20260817-0001`), from
+  `packages/qfai`: `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts`
+- **GREEN result**: `Tests 2 passed (2)`, exit 0.
+- **Refactor verify command / result**: the same command, re-run after the step-1 edit landed —
+  `Tests 2 passed (2)`, exit 0. Identical to GREEN, because step 1 changed only comments.
+- **Closure**, as a literal command with full paths and no bare stems, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/integration/spec0006WorkflowsIntegrity.declined.test.ts tests/integration/spec0006WorkflowsIntegrity.failOnWarning.test.ts tests/integration/spec0006WorkflowsIntegrity.drift.test.ts tests/integration/spec0006WorkflowsIntegrity.repairText.test.ts tests/integration/spec0006WorkflowsIntegrity.provenanceGate.test.ts tests/integration/spec0006WorkflowsIntegrity.unresolvedPackaged.test.ts tests/integration/spec0006WorkflowsIntegrity.exitCode.test.ts tests/integration/spec0006WorkflowsIntegrity.advisoryBucket.test.ts tests/integration/spec0006DoctorProbeOrder.test.ts tests/cli/doctor.test.ts tests/cli/doctorConfigSeverity.test.ts tests/integration/doctorSpec0006.test.ts tests/e2e/spec0006DoctorProbeOrderE2E.test.ts tests/unit/shared/text.test.ts`
+  → `Test Files 14 passed (14)` / `Tests 71 passed (71)`, exit 0.
+- **Falsifiability re-measured at this revision**, and one gap in the earlier record closes:
+
+```text
+G1  base 6be8de00  mutant 5615fa23  Tests 1 failed | 1 passed (2), exit 1
+    declined.test.ts:260:9   workflows.integrity must be registered exactly once per doctor run
+                             [GUARD #4 — not a claim, which is the point]
+
+G2  base 6be8de00  mutant e88bc009  Tests 1 failed | 1 passed (2), exit 1
+    declined.test.ts:284:10  the ok payload carries `workflowsDir` only  [CLAIM 2]
+
+G3  base 6be8de00  mutant 54716d1f  Tests 1 failed | 1 passed (2), exit 1
+    declined.test.ts:272:10  a declined name is never reported again — §3  [CLAIM 1]
+
+M-C base 6be8de00  mutant f3853988  Tests 2 failed (2), exit 1
+    declined.test.ts:293:78  an ok check must not change the exit code  [CLAIM 3]
+```
+
+  **CLAIM 3 now has an oracle, and this replaces the admission that it did not.** The earlier record
+  said plainly that CLAIM 3 was not separately proven for this row and refused to borrow `M-C`'s
+  measurement from the sibling — the right call at the time, because no run had measured it here.
+  A run has now: `M-C` at `6be8de00` reddens `declined.test.ts:293:78`, which is this row's
+  exit-code claim, in the same run that reddens `TDD-0036`'s CLAIM 5. Measured rather than borrowed.
+
+  `G1`'s mutant blob has now moved four times — `3607056b` at `3dbeeef6`, `69cea6c6` at `d3f4318a`,
+  `83bc069b` at `1da38e12`, `5615fa23` here — because every round's comment repair touched
+  `workflowsIntegrity.ts`. `G2`/`G3` never moved, because `doctor.ts` has not. That contrast is the
+  clearest illustration in this slice of why `CR-20260817-0002` records the revision and derives the
+  blob: four values for one mutation, none of them wrong when written.
+
+- **`Satisfied-by` dependency, unchanged and still binding**: `TDD-0036`. That row is `refactor`,
+  so this row cannot reach `done` before it. `qa-gatekeeper` ruled the two `done` transitions must
+  sit in strictly separate commits; `completion-reviewer` overruled that on the grounds that this
+  slice's own steering entry §5 requires a shared-file group to close in ONE commit, and that
+  `red-not-observable.md`'s mention of a `done` sibling is in its classification bullet rather than
+  in an ordering rule. **The second reading is adopted**: the precedence that matters is already
+  legible at `3dbeeef6`, where TDD-0036's production change landed, and splitting the closure is the
+  incremental closure §5 rules out. Both rows close in one commit, TDD-0036 first in ledger order.
+- **Item 12, the per-item checkpoint, run in full and reported honestly — it FAILS, and not on
+  anything this row owns.** The command set is four steps and the substitution applies to step 4
+  only:
+
+  1. the row's own test, file-scoped, no `-t` — **exit 0** (above);
+  2. the FULL package suite, `./node_modules/.bin/vitest run` with no filter —
+     `Test Files 426 passed | 8 skipped (434)` / `Tests 4351 passed | 37 skipped (4388)`, **exit 0**;
+  3. the static gates — `pnpm ci:lint` **exit 0** across all ten members (redirected, never piped),
+     and `tsc --noEmit -p tsconfig.json` **exit 0**;
+  4. `validate --profile tdd --fail-on error` — `info=4 warning=364 error=2`, exit 1.
+
+  Step 4 is judged on the measured-delta substitution, and **four of its five clauses hold**:
+  clause 1 (a baseline with counts AND finding IDs, captured before any G1 code — recorded in this
+  file's `## Checkpoint step-4 baseline` section), clause 2 (`QFAI-TEST-001` = 0, measured), clause 4
+  (no `TC-*` re-entry — zero `SPEC-0006:TC-*` remain in the `QFAI-ATDD-112` list, all nine departed),
+  and clause 5 (both standing errors name obligations no row here carries: `QFAI-ATDD-111`'s
+  `SPEC-0006:US-0006-0011` is a `/qfai-sdd` Phase 2b obligation this skill may not create, and
+  `QFAI-ATDD-112`'s residue is spec-0003 / 0008 / 0015 / 0017).
+
+  **Clause 3 fails**: `warning` is 364 against a baseline of 352. The delta is attributed rather than
+  reported as a total — `TDDLIST_STALE_STATUS` is 16, split spec-0003 **1**, spec-0012 **3**,
+  spec-0017 **12**, spec-0006 **0**. The four in the baseline's share are the spec-0003/0012 ones; the
+  entire delta is spec-0017's, and `CR-20260818-0001` measures all twelve as FALSE positives. So this
+  row is held out of `done` by twelve warnings that belong to another spec, are individually wrong,
+  and that no row here can discharge. Filed as `CR-20260818-0006`, which also records why clause 3
+  and clause 5 cannot both be right: clause 5 is explicitly per-row and anticipates exactly this
+  case, while clause 3 is an unattributed repository-wide total.
+
+  Per the reference, a partial run is not a pass. **The checkpoint FAILS and the row stays
+  `refactor`.** Recorded as a gate result rather than waived, because waiving a clause on my own
+  judgement is the move the whole gate exists to prevent.
+- **`validate --profile verify --fail-on error`**: zero `QFAI-REVIEW` findings over every pack under
+  `.qfai/review/review-20260818*` — one per round per row, naming `3dbeeef6`, `5ea28793`,
+  `d3f4318a` and `1da38e12`. Deliberately no count: a pack tally is a file-content derivative and
+  this slice has already had two numerals rot, one of them in a paragraph about keeping records
+  current. Recorded at all because this is the only profile that reports `QFAI-REVIEW-*`.
+
 ### Traceability, and a step that was missed once
 
 `QFAI-ATDD-112` requires each TC to be referenced from the directory its declared Level names, and the
@@ -7853,10 +8218,12 @@ applies to its suite counts was simply not applied to this one.
 
 **`validate --profile verify --fail-on error`** — recorded because it is the ONLY profile that
 reports `QFAI-REVIEW-*`, so neither `--profile tdd` nor `--profile sdd` can see whether a review
-pack is well-formed. At `d3f4318a` it returns **zero** `QFAI-REVIEW` findings over the eight packs
-under `.qfai/review/`: `review-20260818060001000` … `review-20260818060004000` (round 1) and
-`review-20260818080001000` … `review-20260818080004000` (round 2). Previously this claim existed
-only in a commit message, which is not the record an auditor reads.
+pack is well-formed. Re-run at `6be8de00`: **zero** `QFAI-REVIEW` findings over every pack under
+`.qfai/review/review-20260818*` — one per round per row, the round stamps being `…06000N000`
+(`3dbeeef6`), `…08000N000` (`5ea28793`), `…10000N000` (`d3f4318a`) and `…12000N000`
+(`1da38e12`). This sentence said *eight* for one revision and then *twelve* for the next, which is
+why it now names no number at all. Previously the claim existed only in a commit message, which is
+not the record an auditor reads.
 
 ### Gate items NOT satisfied for these two rows
 
@@ -7889,12 +8256,20 @@ there are three, then claiming `qa-gatekeeper` had not run after it had.
 
 (columns in `TDD-0034` / `0035` / `0036` / `0037` order.)
 
-**What that leaves.** Items 3 and 5 have a `qa-gatekeeper` observation for three of the four rows.
-Items 7 and 8 have observations for all four, but the standing verdicts are REVISE. **Item 10 is the
-binding one**: it compares the revision each observation names, and they name four different ones
-today — `13c06411` / `3dbeeef6` for the round blocks, `f357d77a` for the rework blocks, `5ea28793`
-for `M-D` and the round-2 packs. It is no longer unevaluable, which it was before any pack existed;
-it is evaluable and currently false.
+**What that leaves.** Every one of the three blocking agents has an observation for every one of
+the four rows — round 2 for `qa-gatekeeper`, rounds 1 and 3 for the other two. Counting them is not
+the question; **item 10 is**, and it asks whether the observations name the SAME revision.
+
+They do not. Five revisions are in play, and the enumeration is exhaustive rather than illustrative:
+`13c06411` and `3dbeeef6` for the round blocks, `f357d77a` for the rework blocks, `5ea28793` for
+`M-D` and the round-2 packs, `d3f4318a` for round 3 and for `G1`/`G2`/`G3`. So item 10 is no longer
+unevaluable — which it was before any pack existed — it is evaluable and false.
+
+> An earlier draft of this paragraph said "three of the four rows" and "four different ones", and the
+> table directly above it falsifies both. It was written in the commit that introduced the table, to
+> replace a prose form that had been wrong twice. Recorded rather than silently swapped: a table does
+> not stop prose beneath it from contradicting it, and the reviewer who caught this had caught the
+> two earlier versions as well.
 
 **`TDD-0036`'s item 3 is discharged and `TDD-0037`'s is not.** The gatekeeper required a substitute
 for `TDD-0036`'s unrecoverable RED; `M-D` below is it, and round 3 confirmed it independently —
@@ -7923,11 +8298,16 @@ what changes is that it is now named as a completion blocker rather than as back
 **2. Item 10's same-revision clause was unevaluable, not merely unmet.** The gate requires the four
 sub-agent observations to name the **same** revision. Until this round no review pack existed for any
 of the four rows — the verdicts lived only as prose here, which `SKILL.md` § `Review artifact layout
-(MUST)` forbids in terms — so there was nothing for the clause to compare. Eight packs now exist
-under `.qfai/review/`, two rounds for each of the four rows, each naming the revision its round
-measured at: `3dbeeef6` for round 1 and `5ea28793` for round 2. Written after the fact and labelled
-as such inside each `review_request.md`, because a pack backdated silently would be worse than the
-gap it fills.
+(MUST)` forbids in terms — so there was nothing for the clause to compare. There is now one pack per
+round per row under `.qfai/review/`, each naming the revision its round measured at: `3dbeeef6`,
+`5ea28793`, `d3f4318a`, `1da38e12`. Written after the fact and labelled as such inside each
+`review_request.md`, because a pack backdated silently would be worse than the gap it fills.
+
+> This sentence carried a pack COUNT until `6be8de00` — *eight*, then *twelve* — and both were
+> written in the same commit as the packs that falsified them. It now names no number, for the same
+> reason the member inventory in `workflowsIntegrity.ts` had its numeral removed: a count at one site
+> is a second thing to maintain, and this one rotted twice inside a paragraph about keeping records
+> current.
 
 They are **untracked**, and the warrant first written here for that was **false**. It claimed the
 repository has a convention against tracking packs, inferred from `.gitignore:61` plus the fact that

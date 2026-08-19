@@ -66,18 +66,27 @@ the spec makes progress.
 found that **none** of the four `Selector` cells appears verbatim in its test file. Each is reported
 as resolved on one common word:
 
-The `TDD-0034` cell read **38** until 2026-08-18. That figure was `grep -c` — a count of LINES —
-under a header that says _occurrences_; `grep -o | wc -l` gives **46**. Self-reported by the
-reviewer whose own round-2 measurement it came from, and re-measured here before correcting. The
-conclusion is untouched, because any count >= 1 makes `selectorResolves` falsely true, and the other
-three coincide only because those tokens happen to appear once per line.
+> **Two cells of this table were wrong, in two different ways, and both are worth keeping visible.**
+>
+> `TDD-0034` read **38** — that is `grep -c`, a count of LINES, under a header that says
+> _occurrences_. `grep -o | wc -l` gives **46**. Self-reported by the reviewer whose own round-2
+> measurement it came from.
+>
+> `TDD-0037` then read **21**, and correcting the first cell is what exposed it: `1da38e12`'s own
+> rewording of a docblock ("emits nothing" to "raises no drift finding") added an occurrence of
+> `finding`, so the commit that fixed one cell staled its neighbour. The same arithmetic this CR is
+> about, one table over.
+>
+> All four re-measured at `6be8de00`: 46 / 5 / 6 / 22. The conclusion is untouched — any count of one
+> or more makes `selectorResolves` falsely true — and the other three coincide with their line counts
+> only because those tokens happen to appear once per line.
 
 | row        | resolves via  | occurrences of that token in the file |
 | ---------- | ------------- | ------------------------------------- |
 | `TDD-0034` | `warning`     | 46                                    |
 | `TDD-0035` | `control`     | 5                                     |
 | `TDD-0036` | `packagedDir` | 6                                     |
-| `TDD-0037` | `finding`     | 21                                    |
+| `TDD-0037` | `finding`     | 22                                    |
 
 The first instance in this CR is **noise** — twelve warnings about rows that have not started. This
 one is the opposite failure and it is worse:
