@@ -860,3 +860,189 @@ The three blocking agent verdicts were not obtained, so `Status` is `refactor` f
 item-12 checkpoint is not attempted: step 2 asks for an unfiltered whole-suite run this machine is not
 giving, and step 4's clause 3 reads a total that `CR-20260818-0006` is about. `CR-20260820-0002` is open
 against `TC-0017-0063`'s wording; the row is implemented against the intent, not the literal text.
+
+## Change 6 — the parallelism knob set (TDD-0060, TDD-0061, TDD-0068)
+
+`10_Plan.md` step 6: the knob set per project with the declared starting value of ten. Structure only;
+the final value is a later change per project. Base revision `01c9f6ff`.
+
+### The specified shape was implemented first, and it was inert
+
+`BR-0017-0047` says "**every project in the runner workspace** MUST declare a pool and its pool
+options, a worker setting, a within-file concurrency setting, a file-parallelism setting and a hook
+timeout". That is what the first implementation did: six knobs on all seven projects. Every gate
+passed. Nothing warned.
+
+It also did nothing. The runner scopes three of those options to the root — its own
+`NonProjectOptions` names `maxWorkers`, `minWorkers` and `fileParallelism`, and its
+`poolOptions.forks` is narrowed to `singleFork | isolate`, so `maxForks` is not a project-level escape
+hatch either. Measured on the `validators` project, same command, one variable changed:
+
+```text
+validators, worker override = 1        11.4s   46 passed (46)
+validators, declared default (ten)     12.3s   46 passed (46)
+ratio 0.93x
+```
+
+Constraining the worker count to one did not slow the project down. The runner's type and the
+stopwatch agree that a project-level worker declaration is inert.
+
+A declaration nothing reads is the same defect class as the test project that matched zero files —
+`TC-0017-0063`, one change earlier. Satisfying this rule's literal wording is what would have shipped a
+second instance of it. Filed as `CR-20260820-0003`.
+
+### Why no gate caught it, and my first explanation was WRONG
+
+The first explanation I reached for was that TypeScript's excess-property check does not fire through
+an object spread. That was a hypothesis, so it was tested: a root-only key written **inline** on one
+project, and the same key introduced through the shared spread object. Both left `tsc -b` at exit 0.
+
+The real reason is simpler and is measured. `packages/qfai/tsconfig.json` includes
+`["src/**/*.ts", "src/**/*.d.ts"]`, and `tsc --listFiles` shows none of the three runner config files.
+The arrangement is deliberate and already written down: `eslint.config.js:51` heads that exact file
+list with "Test files & config files outside tsconfig – disable type-checked rules". So no compiler was
+ever going to look, and the runner drops unknown project options in silence.
+
+Which leaves a test as the only mechanism that can catch this class. That is what `TDD-0060`'s new
+root-only guard is, and oracle round `R6` is the proof it works: re-declaring a root-only option on
+every project reddens `:219:8` and **nothing else**.
+
+### The split, and what stayed the same
+
+The knob set is defined once in `packages/qfai/vitest.knobs.ts` and consumed by both configs:
+
+| knob | site | why |
+| --- | --- | --- |
+| `pool`, `poolOptions.forks` | each project | project-scoped; the narrowed `singleFork \| isolate` pair is what the runner accepts |
+| `maxConcurrency` | each project | project-scoped, and the within-file axis |
+| `hookTimeout`, `testTimeout` | each project | project-scoped |
+| `maxWorkers`, `minWorkers` | `vitest.config.ts` | root-only by the runner's own type |
+| `fileParallelism` | `vitest.config.ts` | root-only by the runner's own type |
+
+Both halves are still declared rather than inherited, which is what the rule protects. Only the
+declaration site follows the runner. `forks` over `threads` on purpose: much of this suite spawns the
+built binary and writes temporary trees, and process isolation is what keeps those from colliding.
+
+Nothing here adopts a value. Both axes stay at ten, the override exists so a timing run never has to
+edit a declaration, and `BR-0017-0049`/`BR-0017-0051` keep the final value and any revision of the
+declared starting value out of this change.
+
+### Two co-changes, both the same treatment as an existing sibling
+
+- **`eslint.config.js`** — `vitest.knobs.ts` added to the list that disables type-checked rules for
+  files outside tsconfig. Without it eslint fails outright with "was not found by the project service".
+  The list already names `vitest.config.ts` and `vitest.workspace.ts`; this is the same category, not a
+  weakening.
+- **`vitest.config.ts`** — gains the root-scoped axes next to the coverage block it already carried.
+
+### RED and GREEN
+
+- **RED command**, from `packages/qfai`:
+  `pnpm exec vitest run tests/scripts/vitestWorkspaceKnobs.test.ts`
+- **RED result**: `Tests 4 failed | 1 passed (5)`, exit 1 — every failure an assertion, no load error.
+- **`TDD-0068` passed at RED**, structurally: no retry setting existed to begin with. The row is a
+  regression guard, so `RED failure mode: falsifiability` with `R8`/`R9` and the prose control `R10`.
+- **GREEN result**: same command, `Tests 5 passed (5)`. Reached twice — once against the inert
+  implementation, and once against the split. Only the second GREEN means anything, which is the whole
+  lesson of this change.
+
+### One correction the GREEN forced
+
+`TDD-0068`'s textual claim first matched the bare word `retry`, and it reddened on the configuration's
+own comment saying no retry may be added — the very comment that stops someone adding one. Weakening
+the documentation to satisfy the scan would have been backwards, so the scan was made precise instead:
+`retry` or `retries` immediately followed by an assignment. `R10` is the control that proves this was a
+narrowing and not a loosening — a comment discussing retries reddens nothing, while `R9`'s
+commented-out `retry: 2` still reddens. Fourth time this slice has had prose trip a text assertion.
+
+### Oracle proof — eleven rounds against the one file that defines the set
+
+| id | row | mutant | reddens |
+| --- | --- | --- | --- |
+| `R1` | TDD-0060 | `c67579fb` | `:192:8` — every knob must be declared, not inherited from the runner's defaults |
+| `R2` | TDD-0060 | `c797ed07` | `:192:8` — every knob must be declared, not inherited from the runner's defaults |
+| `R3` | TDD-0060 | `603658fa` | `:207:8` — pool options that do not name the declared pool are read by nothing |
+| `R4` | TDD-0061 | `e266664d` | `:260:8` — each axis must resolve through its own override, not a fixed literal |
+| `R5` | TDD-0061 | `be0bb61f` | `:238:8` — both tunable axes start at ten — the user's declared value; `:282:10` — an override of <malformed> must fall back to ten |
+| `R6` | TDD-0060 | `4c81a1e2` | `:219:8` — a root-only option declared on a project is a declaration nothing reads |
+| `R7` | TDD-0060 | `d53872db` | `:192:8` — every knob must be declared, not inherited from the runner's defaults |
+| `R8` | TDD-0068 | `9772f224` | `:301:8` — a retry would mask the concurrent-writer races more workers surface; `:323:8` — a search of the runner configuration for a retry must return zero results |
+| `R9` | TDD-0068 | `3865d471` | `:323:8` — a search of the runner configuration for a retry must return zero results |
+| `R10-control` | (control) | `d6409baf` | **nothing new** |
+| `R11-control` | (control) | `47121589` | **nothing new** |
+
+Baseline is green, so a control that reddens nothing NEW is what separates "the row sees this" from
+"the suite was already red". Two controls rather than one, because `R10` has a second job: without it,
+the narrowed retry scan is indistinguishable from a weakened one.
+
+### The suite at the declared value
+
+Seven sequential slices through the scripts the CI matrix calls:
+
+| script | test files | tests | wall clock |
+| --- | --- | --- | --- |
+| `test:core` | 122 passed (122) | 1587 passed | 2 skipped (1589) | 98.4s |
+| `test:unit` | 43 passed (43) | 266 passed (266) | 13.9s |
+| `test:validators` | 46 passed (46) | 351 passed (351) | 17.7s |
+| `test:integration` | 124 passed | 4 skipped (128) | 862 passed | 19 skipped (881) | 72.9s |
+| `test:e2e` | 73 passed | 4 skipped (77) | 889 passed | 16 skipped (905) | 38.9s |
+| `test:cli` | 11 passed (11) | 321 passed (321) | 122.9s |
+| `test:scripts` | 10 passed (10) | 97 passed (97) | 9.2s |
+
+Total 373.9s, every one green.
+
+**No timing claim is made from this table.** Slice by slice it runs both faster and slower than change
+5's sweep — `core` down, `integration` up — and the runs were taken on a machine that was doing other
+work, including mine. That spread is the same noise change 3 recorded when a whole-suite run failed a
+differing set of files each time. Reading a knob effect out of it would be exactly the move
+`BR-0017-0049` forbids: a value is adopted only against a timing artifact comparing at least two
+settings on the largest project, and this is not one. The table's claim is narrow and it is the one that
+matters here — the declared configuration does not break anything.
+
+An earlier sweep is discarded rather than reported: it was still running when these config files were
+edited, so its later slices measured a different tree than its earlier ones.
+
+### The validate delta, and one warning this change declined to join
+
+`validate --profile tdd --fail-on error --root .` reports `info=4 warning=377 error=2`, exit 1 — every
+count identical to change 5, and `QFAI-ATDD-112`'s aggregate list unchanged as well, since no new
+`TC-*` annotation directory is involved.
+
+Getting there took a correction. The first version of these three Evidence cells stated a verdict —
+`Tests 4 failed | 1 passed (5)` — with no command, which is exactly what
+`TDDLIST_EVIDENCE_STATUS_ONLY` fires on: the count went 377 to **378**, and the 97th instance of that
+warning class was mine. The validator accepts a cell naming a known runner, so the cells now lead with
+the command that produced the verdict. Count back to 377, `TDDLIST_EVIDENCE_STATUS_ONLY` back to 96.
+
+Worth recording rather than quietly fixing, for two reasons. It is the second time in this slice that a
+count moving by one turned out to be attributable and cheap to fix, against a background of 377 where
+"unchanged" is the easy thing to report. And the 96 that remain are real: they include every spec-0017
+row from changes 1 through 5, all authored in this session and all missing their command. Repairing
+those is a mechanical pass over Evidence cells — an unconditional carve-out cell, so the drift protocol
+permits it — and it is deliberately NOT folded into change 6, whose diff should stay the knob set.
+
+### A raw pipe inside a table cell silently adds a column
+
+Worth its own note because the failure was structural and the report pointed elsewhere. The first
+repaired Evidence cells quoted the runner verbatim, and the runner writes
+`Tests 4 failed | 1 passed (5)`. A Markdown table splits on `|` with no regard for code spans, so
+those two rows carried ELEVEN and TEN fields instead of nine. Prettier then aligned the whole table
+to eleven columns, which pushed the separator row two characters past the 1200-character limit and
+produced five `MD038` hits on rows I had not touched — three of them from change 5.
+
+So a stray pipe in one cell reported as a formatting problem in four other rows. The verdict is now
+written with `/`: same information, no hazard. Escaping as a backslash-pipe also renders, but a cell
+whose correctness depends on an escape is a trap for whoever edits it by hand next.
+
+The repair script rebuilds each row from its first nine fields rather than editing cell 8 in place,
+because a row already split by a stray pipe has its Evidence at the wrong index — editing in place
+would have written the fix into the wrong cell. It then asserts every data row holds nine cells: 82
+rows, one distinct field count.
+
+### Gate items NOT satisfied
+
+The three blocking agent verdicts were not obtained, so `Status` is `refactor` for all three rows. The
+item-12 checkpoint is not attempted: step 2 asks for an unfiltered whole-suite run this machine is not
+giving, and step 4's clause 3 reads a total that `CR-20260818-0006` is about. `CR-20260820-0003` is
+open against `BR-0017-0047`'s and `TC-0017-0060`'s scope; the row is implemented against the intent,
+not the literal text.

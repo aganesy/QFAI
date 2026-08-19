@@ -55,6 +55,9 @@ export default [
       "packages/qfai/scripts/**/*.ts",
       "packages/qfai/vitest.config.ts",
       "packages/qfai/vitest.workspace.ts",
+      // The runner knob set, shared by the two files above. Same category as its two
+      // siblings: a runner config file, outside tsconfig's `src/**` include.
+      "packages/qfai/vitest.knobs.ts",
       "packages/qfai/tsup.config.ts",
     ],
     ...tseslint.configs.disableTypeChecked,
