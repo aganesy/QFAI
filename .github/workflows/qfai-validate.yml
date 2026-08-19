@@ -20,17 +20,24 @@ on:
     branches: [main, master]
   pull_request:
 
+# Least-privilege default. This workflow only reads the tree and runs a
+# validator; nothing it does needs write access.
+permissions:
+  contents: read
+
 jobs:
   validate:
     name: qfai validate (full profile, fail on error)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
         run: corepack enable
         shell: bash
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           # Match the QFAI repo's CI baseline (Node 20 LTS) and the package
           # `engines: ">=18.0.0"`. Bump deliberately when QFAI raises its

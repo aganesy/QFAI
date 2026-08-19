@@ -182,3 +182,173 @@ reason recorded above. Oracle `O1`.
 
 `TC-0017-0005` (AC-0017-0002 / EX-0017-0003, `boundary`, `unit`). RED mode `assertion`: all five
 near-miss tokens and the empty map returned 0 against the seam and return 1 against the real body.
+
+## Change 2 — own-tree hardening (TDD-0014, TDD-0019, TDD-0021, TDD-0022, TDD-0024)
+
+`10_Plan.md` step 2: per-job permissions, `persist-credentials: false` on every checkout step, and
+every action reference pinned to a full SHA. Mechanical and wide; no topology change. Base revision
+`08214aeb`.
+
+### The baseline, measured before any edit — and the spec's own figures reproduce exactly
+
+```text
+jobs                     12   permission block reachable   4    declared  2
+checkout steps           11   persist-credentials: false   0
+full-history jobs         3   ci.yml::lint, release.yml::verify, release.yml::gate
+uses references          21   pinned to a full SHA         0
+```
+
+`BR-0017-0014`'s Notes say "2 of 12 declare, 4 of 12 reach. The gap this spec closes is 8 jobs, not
+10." Both halves reproduce: the two declarations are `release.yml`'s `github-release` and `publish`,
+and the four reachable are `release.yml`'s jobs, which inherit its workflow-level block. A spec figure
+reproducing to the digit is worth recording, because most of this slice's rework has come from figures
+that did not.
+
+### One measurement decided a change the plan did not spell out
+
+`BR-0017-0019` names **two** jobs as legitimately needing full history — the lint lane's pair-changed
+diff and the release workflow's verification job — and the tree had **three**. Rather than assume the
+rule undercounted or that the third was needed, I measured what the third job runs:
+
+- `release.yml`'s `gate` runs `pnpm ci:gate`, which is `sync:ssot` + a WORKING-TREE
+  `git diff --exit-code` + `format:check` + `lint` + `lint:md` + `check-types` + `check-bidi` +
+  `check-instructions-size` + `check-build-warnings` + the package tests + `verify:pack`.
+- **`ci:gate` does not include `check-prompt-scanner-pair.mjs`** — that is `ci:lint`'s member, and it
+  is the only history-dependent one in either aggregate. Grepping the remaining members for `origin/`,
+  `rev-list` and `git log` returns nothing; `sync-init-to-root.mjs`'s only match is inside a comment,
+  and `check-build-warnings.mjs`'s two `spawnSync` hits run the build.
+- The job also checks out a pinned SHA (`needs.verify.outputs.sha`), so there is no base ref to reach.
+
+So the rule's count was right and the tree carried an unnecessary full clone on a release-path job.
+`fetch-depth: 0` was removed from `gate`. Recorded at this length because it is the one edit in change
+2 that is not mechanical, and because the safe-looking alternative — leaving it and weakening the
+row's assertion to "at least two" — would have made the row unable to detect the case it exists for.
+
+### RED
+
+- **RED command**, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/scripts/workflowHygiene.test.ts`
+- **RED result**: `Tests 4 failed | 1 passed (5)`, exit 1. Four assertion failures, each inside its own
+  row's `describe`, each naming the predicate its row owns:
+
+```text
+workflowHygiene.test.ts:223:8  every own-CI job must have a permission block reachable from it
+workflowHygiene.test.ts:254:8  every checkout step must set `persist-credentials: false`
+workflowHygiene.test.ts:276:8  full history belongs to the lint lane's pair-changed diff and the
+                               release verification job, and to no other job
+workflowHygiene.test.ts:309:8  every action reference must be pinned to a full commit SHA
+```
+
+  Admissible on all four of `red-admissibility.md`'s criteria: the module loads (the fifth test
+  collected and passed), every failure is an assertion inside its row's own selector, every message
+  names the row's predicate, and deleting the assertions would make the run pass.
+
+- **`TDD-0024` passed at RED, and that is structural rather than accidental.** Its two claims —
+  `.github/` is outside `package.json#files`, and the leakage guard exits 0 — were both true before
+  the pins landed and are both true after. The row is a **regression guard**: its value is that the
+  claims survive the arrival of trailers that look exactly like the version markers the guard forbids.
+  `RED failure mode: falsifiability`, with `P5a`/`P5b` below standing in for the RED pair.
+
+### The production change
+
+- `ci.yml`: workflow-level `permissions: { contents: read }`; `permissions: {}` on `ci-pass`;
+  `persist-credentials: false` on all six checkout steps; seven references pinned.
+- `qfai-validate.yml`: workflow-level `permissions: { contents: read }`; the flag on its one checkout
+  step; two references pinned. (This file is deleted at change 7; it is hardened now because it is in
+  the tree now, and a row that skipped it would be asserting over a subset.)
+- `release.yml`: the flag on all four checkout steps; six references pinned; `gate`'s `fetch-depth: 0`
+  removed.
+
+Pins, each with the semver tag it resolves to, taken from the GitHub API:
+
+```text
+actions/checkout         11d5960a326750d5838078e36cf38b85af677262   v4.4.0
+actions/setup-node       49933ea5288caeca8642d1e84afbd3f7d6820020   v4.4.0
+actions/upload-artifact  ea165f8d65b6e75b540449e92b4886f43607fa02   v4.6.2
+```
+
+**Pinned, not upgraded.** All three are `v4` while the current majors are `v7`. Change 2's obligation
+is `BR-0017-0010`'s "every reference is a full-SHA pin", and upgrading three majors is a different
+decision with its own compatibility surface. Recorded so the gap is visible rather than discovered
+later as a surprise.
+
+### GREEN
+
+- **GREEN command / result**: the same file-scoped command — `Tests 5 passed (5)`, exit 0.
+- **Post-change measurement**: jobs 12, reachable **12**, declared 3; checkout steps 11 with the flag
+  **11**; full-history jobs exactly `ci.yml::lint` and `release.yml::verify`; `uses` 21, floating **0**.
+- **`Refactor verify`**: the same command after the prettier pass and the comment repair below —
+  `Tests 5 passed (5)`, exit 0.
+- **Sibling suites**: `tests/scripts/**` plus `shippedWorkflowShapeGate` — `Test Files 9 passed (9)` /
+  `Tests 87 passed (87)`, exit 0. `ci:lint` exits 0 across all ten members.
+
+### Oracle proof — one mutation per row, each reddening exactly one
+
+Base revision `08214aeb` plus change 2's uncommitted edits; needles literal, occurrence counts
+measured, restoration byte-compared and confirmed with `git diff --exit-code`.
+
+| id | row | file | mutant | reddens |
+| --- | --- | --- | --- | --- |
+| `P1` | TDD-0014 | `ci.yml` | `9232ee34` | `:223:8` — the workflow-level block is removed, so every inheriting job loses reachability |
+| `P2` | TDD-0019 | `ci.yml` | `79ae81d6` | `:254:8` — the flag deleted from exactly one checkout step |
+| `P3` | TDD-0021 | `release.yml` | `d5ccf147` | `:276:8` — full history returns to a third job |
+| `P4` | TDD-0022 | `ci.yml` | `3af46a42` | `:309:8` — one reference floats back to a major-version tag |
+| `P5a` | TDD-0024 | `packages/qfai/package.json` | `db85df2e` | `:335:8` — `.github` enters the distributed surface |
+| `P5b` | TDD-0024 | `assets/init/root/DESIGN.md` | `d4f20c19` | `:349:8` — a version marker planted INSIDE the surface, so the guard exits 1 |
+
+Every one is `Tests 1 failed | 4 passed (5)`. `TDD-0024`'s two claims are killed separately: `P5a` the
+structural half (why the trailer is legal), `P5b` the behavioural half (that the guard actually
+passes). `P5a` mutates `package.json` rather than a workflow because that file **is** the row's
+subject — the trailers are legal only while `.github/` stays out of `files`.
+
+### `TC-0017-0016` is absent, and routed rather than guessed
+
+`BR-0017-0016` says exactly two permission blocks depart from "the minimal-scope default". Measured,
+the tree already holds a third the rule never names: `github-release`'s `contents: write`. And
+"minimal-scope default" has two readings the pack does not choose between — a fixed `contents: read`
+literal (count three, rule wrong) or each job's own minimum (count two, term undefined). A `boundary`
+row exists to fix where a rule stops, and this one is ambiguous at exactly that point, so writing it
+would encode my reading of an undefined term as a hard assertion. Filed as `CR-20260818-0007` with
+`TDD-0016` as its blocked set.
+
+### A sibling row caught my prose, and it was right to
+
+The full package suite went red on `shippedWorkflowPins.test.ts`, not on anything change 2 asserts.
+That row scans **every** `.ts` file under `packages/qfai/tests`, line by line, for a floating-major
+action reference and forbids it — because a surviving expectation of that form would demand the
+un-pinned tree back. My new test file carried one in a COMMENT, as an example of what the pin rule
+rejects.
+
+The scan is comment-blind on purpose; its own docblock records that the class escaped a file-scoped
+scan once. So the prose was reworded to describe the forbidden forms rather than write them, and the
+reason is now recorded beside the assertion. A gate that fires on prose is annoying exactly once and
+protects a real invariant; weakening it to make room for a comment would have been the wrong trade.
+
+### The step-4 aggregate got WORSE, and my earlier prediction about it was wrong
+
+I told the user that implementing spec-0017 rows would reduce the twelve false `TDDLIST_STALE_STATUS`
+positives that block spec-0006's checkpoint clause 3. **That was wrong, and the correction is
+measured**: creating `workflowHygiene.test.ts` took the count from 16 to **36**, `warning` from 364 to
+384. Advancing this change's five rows past `todo` returns five of them, leaving 31.
+
+Attributed: spec-0003 **1**, spec-0012 **3**, spec-0017 **32**. Of the spec-0017 ones checked against
+the new file, **5 resolve verbatim** (this change's own rows, correctly firing while their `Status` was
+still `todo`) and **23 resolve only through the last-token fallback** — false positives, the same
+mechanism `CR-20260818-0001` documents, from a single file.
+
+The direction of the effect is the opposite of what I said: a row advancing past `todo` clears its own
+warning, but a new test file adds one for every remaining `todo` row whose selector's last token
+appears anywhere in it. With 72 rows still `todo`, each new file adds more than the rows it closes
+remove. The net only turns downward near the end of the spec. `CR-20260818-0001`'s "monotone in file
+size" claim is now measured twice, at +12 and +20.
+
+**Consequence carried:** spec-0006's four parked rows are blocked by checkpoint clause 3, and this
+change moved that aggregate further from its baseline rather than closer. That is recorded in
+`CR-20260818-0006`, and it is the strongest argument in it: a clause that reads an unattributed total
+makes progress in one spec into an obstacle for another.
+
+### Gate items NOT satisfied
+
+The three blocking agent verdicts were not obtained for these five rows. `Status` is `refactor`:
+implemented, not review-closed. The item-12 checkpoint is not attempted, because step 4 cannot pass
+while clause 3 reads a total this change increased.

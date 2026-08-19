@@ -6,6 +6,14 @@ on:
     branches:
       - main
 
+# ── Least-privilege default for every job in this workflow ──────────
+# `contents: read` is the minimal scope. A job needing more declares its
+# own block; a job needing none declares an empty one, which is explicit
+# rather than missing. Reachability is what the requirement is written
+# against: a job with no block of its own is still governed by this one.
+permissions:
+  contents: read
+
 # ── Node version configuration ──────────────────────────────────────
 # Change these values to update the shared Node version for non-matrix jobs.
 # - NODE_LTS: used by lint, check-types, check-types-future, build
@@ -29,8 +37,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          persist-credentials: false
           # pair-changed CI lane (check-prompt-scanner-pair.mjs) needs
           # `origin/main` reachable for `git diff --name-only
           # origin/main...HEAD`. Default shallow checkout doesn't fetch
@@ -46,7 +55,7 @@ jobs:
       - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
         run: corepack enable
         shell: bash
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ env.NODE_LTS }}
           cache: pnpm
@@ -67,11 +76,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
         run: corepack enable
         shell: bash
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ env.NODE_LTS }}
           cache: pnpm
@@ -87,11 +98,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
         run: corepack enable
         shell: bash
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ env.NODE_LTS }}
           cache: pnpm
@@ -111,11 +124,13 @@ jobs:
       matrix:
         slice: [core, validators, integration, e2e, cli, unit, scripts]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
         run: corepack enable
         shell: bash
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ env.NODE_LTS }}
           cache: pnpm
@@ -147,11 +162,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
         run: corepack enable
         shell: bash
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ env.NODE_LTS }}
           cache: pnpm
@@ -167,11 +184,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
         run: corepack enable
         shell: bash
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ env.NODE_LTS }}
           cache: pnpm
@@ -236,7 +255,7 @@ jobs:
 
       - name: Upload qfai artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: qfai-report
           retention-days: 14
@@ -249,6 +268,11 @@ jobs:
 
   # ── 6. Aggregate gate (for branch protection) ────────────────────
   ci-pass:
+    # An EMPTY map, not an omission. The verdict reads `needs` from the
+    # workflow context and touches no repository content, so it needs no
+    # scope — and declaring that explicitly is what makes the absence
+    # auditable instead of indistinguishable from an oversight.
+    permissions: {}
     if: always()
     needs: [lint, check-types, check-types-future, test, scanner-coverage, build]
     runs-on: ubuntu-latest
