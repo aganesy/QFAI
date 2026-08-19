@@ -49,9 +49,16 @@
 // QFAI:SPEC-0017:TC-0017-0071
 // QFAI:SPEC-0017:TC-0017-0072
 // QFAI:SPEC-0017:TC-0017-0073
+// QFAI:SPEC-0017:TC-0017-0006
+// QFAI:SPEC-0017:TC-0017-0007
+// QFAI:SPEC-0017:TC-0017-0008
+// QFAI:SPEC-0017:TC-0017-0009
+// QFAI:SPEC-0017:TC-0017-0010
+// QFAI:SPEC-0017:TC-0017-0011
+// QFAI:SPEC-0017:TC-0017-0012
 
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -383,8 +390,22 @@ function toolchainJobs(): { id: string; job: Record<string, unknown> }[] {
   for (const [id, job] of Object.entries(doc["jobs"])) {
     if (!isRecord(job)) continue;
     const steps = Array.isArray(job["steps"]) ? job["steps"] : [];
+    // A job that INVOKES pnpm, not one that merely contains the word.
+    //
+    // The substring test was wrong and change 8 proved it: the detection job embeds a
+    // program whose recognized-file list names `pnpm-lock.yaml` and
+    // `pnpm-workspace.yaml`, so the job read as a toolchain job and was reported for
+    // not consuming the shared setup definition. It needs no dependencies at all — it
+    // runs the image's node against a git diff — and making it install the workspace
+    // would add the slowest step in the file to its cheapest job, against the cost
+    // objective this spec exists to serve.
+    //
+    // A narrowing, not a weakening: the row is about jobs that run pnpm, and a command
+    // word is what running pnpm looks like in every form a `run:` block can take.
+    const invokesPnpm = (run: string): boolean =>
+      run.split(/\r?\n/).some((line) => /(?:^|[&|;]\s*)pnpm(?:\s|$)/.test(line.trim()));
     const usesPnpm = steps.some(
-      (step) => isRecord(step) && typeof step["run"] === "string" && step["run"].includes("pnpm"),
+      (step) => isRecord(step) && typeof step["run"] === "string" && invokesPnpm(step["run"]),
     );
     if (usesPnpm) out.push({ id, job });
   }
@@ -746,6 +767,378 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
       .map(stepName);
     expect
       .soft(toothless, "an enumerated verification that cannot fail is not a verification")
+      .toEqual([]);
+  });
+});
+
+// ── change 8: change detection and lane selection ───────────────────────────
+//
+// Two kinds of claim live here, kept apart on purpose.
+//
+// The STRUCTURAL claims read the workflow: which jobs carry a selection condition,
+// which do not, and that no matrix leg was removed to achieve a narrower run. Those
+// are about the shape branch protection sees.
+//
+// The BEHAVIOURAL claims extract the classifier program out of the workflow and RUN
+// it against synthetic path lists — the technique change 1 used for the verdict, for
+// the same reason: a rule that is only read is a rule nobody has tested. The heredoc
+// is quoted, so the bytes GitHub executes are the bytes these tests execute.
+//
+// Why the classifier decides even the failure case: `BR-0017-0008` requires a failed
+// diff to emit an annotation naming the reason AND to select the full set. If that
+// decision lived in the shell around the program it would be the one part of the rule
+// no test could reach. So the workflow only ATTEMPTS the diff — paths to one file,
+// git's stderr to another — and the program decides. A missing or empty path file is
+// "the diff could not be computed", never "nothing changed".
+
+const DETECT_JOB = "detect";
+const LINT_JOB = "lint";
+const REQUIRED_CONTEXT_JOB = "build";
+
+/**
+ * Jobs that must run whatever detection selects.
+ *
+ * `EX-0017-0007` names the four instances a documentation-only pull request may
+ * execute: detection, lint, build and the verdict. `build` is there because it carries
+ * the required status context (`BR-0017-0007`), and `BR-0017-0012` forbids a condition
+ * on such a job or on anything it depends on. `lint` is there because `BR-0017-0011`
+ * exempts it by name — it carries the formatter, the Markdown linter, the leakage
+ * guard and the pin guard, every one of which a documentation change can break.
+ */
+const UNCONDITIONAL_JOBS = [DETECT_JOB, LINT_JOB, REQUIRED_CONTEXT_JOB, VERDICT_JOB] as const;
+
+/** `needs` normalized to an array; a scalar `needs` is legal YAML. */
+function needsOf(job: Record<string, unknown>): string[] {
+  const needs = job["needs"];
+  if (typeof needs === "string") return [needs];
+  return isStringArray(needs) ? needs : [];
+}
+
+function ciJobs(): Record<string, Record<string, unknown>> {
+  const doc: unknown = parseYaml(readFileSync(CI_WORKFLOW, "utf-8"));
+  if (!isRecord(doc) || !isRecord(doc["jobs"])) {
+    throw new Error("ci.yml declares no jobs");
+  }
+  const out: Record<string, Record<string, unknown>> = {};
+  for (const [id, job] of Object.entries(doc["jobs"])) {
+    if (isRecord(job)) out[id] = job;
+  }
+  return out;
+}
+
+const conditionOf = (job: Record<string, unknown>): string => String(job["if"] ?? "(none)");
+
+/**
+ * The classifier program, extracted from the detect job's quoted heredoc.
+ *
+ * Located by the heredoc delimiter rather than by a line offset, so adding a step to
+ * the job cannot silently extract the wrong text.
+ */
+function extractClassifier(): string {
+  const job = ciJobs()[DETECT_JOB];
+  if (job === undefined) {
+    throw new Error(`ci.yml declares no \`${DETECT_JOB}\` job`);
+  }
+  const steps = Array.isArray(job["steps"]) ? job["steps"].filter(isRecord) : [];
+  const bodies = steps
+    .map((step) => step["run"])
+    .filter((run): run is string => typeof run === "string")
+    .filter((run) => run.includes("<<'NODE'"));
+  if (bodies.length !== 1) {
+    throw new Error(
+      `expected exactly one quoted NODE heredoc in \`${DETECT_JOB}\`, found ${bodies.length}`,
+    );
+  }
+  const body = bodies[0];
+  const start = body.indexOf("\n", body.indexOf("<<'NODE'"));
+  const end = body.indexOf("\nNODE", start);
+  if (start < 0 || end < 0) {
+    throw new Error("the classifier heredoc is not terminated");
+  }
+  return body.slice(start + 1, end);
+}
+
+interface Classification {
+  status: number;
+  full: boolean | null;
+  reason: string;
+  annotations: string[];
+  raw: string;
+}
+
+/** One classifier run over a synthetic input. */
+function runClassifier(input: {
+  paths?: readonly string[] | null;
+  diffError?: string;
+}): Classification {
+  const dir = mkdtempSync(path.join(tmpdir(), "qfai-detect-"));
+  try {
+    const program = path.join(dir, "detect.mjs");
+    writeFileSync(program, extractClassifier(), "utf-8");
+
+    const pathsFile = path.join(dir, "changed.txt");
+    if (input.paths !== null && input.paths !== undefined) {
+      writeFileSync(pathsFile, `${input.paths.join("\n")}\n`, "utf-8");
+    }
+    const errFile = path.join(dir, "diff-err.txt");
+    writeFileSync(errFile, input.diffError ?? "", "utf-8");
+    const outFile = path.join(dir, "github-output.txt");
+    writeFileSync(outFile, "", "utf-8");
+
+    const run = spawnSync(process.execPath, [program, pathsFile, errFile], {
+      encoding: "utf-8",
+      env: { ...process.env, GITHUB_OUTPUT: outFile },
+    });
+    const raw = `${run.stdout ?? ""}${run.stderr ?? ""}`;
+    const written = readFileSync(outFile, "utf-8");
+    const full = /^full=(.*)$/m.exec(written);
+    const reason = /^reason=(.*)$/m.exec(written);
+    return {
+      status: run.status ?? -1,
+      full: full === null ? null : full[1].trim() === "true",
+      reason: reason === null ? "" : reason[1].trim(),
+      annotations: raw
+        .split(/\r?\n/)
+        .filter((line) => line.startsWith("::warning"))
+        .map((line) => line.trim()),
+      raw,
+    };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+describe("TC-0017-0006 (TDD-0006): a documentation-only change executes at most four instances", () => {
+  it("leaves exactly four jobs unconditional and derives every other job's condition from detection", () => {
+    const jobs = ciJobs();
+
+    // CLAIM 1 — the four that always run are exactly the four `EX-0017-0007` names.
+    // A set equality rather than "at least these", because the ceiling IS the
+    // requirement: a fifth unconditional job breaks it however useful it is.
+    // "Unconditional" means the job cannot be prevented from running, which is not
+    // the same as carrying no `if`. The verdict carries `if: always()` on purpose —
+    // it must run when its needs are SKIPPED, which is precisely the documentation-only
+    // case, and its accepting set treats `skipped` as passing. Counting it as
+    // conditional would have made the ceiling unmeetable for the one job the ceiling
+    // exists to protect.
+    const ALWAYS = /^\s*(?:\$\{\{\s*)?always\(\)\s*(?:\}\})?\s*$/;
+    const unconditional = Object.entries(jobs)
+      .filter(([, job]) => job["if"] === undefined || ALWAYS.test(String(job["if"])))
+      .map(([id]) => id)
+      .sort();
+
+    // And only the verdict may reach the ceiling that way. `always()` on a lane would
+    // satisfy the count while running it on every documentation change, so which job
+    // is allowed the escape hatch is asserted rather than left to convention.
+    const alwaysJobs = Object.entries(jobs)
+      .filter(([, job]) => job["if"] !== undefined && ALWAYS.test(String(job["if"])))
+      .map(([id]) => id);
+    expect
+      .soft(alwaysJobs, "only the verdict may use always() to stay unconditional")
+      .toEqual([VERDICT_JOB]);
+    expect
+      .soft(
+        unconditional,
+        "a documentation-only run may execute only detection, lint, build and the verdict",
+      )
+      .toEqual([...UNCONDITIONAL_JOBS].sort());
+
+    const selected = Object.entries(jobs).filter(
+      ([id]) => !UNCONDITIONAL_JOBS.includes(id as (typeof UNCONDITIONAL_JOBS)[number]),
+    );
+
+    // CLAIM 2 — every conditional job derives its condition from the detection output.
+    // A hand-written condition would satisfy CLAIM 1 and still select lanes by a rule
+    // nothing tests.
+    const underived = selected
+      .filter(([, job]) => !conditionOf(job).includes(`needs.${DETECT_JOB}.outputs.full`))
+      .map(([id, job]) => `${id}: ${conditionOf(job)}`);
+    expect
+      .soft(underived, "every selected job's condition must be derived from the detection output")
+      .toEqual([]);
+
+    // CLAIM 3 — and each declares the dependency that makes its condition resolvable.
+    // `needs.detect.outputs.full` on a job that does not need `detect` evaluates to
+    // empty, which reads as false and skips the lane forever, silently.
+    const unwired = selected
+      .filter(([, job]) => !needsOf(job).includes(DETECT_JOB))
+      .map(([id]) => id);
+    expect.soft(unwired, `a job reading needs.${DETECT_JOB} must declare it in needs`).toEqual([]);
+
+    // CLAIM 4 — and the verdict covers detection itself.
+    //
+    // Not a restatement of CLAIM 3. Every selected lane needs `detect`, so a CRASHED
+    // detection skips all of them; the verdict reads `skipped`, and `skipped` is
+    // accepting because a documentation-only run legitimately produces one. Without
+    // `detect` in the verdict's own needs that arrives as a green run in which nothing
+    // was verified — the case the verdict's accepting set was written to exclude.
+    // Failing OPEN is a decision the classifier makes and annotates; failing HARD has to
+    // reach the gate. Found by reading the shape, not by a failing test, which is why it
+    // is written down here.
+    expect
+      .soft(
+        needsOf(jobs[VERDICT_JOB] ?? {}),
+        "a crashed detection must reach the verdict rather than skipping every lane into a green run",
+      )
+      .toContain(DETECT_JOB);
+  });
+});
+
+describe("TC-0017-0007 (TDD-0007): unneeded legs stay declared and are skipped, never removed", () => {
+  it("keeps every matrix leg declared and puts the condition on the job, not the list", () => {
+    const test = ciJobs()["test"];
+    expect(test, "ci.yml must declare a `test` job").not.toBeUndefined();
+    if (test === undefined) return;
+
+    // CLAIM 1 — the leg list is untouched. `BR-0017-0006` forbids removing a leg to
+    // achieve a narrower run: a removed leg takes its check name with it, and branch
+    // protection then needs a repository setting change.
+    const strategy = test["strategy"];
+    const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
+    const slices = isRecord(matrix) ? matrix["slice"] : undefined;
+    expect
+      .soft(
+        Array.isArray(slices) ? [...slices].sort() : slices,
+        "every declared slice must stay in the matrix so its check name persists",
+      )
+      .toEqual(["cli", "core", "e2e", "integration", "scripts", "unit", "validators"]);
+
+    // CLAIM 2 — and the condition sits on the JOB. A condition inside the matrix would
+    // change the leg set, which is CLAIM 1's removal by another route.
+    expect
+      .soft(conditionOf(test), "the selection condition belongs on the job")
+      .toContain(`needs.${DETECT_JOB}.outputs.full`);
+    expect
+      .soft(JSON.stringify(strategy ?? null), "no selection condition may live inside the matrix")
+      .not.toContain("needs.");
+  });
+});
+
+describe("TC-0017-0008 (TDD-0008): a resolvable base ref narrows the lane set with no annotation", () => {
+  it("selects the narrow set for a documentation-only list and annotates nothing", () => {
+    const result = runClassifier({ paths: ["REVIEW.md", "packages/qfai/docs/anything.md"] });
+    expect.soft(result.status, `the classifier must exit 0:\n${result.raw}`).toBe(0);
+    expect
+      .soft(result.full, "a documentation-only change must not select the full set")
+      .toBe(false);
+    expect
+      .soft(result.annotations, "a successful classification must emit no warning annotation")
+      .toEqual([]);
+  });
+});
+
+describe("TC-0017-0009 (TDD-0009): a shallow clone and an unreachable base ref both fail open", () => {
+  it("selects the full set and names the reason when the diff produced nothing", () => {
+    // Two shapes of one failure. A shallow clone makes git refuse; an unreachable base
+    // ref makes it fail differently. Both arrive as "no path list was produced", which
+    // is why an EMPTY list must never read as "nothing changed".
+    for (const [label, input] of [
+      ["no path file at all", { paths: null, diffError: "fatal: bad object deadbeef" }],
+      ["an empty path file", { paths: [], diffError: "fatal: unable to read tree" }],
+    ] as const) {
+      const result = runClassifier(input);
+      expect
+        .soft(result.status, `${label}: the classifier must still exit 0:\n${result.raw}`)
+        .toBe(0);
+      expect.soft(result.full, `${label}: a failed diff must select the full lane set`).toBe(true);
+      expect
+        .soft(result.annotations.length, `${label}: a failed diff must emit a warning annotation`)
+        .toBeGreaterThan(0);
+      expect
+        .soft(result.annotations.join("\n"), `${label}: the annotation must name git's reason`)
+        .toContain("fatal:");
+    }
+  });
+});
+
+describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-only", () => {
+  it("selects everything for the assistant tree and narrows for the agent mirrors", () => {
+    // The assistant tree is excluded from the documentation-only set by name
+    // (`BR-0017-0010`) because what lives there changes validate output — the same
+    // reason the catalog is loaded rather than merely shipped.
+    const assistant = runClassifier({ paths: [".qfai/assistant/catalog/test-layers.md"] });
+    expect
+      .soft(
+        assistant.full,
+        "assistant-tree Markdown alters validate output and must select everything",
+      )
+      .toBe(true);
+
+    // And it must be excluded for THAT reason, not by happening to fall through.
+    //
+    // The oracle caught this: removing the assistant tree from the classifier's
+    // never-documentation list reddened nothing, because `.qfai/` is not in the
+    // documentation set either, so the path still selected everything as a plain source
+    // path. The list was inert — the same decoration defect as a project matching zero
+    // files and a knob the runner ignores, and this time it was in my own code.
+    //
+    // `BR-0017-0010` requires the exclusion to be explicit ("MUST exclude the assistant
+    // catalog tree BECAUSE changes there alter validate output"), so the reason is what
+    // makes the rule enforced rather than incidental. Asserting it also keeps the
+    // exclusion working if `.qfai/` is ever admitted to the documentation set.
+    expect
+      .soft(
+        assistant.reason,
+        "the assistant tree must be excluded as validate-affecting, not as an incidental source path",
+      )
+      .toMatch(/validate output/i);
+
+    // And the mirrors go the other way, also by name.
+    const mirrors = runClassifier({
+      paths: [".claude/rules/temporary-files.md", ".codex/skills/whatever.md"],
+    });
+    expect.soft(mirrors.full, "the agent-integration mirrors are documentation-only").toBe(false);
+  });
+});
+
+describe("TC-0017-0011 (TDD-0011): a path in no recognized directory selects everything", () => {
+  it("selects the full set and says the path was unrecognized, not that it was source", () => {
+    const result = runClassifier({ paths: ["some/directory/nobody/declared.txt"] });
+    expect.soft(result.full, "an unclassified path must never read as nothing to run").toBe(true);
+
+    // The REASON is the row, not a nicety. `TC-0017-0010` also selects everything, so
+    // `full` alone cannot tell an unrecognized path from a recognized source one — only
+    // the reason distinguishes the closed list working from it matching by accident.
+    expect
+      .soft(
+        result.reason,
+        "the reason must identify the path as outside every recognized directory",
+      )
+      .toMatch(/unrecognized|not in any recognized/i);
+  });
+});
+
+describe("TC-0017-0012 (TDD-0012): the lint lane carries no selection condition", () => {
+  it("leaves the lint lane and the required-context job unconditional", () => {
+    const jobs = ciJobs();
+    const lint = jobs[LINT_JOB];
+    expect(lint, "ci.yml must declare a `lint` job").not.toBeUndefined();
+    if (lint === undefined) return;
+
+    // `BR-0017-0011`: the lint lane carries the formatter, the Markdown linter, the
+    // leakage guard and the pin guard — all of which a documentation-only change can
+    // break. Skipping it would make those gates vacuous for exactly the changes most
+    // likely to trip them.
+    expect.soft(lint["if"], "the lint lane must carry no selection condition").toBeUndefined();
+    expect
+      .soft(needsOf(lint), "the lint lane must not depend on detection")
+      .not.toContain(DETECT_JOB);
+
+    // And the required-context job. `BR-0017-0012` is about what branch protection
+    // sees: a skipped job reports success, so a condition on the job carrying a
+    // required context — or on anything it depends on — turns the gate into a rubber
+    // stamp. Asserted as an EMPTY needs set rather than "no conditional need",
+    // because the transitive closure is what the rule is about and an empty closure
+    // is the only shape that needs no traversal to verify.
+    const required = jobs[REQUIRED_CONTEXT_JOB];
+    expect
+      .soft(required?.["if"], "the required-context job must carry no condition")
+      .toBeUndefined();
+    expect
+      .soft(
+        needsOf(required ?? {}),
+        "the required-context job must depend on nothing that can be skipped",
+      )
       .toEqual([]);
   });
 });

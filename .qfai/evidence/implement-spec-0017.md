@@ -1318,3 +1318,233 @@ warning count will keep climbing for a reason that has nothing to do with the ro
 
 The three blocking agent verdicts were not obtained, so `Status` is `refactor` for both rows. The
 item-12 checkpoint is not attempted, for the reasons recorded under changes 3 through 7.
+
+## Change 8 — change detection and lane selection (TDD-0006 … TDD-0012)
+
+`10_Plan.md` step 8: the detection job, plus a derived condition on every declared leg; the lint lane
+and the required-context job stay unconditional. Base revision `9aced5bb`.
+
+### The seam went in first, because the first RED was not admissible
+
+The first RED reported `Tests 6 failed | 13 passed (19)`, and four of those six failed with a THROWN
+`ci.yml declares no \`detect\` job` rather than with an assertion. A lookup error says the row could not
+run; it does not say the behaviour is absent, and treating it as a RED would have made the GREEN mean
+less than it appears to.
+
+So a minimal seam went in first: the `detect` job, its two outputs, the checkout, and a step whose
+quoted heredoc contains one comment and no code. Present enough to parse and to be found by the
+extractor, empty enough to fail every behavioural claim. The second RED is the admissible one —
+`Tests 6 failed | 13 passed (19)` with zero thrown errors, every failure an assertion.
+
+### The whole decision lives in the program, failure included
+
+`BR-0017-0008` requires a failed diff to emit an annotation naming the reason AND to select the full
+lane set. If that branch lived in the shell around the classifier it would be the one part of the rule
+no test could execute — and it is the branch that matters most, because getting it wrong means a
+narrowed run that looks deliberate.
+
+So the workflow only ATTEMPTS the diff:
+
+```text
+git diff --name-only "$BASE_SHA" "$HEAD_SHA" > changed.txt 2> diff-err.txt || true
+node detect.mjs changed.txt diff-err.txt
+```
+
+`|| true` is load-bearing. A shallow clone or an unreachable base ref reaches the classifier as "no
+path list was produced", and the classifier decides. An EMPTY list is a failure to compute, never
+"nothing changed" — a pull request always changes something, so an empty diff means the diff did not
+run. `R7` is the mutation that proves the row sees that distinction: making the empty case fall through
+reddens the fail-open claim and nothing else.
+
+The heredoc is quoted, so the bytes GitHub executes are the bytes the tests extract and execute. That
+is change 1's technique for the verdict, used here for the same reason: a rule that is only read is a
+rule nobody has tested.
+
+### The exclusion set is small, and it is small because it was measured
+
+`BR-0017-0009` and `BR-0017-0010` require both lists to be enumerated. The recognized list is the
+tracked top level. The documentation-only list was derived by asking, for each candidate, whether any
+test file reads it — because classifying a path as documentation skips the lane that would catch a
+break there.
+
+Almost everything has a reader. `.qfai/specs/**` is read by dozens of test files (this slice's own rows
+read it); `.qfai/decisions/**` is read by five, including the row committed one change ago;
+`CHANGELOG.md`, `RELEASE.md`, `CLAUDE.md` and `AGENTS.md` each have at least one. What survived is
+`packages/qfai/docs/**` (zero readers), `LICENSE` and `REVIEW.md`.
+
+That makes the practical saving narrow, and saying so is better than implying otherwise: most pull
+requests in this repository will select the full set, because most of them touch something a test
+reads. The measurement is what makes the list defensible rather than optimistic.
+
+### The one member the measurement contradicts, filed as `CR-20260820-0004`
+
+`BR-0017-0010` also requires the agent-integration mirrors, and two test files read the ROOT copies of
+them: `tests/codex/agents.test.ts` reads `REPO_ROOT/.codex`, and `tests/core/prFixMonitor.test.ts`
+reads `repoRoot/.claude` and `repoRoot/.agents`. Both live in slices a documentation-only classification
+skips. So a pull request editing only an agent mirror skips exactly the two files whose subject is
+agent mirrors.
+
+Implemented as written, hazard recorded. The recommendation in the CR is to move those two guards into
+the lint lane, which is structurally exempt from selection and already carries one `vitest` invocation
+of a single integration file for precisely this reason.
+
+### `NEVER_DOCUMENTATION` was inert, and the oracle is what said so
+
+`R9` removes the assistant tree from the classifier's never-documentation list. On the first oracle run
+it reddened **nothing**: `.qfai/` is not in the documentation set either, so an assistant-tree path
+still selected everything — as a plain source path. The list was decoration.
+
+That is the third instance of this defect class in this slice, after a project matching zero files and
+a knob the runner ignores, and this time it was in my own implementation. `BR-0017-0010` requires the
+exclusion to be explicit — "MUST exclude the assistant catalog tree BECAUSE changes there alter
+validate output" — so `TDD-0010` now asserts the REASON as well as the selection. `R9` reddens that
+claim and nothing else, and the list is load-bearing.
+
+### A hole found by reading the shape, and closed
+
+`detect` was not in the verdict's `needs`. Every selected lane needs `detect`, so a CRASHED detection
+skips all of them; the verdict reads `skipped`, and `skipped` is accepting because a documentation-only
+run legitimately produces one. The result would be a green run in which nothing was verified — the
+exact case the verdict's accepting set was written to exclude.
+
+Failing OPEN is a decision the classifier makes and annotates. Failing HARD has to reach the gate. So
+`detect` joined the verdict's needs and `TDD-0006` gained a fourth claim; `R12` is the mutation that
+holds it.
+
+### Two corrections change 8 forced, both measured before applying
+
+- **`toolchainJobs()` matched a job that only NAMES pnpm.** The helper asked whether any step's `run`
+  contained the substring, and the classifier's recognized-file list names `pnpm-lock.yaml` and
+  `pnpm-workspace.yaml` — so the detection job read as a toolchain job and `TDD-0028` reported it for
+  not consuming the shared setup definition. It needs no dependencies at all: it runs the image's node
+  against a git diff, and installing the workspace would add the slowest step in the file to its
+  cheapest job. Narrowed to a command-word match, which is what invoking pnpm looks like in every form
+  a `run:` block can take. A narrowing, not a weakening.
+- **`always()` is a condition that cannot prevent execution.** `TDD-0006`'s ceiling counts job
+  instances, and the verdict carries `if: always()` on purpose — it must run when its needs are
+  SKIPPED, which is the documentation-only case. Counting it as conditional made the ceiling unmeetable
+  for the one job the ceiling exists to protect. The claim now treats `always()` as
+  unconditional-in-effect AND pins it to the verdict alone, so a lane cannot reach the ceiling the same
+  way. `R11` holds both halves.
+
+### The file-scoped GREEN was not enough, and a sibling row is what said so
+
+`tests/scripts/ownWorkflowTopology.test.ts` was green, `ci:lint` was 0 across all eleven members, and
+the change looked finished. The `scripts` slice then failed on a row from change 2:
+
+```text
+AssertionError: full history belongs to the lint lane's pair-changed diff and the release
+verification job, and to no other job: expected [ 'ci.yml::detect', …(2) ] to deeply equal
+[ 'ci.yml::lint', …(1) ]
+```
+
+`TDD-0021` holds a literal allow-list of the jobs that may request `fetch-depth: 0`, and the detection
+job is a third. Worth recording as a process fact and not only a fix: a file-scoped run cannot see a
+sibling row that governs the same file, which is exactly why the item-12 checkpoint asks for the whole
+suite rather than the row's own test.
+
+### Two co-changes, both with the authorization cited
+
+- **`TDD-0021`'s full-history allow-list gains `ci.yml::detect`.** An extension, not a relaxation, and
+  the distinction rests on which half of the rule is normative. `BR-0017-0019` says "the jobs that
+  legitimately need full history MUST request it on the job, and full-history checkout MUST NOT become
+  a workflow-level default"; its Notes then observe "Two jobs need it **today**", which is a
+  measurement of the tree at authoring time. `AC-0017-0004` names the third outright — "the
+  change-detection job requests full history and diffs against the base commit" — and the diff cannot
+  resolve the base commit in a shallow clone, which is one of the two failures that same rule requires
+  to fail open. CLAIM 2, the prohibition on a workflow-level default, is what the rule actually guards
+  and is untouched. Same shape as change 4's `TDD-0022` co-change: the row and the tree disagreed only
+  once something new appeared.
+- **The base ref resolves for `push` as well as `pull_request`.** `github.event.pull_request.base.sha`
+  is empty on a push, so `git diff "" HEAD` fails, the classifier fails open, and **every** push to the
+  default branch would carry a warning annotation saying the diff could not be computed. Correct
+  behaviour, useless signal: an annotation that is always present is one nobody reads. The base is now
+  `github.event.pull_request.base.sha || github.event.before`. On branch creation `before` is all
+  zeroes, the diff fails, and the classifier fails open naming git's reason — the right outcome for a
+  run with no predecessor.
+
+### RED and GREEN
+
+- **RED command**, from `packages/qfai`:
+  `pnpm exec vitest run tests/scripts/ownWorkflowTopology.test.ts`
+- **RED result** (post-seam): `Tests 6 failed | 13 passed (19)`, exit 1, every failure an assertion.
+- **GREEN result**: same command, `Tests 19 passed (19)`.
+- **End-to-end sanity**: the classifier extracted from the committed workflow, run against this
+  branch's own working set, reported `full=true` with
+  `reason=source path: .github/workflows/ci.yml`.
+
+### Oracle proof — thirteen rounds across the shape AND the rule
+
+| id | row | mutant | reddens |
+| --- | --- | --- | --- |
+| `R1` | TDD-0006, TDD-0007 | `e291325b` | `:944:8` — a documentation-only run may execute only detection, lint, build and the verdict; `:958:8` — every selected job's condition must be derived from the detection output; `:1010:8` — the selection condition belongs on the job |
+| `R2` | TDD-0006 | `e817983b` | `:966:88` — a job reading `needs.detect` must declare it in `needs` |
+| `R3` | TDD-0006, TDD-0012 | `05692779` | `:944:8` — a documentation-only run may execute only detection, lint, build and the verdict; `:1122:80` — the lint lane must carry no selection condition; `:1125:12` — the lint lane must not depend on detection |
+| `R4` | TDD-0006, TDD-0012 | `34d3501d` | `:944:8` — a documentation-only run may execute only detection, lint, build and the verdict; `:1136:8` — the required-context job must carry no condition; `:1142:8` — the required-context job must depend on nothing that can be skipped |
+| `R5` | TDD-0012 | `26aa223b` | `:1142:8` — the required-context job must depend on nothing that can be skipped |
+| `R6` | TDD-0007 | `0f61da39` | `:1004:8` — every declared slice must stay in the matrix so its check name persists |
+| `R7` | TDD-0009 | `e0037e08` | `:1043:89` — a failed diff must select the full lane set; `:1046:10` — a failed diff must emit a warning annotation; `:1049:10` — the annotation must name git's reason |
+| `R8` | TDD-0009 | `0c2f5915` | `:1046:10` — a failed diff must emit a warning annotation; `:1049:10` — the annotation must name git's reason |
+| `R9` | TDD-0010 | `fa3e3867` | `:1084:8` — the assistant tree must be excluded as validate-affecting, not as an incidental source path |
+| `R10` | TDD-0011 | `66ef9d35` | `:1107:8` — the reason must identify the path as outside every recognized directory |
+| `R11` | TDD-0006 | `85e54e21` | `:938:8` — only the verdict may use `always()` to stay unconditional; `:944:8` — a documentation-only run may execute only detection, lint, build and the verdict |
+| `R12` | TDD-0006 | `e9dfecd1` | `:983:8` — a crashed detection must reach the verdict rather than skipping every lane into a green run |
+| `R13-control` | (control) | `82a27e3f` | **nothing new** |
+
+Six rounds mutate the workflow's SHAPE and six mutate the classifier's RULES, in one oracle on purpose:
+change 8's obligation spans a structure branch protection reads and a rule that has to be executed, and
+a mutation set covering only one of them would leave the other unmeasured.
+
+### The suite
+
+| script | test files | tests | wall clock |
+| --- | --- | --- | --- |
+| `test:core` | 122 passed (122) | 1587 passed | 2 skipped (1589) | 76.1s |
+| `test:unit` | 43 passed (43) | 266 passed (266) | 7.7s |
+| `test:validators` | 46 passed (46) | 351 passed (351) | 12.5s |
+| `test:integration` | 124 passed | 4 skipped (128) | 862 passed | 19 skipped (881) | 42.6s |
+| `test:e2e` | 74 passed | 4 skipped (78) | 891 passed | 16 skipped (907) | 24.9s |
+| `test:cli` | 11 passed (11) | 321 passed (321) | 62.9s |
+| `test:scripts` | 10 passed (10) | 107 passed (107) | 8.4s |
+
+Total 235.1s, every one green. No timing claim, per change 6.
+
+### The validate delta, diffed rather than reasoned about
+
+`validate --profile tdd --fail-on error --root .` reports `info=4 warning=376 error=2`, exit 1 — three
+below change 7 part 2's 379. `TDDLIST_EVIDENCE_STATUS_ONLY` stays at 96.
+
+I expected seven fewer, since seven rows left `todo`. The diff says otherwise, and the diff is what
+went into this record:
+
+```text
+removed (4)   TC-0017-0007  TC-0017-0009  TC-0017-0010  TC-0017-0011
+added   (1)   TC-0017-0032
+net           -3
+```
+
+Two things there are worth naming. Only FOUR of the seven promoted rows had been reported stale
+beforehand, even though none of the seven `describe` blocks existed at that revision — so the
+resolution check reported four absent selectors as resolving and three as not. And `TC-0017-0032` is
+newly reported stale although its selector text ("the build is produced once and downloaded by the
+rebuild legs") does not appear anywhere in the file its row names; grep returns zero.
+
+Both are the same mechanism, and it is the one `CR-20260818-0001` is open against: resolution is
+satisfied by something weaker than the selector being present, so the reported set shifts as a shared
+file's content changes and has no stable relationship to which rows are actually stale. Fourth time
+this slice has measured it, and the first time it moved in the *helpful* direction — which is worse
+than unhelpful, because a count that falls for the wrong reason reads as progress.
+
+### Gate items NOT satisfied
+
+The three blocking agent verdicts were not obtained, so `Status` is `refactor` for all seven rows.
+
+**`TDD-0013` is NOT in this change.** `TC-0017-0013` and `EX-0017-0012` are about the hygiene lane
+rejecting a condition on a job the required-context job depends on, and the subject is "the job named in
+the required-status-context DECLARATION" — `.github/required-status-contexts.json`, which does not exist
+yet and whose own rows are `TDD-0057` … `TDD-0059`. Implementing `TDD-0013` against a hard-coded job
+name would contradict `TC-0017-0057` ("the expected-context declaration is read from the tree"), so it
+lands with the declaration. `TDD-0006` and `TDD-0012` already assert the structural half over this
+tree: the required-context job carries no condition and an EMPTY needs set.
+
+The item-12 checkpoint is not attempted, for the reasons recorded under changes 3 through 7.

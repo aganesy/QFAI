@@ -20,6 +20,174 @@ concurrency:
 
 # ── Jobs (parallel) ─────────────────────────────────────────────────
 jobs:
+  # ── 0. Change detection ──────────────────────────────────────────
+  # The classifier is a program rather than a path filter so the rule can be
+  # EXECUTED by a test. The heredoc is quoted, so the bytes GitHub runs are the
+  # bytes the test extracts and runs.
+  detect:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      full: ${{ steps.classify.outputs.full }}
+      reason: ${{ steps.classify.outputs.reason }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Full history: the diff is against the base commit, and a shallow clone is
+          # one of the two failures BR-0017-0008 requires to fail open with an
+          # annotation rather than silently narrow the lane set.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Classify the change against the enumerated directory lists
+        id: classify
+        env:
+          # Both event shapes. On a pull request the base commit; on a push the
+          # previous head. Empty on neither, which matters because an empty base
+          # makes the diff fail and the classifier fail open — correct, but it
+          # would put a warning annotation on every push to the default branch,
+          # and an annotation that is always present is one nobody reads.
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -uo pipefail
+          # The diff is ATTEMPTED here and decided by the program. `|| true` is
+          # deliberate: a shallow clone or an unreachable base ref must reach the
+          # classifier as "no path list was produced", so that failing open and naming
+          # the reason live in the one place a test can execute.
+          git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" \
+            > "${RUNNER_TEMP}/changed.txt" 2> "${RUNNER_TEMP}/diff-err.txt" || true
+          cat > "${RUNNER_TEMP}/detect.mjs" <<'NODE'
+          // Change detection: classify the pull request's changed paths against two
+          // ENUMERATED lists and select either the full lane set or the
+          // documentation-only minimum.
+          //
+          // The whole decision lives here, failure included. BR-0017-0008 requires a
+          // failed diff to emit an annotation naming the reason AND to select the full
+          // set; if that branch lived in the shell it would be the one part of the rule
+          // no test could execute. The workflow only attempts the diff.
+          import { appendFileSync, readFileSync } from "node:fs";
+          import process from "node:process";
+
+          // Directories this classifier knows how to reason about (BR-0017-0009). The
+          // list is CLOSED: a path outside every entry selects the full set and says so,
+          // because an unclassified path is never "nothing to run".
+          const RECOGNIZED_DIRS = [
+            ".agents/",
+            ".claude/",
+            ".codex/",
+            ".github/",
+            ".instruction/",
+            ".qfai/",
+            "packages/",
+            "scripts/",
+            "tests/",
+          ];
+
+          // The same closed-list rule at file granularity, for the repository root.
+          const RECOGNIZED_FILES = [
+            "AGENTS.md",
+            "CHANGELOG.md",
+            "CLAUDE.md",
+            "DESIGN.md",
+            "LICENSE",
+            "README.md",
+            "RELEASE.md",
+            "REVIEW.md",
+            "eslint.config.js",
+            "package.json",
+            "pnpm-lock.yaml",
+            "pnpm-workspace.yaml",
+            "qfai.config.yaml",
+            "tsconfig.base.json",
+            "tsconfig.json",
+          ];
+
+          // Paths that may NEVER be read as documentation, checked before the
+          // documentation set (BR-0017-0010). The assistant tree is named here rather
+          // than merely left out, so the exclusion is enforced instead of incidental:
+          // what lives there changes validate output, which is why the catalog is
+          // loaded and not merely shipped.
+          const NEVER_DOCUMENTATION = [".qfai/assistant/"];
+
+          // The documentation-only set (BR-0017-0010). Small, and measured rather than
+          // guessed: every other candidate is read by at least one test file, so
+          // classifying it as documentation would skip the lane that guards it. The
+          // agent-integration mirrors are here because the rule names them.
+          const DOCUMENTATION_DIRS = [
+            ".agents/",
+            ".claude/",
+            ".codex/",
+            ".instruction/",
+            "packages/qfai/docs/",
+          ];
+          const DOCUMENTATION_FILES = ["LICENSE", "REVIEW.md"];
+
+          const under = (dirs, file) => dirs.some((dir) => file.startsWith(dir));
+          const oneLine = (text) => text.replace(/[\r\n]+/g, " ").trim();
+
+          function read(file) {
+            if (typeof file !== "string" || file.length === 0) return null;
+            try {
+              return readFileSync(file, "utf-8");
+            } catch {
+              return null;
+            }
+          }
+
+          function emit(full, reason) {
+            const line = "full=" + (full ? "true" : "false") + "\n" + "reason=" + oneLine(reason) + "\n";
+            const target = process.env.GITHUB_OUTPUT;
+            if (typeof target === "string" && target.length > 0) appendFileSync(target, line);
+            else process.stdout.write(line);
+          }
+
+          function classify(paths) {
+            for (const file of paths) {
+              if (!under(RECOGNIZED_DIRS, file) && !RECOGNIZED_FILES.includes(file)) {
+                return { full: true, reason: "unrecognized path, outside every recognized directory: " + file };
+              }
+              if (under(NEVER_DOCUMENTATION, file)) {
+                return { full: true, reason: "alters validate output: " + file };
+              }
+              if (!under(DOCUMENTATION_DIRS, file) && !DOCUMENTATION_FILES.includes(file)) {
+                return { full: true, reason: "source path: " + file };
+              }
+            }
+            return { full: false, reason: "documentation-only: " + paths.length + " path(s)" };
+          }
+
+          function main() {
+            const [, , pathsFile, diffErrorFile] = process.argv;
+            const paths = (read(pathsFile) ?? "")
+              .split("\n")
+              .map((line) => line.trim())
+              .filter((line) => line.length > 0);
+
+            // An EMPTY list is a failure to compute, never "nothing changed". A pull
+            // request always changes something, so an empty diff means the diff did not
+            // run — a shallow clone or an unreachable base ref, the two cases
+            // AC-0017-0004 names.
+            if (paths.length === 0) {
+              const why = oneLine(read(diffErrorFile) ?? "") || "git produced no output and no error text";
+              process.stdout.write(
+                "::warning title=change detection failed open::could not compute the changed-path list, so the full lane set is selected: " +
+                  why +
+                  "\n",
+              );
+              emit(true, "diff unavailable: " + why);
+              return;
+            }
+
+            const verdict = classify(paths);
+            emit(verdict.full, verdict.reason);
+          }
+
+          main();
+          NODE
+          node "${RUNNER_TEMP}/detect.mjs" "${RUNNER_TEMP}/changed.txt" "${RUNNER_TEMP}/diff-err.txt"
+
   # ── 1. Lint & format checks ──────────────────────────────────────
   # TODO(QFAI-PR206-followup): add a windows-latest matrix entry that runs
   # at minimum the agentsRulesSurface integration test, to catch the
@@ -59,6 +227,11 @@ jobs:
 
   # ── 2. Type checking (current TypeScript) ────────────────────────
   check-types:
+    needs: [detect]
+    # Derived from the detection output, never hand-written. A leg stays
+    # DECLARED and reports skipped, so its check name persists and branch
+    # protection needs no repository setting change (BR-0017-0006, BR-0017-0013).
+    if: ${{ needs.detect.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -73,6 +246,11 @@ jobs:
 
   # ── 3. Type checking (future TypeScript) ─────────────────────────
   check-types-future:
+    needs: [detect]
+    # Derived from the detection output, never hand-written. A leg stays
+    # DECLARED and reports skipped, so its check name persists and branch
+    # protection needs no repository setting change (BR-0017-0006, BR-0017-0013).
+    if: ${{ needs.detect.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -87,6 +265,11 @@ jobs:
 
   # ── 4. Tests (matrix: test slices) ──────────────────────────────
   test:
+    needs: [detect]
+    # Derived from the detection output, never hand-written. A leg stays
+    # DECLARED and reports skipped, so its check name persists and branch
+    # protection needs no repository setting change (BR-0017-0006, BR-0017-0013).
+    if: ${{ needs.detect.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -125,6 +308,11 @@ jobs:
   # the scanner suite); together they pin both breadth and depth of
   # the scanner test surface.
   scanner-coverage:
+    needs: [detect]
+    # Derived from the detection output, never hand-written. A leg stays
+    # DECLARED and reports skipped, so its check name persists and branch
+    # protection needs no repository setting change (BR-0017-0006, BR-0017-0013).
+    if: ${{ needs.detect.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -245,7 +433,12 @@ jobs:
     # auditable instead of indistinguishable from an oversight.
     permissions: {}
     if: always()
-    needs: [lint, check-types, check-types-future, test, scanner-coverage, build]
+    # `detect` is in this list, and it is the one entry that is not a lane.
+    # Without it a CRASHED detection would skip every job that needs it, the verdict
+    # would read those as `skipped`, and `skipped` is accepting — a green run with
+    # nothing verified. Failing OPEN is a decision the classifier makes and records;
+    # failing HARD must reach the gate.
+    needs: [detect, lint, check-types, check-types-future, test, scanner-coverage, build]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

@@ -74,14 +74,24 @@ const WORKFLOWS_DIR = path.join(REPO_ROOT, ".github", "workflows");
 const ACTIONS_DIR = path.join(REPO_ROOT, ".github", "actions");
 
 /**
- * The two jobs `BR-0017-0019`'s Notes name as legitimately needing full history:
- * the lint lane's pair-changed diff, and the release workflow's verification job.
+ * The jobs that legitimately need full history.
  *
- * A LITERAL pair rather than a derived set, and that is the whole assertion: the
+ * A LITERAL list rather than a derived set, and that is the whole assertion: the
  * point is that this list and the tree agree, so deriving one from the other
  * would make the test check the tree against itself.
+ *
+ * Three, and the third arrived with change 8. `BR-0017-0019`'s Notes said "two jobs need
+ * it today", which was a measurement of the tree at authoring time and not a cap — the
+ * normative half is "the jobs that legitimately need full history MUST request it on the
+ * job, and full-history checkout MUST NOT become a workflow-level default". `AC-0017-0004`
+ * names the third outright: "the change-detection job requests full history and diffs
+ * against the base commit". Its diff cannot resolve the base commit in a shallow clone,
+ * which is one of the two failures that rule requires to fail open with an annotation.
+ *
+ * So this is an extension with a cited authorization, not a relaxation. CLAIM 2 below —
+ * no workflow-level default — is what the rule actually guards, and it is untouched.
  */
-const FULL_HISTORY_JOBS = ["ci.yml::lint", "release.yml::verify"];
+const FULL_HISTORY_JOBS = ["ci.yml::detect", "ci.yml::lint", "release.yml::verify"];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -279,13 +289,14 @@ describe("TC-0017-0021 (TDD-0021): full history is job-scoped, never a workflow 
       ),
     ].sort();
 
-    // CLAIM 1 — exactly the two the business rule names. `toEqual` on the sorted
-    // list rather than a count: a count of two is also satisfied by the wrong two,
-    // and the rule is about WHICH jobs, not how many.
+    // CLAIM 1 — exactly the jobs the allow-list names. `toEqual` on the sorted list
+    // rather than a count: a count is also satisfied by the wrong members, and the rule
+    // is about WHICH jobs, not how many. That mattered when the list grew from two to
+    // three — a count assertion would have needed the same edit while proving less.
     expect
       .soft(
         requesting,
-        "full history belongs to the lint lane's pair-changed diff and the release verification job, and to no other job",
+        "full history belongs to change detection, the lint lane's pair-changed diff and the release verification job, and to no other job",
       )
       .toEqual([...FULL_HISTORY_JOBS].sort());
 
