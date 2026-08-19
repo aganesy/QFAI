@@ -352,3 +352,168 @@ makes progress in one spec into an obstacle for another.
 The three blocking agent verdicts were not obtained for these five rows. `Status` is `refactor`:
 implemented, not review-closed. The item-12 checkpoint is not attempted, because step 4 cannot pass
 while clause 3 reads a total this change increased.
+
+## Change 3 — the hygiene lane (TDD-0015, TDD-0017, TDD-0018, TDD-0020, TDD-0023)
+
+`10_Plan.md` step 3: the script, its fixtures, and the `ci:lint` registration. Lands after change 2
+so it is green on arrival — and it is: run against the real tree it exits 0 and prints its rule set.
+Base revision `a8a9e4e3`.
+
+### The rows above assert properties of the tree; these assert the LANE's verdict
+
+Change 2's five rows parse `.github/**` and measure it. These five run the script and read its exit
+code and output. That is a different observation and it needs the script to exist, which is why they
+are change 3's and were deliberately absent from change 2's file rather than stubbed there.
+
+### Violations are planted into a COPY, never into `.github/`
+
+Every planted-violation row copies the own `.github` tree into a temp directory, mutates the copy, and
+points the lane at it with `--root`. Two reasons, and the second decided it: a mutation in the shared
+working tree produced a false red for a concurrent reviewer earlier in this branch's history, and a
+test that edits the repository it runs inside leaves that repository broken if it dies between the
+edit and the restore. The `--root` flag exists for this and for nothing else.
+
+`runLane` maps a signal death to `-1` rather than to `1`. Without that, a lane that CRASHED would
+satisfy every row asserting exit 1 — which is exactly how a missing script would have passed them.
+
+### RED, and a seam that had to be fixed before it was a seam
+
+`red-admissibility.md` § "Step 3a" requires a minimal seam so the first failure is an assertion rather
+than a missing module. The first seam called `process.exit(0)` at module scope — and `TDD-0015`
+IMPORTS the lane to compare its two counters, so the import killed the test process and that row
+failed with `process.exit unexpectedly called`. A load-level failure: precisely what the seam exists
+to avoid. The exit moved behind an entry-point guard, which the shipped lane keeps.
+
+- **RED command**, from `packages/qfai`:
+  `./node_modules/.bin/vitest run tests/scripts/workflowHygiene.test.ts`
+- **RED result**: `Tests 4 failed | 6 passed (10)`, exit 1 — `TDD-0015`, `TDD-0017`, `TDD-0020` and
+  `TDD-0023`, each failing on an assertion inside its own `describe`, with no load error. The six
+  passing are change 2's five plus `TDD-0018`.
+- **`TDD-0018` passed at RED, structurally.** It asserts the ACCEPTING direction — a compliant tree
+  exits 0 — and a no-behaviour seam exits 0. No seam can redden an accepting-direction row; only a
+  mutation that makes the lane reject something can. `RED failure mode: falsifiability`, with `Q1`.
+
+### The lane
+
+`scripts/check-workflow-hygiene.mjs`, three rules over the own tree:
+
+```text
+permissions-reachable   every job has a permission block reachable from it (job or workflow)
+checkout-credentials    every checkout step sets persist-credentials: false
+action-pin              every `uses:` reference is a full 40-hex commit SHA
+```
+
+Four design points worth the reader's time, each forced by something measured rather than chosen:
+
+- **On success the lane PRINTS its rule set, and names what it does not cover.** The contract requires
+  that in those terms: `OQ-0017` deferred adopting an external workflow linter, and the deferral is
+  "only honest while the coverage boundary is visible". So a green run reads as a list of checks
+  rather than as a blanket assurance, and it says out loud that the shipped set, runner labels, secret
+  references and the required-context declaration are elsewhere.
+- **`yaml` is resolved through `createRequire` from the workspace, not imported by name.** Every other
+  root script imports `node:*` built-ins only, and a bare `import ... from "yaml"` here fails with
+  `ERR_MODULE_NOT_FOUND` — measured, not guessed. `scripts/check-review-profile-consistency.mjs`
+  already solves this the same way and records the reason (pnpm hoists `yaml` under the qfai
+  workspace), so this follows the repository's own precedent rather than adding a root dependency.
+- **`process` is imported from `node:process`.** The root eslint config declares no Node globals for
+  `scripts/*.mjs`, so a bare `process` is nine `no-undef` errors. Two existing root scripts import it
+  explicitly; this uses the named form one of them already uses.
+- **A local `uses: ./...` reference is exempt from the pin rule.** It resolves inside the repository at
+  the same commit, which is the property pinning buys — so demanding a SHA there would reject the
+  composite action change 4 introduces. Written now because the exemption is invisible until that
+  change lands and would otherwise look like an oversight.
+
+A malformed workflow is reported as a finding rather than crashing the lane: a parse error that
+surfaces as a stack trace reads as a broken tool, and the operator is then not told which file to
+look at.
+
+### GREEN
+
+- **GREEN command / result**: the same file-scoped command — `Tests 10 passed (10)`, exit 0.
+- **The lane against the real tree**: exit 0, printing the three rules and the not-covered list.
+- **`ci:lint`**: exit 0, and the lane is now its **eighth** member of **eleven**.
+
+### `ci:lint` has eleven members now, and the count is maintained in one place
+
+The lane is registered between `check-prompt-scanner-pair` and the package-scoped members, so the root
+`check-*.mjs` scripts stay contiguous and a failure in the cheap own-tree scan surfaces before a
+vitest run.
+
+The member count appears in roughly seventeen statements across this repository. **One** of them is a
+live operational rule — `.qfai/steering/2026-08-09-chg-007-implementation-standing-brief.md` §4 — and
+that one is updated, with the date and the reason. The other sixteen are revision-stamped records in
+`.qfai/evidence/**` of measurements that were true when taken; those are NOT corrected, because
+rewriting a dated observation destroys an audit trail rather than fixing it. The brief now says so, so
+a reader comparing an old evidence line against a fresh run knows the difference is this member and
+not a regression.
+
+The generalisation is the one this slice has already paid for twice: **a count is maintained at one
+site or it is not maintained.** The member inventory in `workflowsIntegrity.ts` had its numeral deleted
+for exactly this reason. Here the numeral survives because the list IS the rule — but it lives in one
+place.
+
+The existing `ci:lint` placement pin (`shippedWorkflowShapeGate.test.ts`, TDD-0050 of spec-0003) uses
+`toContain` rather than equality, so adding a member does not redden it. Checked before editing, not
+after.
+
+### Oracle proof — one mutation per rule, plus the one the business rule forbids
+
+| id | row | mutant | reddens |
+| --- | --- | --- | --- |
+| `Q1` | TDD-0018 | `e44736e7` | `:498:10` — the judging rule counts DECLARATION instead of reachability |
+| `Q2` | TDD-0015 | `e3cf06bc` | `:444:90` and `:498:10` — the reachability counter drops its workflow half |
+| `Q3` | TDD-0017 | `fef3e48b` | `:473-476` — the permissions rule dropped from the lane |
+| `Q4` | TDD-0020 | `5f6f25c6` | `:537-540` — the checkout-credentials rule dropped |
+| `Q5` | TDD-0023 | `ba560f82` | `:559-563` — the action-pin rule dropped |
+
+**`Q1` is the one worth reading.** It substitutes the declaration-only counter for the reachability one
+inside the rule that judges — the exact substitution `BR-0017-0014` forbids, "because it cannot
+falsify a requirement written against reachability". The row it reddens is `TDD-0018`, the
+accepting-direction row, and that is the only place it COULD be caught: a tree that satisfies
+reachability but not declaration is compliant, and only a row asserting that compliant trees pass will
+notice the counter that rejects it. The business rule and the row it needs are matched.
+
+`Q2` reddens two rows rather than one, correctly: collapsing the reachability counter onto the
+declaration counter breaks both the row that compares them and the row that depends on the difference.
+
+### The full suite, and why it is reported per project
+
+**It could not be taken as one clean run on this machine at this moment, and the figure is given as
+measured rather than as remembered.** Two whole-suite runs failed six and then nine files; every
+failure was a TIMEOUT (15s, 16s, 120s), and the failing SET differed between the two runs. Nine stray
+`node` processes: zero, checked. `dist` was stale and was rebuilt between the runs, which changed the
+figure but not the shape.
+
+Per project, run sequentially so peak contention falls:
+
+```text
+core          1587 passed |  2 skipped (1589)
+validators     351 passed             (351)
+integration    861 passed | 19 skipped (881)   + 1 timeout, see below
+e2e            889 passed | 16 skipped (905)
+cli            321 passed             (321)
+unit           266 passed             (266)
+scripts         85 passed              (85)
+```
+
+The one failure is `tests/integration/shippedWorkflowDetection.test.ts` — `TC-0003-0039`'s "all three
+degraded cases exit 0" — timing out at 15000ms. It builds shallow git clones, so it is I/O-heavy. Run
+in isolation it is `Tests 10 passed (10)` **twice out of two**. It belongs to spec-0003 and change 3
+touches nothing it reads.
+
+So: a contention flake, disproved by isolation rather than filed as a defect — which is the response
+the steering entry prescribes after a heavy parallel dispatch produced a false nondeterminism report
+once before. What is NOT claimed here is a clean whole-suite pass, because I did not get one.
+
+### Gate items NOT satisfied
+
+The three blocking agent verdicts were not obtained for these five rows. `Status` is `refactor`. The
+item-12 checkpoint is not attempted, and now for two reasons rather than one:
+
+1. Step 4 cannot pass while clause 3 reads an unattributed total that spec-0017's own test files keep
+   raising — `CR-20260818-0006`.
+2. Step 2 of the command set is the FULL suite with no filter, and it has to exit 0. It does not on
+   this machine under load. A per-project decomposition is a stronger measurement in one sense — it
+   names which project holds the failure — but it is not the command the reference asks for, and
+   substituting it silently would be the kind of near-miss this slice has been repeatedly corrected
+   for. Recorded as unmet.

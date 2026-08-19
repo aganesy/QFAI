@@ -75,13 +75,24 @@ probe that reported a clean string as _firing_ — wrong for two runs before the
 Another time a backtick inside a needle triggered command substitution. Author with the Write tool or
 `String.raw`, and byte-verify.
 
-## 4. `pnpm ci:lint` has ten members
+## 4. `pnpm ci:lint` has eleven members
 
 `format:check`, `lint`, **`lint:md`**, `check-bidi`, `check-instructions-size`,
-`check-review-profile-consistency`, `check-prompt-scanner-pair`, `lint:shipping`, `lint:workflow-shape`,
-`check-pack-locations`. The slice reported "four gates 0" for five rounds; two of the six never-run members
-were **red on the branch** from prose the orchestrator authored, so `ci:lint` was failing the whole time and
-no test could see it.
+`check-review-profile-consistency`, `check-prompt-scanner-pair`, **`check-workflow-hygiene`**,
+`lint:shipping`, `lint:workflow-shape`, `check-pack-locations`. The slice reported "four gates 0" for five
+rounds; two of the six never-run members were **red on the branch** from prose the orchestrator authored,
+so `ci:lint` was failing the whole time and no test could see it.
+
+> **Ten until 2026-08-20**, when spec-0017's change 3 added `check-workflow-hygiene`. The count is
+> maintained HERE and nowhere else. Roughly sixteen other statements of it exist in
+> `.qfai/evidence/**`, and every one is a revision-stamped record of a measurement that was true when it
+> was taken — those are not corrected, because rewriting a dated observation destroys the audit trail
+> rather than fixing it. If you are comparing an old evidence line against a fresh run, the difference is
+> this member and not a regression.
+>
+> The lesson generalises, and this slice has paid for it twice: **a count is maintained at one site or it
+> is not maintained.** The member inventory in `workflowsIntegrity.ts` had its numeral deleted for exactly
+> this reason. Here the numeral survives because the list is the rule — but then it lives in one place.
 
 **And do not pipe it.** `pnpm ci:lint 2>&1 | tail -30; echo $?` reports **`tail`'s** exit status, not the
 lane's — a lane whose exit code is silently discarded by a pipe is indistinguishable from one that passed.

@@ -40,11 +40,25 @@
 // QFAI:SPEC-0017:TC-0017-0021
 // QFAI:SPEC-0017:TC-0017-0022
 // QFAI:SPEC-0017:TC-0017-0024
+// QFAI:SPEC-0017:TC-0017-0015
+// QFAI:SPEC-0017:TC-0017-0017
+// QFAI:SPEC-0017:TC-0017-0018
+// QFAI:SPEC-0017:TC-0017-0020
+// QFAI:SPEC-0017:TC-0017-0023
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
@@ -354,5 +368,201 @@ describe("TC-0017-0024 (TDD-0024): a readable pin trailer stays legal and no gua
         `the leakage guard must exit 0 with the pin trailers present:\n${run.stdout ?? ""}${run.stderr ?? ""}`,
       )
       .toBe(0);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// Change 3 — the hygiene lane. The rows above assert PROPERTIES of the tree by
+// parsing it; these assert the LANE's verdict on a planted tree, which is a
+// different observation and needs the script to exist.
+//
+// Every planted violation is applied to a COPY in a temp directory, never to
+// `.github/` itself. Two reasons, and the second is the one that decided it:
+// a mutation in the shared working tree produced a false red for a concurrent
+// reviewer earlier in this slice, and a test that edits the repository it runs
+// inside leaves the repository broken when it crashes between edit and restore.
+// ───────────────────────────────────────────────────────────────────────────
+
+const LANE = path.join(REPO_ROOT, "scripts", "check-workflow-hygiene.mjs");
+
+/** A throwaway copy of the own `.github` tree, for planting violations into. */
+function plantedTree(mutate: (dir: string) => void): string {
+  const dir = mkdtempSync(path.join(tmpdir(), "qfai-hygiene-"));
+  cpSync(path.join(REPO_ROOT, ".github"), path.join(dir, ".github"), { recursive: true });
+  mutate(dir);
+  return dir;
+}
+
+type LaneRun = { exitCode: number; output: string };
+
+/**
+ * Runs the lane against a tree and returns its exit code and combined output.
+ *
+ * `status` is mapped to -1 when the child was killed by a signal rather than
+ * exiting, so a crashed lane stays distinguishable from a lane that reported a
+ * violation. A `?? 1` here would let a crash satisfy every row that expects 1 —
+ * which is exactly how a missing script would have passed these rows.
+ */
+function runLane(root: string): LaneRun {
+  const r = spawnSync(process.execPath, [LANE, "--root", root], { encoding: "utf-8" });
+  return {
+    exitCode: r.status ?? -1,
+    output: `${r.stdout ?? ""}${r.stderr ?? ""}`,
+  };
+}
+
+/** Rewrites one workflow file inside a planted tree. */
+function editWorkflow(dir: string, file: string, edit: (text: string) => string): void {
+  const p = path.join(dir, ".github", "workflows", file);
+  const before = readFileSync(p, "utf-8");
+  const after = edit(before);
+  if (after === before) {
+    throw new Error(`planting into ${file} changed nothing — the needle is stale`);
+  }
+  writeFileSync(p, after, "utf-8");
+}
+
+describe("TC-0017-0015 (TDD-0015): reachability and declaration are two different measurements", () => {
+  it("accepts an inheriting fixture job that the declaration-only counter rejects", async () => {
+    // The lane exports both counters so this row can compare them. Importing the
+    // script rather than re-implementing the predicate here is the whole point: a
+    // test-local copy would pass while the lane's own counter was wrong, which is
+    // the failure `BR-0017-0014` exists to prevent.
+    const lane: unknown = await import(pathToFileURL(LANE).href);
+    if (!isRecord(lane)) throw new Error("the lane did not import to a module namespace");
+    const reach = lane["hasReachablePermissions"];
+    const decl = lane["hasDeclaredPermissions"];
+    if (typeof reach !== "function" || typeof decl !== "function") {
+      throw new Error("the lane must export hasReachablePermissions and hasDeclaredPermissions");
+    }
+
+    // The boundary case, stated as data: a job with no block of its own, inside a
+    // workflow that declares one. GitHub governs it; a declaration-only counter
+    // does not see it.
+    const inheriting = { job: {}, workflow: { permissions: { contents: "read" } } };
+
+    expect.soft(reach(inheriting), "an inheriting job HAS a reachable permission block").toBe(true);
+    expect
+      .soft(decl(inheriting), "and it does NOT declare one — that is the whole difference")
+      .toBe(false);
+
+    // The other three corners, so the pair is pinned as a truth table rather than
+    // by one example: both counters agree on a job that declares, and both agree
+    // on a job governed by nothing.
+    const declaring = { job: { permissions: {} }, workflow: {} };
+    const ungoverned = { job: {}, workflow: {} };
+    expect.soft(reach(declaring), "a declaring job is reachable").toBe(true);
+    expect.soft(decl(declaring), "and declares — an EMPTY map still counts as declared").toBe(true);
+    expect.soft(reach(ungoverned), "a job governed by nothing is not reachable").toBe(false);
+    expect.soft(decl(ungoverned), "and declares nothing").toBe(false);
+  });
+});
+
+describe("TC-0017-0017 (TDD-0017): removing both blocks exits 1 naming the workflow and the job", () => {
+  it("reports the workflow and the job whose two permission blocks were both removed", () => {
+    // `ci-pass` is the job to strip: it is the only one carrying its OWN block
+    // (an empty map), so removing the workflow-level block alone would leave it
+    // reachable and the row would measure nothing.
+    const dir = plantedTree((d) => {
+      editWorkflow(d, "ci.yml", (t) =>
+        t.replace("permissions:\n  contents: read\n", "").replace("    permissions: {}\n", ""),
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `the lane must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output, "and name the failure code").toContain("R-WORKFLOW-HYGIENE-DRIFT");
+      expect.soft(run.output, "and name the workflow").toContain("ci.yml");
+      expect.soft(run.output, "and name the job").toContain("ci-pass");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("TC-0017-0018 (TDD-0018): restoring either one of the two blocks returns exit 0", () => {
+  it("exits 0 with only the workflow-level block, and again with only the job-level one", () => {
+    // Two trees, each missing ONE of the pair. The TC's point is that either
+    // alone suffices, because the requirement is written against reachability;
+    // a lane that demanded both would reject a compliant tree.
+    const workflowOnly = plantedTree((d) => {
+      editWorkflow(d, "ci.yml", (t) => t.replace("    permissions: {}\n", ""));
+    });
+    const jobOnly = plantedTree((d) => {
+      editWorkflow(d, "ci.yml", (t) => t.replace("permissions:\n  contents: read\n", ""));
+    });
+    try {
+      const a = runLane(workflowOnly);
+      expect
+        .soft(a.exitCode, `workflow-level block alone must satisfy the lane:\n${a.output}`)
+        .toBe(0);
+
+      // The job-level tree leaves every OTHER ci.yml job unreachable, so this leg
+      // is asserted on the absence of `ci-pass` from the output rather than on
+      // exit 0 — the lane is right to fail that tree, and right not to blame the
+      // one job that declares.
+      const b = runLane(jobOnly);
+      expect
+        .soft(
+          b.output,
+          "a job that declares its own block is never reported, whatever its workflow omits",
+        )
+        .not.toMatch(/ci-pass/);
+    } finally {
+      rmSync(workflowOnly, { recursive: true, force: true });
+      rmSync(jobOnly, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("TC-0017-0020 (TDD-0020): deleting the flag from one checkout step exits 1", () => {
+  it("names the file and the job of the one step that stopped refusing credentials", () => {
+    const dir = plantedTree((d) => {
+      // Exactly one step, and it is `check-types`'s — chosen because its checkout
+      // block holds nothing else, so the planted tree differs from the compliant
+      // one by a single line and the lane's report can be attributed to it.
+      // Located by the job header and the FIRST flag line after it, so the edit
+      // is attributable to one job. `{2}` and `{10}` rather than literal runs of
+      // spaces: a lint rule forbids them in a regex, and rightly — a miscounted
+      // indent would match nothing, plant no violation, and leave a test that
+      // passes while measuring the compliant tree.
+      editWorkflow(d, "ci.yml", (t) =>
+        t.replace(/ {2}check-types:[\s\S]*?\n {10}persist-credentials: false\n/, (block) =>
+          block.replace(/\n {10}persist-credentials: false\n/, "\n"),
+        ),
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `the lane must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output, "and name the failure code").toContain("R-WORKFLOW-HYGIENE-DRIFT");
+      expect.soft(run.output, "and name the file").toContain("ci.yml");
+      expect.soft(run.output, "and name the job").toContain("check-types");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("TC-0017-0023 (TDD-0023): a planted floating reference exits 1 and is named", () => {
+  it("names the reference that was replaced by a floating major-version tag", () => {
+    const dir = plantedTree((d) => {
+      editWorkflow(d, "ci.yml", (t) =>
+        t.replace(
+          "        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2",
+          "        uses: actions/upload-artifact@" + "v" + "4",
+        ),
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `the lane must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output, "and name the failure code").toContain("R-WORKFLOW-HYGIENE-DRIFT");
+      expect
+        .soft(run.output, "and name the offending reference, not merely the file")
+        .toContain("actions/upload-artifact");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
