@@ -1209,3 +1209,112 @@ The three blocking agent verdicts were not obtained, so `Status` is `refactor` f
 justification for the deletion, whose satisfying artifact the ledger places in `07_Decisions.md`, and
 that is a separate piece of authoring rather than a line in this diff. The item-12 checkpoint is not
 attempted for the reasons recorded under changes 3 through 6.
+
+## Change 7 part 2 — the recorded justification (TDD-0074, TDD-0075)
+
+`BR-0017-0061` allows the deletion in part 1 only with a structural contract gate present at or before
+it, and requires a recorded justification whose content it specifies. The ledger routes both rows to
+`packages/qfai/tests/assets/actionPinBumpOwner.test.ts`, the file this spec designates for rows whose
+satisfying artifact is a durable repository record. Base revision `e0396c62`.
+
+### Thirteen rows share that file, and it did not exist
+
+`spec-0017` routes thirteen rows there — obligations of the shape "a decision was taken and written
+down": an owner named, a cost recorded, a rejected alternative kept with its reason. This change
+creates the file with the first two.
+
+Those rows are worth testing rather than waiving. A rule satisfied by "somebody decided this" degrades
+to nothing the moment that person stops reading pull requests; a rule satisfied by a paragraph, read by
+a test, fails when the paragraph is deleted or reworded past the point where it still carries the
+reason.
+
+What the file must NOT do is pin prose verbatim, which would make every editorial pass a red build. So
+each claim names the specific thing its rule names — a path that must be cited, a reason that must be
+present, a rejected reason that must be marked rejected — and the oracle below is what shows the
+difference between reading content and merely finding a paragraph.
+
+### `DR-0017-0007`, and the one distinction `BR-0017-0061` insists on
+
+The rule does not merely ask for a justification; it fixes which one is correct. The recorded cost must
+be **the loss of the manual cross-check**, and explicitly **not** the absence of a mirror — "which was
+already absent". That is not a stylistic preference. The two files had already diverged on the only
+thing that mattered, the profile they ran, so there was no mirror to lose; recording the absent mirror
+would overstate what the deletion takes away and understate what replaces it.
+
+So `TDD-0074` asserts both halves separately: the cross-check is named, AND the mirror is marked as not
+the reason. A record naming the cross-check while leaving the mirror unaddressed satisfies the first and
+still misstates the trade, which is why `R3` and `R4` are distinct rounds.
+
+### `TDD-0075` reads the tree, and deliberately not history
+
+"At or before the deletion" is satisfied structurally by co-presence at this revision: the duplicate is
+absent here and the gate is present here, so no revision of this branch carries the deletion without the
+gate. That is checkable without reading git history — which matters, because a history-dependent
+assertion inside the main suite breaks under a shallow clone, and this repository already keeps its one
+history-dependent check (`check-prompt-scanner-pair.mjs`) out of `ci:gate` for exactly that reason.
+
+The row also asserts the gate is INVOKED by a package script, not merely present. A gate present but
+unwired is a file, and this slice has now caught that decoration defect three times — a project
+matching zero files, a knob the runner ignores, and here.
+
+And it asserts both directions of the deletion: the own copy gone, the shipped copy surviving. Deleting
+the copy adopters receive would be a different and much worse change, and a row that only checked
+"absent" would pass for it.
+
+### RED and GREEN
+
+- **RED command**, from `packages/qfai`:
+  `pnpm exec vitest run tests/assets/actionPinBumpOwner.test.ts`
+- **RED result**: `Tests 1 failed | 1 passed (2)`, exit 1. `TDD-0074` fails on CLAIM 1, which is a HARD
+  `expect` rather than a soft one: everything below it reads the record, so a missing record would
+  otherwise produce four confusing empty-string failures instead of one clear one.
+- **`TDD-0075` passed at RED**, structurally — part 1 had already removed the duplicate and the gate
+  predates both. The row is a regression guard, so `RED failure mode: falsifiability` with `R6`..`R9`.
+- **GREEN result**: same command, `Tests 2 passed (2)`.
+
+### Oracle proof — nine mutations, nine distinct claims, and a control
+
+| id | mutation | mutant | reddens |
+| --- | --- | --- | --- |
+| `R1` | the decision record is deleted outright | `a5318669` | `:90:11` — TDD-0074 CLAIM 1 — the decision record must exist |
+| `R2` | the record stops naming the gate it relies on | `5849b3f3` | `:97:8` — TDD-0074 CLAIM 2 — it must name the structural contract gate |
+| `R3` | the recorded cost stops being the manual cross-check | `0c6962bf` | `:102:8` — TDD-0074 CLAIM 3 — the recorded cost must be the manual cross-check |
+| `R4` | the record stops saying the absent mirror is NOT the reason | `4a05014b` | `:110:8` — TDD-0074 CLAIM 4 — the absent mirror must be recorded as NOT the reason |
+| `R5` | the rejected repoint alternative loses the reason it was rejected for | `4d06e32f` | `:117:8` — TDD-0074 CLAIM 5 — the rejected repoint must keep its reason |
+| `R6` | the deleted own-tree duplicate comes back | `c547fea4` | `:161:8` — TDD-0075 CLAIM 3 — the own duplicate must be gone |
+| `R7` | the SHIPPED copy is deleted too — the mistake the row exists to catch | (file removed) | `:167:8` — TDD-0075 CLAIM 3 — the shipped copy must survive |
+| `R8` | the gate stops being invoked by any package script | `b3ef3a68` | `:151:12` — TDD-0075 CLAIM 2 — a package script must invoke it |
+| `R9` | the gate file is gone while the script still names it | (file removed) | `:134:8` — TDD-0075 CLAIM 1 — the gate file must exist |
+| `R10-control` | a sentence added to the record that touches no required content | `0fcd388e` | **nothing new** |
+
+Every mutation reddens exactly ONE assertion, and each of the nine claims has its own. For a row whose
+artifact is prose that is the whole proof: it is easy to write a record-reading test that any paragraph
+satisfies, and the only way to know it reads the specific content its rule names is to remove each piece
+separately and watch one claim fail. `R10` adds a sentence to the record that touches no required
+content and reddens nothing, which is what separates "the row reads this" from "the row reads anything".
+
+`R7` is the round worth naming: it deletes the SHIPPED copy, the mistake this pair exists to catch, and
+only the survival claim reddens.
+
+### The validate cost this commit pays, measured
+
+`validate --profile tdd --fail-on error --root .` reports `info=4 warning=379 error=2`, exit 1 — five
+above part 1's 374, and **all five are false**.
+
+The arithmetic, because it is easy to state loosely. Creating the file added seven
+`TDDLIST_STALE_STATUS` warnings while all seven rows naming it were `todo`. Two of those — `TDD-0074`
+and `TDD-0075` — are this commit's own and were promoted to `refactor`, so they emit nothing. What
+remains is five: `TDD-0025`, `TDD-0033`, `TDD-0034`, `TDD-0035` and `TDD-0066`, none of which this
+commit touches and none of whose selectors appear in the file. They are reported stale because the
+resolution check is satisfied by the test FILE existing rather than by the selector being present in
+it. Confirmed by reading the warning list, not inferred: those five ids are exactly the ones the run
+names.
+
+That mechanism is `CR-20260818-0001`, and this is the third time this slice has measured it. It will
+recur for each of the remaining eleven rows routed to this file, which is worth stating plainly: the
+warning count will keep climbing for a reason that has nothing to do with the rows landing.
+
+### Gate items NOT satisfied
+
+The three blocking agent verdicts were not obtained, so `Status` is `refactor` for both rows. The
+item-12 checkpoint is not attempted, for the reasons recorded under changes 3 through 7.

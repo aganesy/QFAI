@@ -211,3 +211,49 @@ file, so an entry here is what makes that citation checkable.
   promoted, which is the residual this entry accepts; `10_Plan.md` marks every such path as
   to-be-created so the two files cannot disagree about which exist.
 - Related: AC-0017-0011, BR-0017-0022, `OQ-0025`, `QFAI-TRACE-001`, `QFAI-TRACE-002`
+
+### DR-0017-0007: the duplicate validate workflow is retired, and the recorded cost is the lost manual cross-check
+
+- Status: accepted
+- Context: this repository shipped `.github/workflows/qfai-validate.yml` to adopters through
+  `packages/qfai/assets/init/root/` **and** kept a copy of it in its own `.github/workflows/`. The two
+  were not equivalent: the own copy ran `qfai validate --profile full --fail-on error` on every push to
+  `main`/`master` and every pull request, while the repository's own `build` job ran `--profile tdd`
+  and `--profile sdd` and a default-profile pass over the packed sandbox. So the own copy was the only
+  place the `full` profile ran against this tree, and `BR-0017-0058` asks for it to be gone.
+- Decision: the own copy is deleted, and its full-profile run is folded into the `build` job as a
+  named item of that job's enumerated verification set (`BR-0017-0059`, `BR-0017-0060`). The fold
+  lands in the same change as the deletion, so no revision of this repository exists in which the
+  `full` profile is unrun.
+- Decision, the recorded justification for the deletion, stated in the form `BR-0017-0061` requires:
+  what is lost is the **manual cross-check** — a reader could previously open the own copy and the
+  shipped copy side by side and see whether the workflow this project distributes still resembles the
+  workflow this project runs. That check was informal, unenforced and performed by nobody on a
+  schedule, but it existed. It is **not** the loss of a mirror: the two files had already diverged on
+  the one thing that matters, the profile they run, so there was no mirror to lose. Recording the
+  absent mirror as the cost would overstate what the deletion takes away and understate what replaces
+  it.
+- Decision: what replaces the manual cross-check is structural, and it predates this change.
+  `packages/qfai/tests/integration/shippedWorkflowShapeGate.test.ts` pins the shipped set's contract
+  dimensions and diffs every one of them, and it runs in `ci:lint` as `lint:workflow-shape`. That is
+  the gate `BR-0017-0061` and `DR-0017-0005` edge 4 require to be present at or before the deletion,
+  and it is a stronger instrument than the cross-check it replaces because it fails a build rather
+  than relying on somebody looking.
+- Decision, rejected alternative — repoint the own run at the shipped workflow file: rejected on
+  resolution, not on taste. The root manifest declares no dependency on `packages/qfai` and provides
+  no local binary, so an invocation through the package name resolves to the **published** release.
+  CI would validate a version nobody is reviewing, which inverts the dogfooding this repository exists
+  to demonstrate. `TC-0017-0072` asserts both the local-binary invocation and the absence of any
+  resolver-based one, and it also asserts the warrant — that the root manifest declares no such
+  dependency — so the reason cannot rot into a stale comment.
+- Decision, rejected alternative — delete the copy and drop the profile: that is the coverage loss the
+  fold exists to prevent, and it is what "removed a duplicate" would have quietly meant.
+- Consequences: the `build` job now carries six enumerated verifications rather than five, and the
+  enumeration is held as literals in `TC-0017-0073` so removing any member fails a test instead of
+  reading as a cleanup. The folded run exits 1 today, on the same two pre-existing cross-spec
+  aggregates (`QFAI-ATDD-111`, `QFAI-ATDD-112`) that the `--profile tdd` step above it already
+  reports; `CR-20260807-0001` covers those. The fold therefore adds no new failure mode, which is a
+  weaker claim than "green" and the only one the measurement supports.
+- Related: AC-0017-0030, AC-0017-0031, BR-0017-0058, BR-0017-0059, BR-0017-0060, BR-0017-0061,
+  EX-0017-0061, TC-0017-0071, TC-0017-0072, TC-0017-0073, TC-0017-0074, TC-0017-0075,
+  `DR-0017-0005` edge 4, `CR-20260807-0001`
