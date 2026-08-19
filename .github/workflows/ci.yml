@@ -112,7 +112,11 @@ jobs:
         if: matrix.slice == 'e2e' || matrix.slice == 'integration'
         run: pnpm -C packages/qfai build
       - name: Run tests (${{ matrix.slice }})
-        run: pnpm -C packages/qfai test -- --project ${{ matrix.slice }}
+        # The per-slice script, not the generic runner with a project name.
+        # While this read `test -- --project <slice>` a slice with no script of
+        # its own still ran, so nothing ever demanded the script exist and the
+        # three slice surfaces could drift silently.
+        run: pnpm -C packages/qfai test:${{ matrix.slice }}
 
   # ── 4b. Scanner module statement-coverage gate ───────────────────
   # Asserts that `packages/qfai/src/core/prototyping/designMdViolations.ts`

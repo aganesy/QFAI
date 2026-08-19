@@ -47,6 +47,8 @@
     "test:integration": "vitest run --project integration",
     "test:e2e": "vitest run --project e2e",
     "test:cli": "vitest run --project cli",
+    "test:unit": "vitest run --project unit",
+    "test:scripts": "vitest run --project scripts",
     "test:assets": "vitest run tests/assets",
     "self-validate": "node dist/cli/index.mjs validate --profile tdd --fail-on error --root ../.."
   },

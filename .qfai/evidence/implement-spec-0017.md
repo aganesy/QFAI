@@ -678,3 +678,185 @@ several rounds correcting.
 The three blocking agent verdicts were not obtained. `Status` is `refactor` for the four rows that
 landed. The item-12 checkpoint is not attempted: step 2 needs a clean whole-suite run this machine is
 not currently giving, and step 4's clause 3 reads a total `CR-20260818-0006` is about.
+
+## Change 5 — slice-surface alignment (TDD-0062, TDD-0063, TDD-0064)
+
+`10_Plan.md` step 5: delete the runner project that matches zero files, add the two missing per-slice
+scripts, and make the three slice surfaces name one set. Base revision `9b5b174b`.
+
+### The three surfaces held three different sets, measured
+
+| surface | site | at `9b5b174b` |
+| --- | --- | --- |
+| 1 — runner projects | `packages/qfai/vitest.workspace.ts` | 8, one of them matching zero files |
+| 2 — CI matrix slices | `.github/workflows/ci.yml` `strategy.matrix.slice` | 7 |
+| 3 — per-slice scripts | `packages/qfai/package.json` | 5 |
+
+Each divergence is silent in its own way. A project matching zero files reports nothing. A matrix entry
+with no script still ran, because the matrix handed the project name to a generic script — which is why
+surface 3 could be two names short for months without anyone noticing.
+
+### Surface 3 is defined by BEHAVIOUR, because the RED rejected the definition by name
+
+The first draft derived surface 3 from the `test:` key prefix, minus a hand-kept exclusion for
+`test:coverage`. The RED rejected it: `test:assets` also carries the prefix, and the claim demanded it
+select an `assets` project that does not exist. Redefining a per-slice script as *one whose command
+selects a project* excludes both convenience scripts by construction and deletes the exclusion list,
+which was a second thing to maintain and would have gone stale at the next `test:something`.
+
+Then a near-miss inside that definition. `PROJECT_SELECTOR` first read `--project ([a-z]+)`, and one
+project is named `e2e`: surface 3 silently lost `test:e2e`, so the equality claim would have failed for
+a reason with nothing to do with alignment. What caught it was not the test — it was a count assertion
+inside the implementation script, which printed `project-selecting scripts now (6)` and refused because
+it expected 7. The character class is now `[a-z0-9]+` and the reason is recorded at the constant.
+
+### `TC-0017-0063` asks for a runner behaviour that does not exist, and the ORACLE is what proved it
+
+The row was first written exactly as specified — "selecting the deleted project name fails to resolve
+instead of matching zero files" — as `expect(status).not.toBe(0)` over a spawned runner. It passed. The
+oracle contradicted it: round `R1` restores the deleted project, recreating precisely the defect the row
+exists to detect, and the spawn assertion stayed green.
+
+Measured afterwards, same command, two tree states:
+
+```text
+A  project ABSENT              exit 1  | projects: compatibility
+                                       | No test files found, exiting with code 1
+B  project PRESENT, dir gone   exit 1  | projects: compatibility
+                                       | [compatibility] Config
+                                       |   include: tests/compatibility/**/*.test.ts
+                                       | No test files found, exiting with code 1
+```
+
+`--project <name>` does not reject an unknown name; it filters the project set to nothing. Exit status
+is 1 in both states for the same reason. The only difference in the entire output is a reporter echo.
+
+Filed as `CR-20260820-0002` rather than resolved here: rewriting a boundary TC's meaning to match what
+I could implement is the move the drift protocol exists to prevent. The row ships against the intent.
+
+### Three prose claims in this row were wrong before measurement
+
+Recorded because the pattern matters more than any one of them:
+
+1. the docblock stated a zero-file project "resolves, matches nothing, and **exits 0**" — false, and
+   never measured;
+2. a comment stated `tests/compatibility/` "never existed" — it held **four** tests, all removed by
+   `c47d3db5` when the canonical contracts replaced the compatibility surfaces. The old comment told a
+   future reader not to restore tests that were deliberately deleted, which is worse than saying
+   nothing;
+3. the row implied the deleted project was the only instance of the defect. It was not.
+
+### A second, live instance — and why the invariant is per-GLOB
+
+`integration` declared a glob under `tests/review`. That directory has not existed since `017fe9fd`
+deleted the last file under it; the glob was correct when `48f4f3a6` wrote it, and outlived the
+directory by a month. Because `integration` has four other globs with files behind them, a per-PROJECT
+population check passes straight over it — as does every formulation scoped to the one deleted name.
+
+So `TDD-0063` asserts a per-glob floor, and it reddened on this immediately:
+
+```text
+AssertionError: an include glob with no test files advertises coverage that cannot exist:
+  expected [ Array(1) ] to deeply equal []
++   "integration: tests/review/**/*.test.ts"
+ ❯ tests/scripts/sliceSurfaceAlignment.test.ts:306:8
+```
+
+Change 5 removes the dead glob. `vitest list --project integration --filesOnly` collects **128** files
+before and after, so nothing that ran stopped running.
+
+### CLAIM 3 of `TDD-0064` is asserted over parsed `run:` values, not raw text
+
+The first draft asserted `.not.toContain("test -- --project")` over the whole workflow file, and
+reddened on the comment that explains why the matrix stopped using that form — the comment quotes it.
+Narrowed to the parsed `run:` values of the `test` job's steps. That is the actual obligation: what the
+matrix RUNS, not what a comment says about what it used to run. This slice has now hit
+prose-trips-a-text-assertion three times, and asserting over structure is the fix that generalises.
+
+### The production change
+
+- `packages/qfai/vitest.workspace.ts` — the `compatibility` project block deleted; the dead
+  `tests/review` glob deleted from `integration`. 7 projects, 11 globs, every one populated.
+- `packages/qfai/package.json` — `test:unit` and `test:scripts` added next to their siblings.
+- `.github/workflows/ci.yml` — the matrix step now runs `pnpm -C packages/qfai test:${ matrix.slice }`.
+
+### RED and GREEN
+
+- **RED command**, from `packages/qfai`:
+  `pnpm exec vitest run tests/scripts/sliceSurfaceAlignment.test.ts`
+- **RED result**: `Tests 3 failed (3)`, exit 1 — every failure an assertion, no load error. Then a
+  second admissible RED after the row was rewritten: `Tests 1 failed | 2 passed (3)`, the one failure
+  being the dead glob at `:306:8`, which is the extension RED that drove the second production edit.
+- **GREEN result**: same command, `Test Files 1 passed (1)` / `Tests 3 passed (3)`.
+
+### Oracle proof — eight rounds, and the two new claims discriminate
+
+| id | row | mutant | reddens |
+| --- | --- | --- | --- |
+| `R1` | TDD-0062, TDD-0063 | `f9c12a13` | `:249:78` — the CI matrix names exactly the runner's projects; `:252:8` — the per-slice scripts name exactly the runner's projects; `:257:71` — the aligned set has seven members; `:267:12` — `compatibility` must not be declared in the runner workspace; `:306:8` — an include glob with no test files advertises coverage that cannot exist |
+| `R2` | TDD-0062 | `168919f2` | `:249:78` — the CI matrix names exactly the runner's projects |
+| `R3` | TDD-0062, TDD-0064 | `6f3eed67` | `:252:8` — the per-slice scripts name exactly the runner's projects; `:319:10` — slice `<name>` had no per-slice script and must now have one |
+| `R4` | TDD-0062, TDD-0064 | `718f1ab2` | `:252:8` — the per-slice scripts name exactly the runner's projects; `:319:10` — slice `<name>` had no per-slice script and must now have one; `:330:10` — a per-slice script selecting `<name>` must be named `test:<name>` |
+| `R5` | TDD-0064 | `a849d8b7` | `:351:8` — no matrix step may pass a project name to the generic test script; `:358:12` — the matrix must invoke the per-slice script for its slice |
+| `R6` | TDD-0063 | `b3192278` | `:306:8` — an include glob with no test files advertises coverage that cannot exist |
+| `R7` | TDD-0063 | `8c2b7597` | `:295:8` — every include glob must be countable by walking its literal directory prefix |
+| `R8-control` | (control) | `8ef1def1` | **nothing new** |
+
+`R6` and `R7` are the pair that matters for the rewritten row: a planted dead glob reddens **only** the
+population claim, and a glob whose shape the counter cannot handle reddens **only** the shape claim.
+Without that separation, an uncountable glob would have been reported as an empty directory. `R8` is the
+comment-only control, and it is what makes the other seven mean anything — the baseline is green, so a
+control that reddens nothing NEW distinguishes "the row sees this" from "the suite was already red".
+
+### The full suite, run through the scripts CI now calls
+
+The matrix invokes `test:<slice>` after this change, so running the seven scripts sequentially is both
+gate item 2 and proof that the scripts work. It also sidesteps the whole-suite contention recorded under
+change 3 — a single unfiltered run fails a differing set of files each time on this machine, with no
+stray processes, and per-project runs pass.
+
+| script | test files | tests | wall clock |
+| --- | --- | --- | --- |
+| `test:core` | 122 passed (122) | 1587 passed | 2 skipped (1589) | 102.6s |
+| `test:unit` | 43 passed (43) | 266 passed (266) | 10.4s |
+| `test:validators` | 46 passed (46) | 351 passed (351) | 16.3s |
+| `test:integration` | 124 passed | 4 skipped (128) | 862 passed | 19 skipped (881) | 56.2s |
+| `test:e2e` | 73 passed | 4 skipped (77) | 889 passed | 16 skipped (905) | 33.1s |
+| `test:cli` | 11 passed (11) | 321 passed (321) | 73.3s |
+| `test:scripts` | 9 passed (9) | 92 passed (92) | 9.7s |
+
+Total 301.6s across 7 slices, every one green. Stated as seven sequential green slices, not as a
+clean whole-suite run — those are different measurements and only the first was taken.
+
+### The validate delta, including the aggregate this change made worse
+
+`validate --profile tdd --fail-on error --root .` reports `info=4 warning=377 error=2`, exit 1.
+
+- **`warning` is unchanged at 377.** `TDDLIST_STALE_STATUS` fires on a `todo` row whose selector
+  resolves, and all three rows landed at `refactor`, so the new test file adds none. This is the
+  opposite of what change 4 did, where a new file took the count from 16 to 36.
+- **`error` is unchanged at 2**, and both are the same pre-existing aggregates change 4 recorded.
+- **But `QFAI-ATDD-112`'s list grew by three items** — `TC-0017-0062`, `TC-0017-0063`,
+  `TC-0017-0064`. The count did not move because the check emits one aggregated error; the aggregate
+  did. Recorded rather than passed over: an unchanged error count is not the same as an unchanged
+  finding.
+
+The cause is structural and not specific to this change. `QFAI-ATDD-112` routes a TC by its declared
+`Level`, and `.qfai/assistant/catalog/test-layers.md` fixes Integration's location rule at
+`tests/integration/**`. Every spec-0017 row implemented so far — changes 1 through 5 — declares
+`integration` and lives in `packages/qfai/tests/scripts/`, which is where the `scripts` runner project
+looks. So all 60-odd of this spec's TCs are already in that list, together with TCs from `spec-0003`,
+`spec-0008` and `spec-0015`. Change 5 is consistent with its siblings, not newly wrong.
+
+Two approved change requests already cover this ground: `CR-20260814-0001` (the annotation the check
+reads is hand-maintained and coupled to nothing, so it certifies coverage in both false directions) and
+`CR-20260807-0001` (pre-existing cross-spec errors and the checkpoint criterion). Re-routing a layer's
+location rule, or moving five changes' worth of tests out of the project built for them, is neither
+change 5's scope nor a decision to take while those are open.
+
+### Gate items NOT satisfied
+
+The three blocking agent verdicts were not obtained, so `Status` is `refactor` for all three rows. The
+item-12 checkpoint is not attempted: step 2 asks for an unfiltered whole-suite run this machine is not
+giving, and step 4's clause 3 reads a total that `CR-20260818-0006` is about. `CR-20260820-0002` is open
+against `TC-0017-0063`'s wording; the row is implemented against the intent, not the literal text.

@@ -32,16 +32,8 @@ export default defineWorkspace([
         "tests/integration/**/*.test.ts",
         "tests/detection/**/*.test.ts",
         "tests/skill/**/*.test.ts",
-        "tests/review/**/*.test.ts",
         "tests/codex/**/*.test.ts",
       ],
-    },
-  },
-  {
-    test: {
-      ...shared,
-      name: "compatibility",
-      include: ["tests/compatibility/**/*.test.ts"],
     },
   },
   {
