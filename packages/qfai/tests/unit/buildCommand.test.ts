@@ -329,12 +329,10 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.docker", "build", "docker build"],
   ["TOOLS.docker.dirs.-f", "none", "docker -f build clean"],
   ["TOOLS.docker.dirs.--file", "none", "docker --file build clean"],
-  ["TOOLS.docker.values.-t", "none", "docker -t build clean"],
-  ["TOOLS.docker.values.--tag", "none", "docker --tag build clean"],
   ["TOOLS.docker.values.--build-arg", "none", "docker --build-arg build clean"],
   ["TOOLS.docker.values.-H", "none", "docker -H build clean"],
   ["TOOLS.docker.values.--platform", "none", "docker --platform build clean"],
-  ["TOOLS.docker.values.--name", "none", "docker --name build clean"],
+  ["TOOLS.docker.values.--name", "none", "docker create --name build-agent alpine"],
   ["TOOLS.podman", "build", "podman build"],
   ["TOOLS.poetry", "build", "poetry build"],
   ["TOOLS.poetry.dirs.-C", "none", "poetry -C build clean"],
@@ -429,7 +427,7 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.meson.dirs.-C", "none", "meson -C build clean"],
   ["TOOLS.meson.values.-D", "none", "meson -D build clean"],
   ["TOOLS.meson.builds.compile", "build", "meson compile"],
-  ["TOOLS.scons", "build", "scons"],
+  ["TOOLS.scons", "build", "scons build"],
   ["TOOLS.scons.values.-j", "none", "scons -j build clean"],
   ["TOOLS.scons.bareIsBuild", "build", "scons"],
   ["TOOLS.tsc", "build", "tsc -b"],
@@ -958,7 +956,28 @@ describe("classifyBuildCommand", () => {
       [...named].filter((member) => !grammarMembers().includes(member)),
       "a case naming a member the grammar no longer has",
     ).toEqual([]);
-    expect(MEMBER_CASES.length, "one case per member, no duplicates").toBe(named.size);
+    expect(MEMBER_CASES.length, "one case per member, no duplicate labels").toBe(named.size);
+
+    // And no duplicate COMMANDS. A label is unique by construction once the members are canonicalised;
+    // two labels sharing one command line means one of them is carried by the other, which is how 39
+    // alias cases came to exist. Some duplication is legitimate — three lifecycle members are pinned by
+    // two commands between them — so the exceptions are named rather than the rule weakened.
+    const SHARED_BY_DESIGN = new Set([
+      "pnpm -C onlyprepack pack",
+      "pnpm -C onlyprepack publish",
+      "pnpm -C onlypre publish",
+      "timeout 600 pnpm build",
+    ]);
+    const byCommand = new Map<string, string[]>();
+    for (const [member, , line] of MEMBER_CASES) {
+      byCommand.set(line, [...(byCommand.get(line) ?? []), member]);
+    }
+    expect(
+      [...byCommand.entries()]
+        .filter(([line, members]) => members.length > 1 && !SHARED_BY_DESIGN.has(line))
+        .map(([line, members]) => `${line} <- ${members.join(", ")}`),
+      "two members pinned by one command: one of them is carried by the other",
+    ).toEqual([]);
   });
 
   it("holds the verdict of every hardcoded member case", () => {

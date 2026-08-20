@@ -336,10 +336,13 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     // found the literal pinning `v6` while the helper had moved to v7 — so correcting the record was
     // the edit that reddened this guard, and the guard was holding the record stale. It also matched
     // any `v6` anywhere, which the file's own version history guarantees forever.
-    const helper = await readFile(path.resolve(__dirname, "../helpers/buildCommand.ts"), "utf8");
-    const versions = [...helper.matchAll(/\bv(\d+)\b/g)].map((match) => Number(match[1]));
-    const current = Math.max(...versions);
-    expect(current, "the helper must state its own version").toBeGreaterThan(0);
+    // The version comes from the helper's exported constant, not from the largest `vN` token in its
+    // prose. Deriving it from prose closed round 7's literal-pin defect and left the residual round 9
+    // named: a bump whose comment forgot to say the new number would leave both sides agreeing on the
+    // old one. It also went wrong in the other direction the moment it was written about — a sentence
+    // discussing a future `v13` made the pin demand v13 of the record.
+    const { VERSION: current } = await import("../helpers/buildCommand.js");
+    expect(current, "the helper must export its own version").toBeGreaterThan(0);
 
     // Anchored to the sentence that names the helper, not to the file. A bare `toContain` over the
     // whole record passes on the record's own version-history list — which gains a line per version by

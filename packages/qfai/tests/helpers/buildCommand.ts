@@ -55,6 +55,17 @@
  * `heuristic`; `node scripts/bundle.mjs` is invisible and stays that way.
  */
 
+/**
+ * The predicate's version, exported so the record's pin compares a number to a number.
+ *
+ * The pin used to take the largest `vN` token anywhere in this file's prose. That closed round 7's
+ * literal-pin defect and left a residual round 9 named: a bump whose comment forgot to say the new
+ * number would leave both sides agreeing on the old one. It then failed in the other direction the
+ * moment a sentence *discussed* a future version, and the pin demanded that version of the record. This
+ * is the one place to change.
+ */
+export const VERSION = 12;
+
 export type BuildVerdict = "build" | "heuristic" | "none";
 
 export interface ScriptSources {
@@ -94,7 +105,11 @@ const MANAGERS = new Set([
 /**
  * Build tools, each declaring what it takes.
  *
- * `dirs` take a directory (and move the manifest a script resolves in); `values` take anything else;
+ * `dirs` take a directory and `values` take anything else — and **for a tool the two are
+ * behaviourally identical**, because the only difference is that `dirs` moves the directory a script
+ * resolves in and a tool never resolves a script. Folding every tool's `dirs` into its `values` moves
+ * nothing across the whole corpus, measured. The split is kept as documentation of what a flag takes,
+ * and it is load-bearing only for `MANAGER_DIRS`.
  * `optional` take a value only when the next token could be one — GNU make's `-j` is the case, and
  * `make -j build` is a real build the always-consume shape asserted away. `buildFlags` mean build by
  * themselves. `builds` are subcommands that mean build without being spelled it, `buildPrefixes` are
@@ -146,9 +161,16 @@ const GRADLE: ToolGrammar = {
   buildPrefixes: ["assemble", "bundle"],
 };
 
+/**
+ * No `-t` / `--tag`. They appear only in `docker build` and `docker buildx build`, and the exact `build`
+ * token decides those before any flag is read, so no real docker command can distinguish them. The cases
+ * that pinned them were `docker -t build clean` and `docker --name build clean`, which put a subcommand
+ * flag in docker's global position — commands docker rejects. `--name` stays, pinned by
+ * `docker create --name build-agent alpine`, which is a command people write.
+ */
 const DOCKER: ToolGrammar = {
   dirs: ["-f", "--file"],
-  values: ["-t", "--tag", "--build-arg", "-H", "--platform", "--name", "-p", "--project-name"],
+  values: ["--build-arg", "-H", "--platform", "--name", "-p", "--project-name"],
   builds: ["bake"],
   stops: ["run", "exec"],
 };

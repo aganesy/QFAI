@@ -300,6 +300,14 @@ node packages/qfai/dist/cli/index.mjs validate --profile atdd --fail-on error --
                       timestamp the next run will not reproduce
 ```
 
+**`.qfai/report/specs-coverage/spec-0017.md` does not exist**, and round 9 named it as one of the
+inputs it could not read. That directory holds `spec-0001.md` through `spec-0007.md` on disk, last
+written 2026-08-20, and only `spec-0012.md` is tracked; spec-0017's is produced by a `--profile full`
+run and was never committed. The citation is dropped rather than the file committed, for the same reason
+as the run directory: it is regenerable output, and the reviewer obtained it by running the profile,
+which is the reproducible path. Coverage there was clean when they did — every `AC` with 2-3 `TC`, every
+`BR` with an `EX`, every `EX` with a `TC`, no `QFAI-COV-201/202/203`.
+
 **Neither cited path was in the repository until round 8**, which round 8 measured with
 `git ls-files .qfai/report` — five paths, and `validate.spec-0017.json` not among them. So a later reader
 could not check the gate evidence this record cites. The JSON is force-added now (`.gitignore` covers
