@@ -3,35 +3,32 @@
 This file is written by every `qfai validate` run and always points at the newest
 run-log directory. Do not edit it by hand; do not pipe stdout into it.
 
-- run_id: run-20260820183439514
-- started_at: 2026-08-20T09:34:39.514Z
+- run_id: run-20260820183712433
+- started_at: 2026-08-20T09:37:12.433Z
 - command: /qfai-validate
 - status: fail
-- errors: 46
-- warnings: 403
-- run_log: .qfai/report/run-20260820183439514
+- errors: 2
+- warnings: 376
+- run_log: .qfai/report/run-20260820183712433
 
 # Validate Run Summary
 
-- run_id: run-20260820183439514
-- started_at: 2026-08-20T09:34:39.514Z
+- run_id: run-20260820183712433
+- started_at: 2026-08-20T09:37:12.433Z
 - status: fail
-- report_dir: .qfai/report/run-20260820183439514
-- errors: 46
-- warnings: 403
+- report_dir: .qfai/report/run-20260820183712433
+- errors: 2
+- warnings: 376
 
 ## Top Errors
 
-- QFAI-REVIEW-007 (.qfai/review/review-20260818120004000/summary.json): summary.json の最小スキーマを満たしていません: `revision_form` は "content-hash"（現行契約）または "legacy"（形式導入前の pack、履歴から一度だけ付与）が必須です
-- QFAI-REVIEW-007 (.qfai/review/review-20260818120003000/summary.json): summary.json の最小スキーマを満たしていません: `revision_form` は "content-hash"（現行契約）または "legacy"（形式導入前の pack、履歴から一度だけ付与）が必須です
-- QFAI-REVIEW-007 (.qfai/review/review-20260818120002000/summary.json): summary.json の最小スキーマを満たしていません: `revision_form` は "content-hash"（現行契約）または "legacy"（形式導入前の pack、履歴から一度だけ付与）が必須です
-- QFAI-REVIEW-007 (.qfai/review/review-20260818120001000/summary.json): summary.json の最小スキーマを満たしていません: `revision_form` は "content-hash"（現行契約）または "legacy"（形式導入前の pack、履歴から一度だけ付与）が必須です
-- QFAI-REVIEW-007 (.qfai/review/review-20260818100004000/summary.json): summary.json の最小スキーマを満たしていません: `revision_form` は "content-hash"（現行契約）または "legacy"（形式導入前の pack、履歴から一度だけ付与）が必須です
+- QFAI-ATDD-111 (.qfai/specs/spec-0003): E2E で参照されていない US があります: SPEC-0003:US-0003-0021, SPEC-0003:US-0003-0022, SPEC-0003:US-0003-0023, SPEC-0003:US-0003-0024, SPEC-0003:US-0003-0025, SPEC-0003:US-0003-0026, SPEC-0003:US-0003-0027, SPEC-0003:US-0003-0028, SPEC-0006:US-0006-0011, SPEC-0008:US-0008-0008, SPEC-0015:US-0015-0016, SPEC-0017:US-0017-0001, SPEC-0017:US-0017-0002, SPEC-0017:US-0017-0003, SPEC-0017:US-0017-0004, SPEC-0017:US-0017-0005, SPEC-0017:US-0017-0006, SPEC-0017:US-0017-0007, SPEC-0017:US-0017-0008, SPEC-0017:US-0017-0009
+- QFAI-ATDD-112 (.qfai/specs/spec-0003): 宣言 Level が指すディレクトリで参照されていない TC があります: tests/integration/** -> SPEC-0003:TC-0003-0032, SPEC-0008:TC-0008-0015, SPEC-0008:TC-0008-0016, SPEC-0008:TC-0008-0017, SPEC-0008:TC-0008-0018, SPEC-0015:TC-0015-0035, SPEC-0015:TC-0015-0036, SPEC-0017:TC-0017-0016, SPEC-0017:TC-0017-0030, SPEC-0017:TC-0017-0032, SPEC-0017:TC-0017-0033, SPEC-0017:TC-0017-0034, SPEC-0017:TC-0017-0035, SPEC-0017:TC-0017-0069, SPEC-0017:TC-0017-0070
 
 ## Top Warnings
 
-- QFAI-EX-105 (.qfai/specs/spec-0001/06_Test-Cases.md): 06_Test-Cases.md の Level が test-layer policy 外です: L-struct。policy が許可する層: api, component, e2e, integration, unit
-- QFAI-TRIAGE-001 (.qfai/specs/spec-0002/09_delta.md): delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
-- QFAI-EX-105 (.qfai/specs/spec-0004/06_Test-Cases.md): 06_Test-Cases.md の Level が test-layer policy 外です: ssot-guard, validators。policy が許可する層: api, component, e2e, integration, unit
-- QFAI-TRIAGE-001 (.qfai/specs/spec-0005/09_delta.md): delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
-- QFAI-TRIAGE-001 (.qfai/specs/spec-0007/09_delta.md): delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
+- TDDLIST_UNKNOWN_LEVEL (.qfai/specs/spec-0001/06_Test-Cases.md): Unrecognized Level value(s) in 06_Test-Cases.md for spec-0001: L-struct. Accepted — coverage targets: L1, L2, component, unit; non-coverage: L3, L4, L5, acceptance, api, e2e, integration, system. Unrecognized values are treated as coverage targets, so every such TC becomes a mandatory ledger row
+- TDDLIST_EXCEPTION_PARKED (.qfai/specs/spec-0001/tdd/test-list.md): TDD item "TDD-0001" in spec-0001 is parked at Status=exception (DR-ID DR-0001-0002). Resolve it (`exception -> todo` — see .qfai/assistant/skills/qfai-implement/references/execution-ledger.md#allowed-transitions — which needs no Change Request **only when the anomaly did not change an approved obligation**; if it did, that is drift and the approved upstream reset applies instead), or record the accepted risk as a `TDDLIST_EXCEPTION_PARKED` waiver in `.qfai/waivers.yml` naming this row in `match.dl_ids`
+- TDDLIST_EXCEPTION_PARKED (.qfai/specs/spec-0001/tdd/test-list.md): TDD item "TDD-0002" in spec-0001 is parked at Status=exception (DR-ID DR-0001-0002). Resolve it (`exception -> todo` — see .qfai/assistant/skills/qfai-implement/references/execution-ledger.md#allowed-transitions — which needs no Change Request **only when the anomaly did not change an approved obligation**; if it did, that is drift and the approved upstream reset applies instead), or record the accepted risk as a `TDDLIST_EXCEPTION_PARKED` waiver in `.qfai/waivers.yml` naming this row in `match.dl_ids`
+- TDDLIST_EXCEPTION_PARKED (.qfai/specs/spec-0001/tdd/test-list.md): TDD item "TDD-0003" in spec-0001 is parked at Status=exception (DR-ID DR-0001-0002). Resolve it (`exception -> todo` — see .qfai/assistant/skills/qfai-implement/references/execution-ledger.md#allowed-transitions — which needs no Change Request **only when the anomaly did not change an approved obligation**; if it did, that is drift and the approved upstream reset applies instead), or record the accepted risk as a `TDDLIST_EXCEPTION_PARKED` waiver in `.qfai/waivers.yml` naming this row in `match.dl_ids`
+- TDDLIST_EXCEPTION_PARKED (.qfai/specs/spec-0001/tdd/test-list.md): TDD item "TDD-0004" in spec-0001 is parked at Status=exception (DR-ID DR-0001-0002). Resolve it (`exception -> todo` — see .qfai/assistant/skills/qfai-implement/references/execution-ledger.md#allowed-transitions — which needs no Change Request **only when the anomaly did not change an approved obligation**; if it did, that is drift and the approved upstream reset applies instead), or record the accepted risk as a `TDDLIST_EXCEPTION_PARKED` waiver in `.qfai/waivers.yml` naming this row in `match.dl_ids`
