@@ -1418,7 +1418,7 @@ Round 1's pack, for continuity:
 
 ### Review packs and their seals
 
-**Nine** packs, one per round. The seal is *supposed* to be fixed at the moment the last reviewer
+**Ten** packs, one per round. The seal is *supposed* to be fixed at the moment the last reviewer
 response lands, and § "When each pack was actually sealed" below measures four of seven closed packs
 missing it by one to three commits. This sentence asserted the practice for two rounds while its own
 table refuted it and before this
@@ -1465,6 +1465,9 @@ Review pack seal:  d2ef7d5c271225d32d1bc37cffed9cddbd49edb752ebb8fd73fa6de0e7e49
 
 Review pack:       .qfai/review/review-20260821120000000/            (round 9 — stage gates only)
 Review pack seal:  0966ca41de6077e8fada920a5446a6cc73aca52a4bd9d40dd8983aa4c3899136
+
+Review pack:       .qfai/review/review-20260821140000000/            (round 10 — stage gates only)
+Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
 ```
 
 Round 8 routes no P1d pass. That gate closed at round 7 and re-routing a closed gate would be asking a
