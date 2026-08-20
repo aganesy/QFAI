@@ -42,6 +42,53 @@ The needle and the replacement are therefore the load-bearing record, exactly as
 `references/oracle-strength.md` asks. The hashes are not retracted, because they are not wrong; the
 claim that they can be retrieved is what was wrong.
 
+## Cross-spec obligations
+
+**Added 2026-08-20, after review finding B3.** This record described spec-0017 as though it were the
+only spec this branch touches. It is not, and an auditor of the other spec cannot see the connection
+from their side.
+
+`spec-0003`'s `TDD-0038`, `TDD-0039` and `TDD-0040` — `TC-0003-0038` through `TC-0003-0040`, the
+shipped orchestrator's change detection, fail-open selection and verdict job — live in
+`packages/qfai/tests/integration/shippedWorkflowDetection.test.ts`, a file that exists only on this
+branch. It was created by commit `56b34b94` in an earlier session, with all three blocking reviewers
+returning PASS, and those three rows reached `done` there. Nothing in that is this spec's business.
+
+What IS this spec's business is that **commit `dd894914`, made under spec-0017, edited that file
+after those rows were `done`.** The edit was the structural half of the parallelism work — the
+worker value stays ten and the contention was the problem — and it changed how those rows' tests
+execute:
+
+| change                    | what it does                                                      |
+| ------------------------- | ----------------------------------------------------------------- |
+| `orchestratorDocPromise`  | the shipped orchestrator is read and parsed once per worker rather than on every call |
+| `COMMIT_IDENTITY`         | identity and signing passed as `-c` flags instead of three `git config` spawns per fixture repository |
+| `degradedCases()`         | the degraded-case fixture set is built ONCE for its describe instead of once per `it()` |
+
+None of the three touches an assertion. Verified rather than asserted: the diff of `dd894914`
+against that file adds a memo, a constant and a getter, and rewrites three `git config` calls into
+flags — no `expect` was added, removed or altered.
+
+**The obligation, stated so the other spec's auditor does not have to find it.** The third change
+means the three degraded cases now share one fixture run instead of each building their own. Two
+consequences that were traded for the time:
+
+1. The three cases are no longer independent. A failure while building the fixture set fails all
+   three, and they no longer demonstrate that fixture construction is repeatable.
+2. What they read is the run RESULT — status, streams, parsed outputs — which is why memoizing is
+   safe where a `beforeAll` would not be: the temp-directory pool deletes its directories in
+   `afterEach`, so a `beforeAll` fixture would build repositories that vanish after the first test.
+
+That trade is recorded here because it is a change to another spec's evidence base made under this
+one. `TC-0003-0039` is the row that owns the degraded cases, so it is the row the trade most
+concerns. Measured effect, which is the reason it was taken: the file went from 22.90s to 5.49s and
+the integration slice passes at the declared worker value of ten.
+
+**Not affected, checked rather than assumed:** `spec-0003`'s `TDD-0050`
+(`shippedWorkflowShapeGate.test.ts`) and its `shippedWorkflowPins` row are cited in this record as
+precedent and constraint — the pins row scans every test file, which is why a fixture literal in
+this spec's own tests had to move from `@v4` to `@main`. Citing a row is not editing it, and neither
+file was touched here.
 ## Change 1 — the derived verdict (TDD-0001 … TDD-0005)
 
 `10_Plan.md` § `The shape of the change, in order` step 1, and `DR-0017-0005` edge 1: this change
