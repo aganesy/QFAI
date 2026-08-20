@@ -61,6 +61,67 @@ its own `TC-0017-NNNN`; no row carries `US-Refs` or `CON-API-Refs`, because no r
 | --- | -- | ---------- |
 | `TDD-0069` | `TC-0017-0069` | data that does not exist yet — see the row's `Evidence` cell |
 | `TDD-0070` | `TC-0017-0070` | data that does not exist yet — see the row's `Evidence` cell |
+## The scaffold has never executed in GitHub Actions
+
+**Added 2026-08-20.** Measured, because it is the largest thing this record does not say:
+
+```text
+gh pr list --head feature/chg-007-layered-ci-scaffold      ->  []
+gh run list --branch feature/chg-007-layered-ci-scaffold   ->  (no runs)
+```
+
+No pull request, and **zero workflow runs**. Two hundred commits of layered CI scaffold have never
+been dispatched by GitHub.
+
+### What that means for everything above
+
+Every verification in this record is local, and each one verifies something real but none of them
+verifies the thing itself:
+
+| verified                                                             | how                                                       |
+| -------------------------------------------------------------------- | --------------------------------------------------------- |
+| the workflow's job topology, `needs` closure and check-name set      | parsed as YAML and asserted                                |
+| the change classifier's decisions                                    | extracted from its quoted heredoc and executed on this machine |
+| the aggregate verdict's logic                                        | extracted and executed against synthetic `needs` maps      |
+| the hygiene lane, the leakage guard, the shipped-tree scan            | run directly                                               |
+| every test slice, and the whole suite                                | run                                                        |
+
+What is **not** verified, because it cannot be locally:
+
+- that GitHub accepts these files at all — a workflow that fails to parse on their side is reported
+  as a failed run, not as a lint error here;
+- that the `detect` job's `full` output actually reaches the `if:` conditions on four jobs. The
+  classifier's decision is tested; the plumbing from `$GITHUB_OUTPUT` through
+  `needs.detect.outputs.full` is not;
+- that the matrix dispatches seven legs with the check names `TC-0017-0043` pins. Those names are
+  asserted against the file, never against a run;
+- that `actions/upload-artifact` accepts the retention and if-no-files-found settings, and that the
+  build produced once is downloadable by the legs that would consume it;
+- that `ci-pass` reports the verdict branch protection would read;
+- the runtime cost the parallelism work exists to reduce. `TDD-0065`'s timing artifact measures THIS
+  machine at fourteen logical CPUs. A GitHub runner has two, and every worker-count conclusion in
+  that artifact is about hardware the scaffold will not run on.
+
+### Two rows are blocked on precisely this
+
+`TDD-0069` needs three consecutive green aggregate-verdict runs with their identifiers quoted;
+`TDD-0070` needs post-merge default-branch history to measure a rerun-to-green rate. Both are `todo`
+with the reason in their `Evidence` cells, and both become implementable the moment a pull request
+exists and CI runs. They are not blocked by a Change Request — they are blocked by the absence of a
+run.
+
+### Why it is recorded rather than fixed
+
+Opening a pull request is outward-facing: it makes this branch visible, starts CI on the user's
+account, and can trigger notifications and review requests. It is the user's call, not the
+implementer's, and it is put to them rather than assumed.
+
+Stating it as a gap rather than a caveat because the distinction matters. A caveat would say "CI has
+not run yet, which is normal for an unmerged branch". The stronger and truer statement is that the
+central deliverable of this spec — a layered CI scaffold, and the same scaffold in the templates QFAI
+ships — has never been observed doing its job, and no amount of local verification substitutes for
+one run.
+
 ## What the `mutant` column holds, and what it does not
 
 **CORRECTION (2026-08-20, after the gatekeeper's blocking finding.)** The sentence above says "with
