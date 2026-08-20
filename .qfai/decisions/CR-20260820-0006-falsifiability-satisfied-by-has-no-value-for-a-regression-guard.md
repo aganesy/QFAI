@@ -11,7 +11,7 @@
 - Approved option: `-`
 - Applied at: `-`
 - Superseded by: `-`
-- Blocked set: `none — all twenty rows carry the trio with an accurate value; what is open is whether the reference's vocabulary admits those values`
+- Blocked set: `none — all twenty-one rows carry the trio with an accurate value; what is open is whether the reference's vocabulary admits those values`
 
 ## The two classifications the reference offers
 
@@ -107,6 +107,35 @@ grammar of "a `TDD-NNNN`, a `DR-NNNN`, a named artifact and the property it alre
 an earlier change in this run identified by its change number" covers every case measured here and
 leaves nothing to invent.
 
+### And twenty-one, not twenty — the third filing of the same off-by-N
+
+**Added 2026-08-20 after round 6.** Both reviewers counted the ledger and found **21**
+`Satisfied-by:` cells against this CR's twenty. Traced:
+
+```text
+90a33ee5   TDD-0012 has no trio     total 20
+76ade4dd   TDD-0012 gains its trio  total 21
+```
+
+`76ade4dd` is the commit that added the "twenty rows, not thirteen" correction above. So the same
+commit that fixed 13 -> 20 created the 21st member, and the correction was stale the moment it
+landed. Thirteen, then twenty, then twenty-one: three filings, three wrong counts, each one
+introduced by the fix for the previous.
+
+The cause is structural and worth naming rather than apologising for: a count maintained in prose
+about a population the same commit is changing cannot be right. The cross-check in step 3 below is
+now written as a rule rather than a number, so the next reader derives it instead of trusting it.
+
+`TDD-0012` belongs to **class A** — production state predating the row. Its `Satisfied-by` names the
+pre-existing `ci.yml` at the change-8 base, where the `lint` and `build` jobs carried neither a
+condition nor a `needs` list, which is exactly what the row asserts. So the classification becomes:
+
+| class                                                       | rows                                                                                                   |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **A — production state predating this spec** (13)           | `0012`, `0024`, `0026`, `0036`, `0038`, `0041`, `0042`, `0043`, `0055`, `0056`, `0068`, `0080`, `0082` |
+| **B — the no-behaviour seam, or the absence it leaves** (4) | `0004`, `0078`, `0079`, `0081`                                                                         |
+| **C — an earlier change of THIS run** (4)                   | `0018`, `0025`, `0031`, `0075`                                                                         |
+
 ## Options
 
 1. **Add a third classification: "obligation already satisfied by pre-existing production state".**
@@ -167,10 +196,11 @@ alongside it?
      `Satisfied-by` names an artifact must have that cell rewritten to the approved form. That is a
      cell edit, not a status reset — the `Evidence` cell is unconditionally editable under the drift
      protocol.
-3. Cross-check after applying: re-grep the ledger for `Satisfied-by:` and confirm **twenty** cells.
-   Thirteen was the count when this CR was filed and it was already stale by the next commit — see
-   the correction above. Twenty is the number a compliant tree holds today; if it has moved again,
-   re-derive it from the ledger rather than from this line.
+3. Cross-check after applying, as a RULE rather than a number: every `refactor` row whose
+   `Evidence` cell contains `Satisfied-by:` must also contain `Falsifiability command:` and
+   `Falsifiability result:`, and no such row may also carry a `RED command`. Three counts have been
+   written into this CR and all three were stale within a commit — 13, then 20, then 21 — so the
+   number is not the check. Derive it from the ledger.
 
 ## Resolution
 

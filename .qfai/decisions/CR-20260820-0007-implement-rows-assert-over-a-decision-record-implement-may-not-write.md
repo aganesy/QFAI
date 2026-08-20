@@ -11,7 +11,7 @@
 - Approved option: `-`
 - Applied at: `-`
 - Superseded by: `-`
-- Blocked set: `spec-0017 TDD-0032, TDD-0033, TDD-0034, TDD-0035` unconditionally; `TDD-0052, TDD-0066, TDD-0067, TDD-0074, TDD-0075` under options 2 and 3 only (see the two tables below)
+- Blocked set: `spec-0017 TDD-0032, TDD-0033, TDD-0034, TDD-0035, TDD-0052, TDD-0066, TDD-0067, TDD-0074, TDD-0075` — all nine, held while this CR is open
 
 ## The prohibition, quoted
 
@@ -148,11 +148,14 @@ leaving them off meant option 2 could reset rows the operator never approved res
 | `TDD-0074` | `DR-0017-0007` | unaffected     | reset                               |
 | `TDD-0075` | `DR-0017-0007` | unaffected     | reset                               |
 
-They are **conditionally** in the blocked set: option 1 ratifies the records they read and touches
-nothing, options 2 and 3 delete or relocate those records and every one of the five stops being
-satisfiable. That distinction is the reason they were omitted and the reason omitting them was
-wrong — a conditional member is still a member, and the condition belongs in the table rather than
-in the author's head.
+**They are in the blocked set NOW, unconditionally, and the "conditional" framing was wrong.**
+Round 6's `completion-reviewer` corrected it: the halt operates _while_ `Status: open` — exactly
+while the option is unknown — and `drift-protocol.md` step 1 settles the tie: "when the dependency
+is arguable, it is dependent." All nine rows are held from `done` today, not five of them
+conditionally.
+
+The table's `under option 1` column is still useful, but it describes what happens **after** the CR
+is decided, not what is in force. Read it as a step-5 sweep forecast, not as the blocked set.
 
 ### Three new decision records, not five
 

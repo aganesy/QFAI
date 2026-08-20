@@ -103,8 +103,17 @@ claim that they can be retrieved is what was wrong.
 > So the honest statement is narrower than the one above. Where literal bytes are recorded, the
 > hash checks a reconstruction. Where only a description is recorded, the load-bearing record is the
 > **assertion locations** — which row reddened, at which line and column — and the hash is a
-> provenance stamp on bytes that no longer exist anywhere. Neither is retrievable; only the first is
-> verifiable.
+> provenance stamp on bytes that no longer exist anywhere.
+>
+> **Narrowed once more, 2026-08-20 after round 6.** `qa-gatekeeper` went a step further and it is
+> right: the one table that records literal needle and replacement text records its mutant column
+> as `(uncommitted tree)`, with **no hash at all**. So literals and hashes never co-occur anywhere
+> in this record, and the fingerprint is inert in **all sixteen** tables rather than in fifteen.
+> There is no table where a reader could recompute the hash from the bytes, because the only table
+> with bytes has no hash to recompute.
+>
+> What survives, and it is less than the paragraph above implied: the assertion locations and the
+> mutation descriptions are the whole record. The hashes are provenance and nothing more.
 
 ## Cross-spec obligations
 
@@ -3171,6 +3180,110 @@ The three blocking agent verdicts were not obtained, so `Status` is `refactor`. 
 checkpoint is not attempted: step 4's clause 3 remains, for the reason `CR-20260818-0006` is open
 against — see the corrections section near the top of this record for why step 2 is no longer part
 of that answer.
+
+## Round 6 — the oracles for the claims round 5 and 6 rewrote
+
+**Added 2026-08-20.** `qa-gatekeeper` found that `68beb10d` rewrote `TC-0017-0068`'s and
+`TC-0017-0079`'s assertions and **touched no evidence file**, so each row's recorded oracle had run
+against an assertion that commit deleted. It also noted that the oracles I reported for that work
+"appear nowhere in the evidence — that record exists only in the implementing agent's own prose".
+
+Both are correct, and the second is the more serious: an oracle described in a commit message is not
+evidence. Round 6 rewrote three of the same claims again, so the rounds are recorded together here
+with the mutation each round applied and the result measured.
+
+### `TC-0017-0079` — the loader-invisibility claim, three versions
+
+The claim forbids one thing: the mapping document becoming visible to the layer-policy reader. Two
+versions read TEXT and neither could see the change it existed to forbid.
+
+| version  | what it asserted                                          | outcome                                                 |
+| -------- | --------------------------------------------------------- | ------------------------------------------------------- |
+| round 4  | `expect(MAPPING).not.toBe(CATALOG)`                       | two constants defined twenty lines apart; unfalsifiable  |
+| round 5  | the loader's source must not contain the mapping filename  | the catalog's own name occurs SIX times there            |
+| round 6  | `path.join(...)` argument lists only                       | `[^)]*` stops at the first `)`; `path.resolve` unmatched |
+| **now**  | run `loadLayerPolicy` and inspect its tag set              | behavioural                                              |
+
+The current version builds a temp assistant tree holding the real catalog and the real mapping
+document with a `layer-quantum` token the catalog does not carry, calls `loadLayerPolicy`, and
+asserts the policy file was resolved, that the bogus token is absent from `tags`, and that no
+`QFAI-SPACK-091` drift appeared.
+
+Oracle rounds, each planted alone into `packages/qfai/src/core/layerPolicy.ts` and reverted with a
+byte comparison:
+
+| id           | mutation                                                     | result                                                                |
+| ------------ | ------------------------------------------------------------ | --------------------------------------------------------------------- |
+| `X1`         | the resolution gains a nested call: `path.join(path.dirname(…), …, MAPPING)` | **REDDENS** — `the loader must not read test-layers-ci-lanes.md` |
+| `X2`         | `path.resolve` instead of `path.join`                        | **REDDENS**                                                            |
+| `X3`         | the filename built from `["test-layers","ci","lanes"].join("-")` | **REDDENS**                                                        |
+| `X4-control` | a comment naming the mapping file                            | **nothing**                                                            |
+
+`X1`, `X2` and `X3` are the three mutations round 6 measured the text version staying GREEN under.
+The behavioural version also loses a false positive the text version had: extracting the filename to
+a constant is behaviour-preserving and reddened the round-6 claim.
+
+### `TC-0017-0068` — the retry scan, two versions
+
+| version | what it asserted                                       | outcome                                        |
+| ------- | ------------------------------------------------------ | ---------------------------------------------- |
+| round 5 | `retr(y\|ies)\s*[:=]` over whole files                  | `--retry 2` has a space; caught only `--retry=2` |
+| round 6 | two patterns, command text gathered structurally        | line filter selected comments; prose reddened it |
+| **now** | `jobs[*].steps[*].run` from the parsed document          | structural, comments stripped per body          |
+
+| id           | mutation                                                        | result       |
+| ------------ | --------------------------------------------------------------- | ------------ |
+| `Y1-control` | a comment inside a `run:` body documenting the prohibition        | **nothing**  |
+| `Y2-control` | an `env:` entry named `RETRIES`                                   | **nothing**  |
+| `Y3`         | `--retry 2` appended to the matrix invocation in `ci.yml`          | **REDDENS**  |
+| `Y4`         | `--retry 2` appended to `release.yml`'s `pnpm ci:gate`             | **REDDENS**  |
+
+`Y1` and `Y2` are the two false positives round 6 measured. `Y4` is the site round 6 found unscanned:
+`release.yml` runs `pnpm ci:gate`, which runs the suite.
+
+### `TC-0017-0010` — the classifier's executable branch
+
+The branch was added in round 5 and round 6 measured that **reverting it reddened nothing**: the only
+reason assertion was `/executable/i`, which matches the pre-repair string too, and nothing asserted
+`source path`. A production `ci.yml` change no test could see.
+
+| id   | mutation                                                       | result                                                                 |
+| ---- | -------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `Z1` | the whole repair reverted — executable test before the documentation test, with its old reason string | **REDDENS on three assertions**: the executable reason, the `source path` reason, and the `not.toMatch(/executable/i)` on a source path |
+
+Verdicts were unaffected by the repair either way — round 6 confirmed 0 verdict changes across 20
+path classes by running both extracted programs side by side. Only the stated reason moved, which is
+why the three assertions are all about `reason`.
+
+### `TC-0017-0014` — two claims removed rather than repaired
+
+No oracle, because there is no claim left to redden. The `declared <= reachable` comparison round 5
+added was the same tautology as the `declared <= jobs.length` it replaced: `hasDeclaredPermissions`
+is the first disjunct of `hasReachablePermissions`, so containment holds by construction. Measured
+over this tree: jobs 12, declared 4, reachable 12 — and `reachable === jobs.length` made the two
+forms numerically identical.
+
+The companion claim `reachable - declared > 0` reddens the day every job declares its own permission
+block, which is a hardening. Both deleted; `TC-0017-0015` owns that discrimination on fixtures
+against the lane's exported predicates.
+
+### `TC-0017-0057` / `0058` / `0059` — the declaration helper, corrected twice
+
+No oracle: these are fidelity fixes to a fixture, not claim changes. Measured instead.
+
+```text
+round 5   `as Declaration` replaced by a REBUILD
+          -> planting stripped `why` and `verificationSetNote` from every context
+round 6   fixed at the context level, root still stripped
+          -> `{ contexts }` dropped the top-level `$comment`; 2692 bytes -> 1533
+now       `{ ...parsed, contexts: raw.filter(isContext) }`
+          -> measured: root keys and context keys both survive a plant, nothing lost
+```
+
+And `isContext` now verifies what its type claims. Round 6 measured that the previous version
+accepted a context with no `verificationSet`, after which the first read raised
+`TypeError: Cannot read properties of undefined` — so a row planting that shape would have crashed
+rather than failed its claim.
 
 ## Test results summary
 

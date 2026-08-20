@@ -5,13 +5,44 @@
 - Raised by: `/qfai-implement orchestrator, spec-0017; raised after completion-reviewer found 69 of 74 promoted rows without a section of their own`
 - Raised at: `2026-08-20T00:00:00Z`
 - Class: `intent`
-- Status: `open`
+- Status: `superseded`
 - Approved by: `-`
 - Approved at: `-`
 - Approved option: `-`
 - Applied at: `-`
-- Superseded by: `-`
+- Superseded by: `CR-20260820-0009`
 - Blocked set: `none — the pointer contract is satisfied for all 74 rows and every anchor resolves; what is open is whether the SECTION contract can be met at all in this shape`
+
+## SUPERSEDED — the premise was false
+
+**2026-08-20, after round 6.** `completion-reviewer` was asked to challenge this CR and refuted it at
+the citation. The argument rested on:
+
+> "The commands are file-scoped, because that is what `references/relevant-test-suite.md` asks for."
+
+That file's opening line is "What 'run the relevant test suite' resolves to in **Phase: Refactor step
+2**". It governs Refactor, not Red. The rule that governs Red says the opposite — `SKILL.md` Phase Red
+step 4: **"Observe each `Selector` entry's failure separately; one aggregate run is not a valid RED
+observation."**
+
+So there is no rule requiring one RED/GREEN pair per change, and there is one forbidding the
+aggregate. Under a per-row RED there is no "one pair written seven times" — there are seven distinct
+commands with seven distinct outputs, and the per-item section contract is satisfiable with no
+conflict at all. The reviewer also corrected the reading of "the single home": the clause contrasts
+the section with the LEDGER CELL ("because a GFM cell cannot hold a newline or a bare `|`"), not one
+location per run.
+
+A second claim in this CR was also false. § "What is not the problem" asserted "the per-item FIELD
+contract … The fields exist per row". They do not: `Refactor verify` is six pairs for 74 rows and the
+reviewer verdicts are one global table, both per-item fields. That paragraph is what would have
+stopped an operator noticing.
+
+Superseded by **`CR-20260820-0009`**, which files what was underneath this: 44 promoted rows rest on
+an aggregate run the contract says is not a valid RED observation. Review finding B7 — seven cells
+quoting one file-scoped RED, one of them never part of it — was the symptom of that, and two rounds
+were spent repairing the symptom.
+
+Nothing here needs approving. The decision this CR asked for does not exist.
 
 ## The requirement, quoted
 
