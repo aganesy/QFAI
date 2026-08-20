@@ -1669,3 +1669,156 @@ measurement, not a step, and its outcome may legitimately be to keep the rebuild
 
 The three blocking agent verdicts were not obtained, so `Status` is `refactor` for all three rows. The
 item-12 checkpoint is not attempted, for the reasons recorded under changes 3 through 8.
+
+## After the nine — the required-context job's integrity and upload hygiene (TDD-0036, TDD-0038, TDD-0039, TDD-0040)
+
+Not part of `10_Plan.md`'s nine sequenced changes. These are `AC-0017-0016` and `AC-0017-0017`, and they
+became landable once changes 7 through 9 settled what the required-context job is and what it performs.
+Base revision `4ec429e3`.
+
+### `BR-0017-0032` is explicit about what it is NOT satisfied by
+
+"Any split, fold or restructuring MUST leave a job of the exact name `build` that is unconditional and
+that still performs — or depends on jobs that perform — every item of its enumerated verification set.
+**Keeping the name alone is explicitly not sufficient.**"
+
+That last sentence exists because the cheap way to satisfy a required status context is to keep a job
+with the right name and move its work elsewhere: the check stays green, the repository setting stays
+valid, and nothing is verified. So `TDD-0036` asserts all three properties in one row — name, absence
+of a condition, and every item still reachable — and oracle `R1`/`R2`/`R3` take one each.
+
+**The "or depends on" clause is modelled but not exercised, and that is worth saying.** `reachableSteps`
+walks the transitive `needs` closure, so an item that migrated into a job `build` needs would still
+count. No such job exists: `build` declares an empty `needs` set, and `BR-0017-0012` forbids giving it
+one that can be skipped. So the clause is implemented against a case this tree cannot currently produce.
+Leaving it out would have been simpler and wrong — the rule says the closure counts, and a row that
+asserted only the job's own steps would reject a legal restructuring.
+
+### What `TDD-0038` adds over `TC-0017-0073`, proven rather than argued
+
+Change 7 already forbade a toothless verification item, and its claim tests
+`continue-on-error === true`. That key accepts an **expression**, so
+`${ github.event_name == 'push' }` is neither `true` nor `false` at parse time: it slips past an
+equality check and does exactly what `BR-0017-0033` forbids on the runs where it evaluates true.
+
+`TDD-0038` therefore rejects the key's PRESENCE on a verification item, not a particular value. A
+verification item has no legitimate reason to carry it at all. Oracle `R4` and `R5` are the pair that
+settles whether this is duplication:
+
+```text
+R4  continue-on-error: true                              -> reddens :1438 AND :782 (both rows)
+R5  continue-on-error: ${ github.event_name == 'push' } -> reddens :1438 ONLY
+```
+
+The expression form is invisible to the older row. Without `R5` the two rows would look like the same
+claim written twice.
+
+### The two rows with a real RED, and the production change
+
+`TDD-0039` and `TDD-0040` failed on assertions before the edit: the upload carried `if: always()`, no
+`if-no-files-found`, and `retention-days: 14`.
+
+- **`always()` to `!cancelled()`.** The difference is a cancelled run. The upload is most useful when
+  the job FAILED and worth nothing when nobody waited for the result; `always()` pays for both.
+- **`if-no-files-found: warn`.** The step that produces the report tolerates its own failure, so the
+  files may legitimately be absent. Without this the upload fails the job for something that is not a
+  verification failure — and the job it would fail is the one carrying the required status context.
+- **Retention 14 to 7.** `BR-0017-0034` says at most seven. Asserted as a boundary in both directions,
+  because an ABSENT value is not a pass either: the action's own default is ninety days, so removing
+  the key is a regression that a "less than or equal to seven" check alone would accept as `undefined`.
+
+The adjacent `Run qfai report (optional)` step keeps its `if: always()`. `BR-0017-0034` governs the
+upload, no row asserts the report step, and changing production behaviour that no test covers is the
+move this slice has spent nine changes not making.
+
+### The pipe hazard recurred, in the same shape
+
+A ledger Evidence cell quoted a shell fragment containing two pipe characters, and the row split into
+twelve fields instead of ten — `markdownlint` then reported one error and the table realigned around
+the malformed row. Second occurrence; change 6 recorded the first and built the repair that rebuilds a
+row from its first nine fields rather than editing cell 8 in place, which is what fixed it here in one
+pass. The cell now describes the behaviour instead of quoting the operator.
+
+### RED and GREEN
+
+- **RED command**, from `packages/qfai`:
+  `pnpm exec vitest run tests/scripts/ownWorkflowTopology.test.ts`
+- **RED result**: `Tests 2 failed | 24 passed (26)`, exit 1 — `TDD-0039` on three assertions and
+  `TDD-0040` on one, no load error. `TDD-0036` and `TDD-0038` passed, so
+  `RED failure mode: falsifiability` applies to those two.
+- **GREEN result**: same command, `Tests 26 passed (26)`.
+
+### Oracle proof — ten rounds
+
+| id | mutation | mutant | reddens |
+| --- | --- | --- | --- |
+| `R1` | the required-context job is renamed, so the repository setting stops resolving | `34b1da53` | `:1397:8` — TDD-0036 CLAIM 1 — a job of the exact name `build` must exist; `:1415:8` — TDD-0036 CLAIM 3 — every verification item must stay within reach (plus 10 location(s) in earlier rows) |
+| `R2` | the required-context job gains a condition, and a skipped job reports success | `7c9201e5` | `:1403:8` — TDD-0036 CLAIM 2 — the required-context job must carry no condition (plus 2 location(s) in earlier rows) |
+| `R3` | one verification item leaves the job entirely — the name kept, the work moved | `d89541c6` | `:1415:8` — TDD-0036 CLAIM 3 — every verification item must stay within reach (plus 1 location(s) in earlier rows) |
+| `R4` | a verification item is weakened with a literal continue-on-error | `02762362` | `:1438:8` — TDD-0038 — no verification item may carry `continue-on-error` (plus 1 location(s) in earlier rows) |
+| `R5` | a verification item is weakened with an EXPRESSION, which an equality check misses | `ce122dc8` | `:1438:8` — TDD-0038 — no verification item may carry `continue-on-error` |
+| `R6` | the upload goes back to always(), so a cancelled run still uploads | `c80aa15d` | `:1460:12` — TDD-0039 CLAIM 1 — the upload must not run on a cancelled run; `:1463:8` — TDD-0039 CLAIM 1 — and must still run when the job failed |
+| `R7` | the missing-file tolerance is dropped, so an absent report fails the required-context job | `a6d19538` | `:1473:8` — TDD-0039 CLAIM 2 — a missing report must not fail the job |
+| `R8` | retention crosses the boundary by one day | `708e4d24` | `:1496:8` — TDD-0040 — retention must be declared and at most seven days |
+| `R9` | retention is removed, which is not a pass — the action defaults to ninety days | `6544679c` | `:1496:8` — TDD-0040 — retention must be declared and at most seven days; `:1497:75` — TDD-0040 — and must be a positive number of days |
+| `R10-control` | a comment-only edit inside the upload block | `e5b61bde` | **nothing new** |
+
+`R1` renames the required-context job and reddens twelve locations, because several helpers resolve it
+by name and throw. Same shape as change 9's `R3`, and the same point: a rename of a
+repository-settings surface is not a quiet change.
+
+### The suite, and the slice that failed
+
+| script | test files | tests | wall clock |
+| --- | --- | --- | --- |
+| `test:core` | 122 passed (122) | 1587 passed | 2 skipped (1589) | 148.2s |
+| `test:unit` | 43 passed (43) | 266 passed (266) | 13.5s |
+| `test:validators` | 46 passed (46) | 351 passed (351) | 22.4s |
+| `test:integration` | 1 failed | 123 passed | 4 skipped (128) | 1 failed | 861 passed | 19 skipped (881) | 78.0s |
+| `test:e2e` | 74 passed | 4 skipped (78) | 891 passed | 16 skipped (907) | 45.1s |
+| `test:cli` | 11 passed (11) | 321 passed (321) | 99.7s |
+| `test:scripts` | 10 passed (10) | 114 passed (114) | 13.3s |
+
+Total 420.2s. **Six slices green and `integration` failed**, and the failure is not this change's.
+It is recorded here rather than re-run away because what it turned up matters more than this commit.
+
+### The declared worker value of ten makes the integration slice flaky, measured
+
+The failing test is `tests/integration/shippedWorkflowDetection.test.ts`, `TC-0003-0039` — a
+**`spec-0003`** row about the SHIPPED workflow's detection, and it does not read the file this change
+touched (grep for the own `ci.yml` in it returns zero). All three of its cases failed with
+`Test timed out in 15000ms`; none failed an assertion.
+
+Isolation and then attribution, in that order:
+
+```text
+the file alone                                    10 passed          (so: not broken)
+the integration slice, workers=10  conc=10         3 timeouts        (sweep, then again alone)
+the integration slice, workers=10  conc=5          3 timeouts        (so: not the concurrency axis)
+the integration slice, workers=4   conc=5        862 passed          (so: the WORKER axis)
+```
+
+This machine reports fourteen logical CPUs. The failing describe builds temporary git repositories and
+runs several git commands per case against a fifteen-second timeout; ten forks oversubscribe enough that
+it does not finish. The file uses no `.concurrent`, which is why the concurrency axis makes no
+difference and the worker axis makes all of it.
+
+So change 6's declared starting value of ten is the cause, it is load-dependent — the sweeps under
+changes 6, 7, 8 and 9 were all green at ten — and load-dependent is what `BR-0017-0050` means by
+"flakier".
+
+**Nothing is changed here in response.** `BR-0017-0048` makes ten the user's declared starting value and
+`BR-0017-0051` puts revising it behind the user's sign-off: "no agent may substitute a different
+starting value on the strength of its own measurement." Setting a CI-side override instead would be
+adopting a value by another name, which `BR-0017-0049` gates on a timing artifact over the LARGEST
+project — `core`, not `integration` — with one project per pull request and three green runs recorded.
+Raising the fifteen-second timeout would mask contention, which is the family `BR-0017-0052` rules out.
+
+Worth adding for whoever decides: GitHub-hosted runners are commonly four-CPU, so ten forks there
+oversubscribe considerably harder than they do on the fourteen measured above. This is not a
+this-machine-only observation.
+
+### Gate items NOT satisfied
+
+The three blocking agent verdicts were not obtained, so `Status` is `refactor` for all four rows. The
+item-12 checkpoint is not attempted, for the reasons recorded under changes 3 through 9.

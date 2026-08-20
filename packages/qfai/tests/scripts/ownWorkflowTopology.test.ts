@@ -64,6 +64,10 @@
 // QFAI:SPEC-0017:TC-0017-0041
 // QFAI:SPEC-0017:TC-0017-0042
 // QFAI:SPEC-0017:TC-0017-0043
+// QFAI:SPEC-0017:TC-0017-0036
+// QFAI:SPEC-0017:TC-0017-0038
+// QFAI:SPEC-0017:TC-0017-0039
+// QFAI:SPEC-0017:TC-0017-0040
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -1311,5 +1315,185 @@ describe("TC-0017-0043 (TDD-0043): selection creates, removes and renames no che
         "no check name may be created, removed or renamed — each one is a repository setting no agent can configure",
       )
       .toEqual([...CI_CHECK_NAMES].sort());
+  });
+});
+
+// ── the required-context job's integrity, and upload hygiene ─────────────────
+//
+// `BR-0017-0032` is unusually explicit about what it is not satisfied by: "Any split, fold
+// or restructuring MUST leave a job of the exact name `build` that is unconditional and
+// that still performs — or depends on jobs that perform — every item of its enumerated
+// verification set. **Keeping the name alone is explicitly not sufficient.**"
+//
+// That sentence exists because the cheap way to satisfy a required status context is to
+// keep a job with the right name and move its work elsewhere. The check stays green, the
+// setting stays valid, and nothing is verified. So `TDD-0036` asserts all three properties
+// together, and the "or depends on" clause is modelled rather than ignored: an item may
+// migrate to a job `build` needs, and that is legal.
+
+/** The exact name `BR-0017-0032` requires. A literal — the rule is about this string. */
+const REQUIRED_CONTEXT_NAME = "build";
+
+/**
+ * The items of the required-context job's enumerated verification set.
+ *
+ * The same literals `TC-0017-0073` pins, restated here on purpose rather than imported
+ * from that row: `BR-0017-0060` and `BR-0017-0032` are different obligations over the same
+ * list, and a shared constant would let one row's edit silently satisfy the other.
+ */
+const VERIFICATION_SET = [
+  "Run build & pack verification",
+  "Sanity grep — no internal spec IDs or version markers leak (post-build)",
+  "QFAI self-validate this repo (dogfooding — TDD gates)",
+  "QFAI self-validate this repo (dogfooding — SDD gates)",
+  "QFAI self-validate this repo (dogfooding — full profile)",
+  "Run qfai validate gate (fail on error)",
+] as const;
+
+/** Every step of one job, narrowed. */
+function stepsOf(jobId: string): Record<string, unknown>[] {
+  const job = ciJobs()[jobId];
+  if (job === undefined) {
+    throw new Error(`ci.yml declares no \`${jobId}\` job`);
+  }
+  const steps = job["steps"];
+  return Array.isArray(steps) ? steps.filter(isRecord) : [];
+}
+
+/**
+ * The steps of the required-context job and of every job it transitively needs.
+ *
+ * This is what makes `BR-0017-0032`'s "or depends on jobs that perform" clause real rather
+ * than decorative: an item that moved into a dependency still counts, and one that moved
+ * into an unrelated job does not.
+ */
+function reachableSteps(jobId: string): { jobId: string; step: Record<string, unknown> }[] {
+  const jobs = ciJobs();
+  const seen = new Set<string>();
+  const out: { jobId: string; step: Record<string, unknown> }[] = [];
+  const walk = (id: string): void => {
+    if (seen.has(id)) return;
+    seen.add(id);
+    const job = jobs[id];
+    if (job === undefined) return;
+    for (const step of stepsOf(id)) out.push({ jobId: id, step });
+    for (const need of needsOf(job)) walk(need);
+  };
+  walk(jobId);
+  return out;
+}
+
+const named = (step: Record<string, unknown>): string =>
+  typeof step["name"] === "string" ? step["name"] : "(unnamed)";
+
+describe("TC-0017-0036 (TDD-0036): the required-context job keeps its name and unconditionality", () => {
+  it("keeps the exact name, no condition, and every verification item within reach", () => {
+    const jobs = ciJobs();
+
+    // CLAIM 1 — the exact name. `BR-0017-0032` says "a job of the exact name", so this is a
+    // string equality against the key set and not a search for something build-like.
+    expect
+      .soft(Object.keys(jobs), `a job of the exact name \`${REQUIRED_CONTEXT_NAME}\` must exist`)
+      .toContain(REQUIRED_CONTEXT_NAME);
+
+    // CLAIM 2 — unconditional. A skipped job reports success to branch protection, so a
+    // condition here converts the gate into a rubber stamp.
+    expect
+      .soft(jobs[REQUIRED_CONTEXT_NAME]?.["if"], "the required-context job must carry no condition")
+      .toBeUndefined();
+
+    // CLAIM 3 — and every item is still reachable. This is the half the rule says the name
+    // alone does not give: the cheap way to satisfy a required context is to keep the name
+    // and move the work, leaving a green check over nothing.
+    const reachable = new Set(reachableSteps(REQUIRED_CONTEXT_NAME).map((s) => named(s.step)));
+    const missing = VERIFICATION_SET.filter((item) => !reachable.has(item));
+    expect
+      .soft(
+        missing,
+        "every verification item must be performed by the required-context job or by a job it needs",
+      )
+      .toEqual([]);
+  });
+});
+
+describe("TC-0017-0038 (TDD-0038): no verification-set item is weakened by continue-on-error", () => {
+  it("leaves no verification item able to fail without failing the job", () => {
+    const weakened = reachableSteps(REQUIRED_CONTEXT_NAME)
+      .filter(({ step }) =>
+        VERIFICATION_SET.includes(named(step) as (typeof VERIFICATION_SET)[number]),
+      )
+      .filter(({ step }) => step["continue-on-error"] !== undefined)
+      .map(({ jobId, step }) => `${jobId}: ${named(step)} = ${String(step["continue-on-error"])}`);
+
+    // `!== undefined` and not `=== true`, deliberately. `continue-on-error` accepts an
+    // expression, so `${{ github.event_name == 'push' }}` is neither `true` nor `false` at
+    // parse time and would slip past an equality check while doing exactly what
+    // `BR-0017-0033` forbids on the runs where it evaluates true. A verification item has no
+    // legitimate reason to carry the key at all.
+    expect
+      .soft(
+        weakened,
+        "a verification item carrying continue-on-error keeps performing while losing the ability to fail the job",
+      )
+      .toEqual([]);
+  });
+});
+
+describe("TC-0017-0039 (TDD-0039): the report upload skips on cancellation and ages out sooner", () => {
+  it("declines to run on a cancelled run, tolerates a missing file, and expires within a week", () => {
+    const uploads = stepsOf(REQUIRED_CONTEXT_NAME).filter(
+      (step) => typeof step["uses"] === "string" && step["uses"].includes("upload-artifact"),
+    );
+    expect(uploads.length, "the build job must declare exactly one artifact upload").toBe(1);
+    const [upload] = uploads;
+    if (upload === undefined) return;
+    const withBlock = isRecord(upload["with"]) ? upload["with"] : {};
+
+    // CLAIM 1 — not `always()`. `always()` runs on a CANCELLED run too, which spends runner
+    // minutes uploading a report of a run nobody waited for. `!cancelled()` keeps the
+    // upload on failure — where it is most useful — and drops it on cancellation.
+    expect
+      .soft(
+        String(upload["if"] ?? "(none)"),
+        "the upload must not run on a cancelled run; always() does",
+      )
+      .not.toMatch(/^\s*(?:\$\{\{\s*)?always\(\)/);
+    expect
+      .soft(String(upload["if"] ?? "(none)"), "the upload must still run when the job failed")
+      .toMatch(/cancelled\(\)/);
+
+    // CLAIM 2 — a missing report is tolerated. The report step ends in `|| true`, so the
+    // files may legitimately be absent; without this the upload fails the job for a reason
+    // that is not a verification failure.
+    expect
+      .soft(
+        String(withBlock["if-no-files-found"] ?? "(unset)"),
+        "a missing report must not fail the job — the step that produces it may legitimately not",
+      )
+      .toMatch(/^(?:warn|ignore)$/);
+  });
+});
+
+describe("TC-0017-0040 (TDD-0040): retention 7 passes, retention 8 and an unconditional run fail", () => {
+  it("holds the retention boundary at seven days", () => {
+    const uploads = stepsOf(REQUIRED_CONTEXT_NAME).filter(
+      (step) => typeof step["uses"] === "string" && step["uses"].includes("upload-artifact"),
+    );
+    const [upload] = uploads;
+    expect(upload, "the build job must declare an artifact upload").not.toBeUndefined();
+    if (upload === undefined) return;
+    const withBlock = isRecord(upload["with"]) ? upload["with"] : {};
+
+    // The boundary, asserted as a boundary. `BR-0017-0034` says "at most seven days", so
+    // seven passes and eight fails — and an ABSENT value is not a pass either, because the
+    // action's own default is ninety.
+    const retention = withBlock["retention-days"];
+    expect
+      .soft(
+        typeof retention === "number" ? retention : `not a number: ${String(retention)}`,
+        "retention must be declared and at most seven days; the action defaults to ninety",
+      )
+      .toBeLessThanOrEqual(7);
+    expect.soft(retention, "retention must be a positive number of days").toBeGreaterThan(0);
   });
 });

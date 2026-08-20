@@ -413,11 +413,21 @@ jobs:
           node packages/qfai/dist/cli/index.mjs report --root tmp/pack/sandbox/out --run-validate || true
 
       - name: Upload qfai artifacts
-        if: always()
+        # `!cancelled()` and not `always()`. The difference is a cancelled run: the
+        # upload is most useful when the job FAILED, and worth nothing when nobody
+        # waited for the result. `always()` spends runner minutes on both.
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: qfai-report
-          retention-days: 14
+          # Seven days, not the action's default of ninety. These are diagnostic
+          # artifacts for a pull request under review; nothing reads them a week later.
+          retention-days: 7
+          # The report step above ends in `|| true`, so its files may legitimately be
+          # absent. Without this the upload fails the job for something that is not a
+          # verification failure — and the job it would fail is the one carrying the
+          # required status context.
+          if-no-files-found: warn
           path: |
             tmp/pack/sandbox/out/.qfai/report/validate.json
             tmp/pack/sandbox/out/.qfai/report/validate.log
