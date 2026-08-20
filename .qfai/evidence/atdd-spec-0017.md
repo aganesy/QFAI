@@ -177,7 +177,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
 
 ## Work performed (what changed, where)
 
-- **new** `packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts` — nine tests across eight
+- **new** `packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts` — 9 tests across 8
   annotated describes, one describe per covered user story, plus a block comment where
   `US-0017-0007`'s was, recording why the claim was withdrawn rather than leaving its absence to be
   inferred
@@ -721,7 +721,7 @@ tree that carries every round-4 repair:
 
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
-pnpm -C packages/qfai test:e2e                  1418 passed / 16 skipped, exit 0
+pnpm -C packages/qfai test:e2e                  1422 passed / 16 skipped, exit 0
 vitest --project integration --project assets --project unit
                                                 1186 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
@@ -731,9 +731,18 @@ node ... validate --profile atdd --spec 0017     info=2 warning=0 error=2
 node ... validate --profile full                 error=4  (see § "The full profile")
 ```
 
-The e2e total moved 1420 -> 1418 and the rest moved 1174 -> 1186 for one reason: round 4 moved the
-build classifier out of the E2E file into `tests/helpers/buildCommand.ts`, so its two corpus tests
-left the `e2e` project and nine tests joined `unit`.
+The totals moved twice and both moves have a cause. Round 4 took the build classifier out of the E2E
+file into `tests/helpers/buildCommand.ts`, so its two corpus tests left the `e2e` project and nine
+joined `unit`: 1420 -> 1418, 1174 -> 1186. Round 5 then added
+`tests/assets/stageEvidenceCounts.test.ts` — four tests in the `assets` project, which the `test:e2e`
+invocation also runs: 1418 -> 1422.
+
+**Those two totals are the numbers this record cannot derive**, which is why they carry a statement of
+when they were measured. Everything derivable about the artifacts — per-file test counts, annotated
+describes, the recorded guard output, the named packs — is now checked by
+`packages/qfai/tests/assets/stageEvidenceCounts.test.ts` rather than typed. Five rounds each found a
+number here that the tree did not hold; correcting them one at a time did not work, and on its first
+run that test found a pack seal missing from a section this record had already reported as fixed.
 
 ### P1d's verdicts
 
@@ -831,11 +840,17 @@ Confirmed by: round 1's two independent blocking reviewers, both **REVISE**, on 
 
 ### Review packs and their seals
 
-Three packs, one per round, each sealed when its last reviewer response landed and before this record's
-verdict was written. Round 2's and round 3's were **missing their `summary.json`** until round 3 found
-it — `--profile full` reported `QFAI-REVIEW-004` / `-005` against them, masked only because the `tdd`
-step fails first on `error=2`. Written, then sealed; the same sequence round 1's pack went through, and
-this record documented that fix while leaving the next two packs in the state it described.
+**Four** packs, one per round, each sealed when its last reviewer response landed and before this
+record's verdict was written. Rounds 2 and 3 were **missing their `summary.json`** until round 3 found
+it; round 4's was missing until round 4's gatekeeper found the same thing again, this time as two live
+`--profile full` errors. Each was written, then sealed — the same sequence round 1's pack went through,
+which this record had documented while leaving the next pack in the state it described, twice.
+
+The count itself was wrong until now: this section said "Three packs" against four directories, which
+round 4's `completion-reviewer` caught. It is now derived —
+`packages/qfai/tests/assets/stageEvidenceCounts.test.ts` compares the packs this section names against
+the directories on disk, and it caught the fourth seal missing on its first run, because the edit that
+was supposed to add it aborted on a later needle and wrote nothing.
 
 ```text
 Review pack:       .qfai/review/review-20260820200000000/            (round 1)
@@ -847,6 +862,9 @@ Review pack seal:  305ffd6555799fd322db60c7afdddf1f920feb41006c2b9f1e66ac5c5983e
 
 Review pack:       .qfai/review/review-20260821000000000/            (round 3, + P1d pass 2)
 Review pack seal:  257e793b5c764a81532a01a0a422b28f2edbb986f41b0042e75a6b596d01bfd0
+
+Review pack:       .qfai/review/review-20260821020000000/            (round 4, + P1d pass 3)
+Review pack seal:  aaa2d2a6e16b2027169ec58e9419b6269af037ed4d6d632df17fdad604db35ff
 ```
 
 Serialization, stated because it is load-bearing: each manifest line is
