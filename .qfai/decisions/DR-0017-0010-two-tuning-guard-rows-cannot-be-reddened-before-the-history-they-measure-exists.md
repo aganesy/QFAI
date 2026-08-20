@@ -7,8 +7,8 @@
 - Rows: `TDD-0069`, `TDD-0070`
 - Raised by: `/qfai-atdd spec-0017`, Phase Red branch 3
 - Raised at: `2026-08-20T22:00:00Z`
-- Status: `open` — P1d returned **REVISE** twice: once on the first version and again on the
-  revision. Revised a second time below; a third re-route is owed
+- Status: `open` — P1d has returned **REVISE** three times, each time sustaining `TDD-0070`'s own
+  account and failing the record around it. Revised a third time below; a fourth re-route is owed
 
 ## Why this record exists at all
 
@@ -127,27 +127,36 @@ clause 1 — "exactly one runner project is tuned, largest first" — _is_ satis
 and _is_ falsifiable, "mutate `vitest.knobs.ts` to tune a second project ... and a test over that
 clause would redden".
 
-**That mutation is an equivalent mutant, and the repository already says so.** P1d's second pass found
-it: `vitest.knobs.ts` puts `maxWorkers` in `rootKnobs`, and its own docstring records what happened
-when a per-project worker declaration was tried — it "type-checked, it ran, it emitted no warning —
-**and it did nothing**", measured at a ratio of 0.93, which is noise. Open `CR-20260820-0003` adds that
-the runner "drops unknown project options silently". So a second tuned project cannot be declared in a
-way the runner observes, and a test over clause 1 could not be reddened by that mutation or by any
-other.
+**The mutation named was an equivalent mutant.** P1d's second pass found it: `vitest.knobs.ts` puts
+`maxWorkers` in `rootKnobs`, and its own docstring records what happened when a per-project worker
+declaration was tried — it "type-checked, it ran, it emitted no warning — **and it did nothing**",
+measured at a ratio of 0.93, which is noise. Open `CR-20260820-0003` adds that the runner "drops
+unknown project options silently".
 
-Clause 1 is therefore **degenerate rather than satisfied**: not "true of the current state and
-falsifiable", but not expressible against this runner at all. Branch 2 is unavailable for `TDD-0069` —
-which is where the first version landed, by an argument that was wrong. The correct statement is
-narrower than both: there is no satisfied state to falsify for clause 2 because the history does not
-exist, and none for clause 1 because per-project tuning is not observable.
+**And the conclusion drawn from that was also wrong, in the other direction.** The second revision
+called clause 1 "degenerate — not expressible against this runner at all", and P1d's third pass showed
+that is false: `CR-20260820-0003`'s own site table lists **`maxConcurrency`** as "each project /
+project-scoped", `vitest.knobs.ts` puts `maxConcurrency: tunable(CONCURRENCY_ENV)` in `projectKnobs`,
+and `vitest.workspace.ts` spreads it into all seven projects. A differential `maxConcurrency` on `core`
+is a one-line, runner-honoured, **per-project** parallelism change. The 0.93 measurement was about the
+worker override specifically, and reading it as covering all per-project tuning was overreach.
 
-That is the fifth vacuous claim on this spec, and it was written while applying a finding about
-half-quoting the very clause it concerns.
+**Third statement, and the narrow one: clause 1 is UNSATISFIED.** Not unfalsifiable, not degenerate —
+simply not true yet, because _no tuning change has been made_. `BR-0017-0053` and `TC-0017-0069` govern
+a tuning **change**; "exactly one runner project is tuned, largest first" has nothing to be true of
+until one is. That also means clause 1 is **falsifiable in principle**, once a change exists — so
+branch 2 becomes available for it at that point, and is unavailable now for the ordinary reason that
+the state it would check has not been created.
+
+This record has now been wrong about clause 1 three times, in three different directions, across three
+P1d passes. Recorded in full rather than replaced, because the pattern is the finding: each correction
+was written confidently, from a real citation, read one step wider than the citation supported.
 
 **And "exactly one form per row" was the wrong clause to reason from.** P1d's second pass:
 `references/red-provenance.md` § "Evidence shape" governs how many forms _one row records_, not how a
 two-clause obligation is treated. The load-bearing requirement is one line lower — branch 2 needs a
-**GREEN pair**, which clause 2 forbids. Same destination, correct grounds.
+**GREEN pair**, which clause 2 forbids. Same destination, correct grounds, and P1d's third pass
+confirmed the clause.
 
 **The treatment neither this record nor `CR-20260820-0012` considered: split the conjunction
 upstream.** `EX-0017-0053` states two obligations in one example. Split into two examples — one for

@@ -138,13 +138,14 @@ completeness, disjointness and no non-`❌` member.
 
 Sizes, derived from the table above: **A 30, B 7, C 1 — 38 cells.**
 
-**Class A — the shipped surface does not exist, so no depth is reachable.** A depth column asks how
+**Class A — property: `Status = ❌`. The shipped surface does not exist, so no depth is reachable.** A depth column asks how
 thoroughly a behaviour is exercised. Where the behaviour is absent from the adopter's tree there is
 nothing to exercise at any depth, and scoring `⚠️` would claim partial exercise of nothing. Each
 row's own section below says what is absent, what was measured, and which ledger row closes it. This
 is the honest `❌`: not "we did not test it" but "there is no it".
 
-**Class B — the E2E surface reads files and cannot run a workflow.** A state transition here means "a
+**Class B — property: `Status ≠ ❌` and the column is `State transitions` or `Combinatorial`. The
+E2E surface reads files and cannot run a workflow.** A state transition here means "a
 documentation-only push produced a narrow lane set, and the next push a wide one". A combinatorial
 cell means "these lane subsets, crossed with these change classifications, produce these skip
 decisions". Both need a **real run**; the surface this file scores is a directory that `qfai init`
@@ -158,7 +159,8 @@ Class B covers only the four rows whose surface exists. The same two columns on 
 `-0008` are class A: those rows have no surface to run, so the reason they are `❌` is the absence,
 not the harness.
 
-**Class C — a single shipped value admits no boundary.** `US-0017-0001` × `Boundary values`. The
+**Class C — property: the column is `Boundary values` on `US-0017-0001`. A single shipped value
+admits no boundary.** `US-0017-0001` × `Boundary values`. The
 detection job emits one verdict per push; there is no sequence, count or limit to sit at the edge of.
 A boundary cell over a single-valued output is not partially covered, it is inapplicable, and `❌` is
 how this matrix spells that — flagged here because it is the one `❌` in the table that no future work
@@ -183,12 +185,29 @@ runs. `E4` is a sound oracle **for the assertion** and not for the story: an ora
 can fail, and this row has no case. Scoring six category cells `❌` and the oracle `✅` is the same
 incoherence the checklist bars in the other direction.
 
-What the oracle does establish is that the assertion discriminates, and that was worth measuring
-because round 1 found it barely did: the first predicate
-(`/\b(pnpm|npm|yarn)\s+(-\S+\s+\S+\s+)?build\b/`) admitted one flag-value pair and nothing else, so
-`pnpm run build`, `npm run build`, `yarn run build`, `pnpm exec tsup` and `npx tsup` all reddened
-nothing — the idiomatic form was invisible. Round 2 rebuilt the scan around the verb and re-observed
-**10 of 10** forms reddening, with a comment naming `build` as the control that reddens nothing.
+What the oracle establishes is that the assertion discriminates — and getting that far took five
+versions of the predicate, each measured, each of the first four reported as clean by the party that
+wrote it and then broken by a corpus someone else chose:
+
+```text
+v1  one flag-value pair. `pnpm run build`, `npx tsup` and six more reddened nothing
+v2  a package-manager list plus `build` anywhere after it. Caught `npx tsc --noEmit`
+v3  `build` as a standalone shell word. 9 missed, 10 false positives; caught `rm -rf build dist`
+v4  verb plus first target. Fixed those, regressed on 20 of 23 forms v3 caught — and reported
+    `pnpm ci:build-verify` as a build purely because of the script's NAME
+```
+
+The claim previously recorded here — that round 2 "rebuilt the scan **around the verb**" — is
+withdrawn. It was not a verb anchor; it was a closed five-member package-manager list, so
+`make build`, `turbo run build`, `cargo build` and six more were invisible. And v4's naming defect is
+the one worth keeping in view: it measured how a script is *called* rather than what it *does*, which
+is the failure mode § "The finding that re-scored this matrix after round 1" names as this spec's
+recurring one.
+
+`v5` lives in `packages/qfai/tests/helpers/buildCommand.ts`: shell segments before verbs, script
+**bodies** before names — resolved in the manifest the command's directory selects — and a third
+verdict, `heuristic`, for a name-shaped match that nothing can confirm. Measured against four corpora,
+none of which this stage chose; `packages/qfai/tests/unit/buildCommand.test.ts` holds them.
 
 Closing the row is `TDD-0032` … `TDD-0035`, all four `blocked` on `CR-20260820-0007`, because their
 acceptance criteria require numbers written into `07_Decisions.md` which `/qfai-implement` may not

@@ -106,21 +106,29 @@ treat it like `TDD-0070`. Rejected on the record: it makes the wording of `EX-00
 than resolving it, and it is the reading `DR-0017-0010`'s first version implicitly took when it blamed
 "unmerged workflow changes" — which P1d showed is not the obstacle.
 
-### Option 5 — split the conjunction upstream
+### Option 5 — split the conjunction upstream, keeping clause 2's subject bound
 
 `EX-0017-0053` states **two** obligations in one example: "exactly one runner project is tuned, largest
 first" **and** "three consecutive green aggregate-verdict runs are recorded with their run identifiers
-quoted". One ledger row therefore carries a reachable half and an unreachable half, and
-`red-provenance.md` gives a row one branch. Split the example in two, and each half gets its own row,
+quoted". One ledger row therefore carries a satisfiable half and an unsatisfiable half, and
+`red-provenance.md` gives a row one branch. Split the example in two and each half gets its own row,
 its own branch and its own exit.
 
-Neither round-3 gate found this in the option set, and both named it as the treatment missing. It does
-**not** close `TDD-0069` on its own: P1d's second pass established that clause 1 is _degenerate_ against
-this runner — `vitest.knobs.ts` puts `maxWorkers` in `rootKnobs`, its docstring records that a
-per-project worker declaration "did nothing" at a ratio of 0.93, and `CR-20260820-0003` adds that the
-runner drops unknown project options silently. So clause 1's row would be unfalsifiable rather than
-blocked. What the split buys is that a reachable half stops being parked behind an unreachable one, and
-that the two failures get named separately instead of one standing for both.
+**The split must not unbind the second clause, and the first version of this option did.**
+`AC-0017-0029` reads "And **each such** pull request records three consecutive green aggregate-verdict
+runs" — the greens are _that tuning change's_ greens, which is the whole of `BR-0017-0053`'s OC-80
+rationale: batching makes an emergent race unattributable. Worded as two free-standing obligations the
+halves become independently satisfiable and the attributability guarantee is gone. P1d's third pass
+found that, and it is recoverable: clause 2's row must name the change clause 1's row records, so the
+two remain one guard in two rows rather than two guards.
+
+It does **not** close `TDD-0069` on its own. Clause 1 is **unsatisfied** — no tuning change has been
+made, so there is nothing for "exactly one project is tuned, largest first" to be true of — and clause
+2 stays behind the cycle. (An earlier version of this option called clause 1 _degenerate against this
+runner_; P1d's third pass showed that is false, since `maxConcurrency` is project-scoped per this
+repository's own `CR-20260820-0003` site table and `vitest.knobs.ts`'s `projectKnobs`. See
+`DR-0017-0010`, which has now been wrong about clause 1 three times in three directions.) What the
+split buys is that the two failures get named separately instead of one standing for both.
 
 Also an upstream `05_Examples.md` edit, so also the Drift Protocol path.
 
@@ -135,17 +143,28 @@ put to the user as what it is — narrowing the flake budget's signal to exclude
 worth specifying separately, since the cycle it removes is structural and will recur, but not as the
 vehicle for this row.
 
-**The cycle is also over-determined, which no option above closes on its own.** P1d's second pass:
-`error=2`, so clearing `QFAI-ATDD-112` still leaves `error=1` from `QFAI-ATDD-111` — which stands
-**deliberately**, because this stage withdrew `US-0017-0007`'s unearned annotation. And
-`QFAI-ATDD-112`'s eight TCs are the six `blocked` rows plus these two, so a green `build` needs three
-other CRs resolved _and_ `TC-0017-0070` annotated — which `EX-0017-0054` makes impossible pre-merge.
-Under the strict reading `TDD-0069` is blocked on `TDD-0070`. Recorded so that no option here is read
-as sufficient by itself.
+**The cycle is over-determined, and worse than the scoped numbers suggest.** Two passes of P1d found
+successively more of it:
 
-Until an option is approved, `TDD-0069` is `blocked` with `Blocked-By: CR-20260820-0012`, not
-`exception`. `execution-ledger.md` scopes `todo -> blocked` to "an upstream defect, an unresolved
-Change Request, or an unfinished row in another spec", and this is the middle one.
+- clearing `QFAI-ATDD-112` still leaves `error=1` from `QFAI-ATDD-111`, which stands **deliberately**
+  because this stage withdrew `US-0017-0007`'s unearned annotation;
+- `QFAI-ATDD-112`'s eight **scoped** TCs are the six `blocked` rows plus these two, so a green `build`
+  needs three other CRs resolved _and_ `TC-0017-0070` annotated — which `EX-0017-0054` makes impossible
+  pre-merge. Under the strict reading `TDD-0069` is blocked on `TDD-0070`;
+- and the scoped count is the wrong one to reason from. **`build` runs three UNSCOPED profiles**
+  (`ci.yml:376-428`). Unscoped, `QFAI-ATDD-111` is **12 US across five specs** and `QFAI-ATDD-112` is
+  **15 TCs across four**, re-derived here rather than taken on trust:
+
+  ```text
+  QFAI-ATDD-112, unscoped:  SPEC-0003 1   SPEC-0008 4   SPEC-0015 2   SPEC-0017 8   = 15
+  ```
+
+  `build` needs all fifteen, not eight. That is the dominant strand, it was absent from both this CR
+  and `DR-0017-0010`, and it kills **option 2** a second independent way: an exemption for _this
+  spec's_ in-flight rows would still leave **seven** TCs from three other specs failing the same gate,
+  so the cycle would not open.
+
+Recorded so that no option here is read as sufficient by itself.
 
 ## Not to be confused with
 

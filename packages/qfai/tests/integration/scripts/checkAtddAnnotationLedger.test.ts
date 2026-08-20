@@ -158,20 +158,26 @@ describe("collectTestSources", () => {
     await mkdir(real, { recursive: true });
     await writeFile(path.join(real, "linked.test.ts"), `// ${tag("0017", "0017-0001")}\n`, "utf8");
 
-    const link = path.join(dir, "link");
+    // The link must sit INSIDE the scanned directory, as an ENTRY. The first version of this test
+    // passed the link itself as the root, and `readdir` follows a root regardless of what kind of
+    // node it is — so `entry.isSymbolicLink()`, the branch under test, was never reached. Round 4's
+    // oracle caught it: disabling that branch entirely reddened nothing.
+    const scanned = path.join(dir, "scanned");
+    await mkdir(scanned, { recursive: true });
+    const link = path.join(scanned, "link");
     const { symlink } = await import("node:fs/promises");
     try {
       await symlink(real, link, "junction");
     } catch {
-      // Symlink creation can be denied on Windows without the right privilege; the guard's behaviour
+      // Creating a link can be denied on Windows without the right privilege; the guard's behaviour
       // is unchanged either way, so skipping beats a false failure.
       return;
     }
 
-    const sources = await collectTestSources(link);
+    const sources = await collectTestSources(scanned);
     expect(
       [...sources.keys()].map((file) => path.basename(file)),
-      "a linked subtree must contribute its annotations",
+      "a linked subtree, reached as an entry, must contribute its annotations",
     ).toEqual(["linked.test.ts"]);
   });
 
@@ -194,6 +200,67 @@ describe("collectTestSources", () => {
   it("returns an empty map for a tree that does not exist, rather than throwing", async () => {
     const sources = await collectTestSources(path.join(await temp(), "absent"));
     expect(sources.size).toBe(0);
+  });
+});
+
+describe("symlink cycles and the exit codes around them", () => {
+  // Round 3 added the symlink walk and a lexical `seen` set; round 4 measured that set as unreachable
+  // in every scenario and found the third `ELOOP` site unguarded — a mutual cycle still answered exit
+  // 3, "no measurement taken", and dropped a real subtree. Round 4 also noted that **nothing tested
+  // any of it**: the walk, the cycle, `ELOOP`, and exit 3 all had zero coverage while two rounds of
+  // findings were applied to them. These are those tests.
+
+  async function junction(target: string, link: string): Promise<boolean> {
+    const { symlink } = await import("node:fs/promises");
+    try {
+      await symlink(target, link, "junction");
+      return true;
+    } catch {
+      // Creating a link can be denied on Windows without the right privilege. Skipping beats a
+      // failure that says nothing about the guard.
+      return false;
+    }
+  }
+
+  it("terminates on a self-referential junction instead of descending forever", async () => {
+    const dir = await temp();
+    const real = path.join(dir, "tree");
+    await mkdir(real, { recursive: true });
+    await writeFile(path.join(real, "a.test.ts"), `// ${tag("0017", "0017-0001")}\n`, "utf8");
+    if (!(await junction(real, path.join(real, "self")))) return;
+
+    const sources = await collectTestSources(real);
+    expect(
+      [...sources.keys()].map((file) => path.basename(file)),
+      "the file is read once and the cycle does not multiply it",
+    ).toEqual(["a.test.ts"]);
+  });
+
+  it("measures around a mutual cycle rather than abandoning the walk", async () => {
+    // `x -> y`, `y -> x`, with a real annotated file beside them. Round 4's measured failure was that
+    // the whole walk was abandoned and the guard exited 3; the file must still be found.
+    const dir = await temp();
+    const root = path.join(dir, "tree");
+    const x = path.join(root, "x");
+    const y = path.join(root, "y");
+    await mkdir(root, { recursive: true });
+    await writeFile(path.join(root, "real.test.ts"), `// ${tag("0017", "0017-0002")}\n`, "utf8");
+    if (!(await junction(y, x))) return;
+    if (!(await junction(x, y))) return;
+
+    const sources = await collectTestSources(root);
+    expect(
+      [...sources.keys()].map((file) => path.basename(file)),
+      "a cycle beside a real file must not cost the real file",
+    ).toEqual(["real.test.ts"]);
+  });
+
+  it("returns none rather than throwing when a link points nowhere", async () => {
+    const dir = await temp();
+    const root = path.join(dir, "tree");
+    await mkdir(root, { recursive: true });
+    if (!(await junction(path.join(dir, "absent"), path.join(root, "dangling")))) return;
+    await expect(collectTestSources(root)).resolves.toBeInstanceOf(Map);
   });
 });
 
@@ -334,13 +401,16 @@ describe("the guard against this repository's own ledger", () => {
     // per-claim baseline committed next to the CR, which is `CR-20260820-0011` option 1's work — it
     // is where the per-story decisions get made — not a bound this test can tighten.
     const wide = checkLedger(ledger, sources);
-    // `toBe(208)` was wrong in the same way the `> 100` bound was: a legitimate new user story with
-    // a real test appends a backed claim and would have reddened it, so the assertion punished the
-    // work it exists to encourage. A floor lets the ledger grow and still catches a truncation.
-    expect(
-      wide.checked,
-      "the ledger may grow; it may not shrink below what CR-20260820-0011 measured",
-    ).toBeGreaterThanOrEqual(208);
+    // The claim count is deliberately NOT asserted at all, and that took three attempts to get
+    // right. `toBe(208)` reddened on a legitimate new backed story. `>= 208` then reddened on the
+    // FIRST ledger line removed — and removing a line for a story with no test is what
+    // `CR-20260820-0011` Option 1 calls "the one that matters and the one that will hurt", so the
+    // floor punished the remediation just as squarely as equality punished the addition. Round 4
+    // measured both directions: with Option 1 complete the ledger reads `checked = 81,
+    // unbacked = 0`, and the floor stayed red the whole way.
+    //
+    // What is worth pinning is the direction nobody should travel silently, and that is `unbacked`
+    // alone. The claim total belongs in the CR, which is the governance record for it.
     expect(
       wide.unbacked.length,
       "a NEW unbacked ledger claim is a regression; fixing existing ones must stay green — " +

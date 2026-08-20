@@ -146,8 +146,12 @@ export async function collectTestSources(dir) {
         try {
           directory = (await stat(full)).isDirectory();
         } catch (error) {
-          // A dangling link is not a failure of this guard.
-          if (!isMissing(error)) throw error;
+          // A dangling link, and a link in a cycle, are both "this entry contributes nothing" rather
+          // than failures of the guard. `ELOOP` was unhandled HERE after round 3 guarded the other
+          // two sites, and round 4 measured the consequence end to end: a mutual cycle (`x -> y`,
+          // `y -> x`) still gave exit 3, "no measurement taken", and dropped a real subtree the
+          // control run reads fine. Three sites resolve paths; all three are guarded now.
+          if (!isMissing(error) && !isLoop(error)) throw error;
           continue;
         }
       }

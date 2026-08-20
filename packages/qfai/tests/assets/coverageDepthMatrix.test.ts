@@ -200,23 +200,86 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     //   B  the harness cannot run a workflow: State transitions / Combinatorial on a row that is NOT ❌
     //   C  a single shipped value admits no boundary: Boundary values, and only on US-0017-0001
     const statusOf = new Map(rows.map((row) => [row.id, row.cells["Status"]]));
+    const PROPERTIES: Record<string, (row: string, column: string) => boolean> = {
+      A: (row) => statusOf.get(row) === "❌",
+      B: (row, column) =>
+        statusOf.get(row) !== "❌" &&
+        (column === "State transitions" || column === "Combinatorial"),
+      C: (row, column) => column === "Boundary values" && row === "US-0017-0001",
+    };
+
     const misassigned: string[] = [];
+    const unknownClass: string[] = [];
     for (const { className, row, column } of members) {
-      const status = statusOf.get(row);
-      const ok =
-        className === "A"
-          ? status === "❌"
-          : className === "B"
-            ? status !== "❌" && (column === "State transitions" || column === "Combinatorial")
-            : className === "C"
-              ? column === "Boundary values" && row === "US-0017-0001"
-              : false;
-      if (!ok) misassigned.push(`${className}: ${row}/${column} (Status ${String(status)})`);
+      const property = PROPERTIES[className];
+      if (property === undefined) {
+        // A class the table declares and this test does not know is a REVIEW item, not a pass and
+        // not a silent failure: round 4 found that a newly discovered gap on a covered row had no
+        // admissible class at all, so the check was over-constraining as well as under-checking.
+        unknownClass.push(className);
+        continue;
+      }
+      if (!property(row, column)) {
+        misassigned.push(`${className}: ${row}/${column} (Status ${String(statusOf.get(row))})`);
+      }
     }
     expect(
       misassigned,
       "each reason class has a defining property and every member must satisfy its own",
     ).toEqual([]);
+    expect(
+      unknownClass,
+      "a new reason class needs its property added here — silently accepting it would let the letters " +
+        "mean whatever the record says they mean",
+    ).toEqual([]);
+
+    // And the RECORD's own statement of each property must match what this test enforces. Round 4
+    // broke the previous version twice without touching the table: swapping the class A and class B
+    // reason PARAGRAPHS preserved table, partition, sizes and assignment while inverting the
+    // record's central finding, and deleting class A's justification entirely — 30 of 38 cells' worth
+    // of reason — was also green. The properties moved into the test and left the prose unpinned.
+    const stated = new Map<string, string>();
+    for (const match of text.matchAll(/^\*\*Class ([A-Z]) — property: (.+?)\.\s/gms)) {
+      stated.set(match[1] ?? "", (match[2] ?? "").replace(/\s+/g, " ").trim());
+    }
+    const EXPECTED_PROSE: Record<string, string> = {
+      A: "`Status = ❌`",
+      B: "`Status ≠ ❌` and the column is `State transitions` or `Combinatorial`",
+      C: "the column is `Boundary values` on `US-0017-0001`",
+    };
+    for (const className of Object.keys(PROPERTIES)) {
+      expect(
+        stated.get(className),
+        `class ${className}'s justification must state the property this test enforces`,
+      ).toBe(EXPECTED_PROSE[className]);
+    }
+    expect(
+      [...stated.keys()].sort(),
+      "every class the table uses must have a justification paragraph, and no more",
+    ).toEqual(Object.keys(PROPERTIES).sort());
+
+    // The property sentence is not the whole justification. Round 4's break swapped the explanatory
+    // BODIES while leaving each label with its property, so a reader got class B's reason for the 30
+    // cells class A covers — and nothing failed. Each body must carry a phrase only its own reason
+    // would use, which is the cheapest check that survives a paragraph being moved wholesale.
+    const BODY_PHRASE: Record<string, RegExp> = {
+      A: /absent from the adopter's tree there is nothing to exercise/,
+      B: /needs? a \*\*real run\*\*/,
+      C: /no sequence, count or limit to sit at the edge of/,
+    };
+    const bodies = new Map<string, string>();
+    for (const match of text.matchAll(
+      /^\*\*Class ([A-Z]) — property:[\s\S]*?(?=^\*\*Class [A-Z] — property:|^## )/gm,
+    )) {
+      // Collapse the wrapping: these phrases straddle line breaks in the record.
+      bodies.set(match[1] ?? "", match[0].replace(/\s+/g, " "));
+    }
+    for (const [className, phrase] of Object.entries(BODY_PHRASE)) {
+      expect(
+        bodies.get(className) ?? "",
+        `class ${className}'s justification must carry its own reasoning, not another class's`,
+      ).toMatch(phrase);
+    }
   });
 
   it("carries a justification section for every ❌ status row", async () => {

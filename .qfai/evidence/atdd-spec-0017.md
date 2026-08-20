@@ -106,7 +106,7 @@ The first version of this record said the lines were appended "by a script that 
 declared `US` is covered by a `describe`". **That script was not in the repository.**
 `git show --stat 1e806e50` lists five files and no script, and because the test and the ledger lines
 landed in one atomic commit, history could not settle the ordering either. Round 1's `qa-gatekeeper`
-found both halves. The script now exists as `scripts/check-atdd-annotation-ledger.mjs` with 19 tests
+found both halves. The script now exists as `scripts/check-atdd-annotation-ledger.mjs` with 22 tests
 in `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts`, and it reports what
 this stage claims: `8 claim(s) backed by a test annotation (spec-0017)`, exit 0.
 
@@ -177,14 +177,19 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
 
 ## Work performed (what changed, where)
 
-- **new** `packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts` — eight annotated describes,
-  one per covered user story, plus a block comment where `US-0017-0007`'s was, recording why the
-  claim was withdrawn rather than leaving its absence to be inferred
+- **new** `packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts` — nine tests across eight
+  annotated describes, one describe per covered user story, plus a block comment where
+  `US-0017-0007`'s was, recording why the claim was withdrawn rather than leaving its absence to be
+  inferred
 - **appended, then partly reverted** `tests/e2e/qfai-traceability.md` — nine
   `QFAI:SPEC-0017:US-0017-NNNN` lines, of which `US-0017-0007`'s was removed in round 1
 - **new** `.qfai/evidence/coverage-depth-spec-0017.md` — the Coverage Depth Matrix, committed
 - **new** `scripts/check-atdd-annotation-ledger.mjs` — the guard this record had claimed existed
-- **new** `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts` — 19 tests
+- **new** `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts` — 22 tests
+- **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, v5, extracted from the
+  E2E so its corpora can be tested on their own
+- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 9 tests, four corpora, none of them chosen
+  by this stage
 - **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 4 tests pinning the matrix
 - **new** `.qfai/decisions/CR-20260820-0011-*.md` — the 127 unbacked ledger claims
 
@@ -196,7 +201,9 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
 pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts
   -> Tests 9 passed (9), exit 0
      (9 before US-0017-0007 was withdrawn, 8 after, 9 again once US-0017-0003
-      gained the positive-half assertion round 1 showed was available)
+      gained the positive-half assertion round 1 showed was available; briefly 11
+      while the classifier corpus lived here, before round 4 moved it to
+      tests/unit/buildCommand.test.ts where it belongs)
 
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
   -> check-atdd-annotation-ledger: 8 claim(s) backed by a test annotation (spec-0017), exit 0
@@ -205,9 +212,11 @@ node scripts/check-atdd-annotation-ledger.mjs        (repo-wide)
   -> exit 1; 127 of 208 claims unbacked; see CR-20260820-0011
 
 pnpm -C packages/qfai exec vitest run tests/integration/scripts/checkAtddAnnotationLedger.test.ts
-  -> Tests 19 passed (19), exit 0
+  -> Tests 22 passed (22), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
   -> Tests 4 passed (4), exit 0
+pnpm -C packages/qfai exec vitest run --project unit tests/unit/buildCommand.test.ts
+  -> Tests 9 passed (9), exit 0
 
 node packages/qfai/dist/cli/index.mjs validate --profile atdd --fail-on error --spec 0017
   before this stage:  info=2 warning=0 error=2   QFAI-ATDD-111 (9 US), QFAI-ATDD-112 (8 TC)
@@ -253,14 +262,25 @@ The 11 `Unit` rows owe nothing here (`L1` has no mandated directory).
 
 ## Ledger rows advanced
 
-**None advanced. Two rows are routed to branch 3 and parked; the rest were not this stage's to
-route.** The previous version of this section said all 71 `Integration` rows were at `refactor` and
+**None advanced. One row is routed to branch 3, one is `blocked`, and neither transition is yet
+authorised; the rest were not this stage's to route.** The previous version of this section said all 71 `Integration` rows were at `refactor` and
 that zero was therefore trivially correct. That was false, and it is corrected here.
 
-| `TDD-*`    | `Layer`     | obligation     | branch                          | `DR-ID`        | anchor       |
-| ---------- | ----------- | -------------- | ------------------------------- | -------------- | ------------ |
-| `TDD-0069` | Integration | `TC-0017-0069` | none — `blocked`, not a branch | `CR-20260820-0012` | § `TDD-0069` |
-| `TDD-0070` | Integration | `TC-0017-0070` | 3 — `exception`                | `DR-0017-0010`     | § `TDD-0070` |
+| `TDD-*`    | `Layer`     | obligation     | branch                         | `DR-ID`        | `Blocked-By`       | anchor       |
+| ---------- | ----------- | -------------- | ------------------------------ | -------------- | ------------------ | ------------ |
+| `TDD-0069` | Integration | `TC-0017-0069` | none — `blocked`, not a branch | `-`            | `CR-20260820-0012` | § `TDD-0069` |
+| `TDD-0070` | Integration | `TC-0017-0070` | 3 — `exception`                | `DR-0017-0010` | `-`                | § `TDD-0070` |
+
+**Neither ledger cell has been written, and this table is the handover, not the ledger.**
+`tdd/test-list.md:107-108` has both rows `todo` with `DR-ID: -` and `Blocked-By: -`; those cells are
+`/qfai-implement`'s to write. What is recorded here is what it should write, and what P1d has and has
+not authorised.
+
+The previous version of this table put `CR-20260820-0012` in the **`DR-ID`** column, which
+`execution-ledger.md` forbids by name: "`DR-ID` is **not** widened to carry it: that column is what
+distinguishes a parked `exception` from a row that never started, and overloading it would merge the
+two states the `blocked` status exists to separate." P1d's third pass caught it. A `Blocked-By` column
+is the right home and is now here.
 
 **`blocked` is not a branch, and this table said it was for two rounds.** Rounds 1, 2 and 3 each found
 a false statement in this section — the one section whose job is discharging the handover obligation —
@@ -339,17 +359,27 @@ test in the suite, which is not a RED observation; it is a broken build.
 **Branch 2 (falsifiability) is unavailable**: the procedure requires an obligation already satisfied
 by state that exists. Nothing satisfies this one — there is no run history to mutate.
 
-**Branch 3 it is**, recorded in `DR-0017-0010`. The row identity and obligation reference were
-recorded **before** any gate routed — in `58c29d9f`, HEAD's parent at the time — as the branch-3
+**`TDD-0070` is branch 3**, recorded in `DR-0017-0010`. **`TDD-0069` is not** — it is `blocked` on
+`CR-20260820-0012`, and `blocked` takes no RED-provenance branch at all. Both rows' identity and
+obligation references were recorded **before** any gate routed, in `58c29d9f`, as the branch-3
 evidence shape requires.
 
-The row stays `todo` in the ledger until `/qfai-implement` writes `todo -> exception`, which it may do
-**only** with the `qa-gatekeeper` PASS that P1d takes on the `DR-*`
-(`qfai-implement/SKILL.md`: an entry malformed in any other way "leaves the row at `todo` and stops
-with a handoff note"). The first version of this section claimed the entry alone meant the rows were
-"no longer deadlocked"; round 2 corrected that on both reports — an entry naming a branch but carrying
-no `DR-*` and no PASS is malformed, and step 3b treats malformed and absent identically. Nothing was
-unblocked by writing it down.
+Rounds 2, 3 and 4 each found this subsection stating something the record elsewhere had already
+retracted, and round 4 found that the previous repair had touched the index table and **not** the
+prose below it — `git diff` never entered these lines. Four statements went in that pass and are gone
+now: that the workflow changes being unmerged is `TDD-0069`'s obstacle (it is not; the obstacle is the
+self-referential gate in `CR-20260820-0012`), that there is "no run history to mutate" for clause 1
+(the correction is narrower — see the DR), that "branch 3 it is" for both rows, and that the blocking
+condition is the `exception` P1d PASS for both.
+
+Neither transition is authorised yet:
+
+- **`TDD-0070` -> `exception`** needs the P1d `qa-gatekeeper` PASS on `DR-0017-0010`, and P1d has
+  returned `REVISE` three times. Each time the row's own account was **sustained**; what failed was
+  the record around it.
+- **`TDD-0069` -> `blocked`** needs no P1d PASS — that asymmetry is disclosed above — but step 3b
+  leaves a row at `todo` when its handover entry is malformed, and P1d's third pass found this entry
+  self-contradictory. That is what these corrections address.
 
 ### TDD-0070
 
@@ -496,10 +526,47 @@ establishing the property. Two findings against the widened predicate, and both 
   matched. So the day the shipped orchestrator wires a typecheck lane, `US-0017-0004` would fail
   saying that lane "runs its own build" — the test-that-punishes-its-own-fix shape again.
 
-`v3` anchors on `build` as a standalone shell **word**, adds a build-script-path arm, drops bare
-`tsc`, and strips trailing comments as well as whole-line ones. Measured in **both** directions this
-time: **21 forms caught, 14 non-builds rejected, 0 misclassified.** `mvn package` remains invisible
-and is named as a known limit rather than counted as a pass.
+`v3` anchored on `build` as a standalone shell **word**. Reported here as "21 forms caught, 14
+non-builds rejected, 0 misclassified" — and that claim is **withdrawn**. Round 4 measured v3 and v4
+against corpora it chose and found each version wrong in the direction the previous fix had not
+looked:
+
+```text
+v3   9 missed builds, 10 false positives   (it caught `rm -rf build dist` and a JS comment)
+v4   fixed those, then regressed on 20 of 23 forms v3 caught, because returning on the first
+     target makes everything after `&&` invisible — including `npm ci && npm run build`
+```
+
+**And v4's worst property was not a miss.** It reported `pnpm ci:build-verify` as a build, and that
+command's body is `node ./scripts/check-build-warnings.mjs && …` — so what the predicate measured was
+**npm-script naming**. `pnpm ci:pack-verify` would be identical behaviour and `false`. That is the
+"asserted over how something is written rather than over what it does" defect this spec has now found
+five times, this time inside the instrument built to detect a build.
+
+`v5` lives in `packages/qfai/tests/helpers/buildCommand.ts` with its corpora in
+`packages/qfai/tests/unit/buildCommand.test.ts`, and it changes three things: shell segments before
+verbs (`&&`, `;`, `|`, `cd`, `time`, `sudo`, `env`); **script bodies before names**, resolved in the
+manifest the command's directory selects — a single merged script map cannot work here, because this
+repository's root `build` is `pnpm -C packages/qfai build` and the package's is `tsup`; and three
+verdicts instead of two, so a name-shaped guess returns `heuristic` rather than passing itself off as
+an analysis.
+
+Measured against corpora **this stage did not choose** — round 4's 20 regressions, v4's 15 kept
+forms, the 18 non-builds accumulated across rounds 2-4, and every `run:` line in both workflow trees:
+
+```text
+this repository reaches a build in FOUR places, not the two previously asserted
+  build      ci.yml       pnpm -C packages/qfai build                    direct
+  build      release.yml  pnpm -C packages/qfai pack --pack-destination  via prepack -> build -> tsup
+  heuristic  ci.yml       pnpm ci:build-verify                           spawn inside a .mjs
+  heuristic  release.yml  pnpm ci:gate                                   spawn inside the same .mjs
+```
+
+The last two are **opaque to any command-line scan**: `scripts/check-build-warnings.mjs` spawns the
+build, and reading `package.json` cannot follow a `spawnSync` inside a helper. They land on
+`heuristic` only because that filename happens to say `build`, which is luck. Stated as a limit, and
+pinned as a set in the unit test so a build in a new place fails rather than being absorbed by a
+count.
 
 ### E9-E11 — the three rounds round 3 could not find
 
@@ -646,25 +713,32 @@ numbers.
 
 ### P7 quality gates
 
-**Re-run after the last artifact changed, which is the point round 3 made about the first version.**
-That block was written at `16f611c7`; `21ea1ddc` then landed +489/-76 across four files, so the
-evidence predated three of the four artifacts it certified. `git log -S` was how round 3 established
-it. These numbers are from the tree as it stands with every round-3 repair applied:
+**Re-run after the last artifact changed, twice, because this block was wrong about its own
+currency both times.** Round 3 found the first version written at `16f611c7` before `21ea1ddc` landed
++489/-76 across four files, so it certified three artifacts that postdated it — established by
+`git log -S`. Round 4 found the replacement stale in the same way. These numbers are measured at the
+tree that carries every round-4 repair:
 
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
-pnpm -C packages/qfai test:e2e                  1420 passed / 16 skipped, exit 0
+pnpm -C packages/qfai test:e2e                  1418 passed / 16 skipped, exit 0
 vitest --project integration --project assets --project unit
-                                                1174 passed / 19 skipped, exit 0
+                                                1186 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 8 claim(s) backed, exit 0
 node ... validate --profile atdd --spec 0017     info=2 warning=0 error=2
   artifact  .qfai/report/validate.spec-0017.json
+node ... validate --profile full                 error=4  (see § "The full profile")
 ```
+
+The e2e total moved 1420 -> 1418 and the rest moved 1174 -> 1186 for one reason: round 4 moved the
+build classifier out of the E2E file into `tests/helpers/buildCommand.ts`, so its two corpus tests
+left the `e2e` project and nine tests joined `unit`.
 
 ### P1d's verdicts
 
-P1d ran twice on `DR-0017-0010` and returned **REVISE** both times.
+P1d has run **three times** on `DR-0017-0010` and returned **REVISE** every time. Each pass sustained
+`TDD-0070`'s own account; what failed each time was the record around it.
 
 **First pass** (`16f611c7`): the evidence shape was satisfied, `TDD-0070`'s account sustained, and
 `TDD-0069`'s not — the stated obstacle was wrong, `EX-0017-0053` was quoted at half its length, and the
@@ -687,7 +761,37 @@ open `CR-20260820-0003` adds that the runner drops unknown project options silen
 mutant, written while applying a finding about that clause. `DR-0017-0010` now records clause 1 as
 **degenerate rather than satisfied**.
 
-A third re-route is owed. This stage does not claim its own repairs reviewed.
+### Round 3 and round 4
+
+| round | reviewer                  | verdict | findings                     |
+| ----- | ------------------------- | ------- | ---------------------------- |
+| 3     | `implementation-reviewer` | REVISE  | 4 blocking, 6 medium, 9 low  |
+| 3     | `completion-reviewer`     | REVISE  | 7 blocking, 5 major, 4 minor |
+| 3     | `qa-gatekeeper` (P1d)     | REVISE  | 3 blocking                   |
+| 3     | `qa-gatekeeper` (stage)   | **did not run** | —                    |
+| 4     | `implementation-reviewer` | not routed — the code under review was already read by round 4's gatekeeper | — |
+| 4     | `completion-reviewer`     | REVISE  | 6 blocking, 5 major, 5 minor |
+| 4     | `qa-gatekeeper` (stage)   | REVISE  | 6 blocking                   |
+| 4     | `qa-gatekeeper` (P1d)     | REVISE  | 3 blocking                   |
+
+**Round 3's stage-level `qa-gatekeeper` did not run**, and that is a deviation rather than a choice
+about scope: `agent-routing.yml` has it **mandatory and blocking** for the review phase. Its slot went
+to the P1d re-route, which is a different, narrower gate on a single artifact. Round 4 closed the gap
+and its report is the one that found v4's name-matching. Recorded here because round 4's
+`completion-reviewer` found it undisclosed — it was in the commit message and the round-4 request, and
+not in this record.
+
+### The full profile
+
+`validate --profile full` reports **`error=4`** at this stage's HEAD, and `build` runs that profile.
+Two are the scoped `QFAI-ATDD-111` / `-112`; the other two are `QFAI-REVIEW-004` / `-005` against
+**this stage's own in-flight review pack** — a pack cannot satisfy the layout contract until its last
+reviewer has landed and it has been sealed. Round 4's gatekeeper found this undisclosed, and it is the
+same class of gap as the two packs that were missing `summary.json`: masked in CI only because the
+`tdd` step fails first on `error=2`.
+
+A fourth P1d re-route and a fifth stage round are owed. This stage does not claim its own repairs
+reviewed.
 
 ## Final status (PASS/FAIL) + who confirmed
 
@@ -695,8 +799,10 @@ A third re-route is owed. This stage does not claim its own repairs reviewed.
 
 What was achieved: eight of `spec-0017`'s nine `US-*` are covered from `tests/e2e/**` with real
 assertions — one of them rewritten to execute the shipped step rather than read it — across five
-oracle rounds, a ten-form round 2, a three-round behavioural round, and a seven-round falsification of
-the matrix pinning test; the shipped-tree gap is measured at step-body level; the ordering claim this
+oracle rounds against the shipped tree, six behavioural rounds on the version resolver (`E6`-`E11`),
+sixteen falsification rounds on the matrix pinning test (`M1`-`M7`, `X1`-`X3`, `X6`-`X8`, `Y1`-`Y3`),
+three on the ledger ratchet (`W1`-`W3`), three on the loop guard (`L1`-`L3`) and four more on the
+matrix record's own prose (`Z1`-`Z4`); the shipped-tree gap is measured at step-body level; the ordering claim this
 stage had asserted is now enforced by a script that exists and is tested; and a repo-wide defect
 affecting 16 other specs was found and filed.
 
@@ -704,13 +810,18 @@ What is not satisfied:
 
 - **`US-0017-0007` is uncovered**, so `QFAI-ATDD-111` reports it and the scoped gate is `error=2`;
 - the stage's own gate `validate --profile atdd --fail-on error --spec 0017` exits 1;
-- `TDD-0070` is **not yet** parked at `exception`: the transition needs the P1d `qa-gatekeeper` PASS
-  on `DR-0017-0010`, and P1d has returned `REVISE` twice. The row's account is sound and the status is
-  the right one; the gate that authorises writing it has not passed. The first version of this line
-  said the row "is parked at `exception`", which round 3 caught — the sole precondition does not exist;
-- `TDD-0069` is `blocked` on `CR-20260820-0012` — a self-referential gate P1d found while judging the
-  DR, where the row's own unannotated `TC` is one of the two errors that keep the run it waits for red.
-  `blocked` needs no P1d PASS, which is the asymmetry disclosed under § "Ledger rows advanced";
+- **both rows are still `todo` in the ledger.** `tdd/test-list.md:107-108`, `DR-ID: -`,
+  `Blocked-By: -`. Nothing has moved, and the two statuses below are what the handover asks
+  `/qfai-implement` to write rather than what it has written;
+- `TDD-0070` is **not yet** `exception`: that needs the P1d `qa-gatekeeper` PASS on `DR-0017-0010`,
+  and P1d has returned `REVISE` three times — each time sustaining the row's own account and failing
+  the record around it. Round 3 caught an earlier version of this line asserting the row "is parked at
+  `exception`"; round 4 caught the same assertion surviving elsewhere in the file. Both are gone;
+- `TDD-0069` is **not yet** `blocked` either, though `blocked` needs no P1d PASS. Step 3b leaves a row
+  at `todo` while its handover entry is malformed, and P1d's third pass found this one
+  self-contradictory. The status is right on the merits — `CR-20260820-0012` is an unresolved Change
+  Request, and P1d sustained the classification on the ground that a stage laundering a verdict would
+  have kept `exception`, which satisfies completion, rather than taking `blocked`, which prohibits it;
 - Stage Minimum Roles were not used for P2-P4 — the reviewer gate ran, the work orders did not.
 
 Confirmed by: round 1's two independent blocking reviewers, both **REVISE**, on `8fb48002`:
