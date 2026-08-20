@@ -4,7 +4,7 @@
 - Title: `TC-0017-0063 and EX-0017-0055 require a runner behaviour vitest does not implement — an unknown project name is filtered, not rejected`
 - Raised by: `/qfai-implement orchestrator, spec-0017 change 5; the assertion was written as specified, the mutation oracle proved it vacuous, and both states were then measured directly`
 - Raised at: `2026-08-20T00:00:00Z`
-- Class: `ambiguity`
+- Class: `intent`
 - Status: `open`
 - Approved by: `-`
 - Approved at: `-`
@@ -170,7 +170,10 @@ and accept option B's coupling to reporter output, or option C's exception?
 
 1. `/qfai-sdd` rerun scope: move the text, not the test. Reword `TC-0017-0063` and `EX-0017-0055` in
    `spec-0017` to the observable vitest actually implements — an unknown project name is filtered,
-   not rejected.
+   not rejected. Mode: **`re-derive`**. The TC and EX wording is what changes, so the artifact is
+   regenerated rather than confirmed. Note the asymmetry the disclosure section records: the
+   ledger row and the test already carry option A's wording, so a `re-derive` that chose option B
+   or C would also sweep this row.
 2. Downstream ledger sweep: **no rows are reset** under the recommended option, because the row is
    implemented against the intent and its evidence stays true. Named so a later sweep cannot widen:
    - not reset under option A: `TDD-0063`

@@ -42,11 +42,29 @@ The needle and the replacement are therefore the load-bearing record, exactly as
 `references/oracle-strength.md` asks. The hashes are not retracted, because they are not wrong; the
 claim that they can be retrieved is what was wrong.
 
+> **Narrowed 2026-08-20 after round 5.** `qa-gatekeeper` observed that "the needle and the
+> replacement are the load-bearing record" holds for **one** of the sixteen oracle tables below —
+> change 1's, which quotes literal needle and replacement text. The other fifteen record a mutation
+> DESCRIPTION plus the assertion locations it reddened, and no literal bytes. For those, the
+> fingerprint has nothing to be recomputed from and is inert: a reader cannot reconstruct the mutant
+> from "the required-context job is renamed" alone.
+>
+> So the honest statement is narrower than the one above. Where literal bytes are recorded, the
+> hash checks a reconstruction. Where only a description is recorded, the load-bearing record is the
+> **assertion locations** — which row reddened, at which line and column — and the hash is a
+> provenance stamp on bytes that no longer exist anywhere. Neither is retrievable; only the first is
+> verifiable.
+
 ## Cross-spec obligations
 
 **Added 2026-08-20, after review finding B3.** This record described spec-0017 as though it were the
 only spec this branch touches. It is not, and an auditor of the other spec cannot see the connection
 from their side.
+
+**This spec's side of the obligation, named first.** `TDD-0006` through `TDD-0012` — change 8,
+change detection and lane selection in the OWN workflow — are the rows whose work produced the edit
+below. They are what a reader of the other spec needs to be pointed at, and the section as first
+written named only the other spec's rows, so the link ran one way (BL-9).
 
 `spec-0003`'s `TDD-0038`, `TDD-0039` and `TDD-0040` — `TC-0003-0038` through `TC-0003-0040`, the
 shipped orchestrator's change detection, fail-open selection and verdict job — live in
@@ -111,6 +129,13 @@ pnpm test
   exit 0
 ```
 
+> **Re-measured 2026-08-20 after round 5.** `qa-gatekeeper` reported 4426 against this block's 4424
+> and was right: three commits landed after the run above, each adding a claim. Confirmed by
+> re-running the same command — `431 passed | 8 skipped (439)`, `4426 passed | 37 skipped (4463)`,
+> exit 0. The measurement above is left as taken and dated rather than overwritten, because a count
+> that moves with the tree is a fact about a revision and not about the suite. Step 2 passes at
+> both.
+
 So step 2 passes. **Step 4 remains, and it is the only one.** Its clause 3 reads an unattributed
 aggregate — `QFAI-ATDD-112` still names TCs from `spec-0003`, `spec-0008` and `spec-0015`, and
 `QFAI-ATDD-111` wants `US-0017-*` E2E annotations belonging to a different skill's scope — which is
@@ -129,17 +154,31 @@ revision `4e29a2a4`. Two rules from other criteria have joined the lane since �
 gets seven and finds the record saying five.
 
 The output is grouped by scope precisely so the two numbers can both be read off it, which is why
-this is an addition rather than a correction of arithmetic. Current, from `node scripts/check-workflow-hygiene.mjs`:
+this is an addition rather than a correction of arithmetic.
+
+**What the lane actually prints** — verbatim, and the labelling matters because the block that first
+stood here carried counts and a `total 7` line the lane prints nowhere. It was a paraphrase wearing a
+command label, which `completion-reviewer` caught by running the command (BL-10). The counts below
+the fence are mine, derived by reading it:
 
 ```text
-Rules run over both workflow trees:                      5   <- BR-0017-0037's five
-  job-guardrails, checkout-credentials, action-pin, matrix-fail-fast, secret-inheritance
-Rules run over the shipped workflow tree only:           1
-  shipped-third-party
-Rules run over the required-status-context declaration:  1
-  required-context
-                                                    total 7
+workflow hygiene: PASS.
+Rules run over both workflow trees:
+  - job-guardrails: ...
+  - checkout-credentials: ...
+  - action-pin: ...
+  - matrix-fail-fast: ...
+  - secret-inheritance: ...
+Rules run over the shipped workflow tree only:
+  - shipped-third-party: ...
+Rules run over the required-status-context declaration:
+  - required-context: ...
+Not covered here: runner-label rules, secret-reference rules, and the shipped set's own contract shape ...
 ```
+
+Counted from that output: **5** rules in the workflow-tree scope — `BR-0017-0037`'s five — plus **1**
+shipped-scope and **1** declaration-scope rule, so **7** across three scopes. The rule descriptions
+are elided above with `...`; nothing else is.
 
 `TC-0017-0045` pins the workflow-tree scope at five and reads it BY SCOPE rather than by filtering
 names out, which is what keeps "exactly five" reproducible while the total grows. That design choice
@@ -1652,6 +1691,36 @@ suite rather than the row's own test.
 - **RED command**, from `packages/qfai`:
   `pnpm exec vitest run tests/scripts/ownWorkflowTopology.test.ts`
 - **RED result** (post-seam): `Tests 6 failed | 13 passed (19)`, exit 1, every failure an assertion.
+- **`TDD-0012` was among the 13 that PASSED**, and no record said so until round 5. Added
+  2026-08-20 after `completion-reviewer` closed the arithmetic this record left open:
+
+  ```text
+  9aced5bb (this change's base)  12 describes, 12 it()s;  change 7's GREEN was `12 passed (12)`
+  2a3ef61c (this change)         19 describes, 19 it()s;  +7, exactly TC-0017-0006..0012
+  recorded RED                   6 failed | 13 passed (19)
+  => 13 passed = 12 pre-existing + EXACTLY ONE of the seven new rows
+  ```
+
+  And the one is `TDD-0012`, established from the workflow at the seam revision rather than
+  inferred: at `9aced5bb` the `lint` and `build` jobs carry neither `if` nor `needs`, which is
+  precisely what this row asserts, so every claim held against the seam. `TDD-0008` runs the
+  EXTRACTED classifier and requires `full === false`; the seam's heredoc was comment-only, emitted
+  no `full=`, and the value was null — so it failed, along with 0006, 0007, 0009, 0010 and 0011.
+
+  **The B7 repair missed this because I dismissed the test that finds it.** `e4a7295c` said
+  comparing a failure count to a row count is invalid "because a row is a `describe` and may hold
+  several `it()`s". That refutes only the converse: six failures redden AT MOST six describes, so
+  with seven rows at least one passed — and in this file no describe held more than one `it()`, which
+  makes the bound exact. The general caution was correct; applying it without checking whether it
+  bound this case was not.
+
+  `TDD-0012`'s cell now records that it was among the passing and carries the falsifiability trio
+  over rounds `R3`, `R4` and `R5`, which already existed and already named it.
+
+  **Closed generally rather than case by case.** Every group of rows sharing one recorded RED is now
+  checked mechanically: rows still claiming that RED must not outnumber its failures. Twelve groups,
+  and none does. The per-file proviso that makes the bound exact — one `it()` per describe — is
+  checked rather than assumed, which is the step whose omission let this survive a round.
 - **GREEN result**: same command, `Tests 19 passed (19)`.
 - **End-to-end sanity**: the classifier extracted from the committed workflow, run against this
   branch's own working set, reported `full=true` with
@@ -2815,6 +2884,14 @@ item-12 checkpoint is not attempted, for the reasons recorded under the earlier 
 ## The worker-value comparison the rule asks for (TDD-0065)
 
 <a id="tdd-0065"></a>
+
+- **Row**: `TDD-0065`, implementing `TC-0017-0065`
+- **Base revision**: `bc36f08c`, the commit this block's measurements were taken at
+- **Revision**: `a910c91c`, the commit that landed the row
+
+Recorded because `completion-reviewer` found this the only one of seventeen blocks carrying neither
+a base revision nor a citation of its own TC (BL-8). Gate item 10 compares the revision an
+observation names, and a block that names none cannot be checked at all.
 
 `AC-0017-0028` / `BR-0017-0049`, and `EX-0017-0049`: "A timing artifact comparing at least two
 worker settings on the largest project, plus the value actually adopted", accepting when "the

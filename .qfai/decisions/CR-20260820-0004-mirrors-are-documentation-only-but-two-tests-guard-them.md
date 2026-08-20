@@ -2,7 +2,9 @@
 
 - ID: `CR-20260820-0004`
 - Title: `BR-0017-0010 puts the agent-integration mirrors in the documentation-only set, and two test files guard those mirrors from lanes that set skips`
-- Raised by: `/qfai-implement orchestrator, spec-0017 change 8; the exclusion set was derived by measuring which repository paths the test suite reads, and this is the one member the measurement contradicts`
+- Raised by: `/qfai-implement orchestrator, spec-0017 change 8; the exclusion set was derived by
+measuring which repository paths the test suite reads, and this is the one member the
+measurement contradicts`
 - Raised at: `2026-08-20T00:00:00Z`
 - Class: `defect`
 - Status: `open`
@@ -127,6 +129,40 @@ guards. That is the case where the saving is real and the risk is a broken mirro
 it is still a decision between options A, B and C above — but it no longer covers the automation, and
 the "at least five files" figure in that discussion should be read as the ten measured here.
 
+### The census was still incomplete: twenty files that are neither prose nor executable
+
+**Added 2026-08-20, after round 5.** The re-measured census above closed the executable half and
+then framed what remains as "only prose" and "nothing but Markdown". `implementation-reviewer`
+found that false, and the tree agrees:
+
+```text
+tracked files under the four mirror trees that are neither .md nor an executable suffix:
+  .codex/     31   including 20 .toml  (19 x agents/*.toml plus config.toml)
+  .claude/    11   symlinked skill directories
+  .agents/     8   symlinked skill directories
+  .instruction/ 0
+```
+
+The twenty `.toml` files are agent definitions, and they are GUARDED:
+`packages/qfai/tests/codex/agents.test.ts` reads the repository-root `.codex` tree and asserts
+file-count equality against `agent-catalog.yml` plus name and description equality against the
+canonical frontmatter; `packages/qfai/tests/assets/reviewerVerdictVocabulary.test.ts` reads one
+directly. Measured against the extracted classifier:
+
+```text
+.codex/agents/completion-reviewer.toml  ->  full=false, documentation-only
+```
+
+So a pull request that edits one `description` in an agent TOML diverges it from the canonical
+frontmatter, classifies documentation-only, skips the `test` job, never runs the guard, and
+`ci-pass` reads a skipped lane as passing. That is not a prose risk — it is a data mirror falling
+out of sync with its source, which is the same failure class the executable half had.
+
+No further code change is proposed here: option A already covers these files once the census names
+them, because moving the mirror guards into the lint lane makes them run whatever the classifier
+decided. What changes is that the choice between A, B and C is now being made against a complete
+census rather than one that omitted twenty guarded files.
+
 ## Impact
 
 - Specs: `spec-0017 — BR-0017-0010`
@@ -145,7 +181,10 @@ documentation-only set at the cost of the saving, or option C, accepting the gap
 
 1. `/qfai-sdd` rerun scope: decide whether the guard moves or the member does, and record it in
    `BR-0017-0010`. Under option A the follow-on work is a lane wiring change in the root
-   `package.json`, following the existing `lint:workflow-shape` precedent.
+   `package.json`, following the existing `lint:workflow-shape` precedent. Mode: **`re-derive`**
+   if the approved option moves the rule's membership; **`confirm-only`** if the approved option
+   is A, because A leaves `BR-0017-0010` as written and the work is a lane-wiring change in the
+   root `package.json` — which is not a spec artifact and so is not a skill rerun at all.
 2. Downstream ledger sweep: **no rows are reset.** Change 8 implements `BR-0017-0010` as written.
    Named so a later sweep cannot widen:
    - conditional reset under option B: `TDD-0010`, `TDD-0011` — the two rows asserting over which

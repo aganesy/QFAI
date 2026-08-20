@@ -103,7 +103,9 @@ its own change.
 1. Owner is the packaged asset, not a spec-authoring skill:
    `packages/qfai/assets/init/.qfai/assistant/catalog/test-layers.md` states two incompatible
    location rules for L1. Edit the packaged copy and propagate to the installed `.qfai/` mirror by
-   reinstall, never by hand-editing the mirror.
+   reinstall, never by hand-editing the mirror. **No mode applies** — a packaged asset under
+   `packages/qfai/assets/init/**`, which the step-4 invocation table does not cover. The
+   propagation to the installed mirror is a reinstall, not a skill rerun.
 2. Downstream ledger sweep: **no rows are reset.** Four rows landed under the reading the catalog's
    routing rule requires, and that reading is the one this CR recommends keeping. Named so a later
    sweep cannot widen: if the approved option instead adopts the OTHER reading, the sweep is every

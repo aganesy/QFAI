@@ -132,7 +132,7 @@ closed.
 
 1. Owner is the packaged prompt text that states checkpoint step-4 clause 3 — an unattributed
    aggregate where clause 5 is explicitly per-row. Edit the packaged copy under
-   `packages/qfai/assets/init/**`, propagate by reinstall.
+   `packages/qfai/assets/init/**`, propagate by reinstall. **No mode applies** — packaged prompt text under `packages/qfai/assets/init/**`, outside the step-4 invocation table.
 2. Downstream ledger sweep: **no rows are reset**, and four rows are UNBLOCKED. The four named in
    this CR's `Blocked set` are held at `refactor` by this clause and by nothing in their own scope:
    - `spec-0006 TDD-0034`, `TDD-0035`, `TDD-0036`, `TDD-0037`

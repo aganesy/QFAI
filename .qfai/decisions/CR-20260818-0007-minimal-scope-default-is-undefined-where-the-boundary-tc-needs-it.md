@@ -4,7 +4,7 @@
 - Title: `"the minimal-scope default" is undefined at exactly the point TC-0017-0016 measures, and the own tree already carries a third elevation the rule does not name`
 - Raised by: `/qfai-implement orchestrator, spec-0017 change 2, measured against the own workflows tree before writing the row`
 - Raised at: `2026-08-18T00:00:00Z`
-- Class: `ambiguity`
+- Class: `intent`
 - Status: `open`
 - Approved by: `-`
 - Approved at: `-`
@@ -113,7 +113,9 @@ Choose A, B or C. `TDD-0016` stays `todo` until then; change 2's other five rows
 
 1. `/qfai-sdd` rerun scope: define "the minimal-scope default" at the point `TC-0017-0016` measures
    it, in `spec-0017`'s business rules, and reconcile the third elevation the own tree already
-   carries — either by admitting it in the rule or by removing it from the tree.
+   carries — either by admitting it in the rule or by removing it from the tree. Mode:
+   **`re-derive`**. The rule text does not yet define the term, so the artifact cannot be
+   confirmed to already satisfy the change; it has to be written.
 2. Downstream ledger sweep: reset the row this CR blocks, recording `CR-20260818-0007` in its
    `DR-ID` column:
    - `TDD-0016`

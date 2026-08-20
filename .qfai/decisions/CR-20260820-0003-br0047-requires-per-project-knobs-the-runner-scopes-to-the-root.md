@@ -4,7 +4,7 @@
 - Title: `BR-0017-0047 requires every project to declare a worker setting and a file-parallelism setting, and the runner scopes both to the root`
 - Raised by: `/qfai-implement orchestrator, spec-0017 change 6; the specified shape was implemented first, then found inert by the runner's own type and by measurement`
 - Raised at: `2026-08-20T00:00:00Z`
-- Class: `ambiguity`
+- Class: `intent`
 - Status: `open`
 - Approved by: `-`
 - Approved at: `-`
@@ -143,7 +143,7 @@ project" and accept option B's inert declarations, or option C's loss of both kn
 ## Approved actions (owner skill rerun plan)
 
 1. `/qfai-sdd` rerun scope: rewrite `BR-0017-0047` so each knob is declared at the scope that reads
-   it, and add the root-only guard that keeps "declared, not inherited" honest.
+   it, and add the root-only guard that keeps "declared, not inherited" honest. Mode: **`re-derive`**. `BR-0017-0047`'s declaration site is what changes.
 2. Downstream ledger sweep: **no rows are reset** under the recommended option. Change 6 implements
    the intent — root-scoped knobs at the root, project-scoped ones at the project — and the rows'
    evidence describes exactly that split. Named so a later sweep cannot widen:

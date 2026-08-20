@@ -4,7 +4,7 @@
 - Title: `BR-0017-0027 forbids a workflow-level Node literal tree-wide, the plan scopes release.yml to pins, and the publish job encodes an npm constraint engines.node cannot express`
 - Raised by: `/qfai-implement orchestrator, spec-0017 change 4; the conflict surfaced as a test failure and every claim below was measured before filing`
 - Raised at: `2026-08-20T00:00:00Z`
-- Class: `ambiguity`
+- Class: `intent`
 - Status: `open`
 - Approved by: `-`
 - Approved at: `-`
@@ -119,6 +119,8 @@ Choose A, B or C. `TDD-0030` stays `todo` until then.
 1. `/qfai-sdd` rerun scope: reconcile the three statements that cannot all hold — `BR-0017-0027`'s
    tree-wide prohibition, `10_Plan.md`'s narrower `release.yml` scope, and the publish job's
    engine constraint. The publish job is the hard half and the reconciliation has to name it.
+   Mode: **`re-derive`**. Three statements have to be reconciled into new text, which
+   `confirm-only` cannot produce.
 2. Downstream ledger sweep: reset the row this CR blocks, recording `CR-20260820-0001` in its
    `DR-ID` column:
    - `TDD-0030`

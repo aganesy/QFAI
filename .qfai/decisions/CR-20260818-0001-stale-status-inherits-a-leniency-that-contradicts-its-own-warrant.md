@@ -180,7 +180,10 @@ Choose A, B or C, and say whether C should be taken as an interim while A is unl
 
 1. Owner is **not** a spec-authoring skill: the defect is in `packages/qfai/src`, in the rule that
    inherits `selectorResolves`' trailing-token fallback. It is fixed under its own spec row with its
-   own test, not by rerunning `/qfai-sdd` over an artifact.
+   own test, not by rerunning `/qfai-sdd` over an artifact. **No mode applies**: the invocation
+   table in `drift-protocol.md` step 4 covers `spec-*/**`, `_policies/**` and
+   `.qfai/contracts/**`, and this fix is in `packages/qfai/src`. Naming `confirm-only` or
+   `re-derive` here would describe a rerun that cannot happen.
 2. Downstream ledger sweep: **no rows are reset**, in any spec. The defect inflates a warning count
    and degrades a signal; it does not make a landed row's evidence wrong, and no row's status was
    derived from the inflated count.

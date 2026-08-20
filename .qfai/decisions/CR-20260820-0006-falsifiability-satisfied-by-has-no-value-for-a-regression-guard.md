@@ -4,14 +4,14 @@
 - Title: `The falsifiability path's Satisfied-by field has no honest value for a regression guard over pre-existing state`
 - Raised by: `/qfai-implement orchestrator, spec-0017; raised while recording the trio the qa-gatekeeper required, not while trying to avoid it`
 - Raised at: `2026-08-20T00:00:00Z`
-- Class: `ambiguity`
+- Class: `intent`
 - Status: `open`
 - Approved by: `-`
 - Approved at: `-`
 - Approved option: `-`
 - Applied at: `-`
 - Superseded by: `-`
-- Blocked set: `none — all thirteen rows carry the trio with an accurate value; what is open is whether the reference's vocabulary admits that value`
+- Blocked set: `none — all twenty rows carry the trio with an accurate value; what is open is whether the reference's vocabulary admits those values`
 
 ## The two classifications the reference offers
 
@@ -27,7 +27,7 @@ already satisfies this obligation."
 
 ## The case that is neither
 
-Eleven of this spec's thirteen falsifiability rows are **regression guards over production state that
+Twelve of this spec's twenty falsifiability rows are **regression guards over production state that
 predates the row**. Concretely:
 
 | row        | what already satisfied the obligation                                           |
@@ -64,9 +64,48 @@ resolves that locally, the next author resolves it differently — which is the 
 unverified-hand-maintenance failure `CR-20260814-0001` describes one level down.
 
 Recorded in the interim, and visible in the ledger now: `Satisfied-by` names **what actually satisfies
-the obligation**, which for these eleven is a named pre-existing artifact rather than a `TDD-NNNN`.
+the obligation**, which for twelve of them is a named pre-existing artifact rather than a `TDD-NNNN`, and for the other eight is the seam or an earlier change of this run.
 That is a deviation from the reference's literal instruction, taken deliberately and in the open
 rather than by writing a row id that would be false.
+
+## Correction: twenty rows, not thirteen, and three deviation classes rather than one
+
+**Added 2026-08-20, after round 5.** Both `qa-gatekeeper` and `completion-reviewer` found the same
+error independently, and it is mine: this CR was filed at `8b0bcffe` against thirteen rows, and
+`e4a7295c` — the B7 repair, landing after it — put the same three fields on seven more without
+updating the CR. Step 3 below therefore told the operator to "confirm thirteen cells" against a tree
+that correctly holds twenty, so a compliant tree would have failed the CR's own cross-check.
+
+The twenty, and what each `Satisfied-by` actually names:
+
+| class                                                       | rows                                                                                           |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| **A — production state predating this spec** (12)           | `0024`, `0026`, `0036`, `0038`, `0041`, `0042`, `0043`, `0055`, `0056`, `0068`, `0080`, `0082` |
+| **B — the no-behaviour seam, or the absence it leaves** (4) | `0004`, `0078`, `0079`, `0081`                                                                 |
+| **C — an earlier change of THIS run** (4)                   | `0018`, `0025`, `0031`, `0075`                                                                 |
+
+So **20 of 20 deviate** from `Satisfied-by: TDD-NNNN`, not eleven of thirteen as first written, and
+they deviate in three different directions. `qa-gatekeeper` split them 13/4/3 and put `TDD-0025`
+under class A; it belongs in C, because the `DR-0017-0003` it names was written on this branch by
+`42dd70cb`, not before the spec. That is the only disagreement and it does not change the shape of
+the finding.
+
+**Why the three classes matter to the decision.** Option 1 as first written legalises class A only —
+"pre-existing production state". It leaves B and C exactly as unexpressible as before:
+
+- **Class B** is the structural case: an accepting-direction row cannot be reddened by the seam the
+  RED procedure itself prescribes, and a document reduced to a placeholder satisfies every negative
+  claim about it. That will recur in every spec, which is why option 4 asks for it by name.
+- **Class C** is the most awkward, and it is the one no option covers. The satisfier is an earlier
+  change **in the same run** — change 3's own production edit, change 4's placement, change 7 part 1.
+  A sibling ROW is not responsible, so `TDD-NNNN` is still false; but "pre-existing" is false too,
+  because the state was created minutes earlier by the same session. If the approved option is
+  literal about class A, these four rows are left with no honest value at all.
+
+Recommended, updated: **option 1 extended to name all three classes**, plus option 4. A `Satisfied-by`
+grammar of "a `TDD-NNNN`, a `DR-NNNN`, a named artifact and the property it already had, the seam, or
+an earlier change in this run identified by its change number" covers every case measured here and
+leaves nothing to invent.
 
 ## Options
 
@@ -93,7 +132,7 @@ structural case being re-derived by each author.
 
 - Specs: `none — this is a skill reference, not a spec`
 - Plans: `none`
-- Tests: `none of the thirteen rows changes; only what their Evidence cell is allowed to say`
+- Tests: `none of the twenty rows changes; only what their Evidence cell is allowed to say`
 - Contracts: `none`
 - Schema: `none`
 
@@ -112,18 +151,26 @@ alongside it?
 
 1. `/qfai-sdd` rerun scope: edit `references/red-not-observable.md` under
    `packages/qfai/assets/init/**` to add the approved classification and the `Satisfied-by` value
-   grammar; propagate to the installed `.qfai/` mirror by reinstall, not by hand-editing the mirror.
+   grammar; propagate to the installed `.qfai/` mirror by reinstall, not by hand-editing the
+   mirror. **No mode applies, and the owner named here was wrong.**
+   `references/red-not-observable.md` is packaged skill text under `packages/qfai/assets/init/**`,
+   which the step-4 invocation table does not cover — the same reasoning three sibling CRs apply
+   correctly. `/qfai-sdd` does not own it; the package source does, and the installed mirror
+   follows by reinstall.
 2. Downstream ledger sweep: **no rows are reset.** Every affected row is already `refactor` with a
    complete trio, and this CR changes only the vocabulary the trio may use. Enumerated for the
    avoidance of doubt, so a later sweep cannot claim these rows were in scope:
-   - not reset: `TDD-0004`, `TDD-0018`, `TDD-0024`, `TDD-0025`, `TDD-0026`, `TDD-0031`, `TDD-0036`,
-     `TDD-0038`, `TDD-0041`, `TDD-0042`, `TDD-0043`, `TDD-0068`, `TDD-0075`
-   - If the approved option instead REJECTS the artifact-naming value, then the eleven rows whose
+   - not reset, all twenty: `TDD-0004`, `TDD-0018`, `TDD-0024`, `TDD-0025`, `TDD-0026`, `TDD-0031`,
+     `TDD-0036`, `TDD-0038`, `TDD-0041`, `TDD-0042`, `TDD-0043`, `TDD-0055`, `TDD-0056`, `TDD-0068`,
+     `TDD-0075`, `TDD-0078`, `TDD-0079`, `TDD-0080`, `TDD-0081`, `TDD-0082`
+   - If the approved option instead REJECTS the artifact-naming value, then the twelve rows whose
      `Satisfied-by` names an artifact must have that cell rewritten to the approved form. That is a
      cell edit, not a status reset — the `Evidence` cell is unconditionally editable under the drift
      protocol.
-3. Cross-check after applying: re-grep the ledger for `Satisfied-by:` and confirm thirteen cells, the
-   count this CR was raised against.
+3. Cross-check after applying: re-grep the ledger for `Satisfied-by:` and confirm **twenty** cells.
+   Thirteen was the count when this CR was filed and it was already stale by the next commit — see
+   the correction above. Twenty is the number a compliant tree holds today; if it has moved again,
+   re-derive it from the ledger rather than from this line.
 
 ## Resolution
 

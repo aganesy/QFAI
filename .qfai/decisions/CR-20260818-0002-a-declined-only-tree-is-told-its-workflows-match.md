@@ -90,7 +90,7 @@ Choose A, B or C.
 
 1. Owner is `packages/qfai/src` plus the packaged detection surface, not a spec-authoring skill: the
    gap is that `declined` appears in no surface, which is a code and contract change carrying its own
-   spec row and test.
+   spec row and test. **No mode applies** — the fix is in `packages/qfai/src` plus the packaged detection surface, neither of which the step-4 invocation table covers.
 2. Downstream ledger sweep: **no rows are reset.** `TC-0006-0035` is implemented as written and its
    evidence stays true — this CR's own header says the gap is upstream of it. If the approved option
    changes what `TC-0006-0035` asserts, the sweep is exactly that one row and it is named here so a

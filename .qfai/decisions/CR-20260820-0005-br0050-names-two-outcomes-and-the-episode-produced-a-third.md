@@ -4,7 +4,7 @@
 - Title: `BR-0017-0050 names two outcomes for a flakier higher value, and the episode that occurred produced a third`
 - Raised by: `/qfai-implement orchestrator, spec-0017 TDD-0066; raised after the episode was resolved, not while proposing one`
 - Raised at: `2026-08-20T00:00:00Z`
-- Class: `ambiguity`
+- Class: `intent`
 - Status: `open`
 - Approved by: `-`
 - Approved at: `-`
@@ -107,6 +107,8 @@ treating the structural fix as outside the rule?
 
 1. `/qfai-sdd` rerun scope: add the third outcome to `BR-0017-0050` and mirror it in
    `EX-0017-0050`, ordered so the investigation comes first and the reduction is the fallback.
+   Mode: **`re-derive`**. A third outcome is added to the rule and mirrored in the example;
+   neither exists to be confirmed.
 2. Downstream ledger sweep: **no rows are reset.** `TDD-0066` is implemented and records what
    happened, including the refused proposal and the structural fix; `TDD-0067` records the sign-off
    question. Named so a later sweep cannot widen:

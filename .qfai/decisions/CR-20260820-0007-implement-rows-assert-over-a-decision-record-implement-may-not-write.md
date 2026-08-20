@@ -11,7 +11,7 @@
 - Approved option: `-`
 - Applied at: `-`
 - Superseded by: `-`
-- Blocked set: `spec-0017 TDD-0032, TDD-0033, TDD-0034, TDD-0035` (see "Four rows this blocks")
+- Blocked set: `spec-0017 TDD-0032, TDD-0033, TDD-0034, TDD-0035` unconditionally; `TDD-0052, TDD-0066, TDD-0067, TDD-0074, TDD-0075` under options 2 and 3 only (see the two tables below)
 
 ## The prohibition, quoted
 
@@ -132,6 +132,43 @@ Neither constraint is a defect in `TDD-0032`. Both are why it is `todo` rather t
 Recommended: option 1. Option 2 is the only one that is unambiguously correct on authority and it
 destroys the most information; option 1 keeps the information and fixes the cause.
 
+### The five `refactor` rows this also covers, conditionally
+
+**Added 2026-08-20, after round 5.** `completion-reviewer` found the `Blocked set` field naming only
+the four `todo` rows while this CR's own table lists five `refactor` rows that READ the disputed
+records — and its own step 2 says that under option 2 "none may stay at `refactor`". An item the
+blocked set does not name is, by `drift-protocol.md`'s own words, "not blocked by this CR", so
+leaving them off meant option 2 could reset rows the operator never approved resetting.
+
+| row        | reads          | under option 1 | under option 2 or 3                 |
+| ---------- | -------------- | -------------- | ----------------------------------- |
+| `TDD-0052` | `DR-0017-0008` | unaffected     | reset — the record is gone or moved |
+| `TDD-0066` | `DR-0017-0009` | unaffected     | reset                               |
+| `TDD-0067` | `DR-0017-0009` | unaffected     | reset                               |
+| `TDD-0074` | `DR-0017-0007` | unaffected     | reset                               |
+| `TDD-0075` | `DR-0017-0007` | unaffected     | reset                               |
+
+They are **conditionally** in the blocked set: option 1 ratifies the records they read and touches
+nothing, options 2 and 3 delete or relocate those records and every one of the five stops being
+satisfiable. That distinction is the reason they were omitted and the reason omitting them was
+wrong — a conditional member is still a member, and the condition belongs in the table rather than
+in the author's head.
+
+### Three new decision records, not five
+
+Also recorded because a reviewer read it the other way. `completion-reviewer` reported "**five** DR
+entries across two commits, not three". Measured:
+
+```text
+git show 9aced5bb -- 07_Decisions.md | grep '^+### DR-'   ->  DR-0017-0007
+git show 955eb2f1 -- 07_Decisions.md | grep '^+### DR-'   ->  DR-0017-0008, DR-0017-0009
+```
+
+The added lines of those two commits MENTION five distinct DR ids — `0004` and `0005` appear as
+cross-references inside the new entries' prose. Three entries were created. The figure in this CR is
+correct as written, and the discrepancy is recorded here so the next reader does not have to
+re-derive which count is right.
+
 ## Impact
 
 - Specs: `spec-0017 — 07_Decisions.md (DR-0017-0007, DR-0017-0008, DR-0017-0009)`
@@ -154,7 +191,12 @@ append-only writes (option 4)?
 
 1. `/qfai-sdd` rerun scope under option 1: adopt `DR-0017-0007`, `DR-0017-0008` and `DR-0017-0009`
    into `spec-0017`'s decision record as its own output, and add the ordering rule to
-   `SKILL.md`'s prohibition list so the next agent meets a routing constraint instead of this choice.
+   `SKILL.md`'s prohibition list so the next agent meets a routing constraint instead of this
+   choice. Mode: **`confirm-only`** for the decision record under option 1 — the protocol's own
+   words for this case are "the change was already applied by hand under approval", which is
+   exactly what happened and why this CR exists. The `SKILL.md` ordering rule is a separate
+   packaged-asset edit and no mode applies to it. Under option 2 the mode is **`re-derive`**,
+   because the three records are removed and the artifact regenerated without them.
 2. Downstream ledger sweep: **no rows are reset under option 1**, because the records the rows assert
    over do not change — only their authorship does. Enumerated so a later sweep cannot widen:
    - not reset under option 1: `TDD-0052`, `TDD-0066`, `TDD-0067`, `TDD-0074`, `TDD-0075`
