@@ -9,6 +9,39 @@ share a file — which is the normal case here, because this spec's ledger point
 test file**. The one exception is a **mutant** blob, which no revision determines; those are recorded
 as base revision + literal needle + literal replacement, with the mutant hash kept.
 
+## What the `mutant` column holds, and what it does not
+
+**CORRECTION (2026-08-20, after the gatekeeper's blocking finding.)** The sentence above says "with
+the mutant hash kept", which reads as a hash you can look up. You cannot. Every value in the
+`mutant` column of every oracle table below was produced by `git hash-object` **without `-w`**, so it
+was computed and never written to the object database. Measured:
+
+```text
+git cat-file -t 9232ee34   -> fatal: Not a valid object name 9232ee34
+git cat-file -t f9c12a13   -> fatal: Not a valid object name f9c12a13
+git cat-file -t 34b1da53   -> fatal: Not a valid object name 34b1da53
+git cat-file -t de01ef97   -> fatal: Not a valid object name de01ef97
+```
+
+So the column is a **fingerprint, not an address**. What it is still good for, verified rather than
+asserted:
+
+```text
+printf 'x=1\n' > a; git hash-object a   -> bafc5d9a1a836cea09dadcec13e66fe498cd997a
+git cat-file -t bafc5d9a...             -> fatal: could not get object info
+printf 'x=1\n' > b; git hash-object b   -> bafc5d9a1a836cea09dadcec13e66fe498cd997a   (identical)
+```
+
+A reader who reconstructs the mutant from **base revision + literal needle + literal replacement**
+and runs `git hash-object` on the result gets the recorded value back if and only if the
+reconstruction is byte-identical. That makes the column a check on the reconstruction and on this
+record's transcription — which is worth keeping — and it makes `git cat-file` on it fail, which is
+worth saying rather than leaving a reader to discover.
+
+The needle and the replacement are therefore the load-bearing record, exactly as
+`references/oracle-strength.md` asks. The hashes are not retracted, because they are not wrong; the
+claim that they can be retrieved is what was wrong.
+
 ## Change 1 — the derived verdict (TDD-0001 … TDD-0005)
 
 `10_Plan.md` § `The shape of the change, in order` step 1, and `DR-0017-0005` edge 1: this change
@@ -185,6 +218,8 @@ near-miss tokens and the empty map returned 0 against the seam and return 1 agai
 
 ## Change 2 — own-tree hardening (TDD-0014, TDD-0019, TDD-0021, TDD-0022, TDD-0024)
 
+<a id="tdd-0014"></a><a id="tdd-0019"></a><a id="tdd-0021"></a><a id="tdd-0022"></a><a id="tdd-0024"></a>
+
 `10_Plan.md` step 2: per-job permissions, `persist-credentials: false` on every checkout step, and
 every action reference pinned to a full SHA. Mechanical and wide; no topology change. Base revision
 `08214aeb`.
@@ -355,6 +390,8 @@ while clause 3 reads a total this change increased.
 
 ## Change 3 — the hygiene lane (TDD-0015, TDD-0017, TDD-0018, TDD-0020, TDD-0023)
 
+<a id="tdd-0015"></a><a id="tdd-0017"></a><a id="tdd-0018"></a><a id="tdd-0020"></a><a id="tdd-0023"></a>
+
 `10_Plan.md` step 3: the script, its fixtures, and the `ci:lint` registration. Lands after change 2
 so it is green on arrival — and it is: run against the real tree it exits 0 and prints its rule set.
 Base revision `a8a9e4e3`.
@@ -520,6 +557,8 @@ item-12 checkpoint is not attempted, and now for two reasons rather than one:
 
 ## Change 4 — the shared setup definition (TDD-0027, TDD-0028, TDD-0029, TDD-0031)
 
+<a id="tdd-0027"></a><a id="tdd-0028"></a><a id="tdd-0029"></a><a id="tdd-0031"></a>
+
 `10_Plan.md` step 4: extract the preamble duplicated six times into
 `.github/actions/setup/action.yml` and consume it from every toolchain job. Base revision `28b7a8e2`.
 **TDD-0030 is NOT in this change** — it is blocked by `CR-20260820-0001`, filed from a conflict this
@@ -680,6 +719,8 @@ landed. The item-12 checkpoint is not attempted: step 2 needs a clean whole-suit
 not currently giving, and step 4's clause 3 reads a total `CR-20260818-0006` is about.
 
 ## Change 5 — slice-surface alignment (TDD-0062, TDD-0063, TDD-0064)
+
+<a id="tdd-0062"></a><a id="tdd-0063"></a><a id="tdd-0064"></a>
 
 `10_Plan.md` step 5: delete the runner project that matches zero files, add the two missing per-slice
 scripts, and make the three slice surfaces name one set. Base revision `9b5b174b`.
@@ -887,6 +928,8 @@ against `TC-0017-0063`'s wording; the row is implemented against the intent, not
 
 ## Change 6 — the parallelism knob set (TDD-0060, TDD-0061, TDD-0068)
 
+<a id="tdd-0060"></a><a id="tdd-0061"></a><a id="tdd-0068"></a>
+
 `10_Plan.md` step 6: the knob set per project with the declared starting value of ten. Structure only;
 the final value is a later change per project. Base revision `01c9f6ff`.
 
@@ -1073,6 +1116,8 @@ not the literal text.
 
 ## Change 7 — retiring the duplicate validate workflow (TDD-0071, TDD-0072, TDD-0073)
 
+<a id="tdd-0071"></a><a id="tdd-0072"></a><a id="tdd-0073"></a>
+
 `10_Plan.md` step 7: delete `.github/workflows/qfai-validate.yml` and fold its full-profile run into
 `build` as a named item of that job's verification set. Base revision `d8e58fe0`.
 
@@ -1244,6 +1289,8 @@ attempted for the reasons recorded under changes 3 through 6.
 
 ## Change 7 part 2 — the recorded justification (TDD-0074, TDD-0075)
 
+<a id="tdd-0074"></a><a id="tdd-0075"></a>
+
 `BR-0017-0061` allows the deletion in part 1 only with a structural contract gate present at or before
 it, and requires a recorded justification whose content it specifies. The ledger routes both rows to
 `packages/qfai/tests/assets/actionPinBumpOwner.test.ts`, the file this spec designates for rows whose
@@ -1352,6 +1399,8 @@ The three blocking agent verdicts were not obtained, so `Status` is `refactor` f
 item-12 checkpoint is not attempted, for the reasons recorded under changes 3 through 7.
 
 ## Change 8 — change detection and lane selection (TDD-0006 … TDD-0012)
+
+<a id="tdd-0006"></a><a id="tdd-0007"></a><a id="tdd-0008"></a><a id="tdd-0009"></a><a id="tdd-0010"></a><a id="tdd-0011"></a><a id="tdd-0012"></a>
 
 `10_Plan.md` step 8: the detection job, plus a derived condition on every declared leg; the lint lane
 and the required-context job stay unconditional. Base revision `9aced5bb`.
@@ -1583,6 +1632,8 @@ The item-12 checkpoint is not attempted, for the reasons recorded under changes 
 
 ## Change 9 — layer separation stays inside the file (TDD-0041, TDD-0042, TDD-0043)
 
+<a id="tdd-0041"></a><a id="tdd-0042"></a><a id="tdd-0043"></a>
+
 `10_Plan.md` step 9, the last: "jobs and matrix legs inside `ci.yml`, partitioned by the cost data step
 6 produces. Last, because the partition is the only part of this spec that needs a measurement it does
 not itself take." Base revision `2a3ef61c`.
@@ -1703,6 +1754,8 @@ The three blocking agent verdicts were not obtained, so `Status` is `refactor` f
 item-12 checkpoint is not attempted, for the reasons recorded under changes 3 through 8.
 
 ## After the nine — the required-context job's integrity and upload hygiene (TDD-0036, TDD-0038, TDD-0039, TDD-0040)
+
+<a id="tdd-0036"></a><a id="tdd-0038"></a><a id="tdd-0039"></a><a id="tdd-0040"></a>
 
 Not part of `10_Plan.md`'s nine sequenced changes. These are `AC-0017-0016` and `AC-0017-0017`, and they
 became landable once changes 7 through 9 settled what the required-context job is and what it performs.
@@ -1935,6 +1988,8 @@ Total 239.0s, every slice green at the declared worker value.
 
 ## The expected-required-context declaration (TDD-0057, TDD-0058, TDD-0013, TDD-0037, TDD-0059)
 
+<a id="tdd-0013"></a><a id="tdd-0037"></a><a id="tdd-0057"></a><a id="tdd-0058"></a><a id="tdd-0059"></a>
+
 `AC-0017-0025`, and the change that unblocks `TDD-0013`. Base revision `dd894914`.
 
 ### Why a checked-in file, and why these three properties
@@ -2058,6 +2113,8 @@ The three blocking agent verdicts were not obtained, so `Status` is `refactor` f
 item-12 checkpoint is not attempted, for the reasons recorded under the earlier changes.
 
 ## The hygiene rule set, closed and legible (TDD-0044 … TDD-0049)
+
+<a id="tdd-0044"></a><a id="tdd-0045"></a><a id="tdd-0046"></a><a id="tdd-0047"></a><a id="tdd-0048"></a><a id="tdd-0049"></a>
 
 `AC-0017-0019`, `AC-0017-0020` and `AC-0017-0021`. Base revision `4e29a2a4`.
 
@@ -2201,6 +2258,8 @@ item-12 checkpoint is not attempted, for the reasons recorded under the earlier 
 
 ## The shipped tree joins the lane (TDD-0050, TDD-0051, TDD-0053, TDD-0054, TDD-0055, TDD-0056)
 
+<a id="tdd-0050"></a><a id="tdd-0051"></a><a id="tdd-0053"></a><a id="tdd-0054"></a><a id="tdd-0055"></a><a id="tdd-0056"></a>
+
 `AC-0017-0022`, `AC-0017-0023` and `AC-0017-0024`. Base revision `4a4c0954`.
 
 ### The ordering condition was checked before anything was written
@@ -2317,6 +2376,8 @@ The three blocking agent verdicts were not obtained, so `Status` is `refactor` f
 item-12 checkpoint is not attempted, for the reasons recorded under the earlier changes.
 
 ## The record rows whose artifact exists (TDD-0025, TDD-0026, TDD-0052, TDD-0066, TDD-0067)
+
+<a id="tdd-0025"></a><a id="tdd-0026"></a><a id="tdd-0052"></a><a id="tdd-0066"></a><a id="tdd-0067"></a>
 
 Five of the eleven record-shaped rows, chosen because their artifact either already exists or can be
 written from what actually happened. Base revision `8bd05615`.
@@ -2444,6 +2505,8 @@ The three blocking agent verdicts were not obtained, so `Status` is `refactor` f
 item-12 checkpoint is not attempted, for the reasons recorded under the earlier changes.
 
 ## The layer-to-CI-lane mapping document (TDD-0076 … TDD-0082)
+
+<a id="tdd-0076"></a><a id="tdd-0077"></a><a id="tdd-0078"></a><a id="tdd-0079"></a><a id="tdd-0080"></a><a id="tdd-0081"></a><a id="tdd-0082"></a>
 
 `AC-0017-0032` through `AC-0017-0034`. Base revision `955eb2f1`.
 
