@@ -52,7 +52,7 @@
 // QFAI:SPEC-0017:TC-0017-0066
 // QFAI:SPEC-0017:TC-0017-0067
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -344,5 +344,119 @@ describe("TC-0017-0067 (TDD-0067): revising the declared starting value needs th
     expect
       .soft(knobs, "the declared starting value must still be the user's ten")
       .toMatch(/DECLARED_START\s*=\s*10\b/);
+  });
+});
+
+describe("TC-0017-0065 (TDD-0065): the adopted worker value matches the recorded measurement", () => {
+  it("compares at least two settings on the largest project and places the adopted value", () => {
+    // `EX-0017-0049` fixes both halves: a timing artifact comparing at least two worker
+    // settings ON THE LARGEST PROJECT plus the value actually adopted, and the adopted setting
+    // must be the fastest measured or within ten percent of it WITH A WRITTEN REASON. "A value
+    // adopted against no comparison does not satisfy the rule."
+    //
+    // The artifact is read and its arithmetic RE-DONE here rather than its prose trusted. A
+    // record that states a percentage is a record that can state the wrong percentage; the ten
+    // percent test is computed from the artifact's own numbers, so a transcription error fails
+    // this row instead of surviving it.
+    const artifact = readFileSync(
+      path.join(REPO_ROOT, ".qfai", "evidence", "timing-workers-spec-0017.md"),
+      "utf-8",
+    );
+
+    // CLAIM 1 — the largest project is NAMED, and named as a measurement rather than an
+    // assumption. "Largest" is a property of the tree that changes as tests are added, so the
+    // artifact has to say how it was determined and the row checks the claim still holds.
+    const largest = /largest project:\s*`([a-z0-9-]+)`\s*\((\d+)\s*tests\)/i.exec(artifact);
+    expect(largest, "the artifact must name the largest project and its test count").not.toBeNull();
+    if (largest === null) return;
+    // Only the project name is bound. The count is still REQUIRED by the pattern above, so a
+    // an artifact that omits it fails CLAIM 1 — but nothing below needs its value, because the
+    // size check re-counts test FILES rather than cases.
+    const [, project] = largest;
+
+    // CLAIM 2 — at least two settings, each with a duration. Parsed as data, so a row of prose
+    // claiming a comparison cannot stand in for one.
+    const rows = [...artifact.matchAll(/^\|\s*(\d+)\s*\|\s*([0-9.]+)\s*s\s*\|/gm)].map((m) => ({
+      workers: Number(m[1]),
+      seconds: Number(m[2]),
+    }));
+    expect
+      .soft(rows.length, "the artifact must compare at least two worker settings")
+      .toBeGreaterThanOrEqual(2);
+    if (rows.length < 2) return;
+
+    // CLAIM 3 — the adopted value is stated, and it is the value the runner actually uses.
+    // Asserted against `vitest.knobs.ts` and not only against the artifact, so the record and
+    // the configuration cannot agree with each other while both being wrong.
+    const adoptedMatch = /adopted:\s*(\d+)\b/i.exec(artifact);
+    expect(adoptedMatch, "the artifact must state the adopted value").not.toBeNull();
+    if (adoptedMatch === null) return;
+    const adopted = Number(adoptedMatch[1]);
+
+    const knobs = readFileSync(
+      path.join(REPO_ROOT, "packages", "qfai", "vitest.knobs.ts"),
+      "utf-8",
+    );
+    expect
+      .soft(knobs, "the adopted value must be the one the runner declares")
+      .toMatch(new RegExp(`DECLARED_START\\s*=\\s*${adopted}\\b`));
+
+    // CLAIM 4 — the adopted value was actually measured. A comparison that omits the value it
+    // adopts is the "adopted against no comparison" case the rule rejects outright.
+    const adoptedRow = rows.find((r) => r.workers === adopted);
+    expect(
+      adoptedRow,
+      `the comparison must include the adopted value ${adopted}`,
+    ).not.toBeUndefined();
+    if (adoptedRow === undefined) return;
+
+    // CLAIM 5 — and it is the fastest, or within ten percent of the fastest with a reason.
+    // Computed, not read.
+    const fastest = rows.reduce((a, b) => (b.seconds < a.seconds ? b : a));
+    const overhead = (adoptedRow.seconds - fastest.seconds) / fastest.seconds;
+    if (adoptedRow.workers !== fastest.workers) {
+      expect
+        .soft(
+          overhead,
+          `the adopted value ${adopted} (${adoptedRow.seconds}s) must be within ten percent of the fastest ${fastest.workers} (${fastest.seconds}s)`,
+        )
+        .toBeLessThanOrEqual(0.1);
+      // The written reason is required only on this branch, which is why it is asserted here
+      // and not unconditionally: a record that adopts the fastest value owes no explanation.
+      expect
+        .soft(artifact, "a value that is not the fastest must carry a written reason")
+        .toMatch(/reason for not adopting the fastest/i);
+    }
+
+    // CLAIM 6 — the artifact still describes this project. A comparison is only meaningful for
+    // the tree it was run on, so the artifact records the project's test-FILE count and this
+    // claim re-counts it by walking the directory.
+    //
+    // Files and not test cases, deliberately: counting cases needs the runner, and spawning
+    // vitest from a test is the cost that put this spec's own integration slice past its
+    // timeout. A directory walk is a few milliseconds.
+    //
+    // Tolerance rather than equality, because files are added constantly and a red build on
+    // every new test file would make this row an obstacle instead of a check.
+    const filesMatch = /test files:\s*(\d+)\b/i.exec(artifact);
+    expect(filesMatch, "the artifact must record the project's test-file count").not.toBeNull();
+    if (filesMatch === null) return;
+
+    const countTestFiles = (dir: string): number => {
+      let n = 0;
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, entry.name);
+        if (entry.isDirectory()) n += countTestFiles(p);
+        else if (/\.test\.ts$/.test(entry.name)) n += 1;
+      }
+      return n;
+    };
+    const actual = countTestFiles(path.join(PACKAGE_ROOT, "tests", project));
+    expect
+      .soft(
+        Math.abs(actual - Number(filesMatch[1])) / Number(filesMatch[1]),
+        `the artifact says ${project} held ${filesMatch[1]} test files; it now holds ${actual}, and beyond twenty percent the comparison describes a different project`,
+      )
+      .toBeLessThanOrEqual(0.2);
   });
 });

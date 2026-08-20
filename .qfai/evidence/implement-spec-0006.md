@@ -5773,7 +5773,7 @@ contract items, so it is a **lone false RED over the sentences** — exactly wha
 impossible.
 
 **And the disclosure was already in the file, twelve lines below.** The CONSTRAINT paragraph says the
-message "may not use those three as BARE WORDS. The shipped text says 'reports', which the trailing ``
+message "may not use those three as BARE WORDS. The shipped text says 'reports', which the trailing `\b`
 rejects." A bound that made a lone red impossible would need no such constraint. Two paragraphs of the same
 docblock contradicted each other, and three rounds of review had read past it — because each round checked
 the *new* text against measurement and not against its own neighbours.
