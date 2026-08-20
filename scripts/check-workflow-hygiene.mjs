@@ -54,14 +54,41 @@ const CODE = "R-WORKFLOW-HYGIENE-DRIFT";
  * Keyed by the identifier each finding carries, so a red run and this list use
  * the same vocabulary.
  */
+/**
+ * The rule set, SCOPED, and printed on success so a green run names its own coverage.
+ *
+ * The scope is load-bearing rather than decorative. `BR-0017-0037` closes the set over
+ * `.github/workflows/**` at exactly five obligations, and the declaration rule is not one of
+ * them — its subject is a JSON file checked against the workflows and it comes from a
+ * different criterion. Printing the two groups separately is what makes "exactly five"
+ * reproducible from the output instead of a number a reader has to take on trust.
+ *
+ * `job-guardrails` and not `permissions-reachable`: the first obligation is "every job
+ * declares permissions AND `timeout-minutes`", one rule covering two keys. The narrower id
+ * described half of it, and an id that names half of what it fails on sends the operator to
+ * the wrong line.
+ */
 const RULES = [
-  ["permissions-reachable", "every job has a permission block reachable from it (job or workflow)"],
-  ["checkout-credentials", "every checkout step sets persist-credentials: false"],
-  ["action-pin", "every `uses:` reference is a full 40-hex commit SHA"],
   [
+    "workflows",
+    "job-guardrails",
+    "every job has a reachable permission block and declares timeout-minutes",
+  ],
+  ["workflows", "checkout-credentials", "every checkout step sets persist-credentials: false"],
+  ["workflows", "action-pin", "every `uses:` reference is a full 40-hex commit SHA"],
+  ["workflows", "matrix-fail-fast", "every matrix strategy sets fail-fast: false"],
+  ["workflows", "secret-inheritance", "no job inherits the caller's secrets"],
+  [
+    "declaration",
     "required-context",
     "the declared required-status-context job exists, is unskippable through its whole `needs` closure, and still performs its verification set",
   ],
+];
+
+/** The scopes, in print order, with the heading each one is announced under. */
+const SCOPES = [
+  ["workflows", "Rules run over the own CI tree:"],
+  ["declaration", "Rules run over the required-status-context declaration:"],
 ];
 
 /**
@@ -146,7 +173,7 @@ function collectJobs(root) {
     const doc = parseFile(root, file);
     if (doc === null || typeof doc.__parseError === "string") {
       findings.push({
-        rule: "permissions-reachable",
+        rule: "job-guardrails",
         file,
         job: "(whole file)",
         detail: `could not be parsed: ${doc?.__parseError ?? "not a mapping"}`,
@@ -155,7 +182,7 @@ function collectJobs(root) {
     }
     if (!isRecord(doc.jobs)) {
       findings.push({
-        rule: "permissions-reachable",
+        rule: "job-guardrails",
         file,
         job: "(whole file)",
         detail: "declares no `jobs:` mapping",
@@ -170,16 +197,82 @@ function collectJobs(root) {
   return { jobs, findings };
 }
 
-function checkPermissions(jobs) {
-  return jobs
-    .filter((entry) => !hasReachablePermissions(entry))
-    .map((entry) => ({
-      rule: "permissions-reachable",
-      file: entry.file,
-      job: entry.jobKey,
-      detail:
-        "no permission block is reachable from this job — declare one here or on the workflow",
-    }));
+/**
+ * The first obligation, both halves.
+ *
+ * Permissions by REACHABILITY (a job with no block of its own is governed by the workflow's)
+ * and `timeout-minutes` by declaration on the job — the runner has no workflow-level default
+ * for it, so reachability would be the wrong test and would pass a job that can hang for six
+ * hours.
+ */
+function checkJobGuardrails(jobs) {
+  const findings = [];
+  for (const entry of jobs) {
+    if (!hasReachablePermissions(entry)) {
+      findings.push({
+        rule: "job-guardrails",
+        file: entry.file,
+        job: entry.jobKey,
+        detail: "has no permission block reachable from it, at the job or the workflow level",
+      });
+    }
+    if (entry.job["timeout-minutes"] === undefined) {
+      findings.push({
+        rule: "job-guardrails",
+        file: entry.file,
+        job: entry.jobKey,
+        detail:
+          "declares no timeout-minutes; the runner has no workflow-level default, so an unbounded job can hold a runner for six hours",
+      });
+    }
+  }
+  return findings;
+}
+
+/**
+ * Every matrix disables fail-fast.
+ *
+ * `=== false` and not "falsy": the key's ABSENCE means fail-fast is ON, which is the default
+ * this rule exists to override. A missing key and an explicit `true` are the same failure, and
+ * a truthiness test would let the missing one through.
+ */
+function checkMatrixFailFast(jobs) {
+  const findings = [];
+  for (const entry of jobs) {
+    const strategy = entry.job.strategy;
+    if (!isRecord(strategy) || !isRecord(strategy.matrix)) continue;
+    if (strategy["fail-fast"] !== false) {
+      findings.push({
+        rule: "matrix-fail-fast",
+        file: entry.file,
+        job: entry.jobKey,
+        detail: `declares a matrix with fail-fast: ${String(strategy["fail-fast"])}; one failing leg would cancel the rest and hide which others would have failed`,
+      });
+    }
+  }
+  return findings;
+}
+
+/**
+ * Secret inheritance appears nowhere.
+ *
+ * `secrets: inherit` hands a called workflow every secret the caller holds, which is the
+ * opposite of the least-privilege posture the permission blocks establish — a job restricted
+ * to `contents: read` while inheriting the full secret set is restricted in name only.
+ */
+function checkSecretInheritance(jobs) {
+  const findings = [];
+  for (const entry of jobs) {
+    if (entry.job.secrets !== undefined) {
+      findings.push({
+        rule: "secret-inheritance",
+        file: entry.file,
+        job: entry.jobKey,
+        detail: `declares secrets: ${String(entry.job.secrets)}; inheriting the caller's secrets undoes the permission block above it`,
+      });
+    }
+  }
+  return findings;
 }
 
 function checkCheckoutCredentials(jobs) {
@@ -395,7 +488,9 @@ export function runHygieneLane(root) {
   const { jobs, findings: structural } = collectJobs(root);
   return [
     ...structural,
-    ...checkPermissions(jobs),
+    ...checkJobGuardrails(jobs),
+    ...checkMatrixFailFast(jobs),
+    ...checkSecretInheritance(jobs),
     ...checkCheckoutCredentials(jobs),
     ...checkActionPins(collectUses(root, jobs)),
     ...checkRequiredContexts(root, jobs),
@@ -424,9 +519,12 @@ function main(argv) {
   // The coverage boundary, printed because a green result must not read as a
   // blanket assurance — `OQ-0017`'s deferral of an external linter is only honest
   // while this list is visible.
-  stdout.write("workflow hygiene: PASS. Rules run over the own CI tree:\n");
-  for (const [id, description] of RULES) {
-    stdout.write(`  - ${id}: ${description}\n`);
+  stdout.write("workflow hygiene: PASS.\n");
+  for (const [scope, heading] of SCOPES) {
+    stdout.write(`${heading}\n`);
+    for (const [ruleScope, id, description] of RULES) {
+      if (ruleScope === scope) stdout.write(`  - ${id}: ${description}\n`);
+    }
   }
   stdout.write(
     "Not covered here: the shipped workflow set, and runner-label and secret-reference rules.\n",

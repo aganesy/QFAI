@@ -2024,3 +2024,145 @@ shared test file changes which absent selectors are reported as resolving.
 
 The three blocking agent verdicts were not obtained, so `Status` is `refactor` for all five rows. The
 item-12 checkpoint is not attempted, for the reasons recorded under the earlier changes.
+
+## The hygiene rule set, closed and legible (TDD-0044 … TDD-0049)
+
+`AC-0017-0019`, `AC-0017-0020` and `AC-0017-0021`. Base revision `4e29a2a4`.
+
+### The set was three rules, and one of those was half a rule
+
+`BR-0017-0037` enumerates five obligations over `.github/workflows/**`: every job declares permissions
+**and `timeout-minutes`**; every checkout refuses to persist credentials; every action reference is
+SHA-pinned; every matrix disables fail-fast; secret inheritance appears nowhere.
+
+Change 2 shipped three, and its first — `permissions-reachable` — covered only the permissions half of
+obligation one. So this change adds `timeout-minutes` to it, adds the two missing rules, and renames it:
+an id that says "permissions" while also failing on a missing timeout sends the operator to the wrong
+line. Every job in the tree already declares a timeout, every matrix already disables fail-fast, and no
+job declares `secrets:` — so all three additions are regression guards, which is what `AC-0017-0019`
+("exits 0 over the hardened tree") asks for.
+
+### "Exactly five" is now reproducible from the output
+
+The declaration rule from the previous change is not one of the five: its subject is a JSON file checked
+against the workflows and it comes from a different criterion. The lane therefore carries a SCOPE per
+rule and prints two labelled groups.
+
+That is what lets `TDD-0045` assert the closure without a hand-kept exclusion list. The first draft
+filtered the declaration rule out by name while its own comment claimed it was excluded by scope; with
+two groups the row asks for the workflow group and the claim matches the code. A name filter would also
+have let a rule from a third scope join the count silently.
+
+Two implementation details worth their comments:
+
+- **`fail-fast !== false`, not falsy.** The key's ABSENCE means fail-fast is ON — that is the default the
+  rule exists to override — so a missing key and an explicit `true` are the same failure. A truthiness
+  test would pass the missing one, which is the more likely of the two.
+- **`secrets !== undefined`, not `=== "inherit"`.** Any secret declaration on a job undoes the
+  permission block above it; restricting a job to `contents: read` while handing it the caller's secret
+  set is restriction in name only.
+
+### `TDD-0047` compared two static lists, and the oracle is what showed it
+
+`BR-0017-0038` says an unevaluated rule must be ABSENT from the printed list rather than implied by a
+green result. The falsifying shape is a lane that PRINTS a rule it does not RUN.
+
+The first draft compared the printed ids against the ids in this file's plant table — both static — so
+that shape would have passed, and the row would have been a restatement of `TC-0017-0048`. It now DERIVES
+the evaluated set by running each plant and recording which rule the lane actually reports, then asserts
+printed equals evaluated.
+
+Oracle `R1` and `R3` are the pair that proves the difference. Both break the matrix or timeout obligation,
+in different places: `R1` removes a CHECK while the rule stays printed, `R3` removes the CALL while both
+the check and the print survive. `R3` is the "advertised but unevaluated" shape, and only the rewritten
+row sees it.
+
+### Two couplings the oracle exposed, both fixed
+
+- **`TDD-0049` took the first plant off the list**, so removing the timeout check made the namespace row
+  fail for a reason with nothing to do with namespaces. It now selects the pin plant by RULE. The
+  subject is the code emitted, so which rule it breaks is incidental and the most stable one is the right
+  choice.
+- **`R4` reddens three change-3 rows as well as `TDD-0049`.** Changing the emitted code breaks every row
+  that names it, which is correct rather than noise — the code is a contract with the lint aggregate.
+
+### A sibling row caught the fixture, for the second time in this slice
+
+The action-pin plant originally wrote `uses: actions/checkout@` followed by a major tag, because that is
+the obvious way to make a reference float. `spec-0003`'s `shippedWorkflowPins` row scans **every test file
+in the suite** for a floating-major literal — the whole suite, not the shipped tree — and objected:
+
+```text
+FAIL tests/integration/shippedWorkflowPins.test.ts > TC-0003-0030 >
+  DTC-26 co-change: no test in the suite expects a floating-major reference for the shipped workflows
+```
+
+The plant now uses a BRANCH reference instead. The pin rule forbids anything that is not forty hex
+characters, so either form falsifies it, and a branch carries no floating-major literal. Not a reason to
+weaken the scan: the sibling row is doing exactly its job, and the fixture had a cheaper shape available.
+
+Second time this slice a sibling row has caught something in a file it does not own — change 4's was a
+comment rather than a fixture. Both were found only by the whole suite, which is the argument for the
+item-12 checkpoint asking for it rather than for the row's own test.
+
+### A bad edit, and what made it safe
+
+Removing the now-dead `checkPermissions` the first time also deleted `collectJobs`: the script walked
+backwards from the function for a docblock and swallowed its neighbour. The lane then failed with
+`collectJobs is not defined` — loud, immediate, and traceable, which is the only reason it cost minutes
+instead of a wrong green.
+
+The second attempt measured the span first (eleven lines, printed and read), refused unless the span
+contained no second `function` declaration, and verified the lane still loaded before anything else was
+written. Recorded because the lesson is about the method rather than the mistake: an edit that deletes
+code should assert what it is about to delete, not infer it.
+
+### RED and GREEN
+
+- **RED command**, from `packages/qfai`:
+  `pnpm exec vitest run tests/scripts/workflowHygiene.test.ts`
+- **RED result**: `Tests 6 failed | 16 passed (22)`, exit 1, every failure an assertion. `TDD-0047` named
+  `permissions-reachable` as a printed rule with no falsifying fixture, which is what made the rename
+  necessary rather than cosmetic.
+- **GREEN result**: same command, `Tests 22 passed (22)`. The lane over the real tree exits 0 and prints
+  five workflow-tree rules and one declaration rule.
+
+### Oracle proof — eight rounds
+
+| id | mutation | mutant | reddens |
+| --- | --- | --- | --- |
+| `R1` | the timeout half of the first obligation is dropped, while the rule stays printed | `b058fba4` | `TC-0017-0047`, `TC-0017-0048` |
+| `R2` | the matrix rule leaves the printed set, while its check keeps running | `fc6ae825` | `TC-0017-0044`, `TC-0017-0045`, `TC-0017-0046`, `TC-0017-0047` |
+| `R3` | the matrix rule stays printed while its check stops being called — advertised, unevaluated | `85cb6e40` | `TC-0017-0047`, `TC-0017-0048` |
+| `R4` | findings leave the bare-R namespace | `b031cc88` | `TC-0017-0017`, `TC-0017-0020`, `TC-0017-0023`, `TC-0017-0049` |
+| `R5` | the printed rules lose their descriptions | `56c9e599` | `TC-0017-0046` |
+| `R6` | the coverage boundary stops being printed, so green reads as a blanket assurance | `2b766fb1` | `TC-0017-0046` |
+| `R7` | a sixth workflow-scoped rule appears, which the rule text does not authorize | `e8556b34` | `TC-0017-0045`, `TC-0017-0047` |
+| `R8-control` | a comment-only edit beside the rule registry | `4777f5ba` | **nothing new** |
+
+### The suite
+
+| script | test files | tests | wall clock |
+| --- | --- | --- | --- |
+| `test:core` | 122 passed (122) | 1587 passed | 2 skipped (1589) | 76.1s |
+| `test:unit` | 43 passed (43) | 266 passed (266) | 7.5s |
+| `test:validators` | 46 passed (46) | 351 passed (351) | 12.6s |
+| `test:integration` | 124 passed | 4 skipped (128) | 862 passed | 19 skipped (881) | 39.0s |
+| `test:e2e` | 74 passed | 4 skipped (78) | 891 passed | 16 skipped (907) | 25.4s |
+| `test:cli` | 11 passed (11) | 321 passed (321) | 67.8s |
+| `test:scripts` | 10 passed (10) | 126 passed (126) | 15.3s |
+
+Total 243.7s, every one green.
+
+### The validate delta
+
+Four below the previous change: info=4 warning=365 error=2, exit 1. Diffed - five removed
+(TC-0017-0044, 0046, 0047, 0048, 0049) and one added, TC-0017-0053, which this change does not touch.
+TC-0017-0045 was not among the five even though it moved out of todo, and TC-0017-0053 joined without
+its selector appearing in any file. Seventh measurement of the same uneven resolution CR-20260818-0001
+is open against.
+
+### Gate items NOT satisfied
+
+The three blocking agent verdicts were not obtained, so `Status` is `refactor` for all six rows. The
+item-12 checkpoint is not attempted, for the reasons recorded under the earlier changes.

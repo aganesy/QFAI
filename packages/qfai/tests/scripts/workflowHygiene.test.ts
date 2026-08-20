@@ -846,3 +846,328 @@ describe("TC-0017-0059 (TDD-0059): skippable-through-a-dependency and a shrunk s
     }
   });
 });
+
+// ── the rule set, and what a green run is allowed to mean ────────────────────
+//
+// `BR-0017-0037` closes the set over `.github/workflows/**` at exactly five obligations:
+// every job declares permissions and `timeout-minutes`; every checkout refuses to persist
+// credentials; every action reference is SHA-pinned; every matrix disables fail-fast; secret
+// inheritance appears nowhere.
+//
+// The declaration rule is deliberately NOT one of the five. Its subject is a JSON file
+// checked against the workflows, it comes from a different criterion (`AC-0017-0025`), and
+// counting it here would make "exactly five" a number nobody could reproduce from the rule
+// text. The lane therefore carries a scope per rule and these rows count the workflow-tree
+// ones.
+//
+// `BR-0017-0038` is the half that makes a green run readable: the output enumerates each rule
+// it evaluated, and a rule that was not evaluated is ABSENT rather than implied. Two rows
+// take the two directions of that — every printed rule is falsifiable, and every falsifiable
+// rule is printed — because either alone is satisfiable by a lane that lies in one direction.
+
+/** The five obligations `BR-0017-0037` enumerates, paired with the rule id each becomes. */
+const WORKFLOW_RULES = [
+  "job-guardrails",
+  "checkout-credentials",
+  "action-pin",
+  "matrix-fail-fast",
+  "secret-inheritance",
+] as const;
+
+/**
+ * The rule ids a green run prints, BY SCOPE.
+ *
+ * The lane announces each scope with a heading and lists its rules underneath, so a row that
+ * cares about the workflow-tree set can ask for that set instead of filtering the declaration
+ * rule out by name. The difference matters: a name filter is a hand-kept exclusion list, and
+ * the next rule from a third scope would silently join the count `TC-0017-0045` pins at five.
+ */
+function printedRules(output: string, heading: string): string[] {
+  const lines = output.split(/\r?\n/);
+  const start = lines.findIndex((line) => line.trim() === heading);
+  if (start < 0) {
+    throw new Error(`the lane printed no section headed "${heading}"`);
+  }
+  const ids: string[] = [];
+  for (const line of lines.slice(start + 1)) {
+    const m = /^\s+-\s+([a-z][a-z0-9-]*):/.exec(line);
+    if (m === null) break;
+    ids.push(m[1]);
+  }
+  return ids.sort();
+}
+
+/** The headings the lane announces its two scopes under. */
+const WORKFLOW_SCOPE = "Rules run over the own CI tree:";
+const DECLARATION_SCOPE = "Rules run over the required-status-context declaration:";
+
+/**
+ * One plantable violation per workflow-tree rule.
+ *
+ * The plants are the fixtures `BR-0017-0039` requires, and they live here rather than in a
+ * helper so each one sits next to the rule it falsifies. Each returns the job it broke, so
+ * the row can assert the finding names it.
+ */
+const PLANTS: { rule: string; label: string; plant: (dir: string) => string }[] = [
+  {
+    rule: "job-guardrails",
+    label: "a job loses its timeout",
+    plant: (dir) => {
+      editWorkflow(dir, "ci.yml", (text) =>
+        text.replace(
+          "  lint:\n    runs-on: ubuntu-latest\n    timeout-minutes: 10\n",
+          "  lint:\n    runs-on: ubuntu-latest\n",
+        ),
+      );
+      return "lint";
+    },
+  },
+  {
+    rule: "checkout-credentials",
+    label: "a checkout persists credentials",
+    plant: (dir) => {
+      editWorkflow(dir, "ci.yml", (text) =>
+        text.replace(
+          "          persist-credentials: false\n",
+          "          persist-credentials: true\n",
+        ),
+      );
+      return "detect";
+    },
+  },
+  {
+    rule: "action-pin",
+    label: "an action reference floats",
+    // A BRANCH reference and not a major tag, deliberately. The pin rule forbids anything
+    // that is not forty hex characters, so either falsifies it — but a sibling row scans
+    // every test file in this suite for a floating-major literal, and writing one here made
+    // that row fail. Not a reason to weaken the scan: a branch reference breaks the same rule
+    // and carries no such literal.
+    plant: (dir) => {
+      editWorkflow(dir, "ci.yml", (text) =>
+        text.replace(/uses: actions\/checkout@[0-9a-f]{40}/, "uses: actions/checkout@main"),
+      );
+      return "detect";
+    },
+  },
+  {
+    rule: "matrix-fail-fast",
+    label: "a matrix stops disabling fail-fast",
+    plant: (dir) => {
+      editWorkflow(dir, "ci.yml", (text) => text.replace("fail-fast: false", "fail-fast: true"));
+      return "test";
+    },
+  },
+  {
+    rule: "secret-inheritance",
+    label: "a job inherits secrets",
+    plant: (dir) => {
+      editWorkflow(dir, "ci.yml", (text) =>
+        text.replace("  lint:\n", "  lint:\n    secrets: inherit\n"),
+      );
+      return "lint";
+    },
+  },
+];
+
+describe("TC-0017-0044 (TDD-0044): the hygiene lane exits 0 over the hardened own tree", () => {
+  it("passes over the real tree with every one of the five rules evaluated", () => {
+    const dir = plantedTree(() => {});
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `the hardened tree must satisfy its own lane:\n${run.output}`)
+        .toBe(0);
+
+      // The accepting direction is only worth something if the rules ran. A lane that
+      // evaluated nothing also exits 0, which is the reading `BR-0017-0038` exists to close.
+      const printed = printedRules(run.output, WORKFLOW_SCOPE);
+      for (const rule of WORKFLOW_RULES) {
+        expect.soft(printed, `rule ${rule} must have been evaluated`).toContain(rule);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("TC-0017-0045 (TDD-0045): the own-tree hygiene rule set is closed at exactly five", () => {
+  it("evaluates the five enumerated obligations over the workflows tree and no sixth", () => {
+    const dir = plantedTree(() => {});
+    try {
+      const printed = printedRules(runLane(dir).output, WORKFLOW_SCOPE);
+
+      // The closure, both directions in one equality. `BR-0017-0037` enumerates five, so a
+      // sixth workflow-tree rule is as much a violation as a missing one: it would mean the
+      // lane asserts something the rule text does not authorize, and a reviewer reading the
+      // rule could not predict the lane's behaviour.
+      //
+      // The declaration rule is excluded by SCOPE, not by name: it is read from the
+      // declaration section, which this row never asks for. A name filter would be a
+      // hand-kept exclusion list, and the next rule from a third scope would join the count
+      // silently.
+      expect
+        .soft(printed, "the workflow-tree rule set is closed at exactly the five enumerated")
+        .toEqual([...WORKFLOW_RULES].sort());
+
+      // And the declaration rule is present in its own scope, so "five" is a scoping claim
+      // rather than a claim that the sixth rule was dropped.
+      expect
+        .soft(
+          printedRules(runLane(dir).output, DECLARATION_SCOPE),
+          "the declaration rule must still be evaluated, in its own scope",
+        )
+        .toEqual(["required-context"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("TC-0017-0046 (TDD-0046): a green run names every rule it evaluated", () => {
+  it("prints each rule with a description, and says what it does not cover", () => {
+    const dir = plantedTree(() => {});
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, "this row reads a GREEN run's output").toBe(0);
+
+      // A bare list of identifiers is not legible to a reviewer who did not write them, so
+      // each printed rule carries a description. Asserted as "the line is longer than the id"
+      // rather than by matching prose, which would make every wording change a red build.
+      for (const rule of WORKFLOW_RULES) {
+        const line = run.output.split(/\r?\n/).find((l) => l.includes(`- ${rule}:`)) ?? "";
+        expect
+          .soft(line.length, `rule ${rule} must be printed with a description, not bare`)
+          .toBeGreaterThan(`  - ${rule}: `.length + 20);
+      }
+
+      // And the boundary of the green result is stated. `OQ-0017`'s deferral of an external
+      // linter is only honest while what the lane does NOT cover is visible next to what it
+      // does.
+      expect
+        .soft(run.output, "a green run must state its coverage boundary")
+        .toMatch(/not covered/i);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("TC-0017-0047 (TDD-0047): an unevaluated rule is absent, not implied by the green run", () => {
+  it("prints exactly the rules it actually evaluates", () => {
+    // The direction that catches a lie in the FLATTERING direction: a lane could print six
+    // rules and evaluate four, and every accepting row above would still pass. `BR-0017-0038`
+    // is explicit that an unevaluated rule must be ABSENT rather than implied by green.
+    //
+    // So the evaluated set is DERIVED by running each plant and seeing which rule the lane
+    // reports — not read from the plant table, which would compare two static lists and pass
+    // a lane that printed a rule it never ran.
+    const clean = plantedTree(() => {});
+    let printed: string[] = [];
+    try {
+      printed = printedRules(runLane(clean).output, WORKFLOW_SCOPE);
+    } finally {
+      rmSync(clean, { recursive: true, force: true });
+    }
+
+    const evaluated = new Set<string>();
+    for (const { rule, plant } of PLANTS) {
+      const dir = plantedTree((d) => {
+        plant(d);
+      });
+      try {
+        const run = runLane(dir);
+        // The rule counts as evaluated only if breaking it produced a finding UNDER THAT
+        // RULE. A lane that exits 1 for some other reason has not demonstrated this one.
+        if (
+          run.exitCode === 1 &&
+          run.output.split(/\r?\n/).some((line) => line.includes(`: ${rule} —`))
+        ) {
+          evaluated.add(rule);
+        }
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    }
+
+    expect
+      .soft(
+        [...evaluated].sort(),
+        "every printed rule must be one the lane actually evaluates, and every evaluated rule must be printed",
+      )
+      .toEqual(printed);
+  });
+});
+
+describe("TC-0017-0048 (TDD-0048): each planted violation exits 1 naming file, job and rule", () => {
+  it("falsifies every rule independently, and returns to green when the plant is removed", () => {
+    for (const { rule, label, plant } of PLANTS) {
+      let brokenJob = "";
+      const dir = plantedTree((d) => {
+        brokenJob = plant(d);
+      });
+      try {
+        const run = runLane(dir);
+        expect.soft(run.exitCode, `${label}: must exit 1:\n${run.output}`).toBe(1);
+
+        // File, job and rule — all three, because an exit code in a tree with two workflow
+        // files and eighteen jobs is not something an operator can act on.
+        const matching = run.output.split(/\r?\n/).filter((line) => line.includes(rule));
+        expect.soft(matching.join("\n"), `${label}: must name the rule ${rule}`).toContain(rule);
+        expect.soft(matching.join("\n"), `${label}: must name the file`).toContain("ci.yml");
+        expect.soft(matching.join("\n"), `${label}: must name the job`).toContain(brokenJob);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    }
+
+    // And removing the plant returns the lane to 0 — asserted once rather than per plant,
+    // because the plants are made into COPIES and the unplanted copy is the same tree in
+    // every case.
+    const clean = plantedTree(() => {});
+    try {
+      expect.soft(runLane(clean).exitCode, "an unplanted copy must return to green").toBe(0);
+    } finally {
+      rmSync(clean, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("TC-0017-0049 (TDD-0049): hygiene findings use the bare lint namespace", () => {
+  it("emits every finding under the bare-R code, and no other code", () => {
+    // The action-pin plant, chosen rather than taken from the front of the list. This row’s
+    // subject is the NAMESPACE, so which rule it breaks is incidental — and the oracle showed
+    // that using the first plant coupled the row to whichever check that happened to be:
+    // removing the timeout check made this row fail for a reason that has nothing to do with
+    // namespaces. The pin rule is the oldest and least likely to move.
+    const chosen = PLANTS.find((p) => p.rule === "action-pin");
+    expect(chosen, "the action-pin plant must exist").not.toBeUndefined();
+    if (chosen === undefined) return;
+    const { rule, plant } = chosen;
+    let dir = "";
+    try {
+      dir = plantedTree((d) => {
+        plant(d);
+      });
+      const run = runLane(dir);
+      expect.soft(run.exitCode, "the plant must have taken").toBe(1);
+
+      const codes = new Set(
+        run.output
+          .split(/\r?\n/)
+          .map((line) => /^([A-Z][A-Z0-9-]*):/.exec(line.trim()))
+          .filter((m): m is RegExpExecArray => m !== null)
+          .map((m) => m[1]),
+      );
+
+      // `BR-0017-0040` is a NAMESPACE decision and nothing more: the bare `R-` form, matching
+      // the `check-pack-locations` precedent. It does not decide catalog membership, which is
+      // settled by severity class and deferred as a lockstep change.
+      expect
+        .soft([...codes].sort(), `findings must use one bare-R code (rule ${rule})`)
+        .toEqual(["R-WORKFLOW-HYGIENE-DRIFT"]);
+    } finally {
+      if (dir !== "") rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
