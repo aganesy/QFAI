@@ -69,6 +69,69 @@ skill that can does not write here.
 That is the shape of the problem: three documents, each internally consistent, describing an
 ownership boundary with a gap in it.
 
+## Re-measured after merging `origin/main`, and the contradiction changed shape
+
+**Added 2026-08-20.** Two things moved, and together they make this CR stronger rather than moot.
+
+**1. The `SKILL.md` sentence this CR quotes is gone from merged `main`.** The spec-completion
+condition "Every `US-*` the spec declares has a `Layer = E2E` row whose `US-Refs` names it" is
+absent. So one half of the contradiction as originally filed no longer exists.
+
+**2. The VALIDATOR still enforces it.** `QFAI-ATDD-111` fires exactly as before. Measured at the
+merge commit, with each item counted once:
+
+```text
+QFAI-ATDD-111   20 items across 5 specs
+  spec-0003  8      spec-0006 1      spec-0008 1      spec-0015 2
+  spec-0017  9      <- US-0017-0001 .. US-0017-0009, every user story this spec declares
+```
+
+So the contradiction is no longer doc-versus-doc. It is **code versus doc**: `QFAI-ATDD-111` requires
+every `US-*` to be referenced from an E2E test, and the ledger's producer note says `US-*` are not
+rows in this ledger and that `/qfai-atdd` does not write here. A rule enforced by a validator against
+a rule stated in the artifact the validator reads is a harder contradiction than two sentences, not a
+softer one — a reader cannot resolve it by preferring the newer text.
+
+### And it now blocks a green pull request, not just a checkpoint
+
+This CR originally said the contradiction was "half of why 74 rows cannot reach `done`". Running the
+scaffold for the first time (PR #794) showed it is more than that. The `build` job — the one
+`.github/required-status-contexts.json` names as carrying the required status context — runs
+`validate --profile tdd --fail-on error` over the whole repository as a dogfooding step. That step
+exits 1 on these two errors, so:
+
+```text
+build  fail  57s   QFAI self-validate this repo (dogfooding — TDD gates)  -> exit 1
+```
+
+**The required status context cannot go green while these findings stand.**
+
+### The part that changes what any amount of work here can achieve
+
+`spec-0017` contributes 9 of the 20 `QFAI-ATDD-111` items and 8 of the 15 `QFAI-ATDD-112` items. The
+other specs contribute 11 and 7. So even if every row of this spec were `done` and every annotation
+written, the step would still exit 1 on `spec-0003`, `spec-0006`, `spec-0008` and `spec-0015` — and
+the required context would still fail.
+
+That is not an argument for ignoring it. It is the reason the dogfooding step's scope belongs in the
+options: a required-context job that validates the WHOLE repository cannot be made green by any one
+spec, which makes it a gate no pull request can satisfy until every spec is clean simultaneously.
+
+### An option this CR did not have
+
+**Option 5 — scope the dogfooding step to the specs the pull request touches.** `--fail-on error` over the
+whole tree makes every spec's findings every pull request's problem. Scoping it to changed specs
+keeps the gate meaningful for the work in hand and lets a clean spec merge while another is
+mid-flight. Cost: a repository-wide regression in an untouched spec stops failing the required
+context, which is exactly what a dogfooding gate is for — so this trades one real property for
+another and should be decided rather than assumed. It also interacts with `BR-0017-0007`'s
+executed-instance ceiling, since scoping needs the changed-spec list the `detect` job already
+computes.
+
+`spec-0017`'s own contribution to `QFAI-ATDD-112` is exactly its 6 `blocked` and 2 `todo` rows —
+`TC-0017-0016`, `0030`, `0032`..`0035`, `0069`, `0070` — which have no test because those rows are not
+implemented. That part is not a defect and clears when they are.
+
 ## Options
 
 1. **Scope the completion condition to specs that declare E2E coverage-target TCs (recommended).**
