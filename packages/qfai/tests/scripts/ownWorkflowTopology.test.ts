@@ -639,6 +639,16 @@ function triggersOf(file: string): Record<string, unknown> {
   return isRecord(under) ? under : {};
 }
 
+/** Any job's steps, narrowed. Used where the claim is about a job other than `test` or `build`. */
+function stepsOfJob(jobId: string): Record<string, unknown>[] {
+  const job = ciJobs()[jobId];
+  if (job === undefined) {
+    throw new Error(`ci.yml declares no ${jobId} job`);
+  }
+  const steps = job["steps"];
+  return Array.isArray(steps) ? steps.filter(isRecord) : [];
+}
+
 /** The `build` job's steps, narrowed. */
 function buildJobSteps(): Record<string, unknown>[] {
   const doc: unknown = parseYaml(readFileSync(CI_WORKFLOW, "utf-8"));
@@ -1035,6 +1045,35 @@ describe("TC-0017-0008 (TDD-0008): a resolvable base ref narrows the lane set wi
       .toBe(false);
     expect
       .soft(result.annotations, "a successful classification must emit no warning annotation")
+      .toEqual([]);
+  });
+
+  it("computes the path list with rename detection OFF, so a move cannot hide its source", () => {
+    // A narrowing is only correct if the path list is complete, and with rename detection ON it
+    // is not: git reports only the DESTINATION of a move. Measured in a scratch repository —
+    //
+    //   git mv packages/qfai/src/foo.ts packages/qfai/docs/foo.md
+    //   git diff --name-only              -> packages/qfai/docs/foo.md
+    //   git diff --name-only --no-renames -> packages/qfai/docs/foo.md
+    //                                        packages/qfai/src/foo.ts
+    //
+    // So `git mv src/x.ts docs/x.md` reached the classifier as one documentation path and the
+    // source change skipped every test lane. The same move out of the assistant tree bypassed
+    // the never-documentation exclusion on precisely the change class it exists for.
+    //
+    // Asserted over the SHELL rather than the classifier, because that is where the input is
+    // produced — the classifier cannot recover a path it was never given. That is also why this
+    // claim reads a flag: its oracle is a mutation of the workflow, not of the program.
+    const diffRuns = stepsOfJob(DETECT_JOB)
+      .map((step) => step["run"])
+      .filter((run): run is string => typeof run === "string")
+      .filter((run) => run.includes("git diff"));
+    expect(diffRuns.length, "the detect job must compute a diff").toBeGreaterThan(0);
+    expect
+      .soft(
+        diffRuns.filter((run) => !run.includes("--no-renames")),
+        "every diff the detect job runs must pass --no-renames",
+      )
       .toEqual([]);
   });
 });

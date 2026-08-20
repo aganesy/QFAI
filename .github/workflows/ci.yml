@@ -56,7 +56,12 @@ jobs:
           # deliberate: a shallow clone or an unreachable base ref must reach the
           # classifier as "no path list was produced", so that failing open and naming
           # the reason live in the one place a test can execute.
-          git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" \
+          # `--no-renames` is load-bearing. With rename detection ON git reports only the
+          # DESTINATION of a move, so `git mv src/x.ts docs/x.md` arrives here as a single
+          # documentation path and the source change skips every test lane. Turning
+          # detection off makes both halves visible, and the source half classifies as
+          # source. Measured: the default reports one path, `--no-renames` reports two.
+          git diff --name-only --no-renames "${BASE_SHA}" "${HEAD_SHA}" \
             > "${RUNNER_TEMP}/changed.txt" 2> "${RUNNER_TEMP}/diff-err.txt" || true
           cat > "${RUNNER_TEMP}/detect.mjs" <<'NODE'
           // Change detection: classify the pull request's changed paths against two
