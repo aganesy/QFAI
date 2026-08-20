@@ -1394,6 +1394,15 @@ unreproducible.
 | 8     | `completion-reviewer`, `qa-gatekeeper` — stage gates only             | `dbe00247` | REVISE           |
 | 9     | `implementation-reviewer`, `completion-reviewer`, `qa-gatekeeper`     | `05a97202` | REVISE           |
 
+Round 9 routed the `implementation-reviewer` as well, because the helper and the four guards changed
+substantially; `agent-routing.yml` has it **conditional** rather than blocking, and its report says so.
+Its 25 findings are applied all the same.
+
+**All three of round 9's reports were untracked when the round closed**, exactly as round 8's two were.
+`.gitignore:61` ignores `.qfai/review/*`, so a pack reaches the repository only by `git add -f` — and
+the countermeasure round 8 recorded, `git status --porcelain --ignored` on the pack directory before
+sealing, is what caught it this time.
+
 P1d's trajectory is the one that terminated: passes 1-3 found the reasoning wrong, pass 4 **released**
 `todo -> blocked` for `TDD-0069`, pass 5 found nothing wrong with the reasoning and held on two
 sentences about the review, and pass 6 passed. The stage-level set has not shrunk the same way — round
@@ -1455,7 +1464,7 @@ Review pack:       .qfai/review/review-20260821100000000/            (round 8 �
 Review pack seal:  d2ef7d5c271225d32d1bc37cffed9cddbd49edb752ebb8fd73fa6de0e7e490de
 
 Review pack:       .qfai/review/review-20260821120000000/            (round 9 — stage gates only)
-Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
+Review pack seal:  0966ca41de6077e8fada920a5446a6cc73aca52a4bd9d40dd8983aa4c3899136
 ```
 
 Round 8 routes no P1d pass. That gate closed at round 7 and re-routing a closed gate would be asking a
@@ -1485,7 +1494,7 @@ round  last report at   summary.json at   gap
   6    ac4700d1         9a37421c          1 commit
   7    9882a1d4         dbe00247          1 commit
   8    aab29486         aab29486          same commit
-  9    (in flight)      (in flight)       sealed when its last response lands
+  9    (this commit)    (this commit)     same commit
 ```
 
 This section told the rounds-3-and-4 version of that story — "written first, then sealed" — for two

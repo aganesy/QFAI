@@ -201,11 +201,21 @@ function isMissing(error) {
   );
 }
 
-async function main() {
-  // `--spec=0017` and a misspelled flag were both accepted in silence by the first version, which
-  // means a scoped invocation could quietly widen to every spec — or a typo could look like a pass.
-  // Every argument is now accounted for, and anything unrecognized is a usage error.
-  const args = process.argv.slice(2);
+/**
+ * Parse the argument list.
+ *
+ * `--spec=0017` and a misspelled flag were both accepted in silence by the first version, which means a
+ * scoped invocation could quietly widen to every spec — or a typo could look like a pass. Every
+ * argument is accounted for, and anything unrecognized is a usage error.
+ *
+ * Extracted from `main` because that function was 83 lines against the ~50 the project rules set, and
+ * this is the clearest boundary in it: the other two concerns (collecting, reporting) both need the
+ * result of this one.
+ *
+ * @param {readonly string[]} args
+ * @returns {{ spec?: string } | { error: string }} the parsed scope, or the message to print
+ */
+function parseArguments(args) {
   /** @type {string | undefined} */
   let spec;
   let sawSpecFlag = false;
@@ -223,18 +233,26 @@ async function main() {
       spec = inline[1];
       continue;
     }
-    process.stderr.write(
-      `check-atdd-annotation-ledger: unknown argument ${JSON.stringify(argument)}. ` +
-        "Usage: check-atdd-annotation-ledger [--spec NNNN]\n",
-    );
-    process.exitCode = 2;
-    return;
+    return {
+      error:
+        `check-atdd-annotation-ledger: unknown argument ${JSON.stringify(argument)}. ` +
+        "Usage: check-atdd-annotation-ledger [--spec NNNN]",
+    };
   }
   if (sawSpecFlag && (spec === undefined || !/^\d{4}$/.test(spec))) {
-    process.stderr.write("check-atdd-annotation-ledger: --spec needs a four-digit spec number\n");
+    return { error: "check-atdd-annotation-ledger: --spec needs a four-digit spec number" };
+  }
+  return spec === undefined ? {} : { spec };
+}
+
+async function main() {
+  const parsed = parseArguments(process.argv.slice(2));
+  if ("error" in parsed) {
+    process.stderr.write(`${parsed.error}\n`);
     process.exitCode = 2;
     return;
   }
+  const { spec } = parsed;
 
   // The repository root, resolved from THIS FILE rather than from the cwd. Every sibling script in
   // this directory does the same — `check-publish-dry-run.mjs`, `check-workflow-hygiene.mjs`,
