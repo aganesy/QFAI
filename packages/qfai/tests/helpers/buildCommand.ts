@@ -115,6 +115,20 @@ interface ToolGrammar {
   readonly stops?: readonly string[];
 }
 
+const MAKE: ToolGrammar = {
+  dirs: ["-C", "--directory"],
+  values: ["-f", "--file", "-o", "--old-file", "-W", "--what-if"],
+  optional: ["-j", "--jobs", "-l", "--load-average"],
+  builds: ["all"],
+  bareIsBuild: true,
+};
+
+const PYTHON: ToolGrammar = {
+  dirs: [],
+  values: ["-c"],
+  builds: ["bdist_wheel", "sdist", "build_ext"],
+};
+
 const GRADLE: ToolGrammar = {
   dirs: ["-p", "--project-dir"],
   values: [
@@ -144,13 +158,9 @@ const TOOLS: Record<string, ToolGrammar> = {
   nx: { dirs: [], values: ["--projects", "--configuration"] },
   lerna: { dirs: [], values: ["--concurrency"] },
   rush: { dirs: [], values: ["--to", "--from"] },
-  make: {
-    dirs: ["-C", "--directory"],
-    values: ["-f", "--file", "-o", "--old-file", "-W", "--what-if"],
-    optional: ["-j", "--jobs", "-l", "--load-average"],
-    builds: ["all"],
-    bareIsBuild: true,
-  },
+  make: MAKE,
+  // `gmake` is GNU make under its other name, which is the spelling on BSD and macOS.
+  gmake: MAKE,
   cmake: {
     dirs: ["--install", "-B", "-S", "--prefix"],
     values: ["--config", "-G", "-D"],
@@ -220,8 +230,10 @@ const TOOLS: Record<string, ToolGrammar> = {
   "docker-compose": { dirs: ["-f", "--file"], values: ["-p", "--project-name"] },
   poetry: { dirs: ["-C", "--directory"], values: ["--format"] },
   flutter: { dirs: [], values: ["--flavor", "-t"] },
-  python: { dirs: [], values: ["-c"], builds: ["bdist_wheel", "sdist", "build_ext"] },
-  python3: { dirs: [], values: ["-c"], builds: ["bdist_wheel", "sdist", "build_ext"] },
+  python: PYTHON,
+  python3: PYTHON,
+  // `py` is the Windows Python launcher, and `py -m build` is the same command as `python -m build`.
+  py: PYTHON,
   sbt: { dirs: [], values: [], builds: ["compile", "package", "assembly", "stage"] },
   rake: { dirs: ["-C"], values: ["-f"], bareIsBuild: true },
 };
@@ -341,6 +353,12 @@ const LIFECYCLE: Record<string, readonly string[]> = {
  * list is not the list.
  */
 const SCRIPT_EXTENSIONS = ["sh", "ps1", "bat", "cmd", "mjs", "cjs", "js", "ts"];
+/**
+ * Extensions a COMMAND may wear on Windows. `pnpm.cmd build` is `pnpm build`, and without this the
+ * `.cmd` made it match `SCRIPT_FILE` first and return `none` — one command, two verdicts, decided by
+ * which platform wrote the lane.
+ */
+const EXECUTABLE_EXTENSIONS = ["cmd", "exe", "bat", "ps1"];
 const NAME_SEPARATORS = [":", "-", "_", ".", "/"];
 
 const scriptFileRe = (): RegExp =>
@@ -373,6 +391,12 @@ const normalise = (d: string): string =>
 const strongest = (v: readonly BuildVerdict[]): BuildVerdict =>
   v.includes("build") ? "build" : v.includes("heuristic") ? "heuristic" : "none";
 const unquote = (t: string): string => t.replace(/^['"]|['"]$/g, "");
+/** `pnpm.cmd` -> `pnpm`, and `build.cmd` -> `build`; the caller decides which of those is a command. */
+const stripExecutableExtension = (name: string): string => {
+  const dot = name.lastIndexOf(".");
+  if (dot <= 0) return name;
+  return EXECUTABLE_EXTENSIONS.includes(name.slice(dot + 1)) ? name.slice(0, dot) : name;
+};
 
 export function classifyBuildCommand(
   line: string,
@@ -492,11 +516,15 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
   if (!tokens.length) return "none";
 
   const first = tokens[0] ?? "";
-  if (scriptFileRe().test(first)) {
+  // The executable extension is stripped BEFORE the script-file test, because `pnpm.cmd` is a manager
+  // and `build.cmd` is a script, and only the head's own name can tell them apart.
+  const stripped = stripExecutableExtension(first.split("/").pop() ?? "");
+  const known = MANAGERS.has(stripped) || TOOLS[stripped] !== undefined || BUNDLERS.has(stripped);
+  if (!known && scriptFileRe().test(first)) {
     return namesABuild(first.split("/").pop() ?? "") ? "heuristic" : "none";
   }
 
-  const verb = first.split("/").pop() ?? "";
+  const verb = stripped;
   if (BUNDLERS.has(verb)) return "build";
   const tool = TOOLS[verb];
   const isManager = MANAGERS.has(verb);
@@ -664,6 +692,7 @@ export const GRAMMAR = {
   interpreters: INTERPRETERS,
   lifecycle: LIFECYCLE,
   scriptExtensions: SCRIPT_EXTENSIONS,
+  executableExtensions: EXECUTABLE_EXTENSIONS,
   nameSeparators: NAME_SEPARATORS,
   rules: RULES,
 } as const;

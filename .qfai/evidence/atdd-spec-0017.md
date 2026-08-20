@@ -230,7 +230,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
 - **new** `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts` — 22 tests
 - **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, v12, extracted from the
   E2E so its corpora can be tested on their own
-- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 22 tests over the nine corpora
+- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 23 tests over the ten corpora
   enumerated at § "Execution logs" (`E4b`), none of them chosen
   by this stage. Round 8's two findings are the last four: one hardcoded case per grammar member, a check
   that the case list and the grammar name the same members, a sweep that deletes each member in turn and
@@ -276,7 +276,7 @@ pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
 pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
   -> Tests 8 passed (8), exit 0
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/buildCommand.test.ts
-  -> Tests 22 passed (22), exit 0
+  -> Tests 23 passed (23), exit 0
 
 node packages/qfai/dist/cli/index.mjs validate --profile atdd --fail-on error --spec 0017
   before this stage:  info=2 warning=0 error=2   QFAI-ATDD-111 (9 US), QFAI-ATDD-112 (8 TC)
@@ -442,7 +442,7 @@ its sixth pass and **passed** it, keeping `TDD-0069 -> blocked` released and aut
 paragraph said `"a re-route of P1d is owed on the revision"`, which was true when written and outlived
 the gate by one pass.
 
-63 `refactor` rows are past `todo` and outside step 3b's reach — it routes a row this stage would
+63 `Integration` `refactor` rows are past `todo` and outside step 3b's reach — it routes a row this stage would
 advance **from** `todo`. 6 `blocked` rows carry a `Blocked-By` value and are skipped by Phase Red's
 selection. That leaves exactly the two below, and `references/red-provenance.md#a-spec-with-no-atdd-owned-rows`
 does **not** cover them: it is scoped to a spec with zero `E2E`/`API` rows, and says nothing about
@@ -711,7 +711,7 @@ Measured against **nine** corpora, and this is the enumeration both evidence fil
 round 4's 20 regressions, v4's 15 kept forms, round 6's 46-case corpus (20 missed builds, 2 false
 positives), round 7's 59 probes (15 defects), round 8's 66 (25 disagreements, of which 6 missed builds
 and 4 invented ones), round 8's 11 planted builds and 6 wrapper forms, round 9's 60 planted builds
-across two reviewers (18 of 20 and 34 of 40 unnoticed), the non-builds
+across two reviewers (18 of 20 and 34 of 40 unnoticed), its five spelling pairs, the non-builds
 accumulated across every round, one case per grammar member, and every `run:` line in both workflow
 trees:
 
@@ -1064,15 +1064,22 @@ numbers.
 **Re-run after the last artifact changed, twice, because this block was wrong about its own
 currency both times.** Round 3 found the first version written at `16f611c7` before `21ea1ddc` landed
 +489/-76 across four files, so it certified three artifacts that postdated it — established by
-`git log -S`. Round 4 found the replacement stale in the same way. **These numbers are measured at
-`eb5d59af`**, the revision that carries every repair through round 8. The commits after it change
-records only and add no test callsite, which the sequence below shows per commit. Three rounds asked for the revision beside the totals and got a round name
+`git log -S`. Round 4 found the replacement stale in the same way. **These numbers are measured at the working tree of this commit**, which carries every repair through
+round 9. The e2e figure is 1434 and the integration+unit figure 1200; the sequence below reaches
+`30a0ae5a` and the two commits after it add one e2e callsite between them.
+
+The previous version said `eb5d59af` and added that "the commits after it change records only and add no
+test callsite". That was false when written: `f544daad` — round 8's own `B4` repair — changed five
+helper and test files and moved the integration+unit total from 1196 to 1197, while the e2e total did
+not move at all. Round 9 caught it, and the shape is worth naming: the e2e figure has a per-commit
+sequence below because five rounds faulted it, and the integration+unit figure has none, so it went
+stale first. Both are re-measured here; only one of them is derivable. Three rounds asked for the revision beside the totals and got a round name
 instead; a round name cannot be checked, which is the whole reason those rounds asked.
 
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
-pnpm -C packages/qfai test:e2e                  1433 passed / 16 skipped, exit 0
-vitest --project integration --project unit     1196 passed / 19 skipped, exit 0
+pnpm -C packages/qfai test:e2e                  1434 passed / 16 skipped, exit 0
+vitest --project integration --project unit     1200 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 8 claim(s) backed, exit 0
 node ... validate --profile atdd --spec 0017     info=2 warning=0 error=2
@@ -1105,7 +1112,19 @@ per commit, e2e project (tests/e2e/** + tests/assets/**, the project's two inclu
   dbe00247  1432  (+0)            868  (+0)   docs only
   eb5d59af  1433  (+1)            869  (+1)   round 8's apply commit
   96c89ae3  1433  (+0)            869  (+0)   records only
+  b016623b  1433  (+0)            869  (+0)   records only
+  aab29486  1433  (+0)            869  (+0)   records, and round 8's pack committed
+  f544daad  1433  (+0)            869  (+0)   v11 — its new test is in `unit`, not `e2e`
+  05a97202  1433  (+0)            869  (+0)   round 9's request
+  30a0ae5a  1434  (+1)            870  (+1)   v12, and the retracted-claims guard's eighth test
 ```
+
+**The integration+unit total has no sequence like this, and it went stale first.** `f544daad` added the
+twentieth test in `buildCommand.test.ts`, which lives in the `unit` project, so that total moved 1196 to
+1197 while the e2e one did not move at all — and the block above certified the old figure for one
+commit. Caught by re-measuring both totals rather than by a reviewer, which is the first time on this
+spec that this class of defect was found here rather than reported to us. The e2e sequence exists because
+five rounds faulted that number; the other total is derivable the same way and is not yet derived.
 
 **Method, because three derivations of this sequence were wrong with correct endpoints.** The right
 column is `it` / `test` callsites in the project's files at each revision, counted from `git show` —
@@ -1290,12 +1309,16 @@ reviewed.
 What was achieved: eight of `spec-0017`'s nine `US-*` are covered from `tests/e2e/**` with real
 assertions — one of them rewritten to execute the shipped step rather than read it — across five
 oracle rounds against the shipped tree, six behavioural rounds on the version resolver (`E6`-`E11`),
-sixteen falsification rounds on the matrix pinning test (`M1`-`M7`, `X1`-`X3`, `X6`-`X8`, `Y1`-`Y3`),
-three on the ledger ratchet (`R1`-`R3`), three on the loop guard (`G1`-`G3`), four on the matrix
-record's own prose (`X6`-`X9`) and five on the derived-count test (`C1`-`C5`) — all defined under
+sixteen falsification rounds on the matrix pinning test (`M1`-`M7`, `X1`-`X6`, `Y1`-`Y3`), three on
+the ledger ratchet (`R1`-`R3`), three on the loop guard (`G1`-`G3`), seven on the matrix record's own
+prose (`Q1`-`Q7`), nine on the retracted-claims guard (`W1`-`W9`), five on the derived-count test
+(`C1`-`C5`) and an in-suite sweep over every grammar member of the classifier — all defined under
 § "Execution logs", which round 5 found they were not, and renamed off `L*`/`Z*` because `L1`/`L3`
 collided with the layer codes and `Z1`-`Z4` had been used in a review pack for mutations recorded as
-reddening **nothing**; the shipped-tree gap is measured at step-body level; the ordering claim this
+reddening **nothing**. This sentence named `X7`, `X8` and `X9` for three rounds, which exist nowhere
+since the second family was renamed `Q*`, counted that family as four where it holds seven, and omitted
+the `W` family and the sweep entirely — a tally of the measurements, wrong about the measurements, in
+the section that certifies them; the shipped-tree gap is measured at step-body level; the ordering claim this
 stage had asserted is now enforced by a script that exists and is tested; and a repo-wide defect
 affecting 16 other specs was found and filed.
 
@@ -1318,7 +1341,7 @@ What is not satisfied:
 - Stage Minimum Roles were not used for P2-P4 — the reviewer gate ran, the work orders did not.
 
 Confirmed by: **one gate has passed, and it is the narrow one.** Counted from the packs on disk:
-**seven** rounds, **21** reviewer responses, **20 REVISE and one PASS** — the PASS being P1d's sixth
+**nine** rounds, **26** reviewer responses, **25 REVISE and one PASS** — the PASS being P1d's sixth
 pass on `DR-0017-0010`. No stage-level gate has passed. Every earlier version of this line was a round
 behind, which rounds 4, 5, 6 and 7 each said; the numbers here are derived from
 `.qfai/review/review-2026082*/R0*.md` **from `review-20260820200000000` onwards** rather than
@@ -1337,6 +1360,8 @@ unreproducible.
 | 5     | `completion-reviewer`, `qa-gatekeeper`, P1d                           | `3f815725` | REVISE           |
 | 6     | `completion-reviewer`, `qa-gatekeeper`, P1d                           | `cb91e089` | REVISE           |
 | 7     | `completion-reviewer`, `qa-gatekeeper`, P1d                           | `9a37421c` | REVISE, **P1d PASS** |
+| 8     | `completion-reviewer`, `qa-gatekeeper` — stage gates only             | `dbe00247` | REVISE           |
+| 9     | `implementation-reviewer`, `completion-reviewer`, `qa-gatekeeper`     | `05a97202` | REVISE           |
 
 P1d's trajectory is the one that terminated: passes 1-3 found the reasoning wrong, pass 4 **released**
 `todo -> blocked` for `TDD-0069`, pass 5 found nothing wrong with the reasoning and held on two
@@ -1353,7 +1378,10 @@ Round 1's pack, for continuity:
 
 ### Review packs and their seals
 
-**Nine** packs, one per round, each sealed when its last reviewer response landed and before this
+**Nine** packs, one per round. The seal is *supposed* to be fixed at the moment the last reviewer
+response lands, and § "When each pack was actually sealed" below measures four of seven closed packs
+missing it by one to three commits. This sentence asserted the practice for two rounds while its own
+table refuted it and before this
 record's verdict was written. The count is derived —
 `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` compares the packs named here against the
 directories on disk — but the **word** was not, and it said "Three" in round 4 and "Four" from then

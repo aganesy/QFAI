@@ -67,6 +67,9 @@ async function repositorySources(): Promise<ScriptSources> {
   };
 }
 
+type ToolGrammarLike = (typeof GRAMMAR.tools)[string];
+type InterpreterGrammarLike = (typeof GRAMMAR.interpreters)[string];
+
 const TOOL_LISTS = [
   "dirs",
   "values",
@@ -119,6 +122,7 @@ function grammarMembers(): string[] {
     ["WRAPPERS", GRAMMAR.wrappers],
     ["EXISTENCE_PROBE", GRAMMAR.existenceProbe],
     ["SCRIPT_EXTENSIONS", GRAMMAR.scriptExtensions],
+    ["EXECUTABLE_EXTENSIONS", GRAMMAR.executableExtensions],
     ["NAME_SEPARATORS", GRAMMAR.nameSeparators],
   ];
   for (const [name, set] of sets) {
@@ -128,22 +132,30 @@ function grammarMembers(): string[] {
     for (const member of members) out.push(`LIFECYCLE.${hook}.${member}`);
   }
   for (const rule of Object.keys(GRAMMAR.rules)) out.push(`RULES.${rule}`);
+  // Aliases share one object: `gradle`/`gradlew`, `docker`/`podman`, `make`/`gmake`,
+  // `python`/`python3`/`py`, `pwsh`/`powershell`. That is the point of sharing — a flag cannot be added
+  // to one spelling and forgotten in the other — and it means a member reached through two names is ONE
+  // member. Its sub-members are enumerated under the first name that owns the object; the KEY is still
+  // a member under every name, because deleting `gmake` does not delete `make`.
+  const seenTools = new Set<ToolGrammarLike>();
   for (const [tool, grammar] of Object.entries(GRAMMAR.tools)) {
     out.push(`TOOLS.${tool}`);
+    if (seenTools.has(grammar)) continue;
+    seenTools.add(grammar);
     for (const field of TOOL_LISTS) {
       for (const member of grammar[field] ?? []) out.push(`TOOLS.${tool}.${field}.${member}`);
     }
     if (grammar.bareIsBuild === true) out.push(`TOOLS.${tool}.bareIsBuild`);
   }
+  const seenInterpreters = new Set<InterpreterGrammarLike>();
   for (const [name, grammar] of Object.entries(GRAMMAR.interpreters)) {
     out.push(`INTERPRETERS.${name}`);
+    if (seenInterpreters.has(grammar)) continue;
+    seenInterpreters.add(grammar);
     for (const field of INTERPRETER_LISTS) {
       for (const member of grammar[field]) out.push(`INTERPRETERS.${name}.${field}.${member}`);
     }
   }
-  // `gradle`/`gradlew` and `docker`/`podman` and `pwsh`/`powershell` share one object each, so the
-  // same member appears under two names. That is the point of sharing — a flag cannot be added to one
-  // spelling and forgotten in the other — and it means the member list has duplicates by design.
   return [...new Set(out)];
 }
 
@@ -290,12 +302,6 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.gradle.values.-b", "none", "gradle -b build clean"],
   ["TOOLS.gradle.values.--init-script", "none", "gradle --init-script build clean"],
   ["TOOLS.gradlew", "build", "gradlew build"],
-  ["TOOLS.gradlew.dirs.-p", "none", "gradlew -p build clean"],
-  ["TOOLS.gradlew.dirs.--project-dir", "none", "gradlew --project-dir build clean"],
-  ["TOOLS.gradlew.values.--console", "none", "gradlew --console build clean"],
-  ["TOOLS.gradlew.values.--max-workers", "none", "gradlew --max-workers build clean"],
-  ["TOOLS.gradlew.values.--build-file", "none", "gradlew --build-file build clean"],
-  ["TOOLS.gradlew.values.-b", "none", "gradlew -b build clean"],
   ["TOOLS.mvn", "build", "mvn build"],
   ["TOOLS.mvn.dirs.-f", "none", "mvn -f build clean"],
   ["TOOLS.mvn.dirs.--file", "none", "mvn --file build clean"],
@@ -330,11 +336,6 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.docker.values.--platform", "none", "docker --platform build clean"],
   ["TOOLS.docker.values.--name", "none", "docker --name build clean"],
   ["TOOLS.podman", "build", "podman build"],
-  ["TOOLS.podman.dirs.-f", "none", "podman -f build clean"],
-  ["TOOLS.podman.dirs.--file", "none", "podman --file build clean"],
-  ["TOOLS.podman.values.-t", "none", "podman -t build clean"],
-  ["TOOLS.podman.values.--tag", "none", "podman --tag build clean"],
-  ["TOOLS.podman.values.--build-arg", "none", "podman --build-arg build clean"],
   ["TOOLS.poetry", "build", "poetry build"],
   ["TOOLS.poetry.dirs.-C", "none", "poetry -C build clean"],
   ["TOOLS.poetry.dirs.--directory", "none", "poetry --directory build clean"],
@@ -345,11 +346,16 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.python", "build", "python -m build"],
   ["TOOLS.python.values.-c", "none", "python -c build clean"],
   ["TOOLS.python3", "build", "python3 -m build"],
-  ["TOOLS.python3.values.-c", "none", "python3 -c build clean"],
   ["TOOLS.sbt", "build", "sbt build"],
   ["TOOLS.rake", "build", "rake build"],
   ["TOOLS.rake.dirs.-C", "none", "rake -C build clean"],
   ["TOOLS.rake.values.-f", "none", "rake -f build clean"],
+  ["TOOLS.gmake", "build", "gmake"],
+  ["TOOLS.py", "build", "py -m build"],
+  ["EXECUTABLE_EXTENSIONS.cmd", "build", "pnpm.cmd build"],
+  ["EXECUTABLE_EXTENSIONS.exe", "build", "pnpm.exe build"],
+  ["EXECUTABLE_EXTENSIONS.bat", "build", "pnpm.bat build"],
+  ["EXECUTABLE_EXTENSIONS.ps1", "build", "pnpm.ps1 build"],
   ["MANAGERS.npm-run-all", "build", "npm-run-all build"],
   ["MANAGERS.run-s", "build", "run-s build"],
   ["MANAGERS.run-p", "build", "run-p build"],
@@ -411,16 +417,6 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.gradle.builds.installDist", "build", "gradle installDist"],
   ["TOOLS.gradle.buildPrefixes.assemble", "build", "gradle assembleRelease"],
   ["TOOLS.gradle.buildPrefixes.bundle", "build", "gradle bundleRelease"],
-  ["TOOLS.gradlew.values.--init-script", "none", "gradlew --init-script build clean"],
-  ["TOOLS.gradlew.values.-x", "none", "gradlew -x build clean"],
-  ["TOOLS.gradlew.values.--exclude-task", "none", "gradlew --exclude-task build clean"],
-  ["TOOLS.gradlew.builds.jar", "build", "gradlew jar"],
-  ["TOOLS.gradlew.builds.war", "build", "gradlew war"],
-  ["TOOLS.gradlew.builds.bootJar", "build", "gradlew bootJar"],
-  ["TOOLS.gradlew.builds.shadowJar", "build", "gradlew shadowJar"],
-  ["TOOLS.gradlew.builds.installDist", "build", "gradlew installDist"],
-  ["TOOLS.gradlew.buildPrefixes.assemble", "build", "gradlew assembleRelease"],
-  ["TOOLS.gradlew.buildPrefixes.bundle", "build", "gradlew bundleRelease"],
   ["TOOLS.mvn.builds.package", "build", "mvn package"],
   ["TOOLS.mvn.builds.install", "build", "mvn install"],
   ["TOOLS.mvn.builds.verify", "build", "mvn verify"],
@@ -451,13 +447,6 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.docker.values.--project-name", "none", "docker --project-name build clean"],
   ["TOOLS.docker.stops.run", "none", "docker run --rm alpine echo build-info"],
   ["TOOLS.docker.stops.exec", "none", "docker exec --rm alpine echo build-info"],
-  ["TOOLS.podman.values.-H", "none", "podman -H build clean"],
-  ["TOOLS.podman.values.--platform", "none", "podman --platform build clean"],
-  ["TOOLS.podman.values.--name", "none", "podman --name build clean"],
-  ["TOOLS.podman.values.-p", "none", "podman -p build clean"],
-  ["TOOLS.podman.values.--project-name", "none", "podman --project-name build clean"],
-  ["TOOLS.podman.stops.run", "none", "podman run --rm alpine echo build-info"],
-  ["TOOLS.podman.stops.exec", "none", "podman exec --rm alpine echo build-info"],
   ["TOOLS.docker-compose", "build", "docker-compose build"],
   ["TOOLS.docker-compose.dirs.-f", "none", "docker-compose -f build clean"],
   ["TOOLS.docker-compose.dirs.--file", "none", "docker-compose --file build clean"],
@@ -470,9 +459,6 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.python.builds.bdist_wheel", "build", "python bdist_wheel"],
   ["TOOLS.python.builds.sdist", "build", "python sdist"],
   ["TOOLS.python.builds.build_ext", "build", "python build_ext"],
-  ["TOOLS.python3.builds.bdist_wheel", "build", "python3 bdist_wheel"],
-  ["TOOLS.python3.builds.sdist", "build", "python3 sdist"],
-  ["TOOLS.python3.builds.build_ext", "build", "python3 build_ext"],
   ["TOOLS.sbt.builds.compile", "build", "sbt compile"],
   ["TOOLS.sbt.builds.package", "build", "sbt package"],
   ["TOOLS.sbt.builds.assembly", "build", "sbt assembly"],
@@ -502,30 +488,7 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["INTERPRETERS.pwsh.inline.-Command", "build", 'pwsh -Command "pnpm build"'],
   ["INTERPRETERS.pwsh.inline.-c", "build", 'pwsh -c "pnpm build"'],
   ["INTERPRETERS.pwsh.inline.-EncodedCommand", "build", 'pwsh -EncodedCommand "pnpm build"'],
-  [
-    "INTERPRETERS.powershell.values.-ExecutionPolicy",
-    "heuristic",
-    "powershell -ExecutionPolicy Bypass scripts/build.sh",
-  ],
-  [
-    "INTERPRETERS.powershell.values.-WorkingDirectory",
-    "heuristic",
-    "powershell -WorkingDirectory sub scripts/build.sh",
-  ],
-  [
-    "INTERPRETERS.powershell.values.-OutputFormat",
-    "heuristic",
-    "powershell -OutputFormat Text scripts/build.sh",
-  ],
-  ["INTERPRETERS.powershell.inline.-Command", "build", 'powershell -Command "pnpm build"'],
-  ["INTERPRETERS.powershell.inline.-c", "build", 'powershell -c "pnpm build"'],
-  [
-    "INTERPRETERS.powershell.inline.-EncodedCommand",
-    "build",
-    'powershell -EncodedCommand "pnpm build"',
-  ],
   ["TOOLS.docker.builds.bake", "build", "docker buildx bake -f docker-bake.hcl"],
-  ["TOOLS.podman.builds.bake", "build", "podman buildx bake -f docker-bake.hcl"],
   ["WRAPPERS.timeout", "build", "timeout 600 pnpm build"],
 ];
 
@@ -550,6 +513,7 @@ const SETS: Readonly<Record<string, Set<string>>> = {
 /** The two lists that build a regex and a split. Arrays, not sets, so they restore by content. */
 const ARRAYS: Readonly<Record<string, string[]>> = {
   SCRIPT_EXTENSIONS: GRAMMAR.scriptExtensions,
+  EXECUTABLE_EXTENSIONS: GRAMMAR.executableExtensions,
   NAME_SEPARATORS: GRAMMAR.nameSeparators,
 };
 
@@ -1270,6 +1234,36 @@ describe("classifyBuildCommand", () => {
     expect
       .soft(classifyBuildCommand("node scripts/bundle.mjs", sources), "no scan can read this")
       .toBe("none");
+  });
+
+  it("gives one command one verdict across its SPELLINGS, not only its flag forms", async () => {
+    // The one-command-one-verdict invariant killed v5 and v7, and this file asserted it over flag forms
+    // — long versus short, spaced versus inline — where round 9 measured **0 disagreements** across all
+    // 63 long and 44 short tool flags. It then broke the invariant on the axis nobody was asserting:
+    // the name of the command itself.
+    //
+    // `docker-compose` and `cross-env` are the two that matter, because both are the dominant spelling
+    // in real CI and `cross-env` is the npm ecosystem's standard way of doing what the `env` wrapper
+    // entry was added for. `pnpm.cmd` is the sharpest: `.cmd` is in `SCRIPT_EXTENSIONS`, so a manager
+    // wearing its Windows extension was read as a script file and returned `none` — one command, two
+    // verdicts, decided by which platform wrote the lane.
+    const sources = await repositorySources();
+    for (const [left, right] of [
+      ["docker compose build", "docker-compose build"],
+      ["env NODE_ENV=production pnpm build", "cross-env NODE_ENV=production pnpm build"],
+      ["make build", "gmake build"],
+      ["python -m build", "py -m build"],
+      ["pnpm build", "pnpm.cmd build"],
+      ["node --run build", "node.exe --run build"],
+    ] as const) {
+      expect
+        .soft(classifyBuildCommand(left, sources), `${left} and ${right} are the same command`)
+        .toBe(classifyBuildCommand(right, sources));
+    }
+
+    // And the extension rule must not swallow a real script: `build.cmd` is a file, not a command.
+    expect.soft(classifyBuildCommand("./scripts/build.cmd", sources)).toBe("heuristic");
+    expect.soft(classifyBuildCommand("./scripts/lint.cmd", sources)).toBe("none");
   });
 
   it("terminates on a self-referential script chain rather than recursing forever", () => {
