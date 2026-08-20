@@ -124,10 +124,16 @@ two remain one guard in two rows rather than two guards.
 
 It does **not** close `TDD-0069` on its own. Clause 1 is **unsatisfied** — no tuning change has been
 made, so there is nothing for "exactly one project is tuned, largest first" to be true of — and clause
-2 stays behind the cycle. (An earlier version of this option called clause 1 _degenerate against this
-runner_; P1d's third pass showed that is false, since `maxConcurrency` is project-scoped per this
-repository's own `CR-20260820-0003` site table and `vitest.knobs.ts`'s `projectKnobs`. See
-`DR-0017-0010`, which has now been wrong about clause 1 three times in three directions.) What the
+2 stays behind the cycle. (An earlier version of this option said clause 1 was "degenerate against this runner". P1d's third
+pass showed that is false: `maxConcurrency` is project-scoped per this repository's own
+`CR-20260820-0003` site table and `vitest.knobs.ts`'s `projectKnobs`. `DR-0017-0010` records the
+history — two wrong readings and one correction, not, as an earlier version of this sentence had it,
+"wrong about clause 1 three times".)
+
+Italics were doing the quoting in the sentence above until round 6 pointed out that they are emphasis,
+not quotation, so the refuted reading was standing as an assertion. Both refuted wordings are quoted
+now, and `packages/qfai/tests/assets/retractedClaims.test.ts` enforces that rather than this record
+announcing it. What the
 split buys is that the two failures get named separately instead of one standing for both.
 
 Also an upstream `05_Examples.md` edit, so also the Drift Protocol path.

@@ -53,7 +53,16 @@ function parseMatrix(text: string): Row[] {
       .map((field) => field.trim());
     const [id, ...scores] = fields;
     if (id === undefined) continue;
-    // `id` is used in the parse-failure message below.
+
+    // Every row must carry exactly one cell per column. Round 6 deleted a single pipe from one row:
+    // `Oracle strength` slid into `Status`, the missing trailing cell was backfilled by the default,
+    // every derived number stayed the same, and all five tests passed. A row of the wrong width is a
+    // parse failure, not a row with a default in it.
+    if (scores.length !== COLUMNS.length) {
+      throw new Error(
+        `row ${id} has ${String(scores.length)} cells, expected ${String(COLUMNS.length)}`,
+      );
+    }
     const cells: Record<string, Score> = {};
     scores.forEach((score, index) => {
       const column = COLUMNS[index];
@@ -313,18 +322,16 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     expect(headed.sort()).toEqual(failing.sort());
   });
 
-  it("does not restate a predicate claim a review round refuted", async () => {
-    // Round 4 blocked on this file publishing v3's "0 misclassified" after that measurement had been
-    // refuted (9 missed, 10 false positives). The replacement paragraph was written to discharge that
-    // — and round 5 showed it could be reverted to the refuted text with nothing reddening. Both the
-    // absence of the refuted claim and the presence of the current version are pinned now.
+  it("names the predicate version it describes, and keeps the reason the defect mattered", async () => {
+    // The absence of the refuted "0 misclassified" figure is NOT asserted here any more, and that is a
+    // deliberate hand-off rather than a relaxation. Round 6 found two problems with asserting it here:
+    // the string was already present as `0` / `misclassified` across a line break and this pin passed
+    // anyway, and the pin was in **direct conflict** with `retractedClaims.test.ts`, which permits the
+    // figure inside a quotation — so a legal edit under one guard reddened the other. One rule, one
+    // instrument: that file owns every refuted wording, with whitespace collapsed so reflow cannot
+    // hide it. What stays here is what only this file can check.
     const text = await readFile(MATRIX, "utf8");
 
-    expect(
-      /\b0 misclassified\b/.test(text),
-      "a per-version accuracy claim measured only against a corpus this stage chose has been wrong " +
-        "at every version; it must not reappear as a bare figure",
-    ).toBe(false);
     expect(
       text,
       "the record must name the predicate version it describes, so a later reader can tell which",

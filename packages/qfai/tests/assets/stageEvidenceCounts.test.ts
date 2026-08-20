@@ -137,16 +137,31 @@ describe("the stage evidence's counts are derived, not typed", () => {
       },
     ];
 
+    // EVERY occurrence, not the first. Round 6 found `## Work performed` stating one file's size three
+    // times — "four tests", "5 tests", "4 tests", for a file holding 5 — with two of them wrong and
+    // invisible, because `exec` returns only the first match. A duplicate bullet was how the third got
+    // there, so the count of matches is pinned too: a size stated twice is a size that can disagree
+    // with itself.
     const wrong: string[] = [];
     for (const claim of CLAIMS) {
-      const match = claim.pattern.exec(evidence);
-      if (match === null) {
+      const matches = [...evidence.matchAll(new RegExp(claim.pattern.source, "g"))];
+      if (matches.length === 0) {
         wrong.push(`${claim.label}: the record no longer states it in the pinned form`);
         continue;
       }
       const actual = countCases(await source(claim.file));
-      if (Number(match[1]) !== actual) {
-        wrong.push(`${claim.label}: record says ${match[1] ?? "?"}, file holds ${String(actual)}`);
+      for (const match of matches) {
+        if (Number(match[1]) !== actual) {
+          wrong.push(
+            `${claim.label}: record says ${match[1] ?? "?"}, file holds ${String(actual)}`,
+          );
+        }
+      }
+      if (matches.length > 1 && new Set(matches.map((match) => match[1])).size > 1) {
+        wrong.push(
+          `${claim.label}: stated ${String(matches.length)} times with disagreeing values ` +
+            `(${matches.map((match) => match[1] ?? "?").join(", ")})`,
+        );
       }
     }
     expect(wrong, "a count in the record that the tree does not hold").toEqual([]);
@@ -160,10 +175,21 @@ describe("the stage evidence's counts are derived, not typed", () => {
     const RECORDED = /vitest run[^\n]*?(tests\/[\w./-]+\.test\.ts)\n\s*-> Tests (\d+) passed/g;
 
     const rows = [...evidence.matchAll(RECORDED)];
+
+    // The floor is per FILE, not per match. Round 6 pointed out that dropping the `-> ` from one
+    // recorded output removes it from coverage while a bare `rows.length > 2` stays satisfied, so the
+    // files this stage added are named and each must appear.
+    const OWED = [
+      "tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts",
+      "tests/integration/scripts/checkAtddAnnotationLedger.test.ts",
+      "tests/assets/coverageDepthMatrix.test.ts",
+      "tests/unit/buildCommand.test.ts",
+    ];
+    const quoted = new Set(rows.map((row) => row[1] ?? ""));
     expect(
-      rows.length,
-      "the record must quote the runs of the files this stage added",
-    ).toBeGreaterThan(2);
+      OWED.filter((file) => !quoted.has(file)),
+      "a file this stage added whose recorded run is no longer quoted in the pinned form",
+    ).toEqual([]);
 
     const wrong: string[] = [];
     for (const row of rows) {
@@ -174,6 +200,29 @@ describe("the stage evidence's counts are derived, not typed", () => {
       }
     }
     expect(wrong, "a recorded vitest output the file cannot produce").toEqual([]);
+  });
+
+  it("only counts files where the callsite rule is valid, which excludes `.each`", async () => {
+    // `countCases` counts CALLSITES, and vitest reports one test per CASE — so `it.each([a, b, c])`
+    // is one callsite and three tests. Round 6 raised it, and noted that `describe.each` is the
+    // prevailing idiom in this very directory. Rather than emulate the runner, the rule's precondition
+    // is asserted: none of the files whose counts this record states may use `.each`.
+    const COUNTED = [
+      "packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts",
+      "packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts",
+      "packages/qfai/tests/assets/coverageDepthMatrix.test.ts",
+      "packages/qfai/tests/assets/stageEvidenceCounts.test.ts",
+      "packages/qfai/tests/unit/buildCommand.test.ts",
+    ];
+    const offenders: string[] = [];
+    for (const file of COUNTED) {
+      const text = await source(file);
+      if (/^[ \t]*(?:it|test|describe)\.each\b/m.test(text)) offenders.push(file);
+    }
+    expect(
+      offenders,
+      "a counted file using `.each`, where one callsite is many tests and this rule stops holding",
+    ).toEqual([]);
   });
 
   it("counts its own callsites correctly, which two earlier versions did not", () => {
@@ -270,14 +319,17 @@ describe("the stage evidence's counts are derived, not typed", () => {
       ].map((match) => [match[1] ?? "", match[2] ?? ""]),
     );
 
-    const inFlight = packs[packs.length - 1] ?? "";
+    // Three rules, and the third one replaces a rule that was wrong in the other direction. The
+    // previous version REQUIRED the newest pack to be unsealed — which meant it went red exactly when
+    // that pack was correctly sealed, i.e. at the completion gate, and stayed red until a further
+    // round opened a directory. Round 6 measured that. The newest pack may be sealed or not; what must
+    // hold is that every OLDER pack has a seal, and that every seal recorded — newest included —
+    // recomputes.
     const wrong: string[] = [];
     for (const pack of packs.slice(0, -1)) {
-      const recorded = sealed.get(pack);
-      if (recorded === undefined) {
-        wrong.push(`${pack}: closed and carries no recorded seal`);
-        continue;
-      }
+      if (!sealed.has(pack)) wrong.push(`${pack}: closed and carries no recorded seal`);
+    }
+    for (const [pack, recorded] of sealed) {
       const actual = await sealOf(path.join(ROOT, ".qfai/review", pack));
       if (recorded !== actual) {
         wrong.push(
@@ -285,12 +337,9 @@ describe("the stage evidence's counts are derived, not typed", () => {
         );
       }
     }
-    expect(wrong, "a closed pack whose recorded seal does not recompute").toEqual([]);
-
     expect(
-      sealed.has(inFlight),
-      `${inFlight} is the pack under review: named without a seal until its last reviewer lands, ` +
-        "because sealing it early is the thing the seal exists to detect",
-    ).toBe(false);
+      wrong,
+      "a closed pack with no seal, or any recorded seal that does not recompute",
+    ).toEqual([]);
   });
 });

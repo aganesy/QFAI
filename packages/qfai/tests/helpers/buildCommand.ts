@@ -1,41 +1,41 @@
 /**
  * Does a workflow `run:` command reach a build?
  *
- * Six versions, each measured, and the first five were each wrong in a way the next review round
- * found. The history is kept because it is the argument for the current shape:
+ * Seven versions. Each of the first six was measured, reported clean by the party that wrote it, and
+ * then broken by a corpus a reviewer chose. The history is the argument for the current shape:
  *
  * - **v1** one flag-value pair only. `pnpm run build`, `npx tsup` and six more reddened nothing.
  * - **v2** a package-manager list plus `build` anywhere after it. Caught `npx tsc --noEmit`.
- * - **v3** `build` as a standalone shell word. Measured against a corpus someone else chose: 9 missed,
- *   10 false positives, against a recorded "0 misclassified". It caught `rm -rf build dist`.
- * - **v4** verb-allowlist plus first-target. Fixed v3's false positives and regressed on 20 of 23
- *   forms v3 caught, because returning on the first target hides everything after `&&`. And it
- *   reported `pnpm ci:build-verify` as a build **by the script's name**, so what it measured was
- *   npm-script naming rather than behaviour.
- * - **v5** shell segments, per-manifest script resolution, and a third `heuristic` verdict. Round 5
- *   broke it ten ways. The worst: when a manifest lookup MISSED, it returned the strong `build`
- *   verdict from the bare name — so `pnpm --filter qfai ci:build-verify` was `build` while
- *   `pnpm ci:build-verify` was `heuristic`. The same command, upgraded by a lookup failure, in the one
- *   place the file's own docstring promised a labelled guess. It also lost `pnpm -w build` (`-w` is
- *   boolean, and the flag ate the target), `npx turbo run build` and `pnpm nx build web` (a runner
- *   nested inside a runner), `yarn workspace qfai build` (the workspace name read as the target),
- *   `python -m build`, and it treated `cd ./pkg` and `cd pkg` as different directories.
+ * - **v3** `build` as a standalone shell word. 9 missed, 10 false positives; caught `rm -rf build dist`.
+ * - **v4** verb plus first target. Fixed those and regressed on 20 of 23 forms, because returning on
+ *   the first target hides everything after `&&` — and it reported `pnpm ci:build-verify` as a build
+ *   **by the script's name**, so what it measured was npm-script naming rather than behaviour.
+ * - **v5** shell segments, per-manifest script bodies, a third `heuristic` verdict. A manifest lookup
+ *   that MISSED returned the strong `build` from the bare name, so one command had two verdicts
+ *   depending on whether the lookup hit.
+ * - **v6** managers versus tools, a capped miss, nested runners. Round 6 measured **20 missed / 2
+ *   false positives over 46 cases**: `sawFlag` was set by ANY flag, so `make -C packages/qfai build`,
+ *   `make -j4 build`, `cargo --locked build`, `gradle --no-daemon build` and `docker buildx build`
+ *   were all `none` — every one a build under v5. And `pnpm build` / `pnpm --filter qfai build` /
+ *   `pnpm -F qfai build` gave **three different verdicts** for one command, because `--filter` was read
+ *   as a directory and its short form was not read at all.
  *
- * v6 keeps v5's three moves and adds three distinctions:
+ * v7 narrows three rules rather than broadening them:
  *
- * 1. **A package manager resolves a SCRIPT; a build tool takes a SUBCOMMAND.** `pnpm build` looks up
- *    `build` in a manifest; `cargo build` does not. Conflating them is what let a missing script
- *    become a confident `build`.
- * 2. **A missing script is UNKNOWN**, so it returns `heuristic` at most — never `build`.
- * 3. **A runner may nest**, and a build tool's subcommand only counts **before any flag**, which is
- *    what separates `cmake --build .` from `cmake --install build`.
+ * 1. Only a flag that takes a **directory** makes the next bare token a location instead of a
+ *    subcommand. That is what `cmake --install build` is; `cargo --locked build` is not.
+ * 2. `--filter` / `-F` select a **package**, not a directory, so they consume their value and leave
+ *    the manifest alone — which is what makes the three `pnpm build` forms agree.
+ * 3. Only a **target-naming** flag's value can name a target, so `--reporter=build-log` is not a build.
  *
- * **What no command-line scan can see**, stated because this repository has three instances: a build
- * spawned from inside a helper script. `scripts/check-build-warnings.mjs`, `scripts/verify-pack.mjs`
- * and `scripts/check-publish-dry-run.mjs` each reach `prepack -> npm run build -> tsup`. Reading
+ * And `--ignore-scripts` suppresses the lifecycle hooks, so `pnpm pack --ignore-scripts` does not
+ * reach `prepack`.
+ *
+ * **What no command-line scan can see**, because this repository has three instances: a build spawned
+ * from inside a helper. `scripts/check-build-warnings.mjs`, `scripts/verify-pack.mjs` and
+ * `scripts/check-publish-dry-run.mjs` each reach `prepack -> npm run build -> tsup`, and reading
  * `package.json` cannot follow a `spawnSync` inside a `.mjs`. Only the first has a filename that says
- * `build`, so only commands reaching it land on `heuristic`; the other two are indistinguishable from
- * any other helper and land on `none`. That is a limit of the method, not of this implementation.
+ * `build`, so only commands reaching it land on `heuristic`.
  */
 
 export type BuildVerdict = "build" | "heuristic" | "none";
@@ -56,12 +56,10 @@ interface Context {
   readonly sources: ScriptSources | undefined;
   readonly cwd: string;
   readonly seen: Set<string>;
+  readonly noScripts?: boolean;
 }
 
-/** Package managers: the target is a SCRIPT, resolved through a manifest. */
 const MANAGERS = new Set(["pnpm", "npm", "yarn", "npx", "pnpx", "bunx", "bun", "node"]);
-
-/** Build tools: the target is a SUBCOMMAND of the tool, not a script. */
 const TOOLS = new Set([
   "turbo",
   "nx",
@@ -94,7 +92,6 @@ const TOOLS = new Set([
   "sbt",
   "rake",
 ]);
-
 const BUNDLERS = new Set([
   "tsup",
   "rollup",
@@ -109,9 +106,9 @@ const BUNDLERS = new Set([
   "xcodebuild",
 ]);
 const NOT_A_BUNDLER = new Set(["tsc"]);
-const PASSTHROUGH = new Set(["run", "run-many", "exec", "dlx", "workspaces", "--"]);
-/** Sub-verbs that consume the token after them without it being the target. */
-const CONSUMING = new Set(["workspace", "--filter-prod"]);
+const PASSTHROUGH = new Set(["run", "run-many", "exec", "dlx", "workspaces", "--", "buildx"]);
+/** Sub-verbs and flags that consume the next token without it being the target. */
+const CONSUMING = new Set(["workspace", "--filter", "-F", "--filter-prod", "--scope"]);
 const WRAPPERS = new Set([
   "time",
   "sudo",
@@ -124,10 +121,17 @@ const WRAPPERS = new Set([
   "env",
 ]);
 const INTERPRETERS = new Set(["bash", "sh", "zsh", "pwsh", "powershell"]);
-/** Flags naming the directory whose manifest a script resolves in. `-w` is boolean, not a path. */
-const DIR_FLAGS = new Set(["-C", "--dir", "--cwd", "--filter", "--prefix"]);
-/** Flags whose value IS the target: `python -m build`, `nx --target build`. */
+/** Flags naming the directory whose manifest a script resolves in. */
+const DIR_FLAGS = new Set(["-C", "--dir", "--cwd", "--prefix"]);
+/** Flags whose value IS the target. */
 const TARGET_FLAGS = new Set(["-m", "--target", "--task"]);
+/**
+ * Flags whose value is a DIRECTORY, so a `build` after one is a location and not a subcommand.
+ * `cmake --install build` is the case this exists for.
+ */
+const DIRECTORY_VALUE_FLAGS = new Set(["--install", "-B", "-S", "--source", "--output", "-o"]);
+/** With this present, `pack`/`publish` do not fire their lifecycle hooks. */
+const NO_SCRIPTS = new Set(["--ignore-scripts", "--no-scripts"]);
 const LIFECYCLE: Record<string, readonly string[]> = {
   pack: ["prepack"],
   publish: ["prepublishOnly", "prepack"],
@@ -167,10 +171,9 @@ function shell(line: string, ctx: Context): BuildVerdict {
   let cwd = ctx.cwd;
   for (const part of parts) {
     const tokens = part.split(/\s+/).filter(Boolean);
-    const first = tokens[0];
-    const target = tokens[1];
-    if (first === "cd" && target !== undefined) {
-      cwd = target.startsWith("/") ? normalise(tokens[1]) : normalise(`${cwd}/${tokens[1]}`);
+    if (tokens[0] === "cd" && tokens[1] !== undefined) {
+      const target = tokens[1];
+      cwd = target.startsWith("/") ? normalise(target) : normalise(`${cwd}/${target}`);
       continue;
     }
     out.push(command(tokens, { ...ctx, cwd }));
@@ -213,27 +216,31 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
   const isTool = TOOLS.has(verb);
   if (!isManager && !isTool) return "none";
 
+  const noScripts = tokens.some((t) => NO_SCRIPTS.has(t));
   let cwd = ctx.cwd;
-  let sawFlag = false;
+  let afterDirectoryFlag = false;
+
   for (let i = 1; i < tokens.length; i += 1) {
     const token = tokens[i];
     if (token === undefined) break;
-    if (PASSTHROUGH.has(token)) continue;
+    if (PASSTHROUGH.has(token)) {
+      afterDirectoryFlag = false;
+      continue;
+    }
     if (CONSUMING.has(token)) {
       i += 1;
+      afterDirectoryFlag = false;
       continue;
     }
 
     if (token.startsWith("-")) {
-      sawFlag = true;
       const inline = /^(--?[\w-]+)=(.*)$/.exec(token);
       if (inline) {
         const [, flag = "", value = ""] = inline;
-        if (DIR_FLAGS.has(flag)) {
-          cwd = normalise(value);
-          continue;
-        }
-        if (!isPathLike(value) && namesABuild(value)) return "build";
+        if (DIR_FLAGS.has(flag)) cwd = normalise(value);
+        // Only a target-naming flag's value can name a target: `--reporter=build-log` cannot.
+        else if (TARGET_FLAGS.has(flag) && !isPathLike(value) && namesABuild(value)) return "build";
+        afterDirectoryFlag = false;
         continue;
       }
       if (DIR_FLAGS.has(token)) {
@@ -242,33 +249,37 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
           cwd = normalise(value);
           i += 1;
         }
+        afterDirectoryFlag = false;
         continue;
       }
       if (TARGET_FLAGS.has(token)) {
         const value = tokens[i + 1];
         if (value !== undefined && !value.startsWith("-") && namesABuild(value)) return "build";
         if (value !== undefined) i += 1;
+        afterDirectoryFlag = false;
         continue;
       }
       if (namesABuild(token.replace(/^-+/, ""))) return "build";
+      // Only a flag that takes a DIRECTORY makes the next bare token a location rather than a target.
+      afterDirectoryFlag = DIRECTORY_VALUE_FLAGS.has(token);
       continue;
     }
 
     const bare = token.split("/").pop() ?? "";
     if (BUNDLERS.has(bare)) return "build";
     if (NOT_A_BUNDLER.has(bare)) return "none";
-    if (isPathLike(token)) continue;
-
-    // A nested runner: `npx turbo run build`, `pnpm nx build web`.
-    if (MANAGERS.has(bare) || TOOLS.has(bare)) {
-      return command(tokens.slice(i), { ...ctx, cwd });
+    if (isPathLike(token)) {
+      afterDirectoryFlag = false;
+      continue;
     }
+    if (MANAGERS.has(bare) || TOOLS.has(bare)) return command(tokens.slice(i), { ...ctx, cwd });
 
-    // A build tool's subcommand only counts before any flag: `cmake --build .` is a build,
-    // `cmake --install build` names a directory.
-    if (isTool) return !sawFlag && namesABuild(token) ? "build" : "none";
-
-    return script(token, { ...ctx, cwd });
+    if (afterDirectoryFlag) {
+      afterDirectoryFlag = false;
+      continue;
+    }
+    if (isTool) return namesABuild(token) ? "build" : "none";
+    return script(token, { ...ctx, cwd, noScripts });
   }
   return "none";
 }
@@ -283,18 +294,16 @@ function script(target: string, ctx: Context): BuildVerdict {
 
   const scripts = ctx.sources.manifests[ctx.cwd] ?? {};
   const bodies: string[] = [];
-  for (const hook of LIFECYCLE[target] ?? []) {
-    const hookBody = scripts[hook];
-    if (typeof hookBody === "string") bodies.push(hookBody);
+  if (ctx.noScripts !== true) {
+    for (const hook of LIFECYCLE[target] ?? []) {
+      const hookBody = scripts[hook];
+      if (typeof hookBody === "string") bodies.push(hookBody);
+    }
   }
   const own = scripts[target];
   if (typeof own === "string") bodies.push(own);
-
-  // A script this manifest does not declare is UNKNOWN. Round 5 found the previous version returning
-  // the strong `build` here from the bare name, so `pnpm --filter qfai ci:build-verify` was `build`
-  // while `pnpm ci:build-verify` was `heuristic` — the same command, upgraded by a lookup failure.
   if (!bodies.length) return namesABuild(target) ? "heuristic" : "none";
-  return strongest(bodies.map((b) => shell(b, { ...ctx, seen })));
+  return strongest(bodies.map((b) => shell(b, { ...ctx, seen, noScripts: false })));
 }
 
 /** Convenience: does this line reach a build, counting a labelled guess as one? */

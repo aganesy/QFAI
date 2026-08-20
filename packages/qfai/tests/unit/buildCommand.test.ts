@@ -254,6 +254,58 @@ describe("classifyBuildCommand", () => {
     expect(classifyBuildCommand("pnpm build", sources)).toBe("heuristic");
   });
 
+  it("classifies the class round 6 measured v6 regressing on", async () => {
+    // v6 treated ANY flag as ending the subcommand position, so every one of these went to `none`
+    // while being a build under v5. Round 6 measured them; the fix is narrower, not broader — only a
+    // flag that takes a DIRECTORY makes the next bare token a location.
+    const sources = await repositorySources();
+    const REGRESSED = [
+      "make -C packages/qfai build",
+      "make -j4 build",
+      "cargo --locked build",
+      "gradle --no-daemon build",
+      "bazel --output_base=/tmp build //...",
+      "docker buildx build --push .",
+      "docker -H tcp://x build .",
+    ];
+    const missed = REGRESSED.filter((line) => classifyBuildCommand(line, sources) !== "build");
+    expect.soft(missed, "a build v5 caught and v6 lost").toEqual([]);
+
+    // And the one case the directory-flag rule exists for still holds.
+    expect.soft(classifyBuildCommand("cmake --install build", sources)).toBe("none");
+    expect.soft(classifyBuildCommand("cmake --build .", sources)).toBe("build");
+  });
+
+  it("gives one command one verdict across a flag's long, short and absent forms", async () => {
+    // Round 6: `pnpm build` was `build`, `pnpm --filter qfai build` `heuristic`, and
+    // `pnpm -F qfai build` `none`. `--filter` selects a PACKAGE, not a directory, so reading it as a
+    // manifest path pointed at a directory that does not exist — and the short form was not read at
+    // all. All three must agree.
+    const sources = await repositorySources();
+    const forms = ["pnpm build", "pnpm --filter qfai build", "pnpm -F qfai build"];
+    const verdicts = forms.map((line) => classifyBuildCommand(line, sources));
+    expect.soft(new Set(verdicts).size, `one command, one verdict: ${verdicts.join(", ")}`).toBe(1);
+    expect.soft(verdicts[0]).toBe("build");
+  });
+
+  it("does not read a build out of a flag value or a suppressed lifecycle hook", async () => {
+    const sources = await repositorySources();
+    // `--ignore-scripts` means `prepack` does not run, so packing reaches no build.
+    expect
+      .soft(
+        classifyBuildCommand("pnpm -C packages/qfai pack --ignore-scripts", sources),
+        "a suppressed lifecycle hook cannot be a build",
+      )
+      .toBe("none");
+    // Only a target-naming flag's value can name a target.
+    expect
+      .soft(
+        classifyBuildCommand("pnpm --reporter=build-log install", sources),
+        "a reporter name is not a build target",
+      )
+      .toBe("none");
+  });
+
   it("terminates on a self-referential script chain rather than recursing forever", () => {
     const sources: ScriptSources = { manifests: { "": { a: "pnpm b", b: "pnpm a" } } };
     expect(classifyBuildCommand("pnpm a", sources)).toBe("none");
