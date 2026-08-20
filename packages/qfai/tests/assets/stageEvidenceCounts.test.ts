@@ -1,47 +1,109 @@
 /**
  * The counts `atdd-spec-0017.md` states about its own artifacts, checked against the artifacts.
  *
- * This exists because one finding class recurred in every one of five review rounds: a number typed
- * into the record that the tree did not hold. Rounds 2 and 3 each found four; round 4 found four more,
- * including a **recorded command output** ("Tests 9 passed (9)" for a file that ran eleven) and a
- * `## Work performed` line that said eight describes where there were nine. Every one was a figure
- * restated without re-derivation, and every one was caught by a reviewer counting by hand.
+ * This exists because one finding class recurred in every review round: a number typed into the
+ * record that the tree did not hold. Rounds 2 and 3 each found four; round 4 found four more,
+ * including a **recorded command output** ("Tests 9 passed (9)" for a file that ran eleven).
+ * Correcting them one at a time did not work, so these derive them.
  *
- * Correcting them one at a time has not worked. What follows is the same move that fixed the Coverage
- * Depth Matrix's totals: derive the number from the artifact, so the record cannot disagree with the
- * repository without something failing.
+ * The first version of this file was itself the round's worst defect, twice over, and both are kept in
+ * view because they are the mistake this file exists to stop:
  *
- * Deliberately narrow. It checks counts that are mechanically derivable — test cases per file,
- * annotated describes, ledger annotation lines — and nothing that needs judgement. A suite total like
- * "1418 passed" is not derivable without running the suite and is left to the P7 block, which is why
- * that block carries its own statement about when it was measured.
+ * 1. **It made the suite red at the commit that added it.** It required every pack directory to be
+ *    named in `## Final status` *with a seal* — while the practice that fixed round 1's moving-tree
+ *    problem creates a pack **before** its reviewers launch, and `SKILL.md` fixes the seal at "when
+ *    the last reviewer response lands". An in-flight pack could never satisfy it, and
+ *    `tests/assets/**` runs in the `e2e` project, which is a required CI leg. So it asserted something
+ *    no honest edit could satisfy during a round.
+ * 2. **`countCases` returned 6 for its own 4-test file** — it counted the `it(` and `test(` inside its
+ *    own docstring. A counting function that cannot count its own file was checking every other number
+ *    here, and was right elsewhere only by luck.
+ *
+ * Round 5's `qa-gatekeeper` then broke it seven more ways with a green control, including the recorded
+ * vitest outputs — round 4's finding verbatim — and pointed out that seal **values** were never
+ * compared, only counted. All of that is addressed below.
  */
-import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 const ROOT = path.resolve(__dirname, "../../../..");
-/**
- * Count `it(` / `test(` callsites in a test file.
- *
- * Counts the callsite, not the run: a `for` loop inside one `it` is still one case, which is what a
- * "N tests" claim in prose means and what vitest reports.
- */
-function countCases(source: string): number {
-  return [...source.matchAll(/(?:^|[^.\w])(?:it|test)(?:\.\w+)*\s*\(/g)].length;
-}
+
+/** The first review pack this stage opened; earlier directories belong to other stages. */
+const FIRST_PACK = "review-20260820200000000";
 
 async function source(relative: string): Promise<string> {
   return readFile(path.join(ROOT, relative), "utf8");
+}
+
+/**
+ * A statement-initial test callsite: `it(`, `it.skip(`, `test.each(...)(` at the start of a line after
+ * its indentation.
+ *
+ * Two attempts preceded this one and both were wrong in opposite directions. The first counted the
+ * token anywhere and returned **6** for its own 4-test file, from the `it(` and `test(` in its own
+ * docstring. The second stripped comments and string literals first and returned **8** for a 22-test
+ * file: hand-rolling a JavaScript tokenizer with regexes goes wrong the moment a quote or a backtick
+ * inside a stripped span leaves the next pass unbalanced, and then it swallows real code.
+ *
+ * Every test in this repository is written statement-initial, and a decoy is not: a docstring
+ * continuation starts with `*`, a line comment with `//`, and a string occurrence has an assignment or
+ * a call in front of it. So the position does the work no tokenizer needed to.
+ */
+const CALLSITE = /^[ \t]*(?:it|test)(?:\.\w+)*[\s(]/;
+
+/** Count `it(` / `test(` callsites — the callsite, which is what vitest reports and prose means. */
+function countCases(text: string): number {
+  return text.split(/\r?\n/).filter((line) => CALLSITE.test(line)).length;
+}
+
+/** A git blob hash, computed rather than spawned: `sha1("blob " + size + "\0" + bytes)`. */
+function blobHash(bytes: Buffer): string {
+  const header = Buffer.from(`blob ${String(bytes.length)}\0`, "latin1");
+  return createHash("sha1")
+    .update(Buffer.concat([header, bytes]))
+    .digest("hex");
+}
+
+/** The seal: sha256 over `<blob> <path>\n` lines, paths pack-relative in byte order. */
+async function sealOf(packDir: string): Promise<string> {
+  const found: string[] = [];
+  const walk = async (dir: string): Promise<void> => {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await walk(full);
+        continue;
+      }
+      found.push(path.relative(packDir, full).split(path.sep).join("/"));
+    }
+  };
+  await walk(packDir);
+
+  const lines: string[] = [];
+  for (const relative of found.sort()) {
+    const bytes = await readFile(path.join(packDir, relative));
+    lines.push(`${blobHash(bytes)} ${relative}\n`);
+  }
+  return createHash("sha256").update(lines.join(""), "utf8").digest("hex");
+}
+
+/** Pack directories this stage opened, oldest first. No date window: round 5 found one there. */
+async function packsOnDisk(): Promise<string[]> {
+  const entries = await readdir(path.join(ROOT, ".qfai/review"), { withFileTypes: true });
+  return entries
+    .filter((entry) => entry.isDirectory() && /^review-\d+$/.test(entry.name))
+    .map((entry) => entry.name)
+    .filter((name) => name >= FIRST_PACK)
+    .sort();
 }
 
 describe("the stage evidence's counts are derived, not typed", () => {
   it("states the number of tests each new test file actually holds", async () => {
     const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
 
-    // Each entry: the file, and the phrase in the record that states its count. The phrase is matched
-    // with the number as a capture, so a drift in either direction fails here rather than in a review.
     const CLAIMS: ReadonlyArray<{ file: string; pattern: RegExp; label: string }> = [
       {
         file: "packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts",
@@ -63,6 +125,16 @@ describe("the stage evidence's counts are derived, not typed", () => {
         pattern: /spec0017LayeredCiScaffoldE2E\.test\.ts` — (\d+) tests across/,
         label: "the E2E file's test count, in Work performed",
       },
+      {
+        file: "packages/qfai/tests/assets/stageEvidenceCounts.test.ts",
+        pattern: /stageEvidenceCounts\.test\.ts` — (\d+) tests/,
+        label: "this file's own test count, in Work performed",
+      },
+      {
+        file: "packages/qfai/tests/assets/coverageDepthMatrix.test.ts",
+        pattern: /coverageDepthMatrix\.test\.ts` — (\d+) tests/,
+        label: "the matrix pinning test's count, in Work performed",
+      },
     ];
 
     const wrong: string[] = [];
@@ -78,6 +150,49 @@ describe("the stage evidence's counts are derived, not typed", () => {
       }
     }
     expect(wrong, "a count in the record that the tree does not hold").toEqual([]);
+  });
+
+  it("records vitest outputs the named files can actually produce", async () => {
+    // Round 4 found `-> Tests 9 passed (9)` recorded for a file that ran eleven; round 5 found this
+    // file blind to exactly that. `## Commands executed` quotes a command and its output, and the
+    // output must match the file the command names.
+    const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
+    const RECORDED = /vitest run[^\n]*?(tests\/[\w./-]+\.test\.ts)\n\s*-> Tests (\d+) passed/g;
+
+    const rows = [...evidence.matchAll(RECORDED)];
+    expect(
+      rows.length,
+      "the record must quote the runs of the files this stage added",
+    ).toBeGreaterThan(2);
+
+    const wrong: string[] = [];
+    for (const row of rows) {
+      const relative = row[1] ?? "";
+      const actual = countCases(await source(`packages/qfai/${relative}`));
+      if (Number(row[2]) !== actual) {
+        wrong.push(`${relative}: recorded ${row[2] ?? "?"} passed, file holds ${String(actual)}`);
+      }
+    }
+    expect(wrong, "a recorded vitest output the file cannot produce").toEqual([]);
+  });
+
+  it("counts its own callsites correctly, which two earlier versions did not", () => {
+    // The regression guard for defect 2 above: one version returned 6 for a 4-test file by counting
+    // tokens in its own docstring, and its replacement returned 8 for a 22-test file by stripping so
+    // hard it swallowed real code.
+    const decoys = [
+      "/** Count `it(` and `test(` callsites. */",
+      " * it( in a docstring continuation",
+      "// it( in a line comment",
+      'const label = "it( inside a string";',
+      "const tpl = `test( inside a template`;",
+      'it("one", () => {});',
+      'test.each([1])("two", () => {});',
+      'describe("nested", () => {',
+      '  it.skip("three", () => {});',
+      "});",
+    ].join("\n");
+    expect(countCases(decoys), "three callsites, five decoys").toBe(3);
   });
 
   it("states the number of annotated describes the E2E file actually carries", async () => {
@@ -96,37 +211,86 @@ describe("the stage evidence's counts are derived, not typed", () => {
     ).toBe(annotations);
   });
 
-  it("states the number of ledger claims this spec makes, and it matches the ledger", async () => {
+  it("records a guard output the guard itself produces", async () => {
+    // Round 5 found the previous version comparing the record against a transcription of the ledger
+    // and never invoking the guard, so a change in what the guard COUNTS was invisible. It runs now.
     const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
-    const ledger = await source("tests/e2e/qfai-traceability.md");
+    const guard: {
+      checkLedger: (
+        ledger: string,
+        sources: Map<string, string>,
+        options?: { spec?: string },
+      ) => { checked: number };
+      collectTestSources: (dir: string) => Promise<Map<string, string>>;
+    } = await import("../../../../scripts/check-atdd-annotation-ledger.mjs");
 
-    const claims = [...ledger.matchAll(/\bQFAI:SPEC-0017:US-0017-\d{4}\b/g)].length;
+    const ledger = await source("tests/e2e/qfai-traceability.md");
+    const sources = new Map<string, string>();
+    for (const dir of ["tests/e2e", "packages/qfai/tests/e2e"]) {
+      for (const [file, text] of await guard.collectTestSources(path.join(ROOT, dir))) {
+        sources.set(file, text);
+      }
+    }
+    const scoped = guard.checkLedger(ledger, sources, { spec: "0017" });
+
     const stated = /(\d+) claim\(s\) backed by a test annotation/.exec(evidence);
     expect(stated, "the guard's recorded output must be present in the pinned form").not.toBeNull();
-    expect(Number(stated?.[1]), "the recorded guard output must match the ledger it read").toBe(
-      claims,
+    expect(Number(stated?.[1]), "the recorded output must be what the guard now reports").toBe(
+      scoped.checked,
     );
   });
 
-  it("names as many review packs as the review directory holds, each with a seal", async () => {
+  it("names every pack on disk, with a recomputing seal for each closed one", async () => {
+    // Two rules, because a seal is fixed at "when the last reviewer response lands" while the request
+    // is committed BEFORE the reviewers launch — the practice that stopped the tree moving under
+    // round 1's reviewers. The newest pack is in flight: it must be DISCLOSED and cannot carry a seal
+    // yet. Every older pack is closed and must carry one that recomputes.
+    //
+    // The first version required a seal for all of them, which made this suite red at the commit that
+    // added it, in a required CI leg, and no honest edit could green it during a round.
     const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
-    const { readdir } = await import("node:fs/promises");
-
-    // Only packs this stage opened: the review directory also holds earlier stages' packs.
-    const packs = (await readdir(path.join(ROOT, ".qfai/review")))
-      .filter((name) => /^review-2026082[01]\d+$/.test(name))
-      .filter((name) => name >= "review-20260820200000000");
+    const packs = await packsOnDisk();
+    expect(packs.length, "this stage has opened at least one pack").toBeGreaterThan(0);
 
     const named = [...evidence.matchAll(/Review pack:\s+`?\.qfai\/review\/(review-\d+)\/?`?/g)].map(
       (match) => match[1] ?? "",
     );
     expect(
-      named.sort(),
-      "every pack this stage opened must be named in Final status — round 4 found the record saying " +
-        '"Three packs" against four directories',
-    ).toEqual(packs.sort());
+      [...named].sort(),
+      "every pack this stage opened must be named — round 4 found the record saying three against four",
+    ).toEqual(packs);
 
-    const seals = [...evidence.matchAll(/Review pack seal:\s+`?([0-9a-f]{64})`?/g)].length;
-    expect(seals, "one recorded seal per named pack").toBe(named.length);
+    // Seal VALUES, compared. Round 5 found the previous version counting them with `.length`, so a
+    // wrong hash was invisible.
+    const sealed = new Map(
+      [
+        ...evidence.matchAll(
+          /Review pack:\s+`?\.qfai\/review\/(review-\d+)\/?`?[^\n]*\nReview pack seal:\s+`?([0-9a-f]{64})`?/g,
+        ),
+      ].map((match) => [match[1] ?? "", match[2] ?? ""]),
+    );
+
+    const inFlight = packs[packs.length - 1] ?? "";
+    const wrong: string[] = [];
+    for (const pack of packs.slice(0, -1)) {
+      const recorded = sealed.get(pack);
+      if (recorded === undefined) {
+        wrong.push(`${pack}: closed and carries no recorded seal`);
+        continue;
+      }
+      const actual = await sealOf(path.join(ROOT, ".qfai/review", pack));
+      if (recorded !== actual) {
+        wrong.push(
+          `${pack}: recorded ${recorded.slice(0, 12)}…, recomputes ${actual.slice(0, 12)}…`,
+        );
+      }
+    }
+    expect(wrong, "a closed pack whose recorded seal does not recompute").toEqual([]);
+
+    expect(
+      sealed.has(inFlight),
+      `${inFlight} is the pack under review: named without a seal until its last reviewer lands, ` +
+        "because sealing it early is the thing the seal exists to detect",
+    ).toBe(false);
   });
 });

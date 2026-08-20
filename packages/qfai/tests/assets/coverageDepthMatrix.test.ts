@@ -101,6 +101,21 @@ function parsePartition(text: string): Array<{ className: string; row: string; c
 describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
   it("declares a Status total the table actually holds", async () => {
     const text = await readFile(MATRIX, "utf8");
+
+    // The header first. `parseMatrix` maps cells by position and drops anything past `COLUMNS`, so a
+    // column added to the record would carry cells no check here can see — round 5 planted a ninth
+    // all-failing depth column and every test stayed green.
+    const header = /^\|\s*US ID\s*\|(.+)\|\s*$/m.exec(text);
+    expect(header, "the matrix must keep its pinned header form").not.toBeNull();
+    const headings = (header?.[1] ?? "")
+      .split("|")
+      .map((cell) => cell.trim())
+      .filter((cell) => cell !== "");
+    expect(
+      headings,
+      "a column added to the table needs a case in COLUMNS, or its cells are invisible here",
+    ).toEqual([...COLUMNS]);
+
     const rows = parseMatrix(text);
     expect(rows.length, "nine user stories, nine rows").toBe(9);
 
@@ -296,6 +311,29 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     // scoring would read as a live justification.
     const headed = [...text.matchAll(/^### (US-\d{4}-\d{4}) — .*: ❌/gm)].map((match) => match[1]);
     expect(headed.sort()).toEqual(failing.sort());
+  });
+
+  it("does not restate a predicate claim a review round refuted", async () => {
+    // Round 4 blocked on this file publishing v3's "0 misclassified" after that measurement had been
+    // refuted (9 missed, 10 false positives). The replacement paragraph was written to discharge that
+    // — and round 5 showed it could be reverted to the refuted text with nothing reddening. Both the
+    // absence of the refuted claim and the presence of the current version are pinned now.
+    const text = await readFile(MATRIX, "utf8");
+
+    expect(
+      /\b0 misclassified\b/.test(text),
+      "a per-version accuracy claim measured only against a corpus this stage chose has been wrong " +
+        "at every version; it must not reappear as a bare figure",
+    ).toBe(false);
+    expect(
+      text,
+      "the record must name the predicate version it describes, so a later reader can tell which",
+    ).toMatch(/`?v6`?/);
+    // The record wraps, so the phrase is matched over collapsed whitespace and either emphasis form.
+    expect(
+      text.replace(/\s+/g, " "),
+      "and must keep the reason the naming defect mattered, which is the recurring one",
+    ).toMatch(/how a script is [*_]?called[*_]? rather than what it [*_]?does[*_]?/);
   });
 
   it("records the withdrawn US-0017-0007 claim rather than scoring it as covered", async () => {

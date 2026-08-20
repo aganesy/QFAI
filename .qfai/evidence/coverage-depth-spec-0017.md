@@ -192,22 +192,37 @@ wrote it and then broken by a corpus someone else chose:
 ```text
 v1  one flag-value pair. `pnpm run build`, `npx tsup` and six more reddened nothing
 v2  a package-manager list plus `build` anywhere after it. Caught `npx tsc --noEmit`
-v3  `build` as a standalone shell word. 9 missed, 10 false positives; caught `rm -rf build dist`
-v4  verb plus first target. Fixed those, regressed on 20 of 23 forms v3 caught — and reported
-    `pnpm ci:build-verify` as a build purely because of the script's NAME
+v3  `build` as a standalone shell word. Missed nine builds, reported ten non-builds; caught
+    `rm -rf build dist` and a comment in a JS block
+v4  verb plus first target. Fixed those, then lost 20 of the 23 forms v3 caught, because returning
+    on the first target hides everything after `&&` — and reported `pnpm ci:build-verify` as a build
+    purely because of the script's NAME
+v5  shell segments, per-manifest script bodies, and a third `heuristic` verdict. Round 5 broke it
+    ten ways, the worst being that a manifest lookup which MISSED returned the strong `build`
+    verdict from the bare name — so `pnpm --filter qfai ci:build-verify` was `build` while
+    `pnpm ci:build-verify` was `heuristic`: one command, two verdicts, decided by a lookup failure
 ```
 
-The claim previously recorded here — that round 2 "rebuilt the scan **around the verb**" — is
-withdrawn. It was not a verb anchor; it was a closed five-member package-manager list, so
-`make build`, `turbo run build`, `cargo build` and six more were invisible. And v4's naming defect is
-the one worth keeping in view: it measured how a script is *called* rather than what it *does*, which
-is the failure mode § "The finding that re-scored this matrix after round 1" names as this spec's
-recurring one.
+Two claims previously recorded here are withdrawn. That round 2 "rebuilt the scan **around the
+verb**" — it did not; it was a closed five-member package-manager list, so `make build`,
+`turbo run build`, `cargo build` and six more were invisible. And v3's "21 caught / 14 rejected / 0
+misclassified" — a figure measured only against a corpus this stage chose, which is how every version
+of this predicate came to be reported clean and then broken.
 
-`v5` lives in `packages/qfai/tests/helpers/buildCommand.ts`: shell segments before verbs, script
-**bodies** before names — resolved in the manifest the command's directory selects — and a third
-verdict, `heuristic`, for a name-shaped match that nothing can confirm. Measured against four corpora,
-none of which this stage chose; `packages/qfai/tests/unit/buildCommand.test.ts` holds them.
+v4's naming defect is the one worth keeping in view: it measured **how a script is *called* rather
+than what it *does***, which is the failure mode § "The finding that re-scored this matrix after round
+1" names as this spec's recurring one.
+
+`v6` lives in `packages/qfai/tests/helpers/buildCommand.ts` with its corpora in
+`packages/qfai/tests/unit/buildCommand.test.ts`. It keeps v5's shell segmentation and per-manifest
+resolution and adds the three distinctions v5 was missing: a package manager resolves a **script**
+while a build tool takes a **subcommand**; a **missing** script is unknown and can never be more than
+`heuristic`; and a runner may nest, with a build tool's subcommand counting only before any flag —
+which is what separates `cmake --build .` from `cmake --install build`.
+
+No accuracy figure is quoted here on purpose. What the corpora are is recorded instead: round 4's 20
+measured regressions, round 5's 10 measured defects, v4's 15 kept forms, the 18 non-builds four rounds
+accumulated, and every `run:` line in both workflow trees. None was chosen by this stage.
 
 Closing the row is `TDD-0032` … `TDD-0035`, all four `blocked` on `CR-20260820-0007`, because their
 acceptance criteria require numbers written into `07_Decisions.md` which `/qfai-implement` may not

@@ -188,8 +188,15 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
 - **new** `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts` — 22 tests
 - **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, v5, extracted from the
   E2E so its corpora can be tested on their own
-- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 9 tests, four corpora, none of them chosen
+- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 11 tests, five corpora, none of them chosen
   by this stage
+- **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 5 tests deriving the Coverage
+  Depth Matrix's totals, partition, class assignment and per-class justification from the table itself
+- **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 6 tests deriving this record's own
+  counts from the artifacts they describe, after every review round found at least one that the tree
+  did not hold
+- **new** `.qfai/decisions/DR-0017-0010-*.md` — the branch-3 anomaly record for `TDD-0070`
+- **new** `.qfai/decisions/CR-20260820-0012-*.md` — the self-referential gate `TDD-0069` waits on
 - **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 4 tests pinning the matrix
 - **new** `.qfai/decisions/CR-20260820-0011-*.md` — the 127 unbacked ledger claims
 
@@ -214,9 +221,9 @@ node scripts/check-atdd-annotation-ledger.mjs        (repo-wide)
 pnpm -C packages/qfai exec vitest run tests/integration/scripts/checkAtddAnnotationLedger.test.ts
   -> Tests 22 passed (22), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
-  -> Tests 4 passed (4), exit 0
+  -> Tests 5 passed (5), exit 0
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/buildCommand.test.ts
-  -> Tests 9 passed (9), exit 0
+  -> Tests 11 passed (11), exit 0
 
 node packages/qfai/dist/cli/index.mjs validate --profile atdd --fail-on error --spec 0017
   before this stage:  info=2 warning=0 error=2   QFAI-ATDD-111 (9 US), QFAI-ATDD-112 (8 TC)
@@ -350,27 +357,52 @@ does **not** cover them: it is scoped to a spec with zero `E2E`/`API` rows, and 
 - `Selector`: `TC-0017-0069 (TDD-0069): one tuning change per pull request, behind three green runs`
 - Obligation: `TC-0017-0069`, via `EX-0017-0053`
 
-**Branch 1 (observed RED) is unavailable, and not for want of trying.** `EX-0017-0053` requires three
-consecutive green aggregate-verdict runs *with their run identifiers quoted*. A test asserting that
-would fail today — but the failure would be "no such runs exist", and it could not be made green on
-this branch at all, because the workflow changes are unmerged. Writing it would put a permanently red
-test in the suite, which is not a RED observation; it is a broken build.
+**Branch 1 (observed RED) is unavailable, and not for want of trying.** `EX-0017-0053` requires
+"exactly one runner project is tuned, largest first" **and** three consecutive green aggregate-verdict
+runs with their run identifiers quoted. A test asserting that would fail today — but the failure would
+be "no such runs exist", and it could not be made green on this branch at all. Writing it would put a
+permanently red test in the suite, which is not a RED observation; it is a broken build.
 
-**Branch 2 (falsifiability) is unavailable**: the procedure requires an obligation already satisfied
-by state that exists. Nothing satisfies this one — there is no run history to mutate.
+**The reason it cannot go green is the self-referential gate, not unmerged work.** This paragraph read
+"because the workflow changes are unmerged" through three rounds of that sentence being retracted
+elsewhere in this file, and P1d's third and fourth passes both found it still here. `ci-pass` exists at
+`.github/workflows/ci.yml:469` and has run twelve times on this branch; what blocks a green run is
+`CR-20260820-0012` — the row's own unannotated `TC` is one of the errors keeping `build` red.
+`EX-0017-0053` is pre-merge by construction, being about a pull request and its runs.
+
+**Branch 2 (falsifiability) is unavailable, for a narrower reason than this record used to give.** The
+procedure requires an obligation already satisfied by state that exists. The sentence here said
+"nothing satisfies this one — there is no run history to mutate", which is true of clause 2 and wrong
+about clause 1: `DR-0017-0010` now records clause 1 as **unsatisfied** — no tuning change has been
+made, so nothing exists for "exactly one runner project is tuned, largest first" to be true of — which
+is not the same as unfalsifiable. That distinction took three P1d passes and two wrong readings to
+arrive at, and the DR keeps all of them.
 
 **`TDD-0070` is branch 3**, recorded in `DR-0017-0010`. **`TDD-0069` is not** — it is `blocked` on
 `CR-20260820-0012`, and `blocked` takes no RED-provenance branch at all. Both rows' identity and
 obligation references were recorded **before** any gate routed, in `58c29d9f`, as the branch-3
 evidence shape requires.
 
-Rounds 2, 3 and 4 each found this subsection stating something the record elsewhere had already
-retracted, and round 4 found that the previous repair had touched the index table and **not** the
-prose below it — `git diff` never entered these lines. Four statements went in that pass and are gone
-now: that the workflow changes being unmerged is `TDD-0069`'s obstacle (it is not; the obstacle is the
-self-referential gate in `CR-20260820-0012`), that there is "no run history to mutate" for clause 1
-(the correction is narrower — see the DR), that "branch 3 it is" for both rows, and that the blocking
-condition is the `exception` P1d PASS for both.
+**Rounds 1, 2, 3, 4 and 5 each found this subsection stating something the record elsewhere had
+already retracted, and round 5's finding was the repair claim itself.** Round 4's pass touched the
+index table and not the prose below it; round 5's version then claimed four statements "are gone now"
+while two of them stood **byte-for-byte** nine and thirteen lines above that sentence — both P1d's
+fourth pass and the `completion-reviewer` proved it with `git diff`, which showed one as an unchanged
+context line and the other absent from the diff entirely.
+
+So the correction has been applied at the source this time, in the `### TDD-0069` prose itself, and
+what follows is a list of where each retracted statement was rewritten rather than an assertion that
+they are gone:
+
+| retracted statement                                      | rewritten at                        |
+| -------------------------------------------------------- | ----------------------------------- |
+| "because the workflow changes are unmerged"              | § `TDD-0069`, branch 1 paragraph    |
+| "there is no run history to mutate" (for clause 1)       | § `TDD-0069`, branch 2 paragraph    |
+| "branch 3 it is" for both rows                           | this section's opening              |
+| the `exception` P1d PASS as the blocker for both         | "Neither transition is authorised"  |
+
+Each is now stated where a reader meets it, and the first two quote the old sentence as a quotation
+rather than asserting it.
 
 Neither transition is authorised yet:
 
@@ -627,6 +659,67 @@ while preserving membership and sizes — which showed that the letter carrying 
 was unpinned, the only thing the classes exist for. Both are now equality checks, and each class has a
 defining property every member must satisfy.
 
+### R1-R3 — the ledger ratchet
+
+The repo-wide ledger assertion has been wrong three times, once in each direction, so each direction is
+a round:
+
+```text
+R1  60 more unbacked ledger claims appended (a regression)     REDDENS
+R2  27 of the 127 backfilled with real annotations (the fix)   stays GREEN, correct
+R3  ONE more unbacked claim                                    REDDENS
+```
+
+`R2` is the one that matters. The first bound (`> 100`) **failed** on it — the remediation
+`CR-20260820-0011` option 1 prescribes — while being blind to `R1`. The second (`checked >= 208`)
+reddened on the first ledger line *removed*, which is the same option's other branch. The claim count
+is not asserted at all now; only `unbacked` has a direction pinned.
+
+### G1-G3 — the loop guard
+
+```text
+G1  the `stat` site loses its ELOOP guard                      REDDENS
+G2  the realpath dedupe reverts to lexical `path.resolve`      REDDENS
+G3  symlinked directories stop being followed                  REDDENS
+```
+
+`G3` reddened **nothing** the first time it was run, and that is how round 4's vacuity finding was
+confirmed from this side: the symlink test passed the link as the walk's *root*, and `readdir` follows a
+root whatever kind of node it is, so `entry.isSymbolicLink()` — the branch under test — was never
+reached. The test now places the link inside the scanned directory.
+
+### X6-X9 — the matrix record's prose
+
+Round 5 broke the matrix pinning test twice more, both times without touching the table:
+
+```text
+X6  a ninth all-failing depth column is added                  REDDENS
+X7  the refuted accuracy figure is restored                     REDDENS
+X8  the version named in the record drifts back                 REDDENS
+X9  the naming-defect reason is deleted                         REDDENS
+```
+
+`X6` and `X7` reddened nothing before this round: `parseMatrix` dropped any column past its header
+list, so nine unjustified cells were invisible; and the paragraph written to discharge round 4's
+blocking finding could be reverted to the refuted "0 misclassified" text in silence. The header is
+compared to the column list now, and the refuted figure's **absence** is pinned.
+
+### C1-C5 — the derived-count test
+
+```text
+C1  a stated test count drifts from the file                    REDDENS
+C2  a test is added and the record does not follow              REDDENS
+C3  the annotated-describe count drifts                         REDDENS
+C4  the recorded guard output parts from the ledger              REDDENS
+C5  a pack's seal line is deleted                                REDDENS
+```
+
+That test found a real defect on its first run — round 4's seal edit had aborted on a later needle and
+written nothing, so the record still said "Three packs" against four directories in a section this
+record had reported as fixed. It was also **itself** the worst defect of round 5: its first version
+required a seal for every pack on disk, which no honest edit can satisfy while a pack is under review,
+and it made a required CI leg red at the commit that added it.
+
 ## Gaps / Open risks
 
 1. **Five of nine stories are unsatisfied in the shipped tree, and the five shipped layer lanes are
@@ -669,8 +762,13 @@ defining property every member must satisfy.
    is reported, and that a claim over a file's contents is rewritten to run the thing whenever
    running it is possible — as `tests/integration/shippedWorkflow*.test.ts` already does.
 8. **`TDD-0069` and `TDD-0070` are parked, and they are parked for two different reasons.**
-   `TDD-0070` is `exception` against `DR-0017-0010` — post-merge history cannot exist pre-merge, which
-   P1d sustained. `TDD-0069` is `blocked` on `CR-20260820-0012`: P1d found the exit condition
+   **Both are still `todo` in the ledger**, and what follows is the status each is owed rather than
+   one it has — round 4 and round 5 each found this item asserting the statuses while `## Final
+   status` said neither had been written. `TDD-0070` is owed `exception` against `DR-0017-0010`, whose
+   account P1d has sustained four times running: post-merge history cannot exist pre-merge.
+   `TDD-0069` is owed `blocked` on `CR-20260820-0012`, and P1d's fourth pass **released** that write
+   on the merits — the only ground it had blocked on, a `DR-ID` column carrying a `CR-*` id, is fixed.
+   P1d found the exit condition
    `DR-0017-0010` first offered to be **unreachable**, because a green `ci-pass` requires `build`
    green, which requires `error=0`, which requires `QFAI-ATDD-112` clear, which requires
    `TC-0017-0069` annotated — which requires the green runs. The row waits for itself. That is an
@@ -721,9 +819,8 @@ tree that carries every round-4 repair:
 
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
-pnpm -C packages/qfai test:e2e                  1422 passed / 16 skipped, exit 0
-vitest --project integration --project assets --project unit
-                                                1186 passed / 19 skipped, exit 0
+pnpm -C packages/qfai test:e2e                  1425 passed / 16 skipped, exit 0
+vitest --project integration --project unit     1188 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 8 claim(s) backed, exit 0
 node ... validate --profile atdd --spec 0017     info=2 warning=0 error=2
@@ -731,11 +828,20 @@ node ... validate --profile atdd --spec 0017     info=2 warning=0 error=2
 node ... validate --profile full                 error=4  (see § "The full profile")
 ```
 
-The totals moved twice and both moves have a cause. Round 4 took the build classifier out of the E2E
-file into `tests/helpers/buildCommand.ts`, so its two corpus tests left the `e2e` project and nine
-joined `unit`: 1420 -> 1418, 1174 -> 1186. Round 5 then added
-`tests/assets/stageEvidenceCounts.test.ts` — four tests in the `assets` project, which the `test:e2e`
-invocation also runs: 1418 -> 1422.
+**`--project assets` does not exist**, and an earlier version of this block named it. The projects are
+`core`, `unit`, `validators`, `integration`, `cli` and `scripts`; `tests/assets/**` runs under
+**`e2e`**, which `ci.yml` executes as a required matrix leg. That mattered for more than a label: the
+first version of `stageEvidenceCounts.test.ts` was red, and because it lives in `tests/assets/**` it
+made `test (e2e)` red in CI from a clean checkout — with `ci-pass` then failing on two jobs instead of
+one. Round 5's `qa-gatekeeper` measured it while this block certified `exit 0`, which is the same
+defect class this record keeps finding, now about the suite's own colour.
+
+The totals moved three times and each move has a cause. Round 4 took the build classifier out of the
+E2E file into `tests/helpers/buildCommand.ts`, so its two corpus tests left the `e2e` project and
+twelve joined `unit`: 1420 -> 1418, 1174 -> 1186. Round 5 added
+`tests/assets/stageEvidenceCounts.test.ts`, whose six tests run under `e2e`: 1418 -> 1424. Applying
+round 5's findings then added a matrix round, two classifier rounds and three loop-guard tests:
+1424 -> 1425 and 1186 -> 1188.
 
 **Those two totals are the numbers this record cannot derive**, which is why they carry a statement of
 when they were measured. Everything derivable about the artifacts — per-file test counts, annotated
@@ -810,8 +916,11 @@ What was achieved: eight of `spec-0017`'s nine `US-*` are covered from `tests/e2
 assertions — one of them rewritten to execute the shipped step rather than read it — across five
 oracle rounds against the shipped tree, six behavioural rounds on the version resolver (`E6`-`E11`),
 sixteen falsification rounds on the matrix pinning test (`M1`-`M7`, `X1`-`X3`, `X6`-`X8`, `Y1`-`Y3`),
-three on the ledger ratchet (`W1`-`W3`), three on the loop guard (`L1`-`L3`) and four more on the
-matrix record's own prose (`Z1`-`Z4`); the shipped-tree gap is measured at step-body level; the ordering claim this
+three on the ledger ratchet (`R1`-`R3`), three on the loop guard (`G1`-`G3`), four on the matrix
+record's own prose (`X6`-`X9`) and five on the derived-count test (`C1`-`C5`) — all defined under
+§ "Execution logs", which round 5 found they were not, and renamed off `L*`/`Z*` because `L1`/`L3`
+collided with the layer codes and `Z1`-`Z4` had been used in a review pack for mutations recorded as
+reddening **nothing**; the shipped-tree gap is measured at step-body level; the ordering claim this
 stage had asserted is now enforced by a script that exists and is tested; and a repo-wide defect
 affecting 16 other specs was found and filed.
 
@@ -833,7 +942,22 @@ What is not satisfied:
   have kept `exception`, which satisfies completion, rather than taking `blocked`, which prohibits it;
 - Stage Minimum Roles were not used for P2-P4 — the reviewer gate ran, the work orders did not.
 
-Confirmed by: round 1's two independent blocking reviewers, both **REVISE**, on `8fb48002`:
+Confirmed by: **nobody has returned PASS.** Five stage rounds and four P1d passes, fifteen reviewer
+responses, every one **REVISE**. The full set, because an earlier version of this line named round 1
+alone and round 5 found it still doing so:
+
+| round | reviewer                                | revision   | verdict |
+| ----- | --------------------------------------- | ---------- | ------- |
+| 1     | `completion-reviewer`, `qa-gatekeeper`  | `8fb48002` | REVISE  |
+| 2     | `implementation-reviewer`, `completion-reviewer`, `qa-gatekeeper`, P1d | `56daee8d` | REVISE |
+| 3     | `implementation-reviewer`, `completion-reviewer`, P1d — **no stage `qa-gatekeeper`** | `1473897a` | REVISE |
+| 4     | `completion-reviewer`, `qa-gatekeeper`, P1d | `54d8d325` | REVISE |
+| 5     | `completion-reviewer`, `qa-gatekeeper`, P1d | `3f815725` | REVISE |
+
+Round 5's P1d **released** `todo -> blocked` for `TDD-0069`, which is the first write any gate has
+authorised. Everything else remains owed.
+
+Round 1's pack, for continuity:
 
 - `completion-reviewer` — `.qfai/review/review-20260820200000000/R02_completion-reviewer.md`
 - `qa-gatekeeper` — `.qfai/review/review-20260820200000000/R03_qa-gatekeeper.md`
@@ -865,7 +989,20 @@ Review pack seal:  257e793b5c764a81532a01a0a422b28f2edbb986f41b0042e75a6b596d01b
 
 Review pack:       .qfai/review/review-20260821020000000/            (round 4, + P1d pass 3)
 Review pack seal:  aaa2d2a6e16b2027169ec58e9419b6269af037ed4d6d632df17fdad604db35ff
+
+Review pack:       .qfai/review/review-20260821040000000/            (round 5, + P1d pass 4)
+Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
 ```
+
+**The newest pack carries no seal, and that is the contract rather than an omission.** `SKILL.md` fixes
+the seal at "when the last reviewer response lands", while the practice that stopped the tree moving
+under round 1's reviewers commits the request **before** they launch. So a pack under review exists and
+cannot yet be sealed. The first version of
+`packages/qfai/tests/assets/stageEvidenceCounts.test.ts` required a seal for every pack on disk and
+therefore **made the suite red at the commit that added it** — in `tests/assets/**`, which runs in the
+`e2e` project and is a required CI leg. Round 5's gatekeeper measured it: `test:e2e` exit 1, and
+`ci-pass` failing on two jobs rather than one. The rule is now two rules: every **closed** pack must
+carry a seal that recomputes, and the **in-flight** one must be named without one.
 
 Serialization, stated because it is load-bearing: each manifest line is
 `<git hash-object><single space><path><LF>`, paths relative to the pack root in `LC_ALL=C` order, and

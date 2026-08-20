@@ -198,6 +198,62 @@ describe("classifyBuildCommand", () => {
     expect(classifyBuildCommand("pnpm lint && pnpm test", sources)).toBe("none");
   });
 
+  it("classifies the ten forms round 5 measured against v5", async () => {
+    // Round 5's `qa-gatekeeper` broke v5 ten ways. Its cases are here, in its own framing, because a
+    // corpus this stage chose has flattered this predicate at every version.
+    const sources = await repositorySources();
+
+    // The worst one: a MISSING script returned the strong `build` verdict from the bare name, so the
+    // same command changed verdict depending on whether a lookup happened to hit.
+    expect
+      .soft(
+        classifyBuildCommand("pnpm --filter qfai ci:build-verify", sources),
+        "a manifest lookup that misses may never produce more than a labelled guess",
+      )
+      .toBe("heuristic");
+    expect.soft(classifyBuildCommand("pnpm ci:build-verify", sources)).toBe("heuristic");
+    expect
+      .soft(
+        classifyBuildCommand("pnpm --filter qfai ci:build-verify", sources),
+        "and it must agree with the unfiltered form — round 5 found them differing",
+      )
+      .toBe(classifyBuildCommand("pnpm ci:build-verify", sources));
+
+    // Names that merely contain `build` are guesses, not builds.
+    expect.soft(classifyBuildCommand("npm run clean:build-cache", sources)).toBe("heuristic");
+    expect.soft(classifyBuildCommand("npm run restore:build-artifact", sources)).toBe("heuristic");
+
+    // A build tool's subcommand counts before a flag, not after: `--install build` names a directory.
+    expect.soft(classifyBuildCommand("cmake --install build", sources)).toBe("none");
+    expect.soft(classifyBuildCommand("cmake --build .", sources)).toBe("build");
+
+    // Forms v5 lost entirely.
+    expect.soft(classifyBuildCommand("pnpm -w build", sources), "`-w` is boolean").toBe("build");
+    expect.soft(classifyBuildCommand("npx turbo run build", sources)).toBe("build");
+    expect.soft(classifyBuildCommand("pnpm nx build web", sources)).toBe("build");
+    expect
+      .soft(
+        classifyBuildCommand("yarn workspace qfai build", sources),
+        "the workspace NAME is not the target",
+      )
+      .toBe("build");
+    expect.soft(classifyBuildCommand("python -m build", sources)).toBe("build");
+  });
+
+  it("treats `cd ./pkg` and `cd pkg` as the same directory", () => {
+    // Round 5 found them differing: `normalise` left the `./` in place, so one resolved in a manifest
+    // that did not exist. Round 5 also found that removing the whole `cd` handler reddened nothing,
+    // which is why this asserts a positive resolution rather than an absence.
+    const sources: ScriptSources = { manifests: { "": {}, pkg: { build: "tsup" } } };
+    expect(classifyBuildCommand("cd ./pkg && pnpm build", sources)).toBe("build");
+    expect(classifyBuildCommand("cd pkg && pnpm build", sources)).toBe("build");
+    expect(classifyBuildCommand("cd ./pkg/ && pnpm build", sources)).toBe("build");
+    // And a directory with no manifest resolves to a guess, not to the root's script.
+    expect(classifyBuildCommand("cd ./elsewhere && pnpm build", sources)).toBe("heuristic");
+    // Without the `cd`, the root manifest declares no `build`, so the same command is only a guess.
+    expect(classifyBuildCommand("pnpm build", sources)).toBe("heuristic");
+  });
+
   it("terminates on a self-referential script chain rather than recursing forever", () => {
     const sources: ScriptSources = { manifests: { "": { a: "pnpm b", b: "pnpm a" } } };
     expect(classifyBuildCommand("pnpm a", sources)).toBe("none");

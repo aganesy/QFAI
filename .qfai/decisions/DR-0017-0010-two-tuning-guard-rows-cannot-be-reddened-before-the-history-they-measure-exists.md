@@ -148,9 +148,23 @@ until one is. That also means clause 1 is **falsifiable in principle**, once a c
 branch 2 becomes available for it at that point, and is unavailable now for the ordinary reason that
 the state it would check has not been created.
 
-This record has now been wrong about clause 1 three times, in three different directions, across three
-P1d passes. Recorded in full rather than replaced, because the pattern is the finding: each correction
-was written confidently, from a real citation, read one step wider than the citation supported.
+This record has been wrong about clause 1 **twice** — "nothing to falsify", then "degenerate" — and
+the statement above is the third and, per P1d's fourth pass, the correct one. It verified the reading
+independently rather than accepting it: `projectKnobs` is spread uniformly into all seven projects with
+only `name` and `include` overridden, `maxConcurrency` is declared once, and the declared start is
+unmoved on both axes, so no tuning change exists.
+
+The count matters because an earlier version of this line said "wrong three times", which classified
+the current, correct statement as an error — the defect `CR-20260820-0006` describes, in a record that
+cites it eighteen lines later. Two wrong readings and a correction, recorded in full rather than
+replaced: each wrong one was written confidently, from a real citation, read one step wider than the
+citation supported.
+
+P1d's fourth pass added one caveat and marked it explicitly non-blocking: `BR-0017-0053` and
+`AC-0017-0029` are universally quantified, so zero instances makes clause 1 _untriggered_ rather than
+violated. **The row-level conclusion does not rest on that wording** — it rests on branch 2's GREEN
+pair requirement for clause 2, which is independent — so this record does not restate clause 1 a fourth
+time on that ground.
 
 **And "exactly one form per row" was the wrong clause to reason from.** P1d's second pass:
 `references/red-provenance.md` § "Evidence shape" governs how many forms _one row records_, not how a
@@ -161,10 +175,20 @@ confirmed the clause.
 **The treatment neither this record nor `CR-20260820-0012` considered: split the conjunction
 upstream.** `EX-0017-0053` states two obligations in one example. Split into two examples — one for
 "exactly one runner project is tuned, largest first" and one for the three green runs — and each gets
-its own row, its own branch and its own exit. Clause 1's row would still be degenerate against this
-runner (see above), so the split does not close it either; but it would stop a reachable half being
-parked behind an unreachable one, and it is the option a reader of this record should see. It belongs
-in `CR-20260820-0012`'s option set and is added there.
+its own row, its own branch and its own exit.
+
+**This paragraph is where P1d's third pass found the retraction had not reached.** It read "clause 1's
+row would still be degenerate against this runner (see above)" — the exact claim the section twenty
+lines up retracts, pointing at that retraction as its support. The CR's twin paragraph was corrected in
+the same commit range and this one was not: repair the pointer, not the payload, which is the pattern
+`CR-20260820-0006` names. Corrected here.
+
+Clause 1 is **unsatisfied**, so its row after a split would be a row nothing yet makes true — ordinary
+work waiting on a tuning change, not an anomaly. The split therefore does not close `TDD-0069` on its
+own; what it buys is that the two failures get named separately instead of one standing for both. And
+it must keep clause 2's subject bound to clause 1's change, or the halves become independently
+satisfiable and `BR-0017-0053`'s attributability guarantee is gone —`CR-20260820-0012`'s option 5
+carries that wording.
 
 This is distinct from `CR-20260820-0006`'s class-A rows, where the obligation _was_ already satisfied
 and only the reference's vocabulary for saying so was missing. (That CR's own count went 13 -> 20 -> 21

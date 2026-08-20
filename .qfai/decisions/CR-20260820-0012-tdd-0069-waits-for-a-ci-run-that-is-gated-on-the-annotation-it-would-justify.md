@@ -159,10 +159,15 @@ successively more of it:
   QFAI-ATDD-112, unscoped:  SPEC-0003 1   SPEC-0008 4   SPEC-0015 2   SPEC-0017 8   = 15
   ```
 
-  `build` needs all fifteen, not eight. That is the dominant strand, it was absent from both this CR
-  and `DR-0017-0010`, and it kills **option 2** a second independent way: an exemption for _this
-  spec's_ in-flight rows would still leave **seven** TCs from three other specs failing the same gate,
-  so the cycle would not open.
+  `build` needs all fifteen, not eight. That is the dominant strand and it was absent from both this
+  CR and `DR-0017-0010`.
+
+  **It does not, however, give option 2 a second independent failure, and an earlier version of this
+  paragraph claimed it did.** P1d's fourth pass checked: all seven non-`spec-0017` TCs are themselves
+  `todo`, so option 2 as worded — an exemption for _a spec's_ own in-flight rows, not this spec's —
+  is general and would clear `QFAI-ATDD-112` outright. Option 2 still fails, by the **first** reason
+  given above: `QFAI-ATDD-111` has no ledger rows to exempt, so nothing about in-flight rows reaches
+  it.
 
 Recorded so that no option here is read as sufficient by itself.
 
