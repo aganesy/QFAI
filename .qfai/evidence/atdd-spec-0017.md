@@ -138,8 +138,13 @@ annotation over a gap. **The describe and the ledger line are both removed**; `Q
 so not the vacuous case — but `/\b(pnpm|npm|yarn)\s+(-\S+\s+\S+\s+)?build\b/` admits one flag-value
 pair and nothing else. Measured one form at a time: `pnpm build`, `pnpm -C packages/qfai build` and
 `yarn build` reddened; **`pnpm run build`, `npm run build`, `yarn run build`, `pnpm exec tsup` and
-`npx tsup` reddened nothing** — the idiomatic form was invisible. Rebuilt around the verb and
-re-observed: **10 of 10 forms redden**, control green (§ "Execution logs", `E4b`).
+`npx tsup` reddened nothing** — the idiomatic form was invisible. This paragraph then said the scan was
+`"rebuilt around the verb"` and re-observed at `"10 of 10 forms redden"`. **Both are withdrawn.** What
+replaced the regex was a wider but still closed package-manager list, so `make build`,
+`turbo run build`, `cargo build` and six more remained invisible — § "Corrections" and
+`coverage-depth-spec-0017.md` § "the oracle" record the same withdrawal — and the ten forms were the ten
+just enumerated, a corpus this stage chose. The predicate that does generalise arrived seven versions
+later (§ "Execution logs", `E4b`, and `tests/helpers/buildCommand.ts`).
 
 **4. The matrix disagreed with itself.** Declared `✅ 3 / ⚠️ 2 / ❌ 4`; the table held
 `✅ 2 / ⚠️ 2 / ❌ 5` — nine rows counted into eight slots — and the file's own five justification
@@ -375,8 +380,11 @@ REVISE was about the **content of the anomaly account**, and it split the two ro
   examined.
 
 All three were verified independently before being applied. The DR is revised, `TDD-0069` is
-re-classified to `blocked`, and the cycle is filed as `CR-20260820-0012`. A re-route of P1d is owed on
-the revision; this stage does not claim it.
+re-classified to `blocked`, and the cycle is filed as `CR-20260820-0012`. P1d ruled on that revision at
+its sixth pass and **passed** it, keeping `TDD-0069 -> blocked` released and authorising
+`TDD-0070 -> exception`; see § "P1d's verdict: PASS, at the sixth pass". An earlier version of this
+paragraph said `"a re-route of P1d is owed on the revision"`, which was true when written and outlived
+the gate by one pass.
 
 63 `refactor` rows are past `todo` and outside step 3b's reach — it routes a row this stage would
 advance **from** `todo`. 6 `blocked` rows carry a `Blocked-By` value and are skipped by Phase Red's
@@ -771,6 +779,52 @@ record had reported as fixed. It was also **itself** the worst defect of round 5
 required a seal for every pack on disk, which no honest edit can satisfy while a pack is under review,
 and it made a required CI leg red at the commit that added it.
 
+### W1-W9 — the retracted-claims guard, and a false cause this stage published
+
+`packages/qfai/tests/assets/retractedClaims.test.ts` had no family here for three rounds, which is
+part of why the next paragraph went unrecorded: its only account lived in a test docstring and a review
+request, and a completion gate reads neither.
+
+```text
+W1  a retracted claim reinstated as a plain assertion           REDDENS
+W2  the same claim laundered by a zero-width space BETWEEN words REDDENS
+W3  the same claim laundered by a zero-width space INSIDE a word REDDENS
+W4  an entry's needle lengthened past the text it catches        REDDENS
+W5  the claim wrapped in _italics_ rather than quotation marks   REDDENS
+W6  the claim split across a hand-wrapped line break            REDDENS
+W7  a RETIRED claim reintroduced into the records                REDDENS
+W8  a RETIRED declaration deleted while its claim stays absent   REDDENS
+W9  an entry added this round reworded so it matches nothing     REDDENS
+```
+
+Control green. `W2` and `W3` are one mutation in two placements and they need **two** flattenings:
+deleting a zero-width character welds two words together, substituting a space splits one word in two,
+and each repair blinds the guard to the other placement. Round 7 laundered a claim the first way and
+round 8 the second, each against the version repaired for the other.
+
+`W4`, `W8` and `W9` are the class this round added, and the class the guard was missing entirely. An
+entry whose needle is longer than the text it means to catch enforces nothing and reports nothing: the
+suite stays green while the claim stands. Round 8 measured two of thirteen entries in that state —
+`"P1d has returned REVISE three times"` added while its sites read `"sustained across three passes"`
+and `"sustained four times running"`, and `"defeated by the formatter"` added against text reading
+`"defeated by **running** the formatter"`. Both were added by the round that was closing this exact
+defect somewhere else.
+
+**The false cause.** This stage recorded, and repeated for two rounds, that the guard's earlier failure
+was `"defeated by running the formatter ci:lint enforces"`. That is withdrawn. Two configuration facts
+refute it:
+
+| fact                                                                    | source                |
+| ----------------------------------------------------------------------- | --------------------- |
+| `.qfai/evidence/**` and `.qfai/review/**` are excluded from Prettier     | `.prettierignore`     |
+| markdown is formatted with `proseWrap: "preserve"`, so nothing reflows   | `.prettierrc.json`    |
+
+No formatter touches these files, and none would rewrap them if it did. **The line breaks are
+hand-wrapped by this stage** — the same stage that then attributed them to a tool. The failure was real
+and the mechanism was right; the cause was adopted from round 6's report and never checked against the
+two files above. It is the same error as `E4b`'s withdrawn "rebuilt around the verb": a claim about how
+something is written, believed without reading it.
+
 ## Gaps / Open risks
 
 1. **Five of nine stories are unsatisfied in the shipped tree, and the five shipped layer lanes are
@@ -866,13 +920,16 @@ numbers.
 **Re-run after the last artifact changed, twice, because this block was wrong about its own
 currency both times.** Round 3 found the first version written at `16f611c7` before `21ea1ddc` landed
 +489/-76 across four files, so it certified three artifacts that postdated it — established by
-`git log -S`. Round 4 found the replacement stale in the same way. These numbers are measured at the
-tree that carries every round-4 repair:
+`git log -S`. Round 4 found the replacement stale in the same way. **These numbers are measured at
+`eb5d59af`**, the revision that carries every repair through round 8, plus the uncommitted round-8
+record edits — which change no test count, since the sequence below reaches `eb5d59af` and the totals
+here are its measurement. Three rounds asked for the revision beside the totals and got a round name
+instead; a round name cannot be checked, which is the whole reason those rounds asked.
 
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
-pnpm -C packages/qfai test:e2e                  1432 passed / 16 skipped, exit 0
-vitest --project integration --project unit     1193 passed / 19 skipped, exit 0
+pnpm -C packages/qfai test:e2e                  1433 passed / 16 skipped, exit 0
+vitest --project integration --project unit     1196 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 8 claim(s) backed, exit 0
 node ... validate --profile atdd --spec 0017     info=2 warning=0 error=2
@@ -880,9 +937,11 @@ node ... validate --profile atdd --spec 0017     info=2 warning=0 error=2
 node ... validate --profile full                 error=4  (see § "The full profile")
 ```
 
-**`--project assets` does not exist**, and an earlier version of this block named it. The projects are
-`core`, `unit`, `validators`, `integration`, `cli` and `scripts`; `tests/assets/**` runs under
-**`e2e`**, which `ci.yml` executes as a required matrix leg. That mattered for more than a label: the
+**`--project assets` does not exist**, and an earlier version of this block named it. The workspace
+declares **seven** projects — `core`, `unit`, `validators`, `integration`, `e2e`, `cli`, `scripts`
+(`packages/qfai/vitest.workspace.ts`) — and `tests/assets/**` runs under **`e2e`**, which `ci.yml`
+executes as a required matrix leg. An earlier version of this sentence listed six and then named `e2e`
+in the next clause, which is the count that made the seventh look like something else. That mattered for more than a label: the
 first version of `stageEvidenceCounts.test.ts` was red, and because it lives in `tests/assets/**` it
 made `test (e2e)` red in CI from a clean checkout — with `ci-pass` then failing on two jobs instead of
 one. Round 5's `qa-gatekeeper` measured it while this block certified `exit 0`, which is the same
@@ -893,8 +952,28 @@ were right — including one claim its own arithmetic refuted. Re-derived from `
 revision rather than from memory:
 
 ```text
-per commit, e2e project:   3f815725  1422    c40b2358  1425    cb91e089  1428    ac4700d1  1431
+per commit, e2e project (tests/e2e/** + tests/assets/**, the project's two include globs):
+
+  3f815725  1422        callsites 858
+  c40b2358  1425  (+3)            861  (+3)
+  cb91e089  1428  (+3)            864  (+3)
+  ac4700d1  1431  (+3)            867  (+3)
+  9882a1d4  1432  (+1)            868  (+1)   round 7's apply commit
+  dbe00247  1432  (+0)            868  (+0)   docs only
+  eb5d59af  1433  (+1)            869  (+1)   round 8's apply commit
 ```
+
+**Method, because three derivations of this sequence were wrong with correct endpoints.** The right
+column is `it` / `test` callsites in the project's files at each revision, counted from `git show` —
+which is checkable at any later date, unlike a suite total, and is why it is printed. The left column is
+the total those deltas imply from the measured 1422. The two are tied at both ends: the run above
+measures **1433** at `eb5d59af`, and 1422 + (869 - 858) = 1433. Callsites are not tests — `.each` makes
+one callsite many — so the columns only move together while the tests added are plain ones, and every
+step here is.
+
+The sequence stopped at `ac4700d1 1431` for one round while the block beside it certified **1432**, so
+it asserted a total its own derivation could not reach. The missing `+1` is `9882a1d4`, round 7's own
+apply commit: a step that was invisible because it was the step being taken.
 
 Round 7 measured that sequence and it is the one to trust. Two derivations before it were wrong with
 correct endpoints — the first credited round 5 with six tests where `git show` says **four**, and
@@ -907,13 +986,12 @@ times, which is exactly why neither was caught by looking at the totals.
 version credited to the earlier revision. Re-derived with `git show` at each commit rather than
 reconstructed.
 
-Every figure in the block above is the measured one at the revision named. The earlier version
-credited round 5 with six tests where it had four, and claimed three loop-guard tests were added at a
-revision whose diff for that file is empty — a claim `1186 + 2 = 1188` already refuted. Round 6 opened with `retractedClaims.test.ts`, three more under `e2e`:
-1425 -> 1428.
-
-**Those two totals are the numbers this record cannot derive**, which is why they carry a statement of
-when they were measured. Everything derivable about the artifacts — per-file test counts, annotated
+**Those two totals are the numbers this record cannot derive**, which is why they name the revision
+they were measured at and why the sequence above reaches it. Round 7 required the paragraph that used
+to sit here deleted; the round that answered it **duplicated** the paragraph instead, welding the
+sentence marked for deletion onto the end of the copy — an insertion where a deletion was required, in
+the block being rewritten to answer a finding about this block. It is gone now, and that was verified
+with `git diff` rather than by rereading the file. Everything derivable about the artifacts — per-file test counts, annotated
 describes, the recorded guard output, the named packs — is now checked by
 `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` rather than typed. Five rounds each found a
 number here that the tree did not hold; correcting them one at a time did not work, and on its first

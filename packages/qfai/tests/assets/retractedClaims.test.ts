@@ -13,13 +13,19 @@
  * 1. **Proximity.** The first version looked for a corrective word within 900 characters, in a
  *    document that is largely *about* corrections — so six mutations reinstating retracted claims as
  *    plain assertions reddened nothing.
- * 2. **Literal spaces.** The second matched needles containing spaces against text where Prettier had
- *    put **newlines**. Round 6 measured four live occurrences invisible to it, and made the point that
- *    lands hardest: a guard whose premise is "prose cannot be trusted" was defeated by running the
- *    formatter `ci:lint` enforces. It also had three narrower holes — a per-entry `files` list, so a
- *    claim asserted in a file the entry did not name was free; a global quote-parity scan, where one
- *    stray `"` inverted every range after it, laundering an assertion **and** accusing eight correct
- *    quotations; and a needle-length rule justified as surviving reflow that did nothing of the kind.
+ * 2. **Literal spaces.** The second matched needles containing spaces against text where the record
+ *    has **newlines**, so four live occurrences were invisible to it. Round 6 reported the cause as
+ *    `"a guard whose premise is 'prose cannot be trusted' was defeated by running the formatter
+ *    ci:lint enforces"`, and this file asserted that sentence as fact for two rounds. **It is false,
+ *    and it is quoted here for that reason.** `.prettierignore` excludes `.qfai/evidence/**` and
+ *    `.qfai/review/**`, and `.prettierrc.json` sets `proseWrap: "preserve"` for markdown: no formatter
+ *    touches these files, and none would reflow them if it did. The line breaks are hand-wrapped, by
+ *    the same stage that then blamed a tool for them. The defect was real; the diagnosis was adopted
+ *    from a review report without being checked. It also had three narrower holes — a per-entry
+ *    `files` list, so a claim asserted in a file the entry did not name was free; a global
+ *    quote-parity scan, where one stray `"` inverted every range after it, laundering an assertion
+ *    **and** accusing eight correct quotations; and a needle-length rule justified as surviving reflow
+ *    that did nothing of the kind.
  *
  * Four changes, each closing one of those:
  *
@@ -30,6 +36,15 @@
  * - **quotations are extracted per paragraph**, so an unbalanced quote can only affect its own
  *   paragraph rather than the rest of the document;
  * - and **`_italics_` are not quotes**, which is what round 6 found `CR-20260820-0012` relying on.
+ *
+ * **What this list actually tracks is WORDINGS, not claims**, and that residual is the reason the
+ * inert-entry test below exists. An entry catches the exact phrase it holds; a claim reasserted in
+ * different words walks past it. Round 8 measured the consequence twice in the round that was meant to
+ * close it — `"P1d has returned REVISE three times"` was added while the sites it was for said
+ * `"sustained across three passes"` and `"sustained four times running"`, and
+ * `"defeated by the formatter"` was added against text reading `"defeated by **running** the
+ * formatter"`. Both needles matched nothing, both rounds reported the fix applied. Shorter needles
+ * help and are used where a subject can be bound safely, but nothing here makes the list semantic.
  *
  * `tdd/test-list.md` is deliberately **not** in the file set. Its `Status` / `DR-ID` / `Evidence`
  * cells belong to `/qfai-implement` under the Drift Protocol, so a retracted claim living there is a
@@ -127,6 +142,18 @@ const RETRACTED: readonly Retracted[] = [
     why: "P1d passed at its sixth pass; this stood inside the entry step 3b reads (round 8)",
   },
   {
+    claim: "Rebuilt around the verb",
+    why: "round 1 widened a closed five-member package-manager list; `make build`, `turbo run build`, `cargo build` and six more stayed invisible, so nothing was rebuilt around the verb (round 2, restated by round 8 after two entries missed this site)",
+  },
+  {
+    claim: "re-route of P1d is owed",
+    why: "P1d ruled on the revision at its sixth pass and passed it; the sentence outlived the gate it describes (round 8)",
+  },
+  {
+    claim: "NOT BLOCKED by a CR",
+    why: "the negation of the `Blocked-By: CR-20260820-0012` the row is being given (P1d round 7 `A1`)",
+  },
+  {
     claim: "no filters",
     why: "the seal is LF-normalised, not unfiltered; the unfiltered value reproduced only on one machine (round 8)",
   },
@@ -184,10 +211,11 @@ const RETIRED: readonly string[] = [
   // Removed from the records outright rather than quoted, which is the better end state: nothing can
   // read them as assertions because they are not there. Each was verified absent across all five
   // governance files before being listed, and the second assertion below still catches reintroduction.
-  "P1d has returned REVISE three times",
+  // Two entries left this list in round 8: the W-family record in `## Execution logs` now quotes
+  // both, so they are live-and-quoted rather than absent. The second assertion below is what
+  // noticed — writing that record made a retired declaration false in the same commit.
   "P1d has run three times",
   "transition itself is still owed a P1d PASS",
-  "defeated by",
   "no filters",
 ];
 
@@ -315,7 +343,8 @@ describe("retracted claims are quoted, never asserted", () => {
 
   it("sees a claim a line break falls inside", () => {
     // Round 6's decisive finding: `"rebuilt the scan **around the\nverb**"` was invisible, and so were
-    // three more, because the needle had a space where Prettier had a newline. This is that shape.
+    // three more, because the needle had a space where the record has a hand-wrapped newline — not, as
+    // this comment said for two rounds, where a formatter had put one. This is that shape.
     const wrapped = 'That round 2 "rebuilt the scan **around the\nverb**" is withdrawn.';
     const flat = flatten(wrapped);
     expect(
