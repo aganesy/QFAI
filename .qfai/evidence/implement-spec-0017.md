@@ -61,6 +61,93 @@ its own `TC-0017-NNNN`; no row carries `US-Refs` or `CON-API-Refs`, because no r
 | --- | -- | ---------- |
 | `TDD-0069` | `TC-0017-0069` | data that does not exist yet — see the row's `Evidence` cell |
 | `TDD-0070` | `TC-0017-0070` | data that does not exist yet — see the row's `Evidence` cell |
+## The merge moved the contract past this record
+
+**Added 2026-08-20, immediately after merging `origin/main`.** This is the largest single change to
+what the work must satisfy, and it did not come from a review — it came from 202 commits of upstream
+contract work landing on the branch. Measured rather than described.
+
+### Seventy-one of eighty-two rows are now governed by a handover that never happened
+
+Merged `SKILL.md`, Phase Red step 3b:
+
+> **A `todo` `E2E` / `API` / `Integration` row consumes the provenance `/qfai-atdd` recorded; steps 4
+> and 5 do not apply to it.** […] For a `todo` row, verify its entry in
+> `.qfai/evidence/atdd-<spec-id>.md` **first**, then write the status the verified branch calls for,
+> per `../qfai-atdd/references/red-provenance.md#handover-to-qfai-implement`.
+
+```text
+ledger rows by Layer      Integration 71    Unit 11
+.qfai/evidence/atdd-spec-0017.md          does not exist
+```
+
+So on the merged contract, **71 rows should have had their RED produced by `/qfai-atdd` and recorded
+in an evidence file that does not exist**, and this skill should have verified that entry rather than
+observing a RED itself. Every RED in this record for those rows was taken here, by the skill the
+merged text says does not take them.
+
+The eleven `Unit` rows are unaffected: steps 4 and 5 still apply to them, and their evidence is in the
+right place.
+
+### Six field classes the merged contract names and this record does not carry
+
+| field                        | named in merged `SKILL.md` | present here |
+| ---------------------------- | -------------------------- | ------------ |
+| `RED test hash` (+ manifest) | yes                        | **no**       |
+| `RED revision`               | yes                        | **no**       |
+| `Falsifiability revision`    | yes                        | **no**       |
+| `Replacement proof revision` | yes                        | **no**       |
+| `Round N:` prefixed fields   | yes                        | **no**       |
+| `Audited evidence hash`      | yes                        | **no**       |
+
+`Oracle proof` and `Revision` are present. The rest are not, and three of them —
+`Falsifiability revision`, `RED test hash`, `Audited evidence hash` — address states that no longer
+exist: a mutated tree that was reverted, a test file that has been rewritten twice since, a
+phase-authored entry the gatekeeper would have hashed at the time. They cannot be back-filled
+truthfully.
+
+### And Phase Green gained an ordering this record does not meet
+
+> 2. Run the test and **watch it pass**. Do not submit it yet: `qa-gatekeeper` requires an
+>    `Oracle proof` on every item, so a GREEN submitted before step 2a has produced one is a REVISE by
+>    construction.
+>    2a. **Run the `Oracle proof` and record it here, before the submission in step 2.**
+
+Every oracle in this record was run **after** its GREEN, and several were run rounds later — the
+`TDD-0008` rounds were added in round 5 because a review found the row had none. On the merged
+contract that ordering is "a REVISE by construction".
+
+### What this does to the open change requests
+
+Three were written against text the merge replaced, and I am not applying their recommended options
+until each is re-read against the merged rules:
+
+- **`CR-20260820-0009`** (35 rows cite an aggregate run). Step 4's sentence survives the merge, but
+  step 3c reframes what "aggregate" means: "a `Selector` may legally hold a comma-separated list or a
+  glob, and one aggregate run shows the first entry failing while the rest are unobserved". That
+  reads as a rule about a Selector with SEVERAL ENTRIES, not about a file-scoped run covering several
+  rows. Every Selector in this spec holds one entry. So the CR's premise may be the same class of
+  mistake `CR-20260820-0008` made — a rule read wider than it is written — and it is flagged rather
+  than defended. It also matters less: step 4 does not apply to 71 of the rows at all.
+- **`CR-20260820-0010`** (spec completion requires a `Layer = E2E` row per `US-*`). That condition is
+  **absent from merged `SKILL.md`**. The contradiction it files appears to be resolved upstream, and
+  the CR should be closed as superseded once that is confirmed against the merged completion
+  conditions rather than against its absence alone.
+- **`CR-20260820-0008`** was already superseded by `CR-20260820-0009` before the merge.
+
+### Why this is recorded here rather than repaired
+
+Because the repair is not a record edit. Seventy-one rows would need their RED provenance produced by
+a different skill, into a file that does not exist, with four field classes that address trees which
+no longer exist. That is a re-run of the acceptance-test stage for this spec, not a correction to
+this evidence file — and deciding whether to do that, or to close the spec against the contract as it
+stood when the work was done, is not a decision an implementer takes on its own.
+
+What is true and worth stating plainly: **the work is sound against the contract it was done under,
+and the contract has moved.** Both halves matter. The tests pass, the oracles redden, the scaffold
+now runs in GitHub Actions — and the evidence shape the merged skill requires is not the shape this
+record has.
+
 ## The scaffold has never executed in GitHub Actions
 
 **Added 2026-08-20.** Measured, because it is the largest thing this record does not say:
