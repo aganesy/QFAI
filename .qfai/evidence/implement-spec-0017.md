@@ -1570,6 +1570,46 @@ suite rather than the row's own test.
 | `R10` | TDD-0011 | `66ef9d35` | `:1107:8` — the reason must identify the path as outside every recognized directory |
 | `R11` | TDD-0006 | `85e54e21` | `:938:8` — only the verdict may use `always()` to stay unconditional; `:944:8` — a documentation-only run may execute only detection, lint, build and the verdict |
 | `R12` | TDD-0006 | `e9dfecd1` | `:983:8` — a crashed detection must reach the verdict rather than skipping every lane into a green run |
+
+#### `TDD-0008`'s rounds, added 2026-08-20 after review finding B6
+
+The twelve rounds above cover `TDD-0006`, `0007`, `0009`, `0010`, `0011` and `0012`. `TDD-0008` is
+absent from every one of them, and its `Evidence` cell cited `R7` — which is `TDD-0009`'s round, on
+the failed-diff annotation. The omission is not random: `TC-0017-0008` asserts the **accepting**
+direction (a documentation-only list narrows, and annotates nothing), and an accepting-direction
+claim is the kind a mutation set aimed at rejecting behaviour will skip.
+
+Three rounds, each planted alone into `.github/workflows/ci.yml` and reverted with a byte comparison
+against the pre-mutation text:
+
+| id           | mutation                                                              | reddens                                                                                                            |
+| ------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `S1`         | the documentation set loses a member, so a documentation-only list stops narrowing | `a documentation-only change must not select the full set: expected true to be false`                  |
+| `S2`         | `--no-renames` is dropped from the `git diff` command                 | `every git diff the detect job runs must pass --no-renames on the command itself: expected [ Array(1) ] to deeply equal []` |
+| `S3-control` | a comment-only edit above the command                                 | **nothing**                                                                                                        |
+
+### `S2` caught a vacuous assertion in the claim added two commits earlier
+
+Worth recording in full, because it is the third time in this run that a well-formed assertion
+turned out to measure nothing, and the first time one of mine survived a commit.
+
+The `--no-renames` claim added for review finding H1 searched the step's whole `run` string:
+
+```text
+.filter((run) => run.includes("git diff"))
+.filter((run) => !run.includes("--no-renames"))
+```
+
+The comment three lines above the command explains the flag **by naming it**. So the string
+`--no-renames` was present in the block whether or not it was present on the command, and `S2`
+deleted the flag from the invocation while the claim stayed green. The claim now splits the block
+into lines, drops comment lines, and asserts over the `git diff` lines themselves.
+
+This is the same failure shape as change 6's inert per-project knobs and change 5's first draft: the
+assertion was true of the text and said nothing about the behaviour. In all three cases the oracle
+round is what separated them — and here the round only existed because a review pointed out that the
+row had none.
+
 | `R13-control` | (control) | `82a27e3f` | **nothing new** |
 
 Six rounds mutate the workflow's SHAPE and six mutate the classifier's RULES, in one oracle on purpose:

@@ -1064,15 +1064,23 @@ describe("TC-0017-0008 (TDD-0008): a resolvable base ref narrows the lane set wi
     // Asserted over the SHELL rather than the classifier, because that is where the input is
     // produced — the classifier cannot recover a path it was never given. That is also why this
     // claim reads a flag: its oracle is a mutation of the workflow, not of the program.
-    const diffRuns = stepsOfJob(DETECT_JOB)
+    // Comment lines are STRIPPED before the flag is looked for, and that is not tidiness — the
+    // first version of this claim searched the whole `run` string and was vacuous, because the
+    // comment three lines above the command explains the flag by naming it. An oracle round that
+    // deleted the flag from the command reddened NOTHING. Read the assertion below as: the flag is
+    // on the invocation, not merely mentioned near it.
+    const shellLines = stepsOfJob(DETECT_JOB)
       .map((step) => step["run"])
       .filter((run): run is string => typeof run === "string")
-      .filter((run) => run.includes("git diff"));
-    expect(diffRuns.length, "the detect job must compute a diff").toBeGreaterThan(0);
+      .flatMap((run) => run.split(/\r?\n/))
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith("#"));
+    const diffCommands = shellLines.filter((line) => line.includes("git diff"));
+    expect(diffCommands.length, "the detect job must compute a diff").toBeGreaterThan(0);
     expect
       .soft(
-        diffRuns.filter((run) => !run.includes("--no-renames")),
-        "every diff the detect job runs must pass --no-renames",
+        diffCommands.filter((line) => !line.includes("--no-renames")),
+        "every git diff the detect job runs must pass --no-renames on the command itself",
       )
       .toEqual([]);
   });
