@@ -273,8 +273,29 @@ obstacle either. P1d was runnable and was not run.
 
 `.qfai/decisions/DR-0017-0010-two-tuning-guard-rows-cannot-be-reddened-before-the-history-they-measure-exists.md`
 now exists and carries the branch-1 and branch-2 attempts, the anomaly per row, and the audit subject
-`references/red-provenance.md` fixes. P1d's `qa-gatekeeper` is routed on it; the verdict is recorded
-under § "Reviewer verdicts on the branch-3 DR" below.
+`references/red-provenance.md` fixes.
+
+### P1d's verdict on the branch-3 DR
+
+**REVISE**, on `16f611c7`. The evidence shape was satisfied — row identity, obligation, `DR-ID` and
+artifact all present and exact, verified against `tdd/test-list.md:107-108`, `05_Examples.md` and
+`06_Test-Cases.md`, and the placement and ID scheme correct with no collision past `DR-0017-0009`. The
+REVISE was about the **content of the anomaly account**, and it split the two rows:
+
+- **`TDD-0070` sustained.** Post-merge default-branch history cannot exist pre-merge; that is branch
+  3's own named example. `blocked` was checked as an alternative and rejected on
+  `execution-ledger.md`'s three grounds, none of which is "waiting on run history".
+- **`TDD-0069` not sustained.** Three defects: the stated obstacle was wrong ("a repo-wide
+  `QFAI-ATDD-111` unrelated to this row" — both errors are scoped to `spec-0017`, and
+  `QFAI-ATDD-111`'s subject `US-0017-0007` is the parent of `AC-0017-0029`, which is *these rows'*
+  AC); the exit condition offered was **unreachable**, because the gate is self-referential; and
+  `EX-0017-0053` was quoted at half its length, dropping "exactly one runner project is tuned, largest
+  first" — the clause that *is* checkable today, and whose omission means branch 2 had not really been
+  examined.
+
+All three were verified independently before being applied. The DR is revised, `TDD-0069` is
+re-classified to `blocked`, and the cycle is filed as `CR-20260820-0012`. A re-route of P1d is owed on
+the revision; this stage does not claim it.
 
 63 `refactor` rows are past `todo` and outside step 3b's reach — it routes a row this stage would
 advance **from** `todo`. 6 `blocked` rows carry a `Blocked-By` value and are skipped by Phase Red's
@@ -323,8 +344,8 @@ after a merge that has not happened. **The row is not satisfiable on the branch 
 tuning, by construction.** No amount of work on this branch changes that; it needs post-merge
 history.
 
-Branch 3, `DR-*` pending, parked. Recorded here so the next agent reads a determination rather than
-an absence.
+Branch 3, `DR-0017-0010`, parked. This is the row P1d sustained: post-merge history cannot exist
+pre-merge, which is branch 3's own named example.
 
 ### What branch 3 does not do
 
@@ -519,9 +540,18 @@ double-counting `State transitions` across two classes. The test caught it befor
    working countermeasure is not vigilance: it is that every new claim gets an oracle round before it
    is reported, and that a claim over a file's contents is rewritten to run the thing whenever
    running it is possible — as `tests/integration/shippedWorkflow*.test.ts` already does.
-8. **`TDD-0069` and `TDD-0070` need a `DR-*` this stage may not author.** Same authorship gap as
-   `CR-20260820-0007`. Until it is resolved the two rows are parked, not blocked, and the
-   distinction is recorded in the ledger's own `Evidence` cell as well as here. (The ledger's columns
+8. **`TDD-0069` and `TDD-0070` are parked, and they are parked for two different reasons.**
+   `TDD-0070` is `exception` against `DR-0017-0010` — post-merge history cannot exist pre-merge, which
+   P1d sustained. `TDD-0069` is `blocked` on `CR-20260820-0012`: P1d found the exit condition
+   `DR-0017-0010` first offered to be **unreachable**, because a green `ci-pass` requires `build`
+   green, which requires `error=0`, which requires `QFAI-ATDD-112` clear, which requires
+   `TC-0017-0069` annotated — which requires the green runs. The row waits for itself. That is an
+   unresolved Change Request of this spec, so `blocked` is the correct status and `exception` was not.
+
+   The earlier claim here — that both rows "need a `DR-*` this stage may not author", the same
+   authorship gap as `CR-20260820-0007` — was **retracted twice over**: the DR was authorable at
+   `.qfai/decisions/`, and `TDD-0069`/`TDD-0070` are not in that CR's blocked set. (The ledger's
+   columns
    are `TDD-ID` / `TC-Refs` / `Layer` / `Test file` / `Selector` / `Status` / `DR-ID` / `Blocked-By` /
    `Evidence`; the first version of this line said `Notes`, a column that does not exist.)
 
@@ -540,8 +570,10 @@ What is not satisfied:
 
 - **`US-0017-0007` is uncovered**, so `QFAI-ATDD-111` reports it and the scoped gate is `error=2`;
 - the stage's own gate `validate --profile atdd --fail-on error --spec 0017` exits 1;
-- `TDD-0069` / `TDD-0070` are parked on branch 3 with the `DR-*` pending, and branch 3 does not close
-  a spec;
+- `TDD-0070` is parked at `exception` against `DR-0017-0010`, and branch 3 does not close a spec;
+- `TDD-0069` is parked at `blocked` on `CR-20260820-0012` — a self-referential gate P1d found while
+  judging the DR, where the row's own unannotated `TC` is one of the two errors that keep the run it
+  waits for red;
 - Stage Minimum Roles were not used for P2-P4 — the reviewer gate ran, the work orders did not.
 
 Confirmed by: round 1's two independent blocking reviewers, both **REVISE**, on `8fb48002`:

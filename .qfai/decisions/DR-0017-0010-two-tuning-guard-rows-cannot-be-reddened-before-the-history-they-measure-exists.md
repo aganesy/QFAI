@@ -7,7 +7,8 @@
 - Rows: `TDD-0069`, `TDD-0070`
 - Raised by: `/qfai-atdd spec-0017`, Phase Red branch 3
 - Raised at: `2026-08-20T22:00:00Z`
-- Status: `open` — awaiting the `qa-gatekeeper` PASS that P1d routes on this artifact
+- Status: `open` — P1d returned **REVISE** on the first version of this record; revised below and
+  awaiting a re-route
 
 ## Why this record exists at all
 
@@ -39,10 +40,53 @@ Neither row can be reddened on this branch, and not for want of a test.
 - `Selector`: `TC-0017-0069 (TDD-0069): one tuning change per pull request, behind three green runs`
 - Obligation: `TC-0017-0069`, via `EX-0017-0053`
 
-`EX-0017-0053` requires **three consecutive green aggregate-verdict runs with their run identifiers
-quoted**. The workflow changes that produce an aggregate verdict are unmerged; PR #794's runs exist but
-no three-in-a-row green sequence does, because the required context is still failing on a repo-wide
-`QFAI-ATDD-111` unrelated to this row.
+`EX-0017-0053`, **quoted in full** this time:
+
+> Exactly one runner project is tuned, largest first, and three consecutive green aggregate-verdict
+> runs are recorded with their run identifiers quoted in the description
+
+The first version of this record quoted only the second clause, twice, and P1d's `qa-gatekeeper`
+caught it. That matters because **the first clause is checkable today**: `vitest.knobs.ts` declares
+the worker axes at the root and `.qfai/evidence/timing-workers-spec-0017.md` measures `core` as the
+largest project. A row whose obligation is half-quoted has not had branches 1 and 2 examined, whatever
+this record asserted — see § "Branch 2" below, which is corrected as a result.
+
+**And the obstacle this record named was the wrong one.** It said the required context "is still
+failing on a repo-wide `QFAI-ATDD-111` unrelated to this row". Both halves are false, and P1d
+demonstrated it:
+
+- there are **two** errors at HEAD, `error=2`, and **both are scoped to `.qfai/specs/spec-0017`**;
+- `QFAI-ATDD-111`'s subject is `US-0017-0007`, which `03_Acceptance-Criteria.md:410` records as the
+  parent of **`AC-0017-0029`** — the AC these two rows implement. Not unrelated: it is their own;
+- `QFAI-ATDD-112` names `TC-0017-0069` and `TC-0017-0070` **by id**, because neither is annotated
+  anywhere in the repository. That error is _constituted by_ these two rows.
+
+### The real obstacle for `TDD-0069`: the gate is self-referential
+
+```text
+ci-pass green   requires   build green
+build green     requires   qfai validate --fail-on error  ->  exit 0   (error=0)
+error=0         requires   QFAI-ATDD-112 clear
+ATDD-112 clear  requires   TC-0017-0069 annotated in tests/integration/**
+annotated       requires   a passing test for TC-0017-0069
+that test       requires   three consecutive green ci-pass runs
+```
+
+The exit condition this record originally offered — "becomes implementable once PR #794 has three
+consecutive green `ci-pass` runs to cite" — **cannot be followed**, because the run it waits for is
+gated on the annotation it is waiting to justify. P1d verified every link against run `32368851703` at
+`headSha 16f611c7`.
+
+So the framing "a timing fact rather than a defect" is true of `TDD-0070` and **false of `TDD-0069`**.
+`TDD-0070` waits for time to pass. `TDD-0069` waits for itself. That is an arrangement defect, filed
+as `CR-20260820-0012`, and it is what a later reader following the `DR-ID` cell needs to find here —
+`exception` clears only by `exception -> todo` when the anomaly resolves, so a wrong account of the
+anomaly decides when anyone tries again.
+
+Also corrected: "the workflow changes that produce an aggregate verdict are unmerged" was false as
+`TDD-0069`'s reason. `ci-pass` exists at `.github/workflows/ci.yml:469` and has run twelve times on
+this branch; `EX-0017-0053`'s obligation is **pre-merge** by construction, since it is about a pull
+request and its runs.
 
 ### `TDD-0070` — a rerun-to-green rate above one in twenty reopens it
 
@@ -69,19 +113,40 @@ here on the GREEN side, not the RED side.
 
 ## Branch 2 was tried and is unavailable
 
-The falsifiability path applies when the surface is already there — the obligation is satisfied by state
-that predates the row, and the trio (`Satisfied-by`, a falsifiability command, its result) demonstrates
-the test discriminates against that state. There is no such state. The surface these two rows measure is
-**workflow-run history**, and this branch has none of the kind they require. There is nothing to mutate,
-so there is nothing to falsify.
+The falsifiability path applies when the surface is already there — the obligation is satisfied by
+state that predates the row, and the trio (`Satisfied-by`, a falsifiability command, its result)
+demonstrates the test discriminates against that state.
 
-This is distinct from `CR-20260820-0006`'s twelve rows, where the obligation _was_ already satisfied and
-only the reference's vocabulary for saying so was missing. Here the obligation is not satisfied by
-anything.
+**For `TDD-0070`, there is no such state.** The surface it measures is post-merge default-branch run
+history. Nothing to mutate, so nothing to falsify.
+
+**For `TDD-0069`, this record's first version overstated the case, and the half-quote is why.**
+`EX-0017-0053`'s first clause — "exactly one runner project is tuned, largest first" — _is_ satisfied
+by state that predates the row, and it is falsifiable: mutate `vitest.knobs.ts` to tune a second
+project, or to tune one that is not the largest, and a test over that clause would redden. So branch 2
+is available **for that clause**.
+
+It is not available for the row, and `references/red-provenance.md` § "Evidence shape" is why:
+"exactly one form per row, never both and never neither". A row takes one branch, and this row's
+obligation is the conjunction. Satisfying clause 1 by falsifiability leaves the row unable to reach
+GREEN, which is the same wall branch 1 hits — so the row still lands on branch 3, but it lands there
+because the obligation is a conjunction with one unreachable half, not because "there is nothing to
+falsify". The corrected reason is narrower and it is the true one.
+
+This is distinct from `CR-20260820-0006`'s class-A rows, where the obligation _was_ already satisfied
+and only the reference's vocabulary for saying so was missing. (That CR's own count went 13 -> 20 -> 21
+across two corrections and it says in as many words "the number is not the check. Derive it from the
+ledger" — so this record cites its classes and not a figure, which is the second thing P1d caught here.)
 
 ## Decision
 
-Both rows transition `todo -> exception` against this `DR-0017-0010`, and stay parked.
+**`TDD-0070`** transitions `todo -> exception` against this `DR-0017-0010`, and stays parked.
+
+**`TDD-0069`** does not. P1d's REVISE established that its anomaly is a self-referential gate rather
+than absent history, which is an unresolved Change Request of this spec — `CR-20260820-0012` — and
+therefore a `blocked` condition, not an `exception`. It transitions `todo -> blocked` with
+`Blocked-By: CR-20260820-0012`. This record keeps its analysis because the `DR-ID` cell is not the only
+route a reader takes to it, and because the two rows were examined together.
 
 **What that does not do.** `references/red-provenance.md#branch-3-does-not-close-a-spec-on-its-own`:
 an `exception` is a blocking output. It needs a user-approved `TDDLIST-001` waiver, or the row is parked
@@ -89,10 +154,24 @@ and the spec stays open. **The spec stays open.** These two rows, the six `block
 uncovered `US-0017-0007` are why this stage's status is `FAIL`, and none of them is closeable by this
 stage.
 
-**What closes them.** `TDD-0069` becomes implementable once PR #794 has three consecutive green
-`ci-pass` runs to cite. `TDD-0070` becomes implementable only after a merge, plus twenty default-branch
-verdict runs. Both are ordinary work at that point, with no anomaly left to record — which is the sense
-in which this `exception` is a timing fact rather than a defect.
+**What closes them, corrected.**
+
+`TDD-0070` becomes implementable only after a merge, plus twenty default-branch verdict runs. Ordinary
+work at that point, no anomaly left to record. For this row the `exception` is a timing fact.
+
+`TDD-0069` cannot be closed by waiting, because of the cycle above. It becomes implementable when
+`CR-20260820-0012` is resolved — by whichever of its options the user approves, all of which have the
+same shape: break the dependency of the _run_ on the _annotation_. Until then the row is parked on an
+anomaly that is a defect in the arrangement of its own gates, not a property of the calendar.
+
+`blocked` was considered for both and is wrong: `execution-ledger.md` scopes `todo -> blocked` to "an
+upstream defect, an unresolved Change Request, or an unfinished row in another spec". P1d checked this
+independently and it closes in this record's favour for `TDD-0070`. For `TDD-0069` it is now arguable —
+`CR-20260820-0012` is an unresolved Change Request of this spec's own — and the honest answer is that
+`blocked` becomes correct for `TDD-0069` the moment that CR is open, which it now is. Recorded rather
+than decided here: the transition is `/qfai-implement`'s to write, and it should write
+`todo -> blocked` with `Blocked-By: CR-20260820-0012` for `TDD-0069`, and `todo -> exception` against
+this record for `TDD-0070`.
 
 ## What a reviewer is being asked to judge
 
