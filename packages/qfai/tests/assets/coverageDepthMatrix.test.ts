@@ -381,7 +381,18 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
       Object.values(row?.cells ?? {}).every((score) => score === "❌"),
       "a story no test covers cannot score above ❌ in any column",
     ).toBe(true);
-    expect(text).toMatch(/withdrawn/i);
+    // Anchored to the row's own justification section, not to the file. `toMatch(/withdrawn/i)` over
+    // the whole record was satisfied by any occurrence anywhere — changing this very section's
+    // "withdrawn" to "retired" left it green, which round 7 raised and round 8 measured.
+    const section = /#{2,4}[^\n]*US-0017-0007[^\n]*\n([\s\S]*?)(?=\n#{2,4} |$)/.exec(text);
+    expect(
+      section,
+      "the withdrawn story must have a justification section of its own",
+    ).not.toBeNull();
+    expect(
+      (section?.[1] ?? "").replace(/\s+/g, " "),
+      "that section must say the claim was withdrawn, in the section a reader lands on",
+    ).toMatch(/withdrawn/i);
 
     // The ledger line must be gone too, or the matrix and the gate disagree.
     const ledger = await readFile(

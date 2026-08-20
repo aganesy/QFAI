@@ -99,7 +99,6 @@ function grammarMembers(): string[] {
     ["MANAGER_DIRS", GRAMMAR.managerDirs],
     ["TARGET_FLAGS", GRAMMAR.targetFlags],
     ["NO_SCRIPTS", GRAMMAR.noScripts],
-    ["WRAPPERS", GRAMMAR.wrappers],
     ["INTERPRETERS", GRAMMAR.interpreters],
   ];
   for (const [name, set] of sets) {
@@ -108,11 +107,22 @@ function grammarMembers(): string[] {
   for (const [hook, members] of Object.entries(GRAMMAR.lifecycle)) {
     for (const member of members) out.push(`LIFECYCLE.${hook}.${member}`);
   }
+  for (const [manager, flags] of Object.entries(GRAMMAR.managerValues)) {
+    for (const flag of flags) out.push(`MANAGER_VALUES.${manager}.${flag}`);
+  }
   for (const [tool, grammar] of Object.entries(GRAMMAR.tools)) {
     out.push(`TOOLS.${tool}`);
     for (const field of ["dirs", "values", "buildFlags"] as const) {
       for (const member of grammar[field]) out.push(`TOOLS.${tool}.${field}.${member}`);
     }
+    for (const member of grammar.builds ?? []) out.push(`TOOLS.${tool}.builds.${member}`);
+  }
+  for (const [wrapper, grammar] of Object.entries(GRAMMAR.wrappers)) {
+    out.push(`WRAPPERS.${wrapper}`);
+    for (const member of grammar.values) out.push(`WRAPPERS.${wrapper}.values.${member}`);
+    // `args` is a count, not a list, so it is a member only where it is non-zero — and its deletion is
+    // setting it to zero. Only `timeout` has one.
+    if (grammar.args > 0) out.push(`WRAPPERS.${wrapper}.args`);
   }
   return out;
 }
@@ -342,6 +352,48 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.rake", "build", "rake build"],
   ["TOOLS.rake.dirs.-C", "none", "rake -C build clean"],
   ["TOOLS.rake.values.-f", "none", "rake -f build clean"],
+  ["MANAGER_BOOLEAN.--stream", "build", "pnpm --stream build"],
+  ["MANAGER_BOOLEAN.--aggregate-output", "build", "pnpm --aggregate-output build"],
+  ["MANAGER_BOOLEAN.--no-color", "build", "pnpm --no-color build"],
+  ["MANAGER_BOOLEAN.--parallel", "build", "pnpm --parallel build"],
+  ["MANAGER_VALUES.npm.-w", "build", "npm -w pkg run build"],
+  ["TOOLS.docker.builds.bake", "build", "docker buildx bake -f docker-bake.hcl"],
+  ["TOOLS.podman.builds.bake", "build", "podman buildx bake -f docker-bake.hcl"],
+  ["WRAPPERS.time.values.-o", "build", "time -o out.txt pnpm build"],
+  ["WRAPPERS.time.values.--output", "build", "time --output out.txt pnpm build"],
+  ["WRAPPERS.time.values.-f", "build", "time -f fmt pnpm build"],
+  ["WRAPPERS.time.values.--format", "build", "time --format fmt pnpm build"],
+  ["WRAPPERS.sudo.values.-u", "build", "sudo -u builder pnpm build"],
+  ["WRAPPERS.sudo.values.--user", "build", "sudo --user builder pnpm build"],
+  ["WRAPPERS.sudo.values.-g", "build", "sudo -g staff pnpm build"],
+  ["WRAPPERS.sudo.values.--group", "build", "sudo --group staff pnpm build"],
+  ["WRAPPERS.nice.values.-n", "build", "nice -n 19 pnpm build"],
+  ["WRAPPERS.nice.values.--adjustment", "build", "nice --adjustment 19 pnpm build"],
+  ["WRAPPERS.ionice.values.-c", "build", "ionice -c 3 pnpm build"],
+  ["WRAPPERS.ionice.values.-n", "build", "ionice -n 19 pnpm build"],
+  ["WRAPPERS.ionice.values.-p", "build", "ionice -p 1234 pnpm build"],
+  ["WRAPPERS.xvfb-run.values.-s", "build", "xvfb-run -s screen pnpm build"],
+  ["WRAPPERS.xvfb-run.values.--server-args", "build", "xvfb-run --server-args screen pnpm build"],
+  ["WRAPPERS.xvfb-run.values.-n", "build", "xvfb-run -n 19 pnpm build"],
+  ["WRAPPERS.xvfb-run.values.--server-num", "build", "xvfb-run --server-num 99 pnpm build"],
+  ["WRAPPERS.xvfb-run.values.-f", "build", "xvfb-run -f fmt pnpm build"],
+  ["WRAPPERS.xvfb-run.values.--auth-file", "build", "xvfb-run --auth-file auth pnpm build"],
+  ["WRAPPERS.stdbuf.values.-i", "build", "stdbuf -i L pnpm build"],
+  ["WRAPPERS.stdbuf.values.--input", "build", "stdbuf --input L pnpm build"],
+  ["WRAPPERS.stdbuf.values.-o", "build", "stdbuf -o out.txt pnpm build"],
+  ["WRAPPERS.stdbuf.values.--output", "build", "stdbuf --output out.txt pnpm build"],
+  ["WRAPPERS.stdbuf.values.-e", "build", "stdbuf -e L pnpm build"],
+  ["WRAPPERS.stdbuf.values.--error", "build", "stdbuf --error L pnpm build"],
+  ["WRAPPERS.env.values.-u", "build", "env -u builder pnpm build"],
+  ["WRAPPERS.env.values.--unset", "build", "env --unset CI pnpm build"],
+  ["WRAPPERS.env.values.-C", "build", "env -C sub pnpm build"],
+  ["WRAPPERS.env.values.--chdir", "build", "env --chdir sub pnpm build"],
+  ["WRAPPERS.timeout", "build", "timeout 600 pnpm build"],
+  ["WRAPPERS.timeout.values.-s", "build", "timeout -s KILL 600 pnpm build"],
+  ["WRAPPERS.timeout.values.--signal", "build", "timeout --signal KILL 600 pnpm build"],
+  ["WRAPPERS.timeout.values.-k", "build", "timeout -k 30s 600 pnpm build"],
+  ["WRAPPERS.timeout.values.--kill-after", "build", "timeout --kill-after 30s 600 pnpm build"],
+  ["WRAPPERS.timeout.args", "build", "timeout 600 pnpm build"],
 ];
 
 /**
@@ -358,7 +410,6 @@ const SETS: Readonly<Record<string, Set<string>>> = {
   MANAGER_DIRS: GRAMMAR.managerDirs,
   TARGET_FLAGS: GRAMMAR.targetFlags,
   NO_SCRIPTS: GRAMMAR.noScripts,
-  WRAPPERS: GRAMMAR.wrappers,
   INTERPRETERS: GRAMMAR.interpreters,
 };
 
@@ -388,6 +439,13 @@ function deleteMember(member: string): () => void {
     }
     const field = parts[2] ?? "";
     const flag = parts.slice(3).join(".");
+    if (field === "builds") {
+      GRAMMAR.tools[name] = {
+        ...original,
+        builds: (original.builds ?? []).filter((entry) => entry !== flag),
+      };
+      return restore;
+    }
     if (field !== "dirs" && field !== "values" && field !== "buildFlags") {
       throw new Error(`no such tool field: ${field}`);
     }
@@ -396,6 +454,40 @@ function deleteMember(member: string): () => void {
       [field]: original[field].filter((entry) => entry !== flag),
     };
     return restore;
+  }
+
+  if (head === "WRAPPERS") {
+    const name = parts[1] ?? "";
+    const original = GRAMMAR.wrappers[name];
+    if (original === undefined) throw new Error(`no such wrapper: ${name}`);
+    const restore = (): void => {
+      GRAMMAR.wrappers[name] = original;
+    };
+    if (parts.length === 2) {
+      Reflect.deleteProperty(GRAMMAR.wrappers, name);
+      return restore;
+    }
+    if (parts[2] === "args") {
+      GRAMMAR.wrappers[name] = { ...original, args: 0 };
+      return restore;
+    }
+    const flag = parts.slice(3).join(".");
+    GRAMMAR.wrappers[name] = {
+      ...original,
+      values: original.values.filter((entry) => entry !== flag),
+    };
+    return restore;
+  }
+
+  if (head === "MANAGER_VALUES") {
+    const manager = parts[1] ?? "";
+    const original = GRAMMAR.managerValues[manager];
+    if (original === undefined) throw new Error(`no such manager: ${manager}`);
+    const flag = parts.slice(2).join(".");
+    GRAMMAR.managerValues[manager] = original.filter((entry) => entry !== flag);
+    return () => {
+      GRAMMAR.managerValues[manager] = original;
+    };
   }
 
   if (head === "LIFECYCLE") {
@@ -826,6 +918,73 @@ describe("classifyBuildCommand", () => {
         .soft(classifyBuildCommand(spaced, sources), `${spaced} and ${inline} are the same command`)
         .toBe(classifyBuildCommand(inline, sources));
     }
+  });
+
+  it("sees the builds round 8 planted in a shipped lane, wrappers and all", async () => {
+    // Round 8's gatekeeper replaced a shipped placeholder step with a real build, one form at a time,
+    // and ran the story `US-0017-0004` rests on. The control reddened; **ten of eleven builds did not**.
+    // Three were the tool-flag defect fixed above. The rest are three more places where a global rule
+    // stood in for per-family knowledge:
+    //
+    // - a WRAPPER's own flags were not consumed, so the loop broke on `-n` / `-a` and the wrapper's
+    //   argument was read as the command. `env NODE_ENV=production pnpm build` was pinned; `env -u CI
+    //   pnpm build` was `none`, and `xvfb-run -a` and `timeout 600` are the idiomatic CI spellings.
+    // - `timeout` was not a wrapper at all, and its first bare token is a duration rather than a
+    //   command.
+    // - `-w` is BOOLEAN for pnpm (`--workspace-root`) and takes a VALUE for npm (`--workspace`). One
+    //   spelling, two managers, two meanings — the same shape as `-B` in make and cmake, one level up.
+    const sources = await repositorySources();
+    const PLANTED = [
+      "pnpm build",
+      "nice -n 19 pnpm build",
+      "xvfb-run -a pnpm build",
+      "timeout 600 pnpm build",
+      "gradle --console plain build",
+      "make -j 4 build",
+      "dotnet --verbosity minimal build",
+      "pnpm --stream build",
+      "pnpm --workspace-root build",
+      "npm -w pkg run build",
+      "docker buildx bake -f docker-bake.hcl",
+    ];
+    expect
+      .soft(
+        PLANTED.filter((line) => classifyBuildCommand(line, sources) === "none"),
+        "a real build that ships without the story noticing",
+      )
+      .toEqual([]);
+
+    // The rest of the wrapper forms the same round measured, and the one it named as still `none`.
+    const WRAPPED = [
+      "sudo -E make build",
+      "stdbuf -oL pnpm build",
+      "env -u CI pnpm build",
+      "ionice -c 3 pnpm build",
+      "time -p pnpm build",
+      "nohup pnpm build",
+    ];
+    expect
+      .soft(
+        WRAPPED.filter((line) => classifyBuildCommand(line, sources) === "none"),
+        "a build behind a wrapper flag",
+      )
+      .toEqual([]);
+
+    // And the direction that must not move: a wrapper's flag value is not a target, and a duration is
+    // not a command.
+    const STILL_NONE = [
+      "timeout 600 pnpm test",
+      "nice -n 19 pnpm lint",
+      "env -u BUILD pnpm test",
+      "sudo -u builder whoami",
+      "docker run --name build-agent alpine",
+    ];
+    expect
+      .soft(
+        STILL_NONE.filter((line) => classifyBuildCommand(line, sources) !== "none"),
+        "a non-build invented out of a wrapper's own argument",
+      )
+      .toEqual([]);
   });
 
   it("terminates on a self-referential script chain rather than recursing forever", () => {

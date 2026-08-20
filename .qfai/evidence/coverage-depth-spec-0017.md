@@ -185,8 +185,8 @@ runs. `E4` is a sound oracle **for the assertion** and not for the story: an ora
 can fail, and this row has no case. Scoring six category cells `❌` and the oracle `✅` is the same
 incoherence the checklist bars in the other direction.
 
-What the oracle establishes is that the assertion discriminates — and getting that far took ten
-versions of the predicate, each measured, each of the first nine reported as clean by the party that
+What the oracle establishes is that the assertion discriminates — and getting that far took eleven
+versions of the predicate, each measured, each of the first ten reported as clean by the party that
 wrote it and then broken by a corpus someone else chose:
 
 ```text
@@ -222,6 +222,11 @@ v9  each tool declares which of ITS flags take a value, which is the knowledge v
     not just the first
 v10 forty-five grammar members deleted, because round 8's other finding was that the corpus pinned
     45 of 207 and the test that claimed to pin them all detected nothing (below)
+v11 wrappers and managers declare their own flags too. Round 8 planted a real build in a shipped
+    lane eleven ways and TEN went unnoticed: a wrapper's own flags were never consumed, so the
+    scan broke on `nice -n` and `xvfb-run -a` and read `19` as the command; `timeout` was not a
+    wrapper at all; and `-w` is boolean for pnpm and takes a value for npm, one spelling with two
+    meanings, which is `-B` in make and cmake one level up
 ```
 
 Two claims previously recorded here are withdrawn. That round 2 "rebuilt the scan **around the
@@ -234,7 +239,7 @@ v4's naming defect is the one worth keeping in view: it measured **how a script 
 than what it *does***, which is the failure mode § "The finding that re-scored this matrix after round
 1" names as this spec's recurring one.
 
-`v10` lives in `packages/qfai/tests/helpers/buildCommand.ts` with its corpora in
+`v11` lives in `packages/qfai/tests/helpers/buildCommand.ts` with its corpora in
 `packages/qfai/tests/unit/buildCommand.test.ts`. Shell segmentation and per-manifest resolution are
 **v5's**, kept unchanged since — an earlier version of this paragraph credited them to v8, and named
 three "distinctions v5 was missing" that were v5's own. What the versions after v5 actually contribute
@@ -242,6 +247,15 @@ is one thing, arrived at three times: **the grammar is per-runner, not global**.
 resolves a script and its flag set is open-ended, so the safe default is to consume; a build tool takes
 subcommands and its flag set is closed and declared, so the safe default is to consume nothing. v6, v7
 and v8 each tried to hold both with one global rule and each broke one direction to fix the other.
+
+**The same rule, three families, three rounds.** v9 gave each build tool its own flag grammar; v11 gave
+each wrapper and each manager one. Both times the defect was a global rule standing in for per-family
+knowledge, and both times it was found by someone planting real commands rather than by reading the
+code. The direction of the miss is worth stating plainly, because an earlier version of the helper's own
+docstring had it backwards: it argued that missing a build is "the safe direction here", since the
+assertion is that a tree contains none. For **this** assertion a false negative is the **vacuity**
+direction — the guard passes while the thing it forbids is present — and the tradeoff bought four false
+positives anyway.
 
 Round 8's second finding is why v10 is **smaller** than v9. The test that claimed to "pin every member
 of every grammar set" generated its probes **from the sets it pinned**, so deleting a member deleted its
@@ -254,8 +268,9 @@ requires a case to notice, and it fails on any member that cannot be pinned.
 
 No accuracy figure is quoted here on purpose. What the corpora are is recorded instead: round 4's 20
 measured regressions, round 5's 10 measured defects, round 6's 7, round 8's 6 missed builds and 4
-invented ones, v4's 15 kept forms, the non-builds five rounds accumulated, one case per grammar member,
-and every `run:` line in both workflow trees. None was chosen by this stage.
+invented ones, round 8's eleven planted builds and six wrapper forms, v4's 15 kept forms, the non-builds
+five rounds accumulated, one case per grammar member, and every `run:` line in both workflow trees. None
+was chosen by this stage.
 
 Closing the row is `TDD-0032` … `TDD-0035`, all four `blocked` on `CR-20260820-0007`, because their
 acceptance criteria require numbers written into `07_Decisions.md` which `/qfai-implement` may not
@@ -358,7 +373,8 @@ The first repair asserted the same thing over the step's **text** and was vacuou
 rounds caught: `.nvmrc` also occurs in the step's warning message and `version=` also occurs in its
 fallback publish, so breaking the mechanism left both patterns matching other text in the same body.
 `E6`/`E7` reddened nothing. Rewritten to run the step, six rounds redden (`E6`-`E11`) with a comment
-control green. Fourth time on this spec that a claim about how code is *written* survived the
+control green. Another instance of the class enumerated at `atdd-spec-0017.md` § "Gaps / Open risks"
+item 7 — a claim about how code is *written* surviving the
 behaviour being removed — and the fix is the same every time: run the thing and look.
 
 **What this E2E row adds over the integration layer, and what it does not.** Round 2's

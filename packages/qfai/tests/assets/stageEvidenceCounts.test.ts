@@ -226,11 +226,17 @@ describe("the stage evidence's counts are derived, not typed", () => {
     expect(wrong, "a recorded vitest output the file cannot produce").toEqual([]);
   });
 
-  it("only counts files where the callsite rule is valid, which excludes `.each`", async () => {
+  it("only counts files where the callsite rule is valid, which excludes `.each` and `.for`", async () => {
     // `countCases` counts CALLSITES, and vitest reports one test per CASE — so `it.each([a, b, c])`
     // is one callsite and three tests. Round 6 raised it, and noted that `describe.each` is the
     // prevailing idiom in this very directory. Rather than emulate the runner, the rule's precondition
-    // is asserted: none of the files whose counts this record states may use `.each`.
+    // is asserted: none of the files whose counts this record states may use it.
+    //
+    // **`.for` too.** vitest here is 2.1.9, where `test.for` / `it.for` expands one callsite into many
+    // cases exactly as `.each` does. Round 7 raised that as latent and round 8 measured it live: one
+    // `it(` changed to `it.for([1, 2, 3])(` in a counted file made vitest report 7 where the record says
+    // 5 and `countCases` returns 5, with all three guards green. A precondition naming one of two
+    // equivalent constructs is a precondition that does not hold.
     const COUNTED = [
       "packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts",
       "packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts",
@@ -242,11 +248,12 @@ describe("the stage evidence's counts are derived, not typed", () => {
     const offenders: string[] = [];
     for (const file of COUNTED) {
       const text = await source(file);
-      if (/^[ \t]*(?:it|test|describe)\.each\b/m.test(text)) offenders.push(file);
+      if (/^[ \t]*(?:it|test|describe)\.(?:each|for)\b/m.test(text)) offenders.push(file);
     }
     expect(
       offenders,
-      "a counted file using `.each`, where one callsite is many tests and this rule stops holding",
+      "a counted file using `.each` or `.for`, where one callsite is many tests and this rule stops " +
+        "holding",
     ).toEqual([]);
   });
 

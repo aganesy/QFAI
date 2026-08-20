@@ -172,7 +172,11 @@ const COUNTED_CLAIMS: ReadonlyArray<{
   readonly why: string;
 }> = [
   {
-    pattern: /\b(one|two|three|four|five|six|seven|eight|nine|ten|\d+) packs, one per round\b/gi,
+    // `Nine packs — one per round` and `Nine review packs, one per round` both escaped the first
+    // needle, which required the exact string `packs, one per round`. The separator is now any
+    // punctuation or none, and a word may sit between the numeral and `packs`.
+    pattern:
+      /\b(one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+(?:\w+\s+)?packs\s*[,—–-]?\s*one per round\b/gi,
     actual: async () => {
       const { readdir } = await import("node:fs/promises");
       const entries = await readdir(path.join(ROOT, ".qfai/review"), { withFileTypes: true });
@@ -257,19 +261,71 @@ function flatten(text: string): string {
  * inverted every range after it — laundering an assertion in one place and accusing eight correct
  * quotations elsewhere, which reddened a required CI leg.
  */
+/**
+ * The spans a claim may appear inside, per paragraph.
+ *
+ * Quotation marks are the obvious one. Two more were measured as **false accusations** — a correct edit
+ * turning this suite red, and `tests/assets/**` runs in the `e2e` project, a required CI leg:
+ *
+ * - a **fenced code block** carries no quote mark at all, and quoting a prior version's wording verbatim
+ *   inside a fence is the most faithful way to record it;
+ * - a **blockquote** is markdown's own quotation construct.
+ *
+ * Both were reported twice before being fixed here. Fences and blockquote runs are marked wholesale,
+ * because a claim anywhere inside one is being shown rather than asserted.
+ */
 function quotedSpans(paragraph: string): Array<[number, number]> {
-  const spans: Array<[number, number]> = [];
-  let open: number | undefined;
+  const marks: number[] = [];
   for (let index = 0; index < paragraph.length; index += 1) {
     const char = paragraph[index];
-    if (char !== '"' && char !== "“" && char !== "”") continue;
-    if (open === undefined) {
-      open = index;
-      continue;
-    }
-    spans.push([open, index]);
-    open = undefined;
+    if (char === '"' || char === "“" || char === "”") marks.push(index);
   }
+
+  const spans: Array<[number, number]> = [];
+  const pairFrom = (start: number): void => {
+    for (let i = start; i + 1 < marks.length; i += 2) {
+      const open = marks[i];
+      const close = marks[i + 1];
+      if (open !== undefined && close !== undefined) spans.push([open, close]);
+    }
+  };
+  pairFrom(0);
+  // With an ODD number of marks one of them is stray, and pairing from the left puts every span in the
+  // wrong place after it — which accused a **correct** quotation that happened to follow a lone `"`
+  // earlier in the paragraph. The alternate pairing is added rather than substituted, so a paragraph
+  // with one stray mark is read both ways and a claim quoted under either reading is accepted. That
+  // does widen what counts as quoted; a launder would have to introduce a stray quote mark to use it,
+  // and accusing a correct edit in a required CI leg is the worse failure of the two.
+  if (marks.length % 2 === 1) pairFrom(1);
+
+  return spans;
+}
+
+/**
+ * Fenced-block and blockquote regions of a whole document, as `[start, end)` offsets into `text`.
+ *
+ * Computed over the raw document before flattening, then mapped by paragraph in `occurrences`.
+ */
+function shownSpans(paragraph: string): Array<[number, number]> {
+  const spans: Array<[number, number]> = [];
+  let fenceStart: number | undefined;
+  let offset = 0;
+  for (const line of paragraph.split(/\r?\n/)) {
+    const end = offset + line.length;
+    if (/^\s*(?:```|~~~)/.test(line)) {
+      if (fenceStart === undefined) fenceStart = offset;
+      else {
+        spans.push([fenceStart, end]);
+        fenceStart = undefined;
+      }
+    } else if (/^\s*>/.test(line)) {
+      spans.push([offset, end]);
+    }
+    offset = end + 1;
+  }
+  // An unterminated fence runs to the end of the paragraph, which is what a fence split across the
+  // paragraph boundary looks like from here.
+  if (fenceStart !== undefined) spans.push([fenceStart, paragraph.length]);
   return spans;
 }
 
@@ -308,6 +364,11 @@ async function occurrences(): Promise<Occurrence[]> {
         const flat = flattenings(paragraph)[variant];
         const offset = joined.length;
         for (const [start, end] of quotedSpans(flat)) spans.push([offset + start, offset + end]);
+        // Shown spans are computed on the UNFLATTENED paragraph, because they are line-structural and
+        // flattening collapses the lines. A whole flattened paragraph containing a fence or a blockquote
+        // is marked, which is coarser than the quote spans and correct for the same reason: a claim
+        // inside one is being displayed.
+        if (shownSpans(paragraph).length > 0) spans.push([offset - 1, offset + flat.length + 1]);
         joined += `${flat} `;
       }
 

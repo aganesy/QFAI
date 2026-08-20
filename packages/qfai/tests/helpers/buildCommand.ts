@@ -42,7 +42,21 @@
  * - `--task` in `TARGET_FLAGS`, which names no attested flag of any tool here and could only invent a
  *   build (`--task=build-agent` splits to include "build").
  *
- * With those gone, all 208 remaining members are pinned: deleting any one reddens the corpus.
+ * With those gone, every remaining member is pinned: deleting any one reddens the corpus.
+ *
+ * **v11 is the same lesson twice more.** Round 8 replaced a shipped placeholder step with a real build,
+ * one form at a time, and ten of eleven shipped without the story noticing. Three were v8's tool-flag
+ * defect. The rest were two more families still sharing one global rule:
+ *
+ * - a **wrapper's own flags** were not consumed, so the loop broke on `-n` / `-a` and the wrapper's
+ *   argument was read as the command. `env NODE_ENV=production pnpm build` was pinned and
+ *   `env -u CI pnpm build` was `none`; `xvfb-run -a` and `timeout 600` are the idiomatic CI spellings
+ *   of the other two. `timeout` was not a wrapper at all, and its first bare token is a duration.
+ * - `-w` is **boolean** for pnpm (`--workspace-root`) and takes a **value** for npm (`--workspace`).
+ *   One spelling, two managers, two meanings — `-B` in make and cmake, one level up.
+ *
+ * So wrappers and managers now declare their own flags too, the same way tools do, and a tool may name
+ * a build with a verb that is not spelled "build" (`docker buildx bake`).
  *
  * Two rules survive from v8, both measured in both directions:
  *
@@ -96,6 +110,8 @@ interface ToolGrammar {
   readonly dirs: readonly string[];
   readonly values: readonly string[];
   readonly buildFlags: readonly string[];
+  /** Subcommands that mean build without being spelled it. Only `bake` so far. */
+  readonly builds?: readonly string[];
 }
 
 const TOOLS: Record<string, ToolGrammar> = {
@@ -159,8 +175,14 @@ const TOOLS: Record<string, ToolGrammar> = {
     dirs: ["-f", "--file"],
     values: ["-t", "--tag", "--build-arg", "-H", "--platform", "--name"],
     buildFlags: [],
+    builds: ["bake"],
   },
-  podman: { dirs: ["-f", "--file"], values: ["-t", "--tag", "--build-arg"], buildFlags: [] },
+  podman: {
+    dirs: ["-f", "--file"],
+    values: ["-t", "--tag", "--build-arg"],
+    buildFlags: [],
+    builds: ["bake"],
+  },
   poetry: { dirs: ["-C", "--directory"], values: ["--format"], buildFlags: [] },
   flutter: { dirs: [], values: ["--flavor", "-t"], buildFlags: [] },
   python: { dirs: [], values: ["-c"], buildFlags: [] },
@@ -214,9 +236,26 @@ const MANAGER_BOOLEAN = new Set([
   "--offline",
   "--force",
   "--verbose",
+  "--stream",
+  "--aggregate-output",
+  "--no-color",
+  "--parallel",
 ]);
 /** Manager flags naming the directory whose manifest a script resolves in. */
 const MANAGER_DIRS = new Set(["-C", "--dir", "--cwd", "--prefix"]);
+/**
+ * Flags that take a value **for this manager specifically**, checked before the shared boolean list.
+ *
+ * `-w` is the case that forced this: `pnpm -w build` is `--workspace-root` and boolean, so `build` is
+ * the script; `npm -w pkg run build` is `--workspace` and takes a package name, so `pkg` is not. One
+ * spelling, two meanings, and no global list can hold both.
+ */
+const MANAGER_VALUES: Record<string, readonly string[]> = {
+  // `-w` only. `--workspace` was here too and pinned nothing: it is not in MANAGER_BOOLEAN, so
+  // the manager default already consumes its value. Listing it changed no verdict, which is the
+  // third set this measurement has emptied.
+  npm: ["-w"],
+};
 /**
  * Flags whose value IS the target: `python -m build`, `nx --target=build`.
  *
@@ -228,17 +267,41 @@ const TARGET_FLAGS = new Set(["-m", "--target"]);
 /** With one of these, `pack`/`publish` do not fire their lifecycle hooks. */
 const NO_SCRIPTS = new Set(["--ignore-scripts", "--no-scripts"]);
 
-const WRAPPERS = new Set([
-  "time",
-  "sudo",
-  "nice",
-  "ionice",
-  "xvfb-run",
-  "command",
-  "stdbuf",
-  "nohup",
-  "env",
-]);
+/**
+ * Wrappers, each declaring its own flags — and `args`, the count of bare tokens it takes before the
+ * command starts. Only `timeout` has one: its duration.
+ *
+ * A wrapper's flag set is closed and declared, like a tool's, so a flag not listed here takes no value.
+ * That is the safe default in this direction: over-consuming would swallow the command itself.
+ *
+ * There is no `booleans` list, and the first draft of this had one with twenty-three members. A listed
+ * boolean and an unlisted flag are handled identically — both consume nothing — so no command could
+ * distinguish them, exactly like the `pass` lists v10 deleted. Writing the pinning case per member is
+ * what surfaced it, for the second time.
+ */
+interface WrapperGrammar {
+  readonly values: readonly string[];
+  readonly args: number;
+}
+
+const WRAPPERS: Record<string, WrapperGrammar> = {
+  time: { values: ["-o", "--output", "-f", "--format"], args: 0 },
+  sudo: { values: ["-u", "--user", "-g", "--group"], args: 0 },
+  nice: { values: ["-n", "--adjustment"], args: 0 },
+  ionice: { values: ["-c", "-n", "-p"], args: 0 },
+  "xvfb-run": {
+    values: ["-s", "--server-args", "-n", "--server-num", "-f", "--auth-file"],
+    args: 0,
+  },
+  command: { values: [], args: 0 },
+  stdbuf: { values: ["-i", "--input", "-o", "--output", "-e", "--error"], args: 0 },
+  nohup: { values: [], args: 0 },
+  env: { values: ["-u", "--unset", "-C", "--chdir"], args: 0 },
+  timeout: {
+    values: ["-s", "--signal", "-k", "--kill-after"],
+    args: 1,
+  },
+};
 const INTERPRETERS = new Set(["bash", "sh", "zsh", "pwsh", "powershell"]);
 const LIFECYCLE: Record<string, readonly string[]> = {
   pack: ["prepack"],
@@ -293,19 +356,56 @@ function shell(line: string, ctx: Context): BuildVerdict {
   return strongest(out);
 }
 
-function command(input: readonly string[], ctx: Context): BuildVerdict {
+/**
+ * Strip leading `VAR=value` assignments and wrappers, each wrapper taking its own flags and arguments.
+ *
+ * The earlier version sliced off the wrapper's name alone, so `nice -n 19 pnpm build` left `-n` at the
+ * head and returned `none` on the next line. Ten of eleven planted builds got through that way.
+ */
+function stripPrefix(input: readonly string[]): string[] {
   let tokens = [...input];
-  for (let g = 0; g < 8 && tokens.length; g += 1) {
-    const head = tokens[0];
-    if (
-      /^[A-Z_][A-Z0-9_]*=/.test(head ?? "") ||
-      WRAPPERS.has((head ?? "").split("/").pop() ?? "")
-    ) {
+  for (let guard = 0; guard < 8 && tokens.length; guard += 1) {
+    const head = tokens[0] ?? "";
+    if (/^[A-Z_][A-Z0-9_]*=/.test(head)) {
       tokens = tokens.slice(1);
       continue;
     }
-    break;
+    const wrapper = WRAPPERS[head.split("/").pop() ?? ""];
+    if (wrapper === undefined) break;
+
+    const values = new Set(wrapper.values);
+    let args = wrapper.args;
+    let i = 1;
+    while (i < tokens.length) {
+      const token = tokens[i] ?? "";
+      if (token.startsWith("-")) {
+        if (values.has(token)) {
+          i += 2;
+          continue;
+        }
+        // A short flag with its value attached: `stdbuf -oL` is `-o` with `L`.
+        const attached = /^(-[A-Za-z])(.+)$/.exec(token);
+        if (attached !== null && values.has(attached[1] ?? "")) {
+          i += 1;
+          continue;
+        }
+        i += 1;
+        continue;
+      }
+      if (args > 0) {
+        args -= 1;
+        i += 1;
+        continue;
+      }
+      break;
+    }
+    tokens = tokens.slice(i);
   }
+  return tokens;
+}
+
+function command(input: readonly string[], ctx: Context): BuildVerdict {
+  let tokens = stripPrefix(input);
   if (!tokens.length) return "none";
 
   const head = (tokens[0] ?? "").split("/").pop() ?? "";
@@ -330,8 +430,9 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
 
   const pass = isManager ? MANAGER_PASS : EMPTY;
   const dirs = isManager ? MANAGER_DIRS : new Set(tool?.dirs ?? []);
-  const values = isManager ? EMPTY : new Set(tool?.values ?? []);
+  const values = isManager ? new Set(MANAGER_VALUES[verb] ?? []) : new Set(tool?.values ?? []);
   const buildFlags = isManager ? EMPTY : new Set(tool?.buildFlags ?? []);
+  const builds = isManager ? EMPTY : new Set(tool?.builds ?? []);
   const noScripts = tokens.some((t) => NO_SCRIPTS.has(t));
   let cwd = ctx.cwd;
 
@@ -386,6 +487,7 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
 
     const bare = token.split("/").pop() ?? "";
     if (BUNDLERS.has(bare)) return "build";
+    if (builds.has(bare)) return "build";
     if (isPathLike(token) || isSetting(token)) continue;
     if (MANAGERS.has(bare) || TOOLS[bare] !== undefined) {
       return command(tokens.slice(i), { ...ctx, cwd });
@@ -452,6 +554,7 @@ export const GRAMMAR = {
   managerDirs: MANAGER_DIRS,
   targetFlags: TARGET_FLAGS,
   noScripts: NO_SCRIPTS,
+  managerValues: MANAGER_VALUES,
   wrappers: WRAPPERS,
   interpreters: INTERPRETERS,
   lifecycle: LIFECYCLE,

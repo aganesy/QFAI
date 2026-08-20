@@ -228,12 +228,14 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
 - **new** `.qfai/evidence/coverage-depth-spec-0017.md` — the Coverage Depth Matrix, committed
 - **new** `scripts/check-atdd-annotation-ledger.mjs` — the guard this record had claimed existed
 - **new** `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts` — 22 tests
-- **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, v10, extracted from the
+- **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, v11, extracted from the
   E2E so its corpora can be tested on their own
-- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 19 tests, nine corpora, none of them chosen
-  by this stage. Round 8's own finding is the last three: one hardcoded case per grammar member, a check
-  that the case list and the grammar name the same 208 members, and a sweep that deletes each member in
-  turn and requires a case to notice
+- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 20 tests over the eight corpora
+  enumerated at § "Execution logs" (`E4b`), none of them chosen
+  by this stage. Round 8's two findings are the last four: one hardcoded case per grammar member, a check
+  that the case list and the grammar name the same members, a sweep that deletes each member in turn and
+  requires a case to notice, and the eleven real builds it planted in a shipped lane — ten of which the
+  story did not see
 - **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 5 tests deriving the Coverage
   Depth Matrix's totals, partition, class assignment, per-class justification and row width from the
   table itself
@@ -274,14 +276,21 @@ pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
 pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
   -> Tests 7 passed (7), exit 0
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/buildCommand.test.ts
-  -> Tests 19 passed (19), exit 0
+  -> Tests 20 passed (20), exit 0
 
 node packages/qfai/dist/cli/index.mjs validate --profile atdd --fail-on error --spec 0017
   before this stage:  info=2 warning=0 error=2   QFAI-ATDD-111 (9 US), QFAI-ATDD-112 (8 TC)
   after round 1:      info=2 warning=0 error=2   QFAI-ATDD-111 (1 US: US-0017-0007), -112 (8 TC)
-  artifact:           .qfai/report/validate.spec-0017.json
-  per-run directory:  .qfai/report/run-20260820194530635/
+  artifact:           .qfai/report/validate.spec-0017.json      (tracked as of round 8)
+  per-run directory:  .qfai/report/run-20260820194530635/       (regenerable; not tracked)
 ```
+
+**Neither cited path was in the repository until round 8**, which round 8 measured with
+`git ls-files .qfai/report` — five paths, and `validate.spec-0017.json` not among them. So a later reader
+could not check the gate evidence this record cites. The JSON is force-added now (`.gitignore` covers
+`.qfai/report/*`, so every path there is opt-in). The 445 KB per-run directory is **not** added and is
+marked regenerable instead: the command above rewrites it, and a run directory is named for its
+timestamp, so committing one fixes a name that the next run will not reproduce anyway.
 
 **Validate Hard Gate evidence** is those two paths, not `.qfai/report/validate.log`. This skill's
 CRITICAL CONSTRAINTS name the per-run directory and this spec's `validate.spec-<id>.json` as the two
@@ -621,8 +630,12 @@ rewritten to RUN the step under bash
 
 `.nvmrc` also occurs in the step's warning message and `version=` also occurs in its fallback
 publish, so breaking the real mechanism left both text patterns matching other text in the same body.
-That is the **fourth** vacuous claim on this spec, all four asserting over how code is *written*, and
-this one was written while applying a review finding about exactly that class of error.
+That is another instance of the recurring class enumerated at § "Gaps / Open risks" item 7 — a claim
+asserted over how code is *written* rather than what it does — and this one was written while applying a
+review finding about exactly that class of error. **No count is stated here on purpose.** Three sites in
+these two files carried three different counts of this pattern (four, five and four) with nothing
+deriving any of them; the occurrences are enumerated in one place now, and the number is however long
+that list is.
 
 The rewrite follows the pattern `tests/integration/shippedWorkflow*.test.ts` established: locate the
 resolver through the chain (`setup-node`'s `node-version` names a step output, which names the step),
@@ -675,20 +688,21 @@ v4   fixed those, then regressed on 20 of 23 forms v3 caught, because returning 
 **And v4's worst property was not a miss.** It reported `pnpm ci:build-verify` as a build, and that
 command's body is `node ./scripts/check-build-warnings.mjs && …` — so what the predicate measured was
 **npm-script naming**. `pnpm ci:pack-verify` would be identical behaviour and `false`. That is the
-"asserted over how something is written rather than over what it does" defect this spec has now found
-five times, this time inside the instrument built to detect a build.
+"asserted over how something is written rather than over what it does" defect, here inside the
+instrument built to detect a build — one entry in the list at § "Gaps / Open risks" item 7.
 
-`v8` lives in `packages/qfai/tests/helpers/buildCommand.ts` with its corpora in
-`packages/qfai/tests/unit/buildCommand.test.ts`, and it changes three things: shell segments before
+`v11` lives in `packages/qfai/tests/helpers/buildCommand.ts` with its corpora in
+`packages/qfai/tests/unit/buildCommand.test.ts`. Since v5 it changes three things: shell segments before
 verbs (`&&`, `;`, `|`, `cd`, `time`, `sudo`, `env`); **script bodies before names**, resolved in the
 manifest the command's directory selects — a single merged script map cannot work here, because this
 repository's root `build` is `pnpm -C packages/qfai build` and the package's is `tsup`; and three
 verdicts instead of two, so a name-shaped guess returns `heuristic` rather than passing itself off as
 an analysis.
 
-Measured against corpora **this stage did not choose** — round 4's 20 regressions, v4's 15 kept
-forms, round 6's 46-case corpus (20 missed builds, 2 false positives), round 7's 59 probes (15
-defects), round 8's 66 (25 disagreements, of which 6 missed builds and 4 invented ones), the non-builds
+Measured against **eight** corpora, and this is the enumeration both evidence files count from —
+round 4's 20 regressions, v4's 15 kept forms, round 6's 46-case corpus (20 missed builds, 2 false
+positives), round 7's 59 probes (15 defects), round 8's 66 (25 disagreements, of which 6 missed builds
+and 4 invented ones), round 8's 11 planted builds and 6 wrapper forms, the non-builds
 accumulated across every round, one case per grammar member, and every `run:` line in both workflow
 trees:
 
@@ -957,12 +971,32 @@ something is written, believed without reading it.
    documentation-only change actually produces a narrow lane set is now observable — PR #794's runs
    show it — and nothing consumes that observation. That is class B of the matrix's `❌` cells, all
    seven of them, and no ledger row proposes a surface that would consume it.
-7. **The vacuity pattern recurred inside the repair of a finding about vacuity.** `E6`/`E7`'s first
-   form reddened nothing, and it was written minutes after applying `E4`'s widening. Four
-   occurrences on this spec now, all four asserting over source text rather than behaviour. The
-   working countermeasure is not vigilance: it is that every new claim gets an oracle round before it
-   is reported, and that a claim over a file's contents is rewritten to run the thing whenever
-   running it is possible — as `tests/integration/shippedWorkflow*.test.ts` already does.
+7. **One class of defect accounts for most of this spec's findings, and it recurred inside the repair
+   of a finding about it.** Every occurrence is a claim asserted over **how something is written**
+   rather than over **what it does**. This is the canonical list — three other sites used to carry
+   three different counts of it, so they point here now and the count is the list's length:
+
+   1. `E4` — a package-manager regex that measured npm-script *naming*; `pnpm run build` and six more
+      idiomatic forms reddened nothing.
+   2. `v4` — `pnpm ci:build-verify` reported as a build **by the script's name**, when its body reaches
+      no build at all.
+   3. `E6`/`E7`'s first form — the version-resolver assertion matched other text in the same step body,
+      so breaking the real mechanism left it green. Written minutes after applying `E4`'s widening.
+   4. `"defeated by running the formatter"` — a claim about how these evidence files are wrapped,
+      adopted from a review report without reading `.prettierignore` or `.prettierrc.json`. They are
+      hand-wrapped.
+   5. The member-pinning test — it generated its probes **from the sets it pinned**, so the claim "every
+      member is pinned" was a claim about the test's shape. 0 of 17 mutations reddened it.
+   6. The version pin — derived from the helper's docstring, then satisfied by this record's own
+      version-**history** list while the sentence describing the predicate lagged.
+   7. The classifier's own miss direction — the docstring argued that missing a build was "the safe
+      direction here". For an assertion that a tree contains none, a miss is the **vacuity** direction:
+      round 8 planted eleven real builds in a shipped lane and ten shipped unnoticed.
+
+   The working countermeasure is not vigilance: it is that every new claim gets an oracle round before
+   it is reported, and that a claim over a file's contents is rewritten to **run** the thing whenever
+   running it is possible — as `tests/integration/shippedWorkflow*.test.ts` already does. Items 5, 6
+   and 7 were each caught that way, by someone mutating the instrument rather than reading it.
 8. **`TDD-0069` and `TDD-0070` are parked, and they are parked for two different reasons.**
    **Both are still `todo` in the ledger**, and what follows is the status each is owed rather than
    one it has — round 4 and round 5 each found this item asserting the statuses while `## Final
