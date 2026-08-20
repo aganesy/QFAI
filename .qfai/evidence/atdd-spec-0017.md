@@ -30,9 +30,11 @@ rather than propped up. See § "Round 1, and the five things it changed".
 
 ### Delta Rejected Guard — confirmation
 
-`09_delta.md § Rejected` carries three candidates and `07_Decisions.md` carries nine rejected
-alternatives. **No rejected option is reintroduced by this stage**, and one of them is the reason for
-this stage's largest correction:
+`09_delta.md § Rejected` carries three candidates and `07_Decisions.md` carries six rejected
+alternatives across three `DR`s — `:133`, `:137`, `:203`, `:206`, `:242`, `:249`. (The first version
+said nine, which was the file's `DR` count transposed onto its rejected-alternative count; round 3
+caught it.) **No rejected option is reintroduced by this stage**, and one of them is the reason for this
+stage's largest correction:
 
 - *"writing test cases for the two partly observable obligations as if a gate existed … a row that
   cannot fail looks like coverage"* — this is exactly what `US-0017-0007` had become. Its one
@@ -104,7 +106,7 @@ The first version of this record said the lines were appended "by a script that 
 declared `US` is covered by a `describe`". **That script was not in the repository.**
 `git show --stat 1e806e50` lists five files and no script, and because the test and the ledger lines
 landed in one atomic commit, history could not settle the ordering either. Round 1's `qa-gatekeeper`
-found both halves. The script now exists as `scripts/check-atdd-annotation-ledger.mjs` with ten tests
+found both halves. The script now exists as `scripts/check-atdd-annotation-ledger.mjs` with 19 tests
 in `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts`, and it reports what
 this stage claims: `8 claim(s) backed by a test annotation (spec-0017)`, exit 0.
 
@@ -182,7 +184,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   `QFAI:SPEC-0017:US-0017-NNNN` lines, of which `US-0017-0007`'s was removed in round 1
 - **new** `.qfai/evidence/coverage-depth-spec-0017.md` — the Coverage Depth Matrix, committed
 - **new** `scripts/check-atdd-annotation-ledger.mjs` — the guard this record had claimed existed
-- **new** `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts` — 10 tests
+- **new** `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts` — 19 tests
 - **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 4 tests pinning the matrix
 - **new** `.qfai/decisions/CR-20260820-0011-*.md` — the 127 unbacked ledger claims
 
@@ -203,7 +205,7 @@ node scripts/check-atdd-annotation-ledger.mjs        (repo-wide)
   -> exit 1; 127 of 208 claims unbacked; see CR-20260820-0011
 
 pnpm -C packages/qfai exec vitest run tests/integration/scripts/checkAtddAnnotationLedger.test.ts
-  -> Tests 10 passed (10), exit 0
+  -> Tests 19 passed (19), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
   -> Tests 4 passed (4), exit 0
 
@@ -257,8 +259,26 @@ that zero was therefore trivially correct. That was false, and it is corrected h
 
 | `TDD-*`    | `Layer`     | obligation     | branch                          | `DR-ID`        | anchor       |
 | ---------- | ----------- | -------------- | ------------------------------- | -------------- | ------------ |
-| `TDD-0069` | Integration | `TC-0017-0069` | 3 — `exception`                 | `DR-0017-0010` | § `TDD-0069` |
-| `TDD-0070` | Integration | `TC-0017-0070` | 3 — `exception`                 | `DR-0017-0010` | § `TDD-0070` |
+| `TDD-0069` | Integration | `TC-0017-0069` | none — `blocked`, not a branch | `CR-20260820-0012` | § `TDD-0069` |
+| `TDD-0070` | Integration | `TC-0017-0070` | 3 — `exception`                | `DR-0017-0010`     | § `TDD-0070` |
+
+**`blocked` is not a branch, and this table said it was for two rounds.** Rounds 1, 2 and 3 each found
+a false statement in this section — the one section whose job is discharging the handover obligation —
+and the third was this: the table gave both rows `3 — exception` while the prose three paragraphs down
+said `TDD-0069` had been re-classified to `blocked`. A row that is `blocked` takes no RED-provenance
+branch at all; it is skipped by Phase Red's selection and carries a `Blocked-By` value instead. The
+`DR-ID` column now holds what each row's status actually points at.
+
+**Neither cell has been written yet.** `tdd/test-list.md:107-108` still has both rows `todo` with
+`DR-ID: -` and `Blocked-By: -`, because those cells are `/qfai-implement`'s to write and this stage
+does not write the ledger. What this table is, is the handover it reads.
+
+**One asymmetry this stage owes plainly**: `exception` needs a P1d `qa-gatekeeper` PASS and `blocked`
+does not. So re-classifying `TDD-0069` moved it out of the gate its twin still has to pass. That is the
+correct status on the merits — `execution-ledger.md` scopes `blocked` to "an upstream defect, an
+unresolved Change Request, or an unfinished row in another spec", and `blocked` is *more* conservative
+than `exception`, which satisfies spec completion while `blocked` prohibits it — but the gate asymmetry
+is a consequence worth naming rather than leaving for a reader to notice.
 
 **The `DR-*` was authorable all along, and round 2 found that both ways.** The first version of this
 section recorded the branch with the `DR-*` "pending", on the stated grounds that this stage could not
@@ -344,8 +364,9 @@ after a merge that has not happened. **The row is not satisfiable on the branch 
 tuning, by construction.** No amount of work on this branch changes that; it needs post-merge
 history.
 
-Branch 3, `DR-0017-0010`, parked. This is the row P1d sustained: post-merge history cannot exist
-pre-merge, which is branch 3's own named example.
+Branch 3, `DR-0017-0010`, parked. This is the row P1d sustained across three passes: post-merge
+history cannot exist pre-merge, which is branch 3's own named example. The transition itself is still
+owed a P1d PASS — see § "P1d's verdicts" below.
 
 ### What branch 3 does not do
 
@@ -480,7 +501,26 @@ establishing the property. Two findings against the widened predicate, and both 
 time: **21 forms caught, 14 non-builds rejected, 0 misclassified.** `mvn package` remains invisible
 and is named as a known limit rather than counted as a pass.
 
-### M1-M7 — falsifying the matrix pinning test
+### E9-E11 — the three rounds round 3 could not find
+
+Round 3's `completion-reviewer` reported "`E11` was never run", on the ground that `git grep E11`
+returns only the sentence claiming it. **It was run** — the output is below — and the finding is still
+right about what matters: the harness lives in `tmp/`, which is gitignored, so nothing in the
+repository supports the claim. Recording the outputs is the repair; committing the harness is not,
+because a one-off mutation script that edits tracked assets does not belong in a shipped test tree.
+
+```text
+E9   the fail-open default changes without the record          REDDENS
+E10  the fail-open path stops warning                          REDDENS
+E11  .nvmrc loses precedence over .node-version                REDDENS
+```
+
+`E9` and `E10` were round 2's `qa-gatekeeper`'s own additions, which this record had also left
+uncited. With `E6`-`E8` that is six rounds, and round 3's `implementation-reviewer` independently ran
+**eight** behavioural mutants against this row and reports all eight reddening with a comment control
+green.
+
+### M1-M7, X1-X8, Y1-Y3 — falsifying the matrix pinning test
 
 The matrix test is a test over a governance record, which is exactly the shape that goes vacuous
 without being noticed. Each mutation planted alone, reverted with a byte comparison:
@@ -498,6 +538,27 @@ M7  the withdrawn claim is re-added to the ledger            REDDENS
 
 `M4` is the round that earned its keep: the first partition read `30 + 12 + 1 = 43` against 38 cells,
 double-counting `State transitions` across two classes. The test caught it before this record did.
+
+Rounds 2 and 3 then broke the test itself, six ways, and each is now a round of its own:
+
+```text
+X1  a class member is dropped from the partition table        REDDENS
+X2  a class claims a cell the table scores ⚠️, not ❌          REDDENS
+X3  a class enumeration is cut but the sizes line is left     REDDENS
+X6  two members swap classes, so both sums survive            REDDENS
+X7  a cell is claimed by two classes at once                  REDDENS
+X8  a table cell is emptied (was silently read as ⚠️)         REDDENS
+Y1  every stated size inflated tenfold                        REDDENS
+Y2  the B and C labels are permuted, membership preserved     REDDENS
+Y3  one stated size drifts while the total stays              REDDENS
+(control) a sentence added to the prose                       reddens nothing
+```
+
+`Y1` is the one that stings: the size check used `toContain` on a **number**, so `"A 30"` matched
+`"A 300"` and `A 300, B 70, C 10 — 380 cells` passed all four tests. `Y2` permuted two class labels
+while preserving membership and sizes — which showed that the letter carrying each cell's justification
+was unpinned, the only thing the classes exist for. Both are now equality checks, and each class has a
+defining property every member must satisfy.
 
 ## Gaps / Open risks
 
@@ -555,32 +616,6 @@ double-counting `State transitions` across two classes. The test caught it befor
    are `TDD-ID` / `TC-Refs` / `Layer` / `Test file` / `Selector` / `Status` / `DR-ID` / `Blocked-By` /
    `Evidence`; the first version of this line said `Notes`, a column that does not exist.)
 
-## Final status (PASS/FAIL) + who confirmed
-
-**FAIL — incomplete by this skill's own Definition of Done.**
-
-What was achieved: eight of `spec-0017`'s nine `US-*` are covered from `tests/e2e/**` with real
-assertions — one of them rewritten to execute the shipped step rather than read it — across five
-oracle rounds, a ten-form round 2, a three-round behavioural round, and a seven-round falsification of
-the matrix pinning test; the shipped-tree gap is measured at step-body level; the ordering claim this
-stage had asserted is now enforced by a script that exists and is tested; and a repo-wide defect
-affecting 16 other specs was found and filed.
-
-What is not satisfied:
-
-- **`US-0017-0007` is uncovered**, so `QFAI-ATDD-111` reports it and the scoped gate is `error=2`;
-- the stage's own gate `validate --profile atdd --fail-on error --spec 0017` exits 1;
-- `TDD-0070` is parked at `exception` against `DR-0017-0010`, and branch 3 does not close a spec;
-- `TDD-0069` is parked at `blocked` on `CR-20260820-0012` — a self-referential gate P1d found while
-  judging the DR, where the row's own unannotated `TC` is one of the two errors that keep the run it
-  waits for red;
-- Stage Minimum Roles were not used for P2-P4 — the reviewer gate ran, the work orders did not.
-
-Confirmed by: round 1's two independent blocking reviewers, both **REVISE**, on `8fb48002`:
-
-- `completion-reviewer` — `.qfai/review/review-20260820200000000/R02_completion-reviewer.md`
-- `qa-gatekeeper` — `.qfai/review/review-20260820200000000/R03_qa-gatekeeper.md`
-
 ## Round 2, and the P7 evidence for it
 
 Three blocking reviewers on `56daee8d`, with the request **committed before they launched** — round 1's
@@ -609,51 +644,119 @@ That is the exact hazard this record cites when it declines to use `validate.log
 evidence. Had the citation been `validate.log`, this section would now be quoting another stage's
 numbers.
 
-### P7 quality gates, round 2
+### P7 quality gates
+
+**Re-run after the last artifact changed, which is the point round 3 made about the first version.**
+That block was written at `16f611c7`; `21ea1ddc` then landed +489/-76 across four files, so the
+evidence predated three of the four artifacts it certified. `git log -S` was how round 3 established
+it. These numbers are from the tree as it stands with every round-3 repair applied:
 
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
-pnpm -C packages/qfai test:e2e                  1418 passed / 16 skipped, exit 0
+pnpm -C packages/qfai test:e2e                  1420 passed / 16 skipped, exit 0
 vitest --project integration --project assets --project unit
-                                                1171 passed / 19 skipped, exit 0
+                                                1174 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 8 claim(s) backed, exit 0
 node ... validate --profile atdd --spec 0017     info=2 warning=0 error=2
   artifact  .qfai/report/validate.spec-0017.json
 ```
 
-Round 3 is owed on these repairs. This stage does not claim its own repairs reviewed.
+### P1d's verdicts
 
-`Review pack:` `.qfai/review/review-20260820200000000/`
-`Review pack seal:` `5c8cd42571c8baf5f2240515ee2fbd173892cecd09d53ace080900d5c74317e3`
+P1d ran twice on `DR-0017-0010` and returned **REVISE** both times.
 
-The seal is a sha256 over the manifest of `git hash-object` values for every file in the pack, taken
-in `LC_ALL=C` path order, after the last round 1 reviewer response landed and before this verdict was
-written.
+**First pass** (`16f611c7`): the evidence shape was satisfied, `TDD-0070`'s account sustained, and
+`TDD-0069`'s not — the stated obstacle was wrong, `EX-0017-0053` was quoted at half its length, and the
+exit condition offered was **unreachable** because the gate is self-referential. Applied: the row was
+re-classified `blocked`, the cycle filed as `CR-20260820-0012`, the example quoted in full.
 
-It was sealed twice, and only the second value is the recorded one. The first seal
-(`d8ac0a77…58967c9`) covered three files; the pack was missing the `summary.json` that
-`references/review-artifact-layout.md` requires — with `revision_form: "content-hash"` and
-`revision`, both mandatory — so the pack was incomplete and completing it necessarily moved the hash.
-Written, then re-sealed over four files.
+**Second pass** (`1473897a`): the `blocked` re-classification was **sustained** — on the ground that a
+stage laundering a verdict would have kept `exception`, which satisfies completion, rather than taking
+`blocked`, which prohibits it. What failed was three things: this handover table still said `exception`
+for `TDD-0069`; the corrected clause-1 finding was **contradicted by the repository** (see below); and
+the cycle is over-determined in a way `CR-20260820-0012` did not record.
 
-**The reasoning alone would launder an illegitimate re-seal, so the reasoning is not what discharges
-it.** "The pack gained a required artifact" is equally compatible with the reports having changed too.
-What discharges it is a recomputation both round-2 reviewers performed independently: the **first**
-seal, `d8ac0a777dd38514574c63813e51b2e3d0140319d0c171c4190a0a94358967c9`, still reproduces over the
-three reports **as they stand now** — which proves those three files were untouched between the seals
-and that the re-seal added only `summary.json`. Recording the superseded value is what makes that check
-possible; had only `5c8cd425…` been recorded, the claim would have been unfalsifiable. Recomputing it at completion compares against **this recorded value**, not against a value
-re-read from the working tree — `../qfai-implement/references/evidence-revision.md` states why: an
-expected value read from the tree could be rewritten in the same pass that edited the pack, and every
-recomputation would still agree.
+**The clause-1 correction was itself wrong, and this is the fifth vacuous claim on this spec.** Round
+1's finding was that `EX-0017-0053` had been half-quoted, dropping "exactly one runner project is
+tuned, largest first". The repair said that clause *is* satisfied by pre-existing state and *is*
+falsifiable by tuning a second project in `vitest.knobs.ts`. **That mutation does nothing**:
+`maxWorkers` lives in `rootKnobs`, the file's own docstring records that a per-project worker
+declaration "type-checked, it ran, it emitted no warning — and it did nothing" at a ratio of 0.93, and
+open `CR-20260820-0003` adds that the runner drops unknown project options silently. An equivalent
+mutant, written while applying a finding about that clause. `DR-0017-0010` now records clause 1 as
+**degenerate rather than satisfied**.
 
-Serialization, stated because it is load-bearing: each line is `<git hash-object> <space> <path>`
-with a single space and an `LF` terminator, paths relative to the pack root in `LC_ALL=C` order, and
-the sha256 is taken over that byte stream. The first version printed the manifest with **two** spaces
-while the recorded seal was computed with one — anyone recomputing from the printed block would have
+A third re-route is owed. This stage does not claim its own repairs reviewed.
+
+## Final status (PASS/FAIL) + who confirmed
+
+**FAIL — incomplete by this skill's own Definition of Done.**
+
+What was achieved: eight of `spec-0017`'s nine `US-*` are covered from `tests/e2e/**` with real
+assertions — one of them rewritten to execute the shipped step rather than read it — across five
+oracle rounds, a ten-form round 2, a three-round behavioural round, and a seven-round falsification of
+the matrix pinning test; the shipped-tree gap is measured at step-body level; the ordering claim this
+stage had asserted is now enforced by a script that exists and is tested; and a repo-wide defect
+affecting 16 other specs was found and filed.
+
+What is not satisfied:
+
+- **`US-0017-0007` is uncovered**, so `QFAI-ATDD-111` reports it and the scoped gate is `error=2`;
+- the stage's own gate `validate --profile atdd --fail-on error --spec 0017` exits 1;
+- `TDD-0070` is **not yet** parked at `exception`: the transition needs the P1d `qa-gatekeeper` PASS
+  on `DR-0017-0010`, and P1d has returned `REVISE` twice. The row's account is sound and the status is
+  the right one; the gate that authorises writing it has not passed. The first version of this line
+  said the row "is parked at `exception`", which round 3 caught — the sole precondition does not exist;
+- `TDD-0069` is `blocked` on `CR-20260820-0012` — a self-referential gate P1d found while judging the
+  DR, where the row's own unannotated `TC` is one of the two errors that keep the run it waits for red.
+  `blocked` needs no P1d PASS, which is the asymmetry disclosed under § "Ledger rows advanced";
+- Stage Minimum Roles were not used for P2-P4 — the reviewer gate ran, the work orders did not.
+
+Confirmed by: round 1's two independent blocking reviewers, both **REVISE**, on `8fb48002`:
+
+- `completion-reviewer` — `.qfai/review/review-20260820200000000/R02_completion-reviewer.md`
+- `qa-gatekeeper` — `.qfai/review/review-20260820200000000/R03_qa-gatekeeper.md`
+
+### Review packs and their seals
+
+Three packs, one per round, each sealed when its last reviewer response landed and before this record's
+verdict was written. Round 2's and round 3's were **missing their `summary.json`** until round 3 found
+it — `--profile full` reported `QFAI-REVIEW-004` / `-005` against them, masked only because the `tdd`
+step fails first on `error=2`. Written, then sealed; the same sequence round 1's pack went through, and
+this record documented that fix while leaving the next two packs in the state it described.
+
+```text
+Review pack:       .qfai/review/review-20260820200000000/            (round 1)
+Review pack seal:  5c8cd42571c8baf5f2240515ee2fbd173892cecd09d53ace080900d5c74317e3
+  superseded:      d8ac0a777dd38514574c63813e51b2e3d0140319d0c171c4190a0a94358967c9
+
+Review pack:       .qfai/review/review-20260820220000000/            (round 2, + P1d pass 1)
+Review pack seal:  305ffd6555799fd322db60c7afdddf1f920feb41006c2b9f1e66ac5c5983e77a
+
+Review pack:       .qfai/review/review-20260821000000000/            (round 3, + P1d pass 2)
+Review pack seal:  257e793b5c764a81532a01a0a422b28f2edbb986f41b0042e75a6b596d01bfd0
+```
+
+Serialization, stated because it is load-bearing: each manifest line is
+`<git hash-object><single space><path><LF>`, paths relative to the pack root in `LC_ALL=C` order, and
+the seal is a sha256 over that byte stream. The first version of this record printed the manifest with
+**two** spaces while the recorded seal used one — a reader recomputing from the printed block would have
 got `fa8d6e836cabd14a6cdbc12dd8b9dd538bbe971a40cd4bf27b252160d17e2526` and read a legitimate pack as
-tampered. Round 2 found it. The block below is the hashed form, byte for byte:
+tampered. Round 2 found that; round 3 confirmed both the corrected value and the two-space value
+reproduce exactly as stated.
+
+**Why round 1's superseded seal is recorded rather than dropped.** The re-seal added `summary.json`, and
+"the pack gained a required artifact" is equally compatible with the reports having changed too — so the
+*reasoning* would launder an illegitimate re-seal. What discharges it is that the first seal still
+reproduces over the three reports **as they stand now**, which both round-2 and round-3 gates
+recomputed independently. Recording the superseded value is what makes that check possible.
+
+At completion, each seal is recompared against **these recorded values**, not against a value re-read
+from the working tree: `## Final status` is outside every audit subject, so a tree-read expectation could
+be rewritten in the same pass that edited a pack and every recomputation would still agree.
+
+Round 1's manifest, in the hashed form:
 
 ```text
 a65a209bbfd37911c5b4ef2424adf605057d9029 R02_completion-reviewer.md

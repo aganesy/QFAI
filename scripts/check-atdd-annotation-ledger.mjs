@@ -24,7 +24,7 @@
  *     living only under `packages/qfai/tests/e2e/**` is invisible to `QFAI-ATDD-111` — which is why
  *     the ledger exists at all, and why this guard needs both trees.
  */
-import { readFile, readdir, stat } from "node:fs/promises";
+import { readFile, readdir, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -105,9 +105,23 @@ export async function collectTestSources(dir) {
   const queue = [dir];
   const seen = new Set();
   for (let current = queue.pop(); current !== undefined; current = queue.pop()) {
-    // A symlink loop would otherwise walk forever. This repository tracks 83 symlinks, so the
-    // possibility is not theoretical here.
-    const key = path.resolve(current);
+    // A symlink loop would otherwise walk forever, and the first version could not stop one: it
+    // deduped on `path.resolve`, which is LEXICAL. Round 3 measured it against a self-referencing
+    // junction — 64 descents, `seen` grew to 64, zero hits, and what actually stopped the walk was
+    // the operating system. `realpath` resolves the links, so the same walk terminates in two steps.
+    //
+    // Correcting the comment too: this repository's 83 tracked symlinks are all under dot-directories
+    // this walk skips by name, and ZERO are under either scanned tree. The hazard is real for an
+    // adopter's tree, not demonstrated by that count.
+    let key;
+    try {
+      key = await realpath(current);
+    } catch (error) {
+      // A dangling or unresolvable path contributes nothing, and a cycle reported here is exactly
+      // what the `seen` set is for — fall back to the lexical form rather than abandoning the walk.
+      if (!isMissing(error) && !isLoop(error)) throw error;
+      key = path.resolve(current);
+    }
     if (seen.has(key)) continue;
     seen.add(key);
 
@@ -115,8 +129,10 @@ export async function collectTestSources(dir) {
     try {
       entries = await readdir(current, { withFileTypes: true });
     } catch (error) {
-      // A tree that is not there contributes nothing; anything else is a real failure.
-      if (isMissing(error)) continue;
+      // A tree that is not there contributes nothing, and neither does one the OS refuses to descend.
+      // `ELOOP` was previously unhandled, so a symlink cycle answered exit 3 — "no measurement
+      // taken" — instead of being skipped and measured around.
+      if (isMissing(error) || isLoop(error)) continue;
       throw error;
     }
     for (const entry of entries) {
@@ -151,6 +167,21 @@ export async function collectTestSources(dir) {
     }
   }
   return sources;
+}
+
+/**
+ * A symlink cycle or a path the OS will not resolve.
+ *
+ * @param {unknown} error
+ * @returns {boolean}
+ */
+function isLoop(error) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error.code === "ELOOP" || error.code === "ENAMETOOLONG")
+  );
 }
 
 /**

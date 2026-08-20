@@ -328,8 +328,19 @@ describe("the guard against this repository's own ledger", () => {
     // `toBeLessThanOrEqual` fires on a NEW unbacked claim and stays green all the way down to zero.
     // The exact figure lives in the CR, which is the governance record for it; this pins only the
     // direction nobody should be allowed to travel silently.
+    //
+    // One blind spot, stated rather than papered over: a delete-and-add SWAP keeps the count at 127
+    // while replacing which stories are uncovered, and no aggregate can see that. Catching it needs a
+    // per-claim baseline committed next to the CR, which is `CR-20260820-0011` option 1's work — it
+    // is where the per-story decisions get made — not a bound this test can tighten.
     const wide = checkLedger(ledger, sources);
-    expect(wide.checked, "the ledger's claim count, for context on the ratchet below").toBe(208);
+    // `toBe(208)` was wrong in the same way the `> 100` bound was: a legitimate new user story with
+    // a real test appends a backed claim and would have reddened it, so the assertion punished the
+    // work it exists to encourage. A floor lets the ledger grow and still catches a truncation.
+    expect(
+      wide.checked,
+      "the ledger may grow; it may not shrink below what CR-20260820-0011 measured",
+    ).toBeGreaterThanOrEqual(208);
     expect(
       wide.unbacked.length,
       "a NEW unbacked ledger claim is a regression; fixing existing ones must stay green — " +

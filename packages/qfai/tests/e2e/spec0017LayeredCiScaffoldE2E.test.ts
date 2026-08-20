@@ -146,6 +146,135 @@ async function runStep(
   }
 }
 
+/** Verbs that can run a build. A command whose verb is absent here is not a build. */
+const BUILD_RUNNERS = new Set([
+  "pnpm",
+  "npm",
+  "yarn",
+  "npx",
+  "pnpx",
+  "bunx",
+  "bun",
+  "turbo",
+  "nx",
+  "lerna",
+  "rush",
+  "make",
+  "cmake",
+  "ninja",
+  "bazel",
+  "buck",
+  "cargo",
+  "go",
+  "gradle",
+  "gradlew",
+  "mvn",
+  "dotnet",
+  "swift",
+  "zig",
+]);
+
+/**
+ * Verbs that ARE a build when invoked at all.
+ *
+ * `tsc` is deliberately absent: in this ecosystem it is a type check as often as an emit —
+ * `npx tsc --noEmit`, and this repository's own `check-types` is `tsc -b`. A lane that genuinely
+ * bundles reaches for one of these.
+ */
+const BUNDLERS = new Set([
+  "tsup",
+  "rollup",
+  "esbuild",
+  "webpack",
+  "swc",
+  "parcel",
+  "vite",
+  "rspack",
+  "rolldown",
+]);
+
+/** Sub-verbs a runner uses before it names its target. */
+const RUNNER_PASSTHROUGH = new Set([
+  "run",
+  "run-many",
+  "exec",
+  "dlx",
+  "workspace",
+  "workspaces",
+  "--",
+]);
+
+const INTERPRETERS = ["bash", "sh", "pwsh", "powershell", "node"];
+
+/** `ci:build-verify` -> `["ci","build","verify"]`; `build-storybook` -> `["build","storybook"]`. */
+function namesABuild(token: string): boolean {
+  return token
+    .split(/[:\-_./]+/)
+    .filter((part) => part !== "")
+    .includes("build");
+}
+
+/** A path or a filename — a location rather than a target name. */
+function isPathLike(token: string): boolean {
+  return token.includes("/") || token.startsWith(".") || /\.\w{1,5}$/.test(token);
+}
+
+/**
+ * Does one command line run a build?
+ *
+ * Verb first, then the first target. See the commentary at the `US-0017-0004` describe for the three
+ * earlier versions and what each round measured about them.
+ */
+function classifyBuild(line: string): boolean {
+  const tokens = line
+    .trim()
+    .split(/\s+/)
+    .filter((token) => token !== "");
+  if (tokens.length === 0) return false;
+
+  let index = 0;
+  while (index < tokens.length && /^[A-Z_][A-Z0-9_]*=/.test(tokens[index] ?? "")) index += 1;
+  if (INTERPRETERS.includes(tokens[index] ?? "")) index += 1;
+
+  const candidate = tokens[index];
+  if (candidate === undefined) return false;
+
+  // A script whose basename names a build, at any directory depth.
+  if (/^[\w./-]*[\w-]+\.(?:sh|ps1|bat|cmd|mjs|cjs|js|ts)$/.test(candidate)) {
+    return namesABuild(candidate.split("/").pop() ?? "");
+  }
+
+  const verb = candidate.split("/").pop() ?? "";
+  if (BUNDLERS.has(verb)) return true;
+  if (!BUILD_RUNNERS.has(verb)) return false;
+
+  for (let cursor = index + 1; cursor < tokens.length; cursor += 1) {
+    const token = tokens[cursor];
+    if (token === undefined) break;
+    if (RUNNER_PASSTHROUGH.has(token)) continue;
+
+    if (token.startsWith("-")) {
+      const inline = /^--?[\w-]+=(.*)$/.exec(token);
+      if (inline !== null) {
+        const value = inline[1] ?? "";
+        if (!isPathLike(value) && namesABuild(value)) return true;
+        continue;
+      }
+      if (namesABuild(token.replace(/^-+/, ""))) return true;
+      // A bare flag consumes its value — unless that value names a build, where reading it as a flag
+      // value would swallow the target (`pnpm --silent build`).
+      const next = tokens[cursor + 1];
+      if (next !== undefined && !next.startsWith("-") && !namesABuild(next)) cursor += 1;
+      continue;
+    }
+
+    if (BUNDLERS.has(token.split("/").pop() ?? "")) return true;
+    if (isPathLike(token)) continue;
+    return namesABuild(token);
+  }
+  return false;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -397,28 +526,29 @@ describe(
       // `CR-20260820-0007`. What holds now and after that work is that no lane duplicates a build —
       // before reuse because there is nothing to duplicate, after it because reuse is the point.
       //
-      // Three widenings, each measured, because the first two were each wrong in one direction.
+      // Four versions, each measured, because the first three were each wrong in a way the next
+      // round found:
       //
-      // v1 `/\b(pnpm|npm|yarn)\s+(-\S+\s+\S+\s+)?build\b/` admitted ONE flag-value pair. Round 1
-      //    measured it a form at a time: `pnpm run build`, `npm run build`, `yarn run build`,
-      //    `pnpm exec tsup` and `npx tsup` all reddened NOTHING. The idiomatic form was invisible.
-      // v2 `/\b(?:pnpm|npm|yarn|npx|bun)\b[^\n]*?\bbuild\b/` fixed that and overshot. Round 2
-      //    measured the other direction, which nobody had: `npx tsc --noEmit` is a TYPE CHECK and
-      //    was reported as a build, and `--cache-location .cache/build`, `reports/build.xml`,
-      //    `--output=build-artifacts` and `./build` all matched. It was also not the verb anchor its
-      //    own comment claimed — it was a closed five-member package-manager list, so `make build`,
-      //    `turbo run build`, `nx build`, `cargo build`, `go build`, `bazel build`, `gradle build`
-      //    and `./scripts/build.sh` were all invisible.
-      // v3, below, anchors on `build` as a standalone shell WORD, which is what the runners above
-      //    have in common and what a path fragment does not. Measured both directions:
-      //    21 forms caught, 14 non-builds rejected, 0 misclassified.
+      // v1  one flag-value pair only. `pnpm run build`, `npx tsup` and six more reddened NOTHING.
+      // v2  a package-manager list plus `build` anywhere after it. Fixed v1's misses and overshot:
+      //     `npx tsc --noEmit` is a TYPE CHECK and was reported as a build.
+      // v3  `build` as a standalone shell word, minus bare `tsc`. Round 3 measured BOTH directions
+      //     against a 58-command corpus and found **9 missed builds and 10 false positives** against
+      //     a recorded "0 misclassified" — including the pair in this repository's own workflow:
+      //     `pnpm -C packages/qfai build` caught (ci.yml:326), `pnpm ci:build-verify` missed
+      //     (ci.yml:371). It also caught `rm -rf build dist`, `mkdir -p build` and an `echo` naming
+      //     build — and the shipped orchestrator has ten `echo` bodies.
       //
-      // `tsc` is deliberately absent from BUNDLER: in this ecosystem it is a type check as often as
-      // an emit — `npx tsc --noEmit`, and this repository's own `check-types` is `tsc -b`. A lane
-      // that genuinely bundles reaches for one of the others.
-      const BUILD_WORD = /(?<![\w/=.-])build(?![\w/.-])/;
-      const BUILD_SCRIPT = /[\w./-]*\bbuild[\w.-]*\.(?:sh|ps1|bat|cmd|mjs|cjs|js|ts)\b/;
-      const BUNDLER = /\b(?:tsup|rollup|esbuild|webpack|swc|parcel|vite\s+build)\b/;
+      // The structural error in v1-v3 was blacklisting path SHAPES while accepting any verb. `rm` and
+      // `echo` were never consulted. `classifyBuild` allowlists the VERB and then asks whether the
+      // FIRST target names a build — so a command whose verb is not a runner cannot match whatever
+      // its arguments say, and a flag value after the target belongs to that tool rather than to the
+      // runner.
+      //
+      // Measured on data this stage did not invent: every `run:` command line in both workflow trees
+      // (451 lines) flags exactly the two real builds and nothing else, and round 3's own 30 named
+      // cases classify with 0 misclassified. Three rounds of a self-chosen corpus is what made that
+      // distinction necessary.
       const map = await jobs();
       const rebuilding: string[] = [];
       for (const [id, job] of Object.entries(map)) {
@@ -426,19 +556,14 @@ describe(
         for (const step of steps) {
           const run = isRecord(step) ? step["run"] : undefined;
           if (typeof run !== "string") continue;
-          // Comments inside a `run` block are not commands. Scanning the raw string is how a claim
-          // goes vacuous by matching prose — this spec's own `--no-renames` claim did exactly that,
-          // and implement round 5 found it. Whole-line comments were stripped first; round 2 found
-          // that TRAILING comments were not, so `pnpm check-types   # runs tsc -b` was read as a
-          // build. Both forms go now. The known limit: a `#` inside a quoted string truncates the
-          // line, which can only ever make this scan miss, never false-positive.
-          const commands = run
-            .split(/\r?\n/)
-            .map((line) => line.replace(/#.*$/, ""))
-            .filter((line) => line.trim() !== "")
-            .join("\n");
-          if (BUILD_WORD.test(commands) || BUILD_SCRIPT.test(commands) || BUNDLER.test(commands)) {
-            rebuilding.push(`${id}: ${commands.trim().slice(0, 60)}`);
+          for (const line of run.split(/\r?\n/)) {
+            // Comments are not commands, trailing ones included — round 2 found that whole-line
+            // stripping alone read `pnpm check-types   # runs tsc -b` as a build. A `#` inside a
+            // quoted string truncates the line, which can only make this scan miss, never
+            // false-positive.
+            const command = line.replace(/#.*$/, "").trim();
+            if (command === "") continue;
+            if (classifyBuild(command)) rebuilding.push(`${id}: ${command.slice(0, 60)}`);
           }
         }
       }
@@ -448,6 +573,130 @@ describe(
     });
   },
 );
+
+// Not annotated to a user story: this is the predicate `US-0017-0004` rests on, and its own corpus.
+//
+// Three rounds measured it and three times the corpus was one this stage chose, so it flattered the
+// predicate every time — v3 was recorded as "21 caught / 14 rejected / 0 misclassified" and round 3
+// then found 9 missed builds and 10 false positives in it. The countermeasure is not a bigger corpus
+// of my own invention. It is these two, committed:
+//
+//   1. the cases ROUND 3 named — a corpus chosen adversarially, by the party looking for misses;
+//   2. every `run:` command line in both real workflow trees, where the answer is checkable against
+//      what those workflows actually do rather than against what I think a build looks like.
+describe("classifyBuild, the predicate US-0017-0004 rests on", { timeout: 120000 }, () => {
+  it("classifies every case round 3 named, in both directions", () => {
+    const BUILDS = [
+      "pnpm build",
+      "pnpm -C packages/qfai build",
+      "pnpm run build",
+      "npm run build",
+      "yarn run build",
+      "yarn build",
+      "pnpm ci:build-verify",
+      "npm run build-storybook",
+      "nx run-many --target=build",
+      "nx build qfai",
+      "turbo run build",
+      "cmake --build .",
+      "make build",
+      "cargo build",
+      "go build ./...",
+      "bazel build //...",
+      "gradle build",
+      "dotnet build",
+      "pnpm exec tsup",
+      "npx tsup",
+      "pnpm exec vite build",
+      "npx webpack --mode production",
+      "./scripts/build.sh",
+      "bash scripts/build-dist.sh",
+      "pnpm -w --filter ./packages/qfai run build",
+    ];
+    const NOT_BUILDS = [
+      "npx tsc --noEmit",
+      "pnpm check-types",
+      "npm ci --ignore-scripts",
+      "pnpm exec eslint . --cache-location .cache/build",
+      "npm test -- --reporter=junit --outputFile reports/build.xml",
+      "npx playwright test --output=build-artifacts",
+      "yarn dlx license-checker --start ./build",
+      "pnpm vitest run --project e2e",
+      "npm run lint:md",
+      "pnpm -C packages/qfai test:e2e",
+      "pnpm install --frozen-lockfile",
+      "rm -rf build dist",
+      "mkdir -p build",
+      "cp -r dist build-output",
+      "apt-get install -y build-essential",
+      "git diff --name-only",
+      'echo "unit lane placeholder - opted in, but the test-lane body ships later"',
+      'echo "::notice::build reuse is not wired yet"',
+    ];
+
+    const missed = BUILDS.filter((line) => !classifyBuild(line));
+    const falsePositives = NOT_BUILDS.filter((line) => classifyBuild(line));
+    expect.soft(missed, "a build form the predicate cannot see").toEqual([]);
+    expect.soft(falsePositives, "a non-build the predicate reports as one").toEqual([]);
+  });
+
+  it("flags exactly the real builds across both workflow trees, and nothing else", async () => {
+    // Real data, not invented data. The own tree builds once per producer job and the shipped tree
+    // builds nowhere; both facts are load-bearing for `US-0017-0004`, and a lane that starts building
+    // reddens this whether or not I imagined its command form.
+    const roots = [
+      path.resolve(__dirname, "../../../../.github/workflows"),
+      path.resolve(__dirname, "../../assets/init/root/.github/workflows"),
+    ];
+
+    const flagged: string[] = [];
+    let scanned = 0;
+    for (const root of roots) {
+      const { readdir } = await import("node:fs/promises");
+      let names: string[];
+      try {
+        names = await readdir(root);
+      } catch {
+        continue;
+      }
+      for (const name of names) {
+        if (!/\.ya?ml$/.test(name)) continue;
+        const text = await readFile(path.join(root, name), "utf8");
+        const parsed: unknown = parseYaml(text);
+        const workflowJobs = isRecord(parsed) && isRecord(parsed["jobs"]) ? parsed["jobs"] : {};
+        for (const [id, job] of Object.entries(workflowJobs)) {
+          const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
+          for (const step of steps) {
+            const run = isRecord(step) ? step["run"] : undefined;
+            if (typeof run !== "string") continue;
+            for (const raw of run.split(/\r?\n/)) {
+              const command = raw.replace(/#.*$/, "").trim();
+              if (command === "") continue;
+              scanned += 1;
+              if (classifyBuild(command)) flagged.push(`${name} ${id}: ${command}`);
+            }
+          }
+        }
+      }
+    }
+
+    expect
+      .soft(scanned, "the scan must reach a substantial corpus, or its silence means nothing")
+      .toBeGreaterThan(100);
+    expect
+      .soft(
+        flagged.filter((entry) => !entry.startsWith("ci.yml ")),
+        "no workflow outside the own orchestrator may run a build — the shipped tree least of all",
+      )
+      .toEqual([]);
+    expect
+      .soft(
+        flagged.length,
+        "the own tree's build count: one producer plus its verification, both in ci.yml",
+      )
+      .toBe(2);
+  });
+});
 
 // QFAI:SPEC-0017:US-0017-0005
 describe(

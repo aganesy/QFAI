@@ -55,20 +55,33 @@ which puts it outside the pre-merge gate rather than outside the cycle.
 
 ## Options
 
-### Option 1 — cite runs of the workflow, not runs of the required context (recommended)
+### Option 1 — narrow the signal from the aggregate verdict to the lanes the tuning affects
 
-`EX-0017-0053` says "three consecutive green **aggregate-verdict** runs". Read strictly, that is three
-green `ci-pass` **jobs**, which is what the cycle blocks. Read as the business rule intends —
-`BR-0017-0053` guards against a tuning change landing on an unstable pipeline — what needs to be green
-is **the layered lane set the tuning affects**: the seven test legs plus `detect` and the verdict's own
-derivation. Those are green today, and were green on `8fb48002` and `16f611c7`.
+**This is an amendment, not a reading, and the first version of this CR presented it as a reading.**
+Both round-3 gates said so independently, and they are right:
 
-Amend `EX-0017-0053` to name the runs it means, and the row becomes ordinary work with evidence that
-already exists. Cost: an upstream edit to `05_Examples.md`, which is Drift Protocol territory and needs
-the `#when-drift-is-detected` path rather than an inline edit.
+- "aggregate verdict" is **this spec's own defined term** for `ci-pass`. `BR-0017-0001`, `BR-0017-0004`,
+  `AC-0017-0029` and `NFR-0004` all use it that way, and `01_Spec.md` calls the aggregate verdict "the
+  single observed signal". There is no ambiguity to resolve;
+- the cycle is not an artifact of misreading it. `BR-0017-0001` **requires** the verdict to derive from
+  every `need`, so `build` is in it by design;
+- and the first version's warrant was wrong about the rule's own rationale. `BR-0017-0053` gives it as
+  "OC-80. Batching two projects into one pull request makes an emergent race unattributable" —
+  **attributability**, not "guards against an unstable pipeline". The stability reading was invented
+  here.
 
-This is recommended because the cycle is an artifact of reading "aggregate verdict" as "the context
-that also gates annotation completeness", which is not what the tuning guard is about.
+Stated honestly, then: this option asks the user to narrow the flake budget's signal to a **subset of
+`ci-pass`'s inputs that excludes the one failing input**. That may well be right — a tuning change's
+stability is a property of the test lanes, and a `validate` error about annotation completeness says
+nothing about it — but it is a decision to weaken a guard, and the user should be asked for it as one.
+
+Evidence position, corrected: three consecutive runs with the lane set green except `build` **do**
+exist — `32370185891`, `32370813280`, `32370926286` — but `EX-0017-0053` also requires the run
+identifiers to be **quoted in the pull request description**, and PR #794's body quotes none. So the
+evidence is two-thirds present, not present.
+
+Cost: an upstream edit to `05_Examples.md`, which is Drift Protocol territory and needs the
+`#when-drift-is-detected` path rather than an inline edit.
 
 ### Option 2 — exempt a spec's own in-flight TCs from the fatal gate
 
@@ -93,11 +106,42 @@ treat it like `TDD-0070`. Rejected on the record: it makes the wording of `EX-00
 than resolving it, and it is the reading `DR-0017-0010`'s first version implicitly took when it blamed
 "unmerged workflow changes" — which P1d showed is not the obstacle.
 
+### Option 5 — split the conjunction upstream
+
+`EX-0017-0053` states **two** obligations in one example: "exactly one runner project is tuned, largest
+first" **and** "three consecutive green aggregate-verdict runs are recorded with their run identifiers
+quoted". One ledger row therefore carries a reachable half and an unreachable half, and
+`red-provenance.md` gives a row one branch. Split the example in two, and each half gets its own row,
+its own branch and its own exit.
+
+Neither round-3 gate found this in the option set, and both named it as the treatment missing. It does
+**not** close `TDD-0069` on its own: P1d's second pass established that clause 1 is _degenerate_ against
+this runner — `vitest.knobs.ts` puts `maxWorkers` in `rootKnobs`, its docstring records that a
+per-project worker declaration "did nothing" at a ratio of 0.93, and `CR-20260820-0003` adds that the
+runner drops unknown project options silently. So clause 1's row would be unfalsifiable rather than
+blocked. What the split buys is that a reachable half stops being parked behind an unreachable one, and
+that the two failures get named separately instead of one standing for both.
+
+Also an upstream `05_Examples.md` edit, so also the Drift Protocol path.
+
 ## Recommendation
 
-**Option 1**, routed through the Drift Protocol because it edits `05_Examples.md`. Option 2 is worth
-specifying separately — the cycle it removes is structural and will recur — but not as the vehicle for
-this row.
+**Option 5 first, then option 1 for what remains** — both through the Drift Protocol, because both edit
+`05_Examples.md`.
+
+The split is the smaller ask: it changes no obligation, only how many rows carry them, and it makes the
+two distinct failures visible instead of conflated. Option 1 then applies to clause 2 alone and can be
+put to the user as what it is — narrowing the flake budget's signal to exclude `build`. Option 2 is
+worth specifying separately, since the cycle it removes is structural and will recur, but not as the
+vehicle for this row.
+
+**The cycle is also over-determined, which no option above closes on its own.** P1d's second pass:
+`error=2`, so clearing `QFAI-ATDD-112` still leaves `error=1` from `QFAI-ATDD-111` — which stands
+**deliberately**, because this stage withdrew `US-0017-0007`'s unearned annotation. And
+`QFAI-ATDD-112`'s eight TCs are the six `blocked` rows plus these two, so a green `build` needs three
+other CRs resolved _and_ `TC-0017-0070` annotated — which `EX-0017-0054` makes impossible pre-merge.
+Under the strict reading `TDD-0069` is blocked on `TDD-0070`. Recorded so that no option here is read
+as sufficient by itself.
 
 Until an option is approved, `TDD-0069` is `blocked` with `Blocked-By: CR-20260820-0012`, not
 `exception`. `execution-ledger.md` scopes `todo -> blocked` to "an upstream defect, an unresolved

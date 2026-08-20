@@ -168,17 +168,55 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     expect(unclaimed, "every ❌ cell must be named by a reason class").toEqual([]);
     expect(phantom, "a reason class may not name a cell the table does not score ❌").toEqual([]);
 
-    // And the stated per-class sizes must match the members actually listed.
+    // And the stated per-class sizes must match the members actually listed — by EQUALITY, parsed.
+    // The first version used `toContain` on a number, which round 3 broke twice: `"A 30"` is a
+    // substring of `"A 300"`, so `A 300, B 70, C 10 — 380 cells` passed all four tests, and the total
+    // after the em dash was never read at all.
     const sizes = new Map<string, number>();
     for (const { className } of members) sizes.set(className, (sizes.get(className) ?? 0) + 1);
     const statedSizes = /^Sizes, derived from the table above: \*\*(.+?)\*\*/m.exec(text);
     expect(statedSizes, "the section must state the sizes it derives").not.toBeNull();
-    for (const [className, size] of sizes) {
-      expect(
-        statedSizes?.[1],
-        `the stated sizes must name class ${className} at ${String(size)}`,
-      ).toContain(`${className} ${String(size)}`);
+
+    const statedText = statedSizes?.[1] ?? "";
+    const statedPairs = new Map<string, number>();
+    for (const match of statedText.matchAll(/\b([A-Z]) (\d+)\b/g)) {
+      statedPairs.set(match[1] ?? "", Number(match[2]));
     }
+    expect(
+      Object.fromEntries([...statedPairs].sort()),
+      "the stated class sizes must equal the members the table lists, not merely contain them",
+    ).toEqual(Object.fromEntries([...sizes].sort()));
+
+    const statedTotal = /—\s*(\d+) cells/.exec(statedText);
+    expect(statedTotal, "the sizes line must state its own total").not.toBeNull();
+    expect(Number(statedTotal?.[1]), "and that total must be the cell count").toBe(cells);
+
+    // Class ASSIGNMENT, not just class membership. Round 3 permuted the B and C labels while
+    // preserving both membership and sizes and the test stayed green — so the letter that carries a
+    // cell's justification was unpinned, which is the only thing the classes are for. Each class has
+    // a defining property, and every member must satisfy its own:
+    //
+    //   A  the shipped surface is absent, so the ROW's Status is ❌
+    //   B  the harness cannot run a workflow: State transitions / Combinatorial on a row that is NOT ❌
+    //   C  a single shipped value admits no boundary: Boundary values, and only on US-0017-0001
+    const statusOf = new Map(rows.map((row) => [row.id, row.cells["Status"]]));
+    const misassigned: string[] = [];
+    for (const { className, row, column } of members) {
+      const status = statusOf.get(row);
+      const ok =
+        className === "A"
+          ? status === "❌"
+          : className === "B"
+            ? status !== "❌" && (column === "State transitions" || column === "Combinatorial")
+            : className === "C"
+              ? column === "Boundary values" && row === "US-0017-0001"
+              : false;
+      if (!ok) misassigned.push(`${className}: ${row}/${column} (Status ${String(status)})`);
+    }
+    expect(
+      misassigned,
+      "each reason class has a defining property and every member must satisfy its own",
+    ).toEqual([]);
   });
 
   it("carries a justification section for every ❌ status row", async () => {

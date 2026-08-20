@@ -272,9 +272,20 @@ one place an invariant stood in for substance that was reachable.
 
 It is asserted now, and **behaviourally**: the test locates the resolver through the chain
 (`setup-node`'s `node-version` names a step output, which names the step), extracts that step's `run`
-body, and executes it under bash twice — once in a directory holding `.nvmrc` with `23.4.1`, once in
-an empty one — asserting the published output is the file's content in the first case, and a
-different documented value plus a warning in the second.
+body, and executes it under `bash -e -o pipefail` — the flags GitHub applies to a `shell: bash` step —
+**four times**, in four fixture directories:
+
+| fixture                          | asserted                                            |
+| -------------------------------- | --------------------------------------------------- |
+| `.nvmrc` = `23.4.1`              | the published version is `23.4.1`                   |
+| `.node-version` = `21.7.3`       | the published version is `21.7.3`                   |
+| both files present               | `.nvmrc` wins, so the probe order is a fact         |
+| neither present                  | exit 0, the published version is exactly `20`, and a `::warning::` is emitted |
+
+The first version ran it twice and asserted "a different documented value" for the fallback. Round 3
+pointed out that the integration row one layer down asserts the exact literal, and that an E2E row
+claiming to have added a behavioural check should not be the weaker of the two — so it is `20` now, the
+`engines: ">=20.19.0"` floor the shipped comment names.
 
 The first repair asserted the same thing over the step's **text** and was vacuous, which two oracle
 rounds caught: `.nvmrc` also occurs in the step's warning message and `version=` also occurs in its

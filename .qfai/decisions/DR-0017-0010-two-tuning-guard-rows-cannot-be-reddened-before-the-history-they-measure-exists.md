@@ -7,8 +7,8 @@
 - Rows: `TDD-0069`, `TDD-0070`
 - Raised by: `/qfai-atdd spec-0017`, Phase Red branch 3
 - Raised at: `2026-08-20T22:00:00Z`
-- Status: `open` — P1d returned **REVISE** on the first version of this record; revised below and
-  awaiting a re-route
+- Status: `open` — P1d returned **REVISE** twice: once on the first version and again on the
+  revision. Revised a second time below; a third re-route is owed
 
 ## Why this record exists at all
 
@@ -120,18 +120,42 @@ demonstrates the test discriminates against that state.
 **For `TDD-0070`, there is no such state.** The surface it measures is post-merge default-branch run
 history. Nothing to mutate, so nothing to falsify.
 
-**For `TDD-0069`, this record's first version overstated the case, and the half-quote is why.**
-`EX-0017-0053`'s first clause — "exactly one runner project is tuned, largest first" — _is_ satisfied
-by state that predates the row, and it is falsifiable: mutate `vitest.knobs.ts` to tune a second
-project, or to tune one that is not the largest, and a test over that clause would redden. So branch 2
-is available **for that clause**.
+**For `TDD-0069`, this record has now been wrong about clause 1 twice, in opposite directions.**
 
-It is not available for the row, and `references/red-provenance.md` § "Evidence shape" is why:
-"exactly one form per row, never both and never neither". A row takes one branch, and this row's
-obligation is the conjunction. Satisfying clause 1 by falsifiability leaves the row unable to reach
-GREEN, which is the same wall branch 1 hits — so the row still lands on branch 3, but it lands there
-because the obligation is a conjunction with one unreachable half, not because "there is nothing to
-falsify". The corrected reason is narrower and it is the true one.
+The first version said branch 2 was unavailable because there was nothing to falsify. The second said
+clause 1 — "exactly one runner project is tuned, largest first" — _is_ satisfied by pre-existing state
+and _is_ falsifiable, "mutate `vitest.knobs.ts` to tune a second project ... and a test over that
+clause would redden".
+
+**That mutation is an equivalent mutant, and the repository already says so.** P1d's second pass found
+it: `vitest.knobs.ts` puts `maxWorkers` in `rootKnobs`, and its own docstring records what happened
+when a per-project worker declaration was tried — it "type-checked, it ran, it emitted no warning —
+**and it did nothing**", measured at a ratio of 0.93, which is noise. Open `CR-20260820-0003` adds that
+the runner "drops unknown project options silently". So a second tuned project cannot be declared in a
+way the runner observes, and a test over clause 1 could not be reddened by that mutation or by any
+other.
+
+Clause 1 is therefore **degenerate rather than satisfied**: not "true of the current state and
+falsifiable", but not expressible against this runner at all. Branch 2 is unavailable for `TDD-0069` —
+which is where the first version landed, by an argument that was wrong. The correct statement is
+narrower than both: there is no satisfied state to falsify for clause 2 because the history does not
+exist, and none for clause 1 because per-project tuning is not observable.
+
+That is the fifth vacuous claim on this spec, and it was written while applying a finding about
+half-quoting the very clause it concerns.
+
+**And "exactly one form per row" was the wrong clause to reason from.** P1d's second pass:
+`references/red-provenance.md` § "Evidence shape" governs how many forms _one row records_, not how a
+two-clause obligation is treated. The load-bearing requirement is one line lower — branch 2 needs a
+**GREEN pair**, which clause 2 forbids. Same destination, correct grounds.
+
+**The treatment neither this record nor `CR-20260820-0012` considered: split the conjunction
+upstream.** `EX-0017-0053` states two obligations in one example. Split into two examples — one for
+"exactly one runner project is tuned, largest first" and one for the three green runs — and each gets
+its own row, its own branch and its own exit. Clause 1's row would still be degenerate against this
+runner (see above), so the split does not close it either; but it would stop a reachable half being
+parked behind an unreachable one, and it is the option a reader of this record should see. It belongs
+in `CR-20260820-0012`'s option set and is added there.
 
 This is distinct from `CR-20260820-0006`'s class-A rows, where the obligation _was_ already satisfied
 and only the reference's vocabulary for saying so was missing. (That CR's own count went 13 -> 20 -> 21
