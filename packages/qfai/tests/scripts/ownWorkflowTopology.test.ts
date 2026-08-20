@@ -651,16 +651,6 @@ function triggersOf(file: string): Record<string, unknown> {
   return isRecord(under) ? under : {};
 }
 
-/** Any job's steps, narrowed. Used where the claim is about a job other than `test` or `build`. */
-function stepsOfJob(jobId: string): Record<string, unknown>[] {
-  const job = ciJobs()[jobId];
-  if (job === undefined) {
-    throw new Error(`ci.yml declares no ${jobId} job`);
-  }
-  const steps = job["steps"];
-  return Array.isArray(steps) ? steps.filter(isRecord) : [];
-}
-
 /** The `build` job's steps, narrowed. */
 function buildJobSteps(): Record<string, unknown>[] {
   const doc: unknown = parseYaml(readFileSync(CI_WORKFLOW, "utf-8"));
@@ -1106,7 +1096,7 @@ describe("TC-0017-0008 (TDD-0008): a resolvable base ref narrows the lane set wi
     // comment three lines above the command explains the flag by naming it. An oracle round that
     // deleted the flag from the command reddened NOTHING. Read the assertion below as: the flag is
     // on the invocation, not merely mentioned near it.
-    const shellLines = stepsOfJob(DETECT_JOB)
+    const shellLines = stepsOf(DETECT_JOB)
       .map((step) => step["run"])
       .filter((run): run is string => typeof run === "string")
       .flatMap((run) => run.split(/\r?\n/))

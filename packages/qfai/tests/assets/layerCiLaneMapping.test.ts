@@ -155,16 +155,31 @@ describe("TC-0017-0079 (TDD-0079): the vocabulary warning count is unchanged aft
     // twenty lines above it. No production change could falsify that — including adding this
     // document to the loader's resolution list, which is the only thing the claim was for.
     // Implementation-review finding L2.
+    //
+    // Narrowed to the RESOLUTION SITES, not the whole file. The first version searched all of
+    // `layerPolicy.ts` for the catalog's name, and that name occurs SIX times there — once in
+    // JSDoc and four times inside Japanese diagnostic strings, besides the two `path.join`
+    // calls that actually resolve it. So changing the resolved filename left both halves
+    // green: the same vacuity as the `--no-renames` claim this run shipped and repaired, and
+    // found here by an implementation review rather than by an oracle, which is the weaker of
+    // the two ways to find it. Implementation-review finding F4.
     const loader = readFileSync(path.join(PACKAGE_ROOT, "src", "core", "layerPolicy.ts"), "utf-8");
+    const resolutions = [...loader.matchAll(/path\.join\(([^)]*)\)/g)].map((m) => m[1]);
     expect
-      .soft(loader, "the loader must resolve the catalog, or this claim is about the wrong file")
-      .toContain(CATALOG);
+      .soft(resolutions.length, "the loader must resolve its policy file through path.join")
+      .toBeGreaterThan(0);
     expect
       .soft(
-        loader.includes(MAPPING),
-        `the loader must not resolve ${MAPPING}; its invisibility to the policy reader is the mechanism this document relies on`,
+        resolutions.filter((r) => r.includes(CATALOG)).length,
+        `the loader must RESOLVE ${CATALOG}; naming it in a comment or a message is not a resolution`,
       )
-      .toBe(false);
+      .toBeGreaterThan(0);
+    expect
+      .soft(
+        resolutions.filter((r) => r.includes(MAPPING)),
+        `no resolution site may name ${MAPPING}; its invisibility to the policy reader is the mechanism this document relies on`,
+      )
+      .toEqual([]);
   });
 });
 

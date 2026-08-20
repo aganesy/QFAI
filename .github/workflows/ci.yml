@@ -171,10 +171,17 @@ jobs:
               if (under(NEVER_DOCUMENTATION, file)) {
                 return { full: true, reason: "alters validate output: " + file };
               }
-              if (executable(file)) {
-                return { full: true, reason: "executable, not documentation whatever directory it sits in: " + file };
+              const documentary =
+                under(DOCUMENTATION_DIRS, file) || DOCUMENTATION_FILES.includes(file);
+              // The executable test applies ONLY to a path the documentation rule would otherwise
+              // admit. Checked before the documentation test it also fired for `src/**.ts`, which
+              // selected the right lane set for the wrong stated reason — an operator reading
+              // `reason=executable ...` for a source file is being told something false about why
+              // their build ran. Same verdict, honest diagnosis.
+              if (documentary && executable(file)) {
+                return { full: true, reason: "executable inside a documentation directory: " + file };
               }
-              if (!under(DOCUMENTATION_DIRS, file) && !DOCUMENTATION_FILES.includes(file)) {
+              if (!documentary) {
                 return { full: true, reason: "source path: " + file };
               }
             }

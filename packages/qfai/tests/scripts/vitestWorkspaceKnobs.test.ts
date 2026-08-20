@@ -70,25 +70,20 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const REPO_ROOT = path.resolve(PACKAGE_ROOT, "..", "..");
 
 /**
- * Every file that configures the runner.
+ * The runner's CONFIGURATION files — three, since the knob set is split: the workspace, the
+ * root config that carries the root-only axes, and the shared module both import.
  *
- * Four, since the knob set is split: the workspace, the root config that carries the
- * root-only axes, the shared module both import, and the MANIFEST.
- *
- * `package.json` was missing and it is the likeliest site of all: `vitest run --retry 2`
- * added to a `test:*` script appears in no configuration file, so the scan returned zero
- * results while the runner retried on every invocation of that slice. `BR-0017-0052`'s
- * search is over the runner configuration, and the command line IS part of it —
- * implementation-review finding L10.
+ * The command-line sites are deliberately NOT in this list. A manifest's `scripts` and a
+ * workflow's `run:` values are where `--retry 2` would actually be added, and they are
+ * gathered structurally in `TC-0017-0068` CLAIM 2 rather than scanned as whole files —
+ * because the CLI-flag pattern would otherwise match the very comment that explains it.
+ * `package.json` briefly appeared here as a fourth entry (implementation-review finding
+ * L10) and that was the wrong shape: whole-file scanning is what made the claim vacuous.
  */
-const RUNNER_FILES = [
-  "vitest.workspace.ts",
-  "vitest.config.ts",
-  "vitest.knobs.ts",
-  "package.json",
-] as const;
+const CONFIG_FILES = ["vitest.workspace.ts", "vitest.config.ts", "vitest.knobs.ts"] as const;
 
 /** The override variable names. Literals, because the names are the contract. */
 const WORKERS_ENV = "QFAI_TEST_MAX_WORKERS";
@@ -317,16 +312,56 @@ describe("TC-0017-0068 (TDD-0068): the runner workspace carries zero retry setti
     // A retry SETTING, not the word. The first draft matched the bare word and reddened on
     // the configuration's own comment saying no retry may be added — the very comment that
     // stops someone adding one, so weakening the documentation to satisfy the scan would
-    // have been backwards. `retry` or `retries` immediately followed by an assignment is
-    // what a setting looks like in every form these files can take, a commented-out one
-    // included; prose about retries is not one.
-    const hits = RUNNER_FILES.flatMap((file) =>
+    // have been backwards.
+    //
+    // TWO shapes, and the second was missing. `retry:` / `retries =` is what a setting looks
+    // like in a config file. `--retry 2` is what it looks like on a COMMAND LINE, and the
+    // space-separated form is the documented CLI spelling — the pattern demanded `:` or `=`
+    // immediately after the word, so it caught `--retry=2` and missed `--retry 2`. Measured
+    // against the literals rather than reasoned about:
+    //
+    //   MISSED   "test:core": "vitest run --project core --retry 2"
+    //   CAUGHT   "test:core": "vitest run --project core --retry=2"
+    //
+    // Implementation-review finding F1, which is the second vacuous claim this rework shipped.
+    const SETTING = /\bretr(?:y|ies)\s*[:=]/i;
+    const CLI_FLAG = /--retr(?:y|ies)\b/i;
+
+    // Command text is gathered STRUCTURALLY, not by scanning whole files, because the
+    // CLI-flag pattern would otherwise match this file's own docblock explaining it — the
+    // exact trap the first draft fell into one level down. A manifest contributes its script
+    // VALUES; a workflow contributes its `run:` values. Prose cannot reach either.
+    const manifestScripts = (rel: string, root: string): { line: string; at: string }[] => {
+      const parsed: unknown = JSON.parse(readFileSync(path.join(root, rel), "utf-8"));
+      const scripts =
+        isRecord(parsed) && isRecord(parsed["scripts"]) ? parsed["scripts"] : undefined;
+      if (scripts === undefined) return [];
+      return Object.entries(scripts)
+        .filter(([, value]) => typeof value === "string")
+        .map(([name, value]) => ({ line: String(value), at: `${rel} scripts.${name}` }));
+    };
+
+    const workflowRuns = (rel: string): { line: string; at: string }[] =>
+      readFileSync(path.join(REPO_ROOT, rel), "utf-8")
+        .split(/\r?\n/)
+        .map((line, i) => ({ line, at: `${rel}:${i + 1}` }))
+        .filter(({ line }) => /^\s*(?:-\s*)?run:/.test(line) || /^\s{8,}\S/.test(line));
+
+    const commandSites = [
+      ...manifestScripts("package.json", PACKAGE_ROOT),
+      ...manifestScripts("package.json", REPO_ROOT),
+      ...workflowRuns(path.join(".github", "workflows", "ci.yml")),
+    ];
+    const configSites = CONFIG_FILES.flatMap((file) =>
       readFileSync(path.join(PACKAGE_ROOT, file), "utf-8")
         .split(/\r?\n/)
-        .map((line, index) => ({ line, at: index + 1 }))
-        .filter(({ line }) => /\bretr(?:y|ies)\s*[:=]/i.test(line))
-        .map(({ line, at }) => `${file}:${at}: ${line.trim()}`),
+        .map((line, index) => ({ line, at: `${file}:${index + 1}` })),
     );
+
+    const hits = [
+      ...configSites.filter(({ line }) => SETTING.test(line)),
+      ...commandSites.filter(({ line }) => SETTING.test(line) || CLI_FLAG.test(line)),
+    ].map(({ line, at }) => `${at}: ${line.trim()}`);
     expect
       .soft(hits, "a search of the runner configuration for a retry must return zero results")
       .toEqual([]);

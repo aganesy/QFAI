@@ -656,16 +656,11 @@ interface Declaration {
  */
 function manifestScript(manifestPath: string, name: string): string {
   const manifest: unknown = JSON.parse(readFileSync(manifestPath, "utf-8"));
-  if (!isPlainRecord(manifest)) return "";
+  if (!isRecord(manifest)) return "";
   const scripts = manifest["scripts"];
-  if (!isPlainRecord(scripts)) return "";
+  if (!isRecord(scripts)) return "";
   const value = scripts[name];
   return typeof value === "string" ? value : "";
-}
-
-/** A non-array object, narrowed without an assertion. */
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** The declaration as the repository ships it. */
@@ -675,11 +670,11 @@ function declaration(dir: string): Declaration {
   // below trust a shape only the `contexts` array was checked for — the members' `workflow`,
   // `job` and `verificationSet` were never verified, and a malformed declaration would have
   // surfaced as an undefined field deep inside a planting helper.
-  if (!isPlainRecord(parsed) || !Array.isArray(parsed["contexts"])) {
+  if (!isRecord(parsed) || !Array.isArray(parsed["contexts"])) {
     throw new Error("the declaration does not hold a contexts array");
   }
   const contexts = parsed["contexts"].map((entry, i) => {
-    if (!isPlainRecord(entry)) {
+    if (!isRecord(entry)) {
       throw new Error(`declaration context ${i} is not an object`);
     }
     const { workflow, job, verificationSet } = entry;
