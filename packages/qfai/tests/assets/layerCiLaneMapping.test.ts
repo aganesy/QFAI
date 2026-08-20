@@ -148,9 +148,23 @@ describe("TC-0017-0079 (TDD-0079): the vocabulary warning count is unchanged aft
       .toEqual([]);
 
     // CLAIM 2 — and this file is not the one the loader resolves. The invisibility is the
-    // mechanism, so it is asserted rather than assumed: a sibling named `test-layers.md` would
-    // be read, and one named anything else is not.
-    expect.soft(MAPPING, "the mapping must not be the file the loader resolves").not.toBe(CATALOG);
+    // mechanism, so it is asserted against the LOADER rather than against another constant in
+    // this file.
+    //
+    // `expect.soft(MAPPING).not.toBe(CATALOG)` stood here, comparing two literals defined
+    // twenty lines above it. No production change could falsify that — including adding this
+    // document to the loader's resolution list, which is the only thing the claim was for.
+    // Implementation-review finding L2.
+    const loader = readFileSync(path.join(PACKAGE_ROOT, "src", "core", "layerPolicy.ts"), "utf-8");
+    expect
+      .soft(loader, "the loader must resolve the catalog, or this claim is about the wrong file")
+      .toContain(CATALOG);
+    expect
+      .soft(
+        loader.includes(MAPPING),
+        `the loader must not resolve ${MAPPING}; its invisibility to the policy reader is the mechanism this document relies on`,
+      )
+      .toBe(false);
   });
 });
 

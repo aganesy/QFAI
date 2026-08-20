@@ -50,11 +50,6 @@ const { parse: parseYaml } = require("./../packages/qfai/node_modules/yaml");
 const CODE = "R-WORKFLOW-HYGIENE-DRIFT";
 
 /**
- * The rule set, printed on success so a green run names its own coverage.
- * Keyed by the identifier each finding carries, so a red run and this list use
- * the same vocabulary.
- */
-/**
  * The rule set, SCOPED, and printed on success so a green run names its own coverage.
  *
  * The scope is load-bearing rather than decorative. `BR-0017-0037` closes the set over
@@ -461,13 +456,6 @@ function needsClosure(jobsByKey, jobKey) {
   return [...seen];
 }
 
-/**
- * `BR-0017-0043`'s three properties, checked per declared context.
- *
- * All three are reported rather than short-circuited after the first: a change that renames
- * the job usually moves its steps too, and telling the operator only about the rename means a
- * second run to learn the rest.
- */
 /**
  * The shipped set references no unsanctioned third-party action.
  *

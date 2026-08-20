@@ -250,13 +250,29 @@ describe("TC-0017-0014 (TDD-0014): zero own-CI jobs lack a reachable permission 
     // point is that they are different and only one of them can falsify the rule.
     // Declaration-only is expected to stay BELOW reachability here: most jobs
     // inherit, and that is compliant.
+    //
+    // Compared against REACHABILITY, not against the job count. `declared <= jobs.length`
+    // stood here and was a tautology — `jobs.filter(p).length <= jobs.length` holds for every
+    // predicate `p`, so no mutation of either counter could fail it, including one that made
+    // `hasDeclaredPermissions` return true unconditionally. Implementation-review finding L1.
     const declared = jobs.filter(hasDeclaredPermissions).length;
+    const reachable = jobs.filter(hasReachablePermissions).length;
     expect
       .soft(
-        declared <= jobs.length,
-        "declaration is a subset of reachability by construction; if this ever inverts, the counters disagree about what a block is",
+        { declared, reachable },
+        "a declared block is reachable by definition, so declaration can never exceed reachability; if it does, the two counters disagree about what a block is",
       )
-      .toBe(true);
+      .toEqual({ declared, reachable: Math.max(declared, reachable) });
+
+    // And they must actually DIFFER, which is the half `BR-0017-0014` is about: if every job
+    // declared its own block the two counters would coincide and the distinction the rule
+    // draws would be untested by this tree.
+    expect
+      .soft(
+        reachable - declared,
+        "the tree must contain at least one job that inherits rather than declares, or this row proves nothing about reachability",
+      )
+      .toBeGreaterThan(0);
   });
 });
 
@@ -359,11 +375,15 @@ describe("TC-0017-0024 (TDD-0024): a readable pin trailer stays legal and no gua
     // leakage guard forbids — `# v4.4.0` contains `v4.4.0`. They are legal for a
     // structural reason and not by exception: the guard derives its scope from
     // `packages/qfai/package.json#files`, and `.github/` is not in it.
-    const files = JSON.parse(
+    const manifest: unknown = JSON.parse(
       readFileSync(path.join(REPO_ROOT, "packages", "qfai", "package.json"), "utf-8"),
-    ) as { files?: unknown };
+    );
+    // Narrowed, not asserted. `JSON.parse` returns `any`, and naming a shape with `as` here
+    // would let every read below trust a field nothing checked.
+    const shipped =
+      isRecord(manifest) && Array.isArray(manifest["files"]) ? manifest["files"] : undefined;
     expect(
-      Array.isArray(files.files) ? files.files : undefined,
+      shipped,
       "the guard reads package.json#files as its scope, so this row depends on that field existing",
     ).toBeDefined();
 
@@ -372,7 +392,7 @@ describe("TC-0017-0024 (TDD-0024): a readable pin trailer stays legal and no gua
     // enters `files` this row's premise is gone and a reader needs to be told.
     expect
       .soft(
-        (files.files as string[]).filter((f) => f.startsWith(".github")),
+        (shipped ?? []).filter((f) => typeof f === "string" && f.startsWith(".github")),
         "`.github/` must stay outside package.json#files, or the pin trailers enter the distributed surface",
       )
       .toEqual([]);
@@ -626,17 +646,55 @@ interface Declaration {
   contexts: { workflow: string; job: string; verificationSet: string[] }[];
 }
 
+/**
+ * A package manifest's `scripts` entry, narrowed.
+ *
+ * The three call sites below each read one script out of one manifest, and each one used to do
+ * it with two bare `as Record<string, unknown>` assertions — `CLAUDE.md` forbids them and
+ * nothing in the lint configuration catches them inside `tests/**`. One narrowing helper
+ * removes six.
+ */
+function manifestScript(manifestPath: string, name: string): string {
+  const manifest: unknown = JSON.parse(readFileSync(manifestPath, "utf-8"));
+  if (!isPlainRecord(manifest)) return "";
+  const scripts = manifest["scripts"];
+  if (!isPlainRecord(scripts)) return "";
+  const value = scripts[name];
+  return typeof value === "string" ? value : "";
+}
+
+/** A non-array object, narrowed without an assertion. */
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /** The declaration as the repository ships it. */
 function declaration(dir: string): Declaration {
   const parsed: unknown = JSON.parse(readFileSync(path.join(dir, DECLARATION_REL), "utf-8"));
-  if (
-    typeof parsed !== "object" ||
-    parsed === null ||
-    !Array.isArray((parsed as { contexts?: unknown }).contexts)
-  ) {
+  // Narrowed and REBUILT rather than asserted. `as Declaration` would let every caller
+  // below trust a shape only the `contexts` array was checked for — the members' `workflow`,
+  // `job` and `verificationSet` were never verified, and a malformed declaration would have
+  // surfaced as an undefined field deep inside a planting helper.
+  if (!isPlainRecord(parsed) || !Array.isArray(parsed["contexts"])) {
     throw new Error("the declaration does not hold a contexts array");
   }
-  return parsed as Declaration;
+  const contexts = parsed["contexts"].map((entry, i) => {
+    if (!isPlainRecord(entry)) {
+      throw new Error(`declaration context ${i} is not an object`);
+    }
+    const { workflow, job, verificationSet } = entry;
+    if (typeof workflow !== "string" || typeof job !== "string") {
+      throw new Error(`declaration context ${i} lacks a string workflow and job`);
+    }
+    return {
+      workflow,
+      job,
+      verificationSet: Array.isArray(verificationSet)
+        ? verificationSet.filter((v): v is string => typeof v === "string")
+        : [],
+    };
+  });
+  return { contexts };
 }
 
 /** Rewrites the declaration inside a planted tree. */
@@ -1198,6 +1256,7 @@ describe("TC-0017-0047 (TDD-0047): an unevaluated rule is absent, not implied by
       printed = [
         ...printedRules(output, WORKFLOW_SCOPE),
         ...printedRules(output, SHIPPED_SCOPE),
+        ...printedRules(output, DECLARATION_SCOPE),
       ].sort();
     } finally {
       rmSync(clean, { recursive: true, force: true });
@@ -1368,6 +1427,28 @@ PLANTS.push({
   },
 });
 
+// The declaration-scope plant, appended for the same reason and after the same mistake.
+// `TC-0017-0047` read only the workflow and shipped scopes, while its own comment claimed
+// "EVERY printed scope" — so `required-context` was printed by every green run and
+// demonstrated by nothing, which is precisely the hole the shipped plant above was added to
+// close one scope earlier. Implementation-review finding L4.
+//
+// The plant renames the declared job in the workflow, so the declaration keeps pointing at a
+// job that no longer exists. Same shape as `TC-0017-0058`'s, reached through the table so
+// `TC-0017-0047` and `TC-0017-0048` both pick it up.
+PLANTS.push({
+  rule: "required-context",
+  label: "the declared required-status-context job is renamed away",
+  file: "ci.yml",
+  plant: (dir) => {
+    const declared = declaration(dir).contexts[0];
+    editWorkflow(dir, declared.workflow, (text) =>
+      text.replace(`\n  ${declared.job}:\n`, `\n  ${declared.job}-renamed:\n`),
+    );
+    return declared.job;
+  },
+});
+
 /** The findings a run reported, one per line, filtered to those naming a rule. */
 function findingsOf(output: string): string[] {
   return output.split(/\r?\n/).filter((line) => line.startsWith("R-WORKFLOW-HYGIENE-DRIFT:"));
@@ -1534,17 +1615,7 @@ describe("TC-0017-0054 (TDD-0054): an unsanctioned third-party reference exits 1
 
 describe("TC-0017-0055 (TDD-0055): the lane is invoked from an aggregate pull requests execute", () => {
   it("appears in the lint aggregate, and that aggregate runs in an unconditional pull-request job", () => {
-    const manifest: unknown = JSON.parse(
-      readFileSync(path.join(REPO_ROOT, "package.json"), "utf-8"),
-    );
-    const scripts =
-      typeof manifest === "object" && manifest !== null && !Array.isArray(manifest)
-        ? (manifest as Record<string, unknown>)["scripts"]
-        : undefined;
-    const lintAggregate =
-      typeof scripts === "object" && scripts !== null
-        ? String((scripts as Record<string, unknown>)["ci:lint"] ?? "")
-        : "";
+    const lintAggregate = manifestScript(path.join(REPO_ROOT, "package.json"), "ci:lint");
 
     // CLAIM 1 — the lane is a member of the lint aggregate.
     expect
@@ -1565,17 +1636,7 @@ describe("TC-0017-0055 (TDD-0055): the lane is invoked from an aggregate pull re
 
 describe("TC-0017-0056 (TDD-0056): the lane is absent from the release-only aggregate", () => {
   it("stays out of ci:gate, which no pull request invokes", () => {
-    const manifest: unknown = JSON.parse(
-      readFileSync(path.join(REPO_ROOT, "package.json"), "utf-8"),
-    );
-    const scripts =
-      typeof manifest === "object" && manifest !== null && !Array.isArray(manifest)
-        ? (manifest as Record<string, unknown>)["scripts"]
-        : undefined;
-    const gate =
-      typeof scripts === "object" && scripts !== null
-        ? String((scripts as Record<string, unknown>)["ci:gate"] ?? "")
-        : "";
+    const gate = manifestScript(path.join(REPO_ROOT, "package.json"), "ci:gate");
 
     // `BR-0017-0041` rejects placing the lane here, and the reason is the second claim below
     // rather than anything about ci:gate's contents: no pull request invokes it, so a lane

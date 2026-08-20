@@ -74,12 +74,21 @@ const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 /**
  * Every file that configures the runner.
  *
- * Three, since the knob set is split: the workspace, the root config that carries the
- * root-only axes, and the shared module both import. `BR-0017-0052`'s search is over the
- * runner configuration, so a retry hiding in the module neither of the other two would
- * show is exactly what a one-file scan would miss.
+ * Four, since the knob set is split: the workspace, the root config that carries the
+ * root-only axes, the shared module both import, and the MANIFEST.
+ *
+ * `package.json` was missing and it is the likeliest site of all: `vitest run --retry 2`
+ * added to a `test:*` script appears in no configuration file, so the scan returned zero
+ * results while the runner retried on every invocation of that slice. `BR-0017-0052`'s
+ * search is over the runner configuration, and the command line IS part of it —
+ * implementation-review finding L10.
  */
-const RUNNER_FILES = ["vitest.workspace.ts", "vitest.config.ts", "vitest.knobs.ts"] as const;
+const RUNNER_FILES = [
+  "vitest.workspace.ts",
+  "vitest.config.ts",
+  "vitest.knobs.ts",
+  "package.json",
+] as const;
 
 /** The override variable names. Literals, because the names are the contract. */
 const WORKERS_ENV = "QFAI_TEST_MAX_WORKERS";

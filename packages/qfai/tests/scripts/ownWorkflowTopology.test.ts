@@ -199,13 +199,19 @@ function evaluateVerdict(needs: Record<string, { result?: string }>): {
     });
     return { exitCode: 0, output };
   } catch (error) {
-    const failure = error as { status?: number; stdout?: string; stderr?: string };
+    // Narrowed field by field rather than asserted into a shape. A thrown value is `unknown`
+    // by construction, and an `as` here would make the three reads below trust a shape nothing
+    // checked — the same defect this file exists to catch one level up.
+    const failure = isRecord(error) ? error : {};
+    const status = failure["status"];
+    const stdout = failure["stdout"];
+    const stderr = failure["stderr"];
     // `status` is `null` when the child was killed by a signal rather than
     // exiting. Mapping that to -1 keeps a signal death distinguishable from
     // exit 1; a `?? 1` here would let a crashed child satisfy every rejecting row.
     return {
-      exitCode: failure.status ?? -1,
-      output: `${failure.stdout ?? ""}${failure.stderr ?? ""}`,
+      exitCode: typeof status === "number" ? status : -1,
+      output: `${typeof stdout === "string" ? stdout : ""}${typeof stderr === "string" ? stderr : ""}`,
     };
   }
 }
@@ -492,8 +498,13 @@ describe("TC-0017-0029 (TDD-0029): the shared definition keeps its four-step ord
     // setup would be a no-op and the install would use the wrong pnpm.
     expect.soft(steps.length, "the definition has exactly four steps").toBe(4);
 
-    const runOf = (i: number): string =>
-      typeof steps[i]?.["run"] === "string" ? (steps[i]["run"] as string) : "";
+    const runOf = (i: number): string => {
+      // Bound to a local first. `typeof steps[i]?.["run"] === "string"` narrows the EXPRESSION,
+      // not `steps[i]["run"]`, so indexing again threw the narrowing away and invited an
+      // assertion to paper over it.
+      const value = steps[i]?.["run"];
+      return typeof value === "string" ? value : "";
+    };
     expect.soft(runOf(0), "step 1 enables the package-manager shim").toContain("corepack enable");
     expect
       .soft(steps[1]?.["uses"], "step 2 sets Node up")
@@ -508,9 +519,8 @@ describe("TC-0017-0029 (TDD-0029): the shared definition keeps its four-step ord
     // has only the first, so the explicit path is new here rather than carried
     // over, and asserting it is what stops the extraction from silently dropping
     // half the rule.
-    const nodeWith = isRecord(steps[1]?.["with"])
-      ? (steps[1]["with"] as Record<string, unknown>)
-      : {};
+    const withBlock = steps[1]?.["with"];
+    const nodeWith = isRecord(withBlock) ? withBlock : {};
     expect.soft(nodeWith["cache"], "the Node step caches the package manager").toBe("pnpm");
     expect
       .soft(nodeWith["cache-dependency-path"], "and names its cache-dependency path explicitly")
@@ -635,7 +645,9 @@ function triggersOf(file: string): Record<string, unknown> {
   if (!isRecord(doc)) {
     throw new Error(`${file} does not parse as a mapping`);
   }
-  const under = doc["on"] ?? doc[String(true)] ?? (doc as Record<string, unknown>)["true"];
+  // `doc` is already narrowed to a record by the guard above, so the third lookup needs no
+  // assertion — it was there only because the key is written two ways.
+  const under = doc["on"] ?? doc[String(true)] ?? doc["true"];
   return isRecord(under) ? under : {};
 }
 
@@ -779,7 +791,7 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
     // report, which ends in `|| true`), and the difference between the two kinds is the
     // whole point of enumerating them.
     const toothless = steps
-      .filter((step) => REQUIRED.includes(stepName(step) as (typeof REQUIRED)[number]))
+      .filter((step) => listHas(REQUIRED, stepName(step)))
       .filter(
         (step) =>
           step["continue-on-error"] === true ||
@@ -992,9 +1004,7 @@ describe("TC-0017-0006 (TDD-0006): a documentation-only change executes at most 
       )
       .toEqual([...UNCONDITIONAL_JOBS].sort());
 
-    const selected = Object.entries(jobs).filter(
-      ([id]) => !UNCONDITIONAL_JOBS.includes(id as (typeof UNCONDITIONAL_JOBS)[number]),
-    );
+    const selected = Object.entries(jobs).filter(([id]) => !listHas(UNCONDITIONAL_JOBS, id));
 
     // CLAIM 2 — every conditional job derives its condition from the detection output.
     // A hand-written condition would satisfy CLAIM 1 and still select lanes by a rule
@@ -1442,6 +1452,17 @@ const VERIFICATION_SET = [
   "Run qfai validate gate (fail on error)",
 ] as const;
 
+/**
+ * Membership without a type assertion.
+ *
+ * `LIST.includes(value)` on an `as const` tuple rejects a plain `string`, and the usual workaround
+ * is `value as (typeof LIST)[number]` — a bare assertion, which `CLAUDE.md` forbids. Widening the
+ * parameter to `readonly string[]` accepts every tuple in this file and needs no assertion at all.
+ */
+function listHas(list: readonly string[], value: string): boolean {
+  return list.includes(value);
+}
+
 /** Every step of one job, narrowed. */
 function stepsOf(jobId: string): Record<string, unknown>[] {
   const job = ciJobs()[jobId];
@@ -1518,9 +1539,7 @@ describe("TC-0017-0036 (TDD-0036): the required-context job keeps its name and u
     // at all. Same rule as the hygiene lane's property 3 now enforces from CI, asserted
     // here against this repository's own workflow.
     const guarded = reachableSteps(REQUIRED_CONTEXT_NAME)
-      .filter(({ step }) =>
-        VERIFICATION_SET.includes(named(step) as (typeof VERIFICATION_SET)[number]),
-      )
+      .filter(({ step }) => listHas(VERIFICATION_SET, named(step)))
       .filter(({ step }) => step["if"] !== undefined)
       .map(({ jobId, step }) => `${jobId}: ${named(step)} if=${String(step["if"])}`);
     expect
@@ -1564,9 +1583,7 @@ describe("TC-0017-0036 (TDD-0036): the required-context job keeps its name and u
 describe("TC-0017-0038 (TDD-0038): no verification-set item is weakened by continue-on-error", () => {
   it("leaves no verification item able to fail without failing the job", () => {
     const weakened = reachableSteps(REQUIRED_CONTEXT_NAME)
-      .filter(({ step }) =>
-        VERIFICATION_SET.includes(named(step) as (typeof VERIFICATION_SET)[number]),
-      )
+      .filter(({ step }) => listHas(VERIFICATION_SET, named(step)))
       .filter(({ step }) => step["continue-on-error"] !== undefined)
       .map(({ jobId, step }) => `${jobId}: ${named(step)} = ${String(step["continue-on-error"])}`);
 

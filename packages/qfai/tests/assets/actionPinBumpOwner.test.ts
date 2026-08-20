@@ -18,6 +18,23 @@
  * claim below names the specific thing its rule names: a path that must be cited, a reason
  * that must be present, a rejected reason that must be marked rejected.
  *
+ * ## The exception, and why it is not a loophole
+ *
+ * Three claims pin a PHRASE rather than a word, and each says why at its own site. The reason
+ * is always the same and it is not editorial taste: these records QUOTE the business rule they
+ * satisfy, so the obvious word-level pattern matched the quotation instead of the record's own
+ * statement. `/\bkept\b/` passed over a record saying the opposite of what it needed to say,
+ * because `BR-0017-0050`'s quoted text contains "the lower setting MUST be kept". `before` and
+ * `first` appear in the surrounding prose; `sign-off` appears in the next sentence.
+ *
+ * Each of those was found by an oracle round that reddened NOTHING, which is the only way this
+ * class of vacuity shows up. So the rule stands as "content, not wording", with the
+ * clarification that a phrase is the smallest unit of content when a shorter one is satisfied
+ * by the rule's own text quoted nearby. Implementation-review finding L12 pointed out that the
+ * paragraph above said otherwise while the pins existed; this is the honest version.
+ *
+ * Markdown FORMATTING is never part of a pin, and one had crept in — corrected below.
+ *
  * ## The first two rows
  *
  * `TC-0017-0074` and `TC-0017-0075` are about retiring the repository's own duplicate of the
@@ -288,7 +305,11 @@ describe("TC-0017-0066 (TDD-0066): a slower or flakier higher value keeps the lo
       // `kept` alone is not enough: this record QUOTES BR-0017-0050, whose own text says
       // the lower setting must be kept. Matching that word let the claim pass over a
       // record saying the opposite of what it needs to say.
-      .toMatch(/higher setting was \*\*kept\*\*/i);
+      //
+      // The subject plus the verb, and NOT the Markdown emphasis around it. The pattern was
+      // `/higher setting was \*\*kept\*\*/i`, which made bolding load-bearing — an
+      // editorial change this file's own docblock says must not break a build.
+      .toMatch(/higher setting[^.]{0,40}\bkept\b/i);
 
     // CLAIM 3 — and it names the retry loop the rule forbids, as something that did not happen.
     // "Re-running the comparison until it agrees is forbidden" is the failure mode this episode
