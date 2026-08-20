@@ -29,6 +29,11 @@
  */
 // QFAI:SPEC-0017:TC-0017-0074
 // QFAI:SPEC-0017:TC-0017-0075
+// QFAI:SPEC-0017:TC-0017-0025
+// QFAI:SPEC-0017:TC-0017-0026
+// QFAI:SPEC-0017:TC-0017-0052
+// QFAI:SPEC-0017:TC-0017-0066
+// QFAI:SPEC-0017:TC-0017-0067
 
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -165,5 +170,158 @@ describe("TC-0017-0075 (TDD-0075): the gate is present at or before the deletion
         `the shipped copy must survive — adopters still receive it: ${SHIPPED_WORKFLOW}`,
       )
       .toBe(true);
+  });
+});
+
+// ── the pin bump owner, the shipped ordering, and the parallelism episode ────
+//
+// Three subjects, one shape: each is an obligation whose satisfying artifact is a paragraph in
+// the decision register, and each row reads the specific content its rule names rather than
+// the paragraph as a whole.
+
+/** The decision that names the pin bump owner. */
+const PIN_OWNER_DR = "DR-0017-0003";
+
+/** The decision recording that shipped coverage did not precede the shipped hardening. */
+const SHIPPED_ORDER_DR = "DR-0017-0008";
+
+/** The decision recording the parallelism episode. */
+const PARALLELISM_DR = "DR-0017-0009";
+
+/**
+ * Files that would BE a bump configuration.
+ *
+ * `BR-0017-0023` forbids creating one without the user, so the row asserts their absence — and
+ * the list is enumerated rather than pattern-matched, because "a bump configuration" is not a
+ * shape a glob can recognise. These are the three a maintainer would reach for.
+ */
+const BUMP_CONFIGS = [
+  path.join(".github", "dependabot.yml"),
+  path.join(".github", "dependabot.yaml"),
+  "renovate.json",
+];
+
+describe("TC-0017-0025 (TDD-0025): a durable repository artifact names the pin bump owner", () => {
+  it("records an owner and binds the obligation to a moment something can detect", () => {
+    const section = decisionSection(PIN_OWNER_DR);
+    expect(section, `${PIN_OWNER_DR} must record the pin bump owner`).not.toBe("");
+
+    // CLAIM 1 — an owner is named. `BR-0017-0022` makes the pins unsatisfied until a durable
+    // artifact says who bumps them, so the absence of a name is the failure.
+    expect.soft(section, "the record must name who bumps the pins").toMatch(/owner/i);
+
+    // CLAIM 2 — and the obligation is attached to a recurring moment. An owner with no cadence
+    // discharges "whenever someone remembers", which is the state `BR-0017-0022` describes as
+    // unsatisfied rather than as informal.
+    expect
+      .soft(section, "the record must bind the obligation to a recurring, detectable moment")
+      .toMatch(/release preparation/i);
+
+    // CLAIM 3 — and it is a ROLE. A named individual would go stale with no gate able to
+    // notice, which is the same failure class the version-marker rules exist to prevent. The
+    // record says so; this asserts it still does.
+    expect
+      .soft(section, "the record must name a role rather than an individual, and say why")
+      .toMatch(/role/i);
+  });
+});
+
+describe("TC-0017-0026 (TDD-0026): no root bump configuration, and the owner is recorded anyway", () => {
+  it("keeps the repository free of a bump configuration while the obligation stays discharged", () => {
+    // CLAIM 1 — none of the three exists. `BR-0017-0023` forbids creating one without the
+    // user, and `OC-3` is why: it is a root-level addition.
+    const present = BUMP_CONFIGS.filter((rel) => existsSync(path.join(REPO_ROOT, rel)));
+    expect.soft(present, "a bump configuration may not be created without the user").toEqual([]);
+
+    // CLAIM 2 — and the obligation is discharged anyway. This is the half that makes the row
+    // more than a prohibition: the absence of the configuration is only acceptable BECAUSE the
+    // record exists, so both are asserted together.
+    expect
+      .soft(decisionSection(PIN_OWNER_DR), "the owner must be recorded even with no configuration")
+      .not.toBe("");
+  });
+});
+
+describe("TC-0017-0052 (TDD-0052): shipped coverage never precedes the shipped hardening", () => {
+  it("records that the hardening was in place before the scan was enabled, with what was checked", () => {
+    const section = decisionSection(SHIPPED_ORDER_DR);
+    expect(section, `${SHIPPED_ORDER_DR} must record the ordering check`).not.toBe("");
+
+    // CLAIM 1 — the ordering is stated in the accepting direction. `EX-0017-0045` gives the
+    // rejected shape ("lands instantly red") and the accepting one ("in the same change as the
+    // shipped hardening or later, never before it"), so the record has to say which happened.
+    expect
+      .soft(section, "the record must state that the hardening preceded the coverage")
+      // The SENTENCE, not a word. `before` and `first` both appear elsewhere in this
+      // section, so the alternation this replaced survived its own oracle round.
+      .toMatch(/enabled only after/i);
+
+    // CLAIM 2 — and it says what was checked, not merely that a check happened. A record that
+    // asserts "the tree was hardened" without naming the properties is a claim nobody can
+    // re-derive, which is the same defect as a cost claim with no numbers.
+    for (const property of [/permission/i, /timeout/i, /pin/i]) {
+      expect
+        .soft(section, `the record must name what was verified (${String(property)})`)
+        .toMatch(property);
+    }
+  });
+});
+
+describe("TC-0017-0066 (TDD-0066): a slower or flakier higher value keeps the lower one", () => {
+  it("records the flakiness measurement, and what happened instead of lowering the value", () => {
+    const section = decisionSection(PARALLELISM_DR);
+    expect(section, `${PARALLELISM_DR} must record the parallelism episode`).not.toBe("");
+
+    // CLAIM 1 — the measurement is recorded, with numbers. `BR-0017-0030` is explicit that no
+    // parallelism claim lands on argument, and this record exists because a claim WAS made and
+    // then measured.
+    expect
+      .soft(section, "the record must carry the measurement rather than describing it")
+      .toMatch(/\b862\b/);
+
+    // CLAIM 2 — and the outcome is stated as a THIRD outcome, not as the rule's. `BR-0017-0050`
+    // says a flakier higher value means the lower one is kept; here the higher value was kept
+    // and the cause removed instead. A record that let that read as compliance would be worse
+    // than one that omitted it.
+    expect
+      .soft(section, "the record must say the declared value was KEPT, not lowered")
+      // `kept` alone is not enough: this record QUOTES BR-0017-0050, whose own text says
+      // the lower setting must be kept. Matching that word let the claim pass over a
+      // record saying the opposite of what it needs to say.
+      .toMatch(/higher setting was \*\*kept\*\*/i);
+
+    // CLAIM 3 — and it names the retry loop the rule forbids, as something that did not happen.
+    // "Re-running the comparison until it agrees is forbidden" is the failure mode this episode
+    // was closest to, so the record has to distinguish diagnosis from repetition.
+    expect
+      .soft(section, "the record must distinguish diagnosis from re-running until it agrees")
+      .toMatch(/re-?run/i);
+  });
+});
+
+describe("TC-0017-0067 (TDD-0067): revising the declared starting value needs the sign-off", () => {
+  it("records that a revision was proposed and refused, and that the value did not move", () => {
+    const section = decisionSection(PARALLELISM_DR);
+
+    // The rule's negative direction, and this repository has an actual instance of it: a
+    // revision was proposed on the strength of a measurement and refused. `BR-0017-0051` says
+    // "no agent may substitute a different starting value on the strength of its own
+    // measurement", so the interesting artifact is the refusal, not a value.
+    expect
+      .soft(section, "the record must show a revision was proposed and not taken")
+      // `sign-off` appears in the very next sentence, so matching it let this pass over a
+      // record that never mentioned a proposal at all.
+      .toMatch(/proposed lowering/i);
+
+    // And the declared value is still what it was. Asserted against the runner configuration
+    // rather than against the record, so the two cannot agree with each other while both being
+    // wrong.
+    const knobs = readFileSync(
+      path.join(REPO_ROOT, "packages", "qfai", "vitest.knobs.ts"),
+      "utf-8",
+    );
+    expect
+      .soft(knobs, "the declared starting value must still be the user's ten")
+      .toMatch(/DECLARED_START\s*=\s*10\b/);
   });
 });

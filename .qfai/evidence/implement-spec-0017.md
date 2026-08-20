@@ -2283,3 +2283,130 @@ Same uneven resolution as the six previous measurements.
 
 The three blocking agent verdicts were not obtained, so `Status` is `refactor` for all six rows. The
 item-12 checkpoint is not attempted, for the reasons recorded under the earlier changes.
+
+## The record rows whose artifact exists (TDD-0025, TDD-0026, TDD-0052, TDD-0066, TDD-0067)
+
+Five of the eleven record-shaped rows, chosen because their artifact either already exists or can be
+written from what actually happened. Base revision `8bd05615`.
+
+The six left alone are gated on work that has not run: `TDD-0033`/`0034`/`0035` are cost claims about
+build-artifact reuse, which `10_Plan.md` excludes from the nine as "a measurement, not a step";
+`TDD-0065` needs an adopted worker value and no value has been adopted; `TDD-0069`/`0070` are process
+constraints on tuning changes and no tuning change has landed.
+
+### Two rows were already satisfied, and that is the honest reading
+
+`DR-0017-0003` has named the pin bump owner since the spec was authored — as a ROLE, bound to release
+preparation, with the reasoning for both choices written down. So `TDD-0025` and `TDD-0026` passed on
+their first run: they are regression guards over a record that already says what its rule requires, and
+`RED failure mode: falsifiability` applies with `R1` and `R2` carrying it.
+
+`TDD-0026` is the more interesting of the two because it asserts a pair. Three candidate bump
+configurations are asserted absent — `BR-0017-0023` forbids creating one without the user — AND the
+owner is asserted recorded anyway. The absence is only acceptable BECAUSE the record exists, so a row
+that checked only the prohibition would pass on a repository with neither.
+
+### `DR-0017-0008`: the ordering check, recorded because it is not recoverable afterwards
+
+`BR-0017-0045` allows shipped coverage to land with the hardening or later and forbids it landing
+earlier. The distinction lives entirely in what was true at the moment the scan was switched on, and a
+reviewer reading the commit that adds the scan cannot recover it: they see a lane that passes, and
+cannot tell whether it passes because the tree was hardened first or because the rules were written to
+fit whatever the tree happened to be.
+
+So the record carries the check's RESULTS — permissions, timeouts, pins, no `secrets:`, and the absence
+of `fail-fast` explained rather than asserted (there is no matrix to disable it on). `TDD-0052` asserts
+those specifics, not that a check occurred.
+
+### `DR-0017-0009`: the parallelism episode, including the outcome the rule does not name
+
+The declared value of ten measured flakier. The measurement is in the record with its numbers, one
+variable changed per row, because `BR-0017-0030` forbids a parallelism claim landing on argument.
+
+Then the part worth reading: a revision was proposed, put to the user because `BR-0017-0051` reserves
+it, and REFUSED — along with its framing. The instruction was to correct the structure that creates the
+contention rather than the number that exposes it, and that turned out to be right: the cause was
+volume, almost all of it repeated, and removing it took the file from 22.90s to 5.49s with the slice
+passing at ten.
+
+`BR-0017-0050` says a flakier higher value means the lower one is kept. That is not what happened — the
+higher value was kept and the flakiness removed. Recording it as compliance would be false; recording it
+as a violation would be worse, because the rule's purpose was served more completely than its letter
+asks. The record says so in those terms, and `CR-20260820-0005` carries the question of whether the rule
+should name this third outcome. The record also states what did NOT happen: no re-run loop, which
+`BR-0017-0031` forbids and which was the nearest available temptation given that four earlier sweeps had
+been green at ten.
+
+### Four claims matched words that survive their own mutation
+
+The first oracle run reported four rounds reddening nothing. One was the mutation's fault and three were
+the claims':
+
+```text
+R1  /release preparation/  the register writes "Release preparation" at the start of a sentence,
+                           and the round replaced only the lowercase form
+R4  /already|preced|in place|before/  "before" and "first" appear elsewhere in the same section
+R6  /kept|retained|unchanged/         "kept" appears in the QUOTED rule text the record cites
+R7  /propos|asked|sign-off/           "sign-off" appears in the very next sentence
+```
+
+The three claim failures share one cause worth naming: a record that QUOTES its rule makes the rule's
+own vocabulary the most likely thing an over-broad alternation will collide with. `BR-0017-0050` says
+"the lower setting MUST be kept", so a claim matching `kept` passes over a record saying the opposite of
+what it needs to say. Each claim now names the SENTENCE its rule requires — `enabled only after`,
+`higher setting was **kept**`, `proposed lowering` — rather than a word the surrounding prose is likely
+to contain.
+
+### RED and GREEN
+
+- **RED command**, from `packages/qfai`:
+  `pnpm exec vitest run tests/assets/actionPinBumpOwner.test.ts`
+- **RED result**: `Tests 3 failed | 4 passed (7)`, exit 1 — the two missing decisions and one regex on
+  an empty section, all assertions.
+- **GREEN result**: same command, `Tests 7 passed (7)`.
+
+### Oracle proof — nine rounds
+
+| id | mutation | mutant | reddens |
+| --- | --- | --- | --- |
+| `R1` | the pin owner's recurring moment is removed, leaving an owner with no cadence | `ef1d087e` | `TC-0017-0025` |
+| `R2` | a bump configuration appears at a root the user never approved | `e180032a` | `TC-0017-0026` |
+| `R3` | the shipped-ordering record stops naming what was verified | `0a3e73a2` | `TC-0017-0052` |
+| `R4` | the shipped-ordering record stops saying the hardening came first | `69804e17` | `TC-0017-0052` |
+| `R5` | the parallelism record loses its numbers, leaving a claim on argument | `4ac1e8f7` | `TC-0017-0066` |
+| `R6` | the parallelism record stops saying the declared value was kept | `f1c8f48a` | `TC-0017-0066` |
+| `R7` | the parallelism record drops the refusal, so the sign-off question disappears | `a3c2d4e0` | `TC-0017-0067` |
+| `R8` | the declared starting value moves without a sign-off | `5da48f36` | `TC-0017-0067` |
+| `R9-control` | a sentence added to the register that touches no required content | `78ae34e3` | **nothing new** |
+
+Every mutation reddens exactly one row. `R8` is the round that mutates the runner configuration rather
+than the register: `TDD-0067` asserts the declared value against `vitest.knobs.ts` and not against the
+record, so the two cannot agree with each other while both being wrong.
+
+### The suite
+
+| script | test files | tests | wall clock |
+| --- | --- | --- | --- |
+| `test:core` | 122 passed (122) | 1587 passed | 2 skipped (1589) | 76.4s |
+| `test:unit` | 43 passed (43) | 266 passed (266) | 7.4s |
+| `test:validators` | 46 passed (46) | 351 passed (351) | 12.5s |
+| `test:integration` | 124 passed | 4 skipped (128) | 862 passed | 19 skipped (881) | 40.3s |
+| `test:e2e` | 74 passed | 4 skipped (78) | 896 passed | 16 skipped (912) | 25.7s |
+| `test:cli` | 11 passed (11) | 321 passed (321) | 61.7s |
+| `test:scripts` | 10 passed (10) | 132 passed (132) | 15.2s |
+
+Total 239.2s, every one green.
+
+### The validate delta
+
+One below the previous change: info=4 warning=359 error=2, exit 1. Two removed (TC-0017-0025,
+TC-0017-0066) and one added, TC-0017-0065, which this change deliberately did not touch - it needs an
+adopted worker value and none has been adopted. Three of the five promoted rows were not among the
+removed, and one row nothing touched joined. Eighth measurement of the resolution behaviour
+CR-20260818-0001 is open against, and by now the count moves for reasons that have little to do with
+the rows landing.
+
+### Gate items NOT satisfied
+
+The three blocking agent verdicts were not obtained, so `Status` is `refactor` for all five rows. The
+item-12 checkpoint is not attempted, for the reasons recorded under the earlier changes.

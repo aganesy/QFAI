@@ -257,3 +257,80 @@ file, so an entry here is what makes that citation checkable.
 - Related: AC-0017-0030, AC-0017-0031, BR-0017-0058, BR-0017-0059, BR-0017-0060, BR-0017-0061,
   EX-0017-0061, TC-0017-0071, TC-0017-0072, TC-0017-0073, TC-0017-0074, TC-0017-0075,
   `DR-0017-0005` edge 4, `CR-20260807-0001`
+
+### DR-0017-0008: shipped-tree hygiene coverage was enabled over an already-hardened tree
+
+- Status: accepted
+- Context: `BR-0017-0045` allows shipped-tree coverage to land in the same change as the shipped
+  hardening or later, and forbids it landing earlier, because a lane enabled over an unhardened tree
+  "lands instantly red" — and a lane that arrives red is a lane the next person disables. The hardening
+  itself belongs to `spec-0003`, so this spec cannot assert it happened; it can only check the state
+  before switching the scan on, and record what it found.
+- Decision: the scan over `packages/qfai/assets/init/root/.github/workflows/**` was enabled only after
+  the shipped tree was verified to satisfy every rule the scan applies. The check was run first, not
+  after the fact, and these are its results:
+  - every shipped job declares a **permission** block reachable from it;
+  - every shipped job declares **`timeout-minutes`**;
+  - every `uses:` reference in the shipped tree resolves to a forty-hex commit SHA — a **pin** — with
+    one third-party owner, `pnpm`, which is the sanctioned entry;
+  - no shipped job declares `secrets:`;
+  - `fail-fast` is absent because there is no matrix to disable it on: `qfai-tests.yml` expresses its
+    lanes as seven independent jobs rather than as matrix legs.
+- Decision, and why the check is recorded rather than merely performed: the accepting order and the
+  rejected one differ only in what was true at the moment the scan was switched on, and that is not
+  recoverable from the diff afterwards. A reviewer reading the commit that adds the scan sees a lane
+  that passes; they cannot see whether it passes because the tree was hardened first or because the
+  rules were written to fit whatever the tree happened to be. This paragraph is the difference.
+- Consequences: the shipped tree now has two guards with different subjects — this lane over its
+  structural hygiene, and `spec-0003`'s shape gate over its contract dimensions. Neither subsumes the
+  other, and the lane's own coverage boundary says so rather than implying it covers the shipped
+  contract as well.
+- Related: AC-0017-0022, BR-0017-0044, BR-0017-0045, EX-0017-0045, TC-0017-0050, TC-0017-0051,
+  TC-0017-0052, `DR-0017-0004`
+
+### DR-0017-0009: the declared parallelism value of ten measured flakier, and was kept
+
+- Status: accepted
+- Context: `BR-0017-0048` fixes the declared starting value at ten on the worker axis, and change 6
+  landed it. Several sweeps passed at ten. Then one did not: the `integration` slice failed three cases
+  of `spec-0003`'s `shippedWorkflowDetection` row, all with `Test timed out in 15000ms` and none on an
+  assertion.
+- Decision, the measurement, because `BR-0017-0030` forbids a parallelism claim landing on argument.
+  Fourteen logical CPUs, one variable changed per row:
+  - the failing file alone — **10 passed**, so not broken;
+  - the `integration` slice at workers 10, concurrency 10 — **3 timeouts**, reproduced twice;
+  - the slice at workers 10, concurrency 5 — **3 timeouts**, so not the concurrency axis;
+  - the slice at workers 4, concurrency 5 — **862 passed**, so the worker axis.
+- Decision, what was proposed and refused: on that measurement the orchestrator proposed lowering the
+  declared starting value, and asked, because `BR-0017-0051` reserves that revision — "no agent may
+  substitute a different starting value on the strength of its own measurement". The user refused the
+  proposal and its framing: ten is mandatory, and the instruction was to correct the structure that
+  creates the contention rather than the number that exposes it. The sign-off `BR-0017-0051` requires
+  was therefore never given, and the declared value did not move.
+- Decision, what the cause turned out to be: not contention for a lock or a path, but VOLUME, and
+  almost all of it repeated. The failing describe called its fixture builder once per `it()`, three
+  times, for fixtures its own comment called "the SAME three degraded fixtures" — roughly eighty-four
+  git process spawns and nine shell runs to build one fixture set three times. On a platform where a
+  spawn costs tens of milliseconds that is the entire fifteen-second budget. The fixture set is now
+  memoized, the shipped orchestrator document is parsed once per worker instead of once per call, and
+  three `git config` invocations became `-c` flags. The file went from 22.90s to 5.49s and the slice
+  passes at the declared ten.
+- Decision, the outcome named as a THIRD one: `BR-0017-0050` says that when the higher setting measures
+  slower or flakier, the lower setting MUST be kept and the measurement recorded as the reason. That is
+  not what happened here. The higher setting was **kept**, unchanged, and the measured flakiness was
+  removed by fixing what produced it. Recording this as compliance with `BR-0017-0050` would be false;
+  recording it as a violation would be worse, because the rule's purpose — do not paper over flakiness
+  — was served more completely than the rule's letter asks. `CR-20260820-0005` carries the question of
+  whether the rule should name this outcome.
+- Decision, and what did NOT happen: no re-run loop. `BR-0017-0031` forbids "re-running the comparison
+  until it agrees", and the temptation was real — the sweeps under changes 6 through 9 had all been
+  green at ten, so one more run might have been green too. Each run above changed exactly one variable
+  and the conclusion came from the differences between them, not from repetition until a green appeared.
+- Consequences: the declared value stays ten and the override remains available for measurement without
+  editing a declaration. One cost is accepted and named: the repaired describe is now the only place in
+  that file where fixtures are memoized, so the next expensive describe will need the same treatment
+  rather than inheriting it. `validators/upstreamSsotGuard.test.ts` still builds a fixture repository
+  with three `git config` spawns and takes 9.19s; it is not on any failing path today and was left
+  alone rather than swept up.
+- Related: AC-0017-0028, AC-0017-0029, BR-0017-0030, BR-0017-0031, BR-0017-0048, BR-0017-0050,
+  BR-0017-0051, EX-0017-0050, EX-0017-0051, TC-0017-0066, TC-0017-0067, `CR-20260820-0005`
