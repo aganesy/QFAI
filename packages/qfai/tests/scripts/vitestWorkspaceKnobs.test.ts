@@ -63,11 +63,12 @@
 // QFAI:SPEC-0017:TC-0017-0061
 // QFAI:SPEC-0017:TC-0017-0068
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { parse as parseYaml } from "yaml";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "..", "..");
@@ -331,26 +332,65 @@ describe("TC-0017-0068 (TDD-0068): the runner workspace carries zero retry setti
     // CLI-flag pattern would otherwise match this file's own docblock explaining it — the
     // exact trap the first draft fell into one level down. A manifest contributes its script
     // VALUES; a workflow contributes its `run:` values. Prose cannot reach either.
-    const manifestScripts = (rel: string, root: string): { line: string; at: string }[] => {
+    const manifestScripts = (
+      rel: string,
+      root: string,
+      label: string,
+    ): { line: string; at: string }[] => {
       const parsed: unknown = JSON.parse(readFileSync(path.join(root, rel), "utf-8"));
       const scripts =
         isRecord(parsed) && isRecord(parsed["scripts"]) ? parsed["scripts"] : undefined;
       if (scripts === undefined) return [];
       return Object.entries(scripts)
         .filter(([, value]) => typeof value === "string")
-        .map(([name, value]) => ({ line: String(value), at: `${rel} scripts.${name}` }));
+        .map(([name, value]) => ({ line: String(value), at: `${label} scripts.${name}` }));
     };
 
-    const workflowRuns = (rel: string): { line: string; at: string }[] =>
-      readFileSync(path.join(REPO_ROOT, rel), "utf-8")
-        .split(/\r?\n/)
-        .map((line, i) => ({ line, at: `${rel}:${i + 1}` }))
-        .filter(({ line }) => /^\s*(?:-\s*)?run:/.test(line) || /^\s{8,}\S/.test(line));
+    // Workflow commands come from the PARSED document, not from an indentation guess.
+    //
+    // The first version filtered lines by `/^\s*(?:-\s*)?run:/` or `/^\s{8,}\S/`. Measured over
+    // the real `ci.yml`: 325 lines selected, zero run-block lines missed — but 69 of them were
+    // `with:` / `env:` entries and COMMENTS, so a comment documenting the prohibition reddened
+    // the lane, and a `with: { retries: 3 }` input did too. `ci.yml` is the likeliest place to
+    // document the rule, and turning that red points the reader at deleting the documentation —
+    // the backwards incentive this claim was rewritten to remove. Round 6 finding F-5.
+    //
+    // Comment lines are stripped inside each `run:` body for the same reason the `--no-renames`
+    // claim strips them: a body explaining why no retry belongs there must not be a retry.
+    const workflowRuns = (rel: string): { line: string; at: string }[] => {
+      const doc: unknown = parseYaml(readFileSync(path.join(REPO_ROOT, rel), "utf-8"));
+      const jobs = isRecord(doc) && isRecord(doc["jobs"]) ? doc["jobs"] : {};
+      const out: { line: string; at: string }[] = [];
+      for (const [jobId, job] of Object.entries(jobs)) {
+        const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
+        steps.forEach((step, index) => {
+          const run = isRecord(step) ? step["run"] : undefined;
+          if (typeof run !== "string") return;
+          run
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter((line) => line.length > 0 && !line.startsWith("#"))
+            .forEach((line) => out.push({ line, at: `${rel} ${jobId}.steps[${index}].run` }));
+        });
+      }
+      return out;
+    };
+
+    // EVERY workflow, globbed rather than listed. `release.yml` runs `pnpm ci:gate`, and `ci:gate`
+    // contains `pnpm -C packages/qfai test` — so it invokes the runner and a `--retry` added there
+    // was unseen by a one-file list. Round 6 finding F-6; a glob also cannot go stale.
+    const workflowDir = path.join(REPO_ROOT, ".github", "workflows");
+    const workflowFiles = readdirSync(workflowDir)
+      .filter((name) => /\.ya?ml$/.test(name))
+      .map((name) => path.join(".github", "workflows", name));
+    expect
+      .soft(workflowFiles.length, "there must be workflows to scan for this claim to mean anything")
+      .toBeGreaterThan(0);
 
     const commandSites = [
-      ...manifestScripts("package.json", PACKAGE_ROOT),
-      ...manifestScripts("package.json", REPO_ROOT),
-      ...workflowRuns(path.join(".github", "workflows", "ci.yml")),
+      ...manifestScripts("package.json", PACKAGE_ROOT, "packages/qfai/package.json"),
+      ...manifestScripts("package.json", REPO_ROOT, "package.json"),
+      ...workflowFiles.flatMap(workflowRuns),
     ];
     const configSites = CONFIG_FILES.flatMap((file) =>
       readFileSync(path.join(PACKAGE_ROOT, file), "utf-8")

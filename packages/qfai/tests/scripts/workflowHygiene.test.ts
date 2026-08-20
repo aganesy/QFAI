@@ -22,8 +22,11 @@
  * non-compliant, and — worse for a gate — would go on reporting a violation after
  * the violation was fixed at the workflow level.
  *
- * The baseline the spec records for this is `2 of 12 declare, 4 of 12 reach`, and
- * both halves reproduce here. The gap change 2 closes is eight jobs.
+ * The spec's baseline for this is `2 of 12 declare, 4 of 12 reach` — a statement about the
+ * tree BEFORE change 2, not about this one. Measured at HEAD: **4 declare, 12 reach**, a gap
+ * of eight. Round 6 finding F-12: the sentence read as a claim about the current tree, and
+ * as that claim it was false. Both counters are still computed here; only one of them is
+ * asserted, and `TC-0017-0015` owns the comparison.
  *
  * ## What is NOT asserted, and why
  *
@@ -151,10 +154,10 @@ function hasReachablePermissions(entry: Job): boolean {
   return "permissions" in entry.job || "permissions" in entry.workflow;
 }
 
-/** Declaration-only counting, kept so the two measurements can be compared. */
-function hasDeclaredPermissions(entry: Job): boolean {
-  return "permissions" in entry.job;
-}
+// `hasDeclaredPermissions` had a test-local copy here, used only by the two claims round 6
+// removed. `TC-0017-0015` reads the LANE's export instead, which is the point that row makes
+// about itself — so a local duplicate was the weaker half of a pair that already had a
+// stronger half. Deleted rather than prefixed with an underscore to keep it alive.
 
 type Step = { jobId: string; step: Record<string, unknown> };
 
@@ -246,33 +249,26 @@ describe("TC-0017-0014 (TDD-0014): zero own-CI jobs lack a reachable permission 
       )
       .toEqual([]);
 
-    // The two measurements are recorded together, because `BR-0017-0014`'s whole
-    // point is that they are different and only one of them can falsify the rule.
-    // Declaration-only is expected to stay BELOW reachability here: most jobs
-    // inherit, and that is compliant.
+    // This row asserts the COUNT and nothing else, and the reason is worth recording because
+    // two attempts at more have now been removed from here.
     //
-    // Compared against REACHABILITY, not against the job count. `declared <= jobs.length`
-    // stood here and was a tautology — `jobs.filter(p).length <= jobs.length` holds for every
-    // predicate `p`, so no mutation of either counter could fail it, including one that made
-    // `hasDeclaredPermissions` return true unconditionally. Implementation-review finding L1.
-    const declared = jobs.filter(hasDeclaredPermissions).length;
-    const reachable = jobs.filter(hasReachablePermissions).length;
-    expect
-      .soft(
-        { declared, reachable },
-        "a declared block is reachable by definition, so declaration can never exceed reachability; if it does, the two counters disagree about what a block is",
-      )
-      .toEqual({ declared, reachable: Math.max(declared, reachable) });
-
-    // And they must actually DIFFER, which is the half `BR-0017-0014` is about: if every job
-    // declared its own block the two counters would coincide and the distinction the rule
-    // draws would be untested by this tree.
-    expect
-      .soft(
-        reachable - declared,
-        "the tree must contain at least one job that inherits rather than declares, or this row proves nothing about reachability",
-      )
-      .toBeGreaterThan(0);
+    // `declared <= jobs.length` stood here first and was a tautology: `jobs.filter(p).length
+    // <= jobs.length` holds for every predicate. Round 5 replaced it with `declared <=
+    // reachable`, which is the SAME tautology one level in — `hasDeclaredPermissions` is the
+    // first disjunct of `hasReachablePermissions`, so the containment holds by construction of
+    // the two bodies. Measured over this tree: jobs 12, declared 4, reachable 12, and because
+    // `reachable === jobs.length` the second form was numerically identical to the first.
+    // Round 6 finding F-2.
+    //
+    // A companion claim asserting `reachable - declared > 0` went with it: it reddens the day
+    // every job declares its own permission block, which is a HARDENING, and its failure text
+    // invited un-hardening the tree or editing the test.
+    //
+    // The discrimination those claims were reaching for is owned by `TC-0017-0015` at the
+    // four-corner truth table below, over two synthetic fixtures, against the lane's EXPORTED
+    // predicates — which is what `EX-0017-0014` asks for and what this row's own expected
+    // result in `06_Test-Cases.md` does not. Duplicating it here, with test-local copies of the
+    // predicates, was weaker in every respect.
   });
 });
 
@@ -644,6 +640,8 @@ const DECLARATION_RULE = "required-context";
 
 interface Declaration {
   contexts: { workflow: string; job: string; verificationSet: string[] }[];
+  // Everything else the artifact carries — `$comment` today — travels through untouched.
+  [key: string]: unknown;
 }
 
 /**
@@ -668,43 +666,56 @@ function manifestScript(manifestPath: string, name: string): string {
  *
  * A predicate rather than a shape check followed by `as`: `CLAUDE.md` forbids the assertion, and
  * `filter` over a predicate is what lets the parsed objects through unchanged.
+ *
+ * It verifies exactly what the type claims, which the first version did not: it admitted a MISSING
+ * `verificationSet` and non-string members under a type promising `string[]`. Measured — round 6
+ * finding F-4 — `declaration()` accepted `{"contexts":[{"workflow":"ci.yml","job":"build"}]}` and
+ * the first read of `verificationSet[0]` then raised a TypeError, so a row planting that shape
+ * would have crashed with a stack trace instead of failing its claim. `tsc` never sees this file
+ * (`tsconfig.json` includes `src/**` only) and eslint does not flag it, so the predicate is the
+ * only thing standing between the declared type and the parsed JSON.
  */
 function isContext(value: unknown): value is Declaration["contexts"][number] {
   return (
     isRecord(value) &&
     typeof value["workflow"] === "string" &&
     typeof value["job"] === "string" &&
-    (value["verificationSet"] === undefined || Array.isArray(value["verificationSet"]))
+    Array.isArray(value["verificationSet"]) &&
+    value["verificationSet"].every((item) => typeof item === "string")
   );
 }
+
 /** The declaration as the repository ships it. */
 function declaration(dir: string): Declaration {
   const parsed: unknown = JSON.parse(readFileSync(path.join(dir, DECLARATION_REL), "utf-8"));
-  // Narrowed and REBUILT rather than asserted. `as Declaration` would let every caller
-  // below trust a shape only the `contexts` array was checked for — the members' `workflow`,
-  // `job` and `verificationSet` were never verified, and a malformed declaration would have
-  // surfaced as an undefined field deep inside a planting helper.
   if (!isRecord(parsed) || !Array.isArray(parsed["contexts"])) {
     throw new Error("the declaration does not hold a contexts array");
   }
-  // VALIDATED in place, not rebuilt. The first version of this narrowing returned freshly
-  // constructed context objects carrying only the three fields it checked — and
-  // `editDeclaration` writes the result back, so planting into a tree silently stripped
-  // `$comment`, `why` and `verificationSetNote` from the file it planted into. The lane reads
-  // none of those, so nothing asserted differently and the loss was invisible; a fixture that
-  // quietly differs from the artifact it copies is still the wrong fixture.
-  // Implementation-review finding F8.
+  // VALIDATED in place, not rebuilt, and the WHOLE parsed object is returned.
+  //
+  // Two rounds of getting this wrong, both recorded because the second looked like a fix for the
+  // first. `as Declaration` let every caller trust a shape only `contexts` had been checked for.
+  // Replacing it with a REBUILD returned freshly constructed contexts carrying only the three
+  // checked fields, and `editDeclaration` writes the result back — so planting stripped `why` and
+  // `verificationSetNote` from each context (round 5 finding F8). Fixing that at the context level
+  // left the ROOT stripped: `{ contexts }` dropped the top-level `$comment`, measured at 2692
+  // bytes down to 1533, taking the eleven-line block that explains why the file exists at all
+  // (round 6 finding F-3).
+  //
+  // A planted tree is presented as a copy of the shipped artifact. The lane reads none of these
+  // fields, so nothing asserts differently and every loss was invisible — which is the reason to
+  // fix it rather than the reason not to.
   const raw = parsed["contexts"];
   for (const [i, entry] of raw.entries()) {
     if (!isContext(entry)) {
       throw new Error(
-        `declaration context ${i} lacks a string workflow, a string job, or an array verificationSet`,
+        `declaration context ${i} lacks a string workflow, a string job, or a verificationSet of strings`,
       );
     }
   }
   // `filter` over the predicate rather than a rebuild or an `as`: it narrows the array type and
-  // hands back the SAME objects, so `$comment`, `why` and `verificationSetNote` travel with them.
-  return { contexts: raw.filter(isContext) };
+  // hands back the SAME objects. Spreading `parsed` keeps everything beside `contexts`.
+  return { ...parsed, contexts: raw.filter(isContext) };
 }
 
 /** Rewrites the declaration inside a planted tree. */

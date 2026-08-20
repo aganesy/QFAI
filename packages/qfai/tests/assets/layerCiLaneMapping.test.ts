@@ -34,11 +34,15 @@
 // QFAI:SPEC-0017:TC-0017-0082
 
 import { existsSync, readFileSync } from "node:fs";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { defaultConfig } from "../../src/core/config.js";
+import { loadLayerPolicy } from "../../src/core/layerPolicy.js";
 import { LAYER_TAGS } from "../../src/core/testStrategyTags.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -133,7 +137,7 @@ describe("TC-0017-0078 (TDD-0078): the mapping file does not read as activating 
 });
 
 describe("TC-0017-0079 (TDD-0079): the vocabulary warning count is unchanged after it lands", () => {
-  it("introduces no layer code the catalog does not already carry, and is not the file the loader reads", () => {
+  it("introduces no layer code the catalog does not already carry, and is not the file the loader reads", async () => {
     const mapping = read(ASSET_CATALOG, MAPPING);
     const catalog = read(ASSET_CATALOG, CATALOG);
 
@@ -148,38 +152,61 @@ describe("TC-0017-0079 (TDD-0079): the vocabulary warning count is unchanged aft
       .toEqual([]);
 
     // CLAIM 2 — and this file is not the one the loader resolves. The invisibility is the
-    // mechanism, so it is asserted against the LOADER rather than against another constant in
-    // this file.
+    // mechanism, so it is asserted by RUNNING the loader rather than by reading its source.
     //
-    // `expect.soft(MAPPING).not.toBe(CATALOG)` stood here, comparing two literals defined
-    // twenty lines above it. No production change could falsify that — including adding this
-    // document to the loader's resolution list, which is the only thing the claim was for.
-    // Implementation-review finding L2.
+    // Three attempts at this claim, and the first two both read text:
     //
-    // Narrowed to the RESOLUTION SITES, not the whole file. The first version searched all of
-    // `layerPolicy.ts` for the catalog's name, and that name occurs SIX times there — once in
-    // JSDoc and four times inside Japanese diagnostic strings, besides the two `path.join`
-    // calls that actually resolve it. So changing the resolved filename left both halves
-    // green: the same vacuity as the `--no-renames` claim this run shipped and repaired, and
-    // found here by an implementation review rather than by an oracle, which is the weaker of
-    // the two ways to find it. Implementation-review finding F4.
-    const loader = readFileSync(path.join(PACKAGE_ROOT, "src", "core", "layerPolicy.ts"), "utf-8");
-    const resolutions = [...loader.matchAll(/path\.join\(([^)]*)\)/g)].map((m) => m[1]);
-    expect
-      .soft(resolutions.length, "the loader must resolve its policy file through path.join")
-      .toBeGreaterThan(0);
-    expect
-      .soft(
-        resolutions.filter((r) => r.includes(CATALOG)).length,
-        `the loader must RESOLVE ${CATALOG}; naming it in a comment or a message is not a resolution`,
-      )
-      .toBeGreaterThan(0);
-    expect
-      .soft(
-        resolutions.filter((r) => r.includes(MAPPING)),
-        `no resolution site may name ${MAPPING}; its invisibility to the policy reader is the mechanism this document relies on`,
-      )
-      .toEqual([]);
+    //   round 4:  expect(MAPPING).not.toBe(CATALOG)          — two literals defined 20 lines apart
+    //   round 5:  the loader's source must not contain MAPPING — the catalog's name occurs SIX
+    //             times there, so renaming the resolved file left it green
+    //   round 6:  path.join(...) argument lists only          — `[^)]*` stops at the first `)`, so
+    //             `path.join(path.dirname(x), "catalog", MAPPING)` captured `path.dirname(x` and
+    //             the filename never entered the list; `path.resolve` was not matched at all
+    //
+    // Each was a syntactic proxy that the natural way of writing the change walks past. The
+    // property itself is behavioural: put the mapping document beside the catalog, give it a layer
+    // token the catalog does not carry, and the loader must not see it. That is immune to
+    // `path.join` versus `path.resolve` versus a constant, and it has no false positive on a
+    // behaviour-preserving refactor. Round 6 finding F-1.
+    const root = await mkdtemp(path.join(tmpdir(), "qfai-mapping-invisibility-"));
+    try {
+      const assistantRoot = path.join(root, ".qfai", "assistant");
+      await mkdir(path.join(assistantRoot, "skills"), { recursive: true });
+      await mkdir(path.join(assistantRoot, "catalog"), { recursive: true });
+      // The real catalog, so the tags resolve from the policy file rather than the built-in set.
+      await writeFile(
+        path.join(assistantRoot, "catalog", CATALOG),
+        read(ASSET_CATALOG, CATALOG),
+        "utf-8",
+      );
+      // The real mapping document, plus a token the catalog does not carry. If the loader ever
+      // reads this file, `layer-quantum` enters its tag set and both claims below fail.
+      await writeFile(
+        path.join(assistantRoot, "catalog", MAPPING),
+        `${read(ASSET_CATALOG, MAPPING)}\n\n### LQ Quantum\n\nTag: \`layer-quantum\`\n`,
+        "utf-8",
+      );
+
+      const policy = await loadLayerPolicy(root, defaultConfig);
+
+      expect
+        .soft(policy.source, "the loader must resolve the catalog, not fall back to the built-ins")
+        .toBe("policy-file");
+      expect
+        .soft(
+          [...policy.tags].filter((tag) => tag === "layer-quantum"),
+          `the loader must not read ${MAPPING}; its invisibility to the policy reader is the mechanism this document relies on`,
+        )
+        .toEqual([]);
+      expect
+        .soft(
+          policy.issues.filter((entry) => entry.code === "QFAI-SPACK-091"),
+          "and reading it must not introduce policy-versus-built-in drift",
+        )
+        .toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });
 

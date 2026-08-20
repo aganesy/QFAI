@@ -651,7 +651,20 @@ function triggersOf(file: string): Record<string, unknown> {
   return isRecord(under) ? under : {};
 }
 
-/** The `build` job's steps, narrowed. */
+/**
+ * The build job's steps, and NOT a call to `stepsOf(BUILD_JOB)` — kept deliberately after round
+ * 6 finding F-10 asked why a near-duplicate survives the F6 de-duplication.
+ *
+ * The difference is the second throw. `stepsOf` returns `[]` for a job that declares no steps,
+ * which is right for a caller asking "which of these steps carry an `if`" — an empty answer is a
+ * true answer. It is wrong for every caller of THIS helper: `TC-0017-0038` and `TC-0017-0073`
+ * assert that no verification item is weakened and that each enumerated item is present, and
+ * both pass vacuously over an empty list. So a `build` job whose steps vanished would satisfy
+ * them rather than fail them, which is the vacuity this spec has now been bitten by five times.
+ *
+ * The cost is one extra parse of a file already parsed elsewhere in the same run. That is the
+ * trade, stated so the next de-duplication pass does not have to re-derive it.
+ */
 function buildJobSteps(): Record<string, unknown>[] {
   const doc: unknown = parseYaml(readFileSync(CI_WORKFLOW, "utf-8"));
   if (!isRecord(doc) || !isRecord(doc["jobs"]) || !isRecord(doc["jobs"][BUILD_JOB])) {
@@ -1191,7 +1204,22 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
       .toBe(true);
     expect
       .soft(script.reason, "and be excluded as an executable, not as an unrecognized path")
-      .toMatch(/executable/i);
+      .toMatch(/executable inside a documentation directory/);
+
+    // And an ordinary source path must NOT be excluded as an executable, which is the half that
+    // had no test at all. The check used to run before the documentation test, so it also fired
+    // for `src/**.ts` — right verdict, false explanation. Round 6 finding F-7 measured that
+    // reverting the fix reddened nothing: `/executable/i` matches the OLD reason string too, and
+    // nothing asserted `source path`. Both halves are pinned now, so the ordering is load-bearing
+    // in both directions.
+    const src = runClassifier({ paths: ["packages/qfai/src/core/layerPolicy.ts"] });
+    expect.soft(src.full, "a source path must select everything").toBe(true);
+    expect
+      .soft(src.reason, "and be reported as a source path, not as an executable")
+      .toMatch(/source path/);
+    expect
+      .soft(src.reason, "an ordinary source file is not 'inside a documentation directory'")
+      .not.toMatch(/executable/i);
   });
 });
 
