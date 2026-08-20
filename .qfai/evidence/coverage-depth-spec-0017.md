@@ -185,8 +185,8 @@ runs. `E4` is a sound oracle **for the assertion** and not for the story: an ora
 can fail, and this row has no case. Scoring six category cells `❌` and the oracle `✅` is the same
 incoherence the checklist bars in the other direction.
 
-What the oracle establishes is that the assertion discriminates — and getting that far took eleven
-versions of the predicate, each measured, each of the first ten reported as clean by the party that
+What the oracle establishes is that the assertion discriminates — and getting that far took twelve
+versions of the predicate, each measured, each of the first eleven reported as clean by the party that
 wrote it and then broken by a corpus someone else chose:
 
 ```text
@@ -227,6 +227,15 @@ v11 wrappers and managers declare their own flags too. Round 8 planted a real bu
     scan broke on `nice -n` and `xvfb-run -a` and read `19` as the command; `timeout` was not a
     wrapper at all; and `-w` is boolean for pnpm and takes a value for npm, one spelling with two
     meanings, which is `-B` in make and cmake one level up
+v12 tools declare their own SUBCOMMANDS, and the last two families get grammars. Round 9 planted
+    again and did far worse: 18 of 20 for one reviewer, 34 of 40 for the other, and fifteen of the
+    eighteen were tools this grammar already declared. `mvn package`, `gradle assemble`,
+    `dotnet publish`, `make`, `ninja`, `sbt compile`, `go install` and `rake` are the canonical
+    builds of eight of thirty entries, and a build was recognised only when a bare token split to
+    contain the literal word. Also: interpreters had no flag grammar, so `bash -c "pnpm build"` —
+    the commonest way to put a compound command in a `run:` step — had been `none` for eleven
+    versions; and a wrapper's tail is now FOUND rather than counted, which is what finally saw
+    through `xvfb-run -a -s "-screen 0 1024x768x24" pnpm build`
 ```
 
 Two claims previously recorded here are withdrawn. That round 2 "rebuilt the scan **around the
@@ -239,7 +248,7 @@ v4's naming defect is the one worth keeping in view: it measured **how a script 
 than what it *does***, which is the failure mode § "The finding that re-scored this matrix after round
 1" names as this spec's recurring one.
 
-`v11` lives in `packages/qfai/tests/helpers/buildCommand.ts` with its corpora in
+`v12` lives in `packages/qfai/tests/helpers/buildCommand.ts` with its corpora in
 `packages/qfai/tests/unit/buildCommand.test.ts`. Shell segmentation and per-manifest resolution are
 **v5's**, kept unchanged since — an earlier version of this paragraph credited them to v8, and named
 three "distinctions v5 was missing" that were v5's own. What the versions after v5 actually contribute
@@ -248,10 +257,19 @@ resolves a script and its flag set is open-ended, so the safe default is to cons
 subcommands and its flag set is closed and declared, so the safe default is to consume nothing. v6, v7
 and v8 each tried to hold both with one global rule and each broke one direction to fix the other.
 
-**The same rule, three families, three rounds.** v9 gave each build tool its own flag grammar; v11 gave
-each wrapper and each manager one. Both times the defect was a global rule standing in for per-family
-knowledge, and both times it was found by someone planting real commands rather than by reading the
-code. The direction of the miss is worth stating plainly, because an earlier version of the helper's own
+**The same rule, five families, four rounds.** v9 gave each build tool its own flag grammar; v11 gave
+each wrapper and each manager one; v12 gave tools their subcommands and interpreters their flags. Every
+time the defect was a global rule standing in for knowledge the runner has, and every time it was found
+by someone planting real commands rather than by reading the code.
+
+**What each version deleted matters as much as what it added, and v12 deleted more than it added.**
+Eight sets are now empty: every tool's `pass` list, `MANAGER_CONSUMING`'s flag members,
+`NOT_A_BUNDLER`, the wrapper `booleans` list, the wrapper `values` lists with their `args` counts,
+`MANAGER_BOOLEAN`'s nineteen members, `MANAGER_VALUES`, and the interpreter `scripts` lists. Each was a
+list whose deletion changed no command's verdict, and each was found by trying to write the case that
+would notice. The replacements are rules that cannot be incomplete the way a list can: a wrapper's
+command begins at the first token that names a command; a manager flag consumes only when a later bare
+token exists to be the script. The direction of the miss is worth stating plainly, because an earlier version of the helper's own
 docstring had it backwards: it argued that missing a build is "the safe direction here", since the
 assertion is that a tree contains none. For **this** assertion a false negative is the **vacuity**
 direction — the guard passes while the thing it forbids is present — and the tradeoff bought four false

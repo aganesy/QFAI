@@ -346,18 +346,23 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     // convention, so `v10` appears there the moment v10 exists, whatever the describing sentence still
     // says. The pin would then be satisfied by the history of the defect rather than by its correction.
     // Round 7 required the anchor and round 8 measured it still missing.
+    // `matchAll`, not `exec`. `exec` returns the FIRST match, so a second sentence naming an older
+    // version - placed after the true one - was invisible, and the pin held only by the accident of
+    // ordering. That is the `.exec` defect round 6 required fixed in this stage's guards and round 7
+    // found still live at a third site, reintroduced here one round later by the fix for something else.
     const flat = text.replace(/\s+/g, " ");
-    const naming =
-      /[^.]*`?v(\d+)`? lives in `packages\/qfai\/tests\/helpers\/buildCommand\.ts`/.exec(flat);
+    const naming = [
+      ...flat.matchAll(/`?v(\d+)`? lives in `packages\/qfai\/tests\/helpers\/buildCommand\.ts`/g),
+    ];
     expect(
-      naming,
+      naming.length,
       "the record must carry a sentence naming the predicate's version and its file, in the form " +
         "`vN` lives in `packages/qfai/tests/helpers/buildCommand.ts`",
-    ).not.toBeNull();
+    ).toBeGreaterThan(0);
     expect(
-      Number(naming?.[1]),
-      `that sentence must name the version the helper is at: v${String(current)}`,
-    ).toBe(current);
+      naming.map((match) => Number(match[1])),
+      `every such sentence must name the version the helper is at: v${String(current)}`,
+    ).toEqual(naming.map(() => current));
     // The record wraps, so the phrase is matched over collapsed whitespace and either emphasis form.
     expect(
       text.replace(/\s+/g, " "),
@@ -384,15 +389,21 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     // Anchored to the row's own justification section, not to the file. `toMatch(/withdrawn/i)` over
     // the whole record was satisfied by any occurrence anywhere — changing this very section's
     // "withdrawn" to "retired" left it green, which round 7 raised and round 8 measured.
-    const section = /#{2,4}[^\n]*US-0017-0007[^\n]*\n([\s\S]*?)(?=\n#{2,4} |$)/.exec(text);
+    // `matchAll` here too, for the same reason: a second section for the same story would have been
+    // unreachable, and only the first would have been checked.
+    const sections = [
+      ...text.matchAll(/#{2,4}[^\n]*US-0017-0007[^\n]*\n([\s\S]*?)(?=\n#{2,4} |$)/g),
+    ];
     expect(
-      section,
+      sections.length,
       "the withdrawn story must have a justification section of its own",
-    ).not.toBeNull();
+    ).toBeGreaterThan(0);
     expect(
-      (section?.[1] ?? "").replace(/\s+/g, " "),
-      "that section must say the claim was withdrawn, in the section a reader lands on",
-    ).toMatch(/withdrawn/i);
+      sections
+        .map((match) => (match[1] ?? "").replace(/\s+/g, " "))
+        .filter((body) => !/withdrawn/i.test(body)),
+      "every section for the withdrawn story must say the claim was withdrawn",
+    ).toEqual([]);
 
     // The ledger line must be gone too, or the matrix and the gate disagree.
     const ledger = await readFile(

@@ -67,6 +67,17 @@ async function repositorySources(): Promise<ScriptSources> {
   };
 }
 
+const TOOL_LISTS = [
+  "dirs",
+  "values",
+  "optional",
+  "buildFlags",
+  "builds",
+  "buildPrefixes",
+  "stops",
+] as const;
+const INTERPRETER_LISTS = ["values", "inline"] as const;
+
 /**
  * Synthetic manifests for the member cases. Deliberately minimal: `hello` is a build in `sub` and not
  * at the root, so a directory flag either moved the lookup or it did not.
@@ -87,7 +98,13 @@ const SYNTHETIC: ScriptSources = {
   },
 };
 
-/** Every member of `GRAMMAR`, as the dotted paths `MEMBER_CASES` labels its cases with. */
+/**
+ * Every member of `GRAMMAR`, as the dotted paths `MEMBER_CASES` labels its cases with.
+ *
+ * Rules are members too. Round 9 measured `isSetting` reducible to a constant `false` with the whole
+ * corpus green, and six script extensions and two name separators deletable the same way — all because
+ * the sweep's reach is exactly what `GRAMMAR` exports and none of them were in it.
+ */
 function grammarMembers(): string[] {
   const out: string[] = [];
   const sets: ReadonlyArray<readonly [string, Iterable<string>]> = [
@@ -95,11 +112,14 @@ function grammarMembers(): string[] {
     ["BUNDLERS", GRAMMAR.bundlers],
     ["MANAGER_PASS", GRAMMAR.managerPass],
     ["MANAGER_CONSUMING", GRAMMAR.managerConsuming],
-    ["MANAGER_BOOLEAN", GRAMMAR.managerBoolean],
     ["MANAGER_DIRS", GRAMMAR.managerDirs],
     ["TARGET_FLAGS", GRAMMAR.targetFlags],
     ["NO_SCRIPTS", GRAMMAR.noScripts],
-    ["INTERPRETERS", GRAMMAR.interpreters],
+    ["NEVER_FLAGS", GRAMMAR.neverFlags],
+    ["WRAPPERS", GRAMMAR.wrappers],
+    ["EXISTENCE_PROBE", GRAMMAR.existenceProbe],
+    ["SCRIPT_EXTENSIONS", GRAMMAR.scriptExtensions],
+    ["NAME_SEPARATORS", GRAMMAR.nameSeparators],
   ];
   for (const [name, set] of sets) {
     for (const member of set) out.push(`${name}.${member}`);
@@ -107,24 +127,24 @@ function grammarMembers(): string[] {
   for (const [hook, members] of Object.entries(GRAMMAR.lifecycle)) {
     for (const member of members) out.push(`LIFECYCLE.${hook}.${member}`);
   }
-  for (const [manager, flags] of Object.entries(GRAMMAR.managerValues)) {
-    for (const flag of flags) out.push(`MANAGER_VALUES.${manager}.${flag}`);
-  }
+  for (const rule of Object.keys(GRAMMAR.rules)) out.push(`RULES.${rule}`);
   for (const [tool, grammar] of Object.entries(GRAMMAR.tools)) {
     out.push(`TOOLS.${tool}`);
-    for (const field of ["dirs", "values", "buildFlags"] as const) {
-      for (const member of grammar[field]) out.push(`TOOLS.${tool}.${field}.${member}`);
+    for (const field of TOOL_LISTS) {
+      for (const member of grammar[field] ?? []) out.push(`TOOLS.${tool}.${field}.${member}`);
     }
-    for (const member of grammar.builds ?? []) out.push(`TOOLS.${tool}.builds.${member}`);
+    if (grammar.bareIsBuild === true) out.push(`TOOLS.${tool}.bareIsBuild`);
   }
-  for (const [wrapper, grammar] of Object.entries(GRAMMAR.wrappers)) {
-    out.push(`WRAPPERS.${wrapper}`);
-    for (const member of grammar.values) out.push(`WRAPPERS.${wrapper}.values.${member}`);
-    // `args` is a count, not a list, so it is a member only where it is non-zero — and its deletion is
-    // setting it to zero. Only `timeout` has one.
-    if (grammar.args > 0) out.push(`WRAPPERS.${wrapper}.args`);
+  for (const [name, grammar] of Object.entries(GRAMMAR.interpreters)) {
+    out.push(`INTERPRETERS.${name}`);
+    for (const field of INTERPRETER_LISTS) {
+      for (const member of grammar[field]) out.push(`INTERPRETERS.${name}.${field}.${member}`);
+    }
   }
-  return out;
+  // `gradle`/`gradlew` and `docker`/`podman` and `pwsh`/`powershell` share one object each, so the
+  // same member appears under two names. That is the point of sharing — a flag cannot be added to one
+  // spelling and forgotten in the other — and it means the member list has duplicates by design.
+  return [...new Set(out)];
 }
 
 /**
@@ -167,26 +187,7 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["MANAGER_PASS.exec", "build", "pnpm exec build"],
   ["MANAGER_PASS.dlx", "build", "pnpm dlx build"],
   ["MANAGER_PASS.workspaces", "build", "pnpm workspaces build"],
-  ["MANAGER_PASS.--", "build", "pnpm -- build"],
   ["MANAGER_CONSUMING.workspace", "build", "yarn workspace qfai build"],
-  ["MANAGER_BOOLEAN.-w", "build", "pnpm -w build"],
-  ["MANAGER_BOOLEAN.--workspace-root", "build", "pnpm --workspace-root build"],
-  ["MANAGER_BOOLEAN.-r", "build", "pnpm -r build"],
-  ["MANAGER_BOOLEAN.--recursive", "build", "pnpm --recursive build"],
-  ["MANAGER_BOOLEAN.--silent", "build", "pnpm --silent build"],
-  ["MANAGER_BOOLEAN.--quiet", "build", "pnpm --quiet build"],
-  ["MANAGER_BOOLEAN.--yes", "build", "pnpm --yes build"],
-  ["MANAGER_BOOLEAN.-y", "build", "pnpm -y build"],
-  ["MANAGER_BOOLEAN.--frozen-lockfile", "build", "pnpm --frozen-lockfile build"],
-  ["MANAGER_BOOLEAN.--ignore-scripts", "build", "pnpm --ignore-scripts build"],
-  ["MANAGER_BOOLEAN.--no-scripts", "build", "pnpm --no-scripts build"],
-  ["MANAGER_BOOLEAN.--if-present", "build", "pnpm --if-present build"],
-  ["MANAGER_BOOLEAN.--prod", "build", "pnpm --prod build"],
-  ["MANAGER_BOOLEAN.--dev", "build", "pnpm --dev build"],
-  ["MANAGER_BOOLEAN.--no-bail", "build", "pnpm --no-bail build"],
-  ["MANAGER_BOOLEAN.--offline", "build", "pnpm --offline build"],
-  ["MANAGER_BOOLEAN.--force", "build", "pnpm --force build"],
-  ["MANAGER_BOOLEAN.--verbose", "build", "pnpm --verbose build"],
   ["MANAGER_DIRS.-C", "build", "pnpm -C sub hello"],
   ["MANAGER_DIRS.--dir", "build", "pnpm --dir sub hello"],
   ["MANAGER_DIRS.--cwd", "build", "pnpm --cwd sub hello"],
@@ -227,11 +228,8 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.make", "build", "make build"],
   ["TOOLS.make.dirs.-C", "none", "make -C build clean"],
   ["TOOLS.make.dirs.--directory", "none", "make --directory build clean"],
-  ["TOOLS.make.values.-j", "none", "make -j build clean"],
-  ["TOOLS.make.values.-l", "none", "make -l build clean"],
   ["TOOLS.make.values.-f", "none", "make -f build clean"],
   ["TOOLS.make.values.--file", "none", "make --file build clean"],
-  ["TOOLS.make.values.--jobs", "none", "make --jobs build clean"],
   ["TOOLS.cmake", "build", "cmake build"],
   ["TOOLS.cmake.dirs.--install", "none", "cmake --install build clean"],
   ["TOOLS.cmake.dirs.-B", "none", "cmake -B build clean"],
@@ -352,48 +350,183 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.rake", "build", "rake build"],
   ["TOOLS.rake.dirs.-C", "none", "rake -C build clean"],
   ["TOOLS.rake.values.-f", "none", "rake -f build clean"],
-  ["MANAGER_BOOLEAN.--stream", "build", "pnpm --stream build"],
-  ["MANAGER_BOOLEAN.--aggregate-output", "build", "pnpm --aggregate-output build"],
-  ["MANAGER_BOOLEAN.--no-color", "build", "pnpm --no-color build"],
-  ["MANAGER_BOOLEAN.--parallel", "build", "pnpm --parallel build"],
-  ["MANAGER_VALUES.npm.-w", "build", "npm -w pkg run build"],
+  ["MANAGERS.npm-run-all", "build", "npm-run-all build"],
+  ["MANAGERS.run-s", "build", "run-s build"],
+  ["MANAGERS.run-p", "build", "run-p build"],
+  ["MANAGER_PASS.foreach", "build", "yarn workspaces foreach --all run build"],
+  ["NEVER_FLAGS.--help", "none", "pnpm build --help"],
+  ["NEVER_FLAGS.-h", "none", "pnpm build -h"],
+  ["NEVER_FLAGS.--version", "none", "pnpm build --version"],
+  ["NEVER_FLAGS.--dry-run", "none", "pnpm build --dry-run"],
+  ["NEVER_FLAGS.--print", "none", "pnpm build --print"],
+  ["NEVER_FLAGS.--noEmit", "none", "pnpm build --noEmit"],
+  ["WRAPPERS.cross-env", "build", "cross-env pnpm build"],
+  ["WRAPPERS.setsid", "build", "setsid pnpm build"],
+  ["WRAPPERS.unbuffer", "build", "unbuffer pnpm build"],
+  ["WRAPPERS.flock", "build", "flock pnpm build"],
+  ["WRAPPERS.taskset", "build", "taskset pnpm build"],
+  ["WRAPPERS.chrt", "build", "chrt pnpm build"],
+  ["WRAPPERS.retry", "build", "retry pnpm build"],
+  ["WRAPPERS.script", "build", "script pnpm build"],
+  ["WRAPPERS.concurrently", "build", "concurrently pnpm build"],
+  ["EXISTENCE_PROBE.-v", "none", "command -v tsup"],
+  ["EXISTENCE_PROBE.-V", "none", "command -V tsup"],
+  ["SCRIPT_EXTENSIONS.sh", "heuristic", "./scripts/build.sh"],
+  ["SCRIPT_EXTENSIONS.ps1", "heuristic", "./scripts/build.ps1"],
+  ["SCRIPT_EXTENSIONS.bat", "heuristic", "./scripts/build.bat"],
+  ["SCRIPT_EXTENSIONS.cmd", "heuristic", "./scripts/build.cmd"],
+  ["SCRIPT_EXTENSIONS.mjs", "heuristic", "./scripts/build.mjs"],
+  ["SCRIPT_EXTENSIONS.cjs", "heuristic", "./scripts/build.cjs"],
+  ["SCRIPT_EXTENSIONS.js", "heuristic", "./scripts/build.js"],
+  ["SCRIPT_EXTENSIONS.ts", "heuristic", "./scripts/build.ts"],
+  ["NAME_SEPARATORS.:", "heuristic", "pnpm run build:main"],
+  ["NAME_SEPARATORS.-", "heuristic", "pnpm run pre-build"],
+  ["NAME_SEPARATORS._", "heuristic", "pnpm build_all"],
+  ["NAME_SEPARATORS..", "heuristic", "pnpm run build.prod"],
+  ["NAME_SEPARATORS./", "heuristic", "pnpm run ci/build"],
+  ["RULES.isSetting", "none", "make build_dir=out clean"],
+  ["RULES.isPathLike", "none", "bazel test //src/build:tests"],
+  ["TOOLS.make.values.-o", "none", "make -o build clean"],
+  ["TOOLS.make.values.--old-file", "none", "make --old-file build clean"],
+  ["TOOLS.make.values.-W", "none", "make -W build clean"],
+  ["TOOLS.make.values.--what-if", "none", "make --what-if build clean"],
+  ["TOOLS.make.optional.-j", "build", "make -j 4"],
+  ["TOOLS.make.optional.--jobs", "build", "make --jobs 4"],
+  ["TOOLS.make.optional.-l", "build", "make -l 4"],
+  ["TOOLS.make.optional.--load-average", "build", "make --load-average 4"],
+  ["TOOLS.make.builds.all", "build", "make all"],
+  ["TOOLS.make.bareIsBuild", "build", "make"],
+  ["TOOLS.ninja.bareIsBuild", "build", "ninja"],
+  ["TOOLS.just.bareIsBuild", "build", "just"],
+  ["TOOLS.task.bareIsBuild", "build", "task"],
+  ["TOOLS.waf.bareIsBuild", "build", "waf"],
+  ["TOOLS.cargo.builds.install", "build", "cargo install"],
+  ["TOOLS.go.builds.install", "build", "go install"],
+  ["TOOLS.gradle.values.-x", "none", "gradle -x build clean"],
+  ["TOOLS.gradle.values.--exclude-task", "none", "gradle --exclude-task build clean"],
+  ["TOOLS.gradle.builds.jar", "build", "gradle jar"],
+  ["TOOLS.gradle.builds.war", "build", "gradle war"],
+  ["TOOLS.gradle.builds.bootJar", "build", "gradle bootJar"],
+  ["TOOLS.gradle.builds.shadowJar", "build", "gradle shadowJar"],
+  ["TOOLS.gradle.builds.installDist", "build", "gradle installDist"],
+  ["TOOLS.gradle.buildPrefixes.assemble", "build", "gradle assembleRelease"],
+  ["TOOLS.gradle.buildPrefixes.bundle", "build", "gradle bundleRelease"],
+  ["TOOLS.gradlew.values.--init-script", "none", "gradlew --init-script build clean"],
+  ["TOOLS.gradlew.values.-x", "none", "gradlew -x build clean"],
+  ["TOOLS.gradlew.values.--exclude-task", "none", "gradlew --exclude-task build clean"],
+  ["TOOLS.gradlew.builds.jar", "build", "gradlew jar"],
+  ["TOOLS.gradlew.builds.war", "build", "gradlew war"],
+  ["TOOLS.gradlew.builds.bootJar", "build", "gradlew bootJar"],
+  ["TOOLS.gradlew.builds.shadowJar", "build", "gradlew shadowJar"],
+  ["TOOLS.gradlew.builds.installDist", "build", "gradlew installDist"],
+  ["TOOLS.gradlew.buildPrefixes.assemble", "build", "gradlew assembleRelease"],
+  ["TOOLS.gradlew.buildPrefixes.bundle", "build", "gradlew bundleRelease"],
+  ["TOOLS.mvn.builds.package", "build", "mvn package"],
+  ["TOOLS.mvn.builds.install", "build", "mvn install"],
+  ["TOOLS.mvn.builds.verify", "build", "mvn verify"],
+  ["TOOLS.mvn.builds.compile", "build", "mvn compile"],
+  ["TOOLS.mvn.builds.deploy", "build", "mvn deploy"],
+  ["TOOLS.dotnet.values.-a", "none", "dotnet -a build clean"],
+  ["TOOLS.dotnet.builds.publish", "build", "dotnet publish"],
+  ["TOOLS.dotnet.builds.pack", "build", "dotnet pack"],
+  ["TOOLS.meson", "build", "meson compile -C builddir"],
+  ["TOOLS.meson.dirs.-C", "none", "meson -C build clean"],
+  ["TOOLS.meson.values.-D", "none", "meson -D build clean"],
+  ["TOOLS.meson.builds.compile", "build", "meson compile"],
+  ["TOOLS.scons", "build", "scons"],
+  ["TOOLS.scons.values.-j", "none", "scons -j build clean"],
+  ["TOOLS.scons.bareIsBuild", "build", "scons"],
+  ["TOOLS.tsc", "build", "tsc -b"],
+  ["TOOLS.tsc.values.-p", "none", "tsc -p build clean"],
+  ["TOOLS.tsc.values.--project", "none", "tsc --project build clean"],
+  ["TOOLS.tsc.values.-t", "none", "tsc -t build clean"],
+  ["TOOLS.tsc.values.--module", "none", "tsc --module build clean"],
+  ["TOOLS.tsc.buildFlags.-b", "build", "tsc -b dist"],
+  ["TOOLS.tsc.buildFlags.--build", "build", "tsc --build ."],
+  ["TOOLS.tsc.buildFlags.--outDir", "build", "tsc --outDir dist"],
+  ["TOOLS.tsc.buildFlags.--outFile", "build", "tsc --outFile dist"],
+  ["TOOLS.tsc.buildFlags.--emitDeclarationOnly", "build", "tsc --emitDeclarationOnly dist"],
+  ["TOOLS.tsc.bareIsBuild", "build", "tsc"],
+  ["TOOLS.docker.values.-p", "none", "docker -p build clean"],
+  ["TOOLS.docker.values.--project-name", "none", "docker --project-name build clean"],
+  ["TOOLS.docker.stops.run", "none", "docker run --rm alpine echo build-info"],
+  ["TOOLS.docker.stops.exec", "none", "docker exec --rm alpine echo build-info"],
+  ["TOOLS.podman.values.-H", "none", "podman -H build clean"],
+  ["TOOLS.podman.values.--platform", "none", "podman --platform build clean"],
+  ["TOOLS.podman.values.--name", "none", "podman --name build clean"],
+  ["TOOLS.podman.values.-p", "none", "podman -p build clean"],
+  ["TOOLS.podman.values.--project-name", "none", "podman --project-name build clean"],
+  ["TOOLS.podman.stops.run", "none", "podman run --rm alpine echo build-info"],
+  ["TOOLS.podman.stops.exec", "none", "podman exec --rm alpine echo build-info"],
+  ["TOOLS.docker-compose", "build", "docker-compose build"],
+  ["TOOLS.docker-compose.dirs.-f", "none", "docker-compose -f build clean"],
+  ["TOOLS.docker-compose.dirs.--file", "none", "docker-compose --file build clean"],
+  ["TOOLS.docker-compose.values.-p", "none", "docker-compose -p build clean"],
+  [
+    "TOOLS.docker-compose.values.--project-name",
+    "none",
+    "docker-compose --project-name build clean",
+  ],
+  ["TOOLS.python.builds.bdist_wheel", "build", "python bdist_wheel"],
+  ["TOOLS.python.builds.sdist", "build", "python sdist"],
+  ["TOOLS.python.builds.build_ext", "build", "python build_ext"],
+  ["TOOLS.python3.builds.bdist_wheel", "build", "python3 bdist_wheel"],
+  ["TOOLS.python3.builds.sdist", "build", "python3 sdist"],
+  ["TOOLS.python3.builds.build_ext", "build", "python3 build_ext"],
+  ["TOOLS.sbt.builds.compile", "build", "sbt compile"],
+  ["TOOLS.sbt.builds.package", "build", "sbt package"],
+  ["TOOLS.sbt.builds.assembly", "build", "sbt assembly"],
+  ["TOOLS.sbt.builds.stage", "build", "sbt stage"],
+  ["TOOLS.rake.bareIsBuild", "build", "rake"],
+  ["INTERPRETERS.bash.values.-o", "heuristic", "bash -o pipefail scripts/build.sh"],
+  ["INTERPRETERS.bash.values.--rcfile", "heuristic", "bash --rcfile rc scripts/build.sh"],
+  ["INTERPRETERS.bash.values.--init-file", "heuristic", "bash --init-file rc scripts/build.sh"],
+  ["INTERPRETERS.sh.values.-o", "heuristic", "sh -o pipefail scripts/build.sh"],
+  ["INTERPRETERS.zsh.values.-o", "heuristic", "zsh -o pipefail scripts/build.sh"],
+  ["INTERPRETERS.zsh.values.--rcs", "heuristic", "zsh --rcs rc scripts/build.sh"],
+  [
+    "INTERPRETERS.pwsh.values.-ExecutionPolicy",
+    "heuristic",
+    "pwsh -ExecutionPolicy Bypass scripts/build.sh",
+  ],
+  [
+    "INTERPRETERS.pwsh.values.-WorkingDirectory",
+    "heuristic",
+    "pwsh -WorkingDirectory sub scripts/build.sh",
+  ],
+  [
+    "INTERPRETERS.pwsh.values.-OutputFormat",
+    "heuristic",
+    "pwsh -OutputFormat Text scripts/build.sh",
+  ],
+  ["INTERPRETERS.pwsh.inline.-Command", "build", 'pwsh -Command "pnpm build"'],
+  ["INTERPRETERS.pwsh.inline.-c", "build", 'pwsh -c "pnpm build"'],
+  ["INTERPRETERS.pwsh.inline.-EncodedCommand", "build", 'pwsh -EncodedCommand "pnpm build"'],
+  [
+    "INTERPRETERS.powershell.values.-ExecutionPolicy",
+    "heuristic",
+    "powershell -ExecutionPolicy Bypass scripts/build.sh",
+  ],
+  [
+    "INTERPRETERS.powershell.values.-WorkingDirectory",
+    "heuristic",
+    "powershell -WorkingDirectory sub scripts/build.sh",
+  ],
+  [
+    "INTERPRETERS.powershell.values.-OutputFormat",
+    "heuristic",
+    "powershell -OutputFormat Text scripts/build.sh",
+  ],
+  ["INTERPRETERS.powershell.inline.-Command", "build", 'powershell -Command "pnpm build"'],
+  ["INTERPRETERS.powershell.inline.-c", "build", 'powershell -c "pnpm build"'],
+  [
+    "INTERPRETERS.powershell.inline.-EncodedCommand",
+    "build",
+    'powershell -EncodedCommand "pnpm build"',
+  ],
   ["TOOLS.docker.builds.bake", "build", "docker buildx bake -f docker-bake.hcl"],
   ["TOOLS.podman.builds.bake", "build", "podman buildx bake -f docker-bake.hcl"],
-  ["WRAPPERS.time.values.-o", "build", "time -o out.txt pnpm build"],
-  ["WRAPPERS.time.values.--output", "build", "time --output out.txt pnpm build"],
-  ["WRAPPERS.time.values.-f", "build", "time -f fmt pnpm build"],
-  ["WRAPPERS.time.values.--format", "build", "time --format fmt pnpm build"],
-  ["WRAPPERS.sudo.values.-u", "build", "sudo -u builder pnpm build"],
-  ["WRAPPERS.sudo.values.--user", "build", "sudo --user builder pnpm build"],
-  ["WRAPPERS.sudo.values.-g", "build", "sudo -g staff pnpm build"],
-  ["WRAPPERS.sudo.values.--group", "build", "sudo --group staff pnpm build"],
-  ["WRAPPERS.nice.values.-n", "build", "nice -n 19 pnpm build"],
-  ["WRAPPERS.nice.values.--adjustment", "build", "nice --adjustment 19 pnpm build"],
-  ["WRAPPERS.ionice.values.-c", "build", "ionice -c 3 pnpm build"],
-  ["WRAPPERS.ionice.values.-n", "build", "ionice -n 19 pnpm build"],
-  ["WRAPPERS.ionice.values.-p", "build", "ionice -p 1234 pnpm build"],
-  ["WRAPPERS.xvfb-run.values.-s", "build", "xvfb-run -s screen pnpm build"],
-  ["WRAPPERS.xvfb-run.values.--server-args", "build", "xvfb-run --server-args screen pnpm build"],
-  ["WRAPPERS.xvfb-run.values.-n", "build", "xvfb-run -n 19 pnpm build"],
-  ["WRAPPERS.xvfb-run.values.--server-num", "build", "xvfb-run --server-num 99 pnpm build"],
-  ["WRAPPERS.xvfb-run.values.-f", "build", "xvfb-run -f fmt pnpm build"],
-  ["WRAPPERS.xvfb-run.values.--auth-file", "build", "xvfb-run --auth-file auth pnpm build"],
-  ["WRAPPERS.stdbuf.values.-i", "build", "stdbuf -i L pnpm build"],
-  ["WRAPPERS.stdbuf.values.--input", "build", "stdbuf --input L pnpm build"],
-  ["WRAPPERS.stdbuf.values.-o", "build", "stdbuf -o out.txt pnpm build"],
-  ["WRAPPERS.stdbuf.values.--output", "build", "stdbuf --output out.txt pnpm build"],
-  ["WRAPPERS.stdbuf.values.-e", "build", "stdbuf -e L pnpm build"],
-  ["WRAPPERS.stdbuf.values.--error", "build", "stdbuf --error L pnpm build"],
-  ["WRAPPERS.env.values.-u", "build", "env -u builder pnpm build"],
-  ["WRAPPERS.env.values.--unset", "build", "env --unset CI pnpm build"],
-  ["WRAPPERS.env.values.-C", "build", "env -C sub pnpm build"],
-  ["WRAPPERS.env.values.--chdir", "build", "env --chdir sub pnpm build"],
   ["WRAPPERS.timeout", "build", "timeout 600 pnpm build"],
-  ["WRAPPERS.timeout.values.-s", "build", "timeout -s KILL 600 pnpm build"],
-  ["WRAPPERS.timeout.values.--signal", "build", "timeout --signal KILL 600 pnpm build"],
-  ["WRAPPERS.timeout.values.-k", "build", "timeout -k 30s 600 pnpm build"],
-  ["WRAPPERS.timeout.values.--kill-after", "build", "timeout --kill-after 30s 600 pnpm build"],
-  ["WRAPPERS.timeout.args", "build", "timeout 600 pnpm build"],
 ];
 
 /**
@@ -406,11 +539,18 @@ const SETS: Readonly<Record<string, Set<string>>> = {
   BUNDLERS: GRAMMAR.bundlers,
   MANAGER_PASS: GRAMMAR.managerPass,
   MANAGER_CONSUMING: GRAMMAR.managerConsuming,
-  MANAGER_BOOLEAN: GRAMMAR.managerBoolean,
   MANAGER_DIRS: GRAMMAR.managerDirs,
   TARGET_FLAGS: GRAMMAR.targetFlags,
   NO_SCRIPTS: GRAMMAR.noScripts,
-  INTERPRETERS: GRAMMAR.interpreters,
+  NEVER_FLAGS: GRAMMAR.neverFlags,
+  WRAPPERS: GRAMMAR.wrappers,
+  EXISTENCE_PROBE: GRAMMAR.existenceProbe,
+};
+
+/** The two lists that build a regex and a split. Arrays, not sets, so they restore by content. */
+const ARRAYS: Readonly<Record<string, string[]>> = {
+  SCRIPT_EXTENSIONS: GRAMMAR.scriptExtensions,
+  NAME_SEPARATORS: GRAMMAR.nameSeparators,
 };
 
 /**
@@ -432,61 +572,55 @@ function deleteMember(member: string): () => void {
       GRAMMAR.tools[name] = original;
     };
     if (parts.length === 2) {
-      // `Reflect.deleteProperty` rather than `delete`, which the lint rule bars on a computed
-      // key. The key has to go: an entry with empty lists still makes the verb a known tool.
+      // `Reflect.deleteProperty` rather than `delete`, which the lint rule bars on a computed key. The
+      // key has to go: an entry with empty lists still makes the verb a known tool.
       Reflect.deleteProperty(GRAMMAR.tools, name);
+      return restore;
+    }
+    if (parts[2] === "bareIsBuild") {
+      GRAMMAR.tools[name] = { ...original, bareIsBuild: false };
       return restore;
     }
     const field = parts[2] ?? "";
     const flag = parts.slice(3).join(".");
-    if (field === "builds") {
-      GRAMMAR.tools[name] = {
-        ...original,
-        builds: (original.builds ?? []).filter((entry) => entry !== flag),
-      };
-      return restore;
-    }
-    if (field !== "dirs" && field !== "values" && field !== "buildFlags") {
+    if (!TOOL_LISTS.some((known) => known === field)) {
       throw new Error(`no such tool field: ${field}`);
     }
-    GRAMMAR.tools[name] = {
-      ...original,
-      [field]: original[field].filter((entry) => entry !== flag),
-    };
+    const list = original[field as (typeof TOOL_LISTS)[number]] ?? [];
+    GRAMMAR.tools[name] = { ...original, [field]: list.filter((entry) => entry !== flag) };
     return restore;
   }
 
-  if (head === "WRAPPERS") {
+  if (head === "INTERPRETERS") {
     const name = parts[1] ?? "";
-    const original = GRAMMAR.wrappers[name];
-    if (original === undefined) throw new Error(`no such wrapper: ${name}`);
+    const original = GRAMMAR.interpreters[name];
+    if (original === undefined) throw new Error(`no such interpreter: ${name}`);
     const restore = (): void => {
-      GRAMMAR.wrappers[name] = original;
+      GRAMMAR.interpreters[name] = original;
     };
     if (parts.length === 2) {
-      Reflect.deleteProperty(GRAMMAR.wrappers, name);
+      Reflect.deleteProperty(GRAMMAR.interpreters, name);
       return restore;
     }
-    if (parts[2] === "args") {
-      GRAMMAR.wrappers[name] = { ...original, args: 0 };
-      return restore;
-    }
+    const field = parts[2] ?? "";
     const flag = parts.slice(3).join(".");
-    GRAMMAR.wrappers[name] = {
-      ...original,
-      values: original.values.filter((entry) => entry !== flag),
-    };
+    if (!INTERPRETER_LISTS.some((known) => known === field)) {
+      throw new Error(`no such interpreter field: ${field}`);
+    }
+    const list = original[field as (typeof INTERPRETER_LISTS)[number]];
+    GRAMMAR.interpreters[name] = { ...original, [field]: list.filter((entry) => entry !== flag) };
     return restore;
   }
 
-  if (head === "MANAGER_VALUES") {
-    const manager = parts[1] ?? "";
-    const original = GRAMMAR.managerValues[manager];
-    if (original === undefined) throw new Error(`no such manager: ${manager}`);
-    const flag = parts.slice(2).join(".");
-    GRAMMAR.managerValues[manager] = original.filter((entry) => entry !== flag);
+  if (head === "RULES") {
+    // A rule is neutralised rather than deleted: replaced with the answer that stops it deciding
+    // anything. `isSetting` was reducible to a constant `false` with the whole corpus green.
+    const name = parts[1] ?? "";
+    if (name !== "isSetting" && name !== "isPathLike") throw new Error(`no such rule: ${name}`);
+    const original = GRAMMAR.rules[name];
+    GRAMMAR.rules[name] = () => false;
     return () => {
-      GRAMMAR.managerValues[manager] = original;
+      GRAMMAR.rules[name] = original;
     };
   }
 
@@ -498,6 +632,20 @@ function deleteMember(member: string): () => void {
     GRAMMAR.lifecycle[hook] = original.filter((entry) => entry !== dropped);
     return () => {
       GRAMMAR.lifecycle[hook] = original;
+    };
+  }
+
+  const array = ARRAYS[head];
+  if (array !== undefined) {
+    const before = [...array];
+    const dropped = parts.slice(1).join(".");
+    // Spliced in place, because a regex is built from this array on every call — reassigning the
+    // binding would leave the classifier reading the old one.
+    const at = array.indexOf(dropped);
+    if (at !== -1) array.splice(at, 1);
+    return () => {
+      array.length = 0;
+      array.push(...before);
     };
   }
 
@@ -565,11 +713,34 @@ describe("classifyBuildCommand", () => {
     expect.soft(missed, "a fix for the regressions must not undo v4's own gains").toEqual([]);
   });
 
+  it("reads `tsc -b` as the build it is, which three rounds pinned the other way", async () => {
+    // The evidence is in the tsconfig, not in the script name: `packages/qfai/tsconfig.json` sets
+    // `outDir: "dist"` and `composite: true` and no `noEmit`, so `tsc -b` writes JS and declarations
+    // into `packages/qfai/dist`. That is a build by the only definition this file uses.
+    //
+    // It was pinned as NOT a build for three rounds, in the list of "non-builds a review round added
+    // after a false positive" — which is v4's naming defect sitting inside the corpus assembled to
+    // catch it. `pnpm ci:gate` moves with it, because `ci:gate` runs `check-types`.
+    const sources = await repositorySources();
+    expect.soft(classifyBuildCommand("pnpm check-types", sources)).toBe("build");
+    expect.soft(classifyBuildCommand("tsc -b", sources)).toBe("build");
+    expect.soft(classifyBuildCommand("tsc -p tsconfig.build.json", sources)).toBe("build");
+    expect.soft(classifyBuildCommand("pnpm ci:gate", sources)).toBe("build");
+
+    // And the line that separates the check from the emit, in both spellings.
+    expect.soft(classifyBuildCommand("npx tsc --noEmit", sources)).toBe("none");
+    expect.soft(classifyBuildCommand("tsc --noEmit -p tsconfig.json", sources)).toBe("none");
+  });
+
   it("reports none for every non-build a review round added after a false positive", async () => {
     const sources = await repositorySources();
+    // `pnpm check-types` used to be in this list and is now asserted as a BUILD below. Three rounds
+    // pinned it here on the strength of the script's name; its body is `tsc -b`, and
+    // `packages/qfai/tsconfig.json` sets `outDir: dist` and `composite: true` with no `noEmit`, so it
+    // emits. Reading a verdict off a script's name is the defect v4 was broken for, and this list had
+    // an instance of it in it the whole time. `--noEmit` is what separates the check from the emit.
     const NOT_BUILDS = [
       "npx tsc --noEmit",
-      "pnpm check-types",
       "npm ci --ignore-scripts",
       "pnpm exec eslint . --cache-location .cache/build",
       "npm test -- --reporter=junit --outputFile reports/build.xml",
@@ -809,8 +980,10 @@ describe("classifyBuildCommand", () => {
     // - below, that each case still holds. That one is where a deletion is CAUGHT rather than merely
     //   noticed, and it works because the commands are literals that outlive the member.
     //
-    // Measured, not assumed: a sweep deleting each of the 208 members one at a time reddens the corpus
-    // 208 times. Before v10 dropped the forty-five unobservable members, 162 of 207 survived.
+    // No count is written here. Three rounds put one in this comment and in the matrix and it was
+    // stale within a commit every time: 208 while the grammar held 250, which is the defect class the
+    // sibling guards exist for, inside the sentence claiming measurement. The count is available at
+    // runtime, and the assertions below are the measurement rather than a report of one.
     const named = new Set(MEMBER_CASES.map(([member]) => member));
     expect(
       grammarMembers().filter((member) => !named.has(member)),
@@ -848,13 +1021,19 @@ describe("classifyBuildCommand", () => {
     // forty-five of them survived every command anyone could write. Those are gone from the grammar now,
     // and their absence is why this can demand nothing less than all of them.
     const undetected: string[] = [];
+    const mislabelled: string[] = [];
     for (const member of grammarMembers()) {
       const restore = deleteMember(member);
       try {
-        const caught = MEMBER_CASES.some(
+        // Both properties, because the table claims the stronger one. `undetected` is the weak
+        // property: SOME case notices. `mislabelled` is what the table's labels assert, that the
+        // member's OWN case notices its own deletion. Round 9 measured the strong property holding for
+        // every member while only the weak one was asserted, and asserting the true one is free.
+        const disagreeing = MEMBER_CASES.filter(
           ([, want, line]) => classifyBuildCommand(line, SYNTHETIC) !== want,
-        );
-        if (!caught) undetected.push(member);
+        ).map(([label]) => label);
+        if (!disagreeing.length) undetected.push(member);
+        else if (!disagreeing.includes(member)) mislabelled.push(member);
       } finally {
         restore();
       }
@@ -862,6 +1041,11 @@ describe("classifyBuildCommand", () => {
     expect(undetected, "a grammar member whose deletion no case in this corpus notices").toEqual(
       [],
     );
+    expect(
+      mislabelled,
+      "a member whose deletion is noticed only by SOME OTHER member's case: the label is then " +
+        "decoration, and a case going inert would be covered for by its neighbour",
+    ).toEqual([]);
 
     // And the restore has to be exact, or every test after this one is measuring a different grammar.
     expect(grammarMembers().length, "the sweep must leave the grammar as it found it").toBe(
@@ -987,6 +1171,107 @@ describe("classifyBuildCommand", () => {
       .toEqual([]);
   });
 
+  it("sees the builds round 9 planted in the shipped lane, all forty-one of them", async () => {
+    // Two reviewers planted real builds in the shipped orchestrator and ran the story's own loop.
+    // **Eighteen of twenty shipped unnoticed** for one, **thirty-four of forty** for the other, and
+    // fifteen of the eighteen were tools this grammar already declared. The root cause was one level
+    // above v9's flag work: no version had given a tool its own SUBCOMMAND grammar, so a build was
+    // recognised only when a bare token split to contain the literal word "build".
+    //
+    // Every form below is a reviewer's, not this stage's. That distinction is the finding round 9
+    // closed with: "eleven versions in, the corpus's authority still comes from who chose it."
+    const sources = await repositorySources();
+    const PLANTED = [
+      // the build verb is not the word `build`
+      "mvn package",
+      "mvn -B package",
+      "mvn install -DskipTests",
+      "mvn verify",
+      "gradle assemble",
+      "gradle jar",
+      "./gradlew assembleRelease",
+      "dotnet publish -c Release",
+      "dotnet pack",
+      "go install ./cmd/...",
+      "sbt compile",
+      "sbt assembly",
+      "meson compile -C builddir",
+      "python3 setup.py bdist_wheel",
+      "docker-compose build",
+      // a bare tool with a default target
+      "make",
+      "make all",
+      "make -j4",
+      "make -j build",
+      "ninja",
+      "rake",
+      "scons",
+      "just",
+      "task",
+      "waf",
+      // the interpreter had no flag grammar
+      'bash -c "pnpm build"',
+      "bash -lc 'pnpm build'",
+      "sh -c 'npm run build'",
+      "pwsh -Command 'pnpm build'",
+      "pwsh -File scripts/build.ps1",
+      // the wrapper list was the six forms someone had measured
+      "cross-env NODE_ENV=production pnpm build",
+      'xvfb-run -a -s "-screen 0 1024x768x24" pnpm build',
+      "setsid pnpm build",
+      "flock /tmp/lock pnpm build",
+      "taskset -c 0-3 pnpm build",
+      "unbuffer pnpm build",
+      // a manager flag nobody had listed as boolean ate the script name
+      "pnpm --no-frozen-lockfile build",
+      "pnpm --shell-emulator build",
+      // the canonical yarn-berry workspace build
+      "yarn workspaces foreach --all run build",
+      "yarn workspaces foreach -A run build",
+      // and `tsc -b`, which this repository's own type-check lane runs
+      "pnpm exec tsc -b",
+    ];
+    expect
+      .soft(
+        PLANTED.filter((line) => classifyBuildCommand(line, sources) === "none"),
+        "a real build that ships without the story noticing",
+      )
+      .toEqual([]);
+
+    // The other direction, from the same two rounds. Four of these were false positives the new
+    // wrapper grammar introduced, and four are labels or paths whose components include `build`.
+    const NOT_PLANTED = [
+      "command -v tsup",
+      "command -v vite",
+      "stdbuf -oL npx tsup --help",
+      "timeout 5 docker buildx bake --print",
+      "bazel test //src/build:tests",
+      "bazel query deps(//build:all)",
+      "make ./build/report.txt",
+      "docker inspect ./build",
+      "docker run --rm alpine echo build-info",
+      "go vet ./build/...",
+      "gradle test -x build",
+      "dotnet -a build test",
+      "make -j 4 clean",
+      "ninja clean",
+      "make clean",
+      "make test",
+    ];
+    expect
+      .soft(
+        NOT_PLANTED.filter((line) => classifyBuildCommand(line, sources) !== "none"),
+        "a non-build invented out of a flag value, a label or a container's own command line",
+      )
+      .toEqual([]);
+
+    // What stays unseeable, stated rather than left to be rediscovered: a build inside a helper whose
+    // filename does not say build. Round 9 planted this one too, and it is the honest `none`.
+    expect
+      .soft(classifyBuildCommand("node scripts/bundle.mjs", sources), "no scan can read this")
+      .toBe("none");
+  });
+
   it("terminates on a self-referential script chain rather than recursing forever", () => {
     const sources: ScriptSources = { manifests: { "": { a: "pnpm b", b: "pnpm a" } } };
     expect(classifyBuildCommand("pnpm a", sources)).toBe("none");
@@ -1097,9 +1382,15 @@ describe("the real workflow trees", () => {
       )
       .toEqual([
         "build::ci.yml::pnpm -C packages/qfai build",
+        // This one is new, and it is a fact about the repository rather than about the predicate:
+        // the own tree has a THIRD lane that builds. `check-types` runs `tsc -b`, which emits into
+        // `dist`, so the type-check lane and the build lane compile the same package twice.
+        "build::ci.yml::pnpm check-types",
         'build::release.yml::pnpm -C packages/qfai pack --pack-destination "$PWD/tmp"',
+        // `ci:gate` runs `check-types`, whose `tsc -b` emits into `dist`. It was `heuristic` here for
+        // three rounds because the chain was read as far as a script NAME and no further.
+        "build::release.yml::pnpm ci:gate",
         "heuristic::ci.yml::pnpm ci:build-verify",
-        "heuristic::release.yml::pnpm ci:gate",
       ]);
   });
 });
