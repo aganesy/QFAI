@@ -40,7 +40,8 @@
  * `runInit` once, shared. Nine inits of a full asset tree is nine times the same work, and this
  * spec's own integration slice was pushed past its timeout by exactly that shape.
  */
-import { mkdtemp, readFile, rm, access } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, readFile, rm, access, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -83,6 +84,50 @@ async function exists(rel: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Executes one extracted `run:` body under bash with a stubbed `GITHUB_OUTPUT`, returning the exit
+ * status, the streams and the `key=value` pairs the shell published.
+ *
+ * The same pattern as `tests/integration/shippedWorkflow*.test.ts`: the only way to tell a step that
+ * resolves a value from a step that merely mentions one is to run it and read what came out.
+ */
+async function runStep(
+  body: string,
+  cwd: string,
+): Promise<{
+  status: number | null;
+  stdout: string;
+  stderr: string;
+  outputs: Record<string, string>;
+}> {
+  const stage = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-step-"));
+  try {
+    const scriptPath = path.join(stage, "step.sh");
+    const outputPath = path.join(stage, "github-output.txt");
+    await writeFile(scriptPath, body, "utf8");
+    await writeFile(outputPath, "", "utf8");
+    const child = spawnSync("bash", [scriptPath], {
+      cwd,
+      encoding: "utf-8",
+      env: { ...process.env, GITHUB_OUTPUT: outputPath },
+    });
+    if (child.error !== undefined) throw child.error;
+    const outputs: Record<string, string> = {};
+    for (const line of (await readFile(outputPath, "utf8")).split(/\r?\n/)) {
+      const eq = line.indexOf("=");
+      if (eq > 0) outputs[line.slice(0, eq)] = line.slice(eq + 1);
+    }
+    return {
+      status: child.status,
+      stdout: child.stdout ?? "",
+      stderr: child.stderr ?? "",
+      outputs,
+    };
+  } finally {
+    await rm(stage, { recursive: true, force: true });
   }
 }
 
@@ -181,6 +226,99 @@ describe(
         )
         .toEqual([]);
     });
+
+    it("resolves the version by running the shipped step, not by naming a file in prose", async () => {
+      // The positive half of "file-derived". Round 1's `completion-reviewer` was right that the
+      // first version of this row asserted only the negative half, and justified the gap with a
+      // claim that was false: the matrix said "nothing here proves the version comes from a file
+      // rather than from a default", and `qfai-validate.yml` does prove it — it probes `.nvmrc`
+      // then `.node-version` and only falls open to a documented default with a warning.
+      //
+      // The first repair asserted that over the step's TEXT and was vacuous, which two oracle
+      // rounds caught: `.nvmrc` also appears in the step's warning message, and `version=` also
+      // appears in its fallback publish, so breaking the real mechanism left both patterns matching
+      // other text in the same body. That is the fourth time on this spec that a claim about how
+      // code is *written* held while the behaviour was gone.
+      //
+      // So: run the step. `tests/integration/shippedWorkflow*.test.ts` established this pattern —
+      // extract the `run` body, execute it under bash with a stubbed `GITHUB_OUTPUT`, and read what
+      // it published. A behaviour cannot be satisfied by a mention.
+      const text = await workflowText("qfai-validate.yml");
+      const parsed: unknown = parseYaml(text);
+      const map = isRecord(parsed) && isRecord(parsed["jobs"]) ? parsed["jobs"] : {};
+
+      // Find the resolver through the CHAIN rather than by guessing its name: setup-node's
+      // `node-version` must reference a step output, and that reference names the step to run.
+      let resolverId: string | undefined;
+      let resolverBody: string | undefined;
+      for (const job of Object.values(map)) {
+        const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
+        for (const step of steps) {
+          if (!isRecord(step)) continue;
+          const uses = typeof step["uses"] === "string" ? step["uses"] : "";
+          const withBlock = isRecord(step["with"]) ? step["with"] : {};
+          const version =
+            typeof withBlock["node-version"] === "string" ? withBlock["node-version"] : "";
+          if (!/setup-node/.test(uses)) continue;
+          const reference =
+            /\$\{\{\s*steps\.([A-Za-z0-9_-]+)\.outputs\.([A-Za-z0-9_-]+)\s*\}\}/.exec(version);
+          if (reference === null) continue;
+          resolverId = reference[1];
+        }
+        for (const step of steps) {
+          if (!isRecord(step)) continue;
+          if (step["id"] !== resolverId) continue;
+          if (typeof step["run"] === "string") resolverBody = step["run"];
+        }
+      }
+
+      expect
+        .soft(
+          resolverId,
+          "setup-node must take its version from a resolved step output, not a literal",
+        )
+        .toBeDefined();
+      expect
+        .soft(resolverBody, "the referenced resolver step must exist and carry a run body")
+        .toBeDefined();
+      if (resolverBody === undefined) return;
+
+      // With an adopter version file present, the published version must be the file's content.
+      const withFile = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-nodever-a-"));
+      const withoutFile = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-nodever-b-"));
+      try {
+        await writeFile(path.join(withFile, ".nvmrc"), "23.4.1\n", "utf8");
+        const pinned = await runStep(resolverBody, withFile);
+        expect
+          .soft(
+            pinned.outputs["version"],
+            "the adopter's own version file must win — this is the whole of 'file-derived'",
+          )
+          .toBe("23.4.1");
+
+        // With none present it must fall OPEN rather than fail, and say so.
+        const fallback = await runStep(resolverBody, withoutFile);
+        expect.soft(fallback.status, "no version file must not fail the lane").toBe(0);
+        expect
+          .soft(
+            fallback.outputs["version"],
+            "a documented fallback must still be published, or setup-node receives nothing",
+          )
+          .toMatch(/^\d+/);
+        expect
+          .soft(fallback.outputs["version"], "the fallback must not be mistaken for a pinned value")
+          .not.toBe("23.4.1");
+        expect
+          .soft(
+            fallback.stdout + fallback.stderr,
+            "falling open silently is the drift this forbids",
+          )
+          .toMatch(/::warning::/);
+      } finally {
+        await rm(withFile, { recursive: true, force: true });
+        await rm(withoutFile, { recursive: true, force: true });
+      }
+    });
   },
 );
 
@@ -194,14 +332,35 @@ describe(
       // build, so "reuse" has no surface there yet and `TDD-0032`..`TDD-0035` are `blocked` on
       // `CR-20260820-0007`. What holds now and after that work is that no lane duplicates a build —
       // before reuse because there is nothing to duplicate, after it because reuse is the point.
+      //
+      // The first version of this scan was `/\b(pnpm|npm|yarn)\s+(-\S+\s+\S+\s+)?build\b/`, which
+      // admits ONE flag-value pair and nothing else. Round 1's `qa-gatekeeper` measured it one form
+      // at a time: `pnpm build`, `pnpm -C packages/qfai build` and `yarn build` reddened, while
+      // `pnpm run build`, `npm run build`, `yarn run build`, `pnpm exec tsup` and `npx tsup`
+      // reddened nothing. The property held against the shape the oracle happened to plant and not
+      // against the shape a real lane would use — `run` is the idiomatic form and was invisible.
+      //
+      // Two patterns now, each anchored on the verb rather than on the flags before it:
+      //   RUNNER   a package-manager invocation reaching a `build` script, whatever sits between
+      //   BUNDLER  a bundler called directly, which is what a lane that skipped the script does
+      const RUNNER = /\b(?:pnpm|npm|yarn|npx|bun)\b[^\n]*?\bbuild\b/;
+      const BUNDLER = /\b(?:tsup|tsc|rollup|esbuild|webpack|vite\s+build)\b/;
       const map = await jobs();
       const rebuilding: string[] = [];
       for (const [id, job] of Object.entries(map)) {
         const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
         for (const step of steps) {
           const run = isRecord(step) ? step["run"] : undefined;
-          if (typeof run === "string" && /\b(pnpm|npm|yarn)\s+(-\S+\s+\S+\s+)?build\b/.test(run)) {
-            rebuilding.push(`${id}: ${run.trim().slice(0, 60)}`);
+          if (typeof run !== "string") continue;
+          // Comment lines inside a `run` block are not commands. Scanning the raw string is how a
+          // claim goes vacuous by matching prose — this spec's own `--no-renames` claim did exactly
+          // that, and implement round 5 found it.
+          const commands = run
+            .split(/\r?\n/)
+            .filter((line) => !/^\s*#/.test(line))
+            .join("\n");
+          if (RUNNER.test(commands) || BUNDLER.test(commands)) {
+            rebuilding.push(`${id}: ${commands.trim().slice(0, 60)}`);
           }
         }
       }
@@ -261,21 +420,25 @@ describe(
   },
 );
 
-// QFAI:SPEC-0017:US-0017-0007
-describe(
-  "E2E: an adopter receives a runner configuration they can tune (US-0017-0007)",
-  { timeout: 120000 },
-  () => {
-    it("ships a project configuration file the runner reads", async () => {
-      // Measured: no knob file ships, so the derived-parallelism half is `❌` in the matrix. What holds
-      // now and after is that the adopter gets a config the runner reads — without it there is nowhere
-      // for a worker setting to be declared at all, which is the precondition this story needs.
-      expect
-        .soft(await exists("qfai.config.yaml"), "the adopter must receive a project configuration")
-        .toBe(true);
-    });
-  },
-);
+/*
+ * US-0017-0007 — runner parallelism derived from QFAI's own workload — is NOT covered here, and the
+ * annotation for it has been REMOVED from `tests/e2e/qfai-traceability.md`.
+ *
+ * The first version of this file claimed it with one assertion: that `qfai.config.yaml` exists after
+ * init. Round 1's `completion-reviewer` found that `tests/e2e/initE2E.test.ts` already asserts
+ * exactly that — "creates qfai.config.yaml in the project root" — so the row added no discriminating
+ * power at all. Its own matrix cell already conceded the assertion "would hold for a project with no
+ * knobs in it at all" and scored its oracle strength missing.
+ *
+ * That is an annotation over a gap, which is the failure `CR-20260814-0001` describes: the ledger the
+ * gate reads is hand-maintained, so a line in it certifies coverage in both false directions. Writing
+ * one for a story nothing tests is the direction that matters.
+ *
+ * So `QFAI-ATDD-111` reports `US-0017-0007` again, deliberately. Measured: no knob file ships —
+ * `vitest.knobs.ts` exists only under `packages/qfai/` and is not part of the init asset tree — so an
+ * adopter receives no declared worker or file-parallelism setting, and there is nothing to assert
+ * that a project without the feature would fail. The row becomes coverable when the knobs ship.
+ */
 
 // QFAI:SPEC-0017:US-0017-0008
 describe(

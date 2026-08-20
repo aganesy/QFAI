@@ -1,0 +1,179 @@
+#!/usr/bin/env node
+/* global process */
+/**
+ * Refuse an E2E annotation ledger entry that no test backs.
+ *
+ * `QFAI-ATDD-111` answers "is this user story covered?" by reading an annotation LEDGER —
+ * `<testsDir>/e2e/qfai-traceability.md` — and not the test files. Appending a line to that markdown
+ * clears the gate whether or not a test exists. That is the false certification `CR-20260814-0001`
+ * describes, and it is worth noticing that it certifies in both directions: a real test whose
+ * annotation nobody appended reads as uncovered, and an appended line with nothing behind it reads
+ * as covered.
+ *
+ * This guard closes the second direction, which is the one that matters: for every `US` the ledger
+ * claims, some E2E test file must carry the same annotation. It does not require the reverse — a
+ * test annotated ahead of its ledger line is a gate that has not been told yet, not a lie.
+ *
+ * Deliberately narrow:
+ *
+ *   - It checks presence of the annotation, not that the test asserts anything. No script can judge
+ *     whether an assertion earns its annotation; a reviewer can, and `US-0017-0007` is the worked
+ *     example — its one assertion duplicated an existing test's, so the claim was withdrawn rather
+ *     than propped up here.
+ *   - It reads the ledger the SCANNER reads. `testsDir` is repo-root relative, so a `US` annotation
+ *     living only under `packages/qfai/tests/e2e/**` is invisible to `QFAI-ATDD-111` — which is why
+ *     the ledger exists at all, and why this guard needs both trees.
+ */
+import { readFile, readdir } from "node:fs/promises";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+/** `QFAI:SPEC-0017:US-0017-0004` — the annotation form both the ledger and the tests use. */
+const ANNOTATION = /QFAI:SPEC-(\d{4}):(US-\d{4}-\d{4})/g;
+
+const TEST_SUFFIXES = [".ts", ".tsx", ".mts", ".js", ".mjs"];
+
+/**
+ * Compare the claims a ledger makes against the annotations tests carry.
+ *
+ * Pure: both inputs are already-read text, so the decision is testable without a filesystem.
+ *
+ * @param {string} ledgerText contents of `<testsDir>/e2e/qfai-traceability.md`
+ * @param {Map<string, string>} testSources file path -> contents, for every E2E test file
+ * @param {{ spec?: string }} [options] restrict the check to one spec number, e.g. `"0017"`
+ * @returns {{ ok: boolean, unbacked: Array<{ annotation: string, spec: string }>, checked: number }}
+ */
+export function checkLedger(ledgerText, testSources, options = {}) {
+  const claimed = new Map();
+  for (const match of ledgerText.matchAll(ANNOTATION)) {
+    const [, spec, story] = match;
+    if (options.spec !== undefined && spec !== options.spec) continue;
+    claimed.set(`QFAI:SPEC-${spec}:${story}`, spec);
+  }
+
+  const backed = new Set();
+  for (const source of testSources.values()) {
+    for (const match of source.matchAll(ANNOTATION)) {
+      backed.add(`QFAI:SPEC-${match[1]}:${match[2]}`);
+    }
+  }
+
+  const unbacked = [];
+  for (const [annotation, spec] of claimed) {
+    if (!backed.has(annotation)) unbacked.push({ annotation, spec });
+  }
+  unbacked.sort((a, b) => a.annotation.localeCompare(b.annotation));
+  return { ok: unbacked.length === 0, unbacked, checked: claimed.size };
+}
+
+/**
+ * Read every E2E test file under a directory tree.
+ *
+ * @param {string} dir
+ * @returns {Promise<Map<string, string>>} empty when the directory does not exist
+ */
+export async function collectTestSources(dir) {
+  const sources = new Map();
+  /** @type {string[]} */
+  const queue = [dir];
+  while (queue.length > 0) {
+    const current = queue.pop();
+    if (current === undefined) break;
+    let entries;
+    try {
+      entries = await readdir(current, { withFileTypes: true });
+    } catch (error) {
+      // A tree that is not there contributes nothing; anything else is a real failure.
+      if (isMissing(error)) continue;
+      throw error;
+    }
+    for (const entry of entries) {
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
+        queue.push(full);
+        continue;
+      }
+      if (!TEST_SUFFIXES.some((suffix) => entry.name.endsWith(suffix))) continue;
+      try {
+        sources.set(full, await readFile(full, "utf8"));
+      } catch (error) {
+        if (isMissing(error)) continue;
+        throw error;
+      }
+    }
+  }
+  return sources;
+}
+
+/**
+ * @param {unknown} error
+ * @returns {boolean}
+ */
+function isMissing(error) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error.code === "ENOENT" || error.code === "ENOTDIR")
+  );
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  const specIndex = args.indexOf("--spec");
+  const spec = specIndex === -1 ? undefined : args[specIndex + 1];
+  if (specIndex !== -1 && (spec === undefined || !/^\d{4}$/.test(spec))) {
+    process.stderr.write("check-atdd-annotation-ledger: --spec needs a four-digit spec number\n");
+    process.exitCode = 2;
+    return;
+  }
+
+  const root = process.cwd();
+  const ledgerPath = path.join(root, "tests", "e2e", "qfai-traceability.md");
+  let ledgerText;
+  try {
+    ledgerText = await readFile(ledgerPath, "utf8");
+  } catch (error) {
+    if (isMissing(error)) {
+      process.stdout.write(
+        "check-atdd-annotation-ledger: no ledger at tests/e2e — nothing to check\n",
+      );
+      return;
+    }
+    throw error;
+  }
+
+  const sources = new Map();
+  for (const dir of [
+    path.join(root, "tests", "e2e"),
+    path.join(root, "packages", "qfai", "tests", "e2e"),
+  ]) {
+    for (const [file, text] of await collectTestSources(dir)) sources.set(file, text);
+  }
+
+  const result = checkLedger(ledgerText, sources, spec === undefined ? {} : { spec });
+  if (result.ok) {
+    const scope = spec === undefined ? "all specs" : `spec-${spec}`;
+    process.stdout.write(
+      `check-atdd-annotation-ledger: ${result.checked} claim(s) backed by a test annotation (${scope})\n`,
+    );
+    return;
+  }
+  process.stderr.write(
+    "check-atdd-annotation-ledger: the ledger claims coverage no test carries an annotation for.\n" +
+      "Each line below is a user story QFAI-ATDD-111 reads as covered with nothing behind it:\n\n",
+  );
+  for (const { annotation } of result.unbacked) process.stderr.write(`  ${annotation}\n`);
+  process.stderr.write(
+    "\nWrite the test first, then append the ledger line — not the other way round.\n",
+  );
+  process.exitCode = 1;
+}
+
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    process.stderr.write(`check-atdd-annotation-ledger: ${String(error)}\n`);
+    process.exitCode = 1;
+  });
+}
