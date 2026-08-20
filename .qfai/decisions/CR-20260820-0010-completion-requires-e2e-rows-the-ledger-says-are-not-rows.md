@@ -1,7 +1,7 @@
 # Change Request
 
 - ID: `CR-20260820-0010`
-- Title: `Spec completion requires a Layer = E2E ledger row per US-*, and the ledger's own producer note says US-* are not rows there`
+- Title: `spec-0017's nine user stories have no E2E test annotating them, and the required status context validates every spec at once`
 - Raised by: `/qfai-implement orchestrator, spec-0017; raised from qa-gatekeeper's round-6 finding N7, which it left unfiled`
 - Raised at: `2026-08-20T00:00:00Z`
 - Class: `intent`
@@ -131,6 +131,73 @@ computes.
 `spec-0017`'s own contribution to `QFAI-ATDD-112` is exactly its 6 `blocked` and 2 `todo` rows —
 `TC-0017-0016`, `0030`, `0032`..`0035`, `0069`, `0070` — which have no test because those rows are not
 implemented. That part is not a defect and clears when they are.
+
+## CORRECTION — there is no contradiction, and this CR was wrong from the start
+
+**2026-08-20, after measuring what the validator actually reads.** Everything above is superseded by
+this section. Kept rather than deleted because the mistake is the third of its kind in this run and
+the shape is worth being able to see.
+
+### What is actually true
+
+```text
+QFAI: US annotations in packages/qfai/tests/e2e/**      74
+  for spec-0017                                          0
+E2E test files, one per spec, by convention              spec0004…E2E.test.ts, spec0006…, spec0008…
+specs declaring surface_type in FRONTMATTER               0
+.qfai/contracts/ui/ companions                            0  (README only)
+```
+
+The ledger's Producer note says `US-*` are "traced by `QFAI:` annotations in the test tree". That is
+**exactly** what `QFAI-ATDD-111` checks. The note and the validator agree, and 74 live annotations
+prove the mechanism is in use.
+
+So the finding is not a contradiction to resolve. It is a true statement: **spec-0017 declares nine
+user stories and has no E2E test annotating any of them**, while every other spec that is clean has
+one. `QFAI-ATDD-111` is reporting a real coverage gap.
+
+The other four specs it names are in the same position, not collateral: spec-0003 (8 unreferenced),
+spec-0006 (1), spec-0008 (1), spec-0015 (2).
+
+### Where the error came from
+
+I read the `SKILL.md` sentence — "Every `US-*` the spec declares has a `Layer = E2E` **row** whose
+`US-Refs` names it" — as the operative rule, and built a contradiction between it and the Producer
+note's "`US-*` are not rows here". Those two really do conflict, and merged `main` removed the
+sentence. But the sentence was never what the validator enforced, and the annotation mechanism the
+Producer note names was working the whole time in 74 places.
+
+The `surface_type` scoping I then investigated is also a dead end, and correctly so:
+`resolveUiBearingScope` returns `null` when no spec declares a surface, which keeps the gate
+project-wide — and its docblock says that is deliberate ("the obligation remains project-wide and
+this change relaxes nothing for it"). No spec here has a UI companion contract, so none should
+declare one, and the strict fallback is the intended behaviour.
+
+**The pattern, stated because it has now happened three times.** `CR-20260820-0008` argued from
+`relevant-test-suite.md`, which governs a different phase. `CR-20260820-0009` argued from step 4's
+"aggregate" without checking whether it meant a multi-entry `Selector`. This one argued from a
+sentence the validator does not read. Each time I reasoned from a quoted text rather than from what
+the system does — the same failure as the four vacuous claims, which asserted over how code is
+written rather than what it does. The fix in both cases is the same: run it and look.
+
+### What is left of this CR
+
+One thing, and it is not a decision about rules:
+
+**`spec-0017` needs an E2E test annotating `US-0017-0001` … `US-0017-0009`.** `/qfai-atdd` owns that
+— `SKILL.md`'s Non-goals are explicit ("Writing acceptance tests (use `/qfai-atdd`)"), and
+`/qfai-implement` "stops with a handoff note if it does not" exist. That is a handoff, not a change
+request.
+
+And one thing that IS a decision, which the options below keep: the `build` job runs
+`validate --profile tdd --fail-on error` over the WHOLE repository, so the required status context
+cannot go green until every spec's US are referenced — spec-0003's 8, spec-0006's 1, spec-0008's 1 and
+spec-0015's 2 included. No work on spec-0017 alone can clear it. That is option 5, and it is the only
+option in this CR that survives the correction.
+
+Options 1 through 4 are withdrawn: 1 rewords a sentence that no longer exists and was never
+enforced, 2 and 3 would put rows in a ledger whose producer rule correctly excludes them, and 4
+waives a condition that is doing its job.
 
 ## Options
 
