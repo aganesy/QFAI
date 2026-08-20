@@ -24,7 +24,7 @@
  *     living only under `packages/qfai/tests/e2e/**` is invisible to `QFAI-ATDD-111` — which is why
  *     the ledger exists at all, and why this guard needs both trees.
  */
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -49,7 +49,16 @@ import { fileURLToPath, pathToFileURL } from "node:url";
  */
 const ANNOTATION = /\bQFAI:SPEC-(\d{4}):(US-\d{4}(?:-\d{4})?)\b/g;
 
-const TEST_SUFFIXES = [".ts", ".tsx", ".mts", ".js", ".mjs"];
+/**
+ * Suffixes that can carry an annotation in a test tree.
+ *
+ * Deliberately broader than the scanner's own `DEFAULT_TEST_FILE_GLOB`, and narrower than "any file":
+ * a claim is backed when SOME test source names it, and a file the scanner would not execute still
+ * tells a reader the story was written about. `.md` and `.feature` are excluded — a markdown file
+ * naming an annotation is a ledger or a document, not a test, and treating one as backing would
+ * reintroduce exactly the substitution this guard exists to stop.
+ */
+const TEST_SUFFIXES = [".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs"];
 
 /**
  * Compare the claims a ledger makes against the annotations tests carry.
@@ -94,9 +103,14 @@ export async function collectTestSources(dir) {
   const sources = new Map();
   /** @type {string[]} */
   const queue = [dir];
-  while (queue.length > 0) {
-    const current = queue.pop();
-    if (current === undefined) break;
+  const seen = new Set();
+  for (let current = queue.pop(); current !== undefined; current = queue.pop()) {
+    // A symlink loop would otherwise walk forever. This repository tracks 83 symlinks, so the
+    // possibility is not theoretical here.
+    const key = path.resolve(current);
+    if (seen.has(key)) continue;
+    seen.add(key);
+
     let entries;
     try {
       entries = await readdir(current, { withFileTypes: true });
@@ -107,11 +121,26 @@ export async function collectTestSources(dir) {
     }
     for (const entry of entries) {
       const full = path.join(current, entry.name);
-      if (entry.isDirectory()) {
+
+      // `isDirectory()` is FALSE for a symlink to a directory, and this repository's test trees are
+      // full of them — so the first version walked past every linked subtree in silence. `stat`
+      // follows the link; `isSymbolicLink()` alone would not tell us which kind it is.
+      let directory = entry.isDirectory();
+      if (!directory && entry.isSymbolicLink()) {
+        try {
+          directory = (await stat(full)).isDirectory();
+        } catch (error) {
+          // A dangling link is not a failure of this guard.
+          if (!isMissing(error)) throw error;
+          continue;
+        }
+      }
+      if (directory) {
         if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
         queue.push(full);
         continue;
       }
+
       if (!TEST_SUFFIXES.some((suffix) => entry.name.endsWith(suffix))) continue;
       try {
         sources.set(full, await readFile(full, "utf8"));
@@ -138,10 +167,35 @@ function isMissing(error) {
 }
 
 async function main() {
+  // `--spec=0017` and a misspelled flag were both accepted in silence by the first version, which
+  // means a scoped invocation could quietly widen to every spec — or a typo could look like a pass.
+  // Every argument is now accounted for, and anything unrecognized is a usage error.
   const args = process.argv.slice(2);
-  const specIndex = args.indexOf("--spec");
-  const spec = specIndex === -1 ? undefined : args[specIndex + 1];
-  if (specIndex !== -1 && (spec === undefined || !/^\d{4}$/.test(spec))) {
+  /** @type {string | undefined} */
+  let spec;
+  let sawSpecFlag = false;
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    if (argument === "--spec") {
+      sawSpecFlag = true;
+      spec = args[index + 1];
+      index += 1;
+      continue;
+    }
+    const inline = /^--spec=(.*)$/.exec(argument ?? "");
+    if (inline !== null) {
+      sawSpecFlag = true;
+      spec = inline[1];
+      continue;
+    }
+    process.stderr.write(
+      `check-atdd-annotation-ledger: unknown argument ${JSON.stringify(argument)}. ` +
+        "Usage: check-atdd-annotation-ledger [--spec NNNN]\n",
+    );
+    process.exitCode = 2;
+    return;
+  }
+  if (sawSpecFlag && (spec === undefined || !/^\d{4}$/.test(spec))) {
     process.stderr.write("check-atdd-annotation-ledger: --spec needs a four-digit spec number\n");
     process.exitCode = 2;
     return;
@@ -198,7 +252,12 @@ async function main() {
 
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((error) => {
-    process.stderr.write(`check-atdd-annotation-ledger: ${String(error)}\n`);
-    process.exitCode = 1;
+    // Exit 3, not 1. Exit 1 means "the ledger claims coverage no test carries"; an unexpected
+    // internal failure is not that finding, and collapsing the two would let a crash read as a
+    // measurement — which is the fail-open shape this guard exists to close.
+    process.stderr.write(
+      `check-atdd-annotation-ledger: internal failure, no measurement taken: ${String(error)}\n`,
+    );
+    process.exitCode = 3;
   });
 }

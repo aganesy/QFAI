@@ -102,6 +102,7 @@ async function runStep(
   stdout: string;
   stderr: string;
   outputs: Record<string, string>;
+  skipped: boolean;
 }> {
   const stage = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-step-"));
   try {
@@ -109,12 +110,25 @@ async function runStep(
     const outputPath = path.join(stage, "github-output.txt");
     await writeFile(scriptPath, body, "utf8");
     await writeFile(outputPath, "", "utf8");
-    const child = spawnSync("bash", [scriptPath], {
+    // `-e -o pipefail` are the flags GitHub applies to a `shell: bash` step, and this row's headline
+    // assertion — "no version file must not fail the lane" — is precisely a claim about the exit
+    // semantics they define. Two of the three sibling helpers pass them and this one did not, while
+    // its docstring claimed to follow their pattern; round 2 caught the divergence. Measured: the
+    // current resolver behaves identically either way, so this is correctness ahead of a consequence
+    // rather than a fix to one.
+    const child = spawnSync("bash", ["-e", "-o", "pipefail", scriptPath], {
       cwd,
       encoding: "utf-8",
       env: { ...process.env, GITHUB_OUTPUT: outputPath },
     });
-    if (child.error !== undefined) throw child.error;
+    if (child.error !== undefined) {
+      // `bash` is absent on some Windows images. Rethrowing turns a missing interpreter into a
+      // failure of the property under test, which it is not.
+      const code = (child.error as NodeJS.ErrnoException).code;
+      if (code === "ENOENT")
+        return { status: null, stdout: "", stderr: "", outputs: {}, skipped: true };
+      throw child.error;
+    }
     const outputs: Record<string, string> = {};
     for (const line of (await readFile(outputPath, "utf8")).split(/\r?\n/)) {
       const eq = line.indexOf("=");
@@ -125,6 +139,7 @@ async function runStep(
       stdout: child.stdout ?? "",
       stderr: child.stderr ?? "",
       outputs,
+      skipped: false,
     };
   } finally {
     await rm(stage, { recursive: true, force: true });
@@ -303,13 +318,23 @@ describe(
       // only `.nvmrc` was ever written — deleting `.node-version` from the shipped probe list was
       // invisible to this row. Asserting the second candidate is four lines; leaving the sentence
       // false was the alternative.
-      const withFile = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-nodever-a-"));
-      const withoutFile = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-nodever-b-"));
-      const withSecond = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-nodever-c-"));
-      const withBoth = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-nodever-d-"));
+      // Every fixture directory is registered as it is created, and torn down from that list — the
+      // first version mkdtemp'd two of them BEFORE the `try`, so a failure in the second leaked the
+      // first. Round 2 found it.
+      const fixtures: string[] = [];
+      const fixture = async (suffix: string): Promise<string> => {
+        const dir = await mkdtemp(path.join(os.tmpdir(), `qfai-e2e-nodever-${suffix}-`));
+        fixtures.push(dir);
+        return dir;
+      };
       try {
+        const withFile = await fixture("a");
+        const withoutFile = await fixture("b");
+        const withSecond = await fixture("c");
+        const withBoth = await fixture("d");
         await writeFile(path.join(withFile, ".nvmrc"), "23.4.1\n", "utf8");
         const pinned = await runStep(resolverBody, withFile);
+        if (pinned.skipped) return;
         expect
           .soft(
             pinned.outputs["version"],
@@ -336,16 +361,18 @@ describe(
 
         // With none present it must fall OPEN rather than fail, and say so.
         const fallback = await runStep(resolverBody, withoutFile);
+        if (fallback.skipped) return;
         expect.soft(fallback.status, "no version file must not fail the lane").toBe(0);
+        // The documented literal, not "any leading digit". Round 2 pointed out that the integration
+        // row at `tests/integration/shippedWorkflowPortability.test.ts` asserts the exact value, and
+        // that an E2E row claiming to have added a behavioural check should not be the weaker of the
+        // two. The value is the `engines: ">=20.19.0"` floor the shipped comment names.
         expect
           .soft(
             fallback.outputs["version"],
-            "a documented fallback must still be published, or setup-node receives nothing",
+            "the documented fallback must be published verbatim, or setup-node receives a guess",
           )
-          .toMatch(/^\d+/);
-        expect
-          .soft(fallback.outputs["version"], "the fallback must not be mistaken for a pinned value")
-          .not.toBe("23.4.1");
+          .toBe("20");
         expect
           .soft(
             fallback.stdout + fallback.stderr,
@@ -353,9 +380,7 @@ describe(
           )
           .toMatch(/::warning::/);
       } finally {
-        for (const dir of [withFile, withoutFile, withSecond, withBoth]) {
-          await rm(dir, { recursive: true, force: true });
-        }
+        for (const dir of fixtures) await rm(dir, { recursive: true, force: true });
       }
     });
   },

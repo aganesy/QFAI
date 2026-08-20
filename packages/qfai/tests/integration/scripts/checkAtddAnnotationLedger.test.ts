@@ -25,6 +25,18 @@ import {
   collectTestSources,
 } from "../../../../../scripts/check-atdd-annotation-ledger.mjs";
 
+/**
+ * Build an annotation token from parts, so this file contains no live one.
+ *
+ * Round 2 flagged the first version for planting real `QFAI:SPEC-…:US-…` literals in a test file:
+ * any scanner that widens its search — including the very guard under test, whose directory list is
+ * a parameter — would read a fixture string as coverage of a story. A test about a certifier must not
+ * be certifiable by accident.
+ */
+function tag(spec: string, story: string): string {
+  return ["QFAI", `SPEC-${spec}`, `US-${story}`].join(":");
+}
+
 const temps: string[] = [];
 
 async function temp(): Promise<string> {
@@ -40,8 +52,8 @@ afterAll(async () => {
 describe("checkLedger", () => {
   it("accepts a claim a test carries the same annotation for", () => {
     const result = checkLedger(
-      "- QFAI:SPEC-0017:US-0017-0001\n",
-      new Map([["a.test.ts", "// QFAI:SPEC-0017:US-0017-0001\ndescribe('x', () => {});"]]),
+      `- ${tag("0017", "0017-0001")}\n`,
+      new Map([["a.test.ts", `// ${tag("0017", "0017-0001")}\ndescribe('x', () => {});`]]),
     );
     expect(result.ok).toBe(true);
     expect(result.unbacked).toEqual([]);
@@ -50,36 +62,36 @@ describe("checkLedger", () => {
 
   it("rejects a claim no test carries — the false certification, in the direction that matters", () => {
     const result = checkLedger(
-      "- QFAI:SPEC-0017:US-0017-0001\n- QFAI:SPEC-0017:US-0017-0002\n",
-      new Map([["a.test.ts", "// QFAI:SPEC-0017:US-0017-0001\n"]]),
+      `- ${tag("0017", "0017-0001")}\n- ${tag("0017", "0017-0002")}\n`,
+      new Map([["a.test.ts", `// ${tag("0017", "0017-0001")}\n`]]),
     );
     expect(result.ok).toBe(false);
-    expect(result.unbacked).toEqual([{ annotation: "QFAI:SPEC-0017:US-0017-0002", spec: "0017" }]);
+    expect(result.unbacked).toEqual([{ annotation: tag("0017", "0017-0002"), spec: "0017" }]);
   });
 
   it("does NOT reject the reverse — a test annotated ahead of its ledger line is not a lie", () => {
     // A gate that has not been told yet reads the story as uncovered, which is safe. Requiring the
     // ledger to be complete would make this guard demand exactly the append it exists to police.
     const result = checkLedger(
-      "- QFAI:SPEC-0017:US-0017-0001\n",
-      new Map([["a.test.ts", "// QFAI:SPEC-0017:US-0017-0001\n// QFAI:SPEC-0017:US-0017-0009\n"]]),
+      `- ${tag("0017", "0017-0001")}\n`,
+      new Map([["a.test.ts", `// ${tag("0017", "0017-0001")}\n// ${tag("0017", "0017-0009")}\n`]]),
     );
     expect(result.ok).toBe(true);
   });
 
   it("scopes to one spec, leaving a sibling's unbacked claims alone", () => {
-    const ledger = "- QFAI:SPEC-0012:US-0012-0003\n- QFAI:SPEC-0017:US-0017-0001\n";
-    const sources = new Map([["a.test.ts", "// QFAI:SPEC-0017:US-0017-0001\n"]]);
+    const ledger = `- ${tag("0012", "0012-0003")}\n- ${tag("0017", "0017-0001")}\n`;
+    const sources = new Map([["a.test.ts", `// ${tag("0017", "0017-0001")}\n`]]);
     expect(checkLedger(ledger, sources, { spec: "0017" }).ok).toBe(true);
     const wide = checkLedger(ledger, sources);
     expect(wide.ok).toBe(false);
-    expect(wide.unbacked.map((entry) => entry.annotation)).toEqual(["QFAI:SPEC-0012:US-0012-0003"]);
+    expect(wide.unbacked.map((entry) => entry.annotation)).toEqual([tag("0012", "0012-0003")]);
   });
 
   it("finds the annotation wherever in the file it sits, and counts each claim once", () => {
     const result = checkLedger(
-      "- QFAI:SPEC-0017:US-0017-0001\n- QFAI:SPEC-0017:US-0017-0001\n",
-      new Map([["a.test.ts", "describe('x', () => {\n  // QFAI:SPEC-0017:US-0017-0001\n});"]]),
+      `- ${tag("0017", "0017-0001")}\n- ${tag("0017", "0017-0001")}\n`,
+      new Map([["a.test.ts", `describe('x', () => {\n  // ${tag("0017", "0017-0001")}\n});`]]),
     );
     expect(result.ok).toBe(true);
     expect(result.checked).toBe(1);
@@ -97,8 +109,8 @@ describe("checkLedger", () => {
     // A five-digit tail must not be truncated into the real claim it resembles.
     expect(
       checkLedger(
-        "- QFAI:SPEC-0017:US-0017-0001\n",
-        new Map([["a.test.ts", "// QFAI:SPEC-0017:US-0017-00017\n"]]),
+        `- ${tag("0017", "0017-0001")}\n`,
+        new Map([["a.test.ts", `// ${tag("0017", "0017-00017")}\n`]]),
       ).ok,
       "a typo'd annotation must not discharge the claim it does not name",
     ).toBe(false);
@@ -106,22 +118,22 @@ describe("checkLedger", () => {
     // A glued prefix is not an annotation.
     expect(
       checkLedger(
-        "- QFAI:SPEC-0017:US-0017-0001\n",
-        new Map([["a.test.ts", "// XQFAI:SPEC-0017:US-0017-0001\n"]]),
+        `- ${tag("0017", "0017-0001")}\n`,
+        new Map([["a.test.ts", `// X${tag("0017", "0017-0001")}\n`]]),
       ).ok,
     ).toBe(false);
 
     // The short form the scanner accepts must be visible in both directions.
     const short = checkLedger(
-      "- QFAI:SPEC-0017:US-0017\n",
+      `- ${tag("0017", "0017")}\n`,
       new Map([["a.test.ts", "// nothing here\n"]]),
     );
     expect(short.checked, "a short-form claim the scanner reads must be counted").toBe(1);
     expect(short.ok).toBe(false);
     expect(
       checkLedger(
-        "- QFAI:SPEC-0017:US-0017\n",
-        new Map([["a.test.ts", "// QFAI:SPEC-0017:US-0017\n"]]),
+        `- ${tag("0017", "0017")}\n`,
+        new Map([["a.test.ts", `// ${tag("0017", "0017")}\n`]]),
       ).ok,
       "and a short-form claim a test carries must count as backed",
     ).toBe(true);
@@ -130,23 +142,49 @@ describe("checkLedger", () => {
   it("ignores a near-miss token rather than counting it as a claim", () => {
     // `US-0017-0001` on its own is prose, not an annotation. The scanner requires the full
     // `QFAI:SPEC-NNNN:` prefix and so does this.
-    const result = checkLedger("- US-0017-0001\n- see QFAI:SPEC-0017 for detail\n", new Map());
+    const result = checkLedger(`- US-0017-0001\n- see QFAI:SPEC-0017 for detail\n`, new Map());
     expect(result.checked).toBe(0);
     expect(result.ok).toBe(true);
   });
 });
 
 describe("collectTestSources", () => {
+  it("follows a symlinked directory, which isDirectory() reports as false", async () => {
+    // This repository tracks 83 symlinks. The first version tested `entry.isDirectory()` only, so
+    // every linked subtree was walked past in silence — and a claim backed only inside one would have
+    // read as unbacked. Round 2 found it.
+    const dir = await temp();
+    const real = path.join(dir, "real");
+    await mkdir(real, { recursive: true });
+    await writeFile(path.join(real, "linked.test.ts"), `// ${tag("0017", "0017-0001")}\n`, "utf8");
+
+    const link = path.join(dir, "link");
+    const { symlink } = await import("node:fs/promises");
+    try {
+      await symlink(real, link, "junction");
+    } catch {
+      // Symlink creation can be denied on Windows without the right privilege; the guard's behaviour
+      // is unchanged either way, so skipping beats a false failure.
+      return;
+    }
+
+    const sources = await collectTestSources(link);
+    expect(
+      [...sources.keys()].map((file) => path.basename(file)),
+      "a linked subtree must contribute its annotations",
+    ).toEqual(["linked.test.ts"]);
+  });
+
   it("reads test files from a tree and skips node_modules and dot directories", async () => {
     const dir = await temp();
-    await writeFile(path.join(dir, "a.test.ts"), "// QFAI:SPEC-0017:US-0017-0001\n", "utf8");
+    await writeFile(path.join(dir, "a.test.ts"), `// ${tag("0017", "0017-0001")}\n`, "utf8");
     await mkdir(path.join(dir, "nested"), { recursive: true });
     await writeFile(path.join(dir, "nested", "b.test.ts"), "// b\n", "utf8");
     await mkdir(path.join(dir, "node_modules"), { recursive: true });
     await writeFile(path.join(dir, "node_modules", "c.test.ts"), "// c\n", "utf8");
     await mkdir(path.join(dir, ".cache"), { recursive: true });
     await writeFile(path.join(dir, ".cache", "d.test.ts"), "// d\n", "utf8");
-    await writeFile(path.join(dir, "notes.md"), "// QFAI:SPEC-0017:US-0017-0002\n", "utf8");
+    await writeFile(path.join(dir, "notes.md"), `// ${tag("0017", "0017-0002")}\n`, "utf8");
 
     const sources = await collectTestSources(dir);
     const names = [...sources.keys()].map((file) => path.basename(file)).sort();
@@ -208,10 +246,33 @@ describe("the CLI entry point", () => {
 
   it("rejects a malformed --spec with exit 2 rather than widening to every spec", () => {
     const root = path.resolve(__dirname, "../../../../..");
-    for (const args of [["--spec"], ["--spec", "17"], ["--spec", "abcd"]]) {
+    for (const args of [["--spec"], ["--spec", "17"], ["--spec", "abcd"], ["--spec="]]) {
       const result = run(args, root);
-      expect(result.status, `--spec ${args[1] ?? "(missing)"} must not be tolerated`).toBe(2);
+      expect(result.status, `${args.join(" ")} must not be tolerated`).toBe(2);
       expect(result.err).toMatch(/--spec needs a four-digit spec number/);
+    }
+  });
+
+  it("accepts the inline --spec=NNNN form rather than widening in silence", () => {
+    // Round 2 found `--spec=0017` was ignored, so a scoped invocation quietly became a repo-wide one
+    // — which exits 1 today, meaning the typo would have looked like a finding.
+    const root = path.resolve(__dirname, "../../../../..");
+    const inline = run(["--spec=0017"], root);
+    expect(inline.status).toBe(0);
+    expect(inline.out).toBe(run(["--spec", "0017"], root).out);
+  });
+
+  it("rejects an unknown argument instead of ignoring it", () => {
+    const root = path.resolve(__dirname, "../../../../..");
+    for (const args of [
+      ["--spce", "0017"],
+      ["-s", "0017"],
+      ["0017"],
+      ["--spec", "0017", "extra"],
+    ]) {
+      const result = run(args, root);
+      expect(result.status, `${args.join(" ")} must be a usage error`).toBe(2);
+      expect(result.err).toMatch(/unknown argument/);
     }
   });
 

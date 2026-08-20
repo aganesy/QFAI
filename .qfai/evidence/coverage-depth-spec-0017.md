@@ -279,9 +279,23 @@ different documented value plus a warning in the second.
 The first repair asserted the same thing over the step's **text** and was vacuous, which two oracle
 rounds caught: `.nvmrc` also occurs in the step's warning message and `version=` also occurs in its
 fallback publish, so breaking the mechanism left both patterns matching other text in the same body.
-`E6`/`E7` reddened nothing. Rewritten to run the step, all three rounds redden. Fourth time on this
-spec that a claim about how code is *written* survived the behaviour being removed — and the fix is
-the same every time: run the thing and look.
+`E6`/`E7` reddened nothing. Rewritten to run the step, six rounds redden (`E6`-`E11`) with a comment
+control green. Fourth time on this spec that a claim about how code is *written* survived the
+behaviour being removed — and the fix is the same every time: run the thing and look.
+
+**What this E2E row adds over the integration layer, and what it does not.** Round 2's
+`implementation-reviewer` pointed out that `tests/integration/shippedWorkflowPortability.test.ts`
+already extracts the same `run` body from the same asset and executes it, asserting *more* than the
+first version of this row did. So the behavioural execution is not the new thing, and saying it was
+would be a weaker instance of the `US-0017-0007` pattern this stage withdrew a claim over.
+
+What the E2E row genuinely adds is one fact the integration row cannot see: **the resolver arrives in
+the adopter's tree through `qfai init`**, rather than merely existing under `assets/`. That is an
+E2E-layer fact and this is its right home. The resolution *depth* is owned one layer down, and is
+cross-referenced rather than restated. The row was also brought up to the integration row's fidelity
+rather than left below it — the documented fallback is asserted verbatim (`20`, the
+`engines: ">=20.19.0"` floor) instead of "any leading digit", both probe candidates are exercised, and
+their precedence is pinned.
 
 `Boundary values` and `Special values` stay `⚠️`: the two probe candidates and the fail-open default
 are exercised, a blank or whitespace-only file is not.
