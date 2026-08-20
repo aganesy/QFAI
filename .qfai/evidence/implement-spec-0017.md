@@ -9,6 +9,57 @@ share a file — which is the normal case here, because this spec's ledger point
 test file**. The one exception is a **mutant** blob, which no revision determines; those are recorded
 as base revision + literal needle + literal replacement, with the mutant hash kept.
 
+## Objective
+
+Implement `spec-0017` — the layered CI scaffold for QFAI's own toolchain, and the same scaffold in
+the workflow templates QFAI ships, so adopters receive it rather than rebuilding it. Eighty-two
+ledger rows across nine sequenced changes fixed by `DR-0017-0005`.
+
+Three things this record is answerable for, stated so a reader can check them rather than infer
+them:
+
+1. **Every promoted row carries falsifiable evidence.** Not "the test passes" — a RED that failed on
+   an assertion, a GREEN that reproduces, and an oracle round showing the smallest production change
+   that reddens it again. Where a row could not have a natural RED, the falsifiability trio in its
+   place.
+2. **Nothing is claimed that was not measured.** Counts, durations and gate outputs are quoted from
+   runs recorded here. Where a number moved after it was written, both are kept and dated.
+3. **Where the spec and the tree disagree, a change request is filed rather than resolved.** Fourteen
+   are open. Six rows are `blocked` on four of them.
+
+## Items processed
+
+Generated from `.qfai/specs/spec-0017/tdd/test-list.md` at `76ade4dd`, not maintained by hand —
+a second copy of 82 statuses would be a second thing to keep in sync, and this section
+exists so a reader does not have to open the ledger to see the shape.
+
+| Status     | Count | Rows |
+| ---------- | ----- | ---- |
+| `refactor` | 74 | 0001-0015, 0017-0029, 0031, 0036-0068, 0071-0082 |
+| `blocked` | 6 | 0016, 0030, 0032-0035 |
+| `todo` | 2 | 0069-0070 |
+
+Total: **82** rows, one per test case in `06_Test-Cases.md`. Every row's `TC-Refs` is
+its own `TC-0017-NNNN`; no row carries `US-Refs` or `CON-API-Refs`, because no row is
+`Layer = E2E` or `Layer = API`.
+
+**`blocked` rows and what each waits on:**
+
+| Row | TC | Waiting on |
+| --- | -- | ---------- |
+| `TDD-0016` | `TC-0017-0016` | CR-20260818-0007 |
+| `TDD-0030` | `TC-0017-0030` | CR-20260820-0001 |
+| `TDD-0032` | `TC-0017-0032` | CR-20260820-0007 |
+| `TDD-0033` | `TC-0017-0033` | CR-20260820-0007 |
+| `TDD-0034` | `TC-0017-0034` | CR-20260820-0007 |
+| `TDD-0035` | `TC-0017-0035` | CR-20260820-0007 |
+
+**`todo` rows and what each waits on:**
+
+| Row | TC | Waiting on |
+| --- | -- | ---------- |
+| `TDD-0069` | `TC-0017-0069` | data that does not exist yet — see the row's `Evidence` cell |
+| `TDD-0070` | `TC-0017-0070` | data that does not exist yet — see the row's `Evidence` cell |
 ## What the `mutant` column holds, and what it does not
 
 **CORRECTION (2026-08-20, after the gatekeeper's blocking finding.)** The sentence above says "with
@@ -57,14 +108,26 @@ claim that they can be retrieved is what was wrong.
 
 ## Cross-spec obligations
 
-**Added 2026-08-20, after review finding B3.** This record described spec-0017 as though it were the
-only spec this branch touches. It is not, and an auditor of the other spec cannot see the connection
-from their side.
+**Added 2026-08-20, after review finding B3; put into the contract's field form after BL-9.**
+This record described spec-0017 as though it were the only spec this branch touches. It is not, and
+an auditor of the other spec cannot see the connection from their side.
 
-**This spec's side of the obligation, named first.** `TDD-0006` through `TDD-0012` — change 8,
-change detection and lane selection in the OWN workflow — are the rows whose work produced the edit
-below. They are what a reader of the other spec needs to be pointed at, and the section as first
-written named only the other spec's rows, so the link ran one way (BL-9).
+`references/cross-spec-ownership.md` fixes seven fields per affected spec. The first version of this
+section carried five of them in prose and named no row of THIS spec at all, so the link ran one way.
+Stated as the contract asks:
+
+| Field                | Value                                                                                    |
+| -------------------- | ---------------------------------------------------------------------------------------- |
+| `TDD-ID`             | `TDD-0006` … `TDD-0012` — change 8, change detection and lane selection in the OWN workflow. The parallelism work these rows sit inside is what forced the edit |
+| `Blocked spec`       | `spec-0003`                                                                              |
+| `Blocked TDD-IDs`    | `TDD-0038`, `TDD-0039`, `TDD-0040` (`TC-0003-0038` … `TC-0003-0040`)                       |
+| `File`               | `packages/qfai/tests/integration/shippedWorkflowDetection.test.ts`                        |
+| `Change required`    | the degraded-case fixture set is built once per describe instead of once per `it()`, the shipped orchestrator is parsed once per worker, and commit identity is passed as `-c` flags rather than three `git config` spawns |
+| `Obligation at risk` | `TC-0003-0039` asserts that a shallow clone and an unreachable base ref each fail open with a warning, judged over three fixtures the row previously built INDEPENDENTLY per case. They now share one run, so the three cases no longer demonstrate that fixture construction is repeatable, and a failure while building fails all three together |
+| `Resolution`         | `re-reviewed` — round 5's `completion-reviewer` intersected the whole run range against all seventeen ledgers, found exactly this one file, and confirmed the obligation holds |
+
+**This spec's side, in prose.** `TDD-0006` through `TDD-0012` are the rows a reader of the other spec
+needs to be pointed at.
 
 `spec-0003`'s `TDD-0038`, `TDD-0039` and `TDD-0040` — `TC-0003-0038` through `TC-0003-0040`, the
 shipped orchestrator's change detection, fail-open selection and verdict job — live in
@@ -3035,3 +3098,93 @@ The three blocking agent verdicts were not obtained, so `Status` is `refactor`. 
 checkpoint is not attempted: step 4's clause 3 remains, for the reason `CR-20260818-0006` is open
 against — see the corrections section near the top of this record for why step 2 is no longer part
 of that answer.
+
+## Test results summary
+
+At `76ade4dd`, after round 5's rework. Every command run from `packages/qfai` unless stated.
+
+| Gate                                     | Result                                        |
+| ---------------------------------------- | --------------------------------------------- |
+| `pnpm ci:lint` (repository root)         | exit 0 — all eleven `&&`-chained members      |
+| `pnpm test` (unfiltered)                 | 431 files, 4426 passed / 37 skipped, exit 0   |
+| `validate --profile tdd --fail-on error` | exit 1 — `info=4 warning=352 error=2`         |
+| `pnpm test:scripts`                      | 135 passed                                    |
+| `pnpm test:e2e`                          | 904 passed / 16 skipped                       |
+
+The two `validate` errors are `QFAI-ATDD-111` and `QFAI-ATDD-112`, and neither is attributable to a
+row of this spec: after the annotation ledger was completed, `QFAI-ATDD-112` names only the eight
+rows that have no test — the six `blocked` and the two `todo` — plus TCs from `spec-0003`,
+`spec-0008` and `spec-0015`. `QFAI-ATDD-111` wants `US-0017-*` E2E annotations that belong to a
+different skill's scope.
+
+**Refactor verify — one pair per block command, and why not one per item.** The contract writes
+`Refactor verify command` / `Refactor verify result` once per item. Seventy-four items share six
+commands, so seventy-four identical pairs would be noise; the pairs are recorded here once per
+command with the rows each covers. Measured at `76ade4dd`, after every round-5 edit:
+
+| Refactor verify command (`pnpm exec vitest run …`)  | Result             | Rows covered                                        |
+| --------------------------------------------------- | ------------------ | --------------------------------------------------- |
+| `tests/scripts/ownWorkflowTopology.test.ts`         | `27 passed (27)`   | changes 1, 4, 7, 8, 9 and the required-context block |
+| `tests/scripts/workflowHygiene.test.ts`             | `30 passed (30)`   | changes 2, 3 and the hygiene rule-set blocks         |
+| `tests/scripts/sliceSurfaceAlignment.test.ts`       | `3 passed (3)`     | change 5                                             |
+| `tests/scripts/vitestWorkspaceKnobs.test.ts`        | `5 passed (5)`     | change 6                                             |
+| `tests/assets/actionPinBumpOwner.test.ts`           | `8 passed (8)`     | change 7 part 2, the record rows, `TDD-0065`         |
+| `tests/assets/layerCiLaneMapping.test.ts`           | `7 passed (7)`     | the mapping-document block                           |
+
+## Reviewer verdicts
+
+Round 5, all three blocking reviewers, at `90a33ee5` — the revision each named, one commit after the
+`bc36f08c` their prompts stated. The delta between the two is this pack's `review_request.md` and
+nothing else, which all three verified.
+
+| Field                  | Value                                                              |
+| ---------------------- | ------------------------------------------------------------------ |
+| `Spec review`          | **REVISE** — `completion-reviewer`, `Reviewed revision: 90a33ee5`  |
+| `Code quality review`  | **REVISE** — `implementation-reviewer`, `Reviewed revision: 90a33ee5` |
+| `Prototype parity`     | not applicable — no row of this spec affects a UI surface           |
+| `Gatekeeper`           | **REVISE** — `qa-gatekeeper`, `Reviewed revision: 90a33ee5`         |
+
+Pack: `.qfai/review/review-20260820140000000/`. Rounds 1 through 4 have **no pack** — their verdicts
+were returned to the orchestrator and recorded only in commit messages and in this file's prose,
+which `completion-reviewer` raised as BL-2. That is not repairable retroactively: the reports no
+longer exist to file. Round 5 onward writes a pack, and the gap is recorded rather than papered over.
+
+Two of the three reviewers **corrected measurements stated in this record**, and both corrections are
+applied above and dated at their sites: the unfiltered suite is 4426 rather than 4424, and a fenced
+block labelled as `check-workflow-hygiene.mjs` output was a paraphrase carrying counts the lane never
+prints.
+
+`Checkpoint verification command` / `Checkpoint verification result`: the item-12 checkpoint is not
+attempted. Step 4's clause 1 requires a baseline captured with counts AND finding IDs before any row
+started; none was, and that cannot be repaired after the fact. Clause 3's excess is now zero — the
+warning count is 352, the baseline value — after the six `blocked` rows stopped producing
+`TDDLIST_STALE_STATUS`.
+
+## Commands executed
+
+Every distinct command this record's measurements come from. Paths are relative to the repository
+root; the `vitest` invocations run from `packages/qfai`.
+
+```text
+pnpm ci:lint
+pnpm lint:md
+pnpm exec prettier -w <path>
+node packages/qfai/dist/cli/index.mjs validate --profile tdd --fail-on error --root .
+node packages/qfai/dist/cli/index.mjs validate --profile full --fail-on error --root .
+node scripts/check-workflow-hygiene.mjs
+pnpm -C packages/qfai test
+pnpm -C packages/qfai test:scripts
+pnpm -C packages/qfai test:e2e
+pnpm -C packages/qfai test:core
+QFAI_TEST_MAX_WORKERS=<n> pnpm -C packages/qfai test:core
+pnpm -C packages/qfai exec vitest run --project scripts tests/scripts/<file>.test.ts
+pnpm -C packages/qfai exec vitest run --project e2e tests/assets/<file>.test.ts
+git diff --name-only --no-renames <base> <head>
+git hash-object <path>
+git show <rev>:<path>
+git cat-file -t <hash>
+```
+
+`pnpm exec vitest` **from the repository root does not work** and is recorded because it cost a false
+oracle result: it exits 1 with `Command "vitest" not found`, which reads exactly like a failing test.
+Every invocation above uses `-C packages/qfai`.
