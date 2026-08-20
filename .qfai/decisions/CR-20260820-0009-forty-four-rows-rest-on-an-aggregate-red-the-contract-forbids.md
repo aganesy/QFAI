@@ -1,7 +1,7 @@
 # Change Request
 
 - ID: `CR-20260820-0009`
-- Title: `Forty-four promoted rows rest on an aggregate test-file run, which Phase Red step 4 says is not a valid RED observation`
+- Title: `Fifty-three promoted rows have block-level RED evidence where step 4's admissibility clause is per row`
 - Raised by: `/qfai-implement orchestrator, spec-0017; self-reported. Found by completion-reviewer while refuting the premise of my own CR-20260820-0008`
 - Raised at: `2026-08-20T00:00:00Z`
 - Class: `defect`
@@ -117,6 +117,75 @@ individual Selector runs    35
 The observation obtained is "would this row's test fail without this change's production code" —
 which is what a RED demonstrates, and it is stronger than the historical observation because it uses
 the tests as they now stand rather than as they were first drafted.
+
+## CORRECTION — the rule is narrower than I read it, and the real finding is narrower too
+
+**2026-08-20, after merging `origin/main` and measuring three ways.** This CR rested on step 4's
+"one aggregate run is not a valid RED observation" read as forbidding a file-scoped run. That reading
+is wrong, and merged `main` supplies the gloss that settles it — step 3c, on the same rule:
+
+> run **each entry of** this row's `Selector` separately and capture each failure — a `Selector` may
+> legally hold a comma-separated list or a glob, and one aggregate run shows the first entry failing
+> while the rest are unobserved, **which is the same rule step 4 applies to a RED**
+
+So "aggregate" means one run covering SEVERAL ENTRIES OF ONE SELECTOR, where only the first failure
+is visible. Every `Selector` in this spec holds one entry, so that clause is satisfied.
+
+Fourth time in this run that I argued from a quoted sentence read wider than written. The others are
+recorded in `CR-20260820-0008` (superseded), `CR-20260820-0010` (withdrawn) and the four vacuous
+claims.
+
+### What is actually unmet, measured
+
+Step 4's admissibility clause is per-ROW and has two halves:
+
+> Admissible only when an assertion […] **inside this row's `Selector`** raised the failure and
+> **its message names the predicate the row owns**
+
+Measured against the record:
+
+```text
+refactor rows                                                       74
+  falsifiability trio, no RED pair owed                             21
+  RED evidence recorded at BLOCK level, covering N rows each        53
+evidence blocks carrying a RED result                               14
+  of those, carrying an assertion message                          14   <- all of them
+```
+
+So the messages exist and every one of them is a real assertion message. What does not exist is a
+**per-row** message: fourteen blocks carry one RED result each, covering 53 rows between them, and a
+reader cannot get from a block's `6 failed | 13 passed (19)` plus "every failure an assertion" to
+"the assertion inside `TDD-0009`'s Selector raised it, and its message names the predicate
+`TDD-0009` owns".
+
+That is the finding, and it is the same thing review finding B7 was a symptom of — a cell citing a
+run it cannot attribute. B7's evidentiary half is closed; this is its procedural half.
+
+### What this does to the options
+
+The remedy in option 1 is unchanged in shape and smaller in scope than filed: run each row's
+`Selector` alone against the reconstructed seam and record ITS failing message. What changes is the
+justification — not "the rule forbids a file-scoped run", which it does not, but "the rule's
+admissibility clause is per row and the record answers it per block".
+
+Option 3 is withdrawn. It asked for the rule to admit an aggregate where every row failed, and the
+rule already admits a file-scoped run; there is nothing to relax.
+
+Option 2 is withdrawn for a different reason: it offered to record an identification argument instead
+of re-observing, and the argument it rested on — `failures >= rows`, one `it()` per `describe` — does
+not produce a per-row assertion MESSAGE, which is the half that is missing.
+
+Recommended, unchanged: **option 1**, now stated as 53 rows rather than 35, because the count that
+matters is rows whose RED evidence is block-level, not rows citing an aggregate string.
+
+### And the merge added a reason this may be moot for most of them
+
+Merged step 3b: "A `todo` `E2E` / `API` / **`Integration`** row consumes the provenance
+`/qfai-atdd` recorded; **steps 4 and 5 do not apply to it**." Seventy-one of this spec's rows are
+`Layer = Integration`, so on the merged contract step 4 governs only the eleven `Unit` rows — and the
+71 owe a different thing entirely, recorded in `.qfai/evidence/atdd-spec-0017.md`, which does not
+exist. That gap is recorded in the evidence file under "The merge moved the contract past this
+record" and is not this CR's subject.
 
 ## Options
 
