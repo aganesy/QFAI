@@ -1059,6 +1059,9 @@ Review pack:       .qfai/review/review-20260821040000000/            (round 5, +
 Review pack seal:  5798d55711e1ff78dd8ae49e8e34c788de3a34f0744ef5fe4226517764263b62
 
 Review pack:       .qfai/review/review-20260821060000000/            (round 6, + P1d pass 5)
+Review pack seal:  d99dff9cf0a94bbcb18ca20df5b44d426b19f79f45699308b11ca6f726a96752
+
+Review pack:       .qfai/review/review-20260821080000000/            (round 7, + P1d pass 6)
 Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
 ```
 
