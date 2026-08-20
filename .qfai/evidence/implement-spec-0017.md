@@ -2576,9 +2576,35 @@ would have missed the shape it exists to catch.
   seam is the document itself with a heading and one line of placeholder — present enough to read, empty
   of everything the rows require. The second RED is `Tests 2 failed | 5 passed (7)`, every failure an
   assertion.
-- **Five of the seven rows passed at RED**, because they are negative or invariant claims: an empty
-  document names no per-level routing, invents no layer code, and does not modify the built-in set. Those
-  five carry `RED failure mode: falsifiability`, and the oracle is what makes them mean anything.
+- **Five of the seven rows passed at RED** — `TDD-0078`, `TDD-0079`, `TDD-0080`, `TDD-0081` and
+  `TDD-0082` — because they are negative or invariant claims: an empty document names no
+  per-level routing, invents no layer code, does not modify the built-in set, is byte-identical
+  to its own placeholder mirror, and does not move a sync target that predates it. Those five
+  carry `RED failure mode: falsifiability`, and the oracle is what makes them mean anything.
+  The two that did fail are `TDD-0076` and `TDD-0077`, the only rows requiring content to be
+  present rather than absent.
+
+  > **Added 2026-08-20, after review finding B7.** The sentence here said "five of the seven"
+  > and named none of them, which is not enough for a per-row gate: item 3 of the 11-point gate
+  > is "RED was observed", asked of each row separately, and seven cells were quoting one
+  > file-scoped result as though every row were among the failures. The identity was therefore
+  > MEASURED rather than reasoned out — the seam was reconstructed by reducing both copies of
+  > the mapping document to a heading and one placeholder line, and the file was re-run:
+  >
+  > ```text
+  > x TC-0017-0076 ... exists on both sides and links to the catalog, which links back
+  > x TC-0017-0077 ... says in its header that the loader does not read it
+  > + TC-0017-0078 ... repeats the not-enforced status wherever it names per-level routing
+  > + TC-0017-0079 ... introduces no layer code the catalog does not already carry
+  > + TC-0017-0080 ... holds exactly the five tokens, imported from the source
+  > + TC-0017-0081 ... keeps the two copies byte-identical
+  > + TC-0017-0082 ... mirrors from the asset tree to the root, and offers a check mode
+  > Tests  2 failed | 5 passed (7)
+  > ```
+  >
+  > `2 failed | 5 passed (7)` reproduces the recorded RED exactly, which is what makes the
+  > reconstruction trustworthy rather than merely plausible. Both copies were restored and
+  > byte-compared against their backups afterwards.
 - **GREEN result**: same command, `Tests 7 passed (7)`.
 
 ### Oracle proof — ten rounds
