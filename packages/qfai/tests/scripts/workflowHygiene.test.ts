@@ -689,6 +689,28 @@ describe("TC-0017-0057 (TDD-0057): the expected-context declaration is read from
       rmSync(clean, { recursive: true, force: true });
     }
 
+    // A context that names a real job and enumerates NOTHING is not a passing declaration.
+    //
+    // It clears properties 1 and 2 — the job exists, carries no condition — and then property
+    // 3 iterates an empty list, so the lane reports PASS having checked the one property that
+    // carries the obligation against nothing. That is the same advertised-but-unevaluated
+    // shape `TC-0017-0047` catches for a rule, one level further in.
+    const hollow = plantedTree((d) => {
+      editDeclaration(d, (decl) => {
+        decl.contexts[0].verificationSet = [];
+        return decl;
+      });
+    });
+    try {
+      const run = runLane(hollow);
+      expect.soft(run.exitCode, `an empty verification set must exit 1:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "the finding must say the third property had nothing to check")
+        .toMatch(/empty or missing verificationSet/i);
+    } finally {
+      rmSync(hollow, { recursive: true, force: true });
+    }
+
     // And `BR-0017-0042`'s prohibition, asserted structurally: a lane that queried the API
     // would satisfy every behavioural row above while being unable to run on a pull
     // request, which is the whole reason the declaration exists.
@@ -1123,6 +1145,35 @@ describe("TC-0017-0046 (TDD-0046): a green run names every rule it evaluated", (
         .toMatch(/not covered/i);
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses to name a rule as evaluated when its whole tree is gone", () => {
+    // The failure this row is closest to and did not cover. `yamlFilesUnder` returns an empty
+    // list for a directory that does not exist — deliberately, so the walk cannot crash — and
+    // the consequence is that a deleted or renamed workflow tree yields no jobs, no findings,
+    // and a green run that still prints every rule scoped to it as one it evaluated.
+    //
+    // This test file already knew about the hazard from the other side: `plantedTree` copies
+    // BOTH roots, and the comment there says copying only the own tree "would make every
+    // shipped-tree row prove nothing ... which is indistinguishable from a passing shipped
+    // tree". The production lane had no such protection, which is implementation-review
+    // finding M2 — a hazard recognised in the fixture and never enforced in the thing shipped.
+    const gutted = plantedTree((d) => {
+      const shipped = path.join(d, SHIPPED_WORKFLOWS_REL);
+      for (const entry of readdirSync(shipped)) {
+        if (/\.ya?ml$/.test(entry)) rmSync(path.join(shipped, entry), { force: true });
+      }
+    });
+    try {
+      const run = runLane(gutted);
+      expect.soft(run.exitCode, `an empty workflow tree must exit 1:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "the finding must name the tree that holds nothing")
+        .toMatch(/holds no YAML files/i);
+      expect.soft(run.output, "and say why that is not a pass").toMatch(/evaluated nothing/i);
+    } finally {
+      rmSync(gutted, { recursive: true, force: true });
     }
   });
 });

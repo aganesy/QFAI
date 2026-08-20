@@ -790,6 +790,33 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
     expect
       .soft(toothless, "an enumerated verification that cannot fail is not a verification")
       .toEqual([]);
+
+    // And this list is pinned to the DECLARATION, which is the copy production reads.
+    //
+    // Implementation-review finding M3: the same six literals exist in three places — this
+    // `REQUIRED`, `TC-0017-0036`'s `VERIFICATION_SET`, and
+    // `.github/required-status-contexts.json`. `TC-0017-0036` CLAIM 4 pins its copy to the
+    // declaration. This one was pinned to nothing, so it could drift from both while every
+    // assertion above kept passing — and it is the only copy that checks the can-it-fail
+    // property, so a member that drifted out of it would lose that check silently.
+    //
+    // Pinned by EQUALITY rather than by sharing a constant, deliberately. `BR-0017-0060` and
+    // `BR-0017-0032` are different obligations over the same list, and a shared constant would
+    // let one row's edit satisfy the other by construction — the reason `VERIFICATION_SET`
+    // restates rather than imports. Equality keeps three copies and makes divergence fail.
+    const declared: unknown = JSON.parse(
+      readFileSync(path.join(REPO_ROOT, ".github", "required-status-contexts.json"), "utf-8"),
+    );
+    const contexts =
+      isRecord(declared) && Array.isArray(declared["contexts"]) ? declared["contexts"] : [];
+    const forBuild = contexts.filter(isRecord).find((entry) => entry["job"] === "build");
+    expect(forBuild, "the declaration must name the build job").not.toBeUndefined();
+    expect
+      .soft(
+        forBuild === undefined ? undefined : forBuild["verificationSet"],
+        "this row's literals and the declaration production reads must not drift apart",
+      )
+      .toEqual([...REQUIRED]);
   });
 });
 

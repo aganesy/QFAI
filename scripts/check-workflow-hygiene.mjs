@@ -206,7 +206,22 @@ function collectJobs(root) {
   const jobs = [];
   const findings = [];
   for (const { rel, tree } of WORKFLOW_ROOTS) {
-    for (const file of yamlFilesUnder(root, rel)) {
+    // A root that resolves to no YAML is reported, not skipped. `yamlFilesUnder` returns an
+    // empty list for a directory that does not exist — deliberately, so the walk is not a
+    // crash — and the consequence is that a deleted or renamed tree yields no jobs, no
+    // findings, and a green run that still PRINTS every rule as one it evaluated. That is the
+    // advertised-but-unevaluated shape `TC-0017-0047` catches for a rule; this catches it for
+    // a whole tree.
+    const files = yamlFilesUnder(root, rel);
+    if (files.length === 0) {
+      findings.push({
+        rule: "job-guardrails",
+        file: rel.replace(/\\/g, "/"),
+        job: "(whole tree)",
+        detail: `the ${tree} workflow tree holds no YAML files, so every rule scoped to it would report PASS having evaluated nothing`,
+      });
+    }
+    for (const file of files) {
       const doc = parseFile(root, file);
       if (doc === null || typeof doc.__parseError === "string") {
         findings.push({
@@ -525,6 +540,20 @@ function checkRequiredContexts(root, jobs) {
               : `is skippable through its dependency ${key}, which carries a condition (if: ${String(job.if)})`,
         });
       }
+    }
+
+    // PROPERTY 3 PRECONDITION — there is something to check. A context that names a real,
+    // unskippable job and enumerates nothing passes properties 1 and 2 and then iterates an
+    // empty list, so the rule reports PASS having verified the one property that carries the
+    // obligation against nothing. An empty verification set is a declaration that the job
+    // verifies nothing, which is not a state this repository has any use for.
+    if (wanted.length === 0) {
+      findings.push({
+        rule: "required-context",
+        file: rel,
+        job: declaredJob,
+        detail: `is declared in ${DECLARATION_REL} with an empty or missing verificationSet, so the third property is checked against nothing`,
+      });
     }
 
     // PROPERTY 3 — and its enumerated verification set is intact, where intact means
