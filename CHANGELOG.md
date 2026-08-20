@@ -4,6 +4,2207 @@
 
 ## [Unreleased]
 
+### Added
+
+- **`QFAI-LINK-001` (error) — the assistant integration surface is checked.**
+  `qfai init` builds `.claude/skills`, `.agents/skills`, `.codex/skills`,
+  `.github/skills`, `.claude/agents` and `.github/agents` entirely out of
+  symlinks, and pins their precondition (`core.symlinks true`) into repo-local
+  git config. `.git/config` is not cloned, so on any machine whose system or
+  global config says `core.symlinks = false` — the Windows default — a fresh
+  clone materialises every one of them as a small text file holding the link
+  target. Nothing noticed: `qfai validate` never read those directories, and
+  `qfai doctor`'s `skills.integrity` / `agents.frontmatter` both read the
+  canonical `.qfai/assistant/**` tree, which is unaffected. The assistant then
+  loads no skill and routes no agent, and every gate they define silently stops
+  existing. The new rule runs in **every** profile, ahead of the profile's own
+  validators, and reports a qfai-owned entry that is not a symlink or whose
+  target does not resolve. On a project with no evidence `qfai init` ever ran,
+  an absent directory is not a finding; once there is such evidence, all six
+  integration directories are checked and one deleted whole is reported. Entries
+  qfai does not own are left alone.
+- **`D-SCAFFOLD-FOREIGN-HOME` (warning)** replaces the placeholder gate for an
+  L4/L5 skeleton a pre-upgrade `qfai atdd scaffold` already wrote into
+  `tests/integration/**`. The command stopped generating those, but the ones on
+  disk kept escalating `D-SCAFFOLD-PLACEHOLDER` and telling the operator to
+  implement an assertion — which discharges nothing, because the TC's declared
+  `Level` routes elsewhere and `QFAI-ATDD-123` rejects the annotation wherever
+  the file sits. The new finding names the move-or-delete remediation and does
+  not escalate: escalation exists to pressure an operator into writing the
+  assertion, which is not what this one needs.
+- **`TDDLIST_COVERAGE_LAYER_MISMATCH` (warning)** reports a coverage-target TC
+  discharged only from a row whose `Layer` contradicts its declared `Level` — a
+  `Level = L1` TC closed by a `Layer = Integration` row alone. Coverage counted
+  any non-API/E2E row, so with L1/L2 out of `QFAI-ATDD-112` nothing asked for
+  the unit test. It is a warning, not an error: every ledger written before this
+  check could carry one (this repository has five), and escalating on the
+  release that introduces the rule is a zero-length window. The row still counts
+  as coverage today; the finding announces the escalation.
+- **`QFAI-ATDD-117` (info)** names the TCs excluded from the annotation
+  obligation on every run. A silent exclusion is indistinguishable from a scan
+  that matched nothing, which is how the JS-only test glob survived a release.
+
+### Changed
+
+- **`qfai report` counts the test cases `qfai validate` gates.** The gate reads
+  every `TC-ID` table plus the heading form (`## TC-0001` + `- Level: L1`); the
+  report built its own set from the first table alone and skipped the spec
+  outright when that table did not resolve. So a heading-form spec vanished from
+  `## TDD Coverage` while `TDDLIST_TC_NOT_COVERED` demanded a ledger row for
+  every TC in it, and a TC declared in a second table was gated but never
+  counted in `coverage-target TCs:` or `done:`. Both callers now read one
+  collector (`core/testCaseCoverageTargets.ts`). A spec with no
+  `06_Test-Cases.md` is still omitted from the report rather than printed as a
+  zero row.
+- **`TDDLIST_UNKNOWN_LEVEL` no longer reports a superseded declaration.**
+  `unrecognizedLevels` was filled before the first-declaration-wins guard, so a
+  duplicate heading or table row for a TC that already had a `Level` raised the
+  warning for a value nothing reads — with a message ("Unrecognized values are
+  treated as coverage targets, so every such TC becomes a mandatory ledger
+  row") that the guard makes false for exactly that TC. Only the declaration
+  actually in force is reported.
+- **Every ledger row is checked, not only the ones in the first table.** The
+  previous release widened coverage scoring to every schema-shaped table but
+  left the checks that make a row trustworthy — `Status` enum, `Test file`
+  existence, `Evidence`, `Selector`, `Blocked-By`, the `DR-ID` of a parked row,
+  duplicate `TDD-ID`, unknown `TC-Refs` — reading the first table alone. A
+  `Status=done` row in an appended `## CHG-…` table therefore cleared
+  `TDDLIST_TC_NOT_COVERED` while its non-existent `Test file` and empty
+  `Evidence` were never looked at, and full validation passed: the gate accepted
+  a completion claim it had declined to check. All per-row checks now read one
+  iteration of the ledger, so "does this row discharge a TC" and "is this row
+  trustworthy" are asked of the same rows.
+  - **Who it hits.** Only a ledger with more than one schema-shaped table.
+    Rows there now raise what they always raised in the first table. Measured
+    on this repository: 30 further findings, all `warning`
+    (26 `TDDLIST_EVIDENCE_STATUS_ONLY`, 4 `TDDLIST_SELECTOR_UNRESOLVED`), all
+    in one spec's appended table; `error` stays at 0.
+  - `TDDLIST_DUPLICATE_ID` is now ledger-wide rather than per table. An id
+    repeated in an appended table was invisible, and
+    `TDDLIST_EXCEPTION_PARKED` keys its per-row waiver on the `TDD-ID` — so one
+    approved `match.dl_ids` entry silently covered a second row nobody
+    approved.
+  - `TDDLIST_INFO` ("No active items") is keyed on the whole ledger. It was
+    keyed on the first table, so a file whose first table is a bare header and
+    whose `## CHG-…` table holds every row — the shape `/qfai-implement`
+    produces — was reported as empty while it was being worked.
+- **A fenced or commented-out table is no longer read as the ledger.** Check 2
+  took the first Markdown table in the _raw_ file while the coverage reader
+  masks non-spec regions, so a `tdd/test-list.md` whose only schema-shaped table
+  sat inside a fence failed open in both directions at once: the row checks ran
+  against rows inside the fence, and the coverage check — guarded by
+  `if (coverageTables.length > 0)` — skipped itself entirely in the one case
+  where every TC is certainly uncovered. With L1/L2 out of `QFAI-ATDD-112` that
+  made a copy-paste template a complete substitute for a ledger under
+  `validate --profile full --fail-on error`. Such a file now raises
+  `TDDLIST_TABLE_MISSING` (`error`) plus `TDDLIST_TC_NOT_COVERED` naming the
+  ids that owe a row, the same pair an absent file already raised. A real table
+  sitting below a fenced sample is now read correctly rather than being
+  shadowed by the sample.
+- **`qfai report` lists every parked row `qfai validate` names.** Sharing one
+  "can this row carry coverage" predicate between the two commands put the
+  report's `- exception rows:` block behind it too, so a `Status=exception` row
+  on an `API` or `E2E` layer was dropped from the report while
+  `TDDLIST_EXCEPTION_PARKED` still named it — the two commands disagreeing about
+  one row, which is the defect the shared reader exists to remove. The two
+  questions are separate now: `isLedgerRow` ("is this an entry at all", i.e. does
+  it carry a `TDD-ID`) governs the roll-call, and the narrower
+  `isCoverageBearingRow` still governs the arithmetic, so an `API`/`E2E` row
+  appears in `- exception rows:` without discharging any TC. Projects carrying
+  parked API/E2E rows will see them in `qfai report` again.
+- **One list of the layers a `TC-*` may not sit on.** `tddList.ts` and
+  `tddHelpers.ts` each held a private `["api", "e2e"]`, so the rule that rejects
+  the placement (`TDDLIST_OBLIGATION_LAYER_MISMATCH`) and the rule that declines
+  to score coverage from it read different copies of their own vocabulary. They
+  are one exported `TC_FORBIDDEN_LAYERS` now, on the same terms as
+  `UNIT_COMPONENT_LAYERS`: a layer cannot be added to the rejection and left out
+  of the arithmetic. No behaviour changes — the two sets were identical.
+- **A ledger row is checked the same wherever in the ledger it sits.** Widening
+  the coverage reader to every ledger table left the row checks on the first
+  one, so `TDD-ID = x` / `Layer = bogus` produced `TDDLIST_INVALID_ID` +
+  `TDDLIST_UNKNOWN_LAYER` in the first table and **no finding at all** in an
+  appended one — while clearing `TDDLIST_TC_NOT_COVERED` from both. With L1/L2
+  out of `QFAI-ATDD-112` that turned "the ledger picks the obligation up" into a
+  claim one meaningless cell could falsify with nothing on screen to say so.
+  `TDDLIST_INVALID_ID`, `TDDLIST_UNKNOWN_LAYER` and
+  `TDDLIST_OBLIGATION_LAYER_MISMATCH` now run on every table coverage is scored
+  from.
+  - **What is new is the diagnostic, not the verdict.** The same row already
+    counted as coverage in the first table, at `warning`. Refusing to count it
+    would instead escalate `TDDLIST_UNKNOWN_LAYER` into an unwaivable `error`,
+    against the reason it is a warning — ledgers written before the enum existed
+    carry project-specific layer names — and would make a typo stricter than the
+    known-but-wrong layer beside it, which
+    `TDDLIST_COVERAGE_LAYER_MISMATCH` stages with an announced window.
+  - **Who it hits.** Only a ledger with more than one schema-shaped table. A
+    row there that is malformed, or carries `TC-Refs` on an `API`/`E2E` layer,
+    now raises what it always raised in the first table — including one `error`
+    for the forbidden placement. Findings outside the first table are labelled
+    `ledger table N, row M` — the ordinal counts _ledger_ tables, so the shipped
+    template's `## Schema` documentation table does not shift it; a single-table
+    ledger keeps the `row M` label it had. The
+    status, evidence, transition, duplicate-id and test-file checks read every
+    ledger table too. Splitting them — coverage over all tables, execution
+    state over the first — was a fail-open in two halves: a `Status=done` row
+    in an appended `## CHG-…` table cleared the coverage obligation while its
+    non-existent `Test file` and empty `Evidence` were never looked at, so the
+    gate accepted a completion claim it had declined to check. **Upgrading a
+    multi-table ledger can therefore surface new errors on rows that were
+    never validated before.**
+- **An incomplete later ledger table is reported instead of dropped.**
+  `collectLedgerTables` admits only schema-complete tables, so an appended
+  `## CHG-…` section that mistyped one header contributed nothing: its rows
+  vanished from the gate and from `qfai report`, and a `done` row in the first
+  table read as the whole story while the follow-up work sat in a table nobody
+  looked at. A table carrying `TDD-ID` and `TC-Refs` is a ledger attempt, and
+  a missing column in one is now `TDDLIST_REQUIRED_COLUMN_MISSING`. "Ledger
+  attempt" is **either** test, because neither alone is enough: `TDD-ID` and
+  `TC-Refs` together say "ledger" whatever else is absent, and six of the eight
+  required columns say it for a table that mistyped one of those two. Markers
+  alone miss a mistyped marker; a count alone misses a five-column table that
+  keeps both. A documentation table beside the ledger passes neither, so the
+  shipped template's own `## Schema` table stays out. `qfai report` treats an unreadable ledger table the same way
+  it treats an unreadable first one: no counts, and the reason printed instead.
+- **A broken `## Test Case Table` is unresolved even beside heading-form TCs.**
+  One readable `## TC-NNNN` heading discarded the failure, so a document with
+  both shapes and a mistyped `TC-ID` header lost that table's TCs entirely:
+  no level, no coverage target, and no `TDDLIST_TC_TABLE_UNRESOLVED` — while
+  `collectShortIds` still saw them declared, so ATDD asked for the default
+  integration annotation and full validation passed on a test at the wrong
+  layer. A spec that has no such section is still not a fault.
+- **A malformed `TC-Refs` value discharges nothing.** `resolveParentTcId`
+  strips the last segment, so an over-long `TC-0001-0001-0001` resolved to the
+  real `TC-0001-0001` and cleared its obligation — while Check 5 skips a token
+  that fails the `TC-*` shape rather than reporting it, so nothing named the
+  typo either. Only a well-formed reference is counted or resolved — in `qfai
+report` as well, which was computing `done: 1 / open: 0` from the same
+  malformed cell the gate was reporting as uncovered.
+- **A ledger row whose `Layer` is blank or `-` no longer discharges a TC.** Every rule that
+  would police the placement keys on that cell and skips when it is empty —
+  the enum check, the forbidden-layer test, the `Level`/`Layer` crosswalk — so
+  a row carrying an id and a `TC-Refs` and nothing else cleared
+  `TDDLIST_TC_NOT_COVERED` with no test behind it and no rule able to say so.
+  An unknown but real `Layer` still counts, as before: that is a project's own
+  vocabulary and `TDDLIST_UNKNOWN_LAYER` names it. A blank cell and `-` are not
+  vocabulary — the enum check treats both as the same "no claim" placeholder and
+  skips them, so a row carrying either is exempt from every placement rule.
+- **The counts are omitted, not zeroed, when coverage cannot be assessed.**
+  `report --format json` serializes the spec object verbatim, so hiding the
+  numbers in the markdown formatter alone left machine consumers reading
+  progress computed from rows the validator never accepted.
+- **`qfai report` states when coverage cannot be assessed, instead of printing
+  zero.** A report is an audit artifact and `0 done / 0 open` is a claim: it
+  says the spec owes nothing. Printed for a spec whose `06_Test-Cases.md` has
+  no readable `TC-ID` table (`TDDLIST_TC_TABLE_UNRESOLVED`), or whose ledger's
+  first table is missing required columns — where `validate` stops at Check 3
+  and checks nothing else — that claim is unfounded, and beside a failing gate
+  it reads as the gate being wrong. Those specs now print
+  `coverage cannot be assessed: <why>` and no counts.
+- **The parked-row roll-call no longer depends on the coverage set or on a
+  well-formed id.** A spec whose TCs are all L3-L5 ended before the ledger was
+  read, so `qfai report` showed it with no `exception` rows while
+  `TDDLIST_EXCEPTION_PARKED` was listing them; and a first-table row with an
+  empty `TDD-ID` was dropped by the report while the gate reported it by
+  position. Both readers now share one row-shape rule.
+- **Two headings for one test case resolve to the first, on both sides.**
+  `collectTcLevels` wrote every heading pair into the map, so the _last_
+  duplicate heading won there while the ledger gate kept the first — a TC headed
+  `L1` and then `L3` was excluded from `QFAI-ATDD-112` by one collector and
+  claimed by `TDDLIST_TC_NOT_COVERED` by the other, owed twice for one
+  declaration. Both collectors are first-seen now, matching what the table
+  reader and the scaffold parser already do, so either order leaves exactly one
+  gate owning the TC. A heading block with no `- Level:` line declares nothing
+  and no longer consumes the slot.
+- **A blank `Level` is released by the first explicit one.** An unstated `Level`
+  classifies as a coverage target so the TC cannot
+  fall out of the only gate L1/L2 have — but a row that says nothing must not
+  outrank a later row that says `L3`. The ATDD collector ignores a blank cell
+  and takes the `L3`, so a TC whose first table row had a blank `Level` (or
+  whose first table had no `Level` column) owed `QFAI-ATDD-112` **and**
+  `TDDLIST_TC_NOT_COVERED` together, failing full validation on a spec that was
+  correct. Ids admitted by the fallback are tracked and dropped when a later
+  explicit `Level` says they are not coverage; a later explicit _coverage_
+  `Level` replaces the recorded blank, so the `Level`/`Layer` crosswalk reads
+  what the spec states. A TC that nothing later contradicts still stays a
+  coverage target — the fallback itself has not moved.
+  - **Known residual: a TC that declares no `Level` anywhere is still owed by
+    both gates.** `classifyCoverageLevel("")` is a coverage target, so it owes
+    a ledger row; `collectTcLevels` records no level for a blank cell and
+    `resolveAtddHomeKind(undefined)` routes to `tests/integration/**`, so it
+    also owes `QFAI-ATDD-112`. That is not an oversight — narrowing either side
+    would drop an undeclared TC out of a gate, and the fallback exists because
+    an unstated `Level` must not silently leave L1/L2 ungated. It is written
+    down here because the fix above removes the case where a _later_ row
+    contradicts the blank, and it would otherwise read as removing all of them.
+    Declare the `Level` and exactly one gate owns the TC.
+- **`qfai report` reads the ledger `qfai validate` reads.** `collectTddCoverage`
+  parsed the first Markdown table in `tdd/test-list.md` while the gate scores
+  every table carrying the ledger schema, so a `done` L1/L2 row in an appended
+  `## CHG-…` section passed validation and was printed as missing and open. A CI
+  progress figure that contradicts the gate blocking the same branch is worse
+  than none. Both now call one reader in `core/tddHelpers.ts`, which also masks
+  fenced templates and commented-out tables out of the report and applies the
+  same "is this a row that can carry coverage" rule (`TDD-ID` present, `TC-Refs`
+  not on an `API`/`E2E` row). Report figures may move for a ledger with appended
+  tables, a fenced template, or `TC-Refs` on an `API`/`E2E` row.
+- **`qfai atdd scaffold`'s skip guidance follows `paths.testsDir`.** The message
+  naming where an L4/L5 test case belongs was pinned to `tests/api/**` /
+  `tests/e2e/**` while the writer and the ATDD scan both follow the configured
+  directory, so a project that relocated `testsDir` was sent somewhere no gate
+  reads and could not clear `QFAI-ATDD-112` by doing as it was told.
+- **`QFAI-ATDD-105` no longer asks for an L1/L2 annotation to be moved.** The
+  legacy `tests/atdd/**` probe listed every annotated file, and the finding's
+  advice is "move it into integration / api / e2e" — wrong for a file carrying
+  only Unit/Component annotations, which owe no ATDD directory at all and which
+  `catalog/test-layers.md` says are not misplaced wherever they land. Following
+  it walked the project back into the all-integration collapse the exclusion
+  undoes. Only a file whose every annotation is provably outside ATDD goes
+  quiet: one `US-*`, `CON-API-*` or `CON-DB-*` reference, or one `TC-*` with an
+  unknown or absent `Level`, still names the file.
+- **The npm README states the routing the package ships.** `README.md` is in
+  `package.json#files`, so it is the npm landing page, and it still carried the
+  pre-`Level`-routing rules: every `TC` annotated in `tests/integration/**` and
+  a blanket ban on `TC` in `tests/api/**` / `tests/e2e/**`. A reader arriving
+  from npm duplicated L1/L2 into integration and could not place an L4/L5
+  annotation in the home the validator requires. It now carries the routing
+  table, the L1/L2 exclusion and the gate that replaces it, and says the
+  directories follow `paths.testsDir`.
+- **`tdd/test-list.md` is now required for a spec that declares a
+  coverage-target TC.** This is an escalation from warning to error, announced
+  here because it is one. The file used to be optional for every spec: an
+  absent one raised `TDDLIST_MISSING` (`warning`) and the validator returned.
+  With Unit and Component out of `QFAI-ATDD-112` (below) that early return
+  became the last hole — a spec with declared L1/L2 TCs, no tests and no ledger
+  passed `validate --profile full --fail-on error` on a `warning` and an `info`.
+  An absent ledger now also raises `TDDLIST_TC_NOT_COVERED` (`error`), naming
+  every coverage-target TC it leaves without a row.
+  - **Who it hits.** Only a spec that declares at least one coverage-target
+    `Level` — `L1`/`L2`/`Unit`/`Component`, an unrecognized value, or no
+    `Level` column at all — _and_ has no `tdd/test-list.md`. A spec whose TCs
+    are all L3-L5 keeps the warning and gains no error; a spec that already has
+    a ledger is unaffected, and the escalation is per spec, not per project.
+  - **It is not waivable, and it is clearable.** `QFAI-WAIVER-002` refuses
+    every waiver on an `error` rule, so the exit is to seed `tdd/test-list.md`
+    with one row per coverage-target TC (`/qfai-sdd` Phase 2b) and run
+    `/qfai-implement`. That is the same exit the rule has when the file exists;
+    nothing new becomes unsatisfiable.
+  - `TDDLIST_MISSING` now states which of the two cases the spec is in and
+    names the error that follows, so the escalation is visible in the run that
+    first reports it rather than only in these notes. The shipped `/qfai-sdd`
+    reference (`references/spec-traceability-rules.md`) said unconditionally
+    that a missing ledger is a warning, which told the author the gap was
+    non-blocking; it now states the condition.
+- **`catalog/test-layers.md` says what happens to a multi-valued `Level` cell.**
+  It called `L3/L5` illegal and then claimed "nothing consumes it and no
+  validator can route it" — the opposite of the shipped behaviour, in the file
+  that is the SSOT for it. `QFAI-ATDD-112` routes such a cell to the same
+  default a TC with no `Level` gets (`<testsDir>/integration/**`) and keeps the
+  obligation, and `TDDLIST_UNKNOWN_LEVEL` (`warning`) names the cell while the
+  TC stays a coverage target. Both are written down now, with the only fix
+  (split the row) and an explicit statement that nothing normalizes such a cell
+  to one of its own halves — a consumer project had recorded exactly that
+  invented normalization as a fact about a spec value it never held.
+- **One `Level` predicate, one normalization.** `resolveTcHomeKind` matched
+  `NO_ATDD_OBLIGATION_LEVELS` against the raw map value, the exported
+  `isOutsideAtddObligation` matched a trimmed and lower-cased one, and
+  `qfai atdd scaffold` carried a third set with a third inline normalization —
+  one question with three answers, inside the routing whose whole purpose is
+  stopping two rules from disagreeing about one cell. All three now call
+  `resolveAtddHomeKind`, which owns the normalization. The level table is a
+  `Map` rather than an object literal, so a `Level` cell spelled `constructor`
+  or `__proto__` no longer resolves to an inherited `Object.prototype` value:
+  that made the TC uncounted where it was annotated **and** reported as
+  forbidden there — two errors from one correct placement, on a cell whose only
+  fault was a typo. The Unit/Component word list is now one list rather than
+  two: the ATDD side imports `UNIT_COMPONENT_LAYERS` instead of restating its
+  members, since the levels ATDD stops owing have to be exactly the levels the
+  ledger starts owing, and a spelling in one set and not the other is a `Level`
+  owed by no gate at all. A test pins that property at the predicate level, so
+  it survives the constants being split apart again.
+- **First declaration wins between two tables, not only between two shapes.**
+  The heading-wins fix below settled a heading disagreeing with a table row; two
+  tables inside `## Test Case Table` still disagreed. The non-coverage branch
+  `continue`d without recording the id, so a TC declared `L3` by an earlier
+  table and `L1` by a later one was claimed by the ledger gate as well as by
+  `QFAI-ATDD-112`, which reads the `L3` — the same two-gates-disagree failure
+  one level down, and the one an L1/L2 TC can no longer afford now that exactly
+  one gate is meant to own it. A levelled id is recorded whether or not it is a
+  coverage target, so the first declaration wins in both directions.
+- **`catalog/test-layers.md` describes the routing the validator performs.**
+  The "Annotation routing" section still said the derived `Level` does not move
+  the annotation, that every `TC-*` is answered from `tests/integration/**`, and
+  that a `TC-*` in `tests/api/**` or `tests/e2e/**` is rejected outright — the
+  pre-`Level`-routing rules, two paragraphs above the L1/L2 exclusion that
+  contradicts them. A reader following it duplicated L1/L2 into integration and
+  misplaced L4/L5. It now carries the routing table the gate implements, and the
+  crosswalk paragraph above it agrees. The section anchor changed to
+  `#annotation-routing`.
+- **A coverage row needs a `TDD-ID`, and the heading form wins over a table
+  row.** Requiring the ledger schema of a later table left two ways through: a
+  line under a complete header that fills only `TC-Refs` cleared the obligation
+  with no item behind it (and its blank `Layer` slipped past both the E2E/API
+  exclusion and the `Level` crosswalk), and a TC declared `L3` by its heading
+  and `L1` by a table row picked up a ledger obligation on top of its
+  `QFAI-ATDD-112` one — the two gates disagreeing about one TC.
+- **`qfai atdd scaffold` skips `L4`/`L5` TCs as well.** The writer is
+  integration-only, so their skeleton landed in a directory their declared
+  `Level` does not name: uncounted towards api/e2e coverage and reported as a
+  forbidden reference by `QFAI-ATDD-123`. Skipped TCs are named on stderr with
+  what to do instead.
+- **The forbidden-reference bullet is `Level`-relative, not a blanket ban.** It
+  said `tests/api/**` and `tests/e2e/**` "must not carry `TC-*` annotations",
+  so a reader left an L4/L5 TC uncovered: the validator requires the annotation
+  in the directory the TC's own `Level` names. The re-filing advice — a `TC-*`
+  should not be at L4/L5 at all — stays.
+- **Coverage counts real ledger rows only.** The multi-table scan read the raw
+  file and accepted any table with a `TC-Refs` column, so a fenced template or a
+  commented-out old table in `test-list.md` counted a TC as covered, and a stray
+  two-column table headed `TC-Refs` cleared the obligation with no `TDD-ID`, no
+  `Layer` and no `Test file` behind it — clearing the only `error` that still
+  owes an L1/L2 TC. Non-spec regions are masked first, and a table must carry the
+  full ledger schema to contribute.
+- **The two TC readers now read the same tables.** `collectTcLevels` scanned
+  every table in `06_Test-Cases.md` while `resolveTestCaseTables` reads the
+  `## Test Case Table` section, so an illustrative table above the heading won
+  under first-declaration-wins: an example row saying `TC-0001 | L1` excluded
+  the TC from `QFAI-ATDD-112` while the section-scoped ledger gate read the
+  real `L3` row and did not claim it either. Both now read through
+  `resolveTestCaseTables`, which also leaves a mistyped `tc-id` header owed by
+  both gates instead of neither.
+- **`qfai atdd scaffold` skips Unit and Component TCs.** It wrote a skeleton
+  into `tests/integration/<spec-id>/` for every TC, which for an L1/L2 TC is
+  the annotation the same skill forbids and that `QFAI-ATDD-112` no longer
+  counts — so filling it in discharged nothing. Skipped TCs are named on
+  stderr; a spec whose TCs are all L1/L2 exits 0 saying nothing was in scope,
+  which is distinct from the exit-1 no-Test-Case-entries case.
+- **`QFAI-ATDD-112` no longer demands an annotation for a Unit or Component
+  TC.** `LEVEL_TO_TEST_KIND` had keys for `l3`/`l4`/`l5` and none for
+  `l1`/`l2`, so `resolveTcHomeKind` fell through its `?? "integration"` case —
+  the fallback meant for a spec with _no_ `Level` column — and every declared
+  L1/L2 TC was reported as uncovered in `tests/integration/**`. That is not
+  their home: `catalog/test-layers.md` gives L1/L2 no mandated directory and
+  `qfai-atdd/SKILL.md` puts Unit and Component out of its scope. Since the rule
+  is `error` and `QFAI-WAIVER-002` refuses waivers on `error` rules, a project
+  that filed unit tests where the layer policy says to had **no exit** — the
+  only validator-clean path was duplicating every annotation into
+  `tests/integration/**`, which is the all-integration collapse the same
+  catalog lists as an anti-pattern. Measured on one consumer repository: 263
+  findings, 255 L1 + 8 L2, zero L3, against 483 TCs all correctly annotated.
+  L1/L2 stay gated by `tdd/test-list.md` / `TDDLIST_TC_NOT_COVERED` under
+  `/qfai-implement`, the stage that owns them. The no-`Level` default is
+  unchanged, and an L1/L2 annotation that happens to sit in a scanned directory
+  is not reported as forbidden either — the routing rule and the forbidden rule
+  have to agree.
+  - **What the exclusion adds to the output.** A silent exclusion is
+    indistinguishable from a scan that found nothing, so it is stated in three
+    places a consumer may already parse. `QFAI-ATDD-117` is a new `info` finding
+    naming every excluded TC in `refs` — a code that did not exist before, so a
+    consumer keying on rule codes will meet it on upgrade. `summary.json` gains
+    `excludedUnitComponentTc` (rendered under Deferred Coverage in
+    `summary.md`), because `missing.tc: []` alone reads as "ATDD covers every
+    TC". Neither is an `error` and neither changes an exit code.
+  - **`D-SCAFFOLD-PLACEHOLDER` stops blocking on Unit and Component too.**
+    `qfai atdd scaffold` did not route by `Level` before this release, so an
+    upgrading project can already hold an unfilled L1/L2 skeleton under
+    `tests/integration/**`, and an unfilled one escalates to `error` in
+    `--profile atdd|full`. Left alone, the release would have traded
+    `QFAI-ATDD-112` for that — the same unwaivable block under a second code.
+    The validator reads the spec's declared levels and skips TCs outside the
+    ATDD obligation, through the same `isOutsideAtddObligation` the routing
+    uses, so the two rules cannot disagree about one cell.
+- **`TDDLIST_TC_NOT_COVERED` now reads the whole ledger and the whole spec.**
+  Two gaps surfaced once L1/L2 depended on this gate alone. Coverage was scored
+  against the _first_ table in `tdd/test-list.md`, so a ledger that appends a
+  per-change-request section with its own table reported every TC those later
+  tables cover as uncovered. And the known-TC set was seeded from heading-form
+  `- Level:` pairs, so a `## TC-NNNN` block declaring no `Level` counted as
+  undeclared and its own ledger row became a `TDDLIST_UNKNOWN_REF`. A `TC-*` on
+  an E2E/API row still does not count towards coverage, wherever that row lives.
+- **`references/execution-ledger.md` is the only place the ledger's transition
+  table is stated.** `qfai-implement/SKILL.md` summarised it four times and
+  three of those summaries claimed the re-entry set was a single edge
+  (`refactor` -> `red`), so `blocked` -> `todo`, `exception` -> `todo` and the
+  reviewer loop read as illegal to anyone working from the skill — including the
+  `project_memory` line, which is the one most likely to be quoted into a
+  delegated work order. The summaries now state the forward spine, name the
+  reference as the complete list, and say outright not to infer an edge's
+  absence from them. `TDDLIST_EXCEPTION_PARKED` cites the same anchor and says
+  its `exception -> todo` remediation needs no Change Request **when the row's
+  approved obligation is unchanged**, which is what an operator could not tell
+  from the skill alone. When the investigation finds the obligation itself was
+  wrong, that is an upstream change: the row re-enters through the approved
+  Change Request reset under the Drift Protocol instead.
+- **The Coverage Depth Matrix has a committed home.** `/qfai-atdd` gates
+  completion on it three times — Mandatory Output 2, a Definition-of-Done
+  condition and a Not-done criterion — and `qa-gatekeeper` REVISEs when it is
+  absent, but nothing said where it goes. The only file the skill mandates
+  writing is `.qfai/evidence/atdd-<spec-id>.md`, whose eleven Required sections
+  had no slot for it and which the managed `.gitignore` block ignores, so the
+  judgement that discharges those gates — why a given `❌` cell is acceptable —
+  was guaranteed never to reach a commit, and "unjustified ❌" was unfalsifiable
+  for every later reader. The matrix and its per-`❌` justifications now go to
+  `.qfai/evidence/coverage-depth-<spec-id>.md`, negated in the managed block
+  alongside Change Requests and decision records; the stage evidence file gains
+  a section that links to it and carries the totals. `qa-gatekeeper` treats a
+  matrix that exists only inside the ignored stage evidence as a missing matrix.
+  Existing projects pick the negation up on the next `qfai init`; no ignore line
+  is removed, so nothing previously tracked becomes untracked.
+- **A governance negation is checked against real gitignore globs, and against
+  the whole file.** Git applies the last matching pattern, so a negation is
+  effective only when no ignore line below it matches the same path — and both
+  checks got that wrong. The root check read the managed block alone, so a
+  project rule appended _after_ the block (`.qfai/evidence/*.md`) won while the
+  check called the negations effective and returned early. The leaf
+  `.qfai/evidence/.gitignore` check compared string prefixes, which sees `*` and
+  `.qfai/evidence/*` but not `*.md` or its double-star form — the patterns that
+  match `coverage-depth-*.md`, `decision-*.md` and `change-request-*.md`
+  exactly. Both now use one matcher that implements the anchoring, directory
+  and star rules, over the whole file. The repair itself was already correct;
+  only the detection short-circuited it.
+- **A duplicated managed block no longer loses the lines only its later copy
+  carries.** A past duplicate-append bug left some projects with two blocks
+  separated by their own entries. `removeManagedBlock` strips all of them but
+  the rebuild read only the first, so a line living exclusively in the later
+  block — `.qfai/state.json`, for one — was deleted and never written back, and
+  local run state became committable on the next `qfai init`. The blocks are
+  merged in document order before the rebuild and collapse to one.
+- **Re-init no longer resurrects an ignore line a project deleted.**
+  `ensureRootGitignoreEntries` rewrote the managed block from the canonical list
+  whenever its freshness check failed — and shipping a new governance negation
+  is exactly what makes it fail. A project that had removed `.qfai/evidence/*`
+  to track its own audit trail got that line back from the very release meant to
+  widen tracking. **Every** block now keeps its own ignore lines and only gains
+  the governance negations it is missing — a block still carrying retired lines
+  is not migrated wholesale either, because age and intent cannot be told apart
+  from the file and a project can carry a retired line _and_ have deleted
+  `.qfai/evidence/*` on purpose. Retired lines are dropped, one has a named
+  successor, and no ignore line is ever re-added. A project with no managed
+  block still gets the full canonical one. If you deleted a line you now want
+  back, add it to the block yourself; `qfai init` will preserve it.
+- **`qfai init` migrates a legacy `.qfai/evidence/.gitignore`.** Earlier
+  versions wrote a per-directory ignore whose first line is `*`. Git applies the
+  deepest matching file, so that `*` beat every root-level negation and the
+  governance records — Change Requests, decision records, and now the Coverage
+  Depth Matrix — stayed ignored however correct the managed block was. The
+  leaf negations are appended to that file when it exists; nothing else in it is
+  touched.
+- **`qfai init --force` regenerates `assistant/agents`, not only
+  `assistant/skills`.** Every other `.qfai/**` path is create-only, so a
+  correction to an agent definition reached new projects and nobody else — an
+  installed repository kept the old reviewer instructions with no command that
+  would update them. `agents/` is generated in the same sense `skills/` is.
+  **`assistant/manifest/` is not touched at all**, `agent-catalog.yml`
+  included: `qfai-configure` is the shipped entrypoint for editing those
+  declarative manifests, so forcing the catalog would replace a taxonomy
+  adjustment made through the supported path, and nothing migrates it back —
+  `--upgrade-assistant-tree` deliberately does not walk `manifest/`. The cost
+  is that `agent-catalog.yml#developer_instructions` can drift from
+  `assistant/agents/*.md` in an installed project; drift is visible and
+  repairable, a silently overwritten taxonomy is neither. `specs/`,
+  `contracts/` and `steering/` stay create-only.
+
+### Added
+
+- **`qfai doctor --autoremediate` writes both halves of the legacy migration**
+  — the `.legacy-packs` record _and_ `revision_form: "legacy"` in each pack that
+  declares no form. The validator relaxes only when both agree, so writing the
+  record alone left every pack a blocking `QFAI-REVIEW-007`: the state the
+  migration exists to clear. It refreshes the managed `.gitignore` block first,
+  because an existing repository still carries the older one, whose
+  `.qfai/review/*` would keep the record out of every commit and leave every
+  legacy claim uncorroborated in CI and in the next clone.
+- **`qfai doctor --autoremediate` records the review packs that predate
+  `revision_form`.** Without it, taking a version that requires the marker turns
+  every pack already on disk into a blocking `QFAI-REVIEW-007` — a repository
+  that keeps its review history fails `--fail-on error` on adoption, for a
+  condition no producer can go back and fix. The migration is additive and
+  idempotent: a repeat run is a no-op, a name recorded by hand is never dropped,
+  and a pack that forgets its marker _after_ the migration is still an error.
+
+### Fixed
+
+- **The short-circuit is decided per tree, because the readers differ.** The
+  skills tree is `readdir`ed, so a regular file where the directory belongs
+  raises `ENOTDIR` and takes the run with it; the agents tree is not — each
+  document is opened by path and the same shape reads as absence. Treating both
+  alike stopped `full` on damage nothing walks into. What does stop the agent
+  reader is the _document_ being the wrong type or unreadable, and that is what
+  is recorded now.
+- **A nested `SKILL.md` decides its own short-circuit.** With only the document
+  a symlink, the parent directory is healthy — so the answer inherited from it
+  was "keep going", while `validateSkillDocReferences` opened the same pathname
+  and got `ELOOP`.
+- **An unreadable canonical agent stops the profiles that route agents.**
+  `validateAgentDefinition` confirms the file exists and then reads it, so an
+  ACL ended the run and took the repairable finding with it.
+- **A retired-wrapper candidate is read to the ceiling and confirmed at EOF.**
+  Reading only the size just measured returned a prefix, so an append through an
+  fd held from before the `fstat` could leave a canonical-shaped target matching
+  — and the finding tells the operator to delete the file.
+- **The absent-wrapper branch asks the same question as every other.** It
+  checked link and type only, so with all four wrappers for a skill deleted a
+  canonical that was unreadable, or reachable only through a resolving symlink,
+  passed clean — and the profile then read the same document and ended the run
+  on its own error. There is one helper now, and one place that decides the
+  short-circuit.
+- **A document whose type a later `readFile` cannot survive stops the run.** A
+  `SKILL.md` that is a cycle, a directory or a FIFO gives
+  `validateSkillDocReferences` an `ELOOP` / `EISDIR` — or blocks it — taking the
+  repairable finding with it. Absence does not: every validator handles a
+  missing file, so "has no SKILL.md" is still reported and still lets the rest
+  of the profile run.
+- **A non-file canonical agent stops the profiles that read it.**
+  `validateAgentDefinition` opens the agent pathname directly and runs under
+  `prototyping` / `saas-package` / `full` / `verify`, none of which the
+  skills-only short-circuit covered.
+- **The restored mode comes from the handle the content was read on.** A `stat`
+  on the pathname and a read on another inode could disagree, so content a
+  process had just made `0600` was restored under the `0644` the old entry
+  carried — readable by everyone — and the sidecar removed straight after.
+- **The canonical state is read before the link problem, so every answer
+  carries the short-circuit.** A wrapper that was flattened _and_ whose skills
+  root is a regular file reported the ancestor without marking it unwalkable,
+  and the profile then walked into the same `ENOTDIR` the finding was about.
+- **A broken wrapper's canonical is checked for readability too.** An ACL or a
+  mode that keeps the document shut is not repaired by `qfai init` — the copy is
+  create-only — so reporting the wrapper alone had the operator re-run it and
+  learn nothing. An unreadable document also stops the profile:
+  `validateSkillDocReferences` re-throws its own `readFile` error, which would
+  take the finding down with it.
+- **A damaged integration directory is not enumerated for retired wrappers.**
+  When it is a symlink that resolves, `readdir` follows the redirect and lists
+  somebody else's tree — and the remedy printed for a retired wrapper is "delete
+  the path", which through that redirect deletes a file outside the project.
+- **The restore's copy is a bounded read of the inode it measured.** A ceiling
+  checked by `stat` and a read taken by pathname are two operations on two
+  possibly different inodes, so a sidecar replaced between them was read
+  unbounded anyway.
+- **A create-only copy treats a dangling symlink at the destination as
+  occupied.** `access` follows the link, so a dangling one answered "free" and
+  `copyFile` then wrote _through_ it — resolving the symlink and creating its
+  target — which turned `qfai init` into a writer of fixed content at whatever
+  path the link named, including one outside the project.
+- **A restore that cannot carry the mode takes its destination back out.**
+  Reporting a wrong-permission restore while leaving it in place fixes nothing:
+  a `0600` file put back as `0644` is readable by everyone. The fallback created
+  it exclusively, so it is removed, and the sidecar keeps both the content and
+  the permissions.
+- **The short-circuit does not reach a sibling of the skills directory.**
+  `validateSkillsIntegrity` and `validateAssistantAssets` walk the configured
+  skills directory, not its parent, so a regular file at
+  `.qfai/assistant/agents` stopped `full` on a tree they never open — while a
+  missing agent is an ordinary finding rather than an exception.
+- **Every wrapper branch checks the canonical, through one helper.** The
+  wrong-target branch reported the mismatch and stopped, so `qfai init`
+  re-pointed the wrapper, left the create-only canonical as it found it, and the
+  operator needed a second run to learn the rest. Three branches diverging on
+  which half they checked is what produced that shape three times; they now ask
+  the same question the same way, and the answer carries its own short-circuit
+  rather than leaving the caller to recover it from a detail string.
+- **A per-entry read error is propagated.** A transient `EIO`, or an ACL on one
+  entry, was answered "not a wrapper" — leaving a retired wrapper the assistant
+  still loads unexamined, the same hole the listing error had one level up. Only
+  a race (`ENOENT`) is a clean `null`.
+- **The copy fallback is bounded.** It also runs when the bounded probe
+  _refused_ the entry, so reading an oversized file whole into memory to copy it
+  back was exactly the exhaustion that probe exists to avoid. It refuses
+  instead, keeps the sidecar, and says where the content is.
+- **A flattened wrapper's canonical is checked for type collisions too.** The
+  link check is only one of the two ways a canonical goes wrong: a skill
+  directory replaced by a regular file, or an agent document by a directory, is
+  a collision it says nothing about — and the create-only copy `qfai init`
+  performs fails on it, so the operator was sent to re-run a command that cannot
+  succeed with the path at fault never named.
+- **A non-directory ancestor is reported as itself, once.** `not-a-directory` on
+  a canonical leaf means a component above it is a regular file, so the leaf is
+  unreachable rather than damaged. Naming the leaf recorded one finding per
+  skill and per agent, each pointing at a path the operator cannot even move
+  aside — `ENOTDIR` again — while the one path at fault went unnamed.
+- **A listing error is propagated instead of passing silently.** An
+  execute-only directory answers every `lstat` on a known wrapper and refuses
+  the listing, so swallowing it passed validation with no retired wrapper
+  examined at all, while the assistant went on loading them. Only the damage
+  already reported elsewhere — `ELOOP`, `ENOTDIR`, absence — is skipped.
+- **Only a non-directory component stops the run.** The walks over the
+  assistant tree list a directory with `withFileTypes` and descend only into
+  `isDirectory()` entries, and they probe the root with an `access` that
+  swallows every error — so a symlink, cycle or not, is listed and skipped, and
+  a cycle at the root reads as absent. A regular file where a directory belongs
+  is the one shape that reaches `readdir` and raises `ENOTDIR`. Treating a leaf
+  cycle as unwalkable hid every unrelated finding behind a link the operator had
+  to repair first, and the finding now names the component at fault rather than
+  the leaf below it.
+- **`full` and `verify` follow the configured skills directory.** They pinned
+  `.qfai/assistant` while the validators that walk it read `paths.skillsDir`, so
+  a project that moved it had the run stopped for damage sitting outside every
+  walk it performs.
+- **A flattened wrapper no longer hides the canonical.** The two are
+  independent, and `qfai init` repairs the wrapper while leaving the canonical
+  as it found it — so reporting only the wrapper had the operator clear the
+  finding and end with a healthy symlink loading the wrong instructions.
+- **A retired wrapper is matched byte-exactly.** Git writes the target for mode
+  `120000` with no trailing newline; trimming one off made a project's own
+  one-line note indistinguishable from a wrapper, failed every profile, and told
+  the operator to delete it.
+- **The sidecar is re-read before the cleanup deletes it.** The handle that
+  vetted its content closes when the read returns, and a process holding that
+  inode from before the rename can append in the window that follows — so the
+  delete discarded bytes nothing had seen, with the new symlink standing where
+  they had been. Content that changed keeps the sidecar, and says so.
+- **The short-circuit tests the paths a profile walks, not its name.** `sdd`
+  runs `validateSkillDocReferences`, `validateAutopilotPolicy` and
+  `validateStaleReferences`, all of which `readdir` the configured skills
+  directory — so excluding it by name left one of them raising `ENOTDIR` /
+  `ELOOP` and losing the `QFAI-LINK-001` that names the path and the repair. The
+  test is now the intersection of the damaged paths with the ones that
+  profile's own validators open.
+- **A repair sidecar is not reported as a retired wrapper.** It holds the
+  flattened target, so it reads as one, and it exists precisely because a repair
+  could not finish — sometimes making it the only surviving copy of the
+  original. The remedy printed for a retired wrapper is "delete the path".
+- **The moved-aside wrapper is read to the ceiling, not to its measured size.**
+  A process holding the inode from before the rename can append after the
+  `fstat`; reading only the size just measured took a prefix, which still
+  matched the target, so the repair went ahead and the cleanup deleted the
+  sidecar with the appended bytes in it.
+- **A fallback restore puts the mode back.** `writeFile` creates a new inode
+  with the umask and the parent's defaults, so a `0600` file another process
+  left at the path came back `0644` — readable by everyone — or lost its
+  executable bit, and the sidecar that still carried the metadata was removed
+  straight after. A restore that cannot carry the mode keeps the sidecar and
+  reports itself as incomplete.
+- **The short-circuit stops only the profiles that walk the damage.**
+  `unwalkable` names paths under `.qfai/assistant/**`, and
+  `validateSkillsIntegrity` / `validateAssistantAssets` are the only validators
+  that open that tree — they run under `verify` / `full` alone. `discussion`,
+  `sdd`, `atdd` and `tdd` were being stopped for damage none of their own
+  validators would have touched, so every independent defect in the spec packs,
+  the ledger and the discussion packs stayed hidden until the surface had been
+  repaired and the run repeated.
+- **`qfai init` leaves a marker inside the tree it owns.** The four README
+  markers sit in conventional directories and are written only when the path is
+  free, so a project that already had its own at all four ran init and got no
+  marker at all — and once every wrapper was deleted the surface read as never
+  initialised: nothing checked, every profile passing, and the assistant loading
+  nothing. `.qfai/assistant/README.md` cannot be pre-empted (init creates that
+  tree) and outlives every integration directory, which is the state the
+  evidence is for.
+- **A wrapper for a skill or agent this version no longer ships is reported.**
+  Wrappers are enumerated from the current roster, so one left behind by a
+  shipped document since removed or renamed was enumerated by nobody: it still
+  resolves, so the assistant went on loading retired instructions while every
+  profile reported a clean surface. `pruneStaleQfaiWrappers` does not reach it
+  either — it matches a `qfai-` prefix, and `web-research` is the standing proof
+  that a shipped name need not have one. Identified by where the target lands
+  rather than by the name, so a flattened checkout is covered too.
+- **The short-circuit is decided by the damage, not by the message.** It was
+  read back out of the finding's text, which carries a 12-entry sample — so a
+  thirteenth entry holding the only unwalkable path decided nothing, a profile
+  validator walked into the `ENOTDIR` and the run ended with a stack trace
+  instead of the finding that names the path. Each site now records the
+  canonical it cannot walk as it sees the errno, and `inspectIntegrationSurface`
+  hands that list to the caller.
+- **Damage confined to an integration directory no longer stops the profile.**
+  `.claude/skills` and its siblings are read by this validator and by nothing
+  downstream, so a cycle on one of them breaks no later `readdir` — and
+  stopping there hid every spec, contract and test defect sitting alongside it
+  until the operator had repaired the link and run again.
+- **A wrapper whose canonical is not there yet says why.** Point
+  `.qfai/assistant/skills` at an existing empty directory and every wrapper
+  under it is `ENOENT`, reported as a plain dangling link. The remedy printed
+  for that is "re-run `qfai init`", which writes the canonical _inside_ the
+  redirect and leaves the correct wrapper target alone: the finding clears and
+  the redirect stays. The ancestor is named first.
+- **The moved-aside wrapper is read from the inode it was measured on.**
+  Checking it with `lstat` and reading it by pathname are two operations on two
+  possibly different inodes: another process replacing the sidecar in between,
+  or growing it through an fd held from before the rename, left the read
+  unbounded — memory exhausted, or blocked for ever on a FIFO — with the
+  original already moved aside and the pathname empty. One `open`, `fstat` on
+  that handle, a bounded read from it, shared with the flattened-link probe.
+- **Only damage that breaks a walk stops the run.** A canonical redirected by
+  a link that resolves is a finding a `readdir` survives, so short-circuiting
+  on it hid every unrelated spec, contract and test defect.
+- **A bounded read runs to the end.** `read` may return fewer bytes than
+  asked for, and the unfilled tail stayed NUL — a correct flattened wrapper or
+  the one surviving marker then failed its own signature comparison.
+- **Structural damage stops the run after reporting it.** A profile validator
+  walking the same tree raises `ENOTDIR` from its own `readdir`, and one
+  rejection took the whole run down — losing the only finding that names the
+  path and how to repair it.
+- **A canonical is checked even with its surface gone.** Gating the branch on
+  the wrapper directory existing skipped every canonical check with it, and
+  `qfai init` then recreates the wrappers around a canonical it leaves as it
+  found.
+- **A size ceiling binds the entry that is read.** `lstat` then `readFile` are
+  two operations against a name, so a huge file or a FIFO left at the path in
+  between was read unbounded — one `open`, `fstat` on that handle, and a
+  bounded read from it, with `O_NONBLOCK` so a FIFO answers instead of
+  blocking.
+- **An ancestor that is not a directory is named directly.** The check
+  answered only for symlinks, so a regular file at `.claude` was reported
+  through the child `ENOTDIR` keeps the operator out of.
+- **A claim that never took anything is released.** A failed `rename` left an
+  empty sidecar that prune deliberately skips and the next attempt sidesteps,
+  so repeated failures piled them up to the ceiling and refused every later
+  repair.
+- **The post-move probe is inside the rollback.** By then the wrapper has
+  moved, so a permission change or a transient `EIO` there left the pathname
+  empty and the original in the sidecar with nothing said about either.
+- **A repair sidecar is not pruned as a stale wrapper.** It is named after the
+  wrapper it holds, so it matched the `qfai-` prefix — and prune runs first, so
+  a `--force` re-run deleted the file an earlier failed repair preserved.
+- **A cleanup failure is not a failed repair.** Removing the sidecar sat inside
+  the rollback `try`, so an ACL or antivirus hold sent a successful repair down
+  the restore path — where the new symlink already occupies the name.
+- **Readability is answered by opening the file.** `access(R_OK)` does not
+  consult a Windows ACL, so a document an ACL denies read as fine while the
+  assistant's own read failed.
+- **A broken integration ancestor is reported instead of its child.** With
+  `.claude` a cycle, the probe on `.claude/skills` answered cycle too and named
+  a path the operator cannot reach.
+- **The canonical integrity check does not depend on a wrapper.** With no
+  wrapper to resolve through, a canonical, an ancestor or a `SKILL.md`
+  replaced by a resolving symlink read as a plain missing wrapper — and
+  `qfai init` then creates a wrapper pointing at it, since create-only leaves
+  the canonical as it found it. Both branches call one helper now.
+- **Every canonical ancestor is searched for damage**, not the immediate
+  parent alone: a dangling `.qfai/assistant` leaves the parent answering
+  absent too, so one level of checking found nothing.
+- **What was moved aside is what gets checked.** The caller's size and kind
+  probe covered an inode that may no longer be at the path, so the read ran on
+  an entry nothing had vetted — a large enough one exhausts memory, a FIFO
+  never returns.
+- **The restore writes bytes, not a decoded string.** A non-UTF-8 file was
+  round-tripped through a string on the fallback path, replacing what it could
+  not decode, and the sidecar was removed straight after.
+- **A canonical ancestor is a real directory too.** `.qfai/assistant/skills`
+  redirected inside the project follows through to a real leaf, so the leaf
+  check passed and both resolved paths landed in the same place.
+- **A `SKILL.md` is a real file wherever a link would land**, which is the
+  case no resolved-path comparison can see.
+- **Proof that init ran outweighs a probe that could not read.** One
+  unreadable candidate rejected the whole evidence pass and stopped every
+  profile on a project the wrapper beside it already proved initialised.
+- **A restore that fails during the read path is reported**, with the sidecar
+  named — re-throwing the read error alone made the original look simply lost.
+- **A canonical is a real document, not a link to one.** Redirected at another
+  skill inside the project, both resolved paths converge and the
+  outside-the-project rule is satisfied — while the assistant loads the wrong
+  instructions in every profile but `full`.
+- **A broken link on the way to a surface is not an absent surface.** A
+  dangling `.claude` made the directory answer absent, and a dangling
+  `.qfai/assistant/agents` made every document answer ENOENT — reported as
+  never taken, with a remedy that cannot create anything through a broken link.
+- **Every restore claims the path atomically**, not only the one after a failed
+  `symlink`: the two early returns used a plain rename.
+- **The marker read is bounded.** A project's own document at one of those
+  paths could be any size, and reading it whole to look for three substrings
+  cost every profile in proportion to it.
+- **The sidecar name is claimed exclusively.** A PID alone is not unique, so a
+  second repair in the same process renamed over the file an earlier failed
+  one had preserved — and the success path removes the sidecar.
+- **A nested `SKILL.md` has to resolve inside the project**, like the
+  directory holding it.
+- **Ancestors are checked component by component.** Comparing a resolved path
+  with a built one reported a sound surface as a symlink wherever the
+  filesystem is case-insensitive and the directory was created as `.Claude`.
+- **`ENOTDIR` on a marker path does not end the run.** A marker ancestor
+  written as a regular file lost the finding the other markers and wrappers
+  still had.
+- **The restore claims the path atomically.** Checking that it is free and
+  then renaming are two operations, and `rename` overwrites — so a file
+  created in between was destroyed by the rollback. `link` refuses an existing
+  path instead, with an exclusive write as the fallback.
+- **A canonical that resolves outside the project is reported.** Replace it
+  with a symlink to a readable file of the right kind and both sides of the
+  resolved-path comparison follow it to the same external path, so they agree
+  while the assistant loads instructions the project does not own.
+- **A symlinked ancestor of an integration directory is named.** `.claude`
+  pointing at an external tree leaves `.claude/skills` a plain directory, so
+  the probe on the directory said nothing while every relative wrapper under
+  it resolved against the external location.
+- **The verified file is moved aside, not deleted by pathname.** Reading and
+  deleting are two operations, so another process could still replace the file
+  in between and lose content the check never saw. The repair renames it aside
+  first and judges what it holds; nothing is removed until the symlink exists.
+- **An integration directory that is a symlink is reported.** The wrappers
+  under it carry relative targets, so they resolve against wherever it
+  physically is; empty, there were no wrappers to reach the resolved-path
+  check and it read as healthy while `qfai init` filled the external location.
+- **A wrapper replaced by something other than a file names its kind**, and
+  the remedy covers it — `qfai init` preserves a directory or a special file,
+  and "inspect the content first" does not apply to a FIFO.
+- **An unreadable document has a remedy that changes something.** `qfai init`
+  skips both the wrapper (its target string is right) and the canonical asset
+  (create-only), so the generic remedy left the operator with a check that
+  stops every profile and no way to clear it.
+- **A type collision is reported wherever it sits on the path.** An
+  integration directory replaced by a regular file raised `ENOTDIR` on every
+  wrapper under it, and a canonical ancestor replaced by one did the same on
+  the target — both ended the run instead of reporting. An absent wrapper now
+  also names what the canonical actually is, which is the state `qfai init`
+  cannot repair on its own.
+- **A cyclic integration directory is reported, not thrown.** `lstat` on
+  every wrapper under it raises `ELOOP`, and propagating that ended
+  `qfai validate` with a stack trace instead of a finding.
+- **An init marker is matched on a full signature.** One mention of
+  `.qfai/assistant/` is what a project documenting its own QFAI tree writes,
+  and it made a checkout that never ran init read as initialised.
+- **A flattened wrapper is matched byte-exactly.** `path.normalize` accepted
+  `../../.qfai/assistant/./skills/<id>` — not what git writes — so a project's
+  own note at that path made a checkout that never ran init read as
+  initialised.
+- **An init marker is `lstat`ed.** `stat` followed the link, so a project's
+  own `README.md` pointing at another file that mentions `.qfai/assistant/`
+  read as a marker init wrote.
+- **Only an entry init itself wrote counts as proof it ran.** These
+  directories are conventional and a shipped skill id can be a name a project
+  chose, so a project's own `.agents/skills/web-research` made a checkout that
+  never ran `qfai init` read as initialised — and its own directory was then
+  reported as a broken qfai link, with every other surface reported missing.
+- **A broken canonical document is reported, not skipped.** `access` follows
+  the link, so a canonical replaced by a dangling symlink answered "absent"
+  and its skill left the check altogether; a cycle propagated `ELOOP` and
+  ended `qfai validate` with a stack trace.
+- **An init marker must be a regular file.** These paths are create-only, so
+  whatever the project already had survives; a directory made `readFile` throw
+  `EISDIR` and reject the whole probe, losing the finding a valid marker
+  beside it would have produced, and a FIFO would block the validator.
+- **A wrapper is checked by where it lands, not by what it spells.** The
+  target is relative and the wrapper directory can itself be a symlink, so an
+  outside tree with a canonical-shaped path at the same offset passed every
+  check while the assistant loaded instructions that are not the project's.
+- **A rollback no longer overwrites a file created in the gap.** Between the
+  removal and the failed `symlink`, another process can create its own file at
+  the path — that is what an `EEXIST` from `symlink` means — and the default
+  write flag truncated it and put the old flattened content over the top.
+- **A backslash spelling is not a flattened link on POSIX.** The separator
+  tolerance exists because `path.relative` yields `\` on Windows; applied
+  everywhere it made a hand-maintained `..\..\.qfai\assistant\skills\...` match
+  the real target and get deleted without `--force`.
+- **An agent wrapper names a regular file, not merely a non-directory.** A
+  FIFO, socket or device passed `!isDirectory()` and could pass `access(R_OK)`
+  as well, so the assistant either failed to read the document or, on a FIFO,
+  blocked — with no finding.
+- **A cyclic `SKILL.md` is reported, not propagated.** The wrapper target's own
+  `ELOOP` was already handled as structural damage; the nested probe re-threw
+  it, so `qfai validate` exited with a stack trace.
+- **The remedy names the canonical path.** A canonical type collision is not
+  cleared by re-running init — the copy is create-only and `--force` fails on
+  the collision — so the printed remedy has to say to move it aside first.
+- **A wrapper that changed under the check is not deleted.** Between
+  `isFlattenedLink` reading the file and the removal, an editor or another
+  process can replace it; deleting on the strength of the earlier read
+  destroyed that content without `--force`, and the rollback does not fire when
+  the symlink then succeeds.
+- **The init marker is QFAI's own, not any file at that path.** `.agents/` and
+  `.github/agents/` are conventional directories, so a project's own README in
+  one of them made `initialised` true and failed every profile of a project
+  that never installed QFAI. The marker is the signature `qfai init` writes.
+- **`ELOOP` is a broken target, not a crash.** It says the canonical target is
+  a symlink cycle — structural damage to the thing this rule inspects — and
+  re-throwing it exited `qfai validate` with a stack trace instead of a
+  `QFAI-LINK-001` naming the path to repair.
+- **A target that resolves can still be unreadable.** `stat` reads metadata,
+  which an ACL or a mode can allow while the body stays shut, and the assistant
+  loads the body. Both the agent document and a skill's `SKILL.md` are checked
+  for read access.
+- **The flattened-link probe no longer re-stats what the caller holds.**
+  `ensureSymlink` had already `lstat`ed the path; re-probing let `safeLstat`
+  turn a transient `EIO` into `undefined`, which reads as "somebody else's
+  file" — so init left a flattened wrapper in the reassuring `skipped` list.
+- **An initialised project is recognised without any wrapper left.** The test
+  was "some wrapper survives", so deleting all of them said init had never run
+  and nothing was checked at all — the state where the assistant can load
+  nothing passed every profile most confidently. The READMEs `qfai init` writes
+  and never removes are the marker.
+- **A canonical `SKILL.md` has to be a file.** `access` succeeds on a directory
+  of that name too, and the assistant can load that no better than a missing
+  one — while the profiles that would notice are `prototyping` and `full`.
+- **A canonical type collision has a remedy that works.** `qfai init` skips the
+  existing path (create-only) and `--force` fails on `copyFile` / `mkdir`
+  against a collision, so the printed remedy could not clear the finding. It
+  says to move the canonical path aside first.
+- **An integration surface deleted whole is reported.** The populated test was
+  per directory, so removing one entirely made every entry in it read as "not
+  created yet" and every profile passed while the assistant could load nothing
+  from it. Whether init has run is a property of the project, and the missing
+  directory is reported once — one `rm -r` is one act, and one ref per shipped
+  skill buries that.
+- **A wrapper has to resolve to the right kind of thing.** A canonical agent
+  document replaced by a directory — or a skill directory by a file — leaves
+  the link string correct, so `lstat`, `readlink` and `stat` all succeeded and
+  nothing looked further. The agent surface has no other check outside
+  `prototyping` / `full`, so the narrow profiles passed an agent tree with no
+  markdown in it at all.
+- **A wrapper deleted from a populated surface is reported.** An absent wrapper
+  was skipped unconditionally, so removing one from a directory whose siblings
+  are all in place left the assistant unable to load that skill with nothing
+  saying so — the canonical tree is untouched, so `skills.integrity` sees a
+  healthy spec, and it only runs under `full`. Absence is benign only while the
+  surface is unpopulated, which is also the state of a project that has not
+  taken a newly shipped skill.
+- **A skill wrapper is checked for the file that makes it loadable.** The link
+  can resolve to a directory that still holds `references/` and `templates/`
+  while `SKILL.md` is gone; `stat` succeeded and the rule said nothing, and a
+  narrow profile passed a skill the assistant cannot load.
+- **A `readlink` failure is not a wrong link target.** A transient `EIO` or an
+  `EACCES` reported a healthy wrapper as `points at ?`, and the remedy the
+  finding prints — re-run `qfai init` — calls the same `readlink` and fails the
+  same way. Only an absent link is a link problem.
+- **An unreadable wrapper is not somebody else's file.** `lstat` had already
+  succeeded, so the file is there and small; answering "not the signature" on
+  an ACL or I/O failure put the path in the reassuring `skipped` list and left
+  the flattened wrapper in place, with `QFAI-LINK-001` failing and nothing to
+  act on. Absence stays benign — that is a race with something removing it.
+- **A `stat` failure is not a dangling link.** Every error was reported as
+  dangling, including `EACCES` and a transient `EIO` — and the remedy the
+  finding prints is "re-run `qfai init`", which leaves the wrapper `skipped`
+  because the target string is already correct. That was a `QFAI-LINK-001` an
+  operator could not clear by following it. Only an absent target is dangling.
+- **Ownership is the shipped roster, without the project intersection.** The
+  intersection went one step too far: a shipped skill whose canonical
+  `SKILL.md` was deleted by mistake, wrapper still in place, dropped out of
+  scope and its dangling wrapper passed every profile — precisely the state the
+  rule exists to report. A retired skill is already excluded by not being
+  shipped, and a skill this project has not taken yet is skipped by its wrapper
+  being absent.
+- **The flattened-link match tolerates the separator and nothing else.**
+  Dropping `trim()` left `path.normalize`, which widens the same way for a
+  different input: `../../.qfai//assistant/x` and `../../.qfai/assistant/./x`
+  are not the bytes git writes but normalize to them, so a hand-managed wrapper
+  was still deleted without `--force`. Only `\` vs `/` is absorbed, because
+  git writes `/` and the target comes from `path.relative`.
+- **A rollback that could not write says so.** The restore was wrapped in an
+  empty `catch`, so a disk error or permission change during it still produced
+  "元のファイルは復元しました" — on the one path where the operator has to know
+  the file is gone. The restore's own outcome now decides the message, and the
+  content it could not write back is carried in it.
+- **`ENOTDIR` is a type collision, not an absence.** It says a path component
+  exists and is not a directory — `.claude/skills` written as a regular file.
+  Folding it into "not created yet" skipped every wrapper under it and passed a
+  surface the assistant can load nothing from. Only `ENOENT` means absent.
+- **The template root is identified, not just found.** Candidates were tried
+  outermost-first, and from `<project>/node_modules/qfai/dist` the outermost is
+  `<project>/assets/init` — a consuming project with an unrelated directory of
+  that name became the template root. Wrong-but-present is worse than missing:
+  the shipped roster read empty and `QFAI-LINK-001` passed every broken wrapper
+  without looking. Candidates are nearest-first now, and each is confirmed by
+  sentinels the real tree always has.
+- **A hand-managed wrapper is no longer auto-deleted over a trailing newline.**
+  The flattened-link signature git writes carries no surrounding whitespace, so
+  comparing `content.trim()` matched past it — a regular file someone maintains
+  themselves, written by an editor or `echo`, read as flattened and was removed
+  without `--force`. The comparison is byte-exact; everything else takes the
+  preserve path.
+- **A repair that cannot finish restores what it found.** The removal and the
+  recreate fail independently — `symlink` raises `EPERM` on Windows without
+  Developer Mode, the same condition that flattened the checkout — and the
+  wrapper was left _absent_, which `QFAI-LINK-001` treats as benign because a
+  project predating a newly shipped skill looks identical. The flattened file
+  at least announced itself; it is now put back, and the error says so.
+- **`assets/init` resolves from the package's public entry.** `tsup` bundles
+  with `splitting: false`, so `dist/index.mjs` sits one level shallower than
+  `dist/cli/index.mjs` — a depth the candidate list did not cover. Calling
+  `validateProject` through the library entry therefore searched
+  `<parent-of-package>/assets/init` and threw `Template assets not found`
+  before any validator ran; the CLI was unaffected, which is why it went
+  unnoticed. `QFAI-LINK-001` made this reachable by reading the shipped roster.
+- **The membership probe propagates a read error too.** `readdir` and the
+  wrapper `lstat` were fixed to distinguish absence from failure, but the
+  `SKILL.md` probe that decides whether a skill is in the roster still folded
+  every error into `false` — dropping the skill, and with it the only canonical
+  entry, into the early return that passes a broken surface with no finding.
+- **Ownership of an integration wrapper is the roster `qfai init` ships.** It
+  was every directory in the project's own canonical tree, but
+  `.qfai/assistant/skills/<own>/SKILL.md` is an allowed project-owned location
+  and init enumerates what to wrap from the package assets, never from the
+  project — so a hand-published `.claude/skills/my-skill` was reported as a
+  broken qfai link in every profile. The roster is the shipped set alone — see
+  the shipped-roster entry above for why the project intersection was dropped.
+- **A failing filesystem no longer reads as a healthy surface.** The roster read
+  and the wrapper probe folded every error into "absent", and absent is the
+  benign case — an empty roster takes the early return, an absent wrapper is
+  skipped. `EACCES` on the canonical tree therefore produced a clean
+  `QFAI-LINK-001` pass at exactly the moment the assistant could load nothing.
+  Only `ENOENT` / `ENOTDIR` mean absent; everything else propagates.
+- **`qfai init --dry-run` no longer reports a repair it did not make.** The
+  removal and the recreate are both suppressed under `--dry-run`, but the
+  flattened-link log said `repaired` unconditionally — to the one invocation
+  whose whole purpose is to preview. It says `would repair` there now.
+- **`qfai init` repairs a flattened link instead of skipping it.**
+  `ensureSymlink` returned `"skipped"` for any existing non-symlink unless
+  `--force` was passed, and skipped paths print as a plain list — so the one
+  command that could repair the surface reported the broken entry as preserved
+  and changed nothing. The path is one qfai created and owns, and its content is
+  the link target, so it is now replaced without `--force` and the repair is
+  announced on stdout.
+- **The legacy migration classifies once, on the first run.** Re-scanning on
+  every `doctor --autoremediate` meant a pack written _after_ the migration that
+  forgot its marker was recorded and then marked `legacy` — turning a blocking
+  `QFAI-REVIEW-007` into a warning, which is the downgrade the corroboration
+  exists to prevent. Once the record exists it is a historical fact; adding to it
+  is a visible edit to a governance record.
+- **`doctor --format json` stays parseable through the migration.** The
+  `.gitignore` helper wrote its progress line straight to stdout, ahead of the
+  document, on exactly the adoption path that needs it.
+- **`qa-gatekeeper` follows Integration to the ATDD file, with the ownership
+  boundary that goes with it.** Its input branch still read Integration evidence
+  from the implement file, so P1b / P4b either stopped a correct row for missing
+  evidence or audited the wrong one — and the production-path `Satisfied-by` and
+  the mutation-scope exception were still `E2E` / `API` only, sending a normal
+  branch-2 Integration row to `exception`.
+- **An Integration row's `RED test hash` is recomputed at completion.** Item 10
+  had already taken Integration into the handoff while the field itself was
+  still required and rechecked for `E2E` / `API` alone, so a test or fixture
+  edited after the handoff carried stale provenance to `done`.
+- **The Integration alignment reaches the two places it had missed.** Phase Red
+  step 2 still held back only `E2E` / `API` from `todo -> red`, so an
+  Integration row advanced before step 3b could verify its handoff — and the
+  next run selects only `todo` and `review-fix`, leaving a `red` row with no RED
+  behind it. The mandatory-writer contract, the execution ledger and both
+  reviewers' inputs still sent only `E2E` / `API` evidence to the ATDD file, so
+  a correct Integration handoff put its provenance in one file and its GREEN,
+  refactor pair and verdicts in another.
+- **`Layer = Integration` rows are on the same side of the split as their
+  tests.** `QFAI-ATDD-112` covers every `L3` TC — and every TC with no declared
+  `Level` — from `tests/integration/**`, and `/qfai-atdd`'s P4 writes those
+  tests; but the ledger handoff named only `E2E` and `API`. `/qfai-implement`
+  therefore treated them as self-owned and demanded a fresh RED for a test
+  already made green, so the row either grew a duplicate test or went to
+  `exception` as an unexpected pass. The provenance, the handoff and the
+  evidence home now follow the same three layers.
+- **`implementation-reviewer` is given the subject it hashes.** It records its
+  own `Audited evidence hash` over the row's phase-authored fields, and those
+  live in an evidence file the diff of changed files does not carry — so without
+  the ledger and the evidence home the row's `Layer` selects, the hash goes
+  missing and gate items 10-11 stop, or the orchestrator computes it and breaks
+  the one rule that makes it worth having.
+- **The evidence-shape table lists every field the consumer gate requires.**
+  `RED test hash` and its manifest were missing from the observed-RED branch,
+  and those plus `Falsifiability revision` and the `qa-gatekeeper` PASS from the
+  falsifiability one — so a producer following the canonical table wrote a
+  handoff `/qfai-implement` rejects as malformed, and P1c / P4b could not
+  complete.
+- **The item-cycle reviewer is given the artifacts it judges.** Told to judge
+  the row's own phase-authored evidence, `completion-reviewer` had neither the
+  ledger nor the evidence home the row's `Layer` selects among its inputs — so
+  it could not identify the artifact and fell into its own Stop condition on a
+  correct row.
+- **Omitting a revision field is a current-contract violation, not an older
+  pack.** The layout said both were required and then described the omission as
+  the legacy case; only `revision_form: "legacy"`, corroborated by the migration
+  record, marks a pack as predating the form.
+- **The git probe runs once per repository and once per rev.** It was two
+  synchronous spawns per pack, so a repository that keeps its history paid them
+  on every full run, growing with the number of packs.
+- **A seal says what it catches, and the escalation stops.** Three homes for the
+  expected value each fell to the same move — beside the artifact, in a commit,
+  in the newest commit introducing the line — and a committed copy is not even
+  available: stage evidence is regenerable and deliberately not committed
+  (`.qfai/evidence/*` is ignored, with only the governance records negated back
+  in), so requiring one would have stopped every completion. A seal catches
+  drift between recording and recomputation, which is what happens; it does not
+  catch an author rewriting the artifact and the seal together, and nothing
+  recorded in the repository can. That is stated once, in place of a fourth
+  mechanism.
+- **The audit boundary counts only headings outside a fenced block.** Recorded
+  output is arbitrary — a test asserting on Markdown prints `## …` of its own —
+  and a boundary that took it ended the section there, dropping the GREEN, the
+  `Oracle proof` and the round evidence out of the subject.
+- **The legacy migration record is tracked by default.** `.qfai/review/*` is
+  ignored, so the manifest that corroborates a `legacy` claim was untracked and
+  the pack the claim excuses could add itself to it — which is the
+  self-declaration the corroboration exists to replace.
+- **Every pack producer names the revision fields.** The `qfai-implement` layout
+  and both review-cycle playbooks omitted them, so a pack written by following
+  them passed its own profile and then failed the repo-wide
+  `/qfai-verify --fail-on error`.
+- **A git rev is checked against the repository.** A placeholder, a truncated
+  paste or a transposed digit passes the form check and names no tree at all. A
+  warning, not an error: a shallow clone or an unfetched branch answers the same
+  way, and the check says nothing at all outside a git work tree.
+- **A `legacy` claim is corroborated against the migration record.** The field
+  is exactly as writable as the `revision` it excuses, so a current producer
+  with a broken value could downgrade its own finding by typing `legacy`. Only a
+  pack listed in `.qfai/review/.legacy-packs` — written once by the migration
+  pass — is believed; an uncorroborated claim is an error, and the value it
+  tried to excuse is judged as a current pack's.
+- **The mutation-only handoff has a receiver.** It was defined on the producer
+  side only, and every `/qfai-implement` entry path selects a `todo`, a named or
+  a `review-fix` row — none of which a `done` row can be — so the request had
+  nowhere to land and the requesting stage could never complete. Phase Red now
+  answers it read-only: apply, capture, revert, return, and write nothing to the
+  ledger or to that row's evidence.
+- **Gate item 10 accepts a stage-level re-verify.** The mismatch exception named
+  only "a later row's entry", so a spec with no ATDD-owned rows — the ordinary
+  case for a fresh spec that edits a shared fixture — had nowhere its re-verify
+  would be read, and a correctly re-verified consumer stayed stale for ever.
+- **Two seal references resolve.** `references/evidence-revision.md` does not
+  exist under `qfai-atdd`, and `../qfai-implement/references/…` from inside
+  `qfai-implement/references/` names a directory twice.
+- **An item's `Review pack seal` names the pack and the round it covers.** A
+  spec has several packs and a blocking REVISE opens more, so a bare hash left
+  the gate unable to say which directory to recompute over — it either checked
+  another round's pack or stopped a correct item.
+- **A current pack that names no `revision` at all is an error.** It declares
+  the contract and then gives nothing to check: strictly worse than a malformed
+  value, since the form check never runs either. Only an explicit `legacy` keeps
+  it a warning.
+- **A zero-row ATDD stage hands its shared-artifact mutation to the production
+  owner.** No phase there edits production code, and the rows being re-verified
+  are already `done`, so `/qfai-implement`'s named-row, `todo` and `review-fix`
+  entry paths do not reach them: the stage could only breach its own Non-goals
+  or leave the fixture's hash mismatch permanently unclearable. The handoff is a
+  mutation-only request that applies, captures, reverts and returns — without
+  reopening the row.
+- **The `revision_form` marker is required, and only `legacy` excuses a
+  malformed `revision`.** An optional marker made the strict form opt-in: a
+  producer that omitted it downgraded its own check to a warning, so a
+  `working-tree+<porcelain digest>` — the spelling that does not move when the
+  file under review is edited — passed `--fail-on error`. Absence is now a
+  schema violation like any other missing field. A pack that predates the form
+  says `"revision_form": "legacy"`, written once from the history the same way
+  the `Pre-split-evidence` marker is; until that pass has run those packs are
+  reported rather than accepted, and running it is what clears them.
+- **The spec-level checkpoint carries a seal too.** The seal was defined per
+  item, and the spec-level boundary has no row — gate item 12 never runs for it,
+  so the full-suite result on a terminal ledger could be edited from FAIL to
+  PASS afterwards with no revision, no `Audited evidence hash` and no pack seal
+  moving. The spec completion conditions recompute it.
+
+- **A review pack declares which contract wrote it** — `"revision_form":
+"content-hash"` in `summary.json` — and only a pack that declares it is held
+  to the strict `revision` form as an error. Neither of the two things that
+  could stand in for a declaration works: rank made "current" mean "newest
+  overall", so a malformed pack stopped being an error the moment another spec
+  produced one, and a timestamp cutoff misclassifies by construction — the
+  directory stamp carries no timezone, and any instant chosen either predates
+  the contract (letting that morning's old-contract packs count as current) or
+  postdates it (letting genuinely current packs off). Omitting the marker is
+  reported in its own right, so a producer cannot quietly downgrade its own
+  check by forgetting it.
+- **A stage with no ledger row can still record a shared-artifact re-verify.**
+  A fresh spec owns no ATDD row and still creates and edits the fixtures a
+  completed spec's handed-over rows read. With the record tied to an "editing
+  row" there was nowhere to put the re-run: the earlier row's `RED test hash`
+  stayed mismatched with nothing able to clear it, or the change was accepted
+  unverified. The stage evidence file carries a `## Shared-artifact re-verify`
+  block with the same identity and the same proof rule, and a consumer clearing
+  a mismatch reads both places.
+- **`qa-gatekeeper` reads the validate evidence from the configured outputs.**
+  The scoped JSON goes beside `output.validateJsonPath` and the run directory
+  under `paths.outDir`; pinning `.qfai/report/**` stopped completion on a
+  project that had moved either, reporting a missing artifact for a validate
+  run that had succeeded and left everything it owed.
+- **Phase Red step 3c puts the falsifiability addresses in the round block.**
+  It still called `RED test hash` and `Falsifiability revision` row-level while
+  the round contract put them in each round's block, so a blocking REVISE that
+  opened Round 2 on a `falsifiability` row either overwrote Round 1's addresses
+  or reused them for a mutation run they were not taken on.
+- **Which contract a review pack was written under is read from the pack**, not
+  from its rank among siblings. "Held to the strict `revision` form" meant
+  "newest overall", so a malformed pack written under the current contract
+  stopped being an error the moment any other spec produced one, and
+  `validate --fail-on error` accepted a stale current verdict. The timestamp in
+  the pack's own directory name decides it: a pack stamped before the form
+  shipped could not have satisfied it and cannot be migrated to it, and reports
+  a warning; every pack stamped after is an error. An unreadable stamp
+  establishes nothing, so it is held to the form.
+- **The P8 pack seal has a place to live and something to compare against.**
+  The criterion said to seal the pack and check the status against it, but not
+  where the expected seal is stored or what the recomputation is compared with —
+  and a value taken from the pack at completion always matches itself, whatever
+  was edited in between. It is recorded outside the pack, in the stage evidence
+  file's `## Final status` (the one section excluded from the P8 audit subject,
+  and the only place that exists on a spec with no ATDD-owned rows), when the
+  last reviewer response lands and before the stage writes its verdict.
+- **The checkpoint record carries a seal of its own.** `Checkpoint verification
+command` / `result` are appended after every reviewer has hashed, so they sit
+  in no audit subject; the working-tree revision excludes `.qfai/evidence/**`
+  and the pack seal covers only the pack. A row already at `done` could have its
+  checkpoint result edited from FAIL to PASS with nothing moving anywhere.
+  `Checkpoint verification seal` is taken as the run ends and recomputed at gate
+  item 12.
+- **The RED addresses are out of the row-level field list.** It still named
+  `RED test hash`, `RED revision` and `Falsifiability revision` as recorded once
+  for the row while the round contract put them in each round's block, so a
+  blocking REVISE that opened Round 2 either overwrote Round 1's address or
+  reused it for a RED it was not taken on.
+- **The audit-subject references resolve.** From
+  `qfai-implement/references/`, a bare `constitution/...` names
+  `qfai-implement/references/constitution/...`, which does not exist — so a
+  producer following it could not reach the extraction rule and hashed a range
+  of its own, staling a correct verdict.
+- **The stage's own review pack is sealed**, and `## Final status` is checked
+  against it: the stage hash covers the evidence but not the verdict.
+- **The RED address cardinality is left to the round contract alone.**
+- **`RED test manifest` carries kind and mode.** After Phase Green the
+  original `RED revision` cannot be recomputed, so this hash is the only thing
+  still watching the test-owned artifacts.
+- **A changed test invalidates the proof on either branch**, not only where
+  the corrected test passes.
+- **A re-verify record names the spec as well as the row.** A `TDD-ID` is
+  unique within a ledger, not across them.
+- **A legacy review pack's revision is a warning, not an error.** The tree a
+  past verdict described cannot be reconstructed, so there is no content hash
+  to migrate to — only the current pack is held to the form.
+- **The same-revision exemption is stated once, for item 3 on every row.** The
+  consequences section still listed two special cases, so a reviewer applying
+  it rejected the cycle the section above permits.
+- **The RED address cardinality is stated once**, per round, where the round
+  contract lives.
+- **The pack seal names the procedure it uses** — the audit hash, not the
+  working-tree revision; "the procedure below" was ambiguous between two that
+  produce different values.
+- **A multi-id obligation column is split before matching the matrix**, so a
+  row with two obligations is not left with no matrix rows at all.
+- **The stage hash is recomputed before completion is declared.** On a spec
+  with no ATDD-owned rows item 10 never runs, so it was written by P8 and read
+  by nobody.
+- **A sibling reference is named as a sibling**, not through a `references/`
+  prefix that resolves to `references/references/`.
+- **A RED's revision and hash live in its round block.** Each round's RED is
+  taken on its own tree, so one field per row meant a second round overwrote
+  the first pair's address or inherited it.
+- **The failing review-fix branch syncs the identity too**; a REVISE can ask
+  for real behaviour and a split selector at once.
+- **The pack seal is recomputed by the gate**, and stays out of every
+  reviewer's subject — it is written after the last of them has hashed.
+- **The stage subject stops before `## Final status`**, which the P8 reviewer
+  fills in.
+- **The producer stops restating the untracked record shape.**
+- **The exception producer records what P1d's gate will hash.**
+- **The pre-split migration reads every status**, so a row interrupted
+  mid-cycle by the upgrade can still finish.
+- **A stage review has a subject that needs no row.** A spec with no
+  ATDD-owned rows is the ordinary case, and its final review had no
+  `### <TDD-ID>` section to hash.
+- **A finalized review pack is sealed from outside it.** The audit hash
+  addresses what a reviewer read; the pack is what it wrote, so excluding it
+  from the revision left an edited PASS reading as fresh.
+- **Every RED gets its own revision.** A RED precedes the code that makes it
+  pass, so Phase Green moves the address by construction — framing the
+  exemption as two special cases made an ordinary uncommitted cycle stale at
+  GREEN.
+- **The obligation reference is checked against the ledger too.** Changing
+  `TC-Refs` alone after the PASS left the entry holding the old copy, so a
+  verdict about one requirement stood for another.
+- **The matrix extraction matches an obligation exactly**, table row and
+  justification alike — "everything after the table" was the other reading,
+  and two readers taking one each computed different hashes from one file.
+- **A review-fix that moves the test syncs both the ledger and the copy.**
+  Updating one alone leaves gate item 10 comparing a changed value with an
+  unchanged one, which it fails by construction.
+- **The handoff records the obligation reference the RED subject hashes.** The
+  gatekeeper judges at P1b, so recording it later moves a stored hash and
+  leaving it out lets the reference be repointed.
+- **`Replacement proof revision` is inside a subject**, so the proof cannot be
+  attributed to a tree it never ran on.
+- **The baseline stops restating the working-tree serialization.** Restated as
+  `path + NUL + hash`, it fell behind the canonical's `kind` and `mode`, and
+  the two spellings gave one tree two addresses.
+- **A T1 coherent group is hashed per member.** One hash over a representative
+  left the other members' evidence free to change after the PASS.
+- **A replacement proof gets its own revision.** Overwriting `RED revision` on
+  an `observed-red` row hashed the natural RED's pair with a later mutation's
+  tree as one observation.
+- **Branch 3 hashes the obligation it says cannot be observed**, so the
+  reference cannot be pointed at a different requirement after the PASS.
+- **An untracked symlink contributes its own payload**, never the target's
+  contents — a dangling link has no second reading at all.
+- **The completion gate reads this spec's validate artifact**, not the shared
+  `validate.log` a sibling run overwrites.
+- **Falsifiability is observed per selector entry**, as a RED already is: one
+  aggregate run leaves every entry after the first unobserved.
+- **`Round 1: Revision` is taken from the restored tree.** It is the address
+  items 5, 7 and 8 share, and the revert moves it by construction — the
+  mutated tree already has `Falsifiability revision`.
+- **A `Shared-artifact re-verify` entry clears the hash it necessarily
+  breaks.** A later row editing a shared fixture moves an earlier `done` row's
+  `RED test hash`, and that row cannot take a fresh RED.
+- **The reviewer contract lists the same three exclusions**, review pack
+  included.
+- **The branch-3 `DR-*` is a record in the serialization**, not only a name in
+  the subject.
+- **The producer records the row identity the reviewers hash**, in both the
+  field contract and the ATDD handoff shape.
+- **An untracked record carries kind and mode.** An uncommitted `chmod +x` on
+  a new script left the address unmoved.
+- **The copied row identity is checked against the ledger.** Hashing a value
+  the entry already holds proves only that the entry has not changed, and the
+  ledger is excluded from the revision too — so editing `Selector` after the
+  PASS moved nothing.
+- **Branch 3 has a subject of its own.** There is no RED and no GREEN there,
+  so the `DR-*` is the evidence; leaving it out let the pointer be swapped
+  after the PASS for another existing DR with nothing moving.
+- **The falsifiability trio is a round field**, in the RED pair's place, and
+  `round-evidence.md` is the only list of which fields take the prefix.
+- **A re-entry rewrites the entry before it is judged again.** After a REVISE
+  the mutation or the test has usually changed, so hashing the previous entry
+  recorded a PASS describing neither run.
+- **The replacement revision is recorded where the proof is run.** `/qfai-atdd`
+  owns no mutation, so it could only have named the tree before it.
+- **The stale-manifest remediation is one that exists.** `/qfai-configure`
+  edits what the project has; it does not reconcile against the package, and
+  no such migration exists.
+- **Row identity is in every observation subject.** The ledger is excluded
+  from the revision, so changing `Selector` after a PASS to another valid test
+  in the same file moved nothing.
+- **The review pack is excluded from the working-tree revision.** A project
+  may legitimately track `.qfai/review/**`, and then every reviewer answer
+  written into it moved the address the previous reviewer had just recorded.
+- **Only the matrix rows an obligation names are hashed.** The coverage-depth
+  matrix is one document for the spec and a later run recomputes it, so
+  hashing it whole made every existing verdict stale when an unrelated
+  obligation's cell moved — with no re-review path for a `done` row.
+- **The audit-hash extraction is stated in one place.** The reference still
+  described the old whole-section shape, so a reviewer following it produced a
+  value neither the baseline nor gate item 10 would reproduce.
+- **The RED subject hashes the obligation reference the row's `Layer`
+  selects.** An ATDD-owned row has no `TC-ref`, so its obligation sat outside
+  every hash and could be rewritten after the PASS.
+- **The completion subject covers the `Shared-artifact re-verify` block**,
+  which those reviewers are the ones who audit.
+- **`QFAI-REVIEW-009` validates the form of a `revision` that is present.**
+  Any non-empty string passed, so the porcelain digest the reference forbids
+  by name still cleared the machine gate.
+- **The RED subject holds the transient revision, not the final one.**
+  `Revision` names the tree the GREEN landed at, so including it put a field
+  into the subject that appeared later and made every correct RED PASS stale
+  at GREEN.
+- **The completion subject takes a round block's phase-authored fields only.**
+  Those reviewers write `Round N: reviewer verdict` into the block after
+  reading it, so the whole block put their own line inside what they hashed.
+- **The pre-split anchor is accepted only from a marked row.** Status and
+  anchor cannot tell a legacy row from one written to the wrong file after the
+  split, so accepting it unmarked let a row that never produced an ATDD
+  handoff pass the gate as complete.
+- **Each observation hashes the fields it could read.** Subtracting a list of
+  later-written fields only moved the problem to the next field added: the RED
+  gatekeeper hashes an entry with no GREEN in it yet, so its PASS went stale as
+  soon as the phase wrote on. Three named subjects instead.
+- **The seam returns a schema-compatible neutral body**, not an empty one — a
+  selector that decodes JSON first raises a parse error, which the
+  admissibility rule rejects.
+- **A weakened shared artifact re-takes the proof**, not just a passing re-run:
+  a passing test is not a discriminating one.
+- **Both stale manifests are named**, with a remediation — `agent-catalog.yml`
+  carries the reviewer contracts, so an old one REVISEs correct handoffs.
+- **A replaced test moves its transient revision**, and a fresh RED after a
+  REVISE opens round `N+1` rather than the round the reviewer closed.
+- **Step 3c writes the whole entry before the gate hashes it**, and reverts
+  the mutation whatever the verdict — a REVISE left the broken predicate in
+  the working tree for the next run to break again.
+- **The `Round N:` prefix is scoped to the per-round fields.** It swept in
+  `RED test hash`, `RED revision` and `Falsifiability revision`, which are
+  recorded once for the row.
+- **A re-taken proof reads the field its own branch wrote** — `Oracle proof`
+  on an `observed-red` row, which has no `Satisfied-by`.
+- **The handoff records `RED failure mode`**, which the consumer requires
+  before the reviewers run and neither branch was writing.
+- **The working-tree address has one serialization** — collect, exclude,
+  serialize, hash — so producer and reviewer cannot get different values for
+  the same tree.
+- **The audited entry drops the whole gate-completed group.** The checkpoint
+  fields are appended after the reviewers, so leaving them in made both
+  verdicts stale on every ordinary item the moment the checkpoint ran.
+- **A shared-artifact re-verify is recorded on the row that caused it.**
+  Appending to a `done` row breaks the verdicts that closed it, and `done` has
+  one exit — the upstream reset — which a sibling editing a fixture is not.
+- **Step 3c records `Falsifiability revision`** before the revert: the mutated
+  tree stops existing there, and gate item 10 requires the field.
+- **Branch 3 is judged before it becomes terminal.** P1b judges branch 1 only
+  and the exception path writes the status and stops, so a correct branch-3
+  row reached `exception` having been judged by nobody.
+- **One content-address procedure, referenced rather than restated.** The
+  producer hashed all of `git diff HEAD`, so its `RED revision` and the
+  gatekeeper's `Reviewed revision` for the same RED tree could not be matched.
+- **The audited entry drops every appended verdict**, including the
+  `qa-gatekeeper` observation verdicts — the gatekeeper hashes the entry and
+  then writes into it, so its own verdict went stale on recording.
+- **Both transient observations are named where the rule is stated**, not only
+  the handed-over RED.
+- **The shared `Satisfied-by` procedure requires the symbol too**, in step
+  with the producer and the gatekeeper.
+- **`RED test hash` is one per row**, not per round: nothing produces a
+  second, and the cardinality belongs to `Revision`.
+- **A shared test artifact a later row edits re-verifies the rows that read
+  it** — a `done` row's manifest addressed a fixture that could still change,
+  and a `done` row has no re-entry edge of its own.
+- **The re-taken proof is performed where the production owners are.** The
+  `/qfai-atdd` stage owns no agent for a mutation — the paragraph below the
+  instruction said exactly that — so it marks the proof stale and the handback
+  re-takes it in `/qfai-implement`'s rework.
+- **The audited-evidence hash covers the row's `### Round N` blocks.** Ending
+  the extraction at any `###` cut them out, and a rework's RED, GREEN and
+  proof live there — so a PASS survived every edit to the evidence it was
+  given for.
+- **A falsifiability trio with no gatekeeper PASS is not a complete handoff.**
+  Step 3c writes the trio and only then routes the gate, so an interrupted run
+  left a trio no gate had judged, and step 3b advanced the row on it.
+- **A test-only replacement re-takes its mutation proof.** A new hash over the
+  old proof says somebody edited the test; it does not say the edited test
+  still fails when the predicate is broken.
+- **`Audited evidence hash` has one recomputable procedure** — extract,
+  normalize, serialize, hash — because the subject is part of a file and a
+  file-level manifest alone left two readers free to hash different extents.
+- **The mutation run names its own revision.** The gate reads the mutated tree
+  before the revert, so item 3 observes a tree that is deliberately thrown
+  away while the GREEN and both reviews see the restored one; one revision
+  across all four made every correct branch-2 row permanently stale.
+- **The reviewer response template carries the hash it is judged on.** Every
+  verdict needs an `Audited evidence hash`, but the shared template offered
+  only `Reviewed revision`, so a reviewer answering it faithfully omitted the
+  field and the row could not reach `done`.
+- **The gatekeeper rejects a `Satisfied-by` that names only a commit**, in
+  step with the producer contract: without a symbol the ownership check has no
+  boundary to apply.
+- **Spec completion no longer requires rows no skill may write.** It read
+  "every `US-*` has a `Layer = E2E` row"; Phase 2b seeds one row per
+  coverage-target `TC-*` and `/qfai-atdd` is not a writer of the ledger, so a
+  correct spec was uncompletable and the handoff for the missing rows returned
+  nothing. The gate names `QFAI-ATDD-111` / `QFAI-ATDD-113` — the rules the
+  annotations discharge — instead.
+- **The falsifiability gate sees the mutated tree.** Phase Red step 3c said to
+  revert before routing `qa-gatekeeper`, which left it nothing to inspect but
+  the restored tree — so it could not check that what broke is the predicate
+  `Satisfied-by` names, the one thing that distinguishes a trio from a test
+  that would pass against anything.
+- **A branch-2 row has the test manifest its completion gate recomputes.**
+  `RED test hash` is required on every handed-over `E2E` / `API` row, but a
+  falsifiability row has no RED pair, so nothing was hashed at handoff. Step 3c
+  records it against the mutation run.
+- **The evidence the reviewers audit has an address of its own.** The revision
+  excludes `.qfai/evidence/**` so it stays stable across the phase's own
+  writes — which also let a PASS survive an edit to the RED/GREEN output and
+  the coverage justifications it ruled on. Each verdict now carries an
+  `Audited evidence hash`, recomputed at the completion gate.
+- **`Satisfied-by` names a predicate a mutation can reach.** A commit id was
+  an accepted form; a commit touching several routes and a helper names no
+  single predicate, so the gatekeeper's ownership boundary could not be
+  applied to it.
+- **A test-only replacement re-addresses the test it replaced.** A REVISE that
+  changes only the acceptance test left `RED test hash` addressing the
+  pre-edit manifest, and the consumer sent the row back for a fresh RED — the
+  same passing no-round path, for ever.
+- **The branch-2 handoff is covered by the item-cycle exemption**, and the
+  phase-authored sequencing note names the evidence file the row's `Layer`
+  owns instead of always the implement file.
+- **`QFAI-REVIEW-009`'s remedy names the content hash**, not the porcelain
+  digest its own reference forbids.
+- **The reviewer's revision excludes the ledger too.** `Revision` is
+  phase-authored and `Reviewed revision` is not, and the phases write
+  `test-list.md` between them — so hashing all of `git diff HEAD` in the shared
+  contract made the two permanently unequal while item 10 wants them equal.
+- **The RED test hash records the manifest it was taken over.** Naming only the
+  _kinds_ of file left two readers free to choose different sets from an
+  unchanged tree, so the consumer's recomputation either looped or passed an
+  edit it never looked at.
+- **The migration finds its commit from the patch, not from `-S`.** The id is
+  on both sides of a status-only change, so `git log -S` walks back to the
+  commit that _added_ the row and the marker lands on the wrong one.
+- **Branch 2's mutation is submitted to the gate before the transition.**
+  Steps 4 and 5 are skipped for an `E2E` / `API` row and step 4 is the only
+  place that submits a RED, so the branch advanced the ledger with no
+  observation verdict at all — and the gatekeeper is conditional in that phase,
+  so nothing selected it by default.
+- **A passing `review-fix` row takes the no-round path, not falsifiability.**
+  That form needs a production mutation this stage owns no agent for and cannot
+  hand over: step 3b excludes a `review-fix` row by name and 3c is reachable
+  only from a `todo` entry, so the row would sit at `review-fix` again.
+- **Every blocking reviewer of the nested run is exempt, not just the
+  gatekeeper.** `completion-reviewer` is mandatory and blocking there too and
+  requires validate evidence, so exempting one left the first branch-1 row
+  stopped at the same gate for a different reason.
+- **The revision hash excludes the ledger and the evidence.** Phase Green
+  writes `green` and Refactor writes `refactor` into `test-list.md` between the
+  observations, and gate item 10 wants one revision across the GREEN and both
+  reviews — so a hash over all of `git diff HEAD` moved on its own bookkeeping
+  and no uncommitted item could reach `done`.
+- **The pre-split marker has a migration that writes it.** Nothing did, so no
+  row ever carried it and the compatibility clause it gates was unreachable.
+  It is written once from the history, and until then those rows are judged by
+  the current rule — reported rather than silently accepted.
+- **The consumer recomputes the test hash over the producer's inputs.** It
+  recomputed over `Test file` alone while the producer hashed the artifacts the
+  test reads, so every row with a fixture or a snapshot failed the gate
+  unchanged and was sent back on each pass.
+- **The shared reviewer contract carries the untracked manifest.** It still
+  said "the contents of every untracked file", so a reviewer following it
+  computed a value the consumer could not reproduce.
+- **A handed-over row's mutation may touch the predicate it names.** The Oracle
+  Strength Check rejects a mutation outside the code the item owns, and an
+  `E2E` / `API` row owns no production surface — so no branch-2 row could
+  produce falsifiability evidence that passes.
+- **Branch 3 has a verdict the observation gate can return.** Judged by the two
+  evidence forms a genuine branch-3 row can only be REVISE, and skipping the
+  gate leaves the stage's completion condition unmet: it could not close
+  either way. The `DR-*` and the unavailability of both branches are what that
+  verdict judges.
+- **A corrected test that passes on its first run is reclassified.** A REVISE
+  asking for no new behaviour — a selector split, a rename, an expectation made
+  explicit — leaves the test passing, and demanding a fresh RED stranded the
+  row at `review-fix`.
+- **Phase Red runs 3a, then 3b, then 3c.** Listed 3c first, an ordered read ran
+  the production mutation and wrote `todo -> red` before 3b had checked the
+  entry's branch, selector and missing fields — advancing the ledger on
+  provenance nobody had verified.
+- **The consumer gate requires and rechecks `RED test hash`.** The producer
+  records it, but the completion contract asked only for `Revision` — which
+  Phase Green makes unrecomputable — so a test edited after the handoff passed
+  gate item 10 exactly as a fresh one did.
+- **A pre-split row is identified by a marker, not by its status.** `done` plus
+  an `implement-` anchor also describes a new `E2E` / `API` row written to the
+  wrong file, so the compatibility clause would have accepted a row that never
+  produced its ATDD handoff.
+- **A `review-fix` row has a defined path back through `/qfai-atdd`.** Phase Red
+  step 3b sends one there when the REVISE touches the acceptance test, and the
+  three branches only cover a `todo` row's first handoff — so the stage had no
+  invocation, evidence shape or return path and the row stayed at `review-fix`.
+- **The uncommitted revision hashes a manifest, not bare contents.** Contents
+  alone collide on a rename or a swap between two files, and with no order or
+  separator defined a second reviewer cannot recompute the same value for the
+  same tree — the one thing the address exists to allow.
+- **`RED test hash` covers what the test reads.** Limited to the `Test file`
+  column, an edit to a snapshot, fixture or helper reshaped the assertion after
+  the handoff with the hash unchanged, and the working-tree hash cannot be
+  recomputed from the final tree to catch it.
+- **Scope approval precedes the RED.** The steps ran the test first and asked
+  `delivery-planner` after, while the same step requires a scope REVISE to be
+  settled _before_ the RED is submitted — so a REVISE left the just-recorded
+  RED as evidence for a scope that no longer existed.
+- **`qfai-implement`'s `red` phase routes `qa-gatekeeper` conditionally.** The
+  skill said not to route it for a seam-only invocation; the manifest listed it
+  as mandatory. The gate had no RED to judge, could only return REVISE, and the
+  round trip stopped on the contradiction.
+- **The RED test hash is keyed on `Test file`, not `Selector`.** `Selector` is a
+  test name in the ordinary case, so hashing "the files it names" produced an
+  empty or guessed value and detected no post-handoff edit.
+- **Planner scope authority follows the row's obligation column.** It was
+  defined as "a sufficient slice of its `TC-*` obligation", but an `E2E` row
+  owes `US-Refs` and an `API` row owes `CON-API-Refs` — and the role's required
+  inputs listed neither document, so a blocking gate asked it to judge
+  something it could not read.
+- **Zero ATDD-owned rows is a count, not "nothing to do".** `/qfai-sdd` seeds a
+  row per coverage-target `TC-*`, which excludes L4/L5, and this skill cannot
+  write the ledger — so a fresh spec legitimately has none. Reading that as no
+  work skipped the US and CON-API obligations that are this skill's own.
+- **The reviewer revision description follows the field contract.** It still
+  specified a `git status --porcelain` digest, so a reviewer following it could
+  read a stale PASS as fresh.
+- **The P1c round trip is an item cycle, not a completion gate.**
+  `/qfai-implement` PASSes its blocking reviewers before the checkpoint, and
+  those reviewers' completion-gate inputs are P5/P6 artifacts — so the first
+  branch-1 row stranded at `refactor`, which Phase Red does not re-select, and
+  P2 was never reached.
+- **Branch 3 no longer reads as a way to close a spec.** `exception` is a
+  blocking output and completion needs a user-approved `TDDLIST-001` waiver;
+  "a valid outcome, not a shortfall" read as done, so a run could record the
+  `DR-*`, hand over, and leave a spec that can never legally close. The branch
+  ends in the waiver or in a parked row, and the stage has to say which.
+- **The RED address includes a hash of the test itself.** The working-tree hash
+  covers the production files Phase Green necessarily changes, so it cannot be
+  recomputed from the final tree — a reviewer could not tell "only production
+  changed" from "the acceptance test was edited after the handoff". `RED test
+hash` covers the files the row's `Selector` names and nothing else, which
+  Phase Green does not touch.
+- **A falsifiability reference resolved into its own directory.**
+  `references/red-not-observable.md` from inside `references/`.
+- **The ATDD `red` phase is routed per ledger item, and its gatekeeper is
+  conditional.** The default `per-invocation` routes each agent once for the
+  whole ledger, which cannot execute the one-row-at-a-time loop P1b/P1c
+  require; and a mandatory blocking `qa-gatekeeper` stopped a branch-2-only run
+  before it could reach the P4b handoff that produces the trio it stopped for.
+- **A plan is an acceptable `Oracle proof` at a RED observation.** Branch 1's
+  RED precedes the production behaviour, so there is nothing to mutate —
+  requiring a demonstrated mutation made a correct observed RED unable to pass
+  P1b, and so unable to reach the phase that builds the code the mutation needs.
+- **The revision field is a content address in the contract that binds.** The
+  rule was corrected in the ATDD reference while `evidence-revision.md` and its
+  consumers still specified a `git status --porcelain` digest. `git stash
+create` is not a substitute either: it has no `-u`, and a new acceptance test
+  — the ordinary case — is untracked.
+- **The handoff stage is named the same in both documents.** The reference is
+  mandatory reading before a row advances and still said P1d for branch 2.
+- **A pre-split `E2E` / `API` row stays gateable.** One that reached `done` or
+  `review-fix` before the per-`Layer` evidence split has its anchor in
+  `implement-<spec-id>.md`, has no ATDD entry to produce, and no legal
+  transition that would let it re-observe a RED. That anchor is accepted.
+- **A project whose manifest predates the `red` phase is told what to do.**
+  `qfai init --force` leaves `assistant/manifest/**` alone, so the skill update
+  can arrive without it. The gate still applies; the routing is manual.
+- **The seam returns a neutral response, not an empty one.** An empty body
+  raises a parse error in a test that decodes JSON before asserting, and a
+  thrown handler does the same in a server that re-raises — both non-assertion
+  failures `red-admissibility.md` rejects.
+- **The branch-2 handoff is gate P4b, not part of P1d.** P1d required the
+  surface P2-P4 build while sitting before P2 in a Do-not-skip list, so a run
+  with an ordinary branch-2 row could only wait at a gate whose precondition
+  needed gates it had not reached, or skip one. Branch 3, which has no such
+  precondition, stays at P1d.
+- **A seam-only round trip is not the RED gate.** `/qfai-atdd` calls Phase Red
+  step 3a before it has a RED — that is what the trip is for — but the `red`
+  phase always routes a blocking `qa-gatekeeper`, which had no assertion
+  failure to judge, and step 3b read the row's entry as malformed for lacking
+  the very RED the trip exists to make possible. Step 3a returns after building
+  the seam now, and the blocking gate applies to the handoff that follows.
+- **`qa-gatekeeper`'s completion inputs are conditional on the phase.** It is
+  blocking at stage gate P1b, and validate output, coverage reports and runtime
+  evidence are first produced at P5/P6 — so a fresh run with a perfectly good
+  RED pair stopped on artifacts its own ordering says cannot exist yet.
+- **An uncommitted RED is addressed by content.** `git status --porcelain`
+  names changed paths and their states, so editing the file under test after
+  the RED left the digest identical and a stale observation passed the
+  freshness gate the handover depends on.
+- **Phase Red step 3a covers the seam an HTTP row needs.** It was defined as a
+  module, export or signature the test _imports_, but `/qfai-atdd` hands a row
+  here precisely when an unregistered route 404s — the same resolution error,
+  reached a different way. Following the step as written left the test 404ing
+  with nowhere to go. The step now names the registered route as a seam, and
+  requires a status the row does not contract for, so the route resolves and
+  the assertion still fails.
+- **A checkpoint reference pointed inside the ATDD skill.**
+  `../qfai-implement/...` from `qfai-atdd/references/` resolves to
+  `qfai-atdd/qfai-implement/...`; every other reference in that file already
+  used `../../`.
+- **Every branch is handed over; only the timing differs.** `/qfai-atdd` said
+  branch 2 and branch 3 rows needed no round-trip, but `/qfai-implement` is the
+  only writer of `Status` / `DR-ID` / `Evidence` — and branch 2's mutation is run
+  by its Phase Red step 3c. A run with no branch-1 row therefore ended with the
+  falsifiability trio never produced (P6 and P8 unpassable) or the Decision
+  Record written and the ledger untouched. New stage gate P1d hands both over:
+  branch 2 after P2-P4 build the surface and before P6, branch 3 once its `DR-*`
+  exists.
+- **P1b and P1c are one loop per `TDD-ID`.** P1b required branch 1 "discharged in
+  full" before P1c, while P1c takes each row through GREEN before the next
+  failing test is written — following P1b left several deliberate REDs open at
+  once, and the first row's full-suite checkpoint failed on them. The two gates
+  now read as choose, discharge, next row. The scheduling contract moved to
+  `red-provenance.md#which-stage-hands-a-row-over`, which owns the branches it
+  schedules.
+- **The spec-level checkpoint boundary has a defined home.** Its rule read and
+  wrote `implement-<spec-id>.md`, but a spec whose every row is `E2E` / `API`
+  never has that file — so a terminal ATDD-only ledger judged the boundary
+  unrecorded on every re-run, or wrote a second evidence file and broke the
+  one-file-per-spec contract. The boundary has no `Layer` to route by, so it
+  goes to the implement file when it exists and to the ATDD file when it does
+  not, by the same rule on read and on write.
+- **Two broken references in the skills.** P1's layer catalog resolved from no
+  root (`catalog/test-layers.md` → `.qfai/assistant/catalog/test-layers.md`), and
+  `#atdd-owned-rows` named an anchor the parenthesised heading did not generate.
+  The heading is short now, so one anchor serves every reference to it.
+- **Phase Red selects the row P1c named.** It took the first `todo` row
+  regardless, so a branch-2 row above the named one was processed first — and
+  its full-suite checkpoint ran against a tree still holding the named row's
+  deliberate RED, failed, and left that row at `refactor`, which step 1 does
+  not re-select. A named `TDD-ID` now wins over ledger order.
+- **The branch is re-checked at each row's handoff.** Fixing every row's
+  branch at P1b goes stale once rows are taken one at a time: an earlier
+  branch-1 row's production code can satisfy a later row's predicate, leaving
+  a row recorded as `observed-red` with no observable RED and no
+  re-classification step. The P1b choice is provisional; the branch is taken
+  from a run against the tree as it stands at handoff.
+- **`/qfai-atdd` records `RED revision` when it takes the RED.** The
+  completion gate requires it on a handed-over RED and the producer recorded
+  no revision at all — an uncommitted tree's address cannot be recovered once
+  Phase Green has changed the tree, so the required field was a guess or
+  missing, and a guess fails the freshness gate exactly as a gap does.
+- **A `review-fix` on an `E2E` / `API` row hands its test back.**
+  `/qfai-implement` does not author acceptance tests and its `red` phase has
+  no `acceptance-test-engineer`, so a REVISE asking for a test change left the
+  row at `review-fix` or had a production agent edit a test it does not own.
+  The corrected test and its new RED come from `/qfai-atdd`; the production
+  fix and the re-review stay here.
+- **Cross-spec obligations follow the row's `Layer` too.**
+  `cross-spec-ownership.md` still wrote `## Cross-spec obligations` to
+  `implement-<spec-id>.md`, so an unresolved obligation was invisible in the
+  file gate item 10 reads for an `E2E` / `API` row.
+- **The production-path form of `Satisfied-by` is scoped to handed-over rows.**
+  Widening it for every row let an ordinary `Unit` / `Component` /
+  `Integration` row reach `done` with no production change and no sibling —
+  `qfai-implement/SKILL.md` Phase Red step 5 sends exactly that case to
+  `exception`, so the shared reference and the gatekeeper were contradicting
+  the skill body they serve.
+- **P1b gates the rows that have evidence at P1b.** The `red` phase's
+  `qa-gatekeeper` is mandatory and blocking, and a branch 2 row's payload is
+  the falsifiability trio — which by the same gate's own rule does not exist
+  until P6. A run whose rows are all branch 2 had nothing submittable and
+  could not pass P1b to reach P6. It judges the branch 1 rows there; branch 2
+  rows are judged when their trio lands.
+- **A RED-gate REVISE reruns whoever wrote the production edit.** The seam and
+  the mutation are written by the production owners in that phase, and a
+  `qa-gatekeeper` REVISE there is usually about one of them —
+  `failed-agents-only` re-judged an unchanged artifact and returned the same
+  REVISE, so the row never left `red`. The phase uses
+  `changed-scope-dependents`.
+- **Someone is routed to every step that touches production code.** The
+  implement `red` phase had `qa-gatekeeper` alone and the orchestrator may not
+  implement, so neither step 3a's minimal seam nor the falsifiability mutation
+  had an agent able to perform it — a new-surface row could not reach an
+  admissible RED at all. `frontend-engineer` / `backend-engineer` are
+  conditional agents of that phase now.
+- **Phase Red step 3c performs the first falsifiability mutation.** The
+  preconditions were circular: step 3b deferred a branch-2 row until its trio
+  existed, and Phase Green step 2a refused to repeat a mutation it assumed had
+  already run — so nobody performed the first one and an ordinary
+  first-run-pass row could not leave `todo`. 3c applies it, records the trio in
+  the row's ATDD entry, and writes `todo -> red`; it is that row's
+  `Oracle proof` and 2a still does not repeat it.
+- **A natural RED keeps its scope and RED gates.** The path into branch 1
+  skipped steps 1 and 3-4 as "for a surface that does not exist", which also
+  dropped `delivery-planner`'s scope approval and the `qa-gatekeeper` PASS the
+  handover table then requires. Only the seam is skipped.
+- **Checkpoint evidence follows the row's `Layer`.** `checkpoint-verification.md`
+  still wrote its two per-item fields to `implement-<spec-id>.md`, splitting an
+  `E2E` / `API` row across two files and leaving the one gate item 10 reads
+  incomplete.
+- **`qa-gatekeeper` requires the evidence file the row's `Layer` owns, and only
+  that one.** Requiring both made the Stop condition fire on a spec that
+  legitimately has one: a Unit-only spec never ran `/qfai-atdd`, and a spec
+  whose rows are all `E2E` / `API` has no implement file. Either way the gate
+  stopped before reading the evidence that does exist.
+- **`execution-ledger.md` has an `### Allowed transitions` heading**, so the
+  anchor two documents cite resolves instead of landing at the top of the file.
+- **`RED revision` is a field, so that exemption can be recorded.** Declaring
+  it in the completion gate was not enough: the per-item contract stores one
+  `Revision` per round and `evidence-revision.md` calls any observation naming
+  a different revision stale, so a correct `observed-red` row stayed
+  permanently stale whatever the gate said. The handed-over RED records its own
+  revision; `Revision` covers the GREEN and the two reviews, which must still
+  agree with each other.
+- **P1c takes branch-1 rows one at a time.** Writing every branch-1 failing
+  test and then handing the batch over cannot work: each row's checkpoint runs
+  the full suite, so a second deliberate RED left open elsewhere fails the
+  first row's checkpoint — and that row is then stranded at `refactor`, which
+  Phase Red does not re-select. RED, handoff, GREEN and checkpoint complete for
+  one row before the next one's test is written.
+- **Branch 2's mutation is applied by `/qfai-implement`.** It rewrites a
+  production predicate, and this stage's `evidence` phase is
+  `devops-ci-engineer` and `qa-gatekeeper` — neither owns production source,
+  the same boundary branch 1 states two branches earlier. Following the old
+  text meant editing production code out of ownership; refusing to meant a stop
+  with no falsifiability trio. The row is handed over naming the predicate to
+  break, and records the pair that comes back.
+- **The handed-over RED is exempt from the same-revision rule.** Completion item
+  10 asked the item's four sub-agent observations for one revision. A branch-1
+  RED is taken before the production code exists, so its revision necessarily
+  differs from the GREEN's and the reviewers' — that is the property the RED is
+  worth having, and demanding one revision made an `observed-red` E2E/API row
+  unable to reach `done` at all.
+- **`Satisfied-by` accepts what actually satisfies the row, in the shared
+  contract too.** `red-provenance.md` required the production path and symbol
+  for an ATDD surface no ledger row owns, while `red-not-observable.md` called
+  a sibling `TDD-NNNN` the only legal value and `qa-gatekeeper.md` called a
+  sibling row the only legitimate absence — so the form one document mandates
+  was rejected by the gate that judges it, and every such row stopped. All
+  three now ask the same question of the field: what would I mutate to falsify
+  this row.
+- **A natural RED on an existing surface has a step to enter branch 1 at.**
+  Branch 2's first-run check correctly sends an already-failing row to branch
+  1, but branch 1 opens by asking for a seam for a surface that does not exist
+  and confirms the RED "before any production code exists" — neither true
+  here, so a row that observed a real defect had nowhere to go. It enters at
+  step 2, and what `qa-gatekeeper` confirms is a failure observed against the
+  tree before the fix.
+- **The GREEN is submitted after the `Oracle proof`, not before it.**
+  `qa-gatekeeper` requires a proof on every item and the `build` phase is
+  blocking, so a GREEN submitted before step 2a produced one is a REVISE by
+  construction — and that REVISE blocks the step meant to produce the proof.
+  Step 2 takes the passing run, step 2a takes the proof, and the two are
+  submitted together.
+- **A scope REVISE in the ATDD `red` phase reruns the agents it invalidates.**
+  `failed-agents-only` re-ran `delivery-planner` alone, against a selector
+  nobody had changed — so it returned the same REVISE, or the previous
+  `qa-gatekeeper` PASS stood over a test that had since been split. The phase
+  uses `changed-scope-dependents`.
+- **Phase Green runs the `Oracle proof`.** Branch 1 records the mutation it
+  intends; there is nothing to mutate until Phase Green builds the surface, and
+  the phase had no step for it. Completion item 5 wants the command and its real
+  failing output, so a handed-over row arrived at the gate with a plan and no
+  run. New step 2a applies the mutation, captures the failure, and reverts it
+  immediately. A falsifiability row already has one and must not repeat it.
+- **The mandatory `## Evidence` section follows the row's `Layer` too.** Items
+  10-11 pointed an `E2E` / `API` row at `atdd-<spec-id>.md` while the section
+  below still created `implement-<spec-id>.md` and called it the single home for
+  every row — so following it split one row across two files and left the file
+  the gate reads incomplete.
+- **The minimal seam is requested, not written, by `/qfai-atdd`.** Branch 1 told
+  it to register the route or add the export, which is production code its
+  `red` phase has no agent for — the same ownership breach the branch forbids
+  two steps later. It is asked of `/qfai-implement` Phase Red step 3a instead.
+- **Branch 2 is chosen from a first-run pass, not from surface existence.** A
+  surface that exists can still be wrong, and a correct test against a buggy one
+  fails naturally — an observed RED. Keying on existence sent that real defect to
+  `exception` or to a stop, because the mutation cannot run against an
+  already-failing test and there is no GREEN to restore to.
+- **A branch-2 row is deferred by step 3b, not treated as a malformed handoff.**
+  Phase Red always takes the first `todo` row, and branch 2 records its evidence
+  at the ATDD stage's P6 — after the P1c handover. Stopping on it meant a
+  branch-2 row above the branch-1 rows blocked them from Phase Green, so their
+  tests stayed red, ATDD never passed P5-P8, and P6 never happened. P1c also
+  names the rows it hands over.
+- **`delivery-planner` approves the slice before the RED gate.**
+  `qfai-implement` makes it the only authority on whether a selector covers a
+  sufficient slice and requires a scope REVISE settled _before_ the RED is
+  submitted. The ATDD `red` phase took the `qa-gatekeeper` PASS first, leaving
+  the planner only "keep the PASS and open a new row" — which cannot repair a
+  handoff taken at the wrong granularity. It is now mandatory and blocking in
+  that phase.
+- **The handover is verified before the status moves.** Phase Red step 2 wrote
+  `todo -> red` unconditionally, so a row whose ATDD entry was missing or
+  malformed was parked at `red` with no RED behind it, and an `exception` row
+  reached its `DR-*` only after an illegal `red` hop. An `E2E` / `API` row's
+  transition is now decided by step 3b: `observed-red` and `falsifiability`
+  write `red`, `exception` writes `exception` and skips Phase Green, and an
+  unusable entry leaves the row at `todo`.
+- **The completion gate can see the ATDD evidence file.** Item 10 required every
+  row's `Evidence` anchor to resolve into `implement-<spec-id>.md`, so an
+  `E2E` / `API` row pointing at `atdd-<spec-id>.md` — where this release puts
+  its RED provenance — could not reach `done` however correct its evidence was.
+  The gate now reads the evidence file the row's `Layer` owns, and the reviewer
+  verdicts are appended to that file. `/qfai-implement` still runs both
+  reviewers for every row it advances.
+- **`/qfai-atdd` no longer told to write production code.** Branch 1 ended
+  "build the surface and re-run for GREEN", but `agent-routing.yml` gives that
+  stage `acceptance-test-engineer` and no backend or frontend agent — so it
+  either wrote code it does not own or stopped with no GREEN. It now records the
+  RED, gets `qa-gatekeeper` PASS **before any production code exists** (the
+  blocking confirmation `qfai-implement` requires, which cannot honestly be
+  sought after the surface is built), and hands over; `/qfai-implement` Phase
+  Green builds the surface and takes the GREEN.
+- **The execution ledger is a mandatory `/qfai-atdd` input.** Neither the
+  preflight priority list nor the Read Set Contract named
+  `tdd/test-list.md`, so a default-mode run could not enumerate the
+  `Layer = E2E` / `Layer = API` rows it owes evidence for — and step 3b then
+  stopped on a missing handoff for every one of them. It is read, never written.
+- **The observed-RED submission has a routing phase to go to.** Branch 1 says
+  to submit the RED to `qa-gatekeeper` at routing phase `red`, and
+  `agent-routing.yml` gave `qfai-atdd` only `coverage` / `implementation` /
+  `evidence` / `review` — the phase named belonged to `/qfai-implement`. A
+  blocking `red` phase now sits before `implementation`, which is the only
+  place it can sit: after the surfaces are built there is no RED left to
+  confirm.
+- **Branch 1 rows hand over before the gates that need a green tree (P1c).**
+  Branch 1 ends with a deliberately failing test and no production code, while
+  P5-P8 require the suite and the repo quality gates to pass — so the stage
+  could not finish its own gates. The handover to `/qfai-implement` is now an
+  explicit stage gate rather than a next-action at the end.
+- **P1b no longer demands evidence branch 2 cannot have yet.** It required RED
+  provenance "established" for every row while the same sentence deferred branch
+  2's mutation run to P6. P1b is now "branch chosen for every row, branch 1
+  discharged in full", and a branch 2 row legally leaves it with its branch
+  recorded and no evidence.
+- **A `review-fix` row does not replay the handover.** Phase Red selects it
+  first and keeps its status, so step 3b would have re-read the original ATDD
+  entry and written `todo -> red` from a row that is not at `todo`. It now
+  applies to `todo` rows only; rework goes through `round-evidence.md`.
+- **The layer-owned evidence file is named everywhere the row is written.** Gate
+  item 10 was not enough on its own: the orchestrator override and the ledger's
+  `Evidence` column definition both still said `implement-<spec-id>.md`
+  unconditionally, so following either produced a pointer item 10 rejects.
+- **Step 3b's reference resolves.** `qfai-atdd/references/red-provenance.md`
+  read from `qfai-implement/SKILL.md` points at
+  `qfai-implement/qfai-atdd/...`, which does not exist — the mandatory handover
+  contract was unreachable from the step that requires it.
+- **`/qfai-implement` Phase Red consumes the ATDD provenance instead of
+  re-observing it.** The handover was declared but not executable: steps 4 and 5
+  re-run the row's test and watch it fail, and by the time that skill reaches an
+  `E2E` / `API` row the surface exists, so the run passes and step 5 classifies
+  it as an anomaly bound for `exception` — the terminal state the falsifiability
+  branch exists to avoid, reached through the branch itself. New step 3b verifies
+  and carries over the recorded branch; a missing or malformed entry stops with a
+  handoff note rather than inventing a RED.
+- **The ATDD minimal seam must not answer with the contracted status.** Branch 1
+  said to register the route "with the declared status, an empty body". When the
+  row's predicate _is_ the status — `201` on create, `204` on delete, `403` on a
+  refusal — that passes the assertion the moment the seam exists, so there is no
+  RED left to observe and the behaviour was implemented before the test failed.
+  The seam now answers with a not-implemented sentinel outside the contract's
+  declared set.
+- **ATDD evidence keeps its payload out of the table cell.** `## Ledger rows
+advanced` asked for RED/GREEN commands, output and the falsifiability result
+  inside a GFM cell — the same container defect the implement ledger had. Real
+  output is multi-line and carries bare `|`, so it either truncated the proof
+  `qa-gatekeeper` requires or broke the table below it. The table is now an
+  index; each row's payload lives under its own `### TDD-NNNN` heading in fenced
+  blocks.
+- **`QFAI-ATDD-117` is scoped like the obligations it excludes.** It lists the
+  excluded ids and was filed at `specsRoot`, which belongs to every scope, so
+  a `--spec` run reported a sibling spec's L1/L2 TCs in its own evidence.
+- **The per-spec owner is read positionally, not by pattern search.** The
+  layout is exactly `<testsRoot>/<layer>/spec-NNNN/**`; scanning for that shape
+  anywhere in the path found it above the checkout and inside fixture
+  directories, attributing tests to specs that do not own them.
+- **A nonexistent-spec reference is repo-wide only where no spec owns the
+  file**, and the repo-wide `QFAI-TRACE-*` claim is limited to the findings
+  that have no spec owner — the per-artifact ones are dropped by the scope
+  filter before a scoped checkpoint sees them.
+- **The owner scan stops at the configured tests root.** Test paths are
+  absolute, so a checkout that itself lives under `/srv/integration/spec-0002/`
+  has an ancestor pair spelled exactly like the canonical layout, and a flat
+  `tests/integration/a.test.ts` inside it was attributed to `0002`.
+- **A spec-named directory that is not the owner no longer ends the search.**
+  In `tests/integration/spec-0002/fixtures/spec-0001/**` the innermost
+  `spec-NNNN` is a fixture named after the spec it stands in for; stopping
+  there lost `0002`, so `--spec 0002` dropped findings in its own tests.
+  The forbidden-placement findings (`QFAI-ATDD-121` / `-122` / `-123`) carry
+  that owner in `relatedFiles` too. `narrowForbidden` kept them for the right
+  scope, but `isFindingInSpecScope` re-derives the owners from `relatedFiles` —
+  so `qfai validate --spec 0002` still dropped a misplacement in its own tests,
+  and a test that stopped at the validator return value did not show it.
+
+- **A forbidden reference is owned by the tests that hold it.** The
+  unknown-reference path already treats a file under
+  `tests/integration/spec-0002/**` as `0002`'s; attributing a misplaced
+  annotation to the token alone meant the gate of the spec whose tests hold the
+  misplacement never saw it, and only an unrelated spec's run did.
+- **The test-path owner is read from the layer directory, not any ancestor.**
+  `entry.file` is absolute, so scanning every segment made a checkout that
+  happens to live under a directory called `spec-0002` claim every test in it —
+  dropping repo-wide findings from one scope and leaking siblings into another.
+  Only `<integration|api|e2e|atdd>/spec-NNNN/**` counts.
+- **`lint:shipping` keeps its rules' own flags.** Globalising them with a bare
+  `"g"` dropped the `i` on the spec-id rules, so `SPEC-9999` in JSDoc passed
+  the pre-build lint while the post-build guard and the smoke test caught it.
+- **An unknown reference is attributed to both of its owners.** `narrowUnknown`
+  keeps the finding when either the token's spec or the test's own per-spec
+  directory is in scope, but `relatedFiles` listed only the token's — and
+  `isFindingInSpecScope` re-derives the owners from there, where an unowned
+  `tests/**` path contributes nothing. The narrowing was undone one layer later.
+- **A shared spec artifact keeps a finding repo-wide.** A path under
+  `specsRoot` but outside any `spec-NNNN` directory — `_policies/**` — is part
+  of the finding, not an auxiliary representative path: the duplicate
+  `QFAI-ID-001` reports between a shared policy and one spec is present for
+  every spec, and attributing it to that one spec hid it from all the others.
+  A path outside `specsRoot` stays auxiliary and grants no membership.
+- **An unknown reference has two owners, and either one keeps it in scope.**
+  Attribution used the token alone, but the token is the thing that may be
+  mistyped: a test under `tests/integration/spec-0002/**` annotated
+  `QFAI:SPEC-0001:TC-9999` was attributed to `0001`, so `--spec 0002` — the
+  completion gate of the spec that owns the file — never saw its own broken
+  annotation, and only an unrelated spec's run reported it. A canonical
+  per-spec test directory is an owner too.
+  The three layers also scan the same input set now: the word boundaries the
+  pre-build lint carried made `spec-9999suffix` invisible to it while the
+  post-build guard and the smoke test both caught the `spec-9999` inside it —
+  the same distributed content passing one layer and failing another.
+
+- **The still-blocking families a `--spec` checkpoint names include the
+  contracts.** `runTddValidators` runs `validateContracts` regardless of scope,
+  and `QFAI-CONTRACT-*` / `QFAI-DB-002` are filed against `.qfai/contracts/**`,
+  which no spec owns — so they survive the scope filter and exit 1 exactly like
+  `QFAI-TEST-001` and `QFAI-TRACE-*`. Naming only those two made a contract
+  error read as an unexplained checkpoint failure.
+  The three layers express the range as a numeric property now —
+  `spec-0*[1-9][0-9]+`, any leading zeros then a value of ten or more — because
+  enumerating digit shapes kept them out of step: `spec-9999` (no leading zero)
+  and `spec-00100` (two) were each caught by some layers and not others.
+
+- **The distributed-surface spec-ID guard covered half its own range.**
+  `spec-0010 and above` is a numeric range, but all three layers spelled only
+  its leading-zero half and matched case-exactly — so a four-digit id with no
+  leading zero, or any `SPEC-` spelling, shipped past every one of them. The
+  regex now covers 0010-0099, 0100-0999 (and 01000+) and 1000 and up, in either
+  case; the `SPEC-` spelling matters because a spec directory may legally be
+  `SPEC-0042` on a case-sensitive filesystem. Widening it surfaced two
+  pre-existing leaks in `src/` header comments, which `tsup` was retaining in
+  `dist/*.d.ts` and the sourcemaps; both are removed.
+- **A finding names the spec directory as it is spelled on disk.** Spec
+  discovery matches `spec-NNNN` case-insensitively and keeps the directory name
+  it read, so a pack under `SPEC-0001/` is valid. Attribution rebuilt the path
+  from the number instead — `.qfai/specs/spec-0001` — so on a case-sensitive
+  filesystem the `file` and `relatedFiles` of `QFAI-ATDD-111` / `-112`, the
+  forbidden-layer findings and the scaffold placeholder all pointed at a path
+  that does not exist, and the GitHub annotation had nothing to attach to. The
+  enumerated directory is carried alongside the number now and used verbatim.
+- **"Does this spec exist" is a directory question.** It was answered from the
+  US/TC id maps, which only key a spec that declares at least one id — so a
+  sibling created moments ago read as nonexistent and its typo was kept
+  repo-wide, failing exactly the gate separation `--spec` exists for. The
+  answer comes from the enumerated spec directories now, and the same
+  correction applies to a scaffold directory: `tests/integration/spec-9999/`
+  is not an out-of-scope sibling, and skipping it removed the placeholder from
+  every valid scoped gate.
+- **A reference to a spec that does not exist stays repo-wide.** `--spec`
+  narrowing drops a sibling's unknown reference because that sibling's own
+  gate will report it. A token naming a spec number no spec pack has —
+  `QFAI:SPEC-9999:TC-0001`, the ordinary fat-finger — has no such gate:
+  `--spec 9999` is rejected by `QFAI-SCOPE-002`, so every legitimate per-spec
+  run would drop it and the annotation would sit in the current spec's own
+  tests unreported. Only refs naming a spec that exists are narrowed.
+- **An unknown `US` / `TC` reference is scoped by the spec its token names.**
+  `QFAI-ATDD-101` / `-102` are filed against the test file carrying the typo,
+  which no spec owns, so a sibling's `QFAI:SPEC-0001:TC-9999` failed
+  `--spec 0002`. The root cause was narrower than it looked: the owning-spec
+  regex was anchored at `SPEC-`, and an unknown-reference token is the
+  annotation as written (`QFAI:SPEC-0001:TC-9999`), so every one of them read as
+  unattributed. Contract tokens (`CON-API-*` / `CON-DB-*`) name no spec and stay
+  repo-wide, the documented limit `QFAI-ATDD-113` already has.
+- **A forbidden TC placement is scoped too.** `narrowToScope` narrowed
+  `missing.us` / `missing.tc` only, and `QFAI-ATDD-121` / `-122` / `-123` are
+  filed against a `tests/**` path that `.qfai/specs/` does not own — so a
+  sibling's half-finished annotation failed a scoped gate the requested spec had
+  fully discharged. The lists are narrowed by the same rule, an entry left with
+  no in-scope id is dropped, and the finding carries the owning spec dirs in
+  `relatedFiles` while `file` stays the test path the operator edits.
+- **A `--spec` run no longer touches another spec.** Three ways it still did.
+  `isFindingInSpecScope` kept a finding when _any_ of its paths was in scope,
+  and an unowned path is in every scope — so `D-SCAFFOLD-PLACEHOLDER`, whose
+  representative `file` is a test path outside `.qfai/specs/`, survived every
+  filter no matter what it was attributed to. Once a finding names an owning
+  spec, only its owners decide; a finding no spec owns still belongs to every
+  scope. `validateScaffoldPlaceholder` also scanned and counted repo-wide, so
+  three scoped gates pushed an unrelated spec's placeholder to the escalation
+  threshold and opened its next run at `error` — it now scans, counts and
+  resets only the specs in scope. And the shared
+  `.qfai/report/atdd-traceability/summary.{json,md}` artifact is written from
+  the repo-wide evaluation again rather than the narrowed one, so the artifact
+  no longer depends on which scope wrote it. That is **not** the same as making
+  concurrent runs safe: the two files are separate writes taken at separate
+  instants, so an interleaving can still leave them describing different
+  snapshots. Do not run per-spec gates in parallel expecting a consistent audit
+  artifact — that race is open, tracked in the shared-state issue alongside the
+  `.qfai/state.json` counters.
+- **`qfai-atdd` no longer claims `QFAI-TEST-001` fails its gate.**
+  `runAtddValidators` runs the coverage and scaffold validators only;
+  `validateTestTodoStubs` is wired into the tdd profile. A completion reviewer
+  trusting that line would read a green `--profile atdd` as proof there is no
+  `it.todo` acceptance test.
+- **`qfai validate --spec` now actually scopes the two spec-owned ATDD coverage
+  rules, and the per-spec skills use it.** `QFAI-ATDD-111` and `QFAI-ATDD-112`
+  were filed against `specsRoot` itself; `owningSpecNumber` returns `null` for a
+  path that is not inside a `spec-NNNN` directory and `isPathInSpecScope` treats
+  an unowned path as belonging to every scope, so both findings survived every
+  `--spec` filter. They are now attributed to the spec directories the missing
+  refs name, using the representative-plus-`relatedFiles` shape `QFAI-ID-001`
+  already uses. `/qfai-atdd` (four gate statements) and `/qfai-implement`
+  (`checkpoint-verification.md`, `final-checklist.md`) pass `--spec <spec-id>`,
+  which only `/qfai-sdd` did before — so a stage that discharged everything its
+  own spec owns can close, instead of failing on a sibling's obligations.
+  `QFAI-ATDD-113` / `-115` are attributed to `.qfai/contracts/**`, which no spec
+  owns, so they stay repo-wide under every scope; `/qfai-atdd` now says so
+  rather than implying a scoped gate is clean.
+- **Foreign home is a placement, not a `Level`.** Once `api` and `e2e` are
+  scanned, an L4 skeleton that followed the remediation into `tests/api/**` is
+  in its declared home — its annotation counts, so what it needs is the
+  ordinary placeholder gate and its escalation. Judged by `Level` alone it left
+  the coverage list, hit the `continue`, and sat on the non-escalating foreign
+  warning however many times validate ran: the same silence the move used to
+  produce, one step further along.
+- **A mistyped TC column still declares its ids.** Reading them from the
+  resolved tables closed the appendix hole and opened this one: a header like
+  `TC Id` drops the whole table, so the id left the obligation set and
+  `QFAI-ATDD-112` stopped asking for it. The ledger does not cover the gap —
+  with no `tdd/test-list.md` at all `TDDLIST_MISSING` is a warning and the
+  check returns early — so `--profile full --fail-on error` passed with neither
+  a test nor a row. Tokens in an unresolvable table inside the authoritative
+  section are kept; the header is what `TDDLIST_TC_TABLE_UNRESOLVED` reports.
+- **A top-level indented code block is masked before table parsing.** Only
+  fenced blocks and HTML comments were, and `parseAllMarkdownTables` matches
+  `^s*|` — so a schema-complete sample ledger indented four spaces was
+  collected as a real table. A spec with no ledger of its own could satisfy
+  `TDDLIST_TC_NOT_COVERED` from the sample, and a `todo` row owes neither
+  `Test file` nor `Evidence`, so `validate --profile full --fail-on error`
+  passed with no test behind it. Recognised at the top level only: under a list
+  item four-space indentation is continuation, not code.
+- **A scaffold skeleton is followed to the directory the remediation names.**
+  `D-SCAFFOLD-FOREIGN-HOME` tells the operator to move an L4/L5 skeleton to
+  `tests/api/**` or `tests/e2e/**`, and a move without an implementation left
+  every gate at once — this scan did not reach it, the ATDD scan counted its
+  annotation as coverage, and the generated `it.skip(...)` is not the `*.todo`
+  form `QFAI-TEST-001` matches. Both directories are scanned, and the
+  remediation says to write the real test rather than move the skeleton.
+- **An L1/L2 annotation in `tests/integration/**`is not a violation.** The
+Reviewer Gate and`project_memory`said`QFAI-ATDD-123`rejects it, but`resolveTcHomeKind`returns`null` for those levels and the scan continues
+  before the forbidden-placement check — the validator neither counts it nor
+  flags it. A reviewer working from that text would have had an existing,
+  passing annotation deleted.
+- **The declared TC set is read from the authoritative shapes only.** Masking
+  fixed the fenced-sample case; an appendix or illustrative table written as
+  ordinary markdown _outside_ `## Test Case Table` was still collected, so its
+  ids landed in the declared set with no `Level`, fell through to the
+  integration default, and `QFAI-ATDD-112` raised a hard error against a TC
+  that does not exist. The set is the heading form plus the `TC-ID` column of
+  the tables inside that section — the same two passes `collectTcLevels`
+  makes. Scoped to the section rather than to `resolveTestCaseTables`, so a
+  mistyped `tc-id` header still declares its ids and both gates report it.
+- **The L1/L2 exclusion reaches every mandatory checklist.** The body defined
+  it, but the Reviewer Gate, the Definition of Done and `project_memory` still
+  demanded "every TC" — so a `completion-reviewer`, or an agent that never
+  opens the body, judged an L1/L2-only spec the validator passes as not-done,
+  and the repair they would reach for is the duplicated integration annotation
+  `QFAI-ATDD-123` rejects.
+- **A settled `Level` survives a later table that has no `Level` column.** The
+  first-declaration-wins guard sat inside the `levelIndex >= 0` branch, so a
+  re-listing without that column skipped it and fell through to the
+  column-absent fallback — re-adding an `L3` TC as a Unit/Component target on
+  top of the integration obligation its declaration gives it. The result was
+  `TDDLIST_TC_NOT_COVERED` beside a correct `QFAI-ATDD-112`, and an inflated
+  target count in the report.
+- **The declared-id set is read from the same masked text as the levels.**
+  `collectTcLevels` masks fenced samples and HTML comments; the id collector
+  read the raw document, so an id that appears only in a format example stayed
+  declared with no `Level`, fell through to the integration default, and
+  `QFAI-ATDD-112` raised a hard error against a TC that does not exist.
+- **A ledger table that kept one marker column is a ledger table.** Detection
+  admitted a table carrying both `TDD-ID` and `TC-Refs`, or six of the eight
+  required columns — and a table that drops one marker _and_ two other columns
+  fell between them. `TDD-ID | Layer | Test file | Status | Evidence` can
+  obviously hold ledger rows, so a `done` row in the complete first table and a
+  `todo` row in this one reported no missing column and no outstanding work,
+  and the report published `done: 1 / open: 0` from the first table alone. One
+  marker plus four columns now counts as an attempt, which leaves a
+  `TDD-ID | Status` roll-up read as the summary it is.
+- **The complete transition list says `any status` too.** Widening only the
+  summary table left the list — which declares itself complete and prohibits
+  every unlisted edge — still naming five sources, so whether a `blocked` or
+  `review-fix` reset was legal depended on which of the two a reader reached
+  first. The list also called the approved reset "the fourth" row of a table
+  where it is the third, which read QA rejection recovery as the sanctioned
+  backward transition and contradicted the paragraph below it.
+- **The upstream reset admits every source status.** The lifecycle table
+  enumerated five, which read as a complete list — but `drift-protocol.md`
+  step 5 sweeps the ledger with `any status -> todo`, so a row at `blocked` or
+  `review-fix` when the upstream obligation moved was one the table forbade the
+  Protocol from sweeping, leaving the preflight with nothing legal to do. The
+  enumeration existed to stop an unapproved `review-fix -> todo`; the approval
+  column already does that, and does it without contradicting the Protocol.
+- **`qfai-implement`'s primary spec-completion condition is a list item again.**
+  A missing newline joined `- Each item reached \`done\` or valid \`exception\`
+  (with DR-ID)`to the tail of the bullet above it, and because the joined line
+is a two-space continuation, markdown rendered the condition as trailing prose
+inside a bullet about the`QFAI-ATDD-111`/`QFAI-ATDD-113`hard gate. The
+words were all still there, so nothing flagged it — while the clause had no
+line of its own, and downstream Decision Records that cite it by`file:line`pointed at a line it does not occupy.`tests/assets/swallowedListItem.test.ts`now scans the shipped`assistant/\*\*` tree for a list marker stranded mid-line.
+
+### Changed
+
+- **`/qfai-atdd` now has RED discipline for the ledger rows it feeds.**
+  `qfai-implement/SKILL.md` states the split — `Layer = E2E` and `Layer = API`
+  rows are tracked in its ledger, their tests authored in `/qfai-atdd` — and its
+  Phase Red requires an admissible failure confirmed before production code
+  exists. `qfai-atdd/SKILL.md` contained no occurrence of `RED`, `red`, `green`,
+  `refactor`, `exception` or `test-list.md`, and its stage gates ran
+  plan → layer → E2E → API → integration → validate → runtime → repo gates →
+  reviewer with no failing-test step. Since `todo` has exactly two exits and
+  `todo -> red` needs a RED the stage order makes unobservable, `exception` was
+  the only terminal state such a row could reach: on one consumer repository all
+  13 remaining `todo` rows were ATDD-owned, and the ledger closed at 95
+  `exception` against 21 `done`. The skill now names the ledger it feeds and
+  states that it **does not write it** — `/qfai-implement` remains the single
+  writer of every `Status` / `DR-ID` / `Evidence` cell, as the Drift Protocol
+  grants; what `/qfai-atdd` owes is the evidence those cells point at, in
+  `.qfai/evidence/atdd-<spec-id>.md`. It adds stage gate **P1b** (RED observed,
+  and `qa-gatekeeper`-confirmed, before P2-P4 build any surface) and documents
+  three ordered branches in
+  `references/red-provenance.md` — observed RED, falsifiability via the existing
+  `red-not-observable.md` path, and `exception` with a `DR-*` only when both are
+  unavailable. `qa-gatekeeper` accepts the falsifiability form for these rows as
+  expected evidence and REVISEs an `exception` whose only stated reason is that
+  the surface came first.
+
 ## [1.10.0] - 2026-08-03
 
 ### Changed

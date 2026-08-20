@@ -131,22 +131,33 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       // assertion below vacuous instead of failing. That is exactly what it
       // caught when the lifecycle moved out of SKILL.md.
       const ledger = unwrap(await read(tree, LEDGER));
-      const lifecycleStart = ledger.indexOf("Allowed transitions:");
+      // A real heading, so `TDDLIST_EXCEPTION_PARKED` and SKILL.md can link to
+      // `#allowed-transitions` — as plain text it rendered no anchor and both
+      // pointers landed at the top of the file.
+      const lifecycleStart = ledger.indexOf("### Allowed transitions");
       const lifecycleEnd = ledger.indexOf("## Exception Handling");
-      expect(lifecycleStart, "execution-ledger.md has no `Allowed transitions:`").toBeGreaterThan(
-        -1,
-      );
+      expect(
+        lifecycleStart,
+        "execution-ledger.md has no `### Allowed transitions`",
+      ).toBeGreaterThan(-1);
       expect(lifecycleEnd, "execution-ledger.md has no `## Exception Handling`").toBeGreaterThan(
         lifecycleStart,
       );
       const lifecycle = ledger.slice(lifecycleStart, lifecycleEnd);
       expect(lifecycle).toContain("`refactor` -> `red`");
-      expect(lifecycle).toContain("QA rejection recovery — the only re-entry");
+      expect(lifecycle).toContain("QA rejection recovery");
       expect(lifecycle).toContain("Cite the verdict in `Evidence`");
-      // Every other backward move stays prohibited.
-      expect(lifecycle).toContain(
-        "Backward transitions are otherwise prohibited and nothing but that QA rejection re-opens a row",
-      );
+      // Every edge not listed stays prohibited. The old wording ("nothing but
+      // that QA rejection re-opens a row") was false against this same list —
+      // `blocked -> todo`, `exception -> todo` and the upstream reset all
+      // re-open one — so the claim is now the closed-list rule plus a table
+      // naming each returning edge and whether it needs approval.
+      expect(lifecycle).toContain("Any edge not listed above is prohibited.");
+      expect(lifecycle).not.toContain("the only re-entry");
+      expect(lifecycle).toContain('**"Backward" is narrower than "moves to an earlier status".**');
+      for (const edge of ["`blocked` -> `todo`", "`exception` -> `todo`", "`refactor` -> `red`"]) {
+        expect(lifecycle).toContain(edge);
+      }
       expect(lifecycle).toContain('"Backward transition prohibited: green -> red"');
 
       // The reference splits the two kinds of REVISE so the edge is not used

@@ -5,16 +5,16 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single r
 
 ## Required columns
 
-| Column    | Description                                                                                                                                                                                                                 |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                                                                                                                                                         |
-| TC-Refs   | References to test cases from `06_Test-Cases.md`. Belongs on `Layer = Unit` / `Component` / `Integration` rows                                                                                                              |
-| Layer     | Test layer. Legal values: `Unit`, `Component`, `Integration`, `API`, `E2E`                                                                                                                                                  |
-| Test file | Path to the test file                                                                                                                                                                                                       |
-| Selector  | Test selector(s) for targeted execution — one entry, a comma-separated list, or a glob pattern                                                                                                                              |
-| Status    | Current lifecycle status                                                                                                                                                                                                    |
-| DR-ID     | Decision Record / Change Request IDs, comma-separated: a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses; blank otherwise |
-| Evidence  | The RED/GREEN outcome in one word each, plus an anchor into `.qfai/evidence/implement-<spec-id>.md` for this TDD-ID. **Not** the commands and output themselves — see "Evidence cell contract" below                        |
+| Column    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TDD-ID    | Unique identifier for the TDD item (e.g., TDD-0001)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| TC-Refs   | References to test cases from `06_Test-Cases.md`. Belongs on `Layer = Unit` / `Component` / `Integration` rows                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Layer     | Test layer. Legal values: `Unit`, `Component`, `Integration`, `API`, `E2E`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Test file | Path to the test file                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Selector  | Test selector(s) for targeted execution — one entry, a comma-separated list, or a glob pattern                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Status    | Current lifecycle status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| DR-ID     | Decision Record / Change Request IDs, comma-separated: a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses. A row swept out of `exception` by `exception -> todo` **keeps** the anomaly's `DR-*` — that is the only record of why it was parked. **A row that enters `exception` again records a new `DR-*` for the new anomaly**, appended, not substituted: the retained one documents an anomaly already resolved, and `TDDLIST_EXCEPTION_MISSING_DR` only asks that the cell be non-empty and its tokens resolvable, so the stale id alone would pass the gate while the current anomaly has no Decision Record at all. Blank otherwise |
+| Evidence  | The RED/GREEN outcome in one word each, plus an anchor into the evidence file this row's `Layer` owns — `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row (see "ATDD-owned rows"). **Not** the commands and output themselves — see "Evidence cell contract" below                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 ## Declared seam column (optional, required for parallel dispatch)
 
@@ -85,7 +85,9 @@ non-TC obligation IDs are inert to it by design.
 
 The `Evidence` cell is a **pointer**, not the payload.
 
-`.qfai/evidence/implement-<spec-id>.md` is the single home for the per-item
+`.qfai/evidence/implement-<spec-id>.md` is the home — for every row this skill
+runs itself; the E2E/API rows use `atdd-<spec-id>.md`, see "ATDD-owned rows"
+below — of the per-item
 evidence contract — the RED/GREEN commands, their output, and the reviewer
 verdicts. The ledger cell records the outcome and says where to read the proof:
 
@@ -175,7 +177,10 @@ and examples: `selector-granularity.md`.
 
 Valid status values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`.
 
-Allowed transitions:
+### Allowed transitions
+
+This list is the complete one. `qfai-implement/SKILL.md` summarises it and
+`TDDLIST_EXCEPTION_PARKED` links here; both defer to what follows.
 
 - `todo` -> `blocked` (the row cannot be started: an upstream defect, an
   unresolved Change Request, or an unfinished row in another spec). Name the
@@ -189,8 +194,11 @@ Allowed transitions:
 - `refactor` -> `review-fix` (a blocking reviewer returned `REVISE`)
 - `review-fix` -> `refactor` (rework complete; re-submit to the reviewer)
 - Any active status -> `exception` (anomaly detected; record DR-ID in DR-ID column)
-- `red` | `green` | `refactor` | `done` | `exception` -> `todo` — **upstream
-  reset**, the only legal reopen, available from every status a row can hold.
+- **Any status** -> `todo` — **upstream reset**, the only legal reopen,
+  available from every status a row can hold, `blocked` and `review-fix`
+  included. This list is the complete one and an unlisted edge is prohibited,
+  so enumerating five sources here forbade the sweep
+  `constitution/drift-protocol.md` step 5 requires of exactly those two.
   Permitted **only** when an approved upstream change (Drift Protocol step 4
   rerun) invalidated the row's obligation. The invalidating CR/DR ID MUST be
   recorded in the `DR-ID` column, and the reset MUST cite it in `Evidence`.
@@ -208,7 +216,7 @@ Allowed transitions:
   The `Test file` existence check is unchanged for `green` / `refactor` /
   `done`: those statuses assert a test that ran.
 
-- `refactor` -> `red` (**QA rejection recovery — the only re-entry**): a routed
+- `refactor` -> `red` (**QA rejection recovery**): a routed
   `qa-gatekeeper` returned `REVISE` on this row's RED/GREEN evidence because the
   cycle itself was wrong. Batched (T1) review defers that confirmation until
   after the row has left `red`, so without this edge a rejected row could never
@@ -216,15 +224,41 @@ Allowed transitions:
   in `Evidence`, re-run the micro-cycle; rules:
   `volume-policy.md#group-formation-states-and-transitions`.
 
-Backward transitions are otherwise prohibited and nothing but that QA rejection
-re-opens a row. Attempting `green` -> `red` must produce:
-`"Backward transition prohibited: green -> red"`. The upstream reset above is
-not a backward transition: it is an owner-approved re-entry, and the row starts
-its cycle again from `todo`.
+Any edge not listed above is prohibited. Attempting `green` -> `red` must
+produce: `"Backward transition prohibited: green -> red"`.
 
-The one exception is an approved Change Request reset — the only sanctioned
-backward transition. Preconditions and the reset procedure:
-`references/change-request-reset.md`.
+**"Backward" is narrower than "moves to an earlier status".** All four edges
+below return a row to an earlier state, and **three of them are not backward
+transitions** — a resumption, an anomaly exit and the rework edge each restart
+an earlier phase of the row's own cycle with nothing upstream changed. The
+third, the approved Change Request reset, **is** the one sanctioned backward
+transition: an upstream obligation moved and the row's completed work is
+withdrawn. The column below therefore asks why each edge is _legal_, not why it
+is not backward:
+
+| Edge                                      | Why it is legal                                     | Approval needed |
+| ----------------------------------------- | --------------------------------------------------- | --------------- |
+| `blocked` -> `todo`                       | resumption — the row never started                  | none            |
+| `exception` -> `todo`                     | anomaly resolved — nothing upstream changed         | none            |
+| **any status** -> `todo` (upstream reset) | owner-approved re-entry, cycle restarts from `todo` | approved `CR-*` |
+| `refactor` -> `red`                       | QA rejection recovery on this row's own evidence    | `qa-gatekeeper` |
+
+The first, second and fourth rows are **re-entries, not backward transitions**:
+they return a row to an earlier phase of its own cycle without any upstream
+change. The approved Change Request reset is the one **sanctioned backward
+transition** — an upstream obligation moved, so the row's completed work is
+withdrawn. The distinction is the whole reason the column above asks why each
+edge is _legal_ rather than why it is not backward: three of them are not, one
+of them is and is authorised. `final-checklist.md` carries the same carve-out,
+so a run that performs an approved reset can still tick it. Preconditions and
+the reset procedure: `references/change-request-reset.md`.
+
+**The reset admits every source status**, not the five a run is most likely to
+be in. `constitution/drift-protocol.md` step 5 sweeps the ledger with
+`any status -> todo`, and a row sitting at `blocked` or `review-fix` when the
+upstream obligation moved is exactly a row that has to be swept. Enumerating
+the sources here let this table forbid a transition the Protocol requires, so
+a preflight that hit one had nothing legal left to do.
 
 ### Reviewer rework is not a backward transition
 
@@ -238,6 +272,58 @@ is re-submitted.
 
 `review-fix` is not a completion state and appears in the completion-prohibition
 list. Round-by-round evidence rules: `round-evidence.md`.
+
+## ATDD-owned rows
+
+A row whose `Layer` is `E2E`, `API` or `Integration` — Integration among them
+because `QFAI-ATDD-112` covers every `L3` TC, and every TC with no declared
+`Level`, from `tests/integration/**`, and that stage's P4 writes those tests.
+These rows live in this ledger and follow
+every rule above, but their tests are authored by `/qfai-atdd`
+(`qfai-implement/SKILL.md` Non-goals). The two skills
+therefore share one lifecycle, and the ordering that skill works in makes the
+RED question different rather than absent.
+
+`/qfai-atdd` does **not** write production code — `agent-routing.yml` gives its
+implementation phase `acceptance-test-engineer`, who owns acceptance tests, and
+no backend or frontend agent. The surface a journey needs is built by this
+skill's Phase Green, from the RED that stage handed over. What makes the RED
+question different there is ordering, not ownership: the work orders that build
+a spec's surfaces often run before the journey is written, and a test written
+after its surface passes on the first run. So:
+
+- **There is no waiver here.** `todo -> red` still requires an admissible RED,
+  and a first-run pass is still not one.
+- **The falsifiability path is the answer, not `exception`.**
+  `red-not-observable.md` already defines the substitute — record
+  `Satisfied-by`, mutate the predicate the journey asserts on, watch this row's
+  test fail, restore, and record `Falsifiability command` /
+  `Falsifiability result` beside the GREEN pair. It was written for an
+  obligation a sibling row had already satisfied; a journey whose surface the
+  same cycle just built is the same situation with the sibling being the
+  surface work. `qa-gatekeeper` accepts that form, and the row proceeds to
+  `green` and `done`.
+- **`/qfai-atdd` also has a first branch this ledger cannot see**: writing the
+  journey against the tree _before_ the surface exists, which produces an
+  ordinary RED. Its stage gate P1b is where that happens.
+- **The evidence file follows the stage that produced it.**
+  `implement-<spec-id>.md` holds the rows this skill runs itself;
+  `atdd-<spec-id>.md` holds `## Ledger rows advanced` for the E2E/API rows,
+  because that is the stage that ran the commands. The `Evidence` cell is a
+  pointer either way and its anchor names which file. Calling
+  `implement-<spec-id>.md` the single home was true while one stage produced
+  every pair; it stopped being true the moment another stage did.
+  `qfai-implement/SKILL.md`'s completion item 10 reads the same split, so an
+  E2E/API row whose anchor names the ATDD file reaches `done`; items 11 and the
+  matching prohibition condition append the two reviewer verdicts to **that**
+  file. This skill still runs `completion-reviewer` and
+  `implementation-reviewer` for every row it advances — only the RED provenance
+  came from elsewhere.
+- **`exception` is for a row where both are unavailable** — an obligation with
+  no persisted form or no observable surface at L5, recorded with a `DR-*`
+  naming what is missing. It is not the routine outcome of surface-first
+  ordering. A spec whose ATDD rows are all `exception` has recorded that the
+  provenance step was skipped, not that the obligations were unverifiable.
 
 ## Blocked rows
 

@@ -58,9 +58,27 @@ the placeholders; record the literal commands actually executed in evidence.
 2. The full test suite — `<test runner>` with no file filter and no test-name option.
 3. The project's static gates, when the repository defines them — formatter check, linter, and type
    check.
-4. `npx qfai validate --profile tdd --fail-on error` — qfai is a project dependency, not a global
-   command; a bare `qfai …` is `command not found` (exit 127) on a normal local install, which would
-   fail every checkpoint.
+4. `npx qfai validate --profile tdd --fail-on error --spec <spec-id>` — qfai is a project
+   dependency, not a global command; a bare `qfai …` is `command not found` (exit 127) on a normal
+   local install, which would fail every checkpoint. `--spec` scopes the run to the spec this
+   checkpoint is for: this skill processes one spec at a time, so an unscoped run makes a sibling
+   spec's in-flight failure fail this checkpoint. It also writes
+   `<report>/validate.spec-<id>.json` instead of the shared `validate.json`, so the checkpoint
+   artifact cannot be overwritten by another spec's run.
+   **`--spec` scopes the spec-owned rules only, and this checkpoint still fails on the rest.**
+   `QFAI-TEST-001` names a test file, the `QFAI-TRACE-*` findings **that have no spec
+   owner** are filed against `.qfai/specs/` itself, and the contract validators run
+   regardless of scope —
+   `QFAI-CONTRACT-*` and `QFAI-DB-002` are filed against `.qfai/contracts/**`, which
+   no spec owns. None of the three has a spec owner, so a sibling spec's `it.todo`, a
+   `CAP-*` it has not created yet, or a malformed contract it is mid-way through
+   editing, exits 1 here. **Not the whole `QFAI-TRACE-*` family**: the per-artifact
+   ones are filed against the spec's own `03_Acceptance-Criteria.md` /
+   `04_Business-Rules.md` / `05_Examples.md` / `06_Test-Cases.md` and its ledger, so a
+   sibling's are dropped by the scope filter and never reach this checkpoint —
+   treating them as still-blocking reports a failure this run cannot see. Record the finding, its owning spec and why it
+   is not this checkpoint's work; do **not** drop `--fail-on error`, weaken the profile, or
+   report the checkpoint as passed.
 
 ## Verification command set (per spec)
 
@@ -129,13 +147,47 @@ it unrecorded:
 
 In both, an unconditional "nothing to do" exit would skip the boundary permanently, and no later
 re-run could repair it — a re-run finds no `todo` rows to process either. So before that exit: read
-`.qfai/evidence/implement-<spec-id>.md` for spec-level `Checkpoint verification command` /
+the spec's evidence file for spec-level `Checkpoint verification command` /
 `Checkpoint verification result` entries covering the current ledger state. Run the **per spec**
 command set above and record them when they are absent, or when they predate the last ledger
 change. Only then report "nothing to do".
 
+**Which file, for a boundary that has no `Layer`.** The per-item rule below picks the file from the
+row's `Layer`, and this result belongs to no row. The spec-level boundary is written to
+`.qfai/evidence/implement-<spec-id>.md` whenever that file exists, and to
+`.qfai/evidence/atdd-<spec-id>.md` when it does not — the terminal-ledger case of a spec whose every
+row is `E2E` / `API`, where the implement file was never created. Read and write are the same rule,
+so a re-run finds what the previous run wrote instead of judging the boundary unrecorded, and the
+one-file-per-spec contract holds: a spec never has this boundary in both files.
+
 ## Evidence
 
-Record the result in `.qfai/evidence/implement-<spec-id>.md` using the two per-item evidence fields
-`Checkpoint verification command` and `Checkpoint verification result`. As with RED/GREEN evidence,
+Record a **per-item** result in the evidence file the row's `Layer` owns (the spec-level boundary
+above has no row, and its own rule is stated there) —
+`.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API`
+row — using the per-item evidence fields `Checkpoint verification command`,
+`Checkpoint verification result` and `Checkpoint verification seal`. The seal is the audit hash over
+the first two together with the `Revision` this run was made against, taken the moment the run ends
+and recomputed at gate item 12: these fields are appended after every reviewer has hashed, so they
+sit in no audit subject, and the revision that would otherwise cover them excludes
+`.qfai/evidence/**`. Without it a recorded FAIL could be edited to PASS on a `done` row and no hash
+anywhere would move.
+
+**The spec-level boundary records a seal of its own, and the spec completion conditions recompute
+it.** That boundary has no row, so gate item 12 never runs for it: the seal defined here was
+per-item only, and the full-suite result on a terminal ledger could still be edited from FAIL to
+PASS afterwards with no revision, no `Audited evidence hash` and no pack seal moving. Take it the
+same way — the audit hash over the spec-level `Checkpoint verification command` and
+`Checkpoint verification result` together with the `Revision` that run was made against — record it
+beside them as `Checkpoint verification seal`, and recompute it before spec-level completion is
+declared. A mismatch means the record was edited after the run, and completion is not declared.
+
+**Both seals — per item and per spec — are recorded when the run ends and recomputed at the gate**,
+and `evidence-revision.md` says once, for every seal in this contract, what that catches and what
+it does not: drift between those two moments, which is what happens; not an author rewriting the
+pair and the seal together, which nothing recorded in the repository can catch.
+
+These are per-item fields of the same contract gate item 10
+resolves, so writing them to the implement file for a row anchored at the ATDD one splits that row
+across two files and leaves the one the gate reads incomplete. As with RED/GREEN evidence,
 a status without its command is invalid, and evidence from a previous checkpoint MUST NOT be reused.

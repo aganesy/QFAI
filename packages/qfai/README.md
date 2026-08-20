@@ -121,13 +121,28 @@ npx qfai report
 
 ## ATDD annotation hard gate
 
-`qfai validate` enforces spec-to-test traceability with directory-based rules.
+`qfai validate` enforces spec-to-test traceability. `US` and `CON-API` obligations are routed by ID type;
+a `TC` obligation is routed by the `Level` its spec declares for it.
 
 - `tests/e2e/**`: annotate all covered user stories with concrete IDs such as `QFAI:SPEC-0001:US-0001`.
-- `tests/integration/**`: annotate all covered test cases with concrete IDs such as `QFAI:SPEC-0001:TC-0001`.
 - `tests/api/**`: annotate all covered API contracts with concrete IDs such as `QFAI:CON-API-0001`.
-- `tests/api/**` and `tests/e2e/**` must not use `TC` annotations.
+- Annotate a covered test case with a concrete ID such as `QFAI:SPEC-0001:TC-0001`, in the directory its declared `Level` names:
+
+  | `Level`                       | Annotated in           |
+  | ----------------------------- | ---------------------- |
+  | `L1`/`Unit`, `L2`/`Component` | no ATDD annotation     |
+  | `L3`/`Integration`            | `tests/integration/**` |
+  | `L4`/`API`                    | `tests/api/**`         |
+  | `L5`/`E2E`                    | `tests/e2e/**`         |
+  | none declared, or unreadable  | `tests/integration/**` |
+
+- Unit and Component test cases carry **no** ATDD annotation obligation. They are gated by the
+  `tdd/test-list.md` ledger instead, so do not copy them into `tests/integration/**` to satisfy this gate.
+- A `TC` annotation outside the directory its declared `Level` names is rejected. The rule is `Level`-relative,
+  not a blanket ban: a `TC` in `tests/api/**` is accepted only for a test case that declares `L4`/`API`, and in
+  `tests/e2e/**` only for `L5`/`E2E`.
 - `AC` annotations are not required in code; AC coverage is treated as indirect through full `TC` coverage.
+- These directories follow `paths.testsDir` from `qfai.config.yaml`; `tests/` above is the default.
 
 ## Operating model (skills-driven workflow)
 

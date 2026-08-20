@@ -1,16 +1,22 @@
 import path from "node:path";
+import { constants } from "node:fs";
 import type { Dirent, Stats } from "node:fs";
 import {
   access,
+  chmod,
   lstat,
   mkdir,
+  link,
+  open,
   readdir,
   readFile,
   readlink,
+  rename,
   rm,
   symlink,
   writeFile,
 } from "node:fs/promises";
+import type { FileHandle } from "node:fs/promises";
 import { exec as execCb } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -24,6 +30,8 @@ import {
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_LEGACY_LINES,
+  RETIRED_LINE_SUCCESSORS,
+  negationsOutrankLaterIgnores,
 } from "../../core/gitignore.js";
 import {
   ASSISTANT_LAYERS,
@@ -47,6 +55,36 @@ import {
 } from "../../shared/provenance.js";
 
 const execAsync = promisify(execCb);
+
+/**
+ * Standard assets `--force` regenerates: the trees qfai owns end to end and
+ * whose direct editing is already discouraged.
+ *
+ * `assistant/skills` alone was not enough. Every other `.qfai/**` path is
+ * copied create-only, so a correction to an agent definition reached new
+ * projects and nobody else — an installed repository kept the old reviewer
+ * instructions with no command that would update them, and no signal that it
+ * had not. `agents/` is generated in exactly the sense `skills/` is:
+ * `qfai doctor`'s `skills.integrity` and the shipped README both say a project
+ * edits them at its own risk.
+ *
+ * **`assistant/manifest/` is excluded in full, including `agent-catalog.yml`.**
+ * `qfai-configure` is the shipped, user-facing entrypoint for editing those
+ * declarative manifests — its own `project_memory` names the agent-catalog /
+ * agent-routing / review-profiles SSOTs together — so a project that adjusted
+ * its agent taxonomy through the supported path would have had that adjustment
+ * replaced by the template on the next `--force`. Nothing migrates it back:
+ * `--upgrade-assistant-tree` deliberately does not walk `manifest/`, because
+ * that layer's path is the same before and after the recut.
+ *
+ * The cost is that `agent-catalog.yml#developer_instructions` can drift from
+ * `assistant/agents/*.md` in an installed project. That is the lesser failure:
+ * drift is visible and repairable, a silently overwritten taxonomy is neither.
+ *
+ * `specs/`, `contracts/`, `steering/` and everything else stay create-only for
+ * the same reason: they hold project content.
+ */
+const STANDARD_ASSET_PATHS: readonly string[] = ["assistant/skills", "assistant/agents"];
 
 export type InitOptions = {
   dir: string;
@@ -75,7 +113,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/** と symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts 等は上書きしません）。",
+      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。",
     );
   }
 
@@ -109,7 +147,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     .map((name) => path.join(".github", "workflows", name));
 
   // root/ と .qfai/ は create-only（既存は skip）
-  // assistant/skills のみ --force で上書きする
+  // STANDARD_ASSET_PATHS のみ --force で上書きする
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
     force: false,
     dryRun: options.dryRun,
@@ -121,9 +159,9 @@ export async function runInit(options: InitOptions): Promise<void> {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
-    exclude: ["assistant/skills"],
+    exclude: [...STANDARD_ASSET_PATHS],
   });
-  const skillsResult = await copyTemplatePaths(qfaiAssets, destQfai, ["assistant/skills"], {
+  const skillsResult = await copyTemplatePaths(qfaiAssets, destQfai, [...STANDARD_ASSET_PATHS], {
     force: options.force,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
@@ -142,6 +180,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
   });
   const gitignoreResult = await ensureRootGitignoreEntries(destRoot, options.dryRun);
+  const legacyEvidenceIgnoreResult = await ensureLegacyEvidenceIgnoreNegations(
+    destRoot,
+    options.dryRun,
+  );
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
@@ -189,6 +231,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...skillsResult.copied,
       ...wrappersResult.copied,
       ...gitignoreResult.copied,
+      ...legacyEvidenceIgnoreResult.copied,
       ...assistantTreeResult.copied,
       ...projectSteeringResult.copied,
       ...upgradeResult.copied,
@@ -199,6 +242,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...skillsResult.skipped,
       ...wrappersResult.skipped,
       ...gitignoreResult.skipped,
+      ...legacyEvidenceIgnoreResult.skipped,
       ...assistantTreeResult.skipped,
       ...projectSteeringResult.skipped,
       ...upgradeResult.skipped,
@@ -672,9 +716,21 @@ async function emitLegacyAssistantSteeringSunset(
 // Root .gitignore — QFAI managed block
 // ---------------------------------------------------------------------------
 
-async function ensureRootGitignoreEntries(
+/**
+ * Rewrite the managed `.gitignore` block, adding any governance negation it is
+ * missing.
+ *
+ * Exported because the legacy-review-pack migration needs it: it writes a
+ * governance record under `.qfai/review/`, and an existing repository still
+ * carries the older block whose `.qfai/review/*` would ignore it.
+ */
+export async function ensureRootGitignoreEntries(
   destRoot: string,
   dryRun: boolean,
+  // Where the two progress lines go. `qfai init` writes them to stdout; a
+  // caller emitting JSON there collects them instead, because a stray line
+  // before the document makes it unparseable.
+  report: (line: string) => void = info,
 ): Promise<{ copied: string[]; skipped: string[] }> {
   const gitignorePath = path.join(destRoot, ".gitignore");
 
@@ -696,17 +752,26 @@ async function ensureRootGitignoreEntries(
   // reach fresh inits.
   //
   // Presence alone is not enough — git applies the LAST matching pattern, so a
-  // negation hand-placed above `.qfai/evidence/*` is inert and the decision
-  // records stay ignored. `governanceNegationsEffective` re-checks the order.
+  // negation with any matching ignore line below it is inert and the decision
+  // records stay ignored.
+  //
+  // The order check reads the **whole file**, not the managed block. A project
+  // that appended its own `.qfai/evidence/*.md` after the block wins under
+  // git's last-match rule, and a block-scoped check called the negation
+  // effective while `git check-ignore -v` named the project's line. The repair
+  // path was already right — `removeManagedBlock` strips the block and the
+  // rebuilt one is appended last, so it lands below the project's rule — but
+  // the early return fired first and it never ran.
   //
   // Required entries are matched only against the managed block: a project that
   // deliberately removed, say, `.qfai/evidence/*` to track its own audit trail
   // must not have that choice silently undone by the next `qfai init`.
   const managedBlock = extractManagedBlock(existing);
+  const existingLines = existing.split("\n").map((line) => line.trimEnd());
   if (
     existing.includes(QFAI_GITIGNORE_MARKER) &&
     QFAI_GITIGNORE_GOVERNANCE_NEGATIONS.every((entry) => managedBlock.includes(entry)) &&
-    governanceNegationsEffective(managedBlock) &&
+    negationsOutrankLaterIgnores(existingLines, QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) &&
     QFAI_GITIGNORE_LEGACY_LINES.every((entry) => !existing.includes(entry))
   ) {
     return { copied: [], skipped: [gitignorePath] };
@@ -718,65 +783,185 @@ async function ensureRootGitignoreEntries(
     : existing;
 
   if (dryRun) {
-    info(`  would update: .gitignore (append QFAI entries)`);
+    report(`  would update: .gitignore (append QFAI entries)`);
     return { copied: [gitignorePath], skipped: [] };
   }
 
   const separator = stripped.length > 0 && !stripped.endsWith("\n") ? "\n\n" : "\n";
-  const content =
-    stripped.length > 0 ? stripped + separator + QFAI_GITIGNORE_BLOCK : QFAI_GITIGNORE_BLOCK;
+  const block = rebuildManagedBlock(managedBlock);
+  const content = stripped.length > 0 ? stripped + separator + block : block;
   await writeFile(gitignorePath, content, "utf-8");
-  info("  updated: .gitignore (appended QFAI entries)");
+  report("  updated: .gitignore (appended QFAI entries)");
   return { copied: [gitignorePath], skipped: [] };
 }
 
 /**
- * The contiguous QFAI managed block, or `""` when the marker is absent.
+ * The managed block to write, preserving whatever ignore lines the project's
+ * existing block already had.
+ *
+ * Writing `QFAI_GITIGNORE_BLOCK` wholesale was a silent regression for the one
+ * case the freshness check exists to protect. A project that deliberately
+ * removed, say, `.qfai/evidence/*` from the block to track its own audit trail
+ * fails the `every(...)` check the moment a NEW governance negation ships —
+ * the block is then stripped and the canonical list written back, resurrecting
+ * the ignore line the user deleted and re-hiding every evidence file from that
+ * release on.
+ *
+ * So an existing block keeps its own ignore lines and only gains the governance
+ * negations it is missing (appended last, because git applies the last matching
+ * pattern). A project with no managed block still gets the full canonical one.
+ */
+function rebuildManagedBlock(existingBlock: string): string {
+  if (existingBlock.length === 0) {
+    return QFAI_GITIGNORE_BLOCK;
+  }
+  const legacy = new Set<string>(QFAI_GITIGNORE_LEGACY_LINES);
+  const negations = new Set<string>(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS);
+  const lines = existingBlock.split("\n").map((line) => line.trimEnd());
+  const present = new Set(lines);
+
+  // The retired lines are dropped and the governance negations appended, both
+  // unconditionally. What is *kept* is the project's own ignore set.
+  //
+  // An earlier attempt migrated a legacy-shaped block wholesale, on the theory
+  // that a missing ignore there is age rather than a choice. That is not safe:
+  // a project can carry a retired line *and* have deleted `.qfai/evidence/*` to
+  // track its audit trail, and the wholesale rewrite resurrects the deletion —
+  // the very regression this function exists to stop. Age and intent cannot be
+  // told apart from the file, so the conservative reading wins in both cases:
+  // never re-add an ignore line the block does not have.
+  //
+  // The cost is that a project on an old block does not pick up a newly shipped
+  // *recommended* ignore. `QFAI-REVIEW-008` reports that at `info`, and the
+  // consequence is generated files showing in `git status` — noisy. Silently
+  // re-hiding an audit trail the project chose to track is not noisy, which is
+  // why it is the side to err on.
+  const kept = lines.filter(
+    (line) => line !== QFAI_GITIGNORE_MARKER && !negations.has(line) && !legacy.has(line),
+  );
+  // The one exception: a retired line that was *renamed* rather than dropped.
+  // Stripping `.qfai/discussion/discussion-*/` without adding its successor
+  // would leave the project with no discussion ignore at all — a removal it
+  // never asked for, which is the same harm from the other direction.
+  const renamed = Object.entries(RETIRED_LINE_SUCCESSORS)
+    .filter(([retired, successor]) => present.has(retired) && !present.has(successor))
+    .map(([, successor]) => successor);
+
+  return [QFAI_GITIGNORE_MARKER, ...kept, ...renamed, ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS]
+    .filter((line, index, all) => line.length > 0 || all[index - 1]?.length !== 0)
+    .join("\n");
+}
+
+/**
+ * Leaf negations for the governance records, as a legacy
+ * `.qfai/evidence/.gitignore` needs them.
+ *
+ * Earlier `qfai init` versions wrote a per-directory ignore file whose first
+ * line is `*`. Git applies the deepest matching file, so that `*` wins over
+ * every root-level negation: `change-request-*.md`, `decision-*.md`,
+ * `decisions/**` and the Coverage Depth Matrix all stay ignored in a project
+ * that still has it, however correct the managed block is. The file is not
+ * removed — a project may want the rest of its behaviour — but the governance
+ * records are re-included inside it.
+ */
+const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
+  "!change-request-*.md",
+  "!decision-*.md",
+  "!coverage-depth-*.md",
+  "!decisions/",
+  "!decisions/**",
+];
+
+async function ensureLegacyEvidenceIgnoreNegations(
+  destRoot: string,
+  dryRun: boolean,
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const target = path.join(destRoot, ".qfai", "evidence", ".gitignore");
+  let existing: string;
+  try {
+    existing = await readFile(target, "utf-8");
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      // No legacy file: the root managed block is already authoritative.
+      return { copied: [], skipped: [] };
+    }
+    throw err;
+  }
+
+  const lines = existing.split("\n").map((line) => line.trimEnd());
+  // Presence is not enough: git applies the **last** matching pattern, so a
+  // negation sitting above a broad re-ignore (`*`, or a later
+  // `coverage-depth-*` rule) is inert while a `lines.includes` check reads it
+  // as satisfied. `git check-ignore -v` still names the broad rule, and the
+  // governance record this migration promises to track stays untracked.
+  //
+  // A negation counts only when no ignore line below it can match the same
+  // path. Anything else is re-appended, which puts it last and therefore wins.
+  //
+  // Real glob semantics, not a prefix comparison. A prefix test cannot see
+  // that a later `*.md` or a double-star `/*.md` matches
+  // `coverage-depth-*.md`, `decision-*.md` and `change-request-*.md`, so it
+  // called those negations effective and left the records ignored.
+  const missing = LEGACY_EVIDENCE_IGNORE_NEGATIONS.filter(
+    (entry) => !negationsOutrankLaterIgnores(lines, [entry]),
+  );
+  if (missing.length === 0) {
+    return { copied: [], skipped: [target] };
+  }
+  if (dryRun) {
+    info(`  would update: ${target} (re-include governance records)`);
+    return { copied: [target], skipped: [] };
+  }
+
+  const separator = existing.endsWith("\n") ? "" : "\n";
+  await writeFile(target, `${existing}${separator}${missing.join("\n")}\n`, "utf-8");
+  info(`  updated: ${target} (re-include governance records)`);
+  return { copied: [target], skipped: [] };
+}
+
+/**
+ * The QFAI managed block, or `""` when the marker is absent.
  *
  * Freshness is judged against the block this writer owns, not the whole file:
  * a project that deliberately deleted an ignore line to track its own audit
  * trail keeps that choice, and a line the user re-added elsewhere does not
  * make a stale managed block look current.
+ *
+ * **Every block, not the first.** A past duplicate-append bug left some
+ * projects with two managed blocks, and `removeManagedBlock` strips all of
+ * them. Reading only the first meant an ignore line that lived exclusively in
+ * a later block — `.qfai/state.json`, say — was deleted with that block and
+ * never rebuilt, exposing local run state to the next commit. The blocks are
+ * merged in document order: the first block's ordering is preserved (which is
+ * what `negationsOutrankLaterIgnores` and the last-pattern-wins semantics
+ * depend on) and any line only a later block carries is appended.
  */
 function extractManagedBlock(content: string): string {
   const lines = content.split("\n");
-  const startIdx = lines.findIndex((line) => line.includes(QFAI_GITIGNORE_MARKER));
-  if (startIdx === -1) {
-    return "";
-  }
   const knownLines = new Set([...QFAI_GITIGNORE_BLOCK.split("\n"), ...QFAI_GITIGNORE_LEGACY_LINES]);
-  let endIdx = startIdx + 1;
-  while (endIdx < lines.length && knownLines.has(lines[endIdx] ?? "")) {
-    endIdx += 1;
-  }
-  return lines.slice(startIdx, endIdx).join("\n");
-}
 
-/**
- * True when every governance negation appears AFTER the ignore line it undoes.
- *
- * Git applies the last matching pattern, so `!.qfai/evidence/decisions/` placed
- * above `.qfai/evidence/*` re-ignores the directory and the decision records
- * stay untracked while the file looks correct to a presence-only check.
- */
-function governanceNegationsEffective(block: string): boolean {
-  const lines = block.split("\n");
-  for (const negation of QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) {
-    const negationIdx = lines.indexOf(negation);
-    if (negationIdx === -1) {
-      return false;
-    }
-    // The ignore line this negation undoes, e.g. `.qfai/evidence/*`.
-    const target = negation.replace(/^!/, "").replace(/\/(\*\*)?$/, "");
-    const ignoreIdx = lines.findIndex(
-      (line) =>
-        !line.startsWith("!") && line.endsWith("/*") && target.startsWith(line.slice(0, -2)),
+  const merged: string[] = [];
+  const seen = new Set<string>();
+  let cursor = 0;
+  while (cursor < lines.length) {
+    const startIdx = lines.findIndex(
+      (line, index) => index >= cursor && line.includes(QFAI_GITIGNORE_MARKER),
     );
-    if (ignoreIdx !== -1 && ignoreIdx > negationIdx) {
-      return false;
+    if (startIdx === -1) break;
+    let endIdx = startIdx + 1;
+    while (endIdx < lines.length && knownLines.has(lines[endIdx] ?? "")) {
+      endIdx += 1;
     }
+    for (const line of lines.slice(startIdx, endIdx)) {
+      // The marker itself is deduplicated with everything else, so a merged
+      // block carries exactly one.
+      if (seen.has(line)) continue;
+      seen.add(line);
+      merged.push(line);
+    }
+    cursor = endIdx;
   }
-  return true;
+  return merged.join("\n");
 }
 
 /** Remove all QFAI managed blocks (known block lines only; stops at unknown lines). */
@@ -946,14 +1131,14 @@ async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<
 // Symlink-based integration sync
 // ---------------------------------------------------------------------------
 
-const SKILL_INTEGRATION_DIRS = [
+export const SKILL_INTEGRATION_DIRS = [
   ".claude/skills",
   ".agents/skills",
   ".codex/skills",
   ".github/skills",
 ];
 
-const AGENT_INTEGRATION_CONFIGS: Array<{ dir: string; suffix: string }> = [
+export const AGENT_INTEGRATION_CONFIGS: Array<{ dir: string; suffix: string }> = [
   { dir: ".claude/agents", suffix: ".md" },
   { dir: ".github/agents", suffix: ".agent.md" },
 ];
@@ -1140,8 +1325,37 @@ async function ensureSymlink(
       if (!options.dryRun) {
         await rm(linkPath, { recursive: true, force: true });
       }
+    } else if (await isFlattenedLink(linkPath, target, linkStat)) {
+      // A regular file whose entire content is the link target: the signature
+      // of a checkout that flattened the symlink because `core.symlinks` was
+      // false — the Windows default, and not carried by a clone
+      // (`configureGitSymlinks` writes it repo-locally, and `.git/config` is
+      // not cloned). Returning "skipped" made `qfai init` — the one command
+      // that could repair it — report the broken entry in a reassuring list of
+      // preserved paths and change nothing, so recovery required knowing to
+      // pass `--force`, which nothing told the operator.
+      //
+      // Auto-repair is scoped to exactly this signature. A file whose content
+      // is anything else is a file somebody wrote, and `--force` remains the
+      // documented way to overwrite one.
+      if (!options.dryRun) {
+        // Recreate under a rollback, because the removal and the recreate can
+        // fail independently: `symlink` raises EPERM on Windows without
+        // Developer Mode, and a repair that had already deleted the file left
+        // the wrapper *missing* — worse than the flattened state it started
+        // from, and invisible afterwards because `QFAI-LINK-001` treats an
+        // absent wrapper as one that was never created.
+        return await recreateFlattenedLink(linkPath, target, type);
+      }
+      // The removal and the `symlink` are both suppressed under `--dry-run`;
+      // saying "repaired" there reported a repair that did not happen, to the
+      // one invocation whose whole purpose is to preview.
+      info(`  would repair: ${linkPath} is a flattened symlink`);
+      return "created";
     } else {
-      // Regular file/dir exists
+      // Regular file or directory with content of its own — a customised agent
+      // wrapper, or a generated link replaced by a real directory. Preserve it
+      // unless `--force`.
       if (!options.force) {
         return "skipped";
       }
@@ -1171,6 +1385,480 @@ async function ensureSymlink(
   }
 
   return "created";
+}
+
+/**
+ * Replaces a flattened link with the real symlink, restoring the file if the
+ * symlink cannot be created.
+ *
+ * Without the rollback the failure mode is strictly worse than the state being
+ * repaired: EPERM on Windows without Developer Mode leaves the wrapper absent,
+ * and an absent wrapper is the one state `QFAI-LINK-001` deliberately treats as
+ * benign — the project that predates a newly shipped skill looks the same. The
+ * flattened file at least announced itself.
+ */
+/**
+ * A sidecar path this call owns, created empty and exclusively.
+ *
+ * The name has to be unique against every other repair, including an earlier
+ * one in this same process that failed and left its file behind. `wx` is what
+ * makes the claim and the test one operation; the counter only has to produce
+ * candidates, not guarantee anything by itself.
+ */
+/** Names {@link claimSidecar} produces, so prune leaves them alone. */
+const SIDECAR_RE = /\.qfai-repair-\d+(?:-\d+)?$/;
+
+/**
+ * How much of a sidecar the copy fallback will hold in memory.
+ *
+ * The same ceiling the flattened-link probe vets against, so an entry that
+ * probe refused is refused here too rather than read whole.
+ */
+const SIDECAR_COPY_MAX_BYTES = 4096;
+
+async function claimSidecar(linkPath: string): Promise<string> {
+  const base = `${linkPath}.qfai-repair-${String(process.pid)}`;
+  for (let attempt = 0; attempt < 1000; attempt += 1) {
+    const candidate = attempt === 0 ? base : `${base}-${String(attempt)}`;
+    try {
+      await writeFile(candidate, "", { flag: "wx" });
+      return candidate;
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException | null)?.code !== "EEXIST") throw err;
+    }
+  }
+  throw new Error(
+    `修復用の退避先を確保できません: ${base} と連番の候補がすべて既存です。前回の修復が残した .qfai-repair-* を確認して退避してください。`,
+  );
+}
+
+/**
+ * Put the sidecar back at `linkPath`, refusing a path somebody else has taken.
+ *
+ * `link` is the primitive that refuses: `EEXIST` rather than replacing, and it
+ * restores the same inode. Where the filesystem has no hard links an exclusive
+ * `wx` write makes the same promise, reading the sidecar back as **bytes**:
+ * the file may not be UTF-8, and a round trip through a string would replace
+ * what it cannot decode. The sidecar survives until one of them has succeeded,
+ * so the content is never only in flight.
+ */
+async function restoreSidecar(sidecar: string, linkPath: string): Promise<void> {
+  try {
+    await link(sidecar, linkPath);
+  } catch (linkErr: unknown) {
+    const code = (linkErr as NodeJS.ErrnoException | null)?.code;
+    if (code === "EEXIST") throw linkErr;
+    // `EPERM` / `ENOSYS` / `EXDEV`: no hard links here, not an occupied path.
+    // Bytes, not a string. Decoding as UTF-8 and writing back replaces every
+    // invalid sequence with U+FFFD, and the sidecar is removed straight after —
+    // so a repair that exists to protect a concurrent write would have
+    // corrupted the file it was protecting, irreversibly.
+    //
+    // And bounded, on the same ceiling the caller vets against. This path also
+    // runs when the bounded probe **refused** the entry — an oversized file
+    // another process left at the pathname — and reading it whole into memory
+    // to copy it back was exactly the exhaustion the probe exists to avoid.
+    // Nothing is lost by refusing: the content is in the sidecar, and the
+    // message says where.
+    // Pinned to one handle, like every other read of this file. A ceiling
+    // checked by `stat` and a read taken by pathname are two operations on two
+    // possibly different inodes, so a sidecar replaced or grown between them
+    // was read unbounded anyway — the very exhaustion the ceiling is for, with
+    // the wrapper's pathname still empty.
+    const original = await readPinnedRegularFileBytes(sidecar, SIDECAR_COPY_MAX_BYTES);
+    if (original === null) {
+      throw new Error(
+        [
+          `退避したファイルを復元できません（種別が変わったか、上限 ${String(SIDECAR_COPY_MAX_BYTES)} bytes を超えています）: ${linkPath}`,
+          `このファイルシステムでは hard link を作成できず、内容のコピーはその上限までに制限しています。`,
+          `元のファイルは次の場所にあります: ${sidecar}`,
+        ].join("\n"),
+        { cause: linkErr },
+      );
+    }
+    await writeFile(linkPath, original.content, { flag: "wx" });
+    // Bytes are not the whole file. `writeFile` makes a **new** inode with the
+    // umask and the parent's defaults, so a `0600` file another process left
+    // here came back `0644` and readable by everyone, or lost its executable
+    // bit — and the sidecar that still carried the metadata was removed
+    // straight after. The hard-link path above keeps the mode by construction;
+    // this one has to put it back.
+    //
+    // A restore that could not carry the mode is **not** a restore: the sidecar
+    // stays and the failure is reported, because a file whose permissions are
+    // now wrong is worse than one the operator is told where to find.
+    try {
+      await chmod(linkPath, original.mode);
+    } catch (modeErr: unknown) {
+      // Take the destination back out. This fallback created it exclusively, so
+      // it is ours to remove — and leaving it is the harm the mode was being
+      // restored to prevent: a `0600` file put back as `0644` is readable by
+      // everyone, and reporting that while leaving it there fixes nothing. The
+      // sidecar keeps the content and the permissions.
+      const removeErr = await rm(linkPath, { force: true }).then(
+        () => null,
+        (err: unknown) => err,
+      );
+      throw new Error(
+        [
+          `退避したファイルのパーミッションを復元できなかったため、復元を取り消しました: ${linkPath}`,
+          `原因: ${describeError(modeErr)}`,
+          ...(removeErr === null
+            ? []
+            : [
+                `作成済みの復元先を削除できませんでした（権限が元と異なります）: ${describeError(removeErr)}`,
+              ]),
+          `元のファイル（パーミッションを含む）は次の場所にあります: ${sidecar}`,
+        ].join("\n"),
+        { cause: modeErr },
+      );
+    }
+  }
+  await rm(sidecar, { recursive: true, force: true });
+}
+
+async function recreateFlattenedLink(
+  linkPath: string,
+  target: string,
+  type: "dir" | "file",
+): Promise<"created" | "skipped"> {
+  // Move aside first, then verify what was moved. Reading and then deleting by
+  // pathname are two operations, and between them another process can replace
+  // the file — so the delete destroyed content the check never saw, without
+  // `--force`. `rename` is atomic against the pathname, and afterwards this
+  // process holds the very bytes it is about to judge: if they are not the
+  // flattened signature, the file goes straight back and nothing was ours to
+  // remove. Nothing is deleted until the symlink is in place.
+  // Claimed exclusively, then renamed onto the claim. A PID alone is not a
+  // unique name: a second `runInit` in the same process — or a later one after
+  // PID reuse — would rename straight over a sidecar an earlier failed repair
+  // had left behind, and the success path removes the sidecar, so the message
+  // that said the content was preserved would be describing a file that is
+  // gone. `wx` refuses a name that is taken, so the loop finds one that is not.
+  const sidecar = await claimSidecar(linkPath);
+  try {
+    await rename(linkPath, sidecar);
+  } catch (renameErr: unknown) {
+    // Nothing has moved, so the claim is a stray empty file — and it is one
+    // prune deliberately leaves alone, while the next attempt sidesteps it with
+    // a numbered name. Repeated failures would pile them up to the 1000-name
+    // ceiling and refuse every later repair.
+    await rm(sidecar, { force: true }).catch(() => undefined);
+    throw renameErr;
+  }
+  // What was actually moved, not what the caller saw a moment ago. Between
+  // `isFlattenedLink` and the rename another process can leave a huge file or a
+  // FIFO at the path, and the caller's 4096-byte check protected an inode that
+  // is no longer there.
+  //
+  // One `open`, `fstat` on that handle, a bounded read from it. Checking the
+  // entry with `lstat` and then reading it by pathname were two operations on
+  // two possibly different inodes: another process replacing the sidecar in
+  // between, or growing it through an fd it held from before the rename, left
+  // the read unbounded — memory exhausted, or blocked for ever on a FIFO —
+  // with the original already moved aside and the pathname empty.
+  //
+  // Inside the rollback, because by now the wrapper *has* moved: a permission
+  // change or a transient `EIO` here left the pathname empty and the original
+  // in the sidecar, with nothing said about either — worse than the flattened
+  // state the repair started from.
+  //
+  // Both early returns put the file back the same way the rollback does.
+  // `rename` overwrites, so a path another process re-created while this one
+  // was reading would have been destroyed by the very restore that exists to
+  // leave it alone — the atomic claim belongs on every restore, not only the
+  // one after a failed `symlink`.
+  const original = await readPinnedRegularFile(sidecar, 4096).catch(async (readErr: unknown) => {
+    // A failed restore here is not a detail to swallow. The wrapper is gone
+    // from its pathname and lives in the sidecar, and re-throwing the read
+    // error alone told the operator neither of those — so the original looked
+    // simply lost. Same shape as the rollback below: what happened, and where
+    // the content is.
+    const restoreErr = await restoreSidecar(sidecar, linkPath).then(
+      () => null,
+      (err: unknown) => err,
+    );
+    if (restoreErr === null) throw readErr;
+    throw new Error(
+      [
+        `平坦化された symlink の修復に失敗しました: ${linkPath}`,
+        `退避したファイルの読み取りに失敗しました: ${describeError(readErr)}`,
+        `復元にも失敗しました: ${describeError(restoreErr)}`,
+        `元のファイルは次の場所にあります: ${sidecar}`,
+      ].join("\n"),
+      { cause: readErr },
+    );
+  });
+  // `null` is the kind or the ceiling failing on the inode actually opened —
+  // the same answer the caller's own check gave, taken again on what moved.
+  if (original === null || toComparableTarget(original) !== toComparableTarget(target)) {
+    await restoreSidecar(sidecar, linkPath);
+    return "skipped";
+  }
+  try {
+    await mkdir(path.dirname(linkPath), { recursive: true });
+    await symlink(target, linkPath, type);
+  } catch (err: unknown) {
+    // The restore can fail on its own — a disk error, a permission change, a
+    // transient I/O fault — and swallowing that reported a restore that did not
+    // happen, on the one path where the operator has to know the file is gone.
+    // Its outcome decides what the message says, and the content goes into the
+    // message when it could not be written back.
+    // Put it back by claiming the path atomically, not by checking that it is
+    // free and then taking it. `rename` overwrites, and between a check and a
+    // rename another process can create its own file here — an `EEXIST` from
+    // `symlink` says one already did. A restore that destroys somebody else's
+    // file is worse than no restore.
+    //
+    // `link` is the primitive that refuses: it fails with `EEXIST` rather than
+    // replacing, and it puts back the same inode the sidecar holds. Where the
+    // filesystem has no hard links, an exclusive `wx` write is the same promise
+    // by different means. Either way the sidecar stays until one of them has
+    // succeeded, so the content is never only in flight.
+    let restoreError: unknown;
+    try {
+      await restoreSidecar(sidecar, linkPath);
+    } catch (restoreErr: unknown) {
+      restoreError = restoreErr;
+    }
+    const occupied = (restoreError as NodeJS.ErrnoException | null)?.code === "EEXIST";
+    // Two different failures, and the operator acts on them differently: the
+    // path is occupied by a file this process must not touch, or the rename
+    // failed for its own reason. Either way the content is on disk, in the
+    // sidecar — a path is more use than a copy pasted into an error message.
+    const restored =
+      restoreError === undefined
+        ? "元のファイルは復元しました。"
+        : [
+            occupied
+              ? `${linkPath} には別プロセスが作成したファイルが存在するため、復元しませんでした（上書きを避けています）。`
+              : `元のファイルの復元にも失敗しました: ${describeError(restoreError)}`,
+            `元の内容は次の場所に退避してあります: ${sidecar}`,
+            "内容:",
+            original,
+          ].join("\n");
+    if (isEpermOnWindows(err)) {
+      throw new Error(
+        [
+          `平坦化された symlink の修復に失敗しました (EPERM): ${linkPath}`,
+          restored,
+          "Windows では Developer Mode を有効にする必要があります:",
+          "  設定 > システム > 開発者向け > 開発者モード を ON",
+          "詳細: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
+        ].join("\n"),
+      );
+    }
+    if (restoreError !== undefined) {
+      throw new Error(
+        [`平坦化された symlink の修復に失敗しました: ${linkPath}`, restored].join("\n"),
+        { cause: err },
+      );
+    }
+    throw err;
+  }
+  // Outside the try: the symlink is in place, so this is cleanup, and a failure
+  // here — an ACL, an antivirus hold, a transient I/O error — is not the repair
+  // failing. Inside it, the rollback ran against a path the new symlink already
+  // occupies, so the restore raised `EEXIST` and `init` reported a repair that
+  // had in fact succeeded, blaming Developer Mode on Windows.
+  // Re-read before deleting, on the same terms. The handle that vetted the
+  // content was closed when the read returned, and a process holding this inode
+  // from before the rename can append in the window that follows — so a delete
+  // on the strength of the earlier read discarded bytes nothing had seen, and
+  // the symlink now standing in its place means they cannot be recovered.
+  // Anything but the same target still there is left where it is, and named.
+  const stillOurs = await readPinnedRegularFile(sidecar, 4096).catch(() => null);
+  if (stillOurs === null || toComparableTarget(stillOurs) !== toComparableTarget(target)) {
+    info(
+      `  note: 修復は成功しましたが、退避ファイルの内容が検査時から変わっていたため削除していません: ${sidecar}`,
+    );
+    info(`  repaired: ${linkPath} was a flattened symlink (recreating)`);
+    return "created";
+  }
+  try {
+    await rm(sidecar, { recursive: true, force: true });
+  } catch (cleanupErr: unknown) {
+    info(
+      `  note: 修復は成功しましたが退避ファイルを削除できませんでした: ${sidecar} (${describeError(cleanupErr)})`,
+    );
+  }
+  info(`  repaired: ${linkPath} was a flattened symlink (recreating)`);
+  return "created";
+}
+
+/**
+ * True when `linkPath` is a regular file whose whole content is `target`.
+ *
+ * That is what `git checkout` writes in place of a symlink when
+ * `core.symlinks` is false: the link target, verbatim, with no trailing
+ * newline. Bounded by a size check first so a large user file is never read,
+ * and compared through `path.normalize` so a separator difference does not
+ * make a flattened link look like user content.
+ *
+ * **Byte-exact.** `trim()` widened the match past the signature — a wrapper
+ * somebody manages by hand, written by an editor or `echo` that appends a
+ * newline, read as flattened and was deleted without `--force` — and
+ * `path.normalize` widened it the same way for a different input:
+ * `../../.qfai//assistant/x` and `../../.qfai/assistant/./x` are not the bytes
+ * git writes, but normalize to them. The only difference this tolerates is the
+ * path separator, and **only on Windows**, because git writes `/` and the
+ * target is built with `path.relative`, which yields `\\` there. Everything
+ * else takes the preserve path, which is the safe direction to be wrong in.
+ */
+/**
+ * Separator-insensitive on Windows, byte-exact everywhere else — see
+ * {@link isFlattenedLink}.
+ *
+ * On POSIX a backslash is an ordinary character in a filename, and folding it
+ * made a hand-maintained `..\\..\\.qfai\\assistant\\skills\\...` — a regular
+ * file nobody asked init to own — compare equal to the
+ * `../../.qfai/assistant/...` git actually writes, so it was deleted without
+ * `--force`. The tolerance exists for one platform; it applies there only.
+ */
+function toComparableTarget(value: string): string {
+  return process.platform === "win32" ? value.split("\\").join("/") : value;
+}
+
+async function isFlattenedLink(linkPath: string, target: string, known?: Stats): Promise<boolean> {
+  // The caller has already `lstat`ed this path, and re-probing it opened a hole
+  // the rest of this function had been closed against: `safeLstat` turns a
+  // transient `EIO` or an `EACCES` into `undefined`, which reads as "somebody
+  // else's file", so init left a flattened wrapper in the reassuring `skipped`
+  // list. Pass the `Stats` it already holds.
+  const stats = known ?? (await safeLstat(linkPath));
+  if (stats === undefined || !stats.isFile()) {
+    return false;
+  }
+  // A read failure is not "somebody else's file". `lstat` already succeeded,
+  // so the file is there; an ACL or a transient I/O fault means the signature
+  // could not be checked, and answering `false` put the path in the reassuring
+  // `skipped` list while leaving a flattened wrapper in place — `QFAI-LINK-001`
+  // then keeps failing with nothing the operator can act on. Absence stays
+  // `false`: that is a race with something else removing it.
+  //
+  // The ceiling is applied to the entry that is **read**, not to the one
+  // `lstat` saw. Between them another process can leave a huge file or a FIFO
+  // at the path, and a bound checked on the old inode did not bind the new one
+  // — the read then exhausted memory or never returned. One `open`, `fstat` on
+  // that handle, a bounded read from it.
+  try {
+    const content = await readPinnedRegularFile(linkPath, 4096);
+    return content !== null && toComparableTarget(content) === toComparableTarget(target);
+  } catch (error: unknown) {
+    // Absence stays `false`: that is a race with something else removing it,
+    // not a statement about what the entry holds.
+    if ((error as NodeJS.ErrnoException | null)?.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+/**
+ * The bytes of a regular file no larger than `maxBytes`, read from the inode
+ * the size was measured on, or `null` when the entry is not one.
+ *
+ * **The ceiling binds the entry that is read**, not the one a previous
+ * `lstat` saw. Those are two pathname operations, and between them another
+ * process can replace the path with a huge file or a FIFO — a bound checked on
+ * the old inode does not bind the new one, and the read then exhausted memory
+ * or never returned. One `open`, `fstat` on that handle, a bounded read from
+ * it.
+ *
+ * A read fault is thrown rather than answered `null`: an ACL or a transient
+ * `EIO` says the content could not be checked, and reporting that as "not a
+ * bounded regular file" is a decision nobody made.
+ */
+async function readPinnedRegularFile(filePath: string, maxBytes: number): Promise<string | null> {
+  let handle: FileHandle | undefined;
+  try {
+    handle = await open(filePath, OPEN_READ_FLAGS);
+    const pinned = await handle.stat();
+    if (!pinned.isFile() || pinned.size > maxBytes) {
+      return null;
+    }
+    // Read to the end, not once: `read` may return fewer bytes than asked for,
+    // and the unfilled tail stayed NUL — a correct flattened wrapper then
+    // failed its own signature comparison and was left in place.
+    //
+    // And to `maxBytes + 1`, not to the size just measured. Another process
+    // holding this inode from before the rename can append after the `fstat`,
+    // and stopping at the old size read a **prefix** — which still matched the
+    // target, so the repair went ahead and the cleanup deleted the sidecar with
+    // the appended bytes in it. One byte past the ceiling is what distinguishes
+    // "this is the whole file" from "this is as much as I asked for".
+    const buffer = Buffer.alloc(maxBytes + 1);
+    let filled = 0;
+    while (filled < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
+      if (bytesRead === 0) break;
+      filled += bytesRead;
+    }
+    if (filled > maxBytes) return null;
+    return buffer.subarray(0, filled).toString("utf-8");
+  } catch (error: unknown) {
+    const code = (error as NodeJS.ErrnoException | null)?.code;
+    // `ENXIO` is what `O_NONBLOCK` returns for a FIFO with no writer, in place
+    // of blocking. Neither it nor a directory is a bounded regular file, and
+    // `open` is simply where that shows up instead of `fstat`.
+    if (code === "ENXIO" || code === "EISDIR") return null;
+    throw error;
+  } finally {
+    await handle?.close();
+  }
+}
+
+/**
+ * The same read, returning the bytes.
+ *
+ * The restore copy writes back what it read, and decoding as UTF-8 first
+ * replaces every invalid sequence with U+FFFD — irreversibly, since the sidecar
+ * is removed straight after.
+ */
+async function readPinnedRegularFileBytes(
+  filePath: string,
+  maxBytes: number,
+): Promise<{ content: Buffer; mode: number } | null> {
+  let handle: FileHandle | undefined;
+  try {
+    handle = await open(filePath, OPEN_READ_FLAGS);
+    const pinned = await handle.stat();
+    if (!pinned.isFile() || pinned.size > maxBytes) return null;
+    const buffer = Buffer.alloc(maxBytes + 1);
+    let filled = 0;
+    while (filled < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
+      if (bytesRead === 0) break;
+      filled += bytesRead;
+    }
+    if (filled > maxBytes) return null;
+    // The mode comes from this `fstat`, not from a separate `stat` on the
+    // pathname. Two operations could land on two inodes: content read from a
+    // replacement that somebody made `0600` for a reason, restored under the
+    // `0644` the old entry carried, and readable by everyone.
+    return { content: Buffer.from(buffer.subarray(0, filled)), mode: pinned.mode & 0o7777 };
+  } catch (error: unknown) {
+    const code = (error as NodeJS.ErrnoException | null)?.code;
+    if (code === "ENXIO" || code === "EISDIR") return null;
+    throw error;
+  } finally {
+    await handle?.close();
+  }
+}
+
+/**
+ * Read-only, non-blocking where the platform defines it.
+ *
+ * Opening a FIFO for reading blocks until a writer appears, and the point of a
+ * size check is not to be at the mercy of what is at the path. Windows has no
+ * `O_NONBLOCK`, and no FIFOs in this sense either.
+ */
+const OPEN_READ_FLAGS =
+  typeof constants.O_NONBLOCK === "number"
+    ? constants.O_RDONLY | constants.O_NONBLOCK
+    : constants.O_RDONLY;
+
+/** Message text for an unknown thrown value, without `[object Object]`. */
+function describeError(err: unknown): string {
+  return err instanceof Error ? err.message : JSON.stringify(err);
 }
 
 function isEpermOnWindows(err: unknown): boolean {
@@ -1275,6 +1963,14 @@ async function pruneStaleQfaiWrappers(
     const entries = await readdir(fullDir, { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.name.startsWith("qfai-")) {
+        continue;
+      }
+      // A repair sidecar is not a stale wrapper. It is named after the wrapper
+      // it holds — `qfai-atdd.qfai-repair-1234` — so it matches this prefix,
+      // and prune runs before the repair does: a `--force` re-run would delete
+      // the very file an earlier failed repair preserved, which is the one
+      // case the sidecar exists for.
+      if (SIDECAR_RE.test(entry.name)) {
         continue;
       }
       const entryPath = path.join(fullDir, entry.name);

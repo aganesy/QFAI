@@ -44,9 +44,15 @@ describe.each(TREES)("%s", (tree) => {
     expect(ledger).toContain("The `Evidence` cell is a **pointer**, not the payload.");
   });
 
-  it("names the single home for the payload", async () => {
+  it("names the home for the payload, per producing stage", async () => {
+    // It was "the single home" while `/qfai-implement` produced every pair.
+    // `/qfai-atdd` now produces the E2E/API ones and writes them to
+    // `atdd-<spec-id>.md`, which `qa-gatekeeper` reads on an ATDD review cycle —
+    // so the claim had to name both rather than a file the evidence is not in.
     const ledger = await read(tree, LEDGER);
-    expect(ledger).toContain("`.qfai/evidence/implement-<spec-id>.md` is the single home");
+    expect(ledger).toContain("`.qfai/evidence/implement-<spec-id>.md` is the home");
+    expect(ledger).toContain("The evidence file follows the stage that produced it.");
+    expect(ledger).not.toContain("is the single home for the per-item");
   });
 
   it("publishes the cell encoding the parser actually implements", async () => {

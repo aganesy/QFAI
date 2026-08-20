@@ -730,8 +730,12 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "tests/e2e/** must not include TC annotations for a TC whose declared Level is not E2E.",
   "QFAI-ATDD-123":
     "tests/integration/** must not include TC annotations for a TC whose declared Level is not Integration.",
+  "QFAI-ATDD-117":
+    "TCs declared Unit/Component are excluded from the ATDD annotation obligation; /qfai-implement's ledger gates them.",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
+  "QFAI-LINK-001":
+    "Every qfai-owned entry in .claude/.agents/.codex/.github skill and agent directories is a symlink that resolves.",
   "QFAI-DPACK-001":
     "A latest discussion-pack directory exists under `.qfai/discussion/discussion-<timestamp>/`.",
   "QFAI-DPACK-002":

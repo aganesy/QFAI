@@ -134,6 +134,24 @@ describe("validateAtddCodeTraceability", () => {
       expect(issues.some((entry) => entry.code === "QFAI-ATDD-122")).toBe(true);
     });
   });
+
+  it("attributes a finding to the spec directory as it is spelled on disk", async () => {
+    await withProject(async (root) => {
+      // `listSpecDirs` matches `spec-NNNN` case-insensitively and keeps the name
+      // it read, so this pack is discovered under `SPEC-0001`. A finding that
+      // rebuilt the path from the number alone would name `spec-0001`, which on
+      // a case-sensitive filesystem does not exist — the CLI report and the
+      // GitHub annotation would both point at nothing.
+      await seedSpec(root, "0001", ["US-0001"], ["TC-0001"], { dirName: "SPEC-0001" });
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      const missingUs = issues.find((entry) => entry.code === "QFAI-ATDD-111");
+      expect(missingUs?.file).toBe(path.join(root, ".qfai", "specs", "SPEC-0001"));
+    });
+  });
 });
 
 async function withProject(task: (root: string) => Promise<void>): Promise<void> {
@@ -145,13 +163,58 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
   }
 }
 
+describe("a TC that exists only in a fenced sample is not declared", () => {
+  it("raises no QFAI-ATDD-112 for an id inside a code fence", async () => {
+    // `collectTcLevels` masks fenced samples and HTML comments; the declared-id
+    // collector read the raw text, so a sample id stayed in the declared set
+    // with no `Level`, fell through to the integration default, and the gate
+    // raised a hard error against a TC that does not exist. Both have to read
+    // the same text or they can always disagree.
+    await withProject(async (root) => {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
+      await writeFile(
+        path.join(specDir, "02_User-stories.md"),
+        ["# 02 User stories", "", "## US-0001: title", "- Parent: CAP-0001", ""].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        [
+          "# 06 Test cases",
+          "",
+          "## TC-0001: title",
+          "- Parent: EX-0001",
+          "",
+          "## Format example",
+          "",
+          "```md",
+          "## TC-0009: an id that only appears in this sample",
+          "```",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "integration", "a.test.ts", "/* QFAI:SPEC-0001:TC-0001 */");
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      expect(issues.filter((entry) => entry.code === "QFAI-ATDD-112")).toEqual([]);
+    });
+  });
+});
+
 async function seedSpec(
   root: string,
   specNumber: string,
   usIds: string[],
   tcIds: string[],
+  options: { dirName?: string } = {},
 ): Promise<void> {
-  const specDir = path.join(root, ".qfai", "specs", `spec-${specNumber}`);
+  const specDir = path.join(root, ".qfai", "specs", options.dirName ?? `spec-${specNumber}`);
   await mkdir(specDir, { recursive: true });
 
   const usLines = usIds.flatMap((id) => [`## ${id}: title`, "- Parent: CAP-0001", ""]);
@@ -393,3 +456,45 @@ async function seedTest(
     "utf-8",
   );
 }
+
+describe("a mistyped TC column still declares its ids", () => {
+  it("keeps QFAI-ATDD-112 owed when the authoritative table cannot be resolved", async () => {
+    // Reading ids from the resolved tables closed the appendix hole but opened
+    // this one: a mistyped header drops the whole table, so `TC-0001` left the
+    // declared set and the ATDD gate stopped asking for it. The ledger side
+    // does not cover the gap — with no `tdd/test-list.md` at all
+    // `TDDLIST_MISSING` is a warning and the check returns early — so
+    // `--profile full --fail-on error` passed with neither a test nor a row.
+    await withProject(async (root) => {
+      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
+      await writeFile(
+        path.join(specDir, "02_User-stories.md"),
+        ["# 02 User stories", "", "## US-0001: title", "- Parent: CAP-0001", ""].join("\n"),
+        "utf-8",
+      );
+      await writeFile(
+        path.join(specDir, "06_Test-Cases.md"),
+        [
+          "# 06 Test cases",
+          "",
+          "## Test Case Table",
+          "",
+          "| TC Id | Level | AC-Refs | EX-Ref | Steps | Expected |",
+          "| ----- | ----- | ------- | ------ | ----- | -------- |",
+          "| TC-0001 | L3 | AC-0001 | - | s | e |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedApiContract(root, "CON-API-0001");
+      await seedTest(root, "e2e", "a.test.ts", "/* QFAI:SPEC-0001:US-0001 */");
+      await seedTest(root, "api", "a.test.ts", "/* QFAI:CON-API-0001 */");
+      // No integration annotation for TC-0001: the gate has to say so.
+
+      const issues = await validateAtddCodeTraceability(root, defaultConfig);
+      expect(issues.map((entry) => entry.code)).toContain("QFAI-ATDD-112");
+    });
+  });
+});

@@ -1,37 +1,111 @@
-import { readFile, stat } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
-import { parseFirstMarkdownTable, resolveTestCaseTable } from "../specPackParsers.js";
+import { maskNonSpecRegions, parseFirstMarkdownTable } from "../specPackParsers.js";
 import {
   EXCEPTION_PARKED_CODE,
   EXCEPTION_PARKED_RULE_ID,
   UNKNOWN_LEVEL_CODE,
   UNKNOWN_LEVEL_RULE_ID,
 } from "../ruleIds.js";
+import type { LedgerTable } from "../tddHelpers.js";
 import {
-  classifyCoverageLevel,
-  isCoverageTargetLevel,
+  collectIncompleteLedgerTables,
+  collectLedgerTables,
+  isRowShapeChecked,
+  isWellFormedTcRef,
+  isCoverageBearingRow,
   splitTcRefs,
   resolveParentTcId,
+  TC_FORBIDDEN_LAYERS,
+  TDD_LEDGER_REQUIRED_COLUMNS,
   UNIT_COMPONENT_LAYERS,
   NON_COVERAGE_LAYERS,
 } from "../tddHelpers.js";
+// The coverage-target TC set `qfai report` also reads, so the gate and the
+// progress figure cannot disagree about which TCs a spec declares.
+import { collectTestCaseIds, TEST_CASES_FILE_NAME } from "../testCaseCoverageTargets.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe } from "./utils.js";
 
-const REQUIRED_COLUMNS = [
-  "TDD-ID",
-  "TC-Refs",
-  "Layer",
-  "Test file",
-  "Selector",
-  "Status",
-  "DR-ID",
-  "Evidence",
-];
+/**
+ * The one authoritative list of ledger status transitions.
+ *
+ * `TDDLIST_EXCEPTION_PARKED` remediates via `exception -> todo`, an edge
+ * `qfai-implement/SKILL.md` summarises without naming. An operator who checked
+ * the finding against the skill instead of the reference found only "backward
+ * transitions are prohibited … the only exception is an approved Change Request
+ * reset" and reasonably concluded the tool was asking for something it forbids.
+ * Citing the reference from the finding closes that loop.
+ */
+const TRANSITIONS_REF =
+  ".qfai/assistant/skills/qfai-implement/references/execution-ledger.md#allowed-transitions";
+
+/**
+ * Where a row finding sits, for the human reading it.
+ *
+ * A one-table ledger is the common case and its label has always been `row N`;
+ * naming a table it does not have would be noise. Row indices are per table, so
+ * once there is more than one the table has to be named or `row 2` is ambiguous.
+ *
+ * **The ordinal counts ledger tables, not tables in the file**, and says so.
+ * `collectLedgerTables` admits only schema-complete tables outside fenced and
+ * commented regions, so the shipped `test-list.md` template — a `## Ledger`
+ * table, a `## Schema` documentation table, a `## CHG-001` ledger table — makes
+ * its third table the *second* ledger table. An unqualified `table 2` sent the
+ * reader to the documentation table that has no rows to fix.
+ */
+function describeLedgerRow(tableIndex: number, rowIndex: number): string {
+  return tableIndex === 0
+    ? `row ${rowIndex + 1}`
+    : `ledger table ${tableIndex + 1}, row ${rowIndex + 1}`;
+}
+
+/** One checked ledger row, with everything a finding needs to locate it. */
+interface LedgerRowRef {
+  scan: LedgerTable;
+  row: string[];
+  /** `row N`, or `ledger table M, row N` outside the first ledger table. */
+  label: string;
+}
+
+/**
+ * Every row of every ledger table that the per-row checks apply to.
+ *
+ * **One iteration order, one reader, one label.** Splitting the checks between
+ * "coverage" ones that read every table and "execution state" ones that read
+ * the first was a fail-open in two halves: a `Status=done` row in an appended
+ * `## CHG-…` table cleared `TDDLIST_TC_NOT_COVERED` while its non-existent
+ * `Test file` and empty `Evidence` were never looked at, so the gate accepted a
+ * completion claim it had declined to check. Whether a row is trustworthy and
+ * whether it discharges a TC are not separable questions — the second is only
+ * worth anything because of the first.
+ */
+function* checkedLedgerRows(tables: readonly LedgerTable[]): Generator<LedgerRowRef> {
+  for (const [tableIndex, scan] of tables.entries()) {
+    for (let rowIndex = 0; rowIndex < scan.table.rows.length; rowIndex++) {
+      const row = scan.table.rows[rowIndex];
+      if (!row || !isRowShapeChecked(scan, row, tableIndex)) continue;
+      yield { scan, row, label: describeLedgerRow(tableIndex, rowIndex) };
+    }
+  }
+}
+
+/** A trimmed cell, or `""` when the column is absent from this table. */
+function cell(ref: LedgerRowRef, column: string): string {
+  const index = ref.scan.headers.indexOf(column);
+  return index < 0 ? "" : (ref.row[index] ?? "").trim();
+}
+
+/** Whether any ledger table declares `column`. Optional columns only. */
+function anyTableHasColumn(tables: readonly LedgerTable[], column: string): boolean {
+  return tables.some((scan) => scan.headers.includes(column));
+}
+
+const REQUIRED_COLUMNS = TDD_LEDGER_REQUIRED_COLUMNS;
 
 // `review-fix` is the state an item holds while reworking a blocking
 // reviewer's REVISE. Without it a REVISE landed on `refactor`, whose only
@@ -68,13 +142,32 @@ const BLOCKED_BY_COLUMN = "Blocked-By";
 const VALID_LAYERS = new Set(["unit", "component", "integration", "api", "e2e"]);
 
 /**
- * Layers that cannot host a `TC-*` obligation.
- *
- * `test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and
- * `tests/api/**`, so those rows record their obligation in `US-Refs` /
- * `CON-API-Refs`. This is the mirror of the `US-Refs`-on-a-Unit-row check.
+ * The ledger `Layer` vocabulary, lower-cased. A value outside it is already
+ * reported by `TDDLIST_UNKNOWN_LAYER`; the crosswalk treats it as "no evidence"
+ * rather than stacking a second finding on the same typo.
  */
-const TC_FORBIDDEN_LAYERS = new Set(["api", "e2e"]);
+const KNOWN_LEDGER_LAYERS = new Set(["unit", "component", "integration", "api", "e2e"]);
+
+/**
+ * The ledger layers that discharge a coverage-target TC of this declared
+ * `Level`, or `null` when the level names none — an absent or unrecognized
+ * `Level` says nothing about layer, so any legal row still counts.
+ *
+ * `catalog/test-layers.md`'s crosswalk: L1 -> unit, L2 -> component. L3-L5 are
+ * not coverage targets and never reach here.
+ */
+function expectedCoverageLayers(level: string): Set<string> | null {
+  switch (level) {
+    case "l1":
+    case "unit":
+      return new Set(["unit"]);
+    case "l2":
+    case "component":
+      return new Set(["component"]);
+    default:
+      return null;
+  }
+}
 
 const TC_ID_TOKEN = /^TC-\d{4}(-\d{4})?$/;
 
@@ -387,9 +480,6 @@ function selectorResolves(selector: string, content: string): boolean {
   return last !== undefined && content.includes(last);
 }
 
-/** Per-spec file that owns the Test Case Table, and the target of its findings. */
-const TEST_CASES_FILE_NAME = "06_Test-Cases.md";
-
 /** Repo-relative, posix-slashed path used for the `file` field of an issue. */
 function toRelPath(root: string, filePath: string): string {
   return path.relative(root, filePath).replace(/\\/g, "/");
@@ -412,6 +502,41 @@ function acceptedLevelVocabulary(): string {
   const render = (levels: Iterable<string>): string =>
     [...levels].map(canonicalLevel).sort().join(", ");
   return `coverage targets: ${render(UNIT_COMPONENT_LAYERS)}; non-coverage: ${render(NON_COVERAGE_LAYERS)}`;
+}
+
+/**
+ * The coverage obligations a spec still owes when its ledger holds no rows.
+ *
+ * Two paths reach it and they must answer identically: the file is absent, or
+ * the file exists and its only schema-shaped table is inside a fence or an HTML
+ * comment. Both leave every coverage-target TC without a row, and since
+ * `QFAI-ATDD-112` stopped demanding an annotation for L1/L2 this is the only
+ * gate that still asks. Naming the TCs — rather than only saying "no table" —
+ * is what makes the finding actionable: the fix is one row per id listed.
+ */
+function tcNotCoveredWithoutLedger(
+  unitComponentTcIds: ReadonlySet<string>,
+  specNumber: string,
+  relPath: string,
+  reason: string,
+): Issue[] {
+  if (unitComponentTcIds.size === 0) return [];
+  const missing = Array.from(unitComponentTcIds).sort((left, right) => left.localeCompare(right));
+  return [
+    issue(
+      "TDDLIST_TC_NOT_COVERED",
+      `${reason} for spec-${specNumber}, so ${String(missing.length)} coverage-target TC have no row: ${missing.slice(0, 10).join(", ")}${missing.length > 10 ? ` (他 ${String(missing.length - 10)} 件)` : ""}`,
+      "error",
+      relPath,
+      "tddList.tcCoverage",
+      missing,
+      // Same `category` as the in-ledger `TDDLIST_TC_NOT_COVERED` site. One
+      // rule code emitting two categories would sort the same finding into a
+      // different report section depending on which path raised it.
+      "canonical",
+      `Seed \`${TDD_LIST_REL_PATH}\` with one row per coverage-target TC (\`/qfai-sdd\` Phase 2b), then run \`/qfai-implement\`.`,
+    ),
+  ];
 }
 
 export async function validateTddList(root: string, config: QfaiConfig): Promise<Issue[]> {
@@ -437,17 +562,54 @@ async function validateSpecTddList(
   const relPath = toRelPath(root, filePath);
   const issues: Issue[] = [];
 
-  // Check 1: File existence
+  // Check 1: File existence.
+  //
+  // **`tdd/test-list.md` is optional only for a spec that declares no
+  // coverage-target TC.** That is an escalation from "optional for older
+  // specs", and a deliberate one: a `warning` here was survivable while
+  // `QFAI-ATDD-112` demanded an annotation for every TC, but with Unit and
+  // Component excluded from that rule this ledger is their only gate. Returning
+  // early on a missing file let a spec with declared L1/L2 TCs, no tests and no
+  // ledger pass `validate --profile full --fail-on error`.
+  //
+  // The escalation is carried by `TDDLIST_TC_NOT_COVERED` (`error`), not by
+  // `TDDLIST_MISSING` itself, and it is conditional on the spec: a spec whose
+  // TCs are all L3-L5 still sees only the warning. It is also NOT waivable —
+  // `QFAI-WAIVER-002` refuses every waiver on an `error` rule — so the finding
+  // has to be clearable by the operator, and it is: seed the ledger. The
+  // warning below says all of this, because a new hard failure an operator
+  // meets first as red CI is the failure mode this package keeps re-learning.
   if (!(await exists(filePath))) {
-    // tdd/test-list.md is optional for older specs; emit a warning so
-    // existing specs are not broken.
+    const { unitComponentTcIds } = await collectTestCaseIds(specDir);
+    const owed = unitComponentTcIds.size;
     issues.push(
       issue(
         "TDDLIST_MISSING",
-        `tdd/test-list.md not found for spec-${specNumber}`,
+        owed > 0
+          ? `tdd/test-list.md not found for spec-${specNumber}. It is optional only for a spec that declares no coverage-target TC, and this one declares ${String(owed)}`
+          : `tdd/test-list.md not found for spec-${specNumber} (optional: the spec declares no coverage-target TC)`,
         "warning",
         relPath,
         "tddList.fileExists",
+        undefined,
+        // `canonical` is what this rule has always emitted, and the positional
+        // `category` slot is only spelled out here because `suggested_action`
+        // sits behind it. A JSON `category` is machine-readable output a
+        // consumer may key on, and moving one is a change to announce on its
+        // own merits, not a side effect of adding advice text.
+        "canonical",
+        owed > 0
+          ? `Unit/Component TC are gated here alone since \`QFAI-ATDD-112\` stopped demanding an annotation for them, so the absent ledger is reported as \`TDDLIST_TC_NOT_COVERED\` (error) below. Seed \`${TDD_LIST_REL_PATH}\` with one row per coverage-target TC (\`/qfai-sdd\` Phase 2b), then run \`/qfai-implement\`.`
+          : `Seed \`${TDD_LIST_REL_PATH}\` when the spec gains a Unit or Component TC (\`/qfai-sdd\` Phase 2b).`,
+      ),
+    );
+    // …the obligations the ledger would have carried do not disappear with it.
+    issues.push(
+      ...tcNotCoveredWithoutLedger(
+        unitComponentTcIds,
+        specNumber,
+        relPath,
+        "tdd/test-list.md is absent",
       ),
     );
     return issues;
@@ -455,16 +617,42 @@ async function validateSpecTddList(
 
   const content = await readSafe(filePath);
 
-  // Check 2: Table existence
-  const table = parseFirstMarkdownTable(content);
+  // Check 2: Table existence.
+  //
+  // Read from the masked text, the way `collectLedgerTables` does. Unmasked,
+  // the first table in the file could be a fenced sample or a commented-out old
+  // one, and taking it as the ledger failed open in both directions at once:
+  // every row check below ran against rows inside the fence, while
+  // `collectLedgerTables` correctly found no ledger and Check 10 skipped
+  // coverage entirely — so a spec whose only schema-shaped table was a
+  // copy-paste template passed `--profile full --fail-on error` with its L1/L2
+  // TCs gated by nothing, `QFAI-ATDD-112` having already excluded them.
+  //
+  // Masking also makes the two readers agree on which table is table 1:
+  // Check 3 below returns on any missing required column, so past it the first
+  // masked table IS `coverageTables[0]` and `row N` means the same row to every
+  // check that prints it.
+  const specContent = maskNonSpecRegions(content);
+  const table = parseFirstMarkdownTable(specContent);
   if (!table) {
     issues.push(
       issue(
         "TDDLIST_TABLE_MISSING",
-        `tdd/test-list.md for spec-${specNumber} does not contain a Markdown table`,
+        `tdd/test-list.md for spec-${specNumber} does not contain a Markdown table outside fenced or commented-out regions`,
         "error",
         relPath,
         "tddList.tableExists",
+      ),
+    );
+    // Same as an absent file: the obligations are outstanding and the ids are
+    // what makes that fixable. "No table" alone does not say which rows to add.
+    const { unitComponentTcIds } = await collectTestCaseIds(specDir);
+    issues.push(
+      ...tcNotCoveredWithoutLedger(
+        unitComponentTcIds,
+        specNumber,
+        relPath,
+        "tdd/test-list.md holds no ledger table outside fenced or commented-out regions",
       ),
     );
     return issues;
@@ -489,8 +677,38 @@ async function validateSpecTddList(
     return issues;
   }
 
-  // Informational notice for header-only tables
-  if (table.rows.length === 0) {
+  // Every table coverage is scored from, resolved once and read by every
+  // per-row check below. Past Check 3 the first entry is `table` itself: the
+  // masked reader above found it first and this one requires the same schema.
+  const coverageTables = collectLedgerTables(content);
+  const ledgerRows = (): Generator<LedgerRowRef> => checkedLedgerRows(coverageTables);
+
+  // A later table that looks like a ledger table and is missing a column is
+  // reported, not dropped. `collectLedgerTables` admits only schema-complete
+  // tables, so an appended `## CHG-…` section that mistyped one header
+  // contributed nothing at all — its rows vanished from the gate and from
+  // `qfai report`, and a `done` row in the first table read as the whole
+  // story while the follow-up work sat in a table nobody looked at. Check 3
+  // only ever saw the first table, so nothing named the omission either.
+  for (const incomplete of collectIncompleteLedgerTables(content)) {
+    for (const column of incomplete.missing) {
+      issues.push(
+        issue(
+          "TDDLIST_REQUIRED_COLUMN_MISSING",
+          `Required column "${column}" missing from a ledger table in tdd/test-list.md for spec-${specNumber}. Its rows are not read: a table carrying TDD-ID and TC-Refs is a ledger table, and an incomplete one is a gap, not a note`,
+          "error",
+          relPath,
+          "tddList.requiredColumns",
+        ),
+      );
+    }
+  }
+
+  // Informational notice for a ledger with no rows anywhere. Keyed on the whole
+  // ledger, not on the first table: "No active items" was printed for a file
+  // whose first table is an empty header and whose `## CHG-…` table holds every
+  // row, which is the shape `/qfai-implement` produces.
+  if (coverageTables.every((scan) => scan.table.rows.length === 0)) {
     issues.push(
       issue(
         "TDDLIST_INFO",
@@ -505,29 +723,22 @@ async function validateSpecTddList(
   }
 
   // Check 4: Status enum validation
-  const statusIndex = normalizedHeaders.indexOf("Status");
-  if (statusIndex >= 0) {
-    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
-      const row = table.rows[rowIdx];
-      if (!row) continue;
-      const status = (row[statusIndex] ?? "").trim().toLowerCase();
-      if (status.length > 0 && !VALID_STATUSES.has(status)) {
-        issues.push(
-          issue(
-            "TDDLIST_INVALID_STATUS",
-            `Invalid status "${status}" in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1})`,
-            "error",
-            relPath,
-            "tddList.validStatus",
-          ),
-        );
-      }
-    }
+  for (const ref of ledgerRows()) {
+    const status = cell(ref, "Status").toLowerCase();
+    if (status.length === 0 || VALID_STATUSES.has(status)) continue;
+    issues.push(
+      issue(
+        "TDDLIST_INVALID_STATUS",
+        `Invalid status "${status}" in tdd/test-list.md for spec-${specNumber} (${ref.label})`,
+        "error",
+        relPath,
+        "tddList.validStatus",
+      ),
+    );
   }
 
   // Check 5: TC reference existence
-  const tcRefsIndex = normalizedHeaders.indexOf("TC-Refs");
-  const { knownTcIds, unitComponentTcIds, unrecognizedLevels, unresolved } =
+  const { knownTcIds, unitComponentTcIds, unrecognizedLevels, coverageTargetLevels, unresolved } =
     await collectTestCaseIds(specDir);
   // The offending `Level` cell lives in 06_Test-Cases.md, not in the ledger
   // this validator is otherwise reading. Reporting `relPath` here pointed
@@ -573,40 +784,29 @@ async function validateSpecTddList(
       ),
     );
   }
-  if (tcRefsIndex >= 0) {
-    if (knownTcIds.size > 0) {
-      for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
-        const row = table.rows[rowIdx];
-        if (!row) continue;
-        const tcRefsCell = (row[tcRefsIndex] ?? "").trim();
-        if (tcRefsCell.length === 0) continue;
-        const refs = splitTcRefs(tcRefsCell);
-        for (const ref of refs) {
-          const normalized = ref.toUpperCase();
-          const parent = resolveParentTcId(normalized) ?? normalized;
-          if (
-            TC_ID_TOKEN.test(normalized) &&
-            !knownTcIds.has(normalized) &&
-            !knownTcIds.has(parent)
-          ) {
-            issues.push(
-              issue(
-                "TDDLIST_UNKNOWN_REF",
-                `Unknown TC reference "${ref}" in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1})`,
-                "warning",
-                relPath,
-                "tddList.tcRefExists",
-              ),
-            );
-          }
-        }
+  if (knownTcIds.size > 0) {
+    for (const entry of ledgerRows()) {
+      const tcRefsCell = cell(entry, "TC-Refs");
+      if (tcRefsCell.length === 0) continue;
+      for (const ref of splitTcRefs(tcRefsCell)) {
+        const normalized = ref.toUpperCase();
+        const parent = resolveParentTcId(normalized) ?? normalized;
+        if (!TC_ID_TOKEN.test(normalized)) continue;
+        if (knownTcIds.has(normalized) || knownTcIds.has(parent)) continue;
+        issues.push(
+          issue(
+            "TDDLIST_UNKNOWN_REF",
+            `Unknown TC reference "${ref}" in tdd/test-list.md for spec-${specNumber} (${entry.label})`,
+            "warning",
+            relPath,
+            "tddList.tcRefExists",
+          ),
+        );
       }
     }
   }
 
-  const layerIndex = normalizedHeaders.indexOf("Layer");
-
-  // Check 5a: the `Layer` enum, on every row.
+  // Check 5a: the `Layer` enum.
   //
   // Read independently of any reference column: the obligation checks below
   // skip a row whose reference cell is empty or `-`, so `Layer = System` or a
@@ -614,25 +814,23 @@ async function validateSpecTddList(
   // obligation column that row owns. Warning, not error: `Layer` predates the
   // declared enum and existing ledgers carry project-specific names — an error
   // would break them on upgrade without a migration.
-  if (layerIndex >= 0) {
-    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
-      const rawLayer = (table.rows[rowIdx]?.[layerIndex] ?? "").trim();
-      // An empty cell carries no claim; the required-column check owns that gap.
-      if (rawLayer.length === 0 || rawLayer === "-") continue;
-      if (VALID_LAYERS.has(rawLayer.toLowerCase())) continue;
-      issues.push(
-        issue(
-          "TDDLIST_UNKNOWN_LAYER",
-          `Unknown Layer "${rawLayer}" in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Legal values: Unit, Component, Integration, API, E2E`,
-          "warning",
-          relPath,
-          "tddList.layerEnum",
-          [rawLayer],
-          "change",
-          "Layer を Unit / Component / Integration / API / E2E のいずれかに直してください。行が担う obligation 列は Layer から決まります（TC-Refs: Unit/Component/Integration、US-Refs: E2E、CON-API-Refs: API）。",
-        ),
-      );
-    }
+  for (const ref of ledgerRows()) {
+    const rawLayer = cell(ref, "Layer");
+    // An empty cell carries no claim; the required-column check owns that gap.
+    if (rawLayer.length === 0 || rawLayer === "-") continue;
+    if (VALID_LAYERS.has(rawLayer.toLowerCase())) continue;
+    issues.push(
+      issue(
+        "TDDLIST_UNKNOWN_LAYER",
+        `Unknown Layer "${rawLayer}" in tdd/test-list.md for spec-${specNumber} (${ref.label}). Legal values: Unit, Component, Integration, API, E2E`,
+        "warning",
+        relPath,
+        "tddList.layerEnum",
+        [rawLayer],
+        "change",
+        "Layer を Unit / Component / Integration / API / E2E のいずれかに直してください。行が担う obligation 列は Layer から決まります（TC-Refs: Unit/Component/Integration、US-Refs: E2E、CON-API-Refs: API）。",
+      ),
+    );
   }
 
   // Check 5b: optional obligation columns.
@@ -643,7 +841,7 @@ async function validateSpecTddList(
   // `CON-API-Refs` are the optional homes for those; when present their tokens
   // must be well-formed, otherwise an all-`done` ledger silently misreports.
   issues.push(
-    ...validateObligationColumn(table, normalizedHeaders, {
+    ...validateObligationColumn(ledgerRows(), {
       column: "US-Refs",
       pattern: /^US-\d{4}(?:-\d{4})?$/,
       expected: "US-NNNN",
@@ -654,7 +852,7 @@ async function validateSpecTddList(
     }),
   );
   issues.push(
-    ...validateObligationColumn(table, normalizedHeaders, {
+    ...validateObligationColumn(ledgerRows(), {
       column: "CON-API-Refs",
       pattern: /^CON-API-\d+$/,
       expected: "CON-API-NNNN",
@@ -670,79 +868,67 @@ async function validateSpecTddList(
   // so `Layer = E2E` with `TC-Refs = TC-0001` still validated clean AND, worse,
   // Check 10 below counted it, letting a forbidden placement mark a
   // coverage-target TC as covered.
-  if (tcRefsIndex >= 0 && layerIndex >= 0) {
-    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
-      const rawLayer = (table.rows[rowIdx]?.[layerIndex] ?? "").trim();
-      if (!TC_FORBIDDEN_LAYERS.has(rawLayer.toLowerCase())) continue;
-      const tcRefsCell = (table.rows[rowIdx]?.[tcRefsIndex] ?? "").trim();
-      const tcTokens = splitTcRefs(tcRefsCell).filter((token) =>
-        TC_ID_TOKEN.test(token.toUpperCase()),
-      );
-      if (tcTokens.length === 0) continue;
-      issues.push(
-        issue(
-          "TDDLIST_OBLIGATION_LAYER_MISMATCH",
-          `TC-Refs is not legal on a Layer=${rawLayer.toUpperCase()} row, but spec-${specNumber} (row ${rowIdx + 1}) references ${tcTokens.join(", ")}`,
-          "error",
-          relPath,
-          "tddList.tcRefsLayer",
-          ["TC-Refs", rawLayer],
-          "change",
-          `Set Layer to UNIT / COMPONENT / INTEGRATION for this row, or move the obligation to the column its Layer owns (US-Refs for E2E, CON-API-Refs for API) and put \`-\` in TC-Refs.`,
-        ),
-      );
-    }
+  for (const ref of ledgerRows()) {
+    const rawLayer = cell(ref, "Layer");
+    if (!TC_FORBIDDEN_LAYERS.has(rawLayer.toLowerCase())) continue;
+    const tcTokens = splitTcRefs(cell(ref, "TC-Refs")).filter((token) =>
+      TC_ID_TOKEN.test(token.toUpperCase()),
+    );
+    if (tcTokens.length === 0) continue;
+    issues.push(
+      issue(
+        "TDDLIST_OBLIGATION_LAYER_MISMATCH",
+        `TC-Refs is not legal on a Layer=${rawLayer.toUpperCase()} row, but spec-${specNumber} (${ref.label}) references ${tcTokens.join(", ")}`,
+        "error",
+        relPath,
+        "tddList.tcRefsLayer",
+        ["TC-Refs", rawLayer],
+        "change",
+        `Set Layer to UNIT / COMPONENT / INTEGRATION for this row, or move the obligation to the column its Layer owns (US-Refs for E2E, CON-API-Refs for API) and put \`-\` in TC-Refs.`,
+      ),
+    );
   }
 
   // ── Phase 2 checks ──
 
-  const tddIdIndex = normalizedHeaders.indexOf("TDD-ID");
-  const drIdIndex = normalizedHeaders.indexOf("DR-ID");
-  const testFileIndex = normalizedHeaders.indexOf("Test file");
-
   // Phase 2 – Check 6: TDD-ID format (TDD-NNNN)
-  if (tddIdIndex >= 0) {
-    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
-      const row = table.rows[rowIdx];
-      if (!row) continue;
-      const tddId = (row[tddIdIndex] ?? "").trim();
-      if (!TDD_ID_FORMAT.test(tddId)) {
-        issues.push(
-          issue(
-            "TDDLIST_INVALID_ID",
-            `Invalid TDD-ID "${tddId}" in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Expected format: TDD-NNNN`,
-            "error",
-            relPath,
-            "tddList.idFormat",
-          ),
-        );
-      }
-    }
+  for (const ref of ledgerRows()) {
+    const tddId = cell(ref, "TDD-ID");
+    if (TDD_ID_FORMAT.test(tddId)) continue;
+    issues.push(
+      issue(
+        "TDDLIST_INVALID_ID",
+        `Invalid TDD-ID "${tddId}" in tdd/test-list.md for spec-${specNumber} (${ref.label}). Expected format: TDD-NNNN`,
+        "error",
+        relPath,
+        "tddList.idFormat",
+      ),
+    );
   }
 
-  // Phase 2 – Check 7: Duplicate TDD-ID (case-insensitive)
-  if (tddIdIndex >= 0) {
-    const seen = new Map<string, number>();
-    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
-      const row = table.rows[rowIdx];
-      if (!row) continue;
-      const tddId = (row[tddIdIndex] ?? "").trim().toUpperCase();
-      if (tddId.length === 0) continue;
-      const prev = seen.get(tddId);
-      if (prev !== undefined) {
-        issues.push(
-          issue(
-            "TDDLIST_DUPLICATE_ID",
-            `Duplicate TDD-ID "${row[tddIdIndex]?.trim()}" in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}, first seen row ${prev + 1})`,
-            "error",
-            relPath,
-            "tddList.duplicateId",
-          ),
-        );
-      } else {
-        seen.set(tddId, rowIdx);
-      }
+  // Phase 2 – Check 7: Duplicate TDD-ID (case-insensitive), across the whole
+  // ledger rather than within one table. `TDDLIST_EXCEPTION_PARKED` keys its
+  // per-row waiver on the TDD-ID, so an id repeated in an appended table made
+  // one approved `match.dl_ids` entry silently cover a row nobody approved.
+  const seenTddIds = new Map<string, string>();
+  for (const ref of ledgerRows()) {
+    const tddId = cell(ref, "TDD-ID");
+    if (tddId.length === 0) continue;
+    const key = tddId.toUpperCase();
+    const first = seenTddIds.get(key);
+    if (first === undefined) {
+      seenTddIds.set(key, ref.label);
+      continue;
     }
+    issues.push(
+      issue(
+        "TDDLIST_DUPLICATE_ID",
+        `Duplicate TDD-ID "${tddId}" in tdd/test-list.md for spec-${specNumber} (${ref.label}, first seen ${first})`,
+        "error",
+        relPath,
+        "tddList.duplicateId",
+      ),
+    );
   }
 
   // Phase 2 – Check 8b: parked items must be visible in CI.
@@ -751,48 +937,45 @@ async function validateSpecTddList(
   // so the cheapest fully-compliant path to "implementation complete" was to
   // park every unfinished item there. A warning per row makes the parking
   // visible without breaking existing runs.
-  if (statusIndex >= 0) {
-    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
-      const row = table.rows[rowIdx];
-      if (!row) continue;
-      if ((row[statusIndex] ?? "").trim().toLowerCase() !== "exception") continue;
-      const tddId = tddIdIndex >= 0 ? (row[tddIdIndex] ?? "").trim() : "";
-      const drId = drIdIndex >= 0 ? (row[drIdIndex] ?? "").trim() : "";
-      const hasDrId = drId.length > 0 && drId !== "-";
-      // Every row of one ledger shares the same rule AND the same file, so a
-      // waiver matched on `rule` + `scope.paths` alone would clear every parked
-      // row at once — including ones the operator never approved. `dl_id` is the
-      // only per-finding key `waivers.ts#matchesWaiver` compares, so the row
-      // identity goes there and `WAIVER-005` refuses a waiver that omits it.
-      //
-      // That identity must be unique to ONE row. TDD-ID is (TDDLIST_DUPLICATE_ID
-      // enforces it within a ledger), so it is used when present. A DR-ID is
-      // NOT: several parked rows can cite the same decision record, and keying
-      // on it let one `match.dl_ids` entry suppress every row carrying that DR —
-      // reintroducing the over-suppression this key exists to prevent. Anything
-      // without a TDD-ID falls back to its row position, which is unique by
-      // construction.
-      const rowKey = tddId.length > 0 ? tddId : `row ${rowIdx + 1}`;
-      // Only the TDD-ID form is a "TDD-ID"; the fallback is a row position, and
-      // telling an operator to put a TDD-ID in `match.dl_ids` when the value is
-      // `row 3` would send them looking for one that does not exist.
-      const rowKeyLabel = tddId.length > 0 ? `TDD-ID ${rowKey}` : `row identifier "${rowKey}"`;
-      issues.push(
-        issue(
-          "TDDLIST_EXCEPTION_PARKED",
-          `TDD item "${rowKey}" in spec-${specNumber} is parked at Status=exception${hasDrId ? ` (DR-ID ${drId})` : ""}. Resolve it (\`exception -> todo\`), or record the accepted risk as a \`${EXCEPTION_PARKED_CODE}\` waiver in \`.qfai/waivers.yml\` naming this row in \`match.dl_ids\``,
-          "warning",
-          relPath,
-          // Rule id, not a dotted path: kept as a back-compat waiver key for
-          // files written before `resolveRuleKeys` accepted the code itself.
-          EXCEPTION_PARKED_RULE_ID,
-          hasDrId ? [drId] : undefined,
-          "change",
-          `承認済みの accepted risk である場合は \`.qfai/waivers.yml\` に rule: ${EXCEPTION_PARKED_CODE} の waiver（id / reason / expires / evidence / scope.paths / match.dl_ids が必須）を登録してください。match.dl_ids には対象行の ${rowKeyLabel} だけを列挙します。作業を再開する場合は \`exception -> todo\` で戻してください。`,
-          { dl_id: rowKey },
-        ),
-      );
-    }
+  for (const ref of ledgerRows()) {
+    if (cell(ref, "Status").toLowerCase() !== "exception") continue;
+    const tddId = cell(ref, "TDD-ID");
+    const drId = cell(ref, "DR-ID");
+    const hasDrId = drId.length > 0 && drId !== "-";
+    // Every row of one ledger shares the same rule AND the same file, so a
+    // waiver matched on `rule` + `scope.paths` alone would clear every parked
+    // row at once — including ones the operator never approved. `dl_id` is the
+    // only per-finding key `waivers.ts#matchesWaiver` compares, so the row
+    // identity goes there and `WAIVER-005` refuses a waiver that omits it.
+    //
+    // That identity must be unique to ONE row. TDD-ID is (TDDLIST_DUPLICATE_ID
+    // enforces it across the whole ledger), so it is used when present. A DR-ID
+    // is NOT: several parked rows can cite the same decision record, and keying
+    // on it let one `match.dl_ids` entry suppress every row carrying that DR —
+    // reintroducing the over-suppression this key exists to prevent. Anything
+    // without a TDD-ID falls back to its row position, which is unique by
+    // construction and can only arise in the first ledger table: a blank
+    // `TDD-ID` after it is not a row at all.
+    const rowKey = tddId.length > 0 ? tddId : ref.label;
+    // Only the TDD-ID form is a "TDD-ID"; the fallback is a row position, and
+    // telling an operator to put a TDD-ID in `match.dl_ids` when the value is
+    // `row 3` would send them looking for one that does not exist.
+    const rowKeyLabel = tddId.length > 0 ? `TDD-ID ${rowKey}` : `row identifier "${rowKey}"`;
+    issues.push(
+      issue(
+        "TDDLIST_EXCEPTION_PARKED",
+        `TDD item "${rowKey}" in spec-${specNumber} is parked at Status=exception${hasDrId ? ` (DR-ID ${drId})` : ""}. Resolve it (\`exception -> todo\` — see ${TRANSITIONS_REF} — which needs no Change Request **only when the anomaly did not change an approved obligation**; if it did, that is drift and the approved upstream reset applies instead), or record the accepted risk as a \`${EXCEPTION_PARKED_CODE}\` waiver in \`.qfai/waivers.yml\` naming this row in \`match.dl_ids\``,
+        "warning",
+        relPath,
+        // Rule id, not a dotted path: kept as a back-compat waiver key for
+        // files written before `resolveRuleKeys` accepted the code itself.
+        EXCEPTION_PARKED_RULE_ID,
+        hasDrId ? [drId] : undefined,
+        "change",
+        `承認済みの accepted risk である場合は \`.qfai/waivers.yml\` に rule: ${EXCEPTION_PARKED_CODE} の waiver（id / reason / expires / evidence / scope.paths / match.dl_ids が必須）を登録してください。match.dl_ids には対象行の ${rowKeyLabel} だけを列挙します。作業を再開する場合は \`exception -> todo\` で戻してください（${TRANSITIONS_REF} が定める再入 edge です。anomaly が承認済み obligation を変更していない場合は Change Request 不要で、anomaly の DR-ID はそのまま残します。変更していた場合は drift なので、\`.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected\` の Change Request と承認済み upstream reset を使ってください）。`,
+        { dl_id: rowKey },
+      ),
+    );
   }
 
   // Phase 2 – Check 8a: a blocked row must name its blocker.
@@ -800,47 +983,42 @@ async function validateSpecTddList(
   // Without this the new status would be a second unfalsifiable state: "cannot
   // start" with no record of what it is waiting on is the same re-derivation
   // problem `todo` already had, one word further along.
-  const blockedByIndex = normalizedHeaders.indexOf(BLOCKED_BY_COLUMN);
-  if (statusIndex >= 0) {
-    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
-      const row = table.rows[rowIdx];
-      if (!row) continue;
-      if ((row[statusIndex] ?? "").trim().toLowerCase() !== "blocked") continue;
-      const blockedBy = blockedByIndex >= 0 ? (row[blockedByIndex] ?? "").trim() : "";
-      if (blockedBy.length > 0 && blockedBy !== "-") continue;
-      issues.push(
-        issue(
-          "TDDLIST_BLOCKED_MISSING_REF",
-          blockedByIndex < 0
-            ? `Status=blocked in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}) but the ledger has no ${BLOCKED_BY_COLUMN} column. Add it and name the blocker`
-            : `Status=blocked but ${BLOCKED_BY_COLUMN} is empty in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Name the blocker`,
-          "error",
-          relPath,
-          "tddList.blockedBy",
-          undefined,
-          "change",
-          `${BLOCKED_BY_COLUMN} 列に停止要因を記載してください: Change Request ID（\`CR-YYYYMMDD-NNNN\`）、行番号付きの契約パス（\`.qfai/contracts/db/CON-DB-0005.sql:2715\`）、または他 spec の行（\`spec-0006:TDD-0034\`）。`,
-        ),
-      );
-    }
+  const hasBlockedByColumn = anyTableHasColumn(coverageTables, BLOCKED_BY_COLUMN);
+  for (const ref of ledgerRows()) {
+    if (cell(ref, "Status").toLowerCase() !== "blocked") continue;
+    const blockedBy = cell(ref, BLOCKED_BY_COLUMN);
+    if (blockedBy.length > 0 && blockedBy !== "-") continue;
+    issues.push(
+      issue(
+        "TDDLIST_BLOCKED_MISSING_REF",
+        !hasBlockedByColumn
+          ? `Status=blocked in tdd/test-list.md for spec-${specNumber} (${ref.label}) but the ledger has no ${BLOCKED_BY_COLUMN} column. Add it and name the blocker`
+          : `Status=blocked but ${BLOCKED_BY_COLUMN} is empty in tdd/test-list.md for spec-${specNumber} (${ref.label}). Name the blocker`,
+        "error",
+        relPath,
+        "tddList.blockedBy",
+        undefined,
+        "change",
+        `${BLOCKED_BY_COLUMN} 列に停止要因を記載してください: Change Request ID（\`CR-YYYYMMDD-NNNN\`）、行番号付きの契約パス（\`.qfai/contracts/db/CON-DB-0005.sql:2715\`）、または他 spec の行（\`spec-0006:TDD-0034\`）。`,
+      ),
+    );
   }
 
   // Phase 2 – Check 8: Exception rows must have a DR-ID that resolves
   const declaredDrIds = await collectDeclaredDrIds(specDir, specsRoot);
-  if (statusIndex >= 0 && drIdIndex >= 0) {
-    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
-      const row = table.rows[rowIdx];
-      if (!row) continue;
-      const status = (row[statusIndex] ?? "").trim().toLowerCase();
+  {
+    for (const ref of ledgerRows()) {
+      const rowIdxLabel = ref.label;
+      const status = cell(ref, "Status").toLowerCase();
       if (status !== "exception") continue;
-      const drId = (row[drIdIndex] ?? "").trim();
+      const drId = cell(ref, "DR-ID");
       if (drId.length === 0 || isChangeRequestRefsOnly(drId)) {
         const reason =
           drId.length === 0 ? "DR-ID is empty" : "DR-ID holds only Change Request references";
         issues.push(
           issue(
             "TDDLIST_EXCEPTION_MISSING_DR",
-            `Status=exception but ${reason} in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Add a DR-ID reference in the form DR-NNNN or DR-NNNN-NNNN, declared in 07_Decisions.md (spec-scoped) or _policies/08_Decisions.md (policy-level)`,
+            `Status=exception but ${reason} in tdd/test-list.md for spec-${specNumber} (${rowIdxLabel}). Add a DR-ID reference in the form DR-NNNN or DR-NNNN-NNNN, declared in 07_Decisions.md (spec-scoped) or _policies/08_Decisions.md (policy-level)`,
             "error",
             relPath,
             "tddList.exceptionDrId",
@@ -865,7 +1043,7 @@ async function validateSpecTddList(
         issues.push(
           issue(
             "TDDLIST_EXCEPTION_INVALID_DR",
-            `Malformed DR-ID ${malformed.join(", ")} in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}). Expected DR-NNNN (policy-level) or DR-NNNN-NNNN (spec-scoped)`,
+            `Malformed DR-ID ${malformed.join(", ")} in tdd/test-list.md for spec-${specNumber} (${rowIdxLabel}). Expected DR-NNNN (policy-level) or DR-NNNN-NNNN (spec-scoped)`,
             "warning",
             relPath,
             "tddList.exceptionDrFormat",
@@ -884,7 +1062,7 @@ async function validateSpecTddList(
         issues.push(
           issue(
             "TDDLIST_EXCEPTION_UNRESOLVED_DR",
-            `DR-ID ${unresolved.join(", ")} in tdd/test-list.md for spec-${specNumber} (row ${rowIdx + 1}) is declared in no Decisions file. Searched ${DR_DECLARATION_FILES.join(", ")} and ${toPosixRel(DR_POLICY_DECLARATION_FILE)}`,
+            `DR-ID ${unresolved.join(", ")} in tdd/test-list.md for spec-${specNumber} (${rowIdxLabel}) is declared in no Decisions file. Searched ${DR_DECLARATION_FILES.join(", ")} and ${toPosixRel(DR_POLICY_DECLARATION_FILE)}`,
             "warning",
             relPath,
             // Rule id, not a dotted path: a project keeping its decision
@@ -901,62 +1079,58 @@ async function validateSpecTddList(
   }
 
   // Phase 2 – Check 9: Test file existence for green/refactor/done
-  if (statusIndex >= 0 && testFileIndex >= 0) {
-    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
-      const row = table.rows[rowIdx];
-      if (!row) continue;
-      const status = (row[statusIndex] ?? "").trim().toLowerCase();
-      if (!TEST_FILE_CHECK_STATUSES.has(status)) continue;
-      const testFile = (row[testFileIndex] ?? "").trim();
-      if (testFile.length === 0) {
-        issues.push(
-          issue(
-            "TDDLIST_TEST_FILE_MISSING",
-            `Test file is empty for spec-${specNumber} (row ${rowIdx + 1}, Status=${status}). Provide a project-root-relative test file path`,
-            "error",
-            relPath,
-            "tddList.testFileExists",
-          ),
-        );
-        continue;
-      }
-      const normalized = testFile.replace(/\\/g, "/");
-      const resolved = path.resolve(root, normalized);
-      const relative = path.relative(root, resolved);
-      if (
-        path.isAbsolute(normalized) ||
-        path.win32.isAbsolute(normalized) ||
-        relative === ".." ||
-        relative.startsWith(".." + path.sep)
-      ) {
-        issues.push(
-          issue(
-            "TDDLIST_TEST_FILE_MISSING",
-            `Test file "${testFile}" for spec-${specNumber} (row ${rowIdx + 1}) must be a relative path that does not escape the project root`,
-            "error",
-            relPath,
-            "tddList.testFileExists",
-          ),
-        );
-        continue;
-      }
-      let isFile = false;
-      try {
-        isFile = (await stat(resolved)).isFile();
-      } catch {
-        // file does not exist
-      }
-      if (!isFile) {
-        issues.push(
-          issue(
-            "TDDLIST_TEST_FILE_MISSING",
-            `Test file "${testFile}" not found for spec-${specNumber} (row ${rowIdx + 1}). Path resolved relative to project root`,
-            "error",
-            relPath,
-            "tddList.testFileExists",
-          ),
-        );
-      }
+  for (const ref of ledgerRows()) {
+    const status = cell(ref, "Status").toLowerCase();
+    if (!TEST_FILE_CHECK_STATUSES.has(status)) continue;
+    const testFile = cell(ref, "Test file");
+    if (testFile.length === 0) {
+      issues.push(
+        issue(
+          "TDDLIST_TEST_FILE_MISSING",
+          `Test file is empty for spec-${specNumber} (${ref.label}, Status=${status}). Provide a project-root-relative test file path`,
+          "error",
+          relPath,
+          "tddList.testFileExists",
+        ),
+      );
+      continue;
+    }
+    const normalized = testFile.replace(/\\/g, "/");
+    const resolved = path.resolve(root, normalized);
+    const relative = path.relative(root, resolved);
+    if (
+      path.isAbsolute(normalized) ||
+      path.win32.isAbsolute(normalized) ||
+      relative === ".." ||
+      relative.startsWith(".." + path.sep)
+    ) {
+      issues.push(
+        issue(
+          "TDDLIST_TEST_FILE_MISSING",
+          `Test file "${testFile}" for spec-${specNumber} (${ref.label}) must be a relative path that does not escape the project root`,
+          "error",
+          relPath,
+          "tddList.testFileExists",
+        ),
+      );
+      continue;
+    }
+    let isFile = false;
+    try {
+      isFile = (await stat(resolved)).isFile();
+    } catch {
+      // file does not exist
+    }
+    if (!isFile) {
+      issues.push(
+        issue(
+          "TDDLIST_TEST_FILE_MISSING",
+          `Test file "${testFile}" not found for spec-${specNumber} (${ref.label}). Path resolved relative to project root`,
+          "error",
+          relPath,
+          "tddList.testFileExists",
+        ),
+      );
     }
   }
 
@@ -967,31 +1141,24 @@ async function validateSpecTddList(
   // It is a declaration, so the only thing checkable here is that a filled cell
   // names one module — a list would leave the gate comparing sets again, and a
   // row that honestly owns two modules is a row that should be split.
-  const owningModuleIndex = normalizedHeaders.indexOf("Owning module");
-  if (owningModuleIndex >= 0) {
-    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx += 1) {
-      const cell = (table.rows[rowIdx]?.[owningModuleIndex] ?? "").trim();
-      if (cell.length === 0 || cell === "-") {
-        continue;
-      }
-      if (!/[,;]|\s/.test(cell)) {
-        continue;
-      }
-      issues.push(
-        issue(
-          "TDDLIST_OWNING_MODULE_NOT_SINGULAR",
-          `Owning module must name exactly one module, but spec-${specNumber} (row ${rowIdx + 1}) declares "${cell}"`,
-          "error",
-          relPath,
-          "tddList.owningModule",
-          undefined,
-          "canonical",
-          "Declare one repo-relative path or dotted module path, or `-` when the seam is not declared. " +
-            "A row that genuinely owns two modules is a row to split (`references/selector-granularity.md`); " +
-            "a list would put the parallel-dispatch gate back to comparing sets it cannot evaluate before RED.",
-        ),
-      );
-    }
+  for (const ref of ledgerRows()) {
+    const owningModule = cell(ref, "Owning module");
+    if (owningModule.length === 0 || owningModule === "-") continue;
+    if (!/[,;]|\s/.test(owningModule)) continue;
+    issues.push(
+      issue(
+        "TDDLIST_OWNING_MODULE_NOT_SINGULAR",
+        `Owning module must name exactly one module, but spec-${specNumber} (${ref.label}) declares "${owningModule}"`,
+        "error",
+        relPath,
+        "tddList.owningModule",
+        undefined,
+        "canonical",
+        "Declare one repo-relative path or dotted module path, or `-` when the seam is not declared. " +
+          "A row that genuinely owns two modules is a row to split (`references/selector-granularity.md`); " +
+          "a list would put the parallel-dispatch gate back to comparing sets it cannot evaluate before RED.",
+      ),
+    );
   }
 
   // Phase 2 – Check 9c: the ledger under-reporting.
@@ -1008,29 +1175,24 @@ async function validateSpecTddList(
   // many rows, so file existence alone would fire on any row whose neighbours
   // have landed. Requiring the row's own selector to resolve inside that file
   // means the named test is really there.
-  const selectorIndex = normalizedHeaders.indexOf("Selector");
-  if (statusIndex >= 0 && testFileIndex >= 0 && selectorIndex >= 0) {
-    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
-      const row = table.rows[rowIdx];
-      if (!row) continue;
-      if ((row[statusIndex] ?? "").trim().toLowerCase() !== "todo") continue;
-      const content = await readTestFileContent(root, (row[testFileIndex] ?? "").trim());
-      if (content === null) continue;
-      const selector = (row[selectorIndex] ?? "").trim();
-      if (!selectorResolves(selector, content)) continue;
-      issues.push(
-        issue(
-          "TDDLIST_STALE_STATUS",
-          `Test file exists and its selector "${selector}" resolves, but Status=todo for spec-${specNumber} (row ${rowIdx + 1}). The ledger may be stale; reconcile it before completion`,
-          "warning",
-          relPath,
-          "tddList.staleStatus",
-          undefined,
-          "canonical",
-          `Set this row to the status the repository actually supports, or clear the Test file / Selector if the test does not belong to it. A project that declares test paths and selectors before implementing them registers a \`.qfai/waivers.yml\` waiver with rule: ${STALE_STATUS_RULE_ID}.`,
-        ),
-      );
-    }
+  for (const ref of ledgerRows()) {
+    if (cell(ref, "Status").toLowerCase() !== "todo") continue;
+    const testFileContent = await readTestFileContent(root, cell(ref, "Test file"));
+    if (testFileContent === null) continue;
+    const selector = cell(ref, "Selector");
+    if (!selectorResolves(selector, testFileContent)) continue;
+    issues.push(
+      issue(
+        "TDDLIST_STALE_STATUS",
+        `Test file exists and its selector "${selector}" resolves, but Status=todo for spec-${specNumber} (${ref.label}). The ledger may be stale; reconcile it before completion`,
+        "warning",
+        relPath,
+        "tddList.staleStatus",
+        undefined,
+        "canonical",
+        `Set this row to the status the repository actually supports, or clear the Test file / Selector if the test does not belong to it. A project that declares test paths and selectors before implementing them registers a \`.qfai/waivers.yml\` waiver with rule: ${STALE_STATUS_RULE_ID}.`,
+      ),
+    );
   }
 
   // Phase 2 – Check 9d: `Selector` is a required column, so it has to be read.
@@ -1040,61 +1202,51 @@ async function validateSpecTddList(
   // claim completion Check 9 has already established the file exists; this
   // establishes the named test is in it, which is also what makes Check 9c
   // above trustworthy.
-  if (statusIndex >= 0 && testFileIndex >= 0 && selectorIndex >= 0) {
-    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
-      const row = table.rows[rowIdx];
-      if (!row) continue;
-      const status = (row[statusIndex] ?? "").trim().toLowerCase();
-      if (!TEST_FILE_CHECK_STATUSES.has(status)) continue;
-      const selector = (row[selectorIndex] ?? "").trim();
-      if (selector.length === 0) continue;
-      const content = await readTestFileContent(root, (row[testFileIndex] ?? "").trim());
-      if (content === null) continue;
-      if (selectorResolves(selector, content)) continue;
-      issues.push(
-        issue(
-          "TDDLIST_SELECTOR_UNRESOLVED",
-          `Selector "${selector}" was not found in its Test file for spec-${specNumber} (row ${rowIdx + 1}, Status=${status})`,
-          "warning",
-          relPath,
-          "tddList.selectorResolves",
-          undefined,
-          "canonical",
-          `The row claims a completed test the file does not appear to contain — the test was renamed, moved, or the Selector is stale. Update the Selector, or register a \`.qfai/waivers.yml\` waiver with rule: ${SELECTOR_UNRESOLVED_RULE_ID} when the selector is written in a form this check cannot resolve.`,
-        ),
-      );
-    }
+  for (const ref of ledgerRows()) {
+    const status = cell(ref, "Status").toLowerCase();
+    if (!TEST_FILE_CHECK_STATUSES.has(status)) continue;
+    const selector = cell(ref, "Selector");
+    if (selector.length === 0) continue;
+    const testFileContent = await readTestFileContent(root, cell(ref, "Test file"));
+    if (testFileContent === null) continue;
+    if (selectorResolves(selector, testFileContent)) continue;
+    issues.push(
+      issue(
+        "TDDLIST_SELECTOR_UNRESOLVED",
+        `Selector "${selector}" was not found in its Test file for spec-${specNumber} (${ref.label}, Status=${status})`,
+        "warning",
+        relPath,
+        "tddList.selectorResolves",
+        undefined,
+        "canonical",
+        `The row claims a completed test the file does not appear to contain — the test was renamed, moved, or the Selector is stale. Update the Selector, or register a \`.qfai/waivers.yml\` waiver with rule: ${SELECTOR_UNRESOLVED_RULE_ID} when the selector is written in a form this check cannot resolve.`,
+      ),
+    );
   }
 
   // Phase 2 – Check 9b: Layer <-> Test file consistency.
   //
   // `Layer` was a required column whose value was never read, so a `Unit` row
-  // pointing at `tests/integration/**` was an invisible state. `layerIndex` is
-  // resolved once above, for the enum check.
-  if (layerIndex >= 0 && testFileIndex >= 0) {
-    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
-      const row = table.rows[rowIdx];
-      if (!row) continue;
-      const layer = (row[layerIndex] ?? "").trim().toLowerCase();
-      const testFile = (row[testFileIndex] ?? "").trim().replace(/\\/g, "/");
-      const expectedDir = LAYER_TEST_DIRS[layer];
-      if (!expectedDir || testFile.length === 0) continue;
+  // pointing at `tests/integration/**` was an invisible state.
+  for (const ref of ledgerRows()) {
+    const rawLayer = cell(ref, "Layer");
+    const testFile = cell(ref, "Test file").replace(/\\/g, "/");
+    const expectedDir = LAYER_TEST_DIRS[rawLayer.toLowerCase()];
+    if (!expectedDir || testFile.length === 0) continue;
 
-      const actualDir = Object.entries(LAYER_TEST_DIRS).find(
-        ([, dir]) => dir !== null && isUnderTestDir(testFile, dir),
-      );
-      if (actualDir && actualDir[1] !== expectedDir) {
-        issues.push(
-          issue(
-            "TDDLIST_LAYER_PATH_MISMATCH",
-            `Layer "${(row[layerIndex] ?? "").trim()}" for spec-${specNumber} (row ${rowIdx + 1}) does not match Test file "${testFile}" (expected a path under ${expectedDir})`,
-            "warning",
-            relPath,
-            "tddList.layerPathConsistency",
-          ),
-        );
-      }
-    }
+    const actualDir = Object.entries(LAYER_TEST_DIRS).find(
+      ([, dir]) => dir !== null && isUnderTestDir(testFile, dir),
+    );
+    if (!actualDir || actualDir[1] === expectedDir) continue;
+    issues.push(
+      issue(
+        "TDDLIST_LAYER_PATH_MISMATCH",
+        `Layer "${rawLayer}" for spec-${specNumber} (${ref.label}) does not match Test file "${testFile}" (expected a path under ${expectedDir})`,
+        "warning",
+        relPath,
+        "tddList.layerPathConsistency",
+      ),
+    );
   }
 
   // Phase 2 – Check 9c: Evidence content on rows that have run a cycle.
@@ -1105,122 +1257,179 @@ async function validateSpecTddList(
   // the one machine gate `qfai-implement`'s FINAL CHECKLIST names. That made
   // `error: 0` an actively misleading signal for the two SKILL.md hard rules
   // encoded below, which until now only a human reading the prose could apply.
-  const evidenceIndex = normalizedHeaders.indexOf("Evidence");
-  if (statusIndex >= 0 && evidenceIndex >= 0) {
-    for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx++) {
-      const row = table.rows[rowIdx];
-      if (!row) continue;
-      const status = (row[statusIndex] ?? "").trim().toLowerCase();
-      if (!EVIDENCE_CHECK_STATUSES.has(status)) continue;
-      const evidence = (row[evidenceIndex] ?? "").trim();
-      const rowLabel =
-        tddIdIndex >= 0 && (row[tddIdIndex] ?? "").trim().length > 0
-          ? `${(row[tddIdIndex] ?? "").trim()} (row ${rowIdx + 1})`
-          : `row ${rowIdx + 1}`;
+  for (const ref of ledgerRows()) {
+    const status = cell(ref, "Status").toLowerCase();
+    if (!EVIDENCE_CHECK_STATUSES.has(status)) continue;
+    const evidence = cell(ref, "Evidence");
+    const tddId = cell(ref, "TDD-ID");
+    const rowLabel = tddId.length > 0 ? `${tddId} (${ref.label})` : ref.label;
 
-      if (EVIDENCE_PLACEHOLDER.test(evidence)) {
-        issues.push(
-          issue(
-            "TDDLIST_EVIDENCE_EMPTY",
-            `Evidence is empty for spec-${specNumber} ${rowLabel}, Status=${status}. A row past RED owes the command and its result ("Empty evidence entries are rejected", qfai-implement Evidence hard rules)`,
-            "error",
-            relPath,
-            "tddList.evidencePresent",
-            undefined,
-            "change",
-            `Evidence 列に実際に実行したコマンドとその結果を記録してください（例: \`npx vitest run tests/foo.test.ts\` → 3 passed）。まだ実行していない場合は Status を todo / red に戻してください。`,
-          ),
-        );
-        continue;
-      }
-
-      // Only a cell that *claims a verdict* can be status-only evidence. A cell
-      // holding some other note without a command is under-specified, but
-      // calling it "status-only" would be wrong and erroring on it would reject
-      // ledger content the hard rules never described.
-      if (EVIDENCE_VERDICT_WORD.test(evidence) && !hasCommandShape(evidence)) {
-        issues.push(
-          issue(
-            "TDDLIST_EVIDENCE_STATUS_ONLY",
-            `Evidence for spec-${specNumber} ${rowLabel} states a verdict with no command (Status=${status}): "${evidence}". Status-only evidence is invalid — both the command and its result are required`,
-            // `warning`, not `error`, and waivable.
-            //
-            // The hard rule says "MUST be rejected", and an error is what that
-            // deserves — but every ledger written before this check existed
-            // carries prose verdicts, and turning them into build failures on
-            // upgrade is a migration, not a gate. qfai's own repository has 99
-            // such rows. `TDDLIST_EVIDENCE_EMPTY` stays at `error` because an
-            // empty cell is unambiguous and was the observed failure; a prose
-            // verdict at least asserts something a reviewer can read.
-            //
-            // The rule id is the waivable `^[A-Z]+-\d{3}$` shape, so a project
-            // that has audited its legacy rows can silence them per path
-            // instead of being stuck between a false gate and a rewrite.
-            "warning",
-            relPath,
-            EVIDENCE_STATUS_ONLY_RULE_ID,
-            undefined,
-            "change",
-            `"Status: PASS" のような判定だけの記述は無効です。実行したコマンドを併記してください（例: \`npx vitest run tests/foo.test.ts\` → 3 passed）。`,
-          ),
-        );
-      }
+    if (EVIDENCE_PLACEHOLDER.test(evidence)) {
+      issues.push(
+        issue(
+          "TDDLIST_EVIDENCE_EMPTY",
+          `Evidence is empty for spec-${specNumber} ${rowLabel}, Status=${status}. A row past RED owes the command and its result ("Empty evidence entries are rejected", qfai-implement Evidence hard rules)`,
+          "error",
+          relPath,
+          "tddList.evidencePresent",
+          undefined,
+          "change",
+          `Evidence 列に実際に実行したコマンドとその結果を記録してください（例: \`npx vitest run tests/foo.test.ts\` → 3 passed）。まだ実行していない場合は Status を todo / red に戻してください。`,
+        ),
+      );
+      continue;
     }
+
+    // Only a cell that *claims a verdict* can be status-only evidence. A cell
+    // holding some other note without a command is under-specified, but
+    // calling it "status-only" would be wrong and erroring on it would reject
+    // ledger content the hard rules never described.
+    if (!EVIDENCE_VERDICT_WORD.test(evidence) || hasCommandShape(evidence)) continue;
+    issues.push(
+      issue(
+        "TDDLIST_EVIDENCE_STATUS_ONLY",
+        `Evidence for spec-${specNumber} ${rowLabel} states a verdict with no command (Status=${status}): "${evidence}". Status-only evidence is invalid — both the command and its result are required`,
+        // `warning`, not `error`, and waivable.
+        //
+        // The hard rule says "MUST be rejected", and an error is what that
+        // deserves — but every ledger written before this check existed
+        // carries prose verdicts, and turning them into build failures on
+        // upgrade is a migration, not a gate. qfai's own repository has 99
+        // such rows. `TDDLIST_EVIDENCE_EMPTY` stays at `error` because an
+        // empty cell is unambiguous and was the observed failure; a prose
+        // verdict at least asserts something a reviewer can read.
+        //
+        // The rule id is the waivable `^[A-Z]+-\d{3}$` shape, so a project
+        // that has audited its legacy rows can silence them per path
+        // instead of being stuck between a false gate and a rewrite.
+        "warning",
+        relPath,
+        EVIDENCE_STATUS_ONLY_RULE_ID,
+        undefined,
+        "change",
+        `"Status: PASS" のような判定だけの記述は無効です。実行したコマンドを併記してください（例: \`npx vitest run tests/foo.test.ts\` → 3 passed）。`,
+      ),
+    );
   }
 
   // Phase 2 – Check 10: TC coverage (unit/component TCs must appear in test-list)
-  if (tcRefsIndex >= 0) {
-    if (unitComponentTcIds.size > 0) {
-      const coveredTcIds = new Set<string>();
-      for (const row of table.rows) {
-        // A `TC-*` sitting on an E2E/API row is a forbidden placement
-        // (Check 5c). Counting it here would let that single illegal row clear
-        // the coverage obligation for a unit/component TC.
-        if (layerIndex >= 0) {
-          const rowLayer = (row[layerIndex] ?? "").trim().toLowerCase();
-          if (TC_FORBIDDEN_LAYERS.has(rowLayer)) continue;
-        }
-        const tcRefsCell = (row[tcRefsIndex] ?? "").trim();
+  //
+  // Read from every ledger table, not just the first. A ledger that appends a
+  // per-change-request section (`## CHG-006 …` + its own table) is a shape the
+  // implement skill produces, and scoring coverage against table 1 alone
+  // reports every TC the later tables cover as uncovered. That was survivable
+  // while this was the second gate behind `QFAI-ATDD-112`; with L1/L2 now
+  // excluded from that rule it is the only one, so a false negative here is a
+  // hard `error` on a correct ledger.
+  //
+  // Widening this reader is also what obliged Checks 5a / 5c / 6 to read the
+  // same set. They did not, so the identical row produced `TDDLIST_UNKNOWN_LAYER`
+  // in the first table and *no finding whatsoever* in a later one — while
+  // clearing this rule's `error` from both. The exclusions below name those
+  // checks as the rules that report a bad `Layer`; in a later table that was
+  // simply untrue.
+  //
+  // No guard on `coverageTables.length`. It used to skip this check whole when
+  // the reader found no ledger table, which is exactly the case in which every
+  // coverage-target TC is uncovered — a fenced-only or commented-out ledger
+  // then silenced the one gate L1/L2 have. An empty set cites no layer, so the
+  // loop below reports each TC as not covered, which is the honest answer.
+  if (unitComponentTcIds.size > 0) {
+    // TC -> the row layers that cite it. A set, not a boolean: the coverage
+    // question and the crosswalk question are both answered from it.
+    const citedLayers = new Map<string, Set<string>>();
+    const cite = (tcId: string, layer: string): void => {
+      const layers = citedLayers.get(tcId) ?? new Set<string>();
+      layers.add(layer);
+      citedLayers.set(tcId, layers);
+    };
+    for (const scan of coverageTables) {
+      for (const row of scan.table.rows) {
+        // `isCoverageBearingRow` is the shared answer to "may a coverage
+        // claim be read from this row" — a `TC-*` on an E2E/API row is a
+        // forbidden placement (Check 5c) and a line with no `TDD-ID` is not
+        // an item at all. `qfai report` asks the same function, so the two
+        // commands cannot disagree about one row.
+        if (!isCoverageBearingRow(scan, row)) continue;
+        const rowLayer = (row[scan.layerIndex] ?? "").trim().toLowerCase();
+        const tcRefsCell = (row[scan.tcRefsIndex] ?? "").trim();
         if (tcRefsCell.length === 0) continue;
         const refs = splitTcRefs(tcRefsCell);
         for (const ref of refs) {
           const upper = ref.toUpperCase();
-          coveredTcIds.add(upper);
+          // Only a well-formed reference discharges anything.
+          // `resolveParentTcId` strips the last segment, so an over-long
+          // `TC-0001-0001-0001` resolved to the real `TC-0001-0001` and
+          // cleared its obligation — while Check 5 skips a token that fails
+          // `TC_ID_TOKEN` rather than reporting it, so nothing named the
+          // malformed ref either. The TC ended up owed by neither gate on the
+          // strength of a typo.
+          if (!isWellFormedTcRef(upper)) continue;
+          cite(upper, rowLayer);
           const parent = resolveParentTcId(upper);
-          if (parent) coveredTcIds.add(parent);
+          if (parent) cite(parent, rowLayer);
         }
       }
-      for (const tcId of unitComponentTcIds) {
-        if (!coveredTcIds.has(tcId)) {
-          issues.push(
-            issue(
-              "TDDLIST_TC_NOT_COVERED",
-              `TC "${tcId}" (coverage-target) is not referenced in tdd/test-list.md for spec-${specNumber}. Add a row with this TC in TC-Refs`,
-              "error",
-              relPath,
-              "tddList.tcCoverage",
-            ),
-          );
-        }
+    }
+    for (const tcId of unitComponentTcIds) {
+      const layers = citedLayers.get(tcId);
+      if (layers === undefined) {
+        issues.push(
+          issue(
+            "TDDLIST_TC_NOT_COVERED",
+            `TC "${tcId}" (coverage-target) is not referenced in tdd/test-list.md for spec-${specNumber}. Add a row with this TC in TC-Refs`,
+            "error",
+            relPath,
+            "tddList.tcCoverage",
+          ),
+        );
+        continue;
       }
+      // Crosswalk: a declared `Level` names the layer that discharges the TC.
+      // Counting any non-E2E/API row let a `Level = L1` TC be closed by an
+      // `Layer = Integration` row alone — and since L1/L2 no longer owe
+      // `QFAI-ATDD-112` either, full validation passed with no unit test at
+      // all. Only an explicit contradiction is reported: a TC that declared
+      // no `Level`, or a row whose `Layer` is blank or outside the ledger
+      // vocabulary, is not evidence of a mismatch.
+      const expected = expectedCoverageLayers(coverageTargetLevels.get(tcId) ?? "");
+      if (expected === null) continue;
+      const decisive = [...layers].filter((layer) => KNOWN_LEDGER_LAYERS.has(layer));
+      if (decisive.length !== layers.size || decisive.length === 0) continue;
+      if (decisive.some((layer) => expected.has(layer))) continue;
+      issues.push(
+        issue(
+          "TDDLIST_COVERAGE_LAYER_MISMATCH",
+          `TC "${tcId}" declares Level=${coverageTargetLevels.get(tcId) ?? ""} but is only referenced from Layer=${decisive
+            .map((layer) => layer.toUpperCase())
+            .sort()
+            .join(
+              ", ",
+            )} row(s) in tdd/test-list.md for spec-${specNumber}. The row still counts as coverage today; this escalates to error in a later release`,
+          // `warning`, not `error`, on purpose. The mismatch is real and the
+          // hole it names is real — but every ledger written before this rule
+          // existed could carry one, and escalating on the release that
+          // introduces the check hands consumers a zero-length window. This
+          // repository's own specs have five. Making the drift visible is
+          // what was missing; failing on it needs an announced window.
+          "warning",
+          relPath,
+          "tddList.tcCoverageLayer",
+          [tcId],
+          "change",
+          `Move the TC-Refs to a Layer=${[...expected]
+            .map((layer) => layer.toUpperCase())
+            .sort()
+            .join(
+              " / ",
+            )} row, or change the TC's \`Level\` in ${TEST_CASES_FILE_NAME} to the layer that actually covers it.`,
+        ),
+      );
     }
   }
 
   return issues;
 }
-
-type TestCaseIds = {
-  knownTcIds: Set<string>;
-  unitComponentTcIds: Set<string>;
-  /** `Level` values that match neither vocabulary; reported so a mismatch is visible. */
-  unrecognizedLevels: Set<string>;
-  /**
-   * Set when no `TC-ID`-bearing table could be located. Both TC checks go
-   * silent in that case, so the caller reports the miss rather than letting
-   * "nothing found" read as "everything covered".
-   */
-  unresolved?: "no-table" | "no-tc-id-column";
-};
 
 type ObligationColumnSpec = {
   column: string;
@@ -1244,30 +1453,26 @@ type ObligationColumnSpec = {
  * completion gate reads at the wrong layer.
  */
 function validateObligationColumn(
-  table: { rows: string[][] },
-  headers: string[],
+  rows: Iterable<LedgerRowRef>,
   spec: ObligationColumnSpec,
 ): Issue[] {
-  const index = headers.indexOf(spec.column);
-  if (index < 0) {
-    return [];
-  }
-  const layerIndex = headers.indexOf("Layer");
-
   const issues: Issue[] = [];
-  for (let rowIdx = 0; rowIdx < table.rows.length; rowIdx += 1) {
-    const cell = (table.rows[rowIdx]?.[index] ?? "").trim();
-    if (cell.length === 0 || cell === "-") {
+  for (const ref of rows) {
+    // An absent column reads as an empty cell, which is the same "this row
+    // carries no such obligation" the optional column already means.
+    if (ref.scan.headers.indexOf(spec.column) < 0) continue;
+    const value = cell(ref, spec.column);
+    if (value.length === 0 || value === "-") {
       continue;
     }
-    for (const token of cell.split(/[,;\s]+/).filter((value) => value.length > 0)) {
+    for (const token of value.split(/[,;\s]+/).filter((entry) => entry.length > 0)) {
       if (spec.pattern.test(token.toUpperCase())) {
         continue;
       }
       issues.push(
         issue(
           "TDDLIST_INVALID_OBLIGATION_REF",
-          `Invalid ${spec.column} value "${token}" in tdd/test-list.md for spec-${spec.specNumber} (row ${rowIdx + 1}). Expected format: ${spec.expected}`,
+          `Invalid ${spec.column} value "${token}" in tdd/test-list.md for spec-${spec.specNumber} (${ref.label}). Expected format: ${spec.expected}`,
           "error",
           spec.relPath,
           spec.rule,
@@ -1275,17 +1480,14 @@ function validateObligationColumn(
       );
     }
 
-    if (layerIndex < 0) {
-      continue;
-    }
-    const rawLayer = (table.rows[rowIdx]?.[layerIndex] ?? "").trim();
+    const rawLayer = cell(ref, "Layer");
     if (rawLayer.toLowerCase() === spec.layer) {
       continue;
     }
     issues.push(
       issue(
         "TDDLIST_OBLIGATION_LAYER_MISMATCH",
-        `${spec.column} is only legal on a Layer=${spec.layer.toUpperCase()} row, but spec-${spec.specNumber} (row ${rowIdx + 1}) declares Layer="${rawLayer}"`,
+        `${spec.column} is only legal on a Layer=${spec.layer.toUpperCase()} row, but spec-${spec.specNumber} (${ref.label}) declares Layer="${rawLayer}"`,
         "error",
         spec.relPath,
         `${spec.rule}Layer`,
@@ -1296,49 +1498,4 @@ function validateObligationColumn(
     );
   }
   return issues;
-}
-
-async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> {
-  // One instance of each Set for the whole function: the early returns hand
-  // back the same (still empty) object the happy path fills, so there is no
-  // second `unrecognizedLevels` that could diverge from this one.
-  const knownTcIds = new Set<string>();
-  const unitComponentTcIds = new Set<string>();
-  const unrecognizedLevels = new Set<string>();
-  const collected: TestCaseIds = { knownTcIds, unitComponentTcIds, unrecognizedLevels };
-  const testCasesPath = path.join(specDir, TEST_CASES_FILE_NAME);
-  if (!(await exists(testCasesPath))) return collected;
-  let content: string;
-  try {
-    content = await readFile(testCasesPath, "utf-8");
-  } catch {
-    return collected;
-  }
-  // Scoped to the `## Test Case Table` section the template names, with a
-  // header-match fallback for older specs. Reading the first table in
-  // document order let an explanatory table above the heading hijack the set.
-  const resolution = resolveTestCaseTable(content);
-  if (!resolution.table) {
-    return { ...collected, unresolved: resolution.reason };
-  }
-  const table = resolution.table;
-  const headers = table.headers.map((h) => h.trim());
-  const tcIdIndex = headers.indexOf("TC-ID");
-  const levelIndex = headers.indexOf("Level");
-
-  for (const row of table.rows) {
-    const tcId = (row[tcIdIndex] ?? "").trim().toUpperCase();
-    if (tcId.length === 0) continue;
-    knownTcIds.add(tcId);
-    if (levelIndex >= 0) {
-      const level = (row[levelIndex] ?? "").trim().toLowerCase();
-      if (classifyCoverageLevel(level) === "unrecognized") {
-        unrecognizedLevels.add((row[levelIndex] ?? "").trim());
-      }
-      if (!isCoverageTargetLevel(level)) continue;
-    }
-    // Reaches here when: (a) Level is a coverage target, or (b) Level column is absent (fallback: all TCs)
-    unitComponentTcIds.add(tcId);
-  }
-  return collected;
 }

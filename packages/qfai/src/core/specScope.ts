@@ -106,6 +106,13 @@ export type SpecScopeRoots = {
  * such finding as repo-level — leaking a sibling spec's warnings into a scoped
  * `--strict` run.
  */
+/** Whether a path is under `specsRoot` at all — see {@link isFindingInSpecScope}. */
+function isInsideSpecsRoot(filePath: string, roots: SpecScopeRoots): boolean {
+  const absolute = path.isAbsolute(filePath) ? filePath : path.resolve(roots.root, filePath);
+  const relative = path.relative(roots.specsRoot, absolute);
+  return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
+}
+
 export function owningSpecNumber(filePath: string, roots: SpecScopeRoots): string | null {
   const absolute = path.isAbsolute(filePath) ? filePath : path.resolve(roots.root, filePath);
   const relative = path.relative(roots.specsRoot, absolute);
@@ -160,5 +167,37 @@ export function isFindingInSpecScope(
   if (paths.length === 0) {
     return true;
   }
-  return paths.some((value) => isPathInSpecScope(value, roots, scope));
+  // An unowned path means "unattributed", not "belongs to every spec". Judging
+  // with `some(isPathInSpecScope)` over the whole list made one repo-level path
+  // grant universal membership, so a finding whose representative `file` is a
+  // test path (`tests/integration/spec-0001/…` — outside `specsRoot`, hence
+  // unowned) survived every `--spec` filter no matter what its `relatedFiles`
+  // attributed it to. Once any path names an owning spec the finding IS
+  // attributed, and only those owners decide.
+  // Three kinds of path, and only the first two say anything about scope.
+  //
+  //   - inside a `spec-NNNN` directory: an owner;
+  //   - inside `specsRoot` but not in one — `_policies/**` — a **shared spec
+  //     artifact**. A finding that names one is genuinely repo-level: the
+  //     duplicate `QFAI-ID-001` reports between a shared policy and one spec is
+  //     present for every spec, and dropping it outside that spec's own run hid
+  //     it from the others;
+  //   - outside `specsRoot` — a `tests/**` file, say — **auxiliary**. It is the
+  //     path the operator edits, not a claim about ownership, and letting it
+  //     grant universal membership is what made attributed findings survive
+  //     every `--spec` filter.
+  const owners: string[] = [];
+  let sharedSpecArtifact = false;
+  for (const value of paths) {
+    const owner = owningSpecNumber(value, roots);
+    if (owner !== null) {
+      owners.push(owner);
+    } else if (isInsideSpecsRoot(value, roots)) {
+      sharedSpecArtifact = true;
+    }
+  }
+  if (sharedSpecArtifact || owners.length === 0) {
+    return true;
+  }
+  return owners.some((owner) => scope.has(owner));
 }

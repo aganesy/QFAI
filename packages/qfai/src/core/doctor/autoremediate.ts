@@ -24,6 +24,7 @@ import path from "node:path";
 
 import { exists } from "../validators/utils.js";
 import { loadConfig } from "../config.js";
+import { migrateLegacyReviewPacks } from "./migrateLegacyReviewPacks.js";
 import { cleanStaleReviewPacks } from "./cleanReviewPacks.js";
 import { probeSkillManifestRuntimeDeps } from "./skillManifestProbe.js";
 
@@ -48,6 +49,8 @@ export type AutoremediateSummary = {
   readonly installed: readonly string[];
   readonly archived: readonly string[];
   readonly configFieldsWritten: readonly string[];
+  /** Review packs recorded as predating `revision_form` by this run. */
+  readonly legacyPacksRecorded: readonly string[];
 };
 
 const DEFAULT_KEYED_CONFIG_FIELDS: ReadonlyArray<{
@@ -130,6 +133,7 @@ export async function runAutoremediate(
       installed: [],
       archived: [],
       configFieldsWritten: [],
+      legacyPacksRecorded: [],
     };
   }
 
@@ -187,11 +191,33 @@ export async function runAutoremediate(
     lines.push("autoremediate: would fill default-keyed config fields (dry-run)");
   }
 
+  // (4) Record the review packs that predate `revision_form`, once.
+  // Taking a version that requires the marker turns every pack already on disk
+  // into a blocking `QFAI-REVIEW-007` — a repository that keeps its review
+  // history fails `--fail-on error` on adoption, for a condition no producer
+  // can go back and fix. Additive and idempotent, so a repeat run is a no-op
+  // and a pack that forgets its marker *after* the migration is not excused.
+  // The managed `.gitignore` block is refreshed by the caller before this runs
+  // (`doctor.ts`): an existing repository still carries the older one, whose
+  // `.qfai/review/*` would ignore the record written below, so it never reaches
+  // a commit and every legacy claim is uncorroborated again in CI and in the
+  // next clone. It is done there rather than here because this module is core
+  // and that helper is CLI — importing it the other way is a cycle.
+  const migration = await migrateLegacyReviewPacks(options.root, {
+    ...(options.dryRun ? { dryRun: true } : {}),
+  });
+  lines.push(
+    options.dryRun
+      ? `autoremediate: would record legacy review packs=${String(migration.added.length)} (dry-run)`
+      : `autoremediate: legacy review packs recorded=${String(migration.added.length)}`,
+  );
+
   return {
     disabledInCi: false,
     lines,
     installed,
     archived: archivedNames,
     configFieldsWritten,
+    legacyPacksRecorded: migration.added,
   };
 }

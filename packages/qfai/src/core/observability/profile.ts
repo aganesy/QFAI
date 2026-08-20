@@ -1,6 +1,5 @@
 /**
  * CapabilityProfiler — assesses project capability profiles.
- * SPEC-0032
  *
  * Deterministic: same input always produces same output.
  */

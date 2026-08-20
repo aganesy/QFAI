@@ -75,11 +75,34 @@ routing:
       # the row is allowed to proceed to `build`.
       - id: red
         iteration: per-ledger-item
-        mandatory_agents: [qa-gatekeeper]
-        conditional_agents: []
+        # `qa-gatekeeper` is **conditional**, not mandatory. `/qfai-atdd`
+        # invokes this phase for step 3a alone when a new route or export
+        # needs its seam before a RED can be taken — the row has no RED yet,
+        # which is the whole reason for the trip. Listed as mandatory, the
+        # gate had no assertion failure to judge and could only return
+        # REVISE, so `SKILL.md`'s "do not route `qa-gatekeeper` for a
+        # seam-only invocation" contradicted this manifest and the round trip
+        # stopped. It stays blocking: whenever a RED *is* submitted, its
+        # verdict decides.
+        mandatory_agents: []
+        # The production owners are conditional here, not absent. Two steps
+        # in this phase touch production source before any RED exists, and
+        # the orchestrator may not implement (`SKILL.md` Orchestrator
+        # Protocol): step 3a's minimal seam, which a new-surface row needs
+        # before its failure is an assertion rather than a 404, and step 3c's
+        # falsifiability mutation for a handed-over row whose evidence is not
+        # written yet. Without them the phase had `qa-gatekeeper` alone and
+        # neither step had anyone to perform it.
+        conditional_agents: [qa-gatekeeper, frontend-engineer, backend-engineer]
         parallel_groups: []
         blocking_agents: [qa-gatekeeper]
-        rerun_policy: failed-agents-only
+        # `changed-scope-dependents`: the gatekeeper's REVISE here is usually
+        # *about* the seam or the mutation — it touched code the row does not
+        # own, or the selector did not fail. Re-running only the agent that
+        # returned non-PASS re-judges an unchanged artifact and returns the
+        # same REVISE, so the row never leaves `red`. Whoever wrote the
+        # production edit has to be rerun with it.
+        rerun_policy: changed-scope-dependents
       - id: build
         iteration: per-ledger-item
         mandatory_agents: [qa-gatekeeper]
@@ -121,6 +144,49 @@ routing:
         parallel_groups: []
         blocking_agents: [test-design-analyst]
         rerun_policy: failed-agents-only
+      # Stage gate P1b. `references/red-provenance.md` branch 1 requires
+      # `qa-gatekeeper` to confirm the RED *before any production code exists*,
+      # which is the same rule `qfai-implement` applies to its own rows — and
+      # there was no phase here to submit that to, so the instruction named a
+      # routing phase this skill did not have. It must sit before
+      # `implementation`: after the surfaces are built there is nothing left to
+      # watch fail.
+      - id: red
+        # `delivery-planner` is blocking here, ahead of `qa-gatekeeper`:
+        # `qfai-implement/SKILL.md` makes it the only authority on whether a
+        # selector covers a sufficient slice of its obligation, and requires a
+        # scope REVISE to be settled BEFORE the RED is submitted. Approving the
+        # RED first leaves the planner only "keep the PASS and open a new row",
+        # which cannot repair a handoff taken at the wrong granularity.
+        #
+        # `qa-gatekeeper` is **conditional**, not mandatory: it judges the rows
+        # that have evidence at this gate — the branch 1 ones. A branch 2 row's
+        # payload is its falsifiability trio, which by design does not exist
+        # until P4b, and the role stops when a row's evidence is missing. Listed
+        # as mandatory it therefore stopped a run whose rows are all branch 2
+        # before it could reach the P4b handoff that produces the trio: the gate
+        # blocked on the absence of something it is the reason for. It stays
+        # blocking — when it is routed, its verdict decides.
+        #
+        # `iteration: per-ledger-item`, matching this manifest's
+        # `qfai-implement` red phase. The default is `per-invocation`, which
+        # routes each agent once for the whole ledger — so
+        # `acceptance-test-engineer` would leave several deliberate REDs open at
+        # once and `qa-gatekeeper` would never see a row in its own RED state,
+        # neither of which is the one-row-at-a-time loop P1b/P1c require.
+        iteration: per-ledger-item
+        mandatory_agents: [delivery-planner, acceptance-test-engineer]
+        conditional_agents: [qa-gatekeeper]
+        parallel_groups: []
+        blocking_agents: [delivery-planner, qa-gatekeeper]
+        # `changed-scope-dependents`, not `failed-agents-only`: a
+        # `delivery-planner` REVISE here means the selector covers too little
+        # of its obligation, and the repair is `acceptance-test-engineer`
+        # splitting the test — then a fresh `qa-gatekeeper` verdict on the new
+        # RED. Re-running only the agent that failed would have the planner
+        # re-read an unchanged selector and return the same REVISE, or leave
+        # the previous gatekeeper PASS standing over a test that changed.
+        rerun_policy: changed-scope-dependents
       - id: implementation
         mandatory_agents: [acceptance-test-engineer]
         conditional_agents: []

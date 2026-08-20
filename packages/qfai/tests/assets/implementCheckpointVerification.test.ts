@@ -157,7 +157,10 @@ describe("qfai-implement checkpoint verification contract", () => {
         path.join(dir, "references", "checkpoint-verification.md"),
         "utf-8",
       );
-      expect(reference).toContain("`npx qfai validate --profile tdd --fail-on error`");
+      // The claim is the launcher, not the whole invocation: the command also
+      // carries `--spec <spec-id>`, because this skill runs one spec at a time
+      // and an unscoped checkpoint fails on a sibling's in-flight work.
+      expect(reference).toContain("`npx qfai validate --profile tdd --fail-on error --spec");
       // A bare launcher exits 127 on a normal local install, failing every checkpoint.
       expect(reference).not.toMatch(/^\d+\.\s+`qfai /m);
     }

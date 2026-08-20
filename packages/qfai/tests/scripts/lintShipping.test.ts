@@ -330,3 +330,30 @@ describe("lint-shipping fixture — detection rules", () => {
     expect(violations).toEqual([]);
   });
 });
+
+describe("lint-shipping keeps its rules' own flags", () => {
+  it("detects an upper-case internal spec id in src JSDoc", async () => {
+    // The spec-id rules carry `i`, and globalising them with a bare `"g"`
+    // dropped it — so `SPEC-9999` passed here while the post-build guard and
+    // the smoke test, both case-insensitive, caught it. The same distributed
+    // content, three answers from one SSOT-synced set.
+    const root = await newTempDir();
+    await mkdir(path.join(root, "src/core"), { recursive: true });
+    await writeFile(
+      path.join(root, "src/core/example.ts"),
+      [
+        "/**",
+        " * See SPEC-9999 and .qfai/specs/SPEC-0042/ for the rule.",
+        " */",
+        "export const x = 1;",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    expect(violations.map((v) => v.pattern)).toEqual(
+      expect.arrayContaining(["internal-spec-id-jsdoc-leak", "internal-spec-path-jsdoc-leak"]),
+    );
+  });
+});

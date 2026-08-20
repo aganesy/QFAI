@@ -5,10 +5,16 @@ run.
 
 ## Classify first
 
-- **Obligation already satisfied by a sibling row** — the new test exercises a
-  predicate an earlier `done` row already made pass. This is the usual case
-  when a BR binds several ACs to one common validator. It is **not an anomaly**
-  and does **not** go to `exception`. Follow the procedure below.
+- **Obligation already satisfied by an earlier `done` sibling row** — the new
+  test exercises a predicate that row already made pass. The usual case when a
+  BR binds several ACs to one common validator. **Not an anomaly** and does
+  **not** go to `exception`. Follow the procedure below.
+- **Or, on a `Layer = E2E` / `Layer = API` row handed over by `/qfai-atdd`,
+  satisfied by production code no ledger row owns** — a pre-existing route, or
+  one built outside the ledger. Same procedure, and `Satisfied-by` takes the
+  path rather than a row id (step 1). Specific to those rows: their surfaces
+  come from work orders that never appear in the ledger, which is not true of
+  a `Unit` / `Component` / `Integration` row.
 - **Anything else** — the test is wrong, the SUT is wrong, or the cause is
   unknown. Transition to `exception` and record the anomaly.
 
@@ -20,8 +26,24 @@ An honest GREEN from a sibling item is evidence the system works, not a defect.
 The row still needs to be falsifiable, so substitute falsifiability evidence
 for the natural RED and let the row proceed to `green` and `done`:
 
-1. Record `Satisfied-by: TDD-NNNN` — the row whose implementation already
-   satisfies this obligation.
+1. Record `Satisfied-by` — **the sibling `TDD-NNNN` whose implementation
+   already satisfies this obligation**.
+
+   **The production path and symbol** (`src/api/routes/evaluations.py::register`)
+   **is accepted only on a `Layer = E2E` / `Layer = API` row handed over by
+   `/qfai-atdd`** — path _and_ symbol, never a commit id on its own. A commit
+   that touched several routes and a helper names no single predicate, so the
+   Oracle Strength Check has no boundary to apply and would take a mutation
+   anywhere inside it; `qa-gatekeeper` REVISEs that form for exactly this
+   reason. A commit recorded alongside the symbol is provenance and is fine. Those surfaces routinely
+   have no ledger row — a pre-existing route, or one built outside the ledger —
+   so requiring a row id sent every one of them to `exception`, the terminal
+   state this procedure exists to avoid. On a `Unit` / `Component` /
+   `Integration` row it is **not** accepted: production code no ledger row owns
+   is the "anything else" case above, and `qfai-implement/SKILL.md` Phase Red
+   step 5 sends it to `exception`. Widening the field for every row would let
+   an ordinary TDD row reach `done` with no production change and no sibling.
+
 2. Break the shared predicate deliberately (inject a mutation), run this row's
    test, and confirm it **fails**. Record the command and its output as
    `Falsifiability command` / `Falsifiability result`.

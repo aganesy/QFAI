@@ -1,4 +1,4 @@
-import { access, copyFile, mkdir, readdir } from "node:fs/promises";
+import { copyFile, lstat, mkdir, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 export type CopyOptions = {
@@ -161,6 +161,14 @@ async function collectTemplateFiles(root: string): Promise<string[]> {
     return entries;
   }
 
+  // A caller may name a single file rather than a directory — `qfai init`
+  // forces `assistant/manifest/agent-catalog.yml` without forcing the tunable
+  // manifests beside it. Without this, `readdir` throws ENOTDIR on the path.
+  if ((await stat(root)).isFile()) {
+    entries.push(root);
+    return entries;
+  }
+
   const items = await readdir(root, { withFileTypes: true });
   for (const item of items) {
     const fullPath = path.join(root, item.name);
@@ -184,11 +192,24 @@ async function shouldWrite(target: string, force: boolean): Promise<boolean> {
   return !(await exists(target));
 }
 
+/**
+ * Whether anything occupies `target` — **including a symlink that resolves to
+ * nothing**.
+ *
+ * `access` follows the link, so a dangling one answered "free" and the copy
+ * that followed wrote through it: `copyFile` resolves the symlink and creates
+ * the target, so a link pointing outside the project turned `qfai init` into a
+ * writer of fixed content at an arbitrary path. `lstat` asks about the entry
+ * itself, which is the question being asked.
+ *
+ * A read error other than absence answers "occupied": create-only must not
+ * overwrite a path it could not look at.
+ */
 async function exists(target: string): Promise<boolean> {
   try {
-    await access(target);
+    await lstat(target);
     return true;
-  } catch {
-    return false;
+  } catch (error: unknown) {
+    return (error as NodeJS.ErrnoException | null)?.code !== "ENOENT";
   }
 }

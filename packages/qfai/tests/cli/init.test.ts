@@ -54,6 +54,35 @@ async function expectSymlinkTarget(linkPath: string, expectedFragment: string): 
 // (temp dirs, template copying, globbing), so we use a higher timeout to
 // avoid flaky failures on slow or heavily loaded CI runners.
 describe("qfai init", { timeout: 60000 }, () => {
+  it("treats a dangling symlink at the destination as occupied", async () => {
+    // `access` follows the link, so a dangling one answered "free" and the copy
+    // that followed wrote through it — `copyFile` resolves the symlink and
+    // creates the target, turning a create-only init into a writer of fixed
+    // content at whatever path the link named.
+    const sourceRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-src-"));
+    const destRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-dest-"));
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
+    try {
+      await writeFile(path.join(sourceRoot, "README.md"), "shipped\n", "utf-8");
+      const escapee = path.join(outside, "written-through.md");
+      try {
+        await symlink(escapee, path.join(destRoot, "README.md"), "file");
+      } catch {
+        return; // No symlinks here (Windows without Developer Mode).
+      }
+
+      await expect(
+        copyTemplateTree(sourceRoot, destRoot, { force: false, dryRun: false }),
+      ).rejects.toThrow();
+      // And nothing was written through the link.
+      await expect(readFile(escapee, "utf-8")).rejects.toThrow();
+    } finally {
+      await rm(sourceRoot, { recursive: true, force: true });
+      await rm(destRoot, { recursive: true, force: true });
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
   it("fails with guidance when conflicts exist and --force is missing", async () => {
     const sourceRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-src-"));
     const destRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-dest-"));

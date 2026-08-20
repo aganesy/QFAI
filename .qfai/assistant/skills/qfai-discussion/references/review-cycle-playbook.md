@@ -19,4 +19,8 @@ Use this file for detailed review-pack handling in `/qfai-discussion`.
 ## summary.json
 
 - `target.kind` must be `"discussion"`.
+- `revision_form: "content-hash"` and `revision` are written here too — the state these verdicts
+  describe, as a git rev or `working-tree+<content hash>`
+  (`../../qfai-implement/references/evidence-revision.md`). A pack without them fails the repo-wide
+  `/qfai-verify --fail-on error` even where the stage profile passed.
 - Keep rerun history append-only.

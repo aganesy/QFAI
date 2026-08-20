@@ -164,6 +164,79 @@ describe("TDD coverage resolution across duplicate TC rows", () => {
   });
 });
 
+describe("the report reads the ledger the gate reads", () => {
+  // `qfai validate` scores coverage from every ledger table because
+  // `/qfai-implement` appends one per change request. The report read only the
+  // first, so the same file produced two answers: the gate passed while the
+  // report printed the TC as missing and open. A CI progress figure that
+  // contradicts the gate blocking the same branch is worse than none.
+  const LEDGER_HEADER = [
+    "| TDD-ID   | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+    "| -------- | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+  ];
+
+  it("counts a done row in an appended change-request table", async () => {
+    const spec = await coverageFor(
+      [
+        "# TDD Test List",
+        "",
+        ...LEDGER_HEADER,
+        "| TDD-0001 | -       | unit  | tests/a.test.ts | sel | todo | | ev |",
+        "",
+        "## CHG-001",
+        "",
+        ...LEDGER_HEADER,
+        "| TDD-0002 | TC-0001-0001 | unit | tests/b.test.ts | sel | done | | ev |",
+        "",
+      ].join("\n"),
+    );
+
+    expect(spec.doneCount).toBe(1);
+    expect(spec.openCount).toBe(0);
+    expect(spec.missingTcRefs).toEqual([]);
+  });
+
+  it("does not count a fenced template as progress", async () => {
+    // The shared reader masks non-spec regions, so the report cannot be
+    // inflated by a copy-paste template the gate already refuses to read.
+    const spec = await coverageFor(
+      [
+        "# TDD Test List",
+        "",
+        ...LEDGER_HEADER,
+        "",
+        "```md",
+        ...LEDGER_HEADER,
+        "| TDD-0001 | TC-0001-0001 | unit | tests/a.test.ts | sel | done | | ev |",
+        "```",
+        "",
+      ].join("\n"),
+    );
+
+    expect(spec.doneCount).toBe(0);
+    expect(spec.missingTcRefs).toEqual(["TC-0001-0001"]);
+  });
+
+  it("ignores a line with no TDD-ID, exactly as the gate does", async () => {
+    const spec = await coverageFor(
+      [
+        "# TDD Test List",
+        "",
+        ...LEDGER_HEADER,
+        "",
+        "## Notes",
+        "",
+        ...LEDGER_HEADER,
+        "|  | TC-0001-0001 |  |  |  | done | | |",
+        "",
+      ].join("\n"),
+    );
+
+    expect(spec.doneCount).toBe(0);
+    expect(spec.missingTcRefs).toEqual(["TC-0001-0001"]);
+  });
+});
+
 describe("collectTddCoverage stays off the package's public surface", () => {
   it("is not reachable from the published barrels", async () => {
     // `src/core/index.ts` re-exports `./report.js` with `export *`, and

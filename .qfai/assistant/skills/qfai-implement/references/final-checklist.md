@@ -12,8 +12,17 @@ cannot be ticked is a reason not to declare completion, not a note to carry forw
       observable_ path, where the `Satisfied-by` row already implements the predicate.
 - [ ] Refactor phase: code improved with tests still passing.
 - [ ] `test-list.md` statuses are accurate.
-- [ ] No backward transitions occurred.
+- [ ] No backward transitions occurred — other than an approved Change Request reset, the
+      one the lifecycle sanctions (`execution-ledger.md#allowed-transitions`). A resumption, an
+      anomaly exit and the `qa-gatekeeper` rework edge are re-entries, not backward transitions,
+      and do not need to be declared here.
 - [ ] Exception items have DR-IDs recorded.
 - [ ] All tests pass.
-- [ ] `npx qfai validate --profile tdd --fail-on error` passes with zero `QFAI-TEST-001` findings (no
-      `it.todo` / `test.todo` / `describe.todo` stubs remain).
+- [ ] `npx qfai validate --profile tdd --fail-on error --spec <spec-id>` passes with zero
+      `QFAI-TEST-001` findings (no `it.todo` / `test.todo` / `describe.todo` stubs remain).
+      `--spec` scopes the **spec-owned** rules; `QFAI-TEST-001` is **not** one of them and
+      still fails this gate wherever the stub lives. It names a test file, which no spec
+      owns, so a sibling spec's `it.todo` exits 1 here. That is a real limit, not a
+      formality: record the finding, its owning spec and why it is not this run's work,
+      say so in the completion report, and do **not** claim the gate passed, weaken the
+      profile or lower `--fail-on`. The repo-wide run belongs to `/qfai-verify`.

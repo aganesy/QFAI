@@ -36,17 +36,21 @@ Rules:
 - L1 and L2 have no mandated directory: unit and component tests live wherever
   the project's own convention puts them. Only L3-L5 are directory-pinned, and
   only those directories are scanned by the ATDD traceability rules.
-- **A `TC-*` row's `Level` is L1-L3.** The ATDD annotation hard gate routes an
-  obligation by its ID, not by its `Level`: `US-*` is answered from
-  `<testsDir>/e2e/**` (`QFAI-ATDD-111`), `TC-*` from
-  `<testsDir>/integration/**` (`QFAI-ATDD-112`) and `CON-API-*` from
-  `<testsDir>/api/**` (`QFAI-ATDD-113`) and `CON-DB-*` from
-  `<testsDir>/integration/**` (`QFAI-ATDD-115`), while a `TC-*` reference inside
-  `<testsDir>/api/**` or `<testsDir>/e2e/**` is rejected outright
-  (`QFAI-ATDD-121` / `QFAI-ATDD-122`). L4's goal is `CON-API-*` and L5's is
-  `US-*` (see the layer definitions below), so an oracle that lands at L4 or L5
-  means the obligation is misfiled: record it as `CON-API-*` or `US-*` rather
-  than as a `TC-*` row no test directory can carry.
+- **A `TC-*` row's `Level` is L1-L3.** Of those, only L3 owes an ATDD
+  annotation: L1 and L2 have no mandated directory, so `QFAI-ATDD-112` does not
+  apply to them and `QFAI-ATDD-117` (`info`) names them instead. Their gate is
+  `tdd/test-list.md` / `TDDLIST_TC_NOT_COVERED`, under `/qfai-implement`.
+  `US-*` is answered from `<testsDir>/e2e/**` (`QFAI-ATDD-111`), `CON-API-*`
+  from `<testsDir>/api/**` (`QFAI-ATDD-113`) and `CON-DB-*` from
+  `<testsDir>/integration/**` (`QFAI-ATDD-115`) — those three are fixed by the
+  ID type. A `TC-*` is answered from the directory **its own declared `Level`**
+  names, which for a correctly filed row is `<testsDir>/integration/**`; see
+  [Annotation routing](#annotation-routing) for the full table and the
+  misplacement rules.
+  L4's goal is `CON-API-*` and L5's is `US-*` (see the layer definitions
+  below), so an oracle that lands at L4 or L5 means the obligation is misfiled:
+  record it as `CON-API-*` or `US-*` rather than leaving a `TC-*` row at a
+  layer whose goal is another ID type.
 - The two code-side word lists (`tddHelpers.ts#UNIT_COMPONENT_LAYERS` /
   `#NON_COVERAGE_LAYERS`) accept both the code and the word form for the same
   layer; they MUST stay in step with this table.
@@ -78,7 +82,7 @@ writer targets a declared layer instead.
 - Scope: pure decision logic — a single module's inputs and return values, with
   no port collaboration and no real infrastructure.
 - Goal: verify `TC-*` obligations whose oracle observes inputs and outputs only.
-- Location rule: `tests/unit/**`.
+- Convention: `tests/unit/**`. L1 has no mandated directory and owes no ATDD annotation — see the crosswalk and "Unit and Component owe no ATDD annotation".
 
 ### L2 Component
 
@@ -86,7 +90,7 @@ writer targets a declared layer instead.
   with no real infrastructure.
 - Goal: verify `TC-*` obligations whose oracle observes the interaction with a
   port rather than infrastructure state.
-- Location rule: `tests/component/**`.
+- Convention: `tests/component/**`. L2 has no mandated directory and owes no ATDD annotation — see the crosswalk and "Unit and Component owe no ATDD annotation".
 
 ### L3 Integration
 
@@ -142,8 +146,23 @@ falsifying-oracle rule:
 observable at two layers, it is two obligations: write one TC per oracle and
 give each its own `Level`.
 
-- A multi-valued `Level` cell (`L3/L5`) is **illegal**. Nothing consumes it and
-  no validator can route it.
+- A multi-valued `Level` cell (`L3/L5`, `L1/L2`, `L1, L3`) is **illegal**. It
+  matches no entry in the crosswalk, so no rule can read a layer out of it.
+- **What a reader does with one: split the row.** One TC per oracle, each with
+  its own single `Level`. Nothing else is a fix — in particular, do not record
+  a normalization that "drops one half": no tool performs one, and a note
+  saying an `L3/L5` row "normalizes to `L3`" is a claim about a value that only
+  `06_Test-Cases.md` can make.
+- **What the validators do with one, until it is split.** They neither guess
+  nor let it through:
+  - `QFAI-ATDD-112` routes the TC to the same place a TC with no declared
+    `Level` goes — `<testsDir>/integration/**` — and keeps the obligation.
+    Unreadable is deliberately not "excused": if a cell qfai cannot read
+    discharged the obligation, `L1/L2` would be a one-keystroke way to delete
+    any TC from the gate. That default is where the obligation is _reported_,
+    not where the obligation _belongs_.
+  - `TDDLIST_UNKNOWN_LEVEL` (`warning`) names the cell, and the TC stays a
+    coverage target, so `tdd/test-list.md` still owes it a row.
 - If splitting is genuinely impossible, escalate through the Drift Protocol
   rather than inventing a combined value.
 
@@ -163,15 +182,43 @@ L4" applies only when the service-boundary values are themselves what the
 parent BR owns. Inverting this is what collapses a designed pyramid into an
 all-integration suite.
 
-### Annotation routing is by ID type, not by `Level`
+### Annotation routing
 
-The derived `Level` records which oracle owns the obligation. It does **not**
-move the traceability annotation. The [ATDD annotation hard gate](#atdd-annotation-hard-gate)
-routes by obligation ID: `US-*` is answered from `tests/e2e/**`
-(`QFAI-ATDD-111`), `TC-*` from `tests/integration/**` (`QFAI-ATDD-112`), and
-`CON-API-*` from `tests/api/**` (`QFAI-ATDD-113`); a `TC-*` reference inside
-`tests/api/**` or `tests/e2e/**` is rejected outright (`QFAI-ATDD-121` /
-`QFAI-ATDD-122`). Two consequences bind every `TC-*` row:
+The derived `Level` records which oracle owns the obligation, and the
+[ATDD annotation hard gate](#atdd-annotation-hard-gate) routes each obligation
+ID to exactly one directory. `US-*` is answered from `tests/e2e/**`
+(`QFAI-ATDD-111`) and `CON-API-*` from `tests/api/**` (`QFAI-ATDD-113`); those
+two are fixed by the ID type. A `TC-*` is answered from the directory **its own
+declared `Level`** names (`QFAI-ATDD-112`):
+
+| `Level`                       | Answered from                  |
+| ----------------------------- | ------------------------------ |
+| `L1`/`Unit`                   | no ATDD obligation             |
+| `L2`/`Component`              | no ATDD obligation             |
+| `L3`/`Integration`            | `tests/integration/**`         |
+| `L4`/`API`                    | `tests/api/**` (note)          |
+| `L5`/`E2E`                    | `tests/e2e/**` (note)          |
+| none declared                 | `tests/integration/**`         |
+| anything else — typo, `L3/L5` | `tests/integration/**` (note2) |
+
+**(note)** A `TC-*` **should not be** at L4 or L5 — the first bullet below says
+why and what to do instead. The gate routes it there rather than rejecting it so
+a misfiled row is reported once, by the rule that names the real cause, instead
+of twice as "uncovered in integration" and "forbidden in api".
+
+**(note2)** A `Level` the crosswalk does not list — a typo, a project's own
+word, or the illegal multi-valued cell — falls to the same default as an
+undeclared one, and keeps its obligation. The default is the conservative
+answer to a cell qfai cannot read, never a supported spelling: fix the cell
+(see [Obligation spanning more than one layer](#obligation-spanning-more-than-one-layer)).
+`TDDLIST_UNKNOWN_LEVEL` (`warning`) names such a cell on the ledger side.
+
+Exactly one directory, never two: an annotation outside the one its `Level`
+names is both uncovered and rejected (`QFAI-ATDD-121` / `QFAI-ATDD-122` /
+`QFAI-ATDD-123`), and
+the rejection is symmetric — an annotation left in `tests/integration/**` after
+its TC moved to `L4`/`L5` is rejected the same way an early one in
+`tests/api/**` is. Two consequences bind every `TC-*` row:
 
 - **A `TC-*` row's `Level` stays within L1–L3.** L4's goal is `CON-API-*` and
   L5's goal is `US-*` (see the layer definitions above), so an oracle that
@@ -190,14 +237,15 @@ routes by obligation ID: `US-*` is answered from `tests/e2e/**`
   parent BR keeps a spec-side obligation, split the row instead: keep a `TC-*`
   for the part the BR owns — by step 2 that part derives to L1–L3 — and re-file
   only the boundary assertion as `CON-API-*` / `US-*`.
-- **An L1/L2 `Level` does not relax `QFAI-ATDD-112`, and the gate does not
-  change the `Level`.** The two are independent: the `Level` records what the
-  oracle observes and is derived before any test exists, while the
-  `QFAI:SPEC-XXXX:TC-YYYY` annotation is still owed to `tests/integration/**`.
-  Never rewrite a derived L1/L2 to L3 because no integration trace exists yet —
-  that would make the recorded oracle depend on implementation order and hide
-  the unit/component work `/qfai-implement` selects. The missing annotation is
-  an open ATDD obligation to satisfy, not evidence that the `Level` was wrong.
+- **An L1/L2 `Level` carries no `QFAI-ATDD-112` obligation, and the gate does
+  not change the `Level`.** The two are independent: the `Level` records what
+  the oracle observes and is derived before any test exists, while
+  `QFAI-ATDD-112` asks only about the layers ATDD owns. Never rewrite a derived
+  L1/L2 to L3 to make a gate quieter — that would make the recorded oracle
+  depend on implementation order and hide the unit/component work
+  `/qfai-implement` selects. An L1/L2 row's obligation is discharged through
+  `tdd/test-list.md` and `TDDLIST_TC_NOT_COVERED`, not through an annotation in
+  a directory ATDD scans.
 
 ## TestKind resolution (single source)
 
@@ -246,11 +294,21 @@ routes by obligation ID: `US-*` is answered from `tests/e2e/**`
   - Every `TC-*` in specs must be referenced at least once from the directory
     its declared `Level` routes to: L3/Integration -> `tests/integration/**`,
     L4/API -> `tests/api/**`, L5/E2E -> `tests/e2e/**`. A TC with no declared
-    `Level` defaults to `tests/integration/**`. This is what `QFAI-ATDD-112`
-    checks. - Use `QFAI:SPEC-XXXX:TC-YYYY` annotations.
-  - `tests/api/**` and `tests/e2e/**` must not carry `TC-*` annotations
-    (`QFAI-ATDD-121` / `QFAI-ATDD-122`), so an L4 obligation is discharged as a
-    `CON-API-*` reference, never as a `TC-*` one.
+    `Level` defaults to `tests/integration/**`. **L1/Unit and L2/Component owe
+    no reference at all** — see "Unit and Component owe no ATDD annotation"
+    below. This is what `QFAI-ATDD-112` checks.
+  - Use `QFAI:SPEC-XXXX:TC-YYYY` annotations.
+  - A `TC-*` annotation outside the directory its declared `Level` names is
+    rejected (`QFAI-ATDD-121` / `QFAI-ATDD-122` / `QFAI-ATDD-123`). The rule is
+    `Level`-relative,
+    not a blanket ban: a `TC-*` in `tests/api/**` is rejected **unless** that TC
+    declares `L4`/`API`, and in `tests/e2e/**` unless it declares `L5`/`E2E` —
+    an annotation matching its own `Level` is what discharges the obligation
+    there. A `TC-*` should not be at L4 or L5 in the first place (see
+    "Annotation routing"): re-file that obligation as `CON-API-*` or `US-*`.
+    But while the row exists at that `Level`, its annotation belongs in the one
+    directory the `Level` names, and putting it anywhere else leaves the TC
+    uncovered as well as forbidden.
   - Every declared `CON-DB-*` must be referenced at least once from
     `tests/integration/**` (`QFAI-ATDD-115`). Use `QFAI:CON-DB-XXXX`
     annotations. L3 owns this because a DB contract is only exercised against
@@ -260,16 +318,27 @@ routes by obligation ID: `US-*` is answered from `tests/e2e/**`
     current slice defers with a `-- x-qfai-status: planned` comment line,
     reported at `info` by `QFAI-ATDD-116` so the deferral stays visible.
 
-- Per-level routing (target state — **not enforced, do not follow yet**):
-  - The intended end state is one required location per declared `Level`:
-    L1 -> `tests/unit/**`, L2 -> `tests/component/**`,
-    L3 -> `tests/integration/**`. L4 stays `CON-API-*` in `tests/api/**` and
-    L5 stays `US-*` in `tests/e2e/**`.
-  - **This is not live.** `buildAtddTestGlobs` scans only
-    `tests/{e2e,api,integration}`, so an annotation placed in `tests/unit/**`
-    or `tests/component/**` is invisible to the scanner and `QFAI-ATDD-112`
-    still reports the TC as uncovered. Until the scanner and `QFAI-ATDD-112`
-    resolve per-TC, keep discharging every `TC-*` in `tests/integration/**`.
+- **Unit and Component owe no ATDD annotation.** A `TC-*` whose declared
+  `Level` is L1 or L2 is outside `QFAI-ATDD-112` entirely: it is not required
+  in any directory, and an annotation for it inside a scanned directory is not
+  a violation either. `QFAI-ATDD-117` (`info`) names the excluded TCs on every
+  run so the exclusion is visible rather than silent.
+  - This is the only reading consistent with the rest of the package.
+    `qfai-atdd/SKILL.md` puts Unit and Component out of its scope, and the
+    crosswalk above gives L1/L2 no mandated directory — only L3-L5 are
+    directory-pinned and only those three roots are scanned.
+  - Previously L1/L2 fell through to `tests/integration/**` — the fallback for
+    a spec with no `Level` column at all — so every declared Unit and Component
+    TC was an `error` demanding an annotation in a directory this file says is
+    not its home. `QFAI-WAIVER-002` refuses waivers on `error` rules, so a
+    project that filed unit tests where L1's own entry says to had no exit, and
+    the only validator-clean path was duplicating every annotation into
+    `tests/integration/**` — the all-integration collapse named under
+    Anti-patterns below.
+  - **They are still gated, by the other stage.** Every coverage-target `TC-*`
+    owes a `tdd/test-list.md` row, and `TDDLIST_TC_NOT_COVERED` (`error`)
+    reports a missing one. L1/L2 belong to `/qfai-implement`, which is the
+    stage that writes unit and component tests.
 - API obligations:
   - Every declared `CON-API-*` must be referenced at least once from `tests/api/**`.
   - Use `QFAI:CON-API-XXXX` annotations.
@@ -305,8 +374,10 @@ routes by obligation ID: `US-*` is answered from `tests/e2e/**`
     filed early into `tests/api/**`.
 - Unknown references (`US/TC/CON-API` not declared) are errors.
 - A `TC-*` annotation outside the directory its `Level` routes to is a
-  misplacement, whichever directory it lands in — including the two new
-  locations `tests/unit/**` and `tests/component/**`.
+  misplacement, whichever directory it lands in. **This applies to L3-L5 only.**
+  L1 and L2 route nowhere — they carry no ATDD annotation obligation at all — so
+  an annotation for one is neither required nor misplaced, in
+  `tests/unit/**`, `tests/component/**` or anywhere else.
 - AC annotations are not required in code; AC coverage is treated as indirect through TC coverage.
 - `QFAI:CON-API-*` in `tests/e2e/**` is not forbidden, but contract guarantee belongs to API tests.
 
