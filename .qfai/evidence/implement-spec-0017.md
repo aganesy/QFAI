@@ -170,6 +170,79 @@ the integration slice passes at the declared worker value of ten.
 precedent and constraint — the pins row scans every test file, which is why a fixture literal in
 this spec's own tests had to move from `@v4` to `@main`. Citing a row is not editing it, and neither
 file was touched here.
+## Observation currency, and what the `:line:col` values address
+
+**Added 2026-08-20 after round 5, where `qa-gatekeeper` reported gate item 10 failing for all 74
+promoted rows.** It was right, the number is larger than it stated, and the reason is structural
+rather than sloppy.
+
+### The measurement
+
+Every `:LINE` and `:LINE:COL` token in the oracle tables below, resolved against the files as they
+stand at HEAD:
+
+```text
+locators recorded across all sixteen oracle tables   74
+landing on an assertion at HEAD                      18
+landing on a comment, a string literal, a helper,
+  a describe header, or past the end of the file      56
+```
+
+Three examples, because "stale" understates what a reader would find:
+
+```text
+:1438   recorded for TDD-0038's continue-on-error claim
+        now a string literal inside TDD-0043's describe
+:1254   recorded for TDD-0041 CLAIM 1
+        now a comment inside TDD-0012's describe
+:1313   recorded for TDD-0043's pinned check-name set
+        now a JSDoc line, 98 lines before the describe it named
+```
+
+### Why this happens by construction, and what it does not mean
+
+`evidence-revision.md` is mechanical: "evidence is stale when the revision it names differs from the
+revision the item's work finally landed at", and "a commit that changes any file the observation
+covered invalidates it". This spec points **all 82 rows at six test files**. So every commit touching
+one of those files stales every observation in it — and twenty-four commits on this branch touch
+one of the six, and round 5's rework alone touched five of them.
+
+That is not an argument for tolerating it. It is the reason the locators are the wrong thing to lean
+on: a position in a file that thirty other rows also edit cannot stay correct, and re-deriving 74
+positions after each commit would be work whose product is stale by the next one.
+
+**What is durable is already in the same cell.** Each `reddens` entry names the claim in prose —
+`TDD-0038 — no verification item may carry continue-on-error`, `TDD-0036 CLAIM 2 — the
+required-context job must carry no condition`. That identification does not move when lines shift,
+and it is what a reader greps. Fifty-one of the 74 locators were re-resolved mechanically to the
+assertion MESSAGE at the revision each observation ran against, and every one matched the prose the
+cell already carried — which is the evidence that the prose, not the number, is carrying the record.
+Two of those messages are claimed by more than one locator, which is correct rather than a
+collision: two oracle rounds reddening one claim is exactly what `R1` and `R2` do for
+`TDD-0036` CLAIM 2. The remaining 23 could not be resolved under a rule tight enough to be
+trusted — a window of two lines inside an expect chain — and are left unresolved rather than
+guessed, because a wrong message is as misleading as a wrong line.
+
+So the policy, stated rather than left implicit:
+
+- the **prose claim identity** in each `reddens` cell is the durable record of what the mutation
+  reddened;
+- the `:LINE:COL` value addresses the file **at that block's landing revision**, named in the same
+  block as `Base revision` plus the change, and is stale for any later revision by construction;
+- neither substitutes for a re-run.
+
+### When the re-run happens
+
+At the revision the rows close at, not now. `evidence-revision.md` prescribes exactly this ordering:
+"Measure at the tip, then commit the record and the `done` transition together" — the only ordering
+under which several items sharing a file can all be current at once. Re-running the oracle set at
+`76ade4dd` would produce 74 fresh positions and stale them at the next code commit, which is the
+loop the rule exists to break.
+
+No row is closing on this evidence. All three round-5 reviewers returned REVISE, every promoted row
+is at `refactor`, and item 10 is a completion gate rather than a review gate. It is recorded here as
+an open, measured obligation with a named discharge point, which is the honest state — not as
+something the rework quietly fixed.
 ## Two corrections that apply across the per-change blocks
 
 **Added 2026-08-20, after the review round.** Both concern statements that were TRUE when written and
