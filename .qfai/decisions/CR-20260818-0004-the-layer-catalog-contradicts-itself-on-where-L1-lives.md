@@ -98,6 +98,21 @@ pack's owner and should not ride along with a typo-class repair.
 Choose A, B or C for the contradiction, and say whether finding 2 should be routed to `/qfai-sdd` as
 its own change.
 
+## Approved actions (owner skill rerun plan)
+
+1. Owner is the packaged asset, not a spec-authoring skill:
+   `packages/qfai/assets/init/.qfai/assistant/catalog/test-layers.md` states two incompatible
+   location rules for L1. Edit the packaged copy and propagate to the installed `.qfai/` mirror by
+   reinstall, never by hand-editing the mirror.
+2. Downstream ledger sweep: **no rows are reset.** Four rows landed under the reading the catalog's
+   routing rule requires, and that reading is the one this CR recommends keeping. Named so a later
+   sweep cannot widen: if the approved option instead adopts the OTHER reading, the sweep is every
+   row whose `Layer` cell says `unit` while its test drives real infrastructure — a verifiable
+   selection rule, listed rather than enumerated because the population depends on which reading
+   wins.
+3. Cross-check after applying: the catalog must state one location rule for L1, and
+   `QFAI-SPACK-091` must report no policy-versus-built-in drift.
+
 ## Resolution
 
 Pending.

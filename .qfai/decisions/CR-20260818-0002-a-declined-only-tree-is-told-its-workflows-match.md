@@ -86,6 +86,18 @@ oracle. C is only acceptable if A is also taken.
 
 Choose A, B or C.
 
+## Approved actions (owner skill rerun plan)
+
+1. Owner is `packages/qfai/src` plus the packaged detection surface, not a spec-authoring skill: the
+   gap is that `declined` appears in no surface, which is a code and contract change carrying its own
+   spec row and test.
+2. Downstream ledger sweep: **no rows are reset.** `TC-0006-0035` is implemented as written and its
+   evidence stays true — this CR's own header says the gap is upstream of it. If the approved option
+   changes what `TC-0006-0035` asserts, the sweep is exactly that one row and it is named here so a
+   wider reset cannot claim approval: `spec-0006 TDD-0035`.
+3. Cross-check after applying: a declined-only tree must be reported as declined by every surface the
+   approved option names, verified over a planted tree rather than argued.
+
 ## Resolution
 
 Pending.

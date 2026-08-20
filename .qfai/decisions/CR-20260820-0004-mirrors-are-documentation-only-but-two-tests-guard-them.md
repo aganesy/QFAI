@@ -80,3 +80,38 @@ than exhaustive, so treat the list as a floor, not a census.
 - `BR-0017-0010`, `BR-0017-0011`, `AC-0017-0005`, `EX-0017-0010`, `TC-0017-0010`
 - `spec-0017` `TDD-0010`, `.github/workflows/ci.yml` (the `detect` job's classifier)
 - `packages/qfai/tests/codex/agents.test.ts`, `packages/qfai/tests/core/prFixMonitor.test.ts`
+
+## Impact
+
+- Specs: `spec-0017 — BR-0017-0010`
+- Plans: `10_Plan.md, change 8 (change detection and lane selection)`
+- Tests: `the mirror-guarding files this CR names; TDD-0010 and TDD-0011 assert set membership`
+- Contracts: `none`
+- Schema: `none`
+
+## Decision needed from user
+
+Take option A — move the mirror guards into the lint lane, which `BR-0017-0011` exempts from
+selection, keeping both the saving and the guard — or option B, removing the mirrors from the
+documentation-only set at the cost of the saving, or option C, accepting the gap?
+
+## Approved actions (owner skill rerun plan)
+
+1. `/qfai-sdd` rerun scope: decide whether the guard moves or the member does, and record it in
+   `BR-0017-0010`. Under option A the follow-on work is a lane wiring change in the root
+   `package.json`, following the existing `lint:workflow-shape` precedent.
+2. Downstream ledger sweep: **no rows are reset.** Change 8 implements `BR-0017-0010` as written.
+   Named so a later sweep cannot widen:
+   - conditional reset under option B: `TDD-0010`, `TDD-0011` — the two rows asserting over which
+     paths are members. The remaining detection rows assert selection mechanics, not membership.
+3. Cross-check after applying: **re-measure the census in this CR rather than carrying it forward.**
+   Its caveat section understates the population — it is at least five files across three slices,
+   including `agentsRulesSurface.test.ts`, `skillLinkSurface.test.ts` and
+   `reviewerVerdictVocabulary.test.ts` — and `.agents/` is the master tree holding executable
+   automation, not documentation. Whoever applies this CR counts again first.
+
+## Resolution
+
+<!--
+Filled in when Status leaves `open`. Record the re-measured census and the wiring or rule change.
+-->

@@ -128,6 +128,19 @@ neither is wanted, and it should then be recorded as a deliberate park rather th
 Choose A, B, C, or A+B; and if C, confirm the four rows should be parked at `refactor` rather than
 closed.
 
+## Approved actions (owner skill rerun plan)
+
+1. Owner is the packaged prompt text that states checkpoint step-4 clause 3 — an unattributed
+   aggregate where clause 5 is explicitly per-row. Edit the packaged copy under
+   `packages/qfai/assets/init/**`, propagate by reinstall.
+2. Downstream ledger sweep: **no rows are reset**, and four rows are UNBLOCKED. The four named in
+   this CR's `Blocked set` are held at `refactor` by this clause and by nothing in their own scope:
+   - `spec-0006 TDD-0034`, `TDD-0035`, `TDD-0036`, `TDD-0037`
+     Approving an option that makes clause 3 per-row lets those four reach `done` without any
+     further work on them. That is a forward transition, not the sanctioned backward reset.
+3. Cross-check after applying: the checkpoint must pass for a row whose own spec contributes no
+   findings while a sibling spec's findings remain outstanding, demonstrated rather than asserted.
+
 ## Resolution
 
 Pending.

@@ -87,3 +87,36 @@ will follow.
 - `AC-0017-0028`, `EX-0017-0050`, `EX-0017-0051`, `TC-0017-0066`, `TC-0017-0067`
 - `DR-0017-0009`, `packages/qfai/vitest.knobs.ts`,
   `packages/qfai/tests/integration/shippedWorkflowDetection.test.ts`
+
+## Impact
+
+- Specs: `spec-0017 — BR-0017-0050 and EX-0017-0050`
+- Plans: `none`
+- Tests: `TDD-0066 and TDD-0067 record the episode and the sign-off question`
+- Contracts: `none`
+- Schema: `none`
+
+## Decision needed from user
+
+Take option A — add the third outcome to `BR-0017-0050` in order, making investigation of the
+contended structure the default and the reduction the fallback, with the retry-loop prohibition
+untouched — or option B, leaving the rule and recording each divergence per episode, or option C,
+treating the structural fix as outside the rule?
+
+## Approved actions (owner skill rerun plan)
+
+1. `/qfai-sdd` rerun scope: add the third outcome to `BR-0017-0050` and mirror it in
+   `EX-0017-0050`, ordered so the investigation comes first and the reduction is the fallback.
+2. Downstream ledger sweep: **no rows are reset.** `TDD-0066` is implemented and records what
+   happened, including the refused proposal and the structural fix; `TDD-0067` records the sign-off
+   question. Named so a later sweep cannot widen:
+   - not reset: `TDD-0066`, `TDD-0067`
+3. Cross-check after applying: the rule must not become readable as authorising a retry loop. The
+   distinction to preserve is that the third outcome fixes the CAUSE of the flakiness, while a retry
+   loop re-runs the same structure hoping for a different result.
+
+## Resolution
+
+<!--
+Filled in when Status leaves `open`. Record the amended rule text and the example that mirrors it.
+-->

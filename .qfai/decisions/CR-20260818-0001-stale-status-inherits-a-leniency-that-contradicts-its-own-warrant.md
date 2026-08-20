@@ -176,6 +176,18 @@ being implemented. Any step-4 measured-delta comparison in this spec must theref
 
 Choose A, B or C, and say whether C should be taken as an interim while A is unlanded.
 
+## Approved actions (owner skill rerun plan)
+
+1. Owner is **not** a spec-authoring skill: the defect is in `packages/qfai/src`, in the rule that
+   inherits `selectorResolves`' trailing-token fallback. It is fixed under its own spec row with its
+   own test, not by rerunning `/qfai-sdd` over an artifact.
+2. Downstream ledger sweep: **no rows are reset**, in any spec. The defect inflates a warning count
+   and degrades a signal; it does not make a landed row's evidence wrong, and no row's status was
+   derived from the inflated count.
+3. Cross-check after applying: re-run `validate --profile tdd --root .` and confirm the
+   `TDDLIST_STALE_STATUS` population shrinks by exactly the rows whose `Test file` cell is empty —
+   the second instance measured in this CR cuts the other way and must NOT disappear with it.
+
 ## Resolution
 
 Pending.

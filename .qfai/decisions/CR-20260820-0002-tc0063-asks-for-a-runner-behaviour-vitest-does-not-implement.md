@@ -113,3 +113,37 @@ from the literal text is recorded here and in
 - `BR-0017-0055`, `AC-0017-0027`, `EX-0017-0055`, `TC-0017-0063`
 - `spec-0017` `TDD-0063`, `packages/qfai/tests/scripts/sliceSurfaceAlignment.test.ts`
 - `017fe9fd`, `48f4f3a6`, `c47d3db5` — the three commits that produced the two instances
+
+## Impact
+
+- Specs: `spec-0017 — TC-0017-0063 and EX-0017-0055`
+- Plans: `none`
+- Tests: `packages/qfai/tests/scripts/sliceSurfaceAlignment.test.ts — TDD-0063`
+- Contracts: `none`
+- Schema: `none`
+
+## Decision needed from user
+
+Take option A — reword `TC-0017-0063` and `EX-0017-0055` to "no declared slice can match zero test
+files", the observable that exists and the one the row already proves — or keep the literal wording
+and accept option B's coupling to reporter output, or option C's exception?
+
+## Approved actions (owner skill rerun plan)
+
+1. `/qfai-sdd` rerun scope: move the text, not the test. Reword `TC-0017-0063` and `EX-0017-0055` in
+   `spec-0017` to the observable vitest actually implements — an unknown project name is filtered,
+   not rejected.
+2. Downstream ledger sweep: **no rows are reset** under the recommended option, because the row is
+   implemented against the intent and its evidence stays true. Named so a later sweep cannot widen:
+   - not reset under option A: `TDD-0063`
+   - conditional reset under option B or C: `TDD-0063` alone, since no other row asserts over the
+     unknown-project observable.
+3. Cross-check after applying: the row's `Selector` and its assertion must both describe a filtered
+   project rather than a rejected one, and the evidence cell's citation of this CR for the vacuous
+   first draft must end up saying the same thing as this record.
+
+## Resolution
+
+<!--
+Filled in when Status leaves `open`. Record the reworded TC and EX text, and the re-measured row.
+-->

@@ -87,6 +87,17 @@ sentence.
 Choose A, B or C, and confirm whether the test-docblock pointer should be corrected immediately
 regardless.
 
+## Approved actions (owner skill rerun plan)
+
+1. Owner is `packages/qfai/src`: two implementations of one state enum, of which the tested one has
+   no production consumer. Consolidation is a code change with its own spec row.
+2. Downstream ledger sweep: **no rows are reset.** The divergence is latent — the branch that
+   disagrees has no production consumer, so no landed row's evidence depends on which
+   implementation answered.
+3. Cross-check after applying: assert the retired-name case through the surviving implementation
+   from a test that reaches it via a production caller, so the consolidated enum cannot regain an
+   untested second branch.
+
 ## Resolution
 
 Pending.

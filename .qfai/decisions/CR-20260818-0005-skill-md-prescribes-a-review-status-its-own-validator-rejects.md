@@ -87,6 +87,17 @@ mapping. C should not be taken.
 
 Choose A, B or C.
 
+## Approved actions (owner skill rerun plan)
+
+1. Owner is the packaged skill text:
+   `packages/qfai/assets/init/.qfai/assistant/skills/**/SKILL.md`, which tells adopters to write a
+   review status its own reference, README and validator all reject. One-word fix in the packaged
+   copy, propagated to `.qfai/` by reinstall.
+2. Downstream ledger sweep: **no rows are reset.** The packs written for spec-0006 followed the
+   reference rather than this sentence, so no landed artifact carries the rejected value.
+3. Cross-check after applying: grep the packaged tree for the rejected status literal and expect
+   zero occurrences outside a passage that documents it as rejected.
+
 ## Resolution
 
 Pending.

@@ -125,3 +125,36 @@ change 6 leaves both axes at ten.
 - `spec-0017` `TDD-0060`, `TDD-0061`
 - `packages/qfai/vitest.knobs.ts`, `packages/qfai/vitest.workspace.ts`, `packages/qfai/vitest.config.ts`
 - `CR-20260820-0002` — the same class one change earlier: a specified observable the runner does not implement
+
+## Impact
+
+- Specs: `spec-0017 — BR-0017-0047 and TC-0017-0060`
+- Plans: `none`
+- Tests: `packages/qfai/tests/scripts/vitestWorkspaceKnobs.test.ts — TDD-0060, TDD-0061, TDD-0068`
+- Contracts: `none`
+- Schema: `none`
+
+## Decision needed from user
+
+Take option A — rescope `BR-0017-0047` and `TC-0017-0060` to "the runner configuration" with the
+root-versus-project split named, keeping the "declared, not inherited" obligation — or keep "every
+project" and accept option B's inert declarations, or option C's loss of both knobs?
+
+## Approved actions (owner skill rerun plan)
+
+1. `/qfai-sdd` rerun scope: rewrite `BR-0017-0047` so each knob is declared at the scope that reads
+   it, and add the root-only guard that keeps "declared, not inherited" honest.
+2. Downstream ledger sweep: **no rows are reset** under the recommended option. Change 6 implements
+   the intent — root-scoped knobs at the root, project-scoped ones at the project — and the rows'
+   evidence describes exactly that split. Named so a later sweep cannot widen:
+   - not reset under option A: `TDD-0060`, `TDD-0061`, `TDD-0068`
+   - conditional reset under option B or C: `TDD-0060` alone, as the row that asserts the
+     declaration site.
+3. Cross-check after applying: the oracle that plants a root-only option on a project must still
+   redden, because the inert declaration is the failure this rule exists to prevent.
+
+## Resolution
+
+<!--
+Filled in when Status leaves `open`. Record the rescoped rule text and the re-measured rows.
+-->

@@ -114,6 +114,20 @@ scope the business rules contradict.
 
 Choose A, B or C. `TDD-0030` stays `todo` until then.
 
+## Approved actions (owner skill rerun plan)
+
+1. `/qfai-sdd` rerun scope: reconcile the three statements that cannot all hold — `BR-0017-0027`'s
+   tree-wide prohibition, `10_Plan.md`'s narrower `release.yml` scope, and the publish job's
+   engine constraint. The publish job is the hard half and the reconciliation has to name it.
+2. Downstream ledger sweep: reset the row this CR blocks, recording `CR-20260820-0001` in its
+   `DR-ID` column:
+   - `TDD-0030`
+     `todo` today, so the reset is a no-op on status; the `DR-ID` record is what matters. No other
+     row asserts over `release.yml`'s Node literal, which is why the list is one row and not the
+     whole change.
+3. Cross-check after applying: whichever way it resolves, `check-workflow-hygiene` and
+   `lint:workflow-shape` must both agree with the reconciled rule over the real `release.yml`.
+
 ## Resolution
 
 Pending.

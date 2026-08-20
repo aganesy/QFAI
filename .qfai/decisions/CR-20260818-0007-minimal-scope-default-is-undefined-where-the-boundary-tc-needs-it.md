@@ -109,6 +109,19 @@ that cannot hold one; C narrows the rule away from the blocks that matter most.
 
 Choose A, B or C. `TDD-0016` stays `todo` until then; change 2's other five rows are not blocked.
 
+## Approved actions (owner skill rerun plan)
+
+1. `/qfai-sdd` rerun scope: define "the minimal-scope default" at the point `TC-0017-0016` measures
+   it, in `spec-0017`'s business rules, and reconcile the third elevation the own tree already
+   carries — either by admitting it in the rule or by removing it from the tree.
+2. Downstream ledger sweep: reset the row this CR blocks, recording `CR-20260818-0007` in its
+   `DR-ID` column:
+   - `TDD-0016`
+     It is the only row whose assertion depends on the undefined term. It is `todo` today, so the
+     reset is a no-op on status and the `DR-ID` record is the operative part.
+3. Cross-check after applying: `TC-0017-0016` must be expressible as a literal comparison against
+   the defined default, with no reader judgement left in the assertion.
+
 ## Resolution
 
 Pending.
