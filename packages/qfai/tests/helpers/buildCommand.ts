@@ -1,8 +1,8 @@
 /**
  * Does a workflow `run:` command reach a build?
  *
- * Eight versions. Each of the first seven was measured, reported clean by the party that wrote it, and
- * then broken by a corpus a reviewer chose. The two most instructive:
+ * Ten versions. Each of the first nine was measured, reported clean by the party that wrote it, and
+ * then broken by a corpus someone else chose. The three most instructive:
  *
  * - **v4** reported `pnpm ci:build-verify` as a build **by the script's name**, so what it measured was
  *   npm-script naming rather than behaviour.
@@ -12,16 +12,44 @@
  *   while `make --always-make build` was `build`. And `run` was a global passthrough, so
  *   `docker run --name build-agent alpine` was a **build**: the real subcommand was skipped and a
  *   container name read as a target. Fifteen defects over fifty-nine probes.
+ * - **v8** gave each family its own grammar but kept one global rule — a spaced flag consumes its value
+ *   unless it is a known boolean, with `known` hardcoded `true` for every build tool. So no tool's
+ *   spaced flag ever consumed anything, and its value landed in the subcommand position:
+ *   `gradle --console plain build` was `none`. Twenty-five of sixty-six probes disagreed.
  *
- * v8 gives each family its own grammar, which is the thing v7 was missing rather than another rule:
+ * The thing v6, v7 and v8 each approximated with a global rule is per-tool knowledge of **which flags
+ * take a value**, so v9 has each tool declare it. `dirs` was always a special case of that — a value
+ * flag whose value happens to be a directory. Three further rules came out of v8's false positives:
+ *
+ * - a FLAG never names a build, except a per-tool allowlist (`cmake --build`). Without that,
+ *   `gradle --build-cache test` and `gradle --build-file other.gradle clean` were both builds.
+ * - a bare token carrying `=` is a setting, not a subcommand: `cargo --config build.jobs=2 test`.
+ * - for a tool, EVERY bare token is a candidate subcommand. `make -j 4 build` has two.
+ *
+ * That last rule is what makes v10 **smaller** than v9. Writing one deletion-detecting probe per
+ * grammar member (`../unit/buildCommand.test.ts`) forced the question "what command changes verdict if
+ * this member goes?" for all 207 of them, and for forty-five the answer was *none*:
+ *
+ * - every tool's `pass` list, because a bare verb a tool does not read as a build is already skipped.
+ *   Six members over five tools, none observable;
+ * - `MANAGER_CONSUMING`'s four flag members, subsumed by the manager default of consuming any flag not
+ *   known to be boolean. `workspace` stays: it is a bare verb, and without it the token after it is
+ *   read as the script name;
+ * - `NOT_A_BUNDLER`, which short-circuited the whole command to `none`. The one command whose verdict
+ *   it changed at all — `make tsc build` — it got **wrong**, since make would run the `build` target;
+ * - `--target` in cargo's and flutter's `values` and `-m` in python's, all shadowed by `TARGET_FLAGS`
+ *   being checked first;
+ * - `--task` in `TARGET_FLAGS`, which names no attested flag of any tool here and could only invent a
+ *   build (`--task=build-agent` splits to include "build").
+ *
+ * With those gone, all 208 remaining members are pinned: deleting any one reddens the corpus.
+ *
+ * Two rules survive from v8, both measured in both directions:
  *
  * 1. A **package manager** takes a SCRIPT, after its own passthrough verbs, resolved in the manifest
- *    its directory flags select.
- * 2. A **build tool** takes a SUBCOMMAND, with **per-tool** passthrough verbs and directory flags —
- *    `cmake --install` takes a directory, `make -B` does not.
- * 3. A spaced flag **consumes its value** unless it is a known boolean. That leans toward missing a
- *    build rather than inventing one, which is the safe direction here: the assertion this serves is
- *    that a tree contains none, so a false positive breaks it the day someone adds an innocent lane.
+ *    its directory flags select. Its flag set is open-ended, so the safe default is to consume.
+ * 2. A **build tool** takes SUBCOMMANDS, and its flag set is closed and declared here, so the safe
+ *    default is to consume nothing.
  *
  * **What no command-line scan can see**, because this repository has three instances: a build spawned
  * from inside a helper. `scripts/check-build-warnings.mjs`, `scripts/verify-pack.mjs` and
@@ -53,41 +81,92 @@ interface Context {
 
 const MANAGERS = new Set(["pnpm", "npm", "yarn", "npx", "pnpx", "bunx", "bun", "node"]);
 
-/** Build tools, each with its own passthrough verbs and directory-valued flags. */
-const TOOLS: Record<
-  string,
-  { readonly pass: readonly string[]; readonly dirs: readonly string[] }
-> = {
-  turbo: { pass: ["run"], dirs: ["--cwd"] },
-  nx: { pass: ["run", "run-many"], dirs: [] },
-  lerna: { pass: ["run"], dirs: [] },
-  rush: { pass: [], dirs: [] },
-  make: { pass: [], dirs: ["-C", "--directory"] },
-  cmake: { pass: [], dirs: ["--install", "-B", "-S", "--prefix"] },
-  ninja: { pass: [], dirs: ["-C"] },
-  bazel: { pass: [], dirs: ["--output_base", "--output_user_root"] },
-  buck: { pass: [], dirs: [] },
-  just: { pass: [], dirs: ["-d", "--working-directory"] },
-  task: { pass: [], dirs: ["-d", "--dir"] },
-  waf: { pass: [], dirs: [] },
-  dune: { pass: [], dirs: ["--root"] },
-  stack: { pass: [], dirs: ["--work-dir"] },
-  cargo: { pass: [], dirs: ["--target-dir", "--manifest-path"] },
-  go: { pass: [], dirs: ["-C"] },
-  gradle: { pass: [], dirs: ["-p", "--project-dir"] },
-  gradlew: { pass: [], dirs: ["-p", "--project-dir"] },
-  mvn: { pass: [], dirs: ["-f", "--file"] },
-  dotnet: { pass: [], dirs: ["-o", "--output"] },
-  swift: { pass: [], dirs: ["--package-path"] },
-  zig: { pass: [], dirs: [] },
-  docker: { pass: ["buildx"], dirs: ["-f", "--file"] },
-  podman: { pass: ["buildx"], dirs: ["-f", "--file"] },
-  poetry: { pass: [], dirs: ["-C", "--directory"] },
-  flutter: { pass: [], dirs: [] },
-  python: { pass: [], dirs: [] },
-  python3: { pass: [], dirs: [] },
-  sbt: { pass: [], dirs: [] },
-  rake: { pass: [], dirs: ["-C"] },
+/**
+ * Build tools, each declaring which of its flags take a value.
+ *
+ * `dirs` take a directory (and move the manifest a script resolves in), `values` take anything else,
+ * and `buildFlags` are flags that themselves mean "build". A flag in none of the three takes no value,
+ * so the token after it can still be a subcommand — which is what `make -B build` needs, and the
+ * opposite of what `gradle --console plain build` needs.
+ *
+ * There is no `pass` list: for a tool every bare token is a candidate subcommand, so skipping a verb
+ * and declining to read it as a build are the same thing.
+ */
+interface ToolGrammar {
+  readonly dirs: readonly string[];
+  readonly values: readonly string[];
+  readonly buildFlags: readonly string[];
+}
+
+const TOOLS: Record<string, ToolGrammar> = {
+  turbo: { dirs: ["--cwd"], values: ["--concurrency", "--filter"], buildFlags: [] },
+  nx: { dirs: [], values: ["--projects", "--configuration"], buildFlags: [] },
+  lerna: { dirs: [], values: ["--concurrency"], buildFlags: [] },
+  rush: { dirs: [], values: ["--to", "--from"], buildFlags: [] },
+  make: {
+    dirs: ["-C", "--directory"],
+    values: ["-j", "-l", "-f", "--file", "--jobs"],
+    buildFlags: [],
+  },
+  cmake: {
+    dirs: ["--install", "-B", "-S", "--prefix"],
+    values: ["--config", "-G", "-D"],
+    buildFlags: ["--build"],
+  },
+  ninja: { dirs: ["-C"], values: ["-j", "-k", "-f"], buildFlags: [] },
+  bazel: { dirs: ["--output_base", "--output_user_root"], values: ["--config"], buildFlags: [] },
+  buck: { dirs: [], values: ["--config"], buildFlags: [] },
+  just: { dirs: ["-d", "--working-directory"], values: ["--set"], buildFlags: [] },
+  task: { dirs: ["-d", "--dir"], values: ["-p", "--parallel"], buildFlags: [] },
+  waf: { dirs: [], values: ["-j", "--jobs"], buildFlags: [] },
+  dune: { dirs: ["--root"], values: ["-j", "--profile"], buildFlags: [] },
+  stack: { dirs: ["--work-dir"], values: ["--resolver"], buildFlags: [] },
+  cargo: {
+    dirs: ["--target-dir", "--manifest-path"],
+    values: ["--color", "--config", "-j", "--jobs", "--features"],
+    buildFlags: [],
+  },
+  go: { dirs: ["-C"], values: ["-o", "-tags"], buildFlags: [] },
+  gradle: {
+    dirs: ["-p", "--project-dir"],
+    values: ["--console", "--max-workers", "--build-file", "-b", "--init-script"],
+    buildFlags: [],
+  },
+  gradlew: {
+    dirs: ["-p", "--project-dir"],
+    values: ["--console", "--max-workers", "--build-file", "-b"],
+    buildFlags: [],
+  },
+  mvn: { dirs: ["-f", "--file"], values: ["-P", "-D", "-T"], buildFlags: [] },
+  dotnet: {
+    dirs: ["-o", "--output"],
+    values: [
+      "--arch",
+      "--os",
+      "--framework",
+      "-c",
+      "--configuration",
+      "-r",
+      "--runtime",
+      "-v",
+      "--verbosity",
+    ],
+    buildFlags: [],
+  },
+  swift: { dirs: ["--package-path"], values: ["-c", "--configuration"], buildFlags: [] },
+  zig: { dirs: [], values: ["-target"], buildFlags: [] },
+  docker: {
+    dirs: ["-f", "--file"],
+    values: ["-t", "--tag", "--build-arg", "-H", "--platform", "--name"],
+    buildFlags: [],
+  },
+  podman: { dirs: ["-f", "--file"], values: ["-t", "--tag", "--build-arg"], buildFlags: [] },
+  poetry: { dirs: ["-C", "--directory"], values: ["--format"], buildFlags: [] },
+  flutter: { dirs: [], values: ["--flavor", "-t"], buildFlags: [] },
+  python: { dirs: [], values: ["-c"], buildFlags: [] },
+  python3: { dirs: [], values: ["-c"], buildFlags: [] },
+  sbt: { dirs: [], values: [], buildFlags: [] },
+  rake: { dirs: ["-C"], values: ["-f"], buildFlags: [] },
 };
 
 /** Invoking one of these IS a build, whatever follows. */
@@ -104,15 +183,21 @@ const BUNDLERS = new Set([
   "msbuild",
   "xcodebuild",
 ]);
-const NOT_A_BUNDLER = new Set(["tsc"]);
 
 /** A package manager's own passthrough verbs, before the script name. */
 const MANAGER_PASS = new Set(["run", "exec", "dlx", "workspaces", "--"]);
-/** Verbs and flags that consume the following token without it being the target. */
-const MANAGER_CONSUMING = new Set(["workspace", "--filter", "-F", "--filter-prod", "--scope"]);
+/**
+ * A bare verb that consumes the following token without it being the script.
+ *
+ * Only `workspace`. The four flags that used to be here — `--filter`, `-F`, `--filter-prod`, `--scope`
+ * — are subsumed by the manager default below, which consumes any flag not known to be boolean, and no
+ * command's verdict changed when they were deleted.
+ */
+const MANAGER_CONSUMING = new Set(["workspace"]);
 /** Manager flags that take NO value, so the token after them can still be the script. */
 const MANAGER_BOOLEAN = new Set([
   "-w",
+  "--workspace-root",
   "-r",
   "--recursive",
   "--silent",
@@ -132,8 +217,14 @@ const MANAGER_BOOLEAN = new Set([
 ]);
 /** Manager flags naming the directory whose manifest a script resolves in. */
 const MANAGER_DIRS = new Set(["-C", "--dir", "--cwd", "--prefix"]);
-/** Flags whose value IS the target. */
-const TARGET_FLAGS = new Set(["-m", "--target", "--task"]);
+/**
+ * Flags whose value IS the target: `python -m build`, `nx --target=build`.
+ *
+ * Checked **before** a tool's own `values`, because `-m` is in both and reading it as an ordinary value
+ * consumed `build`. That ordering is why `-m` was then dropped from python's `values`, and `--target`
+ * from cargo's and flutter's: shadowed there, they pinned nothing.
+ */
+const TARGET_FLAGS = new Set(["-m", "--target"]);
 /** With one of these, `pack`/`publish` do not fire their lifecycle hooks. */
 const NO_SCRIPTS = new Set(["--ignore-scripts", "--no-scripts"]);
 
@@ -154,6 +245,8 @@ const LIFECYCLE: Record<string, readonly string[]> = {
   publish: ["prepublishOnly", "prepack"],
 };
 const SCRIPT_FILE = /^[\w./-]*[\w-]+\.(?:sh|ps1|bat|cmd|mjs|cjs|js|ts)$/;
+/** Shared empty set, for whichever side of a manager/tool branch has no members of its own. */
+const EMPTY: ReadonlySet<string> = new Set();
 
 const namesABuild = (t: string): boolean =>
   t
@@ -162,6 +255,8 @@ const namesABuild = (t: string): boolean =>
     .includes("build");
 const isPathLike = (t: string): boolean =>
   t.includes("/") || t.startsWith(".") || /\.\w{1,5}$/.test(t);
+/** A bare token carrying `=` is a setting, not a subcommand: `cargo --config build.jobs=2 test`. */
+const isSetting = (t: string): boolean => t.includes("=");
 const normalise = (d: string): string =>
   d
     .replace(/\\/g, "/")
@@ -233,8 +328,10 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
   const isManager = MANAGERS.has(verb);
   if (tool === undefined && !isManager) return "none";
 
-  const pass = isManager ? MANAGER_PASS : new Set(tool?.pass ?? []);
+  const pass = isManager ? MANAGER_PASS : EMPTY;
   const dirs = isManager ? MANAGER_DIRS : new Set(tool?.dirs ?? []);
+  const values = isManager ? EMPTY : new Set(tool?.values ?? []);
+  const buildFlags = isManager ? EMPTY : new Set(tool?.buildFlags ?? []);
   const noScripts = tokens.some((t) => NO_SCRIPTS.has(t));
   let cwd = ctx.cwd;
 
@@ -248,32 +345,39 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
     }
 
     if (token.startsWith("-")) {
-      const inline = /^(--?[\w-]+)=(.*)$/.exec(token);
+      // `.` is in the flag class because `-Dspring.profiles=x` and `--config build.jobs=2` carry one.
+      const inline = /^(--?[\w.-]+)=(.*)$/.exec(token);
       if (inline) {
         const [, flag = "", value = ""] = inline;
         if (dirs.has(flag)) cwd = normalise(value);
         else if (TARGET_FLAGS.has(flag) && !isPathLike(value) && namesABuild(value)) return "build";
+        else if (buildFlags.has(flag)) return "build";
         continue;
       }
-      if (dirs.has(token)) {
-        const value = tokens[i + 1];
-        if (value !== undefined && !value.startsWith("-")) {
-          cwd = normalise(value);
-          i += 1;
-        }
-        continue;
-      }
+      // TARGET_FLAGS before `values`: `-m` is python's module flag AND a target-naming flag, and the
+      // other order consumed `build` in `python -m build` as an ordinary value.
       if (TARGET_FLAGS.has(token)) {
         const value = tokens[i + 1];
         if (value !== undefined && !value.startsWith("-") && namesABuild(value)) return "build";
         if (value !== undefined) i += 1;
         continue;
       }
-      if (namesABuild(token.replace(/^-+/, ""))) return "build";
-      // A spaced flag consumes its value unless it is a known boolean. Leaning this way misses a build
-      // rather than inventing one, which is the safe direction for an assertion that a tree has none.
-      const known = isManager ? MANAGER_BOOLEAN.has(token) : true;
-      if (!known) {
+      if (dirs.has(token) || values.has(token)) {
+        const value = tokens[i + 1];
+        if (value !== undefined && !value.startsWith("-")) {
+          if (dirs.has(token)) cwd = normalise(value);
+          i += 1;
+        }
+        continue;
+      }
+      if (buildFlags.has(token)) return "build";
+      // A FLAG never names a build otherwise. v8 returned `build` for any flag whose own name contained
+      // one, which made `gradle --build-cache test` and `gradle --build-file other.gradle clean` builds.
+      //
+      // A tool's flag set is closed and declared above, so a flag not in it takes no value and the next
+      // token can still be the subcommand. A manager's is open-ended, so there the same question is
+      // answered by MANAGER_BOOLEAN and the default is to consume.
+      if (isManager && !MANAGER_BOOLEAN.has(token)) {
         const value = tokens[i + 1];
         if (value !== undefined && !value.startsWith("-")) i += 1;
       }
@@ -282,12 +386,18 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
 
     const bare = token.split("/").pop() ?? "";
     if (BUNDLERS.has(bare)) return "build";
-    if (NOT_A_BUNDLER.has(bare)) return "none";
-    if (isPathLike(token)) continue;
+    if (isPathLike(token) || isSetting(token)) continue;
     if (MANAGERS.has(bare) || TOOLS[bare] !== undefined) {
       return command(tokens.slice(i), { ...ctx, cwd });
     }
-    if (tool !== undefined) return namesABuild(token) ? "build" : "none";
+
+    if (tool !== undefined) {
+      // EVERY bare token is a candidate subcommand for a tool — `make -j 4 build` has two, and v8
+      // returned on the first, so `4` decided that command. For a MANAGER the first bare token IS the
+      // script, so there it returns.
+      if (namesABuild(token)) return "build";
+      continue;
+    }
     return script(token, { ...ctx, cwd, noScripts });
   }
   return "none";
@@ -321,21 +431,28 @@ export function reachesBuild(line: string, sources?: ScriptSources, cwd = ""): b
 }
 
 /**
- * The sets v8's grammar is built from, exported so a corpus can pin **every member** rather than one.
+ * Every set the grammar is built from, exported so a corpus can be checked for **naming each member**.
  *
- * Round 7 measured 10 of 23 mutations surviving because each new rule was pinned at exactly one member
- * — `--install` of six directory flags, `--ignore-scripts` of two, `buildx` of seven passthroughs.
- * Deleting the other five was invisible. A test that iterates these cannot have that hole.
+ * Round 7 measured 10 of 23 mutations surviving because each new rule was pinned at exactly one member,
+ * and round 8 measured the repair — a test that ITERATED these sets — detecting nothing at all, because
+ * it generated its probes from the sets it pinned, so deleting a member deleted its own assertion.
+ * `../unit/buildCommand.test.ts` therefore holds a hardcoded case per member and uses this export only
+ * to assert that no member is left unnamed.
+ *
+ * `wrappers`, `interpreters` and `lifecycle` are here because they were NOT, and so nothing could see
+ * that six wrappers, four interpreters and `prepublishOnly` had no case at all.
  */
 export const GRAMMAR = {
   managers: MANAGERS,
   tools: TOOLS,
   bundlers: BUNDLERS,
-  notABundler: NOT_A_BUNDLER,
   managerPass: MANAGER_PASS,
   managerConsuming: MANAGER_CONSUMING,
   managerBoolean: MANAGER_BOOLEAN,
   managerDirs: MANAGER_DIRS,
   targetFlags: TARGET_FLAGS,
   noScripts: NO_SCRIPTS,
+  wrappers: WRAPPERS,
+  interpreters: INTERPRETERS,
+  lifecycle: LIFECYCLE,
 } as const;

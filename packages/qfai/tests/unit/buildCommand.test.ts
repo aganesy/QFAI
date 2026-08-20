@@ -1,7 +1,7 @@
 /**
  * `tests/helpers/buildCommand.ts` — the predicate `US-0017-0004` rests on.
  *
- * Four review rounds measured four versions of it and each version was reported as clean by the party
+ * Eight review rounds measured ten versions of it and each version was reported as clean by the party
  * that wrote it. Every corpus this stage chose flattered its own predicate; every corpus a reviewer
  * chose broke it. So the corpora below are, deliberately, **not** this stage's:
  *
@@ -23,6 +23,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  type BuildVerdict,
   classifyBuildCommand,
   GRAMMAR,
   reachesBuild,
@@ -63,6 +64,358 @@ async function repositorySources(): Promise<ScriptSources> {
       "": await scriptsOf("package.json"),
       "packages/qfai": await scriptsOf("packages/qfai/package.json"),
     },
+  };
+}
+
+/**
+ * Synthetic manifests for the member cases. Deliberately minimal: `hello` is a build in `sub` and not
+ * at the root, so a directory flag either moved the lookup or it did not.
+ */
+const SYNTHETIC: ScriptSources = {
+  manifests: {
+    "": {
+      hello: "echo hi",
+      build: "tsup",
+      run: "echo running",
+      exec: "echo exec",
+      dlx: "echo dlx",
+      workspaces: "echo ws",
+    },
+    sub: { hello: "tsup" },
+    onlypre: { publish: "echo p", prepublishOnly: "tsup" },
+    onlyprepack: { publish: "echo p", prepack: "tsup" },
+  },
+};
+
+/** Every member of `GRAMMAR`, as the dotted paths `MEMBER_CASES` labels its cases with. */
+function grammarMembers(): string[] {
+  const out: string[] = [];
+  const sets: ReadonlyArray<readonly [string, Iterable<string>]> = [
+    ["MANAGERS", GRAMMAR.managers],
+    ["BUNDLERS", GRAMMAR.bundlers],
+    ["MANAGER_PASS", GRAMMAR.managerPass],
+    ["MANAGER_CONSUMING", GRAMMAR.managerConsuming],
+    ["MANAGER_BOOLEAN", GRAMMAR.managerBoolean],
+    ["MANAGER_DIRS", GRAMMAR.managerDirs],
+    ["TARGET_FLAGS", GRAMMAR.targetFlags],
+    ["NO_SCRIPTS", GRAMMAR.noScripts],
+    ["WRAPPERS", GRAMMAR.wrappers],
+    ["INTERPRETERS", GRAMMAR.interpreters],
+  ];
+  for (const [name, set] of sets) {
+    for (const member of set) out.push(`${name}.${member}`);
+  }
+  for (const [hook, members] of Object.entries(GRAMMAR.lifecycle)) {
+    for (const member of members) out.push(`LIFECYCLE.${hook}.${member}`);
+  }
+  for (const [tool, grammar] of Object.entries(GRAMMAR.tools)) {
+    out.push(`TOOLS.${tool}`);
+    for (const field of ["dirs", "values", "buildFlags"] as const) {
+      for (const member of grammar[field]) out.push(`TOOLS.${tool}.${field}.${member}`);
+    }
+  }
+  return out;
+}
+
+/**
+ * One case per grammar member: `[member, verdict, command]`, against `SYNTHETIC`.
+ *
+ * Hardcoded on purpose. Each command was checked to change verdict when its member is deleted — a
+ * probe generated from the set cannot have that property, because it disappears with the member.
+ *
+ * Three of them are worth reading for the shape of the argument:
+ *
+ * - `TARGET_FLAGS.-m` is `python -m build.cli`, not `python -m build`. The plain form pins nothing:
+ *   without the flag rule, the bare `build` is a candidate subcommand anyway. A path-like value is only
+ *   ever read as a target by the flag rule.
+ * - a tool's value flag is pinned by `<tool> <flag> build clean` expecting `none` — the flag has to
+ *   swallow the word `build`. Terse, and the only shape where the membership is what decides.
+ * - `MANAGERS.node` is `pnpm exec node --run build`, because `node --run` is matched by a literal head
+ *   check and never consults the set.
+ */
+const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
+  ["MANAGERS.pnpm", "build", "pnpm build"],
+  ["MANAGERS.npm", "build", "npm build"],
+  ["MANAGERS.yarn", "build", "yarn build"],
+  ["MANAGERS.npx", "build", "npx build"],
+  ["MANAGERS.pnpx", "build", "pnpx build"],
+  ["MANAGERS.bunx", "build", "bunx build"],
+  ["MANAGERS.bun", "build", "bun build"],
+  ["MANAGERS.node", "build", "pnpm exec node --run build"],
+  ["BUNDLERS.tsup", "build", "npx tsup"],
+  ["BUNDLERS.rollup", "build", "npx rollup"],
+  ["BUNDLERS.esbuild", "build", "npx esbuild"],
+  ["BUNDLERS.webpack", "build", "npx webpack"],
+  ["BUNDLERS.swc", "build", "npx swc"],
+  ["BUNDLERS.parcel", "build", "npx parcel"],
+  ["BUNDLERS.vite", "build", "npx vite"],
+  ["BUNDLERS.rspack", "build", "npx rspack"],
+  ["BUNDLERS.rolldown", "build", "npx rolldown"],
+  ["BUNDLERS.msbuild", "build", "npx msbuild"],
+  ["BUNDLERS.xcodebuild", "build", "npx xcodebuild"],
+  ["MANAGER_PASS.run", "build", "pnpm run build"],
+  ["MANAGER_PASS.exec", "build", "pnpm exec build"],
+  ["MANAGER_PASS.dlx", "build", "pnpm dlx build"],
+  ["MANAGER_PASS.workspaces", "build", "pnpm workspaces build"],
+  ["MANAGER_PASS.--", "build", "pnpm -- build"],
+  ["MANAGER_CONSUMING.workspace", "build", "yarn workspace qfai build"],
+  ["MANAGER_BOOLEAN.-w", "build", "pnpm -w build"],
+  ["MANAGER_BOOLEAN.--workspace-root", "build", "pnpm --workspace-root build"],
+  ["MANAGER_BOOLEAN.-r", "build", "pnpm -r build"],
+  ["MANAGER_BOOLEAN.--recursive", "build", "pnpm --recursive build"],
+  ["MANAGER_BOOLEAN.--silent", "build", "pnpm --silent build"],
+  ["MANAGER_BOOLEAN.--quiet", "build", "pnpm --quiet build"],
+  ["MANAGER_BOOLEAN.--yes", "build", "pnpm --yes build"],
+  ["MANAGER_BOOLEAN.-y", "build", "pnpm -y build"],
+  ["MANAGER_BOOLEAN.--frozen-lockfile", "build", "pnpm --frozen-lockfile build"],
+  ["MANAGER_BOOLEAN.--ignore-scripts", "build", "pnpm --ignore-scripts build"],
+  ["MANAGER_BOOLEAN.--no-scripts", "build", "pnpm --no-scripts build"],
+  ["MANAGER_BOOLEAN.--if-present", "build", "pnpm --if-present build"],
+  ["MANAGER_BOOLEAN.--prod", "build", "pnpm --prod build"],
+  ["MANAGER_BOOLEAN.--dev", "build", "pnpm --dev build"],
+  ["MANAGER_BOOLEAN.--no-bail", "build", "pnpm --no-bail build"],
+  ["MANAGER_BOOLEAN.--offline", "build", "pnpm --offline build"],
+  ["MANAGER_BOOLEAN.--force", "build", "pnpm --force build"],
+  ["MANAGER_BOOLEAN.--verbose", "build", "pnpm --verbose build"],
+  ["MANAGER_DIRS.-C", "build", "pnpm -C sub hello"],
+  ["MANAGER_DIRS.--dir", "build", "pnpm --dir sub hello"],
+  ["MANAGER_DIRS.--cwd", "build", "pnpm --cwd sub hello"],
+  ["MANAGER_DIRS.--prefix", "build", "pnpm --prefix sub hello"],
+  ["TARGET_FLAGS.-m", "build", "python -m build.cli"],
+  ["TARGET_FLAGS.--target", "build", "nx --target=build web"],
+  ["NO_SCRIPTS.--ignore-scripts", "none", "pnpm -C onlyprepack pack --ignore-scripts"],
+  ["NO_SCRIPTS.--no-scripts", "none", "pnpm -C onlyprepack pack --no-scripts"],
+  ["WRAPPERS.time", "build", "time pnpm build"],
+  ["WRAPPERS.sudo", "build", "sudo pnpm build"],
+  ["WRAPPERS.nice", "build", "nice pnpm build"],
+  ["WRAPPERS.ionice", "build", "ionice pnpm build"],
+  ["WRAPPERS.xvfb-run", "build", "xvfb-run pnpm build"],
+  ["WRAPPERS.command", "build", "command pnpm build"],
+  ["WRAPPERS.stdbuf", "build", "stdbuf pnpm build"],
+  ["WRAPPERS.nohup", "build", "nohup pnpm build"],
+  ["WRAPPERS.env", "build", "env pnpm build"],
+  ["INTERPRETERS.bash", "heuristic", "bash scripts/build.sh"],
+  ["INTERPRETERS.sh", "heuristic", "sh scripts/build.sh"],
+  ["INTERPRETERS.zsh", "heuristic", "zsh scripts/build.sh"],
+  ["INTERPRETERS.pwsh", "heuristic", "pwsh scripts/build.sh"],
+  ["INTERPRETERS.powershell", "heuristic", "powershell scripts/build.sh"],
+  ["LIFECYCLE.pack.prepack", "build", "pnpm -C onlyprepack pack"],
+  ["LIFECYCLE.publish.prepublishOnly", "build", "pnpm -C onlypre publish"],
+  ["LIFECYCLE.publish.prepack", "build", "pnpm -C onlyprepack publish"],
+  ["TOOLS.turbo", "build", "turbo build"],
+  ["TOOLS.turbo.dirs.--cwd", "none", "turbo --cwd build clean"],
+  ["TOOLS.turbo.values.--concurrency", "none", "turbo --concurrency build clean"],
+  ["TOOLS.turbo.values.--filter", "none", "turbo --filter build clean"],
+  ["TOOLS.nx", "build", "nx build"],
+  ["TOOLS.nx.values.--projects", "none", "nx --projects build clean"],
+  ["TOOLS.nx.values.--configuration", "none", "nx --configuration build clean"],
+  ["TOOLS.lerna", "build", "lerna build"],
+  ["TOOLS.lerna.values.--concurrency", "none", "lerna --concurrency build clean"],
+  ["TOOLS.rush", "build", "rush build"],
+  ["TOOLS.rush.values.--to", "none", "rush --to build clean"],
+  ["TOOLS.rush.values.--from", "none", "rush --from build clean"],
+  ["TOOLS.make", "build", "make build"],
+  ["TOOLS.make.dirs.-C", "none", "make -C build clean"],
+  ["TOOLS.make.dirs.--directory", "none", "make --directory build clean"],
+  ["TOOLS.make.values.-j", "none", "make -j build clean"],
+  ["TOOLS.make.values.-l", "none", "make -l build clean"],
+  ["TOOLS.make.values.-f", "none", "make -f build clean"],
+  ["TOOLS.make.values.--file", "none", "make --file build clean"],
+  ["TOOLS.make.values.--jobs", "none", "make --jobs build clean"],
+  ["TOOLS.cmake", "build", "cmake build"],
+  ["TOOLS.cmake.dirs.--install", "none", "cmake --install build clean"],
+  ["TOOLS.cmake.dirs.-B", "none", "cmake -B build clean"],
+  ["TOOLS.cmake.dirs.-S", "none", "cmake -S build clean"],
+  ["TOOLS.cmake.dirs.--prefix", "none", "cmake --prefix build clean"],
+  ["TOOLS.cmake.values.--config", "none", "cmake --config build clean"],
+  ["TOOLS.cmake.values.-G", "none", "cmake -G build clean"],
+  ["TOOLS.cmake.values.-D", "none", "cmake -D build clean"],
+  ["TOOLS.cmake.buildFlags.--build", "build", "cmake --build ."],
+  ["TOOLS.ninja", "build", "ninja build"],
+  ["TOOLS.ninja.dirs.-C", "none", "ninja -C build clean"],
+  ["TOOLS.ninja.values.-j", "none", "ninja -j build clean"],
+  ["TOOLS.ninja.values.-k", "none", "ninja -k build clean"],
+  ["TOOLS.ninja.values.-f", "none", "ninja -f build clean"],
+  ["TOOLS.bazel", "build", "bazel build"],
+  ["TOOLS.bazel.dirs.--output_base", "none", "bazel --output_base build clean"],
+  ["TOOLS.bazel.dirs.--output_user_root", "none", "bazel --output_user_root build clean"],
+  ["TOOLS.bazel.values.--config", "none", "bazel --config build clean"],
+  ["TOOLS.buck", "build", "buck build"],
+  ["TOOLS.buck.values.--config", "none", "buck --config build clean"],
+  ["TOOLS.just", "build", "just build"],
+  ["TOOLS.just.dirs.-d", "none", "just -d build clean"],
+  ["TOOLS.just.dirs.--working-directory", "none", "just --working-directory build clean"],
+  ["TOOLS.just.values.--set", "none", "just --set build clean"],
+  ["TOOLS.task", "build", "task build"],
+  ["TOOLS.task.dirs.-d", "none", "task -d build clean"],
+  ["TOOLS.task.dirs.--dir", "none", "task --dir build clean"],
+  ["TOOLS.task.values.-p", "none", "task -p build clean"],
+  ["TOOLS.task.values.--parallel", "none", "task --parallel build clean"],
+  ["TOOLS.waf", "build", "waf build"],
+  ["TOOLS.waf.values.-j", "none", "waf -j build clean"],
+  ["TOOLS.waf.values.--jobs", "none", "waf --jobs build clean"],
+  ["TOOLS.dune", "build", "dune build"],
+  ["TOOLS.dune.dirs.--root", "none", "dune --root build clean"],
+  ["TOOLS.dune.values.-j", "none", "dune -j build clean"],
+  ["TOOLS.dune.values.--profile", "none", "dune --profile build clean"],
+  ["TOOLS.stack", "build", "stack build"],
+  ["TOOLS.stack.dirs.--work-dir", "none", "stack --work-dir build clean"],
+  ["TOOLS.stack.values.--resolver", "none", "stack --resolver build clean"],
+  ["TOOLS.cargo", "build", "cargo build"],
+  ["TOOLS.cargo.dirs.--target-dir", "none", "cargo --target-dir build clean"],
+  ["TOOLS.cargo.dirs.--manifest-path", "none", "cargo --manifest-path build clean"],
+  ["TOOLS.cargo.values.--color", "none", "cargo --color build clean"],
+  ["TOOLS.cargo.values.--config", "none", "cargo --config build clean"],
+  ["TOOLS.cargo.values.-j", "none", "cargo -j build clean"],
+  ["TOOLS.cargo.values.--jobs", "none", "cargo --jobs build clean"],
+  ["TOOLS.cargo.values.--features", "none", "cargo --features build clean"],
+  ["TOOLS.go", "build", "go build"],
+  ["TOOLS.go.dirs.-C", "none", "go -C build clean"],
+  ["TOOLS.go.values.-o", "none", "go -o build clean"],
+  ["TOOLS.go.values.-tags", "none", "go -tags build clean"],
+  ["TOOLS.gradle", "build", "gradle build"],
+  ["TOOLS.gradle.dirs.-p", "none", "gradle -p build clean"],
+  ["TOOLS.gradle.dirs.--project-dir", "none", "gradle --project-dir build clean"],
+  ["TOOLS.gradle.values.--console", "none", "gradle --console build clean"],
+  ["TOOLS.gradle.values.--max-workers", "none", "gradle --max-workers build clean"],
+  ["TOOLS.gradle.values.--build-file", "none", "gradle --build-file build clean"],
+  ["TOOLS.gradle.values.-b", "none", "gradle -b build clean"],
+  ["TOOLS.gradle.values.--init-script", "none", "gradle --init-script build clean"],
+  ["TOOLS.gradlew", "build", "gradlew build"],
+  ["TOOLS.gradlew.dirs.-p", "none", "gradlew -p build clean"],
+  ["TOOLS.gradlew.dirs.--project-dir", "none", "gradlew --project-dir build clean"],
+  ["TOOLS.gradlew.values.--console", "none", "gradlew --console build clean"],
+  ["TOOLS.gradlew.values.--max-workers", "none", "gradlew --max-workers build clean"],
+  ["TOOLS.gradlew.values.--build-file", "none", "gradlew --build-file build clean"],
+  ["TOOLS.gradlew.values.-b", "none", "gradlew -b build clean"],
+  ["TOOLS.mvn", "build", "mvn build"],
+  ["TOOLS.mvn.dirs.-f", "none", "mvn -f build clean"],
+  ["TOOLS.mvn.dirs.--file", "none", "mvn --file build clean"],
+  ["TOOLS.mvn.values.-P", "none", "mvn -P build clean"],
+  ["TOOLS.mvn.values.-D", "none", "mvn -D build clean"],
+  ["TOOLS.mvn.values.-T", "none", "mvn -T build clean"],
+  ["TOOLS.dotnet", "build", "dotnet build"],
+  ["TOOLS.dotnet.dirs.-o", "none", "dotnet -o build clean"],
+  ["TOOLS.dotnet.dirs.--output", "none", "dotnet --output build clean"],
+  ["TOOLS.dotnet.values.--arch", "none", "dotnet --arch build clean"],
+  ["TOOLS.dotnet.values.--os", "none", "dotnet --os build clean"],
+  ["TOOLS.dotnet.values.--framework", "none", "dotnet --framework build clean"],
+  ["TOOLS.dotnet.values.-c", "none", "dotnet -c build clean"],
+  ["TOOLS.dotnet.values.--configuration", "none", "dotnet --configuration build clean"],
+  ["TOOLS.dotnet.values.-r", "none", "dotnet -r build clean"],
+  ["TOOLS.dotnet.values.--runtime", "none", "dotnet --runtime build clean"],
+  ["TOOLS.dotnet.values.-v", "none", "dotnet -v build clean"],
+  ["TOOLS.dotnet.values.--verbosity", "none", "dotnet --verbosity build clean"],
+  ["TOOLS.swift", "build", "swift build"],
+  ["TOOLS.swift.dirs.--package-path", "none", "swift --package-path build clean"],
+  ["TOOLS.swift.values.-c", "none", "swift -c build clean"],
+  ["TOOLS.swift.values.--configuration", "none", "swift --configuration build clean"],
+  ["TOOLS.zig", "build", "zig build"],
+  ["TOOLS.zig.values.-target", "none", "zig -target build clean"],
+  ["TOOLS.docker", "build", "docker build"],
+  ["TOOLS.docker.dirs.-f", "none", "docker -f build clean"],
+  ["TOOLS.docker.dirs.--file", "none", "docker --file build clean"],
+  ["TOOLS.docker.values.-t", "none", "docker -t build clean"],
+  ["TOOLS.docker.values.--tag", "none", "docker --tag build clean"],
+  ["TOOLS.docker.values.--build-arg", "none", "docker --build-arg build clean"],
+  ["TOOLS.docker.values.-H", "none", "docker -H build clean"],
+  ["TOOLS.docker.values.--platform", "none", "docker --platform build clean"],
+  ["TOOLS.docker.values.--name", "none", "docker --name build clean"],
+  ["TOOLS.podman", "build", "podman build"],
+  ["TOOLS.podman.dirs.-f", "none", "podman -f build clean"],
+  ["TOOLS.podman.dirs.--file", "none", "podman --file build clean"],
+  ["TOOLS.podman.values.-t", "none", "podman -t build clean"],
+  ["TOOLS.podman.values.--tag", "none", "podman --tag build clean"],
+  ["TOOLS.podman.values.--build-arg", "none", "podman --build-arg build clean"],
+  ["TOOLS.poetry", "build", "poetry build"],
+  ["TOOLS.poetry.dirs.-C", "none", "poetry -C build clean"],
+  ["TOOLS.poetry.dirs.--directory", "none", "poetry --directory build clean"],
+  ["TOOLS.poetry.values.--format", "none", "poetry --format build clean"],
+  ["TOOLS.flutter", "build", "flutter build"],
+  ["TOOLS.flutter.values.--flavor", "none", "flutter --flavor build clean"],
+  ["TOOLS.flutter.values.-t", "none", "flutter -t build clean"],
+  ["TOOLS.python", "build", "python -m build"],
+  ["TOOLS.python.values.-c", "none", "python -c build clean"],
+  ["TOOLS.python3", "build", "python3 -m build"],
+  ["TOOLS.python3.values.-c", "none", "python3 -c build clean"],
+  ["TOOLS.sbt", "build", "sbt build"],
+  ["TOOLS.rake", "build", "rake build"],
+  ["TOOLS.rake.dirs.-C", "none", "rake -C build clean"],
+  ["TOOLS.rake.values.-f", "none", "rake -f build clean"],
+];
+
+/**
+ * The sets `GRAMMAR` exports are the very objects the classifier reads, so a member can be deleted and
+ * put back in process. That is what lets the sweep below be a test rather than a measurement someone
+ * has to remember to re-run.
+ */
+const SETS: Readonly<Record<string, Set<string>>> = {
+  MANAGERS: GRAMMAR.managers,
+  BUNDLERS: GRAMMAR.bundlers,
+  MANAGER_PASS: GRAMMAR.managerPass,
+  MANAGER_CONSUMING: GRAMMAR.managerConsuming,
+  MANAGER_BOOLEAN: GRAMMAR.managerBoolean,
+  MANAGER_DIRS: GRAMMAR.managerDirs,
+  TARGET_FLAGS: GRAMMAR.targetFlags,
+  NO_SCRIPTS: GRAMMAR.noScripts,
+  WRAPPERS: GRAMMAR.wrappers,
+  INTERPRETERS: GRAMMAR.interpreters,
+};
+
+/**
+ * Delete one member named by a `grammarMembers()` path; the returned function puts it back exactly.
+ *
+ * A set is restored by clearing and re-adding in the original order — appending would be enough for
+ * behaviour, since every set is only ever read with `.has`, but not for the two tests that compare
+ * member lists.
+ */
+function deleteMember(member: string): () => void {
+  const parts = member.split(".");
+  const head = parts[0] ?? "";
+
+  if (head === "TOOLS") {
+    const name = parts[1] ?? "";
+    const original = GRAMMAR.tools[name];
+    if (original === undefined) throw new Error(`no such tool: ${name}`);
+    const restore = (): void => {
+      GRAMMAR.tools[name] = original;
+    };
+    if (parts.length === 2) {
+      // `Reflect.deleteProperty` rather than `delete`, which the lint rule bars on a computed
+      // key. The key has to go: an entry with empty lists still makes the verb a known tool.
+      Reflect.deleteProperty(GRAMMAR.tools, name);
+      return restore;
+    }
+    const field = parts[2] ?? "";
+    const flag = parts.slice(3).join(".");
+    if (field !== "dirs" && field !== "values" && field !== "buildFlags") {
+      throw new Error(`no such tool field: ${field}`);
+    }
+    GRAMMAR.tools[name] = {
+      ...original,
+      [field]: original[field].filter((entry) => entry !== flag),
+    };
+    return restore;
+  }
+
+  if (head === "LIFECYCLE") {
+    const hook = parts[1] ?? "";
+    const original = GRAMMAR.lifecycle[hook];
+    if (original === undefined) throw new Error(`no such lifecycle hook: ${hook}`);
+    const dropped = parts.slice(2).join(".");
+    GRAMMAR.lifecycle[hook] = original.filter((entry) => entry !== dropped);
+    return () => {
+      GRAMMAR.lifecycle[hook] = original;
+    };
+  }
+
+  const set = SETS[head];
+  if (set === undefined) throw new Error(`no such grammar set: ${head}`);
+  const before = [...set];
+  set.delete(parts.slice(1).join("."));
+  return () => {
+    set.clear();
+    for (const entry of before) set.add(entry);
   };
 }
 
@@ -350,75 +703,129 @@ describe("classifyBuildCommand", () => {
       .toEqual([]);
   });
 
-  it("pins every member of every grammar set, not one member of each", async () => {
-    // Round 7 measured 10 of 23 mutations surviving the corpus because each new rule was pinned at
-    // exactly one member: `--install` of six directory flags, `--ignore-scripts` of two,
-    // `buildx` of seven passthroughs. Deleting the other five was invisible. This iterates the sets,
-    // so a deleted member fails here rather than in the next review.
+  it("names every grammar member in a hardcoded case, and no member the grammar dropped", () => {
+    // Round 8's headline finding: the version of this test that ITERATED `GRAMMAR` detected nothing.
+    // It generated `pnpm ${flag} build` from the very set it meant to pin, so deleting a member deleted
+    // its own probe — 0 of 17 member mutations reddened it, and member survival went 43% -> 61% while
+    // the test reported success.
+    //
+    // So MEMBER_CASES is hardcoded, and this pair of assertions replaces the iteration:
+    //
+    // - here, that the case list and the grammar name the same members. A new member with no case fails
+    //   the first assertion; a member deleted from the grammar fails the second, which is the deliberate
+    //   part — removing grammar has to be a decision, not a silent narrowing.
+    // - below, that each case still holds. That one is where a deletion is CAUGHT rather than merely
+    //   noticed, and it works because the commands are literals that outlive the member.
+    //
+    // Measured, not assumed: a sweep deleting each of the 208 members one at a time reddens the corpus
+    // 208 times. Before v10 dropped the forty-five unobservable members, 162 of 207 survived.
+    const named = new Set(MEMBER_CASES.map(([member]) => member));
+    expect(
+      grammarMembers().filter((member) => !named.has(member)),
+      "a grammar member no hardcoded case names — iterating the set instead is what round 8 measured " +
+        "as detecting nothing",
+    ).toEqual([]);
+    expect(
+      [...named].filter((member) => !grammarMembers().includes(member)),
+      "a case naming a member the grammar no longer has",
+    ).toEqual([]);
+    expect(MEMBER_CASES.length, "one case per member, no duplicates").toBe(named.size);
+  });
+
+  it("holds the verdict of every hardcoded member case", () => {
+    // Synthetic manifests, not this repository's, because a probe must turn on the grammar rather than
+    // on which scripts happen to exist. `pnpm --dir sub hello` reaching `tsup` says the directory flag
+    // moved the lookup; against the real tree it would reach a build either way, through the root
+    // `build` script, and pin nothing.
+    const wrong = MEMBER_CASES.filter(
+      ([, want, line]) => classifyBuildCommand(line, SYNTHETIC) !== want,
+    ).map(
+      ([member, want, line]) =>
+        `${member}: want ${want}, got ${classifyBuildCommand(line, SYNTHETIC)} — ${line}`,
+    );
+    expect(wrong, "a member case whose verdict moved").toEqual([]);
+  });
+
+  it("reddens on the deletion of any one grammar member", () => {
+    // The property the hardcoded table exists for, asserted rather than described. Deleting each member
+    // in turn must make at least one case disagree; a member that survives is a member the corpus does
+    // not really pin, which is the state round 8 found the previous version of this file in — 0 of 17
+    // mutations reddening it, because it generated its probes from the sets it pinned.
+    //
+    // This is also what shrank v10: run against v9's grammar, 162 of 207 members survived, and
+    // forty-five of them survived every command anyone could write. Those are gone from the grammar now,
+    // and their absence is why this can demand nothing less than all of them.
+    const undetected: string[] = [];
+    for (const member of grammarMembers()) {
+      const restore = deleteMember(member);
+      try {
+        const caught = MEMBER_CASES.some(
+          ([, want, line]) => classifyBuildCommand(line, SYNTHETIC) !== want,
+        );
+        if (!caught) undetected.push(member);
+      } finally {
+        restore();
+      }
+    }
+    expect(undetected, "a grammar member whose deletion no case in this corpus notices").toEqual(
+      [],
+    );
+
+    // And the restore has to be exact, or every test after this one is measuring a different grammar.
+    expect(grammarMembers().length, "the sweep must leave the grammar as it found it").toBe(
+      MEMBER_CASES.length,
+    );
+  });
+
+  it("consumes a tool's spaced flag value, which round 8 measured v8 never doing", async () => {
+    // v8's one global rule was `const known = isManager ? MANAGER_BOOLEAN.has(token) : true`, so for a
+    // build tool `known` was unconditionally true and a spaced flag never consumed its value. The value
+    // landed in the subcommand position instead, and six ordinary CI lines went missing. The naive
+    // repair — dropping the `isManager` branch — reddened the four `make -B build` forms above, which is
+    // why the knowledge had to move into each tool's own `values` list.
     const sources = await repositorySources();
-    const unpinned: string[] = [];
+    const MISSED = [
+      "gradle --console plain build",
+      "dotnet --verbosity minimal build",
+      "make -j 4 build",
+      "cargo --color never build",
+      "ninja -j 8 build",
+      "turbo --concurrency 4 run build",
+    ];
+    // And the other direction, from the same round: a flag whose NAME contains "build" is not a build,
+    // and a bare token carrying `=` is a setting rather than a subcommand.
+    const INVENTED = [
+      "cargo --config build.jobs=2 test",
+      "gradle --build-cache test",
+      "gradle --build-file other.gradle clean",
+      "dotnet --arch build test",
+    ];
+    expect
+      .soft(
+        MISSED.filter((line) => classifyBuildCommand(line, sources) !== "build"),
+        "a build whose tool consumed its own flag value",
+      )
+      .toEqual([]);
+    expect
+      .soft(
+        INVENTED.filter((line) => classifyBuildCommand(line, sources) !== "none"),
+        "a non-build read out of a flag name or a setting",
+      )
+      .toEqual([]);
 
-    // Every manager directory flag must move the manifest a script resolves in.
-    for (const flag of GRAMMAR.managerDirs) {
-      const spaced = `pnpm ${flag} packages/qfai build`;
-      const inline = `pnpm ${flag}=packages/qfai build`;
-      if (classifyBuildCommand(spaced, sources) !== "build") unpinned.push(spaced);
-      if (classifyBuildCommand(inline, sources) !== "build") unpinned.push(inline);
+    // One command, one verdict — the same invariant as the long/short/absent test above, extended to
+    // the spaced and inline forms of the flags this round added.
+    for (const [spaced, inline] of [
+      ["gradle --console plain build", "gradle --console=plain build"],
+      ["dotnet --verbosity minimal build", "dotnet --verbosity=minimal build"],
+      ["make -j 4 build", "make -j4 build"],
+      ["cargo --color never build", "cargo --color=never build"],
+      ["pnpm -w build", "pnpm --workspace-root build"],
+    ] as const) {
+      expect
+        .soft(classifyBuildCommand(spaced, sources), `${spaced} and ${inline} are the same command`)
+        .toBe(classifyBuildCommand(inline, sources));
     }
-
-    // Every manager passthrough verb must lead to the script after it.
-    for (const verb of GRAMMAR.managerPass) {
-      if (verb === "--") continue;
-      const line = `pnpm ${verb} build`;
-      if (classifyBuildCommand(line, sources) === "none") unpinned.push(line);
-    }
-
-    // Every consuming flag must swallow its value rather than reading it as the target.
-    for (const flag of GRAMMAR.managerConsuming) {
-      if (flag === "workspace") continue;
-      const line = `pnpm ${flag} build-tools lint`;
-      if (classifyBuildCommand(line, sources) !== "none") unpinned.push(line);
-    }
-
-    // Every boolean flag must leave the script after it readable.
-    for (const flag of GRAMMAR.managerBoolean) {
-      const line = `pnpm ${flag} build`;
-      if (classifyBuildCommand(line, sources) === "none") unpinned.push(line);
-    }
-
-    // Every no-scripts flag must suppress the lifecycle hook.
-    for (const flag of GRAMMAR.noScripts) {
-      const line = `pnpm -C packages/qfai pack ${flag}`;
-      if (classifyBuildCommand(line, sources) !== "none") unpinned.push(line);
-    }
-
-    // Every target flag's value must be readable as the target.
-    for (const flag of GRAMMAR.targetFlags) {
-      const spaced = `nx ${flag} build web`;
-      const inline = `nx ${flag}=build web`;
-      if (classifyBuildCommand(spaced, sources) !== "build") unpinned.push(spaced);
-      if (classifyBuildCommand(inline, sources) !== "build") unpinned.push(inline);
-    }
-
-    // Every bundler must be a build when invoked at all.
-    for (const bundler of GRAMMAR.bundlers) {
-      const line = bundler === "vite" ? "npx vite build" : `npx ${bundler}`;
-      if (classifyBuildCommand(line, sources) !== "build") unpinned.push(line);
-    }
-
-    // Every tool's own passthrough verbs and directory flags.
-    for (const [tool, grammar] of Object.entries(GRAMMAR.tools)) {
-      for (const verb of grammar.pass) {
-        const line = `${tool} ${verb} build`;
-        if (classifyBuildCommand(line, sources) === "none") unpinned.push(line);
-      }
-      for (const flag of grammar.dirs) {
-        const line = `${tool} ${flag} build lint`;
-        if (classifyBuildCommand(line, sources) !== "none") unpinned.push(line);
-      }
-    }
-
-    expect(unpinned, "a grammar member no case in this corpus exercises").toEqual([]);
   });
 
   it("terminates on a self-referential script chain rather than recursing forever", () => {

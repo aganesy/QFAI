@@ -186,17 +186,19 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
 - **new** `.qfai/evidence/coverage-depth-spec-0017.md` — the Coverage Depth Matrix, committed
 - **new** `scripts/check-atdd-annotation-ledger.mjs` — the guard this record had claimed existed
 - **new** `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts` — 22 tests
-- **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, v8, extracted from the
+- **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, v10, extracted from the
   E2E so its corpora can be tested on their own
-- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 16 tests, eight corpora, none of them chosen
-  by this stage
+- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 19 tests, nine corpora, none of them chosen
+  by this stage. Round 8's own finding is the last three: one hardcoded case per grammar member, a check
+  that the case list and the grammar name the same 208 members, and a sweep that deletes each member in
+  turn and requires a case to notice
 - **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 5 tests deriving the Coverage
   Depth Matrix's totals, partition, class assignment, per-class justification and row width from the
   table itself
 - **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 7 tests deriving this record's own
   counts from the artifacts they describe, after every review round found at least one that the tree
   did not hold
-- **new** `packages/qfai/tests/assets/retractedClaims.test.ts` — 6 tests requiring a claim a review
+- **new** `packages/qfai/tests/assets/retractedClaims.test.ts` — 7 tests requiring a claim a review
   round refuted to appear only inside quotation marks, because "it is gone now" was itself the false
   statement round 5 found
 - **new** `.qfai/decisions/DR-0017-0010-*.md` — the branch-3 anomaly record for `TDD-0070`
@@ -226,9 +228,9 @@ pnpm -C packages/qfai exec vitest run tests/integration/scripts/checkAtddAnnotat
 pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
   -> Tests 5 passed (5), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
-  -> Tests 6 passed (6), exit 0
+  -> Tests 7 passed (7), exit 0
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/buildCommand.test.ts
-  -> Tests 16 passed (16), exit 0
+  -> Tests 19 passed (19), exit 0
 
 node packages/qfai/dist/cli/index.mjs validate --profile atdd --fail-on error --spec 0017
   before this stage:  info=2 warning=0 error=2   QFAI-ATDD-111 (9 US), QFAI-ATDD-112 (8 TC)
@@ -469,9 +471,15 @@ after a merge that has not happened. **The row is not satisfiable on the branch 
 tuning, by construction.** No amount of work on this branch changes that; it needs post-merge
 history.
 
-Branch 3, `DR-0017-0010`, parked. This is the row P1d sustained across three passes: post-merge
-history cannot exist pre-merge, which is branch 3's own named example. The transition itself is still
-owed a P1d PASS — see § "P1d's verdicts" below.
+Branch 3, `DR-0017-0010`. **P1d PASSED this row at its sixth pass** (`9a37421c`), so
+`/qfai-implement` may write `todo -> exception` with this `DR-ID`; see § "P1d's verdict" below for the
+two conditions attached to that write, both discharged. Every one of the six passes sustained this row's
+own account — post-merge history cannot exist pre-merge, which is branch 3's own named example — and
+every refusal was about the record around it.
+
+An earlier version of this paragraph asserted that the transition was "still owed" a PASS, seventeen
+lines from where the PASS is recorded, and P1d wrote that failure mode down in advance: the entry step
+3b reads is this one, so a stale sentence here is the one that matters most.
 
 ### What branch 3 does not do
 
@@ -808,7 +816,8 @@ and it made a required CI leg red at the commit that added it.
    **Both are still `todo` in the ledger**, and what follows is the status each is owed rather than
    one it has — round 4 and round 5 each found this item asserting the statuses while `## Final
    status` said neither had been written. `TDD-0070` is owed `exception` against `DR-0017-0010`, whose
-   account P1d has sustained four times running: post-merge history cannot exist pre-merge.
+   account P1d sustained through all six passes and passed at the sixth: post-merge history cannot
+   exist pre-merge.
    `TDD-0069` is owed `blocked` on `CR-20260820-0012`, and P1d's fourth pass **released** that write
    on the merits — the only ground it had blocked on, a `DR-ID` column carrying a `CR-*` id, is fixed.
    P1d found the exit condition
@@ -946,6 +955,15 @@ is wrong** — the DR is a record it sustains whole. What remained was a refuted
 this file. It also found the new retracted-claims guard green **because of an omission**, which is why
 that guard now searches every governance file for every claim.
 
+**Sixth pass** (`9a37421c`): **PASS.** Two blocking items from pass 5 fixed, and fixed in both files
+at once — the pattern P1d had named three rounds running, where the half named second went unrepaired,
+did not recur. It verified the fix by replaying the guard's own predicate over copies rather than on
+inspection, and reported that its first two mutations against the DR were **no-ops** until it found the
+real quoted span, so a reviewer stopping at the first attempt would have wrongly called the DR
+unguarded. Two conditions were attached to the edit that records the PASS: the round-count sites, and
+the DR's own `Status` field. Both discharged. It also noted one retraction of its own still missing from
+the retracted-claims list, which round 8 added.
+
 **The clause-1 correction was itself wrong, and this is the fifth vacuous claim on this spec.** Round
 1's finding was that `EX-0017-0053` had been half-quoted, dropping "exactly one runner project is
 tuned, largest first". The repair said that clause *is* satisfied by pre-existing state and *is*
@@ -986,7 +1004,8 @@ reviewer has landed and it has been sealed. Round 4's gatekeeper found this undi
 same class of gap as the two packs that were missing `summary.json`: masked in CI only because the
 `tdd` step fails first on `error=2`.
 
-A fourth P1d re-route and a fifth stage round are owed. This stage does not claim its own repairs
+P1d's gate is **closed** — it passed at pass 6 and round 8 did not re-route it, because re-deciding a
+decided gate is not a review. A ninth stage round is owed. This stage does not claim its own repairs
 reviewed.
 
 ## Final status (PASS/FAIL) + who confirmed
@@ -1090,7 +1109,7 @@ Review pack:       .qfai/review/review-20260821060000000/            (round 6, +
 Review pack seal:  d99dff9cf0a94bbcb18ca20df5b44d426b19f79f45699308b11ca6f726a96752
 
 Review pack:       .qfai/review/review-20260821080000000/            (round 7, + P1d pass 6 — PASS)
-Review pack seal:  ea0849f0b759bd8dc922f0dc5eaa8a788949e3639ee8e720c511200dcbab1451
+Review pack seal:  3d56fd2edd484c0ffb8cd2b91fe2de93b1e1d65fd93d6a4c6d5a94fe740e2a92
 
 Review pack:       .qfai/review/review-20260821100000000/            (round 8 — stage gates only)
 Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
@@ -1118,15 +1137,22 @@ therefore **made the suite red at the commit that added it** — in `tests/asset
 carry a seal that recomputes, and the **in-flight** one must be named without one.
 
 Serialization, stated because it is load-bearing: each manifest line is
-`<git hash-object --no-filters><single space><path><LF>`, paths relative to the pack root in `LC_ALL=C`
-order, and the seal is a sha256 over that byte stream.
+`<git hash-object><single space><path><LF>`, paths relative to the pack root in `LC_ALL=C` order, with
+**every file's line endings normalised to LF first**, and the seal is a sha256 over that byte stream.
 
-**`--no-filters` matters and only round 8 made it matter.** The first seven packs held LF-only files, so
-a filtered `git hash-object` and the raw-byte hash agreed and the flag was invisible. Round 7's pack
-carries one report with CRLF line endings, and there the filtered hash normalises them while
-`packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — which recomputes from the working-tree bytes
-— does not. The test caught the disagreement the moment that pack became closed; the recorded value is
-the unfiltered one, which is what the bytes on disk actually hash to. The first version of this record printed the manifest with
+**The normalisation is the whole of it, and this record got it backwards once.** `.gitattributes`
+carries `* text=auto eol=lf`, so a file written with CRLF is stored LF-only and every checkout sees LF
+— while `git status` stays clean, because the filter runs on the way in. Exactly one of the 36 files
+across these packs is in that state: round 7's `qa-gatekeeper` report, 423 CRLF in this working tree and
+0 in its blob. The first six packs were LF-only throughout, which is why eight rounds of agreement
+between a filtered hash and a raw-byte hash was luck.
+
+Round 8 recorded the **raw-byte** value on the reasoning that an unfiltered hash is the honest one. It
+is not: `stageEvidenceCounts.test.ts` reads working-tree bytes, CI runs `ubuntu-latest`, and
+`tests/assets/**` is in the `e2e` project — a required matrix leg — so that value made the test pass
+here and fail from a clean checkout. Round 8's `completion-reviewer` measured both. The recorded value
+is the LF-normalised one, which is what the committed blob hashes to and what every checkout will
+recompute. The first version of this record printed the manifest with
 **two** spaces while the recorded seal used one — a reader recomputing from the printed block would have
 got `fa8d6e836cabd14a6cdbc12dd8b9dd538bbe971a40cd4bf27b252160d17e2526` and read a legitimate pack as
 tampered. Round 2 found that; round 3 confirmed both the corrected value and the two-space value

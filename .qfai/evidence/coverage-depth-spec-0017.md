@@ -185,8 +185,8 @@ runs. `E4` is a sound oracle **for the assertion** and not for the story: an ora
 can fail, and this row has no case. Scoring six category cells `❌` and the oracle `✅` is the same
 incoherence the checklist bars in the other direction.
 
-What the oracle establishes is that the assertion discriminates — and getting that far took five
-versions of the predicate, each measured, each of the first four reported as clean by the party that
+What the oracle establishes is that the assertion discriminates — and getting that far took ten
+versions of the predicate, each measured, each of the first nine reported as clean by the party that
 wrote it and then broken by a corpus someone else chose:
 
 ```text
@@ -201,6 +201,27 @@ v5  shell segments, per-manifest script bodies, and a third `heuristic` verdict.
     ten ways, the worst being that a manifest lookup which MISSED returned the strong `build`
     verdict from the bare name — so `pnpm --filter qfai ci:build-verify` was `build` while
     `pnpm ci:build-verify` was `heuristic`: one command, two verdicts, decided by a lookup failure
+v6  a global `sawFlag`: any flag ended the subcommand position. Round 6 measured seven builds v5
+    had caught going to `none` — `make -C packages/qfai build`, `make -j4 build`,
+    `cargo --locked build`, `gradle --no-daemon build`, `bazel --output_base=/tmp build //...`,
+    `docker buildx build --push .`, `docker -H tcp://x build .`
+v7  the narrower rule v6 needed, but still global: one set of "flags that take a directory" for
+    every runner. Three of its members are BOOLEAN in the tools it was applied to (`-B` is
+    make's `--always-make`, `-S` its `--no-keep-going` and gradle's `--full-stacktrace`), so
+    `make -B build` was `none` while `make --always-make build` was `build` — one command, two
+    verdicts again, from a set that exists for `cmake --install build` alone. And `run` was a
+    global passthrough, so `docker run --name build-agent alpine` was a build: the real
+    subcommand skipped, a container name read as a target. Fifteen defects over 59 probes
+v8  per-family grammars, which is what v7 lacked — but one global rule stayed: a spaced flag
+    consumes its value unless it is a known boolean, with `known` hardcoded `true` for every build
+    tool. So no tool's spaced flag consumed anything and its value landed in the subcommand
+    position: `gradle --console plain build` was `none`. Round 8 measured 25 of 66 disagreeing
+v9  each tool declares which of ITS flags take a value, which is the knowledge v6, v7 and v8 each
+    approximated globally. Plus: a flag never names a build outside a per-tool allowlist; a bare
+    token carrying `=` is a setting; and for a tool EVERY bare token is a candidate subcommand,
+    not just the first
+v10 forty-five grammar members deleted, because round 8's other finding was that the corpus pinned
+    45 of 207 and the test that claimed to pin them all detected nothing (below)
 ```
 
 Two claims previously recorded here are withdrawn. That round 2 "rebuilt the scan **around the
@@ -213,16 +234,28 @@ v4's naming defect is the one worth keeping in view: it measured **how a script 
 than what it *does***, which is the failure mode § "The finding that re-scored this matrix after round
 1" names as this spec's recurring one.
 
-`v8` lives in `packages/qfai/tests/helpers/buildCommand.ts` with its corpora in
-`packages/qfai/tests/unit/buildCommand.test.ts`. It keeps v5's shell segmentation and per-manifest
-resolution and adds the three distinctions v5 was missing: a package manager resolves a **script**
-while a build tool takes a **subcommand**; a **missing** script is unknown and can never be more than
-`heuristic`; and a runner may nest, with a build tool's subcommand counting only before any flag —
-which is what separates `cmake --build .` from `cmake --install build`.
+`v10` lives in `packages/qfai/tests/helpers/buildCommand.ts` with its corpora in
+`packages/qfai/tests/unit/buildCommand.test.ts`. Shell segmentation and per-manifest resolution are
+**v5's**, kept unchanged since — an earlier version of this paragraph credited them to v8, and named
+three "distinctions v5 was missing" that were v5's own. What the versions after v5 actually contribute
+is one thing, arrived at three times: **the grammar is per-runner, not global**. A package manager
+resolves a script and its flag set is open-ended, so the safe default is to consume; a build tool takes
+subcommands and its flag set is closed and declared, so the safe default is to consume nothing. v6, v7
+and v8 each tried to hold both with one global rule and each broke one direction to fix the other.
+
+Round 8's second finding is why v10 is **smaller** than v9. The test that claimed to "pin every member
+of every grammar set" generated its probes **from the sets it pinned**, so deleting a member deleted its
+own assertion: 0 of 17 member mutations reddened it, and a full sweep put member survival at 162 of 207.
+Replacing it with one hardcoded case per member forced the question "what command changes verdict if
+this member goes?" once per member — and for forty-five the answer was none. Those are deleted, one of
+them (`NOT_A_BUNDLER`) because the single command whose verdict it changed it decided **wrong**. The
+sweep is now a test rather than a measurement: it deletes each of the 208 remaining members in turn and
+requires a case to notice, and it fails on any member that cannot be pinned.
 
 No accuracy figure is quoted here on purpose. What the corpora are is recorded instead: round 4's 20
-measured regressions, round 5's 10 measured defects, v4's 15 kept forms, the 18 non-builds four rounds
-accumulated, and every `run:` line in both workflow trees. None was chosen by this stage.
+measured regressions, round 5's 10 measured defects, round 6's 7, round 8's 6 missed builds and 4
+invented ones, v4's 15 kept forms, the non-builds five rounds accumulated, one case per grammar member,
+and every `run:` line in both workflow trees. None was chosen by this stage.
 
 Closing the row is `TDD-0032` … `TDD-0035`, all four `blocked` on `CR-20260820-0007`, because their
 acceptance criteria require numbers written into `07_Decisions.md` which `/qfai-implement` may not

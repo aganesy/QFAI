@@ -115,8 +115,20 @@ const RETRACTED: readonly Retracted[] = [
     why: "shorter than the earlier entry so a one-word drift cannot escape it (round 7)",
   },
   {
-    claim: "defeated by the formatter",
-    why: "the evidence files are prettier-ignored and proseWrap is preserve; the line breaks are hand-wrapped (round 7, self-disclosed)",
+    claim: "defeated by",
+    why: "no formatter defeated anything: .qfai/evidence/** is prettier-ignored and proseWrap is preserve, so the line breaks are hand-wrapped (round 7, self-disclosed; round 8 found the longer needle matching nothing)",
+  },
+  {
+    claim: "P1d has run three times",
+    why: "six passes: five REVISE and a PASS at the sixth (round 8)",
+  },
+  {
+    claim: "transition itself is still owed a P1d PASS",
+    why: "P1d passed at its sixth pass; this stood inside the entry step 3b reads (round 8)",
+  },
+  {
+    claim: "no filters",
+    why: "the seal is LF-normalised, not unfiltered; the unfiltered value reproduced only on one machine (round 8)",
   },
 ];
 
@@ -162,28 +174,52 @@ const WORDS: Record<string, number> = {
 };
 
 /**
- * Collapse whitespace, drop emphasis, strip zero-width characters and lower-case.
+ * Claims whose wording has been removed from the records outright rather than quoted.
  *
- * Round 7 laundered a claim four ways this closes: a zero-width space inside it, a lower-cased first
- * word, one word of drift, and a line break — the last because the collapse ran after the paragraph
- * split. Lower-casing costs nothing here: no entry depends on case to mean what it means.
- *
- * The line-break note in an earlier version of this docstring blamed Prettier and **that was false**:
- * `.prettierignore` excludes `.qfai/evidence/**`, and `.prettierrc.json` sets `proseWrap: "preserve"`
- * for markdown, so the formatter neither touches nor reflows these files. The breaks are hand-wrapped.
- * The claim came from round 6's report and was adopted here without checking it.
+ * An entry here is dormant by design: nothing matches it, and that is the intended end state. Keeping
+ * it listed is what lets the check above tell "deleted" from "needle broken" — round 8 found two inert
+ * entries and nothing was reporting either.
  */
+const RETIRED: readonly string[] = [
+  // Removed from the records outright rather than quoted, which is the better end state: nothing can
+  // read them as assertions because they are not there. Each was verified absent across all five
+  // governance files before being listed, and the second assertion below still catches reintroduction.
+  "P1d has returned REVISE three times",
+  "P1d has run three times",
+  "transition itself is still owed a P1d PASS",
+  "defeated by",
+  "no filters",
+];
+
+/**
+ * Two flattenings, because one is not enough and each earlier version proved it.
+ *
+ * A zero-width character can be placed where a space belongs — round 7 laundered a claim that way, and
+ * deleting the character welds the two words together so the needle stops matching. Or it can be placed
+ * INSIDE a word — round 8 laundered a claim that way, after the repair had switched to substituting a
+ * space, which then split the word. Neither single normalisation covers both placements.
+ *
+ * So both are produced and a claim is sought in each. U+00AD and U+2060 were absent from the stripped
+ * range entirely.
+ *
+ * The wrapping is also collapsed here, and the reason is worth stating precisely because an earlier
+ * version got it wrong: the line breaks inside these records are **hand-wrapped**. `.prettierignore`
+ * excludes `.qfai/evidence/**` and `.prettierrc.json` sets `proseWrap: "preserve"` for markdown, so no
+ * formatter touches or reflows them. The claim that one did came from a review report and was adopted
+ * here without checking.
+ */
+const ZERO_WIDTH = /[\u00AD\u200B-\u200D\u2060\uFEFF]/g;
+
+function flattenings(text: string): [string, string] {
+  const base = text.replace(/[*_`]/g, "");
+  const removed = base.replace(ZERO_WIDTH, "").replace(/\s+/g, " ").toLowerCase();
+  const spaced = base.replace(ZERO_WIDTH, " ").replace(/\s+/g, " ").toLowerCase();
+  return [removed, spaced];
+}
+
+/** The primary flattening, used where only one representation is needed. */
 function flatten(text: string): string {
-  return (
-    text
-      // A zero-width character replaces a space rather than sitting beside one, so deleting it welds two
-      // words together and the needle stops matching — round 7 laundered a claim exactly that way, and
-      // the first repair here deleted them. Substituted with a space and then collapsed.
-      .replace(/[\u200B-\u200D\uFEFF]/g, " ")
-      .replace(/[*_`]/g, "")
-      .replace(/\s+/g, " ")
-      .toLowerCase()
-  );
+  return flattenings(text)[0];
 }
 
 /**
@@ -235,23 +271,27 @@ async function occurrences(): Promise<Occurrence[]> {
   for (const file of GOVERNANCE) {
     const raw = await readFile(path.join(ROOT, file), "utf8");
 
-    let joined = "";
-    const spans: Array<[number, number]> = [];
-    for (const paragraph of raw.split(/\r?\n[ \t]*\r?\n/)) {
-      const flat = flatten(paragraph);
-      const offset = joined.length;
-      for (const [start, end] of quotedSpans(flat)) spans.push([offset + start, offset + end]);
-      joined += `${flat} `;
-    }
+    // One pass per flattening. A claim laundered by a zero-width character is visible in exactly one of
+    // the two, so both are searched and the occurrences merged.
+    for (const variant of [0, 1] as const) {
+      let joined = "";
+      const spans: Array<[number, number]> = [];
+      for (const paragraph of raw.split(/\r?\n[ \t]*\r?\n/)) {
+        const flat = flattenings(paragraph)[variant];
+        const offset = joined.length;
+        for (const [start, end] of quotedSpans(flat)) spans.push([offset + start, offset + end]);
+        joined += `${flat} `;
+      }
 
-    for (const entry of RETRACTED) {
-      const needle = flatten(entry.claim);
-      let index = joined.indexOf(needle);
-      while (index !== -1) {
-        const to = index + needle.length;
-        const quoted = spans.some(([start, end]) => start < index && to <= end);
-        found.push({ file, claim: entry.claim, quoted });
-        index = joined.indexOf(needle, to);
+      for (const entry of RETRACTED) {
+        const needle = flattenings(entry.claim)[variant];
+        let index = joined.indexOf(needle);
+        while (index !== -1) {
+          const to = index + needle.length;
+          const quoted = spans.some(([start, end]) => start < index && to <= end);
+          found.push({ file, claim: entry.claim, quoted });
+          index = joined.indexOf(needle, to);
+        }
       }
     }
   }
@@ -338,6 +378,33 @@ describe("retracted claims are quoted, never asserted", () => {
       }
     }
     expect(wrong, "a counted claim whose number the tree does not hold").toEqual([]);
+  });
+
+  it("has no entry that matches nothing, in either direction", async () => {
+    // Round 8 found two of thirteen entries matching nowhere: one needle was longer than the sentence
+    // it retracts ("defeated by the formatter" against "defeated by **running** the formatter"), and
+    // restoring that sentence left the suite green. An entry that matches nothing enforces nothing, and
+    // nothing was reporting it.
+    //
+    // A claim fully DELETED from the records also matches nothing, and that is the right outcome — so
+    // this cannot simply demand a match. What it demands is that each entry be **live or explicitly
+    // retired**: a claim still present in the records must be found, and one that has been removed
+    // outright must be listed here so a reader knows the entry is dormant by design.
+    const found = await occurrences();
+    const matched = new Set(found.map((entry) => entry.claim));
+    const dormant = RETRACTED.filter((entry) => !matched.has(entry.claim)).map(
+      (entry) => entry.claim,
+    );
+
+    expect(
+      dormant.filter((claim) => !RETIRED.includes(claim)),
+      "an entry matching nothing and not declared retired — it may be a needle longer than the text " +
+        "it means to catch, which is how round 8 found two of thirteen inert",
+    ).toEqual([]);
+    expect(
+      RETIRED.filter((claim) => matched.has(claim)),
+      "an entry declared retired that the records still carry",
+    ).toEqual([]);
   });
 
   it("keeps every entry in a form the search can match", () => {

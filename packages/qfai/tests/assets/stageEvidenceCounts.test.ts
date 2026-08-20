@@ -59,11 +59,26 @@ function countCases(text: string): number {
   return text.split(/\r?\n/).filter((line) => CALLSITE.test(line)).length;
 }
 
-/** A git blob hash, computed rather than spawned: `sha1("blob " + size + "\0" + bytes)`. */
+/**
+ * A git blob hash, computed rather than spawned: `sha1("blob " + size + "\0" + bytes)`.
+ *
+ * **Line endings are normalised to LF first**, and that is not cosmetic. `.gitattributes` carries
+ * `* text=auto eol=lf`, so a file written with CRLF on Windows is stored LF-only and every checkout
+ * sees LF — while `git status` stays clean, because the filter runs on the way in. Round 8 measured the
+ * consequence: exactly one of the 36 pack files holds 423 CRLF in this working tree and 0 in its blob,
+ * so hashing the working-tree bytes gave a seal that reproduced **only on this machine**. On
+ * `ubuntu-latest` — and `tests/assets/**` runs in the `e2e` project, a required CI leg — the same test
+ * would have failed from a clean checkout.
+ *
+ * That was the third time this one file reddened a required leg, and the second time the repair made it
+ * worse: round 8's predecessor recorded the machine-local value on purpose, having reasoned that
+ * `--no-filters` was the honest hash. The honest hash is the one every checkout agrees on.
+ */
 function blobHash(bytes: Buffer): string {
-  const header = Buffer.from(`blob ${String(bytes.length)}\0`, "latin1");
+  const lf = Buffer.from(bytes.toString("binary").replace(/\r\n/g, "\n"), "binary");
+  const header = Buffer.from(`blob ${String(lf.length)}\0`, "latin1");
   return createHash("sha1")
-    .update(Buffer.concat([header, bytes]))
+    .update(Buffer.concat([header, lf]))
     .digest("hex");
 }
 
