@@ -13,6 +13,7 @@
  * repository, and history could not settle it either because the test and the ledger lines landed
  * in one atomic commit. The script is now here, and these are its tests.
  */
+import { spawnSync } from "node:child_process";
 import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -89,6 +90,43 @@ describe("checkLedger", () => {
     expect(checkLedger("# QFAI E2E Traceability\n", new Map()).checked).toBe(0);
   });
 
+  it("refuses the three annotation forms that used to fail open", () => {
+    // Round 2's `implementation-reviewer` measured these against the scanner's own
+    // `US_TEST_ANNOTATION_RE`. All three failed OPEN before the regex was aligned.
+
+    // A five-digit tail must not be truncated into the real claim it resembles.
+    expect(
+      checkLedger(
+        "- QFAI:SPEC-0017:US-0017-0001\n",
+        new Map([["a.test.ts", "// QFAI:SPEC-0017:US-0017-00017\n"]]),
+      ).ok,
+      "a typo'd annotation must not discharge the claim it does not name",
+    ).toBe(false);
+
+    // A glued prefix is not an annotation.
+    expect(
+      checkLedger(
+        "- QFAI:SPEC-0017:US-0017-0001\n",
+        new Map([["a.test.ts", "// XQFAI:SPEC-0017:US-0017-0001\n"]]),
+      ).ok,
+    ).toBe(false);
+
+    // The short form the scanner accepts must be visible in both directions.
+    const short = checkLedger(
+      "- QFAI:SPEC-0017:US-0017\n",
+      new Map([["a.test.ts", "// nothing here\n"]]),
+    );
+    expect(short.checked, "a short-form claim the scanner reads must be counted").toBe(1);
+    expect(short.ok).toBe(false);
+    expect(
+      checkLedger(
+        "- QFAI:SPEC-0017:US-0017\n",
+        new Map([["a.test.ts", "// QFAI:SPEC-0017:US-0017\n"]]),
+      ).ok,
+      "and a short-form claim a test carries must count as backed",
+    ).toBe(true);
+  });
+
   it("ignores a near-miss token rather than counting it as a claim", () => {
     // `US-0017-0001` on its own is prose, not an annotation. The scanner requires the full
     // `QFAI:SPEC-NNNN:` prefix and so does this.
@@ -121,6 +159,80 @@ describe("collectTestSources", () => {
   });
 });
 
+describe("the CLI entry point", () => {
+  // `main()` had zero coverage: not the root resolution, not the argument parsing, not the
+  // missing-ledger branch, not any exit code. Round 2 found the root was taken from `process.cwd()`
+  // — the only script in `scripts/` that did — so from `packages/qfai/` the guard printed
+  // "nothing to check" and exited 0. These tests spawn it, because an exit code is the whole
+  // interface a `ci:lint` member has.
+  const SCRIPT = path.resolve(__dirname, "../../../../../scripts/check-atdd-annotation-ledger.mjs");
+
+  function run(args: string[], cwd: string): { status: number | null; out: string; err: string } {
+    const child = spawnSync(process.execPath, [SCRIPT, ...args], { cwd, encoding: "utf-8" });
+    if (child.error !== undefined) throw child.error;
+    return { status: child.status, out: child.stdout ?? "", err: child.stderr ?? "" };
+  }
+
+  it("passes for spec-0017 from the repository root", () => {
+    const root = path.resolve(__dirname, "../../../../..");
+    const result = run(["--spec", "0017"], root);
+    expect(result.status).toBe(0);
+    expect(result.out).toMatch(/8 claim\(s\) backed by a test annotation \(spec-0017\)/);
+  });
+
+  it("gives the same answer from a subdirectory, because the root is module-relative", async () => {
+    const root = path.resolve(__dirname, "../../../../..");
+    const fromRoot = run(["--spec", "0017"], root);
+    const fromPackage = run(["--spec", "0017"], path.join(root, "packages", "qfai"));
+    expect(fromPackage.status, "the cwd must not decide whether the guard runs").toBe(
+      fromRoot.status,
+    );
+    expect(fromPackage.out).toBe(fromRoot.out);
+    expect(fromPackage.out, "and it must not be the reassuring no-ledger sentence").not.toMatch(
+      /nothing to check/,
+    );
+
+    // The same from an unrelated directory entirely.
+    const elsewhere = await temp();
+    expect(run(["--spec", "0017"], elsewhere).status).toBe(0);
+  });
+
+  it("exits 1 repo-wide, naming unbacked claims on stderr", () => {
+    const root = path.resolve(__dirname, "../../../../..");
+    const result = run([], root);
+    expect(result.status).toBe(1);
+    expect(result.err).toMatch(/claims coverage no test carries an annotation for/);
+    expect(result.err).toMatch(/QFAI:SPEC-\d{4}:US-\d{4}-\d{4}/);
+    expect(result.err).toMatch(/Write the test first/);
+  });
+
+  it("rejects a malformed --spec with exit 2 rather than widening to every spec", () => {
+    const root = path.resolve(__dirname, "../../../../..");
+    for (const args of [["--spec"], ["--spec", "17"], ["--spec", "abcd"]]) {
+      const result = run(args, root);
+      expect(result.status, `--spec ${args[1] ?? "(missing)"} must not be tolerated`).toBe(2);
+      expect(result.err).toMatch(/--spec needs a four-digit spec number/);
+    }
+  });
+
+  it("exits 0 with an explicit message when a tree genuinely has no ledger", async () => {
+    // The one legitimate exit-0-without-checking path. Distinguishable from the wrong-cwd case
+    // only because the root no longer comes from the cwd: this needs a copy of the script in a
+    // tree of its own.
+    const dir = await temp();
+    const scriptDir = path.join(dir, "scripts");
+    await mkdir(scriptDir, { recursive: true });
+    const { copyFile } = await import("node:fs/promises");
+    await copyFile(SCRIPT, path.join(scriptDir, "guard.mjs"));
+    const child = spawnSync(process.execPath, [path.join(scriptDir, "guard.mjs")], {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    expect(child.status).toBe(0);
+    expect(child.stdout ?? "").toMatch(/no ledger at tests\/e2e — nothing to check/);
+  });
+});
+
 describe("the guard against this repository's own ledger", () => {
   it("passes for spec-0017, whose annotations were appended after the test existed", async () => {
     const root = path.resolve(__dirname, "../../../../..");
@@ -143,12 +255,25 @@ describe("the guard against this repository's own ledger", () => {
     );
 
     // Repo-wide the guard does NOT pass, and that is the finding rather than a defect in the guard:
-    // 127 of 208 claims are backed by no annotation in any E2E test file. Recorded in
-    // `CR-20260820-0011`; wiring this script into `ci:lint` repo-wide is that CR's work, not this
-    // spec's. Pinned so the number cannot drift silently in either direction.
+    // 127 of 208 claims are backed by no annotation in any E2E test file. `CR-20260820-0011`.
+    //
+    // This is a RATCHET, and the shape matters. The first version asserted
+    // `unbacked.length > 100`, which round 2's `qa-gatekeeper` broke from both sides: appending 60
+    // more unbacked claims (127 -> 187) reddened NOTHING, while backfilling 27 of the 127 with real
+    // annotations — exactly what `CR-20260820-0011` Option 1 prescribes — made it FAIL. A test that
+    // is blind to unlimited regression and fires on the 27th story fixed is a test that punishes its
+    // own fix, which is the shape this spec rejected in writing twice, in this very file's header.
+    //
+    // `toBeLessThanOrEqual` fires on a NEW unbacked claim and stays green all the way down to zero.
+    // The exact figure lives in the CR, which is the governance record for it; this pins only the
+    // direction nobody should be allowed to travel silently.
     const wide = checkLedger(ledger, sources);
-    expect(wide.checked).toBeGreaterThanOrEqual(200);
-    expect(wide.unbacked.length).toBeGreaterThan(100);
+    expect(wide.checked, "the ledger's claim count, for context on the ratchet below").toBe(208);
+    expect(
+      wide.unbacked.length,
+      "a NEW unbacked ledger claim is a regression; fixing existing ones must stay green — " +
+        "CR-20260820-0011 holds the exact figure",
+    ).toBeLessThanOrEqual(127);
     expect(
       wide.unbacked.some((entry) => entry.spec === "0017"),
       "spec-0017 must not be among the unbacked claims",

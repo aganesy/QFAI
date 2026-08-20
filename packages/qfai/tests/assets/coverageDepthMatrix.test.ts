@@ -30,6 +30,9 @@ const COLUMNS = [
   "Status",
 ] as const;
 
+/** The first code point of `⚠️`; the variation selector is not part of the comparison. */
+const WARNING_HEAD = [..."⚠️"][0];
+
 type Score = "✅" | "⚠️" | "❌";
 type Row = { id: string; cells: Record<string, Score> };
 
@@ -50,16 +53,49 @@ function parseMatrix(text: string): Row[] {
       .map((field) => field.trim());
     const [id, ...scores] = fields;
     if (id === undefined) continue;
+    // `id` is used in the parse-failure message below.
     const cells: Record<string, Score> = {};
     scores.forEach((score, index) => {
       const column = COLUMNS[index];
       if (column === undefined) return;
       const head = [...score][0];
+      // Anything that is not one of the three scores is a parse failure, not a `⚠️`. The first
+      // version defaulted the unrecognized case to `⚠️`, which round 2's `implementation-reviewer`
+      // flagged: a typo'd or empty cell would have been silently counted as the middle score, and
+      // the totals this file exists to derive would have been derived from a guess.
+      // `⚠️` is TWO code points (U+26A0 U+FE0F), so comparing a single code point against the
+      // literal never matches — the trap this function's own docstring names, and the first version
+      // of this check walked straight into it. Compare against the literal's FIRST code point.
+      if (head !== "✅" && head !== "❌" && head !== WARNING_HEAD) {
+        throw new Error(`unrecognized score ${JSON.stringify(score)} in ${id} / ${column}`);
+      }
       cells[column] = head === "✅" ? "✅" : head === "❌" ? "❌" : "⚠️";
     });
     rows.push({ id, cells });
   }
   return rows;
+}
+
+/**
+ * Parse the `Every ❌ cell, named` partition table into one entry per claimed cell.
+ *
+ * Rows look like `| A | US-0017-0004 | Normal path, Error path, … |`. The columns are named in full
+ * so a member is checkable against the matrix table's own headers rather than against an abbreviation
+ * only this file would understand.
+ */
+function parsePartition(text: string): Array<{ className: string; row: string; column: string }> {
+  const members: Array<{ className: string; row: string; column: string }> = [];
+  for (const line of text.split(/\r?\n/)) {
+    const match = /^\|\s*([A-Z])\s*\|\s*(US-\d{4}-\d{4})\s*\|\s*(.+?)\s*\|\s*$/.exec(line);
+    if (match === null) continue;
+    const [, className, row, columns] = match;
+    if (className === undefined || row === undefined || columns === undefined) continue;
+    for (const column of columns.split(",")) {
+      const name = column.trim();
+      if (name !== "") members.push({ className, row, column: name });
+    }
+  }
+  return members;
 }
 
 describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
@@ -110,16 +146,39 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     const statusFailures = rows.filter((row) => row.cells["Status"] === "❌").length;
     expect(Number(declaredCells?.[2])).toBe(statusFailures);
 
-    // Every ❌ cell must fall in exactly one named class, so the class sizes must sum to the total.
-    const classes = [...text.matchAll(/^\*\*Class [A-Z] — .*?\((\d+) cells?\)\.\*\*/gm)].map(
-      (match) => Number(match[1]),
-    );
-    expect(classes.length, "at least one reason class must be declared").toBeGreaterThan(0);
-    expect(
-      classes.reduce((sum, size) => sum + size, 0),
-      "the classes partition the ❌ cells, so their sizes must sum to the cell count — this is what " +
-        "caught 30 + 12 + 1 double-counting State transitions across two classes",
-    ).toBe(cells);
+    // Every ❌ cell must fall in exactly one named class. Checking that by the class SIZES is not
+    // checking it: round 2 broke the first version three ways — cutting a class's enumeration while
+    // leaving its stated size, renaming a member to a cell the table scores ⚠️, and resizing two
+    // halves so the sum survived — all green. So this reads the partition table's MEMBERS.
+    const members = parsePartition(text);
+    expect(members.length, "the partition table must declare members").toBeGreaterThan(0);
+
+    const declared = new Set(members.map(({ row, column }) => `${row}/${column}`));
+    const actual = new Set<string>();
+    for (const row of rows) {
+      for (const column of depth) if (row.cells[column] === "❌") actual.add(`${row.id}/${column}`);
+    }
+
+    // Disjoint: no cell claimed by two classes.
+    expect(declared.size, "a cell may not be claimed by two reason classes").toBe(members.length);
+
+    // Complete, and containing nothing else: set equality both ways, listed for a readable failure.
+    const unclaimed = [...actual].filter((key) => !declared.has(key)).sort();
+    const phantom = [...declared].filter((key) => !actual.has(key)).sort();
+    expect(unclaimed, "every ❌ cell must be named by a reason class").toEqual([]);
+    expect(phantom, "a reason class may not name a cell the table does not score ❌").toEqual([]);
+
+    // And the stated per-class sizes must match the members actually listed.
+    const sizes = new Map<string, number>();
+    for (const { className } of members) sizes.set(className, (sizes.get(className) ?? 0) + 1);
+    const statedSizes = /^Sizes, derived from the table above: \*\*(.+?)\*\*/m.exec(text);
+    expect(statedSizes, "the section must state the sizes it derives").not.toBeNull();
+    for (const [className, size] of sizes) {
+      expect(
+        statedSizes?.[1],
+        `the stated sizes must name class ${className} at ${String(size)}`,
+      ).toContain(`${className} ${String(size)}`);
+    }
   });
 
   it("carries a justification section for every ❌ status row", async () => {
@@ -144,6 +203,12 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     const row = rows.find((candidate) => candidate.id === "US-0017-0007");
 
     expect(row, "the withdrawn story stays in the matrix as the gap it is").toBeDefined();
+    // A floor first: `every` over an empty map is vacuously true, so without this a row whose cells
+    // failed to parse would pass the assertion below. Round 2's `implementation-reviewer` found it.
+    expect(
+      Object.keys(row?.cells ?? {}).length,
+      "the row must have parsed into all eight columns before its scores mean anything",
+    ).toBe(COLUMNS.length);
     expect(
       Object.values(row?.cells ?? {}).every((score) => score === "❌"),
       "a story no test covers cannot score above ❌ in any column",

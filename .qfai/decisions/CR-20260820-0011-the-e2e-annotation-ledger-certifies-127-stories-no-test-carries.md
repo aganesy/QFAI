@@ -23,11 +23,22 @@ that shape. What had never been measured is how far the ledger has drifted from 
 against the `QFAI:SPEC-NNNN:US-NNNN-NNNN` annotations that E2E test files actually carry:
 
 ```text
-claimed in the ledger                                  208
-backed by an annotation in tests/e2e/**                 81
-UNBACKED                                               127     (61%)
-unbacked even across every test directory in the repo  126
+claimed in the ledger                                     208
+backed by an annotation in packages/qfai/tests/e2e/**      81
+UNBACKED                                                  127     (61%)
+unbacked even across every test directory in the repo      126
 ```
+
+Two corrections round 2's `qa-gatekeeper` made to these numbers, both against this CR's own case:
+
+- all 81 live under `packages/qfai/tests/e2e/`. **Zero** are in the repo-root `tests/e2e/` tree, which
+  holds the ledger and no test files at all — and that asymmetry is the whole defect, since
+  `testsDir: tests` is repo-root relative, so the scanner reads only the tree with no tests in it;
+- **127 is the correct figure and 126 is the generous one.** The single claim backed outside the
+  guard's directories is a validator **fixture literal** at
+  `packages/qfai/tests/core/atddCodeTraceability.test.ts:45` — a string in a test about the scanner,
+  not coverage of a story. The parenthetical "126 across every test directory" therefore errs in the
+  direction that weakens this CR's own argument.
 
 By spec:
 
@@ -86,8 +97,11 @@ the guard is wired.
 forward, blocks nothing today, and never regresses a spec that has been cleaned.
 
 Cheaper and safer than option 1, and strictly weaker: the 127 stay unreported by CI, visible only in
-this CR and in the pinned assertion in
-`packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts`.
+this CR and in the **ratchet** in
+`packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts` —
+`toBeLessThanOrEqual(127)`, which reddens on a new unbacked claim and stays green as the 127 are
+fixed. The first version of that assertion was `> 100`, which round 2 showed was blind to unlimited
+regression and **failed on the 27th story backfilled**, i.e. it punished precisely Option 1's work.
 
 ### Option 3 — make the scanner read the test files and retire the ledger
 
@@ -103,7 +117,7 @@ scanner today, so this repository's own tests would need the monorepo case handl
 
 ### Option 4 — record and do nothing
 
-Leave the ledger as is. Rejected: the measurement is now in the repository as a pinned assertion, so
+Leave the ledger as is. Rejected: the measurement is now in the repository as a ratchet, so
 "nobody knew" stops being available, and every subsequent reading of a green `QFAI-ATDD-111` would be
 made in the knowledge that it means nothing for 61% of the claims.
 

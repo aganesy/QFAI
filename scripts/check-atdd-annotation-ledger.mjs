@@ -26,10 +26,28 @@
  */
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-/** `QFAI:SPEC-0017:US-0017-0004` — the annotation form both the ledger and the tests use. */
-const ANNOTATION = /QFAI:SPEC-(\d{4}):(US-\d{4}-\d{4})/g;
+/**
+ * `QFAI:SPEC-0017:US-0017-0004` — the annotation form both the ledger and the tests use.
+ *
+ * This is `US_TEST_ANNOTATION_RE` from `packages/qfai/src/core/atddTraceability.ts`, character for
+ * character, and it is not a stylistic alignment. The first version here was
+ * `/QFAI:SPEC-(\d{4}):(US-\d{4}-\d{4})/g` — no word boundaries and no short form — and round 2's
+ * `implementation-reviewer` measured three divergences from the scanner, all failing OPEN:
+ *
+ *   QFAI:SPEC-0017:US-0017-00017   a five-digit tail was TRUNCATED into a real claim and marked it
+ *                                  backed, so one typo in a test file discharged a claim it does
+ *                                  not name
+ *   XQFAI:SPEC-0017:US-0017-0001   a glued prefix counted as an annotation
+ *   QFAI:SPEC-0017:US-0017         the short form, which the scanner accepts, was invisible in BOTH
+ *                                  directions — neither claimed nor backing
+ *
+ * A guard whose whole stated purpose is to stop a line from certifying nothing must not itself let a
+ * mangled token do the certifying. Duplicated rather than imported because this script must run with
+ * no build step and no dependency on `packages/qfai/dist`; the divergence is what the tests pin.
+ */
+const ANNOTATION = /\bQFAI:SPEC-(\d{4}):(US-\d{4}(?:-\d{4})?)\b/g;
 
 const TEST_SUFFIXES = [".ts", ".tsx", ".mts", ".js", ".mjs"];
 
@@ -129,7 +147,14 @@ async function main() {
     return;
   }
 
-  const root = process.cwd();
+  // The repository root, resolved from THIS FILE rather than from the cwd. Every sibling script in
+  // this directory does the same — `check-publish-dry-run.mjs`, `check-workflow-hygiene.mjs`,
+  // `check-scanner-coverage.mjs`, `check-review-profile-consistency.mjs` — and this one did not.
+  // Round 2 measured the consequence: run from `packages/qfai/`, it printed "no ledger at tests/e2e
+  // — nothing to check" and exited 0. A guard that answers being invoked from the wrong directory
+  // with a reassuring sentence and a success code is the same fail-open shape as the gate it exists
+  // to compensate for, and it could not tell that case apart from a repository with no ledger.
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const ledgerPath = path.join(root, "tests", "e2e", "qfai-traceability.md");
   let ledgerText;
   try {

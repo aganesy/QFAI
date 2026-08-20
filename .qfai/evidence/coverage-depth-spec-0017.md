@@ -56,6 +56,13 @@ than over what it *does*. Two consequences, both applied below:
 
 Totals by `Status`: **✅ 3 / ⚠️ 1 / ❌ 5**.
 
+**That total sums two measurements, and it is worth saying so before it is read as one.** Four rows —
+`US-0017-0002`, `-0003`, `-0005`, `-0008` — name the own tree in their own titles, so their cells score
+the adopter-facing **half** of the story (see § "The scoring surface" below); the other five are scored
+whole. Round 2's `completion-reviewer` raised it. The alternative — scoring the own half here too — is
+worse: it would double-count what the `Integration` rows of `tdd/test-list.md` already score, in a
+matrix whose declared surface is `qfai init`.
+
 The first version of this file declared `✅ 3 / ⚠️ 2 / ❌ 4`, which was wrong: it counted nine rows
 into eight slots. Round 1's `qa-gatekeeper` cross-tabulated the column and got `✅ 2 / ⚠️ 2 / ❌ 5`,
 and noted that this file's own five justification sections agreed with its count rather than with its
@@ -105,38 +112,57 @@ be read with that scope.
 ## Every ❌ cell, named
 
 38 depth cells are `❌`, plus 5 in `Status`. The contract is one justification per cell, so each is
-assigned a reason class here and no cell is left to be inferred from a row-level narrative.
+assigned a reason class here — **by name, in a table a test can read** — and no cell is left to be
+inferred from a row-level narrative.
 
-**Class A — the shipped surface does not exist, so no depth is reachable (30 cells).**
-`US-0017-0004` × {Normal, Error, Boundary, Special, State, Combinatorial}; `US-0017-0005` × the same
-six; `US-0017-0006` × the same six; `US-0017-0007` × the same six plus `Oracle strength`;
-`US-0017-0008` × {Error, Boundary, Special, State, Combinatorial}.
+The first version of this section declared only the class SIZES (`30 + 7 + 1`). Round 2's
+`completion-reviewer` and `qa-gatekeeper` independently broke that: cutting a class's enumeration
+while leaving its stated size reddened nothing, renaming a class member to a cell the table scores
+`⚠️` reddened nothing, and resizing two halves so the sum survived reddened nothing. A partition
+asserted by its total is not asserted. The table below is the partition, and
+`packages/qfai/tests/assets/coverageDepthMatrix.test.ts` checks it against the table's own cells for
+completeness, disjointness and no non-`❌` member.
 
-A depth column asks how thoroughly a behaviour is exercised. Where the behaviour is absent from the
-adopter's tree there is nothing to exercise at any depth, and scoring `⚠️` would claim partial
-exercise of nothing. Each row's own section below says what is absent, what was measured, and which
-ledger row closes it. This is the honest `❌`: not "we did not test it" but "there is no it".
+| class | US ID        | `❌` columns                                                                              |
+| ----- | ------------ | ---------------------------------------------------------------------------------------- |
+| A     | US-0017-0004 | Normal path, Error path, Boundary values, Special values, State transitions, Combinatorial |
+| A     | US-0017-0005 | Normal path, Error path, Boundary values, Special values, State transitions, Combinatorial |
+| A     | US-0017-0006 | Normal path, Error path, Boundary values, Special values, State transitions, Combinatorial |
+| A     | US-0017-0007 | Normal path, Error path, Boundary values, Special values, State transitions, Combinatorial, Oracle strength |
+| A     | US-0017-0008 | Error path, Boundary values, Special values, State transitions, Combinatorial              |
+| B     | US-0017-0001 | State transitions, Combinatorial                                                          |
+| B     | US-0017-0002 | State transitions                                                                         |
+| B     | US-0017-0003 | State transitions, Combinatorial                                                          |
+| B     | US-0017-0009 | State transitions, Combinatorial                                                          |
+| C     | US-0017-0001 | Boundary values                                                                           |
 
-**Class B — the E2E surface reads files and cannot run a workflow (7 cells).**
-`State transitions` for the four rows whose surface exists at all — `US-0017-0001`, `-0002`, `-0003`,
-`-0009` — plus `Combinatorial` for `US-0017-0001`, `-0003`, `-0009`. The same two columns on
-`US-0017-0004` … `-0008` belong to class A: those rows have no surface to run, so the reason they are
-`❌` is the absence, not the harness.
+Sizes, derived from the table above: **A 30, B 7, C 1 — 38 cells.**
 
-A state transition here means "a documentation-only push produced a narrow lane set, and the next
-push a wide one". A combinatorial cell means "these lane subsets, crossed with these change
-classifications, produce these skip decisions". Both need a **real run**; the surface this file
-scores is a directory that `qfai init` just wrote. PR #794 now provides real runs — `detect`, the
-`if:` plumbing, the seven-leg matrix and the derived verdict all observed working in GitHub Actions —
-and **nothing consumes them**. That is the gap, it is the same gap for all seven cells, and closing
-it needs a surface that reads workflow-run history rather than a file. No ledger row proposes one; the
-absence is recorded as open risk 5.
+**Class A — the shipped surface does not exist, so no depth is reachable.** A depth column asks how
+thoroughly a behaviour is exercised. Where the behaviour is absent from the adopter's tree there is
+nothing to exercise at any depth, and scoring `⚠️` would claim partial exercise of nothing. Each
+row's own section below says what is absent, what was measured, and which ledger row closes it. This
+is the honest `❌`: not "we did not test it" but "there is no it".
 
-**Class C — a single shipped value admits no boundary (1 cell).**
-`US-0017-0001` × `Boundary values`. The detection job emits one verdict per push; there is no
-sequence, count or limit to sit at the edge of. A boundary cell over a single-valued output is not
-partially covered, it is inapplicable, and `❌` is how this matrix spells that — flagged here because
-it is the one `❌` in the table that no future work would turn green.
+**Class B — the E2E surface reads files and cannot run a workflow.** A state transition here means "a
+documentation-only push produced a narrow lane set, and the next push a wide one". A combinatorial
+cell means "these lane subsets, crossed with these change classifications, produce these skip
+decisions". Both need a **real run**; the surface this file scores is a directory that `qfai init`
+just wrote. PR #794 now provides real runs — `detect`, the `if:` plumbing, the seven-leg matrix and
+the derived verdict all observed working in GitHub Actions — and **nothing consumes them**. That is
+the gap, it is the same gap for all seven cells, and closing it needs a surface that reads
+workflow-run history rather than a file. No ledger row proposes one; the absence is recorded as open
+risk 6 of the stage evidence.
+
+Class B covers only the four rows whose surface exists. The same two columns on `US-0017-0004` …
+`-0008` are class A: those rows have no surface to run, so the reason they are `❌` is the absence,
+not the harness.
+
+**Class C — a single shipped value admits no boundary.** `US-0017-0001` × `Boundary values`. The
+detection job emits one verdict per push; there is no sequence, count or limit to sit at the edge of.
+A boundary cell over a single-valued output is not partially covered, it is inapplicable, and `❌` is
+how this matrix spells that — flagged here because it is the one `❌` in the table that no future work
+would turn green.
 
 ## Justifications, one per ❌ status row
 
@@ -264,6 +290,6 @@ are exercised, a blank or whitespace-only file is not.
 
 No cell is scored from this repository's own workflows. **Four of the nine stories are satisfied in
 the shipped tree and five are not**, and after round 1 that split is sharper than first reported: of
-the four `Status` rows presented as successes, none depends on a layer lane, because no layer lane
-does anything. The "and ship it to adopters" half of this spec is **less than half done**, and none
+the four rows whose `Status` is not `❌` — three `✅` and one `⚠️` — none depends on a layer lane,
+because no layer lane does anything. The "and ship it to adopters" half of this spec is **less than half done**, and none
 of it was visible until `qfai init` was run and the step bodies — not the job names — were read.

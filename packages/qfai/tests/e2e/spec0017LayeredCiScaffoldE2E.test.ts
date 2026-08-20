@@ -249,27 +249,41 @@ describe(
 
       // Find the resolver through the CHAIN rather than by guessing its name: setup-node's
       // `node-version` must reference a step output, and that reference names the step to run.
+      // Both halves are scoped to ONE job and the search stops at the first match. `steps.<id>` is
+      // job-scoped in GitHub Actions, so a resolver in job A can never feed a consumer in job B —
+      // and round 2's `implementation-reviewer` measured what the unscoped version did instead: a
+      // later job carrying a step with the same `id` and no `setup-node` of its own overwrote the
+      // body, so the test executed an unrelated step and asserted against it. `qfai-validate.yml`
+      // has one job today, which is exactly why it was invisible; the sibling orchestrator has
+      // eight, and folding the validate work into it is this spec's own direction.
       let resolverId: string | undefined;
       let resolverBody: string | undefined;
       for (const job of Object.values(map)) {
         const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
+        let idInThisJob: string | undefined;
         for (const step of steps) {
           if (!isRecord(step)) continue;
           const uses = typeof step["uses"] === "string" ? step["uses"] : "";
+          if (!/setup-node/.test(uses)) continue;
           const withBlock = isRecord(step["with"]) ? step["with"] : {};
           const version =
             typeof withBlock["node-version"] === "string" ? withBlock["node-version"] : "";
-          if (!/setup-node/.test(uses)) continue;
           const reference =
             /\$\{\{\s*steps\.([A-Za-z0-9_-]+)\.outputs\.([A-Za-z0-9_-]+)\s*\}\}/.exec(version);
           if (reference === null) continue;
-          resolverId = reference[1];
+          idInThisJob = reference[1];
+          break;
         }
+        if (idInThisJob === undefined) continue;
         for (const step of steps) {
           if (!isRecord(step)) continue;
-          if (step["id"] !== resolverId) continue;
-          if (typeof step["run"] === "string") resolverBody = step["run"];
+          if (step["id"] !== idInThisJob) continue;
+          if (typeof step["run"] !== "string") continue;
+          resolverId = idInThisJob;
+          resolverBody = step["run"];
+          break;
         }
+        if (resolverBody !== undefined) break;
       }
 
       expect
@@ -284,8 +298,15 @@ describe(
       if (resolverBody === undefined) return;
 
       // With an adopter version file present, the published version must be the file's content.
+      // BOTH probe candidates are exercised, and a third directory settles their precedence. Round 2
+      // caught the Coverage Depth Matrix claiming "the two probe candidates … are exercised" when
+      // only `.nvmrc` was ever written — deleting `.node-version` from the shipped probe list was
+      // invisible to this row. Asserting the second candidate is four lines; leaving the sentence
+      // false was the alternative.
       const withFile = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-nodever-a-"));
       const withoutFile = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-nodever-b-"));
+      const withSecond = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-nodever-c-"));
+      const withBoth = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-nodever-d-"));
       try {
         await writeFile(path.join(withFile, ".nvmrc"), "23.4.1\n", "utf8");
         const pinned = await runStep(resolverBody, withFile);
@@ -294,6 +315,23 @@ describe(
             pinned.outputs["version"],
             "the adopter's own version file must win — this is the whole of 'file-derived'",
           )
+          .toBe("23.4.1");
+
+        await writeFile(path.join(withSecond, ".node-version"), "21.7.3\n", "utf8");
+        const second = await runStep(resolverBody, withSecond);
+        expect
+          .soft(
+            second.outputs["version"],
+            "the second probe candidate must resolve too, or the list is one entry long",
+          )
+          .toBe("21.7.3");
+
+        // Precedence, so the order is a fact rather than an accident of which file a project has.
+        await writeFile(path.join(withBoth, ".nvmrc"), "23.4.1\n", "utf8");
+        await writeFile(path.join(withBoth, ".node-version"), "21.7.3\n", "utf8");
+        const both = await runStep(resolverBody, withBoth);
+        expect
+          .soft(both.outputs["version"], "`.nvmrc` is probed first, so it wins when both exist")
           .toBe("23.4.1");
 
         // With none present it must fall OPEN rather than fail, and say so.
@@ -315,8 +353,9 @@ describe(
           )
           .toMatch(/::warning::/);
       } finally {
-        await rm(withFile, { recursive: true, force: true });
-        await rm(withoutFile, { recursive: true, force: true });
+        for (const dir of [withFile, withoutFile, withSecond, withBoth]) {
+          await rm(dir, { recursive: true, force: true });
+        }
       }
     });
   },
@@ -333,18 +372,28 @@ describe(
       // `CR-20260820-0007`. What holds now and after that work is that no lane duplicates a build —
       // before reuse because there is nothing to duplicate, after it because reuse is the point.
       //
-      // The first version of this scan was `/\b(pnpm|npm|yarn)\s+(-\S+\s+\S+\s+)?build\b/`, which
-      // admits ONE flag-value pair and nothing else. Round 1's `qa-gatekeeper` measured it one form
-      // at a time: `pnpm build`, `pnpm -C packages/qfai build` and `yarn build` reddened, while
-      // `pnpm run build`, `npm run build`, `yarn run build`, `pnpm exec tsup` and `npx tsup`
-      // reddened nothing. The property held against the shape the oracle happened to plant and not
-      // against the shape a real lane would use — `run` is the idiomatic form and was invisible.
+      // Three widenings, each measured, because the first two were each wrong in one direction.
       //
-      // Two patterns now, each anchored on the verb rather than on the flags before it:
-      //   RUNNER   a package-manager invocation reaching a `build` script, whatever sits between
-      //   BUNDLER  a bundler called directly, which is what a lane that skipped the script does
-      const RUNNER = /\b(?:pnpm|npm|yarn|npx|bun)\b[^\n]*?\bbuild\b/;
-      const BUNDLER = /\b(?:tsup|tsc|rollup|esbuild|webpack|vite\s+build)\b/;
+      // v1 `/\b(pnpm|npm|yarn)\s+(-\S+\s+\S+\s+)?build\b/` admitted ONE flag-value pair. Round 1
+      //    measured it a form at a time: `pnpm run build`, `npm run build`, `yarn run build`,
+      //    `pnpm exec tsup` and `npx tsup` all reddened NOTHING. The idiomatic form was invisible.
+      // v2 `/\b(?:pnpm|npm|yarn|npx|bun)\b[^\n]*?\bbuild\b/` fixed that and overshot. Round 2
+      //    measured the other direction, which nobody had: `npx tsc --noEmit` is a TYPE CHECK and
+      //    was reported as a build, and `--cache-location .cache/build`, `reports/build.xml`,
+      //    `--output=build-artifacts` and `./build` all matched. It was also not the verb anchor its
+      //    own comment claimed — it was a closed five-member package-manager list, so `make build`,
+      //    `turbo run build`, `nx build`, `cargo build`, `go build`, `bazel build`, `gradle build`
+      //    and `./scripts/build.sh` were all invisible.
+      // v3, below, anchors on `build` as a standalone shell WORD, which is what the runners above
+      //    have in common and what a path fragment does not. Measured both directions:
+      //    21 forms caught, 14 non-builds rejected, 0 misclassified.
+      //
+      // `tsc` is deliberately absent from BUNDLER: in this ecosystem it is a type check as often as
+      // an emit — `npx tsc --noEmit`, and this repository's own `check-types` is `tsc -b`. A lane
+      // that genuinely bundles reaches for one of the others.
+      const BUILD_WORD = /(?<![\w/=.-])build(?![\w/.-])/;
+      const BUILD_SCRIPT = /[\w./-]*\bbuild[\w.-]*\.(?:sh|ps1|bat|cmd|mjs|cjs|js|ts)\b/;
+      const BUNDLER = /\b(?:tsup|rollup|esbuild|webpack|swc|parcel|vite\s+build)\b/;
       const map = await jobs();
       const rebuilding: string[] = [];
       for (const [id, job] of Object.entries(map)) {
@@ -352,14 +401,18 @@ describe(
         for (const step of steps) {
           const run = isRecord(step) ? step["run"] : undefined;
           if (typeof run !== "string") continue;
-          // Comment lines inside a `run` block are not commands. Scanning the raw string is how a
-          // claim goes vacuous by matching prose — this spec's own `--no-renames` claim did exactly
-          // that, and implement round 5 found it.
+          // Comments inside a `run` block are not commands. Scanning the raw string is how a claim
+          // goes vacuous by matching prose — this spec's own `--no-renames` claim did exactly that,
+          // and implement round 5 found it. Whole-line comments were stripped first; round 2 found
+          // that TRAILING comments were not, so `pnpm check-types   # runs tsc -b` was read as a
+          // build. Both forms go now. The known limit: a `#` inside a quoted string truncates the
+          // line, which can only ever make this scan miss, never false-positive.
           const commands = run
             .split(/\r?\n/)
-            .filter((line) => !/^\s*#/.test(line))
+            .map((line) => line.replace(/#.*$/, ""))
+            .filter((line) => line.trim() !== "")
             .join("\n");
-          if (RUNNER.test(commands) || BUNDLER.test(commands)) {
+          if (BUILD_WORD.test(commands) || BUILD_SCRIPT.test(commands) || BUNDLER.test(commands)) {
             rebuilding.push(`${id}: ${commands.trim().slice(0, 60)}`);
           }
         }
