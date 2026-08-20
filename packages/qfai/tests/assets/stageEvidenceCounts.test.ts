@@ -205,6 +205,9 @@ describe("the stage evidence's counts are derived, not typed", () => {
       "tests/assets/coverageDepthMatrix.test.ts",
       "tests/assets/retractedClaims.test.ts",
       "tests/unit/buildCommand.test.ts",
+      // This file. Absent from the list for two rounds, so the one guard that requires every other
+      // guard's run to be recorded was the guard whose own run could go unrecorded.
+      "tests/assets/stageEvidenceCounts.test.ts",
     ];
     const quoted = new Set(rows.map((row) => row[1] ?? ""));
     expect(

@@ -9,7 +9,7 @@
   "reviewers": [
     { "reviewer": "completion-reviewer", "status": "FAIL", "feedback_count": 21 },
     { "reviewer": "qa-gatekeeper", "status": "FAIL", "feedback_count": 18 },
-    { "reviewer": "qa-gatekeeper", "status": "PASS", "feedback_count": 3 }
+    { "reviewer": "qa-gatekeeper", "status": "PASS", "feedback_count": 8 }
   ],
   "feedback_count_rule": "distinct finding identifiers matching (F|BL|B|M|L|N|A)-?NN, or the count of heading-level-3 sections where a report uses no identifiers"
 }

@@ -49,6 +49,43 @@ stage's largest correction:
   same surface"); `check-atdd-annotation-ledger.mjs` introduces no second parser of any spec
   artifact — it reads an annotation ledger and test sources, neither of which any validator parses.
 
+**Re-run against every artifact added since**, because for five rounds this section reasoned only about
+the round-1 and round-2 set and each round faulted it for that. The four record-deriving guards and the
+classifier they share are checked one at a time against all nine rejected options:
+
+| artifact                        | nearest rejected option                                  | verdict          |
+| ------------------------------- | -------------------------------------------------------- | ---------------- |
+| `tests/helpers/buildCommand.ts` | "a second parser over the same surface" (`:133`)          | not that surface |
+| `tests/unit/buildCommand.test.ts` | "a row that cannot fail looks like coverage" (delta)    | measured, not assumed |
+| `tests/assets/coverageDepthMatrix.test.ts` | same                                          | measured |
+| `tests/assets/stageEvidenceCounts.test.ts` | same                                          | measured |
+| `tests/assets/retractedClaims.test.ts` | same                                              | measured |
+| `CR-20260820-0012` option 5     | options 1-4, rejected in that CR                          | none reintroduced |
+
+The two that need their reasoning stated rather than asserted:
+
+- **`buildCommand.ts` is not the rejected second parser.** That option rejected a second reader of a
+  **spec artifact** — the surface `qfai validate` already parses. This reads GitHub workflow YAML and
+  `package.json` `scripts`, which no validator parses and which no spec artifact contains. The same
+  argument the script was cleared on, applied to a different file.
+- **"a row that cannot fail looks like coverage" is the option these four guards are most at risk of
+  reintroducing**, and this stage has reintroduced it twice: `retractedClaims.test.ts` went green for
+  the wrong reason in two successive versions, and the member-pinning test in `buildCommand.test.ts`
+  generated its probes from the sets it pinned, so 0 of 17 mutations reddened it. Both were caught by
+  **mutating and re-running** rather than by reading. That is why every one of these guards now carries
+  a measured mutation family under § "Execution logs" — `M*`/`X*`/`Y*`/`Q*` for the matrix, `C*` for
+  the derived counts, `W*` for the retracted claims, and an in-suite sweep over all 208 grammar members
+  for the classifier. The option is not reintroduced *now*; it was, twice, and the defence is a
+  measurement rather than a promise.
+- **`CR-20260820-0012`'s own rejected options are not reintroduced.** Option 1 (narrow the signal to
+  the affected lanes), option 2 (exempt a spec's in-flight TCs from the fatal gate), option 3 (waive
+  the row) and option 4 (merge first, then satisfy it) all stay rejected: `TDD-0069` is `blocked` with
+  a `Blocked-By`, no gate was narrowed, no waiver was requested, and nothing was merged. Option 2's
+  second stated reason was withdrawn during that CR's own review and the option remains rejected on
+  its first.
+
+**No RE-OPEN is required.**
+
 ## Decisions made (with rationale)
 
 **1. The E2E surface for this spec is `qfai init`, not this repository's workflows.** `spec-0017` has
@@ -232,6 +269,8 @@ pnpm -C packages/qfai exec vitest run tests/integration/scripts/checkAtddAnnotat
   -> Tests 22 passed (22), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
   -> Tests 5 passed (5), exit 0
+pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
+  -> Tests 7 passed (7), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
   -> Tests 7 passed (7), exit 0
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/buildCommand.test.ts
@@ -306,7 +345,7 @@ distinguishes a parked `exception` from a row that never started, and overloadin
 two states the `blocked` status exists to separate." P1d's third pass caught it. A `Blocked-By` column
 is the right home and is now here.
 
-**`blocked` is not a branch, and this table said it was for two rounds.** Rounds 1 through 5 each found
+**`blocked` is not a branch, and this table said it was for two rounds.** Rounds 1 through 7 each found
 a false statement in this section — the one section whose job is discharging the handover obligation —
 and the third was this: the table gave both rows `3 — exception` while the prose three paragraphs down
 said `TDD-0069` had been re-classified to `blocked`. A row that is `blocked` takes no RED-provenance
@@ -678,7 +717,7 @@ uncited. With `E6`-`E8` that is six rounds, and round 3's `implementation-review
 **eight** behavioural mutants against this row and reports all eight reddening with a comment control
 green.
 
-### M1-M7, X1-X8, Y1-Y3 — falsifying the matrix pinning test
+### M1-M7, X1-X6, Y1-Y3 — falsifying the matrix pinning test
 
 The matrix test is a test over a governance record, which is exactly the shape that goes vacuous
 without being noticed. Each mutation planted alone, reverted with a byte comparison:
@@ -703,14 +742,20 @@ Rounds 2 and 3 then broke the test itself, six ways, and each is now a round of 
 X1  a class member is dropped from the partition table        REDDENS
 X2  a class claims a cell the table scores ⚠️, not ❌          REDDENS
 X3  a class enumeration is cut but the sizes line is left     REDDENS
-X6  two members swap classes, so both sums survive            REDDENS
-X7  a cell is claimed by two classes at once                  REDDENS
-X8  a table cell is emptied (was silently read as ⚠️)         REDDENS
+X4  two members swap classes, so both sums survive            REDDENS
+X5  a cell is claimed by two classes at once                  REDDENS
+X6  a table cell is emptied (was silently read as ⚠️)         REDDENS
 Y1  every stated size inflated tenfold                        REDDENS
 Y2  the B and C labels are permuted, membership preserved     REDDENS
 Y3  one stated size drifts while the total stays              REDDENS
 (control) a sentence added to the prose                       reddens nothing
 ```
+
+`X4`, `X5` and `X6` were numbered 6, 7 and 8 for three rounds, above a second family that ALSO used
+those three ids for three different mutations — so `X6` meant both "two members swap classes" and "a
+ninth all-failing depth column", and the tally below counted twenty where seventeen are distinct. The
+gap they left at 4 and 5 was the visible symptom and it was reported as a heading error for two rounds.
+Contiguous now, and the second family is renamed `Q*`.
 
 `Y1` is the one that stings: the size check used `toContain` on a **number**, so `"A 30"` matched
 `"A 300"` and `A 300, B 70, C 10 — 380 cells` passed all four tests. `Y2` permuted two class labels
@@ -747,21 +792,34 @@ confirmed from this side: the symlink test passed the link as the walk's *root*,
 root whatever kind of node it is, so `entry.isSymbolicLink()` — the branch under test — was never
 reached. The test now places the link inside the scanned directory.
 
-### X6-X9 — the matrix record's prose
+### Q1-Q4 — the matrix record's prose
 
 Round 5 broke the matrix pinning test twice more, both times without touching the table:
 
 ```text
-X6  a ninth all-failing depth column is added                  REDDENS
-X7  the refuted accuracy figure is restored                     REDDENS
-X8  the version named in the record drifts back                 REDDENS
-X9  the naming-defect reason is deleted                         REDDENS
+Q1  a ninth all-failing depth column is added                  REDDENS
+Q2  the refuted accuracy figure is restored                     REDDENS
+Q3  the version named in the record drifts back                 REDDENS
+Q4  the naming-defect reason is deleted                         REDDENS
 ```
 
-`X6` and `X7` reddened nothing before this round: `parseMatrix` dropped any column past its header
+`Q1` and `Q2` reddened nothing before this round: `parseMatrix` dropped any column past its header
 list, so nine unjustified cells were invisible; and the paragraph written to discharge round 4's
 blocking finding could be reverted to the refuted "0 misclassified" text in silence. The header is
-compared to the column list now, and the refuted figure's **absence** is pinned.
+compared to the column list now.
+
+**`Q2` has since moved instruments, and this section said otherwise for two rounds.** The absence of the
+refuted accuracy figure is no longer pinned by `coverageDepthMatrix.test.ts`: that assertion was removed
+deliberately and the check handed to `retractedClaims.test.ts`, where entry 6 of `RETRACTED` holds it
+across all five governance files rather than one — a strictly wider check, and the right home for it,
+since "this figure must not reappear" is the retracted-claims rule and not a property of the matrix's
+table. `Q2` still reddens; what changed is which file goes red. Recording the outcome and not the
+hand-off is the same defect as naming the wrong instrument at § "P7 quality gates" (`M7` below): a
+completion gate reads this file, not the design conversation.
+
+`Q3` is why the version pin is derived from the helper's docstring rather than written here as a
+literal. A literal `v6` held the record stale at v6 while the helper was at v8, and the mutation that
+should have caught it was the mutation of writing the literal.
 
 ### C1-C5 — the derived-count test
 
@@ -833,9 +891,18 @@ something is written, believed without reading it.
    until `qfai init` was run and the step bodies — not the job names — were read.
 2. **`US-0017-0007` is uncovered by choice.** The knobs do not ship, so no honest assertion exists.
    It becomes coverable when they do.
-3. **`QFAI-ATDD-112` still reports 8 spec-0017 TCs** — the 6 `blocked` and 2 `todo` rows. Correct,
-   and it clears when those rows are implemented. Four of the six are `blocked` on
-   `CR-20260820-0007`; the two `todo` rows are parked on branch 3 above.
+3. **`QFAI-ATDD-112` reports 8 spec-0017 TCs, and 15 repo-wide** — the 6 `blocked` and 2 `todo` rows
+   here, plus every other spec's: `spec-0003` (1), `spec-0008` (4), `spec-0015` (2), `spec-0017` (8).
+   The scoped gate this stage runs sees the 8; `build` runs the profile **unscoped** and sees all 15,
+   so eight is the number this stage can act on and fifteen is the number a gate reports. Four of the
+   six `blocked` rows are `blocked` on `CR-20260820-0007`.
+
+   Of the two `todo` rows, **only `TDD-0070` is on branch 3** (`DR-0017-0010`, PASS at P1d pass 6).
+   `TDD-0069` is `blocked` on `CR-20260820-0012` and takes **no** RED-provenance branch at all: a
+   `blocked` row has not started, which is the distinction § "Ledger rows advanced" turns on and the
+   reason the `DR-ID` column was not widened to carry a `Blocked-By` value. An earlier version of this
+   item said both rows were parked on branch 3 — the same false statement § "Ledger rows advanced"
+   reports as corrected after standing two rounds, surviving here in different words.
 4. **The gate still exits 1 for other specs.** `--spec 0017` scopes the spec-owned rules, and
    `spec-0003` (8 US), `spec-0006` (1), `spec-0008` (1) and `spec-0015` (**1**) keep `QFAI-ATDD-111`
    at 11 items repo-wide, plus `US-0017-0007` makes 12. The first version wrote `spec-0015 (2)`,
@@ -921,9 +988,8 @@ numbers.
 currency both times.** Round 3 found the first version written at `16f611c7` before `21ea1ddc` landed
 +489/-76 across four files, so it certified three artifacts that postdated it — established by
 `git log -S`. Round 4 found the replacement stale in the same way. **These numbers are measured at
-`eb5d59af`**, the revision that carries every repair through round 8, plus the uncommitted round-8
-record edits — which change no test count, since the sequence below reaches `eb5d59af` and the totals
-here are its measurement. Three rounds asked for the revision beside the totals and got a round name
+`eb5d59af`**, the revision that carries every repair through round 8. The commits after it change
+records only and add no test callsite, which the sequence below shows per commit. Three rounds asked for the revision beside the totals and got a round name
 instead; a round name cannot be checked, which is the whole reason those rounds asked.
 
 ```text
@@ -961,6 +1027,7 @@ per commit, e2e project (tests/e2e/** + tests/assets/**, the project's two inclu
   9882a1d4  1432  (+1)            868  (+1)   round 7's apply commit
   dbe00247  1432  (+0)            868  (+0)   docs only
   eb5d59af  1433  (+1)            869  (+1)   round 8's apply commit
+  96c89ae3  1433  (+0)            869  (+0)   records only
 ```
 
 **Method, because three derivations of this sequence were wrong with correct endpoints.** The right
@@ -970,6 +1037,11 @@ the total those deltas imply from the measured 1422. The two are tied at both en
 measures **1433** at `eb5d59af`, and 1422 + (869 - 858) = 1433. Callsites are not tests — `.each` makes
 one callsite many — so the columns only move together while the tests added are plain ones, and every
 step here is.
+
+**The invariant, stated so it does not need restating each round:** any later commit that changes an
+`it` / `test` callsite under the project's two globs owes a row here, and any that does not leaves the
+total valid. That is checkable with one `git show` per commit and it is why the right column exists.
+A record naming HEAD is stale at the next commit; a record naming a revision plus a rule is not.
 
 The sequence stopped at `ac4700d1 1431` for one round while the block beside it certified **1432**, so
 it asserted a total its own derivation could not reach. The missing `+1` is `9882a1d4`, round 7's own
@@ -991,11 +1063,21 @@ they were measured at and why the sequence above reaches it. Round 7 required th
 to sit here deleted; the round that answered it **duplicated** the paragraph instead, welding the
 sentence marked for deletion onto the end of the copy — an insertion where a deletion was required, in
 the block being rewritten to answer a finding about this block. It is gone now, and that was verified
-with `git diff` rather than by rereading the file. Everything derivable about the artifacts — per-file test counts, annotated
-describes, the recorded guard output, the named packs — is now checked by
-`packages/qfai/tests/assets/stageEvidenceCounts.test.ts` rather than typed. Five rounds each found a
-number here that the tree did not hold; correcting them one at a time did not work, and on its first
-run that test found a pack seal missing from a section this record had already reported as fixed.
+with `git diff` rather than by rereading the file. What is derivable about the artifacts is checked rather than typed, and by **four** guards, not one —
+naming a single instrument for all of it was itself a wrong attribution, of the same class as the two
+this section reports:
+
+| derived                                                | instrument                        |
+| ------------------------------------------------------ | --------------------------------- |
+| per-file test counts, annotated describes, recorded vitest outputs, the named packs and their seals | `stageEvidenceCounts.test.ts` |
+| the pack-count **numeral** in prose ("Eight packs")     | `retractedClaims.test.ts`         |
+| the classifier version this record names                | `coverageDepthMatrix.test.ts`     |
+| the matrix's totals, partition, class prose, row width  | `coverageDepthMatrix.test.ts`     |
+| every grammar member of the classifier                  | `unit/buildCommand.test.ts`       |
+
+Five rounds each found a number here that the tree did not hold; correcting them one at a time did not
+work, and on its first run the derived-count guard found a pack seal missing from a section this record
+had already reported as fixed.
 
 ### P1d's verdicts
 
@@ -1053,18 +1135,55 @@ mutant, written while applying a finding about that clause. `DR-0017-0010` now r
 **unsatisfied** — not, as an earlier version of this line said, "degenerate rather than satisfied",
 which P1d refuted by showing `maxConcurrency` is project-scoped.
 
-### Round 3 and round 4
+### Findings per round
 
-| round | reviewer                  | verdict | findings                     |
-| ----- | ------------------------- | ------- | ---------------------------- |
-| 3     | `implementation-reviewer` | REVISE  | 4 blocking, 6 medium, 9 low  |
-| 3     | `completion-reviewer`     | REVISE  | 7 blocking, 5 major, 4 minor |
-| 3     | `qa-gatekeeper` (P1d)     | REVISE  | 3 blocking                   |
-| 3     | `qa-gatekeeper` (stage)   | **did not run** | —                    |
-| 4     | `implementation-reviewer` | not routed — the code under review was already read by round 4's gatekeeper | — |
-| 4     | `completion-reviewer`     | REVISE  | 6 blocking, 5 major, 5 minor |
-| 4     | `qa-gatekeeper` (stage)   | REVISE  | 6 blocking                   |
-| 4     | `qa-gatekeeper` (P1d)     | REVISE  | 3 blocking                   |
+Every count below is **derived**: distinct finding identifiers appearing as a heading in the report,
+counted from the packs on disk. `id families` carries the derivation so the number can be checked
+without recounting, and `summary` carries what that pack's own `summary.json` records where the two
+differ.
+
+| round | reviewer                  | verdict | findings | id families            | summary |
+| ----- | ------------------------- | ------- | -------: | ---------------------- | ------: |
+| 1     | `completion-reviewer`     | REVISE  |       13 | B1-B5, M1-M4, m1-m4    |      13 |
+| 1     | `qa-gatekeeper` (stage)   | REVISE  |        — | enumerated inline      |       5 |
+| 2     | `implementation-reviewer` | REVISE  |       10 | B1-B4, M1-M6           |      10 |
+| 2     | `completion-reviewer`     | REVISE  |       13 | B1-B4, M1-M4, m1-m5    |      13 |
+| 2     | `qa-gatekeeper` (stage)   | REVISE  |        — | enumerated inline      |       9 |
+| 2     | `qa-gatekeeper` (P1d 1)   | REVISE  |        6 | B1-B3, N1-N3           |       6 |
+| 3     | `implementation-reviewer` | REVISE  |       10 | B1-B4, M1-M6           |      10 |
+| 3     | `completion-reviewer`     | REVISE  |       16 | B1-B7, M1-M5, m1-m4    |      16 |
+| 3     | `qa-gatekeeper` (P1d 2)   | REVISE  |        3 | B1-B3                  |       3 |
+| 3     | `qa-gatekeeper` (stage)   | **did not run** |  — | —                      |       — |
+| 4     | `implementation-reviewer` | not routed — the code was read by round 4's gatekeeper | — | — | — |
+| 4     | `completion-reviewer`     | REVISE  |       16 | B1-B6, M1-M5, m1-m5    |      16 |
+| 4     | `qa-gatekeeper` (stage)   | REVISE  |        6 | B1-B6                  |      12 |
+| 4     | `qa-gatekeeper` (P1d 3)   | REVISE  |        5 | B1-B2, M1-M3           |       8 |
+| 5     | `completion-reviewer`     | REVISE  |       17 | B1-B7, M1-M5, m1-m5    |      17 |
+| 5     | `qa-gatekeeper` (stage)   | REVISE  |       12 | B1-B10, M1-M3          |      17 |
+| 5     | `qa-gatekeeper` (P1d 4)   | REVISE  |        3 | B1-B3                  |       3 |
+| 6     | `completion-reviewer`     | REVISE  |       17 | B1-B6, M1-M5, m1-m6    |      18 |
+| 6     | `qa-gatekeeper` (stage)   | REVISE  |       10 | B1-B10                 |      20 |
+| 6     | `qa-gatekeeper` (P1d 5)   | REVISE  |        2 | B1-B2                  |       3 |
+| 7     | `completion-reviewer`     | REVISE  |       21 | B1-B6, M1-M7, m1-m8    |      21 |
+| 7     | `qa-gatekeeper` (stage)   | REVISE  |       18 | B1-B11, A1-A7          |      18 |
+| 7     | `qa-gatekeeper` (P1d 6)   | **PASS** |       8 | M1, A1-A7 (inline)     |       8 |
+| 8     | `completion-reviewer`     | REVISE  |       29 | B1-B6, M1-M7, m1-m16   |       — |
+| 8     | `qa-gatekeeper` (stage)   | REVISE  |       22 | B1-B11, A1-A11         |       — |
+
+**Where the two columns disagree, the derived one is the one to trust, and the reason is a rule that
+does not fit every report.** The declared rule counts distinct finding identifiers "or the count of
+heading-level-3 sections where a report uses no identifiers". Three `qa-gatekeeper` stage reports
+enumerate advisories **inline** rather than as headings, so a mechanical heading count undercounts them
+and the recorded value was produced by hand. Round 7's P1d slot is the one corrected: it recorded **3**
+where its own report enumerates `M1` and `A1`-`A7` — eight — which round 7 had already reported for the
+round-6 pack and round 8 found again in the pack sealed at HEAD, so the seal event carried the defect
+forward instead of catching it. That pack is re-sealed, with the old value kept as `superseded:`. The
+other five disagreements are left as written and recorded here rather than edited, because re-sealing
+five packs to move a bookkeeping figure rewrites more history than it repairs; the rule they follow is
+stated instead, which is the alternative round 8 offered.
+
+Round 8's slots have no `summary.json` value because that pack is still in flight; it is sealed when its
+last reviewer response lands.
 
 **Round 3's stage-level `qa-gatekeeper` did not run**, and that is a deviation rather than a choice
 about scope: `agent-routing.yml` has it **mandatory and blocking** for the review phase. Its slot went
@@ -1187,7 +1306,8 @@ Review pack:       .qfai/review/review-20260821060000000/            (round 6, +
 Review pack seal:  d99dff9cf0a94bbcb18ca20df5b44d426b19f79f45699308b11ca6f726a96752
 
 Review pack:       .qfai/review/review-20260821080000000/            (round 7, + P1d pass 6 — PASS)
-Review pack seal:  3d56fd2edd484c0ffb8cd2b91fe2de93b1e1d65fd93d6a4c6d5a94fe740e2a92
+Review pack seal:  022c3addd80a7d9a206f40dc9cfd913ecb555fa7d9458fe2895cffed17ea55b2
+  superseded:      3d56fd2edd484c0ffb8cd2b91fe2de93b1e1d65fd93d6a4c6d5a94fe740e2a92   (its P1d finding count was 3 where the rule gives 8)
 
 Review pack:       .qfai/review/review-20260821100000000/            (round 8 — stage gates only)
 Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
