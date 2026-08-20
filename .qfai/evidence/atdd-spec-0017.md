@@ -195,6 +195,9 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
 - **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 6 tests deriving this record's own
   counts from the artifacts they describe, after every review round found at least one that the tree
   did not hold
+- **new** `packages/qfai/tests/assets/retractedClaims.test.ts` — 3 tests requiring a claim a review
+  round refuted to appear only inside quotation marks, because "it is gone now" was itself the false
+  statement round 5 found
 - **new** `.qfai/decisions/DR-0017-0010-*.md` — the branch-3 anomaly record for `TDD-0070`
 - **new** `.qfai/decisions/CR-20260820-0012-*.md` — the self-referential gate `TDD-0069` waits on
 - **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 4 tests pinning the matrix
@@ -819,7 +822,7 @@ tree that carries every round-4 repair:
 
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
-pnpm -C packages/qfai test:e2e                  1425 passed / 16 skipped, exit 0
+pnpm -C packages/qfai test:e2e                  1428 passed / 16 skipped, exit 0
 vitest --project integration --project unit     1188 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 8 claim(s) backed, exit 0
@@ -841,7 +844,8 @@ E2E file into `tests/helpers/buildCommand.ts`, so its two corpus tests left the 
 twelve joined `unit`: 1420 -> 1418, 1174 -> 1186. Round 5 added
 `tests/assets/stageEvidenceCounts.test.ts`, whose six tests run under `e2e`: 1418 -> 1424. Applying
 round 5's findings then added a matrix round, two classifier rounds and three loop-guard tests:
-1424 -> 1425 and 1186 -> 1188.
+1424 -> 1425 and 1186 -> 1188. Round 6 opened with `retractedClaims.test.ts`, three more under `e2e`:
+1425 -> 1428.
 
 **Those two totals are the numbers this record cannot derive**, which is why they carry a statement of
 when they were measured. Everything derivable about the artifacts — per-file test counts, annotated
@@ -991,8 +995,18 @@ Review pack:       .qfai/review/review-20260821020000000/            (round 4, +
 Review pack seal:  aaa2d2a6e16b2027169ec58e9419b6269af037ed4d6d632df17fdad604db35ff
 
 Review pack:       .qfai/review/review-20260821040000000/            (round 5, + P1d pass 4)
+Review pack seal:  5798d55711e1ff78dd8ae49e8e34c788de3a34f0744ef5fe4226517764263b62
+
+Review pack:       .qfai/review/review-20260821060000000/            (round 6, + P1d pass 5)
 Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
 ```
+
+Round 5's pack was **missing its `summary.json`** when its reviewers landed, for the third time in
+five packs. Written first, then sealed — the order matters, because sealing an incomplete pack and
+sealing it again is exactly the sequence the recorded-versus-recomputed rule exists to make visible,
+and round 1's pack has both values recorded for that reason. `packages/qfai/tests/assets/stageEvidenceCounts.test.ts`
+now recomputes every **closed** pack's seal from its files rather than counting how many seals appear,
+which round 5 found the previous version doing.
 
 **The newest pack carries no seal, and that is the contract rather than an omission.** `SKILL.md` fixes
 the seal at "when the last reviewer response lands", while the practice that stopped the tree moving
