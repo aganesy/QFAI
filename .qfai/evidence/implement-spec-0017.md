@@ -1822,3 +1822,81 @@ this-machine-only observation.
 
 The three blocking agent verdicts were not obtained, so `Status` is `refactor` for all four rows. The
 item-12 checkpoint is not attempted, for the reasons recorded under changes 3 through 9.
+
+## The worker value stays ten, and the structure was the problem
+
+This section supersedes the previous one's closing paragraph. That paragraph said the flaky
+`integration` slice "needs the user", framed the cause as ten forks oversubscribing a fourteen-CPU
+machine, and changed nothing. The user rejected the framing:
+
+> Ten is mandatory. Make a structural change so it does not go flaky. I do not accept the claim that it
+> is flaky because of ten-way parallelism — just fix the structures and mechanisms that create
+> dependencies or contention.
+
+That is the correct instruction and my analysis had stopped one question short. "Oversubscribed" names
+a symptom; it does not say what these tests share or repeat. They repeat almost everything.
+
+### What the three timing-out cases actually did
+
+`TC-0003-0039` has three `it()`s and each called `runDegradedCases()`. Process spawns for ONE call:
+
+```text
+3 x makeRepo()      init + 3 config + add + commit + rev-parse    21 git spawns
+3 x commitChange()  add + commit                                   6 git spawns
+1 x git clone --depth 1                                            1 git spawn
+3 x runDetection()  read + parse the shipped YAML, then bash       3 shells
+```
+
+Three tests, so roughly **eighty-four git spawns and nine bash runs to build one fixture set three
+times** — for fixtures the describe's own comment calls "the SAME three degraded fixtures". A process
+spawn on this platform costs tens of milliseconds, which is the entire fifteen-second budget. The
+timeout was not contention for a lock or a path; it was volume, and the volume was almost all repeat.
+
+### Three structural fixes
+
+- **The fixture set is memoized.** Not moved into `beforeAll`, and the reason is worth keeping: the
+  temp-directory pool registers an `afterEach` that deletes every directory it handed out, so a
+  `beforeAll` fixture would build repositories that vanish after the first test. What the tests read is
+  the RUN RESULT — status, streams, parsed outputs — which outlives the directory it came from, so
+  memoizing the result is safe where hoisting the setup is not.
+- **The shipped orchestrator document is read and parsed once per worker process.** It was re-read on
+  every detection run and by several other tests in the file, and it is a fixture in the repository
+  that cannot change while the suite runs. The promise is cached rather than the value, so concurrent
+  callers share one read instead of racing to fill a slot.
+- **Identity and signing move to `-c` flags**, removing three `git config` spawns per fixture
+  repository at identical effect.
+
+None of the three changes what any test asserts.
+
+### Measured at the declared value, not at a lowered one
+
+```text
+the file alone, before          22.90s   (tests 22.15s)
+the file alone, after            5.49s   (tests  5.11s)
+integration slice, workers=10   862 passed, 4 skipped, ZERO timeouts, 37.66s
+```
+
+A 4.2x reduction in the file, and the slice passes at ten. `DECLARED_START` is untouched, so
+`BR-0017-0048`'s ten stands and `BR-0017-0051` never came into play — there was no value to sign off
+on, because the value was not the defect.
+
+### Scope checked rather than assumed
+
+The anti-pattern is local. `shippedWorkflowPortability.test.ts` makes sixteen `runShell` calls and they
+are sixteen distinct scenarios rather than one repeated — 11 tests in 5.23s. The only other
+`git config` triplet is in `validators/upstreamSsotGuard.test.ts`, which is not on the failing path and
+passes in 9.19s; left alone rather than swept up, and named here so the next person can find it.
+
+### The suite at ten
+
+| script | test files | tests | wall clock |
+| --- | --- | --- | --- |
+| `test:core` | 122 passed (122) | 1587 passed | 2 skipped (1589) | 85.7s |
+| `test:unit` | 43 passed (43) | 266 passed (266) | 7.9s |
+| `test:validators` | 46 passed (46) | 351 passed (351) | 13.1s |
+| `test:integration` | 124 passed | 4 skipped (128) | 862 passed | 19 skipped (881) | 42.4s |
+| `test:e2e` | 74 passed | 4 skipped (78) | 891 passed | 16 skipped (907) | 23.7s |
+| `test:cli` | 11 passed (11) | 321 passed (321) | 58.7s |
+| `test:scripts` | 10 passed (10) | 114 passed (114) | 7.5s |
+
+Total 239.0s, every slice green at the declared worker value.

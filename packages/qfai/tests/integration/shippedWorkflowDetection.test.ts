@@ -43,8 +43,23 @@ const FULL_LANES: readonly string[] = ["unit", "component", "integration", "api"
 const newTempDir = useTempDirPool("qfai-wfdetect-");
 
 /** Parses the shipped orchestrator fresh from disk. */
+/**
+ * The shipped orchestrator, read and parsed ONCE per worker process.
+ *
+ * It was re-read and re-parsed on every call, and it is called by every detection run plus
+ * several tests of its own. The file does not change while the suite runs — it is a fixture
+ * in the repository — so the parse is pure overhead repeated dozens of times.
+ *
+ * The promise is cached rather than the value, so concurrent callers share one read instead
+ * of racing to populate a slot.
+ */
+let orchestratorDocPromise: Promise<unknown> | undefined;
+
 async function orchestratorDoc(): Promise<unknown> {
-  return parse(await readFile(shippedWorkflowPath(ORCHESTRATOR), "utf-8"));
+  orchestratorDocPromise ??= readFile(shippedWorkflowPath(ORCHESTRATOR), "utf-8").then((text) =>
+    parse(text),
+  );
+  return orchestratorDocPromise;
 }
 
 interface ShellRun {
@@ -96,15 +111,28 @@ function git(cwd: string, ...args: string[]): string {
 }
 
 /** A fresh fixture repository with one base commit (README.md only). */
+/**
+ * Identity and signing passed as `-c` flags rather than written with three `git config`
+ * invocations.
+ *
+ * Same effect, three fewer process spawns per fixture repository. That mattered: this file
+ * builds several repositories per test and a spawn is the dominant cost, not the git work.
+ */
+const COMMIT_IDENTITY = [
+  "-c",
+  "user.email=fixture@example.invalid",
+  "-c",
+  "user.name=QFAI Fixture",
+  "-c",
+  "commit.gpgsign=false",
+];
+
 async function makeRepo(): Promise<{ dir: string; baseSha: string }> {
   const dir = await newTempDir();
   git(dir, "init", "--initial-branch=main");
-  git(dir, "config", "user.email", "fixture@example.invalid");
-  git(dir, "config", "user.name", "QFAI Fixture");
-  git(dir, "config", "commit.gpgsign", "false");
   await writeFile(path.join(dir, "README.md"), "# fixture\n", "utf-8");
   git(dir, "add", ".");
-  git(dir, "commit", "-m", "base");
+  git(dir, ...COMMIT_IDENTITY, "commit", "-m", "base");
   return { dir, baseSha: git(dir, "rev-parse", "HEAD") };
 }
 
@@ -114,7 +142,7 @@ async function commitChange(dir: string, relPath: string, content: string): Prom
   await mkdir(path.dirname(filePath), { recursive: true });
   await writeFile(filePath, content, "utf-8");
   git(dir, "add", ".");
-  git(dir, "commit", "-m", `change ${relPath}`);
+  git(dir, ...COMMIT_IDENTITY, "commit", "-m", `change ${relPath}`);
 }
 
 /**
@@ -285,9 +313,31 @@ describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail o
     ];
   }
 
+  /**
+   * The fixture set, built ONCE for the whole describe.
+   *
+   * The three cases below judge the same three fixtures — the comment at the top of this
+   * describe says so — and `runDegradedCases` was being called once per `it()`, rebuilding
+   * three git repositories, three commits, a shallow clone and three shell runs each time.
+   * That is roughly eighty process spawns to produce one fixture set three times, and on a
+   * platform where a spawn costs tens of milliseconds it is what put these cases past their
+   * fifteen-second timeout.
+   *
+   * Memoized rather than moved into `beforeAll`, deliberately: the temp-directory pool
+   * deletes its directories in `afterEach`, so a `beforeAll` fixture would be building
+   * repositories that vanish after the first test. What the tests actually read is the RUN
+   * RESULT — status, streams, parsed outputs — which survives the directory it came from.
+   */
+  let cases: Promise<DegradedCase[]> | undefined;
+
+  const degradedCases = (): Promise<DegradedCase[]> => {
+    cases ??= runDegradedCases();
+    return cases;
+  };
+
   it("all three degraded cases emit a warning annotation", async () => {
     const violations: string[] = [];
-    for (const { label, run } of await runDegradedCases()) {
+    for (const { label, run } of await degradedCases()) {
       if (!/::warning::/.test(run.stdout)) {
         violations.push(`${label}: no ::warning:: annotation in stdout`);
       }
@@ -297,7 +347,7 @@ describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail o
 
   it("all three degraded cases select the full lane superset", async () => {
     const violations: string[] = [];
-    for (const { label, run } of await runDegradedCases()) {
+    for (const { label, run } of await degradedCases()) {
       const lanes = lanesOf(run);
       if (JSON.stringify(lanes) !== JSON.stringify(FULL_LANES)) {
         violations.push(`${label}: selected ${JSON.stringify(lanes)} instead of the full superset`);
@@ -308,7 +358,7 @@ describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail o
 
   it("all three degraded cases exit 0 — fail open stays green because the superset claim holds", async () => {
     const violations: string[] = [];
-    for (const { label, run } of await runDegradedCases()) {
+    for (const { label, run } of await degradedCases()) {
       if (run.status !== 0) {
         violations.push(`${label}: detection exited ${String(run.status)} instead of failing open`);
       }
