@@ -367,4 +367,4 @@
 [info] QFAI-CONTRACT-000 DB 契約ファイルが見つかりません。 (.qfai/contracts/db)
 [info] QFAI-PROFILE-001 profile="tdd" is a partial profile. Hard gates NOT evaluated in this run: QFAI-HYG-*, QFAI-SKILLS-*, QFAI-ASSETS-*, QFAI-DPACK-*, QFAI-VIS-*, QFAI-RESEARCH-*, UIX-VAL-*, QFAI-SPACK-*, QFAI-COV-*, QFAI-ID-*, QFAI-LAYER-*, QFAI-ORPHAN-*, QFAI-CONTRACT-*, QFAI-NAV-*, QFAI-MMD-*, E_*, R-*, QFAI-REVIEW-*, QFAI-PROT-*, QFAI-CRIT-*, QFAI-FID-*, QFAI-UIE-*, QFAI-DCON-*, UIX-VAL-SKILL-*, D-SCAFFOLD-PLACEHOLDER. A PASS here is not full-scan coverage — run `qfai validate --fail-on error` (full profile) before declaring completion.
 counts: info=4 warning=352 error=2
-run-log: .qfai/report/run-20260820155149594
+run-log: .qfai/report/run-20260820155715624

@@ -663,6 +663,20 @@ function manifestScript(manifestPath: string, name: string): string {
   return typeof value === "string" ? value : "";
 }
 
+/**
+ * One declared context, narrowed without an assertion.
+ *
+ * A predicate rather than a shape check followed by `as`: `CLAUDE.md` forbids the assertion, and
+ * `filter` over a predicate is what lets the parsed objects through unchanged.
+ */
+function isContext(value: unknown): value is Declaration["contexts"][number] {
+  return (
+    isRecord(value) &&
+    typeof value["workflow"] === "string" &&
+    typeof value["job"] === "string" &&
+    (value["verificationSet"] === undefined || Array.isArray(value["verificationSet"]))
+  );
+}
 /** The declaration as the repository ships it. */
 function declaration(dir: string): Declaration {
   const parsed: unknown = JSON.parse(readFileSync(path.join(dir, DECLARATION_REL), "utf-8"));
@@ -673,23 +687,24 @@ function declaration(dir: string): Declaration {
   if (!isRecord(parsed) || !Array.isArray(parsed["contexts"])) {
     throw new Error("the declaration does not hold a contexts array");
   }
-  const contexts = parsed["contexts"].map((entry, i) => {
-    if (!isRecord(entry)) {
-      throw new Error(`declaration context ${i} is not an object`);
+  // VALIDATED in place, not rebuilt. The first version of this narrowing returned freshly
+  // constructed context objects carrying only the three fields it checked — and
+  // `editDeclaration` writes the result back, so planting into a tree silently stripped
+  // `$comment`, `why` and `verificationSetNote` from the file it planted into. The lane reads
+  // none of those, so nothing asserted differently and the loss was invisible; a fixture that
+  // quietly differs from the artifact it copies is still the wrong fixture.
+  // Implementation-review finding F8.
+  const raw = parsed["contexts"];
+  for (const [i, entry] of raw.entries()) {
+    if (!isContext(entry)) {
+      throw new Error(
+        `declaration context ${i} lacks a string workflow, a string job, or an array verificationSet`,
+      );
     }
-    const { workflow, job, verificationSet } = entry;
-    if (typeof workflow !== "string" || typeof job !== "string") {
-      throw new Error(`declaration context ${i} lacks a string workflow and job`);
-    }
-    return {
-      workflow,
-      job,
-      verificationSet: Array.isArray(verificationSet)
-        ? verificationSet.filter((v): v is string => typeof v === "string")
-        : [],
-    };
-  });
-  return { contexts };
+  }
+  // `filter` over the predicate rather than a rebuild or an `as`: it narrows the array type and
+  // hands back the SAME objects, so `$comment`, `why` and `verificationSetNote` travel with them.
+  return { contexts: raw.filter(isContext) };
 }
 
 /** Rewrites the declaration inside a planted tree. */
