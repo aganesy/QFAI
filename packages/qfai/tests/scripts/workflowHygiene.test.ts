@@ -588,3 +588,261 @@ describe("TC-0017-0023 (TDD-0023): a planted floating reference exits 1 and is n
     }
   });
 });
+
+// ── the expected-required-context declaration ────────────────────────────────
+//
+// Which checks branch protection actually requires is a repository SETTING, and a pull
+// request cannot read it. `BR-0017-0042` resolves that by moving the expectation into the
+// tree: a checked-in declaration names the job expected to carry the context, and the lane
+// checks the workflow against the declaration. Reading live settings is forbidden precisely
+// because it cannot run where it matters.
+//
+// `BR-0017-0043` fixes the three properties: the declared context resolves to an existing
+// job, that job is not skippable — counting a condition on any job it depends on — and its
+// enumerated verification set is intact. The rows below take those one at a time, because a
+// single "the lane exits 1" row would pass on any one of the three working.
+
+const DECLARATION_REL = path.join(".github", "required-status-contexts.json");
+const DECLARATION_RULE = "required-context";
+
+interface Declaration {
+  contexts: { workflow: string; job: string; verificationSet: string[] }[];
+}
+
+/** The declaration as the repository ships it. */
+function declaration(dir: string): Declaration {
+  const parsed: unknown = JSON.parse(readFileSync(path.join(dir, DECLARATION_REL), "utf-8"));
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !Array.isArray((parsed as { contexts?: unknown }).contexts)
+  ) {
+    throw new Error("the declaration does not hold a contexts array");
+  }
+  return parsed as Declaration;
+}
+
+/** Rewrites the declaration inside a planted tree. */
+function editDeclaration(dir: string, edit: (d: Declaration) => Declaration): void {
+  const before = declaration(dir);
+  const after = edit(structuredClone(before));
+  if (JSON.stringify(after) === JSON.stringify(before)) {
+    throw new Error("planting into the declaration changed nothing — the edit is stale");
+  }
+  writeFileSync(path.join(dir, DECLARATION_REL), `${JSON.stringify(after, null, 2)}\n`, "utf-8");
+}
+
+describe("TC-0017-0057 (TDD-0057): the expected-context declaration is read from the tree", () => {
+  it("takes the job name from the file rather than from anything compiled in", () => {
+    // The row's real claim is that the declaration is INPUT, not decoration. Asserting the
+    // lane passes over the shipped declaration would not show that — a lane ignoring the
+    // file entirely also passes. So the file is edited to name a job that does not exist,
+    // and the lane's verdict has to follow the edit.
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (decl) => {
+        decl.contexts[0].job = "a-job-no-workflow-declares";
+        return decl;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `the lane must follow the declaration in the tree:\n${run.output}`)
+        .toBe(1);
+      expect
+        .soft(run.output, "the finding must name the job the declaration asked for")
+        .toContain("a-job-no-workflow-declares");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("passes over the repository's own declaration, and reads no live settings", () => {
+    // The accepting direction, so the row is not satisfied by a lane that always exits 1.
+    const clean = plantedTree(() => {});
+    try {
+      const run = runLane(clean);
+      expect
+        .soft(run.exitCode, `the shipped tree must satisfy its own declaration:\n${run.output}`)
+        .toBe(0);
+      expect
+        .soft(run.output, "a green run must name the declaration rule it evaluated")
+        .toContain(DECLARATION_RULE);
+    } finally {
+      rmSync(clean, { recursive: true, force: true });
+    }
+
+    // And `BR-0017-0042`'s prohibition, asserted structurally: a lane that queried the API
+    // would satisfy every behavioural row above while being unable to run on a pull
+    // request, which is the whole reason the declaration exists.
+    const source = readFileSync(LANE, "utf-8");
+    for (const forbidden of ["api.github.com", "octokit", "gh api", "GITHUB_TOKEN"]) {
+      expect
+        .soft(source, `the lane must not reach for live settings (${forbidden})`)
+        .not.toContain(forbidden);
+    }
+  });
+});
+
+describe("TC-0017-0058 (TDD-0058): a declared context resolving to no job exits 1", () => {
+  it("reports the workflow and the job when the declared job is absent from it", () => {
+    // Distinct from TDD-0057's first case in what it plants: there the DECLARATION moved,
+    // here the TREE loses the job while the declaration stays correct. Same rule, opposite
+    // direction, and a lane that only compared strings one way would pass one and fail the
+    // other.
+    const dir = plantedTree((d) => {
+      const declared = declaration(d).contexts[0];
+      editWorkflow(d, declared.workflow, (text) =>
+        text.replace(`\n  ${declared.job}:\n`, `\n  ${declared.job}-renamed:\n`),
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a declared context with no job must exit 1:\n${run.output}`)
+        .toBe(1);
+      expect
+        .soft(run.output, "the finding must name the declaration rule")
+        .toContain(DECLARATION_RULE);
+
+      // And it must produce ONE finding, not one per verification item.
+      //
+      // The oracle is why this claim exists. Removing the existence check outright reddened
+      // nothing: execution fell through to the verification-set property, found no steps
+      // because the job was gone, and reported every declared item as missing. The lane still
+      // exited 1 with the rule named — so the row passed while the diagnosis had become six
+      // findings about moved steps in a job that does not exist.
+      //
+      // A count, because the count IS the property: an absent job is one fact.
+      const findings = run.output.split(/\r?\n/).filter((line) => line.includes(DECLARATION_RULE));
+      expect
+        .soft(
+          findings.length,
+          `an absent job is one fact and must be reported once:\n${findings.join("\n")}`,
+        )
+        .toBe(1);
+      expect
+        .soft(findings.join("\n"), "the finding must say the job is not declared")
+        .toMatch(/no such job|declares no/i);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("TC-0017-0013 (TDD-0013): a condition on a dependency makes the required job skippable", () => {
+  it("exits 1 for a condition on a job the declared one depends on, not only on itself", () => {
+    // The transitive case, and the one worth a row of its own. A job whose dependency is
+    // skipped is itself skipped, and a skipped job reports SUCCESS to branch protection —
+    // so a condition two edges away is as fatal as one on the job itself, and much harder
+    // to see. The declared job carries no dependencies in the real tree, so the fixture adds
+    // one and puts the condition there.
+    const dir = plantedTree((d) => {
+      const declared = declaration(d).contexts[0];
+      editWorkflow(d, declared.workflow, (text) =>
+        text
+          .replace(`\n  ${declared.job}:\n`, `\n  ${declared.job}:\n    needs: [a-gate]\n`)
+          .replace(
+            "\njobs:\n",
+            "\njobs:\n  a-gate:\n    if: ${{ github.event_name == 'push' }}\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo gate\n\n",
+          ),
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(
+          run.exitCode,
+          `a condition on a dependency of the declared job must exit 1:\n${run.output}`,
+        )
+        .toBe(1);
+      expect
+        .soft(run.output, "the finding must name the dependency that carries the condition")
+        .toContain("a-gate");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("TC-0017-0037 (TDD-0037): a rename or an added dependency condition is reported", () => {
+  it("names the rule and the offending job in both shapes, rather than only exiting 1", () => {
+    // `TC-0017-0058` and `TC-0017-0013` assert the exit code; this row asserts the FINDING.
+    // An exit code tells an operator that something is wrong in a repository with two
+    // workflow files and eighteen jobs, which is not enough to act on — `BR-0017-0021`'s
+    // reporting obligation is why every finding carries file, job and rule.
+    const shapes = [
+      {
+        label: "a rename",
+        mutate: (d: string): string => {
+          const declared = declaration(d).contexts[0];
+          editWorkflow(d, declared.workflow, (text) =>
+            text.replace(`\n  ${declared.job}:\n`, `\n  ${declared.job}-2:\n`),
+          );
+          return declared.job;
+        },
+      },
+      {
+        label: "an added dependency condition",
+        mutate: (d: string): string => {
+          const declared = declaration(d).contexts[0];
+          editWorkflow(d, declared.workflow, (text) =>
+            text
+              .replace(`\n  ${declared.job}:\n`, `\n  ${declared.job}:\n    needs: [late-gate]\n`)
+              .replace(
+                "\njobs:\n",
+                "\njobs:\n  late-gate:\n    if: ${{ false }}\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo gate\n\n",
+              ),
+          );
+          return "late-gate";
+        },
+      },
+    ];
+
+    for (const { label, mutate } of shapes) {
+      let named = "";
+      const dir = plantedTree((d) => {
+        named = mutate(d);
+      });
+      try {
+        const run = runLane(dir);
+        expect.soft(run.exitCode, `${label}: must exit 1:\n${run.output}`).toBe(1);
+        expect
+          .soft(run.output, `${label}: the finding must name the rule`)
+          .toContain(DECLARATION_RULE);
+        expect.soft(run.output, `${label}: the finding must name what went wrong`).toContain(named);
+        expect
+          .soft(run.output, `${label}: the finding must name the file`)
+          .toContain(declaration(REPO_ROOT).contexts[0].workflow);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    }
+  });
+});
+
+describe("TC-0017-0059 (TDD-0059): skippable-through-a-dependency and a shrunk set both exit 1", () => {
+  it("checks the third property too, so a shrunk verification set is not a silent pass", () => {
+    // The boundary this row exists for. Two of the three properties can hold while the
+    // third does not: the declared job can exist and be unconditional while its work has
+    // been moved out from under it, which is exactly the "keeping the name alone is not
+    // sufficient" case `BR-0017-0032` names. A lane checking only existence and
+    // skippability passes that.
+    const dir = plantedTree((d) => {
+      const declared = declaration(d).contexts[0];
+      const dropped = declared.verificationSet[0];
+      editWorkflow(d, declared.workflow, (text) =>
+        text.replace(`- name: ${dropped}\n`, `- name: ${dropped} (moved elsewhere)\n`),
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a shrunk verification set must exit 1:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "the finding must name the missing verification item")
+        .toContain(declaration(REPO_ROOT).contexts[0].verificationSet[0]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

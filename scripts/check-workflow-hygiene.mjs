@@ -58,7 +58,20 @@ const RULES = [
   ["permissions-reachable", "every job has a permission block reachable from it (job or workflow)"],
   ["checkout-credentials", "every checkout step sets persist-credentials: false"],
   ["action-pin", "every `uses:` reference is a full 40-hex commit SHA"],
+  [
+    "required-context",
+    "the declared required-status-context job exists, is unskippable through its whole `needs` closure, and still performs its verification set",
+  ],
 ];
+
+/**
+ * Where the expected-required-context declaration lives, relative to the root.
+ *
+ * A file and not a constant in this script: which checks branch protection requires is a
+ * repository SETTING, and a pull request cannot read it. The declaration moves the
+ * expectation into the tree so a change that invalidates it fails before it merges.
+ */
+const DECLARATION_REL = ".github/required-status-contexts.json";
 
 function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -224,6 +237,160 @@ function checkActionPins(uses) {
     }));
 }
 
+/**
+ * The declared contexts, or a finding explaining why they could not be read.
+ *
+ * A missing or malformed declaration is a FINDING and not a crash, for the same reason a
+ * malformed workflow is: a stack trace reads as a broken tool, and the operator is then left
+ * guessing which file to open. It is also not a silent pass — a lane that skipped its own
+ * check when the declaration went missing would be worse than one that never had it.
+ */
+function readDeclaration(root) {
+  let text;
+  try {
+    text = readFileSync(path.join(root, DECLARATION_REL), "utf-8");
+  } catch (error) {
+    return {
+      contexts: [],
+      findings: [
+        {
+          rule: "required-context",
+          file: DECLARATION_REL,
+          job: "(whole file)",
+          detail: `could not be read: ${error instanceof Error ? error.message : String(error)}`,
+        },
+      ],
+    };
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    return {
+      contexts: [],
+      findings: [
+        {
+          rule: "required-context",
+          file: DECLARATION_REL,
+          job: "(whole file)",
+          detail: `is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
+        },
+      ],
+    };
+  }
+
+  if (!isRecord(parsed) || !Array.isArray(parsed.contexts) || parsed.contexts.length === 0) {
+    return {
+      contexts: [],
+      findings: [
+        {
+          rule: "required-context",
+          file: DECLARATION_REL,
+          job: "(whole file)",
+          detail: "declares no non-empty `contexts` array",
+        },
+      ],
+    };
+  }
+
+  return { contexts: parsed.contexts.filter(isRecord), findings: [] };
+}
+
+/** Every job reachable from `jobKey` through `needs`, including itself. */
+function needsClosure(jobsByKey, jobKey) {
+  const seen = new Set();
+  const walk = (key) => {
+    if (seen.has(key)) return;
+    seen.add(key);
+    const job = jobsByKey.get(key);
+    if (job === undefined) return;
+    const needs = job.needs;
+    const list = typeof needs === "string" ? [needs] : Array.isArray(needs) ? needs : [];
+    for (const next of list) {
+      if (typeof next === "string") walk(next);
+    }
+  };
+  walk(jobKey);
+  return [...seen];
+}
+
+/**
+ * `BR-0017-0043`'s three properties, checked per declared context.
+ *
+ * All three are reported rather than short-circuited after the first: a change that renames
+ * the job usually moves its steps too, and telling the operator only about the rename means a
+ * second run to learn the rest.
+ */
+function checkRequiredContexts(root, jobs) {
+  const { contexts, findings } = readDeclaration(root);
+  for (const context of contexts) {
+    const workflow = typeof context.workflow === "string" ? context.workflow : "(unnamed)";
+    const declaredJob = typeof context.job === "string" ? context.job : "(unnamed)";
+    const wanted = Array.isArray(context.verificationSet)
+      ? context.verificationSet.filter((item) => typeof item === "string")
+      : [];
+    // POSIX separators, matching what `yamlFilesUnder` returns. `path.join` here made
+    // the comparison fail on Windows and the rule report every job as missing.
+    const rel = `.github/workflows/${workflow}`;
+
+    const inFile = jobs.filter((entry) => entry.file === rel);
+    const jobsByKey = new Map(inFile.map((entry) => [entry.jobKey, entry.job]));
+
+    // PROPERTY 1 — the declared context resolves to an existing job.
+    if (!jobsByKey.has(declaredJob)) {
+      findings.push({
+        rule: "required-context",
+        file: rel,
+        job: declaredJob,
+        detail: `is named in ${DECLARATION_REL} but ${workflow} declares no such job (declared jobs: ${inFile.map((e) => e.jobKey).join(", ") || "none"})`,
+      });
+      continue;
+    }
+
+    // PROPERTY 2 — and it is not skippable, counting the whole `needs` closure. A job whose
+    // dependency is skipped is itself skipped, and a skipped job reports SUCCESS to branch
+    // protection — so a condition two edges away is as fatal as one on the job itself.
+    for (const key of needsClosure(jobsByKey, declaredJob)) {
+      const job = jobsByKey.get(key);
+      if (job !== undefined && job.if !== undefined) {
+        findings.push({
+          rule: "required-context",
+          file: rel,
+          job: declaredJob,
+          detail:
+            key === declaredJob
+              ? `carries a condition of its own (if: ${String(job.if)}), so it can be skipped and report success`
+              : `is skippable through its dependency ${key}, which carries a condition (if: ${String(job.if)})`,
+        });
+      }
+    }
+
+    // PROPERTY 3 — and its enumerated verification set is intact. An item may live in the
+    // declared job or in any job it depends on; relocating work into a dependency is legal,
+    // relocating it out of reach is not.
+    const performed = new Set();
+    for (const key of needsClosure(jobsByKey, declaredJob)) {
+      const job = jobsByKey.get(key);
+      const steps = job !== undefined && Array.isArray(job.steps) ? job.steps : [];
+      for (const step of steps) {
+        if (isRecord(step) && typeof step.name === "string") performed.add(step.name);
+      }
+    }
+    for (const item of wanted) {
+      if (!performed.has(item)) {
+        findings.push({
+          rule: "required-context",
+          file: rel,
+          job: declaredJob,
+          detail: `no longer performs the declared verification item "${item}", and no job it depends on performs it either`,
+        });
+      }
+    }
+  }
+  return findings;
+}
+
 export function runHygieneLane(root) {
   const { jobs, findings: structural } = collectJobs(root);
   return [
@@ -231,6 +398,7 @@ export function runHygieneLane(root) {
     ...checkPermissions(jobs),
     ...checkCheckoutCredentials(jobs),
     ...checkActionPins(collectUses(root, jobs)),
+    ...checkRequiredContexts(root, jobs),
   ];
 }
 
@@ -261,7 +429,7 @@ function main(argv) {
     stdout.write(`  - ${id}: ${description}\n`);
   }
   stdout.write(
-    "Not covered here: the shipped workflow set, runner-label and secret-reference rules, and the required-status-context declaration.\n",
+    "Not covered here: the shipped workflow set, and runner-label and secret-reference rules.\n",
   );
   return 0;
 }

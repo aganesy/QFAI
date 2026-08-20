@@ -1900,3 +1900,127 @@ passes in 9.19s; left alone rather than swept up, and named here so the next per
 | `test:scripts` | 10 passed (10) | 114 passed (114) | 7.5s |
 
 Total 239.0s, every slice green at the declared worker value.
+
+## The expected-required-context declaration (TDD-0057, TDD-0058, TDD-0013, TDD-0037, TDD-0059)
+
+`AC-0017-0025`, and the change that unblocks `TDD-0013`. Base revision `dd894914`.
+
+### Why a checked-in file, and why these three properties
+
+Which checks branch protection requires is a repository SETTING, and a pull request cannot read it.
+`BR-0017-0042` resolves that by moving the expectation into the tree: `.github/required-status-contexts.json`
+names the job expected to carry the context, and the hygiene lane checks the workflow against it. Reading
+live settings is forbidden — not as a preference, but because a check that cannot run on a pull request
+blocks nothing.
+
+`BR-0017-0043` fixes what the lane asserts: the declared context resolves to an existing job, that job is
+not skippable counting a condition on any job it depends on, and its enumerated verification set is
+intact. One row each, because a single "the lane exits 1" row passes on any one of the three working.
+
+### `build` and not `ci-pass`, and the declaration says why
+
+The aggregate verdict carries `if: always()` on purpose — it has to run when its dependencies are
+SKIPPED, which is exactly what a documentation-only pull request produces. A declaration naming it would
+assert two things that cannot both hold: that the job carries no condition, and that it runs when
+everything it needs was skipped.
+
+`BR-0017-0007` settles it rather than leaving it to taste: "at most four job instances **while the job
+named `build` carries the required status context**, and at most three once that context moves." So
+`build` holds it today, the move is anticipated, and the declaration is where a move gets recorded. That
+reasoning is in the file, not only here — a declaration a reader cannot audit is a constant with extra
+steps.
+
+### The oracle found a row that passed with the check it tests removed
+
+`R1` deletes the existence property outright. On the first run it reddened **nothing**.
+
+The reason is worth keeping: with the check gone, execution fell through to the verification-set
+property, found no steps because the job was not there, and reported every declared item as missing. The
+lane still exited 1 with the rule named — so `TDD-0058`, which asserted exit code and rule name, passed.
+What had been lost was the DIAGNOSIS: six findings about moved steps in a job that does not exist, sending
+the operator to look for relocated work rather than a rename.
+
+So the row now asserts the report's SHAPE — an absent job is one fact and must be reported once. That is
+the property the lane's `continue` provides and the property `R1` destroys. Second time in this session
+that an oracle round reddening nothing exposed a vacuous assertion rather than a missing mutation; the
+first was `R9` under change 8.
+
+### A path separator produced a real-looking violation for a non-existent problem
+
+The first run of the finished rule reported `job build: is named in the declaration but ci.yml declares
+no such job (declared jobs: none)` against the real tree. Nothing was wrong with the tree.
+`yamlFilesUnder` normalises every path it returns with `.replace(/\\/g, "/")`, and my lookup built the
+comparison path with `path.join`, which on Windows yields backslashes. The filter matched nothing, so
+every job read as absent.
+
+Worth recording because of the failure mode rather than the bug: it did not crash and it did not pass
+silently — it produced a confident, well-formatted, completely wrong finding. A lane that reports
+precisely is a lane whose own path handling has to be right.
+
+### The verification set now lives in two places, and a claim pins them together
+
+Introducing the declaration put the six-item list in the declaration AND in the literals `TDD-0036` and
+`TC-0017-0073` hold. Two copies of one list is the defect this spec has caught three times.
+
+What makes it acceptable is that one is production data a lane reads and the other is this suite's
+expectation of it — testing data against an expectation is ordinary. What makes it SAFE is `TDD-0036`'s
+new fourth claim, which asserts the two agree. Without it the copies drift silently; with it a wrong
+change has to be made consistently in three places — the workflow, the declaration and the row. `R7`
+mutates the declaration alone and reddens that claim.
+
+### RED and GREEN
+
+- **RED command**, from `packages/qfai`:
+  `pnpm exec vitest run tests/scripts/workflowHygiene.test.ts`
+- **The first RED was inadmissible** and is recorded as such: four of six failures were `ENOENT` on the
+  declaration, which is a row that could not run rather than a behaviour that is absent. The seam is the
+  declaration FILE — data the rows need in order to execute — with no lane rule behind it. The second
+  RED is `Tests 6 failed | 10 passed (16)` with every failure an assertion.
+- **GREEN result**: same command, `Tests 16 passed (16)`. The lane over the real tree exits 0 and now
+  prints four rules rather than three, and its not-covered line no longer claims the declaration is
+  unchecked.
+
+### Oracle proof — eight rounds over the lane and the declaration
+
+| id | mutation | mutant | reddens |
+| --- | --- | --- | --- |
+| `R1` | property 1 is dropped — a declared job that does not exist stops being reported | `754d3009` | `TC-0017-0058` |
+| `R2` | the needs closure shrinks to the job itself, so a condition on a dependency is missed | `9cd70d35` | `TC-0017-0013`, `TC-0017-0037` |
+| `R3` | property 3 is dropped — a shrunk verification set stops being reported | `de01ef97` | `TC-0017-0059` |
+| `R4` | the declaration stops being read: the job name is compiled in instead | `a9e6f447` | `TC-0017-0057` |
+| `R5` | the rule leaves the printed rule set, so a green run stops naming its own coverage | `9167b453` | `TC-0017-0057` |
+| `R6` | the lane reaches for live settings, which cannot run on a pull request | `18dda3d8` | `TC-0017-0057` |
+| `R7` | the declaration's verification set drifts from the topology row's literals | `65954c0a` | `TC-0017-0018`, `TC-0017-0036`, `TC-0017-0057` |
+| `R8-control` | a comment-only edit in the lane | `e452ec38` | **nothing new** |
+
+Rounds are reported by failing ROW rather than by line number, because two test files are involved and
+two files mean two numbering spaces. `R7` also reddens `TC-0017-0018` and `TC-0017-0036`: mutating the
+declaration makes the real tree violate it, so the lane's own green-run row objects too. That is correct
+rather than noise.
+
+### The suite
+
+| script | test files | tests | wall clock |
+| --- | --- | --- | --- |
+| `test:core` | 122 passed (122) | 1587 passed | 2 skipped (1589) | 79.2s |
+| `test:unit` | 43 passed (43) | 266 passed (266) | 7.4s |
+| `test:validators` | 46 passed (46) | 351 passed (351) | 13.1s |
+| `test:integration` | 124 passed | 4 skipped (128) | 862 passed | 19 skipped (881) | 40.7s |
+| `test:e2e` | 74 passed | 4 skipped (78) | 891 passed | 16 skipped (907) | 24.6s |
+| `test:cli` | 11 passed (11) | 321 passed (321) | 64.1s |
+| `test:scripts` | 10 passed (10) | 120 passed (120) | 9.5s |
+
+Total 238.6s, every one green at the declared worker value.
+
+### The validate delta
+
+Three below the previous change: info=4 warning=369 error=2, exit 1. Diffed, not assumed - four
+removed (TC-0017-0037, TC-0017-0057, TC-0017-0058, TC-0017-0059) and one added, TC-0017-0046, whose
+selector text appears nowhere in the file its row names; grep returns zero. The same uneven resolution
+CR-20260818-0001 is open against, and the sixth time this slice has measured it: adding content to a
+shared test file changes which absent selectors are reported as resolving.
+
+### Gate items NOT satisfied
+
+The three blocking agent verdicts were not obtained, so `Status` is `refactor` for all five rows. The
+item-12 checkpoint is not attempted, for the reasons recorded under the earlier changes.

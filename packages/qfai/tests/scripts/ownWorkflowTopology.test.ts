@@ -1413,6 +1413,35 @@ describe("TC-0017-0036 (TDD-0036): the required-context job keeps its name and u
         "every verification item must be performed by the required-context job or by a job it needs",
       )
       .toEqual([]);
+
+    // CLAIM 4 — and the checked-in declaration agrees with these literals.
+    //
+    // The hygiene lane reads `.github/required-status-contexts.json` and checks the same
+    // three properties from CI. That puts this list in two places, which is the defect this
+    // spec has caught three times — so the two are pinned to each other here.
+    //
+    // The redundancy is deliberate and only safe because of this claim. One copy is
+    // production data a lane reads; the other is this suite's expectation of it. Editing
+    // either alone now fails, which turns two unsynchronised copies into a change that has
+    // to be made consistently in three places: the workflow, the declaration and this row.
+    const declared: unknown = JSON.parse(
+      readFileSync(path.join(REPO_ROOT, ".github", "required-status-contexts.json"), "utf-8"),
+    );
+    const contexts =
+      isRecord(declared) && Array.isArray(declared["contexts"]) ? declared["contexts"] : [];
+    const forBuild = contexts
+      .filter(isRecord)
+      .find((entry) => entry["job"] === REQUIRED_CONTEXT_NAME);
+    expect(
+      forBuild,
+      `the declaration must name the ${REQUIRED_CONTEXT_NAME} job`,
+    ).not.toBeUndefined();
+    expect
+      .soft(
+        forBuild === undefined ? undefined : forBuild["verificationSet"],
+        "the declaration's verification set and this row's literals must not drift apart",
+      )
+      .toEqual([...VERIFICATION_SET]);
   });
 });
 

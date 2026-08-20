@@ -1,0 +1,51 @@
+{
+  "$comment": [
+    "The job this repository EXPECTS to carry a required status context, and what that job",
+    "must be performing for the expectation to mean anything.",
+    "",
+    "Why a checked-in file at all: which checks branch protection actually requires is a",
+    "repository setting, and a pull request cannot read it. So the expectation is declared",
+    "here and the workflow hygiene lane checks the tree against this file. Reading live",
+    "settings is forbidden, because a check that cannot run on a pull request blocks nothing.",
+    "",
+    "This file states an expectation. It cannot prove the setting agrees with it. What it can",
+    "do — and what the lane does — is make a change that would invalidate the expectation fail",
+    "before it merges."
+  ],
+  "contexts": [
+    {
+      "workflow": "ci.yml",
+      "job": "build",
+      "why": [
+        "`build` and not `ci-pass`. The aggregate verdict carries `if: always()` on purpose:",
+        "it has to run when its dependencies are SKIPPED, which is what a documentation-only",
+        "pull request produces. A declaration naming it would therefore assert two things at",
+        "once that cannot both hold — that the job carries no condition, and that it runs",
+        "when everything it needs was skipped.",
+        "",
+        "The spec settles which job it is rather than leaving it to taste: the",
+        "executed-instance ceiling is written as 'at most four job instances while the job",
+        "named `build` carries the required status context, and at most three once that",
+        "context moves'. So `build` holds it today, moving it is anticipated, and this file is",
+        "where the move gets recorded."
+      ],
+      "verificationSet": [
+        "Run build & pack verification",
+        "Sanity grep — no internal spec IDs or version markers leak (post-build)",
+        "QFAI self-validate this repo (dogfooding — TDD gates)",
+        "QFAI self-validate this repo (dogfooding — SDD gates)",
+        "QFAI self-validate this repo (dogfooding — full profile)",
+        "Run qfai validate gate (fail on error)"
+      ],
+      "verificationSetNote": [
+        "Step names, because a step name is what a reader of the workflow sees and what a",
+        "reviewer of a diff notices moving. The lane accepts an item performed by the declared",
+        "job OR by a job it depends on, so relocating work into a dependency is legal and",
+        "relocating it out of reach is not.",
+        "",
+        "The optional report upload is deliberately absent: it ends in a tolerated failure and",
+        "cannot fail the job, so it is not a verification however it is named."
+      ]
+    }
+  ]
+}
