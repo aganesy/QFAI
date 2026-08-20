@@ -2410,3 +2410,140 @@ the rows landing.
 
 The three blocking agent verdicts were not obtained, so `Status` is `refactor` for all five rows. The
 item-12 checkpoint is not attempted, for the reasons recorded under the earlier changes.
+
+## The layer-to-CI-lane mapping document (TDD-0076 … TDD-0082)
+
+`AC-0017-0032` through `AC-0017-0034`. Base revision `955eb2f1`.
+
+### A sibling file, because the loader cannot see one
+
+The layer-policy loader resolves `catalog/test-layers.md` by exact path and reads nothing else in that
+directory. So a sibling catalog file is invisible to it, and a new SECTION inside the catalog would not
+be — the loader parses that file, and prose there extracts as a token. That asymmetry is the whole
+reason the mapping is a separate document rather than a heading, and `TDD-0079` asserts the mechanism
+rather than trusting it.
+
+### The hazard the spec warned about, hit on the first try
+
+The cross-link added to the catalog originally read "the **layer-policy** loader reads this file and not
+that one". The extractor is `/@?(layer-[a-z0-9-]+)/gi`, so that hyphenated phrase became a sixth token:
+
+```text
+before  layer-api, layer-component, layer-e2e, layer-integration, layer-unit
+after   layer-api, layer-component, layer-e2e, layer-integration, layer-policy, layer-unit
+```
+
+Six declared tokens against five built-in ones is exactly the drift `QFAI-SPACK-091` reports, which is
+the vocabulary warning `TDD-0079` exists to keep at its baseline. Caught by a probe run immediately
+after the edit — written because the plan says in as many words that prose in this file can extract as a
+token, so the edit was made expecting it.
+
+The phrase is now unhyphenated in the catalog, and also in the mapping document even though the loader
+does not parse that one. The comment there says why: a catalog-directory file carrying such a token is a
+hazard waiting for the day someone widens the loader to scan the directory.
+
+### The control round earned two fixes
+
+`R10` adds a sentence that touches no required content, and on the first oracle run it reddened
+`TC-0017-0081`. So did four other rounds — because every round that edited the asset copy left the
+mirror unchanged, and the identity claim fired on all of them. A control that reddens something is not a
+control, and `TC-0017-0081`'s own signal was buried under four unrelated rounds.
+
+Asset rounds now edit BOTH copies, which is what an authoring edit followed by `pnpm sync:ssot` looks
+like. `R8` keeps the mirror-only edit, which is the divergence that claim is actually for.
+
+The same run showed `R5` — a planted annotation directive — reddening only the identity claim.
+`TC-0017-0078`'s filter matched `\bplace\b` case-SENSITIVELY, and the planted line began "Place each
+annotation...". Directives are usually written at the start of a sentence, so the case-sensitive version
+would have missed the shape it exists to catch.
+
+### What the rows assert, and why each is more than it looks
+
+- **`TDD-0076`** — both copies, and links in BOTH directions. One direction leaves a document nothing
+  points at; the other leaves a pointer to a document that does not acknowledge it.
+- **`TDD-0077`** — the disclaimer is in the HEADER, taken as the first six hundred characters. The reader
+  who stops after one screen is exactly the reader who would otherwise take a catalog-directory file for
+  enforced vocabulary.
+- **`TDD-0078`** — per-level routing, if named, carries its not-enforced status, and no line directs
+  where annotations belong. The live gate reads one directory; a document sending someone elsewhere
+  produces work the gate cannot see, which is worse than no document because it looks like coverage.
+- **`TDD-0080`** — the built-in set is IMPORTED from `src` and compared against five literals. A
+  test-local copy of the set could be edited to agree with a changed source; the import cannot.
+- **`TDD-0082`** — the mirror DIRECTION, read from the sync script, plus its check mode. Two identical
+  copies say nothing about which one is the source, and it is the direction that makes a root-only edit
+  temporary rather than an alternative.
+
+### RED and GREEN
+
+- **RED command**, from `packages/qfai`:
+  `pnpm exec vitest run tests/assets/layerCiLaneMapping.test.ts`
+- **The first RED was inadmissible**: four failures were `ENOENT` on a file that did not exist yet. The
+  seam is the document itself with a heading and one line of placeholder — present enough to read, empty
+  of everything the rows require. The second RED is `Tests 2 failed | 5 passed (7)`, every failure an
+  assertion.
+- **Five of the seven rows passed at RED**, because they are negative or invariant claims: an empty
+  document names no per-level routing, invents no layer code, and does not modify the built-in set. Those
+  five carry `RED failure mode: falsifiability`, and the oracle is what makes them mean anything.
+- **GREEN result**: same command, `Tests 7 passed (7)`.
+
+### Oracle proof — ten rounds
+
+| id | mutation | mutant | reddens |
+| --- | --- | --- | --- |
+| `R1` | the mirrored copy is deleted, so half the audience cannot see the document | (removed) | `TC-0017-0076`, `TC-0017-0081` |
+| `R2` | the catalog stops linking back, so the map is a document nothing points at | `a35e0410` | `TC-0017-0076` |
+| `R3` | the header stops disclaiming the loader | `6cf4844b`, `6cf4844b` | `TC-0017-0077` |
+| `R4` | per-level routing is named without its not-enforced status | `f3297e7a`, `f3297e7a` | `TC-0017-0078` |
+| `R5` | the map starts directing where annotations belong | `2223c54c`, `2223c54c` | `TC-0017-0078` |
+| `R6` | the map invents a layer code the catalog does not carry | `a14963b9`, `a14963b9` | `TC-0017-0079` |
+| `R7` | the built-in token set grows | `c9dcfca9` | `TC-0017-0080` |
+| `R8` | the mirrored copy is edited on its own, so the two diverge | `ba91ed85` | `TC-0017-0081` |
+| `R9` | the sync target stops being the repository root's .qfai | `a4a43ea2` | `TC-0017-0082` |
+| `R10-control` | a sentence added to the map that touches no required content | `54600383`, `54600383` | **nothing new** |
+
+### The suite
+
+| script | test files | tests | wall clock |
+| --- | --- | --- | --- |
+| `test:core` | 122 passed (122) | 1587 passed | 2 skipped (1589) | 75.3s |
+| `test:unit` | 43 passed (43) | 266 passed (266) | 7.3s |
+| `test:validators` | 46 passed (46) | 351 passed (351) | 12.4s |
+| `test:integration` | 124 passed | 4 skipped (128) | 862 passed | 19 skipped (881) | 37.0s |
+| `test:e2e` | 75 passed | 4 skipped (79) | 903 passed | 16 skipped (919) | 23.5s |
+| `test:cli` | 11 passed (11) | 321 passed (321) | 59.4s |
+| `test:scripts` | 10 passed (10) | 132 passed (132) | 14.5s |
+
+Total 229.4s, every one green.
+
+### The validate delta, and the first one that is exactly zero
+
+info=4 warning=359 error=2 - identical to the previous change, and the diff is empty in both
+directions. QFAI-SPACK-091 stays at 0, which is the vocabulary baseline TC-0017-0079 exists to hold.
+
+Zero is worth a sentence because it contrasts with change 7 part 2, where creating a shared test file
+added five FALSE stale-status warnings. The difference is that all seven rows here landed at
+`refactor` in the same change that created their file, so no row was left in the state the resolution
+check misreports. The lesson is small and reusable: a new test file costs nothing on that axis if its
+rows are promoted with it, and costs one false positive per unpromoted sibling if they are not.
+
+### Where the spec stands
+
+Seventy-three of eighty-two ledger rows are `refactor`. The nine that remain are not implementable at
+this revision, and each has a named reason:
+
+```text
+TDD-0016  blocked   CR-20260818-0007, the minimal-scope default the boundary TC needs
+TDD-0030  blocked   CR-20260820-0001, the tree-wide Node literal rule against the publish job
+TDD-0032  deferred  build-artifact reuse, which 10_Plan.md excludes as "a measurement, not a step"
+TDD-0033  gated     a cost claim needs captured numbers, and the measurement has not run
+TDD-0034  gated     same
+TDD-0035  gated     same
+TDD-0065  gated     needs an adopted worker value; none has been adopted
+TDD-0069  gated     constrains a tuning change; none has landed
+TDD-0070  gated     same
+```
+
+### Gate items NOT satisfied
+
+The three blocking agent verdicts were not obtained, so `Status` is `refactor` for all seven rows. The
+item-12 checkpoint is not attempted, for the reasons recorded under the earlier changes.
