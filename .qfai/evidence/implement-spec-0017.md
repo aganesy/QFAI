@@ -1548,3 +1548,124 @@ lands with the declaration. `TDD-0006` and `TDD-0012` already assert the structu
 tree: the required-context job carries no condition and an EMPTY needs set.
 
 The item-12 checkpoint is not attempted, for the reasons recorded under changes 3 through 7.
+
+## Change 9 — layer separation stays inside the file (TDD-0041, TDD-0042, TDD-0043)
+
+`10_Plan.md` step 9, the last: "jobs and matrix legs inside `ci.yml`, partitioned by the cost data step
+6 produces. Last, because the partition is the only part of this spec that needs a measurement it does
+not itself take." Base revision `2a3ef61c`.
+
+### The separation already exists, and the rules forbid moving its surface
+
+The layer split is the `test` job's seven matrix legs, one per runner project, and it predates this
+spec. `BR-0017-0035` keeps it there — "expressed as jobs and matrix legs inside the existing own-CI
+workflow file", file count and aggregate check name unchanged.
+
+Reading `TC-0017-0041`'s oracle next to it settles what a cost-driven repartition may be, and the
+answer is narrower than the plan sentence suggests: "layer separation adds **no workflow file and no
+check name**". A matrix job reports one check per leg, so any repartition that changes the LEG SET adds
+or removes check names — and a check name is a repository-settings surface no agent can configure. So
+merging the three cheap legs into one, or splitting `core` in two, is not available.
+
+What remains available is a repartition that keeps the seven names and changes what each one covers.
+That needs duration data from the runner, and this branch has only local numbers taken on a machine
+doing other work — the same data the change-6 record declines to draw a conclusion from. So the
+partition is not attempted, and what lands is the invariant it will have to satisfy, landed BEFORE it
+rather than after. A guard that arrives after the change it guards against has already failed.
+
+### All three rows passed on their first run
+
+They are accepting-direction regression guards over a state changes 1 through 8 already produce, and
+an accepting-direction row cannot be reddened by a no-behaviour seam — that is structural, not
+accidental. So `RED failure mode: falsifiability` applies to all three, the RED/GREEN pair is replaced
+by the oracle below, and **no RED is claimed**: the first run of this file after the rows landed was
+`Tests 22 passed (22)`.
+
+There is no production change in this commit. That is the correct outcome for an invariant this tree
+already holds, and stating it plainly is better than manufacturing a diff to make the change look like
+the others.
+
+### Literals rather than a before-and-after comparison
+
+`EX-0017-0013` describes "the set of check names a run reports, derived before lane selection lands and
+after it lands". A test cannot derive the earlier set without reading git history, and a
+history-dependent assertion inside the main suite breaks under a shallow clone — this repository keeps
+its one history-dependent check out of `ci:gate` for that reason.
+
+Pinning the fourteen names as literals gets the same guarantee with a better failure: any creation,
+removal or rename fails a test that names which one, rather than producing a diff someone has to
+interpret. It is also what makes `EX-0017-0004`'s falsifying observation work — no job in this file
+declares a `name:`, so each check name IS its job key, and `TDD-0042` asserts that too rather than
+assuming it.
+
+### Oracle proof — the falsifiability trio, eight rounds
+
+| id | mutation | mutant | reddens |
+| --- | --- | --- | --- |
+| `R1` | a per-layer workflow file appears — a check name nobody configured | `271306b3` | `:1254:8` — TDD-0041 CLAIM 1 — layer separation may not add a workflow file (plus 1 location(s) in earlier rows — see below) |
+| `R2` | one layer is split into its own matrix job instead of staying a leg | `98716625` | `:1268:8` — TDD-0041 CLAIM 2 — the split is the matrix of a single job; `:1313:8` — TDD-0043 — the pinned check-name set (plus 3 location(s) in earlier rows — see below) |
+| `R3` | the verdict job is renamed — the repository setting it backs stops resolving | `7ea65c6d` | `:1280:8` — TDD-0042 CLAIM 1 — the verdict job key must not move; `:1313:8` — TDD-0043 — the pinned check-name set (plus 13 location(s) in earlier rows — see below) |
+| `R4` | the verdict keeps its key but gains a name, so the rename hides from the key diff | `b0fffae0` | `:1291:8` — TDD-0042 CLAIM 2 — the verdict takes its check name from its key; `:1313:8` — TDD-0043 — the pinned check-name set |
+| `R5` | a sibling job claims the verdict's check name | `98cb1e5b` | `:1299:77` — TDD-0042 CLAIM 3 — no sibling may claim the verdict's name; `:1313:8` — TDD-0043 — the pinned check-name set |
+| `R6` | a new job appears, adding a check name no repository setting knows | `31c20515` | `:1313:8` — TDD-0043 — the pinned check-name set (plus 3 location(s) in earlier rows — see below) |
+| `R7` | a matrix leg is removed, taking one check name with it | `0f61da39` | `:1313:8` — TDD-0043 — the pinned check-name set (plus 1 location(s) in earlier rows — see below) |
+| `R8-control` | a comment-only edit beside the verdict | `301c0444` | **nothing new** |
+
+`R3` deserves reading rather than skimming. Renaming the verdict job reddens its own claim and then
+eleven more locations, because five change-1 rows resolve the verdict by key and fail on a thrown
+lookup. That collateral is not noise — it is the observation `BR-0017-0004` is written around. A rename
+of a repository-settings surface is not a quiet change, and a tree in which it were quiet is the tree
+the rule forbids.
+
+`R6` and `R7` are the pair that shows `TDD-0043` works in both directions: a job added and a leg
+removed each redden the set equality, so the row is not a one-sided "nothing was deleted" check.
+
+### One stale claim corrected
+
+This file's header said it "carries the first change only". That stopped being true four changes ago.
+It now names the changes it carries instead of counting them — a count maintained in prose is a count
+that goes stale, which is the same lesson the `ci:lint` member count taught under change 3.
+
+### The suite
+
+| script | test files | tests | wall clock |
+| --- | --- | --- | --- |
+| `test:core` | 122 passed (122) | 1587 passed | 2 skipped (1589) | 92.7s |
+| `test:unit` | 43 passed (43) | 266 passed (266) | 12.4s |
+| `test:validators` | 46 passed (46) | 351 passed (351) | 19.4s |
+| `test:integration` | 124 passed | 4 skipped (128) | 862 passed | 19 skipped (881) | 58.5s |
+| `test:e2e` | 74 passed | 4 skipped (78) | 891 passed | 16 skipped (907) | 37.5s |
+| `test:cli` | 11 passed (11) | 321 passed (321) | 100.8s |
+| `test:scripts` | 10 passed (10) | 110 passed (110) | 13.4s |
+
+Total 334.7s, every one green. No timing claim, per change 6 — and note that the numbers in this
+table are exactly the data a legal repartition would need, taken on the wrong machine.
+
+### The validate delta
+
+Two below change 8: `info=4 warning=374 error=2`, exit 1. Diffed rather than assumed — two removed
+(`TC-0017-0041`, `TC-0017-0043`), none added. `TC-0017-0042` had not been reported stale beforehand
+even though its describe did not exist, which is the same uneven resolution recorded under change 8 and
+the fifth time this slice has measured it.
+
+### Where the spec stands after the ninth change
+
+The plan's nine sequenced changes have all landed. Forty of eighty-two ledger rows are `refactor`;
+forty-two remain `todo`, and they are not leftovers from the nine:
+
+```text
+18  workflowHygiene.test.ts     the hygiene lane's remaining rules and its declaration reader
+11  actionPinBumpOwner.test.ts  record-shaped rows whose changes have not run yet
+ 7  layerCiLaneMapping.test.ts  the layer-to-CI-lane mapping document, a separate deliverable
+ 6  ownWorkflowTopology.test.ts TDD-0030 (blocked, CR-20260820-0001), TDD-0032 (deferred as a
+                                measurement), and TDD-0036/0038/0039/0040
+```
+
+Four of that last six are landable now and two are not: `TDD-0030` waits on `CR-20260820-0001`, and
+`TDD-0032` is build-artifact reuse, which `10_Plan.md` deliberately excludes from the nine — "it is a
+measurement, not a step, and its outcome may legitimately be to keep the rebuilds".
+
+### Gate items NOT satisfied
+
+The three blocking agent verdicts were not obtained, so `Status` is `refactor` for all three rows. The
+item-12 checkpoint is not attempted, for the reasons recorded under changes 3 through 8.

@@ -5,14 +5,19 @@
  * different spec and a different contract.
  *
  * This file is the home the ledger names for spec-0017's rows, so it grows one
- * describe per row as the nine sequenced changes land. Today it carries the first
- * change only: the aggregate verdict derives its result from the serialized needs
- * map instead of comparing a hand-written list of job names.
+ * describe per row as the nine sequenced changes land. It now carries changes 1, 4,
+ * 7, 8 and 9 — the derived verdict, the shared setup definition, the retirement of
+ * the duplicate validate workflow, change detection and lane selection, and the
+ * check-name invariants layer separation must preserve. The sentence that stood
+ * here said "the first change only", which stopped being true four changes ago; a
+ * count maintained in prose is a count that goes stale, so this one names the
+ * changes instead.
  *
  * ## How a YAML `run:` body is evaluated rather than read
  *
- * Three of the five rows below are `unit` rows whose oracle is "the verdict
- * expression evaluated over a needs map the test supplies". That requires
+ * Several rows below are `unit` rows whose oracle is "the expression evaluated over
+ * an input the test supplies" — the verdict over a needs map, and the change
+ * classifier over a path list. That requires
  * EXECUTING the shipped body, not pattern-matching it — a test that greps for
  * `success` passes on a body that accepts everything.
  *
@@ -56,6 +61,9 @@
 // QFAI:SPEC-0017:TC-0017-0010
 // QFAI:SPEC-0017:TC-0017-0011
 // QFAI:SPEC-0017:TC-0017-0012
+// QFAI:SPEC-0017:TC-0017-0041
+// QFAI:SPEC-0017:TC-0017-0042
+// QFAI:SPEC-0017:TC-0017-0043
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -1140,5 +1148,168 @@ describe("TC-0017-0012 (TDD-0012): the lint lane carries no selection condition"
         "the required-context job must depend on nothing that can be skipped",
       )
       .toEqual([]);
+  });
+});
+
+// ── change 9: layer separation stays inside the file, and no check name moves ─
+//
+// The layer split ALREADY exists: seven matrix legs of the `test` job, one per runner
+// project. `BR-0017-0035` is what keeps it that way — "test-layer separation MUST be
+// expressed as jobs and matrix legs inside the existing own-CI workflow file", with the
+// file count and the aggregate check name unchanged.
+//
+// What change 9 does NOT do is repartition those legs by cost. `10_Plan.md` puts that
+// last "because the partition is the only part of this spec that needs a measurement it
+// does not itself take", and step 6 landed structure only: no timing artifact exists, and
+// `BR-0017-0049` forbids adopting a value without one. So these three rows are the
+// invariant that repartition will have to satisfy, landed BEFORE it rather than after —
+// which is the only order in which a guard can reject the change it guards against.
+//
+// ## Why literals rather than a before-and-after comparison
+//
+// `EX-0017-0013` describes "the set of check names a run reports, derived before lane
+// selection lands and after it lands". A test cannot derive the earlier set without
+// reading history, and a history-dependent assertion inside the main suite breaks under a
+// shallow clone — this repository already keeps its one history-dependent check out of the
+// aggregate gate for that reason.
+//
+// Pinning the set as literals gets the same guarantee and a better failure. A check name
+// is a repository-settings surface no agent can configure, so what matters is that the set
+// does not move; a literal list makes any creation, removal or rename a failing test that
+// names which one, instead of a diff someone has to interpret.
+
+/** The own-CI workflow files. Two, and layer separation may not make it three. */
+const OWN_WORKFLOW_FILES = ["ci.yml", "release.yml"] as const;
+
+/**
+ * Every check name the own-CI workflow reports, as literals.
+ *
+ * Derived once by hand from the job keys and the matrix expansion, and then frozen. No job
+ * in this file declares a `name:` override, so each check name is its job key — which is
+ * exactly what makes `EX-0017-0004`'s falsifying observation work: "a rename shows as a
+ * diff on the job key".
+ *
+ * A matrix job reports one check per leg, named `<job> (<value>)`. That is why the seven
+ * legs appear here individually: they are seven check names, and removing a leg removes
+ * one — the thing `BR-0017-0006` forbids and `TC-0017-0007` also guards from the matrix
+ * side.
+ */
+const CI_CHECK_NAMES = [
+  "build",
+  "check-types",
+  "check-types-future",
+  "ci-pass",
+  "detect",
+  "lint",
+  "scanner-coverage",
+  "test (cli)",
+  "test (core)",
+  "test (e2e)",
+  "test (integration)",
+  "test (scripts)",
+  "test (unit)",
+  "test (validators)",
+] as const;
+
+/**
+ * The check names one workflow file reports.
+ *
+ * A job's check name is its `name:` when it declares one and its key otherwise; a matrix
+ * job reports one per leg. Both are modelled, so a future `name:` override is visible to
+ * `TC-0017-0043` rather than silently renaming a check.
+ */
+function checkNames(file: string): string[] {
+  const doc: unknown = parseYaml(readFileSync(path.join(WORKFLOWS_DIR, file), "utf-8"));
+  if (!isRecord(doc) || !isRecord(doc["jobs"])) {
+    throw new Error(`${file} declares no jobs`);
+  }
+  const names: string[] = [];
+  for (const [id, job] of Object.entries(doc["jobs"])) {
+    if (!isRecord(job)) continue;
+    const label = typeof job["name"] === "string" ? job["name"] : id;
+    const strategy = job["strategy"];
+    const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
+    const legs = isRecord(matrix) ? Object.values(matrix).filter(isStringArray).flat() : [];
+    if (legs.length > 0) {
+      for (const leg of legs) names.push(`${label} (${leg})`);
+    } else {
+      names.push(label);
+    }
+  }
+  return names.sort();
+}
+
+describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no check name", () => {
+  it("keeps the layer split inside the existing file as matrix legs of one job", () => {
+    // CLAIM 1 — two files, and neither is a per-layer workflow. A new workflow file would
+    // create a check name nobody has configured, which is why `AC-0017-0018` rejects it in
+    // review rather than treating it as a style choice.
+    //
+    // Two and not three: change 7 deleted the repository's own duplicate of the shipped
+    // validate workflow. That deletion is `BR-0017-0058`'s, recorded in `DR-0017-0007`, and
+    // this row asserts the count layer separation must not change — not a count frozen at
+    // the moment the spec was written.
+    expect
+      .soft(ownWorkflowFiles(), "layer separation may not add a workflow file")
+      .toEqual([...OWN_WORKFLOW_FILES]);
+
+    // CLAIM 2 — the layers are legs of ONE job, not one job each. Seven jobs would satisfy
+    // "inside the existing file" and still create six new check names, so the shape is
+    // asserted and not just the location.
+    const jobs = ciJobs();
+    const matrixJobs = Object.entries(jobs)
+      .filter(([, job]) => {
+        const strategy = job["strategy"];
+        return isRecord(strategy) && isRecord(strategy["matrix"]);
+      })
+      .map(([id]) => id);
+    expect
+      .soft(matrixJobs, "the layer split is expressed as the matrix of a single job")
+      .toEqual(["test"]);
+  });
+});
+
+describe("TC-0017-0042 (TDD-0042): the aggregate verdict check name is immutable", () => {
+  it("keeps the verdict's key and declares no name that could rename it", () => {
+    const jobs = ciJobs();
+
+    // CLAIM 1 — the key is unchanged. `BR-0017-0004` forbids renaming it across every
+    // change in this spec, and eight changes have now touched this file.
+    expect
+      .soft(Object.keys(jobs), `the verdict job key must stay \`${VERDICT_JOB}\``)
+      .toContain(VERDICT_JOB);
+
+    // CLAIM 2 — and it declares no `name:`. A `name:` override would change the check name
+    // while leaving the key intact, which defeats `EX-0017-0004`'s falsifying observation
+    // ("a rename shows as a diff on the job key") — the rename would show as a diff on a
+    // line nobody is watching.
+    expect
+      .soft(
+        jobs[VERDICT_JOB]?.["name"],
+        "the verdict must take its check name from its key, so a rename is a diff on the key",
+      )
+      .toBeUndefined();
+
+    // CLAIM 3 — and no other job claims that name. A sibling declaring
+    // `name: ci-pass` would produce two checks with one name, which branch protection
+    // resolves in a way no repository setting records.
+    const impostors = Object.entries(jobs)
+      .filter(([id, job]) => id !== VERDICT_JOB && job["name"] === VERDICT_JOB)
+      .map(([id]) => id);
+    expect.soft(impostors, `no other job may report as \`${VERDICT_JOB}\``).toEqual([]);
+  });
+});
+
+describe("TC-0017-0043 (TDD-0043): selection creates, removes and renames no check name", () => {
+  it("reports exactly the pinned check-name set", () => {
+    // The whole set, as one equality. Selection landed in change 8 and added conditions to
+    // four jobs; a condition changes whether a check REPORTS success or skipped, never
+    // whether it exists. This is the assertion that says so.
+    expect
+      .soft(
+        checkNames("ci.yml"),
+        "no check name may be created, removed or renamed — each one is a repository setting no agent can configure",
+      )
+      .toEqual([...CI_CHECK_NAMES].sort());
   });
 });
