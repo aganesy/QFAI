@@ -1054,7 +1054,7 @@ Round 1's pack, for continuity:
 
 ### Review packs and their seals
 
-**Seven** packs, one per round, each sealed when its last reviewer response landed and before this
+**Eight** packs, one per round, each sealed when its last reviewer response landed and before this
 record's verdict was written. The count is derived —
 `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` compares the packs named here against the
 directories on disk — but the **word** was not, and it said "Three" in round 4 and "Four" from then
@@ -1089,9 +1089,16 @@ Review pack seal:  5798d55711e1ff78dd8ae49e8e34c788de3a34f0744ef5fe4226517764263
 Review pack:       .qfai/review/review-20260821060000000/            (round 6, + P1d pass 5)
 Review pack seal:  d99dff9cf0a94bbcb18ca20df5b44d426b19f79f45699308b11ca6f726a96752
 
-Review pack:       .qfai/review/review-20260821080000000/            (round 7, + P1d pass 6)
+Review pack:       .qfai/review/review-20260821080000000/            (round 7, + P1d pass 6 — PASS)
+Review pack seal:  ea0849f0b759bd8dc922f0dc5eaa8a788949e3639ee8e720c511200dcbab1451
+
+Review pack:       .qfai/review/review-20260821100000000/            (round 8 — stage gates only)
 Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
 ```
+
+Round 8 routes no P1d pass. That gate closed at round 7 and re-routing a closed gate would be asking a
+reviewer to re-decide something already decided; what round 8 reviews is the stage, which has never
+passed.
 
 Round 5's pack was **missing its `summary.json`** when its reviewers landed, for the third time in
 five packs. Written first, then sealed — the order matters, because sealing an incomplete pack and
@@ -1111,8 +1118,15 @@ therefore **made the suite red at the commit that added it** — in `tests/asset
 carry a seal that recomputes, and the **in-flight** one must be named without one.
 
 Serialization, stated because it is load-bearing: each manifest line is
-`<git hash-object><single space><path><LF>`, paths relative to the pack root in `LC_ALL=C` order, and
-the seal is a sha256 over that byte stream. The first version of this record printed the manifest with
+`<git hash-object --no-filters><single space><path><LF>`, paths relative to the pack root in `LC_ALL=C`
+order, and the seal is a sha256 over that byte stream.
+
+**`--no-filters` matters and only round 8 made it matter.** The first seven packs held LF-only files, so
+a filtered `git hash-object` and the raw-byte hash agreed and the flag was invisible. Round 7's pack
+carries one report with CRLF line endings, and there the filtered hash normalises them while
+`packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — which recomputes from the working-tree bytes
+— does not. The test caught the disagreement the moment that pack became closed; the recorded value is
+the unfiltered one, which is what the bytes on disk actually hash to. The first version of this record printed the manifest with
 **two** spaces while the recorded seal used one — a reader recomputing from the printed block would have
 got `fa8d6e836cabd14a6cdbc12dd8b9dd538bbe971a40cd4bf27b252160d17e2526` and read a legitimate pack as
 tampered. Round 2 found that; round 3 confirmed both the corrected value and the two-space value
