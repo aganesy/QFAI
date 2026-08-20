@@ -1147,6 +1147,24 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
       paths: [".claude/rules/temporary-files.md", ".codex/skills/whatever.md"],
     });
     expect.soft(mirrors.full, "the agent-integration mirrors are documentation-only").toBe(false);
+
+    // But only their PROSE. `.agents/` is in the documentation-only set and holds
+    // `skills/pr-fix/scripts/run-pr-fix.ps1` and `skills/pr-merge/scripts/run-pr-merge.ps1`,
+    // which `tests/core/prFixMonitor.test.ts` and `tests/core/prMergePlan.test.ts` read.
+    // Measured: ten test files across five runner projects read something under `.agents/`,
+    // and every one of them was skipped for a change to either script.
+    //
+    // `BR-0017-0010` admits the agent-integration MIRRORS, and a PowerShell script is not a
+    // mirror — so this narrows rather than contradicts the rule. `CR-20260820-0004` is open
+    // on the wider question of whether the guards move or the members do; this claim closes
+    // the half that needs no decision, because nothing in the rule calls automation prose.
+    const script = runClassifier({ paths: [".agents/skills/pr-fix/scripts/run-pr-fix.ps1"] });
+    expect
+      .soft(script.full, "an executable under a documentation directory must select everything")
+      .toBe(true);
+    expect
+      .soft(script.reason, "and be excluded as an executable, not as an unrecognized path")
+      .toMatch(/executable/i);
   });
 });
 

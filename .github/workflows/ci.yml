@@ -148,6 +148,21 @@ jobs:
             else process.stdout.write(line);
           }
 
+          // An EXECUTABLE inside a documentation directory is not documentation, whatever
+          // directory it sits in. `.agents/` holds `skills/pr-fix/scripts/run-pr-fix.ps1`
+          // and `skills/pr-merge/scripts/run-pr-merge.ps1` — automation, read by
+          // `tests/core/prFixMonitor.test.ts` and `tests/core/prMergePlan.test.ts`. Without
+          // this the whole `test` job is skipped for a change to either of them, and ten
+          // test files across five runner projects read something under `.agents/`.
+          //
+          // Narrowing rather than removing the directory: `BR-0017-0010` puts the
+          // agent-integration MIRRORS in the documentation-only set, and a PowerShell
+          // script is not a mirror. Reading the rule as "prose mirrors are documentation,
+          // the automation beside them is not" implements it more closely than treating
+          // every byte under the tree as prose.
+          const EXECUTABLE_SUFFIXES = [".ps1", ".sh", ".mjs", ".cjs", ".js", ".ts", ".py", ".bat", ".cmd"];
+          const executable = (file) => EXECUTABLE_SUFFIXES.some((ext) => file.endsWith(ext));
+
           function classify(paths) {
             for (const file of paths) {
               if (!under(RECOGNIZED_DIRS, file) && !RECOGNIZED_FILES.includes(file)) {
@@ -155,6 +170,9 @@ jobs:
               }
               if (under(NEVER_DOCUMENTATION, file)) {
                 return { full: true, reason: "alters validate output: " + file };
+              }
+              if (executable(file)) {
+                return { full: true, reason: "executable, not documentation whatever directory it sits in: " + file };
               }
               if (!under(DOCUMENTATION_DIRS, file) && !DOCUMENTATION_FILES.includes(file)) {
                 return { full: true, reason: "source path: " + file };

@@ -81,6 +81,52 @@ than exhaustive, so treat the list as a floor, not a census.
 - `spec-0017` `TDD-0010`, `.github/workflows/ci.yml` (the `detect` job's classifier)
 - `packages/qfai/tests/codex/agents.test.ts`, `packages/qfai/tests/core/prFixMonitor.test.ts`
 
+## Census re-measured, and half the gap closed without a decision
+
+**Added 2026-08-20, after implementation-review finding M4.** The caveat above understates the
+population, and the correct number changes how the options read. Measured with `git ls-files`:
+
+```text
+test files that read something under .agents/           10
+runner projects they span                                5   (assets, cli, core, e2e, integration)
+executable files tracked under .agents/                   2
+  .agents/skills/pr-fix/scripts/run-pr-fix.ps1
+  .agents/skills/pr-merge/scripts/run-pr-merge.ps1
+executable files under .claude/, .codex/, .instruction/   0
+```
+
+The two `.ps1` files are read by `packages/qfai/tests/core/prFixMonitor.test.ts` and
+`packages/qfai/tests/core/prMergePlan.test.ts`. The guard files named in the section above are part
+of the ten, not all of it — `agentsRulesSurface.test.ts`, `skillLinkSurface.test.ts` and
+`reviewerVerdictVocabulary.test.ts` belong in the count too.
+
+So `.agents/` is not a mirror tree with some documentation in it. It is **the master tree**, it holds
+executable automation, and a change to either script selected the narrow lane set and skipped the
+`test` job entirely — including the two files whose subject is that script.
+
+### The half that needed no decision
+
+`BR-0017-0010` admits the agent-integration **mirrors** to the documentation-only set. A PowerShell
+script is not a mirror. So the classifier now excludes executables by suffix wherever they sit:
+
+```text
+.agents/skills/pr-fix/scripts/run-pr-fix.ps1
+  -> full=true, reason="executable, not documentation whatever directory it sits in: ..."
+```
+
+That reads the rule more closely rather than deviating from it — nothing in the rule calls automation
+prose — and it is asserted by `TC-0017-0010` with three oracle rounds: removing the carve-out reddens
+both halves of the claim, keeping the check while dropping the reason reddens the reason half alone,
+and a comment-only control round reddens nothing.
+
+### What is still open, and it is narrower now
+
+The remaining question is only about **prose**: a pull request that edits nothing but Markdown under
+`.agents/`, `.claude/`, `.codex/` or `.instruction/` still skips the lanes holding the mirror-parity
+guards. That is the case where the saving is real and the risk is a broken mirror merging green, so
+it is still a decision between options A, B and C above — but it no longer covers the automation, and
+the "at least five files" figure in that discussion should be read as the ten measured here.
+
 ## Impact
 
 - Specs: `spec-0017 — BR-0017-0010`
