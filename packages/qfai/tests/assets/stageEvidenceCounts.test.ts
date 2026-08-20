@@ -135,6 +135,11 @@ describe("the stage evidence's counts are derived, not typed", () => {
         pattern: /coverageDepthMatrix\.test\.ts` — (\d+) tests/,
         label: "the matrix pinning test's count, in Work performed",
       },
+      {
+        file: "packages/qfai/tests/assets/retractedClaims.test.ts",
+        pattern: /retractedClaims\.test\.ts` — (\d+) tests/,
+        label: "the retracted-claims guard's count, in Work performed",
+      },
     ];
 
     // EVERY occurrence, not the first. Round 6 found `## Work performed` stating one file's size three
@@ -183,6 +188,7 @@ describe("the stage evidence's counts are derived, not typed", () => {
       "tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts",
       "tests/integration/scripts/checkAtddAnnotationLedger.test.ts",
       "tests/assets/coverageDepthMatrix.test.ts",
+      "tests/assets/retractedClaims.test.ts",
       "tests/unit/buildCommand.test.ts",
     ];
     const quoted = new Set(rows.map((row) => row[1] ?? ""));
@@ -211,6 +217,7 @@ describe("the stage evidence's counts are derived, not typed", () => {
       "packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts",
       "packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts",
       "packages/qfai/tests/assets/coverageDepthMatrix.test.ts",
+      "packages/qfai/tests/assets/retractedClaims.test.ts",
       "packages/qfai/tests/assets/stageEvidenceCounts.test.ts",
       "packages/qfai/tests/unit/buildCommand.test.ts",
     ];
@@ -249,15 +256,17 @@ describe("the stage evidence's counts are derived, not typed", () => {
     const e2e = await source("packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts");
 
     const annotations = [...e2e.matchAll(/^\/\/ QFAI:SPEC-0017:US-0017-\d{4}$/gm)].length;
-    const stated = /(\d+)\s*annotated\s+describes/.exec(evidence.replace(/\s+/g, " "));
+    // Every occurrence, like the others: round 6 required first-match removed and round 7 found a third
+    // site still using `exec`.
+    const stated = [...evidence.replace(/\s+/g, " ").matchAll(/(\d+)\s*annotated\s+describes/g)];
     expect(
-      stated,
+      stated.length,
       "Work performed must state the describe count in the pinned form",
-    ).not.toBeNull();
+    ).toBeGreaterThan(0);
     expect(
-      Number(stated?.[1]),
+      stated.map((match) => Number(match[1])).filter((value) => value !== annotations),
       "the annotated-describe count: round 4 found this saying eight when there were nine",
-    ).toBe(annotations);
+    ).toEqual([]);
   });
 
   it("records a guard output the guard itself produces", async () => {
@@ -282,11 +291,17 @@ describe("the stage evidence's counts are derived, not typed", () => {
     }
     const scoped = guard.checkLedger(ledger, sources, { spec: "0017" });
 
-    const stated = /(\d+) claim\(s\) backed by a test annotation/.exec(evidence);
-    expect(stated, "the guard's recorded output must be present in the pinned form").not.toBeNull();
-    expect(Number(stated?.[1]), "the recorded output must be what the guard now reports").toBe(
-      scoped.checked,
-    );
+    // Every occurrence. Round 7 demonstrated this green: the phrase appears twice, `exec` read only
+    // the first, and changing the second from `8 claim(s)` to `7` left all three guards passing.
+    const recorded = [...evidence.matchAll(/(\d+) claim\(s\) backed by a test annotation/g)];
+    expect(
+      recorded.length,
+      "the guard's recorded output must be present in the pinned form",
+    ).toBeGreaterThan(0);
+    expect(
+      recorded.map((match) => Number(match[1])).filter((value) => value !== scoped.checked),
+      `every recorded guard output must be what the guard reports (${String(scoped.checked)})`,
+    ).toEqual([]);
   });
 
   it("names every pack on disk, with a recomputing seal for each closed one", async () => {

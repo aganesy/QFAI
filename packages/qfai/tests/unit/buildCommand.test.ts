@@ -22,7 +22,12 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { classifyBuildCommand, reachesBuild, type ScriptSources } from "../helpers/buildCommand.js";
+import {
+  classifyBuildCommand,
+  GRAMMAR,
+  reachesBuild,
+  type ScriptSources,
+} from "../helpers/buildCommand.js";
 
 const ROOT = path.resolve(__dirname, "../../../..");
 
@@ -304,6 +309,116 @@ describe("classifyBuildCommand", () => {
         "a reporter name is not a build target",
       )
       .toBe("none");
+  });
+
+  it("gives each build tool its own grammar, which round 7 found v7 lacking", async () => {
+    // A global "flags that take a directory" set held three flags that are BOOLEAN in the tools it was
+    // applied to, so `make -B build` was `none` while `make --always-make build` was `build` — the
+    // several-verdicts-per-command defect, re-created by a set that exists for `cmake --install build`
+    // alone. And `run` was a global passthrough, so `docker run --name build-agent alpine` was a build.
+    const sources = await repositorySources();
+
+    const SHOULD_BUILD = [
+      "make -B build",
+      "make --always-make build",
+      "make -S build",
+      "make --no-keep-going build",
+      "gradle -S build",
+      "gradle --full-stacktrace build",
+      "cmake --build .",
+      "docker buildx build --push .",
+    ];
+    const SHOULD_NOT = [
+      "cmake --install build",
+      "make --directory build clean",
+      "make -C build clean",
+      "docker run --name build-agent alpine",
+      "pnpm --reporter build-log install",
+      "pnpm --reporter=build-log install",
+    ];
+    expect
+      .soft(
+        SHOULD_BUILD.filter((line) => classifyBuildCommand(line, sources) !== "build"),
+        "a build a per-tool grammar must see",
+      )
+      .toEqual([]);
+    expect
+      .soft(
+        SHOULD_NOT.filter((line) => classifyBuildCommand(line, sources) !== "none"),
+        "a non-build a per-tool grammar must not invent",
+      )
+      .toEqual([]);
+  });
+
+  it("pins every member of every grammar set, not one member of each", async () => {
+    // Round 7 measured 10 of 23 mutations surviving the corpus because each new rule was pinned at
+    // exactly one member: `--install` of six directory flags, `--ignore-scripts` of two,
+    // `buildx` of seven passthroughs. Deleting the other five was invisible. This iterates the sets,
+    // so a deleted member fails here rather than in the next review.
+    const sources = await repositorySources();
+    const unpinned: string[] = [];
+
+    // Every manager directory flag must move the manifest a script resolves in.
+    for (const flag of GRAMMAR.managerDirs) {
+      const spaced = `pnpm ${flag} packages/qfai build`;
+      const inline = `pnpm ${flag}=packages/qfai build`;
+      if (classifyBuildCommand(spaced, sources) !== "build") unpinned.push(spaced);
+      if (classifyBuildCommand(inline, sources) !== "build") unpinned.push(inline);
+    }
+
+    // Every manager passthrough verb must lead to the script after it.
+    for (const verb of GRAMMAR.managerPass) {
+      if (verb === "--") continue;
+      const line = `pnpm ${verb} build`;
+      if (classifyBuildCommand(line, sources) === "none") unpinned.push(line);
+    }
+
+    // Every consuming flag must swallow its value rather than reading it as the target.
+    for (const flag of GRAMMAR.managerConsuming) {
+      if (flag === "workspace") continue;
+      const line = `pnpm ${flag} build-tools lint`;
+      if (classifyBuildCommand(line, sources) !== "none") unpinned.push(line);
+    }
+
+    // Every boolean flag must leave the script after it readable.
+    for (const flag of GRAMMAR.managerBoolean) {
+      const line = `pnpm ${flag} build`;
+      if (classifyBuildCommand(line, sources) === "none") unpinned.push(line);
+    }
+
+    // Every no-scripts flag must suppress the lifecycle hook.
+    for (const flag of GRAMMAR.noScripts) {
+      const line = `pnpm -C packages/qfai pack ${flag}`;
+      if (classifyBuildCommand(line, sources) !== "none") unpinned.push(line);
+    }
+
+    // Every target flag's value must be readable as the target.
+    for (const flag of GRAMMAR.targetFlags) {
+      const spaced = `nx ${flag} build web`;
+      const inline = `nx ${flag}=build web`;
+      if (classifyBuildCommand(spaced, sources) !== "build") unpinned.push(spaced);
+      if (classifyBuildCommand(inline, sources) !== "build") unpinned.push(inline);
+    }
+
+    // Every bundler must be a build when invoked at all.
+    for (const bundler of GRAMMAR.bundlers) {
+      const line = bundler === "vite" ? "npx vite build" : `npx ${bundler}`;
+      if (classifyBuildCommand(line, sources) !== "build") unpinned.push(line);
+    }
+
+    // Every tool's own passthrough verbs and directory flags.
+    for (const [tool, grammar] of Object.entries(GRAMMAR.tools)) {
+      for (const verb of grammar.pass) {
+        const line = `${tool} ${verb} build`;
+        if (classifyBuildCommand(line, sources) === "none") unpinned.push(line);
+      }
+      for (const flag of grammar.dirs) {
+        const line = `${tool} ${flag} build lint`;
+        if (classifyBuildCommand(line, sources) !== "none") unpinned.push(line);
+      }
+    }
+
+    expect(unpinned, "a grammar member no case in this corpus exercises").toEqual([]);
   });
 
   it("terminates on a self-referential script chain rather than recursing forever", () => {

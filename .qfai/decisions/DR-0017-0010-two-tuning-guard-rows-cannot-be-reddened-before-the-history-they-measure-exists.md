@@ -7,8 +7,10 @@
 - Rows: `TDD-0069`, `TDD-0070`
 - Raised by: `/qfai-atdd spec-0017`, Phase Red branch 3
 - Raised at: `2026-08-20T22:00:00Z`
-- Status: `open` — P1d has returned **REVISE** three times, each time sustaining `TDD-0070`'s own
-  account and failing the record around it. Revised a third time below; a fourth re-route is owed
+- Status: **`PASS` at P1d pass 6** (`9a37421c`) — five `REVISE` before it, each sustaining
+  `TDD-0070`'s own account and failing the record around it. `/qfai-implement` may write
+  `todo -> exception` with this `DR-ID` once the stage entry carries the PASS, which
+  `.qfai/evidence/atdd-spec-0017.md` § "Ledger rows advanced" now does
 
 ## Why this record exists at all
 

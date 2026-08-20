@@ -106,11 +106,84 @@ const RETRACTED: readonly Retracted[] = [
     claim: "becomes implementable once the pull request has three green",
     why: "that exit is unreachable — the run it waits for is gated on the annotation it would justify (P1d pass 1)",
   },
+  {
+    claim: "P1d has returned REVISE three times",
+    why: "six passes: five REVISE and a PASS at pass 6 (round 7)",
+  },
+  {
+    claim: "rebuilt the scan around",
+    why: "shorter than the earlier entry so a one-word drift cannot escape it (round 7)",
+  },
+  {
+    claim: "defeated by the formatter",
+    why: "the evidence files are prettier-ignored and proseWrap is preserve; the line breaks are hand-wrapped (round 7, self-disclosed)",
+  },
 ];
 
-/** Collapse whitespace and drop emphasis, so reflow and `**` cannot hide a claim. */
+/**
+ * Claims whose wording carries a NUMBER that drifts as the count changes.
+ *
+ * Round 7 found `Three packs` in the list while the record asserted "**Four** packs" against seven
+ * directories — the same claim with the numeral incremented, which a fixed needle cannot catch. These
+ * are matched by shape, and the number must agree with what the tree holds.
+ */
+const COUNTED_CLAIMS: ReadonlyArray<{
+  readonly pattern: RegExp;
+  readonly actual: () => Promise<number>;
+  readonly why: string;
+}> = [
+  {
+    pattern: /\b(one|two|three|four|five|six|seven|eight|nine|ten|\d+) packs, one per round\b/gi,
+    actual: async () => {
+      const { readdir } = await import("node:fs/promises");
+      const entries = await readdir(path.join(ROOT, ".qfai/review"), { withFileTypes: true });
+      return entries.filter(
+        (entry) =>
+          entry.isDirectory() &&
+          /^review-\d+$/.test(entry.name) &&
+          entry.name >= "review-20260820200000000",
+      ).length;
+    },
+    why: "the pack count said Three, then Four, against four and then seven directories",
+  },
+];
+
+const WORDS: Record<string, number> = {
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+};
+
+/**
+ * Collapse whitespace, drop emphasis, strip zero-width characters and lower-case.
+ *
+ * Round 7 laundered a claim four ways this closes: a zero-width space inside it, a lower-cased first
+ * word, one word of drift, and a line break — the last because the collapse ran after the paragraph
+ * split. Lower-casing costs nothing here: no entry depends on case to mean what it means.
+ *
+ * The line-break note in an earlier version of this docstring blamed Prettier and **that was false**:
+ * `.prettierignore` excludes `.qfai/evidence/**`, and `.prettierrc.json` sets `proseWrap: "preserve"`
+ * for markdown, so the formatter neither touches nor reflows these files. The breaks are hand-wrapped.
+ * The claim came from round 6's report and was adopted here without checking it.
+ */
 function flatten(text: string): string {
-  return text.replace(/[*_`]/g, "").replace(/\s+/g, " ");
+  return (
+    text
+      // A zero-width character replaces a space rather than sitting beside one, so deleting it welds two
+      // words together and the needle stops matching — round 7 laundered a claim exactly that way, and
+      // the first repair here deleted them. Substituted with a space and then collapsed.
+      .replace(/[\u200B-\u200D\uFEFF]/g, " ")
+      .replace(/[*_`]/g, "")
+      .replace(/\s+/g, " ")
+      .toLowerCase()
+  );
 }
 
 /**
@@ -142,23 +215,43 @@ interface Occurrence {
   readonly quoted: boolean;
 }
 
-/** Every occurrence of every claim, paragraph by paragraph. */
+/**
+ * Every occurrence of every claim, searched over the WHOLE document with quotedness judged per
+ * paragraph.
+ *
+ * Two coordinate systems and one mapping between them, because the two requirements pull apart. The
+ * search must span paragraph boundaries — round 7 laundered a claim by putting a blank line inside it,
+ * and an earlier version here argued that away rather than fixing it. Quote pairing must NOT span
+ * them — round 6 planted one stray `"` and a global parity scan inverted every range after it,
+ * accusing eight correct quotations and reddening a required CI leg.
+ *
+ * So paragraphs are flattened and joined with a single space, each paragraph's offset in the joined
+ * text is recorded, and its quote spans are computed locally and shifted into joined coordinates. An
+ * occurrence that straddles two paragraphs then falls inside no span at all, which is the right
+ * answer: nothing quoted it.
+ */
 async function occurrences(): Promise<Occurrence[]> {
   const found: Occurrence[] = [];
   for (const file of GOVERNANCE) {
     const raw = await readFile(path.join(ROOT, file), "utf8");
-    for (const paragraph of raw.split(/\r?\n\s*\r?\n/)) {
+
+    let joined = "";
+    const spans: Array<[number, number]> = [];
+    for (const paragraph of raw.split(/\r?\n[ \t]*\r?\n/)) {
       const flat = flatten(paragraph);
-      const spans = quotedSpans(flat);
-      for (const entry of RETRACTED) {
-        const needle = flatten(entry.claim);
-        let index = flat.indexOf(needle);
-        while (index !== -1) {
-          const to = index + needle.length;
-          const quoted = spans.some(([start, end]) => start < index && to <= end);
-          found.push({ file, claim: entry.claim, quoted });
-          index = flat.indexOf(needle, to);
-        }
+      const offset = joined.length;
+      for (const [start, end] of quotedSpans(flat)) spans.push([offset + start, offset + end]);
+      joined += `${flat} `;
+    }
+
+    for (const entry of RETRACTED) {
+      const needle = flatten(entry.claim);
+      let index = joined.indexOf(needle);
+      while (index !== -1) {
+        const to = index + needle.length;
+        const quoted = spans.some(([start, end]) => start < index && to <= end);
+        found.push({ file, claim: entry.claim, quoted });
+        index = joined.indexOf(needle, to);
       }
     }
   }
@@ -224,6 +317,27 @@ describe("retracted claims are quoted, never asserted", () => {
       "the later paragraph is judged on its own quotes",
     ).toBe(true);
     expect(quotedSpans(flatten(stray)).length, "and the stray one pairs with nothing").toBe(0);
+  });
+
+  it("keeps a counted claim's number equal to what the tree holds", async () => {
+    // A fixed needle cannot catch `Three packs` becoming `Four packs`; round 7 found exactly that, and
+    // the record was two counts behind. The number is compared to the directories on disk.
+    const wrong: string[] = [];
+    for (const counted of COUNTED_CLAIMS) {
+      const actual = await counted.actual();
+      for (const file of GOVERNANCE) {
+        const raw = await readFile(path.join(ROOT, file), "utf8");
+        for (const match of raw.replace(/[*_`]/g, "").matchAll(counted.pattern)) {
+          const stated = WORDS[(match[1] ?? "").toLowerCase()] ?? Number(match[1]);
+          if (stated !== actual) {
+            wrong.push(
+              `${file}: states ${match[1] ?? "?"} where the tree holds ${String(actual)} — ${counted.why}`,
+            );
+          }
+        }
+      }
+    }
+    expect(wrong, "a counted claim whose number the tree does not hold").toEqual([]);
   });
 
   it("keeps every entry in a form the search can match", () => {

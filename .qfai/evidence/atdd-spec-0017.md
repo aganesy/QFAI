@@ -186,9 +186,9 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
 - **new** `.qfai/evidence/coverage-depth-spec-0017.md` — the Coverage Depth Matrix, committed
 - **new** `scripts/check-atdd-annotation-ledger.mjs` — the guard this record had claimed existed
 - **new** `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts` — 22 tests
-- **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, v7, extracted from the
+- **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, v8, extracted from the
   E2E so its corpora can be tested on their own
-- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 14 tests, six corpora, none of them chosen
+- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 16 tests, eight corpora, none of them chosen
   by this stage
 - **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 5 tests deriving the Coverage
   Depth Matrix's totals, partition, class assignment, per-class justification and row width from the
@@ -196,7 +196,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
 - **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 7 tests deriving this record's own
   counts from the artifacts they describe, after every review round found at least one that the tree
   did not hold
-- **new** `packages/qfai/tests/assets/retractedClaims.test.ts` — 5 tests requiring a claim a review
+- **new** `packages/qfai/tests/assets/retractedClaims.test.ts` — 6 tests requiring a claim a review
   round refuted to appear only inside quotation marks, because "it is gone now" was itself the false
   statement round 5 found
 - **new** `.qfai/decisions/DR-0017-0010-*.md` — the branch-3 anomaly record for `TDD-0070`
@@ -225,8 +225,10 @@ pnpm -C packages/qfai exec vitest run tests/integration/scripts/checkAtddAnnotat
   -> Tests 22 passed (22), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
   -> Tests 5 passed (5), exit 0
+pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
+  -> Tests 6 passed (6), exit 0
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/buildCommand.test.ts
-  -> Tests 14 passed (14), exit 0
+  -> Tests 16 passed (16), exit 0
 
 node packages/qfai/dist/cli/index.mjs validate --profile atdd --fail-on error --spec 0017
   before this stage:  info=2 warning=0 error=2   QFAI-ATDD-111 (9 US), QFAI-ATDD-112 (8 TC)
@@ -272,8 +274,8 @@ The 11 `Unit` rows owe nothing here (`L1` has no mandated directory).
 
 ## Ledger rows advanced
 
-**None advanced. One row is routed to branch 3, one is `blocked`, and neither transition is yet
-authorised; the rest were not this stage's to route.** The previous version of this section said all 71 `Integration` rows were at `refactor` and
+**None advanced. One row is routed to branch 3, one is `blocked`, and P1d has now authorised both
+writes; the rest were not this stage's to route.** The previous version of this section said all 71 `Integration` rows were at `refactor` and
 that zero was therefore trivially correct. That was false, and it is corrected here.
 
 | `TDD-*`    | `Layer`     | obligation     | branch                         | `DR-ID`        | `Blocked-By`       | anchor       |
@@ -283,8 +285,13 @@ that zero was therefore trivially correct. That was false, and it is corrected h
 
 **Neither ledger cell has been written, and this table is the handover, not the ledger.**
 `tdd/test-list.md:107-108` has both rows `todo` with `DR-ID: -` and `Blocked-By: -`; those cells are
-`/qfai-implement`'s to write. What is recorded here is what it should write, and what P1d has and has
-not authorised.
+`/qfai-implement`'s to write. What is recorded here is what it should write, and what P1d has
+authorised.
+
+Rounds 5, 6 and 7 each required a duplicate of this paragraph deleted and it survived all three,
+because the two copies had drifted apart in wording — so every attempt looked for an exact match and
+found none. It was two paragraphs saying the same thing four hundred words apart, not one paragraph
+twice. Merged here.
 
 The previous version of this table put `CR-20260820-0012` in the **`DR-ID`** column, which
 `execution-ledger.md` forbids by name: "`DR-ID` is **not** widened to carry it: that column is what
@@ -298,10 +305,6 @@ and the third was this: the table gave both rows `3 — exception` while the pro
 said `TDD-0069` had been re-classified to `blocked`. A row that is `blocked` takes no RED-provenance
 branch at all; it is skipped by Phase Red's selection and carries a `Blocked-By` value instead. The
 `DR-ID` column now holds what each row's status actually points at.
-
-**Neither cell has been written yet.** `tdd/test-list.md:107-108` still has both rows `todo` with
-`DR-ID: -` and `Blocked-By: -`, because those cells are `/qfai-implement`'s to write and this stage
-does not write the ledger. What this table is, is the handover it reads.
 
 ### What the writer must change in the same edit
 
@@ -433,14 +436,25 @@ they are gone:
 Each is now stated where a reader meets it, and the first two quote the old sentence as a quotation
 rather than asserting it.
 
-Neither transition is authorised yet:
+### P1d's verdict: PASS, at the sixth pass
 
-- **`TDD-0070` -> `exception`** needs the P1d `qa-gatekeeper` PASS on `DR-0017-0010`, and P1d has
-  returned `REVISE` three times. Each time the row's own account was **sustained**; what failed was
-  the record around it.
-- **`TDD-0069` -> `blocked`** needs no P1d PASS — that asymmetry is disclosed above — but step 3b
-  leaves a row at `todo` when its handover entry is malformed, and P1d's third pass found this entry
-  self-contradictory. That is what these corrections address.
+**`qa-gatekeeper` (P1d), pass 6, revision `9a37421c`: PASS.** Recorded here because
+`qfai-implement/SKILL.md` step 3b writes `exception` **only when the entry carries the PASS** — it is
+not self-executing, and this is the entry.
+
+- **`TDD-0070` -> `exception`, `DR-ID: DR-0017-0010`**: authorised. Six passes, five refusals. Every
+  one sustained the row's own account — branch 1 unavailable on the GREEN side, branch 2 with no
+  satisfied state to falsify — and every refusal was about the record around it.
+- **`TDD-0069` -> `blocked`, `Blocked-By: CR-20260820-0012`**: released at pass 4 and still released;
+  the condition attached to that release is **discharged**, per pass 6.
+
+The PASS covers **the observation and nothing else.** It does not clear completion: `US-0017-0007` is
+uncovered, the scoped gate is `error=2`, the unscoped profiles `build` runs need 12 `US` and 15 `TC`
+across five specs, six rows are `blocked`, and an `exception` still needs a user-approved
+`TDDLIST-001` waiver or the spec stays open.
+
+**And the writer owes the `Evidence` cell in the same edit** — see the subsection above. Step 3b's own
+malformed-entry rule is what makes that a condition rather than a courtesy.
 
 ### TDD-0070
 
@@ -604,7 +618,7 @@ command's body is `node ./scripts/check-build-warnings.mjs && …` — so what t
 "asserted over how something is written rather than over what it does" defect this spec has now found
 five times, this time inside the instrument built to detect a build.
 
-`v5` lives in `packages/qfai/tests/helpers/buildCommand.ts` with its corpora in
+`v8` lives in `packages/qfai/tests/helpers/buildCommand.ts` with its corpora in
 `packages/qfai/tests/unit/buildCommand.test.ts`, and it changes three things: shell segments before
 verbs (`&&`, `;`, `|`, `cd`, `time`, `sudo`, `env`); **script bodies before names**, resolved in the
 manifest the command's directory selects — a single merged script map cannot work here, because this
@@ -848,8 +862,8 @@ tree that carries every round-4 repair:
 
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
-pnpm -C packages/qfai test:e2e                  1431 passed / 16 skipped, exit 0
-vitest --project integration --project unit     1191 passed / 19 skipped, exit 0
+pnpm -C packages/qfai test:e2e                  1432 passed / 16 skipped, exit 0
+vitest --project integration --project unit     1193 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 8 claim(s) backed, exit 0
 node ... validate --profile atdd --spec 0017     info=2 warning=0 error=2
@@ -870,17 +884,19 @@ were right — including one claim its own arithmetic refuted. Re-derived from `
 revision rather than from memory:
 
 ```text
-round 4  the classifier left the E2E file for tests/helpers/, taking its two corpus tests out of
-         `e2e` and adding nine to `unit` and three to `integration`     1420 -> 1418, 1174 -> 1186
-round 5  stageEvidenceCounts.test.ts, FOUR tests at 3f815725            1418 -> 1422
-         (1424 never existed; the suite was 1 failed / 1421 passed there, which is the same 1422)
-round 5  applying its findings: two classifier cases                    1186 -> 1188
-         (the three loop-guard tests were already in the 1186 baseline — the diff for
-          checkAtddAnnotationLedger.test.ts between those revisions is EMPTY)
-round 6  retractedClaims.test.ts (5 tests), the matrix row-width round and
-         stageEvidenceCounts' .each precondition                       1422 -> 1431
-round 6  three classifier cases for the class v6 regressed on          1188 -> 1191
+per commit, e2e project:   3f815725  1422    c40b2358  1425    cb91e089  1428    ac4700d1  1431
 ```
+
+Round 7 measured that sequence and it is the one to trust. Two derivations before it were wrong with
+correct endpoints — the first credited round 5 with six tests where `git show` says **four**, and
+claimed three loop-guard tests were added at a revision whose diff for that file is **empty**, which
+`1186 + 2 = 1188` already refuted; the second started round 6's row at round **5**'s revision and
+absorbed round 5's repair step into it, making a `+3` delta read as `+9`. The endpoints were right both
+times, which is exactly why neither was caught by looking at the totals.
+
+`retractedClaims.test.ts` held **3** tests at `cb91e089` and 5 at `ac4700d1`, not the 5 the second
+version credited to the earlier revision. Re-derived with `git show` at each commit rather than
+reconstructed.
 
 Every figure in the block above is the measured one at the revision named. The earlier version
 credited round 5 with six tests where it had four, and claimed three loop-guard tests were added at a
@@ -896,7 +912,7 @@ run that test found a pack seal missing from a section this record had already r
 
 ### P1d's verdicts
 
-P1d has run **five times** on `DR-0017-0010` and returned **REVISE** every time. Every pass sustained
+P1d has run **six times** on `DR-0017-0010`: five `REVISE` and, at pass 6, **PASS**. Every pass sustained
 `TDD-0070`'s own account; what failed each time was the record around it. Pass 4 **released**
 `todo -> blocked` for `TDD-0069` — the first write any gate has authorised — and pass 5 reported the
 remaining blocking set as two sentences describing the review itself, with **nothing left saying the
@@ -997,7 +1013,7 @@ What is not satisfied:
   `Blocked-By: -`. Nothing has moved, and the two statuses below are what the handover asks
   `/qfai-implement` to write rather than what it has written;
 - `TDD-0070` is **not yet** `exception`: that needs the P1d `qa-gatekeeper` PASS on `DR-0017-0010`,
-  and P1d has returned `REVISE` three times — each time sustaining the row's own account and failing
+  and P1d returned `REVISE` five times before its pass-6 PASS — each time sustaining the row's own account and failing
   the record around it. Round 3 caught an earlier version of this line asserting the row "is parked at
   `exception`"; round 4 caught the same assertion surviving elsewhere in the file. Both are gone;
 - `TDD-0069` is **not yet** `blocked` either, though `blocked` needs no P1d PASS. Step 3b leaves a row
@@ -1007,20 +1023,29 @@ What is not satisfied:
   have kept `exception`, which satisfies completion, rather than taking `blocked`, which prohibits it;
 - Stage Minimum Roles were not used for P2-P4 — the reviewer gate ran, the work orders did not.
 
-Confirmed by: **nobody has returned PASS.** Five stage rounds and four P1d passes, fifteen reviewer
-responses, every one **REVISE**. The full set, because an earlier version of this line named round 1
-alone and round 5 found it still doing so:
+Confirmed by: **one gate has passed, and it is the narrow one.** Counted from the packs on disk:
+**seven** rounds, **21** reviewer responses, **20 REVISE and one PASS** — the PASS being P1d's sixth
+pass on `DR-0017-0010`. No stage-level gate has passed. Every earlier version of this line was a round
+behind, which rounds 4, 5, 6 and 7 each said; the numbers here are derived from
+`.qfai/review/review-2026082*/R0*.md` rather than remembered.
 
-| round | reviewer                                | revision   | verdict |
-| ----- | --------------------------------------- | ---------- | ------- |
-| 1     | `completion-reviewer`, `qa-gatekeeper`  | `8fb48002` | REVISE  |
-| 2     | `implementation-reviewer`, `completion-reviewer`, `qa-gatekeeper`, P1d | `56daee8d` | REVISE |
+| round | reviewers                                                             | revision   | verdict          |
+| ----- | --------------------------------------------------------------------- | ---------- | ---------------- |
+| 1     | `completion-reviewer`, `qa-gatekeeper`                                | `8fb48002` | REVISE           |
+| 2     | `implementation-reviewer`, `completion-reviewer`, `qa-gatekeeper`, P1d | `56daee8d` | REVISE           |
 | 3     | `implementation-reviewer`, `completion-reviewer`, P1d — **no stage `qa-gatekeeper`** | `1473897a` | REVISE |
-| 4     | `completion-reviewer`, `qa-gatekeeper`, P1d | `54d8d325` | REVISE |
-| 5     | `completion-reviewer`, `qa-gatekeeper`, P1d | `3f815725` | REVISE |
+| 4     | `completion-reviewer`, `qa-gatekeeper`, P1d                           | `54d8d325` | REVISE           |
+| 5     | `completion-reviewer`, `qa-gatekeeper`, P1d                           | `3f815725` | REVISE           |
+| 6     | `completion-reviewer`, `qa-gatekeeper`, P1d                           | `cb91e089` | REVISE           |
+| 7     | `completion-reviewer`, `qa-gatekeeper`, P1d                           | `9a37421c` | REVISE, **P1d PASS** |
 
-Round 5's P1d **released** `todo -> blocked` for `TDD-0069`, which is the first write any gate has
-authorised. Everything else remains owed.
+P1d's trajectory is the one that terminated: passes 1-3 found the reasoning wrong, pass 4 **released**
+`todo -> blocked` for `TDD-0069`, pass 5 found nothing wrong with the reasoning and held on two
+sentences about the review, and pass 6 passed. The stage-level set has not shrunk the same way — round
+6 gave 10 blocking and round 7 gave 11, and round 7 observed that two of its own findings were ones a
+prior round had located precisely and that were not applied. That is a fair description of what
+happened, and the countermeasure taken this round is to apply a located finding by **grep after the
+edit** rather than by editing the sites I happen to find.
 
 Round 1's pack, for continuity:
 
@@ -1029,8 +1054,11 @@ Round 1's pack, for continuity:
 
 ### Review packs and their seals
 
-**Four** packs, one per round, each sealed when its last reviewer response landed and before this
-record's verdict was written. Rounds 2 and 3 were **missing their `summary.json`** until round 3 found
+**Seven** packs, one per round, each sealed when its last reviewer response landed and before this
+record's verdict was written. The count is derived —
+`packages/qfai/tests/assets/stageEvidenceCounts.test.ts` compares the packs named here against the
+directories on disk — but the **word** was not, and it said "Three" in round 4 and "Four" from then
+until round 7 caught it. It is now measured with the rest. Rounds 2 and 3 were **missing their `summary.json`** until round 3 found
 it; round 4's was missing until round 4's gatekeeper found the same thing again, this time as two live
 `--profile full` errors. Each was written, then sealed — the same sequence round 1's pack went through,
 which this record had documented while leaving the next pack in the state it described, twice.

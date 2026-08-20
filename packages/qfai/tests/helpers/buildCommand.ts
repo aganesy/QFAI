@@ -1,35 +1,27 @@
 /**
  * Does a workflow `run:` command reach a build?
  *
- * Seven versions. Each of the first six was measured, reported clean by the party that wrote it, and
- * then broken by a corpus a reviewer chose. The history is the argument for the current shape:
+ * Eight versions. Each of the first seven was measured, reported clean by the party that wrote it, and
+ * then broken by a corpus a reviewer chose. The two most instructive:
  *
- * - **v1** one flag-value pair only. `pnpm run build`, `npx tsup` and six more reddened nothing.
- * - **v2** a package-manager list plus `build` anywhere after it. Caught `npx tsc --noEmit`.
- * - **v3** `build` as a standalone shell word. 9 missed, 10 false positives; caught `rm -rf build dist`.
- * - **v4** verb plus first target. Fixed those and regressed on 20 of 23 forms, because returning on
- *   the first target hides everything after `&&` — and it reported `pnpm ci:build-verify` as a build
- *   **by the script's name**, so what it measured was npm-script naming rather than behaviour.
- * - **v5** shell segments, per-manifest script bodies, a third `heuristic` verdict. A manifest lookup
- *   that MISSED returned the strong `build` from the bare name, so one command had two verdicts
- *   depending on whether the lookup hit.
- * - **v6** managers versus tools, a capped miss, nested runners. Round 6 measured **20 missed / 2
- *   false positives over 46 cases**: `sawFlag` was set by ANY flag, so `make -C packages/qfai build`,
- *   `make -j4 build`, `cargo --locked build`, `gradle --no-daemon build` and `docker buildx build`
- *   were all `none` — every one a build under v5. And `pnpm build` / `pnpm --filter qfai build` /
- *   `pnpm -F qfai build` gave **three different verdicts** for one command, because `--filter` was read
- *   as a directory and its short form was not read at all.
+ * - **v4** reported `pnpm ci:build-verify` as a build **by the script's name**, so what it measured was
+ *   npm-script naming rather than behaviour.
+ * - **v7** assumed every runner shares one grammar. A global set of "flags that take a directory" held
+ *   three flags that are **boolean** in the tools it was applied to — `-B` is `--always-make` in make,
+ *   `-S` is `--no-keep-going` there and `--full-stacktrace` in gradle — so `make -B build` was `none`
+ *   while `make --always-make build` was `build`. And `run` was a global passthrough, so
+ *   `docker run --name build-agent alpine` was a **build**: the real subcommand was skipped and a
+ *   container name read as a target. Fifteen defects over fifty-nine probes.
  *
- * v7 narrows three rules rather than broadening them:
+ * v8 gives each family its own grammar, which is the thing v7 was missing rather than another rule:
  *
- * 1. Only a flag that takes a **directory** makes the next bare token a location instead of a
- *    subcommand. That is what `cmake --install build` is; `cargo --locked build` is not.
- * 2. `--filter` / `-F` select a **package**, not a directory, so they consume their value and leave
- *    the manifest alone — which is what makes the three `pnpm build` forms agree.
- * 3. Only a **target-naming** flag's value can name a target, so `--reporter=build-log` is not a build.
- *
- * And `--ignore-scripts` suppresses the lifecycle hooks, so `pnpm pack --ignore-scripts` does not
- * reach `prepack`.
+ * 1. A **package manager** takes a SCRIPT, after its own passthrough verbs, resolved in the manifest
+ *    its directory flags select.
+ * 2. A **build tool** takes a SUBCOMMAND, with **per-tool** passthrough verbs and directory flags —
+ *    `cmake --install` takes a directory, `make -B` does not.
+ * 3. A spaced flag **consumes its value** unless it is a known boolean. That leans toward missing a
+ *    build rather than inventing one, which is the safe direction here: the assertion this serves is
+ *    that a tree contains none, so a false positive breaks it the day someone adds an innocent lane.
  *
  * **What no command-line scan can see**, because this repository has three instances: a build spawned
  * from inside a helper. `scripts/check-build-warnings.mjs`, `scripts/verify-pack.mjs` and
@@ -60,38 +52,45 @@ interface Context {
 }
 
 const MANAGERS = new Set(["pnpm", "npm", "yarn", "npx", "pnpx", "bunx", "bun", "node"]);
-const TOOLS = new Set([
-  "turbo",
-  "nx",
-  "lerna",
-  "rush",
-  "make",
-  "cmake",
-  "ninja",
-  "bazel",
-  "buck",
-  "just",
-  "task",
-  "waf",
-  "dune",
-  "stack",
-  "cargo",
-  "go",
-  "gradle",
-  "gradlew",
-  "mvn",
-  "dotnet",
-  "swift",
-  "zig",
-  "docker",
-  "podman",
-  "poetry",
-  "flutter",
-  "python",
-  "python3",
-  "sbt",
-  "rake",
-]);
+
+/** Build tools, each with its own passthrough verbs and directory-valued flags. */
+const TOOLS: Record<
+  string,
+  { readonly pass: readonly string[]; readonly dirs: readonly string[] }
+> = {
+  turbo: { pass: ["run"], dirs: ["--cwd"] },
+  nx: { pass: ["run", "run-many"], dirs: [] },
+  lerna: { pass: ["run"], dirs: [] },
+  rush: { pass: [], dirs: [] },
+  make: { pass: [], dirs: ["-C", "--directory"] },
+  cmake: { pass: [], dirs: ["--install", "-B", "-S", "--prefix"] },
+  ninja: { pass: [], dirs: ["-C"] },
+  bazel: { pass: [], dirs: ["--output_base", "--output_user_root"] },
+  buck: { pass: [], dirs: [] },
+  just: { pass: [], dirs: ["-d", "--working-directory"] },
+  task: { pass: [], dirs: ["-d", "--dir"] },
+  waf: { pass: [], dirs: [] },
+  dune: { pass: [], dirs: ["--root"] },
+  stack: { pass: [], dirs: ["--work-dir"] },
+  cargo: { pass: [], dirs: ["--target-dir", "--manifest-path"] },
+  go: { pass: [], dirs: ["-C"] },
+  gradle: { pass: [], dirs: ["-p", "--project-dir"] },
+  gradlew: { pass: [], dirs: ["-p", "--project-dir"] },
+  mvn: { pass: [], dirs: ["-f", "--file"] },
+  dotnet: { pass: [], dirs: ["-o", "--output"] },
+  swift: { pass: [], dirs: ["--package-path"] },
+  zig: { pass: [], dirs: [] },
+  docker: { pass: ["buildx"], dirs: ["-f", "--file"] },
+  podman: { pass: ["buildx"], dirs: ["-f", "--file"] },
+  poetry: { pass: [], dirs: ["-C", "--directory"] },
+  flutter: { pass: [], dirs: [] },
+  python: { pass: [], dirs: [] },
+  python3: { pass: [], dirs: [] },
+  sbt: { pass: [], dirs: [] },
+  rake: { pass: [], dirs: ["-C"] },
+};
+
+/** Invoking one of these IS a build, whatever follows. */
 const BUNDLERS = new Set([
   "tsup",
   "rollup",
@@ -106,9 +105,38 @@ const BUNDLERS = new Set([
   "xcodebuild",
 ]);
 const NOT_A_BUNDLER = new Set(["tsc"]);
-const PASSTHROUGH = new Set(["run", "run-many", "exec", "dlx", "workspaces", "--", "buildx"]);
-/** Sub-verbs and flags that consume the next token without it being the target. */
-const CONSUMING = new Set(["workspace", "--filter", "-F", "--filter-prod", "--scope"]);
+
+/** A package manager's own passthrough verbs, before the script name. */
+const MANAGER_PASS = new Set(["run", "exec", "dlx", "workspaces", "--"]);
+/** Verbs and flags that consume the following token without it being the target. */
+const MANAGER_CONSUMING = new Set(["workspace", "--filter", "-F", "--filter-prod", "--scope"]);
+/** Manager flags that take NO value, so the token after them can still be the script. */
+const MANAGER_BOOLEAN = new Set([
+  "-w",
+  "-r",
+  "--recursive",
+  "--silent",
+  "--quiet",
+  "--yes",
+  "-y",
+  "--frozen-lockfile",
+  "--ignore-scripts",
+  "--no-scripts",
+  "--if-present",
+  "--prod",
+  "--dev",
+  "--no-bail",
+  "--offline",
+  "--force",
+  "--verbose",
+]);
+/** Manager flags naming the directory whose manifest a script resolves in. */
+const MANAGER_DIRS = new Set(["-C", "--dir", "--cwd", "--prefix"]);
+/** Flags whose value IS the target. */
+const TARGET_FLAGS = new Set(["-m", "--target", "--task"]);
+/** With one of these, `pack`/`publish` do not fire their lifecycle hooks. */
+const NO_SCRIPTS = new Set(["--ignore-scripts", "--no-scripts"]);
+
 const WRAPPERS = new Set([
   "time",
   "sudo",
@@ -121,17 +149,6 @@ const WRAPPERS = new Set([
   "env",
 ]);
 const INTERPRETERS = new Set(["bash", "sh", "zsh", "pwsh", "powershell"]);
-/** Flags naming the directory whose manifest a script resolves in. */
-const DIR_FLAGS = new Set(["-C", "--dir", "--cwd", "--prefix"]);
-/** Flags whose value IS the target. */
-const TARGET_FLAGS = new Set(["-m", "--target", "--task"]);
-/**
- * Flags whose value is a DIRECTORY, so a `build` after one is a location and not a subcommand.
- * `cmake --install build` is the case this exists for.
- */
-const DIRECTORY_VALUE_FLAGS = new Set(["--install", "-B", "-S", "--source", "--output", "-o"]);
-/** With this present, `pack`/`publish` do not fire their lifecycle hooks. */
-const NO_SCRIPTS = new Set(["--ignore-scripts", "--no-scripts"]);
 const LIFECYCLE: Record<string, readonly string[]> = {
   pack: ["prepack"],
   publish: ["prepublishOnly", "prepack"],
@@ -212,24 +229,21 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
 
   const verb = first.split("/").pop() ?? "";
   if (BUNDLERS.has(verb)) return "build";
+  const tool = TOOLS[verb];
   const isManager = MANAGERS.has(verb);
-  const isTool = TOOLS.has(verb);
-  if (!isManager && !isTool) return "none";
+  if (tool === undefined && !isManager) return "none";
 
+  const pass = isManager ? MANAGER_PASS : new Set(tool?.pass ?? []);
+  const dirs = isManager ? MANAGER_DIRS : new Set(tool?.dirs ?? []);
   const noScripts = tokens.some((t) => NO_SCRIPTS.has(t));
   let cwd = ctx.cwd;
-  let afterDirectoryFlag = false;
 
   for (let i = 1; i < tokens.length; i += 1) {
     const token = tokens[i];
     if (token === undefined) break;
-    if (PASSTHROUGH.has(token)) {
-      afterDirectoryFlag = false;
-      continue;
-    }
-    if (CONSUMING.has(token)) {
+    if (pass.has(token)) continue;
+    if (isManager && MANAGER_CONSUMING.has(token)) {
       i += 1;
-      afterDirectoryFlag = false;
       continue;
     }
 
@@ -237,48 +251,43 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
       const inline = /^(--?[\w-]+)=(.*)$/.exec(token);
       if (inline) {
         const [, flag = "", value = ""] = inline;
-        if (DIR_FLAGS.has(flag)) cwd = normalise(value);
-        // Only a target-naming flag's value can name a target: `--reporter=build-log` cannot.
+        if (dirs.has(flag)) cwd = normalise(value);
         else if (TARGET_FLAGS.has(flag) && !isPathLike(value) && namesABuild(value)) return "build";
-        afterDirectoryFlag = false;
         continue;
       }
-      if (DIR_FLAGS.has(token)) {
+      if (dirs.has(token)) {
         const value = tokens[i + 1];
         if (value !== undefined && !value.startsWith("-")) {
           cwd = normalise(value);
           i += 1;
         }
-        afterDirectoryFlag = false;
         continue;
       }
       if (TARGET_FLAGS.has(token)) {
         const value = tokens[i + 1];
         if (value !== undefined && !value.startsWith("-") && namesABuild(value)) return "build";
         if (value !== undefined) i += 1;
-        afterDirectoryFlag = false;
         continue;
       }
       if (namesABuild(token.replace(/^-+/, ""))) return "build";
-      // Only a flag that takes a DIRECTORY makes the next bare token a location rather than a target.
-      afterDirectoryFlag = DIRECTORY_VALUE_FLAGS.has(token);
+      // A spaced flag consumes its value unless it is a known boolean. Leaning this way misses a build
+      // rather than inventing one, which is the safe direction for an assertion that a tree has none.
+      const known = isManager ? MANAGER_BOOLEAN.has(token) : true;
+      if (!known) {
+        const value = tokens[i + 1];
+        if (value !== undefined && !value.startsWith("-")) i += 1;
+      }
       continue;
     }
 
     const bare = token.split("/").pop() ?? "";
     if (BUNDLERS.has(bare)) return "build";
     if (NOT_A_BUNDLER.has(bare)) return "none";
-    if (isPathLike(token)) {
-      afterDirectoryFlag = false;
-      continue;
+    if (isPathLike(token)) continue;
+    if (MANAGERS.has(bare) || TOOLS[bare] !== undefined) {
+      return command(tokens.slice(i), { ...ctx, cwd });
     }
-    if (MANAGERS.has(bare) || TOOLS.has(bare)) return command(tokens.slice(i), { ...ctx, cwd });
-
-    if (afterDirectoryFlag) {
-      afterDirectoryFlag = false;
-      continue;
-    }
-    if (isTool) return namesABuild(token) ? "build" : "none";
+    if (tool !== undefined) return namesABuild(token) ? "build" : "none";
     return script(token, { ...ctx, cwd, noScripts });
   }
   return "none";
@@ -310,3 +319,23 @@ function script(target: string, ctx: Context): BuildVerdict {
 export function reachesBuild(line: string, sources?: ScriptSources, cwd = ""): boolean {
   return classifyBuildCommand(line, sources, cwd) !== "none";
 }
+
+/**
+ * The sets v8's grammar is built from, exported so a corpus can pin **every member** rather than one.
+ *
+ * Round 7 measured 10 of 23 mutations surviving because each new rule was pinned at exactly one member
+ * — `--install` of six directory flags, `--ignore-scripts` of two, `buildx` of seven passthroughs.
+ * Deleting the other five was invisible. A test that iterates these cannot have that hole.
+ */
+export const GRAMMAR = {
+  managers: MANAGERS,
+  tools: TOOLS,
+  bundlers: BUNDLERS,
+  notABundler: NOT_A_BUNDLER,
+  managerPass: MANAGER_PASS,
+  managerConsuming: MANAGER_CONSUMING,
+  managerBoolean: MANAGER_BOOLEAN,
+  managerDirs: MANAGER_DIRS,
+  targetFlags: TARGET_FLAGS,
+  noScripts: NO_SCRIPTS,
+} as const;

@@ -213,7 +213,7 @@ v4's naming defect is the one worth keeping in view: it measured **how a script 
 than what it *does***, which is the failure mode § "The finding that re-scored this matrix after round
 1" names as this spec's recurring one.
 
-`v6` lives in `packages/qfai/tests/helpers/buildCommand.ts` with its corpora in
+`v8` lives in `packages/qfai/tests/helpers/buildCommand.ts` with its corpora in
 `packages/qfai/tests/unit/buildCommand.test.ts`. It keeps v5's shell segmentation and per-manifest
 resolution and adds the three distinctions v5 was missing: a package manager resolves a **script**
 while a build tool takes a **subcommand**; a **missing** script is unknown and can never be more than

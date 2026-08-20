@@ -332,10 +332,18 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     // hide it. What stays here is what only this file can check.
     const text = await readFile(MATRIX, "utf8");
 
+    // The version is DERIVED from the helper's own docstring, not written here as a literal. Round 7
+    // found the literal pinning `v6` while the helper had moved to v7 — so correcting the record was
+    // the edit that reddened this guard, and the guard was holding the record stale. It also matched
+    // any `v6` anywhere, which the file's own version history guarantees forever.
+    const helper = await readFile(path.resolve(__dirname, "../helpers/buildCommand.ts"), "utf8");
+    const versions = [...helper.matchAll(/\bv(\d+)\b/g)].map((match) => Number(match[1]));
+    const current = Math.max(...versions);
+    expect(current, "the helper must state its own version").toBeGreaterThan(0);
     expect(
       text,
-      "the record must name the predicate version it describes, so a later reader can tell which",
-    ).toMatch(/`?v6`?/);
+      `the record must name the predicate version it describes: the helper is at v${String(current)}`,
+    ).toContain(`v${String(current)}`);
     // The record wraps, so the phrase is matched over collapsed whitespace and either emphasis form.
     expect(
       text.replace(/\s+/g, " "),
