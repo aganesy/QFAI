@@ -841,18 +841,42 @@ clean whole-suite run — those are different measurements and only the first wa
   did. Recorded rather than passed over: an unchanged error count is not the same as an unchanged
   finding.
 
-The cause is structural and not specific to this change. `QFAI-ATDD-112` routes a TC by its declared
-`Level`, and `.qfai/assistant/catalog/test-layers.md` fixes Integration's location rule at
-`tests/integration/**`. Every spec-0017 row implemented so far — changes 1 through 5 — declares
-`integration` and lives in `packages/qfai/tests/scripts/`, which is where the `scripts` runner project
-looks. So all 60-odd of this spec's TCs are already in that list, together with TCs from `spec-0003`,
-`spec-0008` and `spec-0015`. Change 5 is consistent with its siblings, not newly wrong.
-
-Two approved change requests already cover this ground: `CR-20260814-0001` (the annotation the check
-reads is hand-maintained and coupled to nothing, so it certifies coverage in both false directions) and
-`CR-20260807-0001` (pre-existing cross-spec errors and the checkpoint criterion). Re-routing a layer's
-location rule, or moving five changes' worth of tests out of the project built for them, is neither
-change 5's scope nor a decision to take while those are open.
+> **CORRECTION (2026-08-20, after review finding B4).** The two paragraphs that stood here were
+> wrong, and they were wrong in the direction that excused the finding. They read: "`QFAI-ATDD-112`
+> routes a TC by its declared `Level`, and `.qfai/assistant/catalog/test-layers.md` fixes
+> Integration's location rule at `tests/integration/**`. Every spec-0017 row [...] lives in
+> `packages/qfai/tests/scripts/` [...] So all 60-odd of this spec's TCs are already in that list
+> [...] Change 5 is consistent with its siblings, not newly wrong." They then routed the finding to
+> `CR-20260814-0001` and `CR-20260807-0001` and declined to act.
+>
+> Neither half survives contact with the tree. The check does not read the test module's directory
+> at all — it reads an annotation ledger, `tests/integration/qfai-traceability.md`, and asks whether
+> each promoted TC is named there. That file already held nineteen `QFAI:SPEC-0017` lines when the
+> paragraph above was written: exactly the TCs of changes 1 through 4, appended by this run's own
+> commits. So the mechanism that clears the finding existed, this run used it four times, and then
+> stopped using it — for eleven consecutive changes — while the record above explained the growing
+> list as someone else's structural problem.
+>
+> Two consequences, both now fixed:
+>
+> 1. Fifty-four of the seventy-three promoted rows carried an **unmet coverage obligation**, each one
+>    attributable to the change that promoted it. Appended the fifty-four missing annotations.
+>    Measured after: the TCs `QFAI-ATDD-112` names from this spec went **63 to 9**, and the nine are
+>    exactly the nine rows still `todo` — which have no test and therefore should have no annotation.
+> 2. Every "error=2 unchanged, covered by `CR-20260807-0001`" attribution in the blocks from change 5
+>    onward was **invalid for those rows**. That CR's clause 5 requires the baseline finding to be
+>    unattributable to the row being closed; for these rows it was attributable. The count of 2 was
+>    reported honestly and the growth of the aggregate was recorded rather than passed over — but the
+>    routing to that CR was not available, and claiming it was is the defect. The measurements below
+>    stand as taken; the attribution attached to them does not.
+>
+> What remains after the fix genuinely is pre-existing and cross-spec: `QFAI-ATDD-112` still names
+> TCs from `spec-0003`, `spec-0008` and `spec-0015`, and `QFAI-ATDD-111` still wants `US-0017-*` E2E
+> annotations that belong to a different skill's scope. `CR-20260814-0001` (the ledger is
+> hand-maintained and coupled to nothing, so it certifies coverage in both false directions) is
+> unaffected and still open — appending a line is exactly the unverified hand-maintenance it
+> describes. The difference is that the ledger's weakness is now an argument about the mechanism's
+> value, not a reason this slice may skip it.
 
 ### Gate items NOT satisfied
 
@@ -1084,8 +1108,16 @@ node packages/qfai/dist/cli/index.mjs validate --profile full --fail-on error --
 
 The two errors are `QFAI-ATDD-111` and `QFAI-ATDD-112`, **the same two ids** the `--profile tdd` step
 immediately above it already reports. So the folded step adds no new failure mode: the job it joins
-was already failing at an earlier step for the same reason, and those two aggregates are what
-`CR-20260807-0001` (pre-existing cross-spec errors) is about. `--profile full` introduces no third
+was already failing at an earlier step for the same reason.
+
+> **CORRECTION (2026-08-20, after review finding B4).** The sentence that continued here — "and those
+> two aggregates are what `CR-20260807-0001` (pre-existing cross-spec errors) is about" — was not
+> available when it was written. `QFAI-ATDD-112`'s list at that moment included fifty-four of this
+> spec's own promoted rows, whose missing annotations were attributable to the changes that promoted
+> them, and that CR's clause 5 covers only findings *unattributable* to the row being closed. See the
+> correction under change 5 for the mechanism and the fix. The claim this step actually needs is
+> narrower and survives: `--profile full` introduces **no third error id** beyond what the `tdd` step
+> already reports, so the fold cannot be the reason the job fails. `--profile full` introduces no third
 error id — the `full`-only gates, `QFAI-TEST-001` among them, pass.
 
 Stating it that way rather than "the fold is green" is the point. It is not green. It is *no worse*,

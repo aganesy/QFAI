@@ -862,6 +862,42 @@ describe("TC-0017-0059 (TDD-0059): skippable-through-a-dependency and a shrunk s
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("treats a verification item put behind a condition as shrinking the set", () => {
+    // The same property, reached by the cheaper edit. Moving a step out of the job is
+    // visible in a diff as a moved block; adding one line of `if:` to it is not, and it has
+    // the same effect on every run where the condition is false: the item does not run, the
+    // job still succeeds, and the required context still reports green.
+    //
+    // The condition planted is `always()` on purpose. It is the one an author would reach
+    // for while believing it harmless, and the lane deliberately does not evaluate GitHub
+    // expressions to decide that — so if the rule ever grows an exemption list, this row is
+    // the one that fails.
+    const dir = plantedTree((d) => {
+      const declared = declaration(d).contexts[0];
+      const guarded = declared.verificationSet[0];
+      editWorkflow(d, declared.workflow, (text) =>
+        text.replace(`- name: ${guarded}\n`, `- name: ${guarded}\n        if: always()\n`),
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a conditionalised verification item must exit 1:\n${run.output}`)
+        .toBe(1);
+      const findings = run.output.split(/\r?\n/).filter((line) => line.includes(DECLARATION_RULE));
+      expect
+        .soft(findings.join("\n"), "the finding must name the item that went conditional")
+        .toContain(declaration(REPO_ROOT).contexts[0].verificationSet[0]);
+      // And say WHY, because "missing" would send a maintainer looking for a step that is
+      // still right there in the file.
+      expect
+        .soft(findings.join("\n"), "the finding must attribute it to the condition")
+        .toMatch(/condition|if:/i);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 // ── the rule set, and what a green run is allowed to mean ────────────────────

@@ -1453,6 +1453,30 @@ describe("TC-0017-0036 (TDD-0036): the required-context job keeps its name and u
       )
       .toEqual([]);
 
+    // CLAIM 3b — and reachable has to mean UNCONDITIONALLY reachable, which is the half of
+    // this row's own title the set membership above does not give. A step behind a
+    // condition is present in the diff and absent from the run: on every run where the
+    // condition is false the job still reports success to branch protection with that
+    // verification not performed. The job-level version of this is CLAIM 2; there is no
+    // reason the step level should be weaker, and the cheaper edit is at the step level.
+    //
+    // Placed here rather than beside `TC-0017-0038`'s `continue-on-error` claim because the
+    // failure modes differ: `continue-on-error` runs and cannot fail, an `if` may not run
+    // at all. Same rule as the hygiene lane's property 3 now enforces from CI, asserted
+    // here against this repository's own workflow.
+    const guarded = reachableSteps(REQUIRED_CONTEXT_NAME)
+      .filter(({ step }) =>
+        VERIFICATION_SET.includes(named(step) as (typeof VERIFICATION_SET)[number]),
+      )
+      .filter(({ step }) => step["if"] !== undefined)
+      .map(({ jobId, step }) => `${jobId}: ${named(step)} if=${String(step["if"])}`);
+    expect
+      .soft(
+        guarded,
+        "a verification item behind a condition is not performed on the runs where that condition is false",
+      )
+      .toEqual([]);
+
     // CLAIM 4 — and the checked-in declaration agrees with these literals.
     //
     // The hygiene lane reads `.github/required-status-contexts.json` and checks the same

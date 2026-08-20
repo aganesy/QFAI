@@ -527,26 +527,44 @@ function checkRequiredContexts(root, jobs) {
       }
     }
 
-    // PROPERTY 3 — and its enumerated verification set is intact. An item may live in the
-    // declared job or in any job it depends on; relocating work into a dependency is legal,
-    // relocating it out of reach is not.
+    // PROPERTY 3 — and its enumerated verification set is intact, where intact means
+    // UNCONDITIONALLY performed. An item may live in the declared job or in any job it
+    // depends on; relocating work into a dependency is legal, relocating it out of reach is
+    // not — and putting it behind a step condition relocates it out of reach on every run
+    // where that condition is false, while leaving the name in the diff for a reviewer to
+    // read as still present.
     const performed = new Set();
+    const conditional = new Map();
     for (const key of needsClosure(jobsByKey, declaredJob)) {
       const job = jobsByKey.get(key);
       const steps = job !== undefined && Array.isArray(job.steps) ? job.steps : [];
       for (const step of steps) {
-        if (isRecord(step) && typeof step.name === "string") performed.add(step.name);
+        if (!isRecord(step) || typeof step.name !== "string") continue;
+        // ANY `if` disqualifies, and the lane does not sort conditions into harmless and
+        // harmful. It evaluates no GitHub expressions — at parse time `always()` and
+        // `${{ inputs.deep }}` are the same shape — and property 2 one level up already
+        // applies exactly this rule to a job-level condition. A verification item that has
+        // to be conditional is an item that has to stop being declared, which is a visible
+        // edit to this file rather than an invisible one to the workflow.
+        //
+        // A name appearing both ways still counts as performed: the unconditional
+        // occurrence is the one that runs.
+        if (step.if === undefined) performed.add(step.name);
+        else if (!performed.has(step.name)) conditional.set(step.name, String(step.if));
       }
     }
     for (const item of wanted) {
-      if (!performed.has(item)) {
-        findings.push({
-          rule: "required-context",
-          file: rel,
-          job: declaredJob,
-          detail: `no longer performs the declared verification item "${item}", and no job it depends on performs it either`,
-        });
-      }
+      if (performed.has(item)) continue;
+      const guard = conditional.get(item);
+      findings.push({
+        rule: "required-context",
+        file: rel,
+        job: declaredJob,
+        detail:
+          guard === undefined
+            ? `no longer performs the declared verification item "${item}", and no job it depends on performs it either`
+            : `performs the declared verification item "${item}" only under a condition (if: ${guard}), so it does not run on every run this context is required for`,
+      });
     }
   }
   return findings;
