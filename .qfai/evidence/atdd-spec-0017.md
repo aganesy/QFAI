@@ -447,7 +447,9 @@ permanently red test in the suite, which is not a RED observation; it is a broke
 **The reason it cannot go green is the self-referential gate, not unmerged work.** This paragraph read
 "because the workflow changes are unmerged" through three rounds of that sentence being retracted
 elsewhere in this file, and P1d's third and fourth passes both found it still here. `ci-pass` exists at
-`.github/workflows/ci.yml:469` and has run twelve times on this branch; what blocks a green run is
+`.github/workflows/ci.yml:469` and has run many times on this branch — the count was stated as twelve
+and measured at 23 by P1d two rounds later, and it moves with every push, so it is dropped rather than
+tracked. What blocks a green run is
 `CR-20260820-0012` — the row's own unannotated `TC` is one of the errors keeping `build` red.
 `EX-0017-0053` is pre-merge by construction, being about a pull request and its runs.
 
@@ -480,10 +482,13 @@ they are gone:
 | "because the workflow changes are unmerged"              | § `TDD-0069`, branch 1 paragraph    |
 | "there is no run history to mutate" (for clause 1)       | § `TDD-0069`, branch 2 paragraph    |
 | "branch 3 it is" for both rows                           | this section's opening              |
-| the `exception` P1d PASS as the blocker for both         | "Neither transition is authorised"  |
+| the `exception` P1d PASS as the blocker for both         | § "P1d's verdict: PASS, at the sixth pass" |
 
 Each is now stated where a reader meets it, and the first two quote the old sentence as a quotation
-rather than asserting it.
+rather than asserting it. Row 4's target was `"Neither transition is authorised"` for two rounds — a
+phrase occurring **nowhere in this file except that cell**, and refuted in any case once P1d passed. A
+correction table that sends a reader to a phrase that does not exist is the retracted-claim defect in
+its own repair mechanism. It now names the section that holds the current answer.
 
 ### P1d's verdict: PASS, at the sixth pass
 
@@ -682,7 +687,10 @@ verdicts instead of two, so a name-shaped guess returns `heuristic` rather than 
 an analysis.
 
 Measured against corpora **this stage did not choose** — round 4's 20 regressions, v4's 15 kept
-forms, the 18 non-builds accumulated across rounds 2-4, and every `run:` line in both workflow trees:
+forms, round 6's 46-case corpus (20 missed builds, 2 false positives), round 7's 59 probes (15
+defects), round 8's 66 (25 disagreements, of which 6 missed builds and 4 invented ones), the non-builds
+accumulated across every round, one case per grammar member, and every `run:` line in both workflow
+trees:
 
 ```text
 this repository reaches a build in FOUR places, not the two previously asserted
@@ -692,9 +700,12 @@ this repository reaches a build in FOUR places, not the two previously asserted
   heuristic  release.yml  pnpm ci:gate                                   spawn inside the same .mjs
 ```
 
-The last two are **opaque to any command-line scan**: `scripts/check-build-warnings.mjs` spawns the
-build, and reading `package.json` cannot follow a `spawnSync` inside a helper. They land on
-`heuristic` only because that filename happens to say `build`, which is luck. Stated as a limit, and
+The last two are **opaque to any command-line scan**. Three helpers reach the build this way —
+`scripts/check-build-warnings.mjs`, `scripts/verify-pack.mjs` and `scripts/check-publish-dry-run.mjs`,
+each arriving at `prepack -> npm run build -> tsup` — and reading `package.json` cannot follow a
+`spawnSync` inside any of them. An earlier version of this paragraph named only the first, which is also
+the only one whose **filename** says `build`; that is why commands reaching it land on `heuristic` and
+the other two would land on `none` if nothing else in their line said build. Luck, not detection. Stated as a limit, and
 pinned as a set in the unit test so a build in a new place fails rather than being absorbed by a
 count.
 
@@ -801,7 +812,23 @@ Q1  a ninth all-failing depth column is added                  REDDENS
 Q2  the refuted accuracy figure is restored                     REDDENS
 Q3  the version named in the record drifts back                 REDDENS
 Q4  the naming-defect reason is deleted                         REDDENS
+Q5  a matrix row loses one pipe, so a cell slides left          REDDENS
+Q6  the describing sentence lags the helper by one version      REDDENS
+Q7  the new version appears in the history list only            REDDENS
 ```
+
+`Q5` is round 6's: deleting a single pipe from one row slid `Oracle strength` into `Status`, the missing
+trailing cell was backfilled by a default, **every derived number stayed the same** and all five tests
+passed. A row of the wrong width is a parse failure now, not a row with a default in it.
+
+`Q6` and `Q7` are one defect in two placements, and `Q7` is why the version pin had to be **anchored**
+rather than merely derived. Deriving it from the helper's docstring closed round 7's failure — a literal
+`v6` pinning the record at v6 while the helper had moved on — but the assertion was still `toContain`
+over the whole record, and this record gains a **history line per version** by convention. So `v11`
+would appear in the history the moment v11 existed, satisfying the pin while the sentence that describes
+the predicate still said v10. The pin now reads the version out of the sentence naming
+`packages/qfai/tests/helpers/buildCommand.ts` and compares it to the helper's own maximum. Both
+placements were measured before the change and both redden after it.
 
 `Q1` and `Q2` reddened nothing before this round: `parseMatrix` dropped any column past its header
 list, so nine unjustified cells were invisible; and the paragraph written to discharge round 4's
@@ -922,7 +949,10 @@ something is written, believed without reading it.
    exactly what `CR-20260820-0011` Option 1 prescribes — made it **fail**. Blind to unlimited
    regression, firing on the 27th story fixed: a test that punishes its own fix, which is the shape
    this spec rejects in writing in two separate files. Both reviewers found it independently. The
-   ratchet was then falsified in the same three directions: `W1` and `W3` redden, `W2` stays green.
+   ratchet was then falsified in the same three directions: `R1` and `R3` redden, `R2` stays green
+   (§ "Execution logs"). This read `W1`/`W2`/`W3` for two rounds, naming a family that did not exist —
+   and `W*` now names the retracted-claims family, so the stale reference would have resolved to the
+   wrong instrument rather than to nothing.
 6. **The E2E surface cannot exercise a real workflow run.** It reads what `init` ships. Whether a
    documentation-only change actually produces a narrow lane set is now observable — PR #794's runs
    show it — and nothing consumes that observation. That is class B of the matrix's `❌` cells, all
@@ -956,14 +986,18 @@ something is written, believed without reading it.
 
 ## Round 2, and the P7 evidence for it
 
-Three blocking reviewers on `56daee8d`, with the request **committed before they launched** — round 1's
+Three reviewers ran on `56daee8d` — **two of them blocking**, per `agent-routing.yml`, whose atdd
+review phase lists `blocking_agents: qa-gatekeeper, completion-reviewer` with `implementation-reviewer`
+**conditional** on helper or runtime code having changed. It had, so it was routed, and its findings were
+applied; that does not make it a blocking gate, and calling it one overstated the gate this stage
+cleared. Five rounds asked for this. The request was **committed before they launched** — round 1's
 `qa-gatekeeper` had detected five files moving while three reviewers ran, which was this orchestrator's
 fault and is fixed structurally rather than by intention. All three confirmed HEAD did not move and
 `git status --porcelain` was empty at their start.
 
 | reviewer                   | verdict  | findings                        | report                             |
 | -------------------------- | -------- | ------------------------------- | ---------------------------------- |
-| `implementation-reviewer`  | REVISE   | 4 blocking, 6 medium, 5 low     | `R01_implementation-reviewer.md`   |
+| `implementation-reviewer`  | REVISE   | 4 blocking, 6 medium, 9 low     | `R01_implementation-reviewer.md`   |
 | `completion-reviewer`      | REVISE   | 4 blocking, 4 major, 5 minor    | `R02_completion-reviewer.md`       |
 | `qa-gatekeeper`            | REVISE   | 3 blocking, 6 advisory          | `R03_qa-gatekeeper.md`             |
 
@@ -1167,8 +1201,8 @@ differ.
 | 7     | `completion-reviewer`     | REVISE  |       21 | B1-B6, M1-M7, m1-m8    |      21 |
 | 7     | `qa-gatekeeper` (stage)   | REVISE  |       18 | B1-B11, A1-A7          |      18 |
 | 7     | `qa-gatekeeper` (P1d 6)   | **PASS** |       8 | M1, A1-A7 (inline)     |       8 |
-| 8     | `completion-reviewer`     | REVISE  |       29 | B1-B6, M1-M7, m1-m16   |       — |
-| 8     | `qa-gatekeeper` (stage)   | REVISE  |       22 | B1-B11, A1-A11         |       — |
+| 8     | `completion-reviewer`     | REVISE  |       29 | B1-B6, M1-M7, m1-m16   |      29 |
+| 8     | `qa-gatekeeper` (stage)   | REVISE  |       22 | B1-B11, A1-A11         |      22 |
 
 **Where the two columns disagree, the derived one is the one to trust, and the reason is a rule that
 does not fit every report.** The declared rule counts distinct finding identifiers "or the count of
@@ -1182,8 +1216,9 @@ other five disagreements are left as written and recorded here rather than edite
 five packs to move a bookkeeping figure rewrites more history than it repairs; the rule they follow is
 stated instead, which is the alternative round 8 offered.
 
-Round 8's slots have no `summary.json` value because that pack is still in flight; it is sealed when its
-last reviewer response lands.
+Round 8's pack is now closed: both reports had landed, so its `summary.json` was written from the same
+derivation as the table above and the pack sealed. It is the first pack whose recorded counts and derived
+counts agree by construction rather than by luck.
 
 **Round 3's stage-level `qa-gatekeeper` did not run**, and that is a deviation rather than a choice
 about scope: `agent-routing.yml` has it **mandatory and blocking** for the review phase. Its slot went
@@ -1243,7 +1278,12 @@ Confirmed by: **one gate has passed, and it is the narrow one.** Counted from th
 **seven** rounds, **21** reviewer responses, **20 REVISE and one PASS** — the PASS being P1d's sixth
 pass on `DR-0017-0010`. No stage-level gate has passed. Every earlier version of this line was a round
 behind, which rounds 4, 5, 6 and 7 each said; the numbers here are derived from
-`.qfai/review/review-2026082*/R0*.md` rather than remembered.
+`.qfai/review/review-2026082*/R0*.md` **from `review-20260820200000000` onwards** rather than
+remembered. The boundary is load-bearing and the recipe omitted it for two rounds: that glob also matches
+`review-20260820140000000` and `review-20260820180000000`, which are `/qfai-implement` packs of three
+responses each, so a reader following the stated recipe gets **27**. `stageEvidenceCounts.test.ts` has the
+boundary as an explicit `FIRST_PACK` constant; the prose did not, so the number was right and
+unreproducible.
 
 | round | reviewers                                                             | revision   | verdict          |
 | ----- | --------------------------------------------------------------------- | ---------- | ---------------- |
@@ -1310,12 +1350,42 @@ Review pack seal:  022c3addd80a7d9a206f40dc9cfd913ecb555fa7d9458fe2895cffed17ea5
   superseded:      3d56fd2edd484c0ffb8cd2b91fe2de93b1e1d65fd93d6a4c6d5a94fe740e2a92   (its P1d finding count was 3 where the rule gives 8)
 
 Review pack:       .qfai/review/review-20260821100000000/            (round 8 — stage gates only)
-Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
+Review pack seal:  d2ef7d5c271225d32d1bc37cffed9cddbd49edb752ebb8fd73fa6de0e7e490de
 ```
 
 Round 8 routes no P1d pass. That gate closed at round 7 and re-routing a closed gate would be asking a
 reviewer to re-decide something already decided; what round 8 reviews is the stage, which has never
 passed.
+
+**Round 8's two reviewer reports were not in version control at all** until this commit, and that is
+worth recording plainly because nothing was watching for it. `.gitignore:61` ignores `.qfai/review/*`,
+so every pack's contents reach the repository only by `git add -f`; rounds 1 through 7 were force-added
+and round 8's were not, so for the length of the round the evidence cited findings from two files that
+existed in one working tree and nowhere else. The seal cannot catch this — it hashes what is on disk, and
+what is on disk was right. `git status --porcelain` cannot either: an ignored file is not untracked
+output, it is invisible. What would have caught it is `git status --porcelain --ignored` on the pack
+directory, which is now part of sealing a pack.
+
+**When each pack was actually sealed, traced with `git log --diff-filter=A` rather than described.**
+`SKILL.md` fixes the seal at the moment the last reviewer response lands. Measured, four of the seven
+closed packs missed it:
+
+```text
+round  last report at   summary.json at   gap
+  1    58c29d9f         58c29d9f          same commit
+  2    a241b90e         2d3426aa          3 commits
+  3    2d3426aa         2d3426aa          same commit
+  4    0cfa67c9         0cfa67c9          same commit
+  5    c40b2358         cb91e089          1 commit
+  6    ac4700d1         9a37421c          1 commit
+  7    9882a1d4         dbe00247          1 commit
+  8    (this commit)    (this commit)     same commit
+```
+
+This section told the rounds-3-and-4 version of that story — "written first, then sealed" — for two
+rounds after it had stopped being true of the majority. Nothing was laundered in any of the gaps: round
+8 verified that independently, and the seals recompute over the current bytes. It is an **auditability**
+gap rather than an integrity one, and the honest statement is the table, not a practice claim.
 
 Round 5's pack was **missing its `summary.json`** when its reviewers landed, for the third time in
 five packs. Written first, then sealed — the order matters, because sealing an incomplete pack and

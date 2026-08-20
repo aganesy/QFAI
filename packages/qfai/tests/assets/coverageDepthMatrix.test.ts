@@ -340,10 +340,24 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     const versions = [...helper.matchAll(/\bv(\d+)\b/g)].map((match) => Number(match[1]));
     const current = Math.max(...versions);
     expect(current, "the helper must state its own version").toBeGreaterThan(0);
+
+    // Anchored to the sentence that names the helper, not to the file. A bare `toContain` over the
+    // whole record passes on the record's own version-history list — which gains a line per version by
+    // convention, so `v10` appears there the moment v10 exists, whatever the describing sentence still
+    // says. The pin would then be satisfied by the history of the defect rather than by its correction.
+    // Round 7 required the anchor and round 8 measured it still missing.
+    const flat = text.replace(/\s+/g, " ");
+    const naming =
+      /[^.]*`?v(\d+)`? lives in `packages\/qfai\/tests\/helpers\/buildCommand\.ts`/.exec(flat);
     expect(
-      text,
-      `the record must name the predicate version it describes: the helper is at v${String(current)}`,
-    ).toContain(`v${String(current)}`);
+      naming,
+      "the record must carry a sentence naming the predicate's version and its file, in the form " +
+        "`vN` lives in `packages/qfai/tests/helpers/buildCommand.ts`",
+    ).not.toBeNull();
+    expect(
+      Number(naming?.[1]),
+      `that sentence must name the version the helper is at: v${String(current)}`,
+    ).toBe(current);
     // The record wraps, so the phrase is matched over collapsed whitespace and either emphasis form.
     expect(
       text.replace(/\s+/g, " "),
