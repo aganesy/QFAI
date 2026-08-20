@@ -24,12 +24,13 @@ them:
    place.
 2. **Nothing is claimed that was not measured.** Counts, durations and gate outputs are quoted from
    runs recorded here. Where a number moved after it was written, both are kept and dated.
-3. **Where the spec and the tree disagree, a change request is filed rather than resolved.** Fourteen
-   are open. Six rows are `blocked` on four of them.
+3. **Where the spec and the tree disagree, a change request is filed rather than resolved.** Seventeen
+   are open. Six rows are `blocked`, on **three** of them — `CR-20260818-0007`,
+   `CR-20260820-0001` and `CR-20260820-0007`. ("Four" stood here and was wrong; counted.)
 
 ## Items processed
 
-Generated from `.qfai/specs/spec-0017/tdd/test-list.md` at `76ade4dd`, not maintained by hand —
+Generated from `.qfai/specs/spec-0017/tdd/test-list.md` at `0066c29c`, not maintained by hand —
 a second copy of 82 statuses would be a second thing to keep in sync, and this section
 exists so a reader does not have to open the ledger to see the shape.
 
@@ -3181,6 +3182,80 @@ checkpoint is not attempted: step 4's clause 3 remains, for the reason `CR-20260
 against — see the corrections section near the top of this record for why step 2 is no longer part
 of that answer.
 
+## Rounds, and two places the round contract is not met
+
+**Added 2026-08-20 after round 6.** `qa-gatekeeper` found that **zero `Round N:` blocks exist**
+anywhere in this record, against six review rounds, and that **no row has ever held `review-fix`**.
+Both are true. `references/round-evidence.md` is the contract, and this section states what the
+rounds actually were and where the record does not meet it — rather than writing round blocks after
+the fact and calling it compliance.
+
+### Which rounds exist, by the contract's own test
+
+The contract does not count review rounds. It counts RED/GREEN cycles:
+
+> Round 1 is the original RED/GREEN cycle. Each blocking reviewer `REVISE` that requires **new
+> production behaviour** adds a round. A `REVISE` that needs none (naming, duplication, comments)
+> opens no round and is verified by a refreshed `Refactor verify` pair instead.
+
+Six review rounds have run. Applying that test to the commits, **six** of the rework commits changed
+production — `.github/workflows/ci.yml`, `scripts/`, `packages/qfai/src/` — and the rest changed only
+tests and records:
+
+| commit     | production change                                                        | rows whose round it opens                        |
+| ---------- | ------------------------------------------------------------------------ | ------------------------------------------------ |
+| `575af2e4` | `--no-renames` on the detect job's diff                                  | `TDD-0008`                                        |
+| `9c04aa47` | hygiene lane property 3 rejects a step-level `if`                        | `TDD-0036`, `TDD-0059`                            |
+| `1f453a31` | the classifier excludes executables from the documentation set           | `TDD-0010`                                        |
+| `05778274` | three lane guards: empty verification set, empty tree, `REQUIRED` pinned  | `TDD-0046`, `TDD-0057`, `TDD-0073`                |
+| `5ce34ff5` | the retry scan reads the manifest; `layerPolicy` untouched                | none — test-only for every row it names           |
+| `68beb10d` | the classifier's executable branch reordered, reason string changed       | `TDD-0010` (a second time)                        |
+
+Everything else — F-1 through F-8's test rewrites, the ledger migration, the CR and evidence work —
+is a `REVISE` needing no new production behaviour. Those took the second path: **no round**, and a
+refreshed `Refactor verify` pair, which is recorded in § "Test results summary" measured at HEAD.
+
+### Deviation 1 — the rework rounds have no pre-fix RED
+
+A round block wants `Round N: RED command` / `Round N: RED result`: the rework's new failing test,
+observed failing **before** the production fix. That is not what happened. In every case above the
+claim and the production change landed in one commit, so no pre-fix failure was observed.
+
+What was observed, after the fact, is the oracle round: revert the production change and the claim
+fails. Those are recorded — `S1`/`S2`/`S3` for `TDD-0008`, oracle A for `TDD-0036`/`TDD-0059`,
+`T1`/`T2`/`T3` for `TDD-0010`, `M1`/`M2`/`M3` for the lane guards, `Z1` for the reordering —
+and each demonstrates exactly the proposition a RED demonstrates: this claim fails without this
+production code.
+
+It is not a RED, and calling it one would be the substitution `red-admissibility.md` forbids. It is
+the same shape as the falsifiability path: the demonstration is real, the ORDER was wrong. Recorded
+as a test-first gap per round rather than dressed as a round block, which is what
+§ "Gate items NOT satisfied" already says for the original cycle of changes 1 through 5.
+
+### Deviation 2 — no row held `review-fix`, and it cannot be written now
+
+The contract's rework path is `refactor -> review-fix`, the rounds happen while the row sits at
+`review-fix`, and `review-fix -> refactor` is the only status change the rework produces. Every row
+stayed at `refactor` through six rounds of rework.
+
+That is a real deviation and it is not repairable retroactively. Writing `review-fix` into a ledger
+cell now would record a state the row never held during work that is already finished, which is the
+fabrication the status lifecycle exists to prevent. The rework is over; the honest record is that it
+happened at `refactor`.
+
+What it cost, concretely: `SKILL.md`'s Phase Red step 1 says a `review-fix` row is selected **before**
+any `todo` row, "one left by an interrupted session is otherwise never picked up". Rows parked at
+`refactor` do not get that treatment — so a session interrupted mid-rework would have resumed by
+selecting a `todo` row and left the rework stranded. Nothing was lost here because no session was
+interrupted, which is luck rather than process.
+
+### What this section is not
+
+It is not a claim that the rounds are compliant. Two of the contract's requirements are unmet and
+both are named above. It exists because the alternative — leaving six rounds of rework with no round
+structure recorded at all — is worse, and because `qa-gatekeeper` asked for the rounds and is
+entitled to see which ones the contract says exist.
+
 ## Round 6 — the oracles for the claims round 5 and 6 rewrote
 
 **Added 2026-08-20.** `qa-gatekeeper` found that `68beb10d` rewrote `TC-0017-0068`'s and
@@ -3254,6 +3329,23 @@ reason assertion was `/executable/i`, which matches the pre-repair string too, a
 Verdicts were unaffected by the repair either way — round 6 confirmed 0 verdict changes across 20
 path classes by running both extracted programs side by side. Only the stated reason moved, which is
 why the three assertions are all about `reason`.
+
+### The three lane guards (`05778274`) — recorded here because they were not recorded anywhere
+
+`qa-gatekeeper`'s point applies to these too: the oracles ran, and until now they existed only in
+that commit's message. Each guard makes the hygiene lane stop reporting PASS over nothing, and each
+was planted alone into `scripts/check-workflow-hygiene.mjs` (or the declaration) and reverted with a
+byte comparison.
+
+| id           | mutation                                                    | reddens                                                                        |
+| ------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `M1`         | the empty-verification-set guard removed                    | `TC-0017-0057` — `expected … to match /empty or missing verificationSet/`        |
+| `M2`         | the empty-tree guard removed                                | `TC-0017-0046` — `expected … to match /holds no YAML files/i`                    |
+| `M3`         | one member of the declaration's verification set renamed     | `TC-0017-0073` **and** `TC-0017-0036` together                                  |
+
+`M3` is the one worth keeping: after it, drifting the declaration fails BOTH rows that read it, so
+there is no single edit that leaves one copy quietly disagreeing. Before the fix, `TC-0017-0073`'s
+`REQUIRED` was pinned to nothing.
 
 ### `TC-0017-0014` — two claims removed rather than repaired
 
