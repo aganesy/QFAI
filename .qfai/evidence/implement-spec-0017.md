@@ -2166,3 +2166,120 @@ is open against.
 
 The three blocking agent verdicts were not obtained, so `Status` is `refactor` for all six rows. The
 item-12 checkpoint is not attempted, for the reasons recorded under the earlier changes.
+
+## The shipped tree joins the lane (TDD-0050, TDD-0051, TDD-0053, TDD-0054, TDD-0055, TDD-0056)
+
+`AC-0017-0022`, `AC-0017-0023` and `AC-0017-0024`. Base revision `4a4c0954`.
+
+### The ordering condition was checked before anything was written
+
+`BR-0017-0045` forbids enabling the shipped scan over an unhardened tree: it "lands instantly red", and
+a lane that arrives red is a lane someone disables. Measured first — every shipped job declares
+permissions and a timeout, every reference is SHA-pinned, no job declares `secrets:`, and there is no
+matrix to disable fail-fast on because `qfai-tests.yml` expresses its lanes as seven independent JOBS.
+The condition holds, so the coverage lands here rather than waiting.
+
+### Two roots, not a copy
+
+`BR-0017-0044` allows either "copying it into the workflows directory inside the CI checkout or
+pointing the script at both trees". Two roots is chosen, and `TDD-0051` is the row that makes the choice
+matter: a copy-based implementation exits 1 on a shipped-only violation too, but names
+`.github/workflows/qfai-tests.yml` — telling an adopter to look in a file they do not have. So the row
+asserts not only that a shipped violation is reported, but that NOTHING is reported against the own tree.
+
+`TDD-0050` plants in both trees in ONE run. Two separate runs would each prove one root is scanned and
+neither would prove they are scanned together, which a lane scanning whichever tree it was pointed at
+would satisfy.
+
+### The one rule here that is not a count
+
+`BR-0017-0046` rejects a formulation by name: "expressing it as a count of zero MUST be rejected,
+because it would fail the lane on the one action the shipped pin policy legitimately keeps". That action
+is `pnpm/action-setup`, and it is the only third-party reference in the shipped set — measured, not
+assumed.
+
+`TDD-0053` therefore has two halves, and the second is what keeps it honest: exiting 0 would also be
+satisfied by a lane with no third-party rule at all, so the row asserts the fixture actually CONTAINS a
+third-party reference. A row that passes over an empty premise proves nothing about the rule.
+
+### The oracle found two holes, and neither was in the lane
+
+- **`R4` removed the shipped rule from the printed registry and reddened NOTHING.** `TDD-0053` asserted
+  the shipped HEADING appears, and the heading comes from the scope list rather than the rule list — so
+  a heading standing over nothing satisfied it. The row now asserts the rule is LISTED under it.
+- **`R7` removed the shipped rule's CALL while leaving it printed, and reddened only `TDD-0054`.**
+  `TC-0017-0047` — printed equals evaluated — parsed the structural scope only, so the shipped scope had
+  no such guard at all. `BR-0017-0038` is about the printed list, not one section of it; the row now
+  reads every scope, and the plant table gained the shipped entry it needs to derive the evaluated set.
+
+That second fix forced a third: the plant table now carries the FILE each finding must name. `TDD-0048`
+had `ci.yml` hard-coded, which was fine while every plant was in the own tree and wrong the moment a
+shipped plant joined — the shipped finding names a path under the asset tree.
+
+### A stale claim in the lane's own output
+
+The coverage boundary said "Not covered here: the shipped workflow set". After this change that is
+false. It now names what is genuinely uncovered — runner-label rules, secret-reference rules, and the
+shipped set's contract SHAPE, which `lint:workflow-shape` owns rather than this lane. A boundary
+statement is only useful while it is true, and this one had one commit of accuracy left in it.
+
+### Two stale plant needles, caught by the harness
+
+`editShipped` refuses to write a file its edit did not change, and it fired twice: the first draft
+planted a `fail-fast` violation into a tree with no matrix, and pointed the third-party plant at
+`qfai-tests.yml` when the sanctioned action lives in `qfai-validate.yml`. Both would otherwise have been
+plants that changed nothing — a passing row over an intact fixture, indistinguishable from a working
+rule.
+
+### RED and GREEN
+
+- **RED command**, from `packages/qfai`:
+  `pnpm exec vitest run tests/scripts/workflowHygiene.test.ts`
+- **RED result**: `Tests 4 failed | 24 passed (28)`, exit 1, every failure an assertion. `TDD-0055` and
+  `TDD-0056` passed at RED — the lane was already in the right aggregate and absent from the wrong one —
+  so `RED failure mode: falsifiability` applies to those two, with `R5` and `R6` carrying it.
+- **GREEN result**: same command, `Tests 28 passed (28)`.
+
+### Oracle proof — eight rounds
+
+| id | mutation | mutant | reddens |
+| --- | --- | --- | --- |
+| `R1` | the shipped root leaves the scan entirely | `83a955bc` | `TC-0017-0047`, `TC-0017-0048`, `TC-0017-0050`, `TC-0017-0051`, `TC-0017-0054` |
+| `R2` | the shipped tree is still scanned, but its jobs are tagged as own-tree ones | `c5daa25d` | `TC-0017-0047`, `TC-0017-0048`, `TC-0017-0054` |
+| `R3` | the third-party rule becomes a count of zero, failing the entry the pin policy keeps | `124d2681` | `TC-0017-0018`, `TC-0017-0044`, `TC-0017-0045`, `TC-0017-0046`, `TC-0017-0047`, `TC-0017-0048`, `TC-0017-0053`, `TC-0017-0057` |
+| `R4` | the shipped rule leaves the printed set, so its scope stops being announced | `371e9c72` | `TC-0017-0047`, `TC-0017-0053` |
+| `R5` | the lane leaves the lint aggregate a pull request executes | `d0285ddc` | `TC-0017-0055` |
+| `R6` | the lane is added to the release-only aggregate, where no pull request invokes it | `b5c3fb04` | `TC-0017-0056` |
+| `R7` | the shipped rule stays printed while its check stops being called | `a13f33f8` | `TC-0017-0047`, `TC-0017-0048`, `TC-0017-0054` |
+| `R8-control` | a comment-only edit beside the shipped roots | `f7674537` | **nothing new** |
+
+`R2` is the round worth reading. It leaves the shipped tree SCANNED but tags its jobs as own-tree ones:
+the structural rules still cover them and the paths are still reported correctly, so the two path rows
+stay green and only the shipped-scoped rule goes blind. That separates "the shipped tree is scanned"
+from "the shipped-only rule applies to it" — two claims a single coarser mutation would have conflated.
+
+### The suite
+
+| script | test files | tests | wall clock |
+| --- | --- | --- | --- |
+| `test:core` | 122 passed (122) | 1587 passed | 2 skipped (1589) | 94.4s |
+| `test:unit` | 43 passed (43) | 266 passed (266) | 9.4s |
+| `test:validators` | 46 passed (46) | 351 passed (351) | 15.6s |
+| `test:integration` | 124 passed | 4 skipped (128) | 862 passed | 19 skipped (881) | 44.3s |
+| `test:e2e` | 74 passed | 4 skipped (78) | 891 passed | 16 skipped (907) | 30.2s |
+| `test:cli` | 11 passed (11) | 321 passed (321) | 73.3s |
+| `test:scripts` | 10 passed (10) | 132 passed (132) | 17.0s |
+
+Total 284.2s, every one green.
+
+### The validate delta
+
+Five below the previous change: info=4 warning=360 error=2, exit 1. Five removed
+(TC-0017-0050, 0051, 0053, 0054, 0056) and none added - the first clean delta in this slice, with
+every promoted row accounted for except TC-0017-0055, which had not been reported stale beforehand.
+Same uneven resolution as the six previous measurements.
+
+### Gate items NOT satisfied
+
+The three blocking agent verdicts were not obtained, so `Status` is `refactor` for all six rows. The
+item-12 checkpoint is not attempted, for the reasons recorded under the earlier changes.

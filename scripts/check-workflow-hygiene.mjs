@@ -70,14 +70,19 @@ const CODE = "R-WORKFLOW-HYGIENE-DRIFT";
  */
 const RULES = [
   [
-    "workflows",
+    "structural",
     "job-guardrails",
     "every job has a reachable permission block and declares timeout-minutes",
   ],
-  ["workflows", "checkout-credentials", "every checkout step sets persist-credentials: false"],
-  ["workflows", "action-pin", "every `uses:` reference is a full 40-hex commit SHA"],
-  ["workflows", "matrix-fail-fast", "every matrix strategy sets fail-fast: false"],
-  ["workflows", "secret-inheritance", "no job inherits the caller's secrets"],
+  ["structural", "checkout-credentials", "every checkout step sets persist-credentials: false"],
+  ["structural", "action-pin", "every `uses:` reference is a full 40-hex commit SHA"],
+  ["structural", "matrix-fail-fast", "every matrix strategy sets fail-fast: false"],
+  ["structural", "secret-inheritance", "no job inherits the caller's secrets"],
+  [
+    "shipped",
+    "shipped-third-party",
+    "every third-party `uses:` owner in the shipped set is in the closed sanctioned list",
+  ],
   [
     "declaration",
     "required-context",
@@ -87,9 +92,40 @@ const RULES = [
 
 /** The scopes, in print order, with the heading each one is announced under. */
 const SCOPES = [
-  ["workflows", "Rules run over the own CI tree:"],
+  ["structural", "Rules run over both workflow trees:"],
+  ["shipped", "Rules run over the shipped workflow tree only:"],
   ["declaration", "Rules run over the required-status-context declaration:"],
 ];
+
+/**
+ * The two workflow trees the structural rules cover.
+ *
+ * Two roots rather than copying the shipped files into the workflows directory inside the CI
+ * checkout. Both satisfy `BR-0017-0044`, and the copy makes the reported path ambiguous — an
+ * adopter told to look at `.github/workflows/qfai-tests.yml` is being sent to a file they do
+ * not have. The rule requires the shipped path to be named AS the shipped path.
+ */
+const WORKFLOW_ROOTS = [
+  { rel: path.join(".github", "workflows"), tree: "own" },
+  {
+    rel: path.join("packages", "qfai", "assets", "init", "root", ".github", "workflows"),
+    tree: "shipped",
+  },
+];
+
+/**
+ * The third-party action owners the shipped set may reference.
+ *
+ * A closed sanctioned SET, not a count of zero. `BR-0017-0046` rejects the count formulation
+ * by name, and for a concrete reason: the shipped pin policy legitimately keeps the
+ * package-manager setup action, so "zero third-party references" would fail the lane on the
+ * one entry it is supposed to allow.
+ *
+ * `actions` and `github` are first-party and are not third-party references at all, so they
+ * are excluded from the question rather than added to the allow-list.
+ */
+const SANCTIONED_THIRD_PARTY = ["pnpm"];
+const FIRST_PARTY_OWNERS = ["actions", "github"];
 
 /**
  * Where the expected-required-context declaration lives, relative to the root.
@@ -169,29 +205,31 @@ function parseFile(root, rel) {
 function collectJobs(root) {
   const jobs = [];
   const findings = [];
-  for (const file of yamlFilesUnder(root, path.join(".github", "workflows"))) {
-    const doc = parseFile(root, file);
-    if (doc === null || typeof doc.__parseError === "string") {
-      findings.push({
-        rule: "job-guardrails",
-        file,
-        job: "(whole file)",
-        detail: `could not be parsed: ${doc?.__parseError ?? "not a mapping"}`,
-      });
-      continue;
-    }
-    if (!isRecord(doc.jobs)) {
-      findings.push({
-        rule: "job-guardrails",
-        file,
-        job: "(whole file)",
-        detail: "declares no `jobs:` mapping",
-      });
-      continue;
-    }
-    for (const [jobKey, job] of Object.entries(doc.jobs)) {
-      if (!isRecord(job)) continue;
-      jobs.push({ file, jobKey, job, workflow: doc });
+  for (const { rel, tree } of WORKFLOW_ROOTS) {
+    for (const file of yamlFilesUnder(root, rel)) {
+      const doc = parseFile(root, file);
+      if (doc === null || typeof doc.__parseError === "string") {
+        findings.push({
+          rule: "job-guardrails",
+          file,
+          job: "(whole file)",
+          detail: `could not be parsed: ${doc?.__parseError ?? "not a mapping"}`,
+        });
+        continue;
+      }
+      if (!isRecord(doc.jobs)) {
+        findings.push({
+          rule: "job-guardrails",
+          file,
+          job: "(whole file)",
+          detail: "declares no `jobs:` mapping",
+        });
+        continue;
+      }
+      for (const [jobKey, job] of Object.entries(doc.jobs)) {
+        if (!isRecord(job)) continue;
+        jobs.push({ file, jobKey, job, workflow: doc, tree });
+      }
     }
   }
   return { jobs, findings };
@@ -415,6 +453,36 @@ function needsClosure(jobsByKey, jobKey) {
  * the job usually moves its steps too, and telling the operator only about the rename means a
  * second run to learn the rest.
  */
+/**
+ * The shipped set references no unsanctioned third-party action.
+ *
+ * Scoped to the shipped tree because that is what `BR-0017-0046` governs: the own tree's
+ * third-party posture is a different question and is not decided here.
+ */
+function checkShippedThirdParty(jobs) {
+  const findings = [];
+  for (const entry of jobs) {
+    if (entry.tree !== "shipped") continue;
+    const steps = Array.isArray(entry.job.steps) ? entry.job.steps : [];
+    for (const step of steps) {
+      if (!isRecord(step) || typeof step.uses !== "string") continue;
+      // A local path is not a third-party reference; it resolves inside the repository at the
+      // same commit.
+      if (step.uses.startsWith("./")) continue;
+      const owner = step.uses.split("/")[0];
+      if (FIRST_PARTY_OWNERS.includes(owner)) continue;
+      if (SANCTIONED_THIRD_PARTY.includes(owner)) continue;
+      findings.push({
+        rule: "shipped-third-party",
+        file: entry.file,
+        job: entry.jobKey,
+        detail: `references the unsanctioned third-party owner \`${owner}\` (${step.uses}); the sanctioned set is ${SANCTIONED_THIRD_PARTY.join(", ")}`,
+      });
+    }
+  }
+  return findings;
+}
+
 function checkRequiredContexts(root, jobs) {
   const { contexts, findings } = readDeclaration(root);
   for (const context of contexts) {
@@ -493,6 +561,7 @@ export function runHygieneLane(root) {
     ...checkSecretInheritance(jobs),
     ...checkCheckoutCredentials(jobs),
     ...checkActionPins(collectUses(root, jobs)),
+    ...checkShippedThirdParty(jobs),
     ...checkRequiredContexts(root, jobs),
   ];
 }
@@ -527,7 +596,7 @@ function main(argv) {
     }
   }
   stdout.write(
-    "Not covered here: the shipped workflow set, and runner-label and secret-reference rules.\n",
+    "Not covered here: runner-label rules, secret-reference rules, and the shipped set’s own contract shape, which lint:workflow-shape owns.\n",
   );
   return 0;
 }

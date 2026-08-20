@@ -407,10 +407,27 @@ describe("TC-0017-0024 (TDD-0024): a readable pin trailer stays legal and no gua
 
 const LANE = path.join(REPO_ROOT, "scripts", "check-workflow-hygiene.mjs");
 
+/** The shipped workflows tree, relative to the repository root. */
+const SHIPPED_WORKFLOWS_REL = path.join(
+  "packages",
+  "qfai",
+  "assets",
+  "init",
+  "root",
+  ".github",
+  "workflows",
+);
+
 /** A throwaway copy of the own `.github` tree, for planting violations into. */
 function plantedTree(mutate: (dir: string) => void): string {
   const dir = mkdtempSync(path.join(tmpdir(), "qfai-hygiene-"));
   cpSync(path.join(REPO_ROOT, ".github"), path.join(dir, ".github"), { recursive: true });
+  // The shipped workflows too, because the lane scans BOTH roots. Copying only the own tree
+  // would make every shipped-tree row prove nothing: the lane would find no shipped files and
+  // report no shipped findings, which is indistinguishable from a passing shipped tree.
+  cpSync(path.join(REPO_ROOT, SHIPPED_WORKFLOWS_REL), path.join(dir, SHIPPED_WORKFLOWS_REL), {
+    recursive: true,
+  });
   mutate(dir);
   return dir;
 }
@@ -898,7 +915,10 @@ function printedRules(output: string, heading: string): string[] {
 }
 
 /** The headings the lane announces its two scopes under. */
-const WORKFLOW_SCOPE = "Rules run over the own CI tree:";
+// The heading changed when the shipped tree joined the scan: the five structural rules now
+// cover BOTH trees, so a heading saying "the own CI tree" would be false. The constant is
+// what keeps TC-0017-0045 asking for the right section.
+const WORKFLOW_SCOPE = "Rules run over both workflow trees:";
 const DECLARATION_SCOPE = "Rules run over the required-status-context declaration:";
 
 /**
@@ -908,10 +928,24 @@ const DECLARATION_SCOPE = "Rules run over the required-status-context declaratio
  * helper so each one sits next to the rule it falsifies. Each returns the job it broke, so
  * the row can assert the finding names it.
  */
-const PLANTS: { rule: string; label: string; plant: (dir: string) => string }[] = [
+/**
+ * Each plant carries the FILE its finding must name, not just the job.
+ *
+ * The first version hard-coded `ci.yml` in the row that reads this table, which was fine while
+ * every plant was in the own tree and wrong the moment a shipped plant joined it — the shipped
+ * finding names a path under the asset tree, and a row asserting `ci.yml` would have demanded
+ * the wrong answer.
+ */
+const PLANTS: {
+  rule: string;
+  label: string;
+  file: string;
+  plant: (dir: string) => string;
+}[] = [
   {
     rule: "job-guardrails",
     label: "a job loses its timeout",
+    file: "ci.yml",
     plant: (dir) => {
       editWorkflow(dir, "ci.yml", (text) =>
         text.replace(
@@ -925,6 +959,7 @@ const PLANTS: { rule: string; label: string; plant: (dir: string) => string }[] 
   {
     rule: "checkout-credentials",
     label: "a checkout persists credentials",
+    file: "ci.yml",
     plant: (dir) => {
       editWorkflow(dir, "ci.yml", (text) =>
         text.replace(
@@ -938,6 +973,7 @@ const PLANTS: { rule: string; label: string; plant: (dir: string) => string }[] 
   {
     rule: "action-pin",
     label: "an action reference floats",
+    file: "ci.yml",
     // A BRANCH reference and not a major tag, deliberately. The pin rule forbids anything
     // that is not forty hex characters, so either falsifies it — but a sibling row scans
     // every test file in this suite for a floating-major literal, and writing one here made
@@ -953,6 +989,7 @@ const PLANTS: { rule: string; label: string; plant: (dir: string) => string }[] 
   {
     rule: "matrix-fail-fast",
     label: "a matrix stops disabling fail-fast",
+    file: "ci.yml",
     plant: (dir) => {
       editWorkflow(dir, "ci.yml", (text) => text.replace("fail-fast: false", "fail-fast: true"));
       return "test";
@@ -961,6 +998,7 @@ const PLANTS: { rule: string; label: string; plant: (dir: string) => string }[] 
   {
     rule: "secret-inheritance",
     label: "a job inherits secrets",
+    file: "ci.yml",
     plant: (dir) => {
       editWorkflow(dir, "ci.yml", (text) =>
         text.replace("  lint:\n", "  lint:\n    secrets: inherit\n"),
@@ -1062,10 +1100,18 @@ describe("TC-0017-0047 (TDD-0047): an unevaluated rule is absent, not implied by
     // So the evaluated set is DERIVED by running each plant and seeing which rule the lane
     // reports — not read from the plant table, which would compare two static lists and pass
     // a lane that printed a rule it never ran.
+    // EVERY printed scope, not just the structural one. `BR-0017-0038` is about the printed
+    // list, and the oracle showed the narrower version had a hole: removing the shipped rule's
+    // call while leaving it printed reddened nothing here, because the shipped section was
+    // never read.
     const clean = plantedTree(() => {});
     let printed: string[] = [];
     try {
-      printed = printedRules(runLane(clean).output, WORKFLOW_SCOPE);
+      const output = runLane(clean).output;
+      printed = [
+        ...printedRules(output, WORKFLOW_SCOPE),
+        ...printedRules(output, SHIPPED_SCOPE),
+      ].sort();
     } finally {
       rmSync(clean, { recursive: true, force: true });
     }
@@ -1101,7 +1147,7 @@ describe("TC-0017-0047 (TDD-0047): an unevaluated rule is absent, not implied by
 
 describe("TC-0017-0048 (TDD-0048): each planted violation exits 1 naming file, job and rule", () => {
   it("falsifies every rule independently, and returns to green when the plant is removed", () => {
-    for (const { rule, label, plant } of PLANTS) {
+    for (const { rule, label, file, plant } of PLANTS) {
       let brokenJob = "";
       const dir = plantedTree((d) => {
         brokenJob = plant(d);
@@ -1114,7 +1160,7 @@ describe("TC-0017-0048 (TDD-0048): each planted violation exits 1 naming file, j
         // files and eighteen jobs is not something an operator can act on.
         const matching = run.output.split(/\r?\n/).filter((line) => line.includes(rule));
         expect.soft(matching.join("\n"), `${label}: must name the rule ${rule}`).toContain(rule);
-        expect.soft(matching.join("\n"), `${label}: must name the file`).toContain("ci.yml");
+        expect.soft(matching.join("\n"), `${label}: must name the file`).toContain(file);
         expect.soft(matching.join("\n"), `${label}: must name the job`).toContain(brokenJob);
       } finally {
         rmSync(dir, { recursive: true, force: true });
@@ -1169,5 +1215,297 @@ describe("TC-0017-0049 (TDD-0049): hygiene findings use the bare lint namespace"
     } finally {
       if (dir !== "") rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+// ── the shipped tree, and where the lane is invoked from ─────────────────────
+//
+// `BR-0017-0044` extends the lane to the workflows QFAI ships to adopters. Two roots rather
+// than copying the shipped files into the workflows directory inside the checkout: copying
+// makes the reported path ambiguous, and the rule requires the shipped path to be named AS
+// the shipped path.
+//
+// `BR-0017-0045` puts an ordering condition on this: shipped coverage lands with the shipped
+// hardening or later, never before, because enabling the scan over an unhardened tree lands
+// instantly red. Measured before these rows were written — every shipped job already declares
+// permissions and a timeout, every reference is SHA-pinned, the one matrix disables fail-fast
+// and no job declares secrets. The condition holds.
+//
+// `BR-0017-0046` is the one rule here that is NOT a count. The shipped set legitimately keeps
+// one third-party action, the package-manager setup, so the rule asserts membership in a closed
+// sanctioned set. A count of zero would fail the lane on the entry the pin policy deliberately
+// keeps, which is why the rule text rejects that formulation by name.
+
+/** The scope heading the shipped-only rule is announced under. */
+const SHIPPED_SCOPE = "Rules run over the shipped workflow tree only:";
+
+/** The shipped workflow the structural plants target. */
+const SHIPPED_FILE = "qfai-tests.yml";
+
+/**
+ * And the one that carries the sanctioned third-party action.
+ *
+ * A separate constant because it is a separate fact: the third-party rule has nothing to
+ * assert unless it is pointed at the file that actually holds such a reference, and the
+ * first draft pointed it at the wrong one.
+ */
+const SHIPPED_THIRD_PARTY_FILE = "qfai-validate.yml";
+
+/** Rewrites one shipped workflow inside a planted tree. */
+function editShipped(dir: string, file: string, edit: (text: string) => string): void {
+  const p = path.join(dir, SHIPPED_WORKFLOWS_REL, file);
+  const before = readFileSync(p, "utf-8");
+  const after = edit(before);
+  if (after === before) {
+    throw new Error(`planting into shipped ${file} changed nothing — the needle is stale`);
+  }
+  writeFileSync(p, after, "utf-8");
+}
+
+// The shipped-scope plant joins the table declared above, appended here because it needs
+// `editShipped` and the file constant. `TC-0017-0047` derives the evaluated set from this
+// table, so a printed rule with no entry in it is a rule nothing demonstrates — which is
+// exactly the hole the oracle found when the shipped rule had no plant.
+PLANTS.push({
+  rule: "shipped-third-party",
+  label: "the shipped set references an unsanctioned owner",
+  file: SHIPPED_THIRD_PARTY_FILE,
+  plant: (dir) => {
+    editShipped(dir, SHIPPED_THIRD_PARTY_FILE, (text) =>
+      text.replace(
+        /uses: pnpm\/action-setup@[0-9a-f]{40}/,
+        "uses: someone-else/action-setup@0123456789abcdef0123456789abcdef01234567",
+      ),
+    );
+    return "validate";
+  },
+});
+
+/** The findings a run reported, one per line, filtered to those naming a rule. */
+function findingsOf(output: string): string[] {
+  return output.split(/\r?\n/).filter((line) => line.startsWith("R-WORKFLOW-HYGIENE-DRIFT:"));
+}
+
+describe("TC-0017-0050 (TDD-0050): the lane scans both roots and reports shipped paths as such", () => {
+  it("reports a violation from each tree in one run, each under its own path", () => {
+    // Both plants in ONE run, because that is what "scans both roots" means. Two separate
+    // runs would each prove one root is scanned and neither would prove they are scanned
+    // together — a lane that scanned whichever tree it was pointed at would pass that.
+    const dir = plantedTree((d) => {
+      editWorkflow(d, "ci.yml", (text) =>
+        text.replace(
+          "  lint:\n    runs-on: ubuntu-latest\n    timeout-minutes: 10\n",
+          "  lint:\n    runs-on: ubuntu-latest\n",
+        ),
+      );
+      // The timeout rule, not fail-fast: the shipped tree expresses its lanes as seven
+      // independent jobs rather than matrix legs, so it has no matrix to disable.
+      editShipped(d, SHIPPED_FILE, (text) =>
+        text.replace("      contents: read\n    timeout-minutes: 10\n", "      contents: read\n"),
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `both plants must be reported:\n${run.output}`).toBe(1);
+
+      const findings = findingsOf(run.output);
+      const own = findings.filter((f) => f.includes(".github/workflows/ci.yml"));
+      const shipped = findings.filter((f) => f.includes(SHIPPED_WORKFLOWS_REL.replace(/\\/g, "/")));
+      expect
+        .soft(own.length, `the own-tree plant must be reported:\n${run.output}`)
+        .toBeGreaterThan(0);
+      expect
+        .soft(shipped.length, `the shipped-tree plant must be reported:\n${run.output}`)
+        .toBeGreaterThan(0);
+
+      // And the shipped finding names the SHIPPED path — the property the two-roots choice
+      // exists for. A copy-into-the-checkout implementation reports
+      // `.github/workflows/qfai-tests.yml`, which tells an adopter to look in a file they do
+      // not have.
+      expect
+        .soft(shipped.join("\n"), "a shipped finding must name the shipped path, not an own-CI one")
+        .toContain(`${SHIPPED_WORKFLOWS_REL.replace(/\\/g, "/")}/${SHIPPED_FILE}`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("TC-0017-0051 (TDD-0051): a shipped-only violation exits 1 naming the shipped path", () => {
+  it("exits 1 with no own-CI path in the report when only the shipped tree is broken", () => {
+    const dir = plantedTree((d) => {
+      editShipped(d, SHIPPED_FILE, (text) =>
+        text.replace(/uses: actions\/checkout@[0-9a-f]{40}/, "uses: actions/checkout@main"),
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a shipped-only violation must exit 1:\n${run.output}`).toBe(1);
+
+      // The distinguishing claim: NOTHING is reported against the own tree. An
+      // implementation that copied the shipped files into `.github/workflows/` would exit 1
+      // here too, and would name an own-CI path — passing an exit-code-only row while
+      // misdirecting whoever reads it.
+      const findings = findingsOf(run.output);
+      const own = findings.filter((f) => /\.github\/workflows\/(ci|release)\.yml/.test(f));
+      expect
+        .soft(
+          own,
+          "an intact own tree must produce no findings when only the shipped tree is broken",
+        )
+        .toEqual([]);
+      expect
+        .soft(findings.join("\n"), "the finding must name the shipped file")
+        .toContain(SHIPPED_FILE);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("TC-0017-0053 (TDD-0053): the shipped third-party rule is allow-list membership", () => {
+  it("passes the sanctioned third-party action, which a count of zero could not", () => {
+    // The claim `BR-0017-0046` makes by rejecting an alternative: the shipped set keeps one
+    // third-party action on purpose, so a rule of "zero third-party references" would fail
+    // the lane on the entry the pin policy deliberately keeps.
+    //
+    // Two halves, and both are needed. Exiting 0 alone would also be satisfied by a lane with
+    // no third-party rule at all, so the fixture is asserted to actually CONTAIN a
+    // third-party reference — otherwise the row passes over an empty premise.
+    const dir = plantedTree(() => {});
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `the sanctioned entry must pass:\n${run.output}`).toBe(0);
+
+      const shippedText = readdirSync(path.join(dir, SHIPPED_WORKFLOWS_REL))
+        .map((f) => readFileSync(path.join(dir, SHIPPED_WORKFLOWS_REL, f), "utf-8"))
+        .join("\n");
+      const thirdParty = [...shippedText.matchAll(/uses:\s+([^/\s]+)\/[^\s]+/g)]
+        .map((m) => m[1])
+        .filter((owner) => owner !== "actions" && owner !== "github");
+      expect
+        .soft(thirdParty, "the premise: the shipped set keeps at least one third-party action")
+        .not.toEqual([]);
+
+      // And the rule is announced in its own scope, so a reader can see the shipped set is
+      // governed by something the own tree is not.
+      //
+      // Asserted over the raw output rather than by parsing the section: the parser throws
+      // when the heading is absent, and a thrown helper is an inadmissible RED - it says the
+      // row could not run, not that the behaviour is missing.
+      expect
+        .soft(run.output, "the shipped scope must be announced in the printed rule set")
+        .toContain(SHIPPED_SCOPE);
+
+      // And a rule must be LISTED under it. The heading comes from the scope list and the
+      // rules from the rule list, so removing the rule leaves the heading standing over
+      // nothing — which the oracle caught: that mutation reddened no row at all.
+      expect
+        .soft(printedRules(run.output, SHIPPED_SCOPE), "the shipped scope must declare its rule")
+        .toEqual(["shipped-third-party"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("TC-0017-0054 (TDD-0054): an unsanctioned third-party reference exits 1", () => {
+  it("rejects a third-party owner that is not in the sanctioned set, and names it", () => {
+    const dir = plantedTree((d) => {
+      // `qfai-validate.yml`, not the tests workflow: that is where the one sanctioned
+      // third-party action lives.
+      editShipped(d, SHIPPED_THIRD_PARTY_FILE, (text) =>
+        text.replace(
+          /uses: pnpm\/action-setup@[0-9a-f]{40}/,
+          "uses: someone-else/action-setup@0123456789abcdef0123456789abcdef01234567",
+        ),
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `an unsanctioned third-party reference must exit 1:\n${run.output}`)
+        .toBe(1);
+
+      // Named, and named as the OWNER rather than as "a third-party action": the operator's
+      // next question is which one, and a finding that does not answer it costs a second run.
+      expect
+        .soft(findingsOf(run.output).join("\n"), "the finding must name the unsanctioned owner")
+        .toContain("someone-else");
+
+      // The plant keeps a valid SHA pin, so this cannot pass by tripping the pin rule
+      // instead. Asserted rather than assumed, because a plant that fails the wrong rule is
+      // the commonest way a negative fixture goes vacuous.
+      expect
+        .soft(findingsOf(run.output).join("\n"), "the finding must come from the third-party rule")
+        .not.toContain("action-pin");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("TC-0017-0055 (TDD-0055): the lane is invoked from an aggregate pull requests execute", () => {
+  it("appears in the lint aggregate, and that aggregate runs in an unconditional pull-request job", () => {
+    const manifest: unknown = JSON.parse(
+      readFileSync(path.join(REPO_ROOT, "package.json"), "utf-8"),
+    );
+    const scripts =
+      typeof manifest === "object" && manifest !== null && !Array.isArray(manifest)
+        ? (manifest as Record<string, unknown>)["scripts"]
+        : undefined;
+    const lintAggregate =
+      typeof scripts === "object" && scripts !== null
+        ? String((scripts as Record<string, unknown>)["ci:lint"] ?? "")
+        : "";
+
+    // CLAIM 1 — the lane is a member of the lint aggregate.
+    expect
+      .soft(lintAggregate, "the hygiene lane must be a member of ci:lint")
+      .toContain("check-workflow-hygiene.mjs");
+
+    // CLAIM 2 — and that aggregate is actually executed by a pull request. Membership in an
+    // aggregate nobody runs is the failure `BR-0017-0041` names, so the workflow side is
+    // asserted too: a job that invokes it, in a workflow triggered by pull_request, with no
+    // condition that could skip it.
+    const ci = readFileSync(path.join(REPO_ROOT, ".github", "workflows", "ci.yml"), "utf-8");
+    expect.soft(ci, "ci.yml must invoke the lint aggregate").toContain("pnpm ci:lint");
+    expect
+      .soft(ci, "and be triggered by pull requests")
+      .toMatch(/^on:\s*$[\s\S]{0,80}pull_request:/m);
+  });
+});
+
+describe("TC-0017-0056 (TDD-0056): the lane is absent from the release-only aggregate", () => {
+  it("stays out of ci:gate, which no pull request invokes", () => {
+    const manifest: unknown = JSON.parse(
+      readFileSync(path.join(REPO_ROOT, "package.json"), "utf-8"),
+    );
+    const scripts =
+      typeof manifest === "object" && manifest !== null && !Array.isArray(manifest)
+        ? (manifest as Record<string, unknown>)["scripts"]
+        : undefined;
+    const gate =
+      typeof scripts === "object" && scripts !== null
+        ? String((scripts as Record<string, unknown>)["ci:gate"] ?? "")
+        : "";
+
+    // `BR-0017-0041` rejects placing the lane here, and the reason is the second claim below
+    // rather than anything about ci:gate's contents: no pull request invokes it, so a lane
+    // living only there would block nothing while looking registered.
+    expect
+      .soft(gate, "the hygiene lane must not live only in the release-only aggregate")
+      .not.toContain("check-workflow-hygiene.mjs");
+
+    // The warrant, asserted so the reason cannot rot: ci:gate is invoked by the release
+    // workflow, and that workflow has no pull-request trigger.
+    const release = readFileSync(
+      path.join(REPO_ROOT, ".github", "workflows", "release.yml"),
+      "utf-8",
+    );
+    expect.soft(release, "the release workflow is what invokes ci:gate").toContain("pnpm ci:gate");
+    expect
+      .soft(release, "and the release workflow is not triggered by pull requests")
+      .not.toMatch(/^\s{2}pull_request:/m);
   });
 });
