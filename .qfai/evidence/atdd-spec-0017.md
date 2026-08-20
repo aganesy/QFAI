@@ -1344,7 +1344,7 @@ Round 1's pack, for continuity:
 
 ### Review packs and their seals
 
-**Eight** packs, one per round, each sealed when its last reviewer response landed and before this
+**Nine** packs, one per round, each sealed when its last reviewer response landed and before this
 record's verdict was written. The count is derived —
 `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` compares the packs named here against the
 directories on disk — but the **word** was not, and it said "Three" in round 4 and "Four" from then
@@ -1385,6 +1385,9 @@ Review pack seal:  022c3addd80a7d9a206f40dc9cfd913ecb555fa7d9458fe2895cffed17ea5
 
 Review pack:       .qfai/review/review-20260821100000000/            (round 8 — stage gates only)
 Review pack seal:  d2ef7d5c271225d32d1bc37cffed9cddbd49edb752ebb8fd73fa6de0e7e490de
+
+Review pack:       .qfai/review/review-20260821120000000/            (round 9 — stage gates only)
+Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
 ```
 
 Round 8 routes no P1d pass. That gate closed at round 7 and re-routing a closed gate would be asking a
