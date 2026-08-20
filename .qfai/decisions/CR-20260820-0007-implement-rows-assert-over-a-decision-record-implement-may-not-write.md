@@ -11,7 +11,7 @@
 - Approved option: `-`
 - Applied at: `-`
 - Superseded by: `-`
-- Blocked set: `none is newly blocked — five rows are already at refactor with the records in place; what is open is whether the writes stand, and who owns them`
+- Blocked set: `spec-0017 TDD-0032, TDD-0033, TDD-0034, TDD-0035` (see "Four rows this blocks")
 
 ## The prohibition, quoted
 
@@ -75,6 +75,40 @@ None of the three invents a decision. Each records one that had already been tak
 which is exactly the class of thing a decision record exists to hold, and losing it would be worse
 than the scope violation. That is an argument about consequences, not about authority, and it does
 not make the write permitted.
+
+## Four rows this blocks, established after filing
+
+The header first said "none is newly blocked". That was wrong, and finding out why is what made
+this CR's second half concrete rather than procedural: **four `todo` rows cannot be implemented
+while this is open**, because their own acceptance criteria require the write the CR is about.
+
+| row        | rule           | what it requires                                                            |
+| ---------- | -------------- | --------------------------------------------------------------------------- |
+| `TDD-0032` | `BR-0017-0030` | before-and-after numbers quoted in the PR description AND `07_Decisions.md` |
+| `TDD-0033` | `EX-0017-0030` | the same, as the rejecting direction — a cost claim with no numbers fails   |
+| `TDD-0034` | `EX-0017-0031` | a recorded regression, in that same decision record                         |
+| `TDD-0035` | `EX-0017-0030` | the same rule as `TDD-0033`, from the boundary direction                    |
+
+`BR-0017-0030` binds `AC-0017-0014`, which is the criterion `TC-0017-0032` belongs to. So the
+conflict is not incidental to how I worked: **the spec routes a row to `/qfai-implement` whose
+acceptance criterion is a decision-record write that skill is forbidden to make.** That is stronger
+evidence for this CR than the three records I wrote — those could be read as my overreach; this
+cannot.
+
+### A second, independent constraint on TDD-0032, recorded so it is not rediscovered
+
+Adopting artifact reuse means a producer job that builds once and uploads. A new job adds a
+fifteenth CI check name, and change 9's oracle `R6` — "a new job appears, adding a check name no
+repository setting knows" — already reddens `TDD-0043` for exactly that. The pinned set is a
+repository-settings surface no agent can reconfigure, so the workflow edit has to be coordinated
+with a branch-protection change by a human.
+
+`BR-0017-0007`'s documentation-only ceiling ("at most four job instances") is satisfiable alongside
+it, provided the producer is conditioned on the detection output like the other lanes — docs-only
+runs would still execute detect, lint, build and the verdict. Checked rather than assumed, because
+a producer that always ran would break that ceiling silently.
+
+Neither constraint is a defect in `TDD-0032`. Both are why it is `todo` rather than attempted.
 
 ## Options
 
