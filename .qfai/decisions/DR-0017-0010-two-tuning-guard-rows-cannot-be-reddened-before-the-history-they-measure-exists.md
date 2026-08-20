@@ -86,7 +86,7 @@ as `CR-20260820-0012`, and it is what a later reader following the `DR-ID` cell 
 anomaly decides when anyone tries again.
 
 Also corrected: "the workflow changes that produce an aggregate verdict are unmerged" was false as
-`TDD-0069`'s reason. `ci-pass` exists at `.github/workflows/ci.yml:469` and has run twelve times on
+`TDD-0069`'s reason. `ci-pass` exists at `.github/workflows/ci.yml:469` and has run many times on
 this branch; `EX-0017-0053`'s obligation is **pre-merge** by construction, since it is about a pull
 request and its runs.
 

@@ -69,14 +69,28 @@ The two that need their reasoning stated rather than asserted:
   `package.json` `scripts`, which no validator parses and which no spec artifact contains. The same
   argument the script was cleared on, applied to a different file.
 - **"a row that cannot fail looks like coverage" is the option these four guards are most at risk of
-  reintroducing**, and this stage has reintroduced it twice: `retractedClaims.test.ts` went green for
-  the wrong reason in two successive versions, and the member-pinning test in `buildCommand.test.ts`
-  generated its probes from the sets it pinned, so 0 of 17 mutations reddened it. Both were caught by
-  **mutating and re-running** rather than by reading. That is why every one of these guards now carries
-  a measured mutation family under § "Execution logs" — `M*`/`X*`/`Y*`/`Q*` for the matrix, `C*` for
-  the derived counts, `W*` for the retracted claims, and an in-suite sweep over all 208 grammar members
-  for the classifier. The option is not reintroduced *now*; it was, twice, and the defence is a
-  measurement rather than a promise.
+  reintroducing**, and this stage has reintroduced it three times: `retractedClaims.test.ts` went green
+  for the wrong reason in two successive versions; the member-pinning test in `buildCommand.test.ts`
+  generated its probes from the sets it pinned, so 0 of 17 mutations reddened it; and the story
+  `US-0017-0004` rests on let **18 of 20** planted builds through. Each was caught by **mutating and
+  re-running** rather than by reading.
+
+  **Two properties, and they need different instruments — this bullet cited the wrong one for a round.**
+  The mutation families under § "Execution logs" (`M*`/`X*`/`Y*`/`Q*` for the matrix, `C*` for the
+  derived counts, `W*` for the retracted claims, and the in-suite sweep over every grammar member)
+  establish that **deleting a rule reddens the corpus**. That is a property of the *guards*. It says
+  nothing about whether the *story's* assertion can fail when a shipped lane contains a build, which is
+  what this rejected option is actually about — and the previous version of this bullet discharged the
+  option by citing the sweep, which is the naming-the-wrong-instrument defect two other findings in this
+  same round are about.
+
+  The instrument for the story-level property is planting a real build in the shipped lane and running
+  the story's own loop. Round 8 did it (10 of 11 unnoticed), round 9 did it twice (18 of 20 and 34 of
+  40), and v12 is the repair; the forty-one forms they used are pinned in
+  `tests/unit/buildCommand.test.ts`. So: the option is not reintroduced *now*, in both senses, and both
+  defences are measurements. But the measurement that matters here was made by reviewers three rounds
+  running, not by this stage, and the honest statement is that the story's discriminating power has only
+  ever been established from outside.
 - **`CR-20260820-0012`'s own rejected options are not reintroduced.** Option 1 (narrow the signal to
   the affected lanes), option 2 (exempt a spec's in-flight TCs from the fatal gate), option 3 (waive
   the row) and option 4 (merge first, then satisfy it) all stay rejected: `TDD-0069` is `blocked` with
@@ -1082,6 +1096,9 @@ pnpm -C packages/qfai test:e2e                  1434 passed / 16 skipped, exit 0
 vitest --project integration --project unit     1200 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 8 claim(s) backed, exit 0
+pnpm verify:pack                                exit 0
+  (named because round 9 found it absent from this block while `release.yml` runs it, and because it
+   is one of the three helpers that reach a build through `spawnSync` and so cannot be scanned)
 node ... validate --profile atdd --spec 0017     info=2 warning=0 error=2
   artifact  .qfai/report/validate.spec-0017.json
 node ... validate --profile full                 error=4  (see § "The full profile")
@@ -1252,10 +1269,10 @@ differ.
 | 3     | `qa-gatekeeper` (stage)   | **did not run** |  — | —                      |       — |
 | 4     | `implementation-reviewer` | not routed — the code was read by round 4's gatekeeper | — | — | — |
 | 4     | `completion-reviewer`     | REVISE  |       16 | B1-B6, M1-M5, m1-m5    |      16 |
-| 4     | `qa-gatekeeper` (stage)   | REVISE  |        6 | B1-B6                  |      12 |
+| 4     | `qa-gatekeeper` (stage)   | REVISE  |        6 | B1, B2, M4, M4b, B6, B6b |    12 |
 | 4     | `qa-gatekeeper` (P1d 3)   | REVISE  |        5 | B1-B2, M1-M3           |       8 |
 | 5     | `completion-reviewer`     | REVISE  |       17 | B1-B7, M1-M5, m1-m5    |      17 |
-| 5     | `qa-gatekeeper` (stage)   | REVISE  |       12 | B1-B10, M1-M3          |      17 |
+| 5     | `qa-gatekeeper` (stage)   | REVISE  |       12 | B1-B10, M1, M3         |      17 |
 | 5     | `qa-gatekeeper` (P1d 4)   | REVISE  |        3 | B1-B3                  |       3 |
 | 6     | `completion-reviewer`     | REVISE  |       17 | B1-B6, M1-M5, m1-m6    |      18 |
 | 6     | `qa-gatekeeper` (stage)   | REVISE  |       10 | B1-B10                 |      20 |
@@ -1268,9 +1285,13 @@ differ.
 
 **Where the two columns disagree, the derived one is the one to trust, and the reason is a rule that
 does not fit every report.** The declared rule counts distinct finding identifiers "or the count of
-heading-level-3 sections where a report uses no identifiers". Three `qa-gatekeeper` stage reports
-enumerate advisories **inline** rather than as headings, so a mechanical heading count undercounts them
-and the recorded value was produced by hand. Round 7's P1d slot is the one corrected: it recorded **3**
+heading-level-3 sections where a report uses no identifiers", and round 9 showed that neither branch
+describes what these reports do. Round 1's `R03` has **zero** level-3 headings and five `## Finding N`
+headings, and its recorded 5 is exactly derivable from those — so it is enumerated as headings, at level
+two, with a word prefix. Round 2's `R03` has four level-3 sections against a recorded 9. The honest
+statement is that identifier headings appear at level two or three, sometimes with a word prefix and
+sometimes backtick-wrapped, and that where a report enumerates advisories inline the recorded value was
+produced by hand. The rule as written fits the `completion-reviewer` reports and no others. Round 7's P1d slot is the one corrected: it recorded **3**
 where its own report enumerates `M1` and `A1`-`A7` — eight — which round 7 had already reported for the
 round-6 pack and round 8 found again in the pack sealed at HEAD, so the seal event carried the defect
 forward instead of catching it. That pack is re-sealed, with the old value kept as `superseded:`. The
@@ -1329,9 +1350,11 @@ What is not satisfied:
 - **both rows are still `todo` in the ledger.** `tdd/test-list.md:107-108`, `DR-ID: -`,
   `Blocked-By: -`. Nothing has moved, and the two statuses below are what the handover asks
   `/qfai-implement` to write rather than what it has written;
-- `TDD-0070` is **not yet** `exception`: that needs the P1d `qa-gatekeeper` PASS on `DR-0017-0010`,
-  and P1d returned `REVISE` five times before its pass-6 PASS — each time sustaining the row's own account and failing
-  the record around it. Round 3 caught an earlier version of this line asserting the row "is parked at
+- `TDD-0070` is **not yet** `exception`, and what it now waits on is the **ledger write**, not the
+  gate. The P1d `qa-gatekeeper` PASS on `DR-0017-0010` was granted at pass 6; P1d returned `REVISE` five
+  times before it, each time sustaining the row's own account and failing the record around it. An
+  earlier version of this line named the gate as the outstanding item and then said in its next clause
+  that the gate had passed. Round 3 caught an earlier version of this line asserting the row "is parked at
   `exception`"; round 4 caught the same assertion surviving elsewhere in the file. Both are gone;
 - `TDD-0069` is **not yet** `blocked` either, though `blocked` needs no P1d PASS. Step 3b leaves a row
   at `todo` while its handover entry is malformed, and P1d's third pass found this one
@@ -1453,7 +1476,8 @@ round  last report at   summary.json at   gap
   5    c40b2358         cb91e089          1 commit
   6    ac4700d1         9a37421c          1 commit
   7    9882a1d4         dbe00247          1 commit
-  8    (this commit)    (this commit)     same commit
+  8    aab29486         aab29486          same commit
+  9    (in flight)      (in flight)       sealed when its last response lands
 ```
 
 This section told the rounds-3-and-4 version of that story — "written first, then sealed" — for two
