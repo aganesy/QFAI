@@ -84,6 +84,44 @@ it immediately, and change 5 removes it.
 Oracle rounds R6 and R7 confirm claims 3 and 4 discriminate rather than overlap: planting a dead glob
 reddens only claim 4, and planting a glob whose shape the counter cannot handle reddens only claim 3.
 
+## Disclosure: option A is already in the tree
+
+**Added 2026-08-20, after review finding B1.** The options above are presented as a choice, and one
+of them has already been made. That has to be stated before anyone reads them as open.
+
+`TC-0017-0063`'s ledger `Selector` and the test's `describe` title both read **"no declared slice can
+match zero test files"** — which is option A's proposed wording, verbatim. Recorded here rather than
+left for a reviewer to find twice:
+
+```text
+a23220de (ledger seed)  Selector: TC-0017-0063 (TDD-0063): the deleted project name no longer resolves   status todo
+01c9f6ff (change 5)     Selector: TC-0017-0063 (TDD-0063): no declared slice can match zero test files   status refactor
+```
+
+**Why the edit was permitted at the moment it was made.** The Drift Protocol allows the `Selector`
+cell to be edited while `selectorResolves` is false. At the seed commit the row's test file did not
+exist, so the selector resolved against nothing and the cell was inside the carve-out. It is outside
+it now — the selector resolves — so this wording cannot be edited again under the same authority.
+That is what makes the disclosure load-bearing rather than a formality: undoing it is no longer a
+cell edit.
+
+**What was NOT changed.** `06_Test-Cases.md` is untouched on this branch after the seed commit, and
+still reads "The deleted project name no longer resolves / Selecting the deleted project name fails
+to resolve instead of matching zero files". So the upstream text and the ledger row currently
+disagree, and that live divergence is exactly what this CR exists to resolve. No upstream artifact
+was patched to make the row work.
+
+**What this does to the options.** It makes them unequal in a way the section above does not show:
+
+- **Option A** costs an upstream text edit. Nothing in the ledger or the test moves.
+- **Options B and C** cost an upstream text edit AND a rewrite of a landed row's selector and
+  assertion — a selector that now resolves, so the rewrite needs this CR's approval as its warrant
+  rather than the Drift Protocol's carve-out.
+
+That asymmetry is a consequence of the order the work happened in, not an argument for A. It is
+stated so the choice is made with it visible; a reader who prefers B or C should read the extra cost
+as the price of my having implemented before the text was settled, not as a reason to prefer A.
+
 ## Options
 
 **A — reword `TC-0017-0063` and `EX-0017-0055` to the observable that exists (recommended).** The TC

@@ -89,6 +89,62 @@ the integration slice passes at the declared worker value of ten.
 precedent and constraint — the pins row scans every test file, which is why a fixture literal in
 this spec's own tests had to move from `@v4` to `@main`. Citing a row is not editing it, and neither
 file was touched here.
+## Two corrections that apply across the per-change blocks
+
+**Added 2026-08-20, after the review round.** Both concern statements that were TRUE when written and
+are no longer, so neither is edited in place — a per-change block records what was measured at that
+revision, and rewriting it would destroy the only evidence of when the situation changed.
+
+### Item-12 step 2 now passes; step 4 is the sole remaining blocker
+
+Blocks from change 4 onward record the checkpoint as unattempted for TWO reasons: step 2 needed an
+unfiltered whole-suite run "this machine is not giving", and step 4's clause 3 reads a total that
+`CR-20260818-0006` is about. The first of those stopped being true once the structural fix landed —
+the fixture builder that was called once per `it()` for identical fixtures. Measured now, unfiltered,
+from `packages/qfai`:
+
+```text
+pnpm test
+  Test Files  431 passed | 8 skipped (439)
+       Tests  4424 passed | 37 skipped (4461)
+    Duration  193.08s
+  exit 0
+```
+
+So step 2 passes. **Step 4 remains, and it is the only one.** Its clause 3 reads an unattributed
+aggregate — `QFAI-ATDD-112` still names TCs from `spec-0003`, `spec-0008` and `spec-0015`, and
+`QFAI-ATDD-111` wants `US-0017-*` E2E annotations belonging to a different skill's scope — which is
+exactly the defect `CR-20260818-0006` is open against, and that CR blocks four `spec-0006` rows for
+the same reason.
+
+Stated this way rather than "the checkpoint now passes", because it does not. What changed is that
+one of the two reasons was mine to fix and is fixed, and the remaining one is a clause under review.
+
+### The lane prints seven rules across three scopes, not five
+
+The heading "Exactly five is now reproducible from the output" and the paragraphs under it are about
+`BR-0017-0037`'s five obligations over `.github/workflows/**`, and that framing was correct at
+revision `4e29a2a4`. Two rules from other criteria have joined the lane since — `shipped-third-party`
+(`AC-0017-0024`) and `required-context` (`AC-0017-0025`) — so a reader who counts the output today
+gets seven and finds the record saying five.
+
+The output is grouped by scope precisely so the two numbers can both be read off it, which is why
+this is an addition rather than a correction of arithmetic. Current, from `node scripts/check-workflow-hygiene.mjs`:
+
+```text
+Rules run over both workflow trees:                      5   <- BR-0017-0037's five
+  job-guardrails, checkout-credentials, action-pin, matrix-fail-fast, secret-inheritance
+Rules run over the shipped workflow tree only:           1
+  shipped-third-party
+Rules run over the required-status-context declaration:  1
+  required-context
+                                                    total 7
+```
+
+`TC-0017-0045` pins the workflow-tree scope at five and reads it BY SCOPE rather than by filtering
+names out, which is what keeps "exactly five" reproducible while the total grows. That design choice
+is recorded under the rule-set block; this note exists so the count in the prose cannot be mistaken
+for the count in the output.
 ## Change 1 — the derived verdict (TDD-0001 … TDD-0005)
 
 `10_Plan.md` § `The shape of the change, in order` step 1, and `DR-0017-0005` edge 1: this change
