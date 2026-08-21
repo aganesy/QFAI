@@ -34,6 +34,7 @@ const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
 const PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
 const REVIEW_FIX = "assistant/skills/qfai-atdd/references/review-fix-rounds.md";
 const SHARED_ARTIFACT = "assistant/skills/qfai-atdd/references/shared-test-artifacts.md";
+const MIGRATION = "assistant/skills/qfai-implement/references/pre-split-evidence-migration.md";
 const GATEKEEPER = "assistant/agents/qa-gatekeeper.md";
 const CATALOG = "assistant/manifest/agent-catalog.yml";
 
@@ -1035,6 +1036,47 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
     expect(implement).toContain("A row with no marker is judged by the current rule");
   });
 
+  it("gives the pre-split marker pass a phase that owns it", async () => {
+    // Item 10 carried the whole backfill and named "taking this version" as its
+    // trigger, which is not a phase: nothing ran it, so an unmarked legacy row
+    // failed item 10 forever, and a one-time repository migration was re-read
+    // on every transition to `done`.
+    const implement = await read(tree, IMPLEMENT);
+    const flatImplement = flat(implement);
+    expect(flatImplement).toContain(
+      "3. **Run the pre-split evidence marker pass, once per repository** (`references/pre-split-evidence-migration.md`)",
+    );
+    expect(flatImplement).toContain("`migrations.preSplitEvidence` in `.qfai/state.json`");
+
+    const item10 = implement
+      .split("\n")
+      .filter((line) => line.startsWith("10. `test-list.md` Status is current"));
+    expect(item10).toHaveLength(1);
+    // The gate reads the marker; it no longer prescribes the history walk.
+    expect(item10[0]).toContain("**This item reads the marker; it never writes one.**");
+    expect(item10[0]).not.toContain("Write it once, from the history");
+    expect(item10[0]).not.toContain("git log");
+  });
+
+  it("states the marker pass's guard and its per-row procedure in one reference", async () => {
+    // Without the flag the pass is either never run or run every session; both
+    // are what putting it in the gate already cost.
+    const migration = flat(
+      await read(
+        tree,
+        "assistant/skills/qfai-implement/references/pre-split-evidence-migration.md",
+      ),
+    );
+    expect(migration).toContain("runs **once per repository**");
+    expect(migration).toContain("**Flag set → skip.**");
+    expect(migration).toContain("**Flag absent → run the procedure below, then set the flag.**");
+    // `-S` matches a filepair only when one side holds the string, so it walks
+    // back to the commit that added the row instead of the one that moved it.
+    expect(migration).toContain("not with `git log -S`");
+    expect(migration).toContain("`git log -p -- <test-list.md>`");
+    expect(migration).toContain("append `Pre-split-evidence: implement`");
+  });
+
   it("defines the rework path a review-fix row takes through this stage", async () => {
     // Step 3b sends the row back here when the REVISE touches the acceptance
     // test, and the three branches only cover a `todo` row's first handoff.
@@ -1082,11 +1124,16 @@ describe.each(TREES)("%s (a gate cannot fail on its own bookkeeping)", (tree) =>
 
   it("names the migration that writes the pre-split marker", async () => {
     // Without one, no row ever carries the marker, so the compatibility clause
-    // it gates is unreachable and every legacy row is rejected.
+    // it gates is unreachable and every legacy row is rejected. The skill names
+    // the phase step that runs it; the procedure itself is in the reference.
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("**Write it once, from the history**");
-    expect(implement).toContain("`git log -S`");
-    expect(implement).toContain("until it has run, those rows are judged by the current rule");
+    expect(implement).toContain("`references/pre-split-evidence-migration.md`");
+    expect(implement).toContain(
+      "until it has run, unmarked legacy rows are reported rather than accepted",
+    );
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("**Write it once, from the history**");
+    expect(migration).toContain("`git log -S`");
   });
 
   it("recomputes the test hash over what the producer hashed", async () => {
@@ -1164,9 +1211,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   it("finds the migration's commit from the patch, not from -S", async () => {
     // The id is on both sides of a status-only change, so `-S` walks back to
     // the commit that added the row and the marker lands on the wrong one.
-    const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("from the row's **patch history**, not with `git log -S`");
-    expect(implement).toContain("`git log -p -- <test-list.md>`");
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("from the row's **patch history**, not with `git log -S`");
+    expect(migration).toContain("`git log -p -- <test-list.md>`");
   });
 
   it("submits branch 2's mutation to the gate before the transition", async () => {
@@ -1564,9 +1611,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   it("migrates a pre-split row at any status, not two", async () => {
     // A row interrupted mid-cycle by the upgrade stored evidence there too, and
     // unmarked it is judged by the current rule whatever its status.
-    const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("for **every** `E2E` / `API` row past `todo`");
-    expect(implement).toContain("A row interrupted mid-cycle by the upgrade");
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("for **every** `E2E` / `API` row past `todo`");
+    expect(migration).toContain("A row interrupted mid-cycle by the upgrade");
   });
 
   it("gives a stage review a subject that needs no row", async () => {
