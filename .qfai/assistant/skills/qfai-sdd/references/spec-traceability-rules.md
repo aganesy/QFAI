@@ -212,6 +212,41 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   several test modules is legitimate. `TDD-ID` uniqueness is the only
   identity constraint.
 - `TDD-ID` must match `TDD-NNNN` and be unique within the spec.
+- **`TDD-ID` allocation is by reserved block, decided before the workers
+  split.** Uniqueness alone does not say who takes the next value.
+  `TDD-NNNN` is dense, spec-scoped and monotonic, so that value is `max + 1`
+  over the very file every concurrent author is also appending to — and
+  `constitution/workflow.md` requires worktree separation for parallel work,
+  which makes the read stale the moment another author appends.
+  `TDDLIST_DUPLICATE_ID` is an `error`, so everyone but the last writer is
+  locked out of landing their rows at all. The rule:
+  1. **Serial authoring — `max + 1`.** Take the maximum `TDD-NNNN` over the
+     whole ledger, including retired, `blocked` and `exception` rows, and
+     allocate upward from it. Nothing changes for the ordinary case.
+  2. **Concurrent authoring — reserve first, on the shared branch.** Before
+     dispatching authors that will append to one spec's ledger from separate
+     worktrees, make one serialized write on the branch they all fork from
+     that records a disjoint block per author under a
+     `## TDD-ID reservations` heading in that ledger. Record it as a bullet
+     list, never a markdown table: `validateTddList` reads every table in the
+     file as ledger rows, so a reservation table would be validated as rows.
+     One bullet per author, shaped
+     `- TDD-0065..TDD-0079 — <author or slice>, reserved <YYYY-MM-DD>`. Each
+     author then allocates only inside its own block, and the appends cannot
+     collide. **If no reservation exists and you need IDs anyway, take one
+     yourself** — the bullet is a one-line append that can land on the shared
+     branch in its own commit long before the rows are ready, so it serializes
+     where a batch of rows cannot.
+  3. **A block is a budget, not a promise.** An author that exhausts its block
+     stops and asks for another one; it does not continue past the boundary.
+     Unused reserved IDs stay unused and the bullet is deleted — leave the
+     gap, exactly as `_policies/11_Slice-Policy.md` says for spec IDs. Density
+     is not a property `TDD-NNNN` is required to have.
+  4. **A written `TDD-ID` is never renumbered.** Once an id appears anywhere
+     outside the ledger — a commit message, `.qfai/evidence/implement-*.md`,
+     `.qfai/evidence/atdd-*.md`, or a `DR-*` cross-reference — a merge does
+     not rewrite it, so renumbering at merge time silently breaks those
+     references. Reservation is what makes "never renumber" affordable.
 - Missing `tdd/test-list.md` is a warning **only when the spec declares no
   coverage-target TC**. If it declares any, the absent file also raises
   `TDDLIST_TC_NOT_COVERED` (error) naming them: the obligations do not

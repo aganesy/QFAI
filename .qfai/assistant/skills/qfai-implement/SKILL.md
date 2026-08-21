@@ -100,6 +100,8 @@ the lifecycle is forward-only along `todo` -> `red` -> `green` -> `refactor` -> 
 
 The eight required columns, the allowed transitions and the exception rules are in `references/execution-ledger.md`. Read it before writing to the ledger.
 
+Allocating a new `TDD-ID` is governed by `references/execution-ledger.md#tdd-id-allocation`: `max + 1` when authoring serially, a block reserved on the shared branch before the worktrees split when authors run concurrently — never guess the next value from a ledger another worktree holds, because that read is stale on arrival and `TDDLIST_DUPLICATE_ID` is an `error`.
+
 ## Required Process
 
 ### Phase: Stage 0 + Preflight — MANDATORY, runs first
