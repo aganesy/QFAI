@@ -86,11 +86,23 @@ The two that need their reasoning stated rather than asserted:
 
   The instrument for the story-level property is planting a real build in the shipped lane and running
   the story's own loop. Round 8 did it (10 of 11 unnoticed), round 9 did it twice (18 of 20 and 34 of
-  40), and v12 is the repair; the forty-one forms they used are pinned in
-  `tests/unit/buildCommand.test.ts`. So: the option is not reintroduced *now*, in both senses, and both
-  defences are measurements. But the measurement that matters here was made by reviewers three rounds
-  running, not by this stage, and the honest statement is that the story's discriminating power has only
-  ever been established from outside.
+  40), and round 10 did it twice more (18 of 20 and 44 of 50) — five plantings, in each of which the
+  majority shipped unnoticed.
+
+  **So the discharge is scoped, and the scope is the point.** Over the ninety-one forms four reviewers
+  planted, the option is not reintroduced: every one of them is pinned in
+  `tests/unit/buildCommand.test.ts` and refused by `tests/unit/shippedLaneCommands.test.ts`. Over a
+  build the grammar does not declare, the predicate was vacuous, and it stayed vacuous through ten
+  versions — round 10's verdict was that it did not need a weakness, only a tool nobody had named. The
+  previous version of this bullet said "the option is not reintroduced *now*, in both senses" without
+  that qualifier, which read as a general claim and was false as one.
+
+  What answers the general claim is not a better spelling list. `shippedLaneCommands.ts` inverts the
+  question — what may a lane INVOKE — so the assertion needs no corpus and fails closed, and the
+  delta's Temptation ("a row that cannot fail looks like coverage") stops describing this row. The
+  classifier keeps the own-tree job, where a miss is tolerable. Note also who measured: four of the five
+  plantings were reviewers', not this stage's, and the story's discriminating power was only ever
+  established from outside.
 - **`CR-20260820-0012`'s own rejected options are not reintroduced.** Option 1 (narrow the signal to
   the affected lanes), option 2 (exempt a spec's in-flight TCs from the fatal gate), option 3 (waive
   the row) and option 4 (merge first, then satisfy it) all stay rejected: `TDD-0069` is `blocked` with
@@ -838,13 +850,20 @@ repository's root `build` is `pnpm -C packages/qfai build` and the package's is 
 verdicts instead of two, so a name-shaped guess returns `heuristic` rather than passing itself off as
 an analysis.
 
-Measured against **nine** corpora, and this is the enumeration both evidence files count from —
-round 4's 20 regressions, v4's 15 kept forms, round 6's 46-case corpus (20 missed builds, 2 false
-positives), round 7's 59 probes (15 defects), round 8's 66 (25 disagreements, of which 6 missed builds
-and 4 invented ones), round 8's 11 planted builds and 6 wrapper forms, round 9's 60 planted builds
-across two reviewers (18 of 20 and 34 of 40 unnoticed), its five spelling pairs, the non-builds
-accumulated across every round, one case per grammar member, and every `run:` line in both workflow
-trees:
+**No count of the corpora is stated, and the enumeration is the statement.** It said "ten corpora" in
+one place and "nine" in another, in the same file, against a list holding eleven items — round 10 found
+both — and the enumeration then gained round 10's two plantings, which would have made every stated
+numeral wrong again. A numeral over a list that grows once a round is a thing to be wrong about; the
+list is checkable at any revision and the numeral is not, so the numeral is gone rather than corrected
+for the third time.
+
+Measured against — round 4's 20 regressions, v4's 15 kept forms, round 6's 46-case corpus (20 missed
+builds, 2 false positives), round 7's 59 probes (15 defects), round 8's 66 (25 disagreements, of which 6
+missed builds and 4 invented ones), round 8's 11 planted builds and 6 wrapper forms, round 9's 60 planted
+builds across two reviewers (18 of 20 and 34 of 40 unnoticed), its five spelling pairs, round 10's 70
+planted builds across two reviewers (18 of 20 and 44 of 50 unnoticed), its sixteen side-by-side
+member-versus-command pairs, the non-builds accumulated across every round, one case per grammar member,
+and every `run:` line in both workflow trees:
 
 ```text
 the own tree's builds, as `tests/unit/buildCommand.test.ts` pins them
@@ -1024,7 +1043,7 @@ record had reported as fixed. It was also **itself** the worst defect of round 5
 required a seal for every pack on disk, which no honest edit can satisfy while a pack is under review,
 and it made a required CI leg red at the commit that added it.
 
-### W1-W9 — the retracted-claims guard, and a false cause this stage published
+### W1-W13 — the retracted-claims guard, and a false cause this stage published
 
 `packages/qfai/tests/assets/retractedClaims.test.ts` had no family here for three rounds, which is
 part of why the next paragraph went unrecorded: its only account lived in a test docstring and a review
@@ -1040,6 +1059,11 @@ W6  the claim split across a hand-wrapped line break            REDDENS
 W7  a RETIRED claim reintroduced into the records                REDDENS
 W8  a RETIRED declaration deleted while its claim stays absent   REDDENS
 W9  an entry added this round reworded so it matches nothing     REDDENS
+W10 a claim laundered by opening a fence around it (round 9)     REDDENS
+W11 the same launder against the line-scoped exemption rule      REDDENS
+W12 a stray quotation mark on a fenced line, shifting every span REDDENS
+W13 a zero-width character in a fence marker, exempt in one
+    flattening and counted in the other                          REDDENS
 ```
 
 Control green. `W2` and `W3` are one mutation in two placements and they need **two** flattenings:
@@ -1047,7 +1071,21 @@ deleting a zero-width character welds two words together, substituting a space s
 and each repair blinds the guard to the other placement. Round 7 laundered a claim the first way and
 round 8 the second, each against the version repaired for the other.
 
-`W4`, `W8` and `W9` are the class this round added, and the class the guard was missing entirely. An
+`W10`-`W13` are the fifth rebuild of this guard, and they are recorded here because for one round they
+were not: round 9 found the launder, the repair was written and verified, and the oracle round existed
+only in a review report and a test docstring — which is the sentence this section opens with, about this
+same file, reproduced by the commit that was closing it.
+
+`W10` is round 9's launder: a claim is exempt when it sits inside a fence, so **opening a fence around
+it** made it exempt without moving it. `W11` is the same launder against the repair — exemption scoped
+to the line rather than inherited by the document — and it still reddens. `W12` and `W13` are round
+10's, and both are about the two guards disagreeing on where an exempt span is rather than about the
+claim: a stray quotation mark on a fenced line shifted every quoted span after it while the paragraph
+still read as balanced, and a zero-width character in a fence marker made a mark exempt in one
+flattening and counted
+in the other. Both now read the same mark set, and the odd-parity report runs over both flattenings.
+
+`W4`, `W8` and `W9` are the class round 8 added, and the class the guard was missing entirely. An
 entry whose needle is longer than the text it means to catch enforces nothing and reports nothing: the
 suite stays green while the claim stands. Round 8 measured two of thirteen entries in that state —
 `"P1d has returned REVISE three times"` added while its sites read `"sustained across three passes"`
@@ -1481,7 +1519,7 @@ assertions — one of them rewritten to execute the shipped step rather than rea
 oracle rounds against the shipped tree, six behavioural rounds on the version resolver (`E6`-`E11`),
 sixteen falsification rounds on the matrix pinning test (`M1`-`M7`, `X1`-`X6`, `Y1`-`Y3`), three on
 the ledger ratchet (`R1`-`R3`), three on the loop guard (`G1`-`G3`), seven on the matrix record's own
-prose (`Q1`-`Q7`), nine on the retracted-claims guard (`W1`-`W9`), five on the derived-count test
+prose (`Q1`-`Q7`), thirteen on the retracted-claims guard (`W1`-`W13`), five on the derived-count test
 (`C1`-`C5`) and an in-suite sweep over every grammar member of the classifier — all defined under
 § "Execution logs", which round 5 found they were not, and renamed off `L*`/`Z*` because `L1`/`L3`
 collided with the layer codes and `Z1`-`Z4` had been used in a review pack for mutations recorded as

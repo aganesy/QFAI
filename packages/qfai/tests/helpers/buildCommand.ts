@@ -228,6 +228,9 @@ const TOOLS: Record<string, ToolGrammar> = {
     dirs: ["--install", "-B", "-S", "--prefix"],
     values: ["--config", "-G", "-D"],
     buildFlags: ["--build"],
+    // `cmake build` configures `./build` as the SOURCE directory. cmake's build verb is `--build`,
+    // which is in `buildFlags`; the bare word is a path.
+    stops: ["build"],
   },
   ninja: { dirs: ["-C"], values: ["-j", "-k", "-f"], bareIsBuild: true },
   bazel: BAZEL,
@@ -878,8 +881,15 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
       const verbTail = whole.includes(":") ? (whole.split(":").pop() ?? whole) : whole;
       if (builds.has(whole) || builds.has(verbTail)) return "build";
       if ([whole, verbTail].some((v) => buildPrefixes.some((p) => v.startsWith(p)))) return "build";
-      if (whole === "build" || verbTail === "build") return "build";
+      // A declared stop beats the generic verb guess below, which is the whole point of declaring one.
+      // It used to be checked AFTER, so a tool could not declare that the word `build` is not a build
+      // for it — and `cmake build` is exactly that: it CONFIGURES `./build` as the source directory,
+      // the inverse of the `cmake --install build` case this corpus already holds. Reading it as a
+      // build made the test punish a lane that legitimately configures, which is the shape this spec
+      // rejects in writing. Only docker declared stops (`run`, `exec`), neither of which is `build`,
+      // so nothing else moves.
       if (stops.has(whole)) return "none";
+      if (whole === "build" || verbTail === "build") return "build";
     }
     // `isPathLike` belongs to the TOOL path only: a MANAGER's first bare token is a script NAME, and
     // `build.prod` is a script people write. Reading it as a path lost 142 generated lines, one shape.

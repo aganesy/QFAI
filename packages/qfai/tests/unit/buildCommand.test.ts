@@ -289,14 +289,36 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.make.dirs.--directory", "none", "make --directory build clean"],
   ["TOOLS.make.values.-f", "none", "make -f build clean"],
   ["TOOLS.make.values.--file", "none", "make --file build clean"],
-  ["TOOLS.cmake", "build", "cmake build"],
-  ["TOOLS.cmake.dirs.--install", "none", "cmake --install build clean"],
-  ["TOOLS.cmake.dirs.-B", "none", "cmake -B build clean"],
-  ["TOOLS.cmake.dirs.-S", "none", "cmake -S build clean"],
-  ["TOOLS.cmake.dirs.--prefix", "none", "cmake --prefix build clean"],
-  ["TOOLS.cmake.values.--config", "none", "cmake --config build clean"],
-  ["TOOLS.cmake.values.-G", "none", "cmake -G build clean"],
-  ["TOOLS.cmake.values.-D", "none", "cmake -D build clean"],
+  // Three key-pins that used to assert a verdict for a command the tool does not have. A tool's KEY
+  // is reachable only through a sub-member or the generic `build` verb, and the generic verb was the
+  // easy route — so `cmake build`, `mvn build` and `sbt build` were all pinned as builds, and none of
+  // the three is a command. `cmake build` was the one that cost something: it CONFIGURES `./build`, so
+  // the corpus asserted the opposite of the truth and the row would have punished a lane that
+  // legitimately configures. cmake now declares `build` as a stop and the key is pinned by a real
+  // invocation whose verdict still changes when the key goes; mvn and sbt are pinned by real
+  // invocations of theirs.
+  // `cmake --build build` — the real invocation, and the one that makes the point: the directory is
+  // called `build` and the verb is `--build`. It is a build; `cmake build` is not.
+  ["TOOLS.cmake", "build", "cmake --build build"],
+  ["TOOLS.cmake.stops.build", "none", "cmake build"],
+  // cmake's seven flag members had to be re-pinned when `build` became a stop for it, and the reason
+  // is worth stating: every one of them was pinned by `<flag> build clean` expecting `none`, which
+  // works only because the generic verb rule would otherwise read the bare `build`. Correct the tool
+  // and all seven go inert at once — the sweep reported exactly those seven — so they were pinned by
+  // the false assertion rather than by anything cmake does.
+  //
+  // A flag can only consume a value that does not start with `-`, and cmake's one build verb is
+  // `--build`, so no cmake flag can hide it. What a flag CAN hide is a token that names a command: the
+  // three `values` swallow `pnpm` and leave `build`, which cmake stops. And the four `dirs` are pinned
+  // as dirs specifically — they move the manifest the nested command resolves against, so
+  // `hello` is `tsup` in `sub` and `echo hi` at the root, exactly as `make -C` is pinned.
+  ["TOOLS.cmake.dirs.--install", "build", "cmake --install sub pnpm hello"],
+  ["TOOLS.cmake.dirs.-B", "build", "cmake -B sub pnpm hello"],
+  ["TOOLS.cmake.dirs.-S", "build", "cmake -S sub pnpm hello"],
+  ["TOOLS.cmake.dirs.--prefix", "build", "cmake --prefix sub pnpm hello"],
+  ["TOOLS.cmake.values.--config", "none", "cmake --config pnpm build"],
+  ["TOOLS.cmake.values.-G", "none", "cmake -G pnpm build"],
+  ["TOOLS.cmake.values.-D", "none", "cmake -D pnpm build"],
   ["TOOLS.cmake.buildFlags.--build", "build", "cmake --build ."],
   ["TOOLS.ninja", "build", "ninja build"],
   ["TOOLS.ninja.dirs.-C", "none", "ninja -C build clean"],
@@ -349,7 +371,7 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.gradle.values.-b", "none", "gradle -b build clean"],
   ["TOOLS.gradle.values.--init-script", "none", "gradle --init-script build clean"],
   ["TOOLS.gradlew", "build", "gradlew build"],
-  ["TOOLS.mvn", "build", "mvn build"],
+  ["TOOLS.mvn", "build", "mvn -f sub package"],
   ["TOOLS.mvn.dirs.-f", "none", "mvn -f build clean"],
   ["TOOLS.mvn.dirs.--file", "none", "mvn --file build clean"],
   ["TOOLS.mvn.values.-P", "none", "mvn -P build clean"],
@@ -391,7 +413,7 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.python", "build", "python -m build"],
   ["TOOLS.python.values.-c", "none", "python -c build clean"],
   ["TOOLS.python3", "build", "python3 -m build"],
-  ["TOOLS.sbt", "build", "sbt build"],
+  ["TOOLS.sbt", "build", "sbt clean compile"],
   ["TOOLS.rake", "build", "rake build"],
   ["TOOLS.rake.dirs.-C", "none", "rake -C build clean"],
   ["TOOLS.rake.values.-f", "none", "rake -f build clean"],

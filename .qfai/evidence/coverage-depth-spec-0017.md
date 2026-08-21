@@ -287,11 +287,12 @@ here.** It read 208 for three rounds while the tree held 250 and then 296, and e
 stale inside a commit; the number is `grammarMembers().length` at run time and the assertions are the
 measurement, so restating it in prose only creates something to be wrong about.
 
-No accuracy figure is quoted here on purpose. What the corpora are is recorded instead: round 4's 20
-measured regressions, round 5's 10 measured defects, round 6's 7, round 8's 6 missed builds and 4
-invented ones, round 8's eleven planted builds and six wrapper forms, v4's 15 kept forms, the non-builds
-five rounds accumulated, one case per grammar member, and every `run:` line in both workflow trees. None
-was chosen by this stage.
+No accuracy figure is quoted here on purpose, and **the corpora are enumerated in exactly one place** —
+`.qfai/evidence/atdd-spec-0017.md`, in the paragraph beginning "Measured against". This file used to
+carry its own list, and round 10 found the two enumerating different sets: this one stopped at round 8
+while the other ran to round 9, so each was a partial record described as the record. Two copies of a
+list that grows once a round is the same defect as two copies of a number, and the fix is the same one —
+one site, pointed at rather than retyped. None of the corpora was chosen by this stage.
 
 Closing the row is `TDD-0032` … `TDD-0035`, all four `blocked` on `CR-20260820-0007`, because their
 acceptance criteria require numbers written into `07_Decisions.md` which `/qfai-implement` may not
