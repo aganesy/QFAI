@@ -1229,11 +1229,12 @@ export const DESIGN_MD_SAMPLE_MARKER = "QFAI-SAMPLE-DESIGN-MD";
  * `DESIGN_MD_SAMPLE_MARKER` existed.
  *
  * A marker-only test cannot see the installed base this gate exists to
- * rescue: `qfai init` copies `assets/init/root/DESIGN.md` under
- * `protect: ["DESIGN.md"]` (see `src/cli/commands/init.ts`), so a project
- * that initialized on an older release keeps its marker-less copy of the
- * sample even across `qfai init --force`. Those projects are exactly the
- * ones at risk of freezing an unauthored brand.
+ * rescue: `qfai init` copies the whole root asset tree create-only — every
+ * existing file there is skipped, `--force` included (see
+ * `src/cli/commands/init.ts`) — so a project that initialized on an older
+ * release keeps its marker-less copy of `assets/init/root/DESIGN.md` even
+ * across `qfai init --force`. Those projects are exactly the ones at risk
+ * of freezing an unauthored brand.
  *
  * BOTH signals are required — the front-matter brand name AND the opening
  * sentence of the shipped brand-philosophy body. Requiring both keeps the

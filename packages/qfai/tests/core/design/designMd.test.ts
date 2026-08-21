@@ -1189,9 +1189,9 @@ describe("isUnreplacedDesignMdSample", () => {
   });
 
   it("flags a marker-less legacy copy of the shipped sample", async () => {
-    // `qfai init` copies root/DESIGN.md under `protect: ["DESIGN.md"]`, so
-    // a project initialized before the marker existed keeps a marker-less
-    // copy forever — including across `qfai init --force`. Simulate that
+    // `qfai init` copies the root asset tree create-only — `--force`
+    // included — so a project initialized before the marker existed keeps a
+    // marker-less copy of root/DESIGN.md forever. Simulate that
     // installed-base file by stripping the marker comment from the
     // shipped sample.
     const text = await readFile(path.join(getInitAssetsDir(), "root", "DESIGN.md"), "utf-8");

@@ -122,11 +122,16 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   // root/ と .qfai/ は create-only（既存は skip）
   // STANDARD_ASSET_PATHS のみ --force で上書きする
+  //
+  // root/ の create-only は `force: false` が一律に効いているだけで、
+  // DESIGN.md だけを特別扱いする仕組みは存在しない（qfai.config.yaml も
+  // .github/workflows/qfai-validate.yml も同じく --force で残る）。
+  // ここを `force: options.force` に広げると、ユーザが `qfai-configure` で
+  // 調整した qfai.config.yaml まで上書きされる点に注意。
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
-    protect: ["DESIGN.md"],
   });
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
