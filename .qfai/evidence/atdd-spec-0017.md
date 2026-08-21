@@ -566,9 +566,12 @@ subject.**
 for `US-0017-0007`'s restoration and left the matrix saying the story was uncovered, with seven `❌` cells
 justified by "no knob file ships" — the reason this record retracts as a category error. Worse, the guard
 still required the section to say "withdrawn", so correcting the matrix reddened a required CI leg. The row
-is rescored with a reason per remaining `❌`, the partition re-derived (A 23, B 9, C 1, D 1 — 34 cells,
-with a new class for the one cell that fits none of the others), and the guard now demands the restoration
-and the carrier's name instead.
+is rescored with a reason per remaining `❌`, the partition re-derived (A 23, B 9, C 2 — 34 cells), and the
+guard now demands the restoration and the carrier's name instead. Round 12 gave the new cell a class of
+its own, `D`; round 14 merged it back into `C`, because both classes had been stated as a property that
+named its single member's coordinates — which nothing can violate except a different cell — and the two
+paragraphs then contradicted each other about how many such cells the table held. One property, two
+members, and a roster the guard checks against the table.
 
 **The gate moved for the first time in eleven rounds: `error=2` to `error=1`.** Eleven rounds reviewed
 the instruments and none of them went back to the two open obligations, which is worth naming as its own
@@ -1874,8 +1877,11 @@ something is written, believed without reading it.
 
 9. **Two things the shipped-lane repairs do not close, stated rather than implied.**
 
-   - **An allowed install runs the adopter's own code.** `npm ci` is enumerated, and it executes whatever
-     `preinstall` / `postinstall` / `prepare` an adopter's `package.json` declares. The lane's own writes
+   - **An allowed install runs the adopter's own code.** `npm ci`, `npm install --no-audit --no-fund`,
+     `pnpm install --frozen-lockfile` and `yarn` are all enumerated, and every one of them executes
+     whatever `preinstall` / `postinstall` / `prepare` an adopter's `package.json` declares. This item
+     named `npm ci` alone until round 14; the shipped body's own fallback is the `npm install` form,
+     which is the branch an adopter without a lockfile takes. The lane's own writes
      onto a manifest are refused now, so the lane cannot supply that code itself — but an adopter's
      existing manifest is not this scan's to read. So `US-0017-0004`'s claim is scoped: **the shipped TEXT
      invokes only these programs**, and not "the shipped lane executes no build in an adopter's tree".
@@ -2112,12 +2118,19 @@ which P1d refuted by showing `maxConcurrency` is project-scoped.
 
 ### Findings per round
 
-**The rule below reproduces 25 of the 27 numeral-bearing rows**, and the two it does not are named.
+**Every row below is produced by the rule, and the two exceptions are named rather than counted.**
 The rule: distinct finding identifiers appearing as a heading at level two to four, optionally
 backtick-wrapped, counted from the packs on disk.
 
+This line opened "the rule reproduces 25 of the 27 numeral-bearing rows" until round 14, and by then the
+table held 37. A pair of numerals over a table that gains a row per reviewer per round cannot survive a
+round, and unlike the other stale counts in this record a reader could not repair this one by recounting,
+because it is a claim about a RULE's coverage rather than about the table. So it carries no numerals: the
+rows are countable and the exceptions are named, which is the form § "Gaps / Open risks" item 7 arrived at
+for the same reason.
+
 It said "Every count below is derived" for three rounds. Round 11 implemented the stated rule and ran it
-over all 27 rows: two disagree. Round 4's stage report gives 8 against a recorded 6, because two of its
+over the table as it then stood: two disagree. Round 4's stage report gives 8 against a recorded 6, because two of its
 eight heading identifiers (`E6`, `X1`) are oracle-round ids rather than findings; round 7's P1d gives 0,
 because it enumerates its ids inline and carries none as headings. **Both exceptions are properties of
 those reports, not of the rule** — which is the opposite of what the next paragraph used to claim. `id families` carries the derivation so the number can be checked
@@ -2163,6 +2176,10 @@ differ.
 | 12    | `implementation-reviewer` | REVISE  |       16 | B1-B2, M1-M6, m1-m7, A1 |     16 |
 | 12    | `completion-reviewer`     | REVISE  |       26 | B1-B6, M1-M9, m1-m8, A1-A3 |  26 |
 | 12    | `qa-gatekeeper` (stage)   | REVISE  |       14 | B1-B6, A1-A8           |      14 |
+| 13    | — none ran                | —       |        0 | reviewers died on ENOTFOUND |    — |
+| 14    | `implementation-reviewer` | REVISE  |       10 | B1-B5, m1-m3, A1-A2    |      10 |
+| 14    | `completion-reviewer`     | REVISE  |       14 | B1-B3, M1-M4, m1-m4, A1-A3 |  14 |
+| 14    | `qa-gatekeeper` (stage)   | REVISE  |       14 | B1-B4, M1-M4, m1-m3, A1-A3 |  14 |
 
 **Where the two columns disagree, the derived one is the one to trust, and the reason is a rule that
 does not fit every report.** The declared rule counts distinct finding identifiers "or the count of

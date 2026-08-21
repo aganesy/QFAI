@@ -284,16 +284,25 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     //
     //   A  the shipped surface is absent, so the ROW's Status is ❌
     //   B  the harness cannot run a workflow: State transitions / Combinatorial on a row that is NOT ❌
-    //   C  a single shipped value admits no boundary: Boundary values, and only on US-0017-0001
-    //   D  the design has no failure to observe: Error path, and only on US-0017-0007
+    //   C  the cell is inapplicable by the design: neither A's absence nor B's harness
+    //
+    // C and D were separate until round 14, and each was stated as a property naming its single
+    // member's COORDINATES — which nothing can violate except a different cell, so the assignment
+    // check this block exists for was vacuous for both. They shared one real property, and the record
+    // proved it by contradicting itself: one paragraph called itself the only such cell, the other the
+    // second. Merged, C is computable and falsifiable — a cell filed under it whose row is ❌, or whose
+    // column is a class-B column on a covered row, fails — and the membership the coordinates were
+    // really pinning is checked below as a ROSTER, which is a different question from the property.
     const statusOf = new Map(rows.map((row) => [row.id, row.cells["Status"]]));
     const PROPERTIES: Record<string, (row: string, column: string) => boolean> = {
       A: (row) => statusOf.get(row) === "❌",
       B: (row, column) =>
         statusOf.get(row) !== "❌" &&
         (column === "State transitions" || column === "Combinatorial"),
-      C: (row, column) => column === "Boundary values" && row === "US-0017-0001",
-      D: (row, column) => column === "Error path" && row === "US-0017-0007",
+      C: (row, column) =>
+        statusOf.get(row) !== "❌" &&
+        column !== "State transitions" &&
+        column !== "Combinatorial",
     };
 
     const misassigned: string[] = [];
@@ -333,8 +342,9 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     const EXPECTED_PROSE: Record<string, string> = {
       A: "`Status = ❌`",
       B: "`Status ≠ ❌` and the column is `State transitions` or `Combinatorial`",
-      C: "the column is `Boundary values` on `US-0017-0001`",
-      D: "the column is `Error path` on `US-0017-0007`",
+      C:
+        "the cell is inapplicable by the design rather than untested, which is neither class A's " +
+        "missing surface nor class B's missing harness",
     };
     for (const className of Object.keys(PROPERTIES)) {
       expect(
@@ -342,6 +352,23 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
         `class ${className}'s justification must state the property this test enforces`,
       ).toBe(EXPECTED_PROSE[className]);
     }
+
+    // The ROSTER, which is what class C's coordinates were really pinning. A property that says "not A
+    // and not B" cannot say WHICH cells are inapplicable, so the record must name each one and the
+    // table must agree: a member the prose does not name is a cell reclassified without a reason, and a
+    // name with no member is a reason for a cell that moved.
+    const namedInProse = new Set(
+      [...text.matchAll(/`(US-0017-\d{4})`\s*×\s*`([^`]+)`/g)].map(
+        (match) => `${match[1] ?? ""}/${match[2] ?? ""}`,
+      ),
+    );
+    const classC = members
+      .filter((member) => member.className === "C")
+      .map((member) => `${member.row}/${member.column}`);
+    expect(
+      classC.filter((cell) => !namedInProse.has(cell)),
+      "a class C cell the record does not name with its own reason",
+    ).toEqual([]);
     expect(
       [...stated.keys()].sort(),
       "every class the table uses must have a justification paragraph, and no more",

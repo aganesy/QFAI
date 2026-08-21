@@ -15,10 +15,18 @@ named" below is the enumeration that makes "one per cell" checkable rather than 
 
 `spec-0017` has two halves — QFAI's own CI, and the same scaffold in the templates QFAI ships. The
 own half is asserted directly against `.github/workflows/**` by the integration slices. The half a
-user story is about is the adopter's, and it has one end-to-end surface: run `qfai init` into an
-empty project and read what arrives. Every cell below is scored against **that** surface, not against
-this repository's own workflows, which is why several rows carry `❌` for work the own tree has and
-the shipped tree does not.
+user story is about the adopter's, and it has one end-to-end surface: run `qfai init` into an
+empty project and read what arrives.
+
+**Eight of the nine rows are scored against that surface. `US-0017-0007` is scored against this
+repository's own runner**, because that is what its story is about — "as a maintainer tuning a 415-file
+suite", whose three slice surfaces are this repository's own vitest projects, CI matrix and scripts.
+Ten rounds read the row as adopter-facing and scored it uncoverable on the ground that no knob file
+ships, which this record retracts as a category error; the row's own justification section says so in as
+many words. So the scope of this matrix is **the surface each story is actually about**, and for eight
+rows that is `qfai init` — which is why several of them carry `❌` for work the own tree has and the
+shipped tree does not. A reader who takes "always the adopter's tree" at face value would read
+`US-0017-0007`'s `✅`s as adopter-facing, and round 14 found this section saying exactly that.
 
 ## The finding that re-scored this matrix after round 1
 
@@ -83,7 +91,9 @@ oracle for a story. Neither movement changes the `❌` count.
 
 The first version of this file justified scoring against the shipped tree with a premise: "a user
 story is about the adopter". Round 1's `completion-reviewer` read that against this spec's US
-catalogue and the premise does not hold. **Four of the nine stories name the own tree explicitly**:
+catalogue and the premise does not hold. **Five of the nine stories name the own tree explicitly** —
+four that round 1 enumerated, and `US-0017-0007`, whose own-tree reading round 12 established and which
+this list did not gain until round 14 pointed at the disagreement between the two records:
 
 - `US-0017-0002` — "**Own-CI** supply-chain hardening…", goal "every own-CI job…"
 - `US-0017-0003` — "the setup preamble to exist exactly once **in the repository**", and its
@@ -131,7 +141,6 @@ completeness, disjointness and no non-`❌` member.
 | A     | US-0017-0004 | Normal path, Error path, Boundary values, Special values, State transitions, Combinatorial |
 | A     | US-0017-0005 | Normal path, Error path, Boundary values, Special values, State transitions, Combinatorial |
 | A     | US-0017-0006 | Normal path, Error path, Boundary values, Special values, State transitions, Combinatorial |
-
 | A     | US-0017-0008 | Error path, Boundary values, Special values, State transitions, Combinatorial              |
 | B     | US-0017-0001 | State transitions, Combinatorial                                                          |
 | B     | US-0017-0002 | State transitions                                                                         |
@@ -139,9 +148,9 @@ completeness, disjointness and no non-`❌` member.
 | B     | US-0017-0007 | State transitions, Combinatorial                                                          |
 | B     | US-0017-0009 | State transitions, Combinatorial                                                          |
 | C     | US-0017-0001 | Boundary values                                                                           |
-| D     | US-0017-0007 | Error path                                                                                |
+| C     | US-0017-0007 | Error path                                                                                |
 
-Sizes, derived from the table above: **A 23, B 9, C 1, D 1 — 34 cells.**
+Sizes, derived from the table above: **A 23, B 9, C 2 — 34 cells.**
 
 `US-0017-0007` left class A entirely when its row was rescored in round 12: class A's property is
 `Status = ❌` and that row is `⚠️` now. Two of its three remaining `❌` cells joined class B on the
@@ -165,23 +174,31 @@ the gap, it is the same gap for every cell in the class, and closing it needs a 
 workflow-run history rather than a file. No ledger row proposes one; the absence is recorded as open
 risk 6 of the stage evidence.
 
-Class B covers only the four rows whose surface exists. The same two columns on `US-0017-0004` …
+Class B covers the rows whose `Status` is not `❌` — five of them, and stated as the property rather
+than as a numeral because the numeral said four for two rounds after `US-0017-0007` was rescored into
+the class, in the same edit that wrote the paragraph three lines above explaining the rescoring. The same two columns on `US-0017-0004` …
 `-0008` are class A: those rows have no surface to run, so the reason they are `❌` is the absence,
 not the harness.
 
-**Class D — property: the column is `Error path` on `US-0017-0007`. The design has no failure to
-observe.** A malformed worker override does not fail; it falls back to the declared value, deliberately, so
-that a tuning aid cannot reconfigure the suite by accident. There is therefore no error path for the test
-to exercise — the honest gap is narrower and is stated in the row's own section: nothing observes the
-runner's behaviour when the pool cannot start at all, which is a different question from a bad override.
-This is the second `❌` in the table that no future work on the story itself would turn green.
+**Class C — property: the cell is inapplicable by the design rather than untested, which is neither
+class A's missing surface nor class B's missing harness. There is nothing there to observe.** These are
+the `❌`s that no future work on the story would turn green. Two members, each with its own reason:
 
-**Class C — property: the column is `Boundary values` on `US-0017-0001`. A single shipped value
-admits no boundary.** `US-0017-0001` × `Boundary values`. The
-detection job emits one verdict per push; there is no sequence, count or limit to sit at the edge of.
-A boundary cell over a single-valued output is not partially covered, it is inapplicable, and `❌` is
-how this matrix spells that — flagged here because it is the one `❌` in the table that no future work
-would turn green.
+- `US-0017-0001` × `Boundary values` — **a single shipped value admits no boundary.** The detection job
+  emits one verdict per push; there is no sequence, count or limit to sit at the edge of. A boundary cell
+  over a single-valued output is not partially covered, it is inapplicable, and `❌` is how this matrix
+  spells that.
+- `US-0017-0007` × `Error path` — **the design has no failure to observe.** A malformed worker override
+  does not fail; it falls back to the declared value, deliberately, so that a tuning aid cannot
+  reconfigure the suite by accident. The honest gap is narrower and is stated in the row's own section:
+  nothing observes the runner's behaviour when the pool cannot start at all, which is a different
+  question from a bad override.
+
+**These were two classes until round 14**, and each was stated as a property that named its single
+member's coordinates — so the assignment check could not be violated by anything except a different
+cell, which made it vacuous for both. The two paragraphs also contradicted each other in this file: one
+called itself "the one `❌` in the table that no future work would turn green" and the other "the
+second". One property, two members, and a roster the guard now checks against the table.
 
 ## Justifications, one per ❌ status row
 
@@ -420,7 +437,7 @@ check depending on it keeps its name and loses its content. `Normal path` is `�
 because reachability is genuinely half the story, and the other half (that the duplicate is gone) is
 what has not happened.
 
-## The one row still scored ⚠️, and the one that stopped being scored ⚠️
+## The two rows scored ⚠️, and the one that stopped being scored ⚠️
 
 - **US-0017-0001** `⚠️`: the detection job and the needs-map verdict both ship and both are asserted,
   with oracles (`E1`, `E3`). `Boundary values` is class C, `State transitions` and `Combinatorial`
