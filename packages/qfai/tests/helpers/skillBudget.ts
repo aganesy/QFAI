@@ -7,9 +7,11 @@
  * raised one at a time as skills grew.
  *
  * The ceiling is a backstop, not the design rule. The design rule is that a
- * `SKILL.md` stays thin: it states the contract and points at the topic file
- * that carries the detail, under the skill's own `references/`, `templates/` or
- * `examples/` directory. Those files are split by topic too — a single
+ * shipped asset stays thin: it states the contract and points at the topic file
+ * that carries the detail, under the owning tree's own `references/`,
+ * `templates/` or `examples/` directory — the skill's for a `SKILL.md`,
+ * `constitution/references/` for a constitution file, `catalog/references/` for
+ * a catalog one. Those files are split by topic too — a single
  * oversized reference is the same problem moved one directory down. A file
  * approaching this number is a signal to move a section out, not to raise it.
  */

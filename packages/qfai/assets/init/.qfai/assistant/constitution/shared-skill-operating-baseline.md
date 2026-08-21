@@ -3,7 +3,7 @@
 Use this document to keep SKILL bodies compact.
 Skill files should reference this baseline and only restate skill-specific additions or overrides.
 
-## SKILL.md Authoring Shape (Mandatory)
+## Asset Authoring Shape (Mandatory)
 
 A `SKILL.md` states the contract and points at the file that carries the detail.
 It is not where the detail lives.
@@ -12,22 +12,39 @@ It is not where the detail lives.
   constraints, the phase/step order, and the gate conditions. Enough for an
   agent to know what it must do and when it is done.
 - **Move out**: command sets, table schemas, field-by-field contracts, worked
-  procedures, checklists and rationale. These go under the skill's own
+  procedures, checklists and rationale. These go under the owning tree's own
   directory:
-  - `references/` — normative detail the skill body cites (`references/<topic>.md`)
-  - `templates/` — artifacts the skill produces, as fillable skeletons
+  - `references/` — normative detail the body cites (`references/<topic>.md`)
+  - `templates/` — artifacts the file produces, as fillable skeletons
   - `examples/` — worked instances that illustrate, and bind, nothing
 - **One topic per file.** Do not replace an oversized `SKILL.md` with an
   oversized `references/everything.md`; that is the same problem one directory
   down. Split by topic and keep each file readable on its own — a reader who
   followed one pointer should not have to scan past three unrelated subjects to
   reach the one they came for.
-- **Every pointer resolves.** A `SKILL.md` line that moves detail out must name
-  the file (and anchor, when the file covers more than one topic) so the reader
-  is never left guessing where the rule went.
+- **Every pointer resolves.** A line that moves detail out must name the file
+  (and anchor, when the file covers more than one topic) so the reader is never
+  left guessing where the rule went.
 
 A hard line ceiling backs this up in the asset tests, but it is a backstop, not
-the rule. A skill approaching it is a signal to move a section out.
+the rule. A file approaching it is a signal to move a section out.
+
+### The owning tree is the one the file sits in
+
+The ceiling applies to **every** shipped assistant asset, not only `SKILL.md`,
+so this shape does too. `assistant/` has more trees than `skills/`, and each
+one owns the same overflow directories directly under itself:
+`constitution/references/<topic>.md`, `catalog/references/<topic>.md`,
+`agents/references/<topic>.md`, `manifest/references/<topic>.md`,
+`process/references/<topic>.md`. A constitution or catalog file at the ceiling
+splits by topic into its own tree's `references/` and cites the result, exactly
+as a `SKILL.md` splits into the skill's — the tree that owns the file owns where
+its detail goes, and a worked instance ships at
+`constitution/references/audited-evidence-hash.md`.
+
+Raising the ceiling or claiming an exemption is not the remedy. An exemption
+claims no split is possible, and a file whose tree has a `references/` home
+available cannot make that claim.
 
 ## User Questions (AskUserQuestion Protocol)
 
