@@ -488,5 +488,5 @@ checked one — the detector used to be JS-only while file selection was
 stack-agnostic, so every other stack got a clean result that meant nothing.
 
 The same finding also reports an empty `validation.traceability.testFileGlobs`,
-the value `qfai init` ships: the stub gate then selects no file at all, so
+the value `npx qfai init` ships: the stub gate then selects no file at all, so
 `QFAI-TEST-001` cannot fire until `/qfai-configure` populates that key.
