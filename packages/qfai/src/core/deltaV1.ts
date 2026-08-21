@@ -88,7 +88,7 @@ export function parseDeltaV1(text: string): ParsedDeltaV1 {
   const headings = parseHeadings(text);
   const sections = extractH2Sections(text);
   const hasDeltaHeading = headings.some(
-    (heading) => heading.level === 1 && normalizeHeading(heading.title).startsWith("delta"),
+    (heading) => heading.level === 1 && isDeltaTitle(heading.title),
   );
   const updateHistorySection = findSection(sections, "Update History");
   const decisionLogSection = findSection(sections, "Decision Log");
@@ -401,6 +401,18 @@ function sanitizeMetaYaml(block: string): string {
   }
 
   return out.join("\n");
+}
+
+/**
+ * The shipped delta files are numbered (`# 09 Delta`, `# 18 Delta`) because every
+ * file in a spec pack follows the `NN Title` convention. Strip that leading
+ * ordinal before the prefix test, so the heading the templates ship and the
+ * heading this parser recognises are the same thing.
+ */
+function isDeltaTitle(title: string): boolean {
+  return normalizeHeading(title)
+    .replace(/^\d+\s+/, "")
+    .startsWith("delta");
 }
 
 function normalizeHeading(value: string): string {

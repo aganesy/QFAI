@@ -148,6 +148,12 @@ export type ReportGuardrails = {
 };
 
 export type ReportChangeTypeSummary = {
+  /**
+   * How many delta files were opened. `totalEntries: 0` means "nothing parsed"
+   * when this is positive and "nothing to parse" when it is zero; without it
+   * the two are the same report.
+   */
+  deltaFilesScanned: number;
   totalEntries: number;
   primary: Record<"Initial" | "Behavior" | "Structural" | "Ops" | "unknown", number>;
   tags: Record<"@api" | "@db" | "@nfr" | "@docs" | "@test", number>;
@@ -967,7 +973,7 @@ export function formatReportMarkdown(
   lines.push("");
   lines.push("### Summary");
   lines.push("");
-  lines.push(`- decision entries: ${data.changeType.summary.totalEntries}`);
+  lines.push(...formatDeltaScanLines(data.changeType.summary));
   lines.push(
     `- primary: Initial ${data.changeType.summary.primary.Initial} / Behavior ${data.changeType.summary.primary.Behavior} / Structural ${data.changeType.summary.primary.Structural} / Ops ${data.changeType.summary.primary.Ops} / unknown ${data.changeType.summary.primary.unknown}`,
   );
@@ -1647,6 +1653,7 @@ type SpecContractRefEntry = {
 
 async function collectChangeTypeSummary(specsRoot: string): Promise<ReportChangeTypeSummary> {
   const summary: ReportChangeTypeSummary = {
+    deltaFilesScanned: 0,
     totalEntries: 0,
     primary: {
       Initial: 0,
@@ -1672,6 +1679,7 @@ async function collectChangeTypeSummary(specsRoot: string): Promise<ReportChange
   };
 
   const deltaFiles = await collectSpecDeltaFiles(specsRoot);
+  summary.deltaFilesScanned = deltaFiles.length;
 
   for (const deltaFile of deltaFiles) {
     const text = await readFile(deltaFile, "utf-8");
@@ -1902,6 +1910,26 @@ async function evaluateTraceability(
 function buildIdPattern(ids: string[]): RegExp {
   const escaped = ids.map((id) => id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   return new RegExp(`\\b(${escaped.join("|")})\\b`);
+}
+
+/**
+ * Names the input the Change Type counters were computed from.
+ *
+ * `decision entries: 0` alone reads as "no change was classified", which is the
+ * same output as "delta files were read and none of them could be parsed" — the
+ * second is a defect in the files, and it must not report as a clean run.
+ */
+function formatDeltaScanLines(summary: ReportChangeTypeSummary): string[] {
+  const lines = [
+    `- delta files scanned: ${summary.deltaFilesScanned}`,
+    `- decision entries: ${summary.totalEntries}`,
+  ];
+  if (summary.deltaFilesScanned > 0 && summary.totalEntries === 0) {
+    lines.push(
+      "- NOTE: delta files were read but none yielded a `## Decision Log` entry with a complete `#### Meta` block. The counters below are empty because nothing parsed, not because nothing is wrong.",
+    );
+  }
+  return lines;
 }
 
 function formatIdLine(label: string, values: string[]): string {

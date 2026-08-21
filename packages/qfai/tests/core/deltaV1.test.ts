@@ -90,6 +90,21 @@ describe("deltaV1 parser", () => {
     expect(hasLegacyMigrationNotes(entry?.notesBody ?? null)).toBe(true);
   });
 
+  it("recognises the numbered delta heading the templates ship", () => {
+    // Every spec-pack file is titled `NN Title`, so the shipped delta files are
+    // `# 09 Delta` / `# 18 Delta`. Requiring a bare `# Delta` made the parser
+    // disagree with the convention its own templates teach (#545).
+    for (const title of ["# 09 Delta", "# 18 Delta", "# Delta", "# 09 Delta (Migration Record)"]) {
+      expect(parseDeltaV1(`${title}\n`).hasDeltaHeading, title).toBe(true);
+    }
+  });
+
+  it("does not treat an unrelated H1 as a delta heading", () => {
+    for (const title of ["# 09 Decisions", "# 10 Plan", "# 09"]) {
+      expect(parseDeltaV1(`${title}\n`).hasDeltaHeading, title).toBe(false);
+    }
+  });
+
   it("treats migration section without bullets as empty", () => {
     expect(hasMigrationBullets("just text")).toBe(false);
     expect(hasMigrationBullets("- ")).toBe(false);
