@@ -714,6 +714,32 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("generated agent instruction files reference no QFAI monorepo path", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const generated = [
+        path.join(root, ".github", "copilot-instructions.md"),
+        path.join(root, ".codex", "README.md"),
+        path.join(root, ".agents", "README.md"),
+        path.join(root, ".claude", "agents", "README.md"),
+        path.join(root, ".github", "agents", "README.md"),
+      ];
+
+      for (const generatedPath of generated) {
+        const content = await readFile(generatedPath, "utf-8");
+        // `packages/qfai/**` only exists inside the QFAI monorepo; a rule that
+        // names it is unresolvable in the consuming project it is written into.
+        expect(content, `${generatedPath} names a QFAI monorepo path`).not.toMatch(
+          /packages\/qfai\//,
+        );
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("keeps README.md as regular files (not symlinked)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
