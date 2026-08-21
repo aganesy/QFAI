@@ -16,7 +16,7 @@
 
 Storage slot for the `research_summary` output of
 `.qfai/assistant/constitution/research-first-protocol.md`. Replace every placeholder with the actual
-protocol run; `qfai validate --profile discussion` reports `QFAI-RESEARCH-*` while they remain.
+protocol run; `npx qfai validate --profile discussion` reports `QFAI-RESEARCH-*` while they remain.
 
 ```yaml
 research_summary:
