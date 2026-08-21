@@ -41,6 +41,13 @@ import { createHash } from "node:crypto";
  * `TERMINATORS`, declared beside `invocationOf`, are the two answers it could not give.
  */
 
+/**
+ * Stands in for a command substitution removed from a surrounding word.
+ *
+ * Chosen to be something no real token contains, and something `invocationOf` reads as unreadable.
+ */
+export const SUBSTITUTION = "\u0000substitution\u0000";
+
 /** After one of these, the next token is a payload rather than a command. */
 const OPAQUE_AFTER = new Set(["-e", "--eval", "-c", "--command", "-p", "--print"]);
 
@@ -81,6 +88,12 @@ export function commandsOf(body: string): string[] {
     if (ch === "$" && body[i + 1] === "(" && quote !== "'") {
       const close = matchingParen(body, i + 1);
       out.push(...commandsOf(body.slice(i + 2, close)));
+      // A PLACEHOLDER, not nothing. Deleting the substitution from the surrounding word narrowed the
+      // command into a shorter one that happened to be allowed: `node $(echo build.mjs)` left a bare
+      // `node`, which is on the list, while the substitution's output was the script it ran. Nothing can
+      // know that output, so the surrounding command must read as unreadable rather than as a prefix of
+      // itself.
+      current += SUBSTITUTION;
       i = close;
       continue;
     }
@@ -267,6 +280,31 @@ const TERMINATORS = new Set([
  * The argument is included because `npx qfai validate` and `npx tsup` are the same program and only one
  * of them may ship.
  */
+/**
+ * Where the program name starts, after assignments, redirects and command-prefix keywords.
+ *
+ * `undefined` when the walk runs out of tokens or hits something that answers for the whole command; the
+ * caller decides what that means. Shared so `invocationOf` and `bareArgumentsOf` cannot disagree about
+ * which token is the program.
+ */
+function headIndexOf(tokens: readonly string[]): number | undefined {
+  let i = 0;
+  for (;;) {
+    if (i >= tokens.length) return undefined;
+    const token = tokens[i] ?? "";
+    if (/^[A-Za-z_]\w*=/.test(token) || token.startsWith(">") || token.startsWith("<")) {
+      i += 1;
+      continue;
+    }
+    if (COMMAND_PREFIXES.has(token)) {
+      i += 1;
+      continue;
+    }
+    if (token === "for" || token === "case" || token === "select") return undefined;
+    return i;
+  }
+}
+
 export function invocationOf(command: string): string | typeof NOTHING | typeof UNREADABLE {
   const tokens = tokensOf(command);
   let i = 0;
@@ -277,6 +315,14 @@ export function invocationOf(command: string): string | typeof NOTHING | typeof 
     const token = tokens[i] ?? "";
     if (i >= tokens.length) break;
     if (/^[A-Za-z_]\w*=/.test(token) || token.startsWith(">") || token.startsWith("<")) {
+      // An assignment whose VALUE names a program is a way to run one: `GIT_EXTERNAL_DIFF=./ext-diff.sh
+      // git diff --ext-diff HEAD` runs an arbitrary script, and skipping the prefix made it invisible.
+      // A path or a script file is refused; `IFS=`, `NODE_ENV=production` and `declared=…` are not, which
+      // is what keeps the shipped tree readable.
+      const value = token.slice(token.indexOf("=") + 1);
+      if (value !== "" && /[\\/]|\.(?:sh|bash|ps1|cmd|bat|mjs|cjs|js|py)$/.test(value)) {
+        return UNREADABLE;
+      }
       i += 1;
       continue;
     }
@@ -286,7 +332,17 @@ export function invocationOf(command: string): string | typeof NOTHING | typeof 
       i += 1;
       continue;
     }
-    if (token === "for" || token === "case" || token === "select") return NOTHING;
+    // `for` terminates: what follows its `in` is a word LIST, and its body arrives in a later segment as
+    // `do …`. `case` and `select` do not — `case $x in *) npx tsup ;; esac` puts the arm in the SAME
+    // segment, so answering `NOTHING` here discarded the command after the pattern. Skip past `in` and
+    // keep reading; the arm is then handled as the prefix it is.
+    if (token === "for") return NOTHING;
+    if (token === "case" || token === "select") {
+      const at = tokens.indexOf("in", i + 1);
+      if (at === -1) return NOTHING;
+      i = at + 1;
+      continue;
+    }
     break;
   }
   const head = tokens[i];
@@ -479,10 +535,18 @@ const TAKES_NO_PACKAGE: ReadonlySet<string> = new Set([
 /** The non-flag arguments a command carries after its program. */
 function bareArgumentsOf(command: string): string[] {
   const tokens = tokensOf(command);
+  // The SAME prefix walk `invocationOf` uses. Counting from index 1 assumed token 0 is the program, and
+  // with an assignment prefix it is not — `NODE_ENV=production npm ci` yielded `["npm", "ci"]`, so
+  // `TAKES_NO_PACKAGE` refused a line the shipped tree may legitimately contain. Two coordinate systems in
+  // one small pair of functions, which is the defect the classifier's `namesACommand` had.
+  const head = headIndexOf(tokens);
+  if (head === undefined) return [];
   const out: string[] = [];
-  for (let i = 1; i < tokens.length; i += 1) {
+  // No break at an opaque flag. `OPAQUE_AFTER` stops `invocationOf` looking for a PROGRAM NAME past a
+  // payload; counting a command's arguments is a different question, and stopping early made
+  // `npm install -e foo left-pad` report zero bare arguments.
+  for (let i = head + 1; i < tokens.length; i += 1) {
     const token = tokens[i] ?? "";
-    if (OPAQUE_AFTER.has(token)) break;
     if (!token.startsWith("-")) out.push(token);
   }
   return out;
@@ -507,6 +571,17 @@ export function refusals(body: string): string[] {
     }
     const program = invocation.split(" ")[0] ?? "";
     if (local.has(program)) continue;
+    // A removed substitution is part of the command, and nothing here runs it — so the command cannot be
+    // resolved UNLESS its program is one whose arguments cannot reach a build. That is exactly what the
+    // by-name list means, and the distinction matters: the shipped tree writes
+    // `if [ "$(git rev-parse --is-shallow-repository)" = "true" ]`, where the substitution is an argument
+    // to `[`, while `node $(echo build.mjs)` is a substitution deciding WHICH `node` invocation runs.
+    if (command.includes(SUBSTITUTION) && !HARMLESS_PROGRAMS.has(program)) {
+      out.push(
+        `<unreadable substitution> ${command.replaceAll(SUBSTITUTION, "$(…)").slice(0, 60)}`,
+      );
+      continue;
+    }
     if (!HARMLESS_PROGRAMS.has(program) && !ALLOWED_INVOCATIONS.has(invocation)) {
       out.push(invocation);
       continue;

@@ -176,6 +176,16 @@ const ROOT_CAUSES = [
   // A one-line function definition, whose header used to swallow its whole body. The shipped tree
   // contains the construct, so this is the tree's own idiom rather than exotic shell.
   "build_once() { pnpm -C packages/qfai build; }",
+  // A one-line `case`, whose pattern used to swallow the arm on the same line. The multi-line form
+  // worked, because `commandsOf` splits on `;` and the arm landed in its own segment.
+  "case $x in *) npx tsup ;; esac",
+  // A substitution deciding WHICH invocation runs. `commandsOf` removed it from the surrounding word,
+  // narrowing the command into the shorter, allowed `node`.
+  "node $(echo build.mjs)",
+  // An assignment prefix whose VALUE names a program, which the prefix skip made invisible.
+  "GIT_EXTERNAL_DIFF=./ext-diff.sh git diff --ext-diff HEAD",
+  // An install naming a package behind an opaque flag: counting stopped at `-e` and reported zero.
+  "npm install -e foo left-pad",
   // An unspaced pipe, which the previous spacing rule read as one command invoking `echo`.
   "echo x|npx tsup",
   "[ -f package.json ]|npx tsup",

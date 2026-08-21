@@ -476,6 +476,57 @@ The other three each needed a different kind of answer:
 - **`shell: npx tsup {0}`** — a step's `shell:` is a command template and nothing read it. The same shape
   as the job-level `uses:` the previous round closed: a channel one level from where anyone had looked.
 
+**Four more escape classes, each a different mechanism, and one of the repairs was wrong twice before it
+was right.**
+
+- **A one-line `case`.** `case $x in *) npx tsup ;; esac` — `case` answered `NOTHING` for the whole
+  segment and discarded the arm. The multi-line form worked only because `commandsOf` splits on `;` and put
+  the arm in its own segment. `case` and `select` now skip past their `in` and keep reading; `for` still
+  terminates, because what follows its `in` is a word list.
+- **A substitution removed from its word.** `commandsOf` entered `$( … )`, scanned it, and DELETED it from
+  the surrounding word — so `node $(echo build.mjs)` left a bare `node`, which is allowed. **This repair
+  went wrong first**: making any command containing a removed substitution unreadable refused a real
+  shipped line, `if [ "$(git rev-parse --is-shallow-repository)" = "true" ]`. The distinction it was missing
+  is the one the by-name list already encodes — a substitution among `[`'s arguments cannot reach a build
+  because nothing among `[`'s arguments can, while a substitution deciding which `node` invocation runs is
+  the invocation. Scoped to programs that are not name-allowed.
+- **An assignment prefix whose value names a program.**
+  `GIT_EXTERNAL_DIFF=./ext-diff.sh git diff --ext-diff HEAD` runs an arbitrary script and the prefix skip
+  made it invisible. A value that is a path or a script file is refused; `IFS=`, `NODE_ENV=production` and
+  `declared=…` are not.
+- **`bareArgumentsOf` breaking at an opaque flag**, so `npm install -e foo left-pad` reported zero bare
+  arguments and `TAKES_NO_PACKAGE` passed a command that installs a package. Fixing that exposed a second
+  defect in the same pair: `bareArgumentsOf` counted from index 1, assuming token 0 is the program, so
+  `NODE_ENV=production npm ci` yielded two arguments and was refused. **Two coordinate systems in one small
+  pair of functions** — the classifier's `namesACommand` defect, in a second instrument — so the prefix walk
+  is extracted and both callers share it by construction.
+
+The pipe rule is worth recording separately, because both previous versions were answering the wrong
+question. Requiring a SPACE let `echo x|npx tsup` read as an invocation of `echo`. Splitting
+unconditionally broke what the space rule protected — `case` pattern alternations fragmented into glob
+heads with no `)`, sixteen false refusals in the shipped tree. Neither rule was about spacing: a `|` is an
+alternation exactly when a `)` is reachable before any `;`, newline or `(`.
+
+### Round 12 findings that did not reproduce, with the measurement
+
+- **`R03 B2` — "`QFAI-ATDD-111`'s closure rests on a test that is red at HEAD".** Not reproduced. The test
+  passes at HEAD, twice measured, in 6.3s; the mechanism given (a bare `vitest/config` import unresolvable
+  from `os.tmpdir()`) does not apply, because vitest resolves its own config imports through its own
+  loader. The one failing e2e test at that revision was `stageEvidenceCounts`, reacting to this round's
+  reports landing — the derived-count guard doing its job. A misattribution rather than a defect.
+- **`R01 M1` — "a project-level `poolOptions.forks.singleFork: true` gives PEAK=1 at four workers while the
+  new E2E stays GREEN".** Not reproduced: the mutation **reddens** the test. Both reviewers reported the
+  subject moving under them, and this stage was editing the helper while `R01` measured, so an intermediate
+  state is the likely explanation. Recorded rather than dismissed, because the finding it would have been
+  is a real one and the next round can re-run it against a still tree.
+
+**And that is a defect of this stage's orchestration, not of either reviewer.** Round 11's `A5` was two
+reviewers colliding, and the response — partitioning the asset tree by role — addressed the wrong half. This
+round the collision was between the stage and its own reviewers: `R01` reports ten files edited beneath it,
+four of them the helper under review, and one intermediate state reddening three tests. The rule that
+follows is the same one in a wider form: **while a review round is in flight, the stage does not edit the
+subject.**
+
 **And the Coverage Depth Matrix had been held away from the tree by its own guard.** I updated the guard
 for `US-0017-0007`'s restoration and left the matrix saying the story was uncovered, with seven `❌` cells
 justified by "no knob file ships" — the reason this record retracts as a category error. Worse, the guard
