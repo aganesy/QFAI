@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { runInit } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
+import { MAX_ITERATION_INDEX } from "../../src/core/prototyping/iteration.js";
 import { countLines, LINE_BUDGET_EXEMPT, SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -482,6 +483,47 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toMatch(/review\.json/);
     expect(content).toMatch(/exit code|`64`|`65`/);
     expect(content).toMatch(/best-of-history is gone/i);
+  });
+
+  it("keeps shipped prototyping cycle literals aligned with the iteration budget", async () => {
+    const skillDir = path.join(templateQfaiDir, "assistant", "skills", "qfai-prototyping");
+    const files = await fg(["SKILL.md", "references/*.md"], { cwd: skillDir, absolute: true });
+
+    expect(files.length).toBeGreaterThan(0);
+
+    // Every free-text restatement of the last legal cycle must equal
+    // MAX_ITERATION_INDEX. Three divergent values once circulated here.
+    const cycleLiteral = /(?:cycles?\s+1\.\.|\bC1\.\.|index\s*===\s*)(\d+)/gi;
+    const mismatches: string[] = [];
+    for (const filePath of files) {
+      const content = await readFile(filePath, "utf-8");
+      for (const match of content.matchAll(cycleLiteral)) {
+        if (Number(match[1]) !== MAX_ITERATION_INDEX) {
+          mismatches.push(`${path.relative(repoRoot, filePath)}: ${match[0]}`);
+        }
+      }
+    }
+
+    expect(mismatches, `cycle literals must equal ${MAX_ITERATION_INDEX}`).toEqual([]);
+  });
+
+  it("keeps the prototyping iteration budget out of qfai-discussion surfaces", async () => {
+    const discussionDir = path.join(templateQfaiDir, "assistant", "skills", "qfai-discussion");
+    const files = [
+      path.join(discussionDir, "references", "discussion-artifact-rules.md"),
+      path.join(discussionDir, "templates", "prototyping.yaml"),
+    ];
+
+    // qfai-discussion neither owns nor enforces the prototyping budget;
+    // restating it there is what produced a third value.
+    const restated = /iteration count[^.]*?\b\d+\b/i;
+    for (const filePath of files) {
+      const content = await readFile(filePath, "utf-8");
+      expect(content, `${path.relative(repoRoot, filePath)} restates the budget`).not.toMatch(
+        restated,
+      );
+      expect(content).toContain(".qfai/assistant/skills/qfai-prototyping/SKILL.md");
+    }
   });
 
   it("placeholder for removed v1.x test (ships ui contract sample) — replaced by ui-contract.sample.yaml direct check above", () => {

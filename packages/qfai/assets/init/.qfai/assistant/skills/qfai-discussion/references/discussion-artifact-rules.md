@@ -56,5 +56,5 @@ prototyping:
 ```
 
 Mode-tier fields (`recommended_mode` / `allowed_modes` / `mode_expectations`)
-are not supported. The single-thread evolution loop fixes iteration count
-globally to 15.
+are not supported. The single-thread evolution loop owns its iteration
+budget; see `.qfai/assistant/skills/qfai-prototyping/SKILL.md`.
