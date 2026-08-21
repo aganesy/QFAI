@@ -270,6 +270,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     default:
       error(`Unknown command: ${command}`);
       info(usage());
+      process.exitCode = options.invalidExitCode;
       return;
   }
 }
