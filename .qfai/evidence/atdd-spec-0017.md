@@ -606,25 +606,41 @@ the parked rows". **That over-claimed twice**, and round 12 measured it per row 
 records' `Blocked set:` fields and the ledger's own `Blocked-By` column:
 
 ```text
-TC-0017-0016   CR-20260818-0007  in blocked set    ledger row: blocked on it
-TC-0017-0030   CR-20260820-0001  in blocked set    ledger row: blocked on it
-TC-0017-0032   CR-20260820-0007  in blocked set    ledger row: refactor
-TC-0017-0033   CR-20260820-0007  in blocked set    ledger row: refactor
-TC-0017-0034   CR-20260820-0007  in blocked set    ledger row: refactor
-TC-0017-0035   CR-20260820-0007  in blocked set    ledger row: refactor
+TC-0017-0016   CR-20260818-0007  in blocked set    ledger row: blocked, Blocked-By: CR-20260818-0007
+TC-0017-0030   CR-20260820-0001  in blocked set    ledger row: blocked, Blocked-By: CR-20260820-0001
+TC-0017-0032   CR-20260820-0007  in blocked set    ledger row: blocked, Blocked-By: CR-20260820-0007
+TC-0017-0033   CR-20260820-0007  in blocked set    ledger row: blocked, Blocked-By: CR-20260820-0007
+TC-0017-0034   CR-20260820-0007  in blocked set    ledger row: blocked, Blocked-By: CR-20260820-0007
+TC-0017-0035   CR-20260820-0007  in blocked set    ledger row: blocked, Blocked-By: CR-20260820-0007
 TC-0017-0069   CR-20260820-0012  in blocked set    ledger row: todo, Blocked-By: -
 TC-0017-0070   NAMED IN NO BLOCKED SET             ledger row: todo, Blocked-By: -
 ```
 
 Seven of the eight are named in an open CR's blocked set. **`TDD-0070` is named in none**: `DR-0017-0010`
 is its anomaly record, authorising an `exception` transition that has not been written. And for the last
-two the LEDGER — which is where a reader looks — records `-`, so the parking exists in the decision
-records and not in the artifact that indexes it. Four more are `refactor` in the ledger while their CR
-holds them, which is the same disagreement in the other direction.
+**two** the LEDGER — which is where a reader looks — records `-`, so the parking exists in the decision
+records and not in the artifact that indexes it.
 
-Those cells are `/qfai-implement`'s to write; this stage owes the evidence they point at, and what it
-owes here is the accurate statement rather than a tidier one. The honest form: **every uncovered TC has a
-recorded reason somewhere, and for three of the eight that reason is not where the ledger says to look.**
+The honest form: **every uncovered TC has a recorded reason somewhere, and for two of the eight that
+reason is not where the ledger says to look.**
+
+**The four middle rows of that table said `refactor` for two rounds and they are `blocked`.** Round 14's
+`completion-reviewer` measured them against `tdd/test-list.md` directly: `TDD-0032`-`-0035` carry
+`blocked` with `Blocked-By: CR-20260820-0007`, and have carried it since `bc36f08c`, 285 commits before
+this one — so they were already `blocked` when the table describing itself as "measured per row" was
+written. **The record contradicted its own derived tally in the same file**: § "Inputs reviewed" states
+74 `refactor` / 6 `blocked` / 2 `todo`, `stageEvidenceCounts.test.ts` derives that from the ledger and
+passes, and the six `blocked` rows are exactly `TDD-0016`, `-0030`, `-0032`, `-0033`, `-0034`, `-0035`.
+A derived number and a hand-written one disagreed, and the derived one was right — which is the argument
+this record makes everywhere else, failing on its own table. Recurring-class entry 5 and entry 8, again:
+a table described as measured that was not re-measured.
+
+**The disagreement it was pointing at is real and belongs to five other rows.** `CR-20260820-0007`'s
+blocked set is nine rows, and `TDD-0052`, `-0066`, `-0067`, `-0074` and `-0075` are all `refactor` with
+`Blocked-By: -` while that CR holds them. **None of the five is among the eight** this section is about,
+so the finding had been attributed to rows that were already fixed and the rows that still carry it went
+unnamed. They are outside this stage's remit either way — those cells are `/qfai-implement`'s to write —
+but the accurate statement is the one this stage owes, not the tidier one.
 
 ### A test that timed out, fixed structurally rather than by raising its budget
 
@@ -889,8 +905,10 @@ timestamp, so committing one fixes a name that the next run will not reproduce a
 `traceability.testFiles.matchedFileCount` at **465** in the committed artifact against **467** at HEAD,
 and traced 465 to `0cfa67c9` — so the file cited as this stage's gate evidence was four rounds old, and a
 reader checking it was reading round 4's tree. The verdict was never affected: `error=2` with the same
-two findings reproduces at HEAD, which is what round 9 verified independently. But an artifact exists to
-be checked, and this one could not be.
+two findings reproduced at HEAD **as round 9 measured it**, which is what round 9 verified
+independently. (Past tense since round 14: at this HEAD the scoped gate is `error=1`, and a sentence
+about a past measurement written in the present tense goes false without being edited.) But an artifact
+exists to be checked, and this one could not be.
 
 Re-run and re-added at round 9, and **again at round 11** — where the finding was not the staleness but
 the sentence that used to end this paragraph. It read "`matchedFileCount` is 467", a figure that moves
@@ -1019,7 +1037,10 @@ The 11 `Unit` rows owe nothing here (`L1` has no mandated directory).
 - `US-0017-0001` … `-0006`, `-0008`, `-0009` — **covered**, `tests/e2e/**`, verified by the E2E suite
   passing and by `check-atdd-annotation-ledger.mjs --spec 0017` confirming each ledger claim names a
   test that exists. **Not** verified by `validate`, which reads only the ledger (round 1, finding 5)
-- `US-0017-0007` — **not covered**, deliberately. Claim withdrawn; `QFAI-ATDD-111` reports it
+- `US-0017-0007` — **covered**, `tests/e2e/spec0017RunnerParallelismE2E.test.ts`, which observes an
+  effect rather than a mention. `QFAI-ATDD-111` is clear for this spec. (This line read "**not
+  covered**, deliberately" for eleven rounds and was stale from round 1's withdrawal — one of five
+  sites round 14 found still asserting it after the headline paragraph had been corrected.)
 - `CON-API-*` — none declared, nothing owed
 - `TC-0017-*` at `L3` — 63 of 71 covered; the 8 uncovered are the 6 `blocked` and 2 `todo` rows,
   which have no test because they are not implemented. `QFAI-ATDD-112` names exactly those eight
@@ -1210,10 +1231,15 @@ not self-executing, and this is the entry.
 - **`TDD-0069` -> `blocked`, `Blocked-By: CR-20260820-0012`**: released at pass 4 and still released;
   the condition attached to that release is **discharged**, per pass 6.
 
-The PASS covers **the observation and nothing else.** It does not clear completion: `US-0017-0007` is
-uncovered, the scoped gate is `error=2`, the unscoped profiles `build` runs need 12 `US` and 15 `TC`
-across five specs, six rows are `blocked`, and an `exception` still needs a user-approved
-`TDDLIST-001` waiver or the spec stays open.
+The PASS covers **the observation and nothing else.** It does not clear completion: the scoped gate is
+`error=1`, the unscoped profiles `build` runs need 11 `US` and 15 `TC` across four specs, six rows are
+`blocked`, and an `exception` still needs a user-approved `TDDLIST-001` waiver or the spec stays open.
+
+(This sentence carried three refuted figures at once until round 14: `error=2`, `US-0017-0007`
+uncovered, and "12 `US` … five specs" — the exact double-count Gaps item 4 retracts by name, surviving
+in a second site because the two copies were worded differently. That is the failure mode
+§ "Ledger rows advanced" describes for a different paragraph: every search for the retracted wording
+looked for an exact match and found none.)
 
 **And the writer owes the `Evidence` cell in the same edit** — see the subsection above. Step 3b's own
 malformed-entry rule is what makes that a condition rather than a courtesy.
@@ -1245,8 +1271,9 @@ lines from where the PASS is recorded, and P1d wrote that failure mode down in a
 
 `references/red-provenance.md` is explicit that branch 3 does not close a spec: an `exception` needs a
 user-approved `TDDLIST-001` waiver, or the row is parked and the spec stays open. **The spec stays
-open.** These two rows, the six `blocked` ones and `US-0017-0007` are why the completion status below
-is `FAIL`, and none of them is closeable by this stage.
+open.** These two rows and the six `blocked` ones are why the completion status below is `FAIL`, and
+none of them is closeable by this stage. `US-0017-0007` was named here too until round 14; it is
+covered, and it was never one of the reasons this spec cannot close.
 
 ## Coverage Depth Matrix
 
@@ -2187,7 +2214,8 @@ NONE**, and 15 TCs across four, of which it owns 8; `build` needs all of them; t
 **this stage's own in-flight review pack** — a pack cannot satisfy the layout contract until its last
 reviewer has landed and it has been sealed. Round 4's gatekeeper found this undisclosed, and it is the
 same class of gap as the two packs that were missing `summary.json`: masked in CI only because the
-`tdd` step fails first on `error=2`.
+`tdd` step fails first on the scoped gate's error, which was `error=2` when this was written and is
+`error=1` now.
 
 P1d's gate is **closed** — it passed at pass 6 and round 8 did not re-route it, because re-deciding a
 decided gate is not a review. A ninth stage round is owed. This stage does not claim its own repairs
@@ -2197,7 +2225,7 @@ reviewed.
 
 **FAIL — incomplete by this skill's own Definition of Done.**
 
-What was achieved: eight of `spec-0017`'s nine `US-*` are covered from `tests/e2e/**` with real
+What was achieved: all nine of `spec-0017`'s `US-*` are covered from `tests/e2e/**` with real
 assertions — one of them rewritten to execute the shipped step rather than read it — across five
 oracle rounds against the shipped tree, six behavioural rounds on the version resolver (`E6`-`E11`),
 sixteen falsification rounds on the matrix pinning test (`M1`-`M7`, `X1`-`X6`, `Y1`-`Y3`), three on
@@ -2215,8 +2243,9 @@ affecting 16 other specs was found and filed.
 
 What is not satisfied:
 
-- **`US-0017-0007` is uncovered**, so `QFAI-ATDD-111` reports it and the scoped gate is `error=2`;
-- the stage's own gate `validate --profile atdd --fail-on error --spec 0017` exits 1;
+- the stage's own gate `validate --profile atdd --fail-on error --spec 0017` exits 1 — `error=1`,
+  `QFAI-ATDD-112` on eight TCs. (This list opened with "`US-0017-0007` is uncovered … the scoped gate
+  is `error=2`" until round 14, in the section that certifies.);
 - **both rows are still `todo` in the ledger.** `tdd/test-list.md:107-108`, `DR-ID: -`,
   `Blocked-By: -`. Nothing has moved, and the two statuses below are what the handover asks
   `/qfai-implement` to write rather than what it has written;
@@ -2234,7 +2263,7 @@ What is not satisfied:
 - Stage Minimum Roles were not used for P2-P4 — the reviewer gate ran, the work orders did not.
 
 Confirmed by: **one gate has passed, and it is the narrow one.** Counted from the packs on disk:
-**thirteen** rounds, **35** reviewer responses, **34 REVISE and one PASS** — the PASS being P1d's sixth
+**fourteen** rounds, **38** reviewer responses, **37 REVISE and one PASS** — the PASS being P1d's sixth
 pass on `DR-0017-0010`. No stage-level gate has passed. Every earlier version of this line was a round
 behind, which rounds 4, 5, 6 and 7 each said; the numbers here are derived from
 `.qfai/review/review-2026082*/R0*.md` **from `review-20260820200000000` onwards** rather than
@@ -2292,7 +2321,9 @@ Round 1's pack, for continuity:
 
 ### Review packs and their seals
 
-**Thirteen** packs, one per round. The seal is *supposed* to be fixed at the moment the last reviewer
+**Fourteen** packs, one per round — and round 13's holds a request and no reports, because its three
+reviewers died on `ENOTFOUND` before writing. Zero is a legitimate response count for a round; it is not
+a passed one. The seal is *supposed* to be fixed at the moment the last reviewer
 response lands, and § "When each pack was actually sealed" below measures the gap **per round**, without a
 summary figure — because this sentence carried one ("four of seven closed packs") while the section it
 points at had already retracted that exact wording for going stale as packs closed. One section asserting
@@ -2353,7 +2384,11 @@ Review pack seal:  85c0d27221c6d887035a6e9bef3ff17eec6c6ade37e9442996ba6dfea2b4f
 Review pack:       .qfai/review/review-20260821180000000/            (round 12 — stage gates only)
 Review pack seal:  44d99dce97dbf4ae1a2e96b4b08eba2154edeff5536aab3035d77cdec9e390f6
 Review pack:       .qfai/review/review-20260821200000000/            (round 13 — stage gates only)
-Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
+Review pack seal:  06638643339fc1eb1f8bd9d3d1cccf7013db314361ac3d6b2eac4609cff07888
+                   Closed with a request and no reports: all three of its reviewers died on ENOTFOUND
+                   before writing. A pack with nothing in it is closed, not in flight.
+Review pack:       .qfai/review/review-20260822030000000/            (round 14 — stage gates only)
+Review pack seal:  3b81e2422d6bebde7e59071b82e1be184d684f7189b5a53b734136569b136bbc
 ```
 
 Round 8 routes no P1d pass. That gate closed at round 7 and re-routing a closed gate would be asking a
