@@ -298,7 +298,8 @@ Commands:
 Options:
   --root <path>   対象ディレクトリ
   --dir <path>    init の出力先
-  --force         init: .qfai/assistant/{skills,agents}/** と publish 先 skills/agents を上書き（assistant/manifest/** を含むそれ以外は既存があればスキップ）
+  --force         init: .qfai/assistant/{skills,agents}/** と publish 先 skills/agents、および symlink assets（.agents/.claude/.github/.codex）の生成物を上書き
+                              （生成物には各ツリーの README.md と .github/copilot-instructions.md を含む。specs/contracts/steering と assistant/manifest/** は上書きしない）
   --yes           init: 予約フラグ（現状は非対話のため挙動差なし。将来の対話導入時に自動Yes）
   --upgrade-assistant-tree   init: 既存プロジェクトを 4-layer assistant-tree に migrate
                               (legacy .qfai/assistant/{instructions,steering,manifest}/ → constitution/manifest/catalog/process/)
