@@ -47,13 +47,13 @@ Exit codes:
 
 #### `--upgrade-assistant-tree` (one-shot migration helper)
 
-Relocates files from the pre-recut layout (`.qfai/assistant/instructions/*`, `.qfai/assistant/steering/*`, `.qfai/assistant/manifest/*`) to the post-recut layout (`constitution/`, `manifest/`, `catalog/`, `process/`) per the canonical relocation table.
+Copies files from the pre-recut layout (`.qfai/assistant/instructions/*`, `.qfai/assistant/steering/*`, `.qfai/assistant/manifest/*`) into the post-recut layout (`constitution/`, `manifest/`, `catalog/`, `process/`) per the canonical relocation table. The pre-recut files stay where they are.
 
 Behavior:
 
-- For each file in the relocation table, move the existing user-edited content to the new path.
+- For each file in the relocation table, copy the existing user-edited content to the new path. The original is left in place on purpose — see the deprecation-window bullet below and NFR-0002.
 - If a destination already exists with user edits, preserve the user-edited content and surface `W-USER-EDIT-PRESERVED` (REQ-0013).
-- After the move, run `qfai init` default flow to refresh seeded README / template.
+- After the copy, run `qfai init` default flow to refresh seeded README / template.
 - Old paths are not deleted within the deprecation window (NFR-0002); they remain readable but emit `D-DEPRECATED-PATH` warnings during validate.
 
 Required preconditions:
