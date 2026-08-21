@@ -19,6 +19,8 @@ links to it rather than restating it.
 
 ## 1. Equivalence Partitioning (同値分割)
 
+Scored as the `Equivalence partitions` cell of the matrix below.
+
 For each input parameter or condition:
 
 - [ ] Valid partitions identified with at least one representative test case each.
@@ -36,6 +38,10 @@ For each numeric, date, string-length, or ordered domain:
 - [ ] Off-by-one boundaries tested where applicable.
 
 ## 3. Normal / Error / Edge Path Coverage (正常系・異常系・エッジケース)
+
+Scored as the `Normal path`, `Error path` and `Edge cases` cells of the matrix
+below — one cell per bullet, so the edge-case bullet cannot pass unscored on a
+row whose normal and error cells are ✅.
 
 For each US or TC:
 
@@ -67,6 +73,11 @@ When multiple conditions interact:
 
 ## 7. Business Rule Coverage (ビジネスルール網羅)
 
+Scored in the **Business rule coverage** table below the matrix, one row per
+`BR-*`. This obligation is keyed on the rule, not on a `US/TC`: one `BR-*`
+spans several `TC`s and one `TC` realizes several `BR-*`, so it has no matrix
+row to sit in and gets its own table in the same file.
+
 - [ ] Every BR-\* referenced in 04_Business-Rules.md has at least one positive and one negative test case.
 - [ ] Conditional business rules have test cases for each branch.
 
@@ -93,6 +104,11 @@ case's assertion can fail. A test that cannot fail satisfies every category.
 Reviewers and test-design-analysts MUST produce this matrix for each spec under review.
 Mark each cell: ✅ covered, ⚠️ partial, ❌ missing.
 
+**Every section above is scored.** Sections 1–6 and 8 are matrix columns;
+section 7 is the business rule table that follows the matrix. A section with no
+cell could never be ❌, never need a justification and never block — it would be
+decoration in a document the completion gate reads cell by cell.
+
 **Home: `.qfai/evidence/coverage-depth-<spec-id>.md`.** That path is negated in
 the managed `.gitignore` block, so the matrix and the justifications below it
 are committed. The rest of `.qfai/evidence/**` is not: a matrix written into
@@ -100,18 +116,29 @@ are committed. The rest of `.qfai/evidence/**` is not: a matrix written into
 every reason a `❌` was accepted — which is the input the PASS/REVISE criteria
 below read. Write it once, in its own file, and link it from the stage evidence.
 
-| US/TC ID | Normal path | Error path | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status |
-| -------- | ----------- | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
-| US-0001  | ✅/⚠️/❌    | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌          | ✅/⚠️/❌      | ✅/⚠️/❌        | —      |
-| TC-0001  | ✅/⚠️/❌    | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌          | ✅/⚠️/❌      | ✅/⚠️/❌        | —      |
+| US/TC ID | Equivalence partitions | Normal path | Error path | Edge cases | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status |
+| -------- | ---------------------- | ----------- | ---------- | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------ |
+| US-0001  | ✅/⚠️/❌               | ✅/⚠️/❌    | ✅/⚠️/❌   | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌          | ✅/⚠️/❌      | ✅/⚠️/❌        | —      |
+| TC-0001  | ✅/⚠️/❌               | ✅/⚠️/❌    | ✅/⚠️/❌   | ✅/⚠️/❌   | ✅/⚠️/❌        | ✅/⚠️/❌       | ✅/⚠️/❌          | ✅/⚠️/❌      | ✅/⚠️/❌        | —      |
+
+### Business rule coverage (§7)
+
+One row per `BR-*` referenced in `04_Business-Rules.md`, in the same file,
+directly under the matrix. Omit the table only when the spec declares no
+`BR-*`, and say so in its place. Its cells are ❌-accounted exactly like the
+matrix cells: an unjustified ❌ here is the same REVISE.
+
+| BR ID   | Positive case | Negative case | Conditional branches | Covering TC | Status |
+| ------- | ------------- | ------------- | -------------------- | ----------- | ------ |
+| BR-0001 | ✅/⚠️/❌      | ✅/⚠️/❌      | ✅/⚠️/❌/n/a         | TC-0001     | —      |
 
 ### Evaluation criteria
 
-- **PASS**: All cells are ✅ or ⚠️ with documented rationale for partial coverage.
-- **Oracle strength is not waivable by category coverage.** A row whose six
+- **PASS**: All cells in both tables are ✅ or ⚠️ with documented rationale for partial coverage.
+- **Oracle strength is not waivable by category coverage.** A row whose eight
   category cells are ✅ and whose Oracle strength cell is ❌ is a REVISE: it has
   cases in every category and no evidence that any of them can fail.
-- **REVISE**: Any cell is ❌ without an explicit justification (e.g., Decision Record).
+- **REVISE**: Any cell in either table is ❌ without an explicit justification (e.g., Decision Record).
 - **A justification counts only where it survives.** It goes under the matrix in
   `.qfai/evidence/coverage-depth-<spec-id>.md`, naming the cell, why the
   obligation is not coverable at this layer, and the `DR-*` or `CR-*` that
@@ -120,8 +147,8 @@ below read. Write it once, in its own file, and link it from the stage evidence.
 
 ### Usage
 
-- `test-design-analyst`: Produce this matrix when defining coverage obligations. Flag ❌ cells as gaps.
-- `qa-gatekeeper`: Verify the matrix exists and no unjustified ❌ cells remain. Read
+- `test-design-analyst`: Produce this matrix and its business rule table when defining coverage obligations. Flag ❌ cells in either as gaps.
+- `qa-gatekeeper`: Verify the matrix and its business rule table exist and no unjustified ❌ cells remain in either. Read
   `.qfai/evidence/coverage-depth-<spec-id>.md`; a matrix that exists only in an
   uncommitted stage-evidence file is a missing matrix.
 - `completion-reviewer`: Confirm the matrix was reviewed and any ⚠️ cells have rationale.
