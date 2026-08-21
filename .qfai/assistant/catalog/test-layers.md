@@ -484,9 +484,9 @@ supported stack:
 
 Every dialect is an `error` except the JS/TS `.skip` form. A `.todo` is a bare
 declaration and can only ever mean work not done; a `.skip` keeps its body, is
-what `qfai atdd scaffold` emits for a skeleton awaiting implementation, and can
-be waived per path in `.qfai/waivers.yml` — which a waiver aimed at an `error`
-rule cannot be.
+what `npx qfai atdd scaffold` emits for a skeleton awaiting implementation,
+and can be waived per path in `.qfai/waivers.yml` — which a waiver aimed at
+an `error` rule cannot be.
 
 `QFAI-TEST-002` (info) names any extension the scan opened that has no dialect.
 Without it a clean run on an unsupported stack is indistinguishable from a
