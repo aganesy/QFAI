@@ -42,7 +42,12 @@ const LEGACY_FOUR_AXIS_SECTIONS = [
 // `core/prototyping/evaluatorReview.ts` (`ORDINAL_AXES`); they are no
 // longer shipped by `qfai init`. Only screen-level UX sidecars remain
 // in the required family.
-const CANONICAL_REQUIRED_SIDECAR_FILES = [
+//
+// Exported so the shipped-template sweep in
+// `tests/integration/discussionSkillTemplateIntegration.test.ts` can check the
+// family that `qfai-discussion/SKILL.md` declares against this list rather than
+// letting the entry point drift away from what `qfai validate` requires.
+export const CANONICAL_REQUIRED_SIDECAR_FILES = [
   "00_index.md",
   "40_screen_contracts.md",
   "50_review_input_bundle.md",

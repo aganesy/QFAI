@@ -42,7 +42,7 @@ Produce a unified 15-file discussion pack plus exploration-first UI sidecars so 
 
 ## UI-bearing Canonical Sidecar Family
 
-UI-bearing packs must produce, as primary truth: `uiux/40_screen_contracts.md`, `uiux/50_review_input_bundle.md`. They MUST also emit a draft brand SSOT at the **consuming-project root**:
+UI-bearing packs must produce, as primary truth: `uiux/00_index.md`, `uiux/40_screen_contracts.md`, `uiux/50_review_input_bundle.md`. They MUST also emit a draft brand SSOT at the **consuming-project root**:
 
 - `<consuming-project-root>/DESIGN.md` — brand SSOT consumed by `/qfai-sdd` (freezes its sha256 in `.qfai/contracts/design/DESIGN.md.lock.yaml`) and by `/qfai-prototyping` (iterates against locked tokens). Brand intent (product intent, brand signals, anti-goals, reference pool framed as deviate-from inputs) lives in front-matter + `# Brand Philosophy` body — no separate per-aspect sidecar.
 
@@ -149,6 +149,6 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 
 project_memory:
 
-- 15-file mandatory output set is fixed; the UI-bearing sidecar family (40_screen_contracts.md + 50_review_input_bundle.md + root DESIGN.md) is required only when the target is UI-bearing.
+- 15-file mandatory output set is fixed; the UI-bearing sidecar family (00_index.md + 40_screen_contracts.md + 50_review_input_bundle.md + root DESIGN.md) is required only when the target is UI-bearing.
 - Discussion is planner-first: never pick a single visual winner; carry exploration references as deviate-from inputs, not imitate-this.
 - Completion requires Disposition: open count = 0 in 11_OQ-Register.md; deferred items must move to 13_Deferred.md with full metadata.
