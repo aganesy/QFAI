@@ -28,6 +28,8 @@
  * scanner spans a whole `run` body and a newline outside quotes is just another separator.
  */
 
+import { createHash } from "node:crypto";
+
 /**
  * `local` is deliberately not special-cased anywhere: `local x=1` is an assignment, and the
  * assignment skip reads it as one.
@@ -122,13 +124,24 @@ export function commandsOf(body: string): string[] {
       i += 1;
       continue;
     }
-    // A pipe splits commands only when it is spaced. `*.md|*.txt|LICENSE|docs/*)` is a `case`
-    // pattern alternation, and splitting it produced `LICENSE` as a program — the last parse artifact
-    // in this scan. A real pipe is written `a | b`; the unspaced form is legal shell that nobody uses,
-    // and this tree uses neither for a pipe nor anything else but patterns.
-    const spacedPipe =
-      ch === "|" && (/\s/.test(body[i - 1] ?? " ") || /\s/.test(body[i + 1] ?? " "));
-    if (ch === ";" || spacedPipe || ch === "&" || ch === "\n") {
+    // A `|` is a pipe unless it sits inside a `case` PATTERN, where it is an alternation. Spacing is not
+    // the question, and two previous rules both got that wrong: requiring a space let
+    // `echo x|npx tsup` read as an invocation of `echo` with the build running (round 12), and splitting
+    // unconditionally fragmented `*.md|*.markdown|*.txt|LICENSE|docs/*)` into glob heads with no `)`,
+    // which the fail-closed rule then refused sixteen times in the shipped tree.
+    //
+    // Decidable locally: a `)` reachable before any `;`, newline or `(` closes a case arm, so the `|`
+    // before it is an alternation. A `(` first means the `)` belongs to that group, so
+    // `echo a|grep -f <(make)` splits — its `)` closes the process substitution.
+    const isAlternation = (): boolean => {
+      for (let j = i + 1; j < body.length; j += 1) {
+        const ahead = body[j] ?? "";
+        if (ahead === ")") return true;
+        if (ahead === ";" || ahead === "\n" || ahead === "(") return false;
+      }
+      return false;
+    };
+    if (ch === ";" || (ch === "|" && !isAlternation()) || ch === "&" || ch === "\n") {
       flush();
       continue;
     }
@@ -278,7 +291,19 @@ export function invocationOf(command: string): string | typeof NOTHING | typeof 
   }
   const head = tokens[i];
   if (head === undefined || TERMINATORS.has(head)) return NOTHING;
-  if (head.endsWith("()")) return NOTHING;
+  // A function-definition HEADER is a prefix, not a command — the same reading `if` and a `case` arm get,
+  // and the third punctuation mark this instrument has had to learn it for. `commandsOf` splits on `;`, so
+  // `build_once() { pnpm build; }` arrives as one command whose head is `build_once()`; answering `NOTHING`
+  // discarded the entire body, and `refusals()` returned `[]` for a line that builds.
+  //
+  // Round 12 measured it, and the shipped tree already contains the construct: `qfai-tests.yml` defines
+  // `emit() { echo "$1"; }` on one line, which this scanner has been reporting as nothing all along. Only
+  // the ONE-LINE form was blind — a definition whose `{` and body sit on separate lines was already read —
+  // which is why every corpus of bare commands missed it.
+  if (head.endsWith("()")) {
+    const rest = tokens.slice(i + 1);
+    return rest.length === 0 ? NOTHING : invocationOf(rest.join(" "));
+  }
   if (/^[A-Za-z_]\w*=/.test(head) && tokens.length === i + 1) return NOTHING;
   // A `case` pattern ARM is a prefix, not a command: `commandsOf` splits on `;`, so `*.ts) npx tsup ;;`
   // arrives as one command whose head is the pattern. Reading the head and discarding the tail hid the
@@ -404,6 +429,38 @@ export const ALLOWED_ACTION_INPUTS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * The `node -e` payloads a shipped lane may carry, as sha256 of their whitespace-collapsed text.
+ *
+ * Hashes rather than the text itself, because the two payloads are 514 and 909 characters of multi-line
+ * JavaScript and a literal copy here would break on every reflow of the shipped file. A reflow IS a change
+ * someone should read, so the hash failing is the intended behaviour and the fix is to re-measure and
+ * re-record — not to loosen the comparison.
+ *
+ * `node` is on the allowed list because the shipped tree needs one `node -e`, and a payload is CODE: no
+ * command scanner reads it, so `node -e "require('child_process').execSync('pnpm build')"` was accepted
+ * and ran a build. The answer is not a denylist of suspicious substrings — that is the fail-open
+ * direction this instrument was rebuilt to escape. It is to enumerate the payloads, which needs no corpus
+ * and refuses every payload nobody wrote down, including the ones nobody has thought of.
+ *
+ * Both shipped workflows carry the same payload: the one that reads `packageManager` out of
+ * `package.json`. A second one is a change someone should read.
+ */
+export const ALLOWED_NODE_PAYLOADS: ReadonlySet<string> = new Set([
+  // `qfai-tests.yml#detection` — reads `scripts` out of `package.json`. 514 characters.
+  "9b167ae1d3e96d47ef48d847b143b141803e9d33aaf0f81f50b2982e3849ff35",
+  // `qfai-validate.yml#validate` — reads `packageManager` out of `package.json`. 909 characters.
+  "df5c5a7b43cd48300a7baf113779007e08e814f69d01bfa726e476d9680406e1",
+]);
+
+/** The payload of a `node -e`, whitespace-collapsed, hashed. */
+export function payloadDigest(payload: string): string {
+  return createHash("sha256").update(payload.replace(/\s+/g, " ").trim()).digest("hex");
+}
+
+/** The `shell:` values a shipped step may declare. A `shell:` is a command template, so it is scanned. */
+export const ALLOWED_SHELLS: ReadonlySet<string> = new Set(["bash"]);
+
+/**
  * Invocations after which a further bare argument changes what the command DOES.
  *
  * A package manager's install with a bare argument names a package, and installing an arbitrary package
@@ -453,6 +510,19 @@ export function refusals(body: string): string[] {
     if (!HARMLESS_PROGRAMS.has(program) && !ALLOWED_INVOCATIONS.has(invocation)) {
       out.push(invocation);
       continue;
+    }
+    // A payload is CODE, and `node` is allowed only because the shipped tree needs one `node -e`. Round
+    // 12 ran `node -e "require('child_process').execSync('pnpm build')"` straight through. Enumerating
+    // the payloads refuses every one nobody wrote down, including the ones nobody has thought of, which
+    // a denylist of suspicious substrings could not.
+    const tokens = tokensOf(command);
+    const eval_at = tokens.findIndex((token) => token === "-e" || token === "--eval");
+    if (program === "node" && eval_at !== -1) {
+      const payload = tokens.slice(eval_at + 1).join(" ");
+      if (!ALLOWED_NODE_PAYLOADS.has(payloadDigest(payload))) {
+        out.push(`node -e <payload ${payloadDigest(payload).slice(0, 12)}…>`);
+        continue;
+      }
     }
     // The two-token prefix's blind spot, closed where a third token changes the act.
     if (TAKES_NO_PACKAGE.has(invocation) && bareArgumentsOf(command).length > 1) {

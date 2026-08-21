@@ -432,6 +432,58 @@ files — a number derived once and then described as derived.**
   callsites is valid. One `TRACKED` list now feeds all three, with an assertion that the claimed set and
   the tracked set are equal.
 
+**Round 12 found that nothing type-checks this stage's own tests, which makes several of this record's
+verification claims vacuous.**
+
+`packages/qfai/tsconfig.json` includes `src/**` only, so `tsc -b` has never read a test file — and
+`eslint.config.js` disabled type-checked rules over `**/tests/**/*.ts`, which turns off
+`no-floating-promises`. **Every "check-types clean" statement this stage made about a test file was
+therefore empty**, and the async conversion's six missing `await`s are the measured consequence: they
+passed `tsc -b`, `tsc --noEmit` and `eslint . --max-warnings 0`, and surfaced only because a DIFFERENT
+test began asserting the absence of a warning it now received.
+
+Falsified both directions, which is what distinguishes the two gates. Dropping an `await` whose result is
+USED: `tsc` catches it (`Type 'Promise<string>' is not assignable to type 'string'`). Dropping one whose
+result is DISCARDED — the shape five of the six actually had: **`tsc` misses it, because a dropped promise
+is a valid statement, and only `no-floating-promises` catches it.**
+
+`packages/qfai/tsconfig.tests.json` now type-checks the files this change authored, `pnpm check-types` runs
+it, and the four promise rules are on for exactly that set. **The scope is stated rather than assumed**: the
+whole tests tree reports **212** type errors across 415 files and **54** within spec-0017's own files,
+concentrated in `tests/scripts/`. This stage has no mandate for that cleanup, so it is a measured number
+someone can act on rather than a silent widening — and the class is closed where it was introduced.
+
+**The allowlist leaked again, in four more ways, and one was in the shipped file already.**
+
+Round 12 planted into the shipped `unit` lane and three of four shipped unnoticed through 2829 tests. All
+four are now refused, and the sharpest is the one that needed no invention: a **one-line function
+definition**. `commandsOf` splits on `;`, so `build_once() { pnpm -C packages/qfai build; }` arrives as one
+command whose head is `build_once()`, `invocationOf` answered `NOTHING`, and the body went with it. I wrote
+that branch one commit after fixing the identical defect for keyword heads and `case` arms — and
+`qfai-tests.yml` already defines `emit() { echo "$1"; }` on one line, so the scanner had been reporting
+nothing for the shipped file's own idiom all along.
+
+The other three each needed a different kind of answer:
+
+- **`echo x|npx tsup`** — the pipe split required a SPACE, because an unspaced pipe also appears in a
+  `case` pattern alternation. Splitting unconditionally was my first fix and it broke what the space rule
+  protected: sixteen false refusals in the shipped tree. Neither rule was about spacing. A `|` is an
+  alternation when a `)` is reachable before any `;`, newline or `(` — decidable locally, and both
+  earlier rules were answering the wrong question.
+- **`node -e "…execSync('pnpm build')"`** — a payload is code, and no command scanner reads code. Not a
+  denylist of suspicious substrings, which is the fail-open direction this instrument was rebuilt to
+  escape: the two shipped payloads are enumerated by digest and every other is refused.
+- **`shell: npx tsup {0}`** — a step's `shell:` is a command template and nothing read it. The same shape
+  as the job-level `uses:` the previous round closed: a channel one level from where anyone had looked.
+
+**And the Coverage Depth Matrix had been held away from the tree by its own guard.** I updated the guard
+for `US-0017-0007`'s restoration and left the matrix saying the story was uncovered, with seven `❌` cells
+justified by "no knob file ships" — the reason this record retracts as a category error. Worse, the guard
+still required the section to say "withdrawn", so correcting the matrix reddened a required CI leg. The row
+is rescored with a reason per remaining `❌`, the partition re-derived (A 23, B 9, C 1, D 1 — 34 cells,
+with a new class for the one cell that fits none of the others), and the guard now demands the restoration
+and the carrier's name instead.
+
 **The gate moved for the first time in eleven rounds: `error=2` to `error=1`.** Eleven rounds reviewed
 the instruments and none of them went back to the two open obligations, which is worth naming as its own
 failure mode — a review loop can converge on the quality of what exists while what is missing stays
@@ -463,12 +515,30 @@ module it was testing, so a rename carried the test along with it and every asse
 name is a contract with the caller, so it is now pinned as a literal, which is the one value in that file
 that must not be derived from its subject.
 
-**`TC-0017-0030` is covered**, in `tests/integration/spec0017OwnWorkflowScope.test.ts`. `QFAI-ATDD-112`
-reports **seven** rather than eight, and every one of the seven is a parked row: `TC-0017-0016` on
-`CR-20260818-0007`, `TC-0017-0032`..`TC-0017-0035` on `CR-20260820-0007` — whose acceptance criteria need
-numbers written into `07_Decisions.md` that `/qfai-implement` may not patch — and `TC-0017-0069` /
-`TC-0017-0070` on `CR-20260820-0012` and `DR-0017-0010`. For the first time the uncovered set and the
-recorded-blocked set are the same set.
+`QFAI-ATDD-112` reports **eight** TCs, and an earlier version of this paragraph said they were "exactly
+the parked rows". **That over-claimed twice**, and round 12 measured it per row against the decision
+records' `Blocked set:` fields and the ledger's own `Blocked-By` column:
+
+```text
+TC-0017-0016   CR-20260818-0007  in blocked set    ledger row: blocked on it
+TC-0017-0030   CR-20260820-0001  in blocked set    ledger row: blocked on it
+TC-0017-0032   CR-20260820-0007  in blocked set    ledger row: refactor
+TC-0017-0033   CR-20260820-0007  in blocked set    ledger row: refactor
+TC-0017-0034   CR-20260820-0007  in blocked set    ledger row: refactor
+TC-0017-0035   CR-20260820-0007  in blocked set    ledger row: refactor
+TC-0017-0069   CR-20260820-0012  in blocked set    ledger row: todo, Blocked-By: -
+TC-0017-0070   NAMED IN NO BLOCKED SET             ledger row: todo, Blocked-By: -
+```
+
+Seven of the eight are named in an open CR's blocked set. **`TDD-0070` is named in none**: `DR-0017-0010`
+is its anomaly record, authorising an `exception` transition that has not been written. And for the last
+two the LEDGER — which is where a reader looks — records `-`, so the parking exists in the decision
+records and not in the artifact that indexes it. Four more are `refactor` in the ledger while their CR
+holds them, which is the same disagreement in the other direction.
+
+Those cells are `/qfai-implement`'s to write; this stage owes the evidence they point at, and what it
+owes here is the accurate statement rather than a tidier one. The honest form: **every uncovered TC has a
+recorded reason somewhere, and for three of the eight that reason is not where the ledger says to look.**
 
 ### A test that timed out, fixed structurally rather than by raising its budget
 
@@ -986,7 +1056,7 @@ is `FAIL`, and none of them is closeable by this stage.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0017.md` (committed). Totals by `Status`:
-**✅ 3 / ⚠️ 1 / ❌ 5**, derived from the table by
+**✅ 3 / ⚠️ 2 / ❌ 4**, derived from the table by
 `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` so the two cannot part again.
 
 Three numbers, in order, because the sequence matters: the file declared `✅ 3 / ⚠️ 2 / ❌ 4`, which
@@ -994,7 +1064,7 @@ the table never held; round 1's `qa-gatekeeper` cross-tabulated it to `✅ 2 / �
 cells then moved on merit while the findings were applied — `US-0017-0003` rose to `✅` because the
 assertion it was missing turned out to be available and was written, and `US-0017-0004`'s
 `Oracle strength` fell to `⚠️` because an oracle for an assertion is not an oracle for a story when
-the collection it filters is empty by construction. The `❌` count is unchanged at 5 rows and 38
+the collection it filters is empty by construction. The `❌` count is at 4 rows and 34
 depth cells.
 
 ## Work Orders Summary
@@ -1825,6 +1895,9 @@ differ.
 | 11    | `implementation-reviewer` | REVISE  |       16 | B1-B4, M1-M5, m1-m7    |      16 |
 | 11    | `completion-reviewer`     | REVISE  |       17 | B1-B6, M1-M7, m1-m4    |      17 |
 | 11    | `qa-gatekeeper` (stage)   | REVISE  |       15 | B1-B8, A1-A7           |      15 |
+| 12    | `implementation-reviewer` | REVISE  |       15 | B1-B2, M1-M6, m1-m7    |      15 |
+| 12    | `completion-reviewer`     | REVISE  |       26 | B1-B6, M1-M9, m1-m8, A1-A3 |  26 |
+| 12    | `qa-gatekeeper` (stage)   | REVISE  |       14 | B1-B6, A1-A8           |      14 |
 
 **Where the two columns disagree, the derived one is the one to trust, and the reason is a rule that
 does not fit every report.** The declared rule counts distinct finding identifiers "or the count of
@@ -1921,7 +1994,7 @@ What is not satisfied:
 - Stage Minimum Roles were not used for P2-P4 — the reviewer gate ran, the work orders did not.
 
 Confirmed by: **one gate has passed, and it is the narrow one.** Counted from the packs on disk:
-**twelve** rounds, **32** reviewer responses, **31 REVISE and one PASS** — the PASS being P1d's sixth
+**twelve** rounds, **35** reviewer responses, **34 REVISE and one PASS** — the PASS being P1d's sixth
 pass on `DR-0017-0010`. No stage-level gate has passed. Every earlier version of this line was a round
 behind, which rounds 4, 5, 6 and 7 each said; the numbers here are derived from
 `.qfai/review/review-2026082*/R0*.md` **from `review-20260820200000000` onwards** rather than

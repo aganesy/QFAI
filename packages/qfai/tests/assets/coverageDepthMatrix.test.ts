@@ -285,6 +285,7 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     //   A  the shipped surface is absent, so the ROW's Status is ❌
     //   B  the harness cannot run a workflow: State transitions / Combinatorial on a row that is NOT ❌
     //   C  a single shipped value admits no boundary: Boundary values, and only on US-0017-0001
+    //   D  the design has no failure to observe: Error path, and only on US-0017-0007
     const statusOf = new Map(rows.map((row) => [row.id, row.cells["Status"]]));
     const PROPERTIES: Record<string, (row: string, column: string) => boolean> = {
       A: (row) => statusOf.get(row) === "❌",
@@ -292,6 +293,7 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
         statusOf.get(row) !== "❌" &&
         (column === "State transitions" || column === "Combinatorial"),
       C: (row, column) => column === "Boundary values" && row === "US-0017-0001",
+      D: (row, column) => column === "Error path" && row === "US-0017-0007",
     };
 
     const misassigned: string[] = [];
@@ -332,6 +334,7 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
       A: "`Status = ❌`",
       B: "`Status ≠ ❌` and the column is `State transitions` or `Combinatorial`",
       C: "the column is `Boundary values` on `US-0017-0001`",
+      D: "the column is `Error path` on `US-0017-0007`",
     };
     for (const className of Object.keys(PROPERTIES)) {
       expect(
@@ -473,13 +476,25 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     ];
     expect(
       sections.length,
-      "the withdrawn story must have a justification section of its own",
+      "the story must have a justification section of its own",
     ).toBeGreaterThan(0);
+    // The claim is RESTORED, so this demands the opposite of what it used to. It required the word
+    // "withdrawn", which meant rewriting the matrix's stale sentences reddened a required CI leg — the
+    // guard was updated for the restoration in one clause and left enforcing the withdrawal in another,
+    // and it held the record away from the tree for a whole round.
+    //
+    // Two things, because the claim was withdrawn for being VACUOUS rather than misfiled: the section
+    // must say it is restored, and it must name the file that carries it. A restoration that does not
+    // name its carrier is the same defect wearing a new sentence.
+    const bodies = sections.map((match) => (match[1] ?? "").replace(/\s+/g, " "));
     expect(
-      sections
-        .map((match) => (match[1] ?? "").replace(/\s+/g, " "))
-        .filter((body) => !/withdrawn/i.test(body)),
-      "every section for the withdrawn story must say the claim was withdrawn",
+      bodies.filter((body) => !/restored|withdrawal is over|COVERED/i.test(body)),
+      "every section for this story must record that the claim is restored",
+    ).toEqual([]);
+    expect(
+      bodies.filter((body) => !/spec0017RunnerParallelismE2E/.test(body)),
+      "and must name the test that carries it, because a claim with no named carrier is what was " +
+        "withdrawn in the first place",
     ).toEqual([]);
 
     // The claim is restored, and this is the half that stops a restoration being a relapse. The

@@ -62,6 +62,44 @@ export default [
     ],
     ...tseslint.configs.disableTypeChecked,
   },
+  // …except the files spec-0017 authored, which ARE type-checked, by `tsconfig.tests.json`.
+  //
+  // Round 12 measured what the blanket disable cost: `no-floating-promises` is the rule that catches a
+  // missing `await` mechanically, and it was off over every file in that change — so six of them passed
+  // `tsc -b`, `tsc --noEmit` and `eslint . --max-warnings 0`, and surfaced only as a different test
+  // asserting the absence of a warning it had started receiving.
+  //
+  // Scoped rather than lifted wholesale: the full tests tree reports 212 type errors across 415 files and
+  // this stage has no mandate to clean them. The list here is the set `tsconfig.tests.json` includes, where
+  // the count is zero. Widening it is a follow-up with a number attached rather than a guess.
+  {
+    files: [
+      "packages/qfai/tests/helpers/buildCommand.ts",
+      "packages/qfai/tests/helpers/shippedLaneCommands.ts",
+      "packages/qfai/tests/unit/buildCommand.test.ts",
+      "packages/qfai/tests/unit/shippedLaneCommands.test.ts",
+      "packages/qfai/tests/assets/coverageDepthMatrix.test.ts",
+      "packages/qfai/tests/assets/retractedClaims.test.ts",
+      "packages/qfai/tests/assets/stageEvidenceCounts.test.ts",
+      "packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts",
+      "packages/qfai/tests/e2e/spec0017RunnerParallelismE2E.test.ts",
+      "packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts",
+      "packages/qfai/tests/integration/shippedWorkflowDetection.test.ts",
+      "packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts",
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ["packages/qfai/tsconfig.tests.json"],
+        tsconfigRootDir: __dirname,
+      },
+    },
+    rules: {
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/await-thenable": "error",
+      "@typescript-eslint/require-await": "error",
+      "@typescript-eslint/no-misused-promises": "error",
+    },
+  },
   // JS/MJS files – no type-checked rules
   {
     files: ["**/*.{js,mjs,cjs}"],

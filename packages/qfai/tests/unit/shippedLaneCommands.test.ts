@@ -114,7 +114,10 @@ const PLANTED = [
 const SHIPPED = [
   'echo "unit lane placeholder - opted in, but the test-lane body ships in a later revision"',
   "npx qfai validate --profile full --fail-on error",
-  'declared="$(node -e \'const { readFileSync } = require("node:fs"); process.stdout.write("[]");\')" || declared="[]"',
+  // The two real `node -e` payloads are covered where they live: the `US-0017-0004` row runs `refusals()`
+  // over every shipped step body. A PARAPHRASE of one used to sit here, in a list documented as shapes the
+  // tree actually contains, and it is refused now — correctly, because an unenumerated payload is refused
+  // even when it is harmless. That is the cost of failing closed, and it belongs in the refused direction.
   'if printf \'%s\' "$X" | grep -Eq \'"result": *"(failure|cancelled)"\'; then exit 1; fi',
   "corepack enable",
   "npm ci",
@@ -165,6 +168,17 @@ const ROOT_CAUSES = [
   "read -r v < <(pnpm build)",
   // `#` starts a comment only at the beginning of a word
   "echo a#b && npx tsup",
+  // A `node -e` payload nobody enumerated, harmless or not. Round 12 ran
+  // `node -e "require('child_process').execSync('pnpm build')"` straight through, and a payload is code
+  // that no command scanner reads — so the payloads are enumerated by digest and every other is refused.
+  "node -e 'process.stdout.write(\"x\")'",
+  "node -e \"require('child_process').execSync('pnpm build')\"",
+  // A one-line function definition, whose header used to swallow its whole body. The shipped tree
+  // contains the construct, so this is the tree's own idiom rather than exotic shell.
+  "build_once() { pnpm -C packages/qfai build; }",
+  // An unspaced pipe, which the previous spacing rule read as one command invoking `echo`.
+  "echo x|npx tsup",
+  "[ -f package.json ]|npx tsup",
   // and `git`, which takes a shell command as its argument in five separate subcommands
   "git -c alias.zz='!pnpm build' zz",
   "git submodule foreach 'pnpm -C packages/qfai build'",

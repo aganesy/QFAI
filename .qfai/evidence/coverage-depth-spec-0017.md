@@ -1,8 +1,10 @@
 # Coverage Depth Matrix — spec-0017
 
 Scope: the nine `US-0017-*` this spec declares, scored against
-`packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts`. **Eight are covered; `US-0017-0007`
-is not** — its claim was withdrawn in round 1 and the row is scored as the gap it is. The 82
+`packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts`, and `US-0017-0007` against
+`packages/qfai/tests/e2e/spec0017RunnerParallelismE2E.test.ts`. **All nine are covered**, the ninth since
+round 12 — its claim was withdrawn in round 1 for asserting that a file exists, and it is carried now by a
+test that observes the runner's pool. The 82
 `TC-0017-*` are `L1`/`L3` and belong to `tdd/test-list.md` under `/qfai-implement`; this matrix does
 not restate them.
 
@@ -50,11 +52,11 @@ than over what it *does*. Two consequences, both applied below:
 | US-0017-0004 | ❌          | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ❌     |
 | US-0017-0005 | ❌          | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ❌     |
 | US-0017-0006 | ❌          | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ❌     |
-| US-0017-0007 | ❌          | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| US-0017-0007 | ✅          | ❌         | ⚠️              | ⚠️             | ❌                | ❌            | ✅              | ⚠️     |
 | US-0017-0008 | ⚠️          | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ❌     |
 | US-0017-0009 | ✅          | ✅         | ⚠️              | ⚠️             | ❌                | ❌            | ✅              | ✅     |
 
-Totals by `Status`: **✅ 3 / ⚠️ 1 / ❌ 5**.
+Totals by `Status`: **✅ 3 / ⚠️ 2 / ❌ 4**.
 
 **That total sums two measurements, and it is worth saying so before it is read as one.** Four rows —
 `US-0017-0002`, `-0003`, `-0005`, `-0008` — name the own tree in their own titles, so their cells score
@@ -112,7 +114,7 @@ be read with that scope.
 
 ## Every ❌ cell, named
 
-38 depth cells are `❌`, plus 5 in `Status`. The contract is one justification per cell, so each is
+34 depth cells are `❌`, plus 4 in `Status`. The contract is one justification per cell, so each is
 assigned a reason class here — **by name, in a table a test can read** — and no cell is left to be
 inferred from a row-level narrative.
 
@@ -129,15 +131,22 @@ completeness, disjointness and no non-`❌` member.
 | A     | US-0017-0004 | Normal path, Error path, Boundary values, Special values, State transitions, Combinatorial |
 | A     | US-0017-0005 | Normal path, Error path, Boundary values, Special values, State transitions, Combinatorial |
 | A     | US-0017-0006 | Normal path, Error path, Boundary values, Special values, State transitions, Combinatorial |
-| A     | US-0017-0007 | Normal path, Error path, Boundary values, Special values, State transitions, Combinatorial, Oracle strength |
+
 | A     | US-0017-0008 | Error path, Boundary values, Special values, State transitions, Combinatorial              |
 | B     | US-0017-0001 | State transitions, Combinatorial                                                          |
 | B     | US-0017-0002 | State transitions                                                                         |
 | B     | US-0017-0003 | State transitions, Combinatorial                                                          |
+| B     | US-0017-0007 | State transitions, Combinatorial                                                          |
 | B     | US-0017-0009 | State transitions, Combinatorial                                                          |
 | C     | US-0017-0001 | Boundary values                                                                           |
+| D     | US-0017-0007 | Error path                                                                                |
 
-Sizes, derived from the table above: **A 30, B 7, C 1 — 38 cells.**
+Sizes, derived from the table above: **A 23, B 9, C 1, D 1 — 34 cells.**
+
+`US-0017-0007` left class A entirely when its row was rescored in round 12: class A's property is
+`Status = ❌` and that row is `⚠️` now. Two of its three remaining `❌` cells joined class B on the
+class's own property. The third needed a class of its own rather than a membership invented to keep a
+total tidy, which is the move round 2 broke this section for.
 
 **Class A — property: `Status = ❌`. The shipped surface does not exist, so no depth is reachable.** A depth column asks how
 thoroughly a behaviour is exercised. Where the behaviour is absent from the adopter's tree there is
@@ -159,6 +168,13 @@ risk 6 of the stage evidence.
 Class B covers only the four rows whose surface exists. The same two columns on `US-0017-0004` …
 `-0008` are class A: those rows have no surface to run, so the reason they are `❌` is the absence,
 not the harness.
+
+**Class D — property: the column is `Error path` on `US-0017-0007`. The design has no failure to
+observe.** A malformed worker override does not fail; it falls back to the declared value, deliberately, so
+that a tuning aid cannot reconfigure the suite by accident. There is therefore no error path for the test
+to exercise — the honest gap is narrower and is stated in the row's own section: nothing observes the
+runner's behaviour when the pool cannot start at all, which is a different question from a bad override.
+This is the second `❌` in the table that no future work on the story itself would turn green.
 
 **Class C — property: the column is `Boundary values` on `US-0017-0001`. A single shipped value
 admits no boundary.** `US-0017-0001` × `Boundary values`. The
@@ -344,22 +360,54 @@ so a lane added there would run rather than sitting in an aggregate nobody invok
 `BR-0017-0041` names. Asserting the absence was rejected deliberately: a test pinning "no hygiene
 lane is invoked" fails the day someone correctly adds one.
 
-### US-0017-0007 — runner parallelism derived from QFAI's own workload: ❌ and NOT COVERED
+### US-0017-0007 — runner parallelism derived from QFAI's own workload: ⚠️ and COVERED
 
-No knob file ships. `vitest.knobs.ts` exists in `packages/qfai/` and is not part of the init asset
-tree, so an adopter receives no declared worker or file-parallelism setting. `TDD-0060`, `TDD-0061`
-and `TDD-0068` are `refactor` against the own tree only.
+**The withdrawal is over, and the reason it lasted eleven rounds was wrong.** The first version of this
+row asserted that `qfai.config.yaml` exists after init — which `tests/e2e/initE2E.test.ts:58-64` already
+asserted, and which would hold for a project with no knobs in it at all. Round 1 removed it, correctly, as
+the false certification `CR-20260814-0001` describes.
 
-**The coverage claim for this row has been withdrawn.** The first version asserted that
-`qfai.config.yaml` exists after init — and round 1's `completion-reviewer` found that
-`tests/e2e/initE2E.test.ts:58-64` already asserts exactly that. The row added no discriminating
-power whatever: it would have passed for a project with no knobs in it at all, which this matrix
-already conceded by scoring `Oracle strength` `❌`, and it duplicated a test that was already there.
+What this section then said for eleven rounds was **"no knob file ships … it becomes coverable when the
+knobs ship"**, and that was a category error. The story reads "as a maintainer tuning a 415-file suite",
+and its three slice surfaces — vitest project names, the CI matrix slice list, the per-slice scripts — are
+this repository's own. It was never about an adopter's tree. Every other `tests/e2e/**` file here runs
+`qfai init` into a temporary directory, so the habit of the suite pointed at a tree the story does not
+name, and the absent knob file was recorded as the obstacle it never was.
 
-An annotation over a gap is the false certification `CR-20260814-0001` describes, so the describe was
-removed and the `- QFAI:SPEC-0017:US-0017-0007` line was deleted from
-`tests/e2e/qfai-traceability.md`. `QFAI-ATDD-111` reports this story again, deliberately. It becomes
-coverable when the knobs ship.
+`packages/qfai/tests/e2e/spec0017RunnerParallelismE2E.test.ts` carries the row now, and what makes it
+coverage rather than a second annotation over a gap is that it asserts an EFFECT. The story's eight
+existing tests all assert that a knob is DECLARED at the site the runner reads it — and `vitest.knobs.ts`
+contains the proof that a declaration can be declared and do nothing, recording a project-level worker
+declaration that "type-checked, it ran, it emitted no warning — and it did nothing" at a 0.93 wall-clock
+ratio. This test spawns a fixture suite twice through the real `rootKnobs` and observes the pool: peak
+simultaneously-live files is 1 at one worker and greater than 1 at four.
+
+Scores, and the reason for every remaining `❌`:
+
+- **Normal path `✅`** — the declared axis is exercised at two settings and the verdict differs.
+- **Oracle strength `✅`** — the oracle is a measured effect, not a file's contents. Falsified four ways,
+  all reddening: the axis declared at a scope the runner ignores, the override replaced by a fixed
+  literal, file parallelism switched off, and the override variable renamed. The fourth is the one worth
+  recording — it found a self-referential oracle in the first version, which read the variable's name from
+  the module it tests, so a rename carried the test along and everything stayed green. The name is pinned
+  as a literal now.
+- **Boundary values `⚠️`** — one worker and four are exercised, and one worker is the true boundary
+  (the pool cannot overlap). The declared value of ten is not exercised as such, and the upper end of the
+  axis is not probed at all.
+- **Special values `⚠️`** — the override rejects `""`, `" "`, `"0"`, `"-1"`, `"2.5"`, `"1e3"` and `"ten"`,
+  each measured. What is not covered is a value large enough to exhaust the machine.
+- **Error path `❌`** — there is no error path asserted. A malformed override falls back to the declared
+  value rather than failing, which is the design, so the honest gap is that nothing observes the runner's
+  behaviour when the pool cannot start.
+- **State transitions `❌`** — the axis is read once per run. Changing it mid-run is not a thing the runner
+  supports, and nothing here asserts what happens across two runs at different settings beyond the two
+  this test makes.
+- **Combinatorial `❌`** — the worker axis and the within-file concurrency axis are declared together and
+  only the worker axis is observed. `CONCURRENCY_ENV`'s effect is unmeasured, and their interaction
+  entirely so.
+
+`TDD-0060`, `TDD-0061` and `TDD-0068` remain `refactor` against the own tree, which is now the right
+subject rather than a limitation.
 
 ### US-0017-0008 — retire the duplicate validate workflow without weakening the required check: ❌
 

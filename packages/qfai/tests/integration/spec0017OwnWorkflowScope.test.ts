@@ -124,9 +124,23 @@ describe("the own tree's departures from minimal permission scope are a closed s
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0030
-describe("TC-0017-0030: the own tree holds no workflow-level Node version literal", () => {
-  it("reads every Node version from a named source rather than from a literal at the use site", async () => {
+// NOT annotated either, and for two reasons rather than one.
+//
+// `CR-20260820-0001` is open, `Class: intent`, `Blocked set: spec-0017 TDD-0030 (TC-0017-0030)`, and the
+// ledger row is `blocked` on it. Three statements cannot all hold: `BR-0017-0027`'s tree-wide prohibition
+// on a workflow-level Node literal, `10_Plan.md` scoping `release.yml` to pins only, and the publish job
+// encoding an npm engine constraint.
+//
+// **And the case's oracle is stronger than what this test checks.** It asks for ZERO workflow-level Node
+// version literals; the tree holds two, in `release.yml`'s `env:` block (`NODE_LTS: "20.19"` and
+// `NODE_PUBLISH: "24"`). The scan below matches `node-version:` only, so it reads `${{ env.NODE_LTS }}` as
+// compliant and never looks at the block the value comes from — which is exactly the conflict the CR was
+// raised about. Annotating this would have certified the case with a test blind to the thing it forbids.
+//
+// So the scope is stated for what it is: no literal at a `node-version:` USE SITE. A real property,
+// weaker than the case's, and not coverage of it.
+describe("no Node version literal sits at a use site in the own tree", () => {
+  it("reads every use-site Node version from a named source rather than from a literal", async () => {
     const workflows = await ownWorkflows();
     const literals: string[] = [];
     const references: string[] = [];

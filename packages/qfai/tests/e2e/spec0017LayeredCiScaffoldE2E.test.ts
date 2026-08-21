@@ -53,6 +53,7 @@ import { classifyBuildCommand } from "../helpers/buildCommand.js";
 import {
   ALLOWED_ACTION_INPUTS,
   ALLOWED_ACTIONS,
+  ALLOWED_SHELLS,
   invocationsOf,
   refusals,
 } from "../helpers/shippedLaneCommands.js";
@@ -588,6 +589,14 @@ describe(
         // nothing in the shipped set uses one. Refused by not being enumerated at all.
         for (const key of ["container", "services"]) {
           if (holder[key] !== undefined) refusedUses.push(`${label}: declares ${key}`);
+        }
+        // A `shell:` is a COMMAND TEMPLATE. Round 12 planted `shell: npx tsup {0}` with a `run:` body of
+        // `echo noop` and it shipped, because the scan read `run:` bodies and `uses:` and never this. Same
+        // shape as the job-level `uses:` the previous round closed: a channel one level from where anyone
+        // had looked. Every shipped step declares `bash`.
+        const shell = holder["shell"];
+        if (shell !== undefined && (typeof shell !== "string" || !ALLOWED_SHELLS.has(shell))) {
+          refusedUses.push(`${label}: declares shell ${JSON.stringify(shell)}`);
         }
       };
       for (const [id, job] of Object.entries(map)) {

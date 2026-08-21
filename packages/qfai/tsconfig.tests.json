@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"],
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": [
+    "vitest.knobs.ts",
+    "tests/helpers/buildCommand.ts",
+    "tests/helpers/shippedLaneCommands.ts",
+    "tests/unit/buildCommand.test.ts",
+    "tests/unit/shippedLaneCommands.test.ts",
+    "tests/assets/coverageDepthMatrix.test.ts",
+    "tests/assets/retractedClaims.test.ts",
+    "tests/assets/stageEvidenceCounts.test.ts",
+    "tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts",
+    "tests/e2e/spec0017RunnerParallelismE2E.test.ts",
+    "tests/integration/spec0017OwnWorkflowScope.test.ts",
+    "tests/integration/shippedWorkflowDetection.test.ts",
+    "tests/integration/scripts/checkAtddAnnotationLedger.test.ts"
+  ]
+}
