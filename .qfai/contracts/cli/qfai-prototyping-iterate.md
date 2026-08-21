@@ -31,7 +31,27 @@ qfai prototyping iterate --cycle <0..9> [--target-url <url>]
                          [--license-patch <file>]
                          [--check-convergence]
                          [--primary-spec-id <spec-id>]
+                         [--emit-skeletons]
+                         [--skeleton-mode <placeholder|full|stub>]
+                         [--mode <convergence|exploration>]
 ```
+
+`--emit-skeletons` is cycle-0 only: it writes one placeholder
+`.qfai/prototypes/iter-00/<screenId>.html` per declared screen as a seed
+aid and never an `index.html`; `iterate` ignores it at cycle >= 1.
+`--skeleton-mode` selects the emission shape and has no effect without
+`--emit-skeletons`; any value other than `placeholder` (default,
+token-driven static HTML) / `full` (placeholder plus the
+caller-replaces-via-generation marker) / `stub` (minimal
+`<!doctype html>` marker) is exit 2. SSOT:
+`packages/qfai/src/core/prototyping/emitSkeletons.ts`.
+
+`--mode` selects the loop posture: `convergence` (default) keeps every
+rubric gate blocking, `exploration` relaxes the soft-rubric gates to
+warning. Any other value is exit 2. The posture is persisted per
+iteration and `qfai prototyping certify` exits 2 on any loop that
+contains an exploration-mode iteration
+(`detectExplorationCertifyAttempt`).
 
 `--check-convergence` is a read-only peek path: it reads
 `.qfai/evidence/prototyping/prototyping.json`, exits `0` when

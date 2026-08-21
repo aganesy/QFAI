@@ -79,10 +79,13 @@ current `DESIGN.md` hash does not match the lock.
   `D-DEPRECATED-PROBE` reports `error`. Install `playwright`
   (`npm i -D playwright`) rather than reaching for it.
 
-### Step 2-B.1 — Opt-in iterate flags
+### Step 2-B.1 — `iterate` flag surface
 
-Three flags extend `npx qfai prototyping iterate`; all default OFF so the
-prior invocation pattern is byte-equivalent when no flag is passed:
+The flags below extend `npx qfai prototyping iterate`. `--target-url` is
+required at cycle 0; every other flag is opt-in and defaults OFF, so the
+prior invocation pattern is byte-equivalent when no opt-in flag is
+passed. This list is the flag reference for the sub-command — when it and
+`npx qfai --help` disagree, the help text wins and this section is stale.
 
 - `--capture` — enable PNG / HTML capture per screen each cycle via
   the default Playwright runner (dynamic `import("playwright")`;
@@ -102,6 +105,35 @@ prior invocation pattern is byte-equivalent when no flag is passed:
   Exits `0` when converged (`stopReason === "axes-exceptional"` with
   `acceptedIterationIndex` set), exits `2` otherwise. No writes,
   no Playwright launches. Use at cycle 9 before recovery.
+- `--target-url <url>` — base URL the capture / review steps drive.
+  Required at cycle 0, and at cycle >= 1 whenever `--capture` is set
+  and a screen `url` is route-relative. Used throughout Step 2-C.
+- `--force` — **required**, not optional, to re-run cycle 0 once an
+  `iter-00` exists: the destructive-rerun gate refuses to overwrite it
+  otherwise. Backs `iter-00` up to `iter-00.backup-<ISO>` and clears
+  stale `iter-NN` directories. Detail:
+  `references/iteration-loop.md#sealed-loop`.
+- `--license-patch <file>` — apply a cycle-0 add-only patch to the
+  license allowlist before it is frozen, appending to the audit ledger
+  so the decision replays. Use instead of hand-editing
+  `frozenLicenseCatalog`, which is a lock-drift exit 2. See
+  "License-verify hard-stop (exit 66)" below.
+- `--primary-spec-id <spec-id>` — pin the primary UI-bearing spec at
+  cycle 0 when several candidates resolve. Accepts `NNNN` or
+  `spec-NNNN`; takes precedence over the `qfai.config.yaml`
+  `prototyping.primarySpecId` field.
+- `--emit-skeletons` — cycle 0 only: write one placeholder HTML file
+  per declared screen as a seed aid, not an alternative output shape.
+  Ignored at cycle >= 1. Detail:
+  `references/generator-prompt.md`.
+- `--skeleton-mode <placeholder|full|stub>` — output mode for
+  `--emit-skeletons` (default `placeholder`). No effect without it.
+- `--mode <convergence|exploration>` — loop posture, default
+  `convergence`. `exploration` relaxes the soft-rubric gates to
+  warning, i.e. it changes which gates block, and the posture is
+  persisted per iteration: `npx qfai prototyping certify` exits `2` on
+  any loop that contains an exploration iteration. Never reach for it
+  to clear a failing gate on a loop you intend to certify.
 
 ### Step 2-C — Run the Loop
 
