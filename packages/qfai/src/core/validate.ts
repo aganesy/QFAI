@@ -57,6 +57,7 @@ import {
   validateSpecSplitByCapability,
   validateStatusInSpecs,
   validateTddList,
+  validateTddListSeedShape,
   validateUiDefinitionConsistency,
   validateDesignAudit,
   validateNavigationFlow,
@@ -361,8 +362,18 @@ async function runSddValidators(
   includeCodeReferences = false,
   enforceNoPrematurePrototypingContracts = true,
   specScope?: SpecScope,
+  // `full` also runs the tdd profile, which calls the whole of
+  // `validateTddList`, so it opts out here rather than reporting the
+  // seed-shape codes twice.
+  includeTddListSeedShape = true,
 ): Promise<Issue[]> {
   return [
+    // `/qfai-sdd` Phase 2b writes `tdd/test-list.md`, and `--profile sdd` is
+    // the only gate it stops on — so the profile has to be able to read back
+    // the shape it just wrote. Only the seed-shape half: the rest of
+    // `validateTddList` reports execution state that exists after
+    // `/qfai-implement`, which the SDD stage cannot clear.
+    ...(includeTddListSeedShape ? await validateTddListSeedShape(root, config) : []),
     ...(await validateMermaidEnforcement(root)),
     ...(await validateSpecPacks(root, config)),
     // The catalog wins over the in-code required-file sets, so a divergence
@@ -528,7 +539,7 @@ async function runFullValidators(
     ...(await validateSkillsIntegrity(root, config)),
     ...(await validateAssistantAssets(root, config)),
     ...(await runDiscussionValidators(root, config)),
-    ...(await runSddValidators(root, config, true, false, specScope)),
+    ...(await runSddValidators(root, config, true, false, specScope, false)),
     ...(await validateReviewArtifacts(root)),
     ...(await runPrototypingValidators(root, config, platformOption)),
     ...(await runAtddValidators(root, config, specScope)),

@@ -552,6 +552,44 @@ export async function validateTddList(root: string, config: QfaiConfig): Promise
   return issues;
 }
 
+/**
+ * The codes that describe the ledger's **seed shape** — the state
+ * `/qfai-sdd` Phase 2b leaves behind and can therefore be held to.
+ *
+ * Every other code in this validator describes execution state that only
+ * exists once `/qfai-implement` has driven rows (evidence, test files, stale
+ * status, parked exceptions), so those stay in the `tdd` profile alone: the
+ * SDD stage neither creates nor owns them.
+ */
+export const TDD_LIST_SEED_SHAPE_CODES: ReadonlySet<string> = new Set([
+  "TDDLIST_TABLE_MISSING",
+  "TDDLIST_REQUIRED_COLUMN_MISSING",
+  "TDDLIST_DUPLICATE_ID",
+  "TDDLIST_INVALID_ID",
+  "TDDLIST_INVALID_STATUS",
+  "TDDLIST_UNKNOWN_LAYER",
+  "TDDLIST_UNKNOWN_LEVEL",
+  "TDDLIST_TC_NOT_COVERED",
+]);
+
+/**
+ * `validateTddList` restricted to {@link TDD_LIST_SEED_SHAPE_CODES}.
+ *
+ * The phase that writes `tdd/test-list.md` was not the phase that validated
+ * it: `--profile sdd` — the only gate `/qfai-sdd` stops on — ran no
+ * `TDDLIST_*` check at all, so a ledger seeded at Phase 2b with a duplicate
+ * `TDD-ID`, a missing required column, a stray table above the ledger table or
+ * a coverage-target TC with no row exited that stage green and surfaced in
+ * `/qfai-implement`, on the one agent the drift protocol forbids to restructure
+ * the ledger. The whole validator cannot run there — most of it reports
+ * execution state the SDD stage has not reached yet — so the writing stage is
+ * held to the shape it wrote, and nothing more.
+ */
+export async function validateTddListSeedShape(root: string, config: QfaiConfig): Promise<Issue[]> {
+  const issues = await validateTddList(root, config);
+  return issues.filter((entry) => TDD_LIST_SEED_SHAPE_CODES.has(entry.code));
+}
+
 async function validateSpecTddList(
   root: string,
   specDir: string,

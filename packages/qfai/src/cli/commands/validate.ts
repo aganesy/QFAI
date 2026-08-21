@@ -423,7 +423,22 @@ const GATE_GROUP_FAMILIES = {
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
   "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
-  tdd: ["TDDLIST_*", "QFAI-TEST-001", "QFAI-TRACE-*"],
+  // The half of the ledger validator that describes what `/qfai-sdd` Phase 2b
+  // wrote. Both `sdd` and `tdd` run it, so it is its own group: folding it into
+  // `tdd` would tell an `sdd` reader these codes went unevaluated.
+  "tdd-ledger-seed": [
+    "TDDLIST_TABLE_MISSING",
+    "TDDLIST_REQUIRED_COLUMN_MISSING",
+    "TDDLIST_DUPLICATE_ID",
+    "TDDLIST_INVALID_ID",
+    "TDDLIST_INVALID_STATUS",
+    "TDDLIST_UNKNOWN_LAYER",
+    "TDDLIST_UNKNOWN_LEVEL",
+    "TDDLIST_TC_NOT_COVERED",
+  ],
+  // The remaining `TDDLIST_*` codes report execution state that only exists
+  // after `/qfai-implement` has driven rows, so only its profile evaluates them.
+  tdd: ["TDDLIST_* (execution state)", "QFAI-TEST-001", "QFAI-TRACE-*"],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
@@ -439,12 +454,14 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   full: ALL_GATE_GROUPS,
   verify: ALL_GATE_GROUPS,
   discussion: ["discussion"],
-  sdd: ["sdd"],
+  // `runSddValidators` also calls `validateTddListSeedShape`: the stage that
+  // seeds the ledger is gated on the shape it seeded.
+  sdd: ["sdd", "tdd-ledger-seed"],
   prototyping: ["prototyping"],
   atdd: ["atdd-traceability", "atdd-scaffold"],
   // `runTddValidators` also calls `validateAtddCodeTraceability`, but not the
   // scaffold-placeholder gate that completes the atdd group.
-  tdd: ["tdd", "atdd-traceability"],
+  tdd: ["tdd", "tdd-ledger-seed", "atdd-traceability"],
   "saas-package": ["prototyping"],
 };
 
