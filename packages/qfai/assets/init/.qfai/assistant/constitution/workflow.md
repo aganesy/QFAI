@@ -67,7 +67,7 @@ Prototyping stage policy:
 
 - `/qfai-prototyping` scope is fixed to **ALL specs** discovered from `.qfai/specs/spec-*`.
 - Completion requires prototyping evidence (markdown + json in `.qfai/evidence/`) and `npx qfai validate --profile prototyping --fail-on error` pass. The profile is explicit on purpose: an omitted `--profile` defaults to `full`, which runs the ATDD traceability rules (`QFAI-ATDD-111/112/113`) at severity `error` — obligations of stage 5, which has not run yet at stage 4.
-- The `/qfai-verify` run that feeds `npx qfai prototyping certify` writes `.qfai/output/verify.json` with `scope: "prototyping"`; certify accepts no other scope. See the Verify Output Contract in `.qfai/assistant/skills/qfai-verify/SKILL.md`.
+- The `/qfai-verify` run that feeds `npx qfai prototyping certify` writes `.qfai/report/verify.json` with `scope: "prototyping"`; certify accepts no other scope. See the Verify Output Contract in `.qfai/assistant/skills/qfai-verify/SKILL.md`.
 - Coverage gaps (missing spec rows, unresolved declared checks, API 404) are blocking.
 
 Implementation stage:
