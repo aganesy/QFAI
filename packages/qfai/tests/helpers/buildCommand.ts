@@ -136,6 +136,22 @@ interface ToolGrammar {
   readonly buildFlags?: readonly string[];
   readonly builds?: readonly string[];
   readonly buildPrefixes?: readonly string[];
+  /**
+   * A bare invocation of this tool builds: `make`, `ninja`, `hugo`.
+   *
+   * **This requires the tool's flag partition to be complete, in both halves.** The check runs after
+   * the token loop and is gated on no target having been seen, so a flag whose argument this grammar
+   * does not know to consume leaves that argument sitting in target position and suppresses the
+   * default — `hugo -d dist` came out `none`. And a query flag that this grammar does not know to
+   * refuse leaves the default firing for a command that builds nothing — `rake -T` came out `build`.
+   * Round 11 measured thirteen wrong verdicts across nine tools, in both directions, from that one
+   * mechanism.
+   *
+   * So every `bareIsBuild` tool must declare its value flags in `values` and its query flags in
+   * `never`. That is a closed-world assumption about ONE tool's documented flag set, which is
+   * defensible in the way the closed-world assumption about the SET of build tools is not: a tool's
+   * flags are finite and written down by its authors, while the set of build tools is neither.
+   */
   readonly bareIsBuild?: boolean;
   /**
    * Every invocation builds, so there is nothing to recognise past the program's own name.
@@ -245,16 +261,35 @@ const TOOLS: Record<string, ToolGrammar> = {
     // which is in `buildFlags`; the bare word is a path.
     stops: ["build"],
   },
-  ninja: { dirs: ["-C"], values: ["-j", "-k", "-f"], bareIsBuild: true },
+  ninja: {
+    dirs: ["-C"],
+    values: ["-j", "-k", "-f", "-d", "-l", "-w"],
+    never: ["-n", "-t"],
+    bareIsBuild: true,
+  },
   bazel: BAZEL,
   // `bazelisk` is the launcher for bazel, as `gradlew` is for gradle and `mvnw` for mvn. Round 10
   // planted all three; two were declared and one was not, which is the shape the launcher aliases
   // exist to close.
   bazelisk: BAZEL,
   buck: { dirs: [], values: ["--config"] },
-  just: { dirs: ["-d", "--working-directory"], values: ["--set"], bareIsBuild: true },
-  task: { dirs: ["-d", "--dir"], values: ["-p", "--parallel"], bareIsBuild: true },
-  waf: { dirs: [], values: ["-j", "--jobs"], bareIsBuild: true },
+  just: {
+    dirs: ["-d", "--working-directory"],
+    values: ["--set", "--justfile", "-f", "--color"],
+    never: ["--list", "-l", "--summary", "--dump", "--evaluate", "-n"],
+    bareIsBuild: true,
+  },
+  task: {
+    dirs: ["-d", "--dir"],
+    values: ["-p", "--parallel", "-t", "--taskfile", "-o", "--output"],
+    never: ["--list", "-l", "--list-all", "-a", "--summary", "--dry", "-n"],
+    bareIsBuild: true,
+  },
+  waf: {
+    dirs: [],
+    values: ["-j", "--jobs", "-o", "--out", "-t", "--top", "-p", "--prefix"],
+    bareIsBuild: true,
+  },
   dune: { dirs: ["--root"], values: ["-j", "--profile"] },
   stack: { dirs: ["--work-dir"], values: ["--resolver"] },
   cargo: {
@@ -290,7 +325,12 @@ const TOOLS: Record<string, ToolGrammar> = {
   },
   swift: { dirs: ["--package-path"], values: ["-c", "--configuration"] },
   meson: { dirs: ["-C"], values: ["-D"], builds: ["compile"] },
-  scons: { dirs: [], values: ["-j"], bareIsBuild: true },
+  scons: {
+    dirs: [],
+    values: ["-j", "-f", "--file", "--sconstruct", "-Y", "--repository"],
+    never: ["-n", "--no-exec", "--tree", "-H", "--help-options", "--debug"],
+    bareIsBuild: true,
+  },
   zig: { dirs: [], values: ["-target"] },
   /**
    * `tsc -b` EMITS. `packages/qfai/tsconfig.json` sets `outDir: dist` and `composite: true` with no
@@ -304,6 +344,9 @@ const TOOLS: Record<string, ToolGrammar> = {
     // shadowing that removed it from cargo's and flutter's lists.
     values: ["-p", "--project", "-t", "--module"],
     buildFlags: ["-b", "--build", "--outDir", "--outFile", "--emitDeclarationOnly"],
+    // `--showConfig` prints the resolved configuration and compiles nothing; `--listFiles` and
+    // `--listFilesOnly` are the same shape. `--noEmit` is already in the global `NEVER_FLAGS`.
+    never: ["--showConfig", "--listFiles", "--listFilesOnly", "--traceResolution"],
     bareIsBuild: true,
   },
   docker: DOCKER,
@@ -316,7 +359,12 @@ const TOOLS: Record<string, ToolGrammar> = {
   // `py` is the Windows Python launcher, and `py -m build` is the same command as `python -m build`.
   py: PYTHON,
   sbt: { dirs: [], values: [], builds: ["compile", "package", "assembly", "stage"] },
-  rake: { dirs: ["-C"], values: ["-f"], bareIsBuild: true },
+  rake: {
+    dirs: ["-C"],
+    values: ["-f", "-I", "-r", "-R"],
+    never: ["-T", "--tasks", "-P", "--prereqs", "-D", "--describe", "-n", "-W", "--where"],
+    bareIsBuild: true,
+  },
   // The JS-framework CLIs. Declared as TOOLS rather than BUNDLERS because the program name alone does
   // not mean build for any of them — `next dev` and `ng serve` are the commands people run most — so
   // the subcommand has to be read.
@@ -331,9 +379,11 @@ const TOOLS: Record<string, ToolGrammar> = {
   grunt: { dirs: [], values: ["--gruntfile", "--base"] },
   // Static-site and docs generators, where a bare invocation builds the site: that is what the program
   // is for, and `hugo --minify` is the common CI line.
-  // hugo declares no `values`: its own `bareIsBuild` decides before any flag can matter, so a
-  // consumed argument cannot change the verdict.
-  hugo: { dirs: ["-s", "--source"], bareIsBuild: true },
+  hugo: {
+    dirs: ["-s", "--source"],
+    values: ["-d", "--destination", "-b", "--baseURL", "--config", "--cacheDir", "--theme"],
+    bareIsBuild: true,
+  },
   jekyll: { dirs: ["-s", "--source"], values: ["-d", "--destination"] },
   mkdocs: { dirs: [], values: ["-f", "--config-file"] },
   // Its own object rather than an alias of `COMPILER`: sub-members are labelled under the first key
@@ -355,7 +405,7 @@ const TOOLS: Record<string, ToolGrammar> = {
   R: { dirs: [], values: [] },
   ant: {
     dirs: [],
-    values: ["-f", "-buildfile", "-D"],
+    values: ["-f", "-buildfile", "-D", "-lib", "-logfile", "-propertyfile"],
     builds: ["dist", "jar", "compile"],
     bareIsBuild: true,
   },
@@ -671,6 +721,21 @@ function commandName(token: string): string {
   return whole.split(/[/\\]/).pop() ?? "";
 }
 
+/**
+ * Does any token refuse the whole line, by naming a flag in `refusing`?
+ *
+ * Reads the inline `flag=value` spelling as well as the spaced one. A whole-token match could not see
+ * `scons --tree=all` or `tsc --showConfig=true`, which is the one-command-two-spellings invariant the
+ * per-tool `never` list was introduced for, reproduced inside its own first use.
+ */
+function refusedBy(tokens: readonly string[], refusing: ReadonlySet<string>): boolean {
+  return tokens.some((token) => {
+    if (refusing.has(token)) return true;
+    const at = token.indexOf("=");
+    return at > 0 && refusing.has(token.slice(0, at));
+  });
+}
+
 /** Does this token name something that can start a command? */
 function namesACommand(token: string): boolean {
   // Unquoted ONCE, and both halves read the same token. The regex used to be tested on the RAW token
@@ -784,7 +849,7 @@ function interpreterTail(
 function command(input: readonly string[], ctx: Context): BuildVerdict {
   let tokens = stripPrefix(input);
   if (!tokens.length) return "none";
-  if (tokens.some((t) => NEVER_FLAGS.has(t))) return "none";
+  if (refusedBy(tokens, NEVER_FLAGS)) return "none";
 
   // Unquoted once, here, because `namesACommand` unquotes and this did not — so `stripPrefix` could
   // choose a tail beginning at a token this stage then failed to recognise. `sudo "pnpm" build` was
@@ -837,7 +902,9 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
   const builds = new Set(tool?.builds ?? []);
   const stops = new Set(tool?.stops ?? []);
   const buildPrefixes = tool?.buildPrefixes ?? [];
-  if (tokens.some((token) => new Set(tool?.never ?? []).has(token))) return "none";
+  // Built once per call, not once per token — the previous version constructed a `Set` inside the
+  // predicate, so it was rebuilt for every token of every command.
+  if (refusedBy(tokens, new Set(tool?.never ?? []))) return "none";
   if (tool?.alwaysBuilds === true) return "build";
   const noScripts = tokens.some((t) => NO_SCRIPTS.has(t));
   let cwd = ctx.cwd;

@@ -89,8 +89,10 @@ The two that need their reasoning stated rather than asserted:
   40), and round 10 did it twice more (18 of 20 and 44 of 50) — five plantings, in each of which the
   majority shipped unnoticed.
 
-  **So the discharge is scoped, and the scope is the point.** Over the ninety-one forms four reviewers
-  planted, the option is not reintroduced: every one of them is pinned in
+  **So the discharge is scoped, and the scope is the point.** Over the forms four reviewers planted —
+  enumerated at § "Execution logs", not counted here, because round 11 found "ninety-one" matching
+  nothing in the tree or in this record's own narrative — the option is not reintroduced: they are pinned
+  in
   `tests/unit/buildCommand.test.ts` and refused by `tests/unit/shippedLaneCommands.test.ts`. Over a
   build the grammar does not declare, the predicate was vacuous, and it stayed vacuous through ten
   versions — round 10's verdict was that it did not need a weakness, only a tool nobody had named. The
@@ -258,8 +260,11 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   answer to a question ten versions of the classifier could not settle. It asks what a lane **invokes**
   rather than whether a command **is a build**, which needs no corpus of build spellings and fails
   closed
-- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 5 tests. The falsification: every
-  form rounds 8, 9 and 10 planted, all refused, and the shipped tree's own shapes accepted
+- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 8 tests. The falsification: every
+  form rounds 8, 9, 10 and 11 planted, all refused, and the shipped tree's own shapes accepted. Round 11
+  added three, and what they cover is the class the first five could not: the corpus was 62 BARE commands,
+  so wrapping any of them in one shell construct escaped 61 of 62. It is now checked wrapped as well as
+  bare, by root cause as well as by spelling
 - **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, v12, extracted from the
   E2E so its corpora can be tested on their own
 - **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 26 tests over the corpora enumerated
@@ -280,7 +285,7 @@ sweep cannot reach. That guard exists because the previous version of this line 
 - **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 5 tests deriving the Coverage
   Depth Matrix's totals, partition, class assignment, per-class justification and row width from the
   table itself
-- **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 8 tests deriving this record's own
+- **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 9 tests deriving this record's own
   counts from the artifacts they describe, after every review round found at least one that the tree
   did not hold. The eighth derives `## Final status`'s own round and response counts, which were correct
   and underived through five findings of exactly that shape
@@ -302,7 +307,7 @@ sweep cannot reach. That guard exists because the previous version of this line 
 pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts
   -> Tests 10 passed (10), exit 0
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/shippedLaneCommands.test.ts
-  -> Tests 5 passed (5), exit 0
+  -> Tests 8 passed (8), exit 0
      (9 before US-0017-0007 was withdrawn, 8 after, 9 again once US-0017-0003
       gained the positive-half assertion round 1 showed was available; briefly 11
       while the classifier corpus lived here, before round 4 moved it to
@@ -319,7 +324,7 @@ pnpm -C packages/qfai exec vitest run tests/integration/scripts/checkAtddAnnotat
 pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
   -> Tests 5 passed (5), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
-  -> Tests 8 passed (8), exit 0
+  -> Tests 9 passed (9), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
   -> Tests 11 passed (11), exit 0
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/buildCommand.test.ts
@@ -365,6 +370,12 @@ and are allowed by name; six could, and are allowed only as exact invocations, s
 nobody has written, and fails **closed** — an innocent new program breaks the test, which is the right
 cost for a shipped surface. Measured: **55 of 55 planted builds refused, 6 of 6 shipped shapes
 accepted**, where the classifier caught 6 of 50.
+
+Those two numerals were 55 and 6 for a round, against a corpus of 62 and 8 — and both were written as
+measurements. **No numeral for either list is stated here now**: both grow every round, for the same
+reason the classifier's corpora do, and `tests/unit/shippedLaneCommands.test.ts` holds the lists and
+asserts the property. Round 11 confirmed nothing derived the pair by rewriting it to "3 of 3 … 1 of 1"
+and finding the whole suite green.
 
 It also closes the channel round 10 found invisible to **both** instruments: a build arriving as
 `uses: gradle/actions/setup-gradle` with `arguments: build`, which no `run:` scan can see. The actions a
@@ -1329,7 +1340,21 @@ numbers.
 currency both times.** Round 3 found the first version written at `16f611c7` before `21ea1ddc` landed
 +489/-76 across four files, so it certified three artifacts that postdated it — established by
 `git log -S`. Round 4 found the replacement stale in the same way. **These numbers are measured at the working tree of this commit**, which carries every repair through
-round 10: the e2e figure is 1437 and the integration+unit figure 1206.
+round 11: the e2e figure is 1439 and the integration+unit figure 1212.
+
+e2e callsites at this tree: 876
+
+**That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
+each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
+by a test — deriving them would mean running the suite from inside it — but the thing that INVALIDATES
+them can be: a commit that changes an `it` / `test` callsite under the e2e project's two include globs.
+`stageEvidenceCounts.test.ts` measures that count and requires the line above to equal it, so a commit
+that moves a callsite reddens until the line is corrected, and the totals beside it are known-invalid
+rather than presumed-valid in the window between.
+
+It reads "at this tree" rather than naming a revision on purpose. A row cannot name the commit it is
+written in — round 10's `m1` — so pointing the guard at the sequence's last row would either make the row
+false or make the guard red at the commit that corrects it.
 
 **No sentence here claims how many commits follow the last row of the sequence.** Five rounds running,
 that sentence was wrong — "the two commits after it" against five, and before that "records only" against
@@ -1347,8 +1372,8 @@ instead; a round name cannot be checked, which is the whole reason those rounds 
 
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
-pnpm -C packages/qfai test:e2e                  1437 passed / 16 skipped, exit 0
-vitest --project integration --project unit     1206 passed / 19 skipped, exit 0
+pnpm -C packages/qfai test:e2e                  1439 passed / 16 skipped, exit 0
+vitest --project integration --project unit     1212 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 8 claim(s) backed, exit 0
 pnpm verify:pack                                exit 0
@@ -1640,7 +1665,7 @@ What is not satisfied:
 - Stage Minimum Roles were not used for P2-P4 — the reviewer gate ran, the work orders did not.
 
 Confirmed by: **one gate has passed, and it is the narrow one.** Counted from the packs on disk:
-**eleven** rounds, **29** reviewer responses, **28 REVISE and one PASS** — the PASS being P1d's sixth
+**eleven** rounds, **32** reviewer responses, **31 REVISE and one PASS** — the PASS being P1d's sixth
 pass on `DR-0017-0010`. No stage-level gate has passed. Every earlier version of this line was a round
 behind, which rounds 4, 5, 6 and 7 each said; the numbers here are derived from
 `.qfai/review/review-2026082*/R0*.md` **from `review-20260820200000000` onwards** rather than

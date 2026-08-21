@@ -50,6 +50,11 @@ const TRACKED = [
   "packages/qfai/tests/assets/retractedClaims.test.ts",
   "packages/qfai/tests/assets/stageEvidenceCounts.test.ts",
   "packages/qfai/tests/unit/buildCommand.test.ts",
+  // Added round 11. It was the one new test file outside this list, so its count was checked by the
+  // recorded-vitest-output rule and its `.each` / `.for` precondition was not — and that
+  // precondition is the only thing making callsite counting valid. The A7 repair unified three
+  // lists and then omitted a file from the one list that remained.
+  "packages/qfai/tests/unit/shippedLaneCommands.test.ts",
 ] as const;
 
 /** `packages/qfai/tests/x.test.ts` -> `tests/x.test.ts`, the spelling the recorded commands use. */
@@ -155,6 +160,11 @@ describe("the stage evidence's counts are derived, not typed", () => {
         file: "packages/qfai/tests/unit/buildCommand.test.ts",
         pattern: /buildCommand\.test\.ts` — (\d+) tests/,
         label: "the build classifier's test count, in Work performed",
+      },
+      {
+        file: "packages/qfai/tests/unit/shippedLaneCommands.test.ts",
+        pattern: /shippedLaneCommands\.test\.ts` — (\d+) tests/,
+        label: "the shipped-lane allowlist's test count, in Work performed",
       },
       {
         file: "packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts",
@@ -345,6 +355,66 @@ describe("the stage evidence's counts are derived, not typed", () => {
       recorded.map((match) => Number(match[1])).filter((value) => value !== scoped.checked),
       `every recorded guard output must be what the guard reports (${String(scoped.checked)})`,
     ).toEqual([]);
+  });
+
+  it("keeps the e2e sequence's last row current with the callsites it counts", async () => {
+    // The two `P7` suite totals were stale for the SIXTH time this round: 1437 recorded against 1439
+    // measured, 1206 against 1212. Five previous rounds each found the same sentence a round behind, and
+    // each repair re-typed the number.
+    //
+    // A test cannot derive the totals — that would mean running the suite from inside it. It CAN derive
+    // the thing that invalidates them. The sequence's rows carry a CALLSITE count beside each total, and
+    // the record's own stated rule is that a commit changing an `it` / `test` callsite under the e2e
+    // project's two globs owes a row. So the last row's callsite figure is compared with the measured
+    // one: a commit that adds a callsite reddens this until its row is written, and until then the total
+    // beside it is known to be wrong rather than assumed to be right.
+    const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
+
+    // The globs are the e2e project's, read from the workspace file rather than assumed, because a
+    // guard over "the e2e project's callsites" that hardcodes the directories is one include away from
+    // measuring something else.
+    const workspace = await source("packages/qfai/vitest.workspace.ts");
+    const globs = [...workspace.matchAll(/"(tests\/(?:e2e|assets)\/[^"]*)"/g)].map(
+      (m) => m[1] ?? "",
+    );
+    expect(globs.length, "the e2e project must declare its includes").toBeGreaterThan(0);
+
+    const CALLSITE_LINE = /^[ \t]*(?:it|test)(?:\.\w+)*[\s(]/;
+    let measured = 0;
+    for (const dir of ["packages/qfai/tests/e2e", "packages/qfai/tests/assets"]) {
+      const walk = async (at: string): Promise<void> => {
+        for (const entry of await readdir(at, { withFileTypes: true })) {
+          const full = path.join(at, entry.name);
+          if (entry.isDirectory()) {
+            await walk(full);
+            continue;
+          }
+          if (!/\.test\.ts$/.test(entry.name)) continue;
+          const text = await readFile(full, "utf8");
+          measured += text.split(/\r?\n/).filter((line) => CALLSITE_LINE.test(line)).length;
+        }
+      };
+      await walk(path.join(ROOT, dir));
+    }
+
+    // Compared against a line describing the WORKING TREE, not against the table's last row. A row
+    // cannot name the commit it is written in — that is round 10's `m1`, and pointing this guard at the
+    // last row would have made it red at exactly the commit that corrects it, or made the row false.
+    // The table stays as history, where every row names a revision a reader can check; what has to be
+    // current is the count the two totals are valid FOR, which is a property of the tree.
+    const stated = /^e2e callsites at this tree: (\d+)$/m.exec(evidence);
+    expect(
+      stated,
+      "the record must state its own e2e callsite count, in the form " +
+        "`e2e callsites at this tree: N`, because the two suite totals above it are only valid for that " +
+        "count and nothing else pins them",
+    ).not.toBeNull();
+    expect(
+      Number(stated?.[1]),
+      `the record states ${stated?.[1] ?? "?"} e2e callsites; the tree holds ${String(measured)}. ` +
+        "A commit that changes one invalidates both suite totals, which is the defect six rounds have " +
+        "reported and five repairs have re-typed",
+    ).toBe(measured);
   });
 
   it("derives the round and response counts `## Final status` certifies with", async () => {

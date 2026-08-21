@@ -26,6 +26,8 @@ import {
   invocationOf,
   invocationsOf,
   refusals,
+  NOTHING,
+  UNREADABLE,
 } from "../helpers/shippedLaneCommands.js";
 
 /** Every form a reviewer planted, across three rounds. None was chosen by this stage. */
@@ -109,6 +111,57 @@ const SHIPPED = [
   "git diff --name-only origin/main...HEAD | cut -d/ -f1 | tr -d ' '",
 ];
 
+/**
+ * Seven ordinary shell constructs that execute the command they wrap.
+ *
+ * Round 11 measured the corpus above going from 0 of 62 missed to **61 of 62 missed** under any one of
+ * these. Every entry in `PLANTED` was a bare command, so the list's "0 escaped" result said nothing
+ * about the commonest thing a CI author writes: a build inside a conditional.
+ *
+ * Applied as a WRAPPER rather than pasted in as more literals, deliberately. A hole that appears only
+ * under wrapping cannot be closed by enumerating unwrapped spellings — which is the lesson the build
+ * classifier's twelve versions taught one instrument over, arriving here in a new shape.
+ */
+/** A literal backtick, built from its code point because it cannot appear inside a template. */
+const BACKTICK = String.fromCharCode(96);
+
+const WRAPS: ReadonlyArray<(command: string) => string> = [
+  (c) => `if [ -f package.json ]; then ${c}; fi`,
+  (c) => `if true; then ${c}; fi`,
+  (c) => `if false; then echo skip; else ${c}; fi`,
+  (c) => `for p in one; do ${c}; done`,
+  (c) => `until ${c}; do break; done`,
+  (c) => `{ ${c}; }`,
+  (c) => `! ${c}`,
+  (c) => `echo ${BACKTICK}${c}${BACKTICK}`,
+  (c) => `grep -q x <(${c})`,
+  (c) => `echo a#b && ${c}`,
+];
+
+/**
+ * The five parser holes round 11 measured, each with a distinct root cause and each EXECUTED with a
+ * marker stub by the reviewer that found it. Kept as literals beside the wrapper because their point is
+ * the root cause rather than the spelling.
+ */
+const ROOT_CAUSES = [
+  // a keyword is a prefix to a command, not a command
+  "if [ -f package.json ]; then pnpm build; fi",
+  // the other spelling of `$( … )`
+  `declared=${BACKTICK} tsup ${BACKTICK}`,
+  // a glob in the head is a path being executed, not a `case` pattern
+  "./ci/*/build.sh",
+  // process substitution
+  "read -r v < <(pnpm build)",
+  // `#` starts a comment only at the beginning of a word
+  "echo a#b && npx tsup",
+  // and `git`, which takes a shell command as its argument in five separate subcommands
+  "git -c alias.zz='!pnpm build' zz",
+  "git submodule foreach 'pnpm -C packages/qfai build'",
+  "git bisect run make",
+  // a build inside a `case` arm, which the pattern head used to hide
+  "*.ts) npx tsup ;;",
+];
+
 describe("the shipped-lane allowlist", () => {
   it("refuses every build anyone has planted, without a corpus of build spellings", () => {
     const escaped = PLANTED.filter((line) => refusals(line).length === 0);
@@ -116,6 +169,35 @@ describe("the shipped-lane allowlist", () => {
       escaped,
       "a planted build the allowlist let through: the classifier caught 6 of 50 of these, which is " +
         "why the assertion was inverted",
+    ).toEqual([]);
+  });
+
+  it("refuses the same builds when one shell construct is wrapped around them", () => {
+    // The measurement that mattered most in round 11, as a permanent test. `pnpm build` is the first
+    // entry `PLANTED` refuses, and `if [ -f package.json ]; then pnpm build; fi` refused nothing: one
+    // construct around a command the corpus already names was enough to defeat the instrument the whole
+    // story rests on.
+    const escaped: string[] = [];
+    for (const wrap of WRAPS) {
+      for (const line of PLANTED) {
+        const wrapped = wrap(line);
+        if (refusals(wrapped).length === 0) escaped.push(wrapped);
+      }
+    }
+    expect
+      .soft(escaped.slice(0, 12), "a planted build that a shell construct hid from the allowlist")
+      .toEqual([]);
+    expect(escaped.length, "how many of the wrapped forms escaped").toBe(0);
+  });
+
+  it("refuses each of the five parser holes by its root cause", () => {
+    // Enumerated separately from `WRAPS` because the fix for these is not "one more entry": it is that
+    // `invocationOf` distinguishes "invokes nothing" from "cannot be read", and refuses the second. A
+    // spelling nobody has thought of now costs a spurious refusal in review rather than a shipped
+    // build, which is what "fails closed" has to mean for a claim that there is nothing here.
+    expect(
+      ROOT_CAUSES.filter((line) => refusals(line).length === 0),
+      "a parser hole that still hides the command behind it",
     ).toEqual([]);
   });
 
@@ -131,6 +213,32 @@ describe("the shipped-lane allowlist", () => {
     ).toEqual([]);
   });
 
+  it("refuses an install that names a package, which the two-token prefix could not see", () => {
+    // `ALLOWED_INVOCATIONS` matches a program plus its FIRST non-flag argument, and its docstring used
+    // to call that exact — so `npm install left-pad` read as `npm install` and shipped. Installing an
+    // arbitrary package in a shipped lane is a different act from restoring a lockfile, and the shortest
+    // route to running arbitrary code, through that package's own install scripts.
+    for (const line of [
+      "npm install left-pad",
+      "npm ci extra-package",
+      "pnpm install some-pkg",
+      "yarn install some-pkg",
+      "corepack enable yarn@4.0.0",
+    ]) {
+      expect(refusals(line), `${line} must be refused`).toHaveLength(1);
+    }
+    // And the shipped forms, which carry flags but no package, stay accepted.
+    for (const line of [
+      "npm install",
+      "npm ci",
+      "pnpm install --frozen-lockfile",
+      "yarn install --immutable",
+      "corepack enable",
+    ]) {
+      expect(refusals(line), `${line} must be accepted`).toEqual([]);
+    }
+  });
+
   it("reads a payload as opaque rather than as commands", () => {
     // Three versions of the scanner descended into `node -e '<javascript>'` and reported `typeof
     // parsed`, `let field` and `try {` as programs. The last of them failed because the payload sits
@@ -142,11 +250,21 @@ describe("the shipped-lane allowlist", () => {
     ]);
   });
 
-  it("does not read a `case` pattern alternation as a program", () => {
+  it("reads a `case` arm as a prefix, not as a program and not as a wall", () => {
     // `*.md|*.txt|LICENSE|docs/*)` was split on `|` and reported `LICENSE` as a program. A pipe
     // separates commands only when it is spaced; the unspaced form is legal shell that nobody writes.
     expect(commandsOf("*.md|*.markdown|*.txt|LICENSE|docs/*) ;;")).toHaveLength(1);
-    expect(invocationOf("*.md|*.txt|LICENSE|docs/*)")).toBeUndefined();
+    // An arm with nothing after it invokes NOTHING, which is a different verdict from UNREADABLE — and
+    // the distinction is the whole of round 11's repair. Both used to be `undefined`, and `refusals()`
+    // read `undefined` as consent, so a construct the scanner could not parse was permission to run
+    // anything.
+    expect(invocationOf("*.md|*.txt|LICENSE|docs/*)")).toBe(NOTHING);
+    // An arm WITH a command after it is a prefix: the pattern must not hide what follows it. This is the
+    // keyword defect wearing a different punctuation mark, and it hid a build inside a case arm.
+    expect(invocationOf("*.md) echo docs")).toBe("echo docs");
+    expect(refusals("*.ts) npx tsup ;;")).toHaveLength(1);
+    // A glob head that is NOT an arm is a path being executed, and unreadable rather than nothing.
+    expect(invocationOf("./ci/*/build.sh")).toBe(UNREADABLE);
     // And a real pipe still separates.
     expect(commandsOf("printf '%s' x | grep -q y")).toHaveLength(2);
   });

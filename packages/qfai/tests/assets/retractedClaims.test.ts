@@ -187,8 +187,16 @@ const COUNTED_CLAIMS: ReadonlyArray<{
     // `Nine packs — one per round` and `Nine review packs, one per round` both escaped the first
     // needle, which required the exact string `packs, one per round`. The separator is now any
     // punctuation or none, and a word may sit between the numeral and `packs`.
-    pattern:
-      /\b(one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+(?:\w+\s+)?packs\s*[,—–-]?\s*one per round\b/gi,
+    //
+    // **The numeral is captured as any word, not as an alternation.** The alternation stopped at `ten`,
+    // so at exactly eleven packs the record said "Eleven", nothing matched, the loop body never ran, and
+    // the assertion passed over an empty match list: `Eleven -> Twelve` reddened nothing. A pin whose
+    // needle is a closed enumeration cannot be falsified from outside that enumeration, which is how
+    // this one survived every round it existed — an oracle round on it only ever tested values it
+    // already covered. A word `WORDS` cannot read is now reported rather than skipped.
+    // Spaces and tabs, not `\s`: `\s` crosses a line break, so the heading Review packs and their
+    // seals sitting two lines above the sentence made `seals` the captured numeral.
+    pattern: /\b(\w+)[ \t]+(?:\w+[ \t]+)?packs[ \t]*[,—–-]?[ \t]*one per round\b/gi,
     actual: async () => {
       const { readdir } = await import("node:fs/promises");
       const entries = await readdir(path.join(ROOT, ".qfai/review"), { withFileTypes: true });
@@ -205,6 +213,16 @@ const COUNTED_CLAIMS: ReadonlyArray<{
 
 const WORDS: Record<string, number> = {
   one: 1,
+  eleven: 11,
+  twelve: 12,
+  thirteen: 13,
+  fourteen: 14,
+  fifteen: 15,
+  sixteen: 16,
+  seventeen: 17,
+  eighteen: 18,
+  nineteen: 19,
+  twenty: 20,
   two: 2,
   three: 3,
   four: 4,
@@ -582,16 +600,29 @@ describe("retracted claims are quoted, never asserted", () => {
     const wrong: string[] = [];
     for (const counted of COUNTED_CLAIMS) {
       const actual = await counted.actual();
+      let matched = 0;
       for (const file of GOVERNANCE) {
         const raw = await readFile(path.join(ROOT, file), "utf8");
         for (const match of raw.replace(/[*_`]/g, "").matchAll(counted.pattern)) {
+          matched += 1;
           const stated = WORDS[(match[1] ?? "").toLowerCase()] ?? Number(match[1]);
+          if (Number.isNaN(stated)) {
+            wrong.push(`${file}: states ${match[1] ?? "?"}, which no numeral table here can read`);
+            continue;
+          }
           if (stated !== actual) {
             wrong.push(
               `${file}: states ${match[1] ?? "?"} where the tree holds ${String(actual)} — ${counted.why}`,
             );
           }
         }
+      }
+      // A FLOOR, because matching nothing was a pass. This pin held for eight rounds and then went
+      // inert the moment the pack count reached a numeral its alternation did not list — and the way it
+      // went inert was by matching zero times, which is indistinguishable from correctness without
+      // this line.
+      if (matched === 0) {
+        wrong.push(`no governance file states the claim this pin exists for — ${counted.why}`);
       }
     }
     expect(wrong, "a counted claim whose number the tree does not hold").toEqual([]);
@@ -630,19 +661,46 @@ describe("retracted claims are quoted, never asserted", () => {
         const document = flattenDocument(raw, variant);
         const where = `${file} [flattening ${String(variant)}]`;
 
-        // Every exempt span must BE a line of the file. Not "inside one", not "the right length": the
-        // slice and the line's own flattened text must be the same string.
-        const lines = new Set(
-          raw.split(LINE_BREAK).map((line) => flattenings(line)[variant].trim()),
-        );
-        for (const [from, to] of document.exempt) {
-          const slice = document.text.slice(from, to);
-          if (!lines.has(slice)) {
-            offenders.push(
-              `${where}: exempt span [${String(from)},${String(to)}] is not any line: ` +
-                JSON.stringify(slice.slice(0, 48)),
-            );
+        // The exempt spans must be an ORDERED, ONE-PER-LINE correspondence with the lines that are
+        // shown rather than asserted — not merely a set of strings that each happen to occur somewhere.
+        // `lines.has(slice)` was the previous rule and it has no positional content: shift every span
+        // back one line and each slice is still SOME line, so three mutations left it green.
+        //
+        // Which lines are shown is re-derived here from the raw source, in three lines. That is a small
+        // tautology — two implementations of one rule can be wrong together — and it is worth naming as
+        // the limit of this check. What is NOT re-derived is the coordinate arithmetic, which is the
+        // half that was wrong for 50 of 456 paragraphs, and a shift of one line in either direction now
+        // fails on the first span.
+        const shown: string[] = [];
+        let inside = false;
+        // Paragraphs first, then lines, through the SAME two splits the builder uses. A blank line is a
+        // paragraph separator and never reaches the line loop, so iterating raw lines counted fifteen
+        // blank lines inside fences as shown and produced 210 against 195. The splits are shared
+        // constants for this reason; what is deliberately NOT shared is the offset arithmetic.
+        for (const paragraph of raw.split(PARAGRAPH_BREAK)) {
+          for (const line of paragraph.split(LINE_BREAK)) {
+            if (/^\s*(?:```|~~~)/.test(line)) {
+              inside = !inside;
+              continue;
+            }
+            if (inside || /^\s*>/.test(line)) shown.push(flattenings(line)[variant].trim());
           }
+        }
+        const exemptSlices = document.exempt.map(([from, to]) => document.text.slice(from, to));
+        if (exemptSlices.length !== shown.length) {
+          offenders.push(
+            `${where}: ${String(exemptSlices.length)} exempt spans for ` +
+              `${String(shown.length)} shown lines`,
+          );
+        } else {
+          exemptSlices.forEach((slice, index) => {
+            if (slice !== shown[index]) {
+              offenders.push(
+                `${where}: exempt span ${String(index)} reads ${JSON.stringify(slice.slice(0, 40))}, ` +
+                  `the shown line there is ${JSON.stringify((shown[index] ?? "").slice(0, 40))}`,
+              );
+            }
+          });
         }
 
         // And every paragraph span must reconstruct its own paragraph. The builder walks the same split

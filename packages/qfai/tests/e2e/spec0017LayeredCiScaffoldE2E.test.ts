@@ -177,10 +177,15 @@ async function jobs(): Promise<Record<string, unknown>> {
  * The set is derived from the shipped directory rather than listed, so a third workflow is in scope the
  * moment it ships instead of the round after someone remembers to add it.
  */
-async function shippedJobs(): Promise<Record<string, unknown>> {
+async function shippedWorkflowFiles(): Promise<string[]> {
   const dir = path.join(await project(), ".github", "workflows");
   const files = (await readdir(dir)).filter((name) => /\.ya?ml$/.test(name)).sort();
   if (files.length === 0) throw new Error("the shipped tree has no workflows to read");
+  return files;
+}
+
+async function shippedJobs(): Promise<Record<string, unknown>> {
+  const files = await shippedWorkflowFiles();
   const out: Record<string, unknown> = {};
   for (const file of files) {
     const parsed: unknown = parseYaml(await workflowText(file));
@@ -224,7 +229,13 @@ describe(
   { timeout: 120000 },
   () => {
     it("pins every action to a full SHA and refuses to persist credentials", async () => {
-      const files = [ORCHESTRATOR, "qfai-validate.yml"];
+      // Derived, not listed. This row said `[ORCHESTRATOR, "qfai-validate.yml"]` while the function
+      // that derives the set sat forty lines above it, added last round for `US-0017-0004` after
+      // exactly this defect was measured there. A third shipped workflow with a floating-major
+      // checkout reference and no `persist-credentials: false` left this row green. (The reference is
+      // described rather than written: a co-change guard forbids any test in this suite from carrying a
+      // literal floating-major spelling, and it caught this comment.)
+      const files = await shippedWorkflowFiles();
       const floating: string[] = [];
       const unhardened: string[] = [];
       for (const file of files) {
@@ -260,7 +271,7 @@ describe(
       // literal that would compete with the file. A version pinned in the workflow and a version in
       // the project's own file are two sources for one answer, which is the drift this forbids.
       const offenders: string[] = [];
-      for (const file of [ORCHESTRATOR, "qfai-validate.yml"]) {
+      for (const file of await shippedWorkflowFiles()) {
         const text = await workflowText(file);
         for (const line of text.split(/\r?\n/)) {
           if (line.trim().startsWith("#")) continue;
@@ -509,21 +520,38 @@ describe(
       // `run:` line existing, and the assertion above greps `run:` bodies. So the action and every input
       // key it is given are enumerated too — `arguments`, `args` and `run` are refused by not appearing.
       const refusedUses: string[] = [];
-      for (const [id, job] of Object.entries(map)) {
-        const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
-        for (const step of steps) {
-          if (!isRecord(step)) continue;
-          const uses = step["uses"];
-          if (typeof uses !== "string") continue;
+      const readUses = (label: string, holder: Record<string, unknown>): void => {
+        const uses = holder["uses"];
+        if (typeof uses === "string") {
           const action = uses.split("@")[0] ?? uses;
-          if (!ALLOWED_ACTIONS.has(action)) refusedUses.push(`${id}: uses ${action}`);
-          const inputs = step["with"];
-          if (!isRecord(inputs)) continue;
-          for (const key of Object.keys(inputs)) {
-            if (!ALLOWED_ACTION_INPUTS.has(key)) {
-              refusedUses.push(`${id}: ${action} with ${key}`);
+          if (!ALLOWED_ACTIONS.has(action)) refusedUses.push(`${label}: uses ${action}`);
+          const inputs = holder["with"];
+          if (isRecord(inputs)) {
+            for (const key of Object.keys(inputs)) {
+              if (!ALLOWED_ACTION_INPUTS.has(key))
+                refusedUses.push(`${label}: ${action} with ${key}`);
             }
           }
+        }
+        // An image is a program with an entrypoint, so it is the same channel by another name and
+        // nothing in the shipped set uses one. Refused by not being enumerated at all.
+        for (const key of ["container", "services"]) {
+          if (holder[key] !== undefined) refusedUses.push(`${label}: declares ${key}`);
+        }
+      };
+      for (const [id, job] of Object.entries(map)) {
+        if (!isRecord(job)) continue;
+        // The JOB level first. The previous version read `step["uses"]` inside `job["steps"]`, so a job
+        // with no steps was scanned zero times — and a job-level `uses:` is a whole third-party
+        // reusable workflow, a larger supply-chain edge than any of the three enumerated actions. The
+        // planted one carried `with: arguments: build`, which is the exact key this guard's own comment
+        // names as the channel a `uses:` build arrives by, and it shipped because the key was read at
+        // the wrong level of the document.
+        readUses(id, job);
+        const steps = Array.isArray(job["steps"]) ? job["steps"] : [];
+        for (const step of steps) {
+          if (!isRecord(step)) continue;
+          readUses(id, step);
         }
       }
       expect

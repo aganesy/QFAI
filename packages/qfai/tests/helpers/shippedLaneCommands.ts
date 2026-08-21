@@ -26,38 +26,16 @@
  * scanner spans a whole `run` body and a newline outside quotes is just another separator.
  */
 
-/** Shell words that begin a construct rather than name a program. */
-const KEYWORDS = new Set([
-  "if",
-  "then",
-  "else",
-  "elif",
-  "fi",
-  "for",
-  "while",
-  "until",
-  "do",
-  "done",
-  "case",
-  "esac",
-  "in",
-  "{",
-  "}",
-  "(",
-  ")",
-  "[",
-  "]",
-  "[[",
-  "]]",
-  "!",
-  ":",
-  ";;",
-  "return",
-  "local",
-  "shift",
-  "continue",
-  "break",
-]);
+/**
+ * `local` is deliberately not special-cased anywhere: `local x=1` is an assignment, and the
+ * assignment skip reads it as one.
+ *
+ * The set that used to sit here — one flat `KEYWORDS` holding `if` beside `fi` and `[` beside `]` —
+ * is gone, and its SHAPE was the defect. A single set could only support one answer, "this is a
+ * keyword, stop", which discarded the command a prefix keyword introduces:
+ * `if [ -f package.json ]; then pnpm build; fi` refused nothing. `COMMAND_PREFIXES` and
+ * `TERMINATORS`, declared beside `invocationOf`, are the two answers it could not give.
+ */
 
 /** After one of these, the next token is a payload rather than a command. */
 const OPAQUE_AFTER = new Set(["-e", "--eval", "-c", "--command", "-p", "--print"]);
@@ -91,11 +69,28 @@ export function commandsOf(body: string): string[] {
       if (ch === "\n") inComment = false;
       else continue;
     }
-    // A substitution is scanned on its own terms, inside or outside quotes.
+    // A substitution is scanned on its own terms, inside or outside quotes. THREE spellings, because
+    // the shell has three and the previous version entered one: `$( … )`, the backtick, and process
+    // substitution `<( … )` / `>( … )`. Round 11 measured all three: `echo ` npx tsup `` and
+    // `grep -q x <(npx tsup)` both ran a real build while `$(npx tsup)` was correctly refused, so two
+    // spellings of one shell feature got opposite verdicts.
     if (ch === "$" && body[i + 1] === "(" && quote !== "'") {
       const close = matchingParen(body, i + 1);
       out.push(...commandsOf(body.slice(i + 2, close)));
       i = close;
+      continue;
+    }
+    if ((ch === "<" || ch === ">") && body[i + 1] === "(" && quote !== "'") {
+      const close = matchingParen(body, i + 1);
+      out.push(...commandsOf(body.slice(i + 2, close)));
+      i = close;
+      continue;
+    }
+    if (ch === "`" && quote !== "'") {
+      const close = body.indexOf("`", i + 1);
+      const end = close === -1 ? body.length : close;
+      out.push(...commandsOf(body.slice(i + 1, end)));
+      i = end;
       continue;
     }
     if (quote !== "") {
@@ -108,7 +103,9 @@ export function commandsOf(body: string): string[] {
       current += ch;
       continue;
     }
-    if (ch === "#") {
+    // A comment starts only at the beginning of a WORD. bash runs `echo a#b && npx tsup`; the
+    // previous version dropped the rest of the line at the `#` and the build ran unseen.
+    if (ch === "#" && (i === 0 || /[\s;&|(]/.test(body[i - 1] ?? " "))) {
       inComment = true;
       continue;
     }
@@ -189,24 +186,114 @@ export function tokensOf(command: string): string[] {
 }
 
 /**
+ * A construct that provably invokes no program: a `case` pattern arm, a function-definition header, a
+ * bare assignment, a block terminator. **Not** the same as "I cannot tell", which is `UNREADABLE`.
+ */
+export const NOTHING = Symbol("invokes nothing");
+
+/**
+ * A command whose program this scanner could not determine.
+ *
+ * The distinction from `NOTHING` is the whole repair. Both used to be `undefined`, and `refusals()` read
+ * `undefined` as consent — so every construct the scanner did not understand was permission to run
+ * anything. Round 11 measured five separate holes of that shape (a keyword head, a backtick, a glob
+ * head, a process substitution, a mid-word `#`) and ran fifteen of eighteen real builds with the
+ * instrument reporting clean. Enumerating five repairs would have left the sixth open.
+ *
+ * Now the scanner's own failure is a refusal. A construct nobody anticipated costs a spurious refusal in
+ * review — which someone reads — rather than a shipped build, which nobody does. That is what "fails
+ * closed" has to mean for an assertion whose content is "there is nothing here".
+ */
+export const UNREADABLE = Symbol("cannot be read");
+
+/**
+ * Shell keywords that PREFIX a command rather than being one.
+ *
+ * `if`, `then`, `else`, `elif`, `do`, `while`, `until`, `!` and `{` are all followed by a command in
+ * one-line form, and `commandsOf` splits on `;` — so the command after the keyword used to arrive as the
+ * TAIL of a keyword-headed command and be discarded whole. `if [ -f package.json ]; then pnpm build; fi`
+ * refused nothing, and `pnpm build` is the first entry the corpus claims to refuse: one shell construct
+ * around it was enough.
+ */
+const COMMAND_PREFIXES = new Set([
+  "if",
+  "then",
+  "else",
+  "elif",
+  "do",
+  "while",
+  "until",
+  "!",
+  "{",
+  "(",
+]);
+
+/** Keywords that end a construct and invoke nothing at all. */
+const TERMINATORS = new Set([
+  "fi",
+  "done",
+  "esac",
+  "}",
+  ")",
+  ";;",
+  "in",
+  // Loop and function control. These are builtins that run nothing, so they belong here rather than on
+  // the by-name program list, where they would have read as programs whose arguments are unexamined.
+  "continue",
+  "break",
+  "shift",
+  "return",
+  ":",
+]);
+
+/**
  * What this command invokes: the program, plus its first non-flag argument when it has one.
  *
  * The argument is included because `npx qfai validate` and `npx tsup` are the same program and only one
- * of them may ship. `undefined` means the command names no program — a shell keyword, a `case` pattern,
- * an assignment, or a function definition.
+ * of them may ship.
  */
-export function invocationOf(command: string): string | undefined {
+export function invocationOf(command: string): string | typeof NOTHING | typeof UNREADABLE {
   const tokens = tokensOf(command);
   let i = 0;
-  while (i < tokens.length) {
+  // The two skips INTERLEAVE. Running the assignment skip once and then the keyword skip once left
+  // `while IFS= read -r changed_path` — the shipped tree's own line — with `IFS=` as its head, because
+  // the assignment sits after the keyword and the assignment pass had already finished.
+  for (;;) {
     const token = tokens[i] ?? "";
-    if (!/^[A-Za-z_]\w*=/.test(token) && !token.startsWith(">") && !token.startsWith("<")) break;
-    i += 1;
+    if (i >= tokens.length) break;
+    if (/^[A-Za-z_]\w*=/.test(token) || token.startsWith(">") || token.startsWith("<")) {
+      i += 1;
+      continue;
+    }
+    // `for` and `case` introduce a word list rather than a command, so they terminate; `do` and `then`
+    // resume, which is why the prefixes are skipped rather than stopped at.
+    if (COMMAND_PREFIXES.has(token)) {
+      i += 1;
+      continue;
+    }
+    if (token === "for" || token === "case" || token === "select") return NOTHING;
+    break;
   }
   const head = tokens[i];
-  if (head === undefined || KEYWORDS.has(head)) return undefined;
-  // A `case` pattern, a function definition, or an assignment reached by another route.
-  if (/[*?[\]]/.test(head) || head.endsWith("()") || head.includes("=")) return undefined;
+  if (head === undefined || TERMINATORS.has(head)) return NOTHING;
+  if (head.endsWith("()")) return NOTHING;
+  if (/^[A-Za-z_]\w*=/.test(head) && tokens.length === i + 1) return NOTHING;
+  // A `case` pattern ARM is a prefix, not a command: `commandsOf` splits on `;`, so `*.ts) npx tsup ;;`
+  // arrives as one command whose head is the pattern. Reading the head and discarding the tail hid the
+  // build after it — the keyword defect wearing a different punctuation mark. Strip the arm and read
+  // what follows, which also keeps `*.md|*.txt|LICENSE|docs/*) echo docs` accepted, on `echo`.
+  if (head.endsWith(")") && !head.startsWith("(")) {
+    const rest = tokens.slice(i + 1);
+    return rest.length === 0 ? NOTHING : invocationOf(rest.join(" "));
+  }
+  // `[` and `[[` are the test builtins, and `[` is itself a glob metacharacter — so the glob rule below
+  // read the shipped tree's own `if [ -f package.json ]` as an executed path. They are programs, they
+  // evaluate a condition, and they run nothing.
+  if (head === "[" || head === "[[") return head;
+  // A glob-bearing head that is NOT a case arm is a path being executed. `./ci/*/build.sh` and
+  // `scripts/*/build.sh` are ordinary CI idiom and they run, so this is unreadable rather than nothing.
+  if (/[*?[\]]/.test(head)) return UNREADABLE;
+  if (head.includes("=")) return UNREADABLE;
   for (let j = i + 1; j < tokens.length; j += 1) {
     const token = tokens[j] ?? "";
     if (OPAQUE_AFTER.has(token)) return head;
@@ -231,7 +318,12 @@ export function invocationsOf(body: string): string[] {
   const out: string[] = [];
   for (const command of commandsOf(body)) {
     const invocation = invocationOf(command);
-    if (invocation === undefined) continue;
+    if (invocation === NOTHING) continue;
+    if (invocation === UNREADABLE) {
+      // Reported as the command itself, so a refusal names what a reader has to look at.
+      out.push(`<unreadable> ${command.slice(0, 60)}`);
+      continue;
+    }
     if (local.has(invocation.split(" ")[0] ?? "")) continue;
     out.push(invocation);
   }
@@ -254,10 +346,24 @@ export const HARMLESS_PROGRAMS: ReadonlySet<string> = new Set([
   "cut",
   "tr",
   "printf",
-  "git",
+  // `[`, `[[` and `test` evaluate a condition and run nothing. They are here rather than among the
+  // keywords because they ARE programs, and the shipped tree uses `[ -f package.json ]`.
+  "[",
+  "[[",
+  "test",
+  "false",
 ]);
 
-/** Exact invocations allowed for a program that could otherwise build. */
+/**
+ * Allowed invocations for a program that could otherwise build: the program plus its first non-flag
+ * argument.
+ *
+ * **A two-token PREFIX, not an exact match**, and the previous docstring said exact — so
+ * `npm install left-pad` read as `npm install` and shipped. `TAKES_NO_PACKAGE` below closes the case
+ * that prefix loses; it cannot be closed for every entry, because `npx qfai validate` and
+ * `git diff --name-only origin/main...HEAD` legitimately carry further bare arguments, so the closure is
+ * declared per entry rather than assumed.
+ */
 export const ALLOWED_INVOCATIONS: ReadonlySet<string> = new Set([
   "corepack enable",
   "npm ci",
@@ -269,6 +375,17 @@ export const ALLOWED_INVOCATIONS: ReadonlySet<string> = new Set([
   // `node` with no bare argument: its only shipped use is `node -e <payload>`, and a payload is opaque
   // to any scan. `node build.mjs` is a different invocation and is refused.
   "node",
+  // `git` was allowed by NAME, under a docstring claiming these programs' arguments cannot reach a
+  // build. `git submodule foreach`, `git bisect run`, `git difftool --extcmd`,
+  // `git filter-branch --tree-filter` and `git -c alias.X='!cmd' X` all take a shell command as their
+  // argument, and `git -c alias.zz='!npx tsup' zz` is one line and a real build. It is exactly the
+  // `npx qfai` / `npx tsup` case the split above exists for, so it takes the same treatment: the one
+  // shipped use is `git diff --name-only origin/main...HEAD`.
+  "git diff",
+  // The detection job asks git two questions. Surfacing this one is what moving `git` off the by-name
+  // list is FOR: each shipped use is now written down, and a sixth would fail this list rather than
+  // arrive under a program name.
+  "git rev-parse",
 ]);
 
 /** Actions a shipped lane may use, and the input keys they may be given. */
@@ -285,6 +402,34 @@ export const ALLOWED_ACTION_INPUTS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Invocations after which a further bare argument changes what the command DOES.
+ *
+ * A package manager's install with a bare argument names a package, and installing an arbitrary package
+ * in a shipped lane is a different act from restoring a lockfile — it is also the shortest route to
+ * running arbitrary code, via that package's install scripts. `corepack enable` is here for the same
+ * reason: with an argument it enables a named package manager version.
+ */
+const TAKES_NO_PACKAGE: ReadonlySet<string> = new Set([
+  "npm install",
+  "npm ci",
+  "pnpm install",
+  "yarn install",
+  "corepack enable",
+]);
+
+/** The non-flag arguments a command carries after its program. */
+function bareArgumentsOf(command: string): string[] {
+  const tokens = tokensOf(command);
+  const out: string[] = [];
+  for (let i = 1; i < tokens.length; i += 1) {
+    const token = tokens[i] ?? "";
+    if (OPAQUE_AFTER.has(token)) break;
+    if (!token.startsWith("-")) out.push(token);
+  }
+  return out;
+}
+
+/**
  * The invocations in this body that the allowlist refuses.
  *
  * One definition, used by the story's assertion and by the corpus that falsifies it. Round 10 found
@@ -292,8 +437,25 @@ export const ALLOWED_ACTION_INPUTS: ReadonlySet<string> = new Set([
  * an allowlist is the same defect one size smaller.
  */
 export function refusals(body: string): string[] {
-  return invocationsOf(body).filter((invocation) => {
+  const out: string[] = [];
+  const local = localFunctionsOf(body);
+  for (const command of commandsOf(body)) {
+    const invocation = invocationOf(command);
+    if (invocation === NOTHING) continue;
+    if (invocation === UNREADABLE) {
+      out.push(`<unreadable> ${command.slice(0, 60)}`);
+      continue;
+    }
     const program = invocation.split(" ")[0] ?? "";
-    return !HARMLESS_PROGRAMS.has(program) && !ALLOWED_INVOCATIONS.has(invocation);
-  });
+    if (local.has(program)) continue;
+    if (!HARMLESS_PROGRAMS.has(program) && !ALLOWED_INVOCATIONS.has(invocation)) {
+      out.push(invocation);
+      continue;
+    }
+    // The two-token prefix's blind spot, closed where a third token changes the act.
+    if (TAKES_NO_PACKAGE.has(invocation) && bareArgumentsOf(command).length > 1) {
+      out.push(`${invocation} + ${bareArgumentsOf(command).slice(1).join(" ")}`);
+    }
+  }
+  return out;
 }
