@@ -2188,6 +2188,7 @@ round  last report at   summary.json at   gap
   9    a163b52a         a163b52a          same commit
  10    225a242e         225a242e          same commit
  11    2ee4874b         2ee4874b          same commit
+ 12    0bf5dc4e         0bf5dc4e          same commit
 ```
 
 Row 9 said `(this commit)` for a round. Round 9's own `m3` made exactly that objection about row 8 and
