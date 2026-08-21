@@ -122,6 +122,18 @@ describe("_policies scope bans carve out the mandated Triage table", () => {
     );
   });
 
+  it("exempts every canonical `## Triage` section, not just the first", async () => {
+    // A re-run appends a second `## Triage` rather than extending the first
+    // table; `validateTriageSection` reads both, so both must be exempt or
+    // the two rules are jointly unsatisfiable for the appended one.
+    await withPolicies(
+      ["# 10 Delta", "", ...TRIAGE_SECTION, "", ...TRIAGE_SECTION, ""].join("\n"),
+      (issues) => {
+        expect(policyScopeFindings(issues)).toEqual([]);
+      },
+    );
+  });
+
   it("only exempts the canonical `## Triage` H2, not near-miss headings", async () => {
     const row = "| REQ-0042 | x | spec-0007 | UPDATE | MODIFY | - | AC-0007-0004 renamed |";
     const table = [
