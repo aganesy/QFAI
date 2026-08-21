@@ -12,6 +12,43 @@
 - `secondary`: Derived information (summaries, analyses).
 - `external`: Third-party references (specs, RFCs, vendor docs).
 
+## Research Summary
+
+Storage slot for the `research_summary` output of
+`.qfai/assistant/constitution/research-first-protocol.md`. Replace every placeholder with the actual
+protocol run; `qfai validate --profile discussion` reports `QFAI-RESEARCH-*` while they remain.
+
+```yaml
+research_summary:
+  sources:
+    - id: SRC-0001
+      title: [Reference title]
+      url: [https://example.com/reference]
+      published: YYYY-MM-DD
+  best_practices:
+    - id: BP-0001
+      category: [Category this practice belongs to]
+      title: [Best practice title]
+      description: [What to do and when it applies]
+      source_id: SRC-0001
+  anti_patterns:
+    - id: AP-0001
+      category: [Category this anti-pattern belongs to]
+      title: [Anti-pattern title]
+      description: [What to avoid and why]
+      source_id: SRC-0001
+  reflection:
+    - source_id: SRC-0001
+      finding: [What the source implies for this project]
+      action: apply
+      reason: [Why apply / reject / defer was chosen]
+```
+
+- Every `sources[]` entry needs `id`, `title`, `url`, and a `published` date in `YYYY-MM-DD` form.
+- At least 80% of the sources should be published within the last two years.
+- At least one `reflection[]` entry must carry `action: apply`; never auto-overwrite an existing
+  BP/AP rule — record `reject` or `defer` with a reason instead.
+
 ## Trend Scan
 
 ### user expectation / market norm
