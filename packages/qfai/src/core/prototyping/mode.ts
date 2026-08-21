@@ -42,15 +42,27 @@ export const EXPLORATION_RELAXABLE_CODES: readonly string[] = [
 
 /**
  * Issue codes that MUST stay hard error under exploration mode. This
- * set is the explicit, narrow allowlist of "structural / schema /
- * path / license (exit 66)" gates referenced by the spec. Used by
- * the unit test to assert disjointness; the runtime relaxation does
- * not consult this list (anything not in `RELAXABLE` is left alone).
+ * set is the explicit, narrow allowlist of the structural / schema /
+ * path gates referenced by the spec. Used by the unit test to assert
+ * disjointness; the runtime relaxation does not consult this list
+ * (anything not in `RELAXABLE` is left alone).
+ *
+ * Every entry MUST be a code some validator under `core/validators/`
+ * actually emits — the unit test asserts that, so a placeholder can no
+ * longer satisfy the disjointness check vacuously. Listing a code no
+ * emitter produces tells an auditor a gate survives exploration when
+ * nothing backs the claim.
+ *
+ * The license gate is deliberately NOT listed. `licenseVerify` produces
+ * no `Issue`: its failure is an exit-66 hard stop raised in
+ * `cli/commands/prototypingIterate.ts` before any `Issue[]` exists, so
+ * it is structurally out of reach of this post-filter and cannot be
+ * expressed as a code allowlist entry.
  */
 export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-PROT-002", // schema / required-field gate
-  "QFAI-PROT-LIC", // license verify (exit 66)
-  "QFAI-PROT-PATH", // path / iter layout
+  "QFAI-PROT-004", // iter layout: iterations[i].index contiguity
+  "QFAI-PROT-009", // artifact path integrity (empty / outside-root / missing ref)
 ] as const;
 
 /**
