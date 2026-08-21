@@ -5,14 +5,15 @@
  * section listing three named buckets per the spec governance contract:
  *   - auto-decide (output formatting / ID / sequence numbering /
  *     append-vs-create on subject overlap / equivalent-option pick)
- *   - ask-user (CREATE / DELETE / SPLIT / MERGE / SUPERSEDE /
- *     UPDATE:REMOVE triage ops, destructive operations, version-pin
- *     changes, scope expansions)
- *   - hard-required (companyName / brand intent / primarySpecId)
+ *   - ask-user (the decisions the skill stops and prompts on)
+ *   - hard-required (the inputs the skill cannot proceed without)
  *
- * A SKILL.md MAY narrow the auto-decide set (drop entries) but MUST
- * NOT widen it. Widening surfaces a warning-level
- * `R-AUTOPILOT-POLICY-WIDENED` flag.
+ * A SKILL.md MAY narrow ANY of the three buckets — dropping an entry
+ * the skill cannot reach — but MUST NOT widen one. Only auto-decide
+ * widening is machine-detectable (the canonical entry set is closed);
+ * it surfaces a warning-level `R-AUTOPILOT-POLICY-WIDENED` flag. The
+ * other two buckets carry per-skill entries, so their contract is
+ * enforced by review.
  *
  * Scoping: only `qfai-*` skills under `.qfai/assistant/skills/` are
  * checked. User-authored non-qfai-* skills are intentionally exempt

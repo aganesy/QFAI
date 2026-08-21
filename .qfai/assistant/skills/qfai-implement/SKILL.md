@@ -481,16 +481,16 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - append-vs-create on subject overlap
   - equivalent-option pick
 - ask-user:
-  - CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage operations (each with a prompt template that names the target and rationale)
+  - routing an item to `exception` status (name the anomaly and the DR-ID it will carry)
+  - approving the `TDDLIST-001` accepted-risk waiver an `exception` row needs before completion
+  - Change-Request escalation under the Drift Protocol (an obligation the run found wrong)
   - destructive operations (rm / overwrite / force-push)
   - version-pin changes (`package.json#version`, branch pin)
   - scope expansions outside the active envelope
 - hard-required:
-  - `companyName`
-  - brand intent
   - `primarySpecId` (when absent from inputs)
 
-A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. Widening triggers a Reviewer-Gate finding.
+A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach) but MUST NOT widen one. Widening triggers a Reviewer-Gate finding.
 
 project_memory:
 
