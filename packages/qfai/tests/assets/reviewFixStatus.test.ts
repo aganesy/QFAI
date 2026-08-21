@@ -49,7 +49,7 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
     it(`${relativePath}: review-fix blocks completion`, async () => {
       const skill = await read(relativePath, "SKILL.md");
       expect(skill).toContain(
-        "- Items with `todo`, `red`, `green`, `refactor`, or `review-fix` status still exist",
+        "- Items with `todo`, `blocked`, `red`, `green`, `refactor`, or `review-fix` status still exist",
       );
     });
 

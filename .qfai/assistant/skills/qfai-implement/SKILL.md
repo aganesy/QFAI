@@ -366,7 +366,7 @@ Completion MUST NOT be declared when any of the following are true:
 - Either reviewer (`completion-reviewer` or `implementation-reviewer`) has not been run or returned REVISE
 - The item's evidence file (item 10) does not exist, or does not record both reviewer verdicts for the item (this is the single blocking statement about the evidence file; its absence of _verdicts_ is never blocking before items 7-8)
 - A `## Cross-spec obligations` entry in this spec's evidence file is still open — the change it names has not landed, or the blocked spec's obligation is still untested. A clean completion here would certify an obligation this run knowingly left unmet (`references/cross-spec-ownership.md`)
-- Items with `todo`, `red`, `green`, `refactor`, or `review-fix` status still exist (for spec-level completion)
+- Items with `todo`, `blocked`, `red`, `green`, `refactor`, or `review-fix` status still exist (for spec-level completion)
 - Items with `exception` status still exist, **unless** the row's `DR-ID` names
   a Decision Record explicitly recorded as a **user-approved accepted-risk
   waiver** (a `TDDLIST-001` entry in `.qfai/waivers.yml`). An `exception` whose
