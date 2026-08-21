@@ -2,16 +2,50 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
+import type {
+  ValidationCounts,
+  ValidationProfile,
+  ValidationResult,
+} from "../../src/core/types.js";
 
 const VALID_PROSE_CRITIQUE = Array.from(
   { length: 200 },
   (_, index) => `critique-word-${index}`,
 ).join(" ");
+
+/**
+ * profile ごとの counts だけが違う、最小限の validate 出力を書き出す。
+ * report の読み取り側がどのファイルを選んだかを counts で識別できるようにする。
+ */
+async function writeValidationFixture(
+  filePath: string,
+  profile: ValidationProfile,
+  counts: ValidationCounts,
+): Promise<void> {
+  const result: ValidationResult = {
+    toolVersion: "0.0.0-test",
+    profile,
+    issues: [],
+    counts,
+    traceability: {
+      sc: { total: 0, covered: 0, missing: 0, missingIds: [], refs: {} },
+      testFiles: {
+        globs: [],
+        excludeGlobs: [],
+        matchedFileCount: 0,
+        truncated: false,
+        limit: 0,
+      },
+    },
+  };
+  await mkdir(path.dirname(filePath), { recursive: true });
+  await writeFile(filePath, `${JSON.stringify(result, null, 2)}\n`, "utf-8");
+}
 
 describe("report", { timeout: 15000 }, () => {
   it("runs init -> validate(json) -> report(md)", async () => {
@@ -204,6 +238,132 @@ describe("report", { timeout: 15000 }, () => {
 
     const report = await readFile(reportPath, "utf-8");
     expect(report).toContain("# QFAI Report");
+  });
+
+  it("reads validate-<profile>.json when --profile is given without --run-validate (#667)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+    const reportDir = path.join(root, ".qfai", "report");
+    // 常に最新のポインタは prototyping の実行結果を保持している状態。
+    await writeValidationFixture(path.join(reportDir, "validate.json"), "prototyping", {
+      info: 1,
+      warning: 3,
+      error: 0,
+    });
+    await writeValidationFixture(path.join(reportDir, "validate-sdd.json"), "sdd", {
+      info: 5,
+      warning: 1,
+      error: 0,
+    });
+
+    const reportPath = path.join(reportDir, "report.json");
+    await runReport({
+      root,
+      format: "json",
+      outPath: reportPath,
+      profile: "sdd",
+    });
+
+    const report = JSON.parse(await readFile(reportPath, "utf-8")) as {
+      profile?: string;
+      summary?: { counts?: ValidationCounts };
+    };
+    expect(report.summary?.counts).toEqual({ info: 5, warning: 1, error: 0 });
+    expect(report.profile).toBe("sdd");
+  });
+
+  it("guides toward the profile run when validate-<profile>.json is missing (#667)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+    const reportDir = path.join(root, ".qfai", "report");
+    await writeValidationFixture(path.join(reportDir, "validate.json"), "prototyping", {
+      info: 1,
+      warning: 3,
+      error: 0,
+    });
+
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      await runReport({ root, format: "json", profile: "sdd" });
+
+      expect(process.exitCode).toBe(2);
+      const written = stderr.mock.calls.map(([chunk]) => String(chunk)).join("");
+      expect(written).toContain("validate-sdd.json");
+      expect(written).toContain("qfai validate --profile sdd");
+    } finally {
+      process.exitCode = previousExitCode;
+      stderr.mockRestore();
+    }
+  });
+
+  it("warns about a narrow profile in CI without --run-validate (#667)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+    const reportDir = path.join(root, ".qfai", "report");
+    await writeValidationFixture(path.join(reportDir, "validate-discussion.json"), "discussion", {
+      info: 0,
+      warning: 0,
+      error: 0,
+    });
+
+    const previousCi = process.env.CI;
+    const previousGithubActions = process.env.GITHUB_ACTIONS;
+    process.env.CI = "true";
+    delete process.env.GITHUB_ACTIONS;
+    const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    try {
+      await runReport({
+        root,
+        format: "json",
+        outPath: path.join(reportDir, "report.json"),
+        profile: "discussion",
+      });
+
+      const written = stdout.mock.calls.map(([chunk]) => String(chunk)).join("");
+      expect(written).toContain("full-scan");
+    } finally {
+      stdout.mockRestore();
+      if (previousCi === undefined) {
+        delete process.env.CI;
+      } else {
+        process.env.CI = previousCi;
+      }
+      if (previousGithubActions === undefined) {
+        delete process.env.GITHUB_ACTIONS;
+      } else {
+        process.env.GITHUB_ACTIONS = previousGithubActions;
+      }
+    }
+  });
+
+  it("warns when --in holds a different profile than --profile (#667)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+    const customPath = path.join(root, "custom", "validate.json");
+    await writeValidationFixture(customPath, "prototyping", { info: 1, warning: 3, error: 0 });
+
+    const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    try {
+      await runReport({
+        root,
+        format: "json",
+        outPath: path.join(root, ".qfai", "report", "report.json"),
+        inputPath: path.relative(root, customPath),
+        profile: "sdd",
+      });
+
+      const written = stdout.mock.calls.map(([chunk]) => String(chunk)).join("");
+      expect(written).toContain("sdd");
+      expect(written).toContain("prototyping");
+    } finally {
+      stdout.mockRestore();
+    }
   });
 
   it("links file paths with --base-url", async () => {
