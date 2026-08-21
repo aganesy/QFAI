@@ -299,8 +299,8 @@ QFAI expects `assistant/catalog/` to contain **project‑specific facts** so all
    only), **populate them by analyzing the current repository**:
 
 - derive “what/why/users/success/non-goals” from README/docs/issues (product.md)
-- derive runtime/tooling versions + constraints from package.json, CI config, lockfiles (tech.md)
-- derive repo layout + key directories + gate commands from the file tree and scripts (structure.md)
+- derive runtime/tooling versions + constraints + standard gate commands from package.json, CI config, lockfiles (tech.md#standard-commands-copy-paste)
+- derive repo layout + key directories from the file tree and scripts (structure.md)
 
 1. Do **not** invent facts. If something cannot be verified, write it as:
 
@@ -310,8 +310,8 @@ QFAI expects `assistant/catalog/` to contain **project‑specific facts** so all
 ### Steering refresh checklist
 
 - [ ] product.md: what we build / users / success / non-goals / release posture
-- [ ] tech.md: Node / package manager / TS / test / lint / CI constraints
-- [ ] structure.md: repo layout, key packages, entrypoints, standard gate commands, how to run locally
+- [ ] tech.md: Node / package manager / TS / test / lint / CI constraints, plus the standard gate commands under `#standard-commands-copy-paste` — the section `/qfai-implement` reads
+- [ ] structure.md: repo layout, key packages, entrypoints, how to run locally
 
 ## Step 1 — Discover project gate commands (DevOps/CI Engineer)
 
