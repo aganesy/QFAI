@@ -9,6 +9,8 @@ import { describe, expect, it } from "vitest";
 import { runInit } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
+import { parseAllMarkdownTables } from "../../src/core/specPackParsers.js";
+import { findTableArityMismatches } from "../../src/core/validators/markdownTableArity.js";
 import { countLines, LINE_BUDGET_EXEMPT, SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -1345,6 +1347,51 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const contractsTemplate = await readFile(contractsTemplatePath, "utf-8");
     expect(contractsTemplate).toContain("```mermaid");
     expect(contractsTemplate).toContain("erDiagram");
+  });
+
+  it("keeps 05_Contracts example rows aligned with their own table header", async () => {
+    // #653: the three commented example rows carried 5 cells under a 6-column
+    // header, so an author who did what the comment asks — copy the row into
+    // the table — tripped QFAI-TABLE-001 and parked a purpose string in
+    // `Depends On`. Copying a shipped example row under its own header must
+    // produce a well-formed row.
+    const contractsTemplatePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
+      "templates",
+      "specs",
+      "_policies",
+      "05_Contracts.md",
+    );
+    const contractsTemplate = await readFile(contractsTemplatePath, "utf-8");
+    const lines = contractsTemplate.split(/\r?\n/);
+
+    const examples = [
+      { rowPrefix: "| DB-001", entityColumn: "Entity" },
+      { rowPrefix: "| API-001", entityColumn: "Router" },
+      { rowPrefix: "| UI-001", entityColumn: "Screen" },
+    ];
+    for (const { rowPrefix, entityColumn } of examples) {
+      const headerIndex = lines.findIndex(
+        (line) => line.startsWith("| Short ID |") && line.includes(`| ${entityColumn} |`),
+      );
+      expect(headerIndex).toBeGreaterThan(-1);
+      const exampleRow = lines.find((line) => line.startsWith(rowPrefix));
+      expect(exampleRow).toBeDefined();
+
+      const copied = [lines[headerIndex], lines[headerIndex + 1], exampleRow].join("\n");
+      expect(findTableArityMismatches(copied)).toEqual([]);
+
+      const [table] = parseAllMarkdownTables(copied);
+      expect(table).toBeDefined();
+      const dependsOn = table?.headers.indexOf("Depends On") ?? -1;
+      expect(dependsOn).toBeGreaterThan(-1);
+      // `-` is the Mapping Rules value for "no dependency"; a purpose string
+      // here would be an illegal value for the column.
+      expect(table?.rows[0]?.[dependsOn]).toBe("-");
+    }
   });
 
   it("ensures qfai-sdd no-argument mode uses all-spec batch delegation", async () => {
