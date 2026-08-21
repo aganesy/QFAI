@@ -1,7 +1,7 @@
 /**
  * Canonical UIX aggregate validator.
  *
- * Runs the eight canonical UIX checks against the discussion pack under
+ * Runs the canonical UIX checks against the discussion pack under
  * validation — resolved from a repo root, or taken directly when the target is
  * already a pack root.
  */
@@ -17,6 +17,7 @@ import { validateClassification } from "./classification.js";
 import { validateSidecarMissing } from "./foundation.js";
 import { validateExplorationArtifacts } from "./comparisonValidator.js";
 import { validateOqClosure } from "./oqClosure.js";
+import { validateCompetitiveReferences } from "./competitiveRefs.js";
 
 import {
   validateThreeLayerModel,
@@ -56,6 +57,8 @@ export async function runCanonicalUixValidators(
     validateScreenContractSchema,
     // Exploration brief / rubric / evaluator calibration
     validateExplorationArtifacts,
+    // Competitive Reference Registry (bounded by uiux.competitive_refs_min)
+    validateCompetitiveReferences,
     // OQ closure
     validateOqClosure,
   ];

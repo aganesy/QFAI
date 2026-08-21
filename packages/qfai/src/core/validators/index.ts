@@ -56,6 +56,7 @@ export { validateTrendScan } from "./uix/trend.js";
 export { validateStrategyStrong } from "./uix/strategy.js";
 export { validateScreenContractSchema } from "./uix/screenContract.js";
 export { runCanonicalUixValidators } from "./uix/canonical.js";
+export { validateCompetitiveReferences } from "./uix/competitiveRefs.js";
 export { validateSpecRequiredFilesCatalog } from "./specRequiredFilesCatalog.js";
 export { validateMarkdownTableArity } from "./markdownTableArity.js";
 export { validateTraceabilityIntegrity } from "./traceabilityIntegrity.js";

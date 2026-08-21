@@ -7,6 +7,7 @@
 import type { QfaiConfig } from "../../config.js";
 import type { Issue } from "../../types.js";
 import { validateAntiPreference } from "./antiPreference.js";
+import { validateCompetitiveReferences } from "./competitiveRefs.js";
 import { validateOptionComparison } from "./comparisonValidator.js";
 import { validateScreenContractSchema } from "./screenContract.js";
 import { validateStrategyStrong } from "./strategy.js";
@@ -32,6 +33,7 @@ export async function countUiBearingFires(
     validateOptionComparison,
     validateTasteReflection,
     validateAntiPreference,
+    validateCompetitiveReferences,
   ];
 
   const allIssues: Issue[] = [];
