@@ -5,8 +5,12 @@
 - Used-by: `/qfai-prototyping` (precondition check), CI lanes that gate on environment readiness
 - SSOT modules:
   - `packages/qfai/src/cli/commands/doctor.ts`
-  - `packages/qfai/src/core/doctor.ts` (doctor probe orchestration;
-    single-file module — there is no `core/doctor/` directory)
+  - `packages/qfai/src/core/doctor.ts` (doctor probe orchestration)
+  - `packages/qfai/src/core/doctor/` (the side-effecting remediations
+    reached only through `--clean` / `--autoremediate`:
+    `autoremediate.ts`, `cleanReviewPacks.ts`,
+    `migrateLegacyReviewPacks.ts`, `skillManifestProbe.ts`,
+    `staleTtl.ts`)
   - `packages/qfai/src/core/prototyping/playwrightLauncher.ts`
     (Playwright launcher candidate probe via `resolvePlaywrightLauncher`
     and the `getProbeOrder` candidate list)
@@ -15,23 +19,89 @@
 
 ## Public sub-commands
 
-### `qfai doctor [--profile <name>]`
+### `qfai doctor [--profile <name>] [--format <text|json>] [--out <path>] [--fail-on <error|warning>] [--clean] [--autoremediate] [--dry-run] [--yes]`
 
 Probes the active profile's required runtime preconditions and the
 skill / asset integrity surface. Returns a structured summary grouping
 findings into two buckets: "errors blocking the active profile" and
 "warnings advisory of drift" (per REQ-0122).
 
-Required inputs (read; never written):
+The probe itself is read-only. `--clean` and `--autoremediate` are the
+only paths that write, and they run as pre-steps BEFORE the diagnostic
+build so the summary reports the post-remediation tree. Every path they
+write is enumerated under "Side effects (written)" below.
+
+Inputs (read; never written):
 
 - `--profile <name>` — when passed, doctor scopes the probe to the
   named profile's required runtime preconditions (e.g.
   `prototyping` requires the Playwright launcher to be probeable).
+  A skill name (e.g. `qfai-prototyping`) instead scopes the probe to
+  that skill manifest's `runtimeDependencies`.
   When omitted, doctor runs the profile-agnostic checks only.
+- `--format <text|json>` — output shape. Defaults to `text`. Under
+  `json`, stdout carries the JSON document alone and every
+  side-effect line is routed to stderr, so the stdout channel stays
+  parseable.
+- `--out <path>` — writes the rendered summary to `<path>` in
+  addition to stdout. This is an operator-named report destination,
+  not a repository mutation.
+- `--fail-on <error|warning>` — selects the finding severity that
+  turns the exit code non-zero; see "Exit codes".
 - `qfai.config.yaml#prototyping.execution.browserTool` — accepted
   values during the deprecation window: `"playwright"` (canonical)
   OR `"playwright-cli"` (legacy, emits `D-DEPRECATED-PROBE`
   warning). After sunset, only `"playwright"` is accepted (REQ-0108).
+- `qfai.config.yaml#review.staleTtlDays` — the calendar-day TTL the
+  `--clean` archive decision uses. Defaults to 14 when unset.
+
+## Side effects (written)
+
+Doctor writes nothing unless `--clean` or `--autoremediate` is
+passed. `--autoremediate` supersedes `--clean`: when both are
+present, only the autoremediate path runs (it archives review packs
+itself as one of its phases).
+
+### `--clean`
+
+Archives TTL-expired review packs — moves, never deletes.
+
+| Path                        | Write              | Condition                                   |
+| --------------------------- | ------------------ | ------------------------------------------- |
+| `.qfai/review/review-<ts>/` | renamed (moved)    | pack mtime older than `review.staleTtlDays` |
+| `.qfai/review/_archive/`    | created if missing | at least one pack is archive-eligible       |
+
+`.qfai/review/_archive/` is itself skipped while enumerating packs, so
+a re-run is a no-op. Under `--dry-run` the plan is reported (`would
+move -> _archive/<pack>`) and no rename is issued.
+
+### `--autoremediate`
+
+Runs install + clean + config-fill as one orchestrated pass.
+
+| Path                               | Write                   | Condition                                                                               |
+| ---------------------------------- | ----------------------- | --------------------------------------------------------------------------------------- |
+| `<root>/.gitignore`                | managed block rewritten | always (before the orchestrator), unless `CI=true`                                      |
+| `qfai.config.yaml`                 | appended                | a default-keyed field (`review:`) is absent; user-authored values are never overwritten |
+| `.qfai/review/review-<ts>/`        | renamed (moved)         | same TTL rule as `--clean`                                                              |
+| `.qfai/review/` legacy-pack record | appended                | packs predating `revision_form` exist and are not yet recorded                          |
+| `node_modules/`                    | `npm install <name>`    | `--profile <skill>` names a manifest with unmet `runtimeDependencies`                   |
+
+Without `--profile <skill>` there is no manifest to probe, so the
+install phase is structurally skipped and doctor says so explicitly.
+
+### `--dry-run` / `--yes` interaction
+
+- `--dry-run` applies to both `--clean` and `--autoremediate`: the
+  plan is reported in the future tense (`would run` / `would fill` /
+  `would move`) and no filesystem write is issued.
+- `--yes` skips interactive confirmation. The remediation paths are
+  non-interactive today, so `--yes` is accepted as a documented
+  forward-compatible flag and changes no behavior on its own.
+- `CI=true` disables `--autoremediate` entirely (AC-0006-0018):
+  doctor emits `autoremediate disabled in CI`, skips the `.gitignore`
+  rewrite and every remediation, and returns 0 without building the
+  diagnostic. `--clean` is not CI-suppressed.
 
 ## Playwright probe order (`--profile prototyping`)
 
@@ -134,12 +204,30 @@ Findings that surface drift without blocking the profile. Examples:
 | 0    | All probes for the active profile passed; warnings (if any) are advisory only.                                                                              |
 | 1    | At least one finding in the "errors blocking the active profile" bucket. The doctor summary names every blocking finding and the recovery hint per finding. |
 
+The non-zero row is gated on `--fail-on`: with `--fail-on error` the
+"errors" bucket being non-empty returns 1, and with `--fail-on
+warning` a non-empty "warnings" bucket does too. Without `--fail-on`,
+doctor reports its findings and returns 0 — the summary is the signal,
+not the exit code.
+
 ## Non-goals
 
-- `qfai doctor` does NOT attempt repairs. It is read-only.
-- `qfai doctor` does NOT trigger `playwright install` or any other
-  install command. Install hints are emitted as text; the operator
-  decides whether to act.
+- `qfai doctor` is read-only BY DEFAULT and does NOT attempt repairs
+  on its own. Repairs happen only when the operator opts in with
+  `--clean` or `--autoremediate`, and are bounded by the paths
+  enumerated under "Side effects (written)". Widening that set is a
+  contract change.
+- `qfai doctor` does NOT delete anything. `--clean` renames stale
+  review packs into `_archive/`; no path is removed on any flag.
+- `qfai doctor` does NOT remediate in CI. `CI=true` disables
+  `--autoremediate` (AC-0006-0018).
+- `qfai doctor` does NOT trigger `playwright install` on any path,
+  and does NOT run any install command on the probe path. Install
+  hints are emitted as text; the operator decides whether to act. The
+  one exception is `--autoremediate --profile <skill>`, which runs
+  `npm install <name>` for that skill manifest's unmet
+  `runtimeDependencies`. The install list comes from that manifest,
+  never from the Playwright launcher probe's failed candidates.
 - `qfai doctor` does NOT probe network reachability of any target
   URL. Network probes are out of scope; they belong to the
   profile-specific gate (e.g. iterate's cycle-0 target-url
