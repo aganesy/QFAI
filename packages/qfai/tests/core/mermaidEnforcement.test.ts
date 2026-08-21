@@ -126,12 +126,44 @@ describe("validateMermaidEnforcement", () => {
     });
   });
 
-  it("ignores evidence directory from enforcement targets", async () => {
+  it("emits error when mermaid syntax is written in language-less fence", async () => {
     await withTempRoot(async (root) => {
-      await writeArtifact(
+      const filePath = await writeArtifact(
+        root,
+        ".qfai/specs/spec-0001/04_Examples.feature",
+        ["Feature: Example", "", "```", "flowchart LR", "  A --> B", "```", ""].join("\n"),
+      );
+
+      const issues = await validateMermaidEnforcement(root);
+      const error = issues.find((entry) => entry.code === "QFAI-MMD-001");
+      expect(error?.severity).toBe("error");
+      expect(error?.file).toBe(filePath);
+      expect(error?.message).toContain("detected=(none)");
+    });
+  });
+
+  it("emits error when an evidence file holds mermaid syntax in a non-mermaid fence", async () => {
+    await withTempRoot(async (root) => {
+      const filePath = await writeArtifact(
         root,
         ".qfai/evidence/reference.md",
         ["# Evidence", "", "```text", "sequenceDiagram", "  A->>B: copy", "```", ""].join("\n"),
+      );
+
+      const issues = await validateMermaidEnforcement(root);
+      const error = issues.find((entry) => entry.code === "QFAI-MMD-001");
+      expect(error?.severity).toBe("error");
+      expect(error?.file).toBe(filePath);
+      expect(error?.message).toContain("detected=text");
+    });
+  });
+
+  it("ignores evidence fences that do not contain mermaid syntax", async () => {
+    await withTempRoot(async (root) => {
+      await writeArtifact(
+        root,
+        ".qfai/evidence/sample.md",
+        ["# Evidence", "", "```text", "this block has no diagram syntax", "```", ""].join("\n"),
       );
 
       const issues = await validateMermaidEnforcement(root);
@@ -139,12 +171,12 @@ describe("validateMermaidEnforcement", () => {
     });
   });
 
-  it("ignores stale discussion packs when the latest pack is clean", async () => {
+  it("emits error for a stale discussion pack even when the latest pack is clean", async () => {
     await withTempRoot(async (root) => {
-      await writeArtifact(
+      const stalePath = await writeArtifact(
         root,
         ".qfai/discussion/discussion-20260216160000000/03_Story-Workshop.md",
-        ["# Flow", "", "flowchart TD", "  A --> B", ""].join("\n"),
+        ["# Flow", "", "```text", "flowchart TD", "  A --> B", "```", ""].join("\n"),
       );
       await writeArtifact(
         root,
@@ -153,7 +185,9 @@ describe("validateMermaidEnforcement", () => {
       );
 
       const issues = await validateMermaidEnforcement(root);
-      expect(issues).toEqual([]);
+      const error = issues.find((entry) => entry.code === "QFAI-MMD-001");
+      expect(error?.severity).toBe("error");
+      expect(error?.file).toBe(stalePath);
     });
   });
 });

@@ -2,12 +2,22 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { collectFiles } from "../fs.js";
-import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import { escapeRegExp } from "../regex.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
-const SPEC_TARGET = { segments: [".qfai", "specs"] as const, extensions: [".md", ".feature"] };
+/**
+ * Mermaid fence の走査対象。specs だけでなく evidence と discussion
+ * 配下も対象に含める（レビュアーが rendered Markdown として読む
+ * 成果物であり、最新以外の discussion pack も GitHub 上では同じく
+ * ソースのまま表示されるため）。
+ */
+const TARGET_DIRS = [
+  [".qfai", "specs"],
+  [".qfai", "discussion"],
+  [".qfai", "evidence"],
+] as const;
+const TARGET_EXTENSIONS = [".md", ".feature"] as const;
 
 const BUSINESS_FLOW_RELATIVE_CANDIDATES = [
   path.join(".qfai", "specs", "_policies", "04_Business-Flow.md"),
@@ -94,18 +104,11 @@ export async function validateMermaidEnforcement(root: string): Promise<Issue[]>
 }
 
 async function collectTargetFiles(root: string): Promise<string[]> {
-  const files = [
-    ...(await collectFiles(path.join(root, ...SPEC_TARGET.segments), {
-      extensions: [...SPEC_TARGET.extensions],
-    })),
-  ];
-  const latestDiscussionPackDir = await findLatestDiscussionPackDir(
-    path.join(root, ".qfai", "discussion"),
-  );
-  if (latestDiscussionPackDir) {
+  const files: string[] = [];
+  for (const segments of TARGET_DIRS) {
     files.push(
-      ...(await collectFiles(latestDiscussionPackDir, {
-        extensions: [".md"],
+      ...(await collectFiles(path.join(root, ...segments), {
+        extensions: [...TARGET_EXTENSIONS],
       })),
     );
   }
