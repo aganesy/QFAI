@@ -10,6 +10,7 @@ import { runPrototypingCertify, runPrototypingShowSpec } from "./commands/protot
 import { runReport } from "./commands/report.js";
 import { runValidate } from "./commands/validate.js";
 import { parseArgs } from "./lib/args.js";
+import { formatExitCodesSection } from "./lib/exitCodes.js";
 import { error, info, warn } from "./lib/logger.js";
 import { findConfigRoot } from "../core/config.js";
 
@@ -341,6 +342,8 @@ Options:
   --spec <id>                   validate: 対象 spec に限定 (複数指定可; 例: --spec 0003 --spec spec-0004)
                                  指定 spec 外の spec-owned findings と specs-coverage レポート出力を除外する
   -h, --help      ヘルプ表示
+
+${formatExitCodesSection()}
 `;
 }
 

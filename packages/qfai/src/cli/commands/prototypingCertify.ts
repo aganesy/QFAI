@@ -77,6 +77,7 @@ import {
 import { SAAS_PACKAGE_SKIPPED_GATES } from "../../core/saasPackage/skippedGates.js";
 import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
 import { resolveToolVersion } from "../../core/version.js";
+import { EXIT_CODES } from "../lib/exitCodes.js";
 import { error, info, warn } from "../lib/logger.js";
 import { profileSuffixedReportPath } from "./validate.js";
 
@@ -646,7 +647,7 @@ export async function runPrototypingCertify(
         // screen"). Returning 2 (input error) here would split the same
         // coverage rejection across two exit codes and break operator
         // workflows that key on 64 for missing review.json gaps.
-        return 64;
+        return EXIT_CODES.prototypingConverged;
       }
       info(
         `qfai prototyping certify: per-spec ${acceptedIterDir}/spec-NNNN layout not detected — ` +
@@ -721,7 +722,7 @@ export async function runPrototypingCertify(
         // declared screen" → exit 64; returning 2 (input error) here
         // would split the same coverage rejection across two exit
         // codes and break operator workflows that key on 64.
-        return 64;
+        return EXIT_CODES.prototypingConverged;
       }
     }
   }

@@ -1,0 +1,105 @@
+/**
+ * SSOT for the exit codes the qfai CLI returns.
+ *
+ * The commands import these constants at their `return` sites and
+ * `usage()` renders the `Exit codes:` help block from the same table,
+ * so the documented matrix cannot drift away from actual behaviour.
+ * Consumers installing qfai from npm have no access to the framework's
+ * own CLI contracts, which makes `--help` the only reachable statement
+ * of this mapping.
+ */
+export const EXIT_CODES = {
+  /** 成功 / fail-on 閾値未満 (prototyping iterate では「継続」)。 */
+  ok: 0,
+  /** validate / doctor: --fail-on 閾値に到達。使用法エラーの既定値でもある。 */
+  findings: 1,
+  /** 入力 / lock drift エラー。guardrails では使用法エラーもこの値。 */
+  inputError: 2,
+  /**
+   * prototyping: STOP — iterate は収束 / reviewer hard-stop、
+   * certify は review.json のカバレッジ不足に同じ拒否クラスとして使う。
+   */
+  prototypingConverged: 64,
+  /** prototyping iterate: STOP — バジェット (max iterations) 枯渇。 */
+  prototypingBudgetExhausted: 65,
+  /** prototyping iterate: STOP — license-verify 失敗。 */
+  prototypingLicenseFailure: 66,
+} as const;
+
+type ExitCodeRow = {
+  readonly label: string;
+  readonly lines: readonly string[];
+};
+
+const LABEL_WIDTH = 29;
+
+const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
+  {
+    label: "validate / doctor",
+    lines: [`${EXIT_CODES.ok} = 成功, ${EXIT_CODES.findings} = --fail-on 閾値に到達`],
+  },
+  {
+    label: "prototyping preflight",
+    lines: [`${EXIT_CODES.ok} = 成功, ${EXIT_CODES.findings} = --fail-on 閾値に到達`],
+  },
+  {
+    label: "guardrails",
+    lines: [`${EXIT_CODES.ok} = 成功, ${EXIT_CODES.inputError} = 入力エラー / 使用法エラー`],
+  },
+  {
+    label: "prototyping iterate",
+    lines: [
+      `${EXIT_CODES.ok} = 継続 (次 cycle へ), ${EXIT_CODES.inputError} = 入力 / lock drift エラー,`,
+      `${EXIT_CODES.prototypingConverged} = STOP: 収束 または reviewer hard-stop,`,
+      `${EXIT_CODES.prototypingBudgetExhausted} = STOP: バジェット枯渇 (max iterations),`,
+      `${EXIT_CODES.prototypingLicenseFailure} = STOP: license-verify 失敗`,
+    ],
+  },
+  {
+    label: "prototyping certify",
+    lines: [
+      `${EXIT_CODES.ok} = 成功, ${EXIT_CODES.inputError} = 入力エラー,`,
+      `${EXIT_CODES.prototypingConverged} = カバレッジ不足 (review.json 欠落)`,
+    ],
+  },
+  {
+    label: "その他のコマンド",
+    lines: [`${EXIT_CODES.ok} = 成功, ${EXIT_CODES.findings} = 使用法エラー`],
+  },
+];
+
+const USAGE_ERROR_NOTE =
+  `  ※ 使用法エラーは guardrails のみ ${EXIT_CODES.inputError}、` +
+  `他コマンドは ${EXIT_CODES.findings} を返す (既存互換のための差異)。`;
+
+/** CJK punctuation / kana / ideographs / fullwidth forms. */
+const FULL_WIDTH_RE = /[\u3000-\u30ff\u3400-\u9fff\uff01-\uff60]/u;
+
+/** 全角文字を 2 桁として数え、ラベル列の桁揃えを崩さないようにする。 */
+function displayWidth(text: string): number {
+  let width = 0;
+  for (const char of text) {
+    width += FULL_WIDTH_RE.test(char) ? 2 : 1;
+  }
+  return width;
+}
+
+function padLabel(label: string): string {
+  return label + " ".repeat(Math.max(1, LABEL_WIDTH - displayWidth(label)));
+}
+
+function formatRow(row: ExitCodeRow): string {
+  const [first, ...rest] = row.lines;
+  const head = `  ${padLabel(row.label)}${first ?? ""}`;
+  const continuation = rest.map((line) => `  ${" ".repeat(LABEL_WIDTH)}${line}`);
+  return [head, ...continuation].join("\n");
+}
+
+/**
+ * Render the `Exit codes:` block appended to `qfai --help`.
+ * Per-command rather than one flat table: the same numeric code carries
+ * a different meaning per command, so a flat list would mislead.
+ */
+export function formatExitCodesSection(): string {
+  return ["Exit codes:", ...EXIT_CODE_ROWS.map(formatRow), USAGE_ERROR_NOTE].join("\n");
+}
