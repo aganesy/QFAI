@@ -8,6 +8,14 @@ Per-round fields of the `qfai-implement` evidence contract. The skill's
 One block per RED/GREEN cycle. Round 1 is the original cycle; each blocking
 reviewer `REVISE` that requires new production behaviour adds a round.
 
+**Where a block goes.** A `#### Round N` heading **inside the row's own
+`### TDD-NNNN` section** of the evidence file the row's `Layer` owns, never
+beside it. The nesting is the whole of the attribution: a `### Round N` written
+after the row's section is that section's sibling and terminates it, so two rows
+reworked in the same cycle produce two `### Round 2` blocks that no reader — and
+no audit subject — can attribute to a row. A round block is not a section of the
+evidence template either: the row's entry is its only home.
+
 - `Round N: Revision` — the state this round's observations were made
   against (`evidence-revision.md`)
 - `Round N: RED revision` — the tree that round's RED was observed on, and

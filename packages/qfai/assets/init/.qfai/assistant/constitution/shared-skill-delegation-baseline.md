@@ -390,8 +390,11 @@ post-escalation verification review of a user-named fix.
        `Shared-artifact re-verify` block when the row has one — it records the
        earlier rows' re-runs and re-taken proofs, which these reviewers are the
        ones who audit, so leaving it out let it be edited or deleted without
-       moving either hash — and, from every `### Round N` block the row
-       carries, that block's **phase-authored** fields only. `Round N: reviewer verdict` is written by these reviewers
+       moving either hash — and, from every `#### Round N` block nested in
+       the row's `### <TDD-ID>` section, that block's **phase-authored** fields
+       only — the nesting is what says which row a round belongs to, and at
+       `###` the blocks were siblings of the row sections, so a rework in a
+       cycle that reworked two rows could not be attributed at all. `Round N: reviewer verdict` is written by these reviewers
        after they have read the block, so taking the whole block put their own
        line inside what they hashed.
 

@@ -104,11 +104,21 @@ handoff of a `todo` row, so this one needs its own contract.
     new production behaviour is not this case — that one's corrected test fails,
     and the branch above applies.
 
-- **Where it goes.** A `### Round N` block in
+- **Where it goes.** A `#### Round N` block **nested inside the row's own
+  `### TDD-NNNN` section** under `## Ledger rows advanced` in
   `.qfai/evidence/atdd-<spec-id>.md`, in the shape
-  `../../qfai-implement/references/round-evidence.md` defines. Not a second
-  `## Ledger rows advanced` entry: that section is the record of a first
-  handoff, and appending to it would read as one.
+  `../../qfai-implement/references/round-evidence.md` defines. One heading
+  level below the row, because that nesting is the whole of the attribution:
+  written at `###` the block is the row section's _sibling_ and terminates it,
+  two rows reworked in one cycle then leave two `### Round 2` blocks with
+  nothing tying either to a `### TDD-NNNN`, and the reviewer hashing a
+  completion-review subject has to guess which row a block belongs to. Appended
+  at the end of the file it is worse than ambiguous: it lands under
+  `## Final status`, the one section every audit subject excludes, so the
+  rework evidence a second reviewer most needs pinned is covered by no hash at
+  all, silently. Not a second `### TDD-NNNN` entry for the same row: that entry
+  is the record of a first handoff, and a duplicate of it would read as one.
+  The row already has an entry; the round goes inside it.
 
   **Which N.** The REVISE closed the round it was given on, so a fresh RED
   opens the **next** one — round `N+1` where `N` is the round the reviewer

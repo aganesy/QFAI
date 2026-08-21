@@ -1040,7 +1040,9 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
     // test, and the three branches only cover a `todo` row's first handoff.
     const provenance = flat(await read(tree, REVIEW_FIX));
     expect(provenance).toContain("# A `review-fix` row comes back here for a new RED");
-    expect(provenance).toContain("A `### Round N` block in");
+    expect(provenance).toContain(
+      "A `#### Round N` block **nested inside the row's own `### TDD-NNNN` section**",
+    );
     expect(provenance).toContain("round-evidence.md");
     expect(provenance).toContain("this stage writes no ledger cell");
   });
@@ -2090,7 +2092,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // The row's own `### Round N` blocks are in the completion-review subject:
     // a rework's RED, GREEN and proof live there.
     expect(baseline).toContain("heading that names a `TDD-` id");
-    expect(baseline).toContain("every `### Round N` block the row carries");
+    expect(baseline).toContain(
+      "from every `#### Round N` block nested in the row's `### <TDD-ID>` section",
+    );
     expect(baseline).toContain("strip trailing whitespace from every line");
     expect(baseline).toContain("Gate item 10 runs the same four steps");
   });
