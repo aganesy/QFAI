@@ -71,7 +71,8 @@ total. Corrected, and the counts are now pinned by
 again.
 
 Two cells then moved on their merits while round 1's findings were being applied, which is why the
-total is `✅ 3 / ⚠️ 1 / ❌ 5` rather than the `✅ 2 / ⚠️ 2 / ❌ 5` the gatekeeper measured:
+total differs from the `✅ 2 / ⚠️ 2 / ❌ 5` the gatekeeper measured — the current figure is
+stated once, above, where the pin reads it — for two reasons:
 `US-0017-0003` rose because the assertion it was missing turned out to be available and was written
 (§ below), and `US-0017-0004`'s `Oracle strength` fell because an oracle for an assertion is not an
 oracle for a story. Neither movement changes the `❌` count.
@@ -151,7 +152,7 @@ cell means "these lane subsets, crossed with these change classifications, produ
 decisions". Both need a **real run**; the surface this file scores is a directory that `qfai init`
 just wrote. PR #794 now provides real runs — `detect`, the `if:` plumbing, the seven-leg matrix and
 the derived verdict all observed working in GitHub Actions — and **nothing consumes them**. That is
-the gap, it is the same gap for all seven cells, and closing it needs a surface that reads
+the gap, it is the same gap for every cell in the class, and closing it needs a surface that reads
 workflow-run history rather than a file. No ledger row proposes one; the absence is recorded as open
 risk 6 of the stage evidence.
 

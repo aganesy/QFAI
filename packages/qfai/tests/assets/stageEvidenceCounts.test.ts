@@ -494,6 +494,67 @@ describe("the stage evidence's counts are derived, not typed", () => {
     expect(wrong, "a count in `## Final status` that the packs on disk do not support").toEqual([]);
   });
 
+  it("derives the ledger cross-tabulation from the ledger", async () => {
+    // Five numbers over a file this stage READS and `/qfai-implement` WRITES, so every one can move
+    // without this stage touching anything — and the record already carries the scar: it once said
+    // "63 refactor" in one place and "74 refactor" in another, in the same file.
+    const ledger = await source(".qfai/specs/spec-0017/tdd/test-list.md");
+    const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
+
+    // The ledger is a markdown table. Rows are the lines whose first cell is a TDD id, which avoids
+    // re-implementing anything about the ledger's own semantics.
+    const rows = [...ledger.matchAll(/^\|\s*(TDD-\d+)\s*\|(.*)$/gm)].map(([, id, rest]) => ({
+      id: id ?? "",
+      cells: (rest ?? "").split("|").map((cell) => cell.trim()),
+    }));
+    expect(rows.length, "the ledger must have rows in the pinned form").toBeGreaterThan(0);
+
+    const tally = (values: string[]): Record<string, number> => {
+      const out: Record<string, number> = {};
+      for (const value of values) out[value] = (out[value] ?? 0) + 1;
+      return out;
+    };
+    const layers = tally(
+      rows.flatMap((row) =>
+        row.cells.filter((c) => /^(Unit|Integration|E2E|API|Component)$/.test(c)),
+      ),
+    );
+    const statuses = tally(
+      rows.flatMap((row) =>
+        row.cells.filter((c) => /^(todo|red|green|refactor|blocked|exception)$/.test(c)),
+      ),
+    );
+
+    const stated =
+      /(\d+) rows: (\d+) `Integration`,\s*(\d+) `Unit`; \*\*(\d+) `refactor`, (\d+) `blocked`, (\d+) `todo`\*\*/.exec(
+        evidence,
+      );
+    expect(
+      stated,
+      "the record must state the ledger cross-tabulation in the pinned form: " +
+        "`N rows: N `Integration`, N `Unit`; **N `refactor`, N `blocked`, N `todo`**`",
+    ).not.toBeNull();
+    expect(
+      [
+        Number(stated?.[1]),
+        Number(stated?.[2]),
+        Number(stated?.[3]),
+        Number(stated?.[4]),
+        Number(stated?.[5]),
+        Number(stated?.[6]),
+      ],
+      "the stated cross-tabulation must be the ledger's own",
+      // The order is rows, Integration, Unit, refactor, blocked, todo.
+    ).toEqual([
+      rows.length,
+      layers["Integration"] ?? 0,
+      layers["Unit"] ?? 0,
+      statuses["refactor"] ?? 0,
+      statuses["blocked"] ?? 0,
+      statuses["todo"] ?? 0,
+    ]);
+  });
+
   it("names every pack on disk, with a recomputing seal for each closed one", async () => {
     // Two rules, because a seal is fixed at "when the last reviewer response lands" while the request
     // is committed BEFORE the reviewers launch — the practice that stopped the tree moving under

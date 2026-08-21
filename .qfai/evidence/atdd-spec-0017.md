@@ -265,7 +265,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   added three, and what they cover is the class the first five could not: the corpus was 62 BARE commands,
   so wrapping any of them in one shell construct escaped 61 of 62. It is now checked wrapped as well as
   bare, by root cause as well as by spelling
-- **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, v12, extracted from the
+- **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, extracted from the
   E2E so its corpora can be tested on their own
 - **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 26 tests over the corpora enumerated
   at § "Execution logs" (`E4b`), none of them chosen. The count is **derived** —
@@ -285,7 +285,7 @@ sweep cannot reach. That guard exists because the previous version of this line 
 - **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 5 tests deriving the Coverage
   Depth Matrix's totals, partition, class assignment, per-class justification and row width from the
   table itself
-- **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 9 tests deriving this record's own
+- **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 10 tests deriving this record's own
   counts from the artifacts they describe, after every review round found at least one that the tree
   did not hold. The eighth derives `## Final status`'s own round and response counts, which were correct
   and underived through five findings of exactly that shape
@@ -324,7 +324,7 @@ pnpm -C packages/qfai exec vitest run tests/integration/scripts/checkAtddAnnotat
 pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
   -> Tests 5 passed (5), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
-  -> Tests 9 passed (9), exit 0
+  -> Tests 10 passed (10), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
   -> Tests 11 passed (11), exit 0
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/buildCommand.test.ts
@@ -533,7 +533,14 @@ timestamp, so committing one fixes a name that the next run will not reproduce a
 and traced 465 to `0cfa67c9` — so the file cited as this stage's gate evidence was four rounds old, and a
 reader checking it was reading round 4's tree. The verdict was never affected: `error=2` with the same
 two findings reproduces at HEAD, which is what round 9 verified independently. But an artifact exists to
-be checked, and this one could not be. Re-run and re-added at round 9; `matchedFileCount` is 467.
+be checked, and this one could not be.
+
+Re-run and re-added at round 9, and **again at round 11** — where the finding was not the staleness but
+the sentence that used to end this paragraph. It read "`matchedFileCount` is 467", a figure that moves
+every time this stage adds a test file, which it does every round; it was 468 at HEAD. **No figure is
+stated now.** The checkable statement is the rule: the artifact is committed, and it must be deep-equal
+to a fresh `--profile atdd --fail-on error --spec 0017` run. That holds at any revision and needs no
+number, which is the third time this one sentence has taught the same lesson.
 
 **Validate Hard Gate evidence** is those two paths, not `.qfai/report/validate.log`. This skill's
 CRITICAL CONSTRAINTS name the per-run directory and this spec's `validate.spec-<id>.json` as the two
@@ -1245,8 +1252,9 @@ something is written, believed without reading it.
    wrong instrument rather than to nothing.
 6. **The E2E surface cannot exercise a real workflow run.** It reads what `init` ships. Whether a
    documentation-only change actually produces a narrow lane set is now observable — PR #794's runs
-   show it — and nothing consumes that observation. That is class B of the matrix's `❌` cells, all
-   seven of them, and no ledger row proposes a surface that would consume it.
+   show it — and nothing consumes that observation. That is class B of the matrix's `❌` cells — whose
+   membership the matrix enumerates and its guard partitions, so no count of them is stated here —
+   and no ledger row proposes a surface that would consume it.
 7. **One class of defect accounts for most of this spec's findings, and it recurred inside the repair
    of a finding about it.** Every occurrence is a claim asserted over **how something is written**
    rather than over **what it does**. This is the canonical list — three other sites used to carry
@@ -1387,7 +1395,7 @@ currency both times.** Round 3 found the first version written at `16f611c7` bef
 `git log -S`. Round 4 found the replacement stale in the same way. **These numbers are measured at the working tree of this commit**, which carries every repair through
 round 11: the e2e figure is 1440 and the integration+unit figure 1212.
 
-e2e callsites at this tree: 876
+e2e callsites at this tree: 877
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
