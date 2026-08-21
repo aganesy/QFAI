@@ -391,7 +391,12 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     const BODY_PHRASE: Record<string, RegExp> = {
       A: /absent from the adopter's tree there is nothing to exercise/,
       B: /needs? a \*\*real run\*\*/,
-      C: /no sequence, count or limit to sit at the edge of/,
+      // Class-level, as A's and B's are. This pinned `no sequence, count or limit to sit at the edge
+      // of` — one MEMBER's reason — so rescoring that cell would have demanded prose for a member the
+      // class no longer has, while the property and the roster both stayed satisfied. What every member
+      // shares is that no future work turns the cell green; which members there are is the roster's
+      // question, and each member's own reason is checked by the naming rule below.
+      C: /no future work on the story would turn green/,
     };
     const bodies = new Map<string, string>();
     for (const match of text.matchAll(

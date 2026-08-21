@@ -62,6 +62,19 @@ const TRACKED = [
   "packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts",
 ] as const;
 
+/**
+ * The two helpers this stage added, which `TRACKED` does not hold.
+ *
+ * `TRACKED` is a list of TEST files, because its other rule counts `it` callsites. The Delta Rejected
+ * Guard tie below is a different question — has this stage reasoned about every artifact it added
+ * against the rejected options — and the artifacts the spec's central claim rests on are these two.
+ * Checking `TRACKED` alone would have left them exactly where round 15 found them.
+ */
+const HELPERS = [
+  "packages/qfai/tests/helpers/buildCommand.ts",
+  "packages/qfai/tests/helpers/shippedLaneCommands.ts",
+] as const;
+
 /** `packages/qfai/tests/x.test.ts` -> `tests/x.test.ts`, the spelling the recorded commands use. */
 const asRecorded = (file: string): string => file.replace(/^packages\/qfai\//, "");
 
@@ -148,6 +161,42 @@ async function packsOnDisk(): Promise<string[]> {
 }
 
 describe("the stage evidence's counts are derived, not typed", () => {
+  it("reasons about every file it added against the rejected options", async () => {
+    // The Delta Rejected Guard table promised to cover "every artifact added since" for five rounds and
+    // covered the round-1 and round-2 set, because nothing tied its rows to the files this stage added.
+    // The section disclosed that in its own words rather than papering over it, and round 15 found the
+    // two artifacts the spec's central claim rests on still missing — so the promise is a check now.
+    //
+    // `TRACKED` is the list, already here for a different rule. One assertion, no new list, and the
+    // failure mode it closes is a table that reads as exhaustive and is not.
+    const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
+    const start = evidence.indexOf("### Delta Rejected Guard");
+    expect(start, "the Delta Rejected Guard section must be findable").toBeGreaterThan(-1);
+    // The next TOP-LEVEL heading, not a named one. The first version of this ended the slice at
+    // "## Inputs reviewed", which precedes this section rather than following it — so the search found
+    // nothing, the slice ran to the end of the file, and every file this stage added matched somewhere
+    // in the record. Deleting a row from the table left it green, which is how it was caught: the check
+    // written to close a disclosed gap could not fail, one round after three others of that shape.
+    const rest = evidence.slice(start + 1);
+    const next = rest.search(/\n## [^#]/);
+    const section = next === -1 ? rest : rest.slice(0, next);
+    // The TABLE's first column, not the section's text. Reading the section made the check vacuous a
+    // second time: every tracked file is also named in the prose below the table, so deleting a row
+    // left it green. Two vacuous versions of one check, both caught by deleting the row it guards —
+    // which is the procedure this record argues for and the reason it is written down.
+    const listed = new Set(
+      [...section.matchAll(/^\|\s*`([^`]+)`/gm)].map((match) => match[1] ?? ""),
+    );
+    expect(listed.size, "the table must have a first column to read").toBeGreaterThan(5);
+    const missing = [...TRACKED, ...HELPERS].filter(
+      (file) => !listed.has(file.replace("packages/qfai/", "")),
+    );
+    expect(
+      missing,
+      "a file this stage added that the Delta Rejected Guard table does not reason about",
+    ).toEqual([]);
+  });
+
   it("states the size of the mechanism corpus it cites as its falsification", async () => {
     // The sweep block cites this number four times, and the corpus grows every round a reviewer
     // proves a new escape — so it is derived rather than typed.
@@ -438,15 +487,29 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // The globs are the e2e project's, read from the workspace file rather than assumed, because a
     // guard over "the e2e project's callsites" that hardcodes the directories is one include away from
     // measuring something else.
+    //
+    // That comment was FALSE for three rounds: the globs were read, asserted non-empty and then never
+    // used, while the walk below iterated two hardcoded directory names — the exact failure the sentence
+    // claims is prevented, in the file whose subject is claims of that kind. The roots are derived from
+    // the globs now, so a third include added to the project changes what this measures.
     const workspace = await source("packages/qfai/vitest.workspace.ts");
-    const globs = [...workspace.matchAll(/"(tests\/(?:e2e|assets)\/[^"]*)"/g)].map(
-      (m) => m[1] ?? "",
+    // The `e2e` project's OWN include list, not every glob in the file: the first version of this
+    // repair matched `tests/…` anywhere and measured the whole tests tree, 4562 against 880. The
+    // block is found by the project name, which is the thing the record's rule names.
+    const project = /name:\s*"e2e",\s*include:\s*\[([^\]]*)\]/.exec(workspace);
+    expect(
+      project,
+      "the workspace must declare an `e2e` project with an include list",
+    ).not.toBeNull();
+    const globs = [...(project?.[1] ?? "").matchAll(/"(tests\/[^"*]+)\/\*/g)].map(
+      (match) => match[1] ?? "",
     );
     expect(globs.length, "the e2e project must declare its includes").toBeGreaterThan(0);
+    const roots = [...new Set(globs)].map((glob) => `packages/qfai/${glob}`).sort();
 
     const CALLSITE_LINE = /^[ \t]*(?:it|test)(?:\.\w+)*[\s(]/;
     let measured = 0;
-    for (const dir of ["packages/qfai/tests/e2e", "packages/qfai/tests/assets"]) {
+    for (const dir of roots) {
       const walk = async (at: string): Promise<void> => {
         for (const entry of await readdir(at, { withFileTypes: true })) {
           const full = path.join(at, entry.name);

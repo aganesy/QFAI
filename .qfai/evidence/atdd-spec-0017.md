@@ -56,14 +56,24 @@ stage's largest correction:
 **Re-run against every artifact added since**, because for five rounds this section reasoned only about
 the round-1 and round-2 set and each round faulted it for that — and then round 12 found the two artifacts
 of round 12 absent from it, one round after that sentence was written. Making the promise is not keeping it,
-and the check that would keep it does not exist: nothing ties this table's rows to the files
-`## Work performed` lists. Recorded as a gap rather than papered over, because the alternative is a table
-that reads as exhaustive and is not. The four record-deriving guards and the
-classifier they share are checked one at a time against all nine rejected options:
+and for two rounds the check that would keep it did not exist: nothing tied this table's rows to the
+files this stage added, so the promise was renewed each round and the table stayed short. **Round 15's
+`completion-reviewer` found the two artifacts the spec's central claim rests on missing from it** — the
+allowlist and its corpus — and pointed out that the tie is one assertion, because
+`stageEvidenceCounts.test.ts` already holds the list. It now requires every tracked file to appear in this
+table's first column. The gap was disclosed rather than papered over for two rounds, which was the right
+behaviour and not a substitute for closing it.
+
+The four record-deriving guards, the classifier they share, and the two artifacts that carry the boundary
+are checked one at a time against all nine rejected options:
 
 | artifact                        | nearest rejected option                                  | verdict          |
 | ------------------------------- | -------------------------------------------------------- | ---------------- |
 | `tests/helpers/buildCommand.ts` | "a second parser over the same surface" (`:133`)          | not that surface |
+| `tests/helpers/shippedLaneCommands.ts` | "a second parser over the same surface" (`:133`)   | not that surface: it reads workflow YAML and shell, which no validator parses |
+| `tests/unit/shippedLaneCommands.test.ts` | "a row that cannot fail looks like coverage" (delta) | measured: the pre-repair helper lets every corpus entry through |
+| `tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts` | "a row that cannot fail looks like coverage" (delta) | measured: every rule in it has been reddened by a plant in the shipped tree |
+| `tests/integration/scripts/checkAtddAnnotationLedger.test.ts` | same                     | measured |
 | `tests/unit/buildCommand.test.ts` | "a row that cannot fail looks like coverage" (delta)    | measured, not assumed |
 | `tests/assets/coverageDepthMatrix.test.ts` | same                                          | measured |
 | `tests/assets/stageEvidenceCounts.test.ts` | same                                          | measured |
@@ -296,7 +306,7 @@ sweep cannot reach. That guard exists because the previous version of this line 
 - **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 5 tests deriving the Coverage
   Depth Matrix's totals, partition, class assignment, per-class justification and row width from the
   table itself
-- **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 11 tests deriving this record's own
+- **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 12 tests deriving this record's own
   counts from the artifacts they describe, after every review round found at least one that the tree
   did not hold. The eighth derives `## Final status`'s own round and response counts, which were correct
   and underived through five findings of exactly that shape
@@ -353,7 +363,7 @@ pnpm -C packages/qfai exec vitest run tests/integration/scripts/checkAtddAnnotat
 pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
   -> Tests 5 passed (5), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
-  -> Tests 11 passed (11), exit 0
+  -> Tests 12 passed (12), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
   -> Tests 11 passed (11), exit 0
 pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017RunnerParallelismE2E.test.ts
@@ -1945,6 +1955,11 @@ something is written, believed without reading it.
      shipped lane executes no build in an adopter's tree". Every assertion in this record about that
      story means the first sentence. Naming it matters because the second sentence is the one a reader
      assumes.
+   - **And the lane can still choose WHERE a reviewed install runs**, or could until round 15:
+     `defaults.run.working-directory` pointed the digest-approved lockfile-aware install at a tree of the
+     planter's choosing, whose lifecycle scripts then ran. It is closed by the key enumerations — that
+     key is on none of the three lists — and it is recorded here because it is the counter-example that
+     narrowed this item's claim in the first place, not because it is still open.
    - **`refusals()` is now an instrument rather than the boundary.** It remains the best available answer
      to "what does this body run", it is the thing to run before writing a digest down, and it is still
      the only check that reads an adopter-facing body at all. What it is not, after the sweep, is the
@@ -1988,9 +2003,9 @@ numbers.
 currency both times.** Round 3 found the first version written at `16f611c7` before `21ea1ddc` landed
 +489/-76 across four files, so it certified three artifacts that postdated it — established by
 `git log -S`. Round 4 found the replacement stale in the same way. **These numbers are measured at the working tree of this commit**, which carries every repair through
-round 14: the e2e figure is 1444 and the integration+unit figure 1219. Round 12 re-measured them at
+round 14: the e2e figure is 1445 and the integration+unit figure 1219. Round 12 re-measured them at
 1443 and 1216 and round 14 moved both again — the e2e figure by exactly the arithmetic the rule below
-predicts, 1443 + (880 - 879) = 1444, since this round added one callsite: the derived check over the
+predicts, 1443 + (881 - 879) = 1445, since this round added two callsites: the derived check over the
 mechanism corpus's own size.
 
 Round 14's `completion-reviewer` found this block certifying `test:e2e … exit 0` while three of the
@@ -1998,7 +2013,7 @@ stage's own guards were red in that project, at a revision that had opened a rev
 nothing else. The block is re-run rather than carried forward, which is what its own first sentence has
 demanded through six rounds.
 
-e2e callsites at this tree: 880
+e2e callsites at this tree: 881
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
@@ -2029,7 +2044,7 @@ instead; a round name cannot be checked, which is the whole reason those rounds 
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
 pnpm check-types                                exit 0
-pnpm -C packages/qfai test:e2e                  1444 passed / 16 skipped, exit 0
+pnpm -C packages/qfai test:e2e                  1445 passed / 16 skipped, exit 0
 vitest --project integration --project unit     1219 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 9 claim(s) backed, exit 0
@@ -2379,8 +2394,11 @@ masked in CI only because the `tdd` step fails first on the scoped gate's error,
 this was written and is `error=1` now.
 
 P1d's gate is **closed** — it passed at pass 6 and round 8 did not re-route it, because re-deciding a
-decided gate is not a review. A ninth stage round is owed. This stage does not claim its own repairs
-reviewed.
+decided gate is not a review. **The round after the current one is owed**: this stage does not claim its
+own repairs reviewed, and every round so far has found defects in the previous round's repairs. That
+sentence read "a ninth stage round is owed" for six rounds, in the paragraph that says what completion is
+still waiting for — an ordinal expires every round, and the rule does not, which is the form the callsite
+line two sections up arrived at for the same reason.
 
 ## Final status (PASS/FAIL) + who confirmed
 
@@ -2448,20 +2466,16 @@ move again when the reports land, and the guard will fail again then. Two of the
 the second, because a verdict is not written in any parseable form by more than two of twenty-nine
 reports and inventing a marker now would pin only the reports written after it.
 
-| round | reviewers                                                             | revision   | verdict          |
-| ----- | --------------------------------------------------------------------- | ---------- | ---------------- |
-| 1     | `completion-reviewer`, `qa-gatekeeper`                                | `8fb48002` | REVISE           |
-| 2     | `implementation-reviewer`, `completion-reviewer`, `qa-gatekeeper`, P1d | `56daee8d` | REVISE           |
-| 3     | `implementation-reviewer`, `completion-reviewer`, P1d — **no stage `qa-gatekeeper`** | `1473897a` | REVISE |
-| 4     | `completion-reviewer`, `qa-gatekeeper`, P1d                           | `54d8d325` | REVISE           |
-| 5     | `completion-reviewer`, `qa-gatekeeper`, P1d                           | `3f815725` | REVISE           |
-| 6     | `completion-reviewer`, `qa-gatekeeper`, P1d                           | `cb91e089` | REVISE           |
-| 7     | `completion-reviewer`, `qa-gatekeeper`, P1d                           | `9a37421c` | REVISE, **P1d PASS** |
-| 8     | `completion-reviewer`, `qa-gatekeeper` — stage gates only             | `dbe00247` | REVISE           |
-| 9     | `implementation-reviewer`, `completion-reviewer`, `qa-gatekeeper`     | `05a97202` | REVISE           |
-| 10    | `implementation-reviewer`, `completion-reviewer`, `qa-gatekeeper`     | `a66be5c6` | REVISE           |
-| 11    | `implementation-reviewer`, `completion-reviewer`, `qa-gatekeeper`     | `4b58eadd` | REVISE           |
-| 12    | `implementation-reviewer`, `completion-reviewer`, `qa-gatekeeper`     | `45e6f041` | REVISE           |
+**The per-round table that used to sit here is deleted.** It carried the reviewers, the revision and
+the verdict for rounds 1 to 12 and stopped there, three rounds behind the derived numeral three
+paragraphs above it — a hand-maintained table beside a derived one, going stale on the schedule this
+record has faulted itself for eleven times. § "Findings per round" holds the same information with one
+more column and its rule is stated; nothing was lost by deleting it, and the second place to update every
+round was the whole of what it cost. That is the argument the per-commit e2e sequence was deleted on, and
+the reason to make it again rather than add three rows.
+
+The revisions the deleted table carried are the ones each round's `summary.json` records, which is where
+a reader should look for them: they are in the packs, sealed, rather than in a copy of the packs.
 
 Round 9 routed the `implementation-reviewer` as well, because the helper and the four guards changed
 substantially; `agent-routing.yml` has it **conditional** rather than blocking, and its report says so.
