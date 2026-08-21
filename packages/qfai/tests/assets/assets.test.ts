@@ -515,6 +515,42 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toContain("QFAI-TEST-001");
     expect(content).toMatch(/actions\/checkout@v4/);
     expect(content).toMatch(/actions\/setup-node@v4/);
+
+    // The comment justifying the Node pin must quote the floor the package
+    // actually publishes, not one qfai stopped shipping releases ago.
+    const packageJsonText = await readFile(
+      path.join(repoRoot, "packages", "qfai", "package.json"),
+      "utf-8",
+    );
+    const nodeEngine = /"engines"\s*:\s*\{[^}]*"node"\s*:\s*"([^"]+)"/.exec(packageJsonText)?.[1];
+    expect(nodeEngine).toBeTruthy();
+    expect(content).toContain(`\`engines: "${nodeEngine}"\``);
+    expect(content).not.toContain('">=18.0.0"');
+  });
+
+  // Both READMEs used to claim qfai generates no GitHub Actions workflow while
+  // `qfai init` copied `root/.github/workflows/qfai-validate.yml` into every
+  // initialized repository.
+  it("documents the CI workflow `qfai init` installs in both READMEs", async () => {
+    const readmePaths = [
+      path.join(repoRoot, "README.md"),
+      path.join(repoRoot, "packages", "qfai", "README.md"),
+    ];
+
+    for (const readmePath of readmePaths) {
+      const readme = await readFile(readmePath, "utf-8");
+      const label = path.relative(repoRoot, readmePath);
+
+      expect(readme, `${label} must not deny the shipped workflow`).not.toContain(
+        "It does not generate GitHub Actions workflows.",
+      );
+      expect(readme, `${label} must name the shipped workflow`).toContain(
+        ".github/workflows/qfai-validate.yml",
+      );
+      expect(readme, `${label} must state the gate the workflow runs`).toContain(
+        "qfai validate --profile full --fail-on error",
+      );
+    }
   });
 
   it("prevents legacy completion-gate remnants in assistant markdown", async () => {

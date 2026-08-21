@@ -334,8 +334,19 @@ Release gate behavior:
 
 QFAI generates integration wrappers under `.agents/**`, `.claude/**`,
 `.github/**`, and `.codex/**`.
-It does not generate GitHub Actions workflows.
-Configure CI in your own platform and run:
+
+`npx qfai init` also installs one GitHub Actions workflow,
+`.github/workflows/qfai-validate.yml`. It runs
+`npx qfai validate --profile full --fail-on error` on every push to `main` or
+`master` and on every pull request, installing dependencies from whichever
+lockfile the repository has (pnpm / yarn / npm) and falling back to
+`npm install` when there is none. The `full` profile includes the
+`QFAI-TEST-001` test-todo stub gate, so the job can fail your default branch on
+findings your existing CI never checked. The file is copied create-only —
+`qfai init` never overwrites an existing copy, not even with `--force` — so
+edit it freely, or delete it if you would rather gate validation elsewhere.
+
+On any other CI platform, configure the job yourself and run:
 
 ```bash
 pnpm ci:gate
@@ -374,6 +385,9 @@ Typical customizations.
 │   └── skills
 │       └── qfai-configure
 │           └── SKILL.md
+├── .github
+│   └── workflows
+│       └── qfai-validate.yml
 ├── .qfai
 │   ├── assistant
 │   │   ├── agents

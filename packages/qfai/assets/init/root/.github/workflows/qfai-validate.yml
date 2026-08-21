@@ -39,7 +39,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           # Match the QFAI repo's CI baseline (Node 20 LTS) and the package
-          # `engines: ">=18.0.0"`. Bump deliberately when QFAI raises its
+          # `engines: ">=20.19.0"`. Bump deliberately when QFAI raises its
           # supported floor.
           node-version: "20"
           # setup-node@v4's `cache:` accepts a single package-manager value.
