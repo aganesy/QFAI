@@ -49,6 +49,7 @@ Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
 Stop if the latest discussion-pack is missing, incomplete, or has blocking OQ.
+Missing-pack exception (imported spec set): when `.qfai/specs/` already holds specs and no discussion pack exists at all, do not back-fill one — record the real input source as import-lite evidence and continue (see Evidence below).
 On validate / doctor / quality-gate failures, follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
 
 ## Stage 1: Triage (Mandatory)
@@ -250,6 +251,8 @@ Write a `.qfai/steering/<id>.md` entry when this stage hits one of the condition
 - Updated contracts under `.qfai/contracts/**`; UI-bearing targets normalize design/ui contracts
 - `.qfai/report/preflight_summary.md`
 - Evidence file: `.qfai/evidence/sdd-<spec-id>.md`
+- Evidence file: `.qfai/evidence/import-lite-<ts>.md` — imported spec sets only (specs present, no
+  discussion pack); see Evidence below
 
 The canonical file set is defined by skill templates under `.qfai/assistant/skills/qfai-sdd/templates/`.
 
@@ -308,6 +311,19 @@ Inputs reviewed, Preflight summary path, Triage decisions (op + approver per row
 Decisions made, Work performed, Commands executed, Validate evidence paths, Work Orders Summary,
 Gaps / Open risks, Final status. Work Orders Summary uses the fixed 6-column schema from
 `shared-skill-delegation-baseline.md`; its `Status` and `Final status` accept only `PASS` or `REVISE`.
+
+### Import-lite evidence (imported spec sets only)
+
+Producer: Stage 0, in every invocation form. When Stage 0 finds specs under `.qfai/specs/` but no
+`.qfai/discussion/discussion-*/06_REQ.md`, create `.qfai/evidence/import-lite-<ts>.md` from
+`templates/evidence/import-lite.md` and record where the requirements actually came from. That is
+the documented route for a spec set imported from outside QFAI, and it satisfies `QFAI-IMPLITE-001`
+without fabricating a discussion pack.
+
+The `-<ts>` suffix is required, not decorative: the check matches `import-lite-*.md` by basename, so
+a copy kept under the template's own name is not seen. Use the run timestamp (`YYYYMMDDTHHmm`). Write
+one file per import run and do not overwrite an earlier one. This artifact is a pointer for
+preflight, never requirement/spec SSOT — carry unresolved items into the spec's Open Questions.
 
 ## Done Declaration
 
