@@ -26,6 +26,13 @@ import { error, info } from "../lib/logger.js";
 import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import {
+  CODEX_AGENT_WRAPPER_DIR,
+  CODEX_AGENT_WRAPPER_SUFFIX,
+  parseAgentCatalogKinds,
+  renderCodexAgentToml,
+  type CodexAgentKind,
+} from "../../core/codexAgentToml.js";
+import {
   QFAI_GITIGNORE_MARKER,
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
@@ -1199,6 +1206,11 @@ async function syncIntegrationWrappers(
   copied.push(...agentResult.copied);
   skipped.push(...agentResult.skipped);
 
+  // Step 6: Generate Codex agent profiles (.codex/agents/<name>.toml)
+  const codexResult = await createCodexAgentTomls(assistantAssetsDir, destRoot, agents, options);
+  copied.push(...codexResult.copied);
+  skipped.push(...codexResult.skipped);
+
   return { copied, skipped, removed };
 }
 
@@ -1258,6 +1270,125 @@ async function createAgentSymlinks(
   }
 
   return { copied, skipped };
+}
+
+/**
+ * Writes `.codex/agents/<name>.toml`, one Codex profile per canonical agent.
+ *
+ * Unlike the other two agent wrappers this one cannot be a symlink — Codex
+ * wants the whole body escaped into a `developer_instructions` string — so it
+ * is a snapshot, and a snapshot needs a regeneration trigger. It gets the same
+ * one `assistant/agents/**` has: create-only on a plain run, rewritten under
+ * `--force`. Without it a correction to an agent definition reached Claude and
+ * Copilot the moment it landed (they follow the symlink) and never reached
+ * Codex at all.
+ */
+async function createCodexAgentTomls(
+  assistantAssetsDir: string,
+  destRoot: string,
+  agents: string[],
+  options: WrapperSyncOptions,
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const copied: string[] = [];
+  const skipped: string[] = [];
+  if (agents.length === 0) {
+    return { copied, skipped };
+  }
+
+  const kinds = await loadAgentCatalogKinds(assistantAssetsDir, destRoot);
+  const wrapperDir = path.join(destRoot, ...CODEX_AGENT_WRAPPER_DIR.split("/"));
+
+  for (const agentName of agents) {
+    const destination = path.join(wrapperDir, `${agentName}${CODEX_AGENT_WRAPPER_SUFFIX}`);
+    if ((await pathExists(destination)) && !options.force) {
+      skipped.push(destination);
+      continue;
+    }
+
+    const kind = kinds.get(agentName);
+    if (kind === undefined) {
+      // Guessing `worker` would drop `sandbox_mode` from a reviewer and hand a
+      // read-only agent write access; guessing `reviewer` would break a worker.
+      info(`  skip: ${destination} (agent-catalog.yml に ${agentName} の kind がありません)`);
+      continue;
+    }
+
+    const markdown = await readCanonicalAgentMarkdown(assistantAssetsDir, destRoot, agentName);
+    const rendered = markdown === undefined ? undefined : renderCodexAgentToml(markdown, kind);
+    if (rendered === undefined || !rendered.ok) {
+      const reason =
+        rendered === undefined ? "canonical markdown が見つかりません" : rendered.error;
+      info(`  skip: ${destination} (${reason})`);
+      continue;
+    }
+
+    copied.push(destination);
+    if (!options.dryRun) {
+      await mkdir(path.dirname(destination), { recursive: true });
+      await writeFile(destination, rendered.toml, "utf-8");
+    }
+  }
+
+  return { copied, skipped };
+}
+
+/**
+ * The project's own copy wins over the shipped template, for both the catalog
+ * and the canonical markdown: `assistant/manifest/**` is copied create-only and
+ * `qfai-configure` edits it in place, so a project that retyped an agent must
+ * see that reflected in its Codex profile rather than the default. The template
+ * is the fallback for the one case where the destination holds nothing yet —
+ * `--dry-run`, which writes no files but still has to report what it would do.
+ */
+async function loadAgentCatalogKinds(
+  assistantAssetsDir: string,
+  destRoot: string,
+): Promise<Map<string, CodexAgentKind>> {
+  const candidates = [
+    joinAssistantLayer(destRoot, "manifest", "agent-catalog.yml"),
+    path.join(assistantAssetsDir, "manifest", "agent-catalog.yml"),
+  ];
+  for (const candidate of candidates) {
+    const content = await readFileIfPresent(candidate);
+    if (content === undefined) {
+      continue;
+    }
+    const kinds = parseAgentCatalogKinds(content);
+    if (kinds.size > 0) {
+      return kinds;
+    }
+  }
+  return new Map();
+}
+
+async function readCanonicalAgentMarkdown(
+  assistantAssetsDir: string,
+  destRoot: string,
+  agentName: string,
+): Promise<string | undefined> {
+  const candidates = [
+    path.join(destRoot, ".qfai", "assistant", "agents", `${agentName}.md`),
+    path.join(assistantAssetsDir, "agents", `${agentName}.md`),
+  ];
+  for (const candidate of candidates) {
+    const content = await readFileIfPresent(candidate);
+    if (content !== undefined) {
+      return content;
+    }
+  }
+  return undefined;
+}
+
+/** `undefined` for an absent file; every other I/O failure propagates. */
+async function readFileIfPresent(filePath: string): Promise<string | undefined> {
+  try {
+    return await readFile(filePath, "utf-8");
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return undefined;
+    }
+    throw err;
+  }
 }
 
 async function ensureSymlink(

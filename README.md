@@ -458,7 +458,7 @@ Integration wrappers are also generated for immediate use:
 - Agents/Codex VS Code: `.agents/skills/**`
 - Claude Code: `.claude/skills/**`, `.claude/agents/**`
 - GitHub Copilot: `.github/skills/**`, `.github/agents/**`
-- Codex: `.codex/skills/**`
+- Codex: `.codex/skills/**`, `.codex/agents/**`
 
 ## Agent integrations
 
@@ -466,8 +466,10 @@ Integration wrappers are also generated for immediate use:
 and generates thin wrapper assets for Agents/Codex VS Code / Copilot / Claude Code / Codex.
 Canonical agent markdown under `.qfai/assistant/agents/**` uses a shared YAML frontmatter
 subset (`name`, `description`, `tools`) compatible with Claude Code and GitHub Copilot,
-while Codex consumes mirrored `.codex/agents/*.toml` profiles.
-If wrapper assets drift from canonical skills, rerun `npx qfai init --force` to resync.
+while Codex consumes `.codex/agents/*.toml` profiles generated from that same markdown.
+The `.claude` / `.github` agent wrappers are symlinks and follow the canonical document
+automatically; the Codex profiles are generated files, so rerun `npx qfai init --force`
+to refresh them (and any other wrapper asset that has drifted).
 
 ## Contributing (for QFAI maintainers)
 
