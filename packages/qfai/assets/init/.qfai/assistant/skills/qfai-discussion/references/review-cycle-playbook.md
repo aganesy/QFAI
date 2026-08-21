@@ -4,9 +4,12 @@ Use this file for detailed review-pack handling in `/qfai-discussion`.
 
 ## Required Artifacts
 
-- `review_request.md`
-- `Rxx_<reviewer>.md`
-- `summary.json`
+Every review cycle writes its pack into the shared review tree — the same tree `/qfai-sdd` uses and
+the only one `qfai validate` reads:
+
+- `.qfai/review/review-<timestamp>/review_request.md`
+- `.qfai/review/review-<timestamp>/R01_<reviewer>.md`, `R02_<reviewer>.md`, ...
+- `.qfai/review/review-<timestamp>/summary.json`
 
 ## Cycle Rules
 

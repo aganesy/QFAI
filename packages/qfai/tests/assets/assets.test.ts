@@ -1280,6 +1280,47 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(`${discussionPlaybook}\n${sddPlaybook}`).not.toContain("require");
   });
 
+  it("pins the discussion review-pack write paths to the shared review tree", async () => {
+    const discussionSkillDir = path.join(templateQfaiDir, "assistant", "skills", "qfai-discussion");
+    const discussionPlaybookPath = path.join(
+      discussionSkillDir,
+      "references",
+      "review-cycle-playbook.md",
+    );
+    const reviewRequestTemplatePath = path.join(
+      discussionSkillDir,
+      "templates",
+      "14_Review-Request.md",
+    );
+    const [discussionPlaybook, reviewRequestTemplate] = await Promise.all([
+      readFile(discussionPlaybookPath, "utf-8"),
+      readFile(reviewRequestTemplatePath, "utf-8"),
+    ]);
+
+    for (const artifact of ["review_request.md", "R01_<reviewer>.md", "summary.json"]) {
+      expect(discussionPlaybook).toContain(`.qfai/review/review-<timestamp>/${artifact}`);
+    }
+
+    // The discussion tree must name the review-pack directory exactly one way, so that a
+    // pack lands where `validateReviewArtifacts` looks for it.
+    const discussionMarkdown = await fg(["**/*.md"], {
+      cwd: discussionSkillDir,
+      absolute: true,
+    });
+    const strayNames: string[] = [];
+    for (const filePath of discussionMarkdown) {
+      const content = await readFile(filePath, "utf-8");
+      const matches = content.match(/review-<[^>]+>/g) ?? [];
+      for (const match of matches) {
+        if (match !== "review-<timestamp>") {
+          strayNames.push(`${match} (${path.relative(discussionSkillDir, filePath)})`);
+        }
+      }
+    }
+    expect(strayNames).toEqual([]);
+    expect(reviewRequestTemplate).toContain(".qfai/review/review-<timestamp>/review_request.md");
+  });
+
   it("ensures qfai-sdd no longer ships legacy spec-pack templates", async () => {
     const legacySpecPackDir = path.join(
       templateQfaiDir,
