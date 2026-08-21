@@ -54,7 +54,11 @@ stage's largest correction:
   artifact — it reads an annotation ledger and test sources, neither of which any validator parses.
 
 **Re-run against every artifact added since**, because for five rounds this section reasoned only about
-the round-1 and round-2 set and each round faulted it for that. The four record-deriving guards and the
+the round-1 and round-2 set and each round faulted it for that — and then round 12 found the two artifacts
+of round 12 absent from it, one round after that sentence was written. Making the promise is not keeping it,
+and the check that would keep it does not exist: nothing ties this table's rows to the files
+`## Work performed` lists. Recorded as a gap rather than papered over, because the alternative is a table
+that reads as exhaustive and is not. The four record-deriving guards and the
 classifier they share are checked one at a time against all nine rejected options:
 
 | artifact                        | nearest rejected option                                  | verdict          |
@@ -64,6 +68,9 @@ classifier they share are checked one at a time against all nine rejected option
 | `tests/assets/coverageDepthMatrix.test.ts` | same                                          | measured |
 | `tests/assets/stageEvidenceCounts.test.ts` | same                                          | measured |
 | `tests/assets/retractedClaims.test.ts` | same                                              | measured |
+| `tests/e2e/spec0017RunnerParallelismE2E.test.ts` | "a row that cannot fail looks like coverage" (delta) | measured, and the fixture rebuilt when round 12 showed it could not express the inert state |
+| `tests/integration/spec0017OwnWorkflowScope.test.ts` | "annotate a row the pack has not settled" (`CR-20260818-0007`) | **not annotated**, deliberately — see § "TC-0017-0016" |
+| `packages/qfai/tsconfig.tests.json` | "a second gate over the same surface" | not a second gate: nothing was checking this surface at all |
 | `CR-20260820-0012` option 5     | options 1-4, rejected in that CR                          | none reintroduced |
 
 The two that need their reasoning stated rather than asserted:
@@ -902,7 +909,7 @@ clearances was false.
 
 | Layer       | Raw count | Signal | Evidence                   | Notes                                                       |
 | ----------- | --------: | -----: | -------------------------- | ----------------------------------------------------------- |
-| E2E         |         9 |      8 | `US-0017-0001` … `-0009`   | one describe each except `-0007`, withdrawn in round 1       |
+| E2E         |         9 |      9 | `US-0017-0001` … `-0009`   | one describe each; `-0007` restored in round 12, in its own file |
 | API         |         0 |      0 | no `CON-API-*` declared    | nothing owed                                                 |
 | Integration |        71 |     63 | `Layer = Integration` rows | 63 `refactor`; 6 `blocked`, 2 `todo` — see the section below  |
 
@@ -1558,11 +1565,15 @@ something is written, believed without reading it.
    until `qfai init` was run and the step bodies — not the job names — were read.
 2. **`US-0017-0007` is uncovered by choice.** The knobs do not ship, so no honest assertion exists.
    It becomes coverable when they do.
-3. **`QFAI-ATDD-112` reports 8 spec-0017 TCs, and 15 repo-wide** — the 6 `blocked` and 2 `todo` rows
-   here, plus every other spec's: `spec-0003` (1), `spec-0008` (4), `spec-0015` (2), `spec-0017` (8).
-   The scoped gate this stage runs sees the 8; `build` runs the profile **unscoped** and sees all 15,
-   so eight is the number this stage can act on and fifteen is the number a gate reports. Four of the
-   six `blocked` rows are `blocked` on `CR-20260820-0007`.
+3. **`QFAI-ATDD-112` reports 8 spec-0017 TCs, and 15 repo-wide** — re-measured this round, deduping
+   the finding's own id list: `spec-0003` (1), `spec-0008` (4), `spec-0015` (2), `spec-0017` (8). The
+   scoped gate this stage runs sees the 8; `build` runs the profile **unscoped** and sees all 15, so eight
+   is the number this stage can act on and fifteen is the number a gate reports.
+
+   The eight are NOT "the 6 `blocked` and 2 `todo` rows here", which is how this item read for several
+   rounds: § "Ledger rows advanced" measures that false in both directions — four of the eight are
+   `refactor` in the ledger while `CR-20260820-0007` holds them, and `TDD-0070` is named in no blocked set
+   at all.
 
    Of the two `todo` rows, **only `TDD-0070` is on branch 3** (`DR-0017-0010`, PASS at P1d pass 6).
    `TDD-0069` is `blocked` on `CR-20260820-0012` and takes **no** RED-provenance branch at all: a
@@ -1570,11 +1581,15 @@ something is written, believed without reading it.
    reason the `DR-ID` column was not widened to carry a `Blocked-By` value. An earlier version of this
    item said both rows were parked on branch 3 — the same false statement § "Ledger rows advanced"
    reports as corrected after standing two rounds, surviving here in different words.
-4. **The gate still exits 1 for other specs.** `--spec 0017` scopes the spec-owned rules, and
-   `spec-0003` (8 US), `spec-0006` (1), `spec-0008` (1) and `spec-0015` (**1**) keep `QFAI-ATDD-111`
-   at 11 items repo-wide, plus `US-0017-0007` makes 12. The first version wrote `spec-0015 (2)`,
-   which round 2 caught and which was self-detectable: `8 + 1 + 1 + 2 = 12`, not the 11 stated in the
-   same sentence. It was inherited from round 1's report without re-derivation — the same failure as
+4. **The gate still exits 1 for other specs, and none of them is this one.** `--spec 0017` scopes the
+   spec-owned rules, and `spec-0003` (8 US), `spec-0006` (1), `spec-0008` (1) and `spec-0015` (**1**) are
+   `QFAI-ATDD-111`'s eleven items repo-wide — **all of them**. This spec contributes none, because
+   `US-0017-0007` is covered.
+
+   That sentence used to end "plus `US-0017-0007` makes 12", which was double-counting a row already
+   inside the eleven and is why it had to contradict its own arithmetic to be written. Round 2 caught an
+   earlier version writing `spec-0015 (2)` — self-detectable, since `8 + 1 + 1 + 2 = 12` against the 11
+   stated in the same sentence — and round 12 caught the "plus one" surviving the correction. It was inherited from round 1's report without re-derivation — the same failure as
    the "all 71 rows" sentence, one layer down. Recorded as a cross-spec obligation per this
    skill's CRITICAL CONSTRAINTS: not this stage's work, closing it is each owning spec's next
    `/qfai-atdd` run, and the repo-wide run belongs to `/qfai-verify`.
@@ -2037,7 +2052,9 @@ not in this record.
 ### The full profile
 
 `validate --profile full` reports **`error=4`** at this stage's HEAD, and `build` runs that profile.
-Two are `QFAI-ATDD-111` / `-112` **unscoped** — 12 US across five specs and 15 TCs across four, of which this spec owns 1 and 8; `build` needs all fifteen; the other two are `QFAI-REVIEW-004` / `-005` against
+Two are `QFAI-ATDD-111` / `-112` **unscoped** — **11 US across four specs, of which this spec owns
+NONE**, and 15 TCs across four, of which it owns 8; `build` needs all of them; the other two are
+`QFAI-REVIEW-004` / `-005` against
 **this stage's own in-flight review pack** — a pack cannot satisfy the layout contract until its last
 reviewer has landed and it has been sealed. Round 4's gatekeeper found this undisclosed, and it is the
 same class of gap as the two packs that were missing `summary.json`: masked in CI only because the
@@ -2147,22 +2164,28 @@ Round 1's pack, for continuity:
 ### Review packs and their seals
 
 **Twelve** packs, one per round. The seal is *supposed* to be fixed at the moment the last reviewer
-response lands, and § "When each pack was actually sealed" below measures four of seven closed packs
-missing it by one to three commits. This sentence asserted the practice for two rounds while its own
-table refuted it and before this
-record's verdict was written. The count is derived —
-`packages/qfai/tests/assets/stageEvidenceCounts.test.ts` compares the packs named here against the
-directories on disk — but the **word** was not, and it said "Three" in round 4 and "Four" from then
-until round 7 caught it. It is now measured with the rest. Rounds 2 and 3 were **missing their `summary.json`** until round 3 found
-it; round 4's was missing until round 4's gatekeeper found the same thing again, this time as two live
-`--profile full` errors. Each was written, then sealed — the same sequence round 1's pack went through,
-which this record had documented while leaving the next pack in the state it described, twice.
+response lands, and § "When each pack was actually sealed" below measures the gap **per round**, without a
+summary figure — because this sentence carried one ("four of seven closed packs") while the section it
+points at had already retracted that exact wording for going stale as packs closed. One section asserting
+what another declares withdrawn is worse than either alone: a reader who finds the assertion first has no
+reason to keep reading. Both numerator and denominator move every round; the table is the claim.
 
-The count itself was wrong until now: this section said "Three packs" against four directories, which
-round 4's `completion-reviewer` caught. It is now derived —
-`packages/qfai/tests/assets/stageEvidenceCounts.test.ts` compares the packs this section names against
-the directories on disk, and it caught the fourth seal missing on its first run, because the edit that
-was supposed to add it aborted on a later needle and wrote nothing.
+**The pack count is derived, and its history is worth one telling rather than two.**
+`packages/qfai/tests/assets/stageEvidenceCounts.test.ts` compares the packs this section names against the
+directories on disk. Before that, the figure was wrong twice in different ways: the section said "Three
+packs" against four directories, which round 4's `completion-reviewer` caught, and the numeral itself was
+never derived — it read "Three" in round 4 and "Four" from then until round 7. The guard caught a missing
+fourth seal on its first run, because the edit that was supposed to add it aborted on a later needle and
+wrote nothing.
+
+This paragraph existed twice, twelve lines apart, in a section whose subject is records that disagree with
+themselves — and the two copies had drifted, attributing the original defect to different causes. Merged
+here, with both facts kept.
+
+Rounds 2 and 3 were **missing their `summary.json`** until round 3 found it; round 4's was missing until
+round 4's gatekeeper found the same thing again, this time as two live `--profile full` errors. Each was
+written, then sealed — the same sequence round 1's pack went through, which this record had documented while
+leaving the next pack in the state it described, twice.
 
 ```text
 Review pack:       .qfai/review/review-20260820200000000/            (round 1)
