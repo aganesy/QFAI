@@ -302,7 +302,7 @@ Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
 
 ## Completion Contract (Shared)
 
-Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the Test command from `catalog/tech.md#standard-commands-copy-paste`, run over the items this session moved to `done` — a suite that did not execute is UNRUN, not a pass.
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 ### Item completion checklist (12-point gate)
