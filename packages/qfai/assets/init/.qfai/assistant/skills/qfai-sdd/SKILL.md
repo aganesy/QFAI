@@ -135,6 +135,26 @@ and every reviewer response must carry its `Authored/edited under review:` attes
 
 Reviewer routing is fixed by `.qfai/assistant/manifest/agent-routing.yml` and `.qfai/assistant/manifest/review-profiles.yml`.
 
+### Routing Phase Crosswalk (Normative)
+
+`agent-routing.yml` names three phases for this skill; `## Stage and Phase Order (Fixed)` names
+nine stages and phases. They are one sequence in two vocabularies, and this table is the only
+mapping between them. Each routing phase spans a contiguous run of the fixed order: its mandatory
+agents run inside that span, its blocking agents MUST return `PASS` before the span's last entry is
+left, and `rerun_policy` is evaluated against the artifacts produced inside that same span — that
+span is the "changed scope" of `changed-scope-dependents`.
+
+| Routing phase (`agent-routing.yml`) | Spans (from `## Stage and Phase Order (Fixed)`)                                                                                                                          | Blocking gate                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| `slice-and-scope`                   | Stage 0 Preflight, Stage 1 Triage                                                                                                                                        | `delivery-planner` must PASS the persisted Triage table before Phase 0 opens      |
+| `design`                            | Phase 0 Contracts-first, Phase 1 Outline, Phase 2 Slice, Phase 2b Seed tdd/test-list.md, Phase 2c Obligation reconciliation, Phase 3 Plan finalize, Phase 4 Delta update | `solution-architect` must PASS the drafted artifacts before the Quality Gate runs |
+| `review`                            | the terminal gates that follow Phase 4: `## Quality Gate`, the Reviewer Gate section below, `## Done Declaration`                                                        | `completion-reviewer` must PASS before DONE is declared                           |
+
+Every fixed-order entry falls inside exactly one span and the spans do not overlap, so honouring
+per-phase blocking never reorders the fixed order. In no-argument batch mode the `design` span fans
+out per spec while `slice-and-scope` and `review` run once per invocation, per
+`### No-argument batch delegation (MUST)`.
+
 ### Reviewer Gate (MUST)
 
 - Default: `completion-reviewer`.
@@ -354,6 +374,7 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 project_memory:
 
 - Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 2c Obligation reconciliation → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
+- `agent-routing.yml`'s `slice-and-scope` / `design` / `review` phase IDs are spans over that fixed order, not extra steps: resolve them through `### Routing Phase Crosswalk (Normative)` before placing any mandatory or blocking agent.
 - Phase 2c reconciles contracts against the BR/AC written after them: Contracts-first freezes the contract before its obligations exist, and Phase 2c is the only step that checks they are realizable.
 - Phase 2b seeds each target spec's tdd/test-list.md from 06_Test-Cases.md (one row per coverage-target TC, Status = todo) and is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence.
 - Append-first is the Stage 1 default: UPDATE on an active spec whose subject tokens overlap; CREATE only when there is zero overlap AND the REQ adds a new CAP-NNNN, registered before the CREATE row.
