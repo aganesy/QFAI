@@ -682,7 +682,12 @@ function resolveJsonPath(root: string, jsonPath: string): string {
 
 const GITHUB_ANNOTATION_LIMIT = 100;
 
-const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
+/**
+ * Human-readable "expected state" per issue code. Exported so a test can assert
+ * that every code an emitter can raise at error severity is either catalogued
+ * here or explicitly recorded as pending, instead of shipping without one.
+ */
+export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-SCOPE-001": "Every `--spec` value resolves to a 1-4 digit spec number.",
   "QFAI-SCOPE-002": "Every `--spec` value names a spec directory that exists.",
   E_SPEC_MISSING_FILESET: "Spec Pack required files (01..18) are complete.",
@@ -931,7 +936,52 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
   "QFAI-CONTRACT-040":
     "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM). Pairing is by normalized field name, not by an explicit pair declaration.",
+  "QFAI-BPAP-001": "Every BP/AP rule file under `.qfai/contracts/design/` is readable.",
+  "QFAI-BPAP-002": "Every BP/AP rule file parses as YAML.",
+  "QFAI-BPAP-003": "Every BP/AP rule file holds a top-level YAML array of rule entries.",
+  "QFAI-BPAP-004": "Every BP entry has an `id` of the form `BP-XXXX`.",
+  "QFAI-BPAP-005": "BP IDs are unique across every BP rule file.",
+  "QFAI-BPAP-006": "Every BP entry populates all of its required fields.",
+  "QFAI-BPAP-007": "Every AP entry has an `id` of the form `AP-XXXX`.",
+  "QFAI-BPAP-008": "AP IDs are unique across every AP rule file.",
+  "QFAI-BPAP-009": "Every AP entry populates all of its required fields.",
+  "QFAI-BPAP-010": "Every AP entry declares a `detection_method` from the supported set.",
+  "QFAI-BPAP-011": "Every BP/AP entry declares a `severity` from the supported set.",
+  "QFAI-BPAP-012": "Every BP/AP entry declares a `platform` from the supported set.",
 };
+
+/**
+ * Human-readable remediation per issue code, for codes whose emitters cannot
+ * say more at the call site than the message already does. An emitter that
+ * passes `suggested_action` always wins over this catalog: it knows the concrete
+ * values that failed the check.
+ */
+export const ISSUE_FIX_BY_CODE: Record<string, string> = {
+  "QFAI-BPAP-001":
+    "Restore read access to the file, or delete it if it is no longer part of the rule set.",
+  "QFAI-BPAP-002": "Correct the YAML syntax the parse error points at, then rerun validate.",
+  "QFAI-BPAP-003":
+    "Rewrite the file as a top-level YAML sequence of entries (`- id: BP-0001` ...); a mapping at the root is not a rule set.",
+  "QFAI-BPAP-004": "Rename the entry's `id` to `BP-` followed by four digits, e.g. `BP-0001`.",
+  "QFAI-BPAP-005":
+    "Give one of the colliding entries a fresh BP ID, or merge them if they state the same practice.",
+  "QFAI-BPAP-006":
+    "Add the missing field to the BP entry, or drop the entry if it is no longer needed.",
+  "QFAI-BPAP-007": "Rename the entry's `id` to `AP-` followed by four digits, e.g. `AP-0001`.",
+  "QFAI-BPAP-008":
+    "Give one of the colliding entries a fresh AP ID, or merge them if they state the same anti-pattern.",
+  "QFAI-BPAP-009":
+    "Add the missing field to the AP entry, or drop the entry if it is no longer needed.",
+  "QFAI-BPAP-010": "Set `detection_method` to one of the values the message lists.",
+  "QFAI-BPAP-011": "Set `severity` to one of the values the message lists.",
+  "QFAI-BPAP-012": "Set `platform` to one of the values the message lists.",
+};
+
+/** Printed as `expected` when a code has no catalog entry. */
+export const UNCATALOGUED_EXPECTED = "Rule compliance";
+
+/** Printed as `fix` when a code has neither a `suggested_action` nor a catalog entry. */
+export const UNCATALOGUED_FIX = "Follow the expected rule and rerun validate.";
 
 function resolveIssueTarget(issue: Issue): string {
   if (issue.file && issue.refs && issue.refs.length > 0) {
@@ -950,13 +1000,18 @@ function resolveIssueTarget(issue: Issue): string {
  * Human-readable "expected state" a report prints for an issue code. Exported so
  * the catalog entry for a code can be asserted against the single definition the
  * emitting validator uses, instead of drifting from it silently.
+ *
+ * `issue.rule` is deliberately not a fallback: it holds an internal rule token
+ * (`bpApDb.duplicateId`), and printing it in the `expected` field made a missing
+ * catalog entry look like a value rather than an omission.
  */
 export function resolveIssueExpected(issue: Issue): string {
-  return ISSUE_EXPECTED_BY_CODE[issue.code] ?? issue.rule ?? "Rule compliance";
+  return ISSUE_EXPECTED_BY_CODE[issue.code] ?? UNCATALOGUED_EXPECTED;
 }
 
-function resolveIssueFix(issue: Issue): string {
-  return issue.suggested_action ?? "Follow the expected rule and rerun validate.";
+/** Remediation a report prints for an issue: emitter first, then catalog. */
+export function resolveIssueFix(issue: Issue): string {
+  return issue.suggested_action ?? ISSUE_FIX_BY_CODE[issue.code] ?? UNCATALOGUED_FIX;
 }
 
 function emitTextField(label: string, value: string): void {

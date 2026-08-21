@@ -3,6 +3,16 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import {
+  ISSUE_EXPECTED_BY_CODE,
+  ISSUE_FIX_BY_CODE,
+  UNCATALOGUED_EXPECTED,
+  UNCATALOGUED_FIX,
+  resolveIssueExpected,
+  resolveIssueFix,
+} from "../../src/cli/commands/validate.js";
+import { collectIssueCodeUsage } from "../helpers/issueCodes.js";
+
 async function collectTsFiles(dir: string): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
   const files: string[] = [];
@@ -148,5 +158,419 @@ describe("issue code uniqueness", () => {
     const validatePath = path.resolve(__dirname, "../../src/cli/commands/validate.ts");
     const validateContent = await readFile(validatePath, "utf-8");
     expect(validateContent).toContain("QFAI-PROT-150");
+  });
+});
+
+// Report-metadata ratchet.
+//
+// `qfai validate` prints an `expected:` and a `fix:` line for every error
+// finding. Both resolve from a per-code catalog in validate.ts, and a code with
+// no entry degrades to a generic string that tells the reader nothing. The two
+// sets below record the codes that are still generic today. They may only
+// shrink: the tests keep a newly added code from shipping without a decision,
+// and fail when an entry is written but the code stays listed here.
+const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
+  "D-DEPRECATED-PATH",
+  "D-SCAFFOLD-PLACEHOLDER",
+  "D-SURFACE-TYPE-MISSING",
+  "QFAI-AC-001",
+  "QFAI-AGENT-004",
+  "QFAI-AGENT-005",
+  "QFAI-AGENT-006",
+  "QFAI-AGENT-007",
+  "QFAI-AGENT-008",
+  "QFAI-AGENT-009",
+  "QFAI-AGENT-010",
+  "QFAI-AGENT-011",
+  "QFAI-AGENT-012",
+  "QFAI-AGENT-013",
+  "QFAI-ASSETS-001",
+  "QFAI-ASSETS-002",
+  "QFAI-ATDD-104",
+  "QFAI-ATDD-115",
+  "QFAI-BFLOW-001",
+  "QFAI-BFLOW-002",
+  "QFAI-CONTRACT-010",
+  "QFAI-CONTRACT-011",
+  "QFAI-CONTRACT-012",
+  "QFAI-CONTRACT-013",
+  "QFAI-CONTRACT-014",
+  "QFAI-CONTRACT-020",
+  "QFAI-CONTRACT-021",
+  "QFAI-COV-101",
+  "QFAI-COV-102",
+  "QFAI-COV-103",
+  "QFAI-COV-104",
+  "QFAI-CRIT-001",
+  "QFAI-CRIT-002",
+  "QFAI-CRIT-003",
+  "QFAI-CRIT-004",
+  "QFAI-CRIT-005",
+  "QFAI-CRIT-006",
+  "QFAI-CRIT-008",
+  "QFAI-CRIT-009",
+  "QFAI-CRIT-010",
+  "QFAI-DB-002",
+  "QFAI-DT-001",
+  "QFAI-DT-002",
+  "QFAI-DT-004",
+  "QFAI-DT-007",
+  "QFAI-DT-008",
+  "QFAI-DT-009",
+  "QFAI-DT-010",
+  "QFAI-EX-001",
+  "QFAI-EX-002",
+  "QFAI-EX-003",
+  "QFAI-EX-004",
+  "QFAI-EX-005",
+  "QFAI-EX-007",
+  "QFAI-FID-001",
+  "QFAI-FID-002",
+  "QFAI-FID-003",
+  "QFAI-FID-004",
+  "QFAI-FID-005",
+  "QFAI-FID-006",
+  "QFAI-FID-007",
+  "QFAI-FID-008",
+  "QFAI-FID-009",
+  "QFAI-ID-001",
+  "QFAI-LAYER-100",
+  "QFAI-LAYER-101",
+  "QFAI-LAYER-102",
+  "QFAI-LAYER-103",
+  "QFAI-LAYER-104",
+  "QFAI-LAYER-105",
+  "QFAI-LAYER-106",
+  "QFAI-LEDGER-001",
+  "QFAI-MERMAID-001",
+  "QFAI-MMD-001",
+  "QFAI-MMD-002",
+  "QFAI-MMD-003",
+  "QFAI-MMD-004",
+  "QFAI-MOCK-001",
+  "QFAI-MOCK-002",
+  "QFAI-MOCK-003",
+  "QFAI-MOCK-004",
+  "QFAI-MOCK-009",
+  "QFAI-MOCK-010",
+  "QFAI-MOCK-011",
+  "QFAI-MOCK-012",
+  "QFAI-NAV-001",
+  "QFAI-NAV-004",
+  "QFAI-NAV-005",
+  "QFAI-ORPHAN-106",
+  "QFAI-ORPHAN-107",
+  "QFAI-PLAN-001",
+  "QFAI-PLAN-005",
+  "QFAI-PROT-001",
+  "QFAI-PROT-002",
+  "QFAI-PROT-003",
+  "QFAI-PROT-004",
+  "QFAI-PROT-005",
+  "QFAI-PROT-006",
+  "QFAI-PROT-007",
+  "QFAI-PROT-008",
+  "QFAI-PROT-009",
+  "QFAI-REQCTX-003",
+  "QFAI-REQCTX-020",
+  "QFAI-REQCTX-021",
+  "QFAI-RESEARCH-001",
+  "QFAI-RESEARCH-003",
+  "QFAI-RESEARCH-004",
+  "QFAI-RESEARCH-005",
+  "QFAI-RESEARCH-006",
+  "QFAI-RESEARCH-007",
+  "QFAI-RESEARCH-008",
+  "QFAI-RESEARCH-009",
+  "QFAI-RESEARCH-010",
+  "QFAI-RESEARCH-011",
+  "QFAI-SKILLS-010",
+  "QFAI-SKILLS-011",
+  "QFAI-SPACK-090",
+  "QFAI-SPACK-101",
+  "QFAI-SPLIT-100",
+  "QFAI-SPLIT-101",
+  "QFAI-SPLIT-102",
+  "QFAI-SPLIT-103",
+  "QFAI-SPLIT-104",
+  "QFAI-SPLIT-105",
+  "QFAI-STATUS-001",
+  "QFAI-STATUS-002",
+  "QFAI-STATUS-003",
+  "QFAI-STATUS-004",
+  "QFAI-STATUS-005",
+  "QFAI-STATUS-006",
+  "QFAI-TC-001",
+  "QFAI-TEST-001",
+  "QFAI-TRACE-001",
+  "QFAI-TRACE-100",
+  "QFAI-TRACE-101",
+  "QFAI-TRACE-102",
+  "QFAI-TRACE-103",
+  "QFAI-TRACE-104",
+  "QFAI-TRACE-105",
+  "QFAI-TRACE-106",
+  "QFAI-TRACE-107",
+  "QFAI-TRACE-108",
+  "QFAI-TRACE-109",
+  "QFAI-TRACE-110",
+  "QFAI-TRACE-111",
+  "QFAI-TRACE-112",
+  "QFAI-TRACE-113",
+  "QFAI-TRACE-114",
+  "QFAI-TRACE-118",
+  "QFAI-TRACE-119",
+  "QFAI-TRACE-120",
+  "QFAI-TRACE-121",
+  "QFAI-TRACE-122",
+  "QFAI-TRACE-123",
+  "QFAI-TRACE-124",
+  "QFAI-TRIAGE-002",
+  "QFAI-TRIAGE-003",
+  "QFAI-TRIAGE-004",
+  "QFAI-TRIAGE-005",
+  "QFAI-TRIAGE-006",
+  "QFAI-WAIVER-001",
+  "QFAI-WAIVER-002",
+  "R-AUTOPILOT-POLICY-MISSING",
+  "R-CERTIFY-VERIFY-CIRCULAR",
+  "R-HANDOFF-INCOMPLETE",
+  "R-MOCK-HREF-DRIFT",
+  "R-PROMPT-SCANNER-DRIFT",
+  "TDDLIST_BLOCKED_MISSING_REF",
+  "TDDLIST_COVERAGE_LAYER_MISMATCH",
+  "TDDLIST_DUPLICATE_ID",
+  "TDDLIST_EVIDENCE_EMPTY",
+  "TDDLIST_EVIDENCE_STATUS_ONLY",
+  "TDDLIST_EXCEPTION_MISSING_DR",
+  "TDDLIST_INVALID_ID",
+  "TDDLIST_INVALID_OBLIGATION_REF",
+  "TDDLIST_INVALID_STATUS",
+  "TDDLIST_OBLIGATION_LAYER_MISMATCH",
+  "TDDLIST_OWNING_MODULE_NOT_SINGULAR",
+  "TDDLIST_REQUIRED_COLUMN_MISSING",
+  "TDDLIST_TABLE_MISSING",
+  "TDDLIST_TC_NOT_COVERED",
+  "TDDLIST_TEST_FILE_MISSING",
+  "TRACE_DOWNSTREAM_REF",
+  "TRACE_SHARED_SCOPE_VIOLATION",
+  "W-SKILL-DOC-BROKEN-REF",
+  "W-STALE-REFERENCE",
+]);
+
+const PENDING_FIX_CATALOG_CODES = new Set<string>([
+  "D-DEPRECATED-PATH",
+  "QFAI-AC-001",
+  "QFAI-AGENT-004",
+  "QFAI-AGENT-005",
+  "QFAI-AGENT-006",
+  "QFAI-AGENT-007",
+  "QFAI-AGENT-008",
+  "QFAI-AGENT-009",
+  "QFAI-AGENT-010",
+  "QFAI-AGENT-011",
+  "QFAI-AGENT-012",
+  "QFAI-AGENT-013",
+  "QFAI-ASSETS-001",
+  "QFAI-ASSETS-002",
+  "QFAI-CONTRACT-010",
+  "QFAI-CONTRACT-011",
+  "QFAI-CONTRACT-012",
+  "QFAI-CONTRACT-013",
+  "QFAI-CONTRACT-020",
+  "QFAI-CONTRACT-021",
+  "QFAI-DCON-009",
+  "QFAI-DCON-012",
+  "QFAI-DT-001",
+  "QFAI-DT-002",
+  "QFAI-DT-004",
+  "QFAI-DT-007",
+  "QFAI-DT-008",
+  "QFAI-DT-009",
+  "QFAI-DT-010",
+  "QFAI-EX-001",
+  "QFAI-EX-002",
+  "QFAI-EX-003",
+  "QFAI-EX-004",
+  "QFAI-EX-005",
+  "QFAI-EX-007",
+  "QFAI-FID-001",
+  "QFAI-FID-002",
+  "QFAI-FID-003",
+  "QFAI-FID-004",
+  "QFAI-FID-005",
+  "QFAI-FID-006",
+  "QFAI-FID-007",
+  "QFAI-FID-008",
+  "QFAI-FID-009",
+  "QFAI-ID-001",
+  "QFAI-LAYER-100",
+  "QFAI-LAYER-101",
+  "QFAI-LAYER-102",
+  "QFAI-LAYER-103",
+  "QFAI-LAYER-104",
+  "QFAI-LAYER-105",
+  "QFAI-LAYER-106",
+  "QFAI-LEDGER-001",
+  "QFAI-MOCK-001",
+  "QFAI-MOCK-002",
+  "QFAI-MOCK-003",
+  "QFAI-MOCK-004",
+  "QFAI-MOCK-009",
+  "QFAI-MOCK-010",
+  "QFAI-MOCK-011",
+  "QFAI-MOCK-012",
+  "QFAI-NAV-001",
+  "QFAI-NAV-004",
+  "QFAI-NAV-005",
+  "QFAI-ORPHAN-106",
+  "QFAI-ORPHAN-107",
+  "QFAI-PROT-001",
+  "QFAI-PROT-002",
+  "QFAI-PROT-003",
+  "QFAI-PROT-004",
+  "QFAI-PROT-005",
+  "QFAI-PROT-006",
+  "QFAI-PROT-007",
+  "QFAI-PROT-008",
+  "QFAI-PROT-009",
+  "QFAI-PROT-251",
+  "QFAI-PROT-252",
+  "QFAI-PROT-253",
+  "QFAI-RESEARCH-001",
+  "QFAI-RESEARCH-003",
+  "QFAI-RESEARCH-004",
+  "QFAI-RESEARCH-005",
+  "QFAI-RESEARCH-006",
+  "QFAI-RESEARCH-007",
+  "QFAI-RESEARCH-008",
+  "QFAI-RESEARCH-009",
+  "QFAI-RESEARCH-010",
+  "QFAI-RESEARCH-011",
+  "QFAI-REVIEW-003",
+  "QFAI-REVIEW-004",
+  "QFAI-REVIEW-005",
+  "QFAI-REVIEW-006",
+  "QFAI-REVIEW-007",
+  "QFAI-SKILLS-010",
+  "QFAI-SKILLS-011",
+  "QFAI-SPLIT-100",
+  "QFAI-SPLIT-101",
+  "QFAI-SPLIT-102",
+  "QFAI-SPLIT-103",
+  "QFAI-SPLIT-104",
+  "QFAI-SPLIT-105",
+  "QFAI-TC-001",
+  "QFAI-TRACE-001",
+  "QFAI-TRACE-100",
+  "QFAI-TRACE-101",
+  "QFAI-TRACE-102",
+  "QFAI-TRACE-103",
+  "QFAI-TRACE-104",
+  "QFAI-TRACE-105",
+  "QFAI-TRACE-106",
+  "QFAI-TRACE-107",
+  "QFAI-TRACE-108",
+  "QFAI-TRACE-109",
+  "QFAI-TRACE-110",
+  "QFAI-TRACE-111",
+  "QFAI-TRACE-112",
+  "QFAI-TRACE-113",
+  "QFAI-TRACE-114",
+  "QFAI-TRACE-118",
+  "QFAI-TRACE-119",
+  "QFAI-TRACE-120",
+  "QFAI-TRACE-121",
+  "QFAI-TRACE-122",
+  "QFAI-TRACE-123",
+  "QFAI-WAIVER-001",
+  "QFAI-WAIVER-002",
+  "R-AUTOPILOT-POLICY-MISSING",
+  "R-CERTIFY-VERIFY-CIRCULAR",
+  "R-HANDOFF-INCOMPLETE",
+  "R-MOCK-HREF-DRIFT",
+  "R-PROMPT-SCANNER-DRIFT",
+  "TDDLIST_DUPLICATE_ID",
+  "TDDLIST_EXCEPTION_MISSING_DR",
+  "TDDLIST_INVALID_ID",
+  "TDDLIST_INVALID_OBLIGATION_REF",
+  "TDDLIST_INVALID_STATUS",
+  "TDDLIST_REQUIRED_COLUMN_MISSING",
+  "TDDLIST_TABLE_MISSING",
+  "TDDLIST_TEST_FILE_MISSING",
+  "TRACE_DOWNSTREAM_REF",
+  "TRACE_SHARED_SCOPE_VIOLATION",
+  "W-SKILL-DOC-BROKEN-REF",
+  "W-STALE-REFERENCE",
+]);
+
+async function collectErrorCapableUsage(): Promise<
+  Map<string, { errorCapable: boolean; hasSuggestedAction: boolean }>
+> {
+  const usage = await collectIssueCodeUsage(path.resolve(__dirname, "../../src"));
+  return new Map([...usage].filter(([, entry]) => entry.errorCapable));
+}
+
+describe("issue report metadata", () => {
+  it("every error-capable issue code has an expected-state catalog entry or is pending", async () => {
+    const usage = await collectErrorCapableUsage();
+    const missing = [...usage.keys()]
+      .filter((code) => !(code in ISSUE_EXPECTED_BY_CODE))
+      .filter((code) => !PENDING_EXPECTED_CATALOG_CODES.has(code))
+      .sort();
+    expect(missing).toEqual([]);
+  });
+
+  it("every error-capable issue code has a remediation source or is pending", async () => {
+    const usage = await collectErrorCapableUsage();
+    const missing = [...usage]
+      .filter(([code, entry]) => !entry.hasSuggestedAction && !(code in ISSUE_FIX_BY_CODE))
+      .map(([code]) => code)
+      .filter((code) => !PENDING_FIX_CATALOG_CODES.has(code))
+      .sort();
+    expect(missing).toEqual([]);
+  });
+
+  it("keeps no stale entries on either pending list", async () => {
+    const usage = await collectErrorCapableUsage();
+    const staleExpected = [...PENDING_EXPECTED_CATALOG_CODES]
+      .filter((code) => !usage.has(code) || code in ISSUE_EXPECTED_BY_CODE)
+      .sort();
+    const staleFix = [...PENDING_FIX_CATALOG_CODES]
+      .filter(
+        (code) =>
+          !usage.has(code) ||
+          code in ISSUE_FIX_BY_CODE ||
+          (usage.get(code)?.hasSuggestedAction ?? false),
+      )
+      .sort();
+    expect({ staleExpected, staleFix }).toEqual({ staleExpected: [], staleFix: [] });
+  });
+
+  it("reports an uncatalogued code honestly instead of printing its internal rule token", () => {
+    const expected = resolveIssueExpected({
+      code: "QFAI-NOT-A-CATALOGUED-CODE",
+      severity: "error",
+      category: "canonical",
+      message: "Duplicate BP ID: BP-0001",
+      rule: "bpApDb.duplicateId",
+    });
+    expect(expected).toBe(UNCATALOGUED_EXPECTED);
+    expect(expected).not.toContain("bpApDb");
+  });
+
+  it("resolves remediation from the emitter first, then the catalog, then the generic", () => {
+    const base = { severity: "error", category: "canonical", message: "Duplicate BP ID" } as const;
+    expect(
+      resolveIssueFix({
+        ...base,
+        code: "QFAI-BPAP-005",
+        suggested_action: "Do the specific thing.",
+      }),
+    ).toBe("Do the specific thing.");
+    const catalogued = resolveIssueFix({ ...base, code: "QFAI-BPAP-005" });
+    expect(catalogued).not.toBe(UNCATALOGUED_FIX);
+    expect(catalogued).toContain("BP ID");
+    expect(resolveIssueFix({ ...base, code: "QFAI-NOT-A-CATALOGUED-CODE" })).toBe(UNCATALOGUED_FIX);
   });
 });
