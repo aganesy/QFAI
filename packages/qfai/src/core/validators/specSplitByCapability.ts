@@ -8,6 +8,31 @@ import { exists, issue, readSafe, to4, uniqueMatches } from "./utils.js";
 
 const CAP_ID_RE = /\bCAP-\d{4}\b/g;
 
+/**
+ * Spec directories for a list of `spec-NNNN` ids, for `details.relatedFiles`.
+ *
+ * The three count findings are filed against `specsRoot`, which no spec owns,
+ * and the ids they name travel in `refs` — a field `isFindingInSpecScope` does
+ * not read. Every one of them therefore survived `--spec`, so a slice worker
+ * gating on its own spec failed on a sibling agent's in-flight `spec-NNNN/`
+ * from the moment that directory appeared until its CAP row landed. Listing the
+ * implicated directories under `relatedFiles` lets the scope filter derive the
+ * owners, the representative-plus-`relatedFiles` shape `QFAI-ID-001` uses.
+ *
+ * `known` maps a lower-cased id to the directory `collectSpecEntries`
+ * enumerated, so a `SPEC-0004/` spelling on a case-sensitive filesystem keeps
+ * its real path. A missing spec has no entry and its path is synthesised: the
+ * finding is then owned by a directory that does not exist yet, which is
+ * precisely the spec whose run has to see it.
+ */
+function specDirPaths(
+  specsRoot: string,
+  specIds: readonly string[],
+  known: ReadonlyMap<string, string>,
+): string[] {
+  return specIds.map((specId) => known.get(specId) ?? path.join(specsRoot, specId));
+}
+
 export async function validateSpecSplitByCapability(
   root: string,
   config: QfaiConfig,
@@ -57,6 +82,16 @@ export async function validateSpecSplitByCapability(
     return issues;
   }
 
+  const specDirById = new Map<string, string>();
+  for (const entry of layeredEntries) {
+    specDirById.set(path.basename(entry.dir).toLowerCase(), entry.dir);
+  }
+  const expectedSpecIds = capIds.map((_, index) => `spec-${to4(index + 1)}`);
+  const missingSpecIds = expectedSpecIds.filter((specId) => !specDirById.has(specId));
+  const extraSpecIds = Array.from(specDirById.keys()).filter(
+    (specId) => !expectedSpecIds.includes(specId),
+  );
+
   if (capIds.length !== layeredEntries.length) {
     issues.push(
       issue(
@@ -65,16 +100,16 @@ export async function validateSpecSplitByCapability(
         "error",
         specsRoot,
         "specSplitByCapability.count",
+        undefined,
+        "canonical",
+        undefined,
+        {
+          relatedFiles: specDirPaths(specsRoot, [...missingSpecIds, ...extraSpecIds], specDirById),
+        },
       ),
     );
   }
 
-  const actualSpecIds = new Set(
-    layeredEntries.map((entry) => path.basename(entry.dir).toLowerCase()),
-  );
-  const expectedSpecIds = capIds.map((_, index) => `spec-${to4(index + 1)}`);
-
-  const missingSpecIds = expectedSpecIds.filter((specId) => !actualSpecIds.has(specId));
   if (missingSpecIds.length > 0) {
     issues.push(
       issue(
@@ -84,13 +119,13 @@ export async function validateSpecSplitByCapability(
         specsRoot,
         "specSplitByCapability.specCount",
         missingSpecIds,
+        "canonical",
+        undefined,
+        { relatedFiles: specDirPaths(specsRoot, missingSpecIds, specDirById) },
       ),
     );
   }
 
-  const extraSpecIds = Array.from(actualSpecIds).filter(
-    (specId) => !expectedSpecIds.includes(specId),
-  );
   if (extraSpecIds.length > 0) {
     issues.push(
       issue(
@@ -100,6 +135,9 @@ export async function validateSpecSplitByCapability(
         specsRoot,
         "specSplitByCapability.specCount",
         extraSpecIds,
+        "canonical",
+        undefined,
+        { relatedFiles: specDirPaths(specsRoot, extraSpecIds, specDirById) },
       ),
     );
   }
