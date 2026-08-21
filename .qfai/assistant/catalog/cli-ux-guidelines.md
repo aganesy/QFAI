@@ -42,6 +42,9 @@ QFAI が定義する、`npx qfai validate` の UI/UX 関連出力ガイドライ
 - 許容値: `web`, `windows`, `mobile-ios`, `mobile-android`, `cross-platform`
 - 未指定時: 自動検出（config → project files → fallback to `web`）
 - 未知の値: warning 発行。platform 値は保持しつつ、実質的に common ルールのみ適用
+- 参照する profile: `prototyping` / `verify` / `full` / `saas-package` のみ。
+  `discussion` / `sdd` / `atdd` / `tdd` は platform を読まないため、これらに
+  `--platform` を渡すと未使用である旨の warning のみを発行する（未知値チェックは走らない）
 
 ## Known Limitations
 
