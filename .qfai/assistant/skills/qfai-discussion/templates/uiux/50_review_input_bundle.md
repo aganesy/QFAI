@@ -25,6 +25,6 @@ Consolidate all sidecar artifacts into a review-ready bundle for design reviewer
 
 - [ ] Root `DESIGN.md` aligns with surface type and project constraints
 - [ ] Reference pool is complete and translated into local design decisions
-- [ ] Evaluator scoring covers all four canonical UX axes (information architecture / navigation flow / usability / functionality) — fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES`
+- [ ] Evaluator scoring covers all four canonical UX axes (information architecture / navigation flow / usability / functionality) — fixed by the evaluator review schema in `.qfai/assistant/skills/qfai-prototyping/references/reviewer-prompt.md`
 - [ ] One-lineage handling is explicit (latest iteration accepted; no best-of-history)
 - [ ] Screen contracts cover all required states

@@ -17,12 +17,10 @@ these `taskFidelity` keys with concrete values:
   four reachable states (default / hover / focused / disabled), with a
   pass/fail observation per state?
 
-The SSOT for this list lives at
-`packages/qfai/src/core/validators/taskFidelityKeywords.ts`
-(`TASK_FIDELITY_REQUIRED_KEYWORDS`). The validator (`QFAI-CRIT-009`),
-the `--capture` template emitter, and this document all read from
-that constant so the keyword set cannot silently drift between the
-three surfaces.
+This document is the SSOT for the list: the keywords named above are
+exactly the ones the validator (`QFAI-CRIT-009`) requires and the ones
+the `--capture` template emitter seeds, so the keyword set cannot
+silently drift between the three surfaces.
 
 ## Canonical markdown structure
 

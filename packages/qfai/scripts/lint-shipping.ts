@@ -88,6 +88,20 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     // not assumptions. Only flag in runtime data.
     appliesTo: ["init-runtime"],
   },
+  {
+    // Shipped assets must not cite the FRAMEWORK's own source tree. After
+    // `qfai init` there is no `packages/qfai/`, no `core/` and no `cli/` in
+    // the consuming repo, so such a citation names a file the reader cannot
+    // open — and inside a template that a project adopts as its own policy
+    // it becomes a false statement about that project's layout.
+    name: "framework-source-path",
+    re: /packages\/qfai\/|\b(?:src\/)?(?:core|cli)\/[A-Za-z0-9_./-]*\.ts\b/,
+    suggestion:
+      "Shipped assets must not cite framework source paths (`packages/qfai/**`, `core/*.ts`, `cli/*.ts`) — they do not exist after `qfai init`. Inline the value, point at a shipped `.qfai/assistant/**` document, or name the CLI command that enforces the rule.",
+    // Applies to documentation AND runtime data: both are copied verbatim
+    // into the consuming repo, where the cited path resolves to nothing.
+    appliesTo: ["init-runtime", "init-doc"],
+  },
   // PR #206 review Ntbp / NwM- / Nv2- / Nv_Q: catch internal-ID and
   // internal-version leakage in src JSDoc BEFORE it ships via
   // `dist/*.d.ts`. tsup strips comments from `.js` outputs but RETAINS

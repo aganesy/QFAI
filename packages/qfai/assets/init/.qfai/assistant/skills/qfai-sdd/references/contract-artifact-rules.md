@@ -9,7 +9,7 @@ Contracts are version-managed downstream execution truth and inputs:
 - `api/`: OpenAPI YAML
 - `db/`: SQL schema contracts
 - `ui/`: UI contract YAML
-- `design/`: root `DESIGN.md` (brand SSOT) + lock, design system YAML, and handoff YAML. Evaluator axes are fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` and no longer authored as separate rubric / calibration contracts.
+- `design/`: root `DESIGN.md` (brand SSOT) + lock, design system YAML, and handoff YAML. Evaluator axes are fixed by the evaluator review schema in `.qfai/assistant/skills/qfai-prototyping/references/reviewer-prompt.md` and no longer authored as separate rubric / calibration contracts.
 
 Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes approved decisions into `.qfai/contracts/**`; downstream skills read contracts, not discussion UI/UX files.
 

@@ -126,6 +126,66 @@ describe("lint-shipping fixture — detection rules", () => {
     expect(pathLit).toEqual([]);
   });
 
+  it("flags framework source paths in shipped markdown and runtime YAML", async () => {
+    // After `qfai init` the consuming repo has no `packages/qfai/`, no
+    // `core/` and no `cli/`, so a citation of those paths names a file the
+    // reader cannot open.
+    const root = await newTempDir();
+    await mkdir(path.join(root, "assets/init/.qfai/assistant/skills/x"), { recursive: true });
+    await mkdir(path.join(root, "assets/init/.qfai/assistant/manifest"), { recursive: true });
+    await writeFile(
+      path.join(root, "assets/init/.qfai/assistant/skills/x/SKILL.md"),
+      [
+        "The SSOT lives at `packages/qfai/src/core/validators/taskFidelityKeywords.ts`.",
+        "Evaluator axes are fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES`.",
+        "The classifier (`src/core/sddTriage.ts::classifyTriage`) appends first.",
+        "- `cli`: commands implemented under `packages/qfai/src/cli/commands/`.",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, "assets/init/.qfai/assistant/manifest/agent-catalog.yml"),
+      [
+        "agents:",
+        "  - prompt: |",
+        "      Axes live in `core/prototyping/evaluatorReview.ts`",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    const frameworkPaths = violations.filter((v) => v.pattern === "framework-source-path");
+    // 6, not 5: the first markdown line carries both `packages/qfai/` and the
+    // `src/core/**.ts` tail, and each is reported separately.
+    expect(frameworkPaths).toHaveLength(6);
+    expect(frameworkPaths.map((v) => v.file)).toContain(
+      "assets/init/.qfai/assistant/manifest/agent-catalog.yml",
+    );
+  });
+
+  it("does NOT flag module basenames or install-site paths as framework source paths", async () => {
+    // `parseEntry.ts` names a module without asserting where it lives, and
+    // `.qfai/assistant/**` DOES exist after `qfai init` — neither is a
+    // framework-only path.
+    const root = await newTempDir();
+    await mkdir(path.join(root, "assets/init/.qfai/assistant/catalog"), { recursive: true });
+    await writeFile(
+      path.join(root, "assets/init/.qfai/assistant/catalog/notes.md"),
+      [
+        "`parseEntry.ts` MUST have unit tests; `reviewerGate.ts` reads the verdict.",
+        "Skills are installed at `.qfai/assistant/skills/*/SKILL.md`.",
+        "Test globs such as `tests/**/*.spec.ts` stay project-defined.",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    expect(violations.filter((v) => v.pattern === "framework-source-path")).toEqual([]);
+  });
+
   it("does NOT flag YAML comment lines (parser ignores them)", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, "assets/init/.qfai"), { recursive: true });

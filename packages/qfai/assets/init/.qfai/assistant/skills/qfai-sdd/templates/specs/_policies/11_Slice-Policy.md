@@ -17,11 +17,10 @@ Validator `QFAI-TRIAGE-006` enforces this: every CREATE row must cite
 a `CAP-NNNN` in the Rationale column, and that CAP must already be
 present in the capability catalog.
 
-The classifier (`src/core/sddTriage.ts::classifyTriage`) implements an
-append-first fallback: when capability does not match exactly, it still
-proposes APPEND on the spec whose title/scope/capability shares the
-most subject tokens. CREATE is only emitted when there is **zero**
-token overlap with any active spec.
+The triage classifier implements an append-first fallback: when capability
+does not match exactly, it still proposes APPEND on the spec whose
+title/scope/capability shares the most subject tokens. CREATE is only
+emitted when there is **zero** token overlap with any active spec.
 
 A single requirement frequently touches multiple specs. Always walk
 every active spec for the _impact cascade_ and emit one Triage row per
@@ -43,9 +42,9 @@ specs whose AC/BR reference the changed concept).
 ## Category definitions
 
 - `structural`: framework-level pack definitions such as spec-pack and discussion-pack.
-- `cli`: commands implemented under `packages/qfai/src/cli/commands/`. One command maps to one spec.
-- `skill`: skills defined under `packages/qfai/assets/init/.qfai/assistant/skills/`. One skill maps to one spec.
-- `agent`: sub-agents defined under `packages/qfai/assets/init/.qfai/assistant/agents/`. All agents are grouped into one shared spec unless a newer approved slice policy says otherwise.
+- `cli`: commands implemented under `<your CLI command directory>`. One command maps to one spec.
+- `skill`: skills defined under `<your skill directory>`. One skill maps to one spec.
+- `agent`: sub-agents defined under `<your agent directory>`. All agents are grouped into one shared spec unless a newer approved slice policy says otherwise.
 
 ## Triage operations (8 first-class)
 
@@ -106,7 +105,7 @@ stop at step 2.
    REQ** → **UPDATE:APPEND on the closest spec** (subject-overlap
    fallback). A threshold breach on that spec is again a size signal
    recorded in `Rationale`, not an upgrade to SPLIT. Subject tokens follow
-   `src/core/sddTriage.ts::tokenize` normalization (STOP_TOKEN drop,
+   the classifier's subject-token normalization (STOP_TOKEN drop,
    length ≥ 2, Unicode `\p{L}\p{N}`), so "the new flag"-style subjects
    collapse to zero tokens and skip to step 6 — author REQ subjects with
    meaningful nouns.

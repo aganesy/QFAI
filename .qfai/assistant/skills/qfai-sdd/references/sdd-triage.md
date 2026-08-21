@@ -34,11 +34,10 @@ Concretely, before persisting any Triage row:
    the Triage row's Rationale column. `QFAI-TRIAGE-006` will fail the
    validator otherwise.
 
-The classifier (`src/core/sddTriage.ts::classifyTriage`) implements an
-append-first fallback: when the REQ's capability does not match exactly,
-it still proposes APPEND on the active spec whose title/capability/scope
-shares the most subject tokens. CREATE is emitted only when there is
-**zero** token overlap with any active spec.
+The triage classifier implements an append-first fallback: when the REQ's
+capability does not match exactly, it still proposes APPEND on the active
+spec whose title/capability/scope shares the most subject tokens. CREATE is
+emitted only when there is **zero** token overlap with any active spec.
 
 ## Operation set (8 first-class)
 
