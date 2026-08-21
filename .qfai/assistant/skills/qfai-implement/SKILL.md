@@ -39,7 +39,7 @@ QFAI Skill Body (SSOT)
 
 ## Spec Auto-Discovery Protocol
 
-When no explicit argument is given, detect the candidate specs. Execution is constrained to one spec at a time. Auto-discovery MAY present several specs as a queue to be processed sequentially (see Volume Policy > Multi-spec queue); this protocol does NOT enable multi-spec parallel execution.
+When no explicit argument is given, detect the candidate specs. Execution is constrained to one spec at a time. Auto-discovery MAY present several specs as a queue to be processed sequentially (see `references/volume-policy.md#multi-spec-queue`); this protocol does NOT enable multi-spec parallel execution.
 
 ### User Selection Flow
 
@@ -72,7 +72,7 @@ Skill-specific examples:
   **spec-level checkpoint boundary** may still be owed — an interrupted run, or a re-run of an
   already-terminal ledger, leaves it unrecorded. Before reporting "nothing to do" and exiting, confirm fresh spec-level checkpoint verification evidence exists for this ledger state; run the
   per-spec verification first when it is missing or stale (`references/checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`).
-  Only then report "nothing to do" for that spec, then advance to the next spec of a confirmed queue; exit when the queue is empty (Volume Policy > Advancing the queue).
+  Only then report "nothing to do" for that spec, then advance to the next spec of a confirmed queue; exit when the queue is empty (`references/volume-policy.md#advancing-the-queue`).
 
 ## Goal
 
@@ -152,7 +152,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 3. Transition status to `refactor`.
 4. Submit for completion review (`completion-reviewer`) and code quality review
    (`implementation-reviewer`). A T1 row submits with its coherent group and stays in
-   `refactor` until the group closes (Volume Policy > Group formation).
+   `refactor` until the group closes (`references/volume-policy.md#group-formation-states-and-transitions`).
 5. After all routed blocking reviewers return PASS, run checkpoint verification
    **while the item is still `refactor`** (see `#checkpoint-verification`). On a
    checkpoint boundary that means the full suite. Off a boundary it is already
@@ -170,8 +170,8 @@ The eight required columns, the allowed transitions and the exception rules are 
    is a user-approved accepted-risk waiver. Completion cannot be declared while
    any `exception` row lacks such a waiver.
 4. If a multi-spec queue was confirmed, announce the next queued spec and restart at
-   Phase: Red with its ledger; exit only after the last entry (Volume Policy >
-   Advancing the queue).
+   Phase: Red with its ledger; exit only after the last entry
+   (`references/volume-policy.md#advancing-the-queue`).
 
 ## Sub-agent Delegation (MANDATORY)
 
