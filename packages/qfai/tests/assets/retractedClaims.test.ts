@@ -60,9 +60,24 @@ import { describe, expect, it } from "vitest";
 const ROOT = path.resolve(__dirname, "../../../..");
 
 /** Every governance file this stage owns. Each claim is searched in all of them. */
+/**
+ * Every file this stage authored that carries its prose.
+ *
+ * The `.qfai/**` records were the whole list until round 15, and a refuted claim does not care which
+ * directory it is written in: three `US-0017-0007` claims round 12 refuted were still standing in a test
+ * file's comments, and survived round 14's correction of five sites in the records because nothing looked
+ * outside `.qfai/`. A guard scoped to one directory certifies that directory, not the claim.
+ */
 const GOVERNANCE = [
   ".qfai/evidence/atdd-spec-0017.md",
   ".qfai/evidence/coverage-depth-spec-0017.md",
+  "packages/qfai/tests/helpers/shippedLaneCommands.ts",
+  "packages/qfai/tests/helpers/buildCommand.ts",
+  "packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts",
+  "packages/qfai/tests/e2e/spec0017RunnerParallelismE2E.test.ts",
+  "packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts",
+  "packages/qfai/tests/assets/coverageDepthMatrix.test.ts",
+  "packages/qfai/tests/assets/stageEvidenceCounts.test.ts",
   ".qfai/decisions/DR-0017-0010-two-tuning-guard-rows-cannot-be-reddened-before-the-history-they-measure-exists.md",
   ".qfai/decisions/CR-20260820-0012-tdd-0069-waits-for-a-ci-run-that-is-gated-on-the-annotation-it-would-justify.md",
   ".qfai/decisions/CR-20260820-0011-the-e2e-annotation-ledger-certifies-127-stories-no-test-carries.md",
@@ -782,8 +797,13 @@ describe("retracted claims are quoted, never asserted", () => {
     //
     // Marks inside a fence or a blockquote are excluded from the count, because a fenced sample may
     // legitimately carry an unbalanced mark and is exempt anyway.
+    //
+    // **Prose files only.** `GOVERNANCE` gained this stage's own source files in round 15, after three
+    // refuted claims were found standing in a test file's comments — and a quotation mark in TypeScript
+    // is a string delimiter, not a quotation. The claim scan reads every member; this rule is about how
+    // a paragraph is punctuated, so it reads the ones that have paragraphs.
     const offenders: string[] = [];
-    for (const file of GOVERNANCE) {
+    for (const file of GOVERNANCE.filter((name) => name.endsWith(".md"))) {
       const raw = await readFile(path.join(ROOT, file), "utf8");
       // The same mark set the pairing uses, from the same document. Round 10 found the two disagreeing
       // — the report skipped exempt marks and the pairing counted them — so one stray `"` on a fenced

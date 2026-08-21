@@ -284,23 +284,31 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     //
     //   A  the shipped surface is absent, so the ROW's Status is ❌
     //   B  the harness cannot run a workflow: State transitions / Combinatorial on a row that is NOT ❌
-    //   C  the cell is inapplicable by the design: neither A's absence nor B's harness
+    //   C  the cell is inapplicable by the design: an enumerated roster, one reason per member
     //
-    // C and D were separate until round 14, and each was stated as a property naming its single
-    // member's COORDINATES — which nothing can violate except a different cell, so the assignment
-    // check this block exists for was vacuous for both. They shared one real property, and the record
-    // proved it by contradicting itself: one paragraph called itself the only such cell, the other the
-    // second. Merged, C is computable and falsifiable — a cell filed under it whose row is ❌, or whose
-    // column is a class-B column on a covered row, fails — and the membership the coordinates were
-    // really pinning is checked below as a ROSTER, which is a different question from the property.
+    // **Class C is a roster, and the two attempts before it are why.** Round 12 wrote C and D as two
+    // classes, each stating its single member's COORDINATES as a property — which nothing can violate
+    // except a different cell, so the assignment check this block exists for was vacuous for both, and
+    // the two paragraphs contradicted each other about how many such cells the table held. Round 14
+    // merged them under the computable property `not A and not B`; round 15 filed a plainly untested
+    // cell under it, with the reason "no one has looked", and the suite stayed green.
+    //
+    // "Inapplicable by the design" is not derivable from a table of scores — it is a claim about the
+    // thing the story describes — so no predicate over coordinates can decide it, and a predicate that
+    // admits whatever the other two classes reject decides nothing. What a test CAN hold is the list of
+    // cells someone has justified, which is the same move `ALLOWED_STEP_BODIES` makes one instrument
+    // over: enumerate our own surface, refuse the rest, and make an addition a review rather than a
+    // silent pass. A new inapplicable cell reddens here until it is named in both places.
     const statusOf = new Map(rows.map((row) => [row.id, row.cells["Status"]]));
+    // The cells this stage has justified as inapplicable by the design. Adding one is an edit here
+    // AND a reason in the record, which is the review the previous two versions of this class skipped.
+    const CLASS_C_ROSTER = new Set(["US-0017-0001/Boundary values", "US-0017-0007/Error path"]);
     const PROPERTIES: Record<string, (row: string, column: string) => boolean> = {
       A: (row) => statusOf.get(row) === "❌",
       B: (row, column) =>
         statusOf.get(row) !== "❌" &&
         (column === "State transitions" || column === "Combinatorial"),
-      C: (row, column) =>
-        statusOf.get(row) !== "❌" && column !== "State transitions" && column !== "Combinatorial",
+      C: (row, column) => CLASS_C_ROSTER.has(`${row}/${column}`),
     };
 
     const misassigned: string[] = [];
@@ -340,6 +348,10 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     const EXPECTED_PROSE: Record<string, string> = {
       A: "`Status = ❌`",
       B: "`Status ≠ ❌` and the column is `State transitions` or `Combinatorial`",
+      // One sentence, as A and B are: the extractor reads up to the first sentence end, and the
+      // clauses after it — that there is nothing to observe, and that the members are enumerated
+      // because no score in this table can decide that — are enforced by the roster rather than by
+      // a string comparison.
       C:
         "the cell is inapplicable by the design rather than untested, which is neither class A's " +
         "missing surface nor class B's missing harness",

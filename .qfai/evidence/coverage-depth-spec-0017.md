@@ -181,8 +181,9 @@ the class, in the same edit that wrote the paragraph three lines above explainin
 not the harness.
 
 **Class C — property: the cell is inapplicable by the design rather than untested, which is neither
-class A's missing surface nor class B's missing harness. There is nothing there to observe.** These are
-the `❌`s that no future work on the story would turn green. Two members, each with its own reason:
+class A's missing surface nor class B's missing harness. There is nothing there to observe, and the
+members are enumerated because no score in this table can decide that.** These are the `❌`s that no
+future work on the story would turn green. Two members, each with its own reason:
 
 - `US-0017-0001` × `Boundary values` — **a single shipped value admits no boundary.** The detection job
   emits one verdict per push; there is no sequence, count or limit to sit at the edge of. A boundary cell
@@ -194,11 +195,21 @@ the `❌`s that no future work on the story would turn green. Two members, each 
   nothing observes the runner's behaviour when the pool cannot start at all, which is a different
   question from a bad override.
 
-**These were two classes until round 14**, and each was stated as a property that named its single
-member's coordinates — so the assignment check could not be violated by anything except a different
-cell, which made it vacuous for both. The two paragraphs also contradicted each other in this file: one
-called itself "the one `❌` in the table that no future work would turn green" and the other "the
-second". One property, two members, and a roster the guard now checks against the table.
+**This class has been written three ways, and the first two could not fail.** Round 12 made it two
+classes, C and D, each stating its single member's coordinates as a property — which nothing can violate
+except a different cell — and the two paragraphs then contradicted each other in this file about how many
+such cells the table held: one called itself "the one `❌` in the table that no future work would turn
+green" and the other "the second". Round 14 merged them under a computable property, `not class A and not
+class B`. Round 15 filed a plainly untested cell under that property, with the reason "it is simply
+untested, and no one has looked", and every guard stayed green.
+
+"Inapplicable by the design" is a claim about the thing the story describes, not about a table of scores,
+so no predicate over a row and a column can decide it — and a predicate that admits whatever the other
+two classes reject decides nothing at all. What a test can hold is the list of cells someone has
+justified. The members are enumerated in `coverageDepthMatrix.test.ts` and each is named here with its
+own reason; a new one reddens until it appears in both. That is the move `ALLOWED_STEP_BODIES` makes one
+instrument over: enumerate our own surface, refuse the rest, and make an addition a review rather than a
+silent pass.
 
 ## Justifications, one per ❌ status row
 

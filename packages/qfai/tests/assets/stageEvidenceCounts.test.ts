@@ -149,10 +149,17 @@ async function packsOnDisk(): Promise<string[]> {
 
 describe("the stage evidence's counts are derived, not typed", () => {
   it("states the size of the mechanism corpus it cites as its falsification", async () => {
-    // The sweep section cites this number twice — "N mechanisms pinned" and "the pre-repair
-    // helper lets all N through" — and the corpus grows every round a reviewer proves a new escape.
-    // A numeral that moves every round is the shape this file exists for, and round 14 found one two
-    // rounds stale in a neighbouring section for exactly this reason.
+    // The sweep block cites this number four times, and the corpus grows every round a reviewer
+    // proves a new escape — so it is derived rather than typed.
+    //
+    // **The first version had no floor**, which is the defect this record names about the pack-count
+    // pin in almost these words: it matched three fixed phrasings, so rewording the sentences and
+    // setting them all to 31 was green, and so was moving a fourth `29` that none of the three
+    // reached while the record described it as derived. A pin whose needle is a closed enumeration
+    // cannot be falsified from outside that enumeration.
+    //
+    // So this reads EVERY numeral adjacent to the word, and requires the number of sites to be the
+    // number the record commits to. Rewording a sentence away now drops a site and reddens.
     const corpus = await source("packages/qfai/tests/unit/shippedLaneCommands.test.ts");
     const start = corpus.indexOf("const MECHANISMS = [");
     const end = corpus.indexOf("\n];", start);
@@ -163,30 +170,31 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // Entries are one per line at indent two, opening with either quote character — prettier picks
     // whichever avoids escaping, and the first version of this count read only the double.
     const held = (corpus.slice(start, end).match(/^ {2}["']/gm) ?? []).length;
+    expect(held, "the corpus must hold something for this row to be about").toBeGreaterThan(20);
 
     const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
-    const wrong: string[] = [];
-    for (const match of evidence.matchAll(/(\d+) mechanisms pinned/g)) {
-      if (Number(match[1]) !== held)
-        wrong.push(
-          `mechanisms pinned: record says ${match[1] ?? "?"}, corpus holds ${String(held)}`,
-        );
-    }
-    for (const match of evidence.matchAll(/lets all (\d+) through/g)) {
-      if (Number(match[1]) !== held)
-        wrong.push(
-          `lets all N through: record says ${match[1] ?? "?"}, corpus holds ${String(held)}`,
-        );
-    }
-    for (const match of evidence.matchAll(/with all (\d+) listed/g)) {
-      if (Number(match[1]) !== held)
-        wrong.push(
-          `with all N listed: record says ${match[1] ?? "?"}, corpus holds ${String(held)}`,
-        );
-    }
+    // Every numeral within a few words of `mechanism`, in either order, so a rewording is still
+    // read. `29 mechanisms`, `all 29 through`, `all 29 listed` and the block's own table row are
+    // the four the record carries today.
+    const sites = [
+      ...evidence.matchAll(/(\d+)(?:\s+\S+){0,3}\s+mechanisms?\b/g),
+      ...evidence.matchAll(/mechanisms?(?:\s+\S+){0,3}\s+(\d+)\b/g),
+      ...evidence.matchAll(/lets all (\d+) through/g),
+      ...evidence.matchAll(/with all (\d+) listed/g),
+    ];
+    const SITES = 4;
+    const wrong = sites
+      .filter((match) => Number(match[1]) !== held)
+      .map((match) => `${match[0]}: corpus holds ${String(held)}`);
     expect(wrong, "a mechanism-corpus size the record states and the corpus does not hold").toEqual(
       [],
     );
+    expect(
+      new Set(sites.map((match) => match.index)).size,
+      "the record must still state the corpus size where it says it does — a rewording that " +
+        "escapes these patterns would otherwise leave the row green over nothing, which is how the " +
+        "first version of this check passed while three sentences carried a wrong number",
+    ).toBe(SITES);
   });
 
   it("states the number of tests each new test file actually holds", async () => {

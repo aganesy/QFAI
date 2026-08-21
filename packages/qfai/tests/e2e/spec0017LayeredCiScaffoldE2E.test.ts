@@ -24,7 +24,7 @@
  *     US-0017-0004  build reuse + upload hygiene                    no surface: 0 uploads, 0 builds
  *     US-0017-0005  layer lanes without a new check name            5 separate JOBS, not matrix legs
  *     US-0017-0006  a hygiene lint lane pull requests run           not invoked by the shipped set
- *     US-0017-0007  parallelism knobs derived from the workload      no knob file ships
+ *     US-0017-0007  parallelism knobs derived from the workload      COVERED, in its own file
  *     US-0017-0008  the duplicate validate workflow retired          qfai-validate.yml still ships
  *
  * The four satisfied ones are asserted on their substance. The five unsatisfied ones are **not**
@@ -853,23 +853,26 @@ describe(
 );
 
 /*
- * US-0017-0007 — runner parallelism derived from QFAI's own workload — is NOT covered here, and the
- * annotation for it has been REMOVED from `tests/e2e/qfai-traceability.md`.
+ * US-0017-0007 — runner parallelism derived from QFAI's own workload — is covered, in
+ * `tests/e2e/spec0017RunnerParallelismE2E.test.ts`, and not here.
  *
- * The first version of this file claimed it with one assertion: that `qfai.config.yaml` exists after
+ * The first version of THIS file claimed it with one assertion: that `qfai.config.yaml` exists after
  * init. Round 1's `completion-reviewer` found that `tests/e2e/initE2E.test.ts` already asserts
  * exactly that — "creates qfai.config.yaml in the project root" — so the row added no discriminating
  * power at all. Its own matrix cell already conceded the assertion "would hold for a project with no
- * knobs in it at all" and scored its oracle strength missing.
+ * knobs in it at all" and scored its oracle strength missing. That is an annotation over a gap, which
+ * is the failure `CR-20260814-0001` describes: the ledger the gate reads is hand-maintained, so a line
+ * in it certifies coverage in both false directions.
  *
- * That is an annotation over a gap, which is the failure `CR-20260814-0001` describes: the ledger the
- * gate reads is hand-maintained, so a line in it certifies coverage in both false directions. Writing
- * one for a story nothing tests is the direction that matters.
+ * The withdrawal was right and the REASON given for it was a category error, which took ten rounds to
+ * see. This block used to end "no knob file ships … the row becomes coverable when the knobs ship",
+ * and the story is about this repository's own suite — "as a maintainer tuning a 415-file suite" —
+ * whose three slice surfaces are this repository's own vitest projects, CI matrix and scripts. Nothing
+ * about it was ever waiting on an adopter's tree. Round 12 covered it against the real `rootKnobs`,
+ * observing peak concurrency of 1 at one worker and more than 1 at four.
  *
- * So `QFAI-ATDD-111` reports `US-0017-0007` again, deliberately. Measured: no knob file ships —
- * `vitest.knobs.ts` exists only under `packages/qfai/` and is not part of the init asset tree — so an
- * adopter receives no declared worker or file-parallelism setting, and there is nothing to assert
- * that a project without the feature would fail. The row becomes coverable when the knobs ship.
+ * The stale version of this block survived round 14's correction of five sites in the evidence files,
+ * because the guard that hunts refuted claims read `.qfai/**` and nothing else. It reads this file now.
  */
 
 // QFAI:SPEC-0017:US-0017-0008
