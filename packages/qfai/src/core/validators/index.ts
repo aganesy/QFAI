@@ -15,7 +15,6 @@ export { validateScaffoldPlaceholder } from "./scaffoldPlaceholder.js";
 export { validateOrphanProhibition } from "./orphanProhibition.js";
 export { validatePrototypingEvidence, validateScreenIdCasing } from "./prototypingEvidence.js";
 export { validateDelegationMapIssues } from "./prototyping/delegationMap.js";
-export { validateStateGate } from "./prototyping/stateGate.js";
 export { validateCompletionCertificateIssues } from "./prototyping/completionCertificate.js";
 export { validateConfigReferenceIntegrity } from "./configReferenceIntegrity.js";
 export { validatePrototypingArtifactRefIntegrity } from "./prototyping/refIntegrity.js";

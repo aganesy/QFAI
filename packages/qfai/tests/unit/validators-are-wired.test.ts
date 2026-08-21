@@ -1,22 +1,22 @@
 /**
  * Meta-test: every prototyping validator function with `Issue[]` return must
- * be referenced from the validate.ts symbol graph (validate.ts itself, OR an
- * orchestrator imported by validate.ts).
+ * be referenced from the validate.ts symbol graph (validate.ts itself, OR a
+ * module imported by validate.ts).
  *
  * This catches the "validator written but never invoked" failure mode that
  * allowed `validateExecutionPlan` and `validateDelegationMap` to lurk as dead
  * code in v1.8.3 (RR §8.6). Adding a new prototyping validator without
- * wiring it into runPrototypingValidators (directly or via an orchestrator
- * like validateStateGate) MUST fail this test in CI.
+ * dispatching it from runPrototypingValidators MUST fail this test in CI.
  *
  * Implementation strategy:
  *   1. Walk every TS file under src/core/validators/prototyping/
  *   2. Extract every `export function validate*(`
  *   3. Build a "reachable text" set: validate.ts plus the source bodies of
  *      every file directly imported from validate.ts under
- *      `./validators/...` (1-hop). This handles the orchestrator pattern
- *      where validate.ts imports `validateStateGate` and the orchestrator
- *      internally calls `validateExecutionPlanIssues`.
+ *      `./validators/...` (1-hop), plus the files those re-export (2-hop).
+ *      The second hop is what resolves the barrel: validate.ts imports
+ *      `validateDelegationMapIssues` from `./validators/index.js`, which
+ *      re-exports it from `./prototyping/delegationMap.js`.
  *   4. Assert each validator name appears in the reachable text, OR is on
  *      the documented PENDING_WIRING allowlist (existing dead code that
  *      requires a follow-up wiring effort).
@@ -47,17 +47,31 @@ const DEPRECATED_LEGACY_VALIDATORS = new Set<string>([
 ]);
 
 /**
- * Validators known to be dead code awaiting wiring. As of v1.8.4 Phase 3
- * this set is empty: the four validators discovered by the Phase 2 meta-test
- * (validateScreenshotDir, validateLighthouseGate, validateIterationGate,
- * validateDesignSystemThreshold) were each given a `*Issues` adapter and
- * dispatched from validateStateGate.
+ * Validators known to be dead code awaiting wiring. This set is empty: the
+ * unwired validators the Phase 2 meta-test discovered were subsequently
+ * deleted rather than adapted, so no name is left to track here. Every
+ * prototyping validator that survives is dispatched from
+ * runPrototypingValidators.
  *
  * This list MUST shrink over time and MUST never grow without explicit
  * justification. The sentinel `expect(PENDING_WIRING.size).toBe(0)` keeps
  * accidental regressions visible.
  */
 const PENDING_WIRING: ReadonlySet<string> = new Set<string>();
+
+/**
+ * Validator names this guard mentions on purpose even though `src/` does not
+ * declare them: they identify the dead-code regression this meta-test was
+ * written to prevent, and both functions have since been deleted.
+ */
+const HISTORICAL_REFERENCES: ReadonlySet<string> = new Set<string>([
+  "validateExecutionPlan",
+  "validateDelegationMap",
+]);
+
+const COMMENT_LINE_RE = /^\s*(?:\/\/|\/\*|\*)/;
+const VALIDATOR_MENTION_RE = /validate[A-Z]\w*/g;
+const VALIDATOR_DECLARATION_RE = /(?:function|const|let)\s+(validate\w+)\s*[(=]/g;
 
 async function listTsFiles(dir: string): Promise<string[]> {
   const entries = await readdir(dir);
@@ -118,9 +132,9 @@ async function buildReachableText(): Promise<string> {
     try {
       const body = await readFile(resolved, "utf-8");
       fragments.push(body);
-      // 2-hop: also follow imports of orchestrators (e.g. validators/index.ts
-      // re-exports stateGate.ts; if validate.ts imports from index.ts, we
-      // need index.ts → stateGate.ts).
+      // 2-hop: also follow re-exports (e.g. validators/index.ts re-exports
+      // prototyping/delegationMap.ts; if validate.ts imports from index.ts,
+      // we need index.ts → delegationMap.ts).
       let inner: RegExpExecArray | null;
       const innerRe = /from\s+["'](\.\.?\/[\w./-]+)["']/g;
       while ((inner = innerRe.exec(body)) !== null) {
@@ -147,6 +161,35 @@ async function buildReachableText(): Promise<string> {
   return fragments.join("\n");
 }
 
+/** Every `validate*` function name declared anywhere under src/. */
+async function collectDeclaredValidatorNames(): Promise<Set<string>> {
+  const files = await listTsFiles(SRC_ROOT);
+  const declared = new Set<string>();
+  for (const file of files) {
+    const body = await readFile(file, "utf-8");
+    VALIDATOR_DECLARATION_RE.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = VALIDATOR_DECLARATION_RE.exec(body)) !== null) {
+      declared.add(match[1]);
+    }
+  }
+  return declared;
+}
+
+/** Every `validate*` name this guard names in one of its own comments. */
+function collectDocumentedValidatorNames(guardSource: string): Set<string> {
+  const documented = new Set<string>();
+  for (const line of guardSource.split(/\r?\n/)) {
+    if (!COMMENT_LINE_RE.test(line)) continue;
+    VALIDATOR_MENTION_RE.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = VALIDATOR_MENTION_RE.exec(line)) !== null) {
+      documented.add(match[0]);
+    }
+  }
+  return documented;
+}
+
 describe("meta-test: prototyping validators are wired into the pipeline", () => {
   it("every public Issue[]-returning validator under validators/prototyping/ is reachable from validate.ts", async () => {
     const validators = await collectPublicValidators(PROTOTYPING_VALIDATORS_DIR);
@@ -168,9 +211,9 @@ describe("meta-test: prototyping validators are wired into the pipeline", () => 
         .join("\n");
       throw new Error(
         `The following prototyping validators are exported but not reachable from validate.ts:\n${lines}\n\n` +
-          "Wire the validator into runPrototypingValidators (directly or via an orchestrator " +
-          "like validateStateGate) before merging. This guard exists to prevent the v1.8.3 " +
-          "dead-code-validator regression (RR §8.6).",
+          "Dispatch the validator from runPrototypingValidators in src/core/validate.ts before " +
+          "merging. This guard exists to prevent the v1.8.3 dead-code-validator regression " +
+          "(RR §8.6).",
       );
     }
   });
@@ -193,14 +236,6 @@ describe("meta-test: prototyping validators are wired into the pipeline", () => 
     ).toEqual([]);
   });
 
-  it("validateExecutionPlanIssues is wired (QFAI-PROT-310)", async () => {
-    const reachable = await buildReachableText();
-    expect(
-      reachable.includes("validateExecutionPlanIssues"),
-      "validateExecutionPlanIssues must reach runPrototypingValidators",
-    ).toBe(true);
-  });
-
   it("validateDelegationMapIssues is wired (QFAI-PROT-311)", async () => {
     const reachable = await buildReachableText();
     expect(
@@ -218,5 +253,26 @@ describe("meta-test: prototyping validators are wired into the pipeline", () => 
     // is now reachable from runPrototypingValidators. NEW dead-code
     // validators cannot enter the codebase silently.
     expect(PENDING_WIRING.size).toBe(0);
+  });
+
+  it("documents only validators that src/ actually declares", async () => {
+    // The guard tells the next contributor how to wire a validator. If its
+    // own prose names functions that no longer exist, the instructions send
+    // that contributor after a mechanism no file implements — the same
+    // dead-surface defect the guard was built to catch.
+    const guardSource = await readFile(__filename, "utf-8");
+    const documented = collectDocumentedValidatorNames(guardSource);
+    const declared = await collectDeclaredValidatorNames();
+
+    const phantom = [...documented]
+      .filter((name) => !declared.has(name) && !HISTORICAL_REFERENCES.has(name))
+      .sort();
+
+    expect(
+      phantom,
+      "these validators are named in this guard's comments but declared nowhere in src/: " +
+        `${phantom.join(", ")}. Rewrite the prose to name a mechanism that exists, or add the ` +
+        "name to HISTORICAL_REFERENCES if it is deliberately cited as a past regression.",
+    ).toEqual([]);
   });
 });
