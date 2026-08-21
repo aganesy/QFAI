@@ -117,6 +117,115 @@ describe("guardrails command", () => {
     }
   });
 
+  it("emits structured JSON for check without changing the exit code", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-guardrails-"));
+    const deltaPath = path.join(root, "18_delta.md");
+    try {
+      await writeFile(
+        deltaPath,
+        [
+          "# SPEC-0001: Delta",
+          "",
+          "## Decision Guardrails",
+          "",
+          "- ID: DG-0001",
+          "  Guardrail: Missing type",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const output = await captureStdout(async () => {
+        const exitCode = await runGuardrails({
+          root,
+          action: "check",
+          paths: [deltaPath],
+          format: "json",
+        });
+        expect(exitCode).toBe(1);
+      });
+
+      const parsed: unknown = JSON.parse(output);
+      if (typeof parsed !== "object" || parsed === null) {
+        throw new Error("guardrails check --format json must emit an object");
+      }
+      const record: Record<string, unknown> = { ...parsed };
+      const errors = record.errors;
+      const warnings = record.warnings;
+      if (!Array.isArray(errors) || !Array.isArray(warnings)) {
+        throw new Error("guardrails check --format json must emit errors[] and warnings[]");
+      }
+      expect(errors).toContainEqual(
+        expect.objectContaining({
+          severity: "error",
+          code: "QFAI-GR-003",
+          file: "18_delta.md",
+          id: "DG-0001",
+        }),
+      );
+      expect(record.summary).toEqual({ errors: errors.length, warnings: warnings.length });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("emits structured JSON for list and extract", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-guardrails-"));
+    const deltaPath = path.join(root, "18_delta.md");
+    try {
+      await writeFile(
+        deltaPath,
+        [
+          "# SPEC-0001: Delta",
+          "",
+          "## Decision Guardrails",
+          "",
+          "- ID: DG-0001",
+          "  Type: non-goal",
+          "  Guardrail: Do not change the spec layout.",
+          "  Rationale: Spec layout is a hard gate.",
+          "  Reconsider: never",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      for (const action of ["list", "extract"] as const) {
+        const output = await captureStdout(async () => {
+          const exitCode = await runGuardrails({
+            root,
+            action,
+            paths: [deltaPath],
+            format: "json",
+          });
+          expect(exitCode).toBe(0);
+        });
+
+        const parsed: unknown = JSON.parse(output);
+        if (typeof parsed !== "object" || parsed === null) {
+          throw new Error(`guardrails ${action} --format json must emit an object`);
+        }
+        const items = { ...parsed }.items;
+        if (!Array.isArray(items)) {
+          throw new Error(`guardrails ${action} --format json must emit items[]`);
+        }
+        expect(items).toEqual([
+          {
+            id: "DG-0001",
+            type: "non-goal",
+            guardrail: "Do not change the spec layout.",
+            rationale: "Spec layout is a hard gate.",
+            reconsider: "never",
+            keywords: [],
+            source: { file: "18_delta.md", line: 5 },
+          },
+        ]);
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("returns exit 2 when path is missing", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-guardrails-"));
     try {

@@ -9,6 +9,7 @@ import {
   sortDecisionGuardrails,
 } from "../../core/decisionGuardrails.js";
 import type { GuardrailLoadResult } from "../../core/decisionGuardrails.js";
+import type { DecisionGuardrail, GuardrailIssue } from "../../core/decisionGuardrails.js";
 import { toRelativePath } from "../../core/paths.js";
 import { error, info } from "../lib/logger.js";
 
@@ -18,6 +19,8 @@ export type GuardrailsCommandOptions = {
   paths: string[];
   max?: number;
   keyword?: string;
+  /** `--format json` emits a machine-readable payload instead of text. */
+  format?: "text" | "json";
 };
 
 const DEFAULT_EXTRACT_MAX = 20;
@@ -40,8 +43,10 @@ export async function runGuardrails(options: GuardrailsCommandOptions): Promise<
     return 2;
   }
 
+  const asJson = options.format === "json";
+
   if (options.action === "check") {
-    return runGuardrailsCheck(entries, root);
+    return runGuardrailsCheck(entries, root, asJson);
   }
 
   const items = sortDecisionGuardrails(normalizeDecisionGuardrails(entries));
@@ -53,12 +58,57 @@ export async function runGuardrails(options: GuardrailsCommandOptions): Promise<
       error("guardrails: --max must be a non-negative number");
       return 2;
     }
+    const limit = Math.max(0, Math.floor(max));
+    if (asJson) {
+      info(formatGuardrailsJson(filtered.slice(0, limit), root));
+      return 0;
+    }
     info(formatGuardrailsForLlm(filtered, max));
+    return 0;
+  }
+
+  if (asJson) {
+    info(formatGuardrailsJson(filtered, root));
     return 0;
   }
 
   info(formatGuardrailsList(filtered, root));
   return 0;
+}
+
+/**
+ * Machine-readable encoding for `list` / `extract`. Mirrors the normalized
+ * entry shape, with `source.file` relativized against the project root so the
+ * payload stays portable across checkouts (the text formatters do the same).
+ */
+function formatGuardrailsJson(items: DecisionGuardrail[], root: string): string {
+  const payload = {
+    items: items.map((item) => ({
+      ...item,
+      source: { file: toRelativePath(root, item.source.file), line: item.source.line },
+    })),
+  };
+  return JSON.stringify(payload, null, 2);
+}
+
+/**
+ * Machine-readable encoding for `check`. Keeps the pre-flatten
+ * `{errors, warnings}` split and the issue fields the text formatter reads.
+ */
+function formatGuardrailsCheckJson(
+  result: { errors: GuardrailIssue[]; warnings: GuardrailIssue[] },
+  root: string,
+): string {
+  const toIssue = (issue: GuardrailIssue): Record<string, unknown> => ({
+    ...issue,
+    file: toRelativePath(root, issue.file),
+  });
+  const payload = {
+    summary: { errors: result.errors.length, warnings: result.warnings.length },
+    errors: result.errors.map(toIssue),
+    warnings: result.warnings.map(toIssue),
+  };
+  return JSON.stringify(payload, null, 2);
 }
 
 function formatGuardrailsList(
@@ -78,8 +128,16 @@ function formatGuardrailsList(
   return lines.join("\n");
 }
 
-function runGuardrailsCheck(entries: GuardrailLoadResult["entries"], root: string): number {
+function runGuardrailsCheck(
+  entries: GuardrailLoadResult["entries"],
+  root: string,
+  asJson: boolean,
+): number {
   const result = checkDecisionGuardrails(entries);
+  if (asJson) {
+    info(formatGuardrailsCheckJson(result, root));
+    return result.errors.length > 0 ? 1 : 0;
+  }
   const lines: string[] = [
     `guardrails check: error=${result.errors.length} warning=${result.warnings.length}`,
   ];

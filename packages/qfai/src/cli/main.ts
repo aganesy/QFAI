@@ -104,6 +104,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.guardrailsKeyword !== undefined
             ? { keyword: options.guardrailsKeyword }
             : {}),
+          ...(options.guardrailsFormat !== undefined ? { format: options.guardrailsFormat } : {}),
         });
         process.exitCode = exitCode;
       }
@@ -320,6 +321,7 @@ Options:
   --path <path>                 guardrails: 対象ファイル/ディレクトリ（複数指定可）
   --max <number>                guardrails extract: 最大件数
   --keyword <text>              guardrails list/extract: キーワードフィルタ
+  --format <text|json>          guardrails list/extract/check: 出力形式（既定 text）
   --target-url <url>            prototyping preflight/iterate: 評価対象の URL
   --cycle <number>              prototyping iterate: cycle index (0..9)
   --check-convergence           prototyping iterate: 収束済みループ状態を再実行なしで覗く (read-only peek; defaults to cycle 9; exit 0 = converged, exit 2 = not converged / missing state)
