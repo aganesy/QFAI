@@ -41,6 +41,14 @@
 - Reason: <why rejected>
 - DO NOT: <must not reintroduce>
 - Temptation: <why people may accidentally choose it again>
+- Re-opened by: `-` <!-- the `Status: re-open` DR-* in 07_Decisions.md that re-adopted this candidate; stays `-` while the rejection holds -->
+
+<!--
+`Re-opened by:` is the only sanctioned route out of `DO NOT`. Moving a rejected
+candidate to `## Adopted` without it is the reintroduction the Delta Rejected
+Guard blocks; `npx qfai validate` reports `QFAI-DECISION-004` when the ID here
+resolves to no `Status: re-open` record.
+-->
 
 ## Impact
 

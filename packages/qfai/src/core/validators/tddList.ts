@@ -3,6 +3,14 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+// The `DR-*` id class and its two declaration files, shared with the re-open
+// gate in `specPack.ts` so both resolve a `DR-*` against the same files.
+import {
+  collectDeclaredDrIds,
+  DR_DECLARATION_FILES,
+  DR_ID_FORMAT,
+  DR_POLICY_DECLARATION_FILE,
+} from "../decisionRecords.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { maskNonSpecRegions, parseFirstMarkdownTable } from "../specPackParsers.js";
 import {
@@ -316,20 +324,6 @@ function isChangeRequestRefsOnly(drId: string): boolean {
 const TDD_LIST_REL_PATH = path.join("tdd", "test-list.md");
 
 /**
- * The declared shape of a Decision Record id.
- *
- * `DR-ID` was a hard, `error`-severity precondition for `exception` with no
- * referent anywhere in the toolkit: no ID class, no row schema in either
- * shipped Decisions template, and no validator that resolved the reference. Any
- * non-empty string satisfied the gate, so the one thing a parked row was
- * required to carry was the one thing nothing could check.
- *
- * Kept in step with `ids.ts#STRICT_ID_PATTERNS.DR` — anchored here because this
- * validates one cell rather than scanning prose.
- */
-const DR_ID_FORMAT = /^DR-\d{4}(?:-\d{4})?$/;
-
-/**
  * Anything presenting itself as a DR id, so a malformed one is reported rather
  * than ignored.
  *
@@ -340,39 +334,11 @@ const DR_ID_FORMAT = /^DR-\d{4}(?:-\d{4})?$/;
  */
 const DR_ID_SHAPED = /^DR[-_\d]/i;
 
-/** Files a `DR-*` may be declared in, relative to the spec dir / specs root. */
-const DR_DECLARATION_FILES = ["07_Decisions.md"];
-const DR_POLICY_DECLARATION_FILE = path.join("_policies", "08_Decisions.md");
-
 /** Waiver rule id for `TDDLIST_EXCEPTION_UNRESOLVED_DR`. */
 export const UNRESOLVED_DR_RULE_ID = "TDDLIST-003";
 
 function toPosixRel(value: string): string {
   return value.replace(/\\/g, "/");
-}
-
-/**
- * Every `DR-*` declared for this spec: its own `07_Decisions.md` plus the
- * shared `_policies/08_Decisions.md`.
- *
- * Both files are read, not one: a policy-level decision is cited from spec
- * ledgers, and resolving only against the spec-local file would report every
- * such citation as unresolved.
- */
-async function collectDeclaredDrIds(specDir: string, specsRoot: string): Promise<Set<string>> {
-  const declared = new Set<string>();
-  const files = [
-    ...DR_DECLARATION_FILES.map((name) => path.join(specDir, name)),
-    path.join(specsRoot, DR_POLICY_DECLARATION_FILE),
-  ];
-  for (const file of files) {
-    if (!(await exists(file))) continue;
-    const text = await readSafe(file);
-    for (const match of text.matchAll(/\bDR-\d{4}(?:-\d{4})?\b/g)) {
-      declared.add(match[0].toUpperCase());
-    }
-  }
-  return declared;
 }
 
 /**

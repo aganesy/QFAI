@@ -698,6 +698,14 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   E_OQ_STATUS_UNPARSEABLE: "Each OQ entry has a valid status (open|resolved|deferred).",
   E_DELTA_MISSING_REQUIRED:
     "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
+  "QFAI-DECISION-001":
+    "A `Status: re-open` Decision Record names the prior `DR-*` it reconsiders in `Re-opens:`, and not itself.",
+  "QFAI-DECISION-002":
+    "The `Re-opens:` reference resolves to a record declared in 07_Decisions.md or _policies/08_Decisions.md.",
+  "QFAI-DECISION-003":
+    "A `Status: re-open` Decision Record carries the explicit approval the Delta Rejected Guard requires (`Approved by` / `Approved at`).",
+  "QFAI-DECISION-004":
+    "A delta's `## Rejected` `Re-opened by:` names a `Status: re-open` record in the same spec's 07_Decisions.md.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
   "QFAI-TRIAGE-007":

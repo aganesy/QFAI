@@ -5,6 +5,14 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { buildContractIndex } from "../contractIndex.js";
 import {
+  collectDeclaredDrHeadingIds,
+  collectReOpenEntries,
+  DR_ID_FORMAT,
+  isPlaceholderValue,
+  RE_OPEN_STATUS,
+  type DecisionRecordEntry,
+} from "../decisionRecords.js";
+import {
   AC_GHERKIN_SECTION,
   extractIds,
   extractInvalidIdOccurrences,
@@ -132,6 +140,7 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
     // avoid two-place drift when a third layout is introduced.
     issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds)));
     issues.push(...(await validateTriageSectionForEntry(entry)));
+    issues.push(...(await validateReOpenForEntry(entry, specsRoot)));
   }
 
   // Cross-spec / policy-only triage rows live in `_policies/10_delta.md`
@@ -1461,6 +1470,154 @@ function validateDeltaGate(entry: SpecEntry, text: string): Issue[] {
       "18_delta.md に `Change Summary / Rationale / Candidates Considered / Adopted / Rejected / Impact / Follow-ups` を揃え、Rejected に `DO NOT` と `Temptation` を記載してください。",
     ),
   ];
+}
+
+/** `07_Decisions.md` entry shape checks for a `[RE-OPEN]` record. */
+const RE_OPEN_RULE = "specPack.decisionsReOpen";
+/** The `## Rejected` back-reference that points at such a record. */
+const RE_OPENED_BY_RULE = "specPack.deltaReOpenedBy";
+
+const RE_OPENED_BY_LINE = /^\s*[-*]\s*re-opened\s+by\s*[:：]\s*(.*)$/i;
+
+/**
+ * The `[RE-OPEN]` record the Delta Rejected Guard names.
+ *
+ * The guard forbids re-adopting a candidate listed under a delta's
+ * `## Rejected` without a re-open decision record, and four reviewer agents
+ * block on it — but the record had no status value, no field for the prior
+ * `DR-*` and no field for the approval, so nothing could tell a valid re-open
+ * from a sentence in a PR description. These checks fire only once a project
+ * actually writes `Status: re-open` or a `Re-opened by:` back-reference, so an
+ * existing spec pack that has never re-opened anything is unaffected.
+ */
+async function validateReOpenForEntry(entry: SpecEntry, specsRoot: string): Promise<Issue[]> {
+  const decisionsText = await readSafe(entry.decisionsPath);
+  const deltaText = entry.deltaPath ? await readSafe(entry.deltaPath) : "";
+  const reOpens = collectReOpenEntries(decisionsText);
+  const backRefs = extractReOpenedByRefs(deltaText);
+  if (reOpens.length === 0 && backRefs.length === 0) {
+    return [];
+  }
+
+  const declared = await collectDeclaredDrHeadingIds(entry.dir, specsRoot);
+  const issues: Issue[] = [];
+  for (const record of reOpens) {
+    issues.push(...validateReOpenRecord(record, declared, entry.decisionsPath));
+  }
+  const reOpenIds = new Set(reOpens.map((record) => record.id));
+  for (const ref of backRefs) {
+    if (reOpenIds.has(ref.toUpperCase())) continue;
+    issues.push(
+      issue(
+        "QFAI-DECISION-004",
+        `delta の \`## Rejected\` にある \`Re-opened by: ${ref}\` が、この spec の 07_Decisions.md にある \`Status: re-open\` の Decision Record に解決しません。`,
+        "error",
+        entry.deltaPath,
+        RE_OPENED_BY_RULE,
+        [ref],
+        "canonical",
+        "07_Decisions.md に `Status: re-open` の DR エントリを追加し、`Re-opened by:` からその ID を参照してください。再採用を取り消す場合は `Re-opened by:` を `-` に戻します。",
+      ),
+    );
+  }
+  return issues;
+}
+
+/**
+ * The three things the guard's own sentence demands of a re-open: the prior
+ * `DR-*` it reconsiders, that the reference resolves, and an explicit approval.
+ */
+function validateReOpenRecord(
+  record: DecisionRecordEntry,
+  declared: Set<string>,
+  decisionsPath: string,
+): Issue[] {
+  return [
+    ...validateReOpensField(record, declared, decisionsPath),
+    ...validateReOpenApproval(record, decisionsPath),
+  ];
+}
+
+/** `Re-opens:` names a well-formed prior `DR-*` that is declared somewhere. */
+function validateReOpensField(
+  record: DecisionRecordEntry,
+  declared: Set<string>,
+  decisionsPath: string,
+): Issue[] {
+  const issues: Issue[] = [];
+  const prior = isPlaceholderValue(record.reOpens) ? "" : (record.reOpens ?? "").trim();
+
+  if (!DR_ID_FORMAT.test(prior) || prior.toUpperCase() === record.id) {
+    issues.push(
+      issue(
+        "QFAI-DECISION-001",
+        `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、再考の対象となる先行 DR を \`Re-opens:\` が指していません (値: ${prior || "(なし)"})。`,
+        "error",
+        decisionsPath,
+        RE_OPEN_RULE,
+        [record.id],
+        "canonical",
+        "`Re-opens:` に先行する Decision Record の ID を DR-NNNN もしくは DR-NNNN-MMMM の形式で記載してください（自分自身は指せません）。",
+      ),
+    );
+  } else if (!declared.has(prior.toUpperCase())) {
+    issues.push(
+      issue(
+        "QFAI-DECISION-002",
+        `${record.id} の \`Re-opens: ${prior}\` に対応する Decision Record が 07_Decisions.md にも _policies/08_Decisions.md にもありません。`,
+        "error",
+        decisionsPath,
+        RE_OPEN_RULE,
+        [record.id, prior],
+        "canonical",
+        "先行 Decision Record を spec の 07_Decisions.md（または _policies/08_Decisions.md）に宣言してから再オープンしてください。",
+      ),
+    );
+  }
+
+  return issues;
+}
+
+/** A re-open carries the explicit approval the guard requires. */
+function validateReOpenApproval(record: DecisionRecordEntry, decisionsPath: string): Issue[] {
+  const issues: Issue[] = [];
+  if (isPlaceholderValue(record.approvedBy) || isPlaceholderValue(record.approvedAt)) {
+    issues.push(
+      issue(
+        "QFAI-DECISION-003",
+        `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、明示的な承認 (\`Approved by\` / \`Approved at\`) がありません。`,
+        "error",
+        decisionsPath,
+        RE_OPEN_RULE,
+        [record.id],
+        "canonical",
+        "`Approved by:` に承認者、`Approved at:` に YYYY-MM-DDThh:mm:ssZ 形式の承認時刻を記載してください。承認前は `Status: proposed` のままにします。",
+      ),
+    );
+  }
+
+  return issues;
+}
+
+/** The non-placeholder `Re-opened by:` values in a delta's `## Rejected`. */
+function extractReOpenedByRefs(deltaText: string): string[] {
+  if (deltaText.length === 0) {
+    return [];
+  }
+  const rejected = extractMarkdownSection(deltaText, "Rejected");
+  const refs: string[] = [];
+  for (const line of rejected.replace(/\r\n/g, "\n").split("\n")) {
+    const match = RE_OPENED_BY_LINE.exec(line);
+    if (!match) continue;
+    const value = (match[1] ?? "")
+      .replace(/<!--.*?-->/g, "")
+      .replace(/`/g, "")
+      .trim();
+    for (const token of value.split(/[,;\s]+/)) {
+      if (token.length > 0 && !isPlaceholderValue(token)) refs.push(token);
+    }
+  }
+  return refs;
 }
 
 function parseOpenQuestionStatuses(text: string): OpenQuestionStatus[] {
