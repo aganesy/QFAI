@@ -688,6 +688,11 @@ describe(
       for (const file of await shippedWorkflowFiles()) {
         const parsed: unknown = parseYaml(await workflowText(file));
         if (!isRecord(parsed)) continue;
+        // Two of `readUses`'s checks can fire here and the rest cannot: GitHub defines no top-level
+        // `uses:`, `with:`, `shell:` or `env:` — so what this call site enforces at the workflow level is
+        // the KEY enumeration, which is the check that catches `defaults:` and everything after it.
+        // Written down because the call reads like a full scan of the level, and the next person deciding
+        // whether the workflow level needs a rule of its own will read this line to find out.
         readUses(`${file} (workflow level)`, parsed, ALLOWED_WORKFLOW_KEYS);
       }
       for (const [id, job] of Object.entries(map)) {

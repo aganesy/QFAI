@@ -300,9 +300,7 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
         statusOf.get(row) !== "❌" &&
         (column === "State transitions" || column === "Combinatorial"),
       C: (row, column) =>
-        statusOf.get(row) !== "❌" &&
-        column !== "State transitions" &&
-        column !== "Combinatorial",
+        statusOf.get(row) !== "❌" && column !== "State transitions" && column !== "Combinatorial",
     };
 
     const misassigned: string[] = [];

@@ -72,8 +72,14 @@ export default [
   // Scoped rather than lifted wholesale: the full tests tree reports 212 type errors across 415 files and
   // this stage has no mandate to clean them. The list here is the set `tsconfig.tests.json` includes, where
   // the count is zero. Widening it is a follow-up with a number attached rather than a guess.
+  //
+  // "The set `tsconfig.tests.json` includes" was false by one entry until round 14: this list held twelve
+  // and the tsconfig thirteen, and the missing one — `vitest.knobs.ts` — was type-checked by `tsc` while
+  // the four promise rules this block exists to re-enable stayed off over it. A sentence naming the set a
+  // future widening will be measured against has to be true of the list beneath it.
   {
     files: [
+      "packages/qfai/vitest.knobs.ts",
       "packages/qfai/tests/helpers/buildCommand.ts",
       "packages/qfai/tests/helpers/shippedLaneCommands.ts",
       "packages/qfai/tests/unit/buildCommand.test.ts",

@@ -337,6 +337,13 @@ describe("the shipped-lane allowlist", () => {
     expect(bodyDigest(continued), "a trailing space after a continuation IS a behaviour").not.toBe(
       bodyDigest(broken),
     );
+    // And the one normalization that remains, which is unreachable from the gate: the `yaml` parser
+    // strips CR from a block scalar, so no CR ever reaches `bodyDigest` in production. It is kept
+    // for a future caller that reads raw YAML text, and exercised here so it is a branch someone can
+    // break rather than one nobody can observe — which is what round 14 found it to be.
+    expect(bodyDigest("echo a\r\necho b"), "a line ending is not a behaviour").toBe(
+      bodyDigest("echo a\necho b"),
+    );
   });
 
   it("accepts the shapes the shipped tree actually contains", () => {

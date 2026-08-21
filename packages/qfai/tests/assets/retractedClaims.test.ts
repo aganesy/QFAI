@@ -82,6 +82,30 @@ interface Retracted {
  */
 const RETRACTED: readonly Retracted[] = [
   {
+    claim: "US-0017-0007 is uncovered",
+    why: "covered since round 12 by a test that observes an effect; the correction moved one paragraph and left five sites, two of them in sections that certify (round 14 B3)",
+  },
+  {
+    claim: "the scoped gate is error=2",
+    why: "re-derived by running the gate: info=2 warning=0 error=1, and the tracked artifact was byte-identical after the run (round 14 B3, gate B3)",
+  },
+  {
+    claim: "15 TC across five specs",
+    why: "eleven US across four specs; the same double-count Gaps item 4 retracts by name, surviving in a second site because the two copies were worded differently (round 14 B3)",
+  },
+  {
+    claim: "trailing whitespace is not a behaviour",
+    why: "a trailing space after a line continuation ends the continuation, so it is the difference between one command and two; it was the assumption that produced the second digest collision (round 14 B4, twice)",
+  },
+  {
+    claim: "stopped being a reading",
+    why: "the gate reads the `run:` scalars and nothing else, in a document that executes through nine other keys, one of them demonstrated running adopter code (round 14 gate m3)",
+  },
+  {
+    claim: "the lane cannot supply that code itself",
+    why: "the working-directory channel supplies it with no write anywhere, by choosing which tree the allowed install runs in; the established claim is the narrower one about writing a manifest (round 14 gate A3)",
+  },
+  {
     claim: "All 71 Integration rows are already at refactor",
     why: "the ledger holds 63 refactor, 6 blocked and 2 todo (round 1)",
   },

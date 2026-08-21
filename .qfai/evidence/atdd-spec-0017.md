@@ -374,12 +374,18 @@ node packages/qfai/dist/cli/index.mjs validate --profile atdd --fail-on error --
                       timestamp the next run will not reproduce
 ```
 
-**`.qfai/report/specs-coverage/spec-0017.md` does not exist**, and round 9 named it as one of the
-inputs it could not read. That directory holds `spec-0001.md` through `spec-0007.md` on disk, last
-written 2026-08-20, and only `spec-0012.md` is tracked; spec-0017's is produced by a `--profile full`
-run and was never committed. The citation is dropped rather than the file committed, for the same reason
-as the run directory: it is regenerable output, and the reviewer obtained it by running the profile,
-which is the reproducible path. Coverage there was clean when they did — every `AC` with 2-3 `TC`, every
+**`.qfai/report/specs-coverage/spec-0017.md` is untracked, not absent.** Round 9 named it as an input
+it could not read, and this paragraph said the file "does not exist" and that the directory held
+`spec-0001.md` through `spec-0007.md`. Round 14's gatekeeper measured the directory: **seventeen** files,
+`spec-0001.md` through `spec-0017.md`, all written 2026-08-21, `spec-0017.md` among them at 4475 bytes.
+Only `spec-0012.md` is tracked, which this paragraph had right.
+
+The conclusion survives — the citation is dropped rather than the file committed, for the same reason as
+the run directory: it is regenerable output produced by a `--profile full` run, and running the profile
+is the reproducible path — but the reason given for it was a statement of fact about the tree that the
+tree contradicts, told to a reviewer for whom that path is a named input. Recorded rather than quietly
+corrected, because it is this record's own recurring class: a claim about the tree, written once and
+never re-measured. Coverage there was clean when they did — every `AC` with 2-3 `TC`, every
 `BR` with an `EX`, every `EX` with a `TC`, no `QFAI-COV-201/202/203`.
 
 **`US-0017-0004` is asserted the other way round now, and that is the largest change this stage has
@@ -1010,6 +1016,20 @@ indentation when it parses it, so re-indenting a step never moved the digest in 
 in both directions by `tests/unit/shippedLaneCommands.test.ts`: the collapsing digest must collide on
 that pair and `bodyDigest` must not.
 
+**And `bodyDigest` had a SECOND collision, which two of round 14's three reviewers found
+independently.** Its first version also stripped trailing whitespace per line, on an assumption the next
+line of that same test stated outright: "trailing whitespace is not a behaviour". It is one. A trailing
+space after a line continuation ends the continuation, so `echo a \` and `echo a \ ` are one command and
+two — and they had one digest. Both sides pass `refusals()`, so the instrument could not have caught what
+the boundary let through, which is the property that makes a collision in this gate worth more than an
+escape past the scanner.
+
+Line endings are the only normalization left, and the tolerance the stripping was bought for did not
+exist: YAML removes a block scalar's indentation when it parses it, so re-indenting a step never moved a
+digest. The remaining `\r\n` rule is unreachable from the gate for the same reason — the parser hands it a
+CR-free string — and is kept for a caller that reads raw text, commented as unreachable and exercised by
+a test, so it is a branch someone can break rather than one nobody can observe.
+
 **`defaults.run.shell`** was the round's other repair and belongs to a different story: a `shell:` is a
 command template, GitHub documents `defaults.run.shell` for applying one across steps, and the guard read
 only `holder["shell"]`. Planted at job level and at workflow level, both shipped. That is the same channel
@@ -1239,7 +1259,8 @@ The PASS covers **the observation and nothing else.** It does not clear completi
 `blocked`, and an `exception` still needs a user-approved `TDDLIST-001` waiver or the spec stays open.
 
 (This sentence carried three refuted figures at once until round 14: `error=2`, `US-0017-0007`
-uncovered, and "12 `US` … five specs" — the exact double-count Gaps item 4 retracts by name, surviving
+uncovered, and "12 US and 15 TC across five specs" — the exact double-count Gaps item 4 retracts by
+name, surviving
 in a second site because the two copies were worded differently. That is the failure mode
 § "Ledger rows advanced" describes for a different paragraph: every search for the retracted wording
 looked for an exact match and found none.)
@@ -1824,10 +1845,19 @@ something is written, believed without reading it.
        not running bash. Entries 12 and 17 differ in what they say about the cure — 12 says an allowlist
        that concedes on confusion is not an allowlist, and 17 says that repairing the concessions does
        not converge, because the set of readings a complete shell has is not finite from where a scanner
-       stands. The countermeasure here is not a better parser: it is that the GATE stopped being a
-       reading. `ALLOWED_STEP_BODIES` enumerates the twelve bodies this tree ships by digest, which is a
-       claim about identity rather than about wording, and `refusals()` is kept as the instrument that
-       says why a body is acceptable when someone has to update one.
+       stands. The countermeasure is to move what the gate READS: `ALLOWED_STEP_BODIES` asks which
+       twelve strings a document contains rather than what they mean, which is decidable, and
+       `refusals()` is kept as the instrument that says why a body is acceptable when someone has to
+       update one.
+
+       **The first version of this entry said the gate "stopped being a reading", and round 14 refuted
+       it in the entry's own terms.** The gate reads the `run:` scalars and nothing else, in a document
+       that executes through `uses:`, `with:`, `shell:`, `defaults.run.shell`, `env:`, `container:`,
+       `services:`, `working-directory:`, `defaults.run.working-directory:` and `runs-on:` — one of
+       which was demonstrated running adopter code with every assertion green. A claim about what an
+       instrument IS, written into the entry whose class is claims of exactly that kind, which is why
+       entry 15 is called the purest instance in this list. The channels are closed now by enumerating
+       the KEYS each level may carry, which is the same inversion one document-level further out.
 
    The working countermeasure is not vigilance: it is that every new claim gets an oracle round before
    it is reported, and that a claim over a file's contents is rewritten to **run** the thing whenever
@@ -1881,12 +1911,19 @@ something is written, believed without reading it.
      `pnpm install --frozen-lockfile` and `yarn` are all enumerated, and every one of them executes
      whatever `preinstall` / `postinstall` / `prepare` an adopter's `package.json` declares. This item
      named `npm ci` alone until round 14; the shipped body's own fallback is the `npm install` form,
-     which is the branch an adopter without a lockfile takes. The lane's own writes
-     onto a manifest are refused now, so the lane cannot supply that code itself — but an adopter's
-     existing manifest is not this scan's to read. So `US-0017-0004`'s claim is scoped: **the shipped TEXT
-     invokes only these programs**, and not "the shipped lane executes no build in an adopter's tree".
-     Every assertion in this record about that story means the first sentence. Naming it matters because
-     the second sentence is the one a reader assumes.
+     which is the branch an adopter without a lockfile takes.
+
+     The lane's own writes onto a manifest are refused, so it cannot supply that code **by writing a
+     manifest** — and that is the whole of what the repair established. This item claimed the wider
+     form, "the lane cannot supply that code itself", until round 14 refuted it with a channel that
+     needs no write at all: `working-directory` lets the lane choose which tree the allowed install runs
+     in, so the manifest that executes is selected rather than created. An adopter's existing manifest is
+     not this scan's to read either way.
+
+     So `US-0017-0004`'s claim is scoped: **the shipped TEXT invokes only these programs**, and not "the
+     shipped lane executes no build in an adopter's tree". Every assertion in this record about that
+     story means the first sentence. Naming it matters because the second sentence is the one a reader
+     assumes.
    - **`refusals()` is now an instrument rather than the boundary.** It remains the best available answer
      to "what does this body run", it is the thing to run before writing a digest down, and it is still
      the only check that reads an adopter-facing body at all. What it is not, after the sweep, is the

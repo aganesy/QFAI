@@ -189,7 +189,20 @@ export function commandsOf(body: string): string[] {
       }
       return false;
     };
-    if (ch === ";" || (ch === "|" && !isAlternation()) || ch === "&" || ch === "\n") {
+    // An `&` is a background operator — unless it belongs to a redirection. `>&2` duplicates a
+    // descriptor and `&>file` redirects both streams, and splitting inside either left a fragment whose
+    // entire content was a redirection with no command: `echo hi >&2` became `echo hi >` plus `2`, and
+    // the write scan then reported a write to a file named `2` with an empty target. One character,
+    // three meanings, and the shipped tree will reach for the second the first time a lane wants a
+    // diagnostic off stdout.
+    const redirectAmp =
+      ch === "&" && (body[i + 1] === ">" || /[<>]/.test(current.replace(/\s+$/, "").slice(-1)));
+    if (
+      ch === ";" ||
+      (ch === "|" && !isAlternation()) ||
+      (ch === "&" && !redirectAmp) ||
+      ch === "\n"
+    ) {
       const piped = ch === "|";
       flush();
       // A pipe IS a redirection of the downstream command's stdin, so it leaves a token shaped like
@@ -739,9 +752,15 @@ export function payloadDigest(payload: string): string {
  * needs no handling here at all — YAML strips it when it parses the scalar, so re-indenting a step in
  * the file never moved the digest, and the tolerance the normalizing was bought for did not exist.
  *
- * The `\r\n` rule survives because `.gitattributes` stores these files LF and a Windows checkout can
- * still hand the parser CRLF; a digest that depends on which machine ran the suite is the defect the
- * pack seal above already learned once.
+ * The `\r\n` rule is **unreachable from the only caller**, and it is kept deliberately: the `yaml`
+ * parser normalizes line breaks inside a block scalar, so a CRLF document yields a CR-free string and
+ * the gate never hands this function a CR. It stays because a digest that depends on which machine
+ * ran the suite is the defect the pack seal above already learned once, and the next caller may read
+ * raw YAML text rather than a parsed scalar. `tests/unit/shippedLaneCommands.test.ts` exercises it
+ * directly, so it is a branch someone can break rather than one nobody can observe.
+ *
+ * The first version of this paragraph justified the rule with "a Windows checkout can still hand the
+ * parser CRLF" — written without measuring the parser, and false. Round 14 measured it.
  */
 export function bodyDigest(body: string): string {
   // Line endings only. Nothing else may be normalized here, and the second collision in this gate
@@ -888,7 +907,13 @@ function redirectionsOf(command: string): { writes: boolean; target: string }[] 
     const writes = ch === ">";
     // Consume the operator: `>`, `>>`, `<`, `<<`, `<<<`, and the `&` of `>&` / `&>`.
     let j = i;
-    while (j < command.length && (command[j] === ch || command[j] === "&")) j += 1;
+    let duplicates = false;
+    while (j < command.length && (command[j] === ch || command[j] === "&")) {
+      // An `&` AFTER the arrow duplicates a descriptor; an `&` before it is bash's `&>`, which is a
+      // write to a file. The two are one character apart and do opposite things.
+      if (command[j] === "&") duplicates = true;
+      j += 1;
+    }
     while (j < command.length && /\s/.test(command[j] ?? "")) j += 1;
     // Then the word it names, read with the same quote state so `> 'a b'` is one target.
     let target = "";
@@ -912,7 +937,11 @@ function redirectionsOf(command: string): { writes: boolean; target: string }[] 
       if (/\s/.test(next) || next === ";") break;
       target += next;
     }
-    found.push({ writes, target });
+    // `>&2` and `2>&1` duplicate a file descriptor. Nothing is created, nothing is read, and the
+    // shipped tree will reach for one the first time a lane wants a diagnostic off stdout — so
+    // reporting it as a write to a file named `2` spends the fail-closed budget on a refusal a
+    // reader cannot act on. The budget is paid for by refusals someone reads.
+    if (!(duplicates && /^[0-9]+-?$|^-$/.test(target))) found.push({ writes, target });
     i = j - 1;
   }
   return found;
