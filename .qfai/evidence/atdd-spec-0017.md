@@ -262,7 +262,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
 - **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 7 tests deriving this record's own
   counts from the artifacts they describe, after every review round found at least one that the tree
   did not hold
-- **new** `packages/qfai/tests/assets/retractedClaims.test.ts` — 8 tests requiring a claim a review
+- **new** `packages/qfai/tests/assets/retractedClaims.test.ts` — 10 tests requiring a claim a review
   round refuted to appear only inside quotation marks, because "it is gone now" was itself the false
   statement round 5 found
 - **new** `.qfai/decisions/DR-0017-0010-*.md` — the branch-3 anomaly record for `TDD-0070`
@@ -296,7 +296,7 @@ pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
 pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
   -> Tests 7 passed (7), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
-  -> Tests 8 passed (8), exit 0
+  -> Tests 10 passed (10), exit 0
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/buildCommand.test.ts
   -> Tests 24 passed (24), exit 0
 

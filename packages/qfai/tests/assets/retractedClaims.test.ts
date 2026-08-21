@@ -255,7 +255,9 @@ const RETIRED: readonly string[] = [
 const ZERO_WIDTH = /[\u00AD\u200B-\u200D\u2060\uFEFF]/g;
 
 function flattenings(text: string): [string, string] {
-  const base = text.replace(/[*_`]/g, "");
+  // Tildes as well as backticks: a `~~~` fence is a fence, and stripping only one of the two
+  // delimiters made the tilde form invisible to the exempt-span scan.
+  const base = text.replace(/[*_`~]/g, "");
   const removed = base.replace(ZERO_WIDTH, "").replace(/\s+/g, " ").toLowerCase();
   const spaced = base.replace(ZERO_WIDTH, " ").replace(/\s+/g, " ").toLowerCase();
   return [removed, spaced];
@@ -267,79 +269,115 @@ function flatten(text: string): string {
 }
 
 /**
- * Quoted spans, computed per paragraph.
+ * One flattened document, with the exempt line ranges in its own coordinates.
  *
- * Paragraph-scoped because a global parity scan is unbounded: round 6 planted one stray `"` and it
- * inverted every range after it — laundering an assertion in one place and accusing eight correct
- * quotations elsewhere, which reddened a required CI leg.
+ * Built rather than modelled, which is the whole change. The previous version computed a paragraph's
+ * flattened text one way and its line offsets another, then assumed the two agreed: that a paragraph's
+ * flattening is its lines' flattenings joined by single spaces. It is not — a line's own leading or
+ * trailing whitespace already collapses to a space and the join adds a second, and a fence marker
+ * flattens to the empty string while still consuming a separator. Round 10 measured **50 of 456 real
+ * paragraphs** with drifting coordinates, the worst by 34 characters.
+ *
+ * So the document is assembled line by line and every offset is recorded as it is written. The two can
+ * no longer disagree, because there is only one of them.
+ *
+ * `inFence` is tracked across the WHOLE document, not per paragraph. A fenced block containing a blank
+ * line is split by the paragraph rule, so a per-paragraph flag read the CLOSING marker as an opening
+ * one and exempted everything after it — a laundering route two reviewers found independently, in the
+ * repair for the paragraph-wholesale version of the same defect.
  */
-/**
- * Quotation-mark spans within one flattened paragraph.
- *
- * Strict even parity, and that is a change. The previous version, faced with an ODD number of marks,
- * added a second pairing offset by one and accepted a claim quoted under either reading — to stop a
- * lone `"` earlier in a paragraph accusing a correct quotation after it. Round 9 measured what that
- * bought: the two pairings together cover **everything between the first and last mark**, so in a
- * densely quoted record one stray mark exempts any assertion that has a real quotation after it. A
- * one-character laundering route, and it was demonstrated working.
- *
- * So the parity is strict again and the stray mark is reported instead — see the odd-parity test below.
- * A stray quotation mark in a governance file is a defect to fix, not a licence to widen the guard.
- */
-function quotedSpans(paragraph: string): Array<[number, number]> {
-  const marks: number[] = [];
-  for (let index = 0; index < paragraph.length; index += 1) {
-    const char = paragraph[index];
-    if (char === '"' || char === "\u201C" || char === "\u201D") marks.push(index);
-  }
-  const spans: Array<[number, number]> = [];
-  for (let i = 0; i + 1 < marks.length; i += 2) {
-    const open = marks[i];
-    const close = marks[i + 1];
-    if (open !== undefined && close !== undefined) spans.push([open, close]);
-  }
-  return spans;
+interface FlatDocument {
+  readonly text: string;
+  /** `[start, end)` of each line that is shown rather than asserted: a fence or a blockquote. */
+  readonly exempt: ReadonlyArray<readonly [number, number]>;
+  /** `[start, end)` of each paragraph, so quote pairing stays inside one. */
+  readonly paragraphs: ReadonlyArray<readonly [number, number]>;
 }
 
-/**
- * Fenced-block and blockquote spans, in the coordinates of the FLATTENED paragraph.
- *
- * These are line-structural, and the previous version marked the **whole paragraph** exempt whenever it
- * found one. Round 9 measured the consequence: 12.5% of the governance corpus was already exempt, and
- * putting one blockquote line under a reasserted claim — no blank line needed, since paragraphs split
- * on blank lines — laundered it. Two reviewers found it independently.
- *
- * The offsets `shownSpans` already computed were being thrown away by its only caller, which read
- * `.length > 0`. They are used now, mapped line by line: flattening collapses runs of whitespace, so a
- * paragraph's flattened text is its lines' flattened texts joined by single spaces, and a line's span
- * is derivable by accumulating lengths.
- */
-function shownSpans(paragraph: string, variant: 0 | 1): Array<[number, number]> {
-  const spans: Array<[number, number]> = [];
-  let offset = 0;
+function flattenDocument(raw: string, variant: 0 | 1): FlatDocument {
+  let text = "";
+  const exempt: Array<[number, number]> = [];
+  const paragraphs: Array<[number, number]> = [];
   let inFence = false;
-  for (const line of paragraph.split(/\r?\n/)) {
-    const flat = flattenings(line)[variant];
-    const start = offset;
-    const end = offset + flat.length;
-    if (/^\s*(?:```|~~~)/.test(line)) {
-      inFence = !inFence;
-      spans.push([start, end]);
-    } else if (inFence || /^\s*>/.test(line)) {
-      spans.push([start, end]);
+
+  for (const paragraph of raw.split(/\r?\n[ \t]*\r?\n/)) {
+    const paragraphStart = text.length;
+    for (const line of paragraph.split(/\r?\n/)) {
+      const flat = flattenings(line)[variant].trim();
+      const isMarker = /^\s*(?:```|~~~)/.test(line);
+      const start = text.length;
+      if (flat !== "") text += flat;
+      const end = text.length;
+      if (isMarker) {
+        inFence = !inFence;
+        exempt.push([start, end]);
+      } else if (inFence || /^\s*>/.test(line)) {
+        exempt.push([start, end]);
+      }
+      // One separator per line, and none after a marker that contributed nothing.
+      if (flat !== "") text += " ";
     }
-    offset = end + 1;
+    paragraphs.push([paragraphStart, text.length]);
+    text += " ";
+  }
+  return { text, exempt, paragraphs };
+}
+
+/** Whether a snippet quotes the claim at `at`, for the unit-shaped tests below. */
+function quotesAt(snippet: string, at: number): boolean {
+  const document = flattenDocument(snippet, 0);
+  return quotedSpans(document).some(([start, end]) => start < at && at <= end);
+}
+
+/** Is this position inside a line that is shown rather than asserted? */
+function isExempt(document: FlatDocument, index: number): boolean {
+  return document.exempt.some(([start, end]) => index >= start && index < end);
+}
+
+/**
+ * Quotation-mark spans, paired per paragraph and **skipping exempt regions**.
+ *
+ * Skipping them is what closes round 10's remaining route. The odd-parity report already ignored marks
+ * inside a fence, while the pairing counted every one — so a single stray `"` on a fenced or quoted line
+ * shifted every span after it while the paragraph still read as balanced. The negative control, the same
+ * mark with no fence, was caught, which localised the hole to exactly this disagreement. One mark set,
+ * used by both.
+ */
+function quotedSpans(document: FlatDocument): Array<[number, number]> {
+  const spans: Array<[number, number]> = [];
+  for (const [from, to] of document.paragraphs) {
+    const marks: number[] = [];
+    for (let index = from; index < to; index += 1) {
+      const char = document.text[index];
+      if (char !== '"' && char !== "\u201C" && char !== "\u201D") continue;
+      if (isExempt(document, index)) continue;
+      marks.push(index);
+    }
+    for (let i = 0; i + 1 < marks.length; i += 2) {
+      const open = marks[i];
+      const close = marks[i + 1];
+      if (open !== undefined && close !== undefined) spans.push([open, close]);
+    }
   }
   return spans;
 }
 
-/**
- * Quoted spans, computed per paragraph.
- *
- * Paragraph-scoped because a global parity scan is unbounded: round 6 planted one stray `"` and it
- * inverted every range after it — laundering an assertion in one place and accusing eight correct
- * quotations elsewhere, which reddened a required CI leg.
- */
+/** Paragraphs carrying an odd number of quotation marks outside any exempt region. */
+function oddParagraphs(document: FlatDocument): string[] {
+  const out: string[] = [];
+  for (const [from, to] of document.paragraphs) {
+    let counted = 0;
+    for (let index = from; index < to; index += 1) {
+      const char = document.text[index];
+      if (char !== '"' && char !== "\u201C" && char !== "\u201D") continue;
+      if (isExempt(document, index)) continue;
+      counted += 1;
+    }
+    if (counted % 2 === 1) out.push(document.text.slice(from, Math.min(to, from + 90)));
+  }
+  return out;
+}
+
 interface Occurrence {
   readonly file: string;
   readonly claim: string;
@@ -369,29 +407,21 @@ async function occurrences(): Promise<Occurrence[]> {
     // One pass per flattening. A claim laundered by a zero-width character is visible in exactly one of
     // the two, so both are searched and the occurrences merged.
     for (const variant of [0, 1] as const) {
-      let joined = "";
-      const spans: Array<[number, number]> = [];
-      for (const paragraph of raw.split(/\r?\n[ \t]*\r?\n/)) {
-        const flat = flattenings(paragraph)[variant];
-        const offset = joined.length;
-        for (const [start, end] of quotedSpans(flat)) spans.push([offset + start, offset + end]);
-        // Line-scoped, not paragraph-scoped. `[start - 1, end]` because the containment test below is
-        // `spanStart < index && to <= spanEnd`, so the span has to open one character before the first
-        // exempt position.
-        for (const [start, end] of shownSpans(paragraph, variant)) {
-          spans.push([offset + start - 1, offset + end]);
-        }
-        joined += `${flat} `;
-      }
+      const document = flattenDocument(raw, variant);
+      const spans = quotedSpans(document);
 
       for (const entry of RETRACTED) {
         const needle = flattenings(entry.claim)[variant];
-        let index = joined.indexOf(needle);
+        let index = document.text.indexOf(needle);
         while (index !== -1) {
           const to = index + needle.length;
+          // Quoted, or shown. A claim inside a fence or a blockquote is being displayed, and the two
+          // are one check now: both read the same document and the same offsets, which is what the
+          // separate coordinate systems could not guarantee.
+          const shown = isExempt(document, index) && isExempt(document, Math.max(index, to - 1));
           const quoted = spans.some(([start, end]) => start < index && to <= end);
-          found.push({ file, claim: entry.claim, quoted });
-          index = joined.indexOf(needle, to);
+          found.push({ file, claim: entry.claim, quoted: quoted || shown });
+          index = document.text.indexOf(needle, to);
         }
       }
     }
@@ -426,12 +456,8 @@ describe("retracted claims are quoted, never asserted", () => {
     ).toBe(true);
 
     const asserted = "Round 2 rebuilt the scan **around the\nverb** and re-measured.";
-    const flatAsserted = flatten(asserted);
-    const at = flatAsserted.indexOf(flatten("rebuilt the scan around the verb"));
-    expect(
-      quotedSpans(flatAsserted).some(([start, end]) => start < at && at <= end),
-      "and the same words unquoted must not pass",
-    ).toBe(false);
+    const at = flatten(asserted).indexOf(flatten("rebuilt the scan around the verb"));
+    expect(quotesAt(asserted, at), "and the same words unquoted must not pass").toBe(false);
   });
 
   it("treats italics as emphasis rather than quotation", () => {
@@ -439,12 +465,8 @@ describe("retracted claims are quoted, never asserted", () => {
     // not one; round 6 found the assertion standing behind it.
     const italic =
       "An earlier version called clause 1 _degenerate against this runner_; that is false.";
-    const flat = flatten(italic);
-    const at = flat.indexOf(flatten("degenerate against this runner"));
-    expect(
-      quotedSpans(flat).some(([start, end]) => start < at && at <= end),
-      "italics are not quotes",
-    ).toBe(false);
+    const at = flatten(italic).indexOf(flatten("degenerate against this runner"));
+    expect(quotesAt(italic, at), "italics are not quotes").toBe(false);
   });
 
   it("bounds an unbalanced quote to its own paragraph", () => {
@@ -452,13 +474,68 @@ describe("retracted claims are quoted, never asserted", () => {
     // quotations. Paragraph scoping is what stops that reaching the rest of the document.
     const stray = 'A paragraph with one " quote mark.';
     const later = 'A later paragraph saying "because the workflow changes are unmerged", quoted.';
-    const flat = flatten(later);
-    const at = flat.indexOf(flatten("because the workflow changes are unmerged"));
+    const at = flatten(later).indexOf(flatten("because the workflow changes are unmerged"));
+    expect(quotesAt(later, at), "the later paragraph is judged on its own quotes").toBe(true);
     expect(
-      quotedSpans(flat).some(([start, end]) => start < at && at <= end),
-      "the later paragraph is judged on its own quotes",
+      quotedSpans(flattenDocument(stray, 0)).length,
+      "and the stray one pairs with nothing",
+    ).toBe(0);
+  });
+
+  it("exempts what a fence shows and refuses what follows it, across a blank line", () => {
+    // Round 10's routes, both directions, on the shapes the reviewers used.
+    //
+    // A fenced block containing a blank line is split by the paragraph rule, so the CLOSING marker was
+    // read as an opening one and everything after it was exempted. Two reviewers found that
+    // independently, in the repair for the paragraph-wholesale version of the same defect — which is
+    // why `inFence` is now tracked across the whole document rather than per paragraph.
+    const CLAIM = "0 misclassified";
+    const shownIn = (raw: string): boolean => {
+      const document = flattenDocument(raw, 0);
+      const at = document.text.indexOf(flatten(CLAIM));
+      expect(at, "the claim must be findable in the flattened document").toBeGreaterThanOrEqual(0);
+      return isExempt(document, at);
+    };
+
+    // Shown: inside a fence, including one a blank line splits, and one that is indented.
+    expect(shownIn(`\`\`\`text\n${CLAIM}\n\`\`\``), "inside a fence").toBe(true);
+    expect(
+      shownIn(`\`\`\`text\n${CLAIM}\n\nmore sample\n\`\`\``),
+      "inside a fence a blank line splits",
     ).toBe(true);
-    expect(quotedSpans(flatten(stray)).length, "and the stray one pairs with nothing").toBe(0);
+    expect(shownIn(`  \`\`\`text\n  ${CLAIM}\n  \`\`\``), "inside an indented fence").toBe(true);
+    expect(shownIn(`~~~text\n${CLAIM}\n~~~`), "inside a tilde fence").toBe(true);
+    expect(shownIn(`> ${CLAIM}`), "inside a blockquote").toBe(true);
+
+    // Asserted: after a fence closes, after a blockquote line, and on its own.
+    expect(shownIn(`\`\`\`text\nsample\n\nmore\n\`\`\`\n${CLAIM}`), "after a split fence").toBe(
+      false,
+    );
+    expect(shownIn(`~~~text\nsample\n\nmore\n~~~\n${CLAIM}`), "after a split tilde fence").toBe(
+      false,
+    );
+    expect(shownIn(`> a quoted line\n${CLAIM}`), "under a blockquote line").toBe(false);
+    expect(shownIn(CLAIM), "on its own").toBe(false);
+  });
+
+  it("counts the same quotation marks the pairing counts", () => {
+    // The last route round 10 measured: the parity report skipped marks inside an exempt region while
+    // the pairing counted every one, so a single stray `"` on a fenced or quoted line shifted every
+    // span after it while the paragraph still read as balanced. The negative control — the same mark
+    // with no fence — was caught, which localised the hole to exactly that disagreement.
+    const stray = `> a quoted line with one " mark\n0 misclassified. And "Three packs" too.`;
+    const document = flattenDocument(stray, 0);
+    const at = document.text.indexOf(flatten("0 misclassified"));
+
+    expect(
+      oddParagraphs(document),
+      "the exempt mark must not make the paragraph read as odd",
+    ).toEqual([]);
+    expect(
+      quotedSpans(document).some(([start, end]) => start < at && at <= end),
+      "and it must not shift a span over the assertion either",
+    ).toBe(false);
+    expect(isExempt(document, at), "the assertion is not inside the blockquote").toBe(false);
   });
 
   it("keeps a counted claim's number equal to what the tree holds", async () => {
@@ -493,17 +570,11 @@ describe("retracted claims are quoted, never asserted", () => {
     const offenders: string[] = [];
     for (const file of GOVERNANCE) {
       const raw = await readFile(path.join(ROOT, file), "utf8");
-      for (const paragraph of raw.split(/\r?\n[ \t]*\r?\n/)) {
-        const flat = flattenings(paragraph)[0];
-        const exempt = shownSpans(paragraph, 0);
-        let counted = 0;
-        for (let index = 0; index < flat.length; index += 1) {
-          const char = flat[index];
-          if (char !== '"' && char !== "\u201C" && char !== "\u201D") continue;
-          if (exempt.some(([start, end]) => index >= start && index < end)) continue;
-          counted += 1;
-        }
-        if (counted % 2 === 1) offenders.push(`${file}: ${flat.slice(0, 90)}`);
+      // The same mark set the pairing uses, from the same document. Round 10 found the two disagreeing
+      // — the report skipped exempt marks and the pairing counted them — so one stray `"` on a fenced
+      // line shifted every span after it while the paragraph still read as balanced.
+      for (const paragraph of oddParagraphs(flattenDocument(raw, 0))) {
+        offenders.push(`${file}: ${paragraph}`);
       }
     }
     expect(
