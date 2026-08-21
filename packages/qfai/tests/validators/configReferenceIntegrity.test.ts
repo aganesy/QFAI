@@ -55,12 +55,9 @@ function makeConfig(overrides: { primarySpecId?: string; packPath?: string } = {
         forbidTestTodoStubs: true,
       },
       traceability: {
-        brMustHaveSc: true,
         scMustHaveTest: true,
         testFileGlobs: [],
         testFileExcludeGlobs: [],
-        scNoTestSeverity: "error",
-        orphanContractsPolicy: "error",
         unknownContractIdSeverity: "warning",
       },
     },

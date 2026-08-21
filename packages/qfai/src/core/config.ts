@@ -12,7 +12,6 @@ import { normalizeRenderViewports, type RenderEvidenceConfig } from "./uiux/rend
 export type FailOn = "never" | "warning" | "error";
 export type OutputFormat = "text" | "github";
 export type TraceabilitySeverity = "warning" | "error";
-export type OrphanContractsPolicy = "error" | "warning" | "allow";
 
 export type QfaiPaths = {
   contractsDir: string;
@@ -47,12 +46,9 @@ export type QfaiValidationConfig = {
     forbidTestTodoStubs: boolean;
   };
   traceability: {
-    brMustHaveSc: boolean;
     scMustHaveTest: boolean;
     testFileGlobs: string[];
     testFileExcludeGlobs: string[];
-    scNoTestSeverity: TraceabilitySeverity;
-    orphanContractsPolicy: OrphanContractsPolicy;
     unknownContractIdSeverity: TraceabilitySeverity;
   };
 };
@@ -196,12 +192,9 @@ export const defaultConfig: QfaiConfig = {
       forbidTestTodoStubs: true,
     },
     traceability: {
-      brMustHaveSc: true,
       scMustHaveTest: true,
       testFileGlobs: [],
       testFileExcludeGlobs: [],
-      scNoTestSeverity: "error",
-      orphanContractsPolicy: "error",
       unknownContractIdSeverity: "error",
     },
   },
@@ -404,6 +397,8 @@ function normalizeValidation(
     testStrategyRaw = undefined;
   }
 
+  reportRetiredTraceabilityKeys(traceabilityRaw, configPath, issues);
+
   return {
     failOn: readFailOn(raw.failOn, base.failOn, "validation.failOn", configPath, issues),
     require: {
@@ -453,13 +448,6 @@ function normalizeValidation(
       ),
     },
     traceability: {
-      brMustHaveSc: readBoolean(
-        traceabilityRaw?.brMustHaveSc,
-        base.traceability.brMustHaveSc,
-        "validation.traceability.brMustHaveSc",
-        configPath,
-        issues,
-      ),
       scMustHaveTest: readBoolean(
         traceabilityRaw?.scMustHaveTest,
         base.traceability.scMustHaveTest,
@@ -478,20 +466,6 @@ function normalizeValidation(
         traceabilityRaw?.testFileExcludeGlobs,
         base.traceability.testFileExcludeGlobs,
         "validation.traceability.testFileExcludeGlobs",
-        configPath,
-        issues,
-      ),
-      scNoTestSeverity: readTraceabilitySeverity(
-        traceabilityRaw?.scNoTestSeverity,
-        base.traceability.scNoTestSeverity,
-        "validation.traceability.scNoTestSeverity",
-        configPath,
-        issues,
-      ),
-      orphanContractsPolicy: readOrphanContractsPolicy(
-        traceabilityRaw?.orphanContractsPolicy,
-        base.traceability.orphanContractsPolicy,
-        "validation.traceability.orphanContractsPolicy",
         configPath,
         issues,
       ),
@@ -941,22 +915,40 @@ function readTraceabilitySeverity(
   return fallback;
 }
 
-function readOrphanContractsPolicy(
-  value: unknown,
-  fallback: OrphanContractsPolicy,
-  label: string,
+/**
+ * `validation.traceability` keys that were declared, defaulted and parsed but
+ * that no validator ever read. They are still accepted so an existing config
+ * keeps loading, and each one that is still present is named in a warning: a
+ * knob shaped like a gate control that changes nothing is worse than no knob,
+ * because it also misreports the gate the code actually runs.
+ */
+const RETIRED_TRACEABILITY_KEYS = [
+  "brMustHaveSc",
+  "scNoTestSeverity",
+  "orphanContractsPolicy",
+] as const;
+
+function reportRetiredTraceabilityKeys(
+  traceabilityRaw: Record<string, unknown> | undefined,
   configPath: string,
   issues: Issue[],
-): OrphanContractsPolicy {
-  if (value === "error" || value === "warning" || value === "allow") {
-    return value;
+): void {
+  if (!traceabilityRaw) {
+    return;
   }
-  if (value !== undefined) {
+  for (const key of RETIRED_TRACEABILITY_KEYS) {
+    if (traceabilityRaw[key] === undefined) {
+      continue;
+    }
     issues.push(
-      configIssue(configPath, `${label} は error|warning|allow のいずれかである必要があります。`),
+      configDeprecatedIssue(
+        configPath,
+        `validation.traceability.${key} は廃止されました。` +
+          `どの検証も参照しないため、設定しても挙動は変わりません。` +
+          `qfai.config.yaml から削除してください。`,
+      ),
     );
   }
-  return fallback;
 }
 
 function normalizeUiux(
@@ -1218,6 +1210,17 @@ function configIssue(file: string, message: string): Issue {
     message,
     file,
     rule: "config.invalid",
+  };
+}
+
+function configDeprecatedIssue(file: string, message: string): Issue {
+  return {
+    code: "QFAI_CONFIG_DEPRECATED",
+    severity: "warning",
+    category: "canonical",
+    message,
+    file,
+    rule: "config.deprecatedKey",
   };
 }
 

@@ -285,3 +285,57 @@ describe("spec-0004 testStrategy.forbidTestTodoStubs", () => {
     }
   });
 });
+
+describe("retired validation.traceability keys", () => {
+  it("reports every retired key still present as deprecated and inert", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-retired-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        [
+          "validation:",
+          "  traceability:",
+          "    brMustHaveSc: false",
+          "    scNoTestSeverity: warning",
+          "    orphanContractsPolicy: allow",
+          "    scMustHaveTest: false",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const { config, issues } = await loadConfig(root);
+
+      const deprecated = issues.filter((issue) => issue.code === "QFAI_CONFIG_DEPRECATED");
+      expect(deprecated.map((issue) => issue.severity)).toEqual(["warning", "warning", "warning"]);
+      for (const key of ["brMustHaveSc", "scNoTestSeverity", "orphanContractsPolicy"]) {
+        expect(
+          deprecated.some((issue) => issue.message.includes(`validation.traceability.${key}`)),
+          `expected a deprecation warning naming ${key}`,
+        ).toBe(true);
+      }
+      // The retired keys must not be rejected outright: an existing config still loads,
+      // and the key that is actually wired keeps its effect.
+      expect(issues.some((issue) => issue.code === "QFAI_CONFIG_INVALID")).toBe(false);
+      expect(config.validation.traceability.scMustHaveTest).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("stays silent when no retired key is present", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-retired-clean-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        ["validation:", "  traceability:", "    scMustHaveTest: true", ""].join("\n"),
+        "utf-8",
+      );
+
+      const { issues } = await loadConfig(root);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
