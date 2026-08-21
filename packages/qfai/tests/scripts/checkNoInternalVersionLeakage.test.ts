@@ -16,13 +16,17 @@
  *   - empty SCAN_PATHS WARN (L97-L102): if every files[] entry is
  *     missing on disk, the guard emits a WARN but exits 0 (lint-only
  *     CI passes legitimately have no `dist/`).
+ *   - filename pass: `grep -rn` only ever matches line content, so a
+ *     marker encoded in a path component used to ship green. The name
+ *     scan must report it with its own message, while honouring the
+ *     documented `assistant/process/migrations/` version exemption.
  *
  * Tests stage a temp directory with a controllable `package.json` and
  * spawn the script with cwd=tempDir so the script's auto-ROOT detection
  * falls through to `ROOT="."`.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -64,6 +68,24 @@ function runGuard(cwd: string): RunResult {
     stdout: child.stdout ?? "",
     stderr: child.stderr ?? "",
   };
+}
+
+/**
+ * Stage a `package.json` whose only distributed surface is `assets/`,
+ * plus the given `assets/`-relative files. Bodies are kept free of
+ * forbidden tokens so any hit can only come from the name pass.
+ */
+async function stageAssets(root: string, files: ReadonlyArray<[string, string]>): Promise<void> {
+  await writeFile(
+    path.join(root, "package.json"),
+    JSON.stringify({ name: "fake", version: "0.0.0", files: ["assets"] }),
+    "utf-8",
+  );
+  for (const [relative, body] of files) {
+    const target = path.join(root, "assets", relative);
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, body, "utf-8");
+  }
 }
 
 describe("check-no-internal-version-leakage.sh defense branches", () => {
@@ -139,6 +161,58 @@ describe("check-no-internal-version-leakage.sh defense branches", () => {
     const r = runGuard(tmp);
     expect(r.status).toBe(1);
     expect(r.stderr).toMatch(/glob pattern 'asset\?\/file\.md'/);
+  });
+
+  it("flags an internal version marker carried by a file NAME (exit 1)", async () => {
+    // Regression: the guard scanned file *contents* only, so a shipped
+    // asset whose marker lived in its name passed green.
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [["notes-v2.0-draft.md", "clean body\n"]]);
+    const r = runGuard(tmp);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/leaked in a FILE NAME/);
+    expect(r.stderr).toMatch(/notes-v2[.]0-draft[.]md/);
+  });
+
+  it("flags an internal spec id carried by a file NAME (exit 1)", async () => {
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [["spec-0042-notes.md", "clean body\n"]]);
+    const r = runGuard(tmp);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/leaked in a FILE NAME/);
+    expect(r.stderr).toMatch(/spec-0042-notes[.]md/);
+  });
+
+  it("flags an internal trace id carried by a DIRECTORY name (exit 1)", async () => {
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [["DR-0007/notes.md", "clean body\n"]]);
+    const r = runGuard(tmp);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/leaked in a FILE NAME/);
+    expect(r.stderr).toMatch(/DR-0007/);
+  });
+
+  it("exempts version-stamped migration memo names from the name pass (exit 0)", async () => {
+    // `assistant/process/migrations/<version>-*.md` names are stamped on
+    // purpose — see the exemption block in the guard.
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [
+      ["init/.qfai/assistant/process/migrations/v1.4.27-atdd-alignment.md", "clean body\n"],
+    ]);
+    const r = runGuard(tmp);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/OK: no internal spec ids/);
+  });
+
+  it("keeps a spec id inside a migration memo name a failure (exit 1)", async () => {
+    // The exemption is scoped to the version class only.
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [
+      ["init/.qfai/assistant/process/migrations/spec-0042-recut.md", "clean body\n"],
+    ]);
+    const r = runGuard(tmp);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/leaked in a FILE NAME/);
   });
 
   it("warns and passes when every files[] entry is absent on disk (exit 0)", async () => {

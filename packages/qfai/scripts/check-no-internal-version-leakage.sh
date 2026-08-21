@@ -28,6 +28,12 @@ fail=0
 # Updating a regex here (e.g. tightening INTERNAL_VERSION_RE to a
 # QFAI-context pattern) requires updating both other sites in the same
 # PR. See `.agents/rules/distributed-surface.md` "Defenses (4 layers)".
+#
+# The same three regexes are applied twice per surface: once to file
+# CONTENT and once to file NAMES (see the loop at the bottom). The smoke
+# test mirrors both dimensions; `lint-shipping.ts` scans `src/**` comment
+# text only, and source file names reach the distributed surface as
+# `dist/` names, which this script's name pass covers post-build.
 
 # Internal spec IDs: spec-0010 and above are QFAI-internal specs.
 # spec-0001..0009 are reserved for sample / Category-B template usage and
@@ -64,6 +70,19 @@ INTERNAL_VERSION_RE='\bv[0-9]+\.[0-9]+(\.[0-9]+)?\b|\bv1\.x\b'
 # late-review wave (codex r3265386185, LOW) to keep `08_Open-questions.md`
 # internal references out of distributed surfaces.
 INTERNAL_ID_RE='\bCAP-0(0[1-9][0-9]|[1-9][0-9]{2,})\b|\bDEC-[0-9]{4}-[0-9]{4}\b|\bDR-[0-9]{4}\b|\bQFAI-PROT2-[0-9]+\b|\bOQ-[0-9]{4}-[0-9]{4}\b'
+
+# Version-class exemption for the FILE NAME pass below.
+#
+# Migration memo file names are version-stamped on purpose: they are
+# ADR-style citation targets whose names must stay stable once
+# published, and `migrationMemoRelativePath()` in
+# `src/core/paths/assistantPaths.ts` mints one per
+# `--upgrade-assistant-tree` run. This exemption keeps that intentional
+# producer visible instead of accidental. It is scoped to the version
+# class only — a spec id or trace id in a migration path is still a
+# leak — and it applies to names only; memo *contents* keep the full
+# content scan.
+MIGRATION_MEMO_DIR_RE='assistant/process/migrations/'
 
 # Schema version field (any literal "schemaVersion") in distributed
 # surfaces. Generated artifact schemas no longer carry this field.
@@ -143,6 +162,26 @@ for target in "${SCAN_PATHS[@]}"; do
   if [[ -n "$hits" ]]; then
     echo "FAIL: internal spec id, version marker, or trace id leaked in $target:" >&2
     echo "$hits" | head -20 >&2
+    fail=1
+  fi
+
+  # File NAME pass: `grep -rn` matches lines *inside* files, so a marker
+  # encoded in a path component — `v1.4.27-atdd-alignment.md`,
+  # `spec-0042-notes.md`, a `DR-0007/` directory — ships with a green
+  # result even though the name is copied verbatim into every consuming
+  # project. Run the same regexes over the path list to close that
+  # dimension, and report it separately so the operator can tell a name
+  # leak from a content leak.
+  target_paths=$(find "$target" -print 2>/dev/null || true)
+  name_hits=$(printf '%s\n' "$target_paths" \
+    | grep -E "$INTERNAL_SPEC_RE|$INTERNAL_ID_RE" || true)
+  version_name_hits=$(printf '%s\n' "$target_paths" \
+    | grep -vE "$MIGRATION_MEMO_DIR_RE" \
+    | grep -E "$INTERNAL_VERSION_RE" || true)
+  if [[ -n "$name_hits" || -n "$version_name_hits" ]]; then
+    echo "FAIL: internal spec id, version marker, or trace id leaked in a FILE NAME under $target:" >&2
+    { printf '%s\n%s\n' "$name_hits" "$version_name_hits" \
+      | grep -vE '^[[:space:]]*$' | head -20 >&2; } || true
     fail=1
   fi
   schema_hits=$(grep -rnE "$SCHEMA_VERSION_RE" "$target" 2>/dev/null \

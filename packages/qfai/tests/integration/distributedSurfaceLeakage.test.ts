@@ -22,6 +22,11 @@
  * has been hit and a single source module is now a reasonable next
  * step, deferred from this PR. See `.agents/rules/distributed-surface.md`
  * "Defenses (4 layers)" for the layered defense overview.
+ *
+ * The patterns are applied in two dimensions: to file CONTENT and to
+ * file NAMES (`scanPathName` below), because `qfai init` copies a path
+ * component into the consuming project just as literally as a line.
+ * Site 2 carries the same two dimensions.
  */
 import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import os from "node:os";
@@ -98,15 +103,51 @@ interface Hit {
   className: string;
 }
 
+/**
+ * Name-pass exemption, mirroring `MIGRATION_MEMO_DIR_RE` in
+ * `scripts/check-no-internal-version-leakage.sh`: migration memo file
+ * names are version-stamped on purpose (ADR-style citation targets, and
+ * `migrationMemoRelativePath()` mints one per `--upgrade-assistant-tree`
+ * run). Version class only — spec ids and trace ids in a migration path
+ * are still a leak — and names only; memo contents keep the full scan.
+ */
+const MIGRATION_MEMO_DIR_RE = /assistant[/\\]process[/\\]migrations[/\\]/;
+
+/**
+ * Scan a relative path for forbidden tokens carried by the *name*.
+ * `PATTERNS` above matches line content; a marker encoded in a path
+ * component (`v1.4.27-atdd-alignment.md`, `spec-0042-notes.md`, a
+ * `DR-0007/` directory) never reaches a content matcher, yet init copies
+ * the name verbatim into the consuming project.
+ */
+function scanPathName(relativePath: string): Hit[] {
+  const found: Hit[] = [];
+  for (const { name, re } of PATTERNS) {
+    if (name === "schemaVersion field") continue;
+    if (name === "internal version marker" && MIGRATION_MEMO_DIR_RE.test(relativePath)) {
+      continue;
+    }
+    re.lastIndex = 0;
+    const m = re.exec(relativePath);
+    if (m) {
+      found.push({ file: relativePath, line: 0, match: m[0], className: name });
+    }
+  }
+  return found;
+}
+
 describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
   it("qfai init output contains no internal IDs or version markers", async () => {
     const tmpDir = await newTempDir();
     await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
 
     const hits: Hit[] = [];
+    const nameHits: Hit[] = [];
     const visitedRelative: string[] = [];
     for await (const file of walk(tmpDir)) {
-      visitedRelative.push(path.relative(tmpDir, file));
+      const relative = path.relative(tmpDir, file);
+      visitedRelative.push(relative);
+      nameHits.push(...scanPathName(relative));
       const ext = path.extname(file);
       if (!TEXT_EXTENSIONS.has(ext)) continue;
       const stats = await stat(file);
@@ -149,9 +190,47 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
     }
     expect(hits).toEqual([]);
 
+    if (nameHits.length > 0) {
+      const report = nameHits
+        .slice(0, 30)
+        .map((h) => `  [${h.className}] ${h.file}`)
+        .join("\n");
+      throw new Error(
+        `Distributed surface leakage detected in qfai init FILE NAMES (${nameHits.length} hits):\n${report}\n\n` +
+          "Fix: rename the originating asset under packages/qfai/assets/init/ so the identifier is not part of its path.",
+      );
+    }
+    expect(nameHits).toEqual([]);
+
     // TC-1.5.1: DESIGN.md must be in the walked file list (guard against
     // accidental rename / exclusion of the root brand SSOT).
     expect(visitedRelative).toContain("DESIGN.md");
+  });
+
+  // The walk above only proves that today's tree happens to be clean —
+  // which is exactly the state a content-only scan also reported. Pin the
+  // name matcher itself on synthetic paths so the dimension stays alive.
+  it("name pass flags path-borne tokens and honours the migration-memo exemption", () => {
+    const classNames = (relative: string): string[] =>
+      scanPathName(relative).map((h) => h.className);
+
+    expect(classNames(path.join(".qfai", "assistant", "notes-v2.0-draft.md"))).toEqual([
+      "internal version marker",
+    ]);
+    expect(classNames(path.join(".qfai", "specs", "spec-0042-notes.md"))).toEqual([
+      "internal spec id (spec-0010+)",
+    ]);
+    expect(classNames(path.join(".qfai", "DR-0007", "notes.md"))).toEqual([
+      "internal trace id (CAP-0010+/DEC/DR/PROT2/OQ)",
+    ]);
+
+    const memoDir = path.join(".qfai", "assistant", "process", "migrations");
+    expect(classNames(path.join(memoDir, "v1.4.27-atdd-alignment.md"))).toEqual([]);
+    // The exemption is scoped to the version class only.
+    expect(classNames(path.join(memoDir, "spec-0042-recut.md"))).toEqual([
+      "internal spec id (spec-0010+)",
+    ]);
+    expect(classNames(path.join(".qfai", "assistant", "steering", "test-layers.md"))).toEqual([]);
   });
 
   // TC-1.5.2: standalone DESIGN.md template scan against all 4 PATTERNS.
