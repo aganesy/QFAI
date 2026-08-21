@@ -870,6 +870,67 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(sanitized).not.toContain("docs/examples");
   });
 
+  it("documents every qfai init flag in both READMEs", async () => {
+    const readmes = await Promise.all(
+      [path.join(repoRoot, "README.md"), path.join(repoRoot, "packages", "qfai", "README.md")].map(
+        (readmePath) => readFile(readmePath, "utf-8"),
+      ),
+    );
+
+    // Backticked tokens only: prose mentions such as `npx qfai init --force`
+    // do not count as documenting the flag.
+    const documented = [
+      "--dir <path>",
+      "--force",
+      "--dry-run",
+      "--upgrade-assistant-tree",
+      "--yes",
+    ];
+    for (const readme of readmes) {
+      for (const flag of documented) {
+        expect(readme, `README must document the init flag ${flag}`).toContain(`\`${flag}\``);
+      }
+      // `--upgrade-assistant-tree` is the remedy the deprecation finding
+      // prints at operators, and the migration copies instead of deleting.
+      expect(readme).toContain("D-DEPRECATED-PATH");
+      expect(readme).toContain("copied, never deleted");
+    }
+
+    // Drift guard: any `qfai init --<flag>` the tool prints at operators must
+    // be documented in both READMEs.
+    const sources = await Promise.all(
+      [
+        path.join(repoRoot, "packages", "qfai", "src", "cli", "commands", "init.ts"),
+        path.join(
+          repoRoot,
+          "packages",
+          "qfai",
+          "src",
+          "core",
+          "validators",
+          "assistantTreeMigration.ts",
+        ),
+      ].map((sourcePath) => readFile(sourcePath, "utf-8")),
+    );
+    const printedFlags = new Set<string>();
+    for (const source of sources) {
+      for (const match of source.matchAll(/qfai init (--[a-z][a-z-]+)/g)) {
+        const flag = match[1];
+        if (flag !== undefined) {
+          printedFlags.add(flag);
+        }
+      }
+    }
+    expect(printedFlags.size).toBeGreaterThan(0);
+    for (const flag of printedFlags) {
+      for (const readme of readmes) {
+        expect(readme, `README must document the init flag ${flag} that the CLI prints`).toContain(
+          `\`${flag}\``,
+        );
+      }
+    }
+  });
+
   it("keeps package README aligned with discussion completion contract", async () => {
     const readmePath = path.join(repoRoot, "packages", "qfai", "README.md");
     const readme = await readFile(readmePath, "utf-8");

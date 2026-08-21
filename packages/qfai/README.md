@@ -77,6 +77,16 @@ npx qfai report
 - `npx qfai init`
   - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit
     (`assistant/` with the 4-layer tree — `constitution/`, `manifest/`, `catalog/`, `process/` — plus `agents/` and `skills/`), plus `qfai.config.yaml`.
+  - Options:
+
+    | Flag                       | Effect                                                                                                                                                                                                                                                                                                                                  |
+    | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | `--dir <path>`             | Output directory (default: the current directory).                                                                                                                                                                                                                                                                                      |
+    | `--force`                  | Re-generate `.qfai/assistant/{skills,agents}/**` and the published skill/agent wrappers under `.agents/`, `.claude/`, `.codex/` and `.github/`. Everything else — including `assistant/manifest/**`, `specs/`, `contracts/` and `steering/` — is skipped when it already exists.                                                        |
+    | `--dry-run`                | Report what would change and write nothing. Use it to rehearse `--upgrade-assistant-tree`.                                                                                                                                                                                                                                              |
+    | `--upgrade-assistant-tree` | Migrate a pre-recut project from `.qfai/assistant/{instructions,steering,manifest}/` to the 4-layer tree. This is what the `D-DEPRECATED-PATH` finding is asking for. Files are copied, never deleted: the legacy paths stay until you remove them, and an existing file at the new path is kept (reported as `W-USER-EDIT-PRESERVED`). |
+    | `--yes`                    | Reserved for a future interactive mode; no behavioural difference today.                                                                                                                                                                                                                                                                |
+
 - `npx qfai validate`
   - Validates specs/contracts/scenarios/traceability and review artifacts
     (`.qfai/review/review-*/summary.json` + minimum schema), writes `.qfai/report/validate.json`,
