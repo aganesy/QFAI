@@ -852,17 +852,22 @@ function interpreterTail(
 }
 
 /**
- * What a command's grammar decides BEFORE any token is read, in one place.
+ * What a command's grammar decides BEFORE any token is read.
  *
- * Grouped because the order is load-bearing and used to be spread over two hundred lines. `alwaysBuilds`
- * is only safe because the never-flags are refused first — `ant -version` read as a build until the
- * single-dash spelling was declared — and a per-tool never must beat it for the same reason.
+ * Two checks, not three. It shipped with a `NEVER_FLAGS` line as well, and that line was DEAD:
+ * `resolveHead` refuses the global never-flags before this is reached, so nothing could observe the
+ * ordering the docstring claimed between them. A dead check whose comment asserts a precedence is the
+ * class this spec catalogues, so the check is gone and the claim is only about what remains.
+ *
+ * The ordering that IS load-bearing: a per-tool never must beat `alwaysBuilds`. Every invocation of a
+ * compiler builds, so `alwaysBuilds` answers immediately — and `ant -version` read as a build until the
+ * single-dash spelling was declared, which is what makes "refuse first" a requirement rather than a
+ * preference.
  */
 function openingVerdict(
   tokens: readonly string[],
   tool: ToolGrammar | undefined,
 ): BuildVerdict | undefined {
-  if (refusedBy(tokens, NEVER_FLAGS)) return "none";
   if (refusedBy(tokens, new Set(tool?.never ?? []))) return "none";
   if (tool?.alwaysBuilds === true) return "build";
   return undefined;
@@ -940,6 +945,15 @@ function resolveHead(input: readonly string[], ctx: Context): Head {
  * The three effects are separate on purpose. A `dirs` flag consumes AND moves the lookup; a `values` flag
  * consumes and does not; an inline `flag=value` moves the lookup and consumes NOTHING, because its value
  * is inside the same token. A first extraction collapsed those and moved 143 member cases.
+ *
+ * **A flag has three MORE effects, and this type carries none of them.** Saying "the three effects are
+ * separate" was true and incomplete, and the incompleteness is where a surviving bug was found:
+ *
+ *   - refuse the whole line — `NEVER_FLAGS` in `resolveHead`, `tool.never` in `openingVerdict`;
+ *   - suppress lifecycle hooks — `NO_SCRIPTS`, a pre-pass over the whole token list. This was the one
+ *     flag effect still matching whole tokens, so `npm publish --ignore-scripts=true` disagreed with
+ *     `npm publish --ignore-scripts`. It reads the inline spelling now.
+ *   - pass through without consuming — `MANAGER_PASS`, checked before the dash branch runs at all.
  */
 interface FlagAction {
   readonly build?: boolean;
@@ -1045,7 +1059,12 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
   const buildPrefixes = tool?.buildPrefixes ?? [];
   const opening = openingVerdict(tokens, tool);
   if (opening !== undefined) return opening;
-  const noScripts = tokens.some((t) => NO_SCRIPTS.has(t));
+  // `refusedBy`, not a whole-token match. This was the last flag effect in the file still reading whole
+  // tokens, so `npm publish --ignore-scripts` skipped the lifecycle hooks and
+  // `npm publish --ignore-scripts=true` did not — npm accepts both spellings identically, so one command
+  // had two verdicts. The same invariant `refusedBy` was introduced for, surviving in the one place that
+  // did not use it.
+  const noScripts = refusedBy(tokens, NO_SCRIPTS);
   let cwd = ctx.cwd;
   let sawBare = false;
   let guessed = false;

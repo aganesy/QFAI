@@ -55,6 +55,11 @@ const TRACKED = [
   // precondition is the only thing making callsite counting valid. The A7 repair unified three
   // lists and then omitted a file from the one list that remained.
   "packages/qfai/tests/unit/shippedLaneCommands.test.ts",
+  // Added round 12, both of them the files that closed the two open obligations. They were outside
+  // this list for one round, so their counts were unrecorded and their `.each` precondition
+  // unchecked — which is exactly what round 11 added the list to prevent, one round later.
+  "packages/qfai/tests/e2e/spec0017RunnerParallelismE2E.test.ts",
+  "packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts",
 ] as const;
 
 /** `packages/qfai/tests/x.test.ts` -> `tests/x.test.ts`, the spelling the recorded commands use. */
@@ -166,6 +171,16 @@ describe("the stage evidence's counts are derived, not typed", () => {
         file: "packages/qfai/tests/unit/shippedLaneCommands.test.ts",
         pattern: /shippedLaneCommands\.test\.ts` — (\d+) tests/,
         label: "the shipped-lane allowlist's test count, in Work performed",
+      },
+      {
+        file: "packages/qfai/tests/e2e/spec0017RunnerParallelismE2E.test.ts",
+        pattern: /spec0017RunnerParallelismE2E\.test\.ts` — (\d+) tests/,
+        label: "the parallelism E2E's test count, in Work performed",
+      },
+      {
+        file: "packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts",
+        pattern: /spec0017OwnWorkflowScope\.test\.ts` — (\d+) tests/,
+        label: "the own-workflow-scope test count, in Work performed",
       },
       {
         file: "packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts",

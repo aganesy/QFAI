@@ -240,7 +240,7 @@ And `US-0017-0003`'s stated reason was **false**: the matrix said nothing proved
 from a file, while `qfai-validate.yml:117-149` probes `.nvmrc`, then `.node-version`, publishes what
 it finds, and only falls open to Node 20 with a `::warning::`. The substance was reachable from the
 surface this matrix scores and had simply not been asserted — a cheap gap, not a limit. Asserted now,
-behaviourally, and the row rose to `✅`. Round 1 also recorded that four of the nine stories name the
+behaviourally, and the row rose to `✅`. Round 1 also recorded that five of the nine stories name the
 own tree explicitly, so "a user story is about the adopter" is stated as a named deviation with the
 own-tree assertions cross-referenced per story, rather than as a premise.
 
@@ -271,7 +271,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   bare, by root cause as well as by spelling
 - **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, extracted from the
   E2E so its corpora can be tested on their own
-- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 26 tests over the corpora enumerated
+- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 27 tests over the corpora enumerated
   at § "Execution logs" (`E4b`), none of them chosen. The count is **derived** —
   `tests/assets/stageEvidenceCounts.test.ts` counts the file's callsites and reddens when this number
   and the file disagree, which is how the 25th arrived: the number was 24 until family 4 was declared,
@@ -293,6 +293,19 @@ sweep cannot reach. That guard exists because the previous version of this line 
   counts from the artifacts they describe, after every review round found at least one that the tree
   did not hold. The eighth derives `## Final status`'s own round and response counts, which were correct
   and underived through five findings of exactly that shape
+- **new** `packages/qfai/tests/e2e/spec0017RunnerParallelismE2E.test.ts` — 2 tests, and the first
+  assertion this story has ever had over an EFFECT rather than a declaration. It spawns a fixture suite
+  twice through the real `rootKnobs` and observes the pool: peak simultaneously-live files is 1 at one
+  worker and greater than 1 at four. Its fixture mirrors the root/project split, because the flat version
+  could not be put into the one inert state `vitest.knobs.ts` records
+- **new** `packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts` — 2 tests over the own
+  workflows, **neither annotated**: `CR-20260818-0007` and `CR-20260820-0001` are open and name both rows
+  in their blocked sets, so annotating either would discharge a gate finding that is a pending decision's
+  only remaining signal
+- **new** `packages/qfai/tsconfig.tests.json` — type-checks the test files this stage authored, which
+  nothing had been doing: `tsc -b` covers `src/**` only, so every "check-types clean" claim about a test
+  file was empty. `pnpm check-types` runs it, and `eslint.config.js` re-enables the four promise rules over
+  the same set
 - **new** `packages/qfai/tests/assets/retractedClaims.test.ts` — 11 tests requiring a claim a review
   round refuted to appear only inside quotation marks, because "it is gone now" was itself the false
   statement round 5 found. The eleventh asserts the coordinate model the previous version's docstring
@@ -321,7 +334,8 @@ node scripts/check-atdd-annotation-ledger.mjs --spec 0017
   -> check-atdd-annotation-ledger: 9 claim(s) backed by a test annotation (spec-0017), exit 0
 
 node scripts/check-atdd-annotation-ledger.mjs        (repo-wide)
-  -> exit 1; 127 of 208 claims unbacked; see CR-20260820-0011
+  -> exit 1; 127 unbacked claims; see CR-20260820-0011 (the denominator is not stated: this stage's
+     own US-0017-0007 annotation moved it, and it moves whenever any spec adds one)
 
 pnpm -C packages/qfai exec vitest run tests/integration/scripts/checkAtddAnnotationLedger.test.ts
   -> Tests 23 passed (23), exit 0
@@ -331,8 +345,12 @@ pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
   -> Tests 10 passed (10), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
   -> Tests 11 passed (11), exit 0
+pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017RunnerParallelismE2E.test.ts
+  -> Tests 2 passed (2), exit 0
+pnpm -C packages/qfai exec vitest run --project integration tests/integration/spec0017OwnWorkflowScope.test.ts
+  -> Tests 2 passed (2), exit 0
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/buildCommand.test.ts
-  -> Tests 26 passed (26), exit 0
+  -> Tests 27 passed (27), exit 0
 
 node packages/qfai/dist/cli/index.mjs validate --profile atdd --fail-on error --spec 0017
   before this stage:  info=2 warning=0 error=2   QFAI-ATDD-111 (9 US), QFAI-ATDD-112 (8 TC)
@@ -370,18 +388,21 @@ which § "Gaps / Open risks" item 7.7 had already written down about this very a
 So `tests/helpers/shippedLaneCommands.ts` answers a decidable question instead: **what does the lane
 invoke?** The set the shipped tree invokes is **pinned in the test, not counted here** — three sites
 carried three different numerals for it (ten, fifteen, and the two lists' own sizes), which is the
-recurring class again. A program that cannot reach a build whatever its arguments
-and are allowed by name; six could, and are allowed only as exact invocations, so `npx qfai` ships and
-`npx tsup` does not though they are the same program. It needs no corpus, cannot be evaded by a spelling
-nobody has written, and fails **closed** — an innocent new program breaks the test, which is the right
-cost for a shipped surface. Measured: **55 of 55 planted builds refused, 6 of 6 shipped shapes
-accepted**, where the classifier caught 6 of 50.
+recurring class again.
 
-Those two numerals were 55 and 6 for a round, against a corpus of 62 and 8 — and both were written as
-measurements. **No numeral for either list is stated here now**: both grow every round, for the same
-reason the classifier's corpora do, and `tests/unit/shippedLaneCommands.test.ts` holds the lists and
-asserts the property. Round 11 confirmed nothing derived the pair by rewriting it to "3 of 3 … 1 of 1"
-and finding the whole suite green.
+The design is a split. A program that cannot reach a build whatever its arguments is allowed **by name**; a
+program that could is allowed only as an **exact invocation**, so `npx qfai` ships and `npx tsup` does not,
+though they are the same program. It needs no corpus of build spellings, cannot be evaded by a spelling
+nobody has written, and fails **closed** — an innocent new program breaks the test, which is the right cost
+for a shipped surface.
+
+**No numeral for either list is stated here**, and the sentence that used to state one is worth recording
+rather than merely deleting. It read "Measured: 55 of 55 planted builds refused, 6 of 6 shipped shapes
+accepted", against a corpus that held 62 and 8. Round 11 confirmed nothing derived the pair by rewriting it
+to "3 of 3 … 1 of 1" and finding the whole suite green — and round 12 then found that my repair had ADDED
+the retraction and left the refuted sentence three lines above it, with a dangling clause where the earlier
+edit had cut. Both lists grow every round, for the same reason the classifier's corpora do;
+`tests/unit/shippedLaneCommands.test.ts` holds them and asserts the property.
 
 It also closes the channel round 10 found invisible to **both** instruments: a build arriving as
 `uses: gradle/actions/setup-gradle` with `arguments: build`, which no `run:` scan can see. The actions a
@@ -415,7 +436,7 @@ files — a number derived once and then described as derived.**
   one PASS**". Correct when checked, derived by nothing, and with a correctness lifetime of exactly one
   round — rounds 4, 5, 6, 7 and 10 each found this sentence a round behind, five findings of one shape.
   Two of the three are now derived from the packs on disk. The verdict split is not derivable (two of
-  twenty-nine reports state a verdict in a parseable form), so what is pinned is the arithmetic: the
+  two of thirty-five reports state a verdict in a parseable form), so what is pinned is the arithmetic: the
   split must SUM to the derived response count, which is exactly how all five findings failed. Falsified
   six ways, all reddening, including the sentence being unbolded or deleted.
 - **A4.** The scope fix above.
@@ -1540,7 +1561,7 @@ something is written, believed without reading it.
    the "all 71 rows" sentence, one layer down. Recorded as a cross-spec obligation per this
    skill's CRITICAL CONSTRAINTS: not this stage's work, closing it is each owning spec's next
    `/qfai-atdd` run, and the repo-wide run belongs to `/qfai-verify`.
-5. **127 of 208 E2E ledger claims are backed by no test.** `CR-20260820-0011`. A cross-spec
+5. **127 E2E ledger claims are backed by no test.** `CR-20260820-0011`. A cross-spec
    obligation across 16 specs; the guard that measures it now ships, and the number is held by a
    **ratchet** — `toBeLessThanOrEqual(127)` — which reddens on a new unbacked claim and stays green
    all the way down to zero.
@@ -2064,6 +2085,8 @@ reports and inventing a marker now would pin only the reports written after it.
 | 8     | `completion-reviewer`, `qa-gatekeeper` — stage gates only             | `dbe00247` | REVISE           |
 | 9     | `implementation-reviewer`, `completion-reviewer`, `qa-gatekeeper`     | `05a97202` | REVISE           |
 | 10    | `implementation-reviewer`, `completion-reviewer`, `qa-gatekeeper`     | `a66be5c6` | REVISE           |
+| 11    | `implementation-reviewer`, `completion-reviewer`, `qa-gatekeeper`     | `4b58eadd` | REVISE           |
+| 12    | `implementation-reviewer`, `completion-reviewer`, `qa-gatekeeper`     | `45e6f041` | REVISE           |
 
 Round 9 routed the `implementation-reviewer` as well, because the helper and the four guards changed
 substantially; `agent-routing.yml` has it **conditional** rather than blocking, and its report says so.

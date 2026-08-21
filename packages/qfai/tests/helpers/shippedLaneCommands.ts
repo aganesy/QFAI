@@ -360,7 +360,6 @@ export function invocationOf(command: string): string | typeof NOTHING | typeof 
     const rest = tokens.slice(i + 1);
     return rest.length === 0 ? NOTHING : invocationOf(rest.join(" "));
   }
-  if (/^[A-Za-z_]\w*=/.test(head) && tokens.length === i + 1) return NOTHING;
   // A `case` pattern ARM is a prefix, not a command: `commandsOf` splits on `;`, so `*.ts) npx tsup ;;`
   // arrives as one command whose head is the pattern. Reading the head and discarding the tail hid the
   // build after it — the keyword defect wearing a different punctuation mark. Strip the arm and read
@@ -396,21 +395,39 @@ export function localFunctionsOf(body: string): Set<string> {
  * A local function is a name this body defined, so it cannot be the route a build arrives by — whatever
  * the function itself runs is scanned on its own.
  */
-export function invocationsOf(body: string): string[] {
+/** One resolved command: what it invokes, and the text it came from. */
+interface Resolved {
+  readonly invocation: string;
+  readonly command: string;
+}
+
+/**
+ * The walk, written ONCE.
+ *
+ * `invocationsOf` and `refusals` used to be this loop twice, diverging only in their last few lines — and
+ * the copies had already drifted apart, because only one of them carried the substitution check. This
+ * module's docstring argues that two copies of an allowlist is the same defect one size smaller; two
+ * copies of the walk is that argument one size smaller again.
+ */
+function resolvedCommands(body: string): Resolved[] {
   const local = localFunctionsOf(body);
-  const out: string[] = [];
+  const out: Resolved[] = [];
   for (const command of commandsOf(body)) {
     const invocation = invocationOf(command);
     if (invocation === NOTHING) continue;
     if (invocation === UNREADABLE) {
       // Reported as the command itself, so a refusal names what a reader has to look at.
-      out.push(`<unreadable> ${command.slice(0, 60)}`);
+      out.push({ invocation: `<unreadable> ${command.slice(0, 60)}`, command });
       continue;
     }
     if (local.has(invocation.split(" ")[0] ?? "")) continue;
-    out.push(invocation);
+    out.push({ invocation, command });
   }
   return out;
+}
+
+export function invocationsOf(body: string): string[] {
+  return resolvedCommands(body).map((resolved) => resolved.invocation);
 }
 
 /**
@@ -561,16 +578,12 @@ function bareArgumentsOf(command: string): string[] {
  */
 export function refusals(body: string): string[] {
   const out: string[] = [];
-  const local = localFunctionsOf(body);
-  for (const command of commandsOf(body)) {
-    const invocation = invocationOf(command);
-    if (invocation === NOTHING) continue;
-    if (invocation === UNREADABLE) {
-      out.push(`<unreadable> ${command.slice(0, 60)}`);
+  for (const { invocation, command } of resolvedCommands(body)) {
+    if (invocation.startsWith("<unreadable>")) {
+      out.push(invocation);
       continue;
     }
     const program = invocation.split(" ")[0] ?? "";
-    if (local.has(program)) continue;
     // A removed substitution is part of the command, and nothing here runs it — so the command cannot be
     // resolved UNLESS its program is one whose arguments cannot reach a build. That is exactly what the
     // by-name list means, and the distinction matters: the shipped tree writes

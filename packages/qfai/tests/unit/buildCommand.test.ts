@@ -1826,6 +1826,31 @@ describe("classifyBuildCommand", () => {
       .toEqual([]);
   });
 
+  it("reads a flag's inline spelling everywhere a flag has an effect", () => {
+    // Round 12 found the last flag effect in the file still matching whole tokens. A flag has six effects
+    // and `FlagAction` names three; of the other three, `NO_SCRIPTS` — which suppresses lifecycle hooks —
+    // used `NO_SCRIPTS.has(token)`, so `npm publish --ignore-scripts` skipped the hooks and
+    // `npm publish --ignore-scripts=true` did not. npm accepts both spellings identically, so that was one
+    // command with two verdicts: the invariant `refusedBy` was written for, surviving in the one place
+    // that had not adopted it.
+    const sources = { manifests: { "": { publish: "echo published", prepublishOnly: "tsup" } } };
+    expect(classifyBuildCommand("npm publish", sources), "the hook reaches a build").toBe("build");
+    for (const line of [
+      "npm publish --ignore-scripts",
+      "npm publish --ignore-scripts=true",
+      "npm publish --no-scripts",
+      "npm publish --no-scripts=1",
+      "pnpm publish --ignore-scripts=true",
+    ]) {
+      expect(classifyBuildCommand(line, sources), `${line} skips the hooks`).toBe("none");
+    }
+    // And the same invariant in the two places that already held it, so a regression in either is visible
+    // beside this one rather than in a separate file.
+    for (const line of ["scons --tree=all", "tsc --showConfig", "ant -version", "make -n build"]) {
+      expect(classifyBuildCommand(line), `${line} is a question, not a build`).toBe("none");
+    }
+  });
+
   it("pins the two live call sites the member sweep cannot reach", () => {
     // A rule's ENTRY is what `deleteMember` neutralises. Its CALL SITES are free, and round 10 mutated
     // two of them with the whole corpus green — a live decision no probe distinguishes, which is the

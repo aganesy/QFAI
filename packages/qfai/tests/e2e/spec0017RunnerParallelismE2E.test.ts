@@ -294,9 +294,12 @@ describe(
 
       const previous = process.env[WORKERS_ENV];
       try {
-        // Assigned rather than deleted: the lint rule bars a dynamic `delete`, and `tunable` reads
-        // `process.env[name]`, for which an absent key and an `undefined` value are the same thing.
-        process.env[WORKERS_ENV] = undefined;
+        // `Reflect.deleteProperty`, not an assignment. `process.env[x] = undefined` stores the STRING
+        // "undefined", so the previous version never reached the absent branch — it tested the
+        // not-a-number branch twice — and its `finally` restored the string rather than the absence.
+        // The lint rule bars a dynamic `delete`; `Reflect.deleteProperty` is the same operation and is
+        // what `buildCommand.test.ts` already uses for a computed key.
+        Reflect.deleteProperty(process.env, WORKERS_ENV);
         expect(tunable(WORKERS_ENV), "an absent override falls back to the declared value").toBe(
           DECLARED_START,
         );
@@ -310,7 +313,7 @@ describe(
           ).toBe(DECLARED_START);
         }
       } finally {
-        if (previous === undefined) process.env[WORKERS_ENV] = undefined;
+        if (previous === undefined) Reflect.deleteProperty(process.env, WORKERS_ENV);
         else process.env[WORKERS_ENV] = previous;
       }
     });

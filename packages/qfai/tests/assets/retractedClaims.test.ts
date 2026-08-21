@@ -106,6 +106,10 @@ const RETRACTED: readonly Retracted[] = [
     why: "measured only against a corpus this stage chose, and wrong at every version (rounds 3-6)",
   },
   {
+    claim: "55 of 55 planted builds refused",
+    why: "the corpus held 62 and 8, not 55 and 6; round 12 found the retraction added above the sentence it retracts (round 12 M1)",
+  },
+  {
     claim: "rebuilt the scan around the verb",
     why: "it was a closed package-manager list, not a verb anchor (round 2)",
   },
