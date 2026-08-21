@@ -283,6 +283,7 @@ Commands:
   report                       検証結果と集計を出力
   doctor                       設定/パス/出力前提の診断
   guardrails                   Decision Guardrails の抽出/検査（list|extract|check）
+  discussion list              discussion pack を列挙（active pointer の pack に * を付与）
   discussion list --active     active discussion session pointer を表示（state.json#discussion.currentId）
   discussion use <id>          active discussion session pointer を設定
   audit log [filters]          .qfai/evidence/decisions/ の決定ログを一覧 (--scope/--operator/--clause + --format table|json)
@@ -305,8 +306,8 @@ Options:
   --dry-run       変更を行わず表示のみ
   --format <text|github>       validate の出力形式
   --format <md|json>           report の出力形式
-  --format <text|json>         doctor / prototyping preflight / discussion list --active の出力形式
-  --active                     discussion list: active session pointer を表示
+  --format <text|json>         doctor / prototyping preflight / discussion list の出力形式
+  --active                     discussion list: pack 列挙ではなく active session pointer を表示
   --strict                     validate: warning 以上で exit 1
   --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full>  validate/report: 検証profileを指定
   --profile <prototyping|<skill>>  doctor: prototyping 固有の preflight 診断、または skill manifest の runtimeDependencies 探索

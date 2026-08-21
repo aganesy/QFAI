@@ -143,6 +143,37 @@ async function runListActive(
   return emitAmbiguityError(candidates, writeErr, reason);
 }
 
+/**
+ * `qfai discussion list` — enumerate every `discussion-*` pack under
+ * the configured discussion root (`paths.discussionDir`), marking the
+ * active-session pointer target with `*`. This is the deliberate
+ * counterpart to `list --active`: the pointer view answers "which pack
+ * am I on?", this one answers "which packs exist?" — the question
+ * `discussion use <id>` needs answered before it can be run. "Nothing
+ * to list" is not a failure for a list verb, so zero candidates exits
+ * 0 with an empty payload rather than reusing the `list --active`
+ * recovery error.
+ */
+async function runListPacks(
+  options: DiscussionOptions,
+  write: (m: string) => void,
+): Promise<number> {
+  const format = options.format ?? "text";
+  const discussionRoot = await resolveDiscussionRoot(options.root);
+  const candidates = await listCandidateDirs(discussionRoot);
+  const currentId = await readDiscussionCurrentId(options.root);
+  const packs = candidates.map((id) => ({ id, active: id === currentId }));
+
+  if (format === "json") {
+    write(JSON.stringify({ packs }, null, 2));
+    return 0;
+  }
+  for (const pack of packs) {
+    write(`${pack.active ? "*" : " "} ${pack.id}`);
+  }
+  return 0;
+}
+
 export async function runDiscussion(options: DiscussionOptions): Promise<number> {
   const write = options.write ?? info;
   const writeErr = options.writeErr ?? error;
@@ -152,9 +183,8 @@ export async function runDiscussion(options: DiscussionOptions): Promise<number>
   }
 
   // action === "list"
-  if (!options.active) {
-    writeErr("qfai discussion list: only --active is supported.");
-    return 1;
+  if (options.active) {
+    return runListActive(options, write, writeErr);
   }
-  return runListActive(options, write, writeErr);
+  return runListPacks(options, write);
 }

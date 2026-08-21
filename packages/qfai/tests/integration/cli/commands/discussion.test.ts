@@ -208,3 +208,88 @@ describe("resolveDiscussionRoot honors absolute discussionDir verbatim", () => {
     }
   });
 });
+
+// Bare `qfai discussion list` used to be a hard error ("only --active
+// is supported."), so the pack ids were reachable only as a side
+// effect of the `list --active` ambiguity error — i.e. only while the
+// operator was already stuck. Enumeration is now the unflagged
+// behaviour of the verb, with the active pointer marked by `*`.
+describe("bare `discussion list` enumerates packs", () => {
+  it("prints every pack, marking the active pointer target", async () => {
+    await makePack("discussion-20260101000000000");
+    await makePack("discussion-20260202000000000");
+    await runDiscussion({
+      root,
+      action: "use",
+      id: "discussion-20260202000000000",
+      write: () => {},
+      writeErr: () => {},
+    });
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "list",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    expect(code).toBe(0);
+    expect(cap.out).toEqual(["  discussion-20260101000000000", "* discussion-20260202000000000"]);
+    expect(cap.err).toEqual([]);
+  });
+
+  it("`--format json` reports { packs: [{ id, active }] }", async () => {
+    await makePack("discussion-20260202000000000");
+    await makePack("discussion-20260101000000000");
+    await runDiscussion({
+      root,
+      action: "use",
+      id: "discussion-20260101000000000",
+      write: () => {},
+      writeErr: () => {},
+    });
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "list",
+      format: "json",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    expect(code).toBe(0);
+    const body = JSON.parse(cap.out.join("\n")) as {
+      packs?: { id: string; active: boolean }[];
+    };
+    expect(body.packs).toEqual([
+      { id: "discussion-20260101000000000", active: true },
+      { id: "discussion-20260202000000000", active: false },
+    ]);
+  });
+
+  it("exits 0 with an empty list when no pack exists (nothing to list is not a failure)", async () => {
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "list",
+      format: "json",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    expect(code).toBe(0);
+    const body = JSON.parse(cap.out.join("\n")) as { packs?: unknown[] };
+    expect(body.packs).toEqual([]);
+    expect(cap.err).toEqual([]);
+  });
+
+  it("marks no pack active when the pointer is unset", async () => {
+    await makePack("discussion-20260101000000000");
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "list",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    expect(code).toBe(0);
+    expect(cap.out).toEqual(["  discussion-20260101000000000"]);
+  });
+});
