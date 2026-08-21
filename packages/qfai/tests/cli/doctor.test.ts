@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createServer, type Server } from "node:http";
-import { chmod, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -42,6 +42,49 @@ describe("doctor", { timeout: 60000 }, () => {
       expect(Array.isArray(parsed.checks)).toBe(true);
       expect(typeof parsed.summary?.ok).toBe("number");
     } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves a relative --out against the resolved root, not the process cwd", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    const relativeOut = "doctor-relative-out.json";
+    const strayOut = path.resolve(process.cwd(), relativeOut);
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      await captureStdout(async () => {
+        await runDoctor({ root, rootExplicit: true, format: "json", outPath: relativeOut });
+      });
+
+      const raw = await readFile(path.join(root, relativeOut), "utf-8");
+      expect(JSON.parse(raw)).toMatchObject({ tool: "qfai" });
+      await expect(stat(strayOut)).rejects.toThrow();
+    } finally {
+      await rm(strayOut, { force: true });
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves a relative --out against the config root found from a subdirectory", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
+    const cwd = path.join(root, "packages", "app");
+    const relativeOut = "doctor-subdir-out.json";
+    const strayOut = path.resolve(process.cwd(), relativeOut);
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await mkdir(cwd, { recursive: true });
+
+      await captureStdout(async () => {
+        await run(["doctor", "--format", "json", "--out", relativeOut], cwd);
+      });
+
+      const raw = await readFile(path.join(root, relativeOut), "utf-8");
+      expect(JSON.parse(raw)).toMatchObject({ tool: "qfai" });
+      await expect(stat(path.join(cwd, relativeOut))).rejects.toThrow();
+      await expect(stat(strayOut)).rejects.toThrow();
+    } finally {
+      await rm(strayOut, { force: true });
       await rm(root, { recursive: true, force: true });
     }
   });
