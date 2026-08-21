@@ -271,7 +271,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   answer to a question ten versions of the classifier could not settle. It asks what a lane **invokes**
   rather than whether a command **is a build**, which needs no corpus of build spellings and fails
   closed
-- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 11 tests. The falsification: every
+- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 12 tests. The falsification: every
   form rounds 8, 9, 10 and 11 planted, all refused, and the shipped tree's own shapes accepted. Round 11
   added three, and what they cover is the class the first five could not: the corpus was 62 BARE commands,
   so wrapping any of them in one shell construct escaped 61 of 62. It is now checked wrapped as well as
@@ -335,9 +335,11 @@ pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017LayeredCiS
       while the classifier corpus lived here, before round 4 moved it to
       tests/unit/buildCommand.test.ts where it belongs)
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/shippedLaneCommands.test.ts
-  -> Tests 11 passed (11), exit 0
+  -> Tests 12 passed (12), exit 0
      (the 11th is the sweep's corpus: one assertion over every mechanism it
-      confirmed executing, added with the repairs that close them)
+      confirmed executing, added with the repairs that close them. The 12th is
+      the digest collision found by attacking the new gate rather than by a
+      review round)
 
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
   -> check-atdd-annotation-ledger: 9 claim(s) backed by a test annotation (spec-0017), exit 0
@@ -947,8 +949,8 @@ entry whatever it is written in.
 
 So the boundary moved, and the scanner stayed:
 
-- **`ALLOWED_STEP_BODIES`** — the sha256 of each of the twelve `run:` bodies the tree ships,
-  whitespace-collapsed. Asserted in both directions: a body with no digest is unreviewed, a digest with no
+- **`ALLOWED_STEP_BODIES`** — the sha256 of each of the twelve `run:` bodies the tree ships, under
+  `bodyDigest`. Asserted in both directions: a body with no digest is unreviewed, a digest with no
   body is an entry nobody deleted. This is an **identity** claim, not a behaviour claim; it cannot say why
   a body is acceptable, and it is silenced by pasting the new digest. That is the design — pasting one is
   visible in review, which is the moment the question is worth asking.
@@ -972,8 +974,20 @@ tests/unit/shippedLaneCommands.test.ts  25 mechanisms pinned; the pre-repair hel
 ```
 
 The last line is the falsification, in both directions: swapping the previous helper under the new
-assertion reddens it with all 25 listed, and swapping it back leaves 11 green. A corpus that passes
+assertion reddens it with all 25 listed, and swapping it back leaves the file green. A corpus that passes
 against both versions of its subject would be measuring nothing, which is entry 5 of that list.
+
+**And the first attack on the new gate came from attacking it rather than from a review round.** The
+digest was `payloadDigest` — the whitespace-collapsing hash the `node -e` payloads already use — and
+collapsing erases the difference between a space and a **newline**. A newline inside `$( … )` is the
+difference between one command and two, and `qfai-tests.yml#detection` ships
+`$(git rev-parse --is-shallow-repository)`: mutating that one space to a newline produced a body with two
+commands and **the same digest**, verified. An identity gate with a collision is not an identity gate. It
+is `bodyDigest` now — line endings and trailing whitespace normalized, nothing else — and the tolerance
+that collapsing was bought for turns out to cost nothing, because YAML strips a block scalar's
+indentation when it parses it, so re-indenting a step never moved the digest in the first place. Pinned
+in both directions by `tests/unit/shippedLaneCommands.test.ts`: the collapsing digest must collide on
+that pair and `bodyDigest` must not.
 
 **`defaults.run.shell`** was the round's other repair and belongs to a different story: a `shell:` is a
 command template, GitHub documents `defaults.run.shell` for applying one across steps, and the guard read

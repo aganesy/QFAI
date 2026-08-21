@@ -641,7 +641,31 @@ export function payloadDigest(payload: string): string {
 }
 
 /**
- * The digest of every `run:` body the shipped tree contains, whitespace-collapsed.
+ * The digest of a step BODY, normalized only where YAML itself is free to vary.
+ *
+ * Deliberately not `payloadDigest`. Collapsing every whitespace run to one space is right for a
+ * `node -e` payload, which is a single argument — and wrong for a body, because it erases the
+ * difference between a space and a NEWLINE. A newline inside `$( … )` is the difference between one
+ * command and two: `$(git rev-parse --is-shallow-repository)` and `$(git` + `rev-parse
+ * --is-shallow-repository)` collapse to the same string, and the shipped tree contains that exact
+ * substitution. Two bodies that behave differently must not share a digest.
+ *
+ * So only line endings and trailing whitespace are normalized. The block indentation needs no handling
+ * here: YAML strips it when it parses the scalar, so re-indenting a step in the file does not move its
+ * digest, and nothing is given up to buy that tolerance.
+ */
+export function bodyDigest(body: string): string {
+  const normalized = body
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+$/, ""))
+    .join("\n")
+    .replace(/\n+$/, "");
+  return createHash("sha256").update(normalized).digest("hex");
+}
+
+/**
+ * The digest of every `run:` body the shipped tree contains, under `bodyDigest`.
  *
  * **This is the boundary, and it is a different KIND of claim from everything else in this file.** The
  * allowlist asks what a body invokes and answers with a parser; a twenty-agent sweep then ran fourteen
@@ -657,9 +681,9 @@ export function payloadDigest(payload: string): string {
  */
 export const ALLOWED_STEP_BODIES: ReadonlySet<string> = new Set([
   // qfai-tests.yml#detection [Select lanes from the name-only diff] — 40 lines
-  "614f4ba84cbb09a3f6d476443f136abd66c614f43eb5b2c3cd4f4646cc0cc9f4",
+  "4eda0748ff16d9a3ec6175977d93dea522d594f3436eeb766de8a4181799edc1",
   // qfai-tests.yml#detection [Probe layer-named test scripts] — 35 lines
-  "ae6054a7fc9827bce7b8ad679a1bbfe740d90984c20d2283afde13dbcf0c3818",
+  "6b535f19d37e0ea25770aa474c106ef05dcf661dd5ecd82f04253e24ba1ca21d",
   // qfai-tests.yml#unit [unit lane placeholder] — 1 line
   "09b8ac75ee3ef6fe71dbc5e38e2bebc7207b7d1a358bec40bc1229fd2dea8523",
   // qfai-tests.yml#component [component lane placeholder] — 1 line
@@ -671,13 +695,13 @@ export const ALLOWED_STEP_BODIES: ReadonlySet<string> = new Set([
   // qfai-tests.yml#e2e [e2e lane placeholder] — 1 line
   "b2382d77e17d5940626aa1e9c306fb74570955930472497aa4a473aa57e3bc93",
   // qfai-tests.yml#verdict [Aggregate lane results (green on skip)] — 8 lines
-  "a5b54a3a66f1681fb317f748e9dc6df9383ad74373bcfc555af309b4a407a3a5",
+  "d02b954b0a4f3ca643fcf23f8808d64d04bcb0324382cef9d853840712cfae0d",
   // qfai-validate.yml#validate [Resolve the package manager (pnpm route fails closed)] — 52 lines
-  "e83d6a946a1424b605cca461300914583cbf6f95b8fafa84dfc3cc3e677a602c",
+  "fc2b494c32d4d0f0ee00bdd8c1926a1efa5f1133521cbcc7ea7b951ce77511d3",
   // qfai-validate.yml#validate [Resolve the Node version (adopter file wins, else fall open)] — 22 lines
-  "020c2d24603e6bd5e0e467ff97558b311fcc17f330f6b9889f8a0761ab253bc9",
+  "913a0456677c6a9452e552b2c25bccfac67c9533d4198922f755ee1c929afcdc",
   // qfai-validate.yml#validate [Install dependencies (lockfile-aware)] — 22 lines
-  "cc817c0973b9a7179506b21b6b366fe1b3d8be9e1e7422973691266c4a64abd8",
+  "7c473537569404e66d1cd27831a8a14db1831f4e38d4fab8eda666279e087fa5",
   // qfai-validate.yml#validate [qfai validate] — 1 line
   "cafa0558d597d81a2b477a24bf245ceb02e38e714767bde76bf0ff0918dd31d9",
 ]);

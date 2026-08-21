@@ -56,9 +56,9 @@ import {
   ALLOWED_SHELLS,
   ALLOWED_STEP_BODIES,
   ALLOWED_STEP_ENV,
+  bodyDigest,
   invocationsOf,
   refusals,
-  payloadDigest,
 } from "../helpers/shippedLaneCommands.js";
 import { captureStdout } from "../helpers/stdout.js";
 
@@ -602,7 +602,7 @@ describe(
           const run = step["run"];
           if (typeof run !== "string") continue;
           const name = typeof step["name"] === "string" ? step["name"] : "(unnamed)";
-          bodies.set(payloadDigest(run), `${id} [${name}]`);
+          bodies.set(bodyDigest(run), `${id} [${name}]`);
         }
       }
       expect

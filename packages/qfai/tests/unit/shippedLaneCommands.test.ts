@@ -26,10 +26,12 @@ import {
   ALLOWED_ACTION_INPUTS,
   ALLOWED_ACTIONS,
   ALLOWED_INVOCATIONS,
+  bodyDigest,
   commandsOf,
   HARMLESS_PROGRAMS,
   invocationOf,
   invocationsOf,
+  payloadDigest,
   refusals,
   NOTHING,
   UNREADABLE,
@@ -302,6 +304,25 @@ describe("the shipped-lane allowlist", () => {
       MECHANISMS.filter((line) => refusals(line).length === 0),
       "a mechanism the sweep proved executes, which the allowlist still lets through",
     ).toEqual([]);
+  });
+
+  it("gives two bodies that behave differently two different digests", () => {
+    // The gate is IDENTITY, so a collision is the hole itself. `payloadDigest` collapses every
+    // whitespace run, which is right for a `node -e` argument and wrong for a body: a newline inside
+    // `$( … )` is the difference between one command and two, and the shipped tree contains exactly
+    // this substitution. Found by attacking the gate rather than by a review round.
+    const one = 'if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then echo shallow; fi';
+    const two = one.replace("git rev-parse", "git\nrev-parse");
+    expect(payloadDigest(one), "the collapsing digest cannot tell these two apart").toBe(
+      payloadDigest(two),
+    );
+    expect(bodyDigest(one), "and the body digest must").not.toBe(bodyDigest(two));
+    // The tolerance it is bought with still holds. Re-indenting a step does not move its digest
+    // because YAML strips the block indentation when it parses the scalar, so what is left to
+    // absorb here is trailing whitespace — which is not a behaviour.
+    expect(bodyDigest(one), "trailing whitespace is not a behaviour").toBe(
+      bodyDigest(one + "  \n"),
+    );
   });
 
   it("accepts the shapes the shipped tree actually contains", () => {
