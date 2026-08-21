@@ -1,7 +1,11 @@
 # Evidence: import-lite (<work-id>)
 
+Copy this to `.qfai/evidence/import-lite-<ts>.md`. The `-<ts>` suffix is part of what
+`QFAI-IMPLITE-001` looks for — this file's own basename does not satisfy the check.
+
 ## Metadata
 
+- output_path: .qfai/evidence/import-lite-<ts>.md
 - generated_at: <ISO8601>
 - author: AI
 - entrypoint: import-lite

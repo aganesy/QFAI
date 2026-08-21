@@ -49,6 +49,7 @@ Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
 Stop if the latest discussion-pack is missing, incomplete, or has blocking OQ.
+When `.qfai/specs/` already exists but no discussion pack does, take the import-lite route in `## Evidence` instead of back-filling a pack.
 On validate / doctor / quality-gate failures, follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
 
 ## Stage 1: Triage (Mandatory)
@@ -250,6 +251,8 @@ Write a `.qfai/steering/<id>.md` entry when this stage hits one of the condition
 - Updated contracts under `.qfai/contracts/**`; UI-bearing targets normalize design/ui contracts
 - `.qfai/report/preflight_summary.md`
 - Evidence file: `.qfai/evidence/sdd-<spec-id>.md`
+- Evidence file (conditional): `.qfai/evidence/import-lite-<ts>.md` — written by Stage 0 only on the
+  no-discussion-pack route; see `## Evidence`
 
 The canonical file set is defined by skill templates under `.qfai/assistant/skills/qfai-sdd/templates/`.
 
@@ -308,6 +311,14 @@ Inputs reviewed, Preflight summary path, Triage decisions (op + approver per row
 Decisions made, Work performed, Commands executed, Validate evidence paths, Work Orders Summary,
 Gaps / Open risks, Final status. Work Orders Summary uses the fixed 6-column schema from
 `shared-skill-delegation-baseline.md`; its `Status` and `Final status` accept only `PASS` or `REVISE`.
+
+Import-lite route (Stage 0, conditional): when `.qfai/specs/` already holds specs but no
+`.qfai/discussion/discussion-*/06_REQ.md` exists, create `.qfai/evidence/import-lite-<ts>.md` from
+`templates/evidence/import-lite.md`, recording where the requirements actually came from. This is the
+route `QFAI-IMPLITE-001` accepts in place of a discussion pack, and `<ts>` is a required part of the
+filename — the detector matches `import-lite-*.md`, so a file copied under the template's own
+basename (`import-lite.md`) does not satisfy it. Skip this artifact entirely when a discussion pack
+exists. It is a pointer artifact for preflight, never requirement or spec SSOT.
 
 ## Done Declaration
 
