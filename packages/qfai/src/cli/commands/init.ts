@@ -141,7 +141,9 @@ export async function runInit(options: InitOptions): Promise<void> {
   });
 
   // git config core.symlinks true（symlink 生成の前提条件）
-  await configureGitSymlinks(destRoot, options.dryRun);
+  // 唯一のワーキングツリー外への変更なので、報告行を受け取って report() の
+  // 直後に出力する（dry-run でもプレビュー行を出す）。
+  const gitConfigNotes = await configureGitSymlinks(destRoot, options.dryRun);
 
   // symlink ベースの統合生成（旧ラッパー prune + symlink 作成 + README/copilot-instructions 生成）
   const wrappersResult = await syncIntegrationWrappers(assistantAssets, destRoot, {
@@ -207,6 +209,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     "init",
     destRoot,
   );
+
+  for (const note of gitConfigNotes) {
+    info(note);
+  }
 
   for (const note of upgradeResult.preservedNotes) {
     info(note);
@@ -1055,16 +1061,53 @@ async function pathExists(target: string): Promise<boolean> {
 // Git config
 // ---------------------------------------------------------------------------
 
-async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<void> {
+/**
+ * Resolves the `.git/config` this init would configure, or null outside a
+ * repository. `git rev-parse` resolves upward from `cwd`, so `--dir subdir`
+ * inside an existing repository configures that repository rather than
+ * `subdir`; naming the resolved file in the report makes that visible.
+ */
+async function resolveGitConfigPath(destRoot: string): Promise<string | null> {
   try {
-    await execAsync("git rev-parse --git-dir", { cwd: destRoot });
+    const { stdout } = await execAsync("git rev-parse --absolute-git-dir", { cwd: destRoot });
+    const gitDir = stdout.trim();
+    return gitDir === "" ? null : path.join(gitDir, "config");
   } catch {
     // Not a git repository — skip
-    return;
+    return null;
+  }
+}
+
+/** True when the effective `core.symlinks` already makes the write a no-op. */
+async function gitSymlinksAlreadyEnabled(destRoot: string): Promise<boolean> {
+  try {
+    const { stdout } = await execAsync("git config --get core.symlinks", { cwd: destRoot });
+    return stdout.trim().toLowerCase() === "true";
+  } catch {
+    // Exit 1 = unset. Any other failure is treated the same: write and let the
+    // write's own error reporting speak.
+    return false;
+  }
+}
+
+/**
+ * Configures `core.symlinks`, the one change init makes outside the working
+ * tree, and returns the report lines that disclose it. Both modes speak: a
+ * dry-run that stayed silent about `.git/config` understated the real run, and
+ * a real run that stayed silent left the setting unattributable afterwards.
+ */
+async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<string[]> {
+  const configPath = await resolveGitConfigPath(destRoot);
+  if (configPath === null) {
+    return [];
+  }
+
+  if (await gitSymlinksAlreadyEnabled(destRoot)) {
+    return [`  git config: core.symlinks already true (${configPath}) — left untouched`];
   }
 
   if (dryRun) {
-    return;
+    return [`  would set: git config core.symlinks true (${configPath})`];
   }
 
   try {
@@ -1080,6 +1123,8 @@ async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<
       ].join("\n"),
     );
   }
+
+  return [`  git config: core.symlinks=true (${configPath})`];
 }
 
 // ---------------------------------------------------------------------------

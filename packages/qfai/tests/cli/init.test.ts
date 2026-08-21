@@ -608,6 +608,83 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("previews and reports the core.symlinks write to .git/config", async () => {
+    // `git config core.symlinks true` is the only change init makes outside
+    // the working tree. Neither mode used to mention it, so --dry-run
+    // enumerated every change except that one and a repository that later
+    // carried the setting gave no clue who wrote it.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await execFile("git", ["init"], { cwd: root });
+      // Shadow any true in the user's global config so the write is observable.
+      await execFile("git", ["config", "--local", "core.symlinks", "false"], { cwd: root });
+
+      const dryRunOutput = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: true, yes: true });
+      });
+
+      expect(dryRunOutput).toContain("would set: git config core.symlinks true");
+      const { stdout: afterDryRun } = await execFile(
+        "git",
+        ["config", "--local", "--get", "core.symlinks"],
+        { cwd: root },
+      );
+      expect(afterDryRun.trim()).toBe("false");
+
+      const realOutput = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(realOutput).toContain("git config: core.symlinks=true");
+      const { stdout: afterInit } = await execFile(
+        "git",
+        ["config", "--local", "--get", "core.symlinks"],
+        { cwd: root },
+      );
+      expect(afterInit.trim()).toBe("true");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("skips the core.symlinks write when it is already true", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await execFile("git", ["init"], { cwd: root });
+      await execFile("git", ["config", "--local", "core.symlinks", "true"], { cwd: root });
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(output).toContain("git config: core.symlinks already true");
+      expect(output).not.toContain("git config: core.symlinks=true");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("stays silent about core.symlinks outside a git repository", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const insideRepo = await execFile("git", ["rev-parse", "--git-dir"], { cwd: root }).then(
+        () => true,
+        () => false,
+      );
+      if (insideRepo) {
+        return; // The temp dir happens to sit inside a repository.
+      }
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(output).not.toContain("core.symlinks");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("does not overwrite specs/contracts even with --force", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
