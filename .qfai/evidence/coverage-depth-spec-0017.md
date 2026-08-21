@@ -287,6 +287,22 @@ here.** It read 208 for three rounds while the tree held 250 and then 296, and e
 stale inside a commit; the number is `grammarMembers().length` at run time and the assertions are the
 measurement, so restating it in prose only creates something to be wrong about.
 
+**The classifier's world is closed, and that is the limit this row's oracle strength rests on.** A build
+run by a tool the grammar does not declare returns `none`. Round 10 planted twenty-six such lines through
+the story's own loop and none was seen: `next build` and `ng build` are the two that matter, being the
+dominant build lines of two of the largest JavaScript ecosystems, in a scaffold shipped to adopters, and
+the list ran on through `gulp`, `grunt`, `hugo`, `jekyll`, `mkdocs`, `mix`, `sphinx-build`, `buck2`,
+`helm`, `goreleaser`, `packer`, `tox`, `R CMD build`, `shards` and `cabal`. Many of those are now
+declared; the point survives their declaration, because enumeration cannot converge and the next round
+can name sixteen more.
+
+For **this** assertion that is the vacuity direction, not the safe one: the row passes while the thing it
+forbids is present. Stating it here rather than only in the helper's docstring is deliberate — the
+completion gate reads this file, and round 9 asked for the sentence in this exact place. What answers the
+limit is not a longer list but the inverted instrument: `tests/unit/shippedLaneCommands.test.ts` asks
+what a lane may INVOKE, which needs no corpus of build spellings and fails closed. This row's oracle is
+qualified for the classifier's sake and the story no longer rests on it.
+
 No accuracy figure is quoted here on purpose, and **the corpora are enumerated in exactly one place** —
 `.qfai/evidence/atdd-spec-0017.md`, in the paragraph beginning "Measured against". This file used to
 carry its own list, and round 10 found the two enumerating different sets: this one stopped at round 8

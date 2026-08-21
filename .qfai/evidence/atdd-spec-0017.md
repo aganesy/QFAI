@@ -284,9 +284,12 @@ sweep cannot reach. That guard exists because the previous version of this line 
   counts from the artifacts they describe, after every review round found at least one that the tree
   did not hold. The eighth derives `## Final status`'s own round and response counts, which were correct
   and underived through five findings of exactly that shape
-- **new** `packages/qfai/tests/assets/retractedClaims.test.ts` — 10 tests requiring a claim a review
+- **new** `packages/qfai/tests/assets/retractedClaims.test.ts` — 11 tests requiring a claim a review
   round refuted to appear only inside quotation marks, because "it is gone now" was itself the false
-  statement round 5 found
+  statement round 5 found. The eleventh asserts the coordinate model the previous version's docstring
+  only described, and it took two attempts: the first checked span arithmetic, and three mutations
+  reintroducing the old model left it green — the drift is one or two characters, which is exactly why
+  round 10 called the defect latent
 - **new** `.qfai/decisions/DR-0017-0010-*.md` — the branch-3 anomaly record for `TDD-0070`
 - **new** `.qfai/decisions/CR-20260820-0012-*.md` — the self-referential gate `TDD-0069` waits on
 - **new** `.qfai/decisions/CR-20260820-0011-*.md` — the 127 unbacked ledger claims
@@ -318,7 +321,7 @@ pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
 pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
   -> Tests 8 passed (8), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
-  -> Tests 10 passed (10), exit 0
+  -> Tests 11 passed (11), exit 0
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/buildCommand.test.ts
   -> Tests 26 passed (26), exit 0
 
@@ -411,6 +414,67 @@ files — a number derived once and then described as derived.**
   `.each` / `.for` precondition went unchecked — and that precondition is the only reason counting
   callsites is valid. One `TRACKED` list now feeds all three, with an assertion that the claimed set and
   the tracked set are equal.
+
+**Round 10's `R02` majors and minors are applied, and two of them changed the grammar's shape rather
+than its contents.**
+
+- **`M1`** — three corpus entries asserted `build` for a command the tool does not have. `cmake build`
+  CONFIGURES `./build`, so the corpus asserted the inverse of the truth, and cmake now declares `build`
+  as a stop. That needed one ordering change — a declared stop beats the generic verb rule, which is the
+  whole point of declaring one — and the correction then made all seven of cmake's flag members go inert
+  at once, because every one of them was pinned by `<flag> build clean` expecting `none`, which works
+  only if the generic rule would otherwise fire. They are re-pinned on what a flag does: the values
+  swallow a token that NAMES a command, the dirs move the manifest the nested command resolves against.
+- **`M2`** — the Delta discharge is scoped to the ninety-one planted forms, above.
+- **`M3`** — `W10`-`W13` are on the record.
+- **`M4`** — `## Final status`'s round and response counts are derived (round 10 `A3`); the corpora
+  numeral is deleted rather than corrected a third time; the member numeral was already gone.
+- **`M5`** — the retracted-claims guard's coordinate model is asserted rather than described, and it took
+  two attempts. The first version checked span ARITHMETIC — no overlap, nothing past the end, exempt
+  spans inside one paragraph — and three mutations reintroducing the old model left it green, because the
+  drift is one to eight characters and too small to break an inequality. That is the same defect one
+  level up, and it is why round 10 could call the original latent. The second version asserts identity
+  against the source: every exempt span must BE a line of the file, and the paragraph spans must tile the
+  text. Tiling is what pins the span's END without circularity — the identity check alone compares a
+  slice whose end came from a flattening against that same flattening, and a model computing the end
+  that way satisfied it by construction. Measured: it did.
+- **`M6`** — `mvnw` is declared, with the launcher-alias rule generalised.
+- **`M7`** — the recurring-class list gains four entries and, more usefully, the limit of its own
+  countermeasure: an oracle round is a measurement against a corpus, and no corpus can establish an
+  absence. Where the claim is "there is nothing here", the instrument has to be inverted rather than
+  tested harder.
+- **`m1`** — the seal-timing table's row 9 names `a163b52a` rather than "(this commit)", which resolved
+  to nothing a later reader could check. Round 9 made that objection about row 8; row 8 was corrected and
+  row 9 was written the same way in the same commit.
+- **`m2`** — closed with `A2`: the version pin reads both records.
+- **`m3`** — three laundering routes through a fence's DELIMITER LINE, and they do not get the same
+  answer. A fence delimiter flattens away completely, so a marker line's flattened text is its INFO
+  STRING and nothing else — and markdown renders an info string not at all. Exempting the whole marker
+  line therefore hid a claim no reader of the document could see while a reader of the raw file sees it
+  asserted. That is closed, together with a tail on the closing delimiter. A blockquote stays exempt **by
+  decision**, because markdown renders it as a quotation, which is what this guard's contract asks for;
+  it is pinned so the decision cannot quietly change. Re-measured: four of the five routes caught, the
+  fifth open on purpose.
+- **`m4`** — one command, three spellings, two verdicts: `make --dry-run build` was `none` while
+  `make -n build` and `make --just-print build` were builds. A tool may now declare its own never-flags,
+  per-tool rather than globally, because `-n` means something else elsewhere.
+- **`m5`** — the closed-world limit is now stated in the matrix's oracle-strength justification, which is
+  where the completion gate reads it and where round 9 asked for it. The twenty-six forms it planted are
+  also declared, and the declaration produced the round's most useful deletion: every `builds: ["build"]`
+  entry is **dead**, because a declared tool already reads a bare `build` through the generic verb rule.
+  Fifteen of the first sixty-two generated cases were rejected on measurement for that reason, and the
+  declarations are gone rather than pinned. Also gone: hugo's `values`, which cannot change a verdict
+  because its own `bareIsBuild` decides first, and `@vercel/ncc`, which the unknown-binary rule already
+  reads. **These deletions rest on structural arguments, not on a sweep's silence** — which is the
+  distinction round 10's `B3` established and the reason the eight earlier deletions were unsound.
+- **`m6`** — round 7's superseded seal now says why it CANNOT recompute, which is the half of round 9's
+  `m4` that was missing. Round 1's re-seal added a file and changed none, so its earlier value still
+  recomputes and the recomputation is the evidence. Round 7's changed its `summary.json`, so no
+  recomputation can distinguish that correction from a rewrite, and what stands in its place is stated as
+  weaker.
+- **`m7`** — a sequencing note on the round-10 pack itself, discharged at the sealing step by force-adding
+  every file and re-running `git status --porcelain --ignored` on the directory.
+- **`m8`** — already closed: `make`'s `builds` holds `dist` and `release`.
 
 **Round 10's `R01` minors are applied, and three of them were larger than they looked.** A boolean tool
 field decided verdicts unswept — `grammarMembers()` named `bareIsBuild` literally, so `alwaysBuilds` was
@@ -1176,11 +1240,36 @@ something is written, believed without reading it.
    7. The classifier's own miss direction — the docstring argued that missing a build was "the safe
       direction here". For an assertion that a tree contains none, a miss is the **vacuity** direction:
       round 8 planted eleven real builds in a shipped lane and ten shipped unnoticed.
+   8. The eight deletion warrants — "each was a list whose deletion changed no command's verdict" is a
+      claim over the commands **this stage enumerated**, not over the commands that exist. Twenty
+      distinguish `MANAGER_BOOLEAN` alone, and nine of ten planted builds shipped through the hole its
+      deletion opened. This is item 5 one layer further out: round 8 found probes generated from the
+      sets, round 9 found the corpus written from the member list, and this is a **deletion** justified
+      by that corpus's silence. The general form is that a sweep's report is identical whether a member
+      is dead or whether the corpus merely lacks its shape.
+   9. The retracted-claims guard's coordinate model — "a paragraph's flattened text is its lines'
+      flattened texts joined by single spaces, and a line's span is derivable by accumulating lengths".
+      False for 50 of 456 real paragraphs, written into the repair for a finding about this very class,
+      and latent only because the drift is one to eight characters.
+   10. "this is the enumeration both evidence files count from" — a claim about how the two files are
+       written, false of both (they enumerated different sets), written to close a finding about
+       counting. The numeral is now gone and the enumeration lives in one file.
+   11. The round-4 findings slot — the `id families` cell was rewritten to agree with the recorded count
+       rather than the count being derived from the stated rule. Weaker than the others, and recorded
+       because it is the same substitution: a claim about how the row is written standing in for the
+       measurement. Offered as a candidate by round 10 and accepted as one.
 
    The working countermeasure is not vigilance: it is that every new claim gets an oracle round before
    it is reported, and that a claim over a file's contents is rewritten to **run** the thing whenever
-   running it is possible — as `tests/integration/shippedWorkflow*.test.ts` already does. Items 5, 6
-   and 7 were each caught that way, by someone mutating the instrument rather than reading it.
+   running it is possible — as `tests/integration/shippedWorkflow*.test.ts` already does. Items 5, 6,
+   7, 8 and 9 were each caught that way, by someone mutating the instrument rather than reading it.
+
+   **And the countermeasure is not sufficient, which item 8 is the proof of.** An oracle round is a
+   measurement against a corpus, and a corpus cannot establish an absence. Where the claim is "there is
+   nothing here", the instrument has to be inverted rather than tested harder — enumerate what is
+   permitted and refuse the rest, so the assertion needs no corpus and fails closed. That is what
+   `tests/helpers/shippedLaneCommands.ts` does, and it is the only repair in this list that answers a
+   whole item rather than an instance of one.
 8. **`TDD-0069` and `TDD-0070` are parked, and they are parked for two different reasons.**
    **Both are still `todo` in the ledger**, and what follows is the status each is owed rather than
    one it has — round 4 and round 5 each found this item asserting the statuses while `## Final
@@ -1678,8 +1767,14 @@ round  last report at   summary.json at   gap
   6    ac4700d1         9a37421c          1 commit
   7    9882a1d4         dbe00247          1 commit
   8    aab29486         aab29486          same commit
-  9    (this commit)    (this commit)     same commit
+  9    a163b52a         a163b52a          same commit
 ```
+
+Row 9 said `(this commit)` for a round. Round 9's own `m3` made exactly that objection about row 8 and
+required `aab29486` written in; row 8 was corrected and row 9 was written in the same defective form in
+the same commit. `(this commit)` names nothing a later reader can resolve — the commit it referred to is
+not HEAD any more, and was not HEAD by the time the next reviewer read it. **A row whose value is
+"wherever you are standing" cannot be checked**, which is the property this table exists to provide.
 
 This section told the rounds-3-and-4 version of that story — "written first, then sealed" — for two
 rounds after it had stopped being true of the majority. Nothing was laundered in any of the gaps: round
@@ -1730,6 +1825,15 @@ reproduce exactly as stated.
 *reasoning* would launder an illegitimate re-seal. What discharges it is that the first seal still
 reproduces over the three reports **as they stand now**, which both round-2 and round-3 gates
 recomputed independently. Recording the superseded value is what makes that check possible.
+
+**That discharge covers round 1 and not round 7, and the difference is what makes it a discharge rather
+than a formula.** Round 1's re-seal added a file and changed none, so the earlier value still recomputes
+over the earlier set and the recomputation is the evidence. Round 7's re-seal **changed** its
+`summary.json` — the findings count was corrected from 3 to 8 — so its superseded value recomputes over
+nothing that exists, and no recomputation can distinguish that legitimate correction from a rewrite.
+What stands in its place is weaker and is stated as weaker: the edit it preceded is named in the row, the
+corrected count is derivable from the report's own headings, and the reports themselves are unchanged
+between the two seals. Round 9 asked for both halves of this and only the first was written.
 
 At completion, each seal is recompared against **these recorded values**, not against a value re-read
 from the working tree: `## Final status` is outside every audit subject, so a tree-read expectation could

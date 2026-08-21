@@ -147,6 +147,17 @@ interface ToolGrammar {
    */
   readonly alwaysBuilds?: boolean;
   readonly stops?: readonly string[];
+  /**
+   * This tool's own spellings of a flag that means "do not do it".
+   *
+   * `NEVER_FLAGS` holds the spellings shared across tools (`--dry-run`, `--help`, `--version`), and a
+   * tool with its own spelling of the same idea used to escape it: `make --dry-run build` was `none`
+   * while `make -n build` and `make --just-print build` were builds. One command, three spellings, two
+   * verdicts — the invariant the sh-cluster and Windows-separator repairs were both about, in the
+   * false-positive direction this time. Per-tool rather than global, because `-n` means something else
+   * elsewhere and a global entry would refuse real builds.
+   */
+  readonly never?: readonly string[];
 }
 
 const MAKE: ToolGrammar = {
@@ -154,6 +165,8 @@ const MAKE: ToolGrammar = {
   values: ["-f", "--file", "-o", "--old-file", "-W", "--what-if"],
   optional: ["-j", "--jobs", "-l", "--load-average"],
   builds: ["all", "dist", "release", "compile", "install"],
+  // make's own spellings of `--dry-run`, plus question mode, which also runs nothing.
+  never: ["-n", "--just-print", "--recon", "-q", "--question"],
   bareIsBuild: true,
 };
 
@@ -304,6 +317,42 @@ const TOOLS: Record<string, ToolGrammar> = {
   py: PYTHON,
   sbt: { dirs: [], values: [], builds: ["compile", "package", "assembly", "stage"] },
   rake: { dirs: ["-C"], values: ["-f"], bareIsBuild: true },
+  // The JS-framework CLIs. Declared as TOOLS rather than BUNDLERS because the program name alone does
+  // not mean build for any of them — `next dev` and `ng serve` are the commands people run most — so
+  // the subcommand has to be read.
+  // No `builds: ["build"]` on any of these. A declared tool already reads a bare `build` token as a
+  // build through the generic verb rule, so the list entry could never be the reason for the verdict —
+  // measured: deleting it changed nothing for all nine tools that had it. Only a verb that is NOT the
+  // word `build` needs declaring.
+  next: { dirs: [], values: [] },
+  ng: { dirs: [], values: ["--configuration", "-c"] },
+  nuxt: { dirs: [], values: [], builds: ["generate"] },
+  gulp: { dirs: [], values: ["--gulpfile", "--cwd"] },
+  grunt: { dirs: [], values: ["--gruntfile", "--base"] },
+  // Static-site and docs generators, where a bare invocation builds the site: that is what the program
+  // is for, and `hugo --minify` is the common CI line.
+  // hugo declares no `values`: its own `bareIsBuild` decides before any flag can matter, so a
+  // consumed argument cannot change the verdict.
+  hugo: { dirs: ["-s", "--source"], bareIsBuild: true },
+  jekyll: { dirs: ["-s", "--source"], values: ["-d", "--destination"] },
+  mkdocs: { dirs: [], values: ["-f", "--config-file"] },
+  // Its own object rather than an alias of `COMPILER`: sub-members are labelled under the first key
+  // that owns a shared object, so aliasing here would have relabelled `TOOLS.gcc.alwaysBuilds` as
+  // `TOOLS.sphinx-build.alwaysBuilds` purely because this line sits above the compilers.
+  "sphinx-build": { dirs: [], values: [], alwaysBuilds: true },
+  // Language and infrastructure build tools.
+  cabal: { dirs: [], values: ["--builddir"], builds: ["install"] },
+  mix: { dirs: [], values: [], builds: ["compile", "release"] },
+  buck2: { dirs: [], values: ["--config"] },
+  helm: { dirs: [], values: ["-d", "--destination"], builds: ["package"] },
+  goreleaser: { dirs: [], values: ["--config"], builds: ["release"] },
+  packer: { dirs: [], values: ["-var-file"] },
+  shards: { dirs: [], values: [] },
+  // `tox -e build` runs the environment named `build`, and `R CMD build .` puts the verb one token in.
+  // Neither needs a `builds` entry: declaring the tool is enough for the generic verb rule to read the
+  // bare `build`, which is exactly the name-shaped case that rule is for.
+  tox: { dirs: [], values: [] },
+  R: { dirs: [], values: [] },
   ant: {
     dirs: [],
     values: ["-f", "-buildfile", "-D"],
@@ -469,6 +518,10 @@ const WRAPPERS = new Set([
   "script",
   "concurrently",
   "corepack",
+  // `bundle exec <tool>`: a wrapper's command begins at the first token that NAMES a command, so
+  // `exec` is skipped without being declared. `poetry` is not here — it is a declared tool with its own
+  // `build` subcommand, and listing it as a wrapper made `poetry build` unreadable.
+  "bundle",
   "xargs",
 ]);
 /** `command -v x` reports whether `x` exists. It runs nothing. */
@@ -784,6 +837,7 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
   const builds = new Set(tool?.builds ?? []);
   const stops = new Set(tool?.stops ?? []);
   const buildPrefixes = tool?.buildPrefixes ?? [];
+  if (tokens.some((token) => new Set(tool?.never ?? []).has(token))) return "none";
   if (tool?.alwaysBuilds === true) return "build";
   const noScripts = tokens.some((t) => NO_SCRIPTS.has(t));
   let cwd = ctx.cwd;

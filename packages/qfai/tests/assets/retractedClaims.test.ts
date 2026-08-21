@@ -299,23 +299,39 @@ interface FlatDocument {
   readonly paragraphs: ReadonlyArray<readonly [number, number]>;
 }
 
+/**
+ * The two splits, shared by the builder and by the test that reconstructs its output.
+ *
+ * Written once because the reconstruction is only meaningful if both sides cut the document the same
+ * way. Two copies of a split is two coordinate systems, which is the defect being repaired here.
+ */
+const PARAGRAPH_BREAK = /\r?\n[ \t]*\r?\n/;
+const LINE_BREAK = /\r?\n/;
+
 function flattenDocument(raw: string, variant: 0 | 1): FlatDocument {
   let text = "";
   const exempt: Array<[number, number]> = [];
   const paragraphs: Array<[number, number]> = [];
   let inFence = false;
 
-  for (const paragraph of raw.split(/\r?\n[ \t]*\r?\n/)) {
+  for (const paragraph of raw.split(PARAGRAPH_BREAK)) {
     const paragraphStart = text.length;
-    for (const line of paragraph.split(/\r?\n/)) {
+    for (const line of paragraph.split(LINE_BREAK)) {
       const flat = flattenings(line)[variant].trim();
       const isMarker = /^\s*(?:```|~~~)/.test(line);
       const start = text.length;
       if (flat !== "") text += flat;
       const end = text.length;
       if (isMarker) {
+        // A marker line toggles the fence and is **not itself exempt**. Round 10 measured the reason:
+        // the delimiter flattens away entirely (backticks and tildes are stripped), so a marker line's
+        // flattened text is its INFO STRING and nothing else — and an info string is not rendered at
+        // all. Exempting the whole marker line therefore hid a claim from the guard that a reader of
+        // the document could not see either, while a reader of the raw file sees it asserted. That is
+        // the one laundering route of the three round 10 demonstrated that is not defensible: the other
+        // two put the claim inside a blockquote (which IS a quotation) or on a closing fence line
+        // (which renders as code). Exempt the fence's CONTENT, not its delimiter.
         inFence = !inFence;
-        exempt.push([start, end]);
       } else if (inFence || /^\s*>/.test(line)) {
         exempt.push([start, end]);
       }
@@ -521,6 +537,23 @@ describe("retracted claims are quoted, never asserted", () => {
     );
     expect(shownIn(`> a quoted line\n${CLAIM}`), "under a blockquote line").toBe(false);
     expect(shownIn(CLAIM), "on its own").toBe(false);
+
+    // Round 10 demonstrated three more routes through the delimiter LINE, and the three do not get the
+    // same answer, so each is pinned rather than left to fall out of the implementation.
+    //
+    // An INFO STRING is the one that had to close. A fence delimiter flattens away completely — the
+    // backticks and tildes are stripped — so a marker line's flattened text is its info string and
+    // nothing else, and markdown does not render an info string at all. Exempting the whole marker line
+    // therefore hid a claim that no reader of the DOCUMENT could see while a reader of the RAW FILE sees
+    // it asserted, which is laundering in its purest form. Same for a tail on the closing delimiter.
+    expect(shownIn(`\`\`\`${CLAIM}\nsample\n\`\`\``), "as a fence info string").toBe(false);
+    expect(shownIn(`\`\`\`text\nsample\n\`\`\`${CLAIM}`), "on the closing delimiter").toBe(false);
+
+    // A blockquote stays exempt, and that is a decision rather than an oversight: markdown renders a
+    // blockquote AS a quotation, so the claim appears to the reader exactly as this guard's whole
+    // contract requires — quoted, not asserted. Pinned here so the decision cannot quietly change, and
+    // recorded as the one route round 10 demonstrated that is meant to stay open.
+    expect(shownIn(`> ${CLAIM}. And more text after it.`), "in a blockquote, by design").toBe(true);
   });
 
   it("counts the same quotation marks the pairing counts", () => {
@@ -562,6 +595,97 @@ describe("retracted claims are quoted, never asserted", () => {
       }
     }
     expect(wrong, "a counted claim whose number the tree does not hold").toEqual([]);
+  });
+
+  it("reconstructs every recorded span from the source, in both flattenings", async () => {
+    // The coordinate model, ASSERTED against the source rather than described in a docstring. Round 10
+    // measured the previous model's stated property false for 50 of 456 real paragraphs: it flattened a
+    // paragraph one way, computed its line offsets another, and assumed the two agreed. Two spans ended
+    // past the end of their own paragraph and leaked into the next. Nothing changed verdict — 0 of 382
+    // marks classified differently — so it is recorded as latent, and fixed anyway, because it was a
+    // claim about how the code is written, false, inside the repair for a finding about that class.
+    //
+    // The first version of THIS test checked span arithmetic — no overlap, nothing past the end, exempt
+    // spans inside one paragraph — and three mutations that reintroduced the old model left it green.
+    // That is the same defect one level up: the drift is a character or two, bounded by the accumulated
+    // indentation, and too small to break an inequality — which is exactly why round 10 called it
+    // latent. So the assertion is identity against the SOURCE, where a one-character displacement is a
+    // different string:
+    //
+    //   guard exempted: "s/unit/buildcommand.test.ts where it belongs)"
+    //   the real line : " tests/unit/buildcommand.test.ts where it belongs)"
+    //
+    // One of the three mutations stays green and that is the right answer, argued structurally rather
+    // than from the suite's silence: appending a separator after a line that flattened to nothing shifts
+    // every later offset by one, but it shifts the TEXT by one in the same step, because the separator is
+    // written after the line's span is recorded and before the next line's start is read. A uniform
+    // translation of one coordinate system is not a displacement — which is the property the rewrite
+    // established, and the reason "the suite is green" is not the argument being made here.
+    const collapse = (text: string): string => text.replace(/\s+/g, " ").trim();
+    const offenders: string[] = [];
+    for (const file of GOVERNANCE) {
+      const raw = await readFile(path.join(ROOT, file), "utf8");
+      const rawParagraphs = raw.split(PARAGRAPH_BREAK);
+      for (const variant of [0, 1] as const) {
+        const document = flattenDocument(raw, variant);
+        const where = `${file} [flattening ${String(variant)}]`;
+
+        // Every exempt span must BE a line of the file. Not "inside one", not "the right length": the
+        // slice and the line's own flattened text must be the same string.
+        const lines = new Set(
+          raw.split(LINE_BREAK).map((line) => flattenings(line)[variant].trim()),
+        );
+        for (const [from, to] of document.exempt) {
+          const slice = document.text.slice(from, to);
+          if (!lines.has(slice)) {
+            offenders.push(
+              `${where}: exempt span [${String(from)},${String(to)}] is not any line: ` +
+                JSON.stringify(slice.slice(0, 48)),
+            );
+          }
+        }
+
+        // And every paragraph span must reconstruct its own paragraph. The builder walks the same split
+        // in the same order and pushes one span each, so the pairing is by index. Compared with runs of
+        // whitespace collapsed, because a fence marker flattens to nothing and contributes no separator
+        // while the paragraph's own flattening leaves one — the one difference the model is allowed.
+        if (document.paragraphs.length !== rawParagraphs.length) {
+          offenders.push(
+            `${where}: ${String(document.paragraphs.length)} spans for ` +
+              `${String(rawParagraphs.length)} paragraphs`,
+          );
+          continue;
+        }
+        document.paragraphs.forEach(([from, to], index) => {
+          const recorded = collapse(document.text.slice(from, to));
+          const source = collapse(flattenings(rawParagraphs[index] ?? "")[variant]);
+          if (recorded !== source) {
+            offenders.push(
+              `${where}: paragraph ${String(index)} reads ${JSON.stringify(recorded.slice(0, 40))}, ` +
+                `source has ${JSON.stringify(source.slice(0, 40))}`,
+            );
+          }
+          // And the spans must TILE the text: one separator between neighbours, and the last one
+          // reaching the end. This is what pins the span's END, and it is why the identity check above
+          // is not enough on its own — that check compares a slice whose end came from a flattening
+          // against that same flattening, so a model that computed the end from the paragraph's own
+          // flattening satisfied it by construction. Measured: it did. Tiling has no such circularity,
+          // because it is a statement about the WRITE POSITION and nothing else.
+          const next = document.paragraphs[index + 1];
+          const expected = next === undefined ? document.text.length : next[0];
+          if (to + 1 !== expected) {
+            offenders.push(
+              `${where}: paragraph ${String(index)} ends at ${String(to)}, but the next begins at ` +
+                `${String(expected)} — the spans do not tile the text`,
+            );
+          }
+        });
+      }
+    }
+    expect(
+      offenders,
+      "a recorded span that does not reconstruct the source text it claims to index",
+    ).toEqual([]);
   });
 
   it("reports a stray quotation mark instead of widening around it", async () => {

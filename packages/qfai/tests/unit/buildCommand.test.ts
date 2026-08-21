@@ -80,6 +80,7 @@ const TOOL_LISTS = [
   "builds",
   "buildPrefixes",
   "stops",
+  "never",
 ] as const;
 const INTERPRETER_LISTS = ["values", "inline"] as const;
 /**
@@ -245,7 +246,11 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["MANAGER_PASS.exec", "none", "pnpm -C noop exec build"],
   ["MANAGER_PASS.dlx", "none", "pnpm -C noop dlx build"],
   ["MANAGER_PASS.workspaces", "none", "pnpm -C noop workspaces build"],
-  ["MANAGER_PASS.--", "build", "pnpm -C noop exec -- next build"],
+  // `widget` names nothing, and that is load-bearing: this case used to say `next`, and declaring
+  // `next` as a tool unpinned it in the same commit — reason (2) of the consume rule is "the next
+  // token NAMES a command", so a declared tool takes the same path as a passed `--`. The sweep
+  // caught it. A probe that depends on a token being UNKNOWN has to use one that stays unknown.
+  ["MANAGER_PASS.--", "build", "pnpm -C noop exec -- widget build"],
   ["MANAGER_CONSUMING.workspace", "none", "yarn -C noop workspace qfai build"],
   ["MANAGER_DIRS.-C", "build", "pnpm -C sub hello"],
   ["MANAGER_DIRS.--dir", "build", "pnpm --dir sub hello"],
@@ -561,6 +566,12 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.make.optional.--load-average", "build", "make --load-average 4"],
   ["TOOLS.make.builds.all", "build", "make all"],
   ["TOOLS.make.bareIsBuild", "build", "make"],
+  // make spells `--dry-run` five ways of its own, and each is a real make flag.
+  ["TOOLS.make.never.-n", "none", "make -n build"],
+  ["TOOLS.make.never.--just-print", "none", "make --just-print build"],
+  ["TOOLS.make.never.--recon", "none", "make --recon build"],
+  ["TOOLS.make.never.-q", "none", "make -q build"],
+  ["TOOLS.make.never.--question", "none", "make --question build"],
   ["TOOLS.ninja.bareIsBuild", "build", "ninja"],
   ["TOOLS.just.bareIsBuild", "build", "just"],
   ["TOOLS.task.bareIsBuild", "build", "task"],
@@ -646,6 +657,60 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["INTERPRETERS.pwsh.inline.-EncodedCommand", "build", 'pwsh -EncodedCommand "pnpm build"'],
   ["TOOLS.docker.builds.bake", "build", "docker buildx bake -f docker-bake.hcl"],
   ["WRAPPERS.timeout", "build", "timeout 600 pnpm build"],
+  // Family 5: the build front-ends round 10's `R02 m5` planted, twenty-six lines of which nineteen
+  // were unseen. Each case was GENERATED and then measured against the deletion of its own member,
+  // and the measurement rejected fifteen of the first sixty-two — every `builds: ["build"]` entry
+  // among them, because a declared tool already reads a bare `build` through the generic verb rule.
+  // Those declarations are gone rather than pinned: an entry that cannot be the reason for a verdict
+  // is not grammar, and this is the one place the file deletes on a structural argument rather than
+  // on a sweep's silence.
+  ["TOOLS.R", "build", "R CMD build ."],
+  ["TOOLS.buck2", "build", "buck2 build //..."],
+  ["TOOLS.buck2.values.--config", "none", "buck2 --config build"],
+  ["TOOLS.cabal", "build", "cabal build all"],
+  ["TOOLS.cabal.builds.install", "build", "cabal install"],
+  ["TOOLS.cabal.values.--builddir", "none", "cabal --builddir build"],
+  ["TOOLS.goreleaser", "build", "goreleaser build --snapshot"],
+  ["TOOLS.goreleaser.builds.release", "build", "goreleaser release"],
+  ["TOOLS.goreleaser.values.--config", "none", "goreleaser --config build"],
+  ["TOOLS.grunt", "build", "grunt build --verbose"],
+  ["TOOLS.grunt.values.--base", "none", "grunt --base build"],
+  ["TOOLS.grunt.values.--gruntfile", "none", "grunt --gruntfile build"],
+  ["TOOLS.gulp", "build", "gulp build --silent"],
+  ["TOOLS.gulp.values.--cwd", "none", "gulp --cwd build"],
+  ["TOOLS.gulp.values.--gulpfile", "none", "gulp --gulpfile build"],
+  ["TOOLS.helm", "build", "helm package charts/app"],
+  ["TOOLS.helm.builds.package", "build", "helm package"],
+  ["TOOLS.helm.values.--destination", "none", "helm --destination build"],
+  ["TOOLS.helm.values.-d", "none", "helm -d build"],
+  ["TOOLS.hugo", "build", "hugo --minify"],
+  ["TOOLS.hugo.bareIsBuild", "build", "hugo"],
+  ["TOOLS.hugo.dirs.--source", "build", "hugo --source sub pnpm hello"],
+  ["TOOLS.hugo.dirs.-s", "build", "hugo -s sub pnpm hello"],
+  ["TOOLS.jekyll", "build", "jekyll build --trace"],
+  ["TOOLS.jekyll.dirs.--source", "build", "jekyll --source sub pnpm hello"],
+  ["TOOLS.jekyll.dirs.-s", "build", "jekyll -s sub pnpm hello"],
+  ["TOOLS.jekyll.values.--destination", "none", "jekyll --destination build"],
+  ["TOOLS.jekyll.values.-d", "none", "jekyll -d build"],
+  ["TOOLS.mix", "build", "mix compile --force"],
+  ["TOOLS.mix.builds.compile", "build", "mix compile"],
+  ["TOOLS.mix.builds.release", "build", "mix release"],
+  ["TOOLS.mkdocs", "build", "mkdocs build --strict"],
+  ["TOOLS.mkdocs.values.--config-file", "none", "mkdocs --config-file build"],
+  ["TOOLS.mkdocs.values.-f", "none", "mkdocs -f build"],
+  ["TOOLS.next", "build", "next build --no-lint"],
+  ["TOOLS.ng", "build", "ng build --configuration production"],
+  ["TOOLS.ng.values.--configuration", "none", "ng --configuration build"],
+  ["TOOLS.ng.values.-c", "none", "ng -c build"],
+  ["TOOLS.nuxt", "build", "nuxt build --dotenv .env"],
+  ["TOOLS.nuxt.builds.generate", "build", "nuxt generate"],
+  ["TOOLS.packer", "build", "packer build template.pkr.hcl"],
+  ["TOOLS.packer.values.-var-file", "none", "packer -var-file build"],
+  ["TOOLS.shards", "build", "shards build --release"],
+  ["TOOLS.sphinx-build", "build", "sphinx-build -b html docs _build"],
+  ["TOOLS.sphinx-build.alwaysBuilds", "build", "sphinx-build docs _build"],
+  ["TOOLS.tox", "build", "tox -e build"],
+  ["WRAPPERS.bundle", "build", "bundle exec rake build"],
 ];
 
 /**
