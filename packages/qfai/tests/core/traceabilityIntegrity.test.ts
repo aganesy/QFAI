@@ -332,3 +332,152 @@ describe("TDD-0015: validate pipeline integration", () => {
     expect(validateSrc).toContain("await validateTraceabilityIntegrity(root, config)");
   });
 });
+
+// ---------------------------------------------------------------------------
+// #536: ledger presence is a property of the working tree, not of the branch
+// diff. The whole validator used to return early when the diff was empty, so a
+// trunk-based repo (HEAD == origin/main), a shallow CI clone and a repo with no
+// remote never saw QFAI-TRACE-002 — the warning the shipped /qfai-sdd docs
+// promise as the only signal that the artifact is missing.
+// ---------------------------------------------------------------------------
+describe("ledger presence is checked without a branch diff", () => {
+  let tmpRoot: string;
+
+  beforeEach(async () => {
+    vi.mocked(execFileSync).mockReset();
+    tmpRoot = await import("node:fs/promises").then((fs) =>
+      fs.mkdtemp(path.join(os.tmpdir(), "qfai-trace-int-")),
+    );
+  });
+
+  afterEach(async () => {
+    await rm(tmpRoot, { recursive: true, force: true });
+  });
+
+  async function seedSpecDirs(...specIds: string[]): Promise<void> {
+    for (const specId of specIds) {
+      await mkdir(path.join(tmpRoot, ".qfai", "specs", specId), { recursive: true });
+    }
+  }
+
+  it("emits QFAI-TRACE-002 for every ledger-less spec when the diff is empty", async () => {
+    await seedSpecDirs("spec-0001", "spec-0002");
+    vi.mocked(execFileSync).mockReturnValue("");
+
+    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
+    const missing = issues.filter((entry) => entry.code === "QFAI-TRACE-002");
+    expect(missing).toHaveLength(2);
+    expect(missing.every((entry) => entry.severity === "warning")).toBe(true);
+    expect(issues.some((entry) => entry.code === "QFAI-TRACE-001")).toBe(false);
+  });
+
+  it("checks specs the diff never mentions", async () => {
+    await seedSpecDirs("spec-0001", "spec-0002");
+    // Only spec-0001 is in the diff; spec-0002's missing ledger is still a fact.
+    vi.mocked(execFileSync).mockReturnValue(".qfai/specs/spec-0001/04_Business-Rules.md\n");
+
+    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
+    const files = issues
+      .filter((entry) => entry.code === "QFAI-TRACE-002")
+      .map((entry) => entry.file);
+    expect(files).toHaveLength(2);
+    expect(files.some((file) => file?.includes("spec-0002"))).toBe(true);
+  });
+
+  it("flags an unexpected ledger format outside the diff too", async () => {
+    await seedSpecDirs("spec-0002");
+    const ledger = ["# Traceability Ledger", "", "| BR/AC | Notes |", "| --- | --- |", ""].join(
+      "\n",
+    );
+    await writeFile(
+      path.join(tmpRoot, ".qfai", "specs", "spec-0002", "16_Traceability-ledger.md"),
+      ledger,
+      "utf-8",
+    );
+    vi.mocked(execFileSync).mockReturnValue("");
+
+    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.code).toBe("QFAI-TRACE-002");
+    expect(issues[0]?.rule).toBe("traceability.integrity.ledgerFormatMismatch");
+  });
+
+  it("does not raise QFAI-TRACE-001 for a spec that is not in the diff", async () => {
+    await seedSpecDirs("spec-0001");
+    const ledger = [
+      "# Traceability Ledger",
+      "",
+      "| BR/AC | Implementation File | Test File |",
+      "| --- | --- | --- |",
+      "| BR-0001-0001 | src/core/someModule.ts | tests/core/someModule.test.ts |",
+    ].join("\n");
+    await writeFile(
+      path.join(tmpRoot, ".qfai", "specs", "spec-0001", "16_Traceability-ledger.md"),
+      ledger,
+      "utf-8",
+    );
+    // A change somewhere else entirely: no BR/AC moved, so nothing is owed.
+    vi.mocked(execFileSync).mockReturnValue("README.md\n");
+
+    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
+    expect(issues).toEqual([]);
+  });
+
+  it("ignores non-spec directories under specsDir", async () => {
+    await seedSpecDirs("spec-0001");
+    await mkdir(path.join(tmpRoot, ".qfai", "specs", "_policies"), { recursive: true });
+    await mkdir(path.join(tmpRoot, ".qfai", "specs", "spec-XXXX"), { recursive: true });
+    vi.mocked(execFileSync).mockReturnValue("");
+
+    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.file).toContain("spec-0001");
+  });
+
+  it("reports no issues when specsDir does not exist", async () => {
+    vi.mocked(execFileSync).mockReturnValue("");
+    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
+    expect(issues).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #536: "git could not answer" used to be indistinguishable from "nothing
+// changed", so a missing base ref silently disabled the error-severity
+// QFAI-TRACE-001 gate without a word in the report.
+// ---------------------------------------------------------------------------
+describe("an unavailable diff is reported, not swallowed", () => {
+  let tmpRoot: string;
+
+  beforeEach(async () => {
+    vi.mocked(execFileSync).mockReset();
+    tmpRoot = await import("node:fs/promises").then((fs) =>
+      fs.mkdtemp(path.join(os.tmpdir(), "qfai-trace-int-")),
+    );
+  });
+
+  afterEach(async () => {
+    await rm(tmpRoot, { recursive: true, force: true });
+  });
+
+  it("emits QFAI-TRACE-003 (info) when git cannot resolve the base ref", async () => {
+    await mkdir(path.join(tmpRoot, ".qfai", "specs", "spec-0001"), { recursive: true });
+    vi.mocked(execFileSync).mockImplementation(() => {
+      throw new Error("fatal: ambiguous argument 'origin/main..HEAD'");
+    });
+
+    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
+    const skipped = issues.find((entry) => entry.code === "QFAI-TRACE-003");
+    expect(skipped?.severity).toBe("info");
+    expect(skipped?.rule).toBe("traceability.integrity.diffUnavailable");
+    expect(skipped?.message).toContain("origin/main");
+    // Ledger presence does not depend on the diff, so it is still reported.
+    expect(issues.some((entry) => entry.code === "QFAI-TRACE-002")).toBe(true);
+  });
+
+  it("does not emit QFAI-TRACE-003 when git answers with an empty diff", async () => {
+    vi.mocked(execFileSync).mockReturnValue("");
+    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
+    expect(issues.some((entry) => entry.code === "QFAI-TRACE-003")).toBe(false);
+  });
+});

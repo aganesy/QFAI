@@ -323,7 +323,7 @@ async function runProfileValidators(
       case "atdd":
         return runAtddValidators(root, config, specScope);
       case "tdd":
-        return runTddValidators(root, config, true, true, true, true, specScope);
+        return runTddValidators(root, config, true, true, true, true, true, specScope);
       case "verify":
       case "full":
         return runFullValidators(root, config, platformOption, specScope);
@@ -382,6 +382,10 @@ async function runSddValidators(
       enforceNoPrematurePrototypingContracts,
     })),
     ...(await validateTraceability(root, config, { includeCodeReferences })),
+    // `16_Traceability-ledger.md` is a spec-pack artifact `/qfai-sdd` writes,
+    // and `--profile sdd` is that skill's completion gate — so the profile that
+    // owns the file is the one that must hear `QFAI-TRACE-002` about it.
+    ...(await validateTraceabilityIntegrity(root, config)),
     ...(await validateDefinedIds(root, config)),
     ...(await validateContracts(root, config)),
     ...(await validateNavigationFlow(root, config)),
@@ -487,6 +491,9 @@ async function runTddValidators(
   includeUpstreamGuard = true,
   // `full` runs the sdd profile, which already calls `validateContracts`.
   includeContracts = true,
+  // Same reason: the sdd profile owns the traceability ledger and now runs
+  // `validateTraceabilityIntegrity` itself, so `full` opts out here.
+  includeTraceabilityIntegrity = true,
   specScope?: SpecScope,
 ): Promise<Issue[]> {
   return [
@@ -503,7 +510,7 @@ async function runTddValidators(
     ...(includeTraceability
       ? await validateTraceability(root, config, { includeCodeReferences: true })
       : []),
-    ...(await validateTraceabilityIntegrity(root, config)),
+    ...(includeTraceabilityIntegrity ? await validateTraceabilityIntegrity(root, config) : []),
     // The drift protocol names `--profile tdd` as the downstream completion
     // gate, so the downstream-only ownership rule is enforced here and nowhere
     // else: `/qfai-sdd` owns these files and edits them legitimately.
@@ -532,7 +539,7 @@ async function runFullValidators(
     ...(await validateReviewArtifacts(root)),
     ...(await runPrototypingValidators(root, config, platformOption)),
     ...(await runAtddValidators(root, config, specScope)),
-    ...(await runTddValidators(root, config, false, false, false, false)),
+    ...(await runTddValidators(root, config, false, false, false, false, false)),
     ...(await validatePrototypingSkill(root, config)),
   ];
 }

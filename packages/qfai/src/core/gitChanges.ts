@@ -16,12 +16,15 @@ export function normalizeRepoPath(p: string): string {
 /**
  * Files changed between `baseBranch` and `HEAD`, as repo-relative paths.
  *
- * Returns an empty set when git is unavailable, the base branch cannot be
- * resolved, or the directory is not a repository. Callers treat "no changed
- * files" as "nothing to check": a validator that hard-failed outside a git
- * checkout would make `qfai validate` unusable in a tarball export.
+ * Returns `null` — not an empty set — when git is unavailable, the base branch
+ * cannot be resolved, or the directory is not a repository. "git could not
+ * answer" and "git answered: nothing changed" are different facts, and folding
+ * the first into the second let a shallow CI clone or a missing base ref
+ * silently disable diff-gated checks. A validator that hard-failed outside a
+ * git checkout would make `qfai validate` unusable in a tarball export, so the
+ * failure stays non-fatal — but callers can now report it.
  */
-export function getChangedFilesAgainstBase(root: string, baseBranch: string): Set<string> {
+export function getChangedFilesAgainstBase(root: string, baseBranch: string): Set<string> | null {
   try {
     const output = execFileSync("git", ["diff", "--name-only", `${baseBranch}..HEAD`], {
       cwd: root,
@@ -36,6 +39,6 @@ export function getChangedFilesAgainstBase(root: string, baseBranch: string): Se
         .map(normalizeRepoPath),
     );
   } catch {
-    return new Set();
+    return null;
   }
 }

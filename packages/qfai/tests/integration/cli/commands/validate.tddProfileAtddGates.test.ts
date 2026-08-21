@@ -203,3 +203,37 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     }
   });
 });
+
+// #536: `/qfai-sdd` owns `16_Traceability-ledger.md` but `--profile sdd` — the
+// gate that skill stops on — never ran the validator that asks for it.
+describe("--profile sdd owns the traceability-ledger gate", () => {
+  it("raises QFAI-TRACE-002 for a ledger-less spec under the sdd profile", async () => {
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await runValidate({ root, strict: false, profile: "sdd" });
+        const codes = (await findings(root)).map((entry) => entry.code);
+        expect(codes).toContain("QFAI-TRACE-002");
+      });
+    });
+  });
+
+  it("does not double-report the ledger gate under the full profile", async () => {
+    await withProject(async (root) => {
+      await runValidate({ root, strict: false });
+      const trace002 = (await findings(root)).filter((entry) => entry.code === "QFAI-TRACE-002");
+      expect(trace002).toHaveLength(1);
+    });
+  });
+
+  it("keeps QFAI-TRACE-* off the unevaluated list for sdd and tdd", async () => {
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await runValidate({ root, strict: false, profile: "sdd" });
+        const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+        expect(notice?.message).not.toContain("QFAI-TRACE-*");
+        // The TDD-list gates are still not part of what sdd evaluates.
+        expect(notice?.message).toContain("TDDLIST_*");
+      });
+    });
+  });
+});

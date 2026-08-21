@@ -228,9 +228,14 @@ Optional per-spec artifact linking `BR-*` / `AC-*` to the implementation file th
 Template: `templates/specs/spec/16_Traceability-ledger.md`.
 
 - It is **optional**. Without it `npx qfai validate` emits `QFAI-TRACE-002` (`warning`) and skips the
-  implementation-integrity check; the spec is still valid.
+  implementation-integrity check; the spec is still valid. Presence is a property of the working
+  tree, so this is checked for **every** spec on every run — it does not depend on the branch diff.
+  Both `--profile sdd` and `--profile tdd` evaluate it.
 - With it, `QFAI-TRACE-001` (`error`) fires when a spec's `03_Acceptance-Criteria.md` or
   `04_Business-Rules.md` changed on the branch but a linked implementation file did not.
+- `QFAI-TRACE-001` needs the branch diff. When git cannot produce one (base ref absent, shallow CI
+  clone, not a repository) `QFAI-TRACE-003` (`info`) says so and that check is skipped for every
+  spec; fetch the base ref or set `baseBranch` in `qfai.config.yaml`.
 - Schema for the **layered** layout — the first Markdown table is the one read; header needs ≥3
   columns, one named `Implementation File`:
 

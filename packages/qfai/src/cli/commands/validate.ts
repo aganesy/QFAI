@@ -423,7 +423,11 @@ const GATE_GROUP_FAMILIES = {
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
   "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
-  tdd: ["TDDLIST_*", "QFAI-TEST-001", "QFAI-TRACE-*"],
+  tdd: ["TDDLIST_*", "QFAI-TEST-001"],
+  // Own group, not part of `tdd`: `/qfai-sdd` owns `16_Traceability-ledger.md`
+  // and both profiles run `validateTraceabilityIntegrity`, but `sdd` does not
+  // run the TDD-list gates.
+  "traceability-ledger": ["QFAI-TRACE-*"],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
@@ -439,12 +443,12 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   full: ALL_GATE_GROUPS,
   verify: ALL_GATE_GROUPS,
   discussion: ["discussion"],
-  sdd: ["sdd"],
+  sdd: ["sdd", "traceability-ledger"],
   prototyping: ["prototyping"],
   atdd: ["atdd-traceability", "atdd-scaffold"],
   // `runTddValidators` also calls `validateAtddCodeTraceability`, but not the
   // scaffold-placeholder gate that completes the atdd group.
-  tdd: ["tdd", "atdd-traceability"],
+  tdd: ["tdd", "atdd-traceability", "traceability-ledger"],
   "saas-package": ["prototyping"],
 };
 
