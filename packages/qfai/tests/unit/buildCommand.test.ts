@@ -82,6 +82,34 @@ const TOOL_LISTS = [
   "stops",
 ] as const;
 const INTERPRETER_LISTS = ["values", "inline"] as const;
+/**
+ * The boolean tool fields. A boolean decides verdicts exactly as a list member does, and `alwaysBuilds`
+ * arrived unswept: `grammarMembers()` enumerated `bareIsBuild` by name and nothing said the NEXT
+ * boolean had to be added too. `TOOL_FIELDS` below closes that: it fails on a field this file does not
+ * classify, so the omission is caught at the commit that adds the field rather than by a review round.
+ */
+const TOOL_BOOLEANS = ["bareIsBuild", "alwaysBuilds"] as const;
+
+/**
+ * Which name owns each shared grammar object, captured ONCE from the pristine grammar.
+ *
+ * Aliases share one object — `gradle`/`gradlew`, `docker`/`podman`, `make`/`gmake`,
+ * `python`/`python3`/`py`, `pwsh`/`powershell`, `mvn`/`mvnw`, `bazel`/`bazelisk`, and the six
+ * compilers — so a member reached through two names is ONE member, and its sub-members need one
+ * canonical label. Reading "the first key in iteration order" LIVE is not that label: `deleteMember`
+ * restores a deleted tool key by reassignment, which moves it to the end of the key order, and the
+ * owner rotates mid-sweep. Frozen here, it cannot.
+ */
+const OWNER = {
+  tools: new Map<ToolGrammarLike, string>(),
+  interpreters: new Map<InterpreterGrammarLike, string>(),
+};
+for (const [name, grammar] of Object.entries(GRAMMAR.tools)) {
+  if (!OWNER.tools.has(grammar)) OWNER.tools.set(grammar, name);
+}
+for (const [name, grammar] of Object.entries(GRAMMAR.interpreters)) {
+  if (!OWNER.interpreters.has(grammar)) OWNER.interpreters.set(grammar, name);
+}
 
 /**
  * Synthetic manifests for the member cases. Deliberately minimal: `hello` is a build in `sub` and not
@@ -149,21 +177,26 @@ function grammarMembers(): string[] {
   // to one spelling and forgotten in the other — and it means a member reached through two names is ONE
   // member. Its sub-members are enumerated under the first name that owns the object; the KEY is still
   // a member under every name, because deleting `gmake` does not delete `make`.
-  const seenTools = new Set<ToolGrammarLike>();
+  // Sub-members are enumerated under `OWNER`, captured once from the pristine grammar rather than
+  // recomputed here. `deleteMember` restores a `TOOLS.<name>` key with `Reflect.deleteProperty` plus a
+  // reassignment, which re-inserts it at the END of the key order — so a rule reading insertion order
+  // LIVE rotates the owner of a shared object mid-sweep: `make` hands ownership to `gmake` for exactly
+  // the twelve steps in which make's sub-members are measured, and every one of their labels changes
+  // under the harness's feet. Today's single pass survives it by accident (the order is restored by the
+  // end, and this function is called once); a frozen map cannot rotate at all, whatever the pass does.
   for (const [tool, grammar] of Object.entries(GRAMMAR.tools)) {
     out.push(`TOOLS.${tool}`);
-    if (seenTools.has(grammar)) continue;
-    seenTools.add(grammar);
+    if (OWNER.tools.get(grammar) !== tool) continue;
     for (const field of TOOL_LISTS) {
       for (const member of grammar[field] ?? []) out.push(`TOOLS.${tool}.${field}.${member}`);
     }
-    if (grammar.bareIsBuild === true) out.push(`TOOLS.${tool}.bareIsBuild`);
+    for (const field of TOOL_BOOLEANS) {
+      if (grammar[field] === true) out.push(`TOOLS.${tool}.${field}`);
+    }
   }
-  const seenInterpreters = new Set<InterpreterGrammarLike>();
   for (const [name, grammar] of Object.entries(GRAMMAR.interpreters)) {
     out.push(`INTERPRETERS.${name}`);
-    if (seenInterpreters.has(grammar)) continue;
-    seenInterpreters.add(grammar);
+    if (OWNER.interpreters.get(grammar) !== name) continue;
     for (const field of INTERPRETER_LISTS) {
       for (const member of grammar[field]) out.push(`INTERPRETERS.${name}.${field}.${member}`);
     }
@@ -201,6 +234,7 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["BUNDLERS.esbuild", "build", "npx esbuild"],
   ["BUNDLERS.webpack", "build", "npx webpack"],
   ["BUNDLERS.swc", "build", "npx swc"],
+  ["BUNDLERS.@swc/cli", "build", "npx --yes @swc/cli src -d dist"],
   ["BUNDLERS.parcel", "build", "npx parcel"],
   ["BUNDLERS.vite", "build", "npx vite"],
   ["BUNDLERS.rspack", "build", "npx rspack"],
@@ -413,6 +447,8 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.ant.builds.jar", "build", "ant jar"],
   ["TOOLS.ant.builds.compile", "build", "ant compile"],
   ["TOOLS.ant.bareIsBuild", "build", "ant"],
+  // The compilers share one object, so `alwaysBuilds` is ONE member, labelled under its owner.
+  ["TOOLS.gcc.alwaysBuilds", "build", "gcc -O2 -o dist/app src/main.c"],
   ["TOOLS.deno", "build", "deno compile app"],
   ["TOOLS.deno.values.--output", "none", "deno --output build clean"],
   ["TOOLS.deno.values.--config", "none", "deno --config build clean"],
@@ -439,7 +475,7 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.elm", "build", "elm make src/Main.elm"],
   ["TOOLS.elm.values.--output", "none", "elm --output build clean"],
   ["TOOLS.elm.builds.make", "build", "elm make src"],
-  ["TOOLS.gcc", "build", "gcc -O2 -o dist/app src/main.c"],
+  ["TOOLS.gcc", "build", "gcc -c src/main.c"],
   ["TOOLS.g++", "build", "g++ -o dist/app src/main.cc"],
   ["TOOLS.clang", "build", "clang -o dist/app src/main.c"],
   ["TOOLS.javac", "build", "javac -d out src/Main.java"],
@@ -611,7 +647,14 @@ const SETS: Readonly<Record<string, Set<string>>> = {
   SH_CLUSTER_VALUES: GRAMMAR.shClusterValues,
 };
 
-/** The two lists that build a regex and a split. Arrays, not sets, so they restore by content. */
+/**
+ * The three ordered lists, spliced in place rather than reassigned.
+ *
+ * Arrays, not sets, so they restore by content. Two of them have a regex or a split built from them on
+ * every call, which is why the mutation is in place: reassigning the binding would leave the classifier
+ * reading the old array. The third, `EXECUTABLE_EXTENSIONS`, builds neither — `stripExecutableExtension`
+ * walks it — and is here for the same restore-by-content reason.
+ */
 const ARRAYS: Readonly<Record<string, string[]>> = {
   SCRIPT_EXTENSIONS: GRAMMAR.scriptExtensions,
   EXECUTABLE_EXTENSIONS: GRAMMAR.executableExtensions,
@@ -633,28 +676,41 @@ function deleteMember(member: string): () => void {
     const name = parts[1] ?? "";
     const original = GRAMMAR.tools[name];
     if (original === undefined) throw new Error(`no such tool: ${name}`);
-    const restore = (): void => {
-      GRAMMAR.tools[name] = original;
-    };
     if (parts.length === 2) {
+      // Only THIS key goes, not its aliases: deleting `gmake` does not delete `make`, which is why the
+      // key is a member under every name while its sub-members are enumerated under one.
       // `Reflect.deleteProperty` rather than `delete`, which the lint rule bars on a computed key. The
-      // key has to go: an entry with empty lists still makes the verb a known tool.
+      // key has to go entirely: an entry with empty lists still makes the verb a known tool.
       Reflect.deleteProperty(GRAMMAR.tools, name);
-      return restore;
+      return () => {
+        GRAMMAR.tools[name] = original;
+      };
     }
-    if (parts[2] === "bareIsBuild") {
-      GRAMMAR.tools[name] = { ...original, bareIsBuild: false };
-      return restore;
-    }
+    // A SUB-member deletion reaches every alias of the object. Replacing one key de-aliases the
+    // grammar for the duration of the measurement — `gmake` kept the `-C` that `make` had lost — so
+    // the grammar under test was not the grammar that ships, and it was de-aliased precisely while the
+    // sweep measured. No case exploits it today only because every shared tool's cases happen to use
+    // the owning spelling; a case written against the alias spelling would silently stop pinning.
+    const aliases = Object.entries(GRAMMAR.tools)
+      .filter(([, grammar]) => grammar === original)
+      .map(([key]) => key);
+    const replaceAll = (next: ToolGrammarLike): (() => void) => {
+      for (const key of aliases) GRAMMAR.tools[key] = next;
+      return () => {
+        for (const key of aliases) GRAMMAR.tools[key] = original;
+      };
+    };
     const raw = parts[2] ?? "";
+    const boolean = TOOL_BOOLEANS.find((known) => known === raw);
+    if (boolean !== undefined) return replaceAll({ ...original, [boolean]: false });
     const flag = parts.slice(3).join(".");
     // `.find` narrows the union for free; the previous version asserted the type with a bare `as`,
     // which the project rules bar and which nothing here needs.
     const field = TOOL_LISTS.find((known) => known === raw);
     if (field === undefined) throw new Error(`no such tool field: ${raw}`);
     const list = original[field] ?? [];
-    GRAMMAR.tools[name] = { ...original, [field]: list.filter((entry) => entry !== flag) };
-    return restore;
+    if (!list.includes(flag)) throw new Error(`no such ${name}.${raw} member: ${flag}`);
+    return replaceAll({ ...original, [field]: list.filter((entry) => entry !== flag) });
   }
 
   if (head === "INTERPRETERS") {
@@ -673,8 +729,15 @@ function deleteMember(member: string): () => void {
     const field = INTERPRETER_LISTS.find((known) => known === raw);
     if (field === undefined) throw new Error(`no such interpreter field: ${raw}`);
     const list = original[field];
-    GRAMMAR.interpreters[name] = { ...original, [field]: list.filter((entry) => entry !== flag) };
-    return restore;
+    if (!list.includes(flag)) throw new Error(`no such ${name}.${raw} member: ${flag}`);
+    const aliases = Object.entries(GRAMMAR.interpreters)
+      .filter(([, grammar]) => grammar === original)
+      .map(([key]) => key);
+    const next = { ...original, [field]: list.filter((entry) => entry !== flag) };
+    for (const key of aliases) GRAMMAR.interpreters[key] = next;
+    return () => {
+      for (const key of aliases) GRAMMAR.interpreters[key] = original;
+    };
   }
 
   if (head === "RULES") {
@@ -694,6 +757,12 @@ function deleteMember(member: string): () => void {
     const original = GRAMMAR.lifecycle[hook];
     if (original === undefined) throw new Error(`no such lifecycle hook: ${hook}`);
     const dropped = parts.slice(2).join(".");
+    // Fail fast on a path that names no member. `deleteMember("LIFECYCLE.pack")` used to compute an
+    // empty `dropped`, filter nothing and return a working restore — so the sweep reported the member
+    // `undetected`, which reads as a missing case rather than as a broken harness. Every other branch
+    // throws on an unknown field; this one silently agreed.
+    if (!original.includes(dropped))
+      throw new Error(`no such lifecycle member: ${hook}.${dropped}`);
     GRAMMAR.lifecycle[hook] = original.filter((entry) => entry !== dropped);
     return () => {
       GRAMMAR.lifecycle[hook] = original;
@@ -707,7 +776,8 @@ function deleteMember(member: string): () => void {
     // Spliced in place, because a regex is built from this array on every call — reassigning the
     // binding would leave the classifier reading the old one.
     const at = array.indexOf(dropped);
-    if (at !== -1) array.splice(at, 1);
+    if (at === -1) throw new Error(`no such ${head} member: ${dropped}`);
+    array.splice(at, 1);
     return () => {
       array.length = 0;
       array.push(...before);
@@ -717,7 +787,9 @@ function deleteMember(member: string): () => void {
   const set = SETS[head];
   if (set === undefined) throw new Error(`no such grammar set: ${head}`);
   const before = [...set];
-  set.delete(parts.slice(1).join("."));
+  const dropped = parts.slice(1).join(".");
+  if (!set.has(dropped)) throw new Error(`no such ${head} member: ${dropped}`);
+  set.delete(dropped);
   return () => {
     set.clear();
     for (const entry of before) set.add(entry);
@@ -1175,6 +1247,13 @@ describe("classifyBuildCommand", () => {
     // This is also what shrank v10: run against v9's grammar, 162 of 207 members survived, and
     // forty-five of them survived every command anyone could write. Those are gone from the grammar now,
     // and their absence is why this can demand nothing less than all of them.
+    //
+    // **What this sweep reaches is `GRAMMAR` members — not every decision that produces a verdict.** A
+    // CALL SITE is invisible to it: `RULES.isSetting` is neutralised as an entry, and the two places
+    // that call it are not, so deleting one of them left the whole corpus green. That is the same
+    // unpinned state the forty-five deleted members were in, reached a different way. The test below
+    // pins the two live call sites the sweep cannot see; it is not a general answer, and a third call
+    // site would arrive unpinned exactly as `alwaysBuilds` arrived unswept.
     const undetected: string[] = [];
     const mislabelled: string[] = [];
     for (const member of grammarMembers()) {
@@ -1582,6 +1661,26 @@ describe("classifyBuildCommand", () => {
         "a question read as a build",
       )
       .toEqual([]);
+  });
+
+  it("pins the two live call sites the member sweep cannot reach", () => {
+    // A rule's ENTRY is what `deleteMember` neutralises. Its CALL SITES are free, and round 10 mutated
+    // two of them with the whole corpus green — a live decision no probe distinguishes, which is the
+    // property this file treats as disqualifying for a grammar member and had no answer for here.
+    //
+    // Both are kept rather than deleted, because both are right: a `-C` on the tool path really does
+    // move which manifest the nested command resolves against, and a manager's `key=value` token really
+    // is a setting rather than a script name. So they are pinned instead, each by a command whose
+    // verdict was measured to change when the line is removed:
+    //
+    //   delete `if (RULES.isSetting(token)) continue;` -> `pnpm build.prod=1` becomes `heuristic`
+    //   stop the tool path assigning `cwd`            -> `make -C sub pnpm hello` becomes `none`
+    //
+    // The second is the interesting one: `hello` is `tsup` in `sub` and `echo hi` at the root, so the
+    // verdict is a statement about WHICH MANIFEST was read, which is the only thing the assignment does.
+    expect(classifyBuildCommand("pnpm build.prod=1", SYNTHETIC)).toBe("none");
+    expect(classifyBuildCommand("make -C sub pnpm hello", SYNTHETIC)).toBe("build");
+    expect(classifyBuildCommand("make pnpm hello", SYNTHETIC)).toBe("none");
   });
 
   it("terminates on a self-referential script chain rather than recursing forever", () => {

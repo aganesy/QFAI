@@ -157,7 +157,7 @@ The first version of this record said the lines were appended "by a script that 
 declared `US` is covered by a `describe`". **That script was not in the repository.**
 `git show --stat 1e806e50` lists five files and no script, and because the test and the ledger lines
 landed in one atomic commit, history could not settle the ordering either. Round 1's `qa-gatekeeper`
-found both halves. The script now exists as `scripts/check-atdd-annotation-ledger.mjs` with 22 tests
+found both halves. The script now exists as `scripts/check-atdd-annotation-ledger.mjs` with 23 tests
 in `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts`, and it reports what
 this stage claims: `8 claim(s) backed by a test annotation (spec-0017)`, exit 0.
 
@@ -241,7 +241,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   `QFAI:SPEC-0017:US-0017-NNNN` lines, of which `US-0017-0007`'s was removed in round 1
 - **new** `.qfai/evidence/coverage-depth-spec-0017.md` — the Coverage Depth Matrix, committed
 - **new** `scripts/check-atdd-annotation-ledger.mjs` — the guard this record had claimed existed
-- **new** `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts` — 22 tests
+- **new** `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts` — 23 tests
 - **new** `packages/qfai/tests/helpers/shippedLaneCommands.ts` — the shipped-lane allowlist, and the
   answer to a question ten versions of the classifier could not settle. It asks what a lane **invokes**
   rather than whether a command **is a build**, which needs no corpus of build spellings and fails
@@ -250,11 +250,12 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   form rounds 8, 9 and 10 planted, all refused, and the shipped tree's own shapes accepted
 - **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, v12, extracted from the
   E2E so its corpora can be tested on their own
-- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 25 tests over the corpora enumerated
+- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 26 tests over the corpora enumerated
   at § "Execution logs" (`E4b`), none of them chosen. The count is **derived** —
   `tests/assets/stageEvidenceCounts.test.ts` counts the file's callsites and reddens when this number
   and the file disagree, which is how the 25th arrived: the number was 24 until family 4 was declared,
-  and the guard failed the same commit. That guard exists because the previous version of this line said
+  and the guard failed the same commit — twice, since the 26th followed for the two call sites the member
+sweep cannot reach. That guard exists because the previous version of this line said
   "No count of them is stated anywhere in this record" **while stating one two words earlier** — a
   sentence about how the record is written, contradicted by the record. Rounds 9 and 10 each found the
   number wrong in a different place — ten here, nine there, eleven items in the list, and the two
@@ -298,7 +299,7 @@ node scripts/check-atdd-annotation-ledger.mjs        (repo-wide)
   -> exit 1; 127 of 208 claims unbacked; see CR-20260820-0011
 
 pnpm -C packages/qfai exec vitest run tests/integration/scripts/checkAtddAnnotationLedger.test.ts
-  -> Tests 22 passed (22), exit 0
+  -> Tests 23 passed (23), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
   -> Tests 5 passed (5), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
@@ -306,7 +307,7 @@ pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
 pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
   -> Tests 10 passed (10), exit 0
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/buildCommand.test.ts
-  -> Tests 25 passed (25), exit 0
+  -> Tests 26 passed (26), exit 0
 
 node packages/qfai/dist/cli/index.mjs validate --profile atdd --fail-on error --spec 0017
   before this stage:  info=2 warning=0 error=2   QFAI-ATDD-111 (9 US), QFAI-ATDD-112 (8 TC)

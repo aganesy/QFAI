@@ -221,16 +221,24 @@ function parseArguments(args) {
   let sawSpecFlag = false;
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
-    if (argument === "--spec") {
+    const inline = /^--spec=(.*)$/.exec(argument ?? "");
+    if (argument === "--spec" || inline !== null) {
+      // Repeated, this used to be last-wins with no message: `--spec 0017 --spec 0018` scoped to 0018
+      // silently. That is the same shape this function exists to close — an invocation whose scope is
+      // not what it appears to be — one turn further in, so it is a usage error like any other.
+      if (sawSpecFlag) {
+        return {
+          error:
+            "check-atdd-annotation-ledger: --spec given more than once; this guard scopes to one spec",
+        };
+      }
       sawSpecFlag = true;
+      if (inline !== null) {
+        spec = inline[1];
+        continue;
+      }
       spec = args[index + 1];
       index += 1;
-      continue;
-    }
-    const inline = /^--spec=(.*)$/.exec(argument ?? "");
-    if (inline !== null) {
-      sawSpecFlag = true;
-      spec = inline[1];
       continue;
     }
     return {

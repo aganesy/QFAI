@@ -329,6 +329,22 @@ describe("the CLI entry point", () => {
     expect(inline.out).toBe(run(["--spec", "0017"], root).out);
   });
 
+  it("rejects a repeated --spec rather than silently taking the last one", () => {
+    // Last-wins with no message is the shape this parser exists to close, one turn further in: the
+    // invocation's scope is not what it reads as. Both spellings, and mixed.
+    const root = path.resolve(__dirname, "../../../../..");
+    for (const args of [
+      ["--spec", "0017", "--spec", "0018"],
+      ["--spec=0017", "--spec=0018"],
+      ["--spec", "0017", "--spec=0018"],
+      ["--spec=0017", "--spec", "0017"],
+    ]) {
+      const result = run(args, root);
+      expect(result.status, `${args.join(" ")} must be a usage error`).toBe(2);
+      expect(result.err).toMatch(/--spec given more than once/);
+    }
+  });
+
   it("rejects an unknown argument instead of ignoring it", () => {
     const root = path.resolve(__dirname, "../../../../..");
     for (const args of [

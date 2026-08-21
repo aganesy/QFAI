@@ -329,6 +329,9 @@ const BUNDLERS = new Set([
   "esbuild",
   "webpack",
   "swc",
+  // The scoped spelling is its own name, not a path: `@swc/cli` used to collapse to `cli`, which
+  // named nothing, so `npx --yes @swc/cli src -d dist` was `none` — a real build. Declared whole.
+  "@swc/cli",
   "parcel",
   "vite",
   "rspack",
@@ -596,16 +599,37 @@ function shell(line: string, ctx: Context): BuildVerdict {
   return strongest(out);
 }
 
+/**
+ * The command name a token carries, if any.
+ *
+ * `basename` is right for a PATH — `./node_modules/.bin/tsup` is tsup — and wrong for a scoped npm
+ * package name, where the slash is part of the name: `@swc/cli` is not `cli`, and `@anything/tsup`
+ * read as the bundler `tsup`, which is the same answer for the wrong reason. A token starting with `@`
+ * keeps its whole name.
+ */
+function commandName(token: string): string {
+  const whole = unquote(token);
+  if (whole.startsWith("@")) return whole;
+  // Both separators: a Windows path reaches here too, and `scripts\\build.cmd` is not a command named
+  // `scripts\\build.cmd`.
+  return whole.split(/[/\\]/).pop() ?? "";
+}
+
 /** Does this token name something that can start a command? */
 function namesACommand(token: string): boolean {
-  const bare = unquote(token).split("/").pop() ?? "";
+  // Unquoted ONCE, and both halves read the same token. The regex used to be tested on the RAW token
+  // while the four set lookups read the unquoted basename, so `sudo "scripts/build.sh"` was not
+  // recognised as wrapping a script while `sudo "pnpm" build` was — two coordinate systems in one
+  // five-line function.
+  const unquoted = unquote(token);
+  const bare = commandName(token);
   return (
     MANAGERS.has(bare) ||
     TOOLS[bare] !== undefined ||
     BUNDLERS.has(bare) ||
     INTERPRETERS[bare] !== undefined ||
     WRAPPERS.has(bare) ||
-    scriptFileRe().test(token)
+    scriptFileRe().test(unquoted)
   );
 }
 
@@ -626,7 +650,7 @@ function stripPrefix(input: readonly string[]): string[] {
       tokens = tokens.slice(1);
       continue;
     }
-    const bare = head.split("/").pop() ?? "";
+    const bare = commandName(head);
     if (!WRAPPERS.has(bare)) break;
     // Scoped to `command`, and to the position the probe occupies. It used to be tested against EVERY
     // wrapper at EVERY position, so appending ` -v` to any wrapped build returned `none` — a one-token
@@ -735,7 +759,9 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
   const first = unquote(tokens[0] ?? "");
   // The executable extension is stripped BEFORE the script-file test, because `pnpm.cmd` is a manager
   // and `build.cmd` is a script, and only the head's own name can tell them apart.
-  const stripped = stripExecutableExtension(first.split(/[/\\]/).pop() ?? "");
+  // `commandName`, not a bare basename: a scoped package name is not a path, and `@swc/cli`
+  // collapsed to `cli` here as well as in `namesACommand` — two sites, one rule.
+  const stripped = stripExecutableExtension(commandName(first));
   const known = MANAGERS.has(stripped) || TOOLS[stripped] !== undefined || BUNDLERS.has(stripped);
   if (!known && scriptFileRe().test(first)) {
     return namesABuild(first.split("/").pop() ?? "") ? "heuristic" : "none";
@@ -774,6 +800,14 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
       const inline = /^(--?[\w.-]+)=(.*)$/.exec(token);
       if (inline) {
         const [, flag = "", value = ""] = inline;
+        // A build flag means build whichever way it is spelled. Every other branch in this loop is
+        // exhaustive over the flag's meaning and this one skipped `buildFlags` entirely, so
+        // `cmake --build=.` was `none` while `cmake --build .` was `build`. No declared tool is known
+        // to ACCEPT the inline form — cmake requires the spaced spelling, and `tsc --outDir=dist` gets
+        // the right answer through `bareIsBuild` rather than through the flag — so this closes a
+        // reachability gap rather than a demonstrated miss. It is one line, and the asymmetry was the
+        // only place the loop's meaning depended on the spelling.
+        if (buildFlags.has(flag)) return "build";
         if (dirs.has(flag)) cwd = normalise(value);
         else if (TARGET_FLAGS.has(flag) && !RULES.isPathLike(value) && namesABuild(value)) {
           return "build";
@@ -829,10 +863,10 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
     }
 
     const whole = unquote(token);
-    // The basename is for LOOKING UP a command — `./node_modules/.bin/tsup` is tsup. It is not for
-    // reading a build VERB out of a path: `docker inspect ./build` has basename `build` and is not a
-    // build. Two different questions, two different tokens.
-    const bare = whole.split("/").pop() ?? "";
+    // The command name is for LOOKING UP a command — `./node_modules/.bin/tsup` is tsup, and
+    // `@swc/cli` is `@swc/cli`. It is not for reading a build VERB out of a path: `docker inspect
+    // ./build` has basename `build` and is not a build. Two different questions, two different tokens.
+    const bare = commandName(token);
     if (BUNDLERS.has(bare)) return "build";
     // Every build-verb rule below belongs to the TOOL path. For a MANAGER the bare token is a
     // SCRIPT NAME, and a script named `build` is only a build if its body reaches one — which is

@@ -573,8 +573,17 @@ describe("retracted claims are quoted, never asserted", () => {
       // The same mark set the pairing uses, from the same document. Round 10 found the two disagreeing
       // — the report skipped exempt marks and the pairing counted them — so one stray `"` on a fenced
       // line shifted every span after it while the paragraph still read as balanced.
-      for (const paragraph of oddParagraphs(flattenDocument(raw, 0))) {
-        offenders.push(`${file}: ${paragraph}`);
+      //
+      // BOTH flattenings, because the pairing checks both. Only variant 0 was read here, and the two
+      // flattenings do not agree on where a fence or a blockquote marker is: a zero-width character
+      // placed in a marker line changes which spans are exempt in one variant and not the other, and
+      // the zero-width axis is the one rounds 7 and 8 both laundered through. A paragraph odd in
+      // EITHER flattening is reported, so a mark cannot hide by being visible in only one of them.
+      for (const variant of [0, 1] as const) {
+        for (const paragraph of oddParagraphs(flattenDocument(raw, variant))) {
+          const label = `${file}: ${paragraph}`;
+          if (!offenders.includes(label)) offenders.push(label);
+        }
       }
     }
     expect(
