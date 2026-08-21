@@ -1,6 +1,6 @@
 # Review Artifact Layout
 
-Items 7-9 of the 11-point reviewer gate in `SKILL.md` are evidence-bearing: the reviewer verdicts
+Items 7-9 of the 12-point reviewer gate in `SKILL.md` are evidence-bearing: the reviewer verdicts
 must be written to a review pack, not left in conversation. There is exactly **one**
 `.qfai/review/**` layout, the one validated by
 `packages/qfai/src/core/validators/reviewArtifacts.ts` and archived by `npx qfai doctor`:

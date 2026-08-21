@@ -60,7 +60,7 @@ describe("an unobservable RED has a non-anomalous outcome", () => {
     });
 
     it(`${tree}: every all-required gate item this path touches is covered`, async () => {
-      // The 11-point gate is ALL-conditions-required, so covering only item 3
+      // The 12-point gate is ALL-conditions-required, so covering only item 3
       // still left the row unable to reach `done`.
       const skill = await read(tree, SKILL);
       expect(skill).toContain(

@@ -52,13 +52,13 @@ The tier scales **how often** a gate runs, never **whether** it runs.
 `implementation-reviewer` all **mandatory** for `qfai-implement`; T1 only
 changes the submitted unit from one row to one coherent group. Every row is
 still covered by a live turn from each of those agents, and a group that has
-not been confirmed leaves all of its members short of the 11-point gate.
+not been confirmed leaves all of its members short of the 12-point gate.
 
 Note the asymmetry, because "all routed blocking reviewers pass" alone is not
 the item gate: `blocking_agents` lists only `qa-gatekeeper` and
 `completion-reviewer`. `implementation-reviewer` is mandatory but not in that
-list, and a `REVISE` from it still blocks `done` — item 8 of the 11-point gate
-requires its PASS independently of the routing list. Read the 11-point gate as
+list, and a `REVISE` from it still blocks `done` — item 8 of the 12-point gate
+requires its PASS independently of the routing list. Read the 12-point gate as
 the authority for an item transition; `blocking_agents` governs phase
 progression, not the ledger write.
 
@@ -105,7 +105,8 @@ the review-ready state — and waits there for its group. Members still move
     in `refactor` instead would strand it: forward-only means it could never
     redo the RED the gatekeeper rejected.
 - **Checkpoint, then the ledger write.** Reviews passing is not the last gate:
-  `SKILL.md` Refactor step 5 and item 11 of the 11-point gate both require
+  `SKILL.md` Refactor step 5 and the gate item that cites
+  `SKILL.md#checkpoint-verification` (item 12 of the 12-point gate) both require
   checkpoint verification to pass **before** a row becomes `done`. Run it once
   for the group after the three reviews return PASS, and only then transition
   every member `refactor -> done` in the same ledger write. A failing checkpoint

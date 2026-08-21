@@ -84,12 +84,12 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
         "`implementation-reviewer` is mandatory but not in that list, and a `REVISE` from it still blocks `done`",
       );
       expect(skill).toContain(
-        "only the first two are in `blocking_agents`, but item 8 of the 11-point gate makes an `implementation-reviewer` REVISE block `done` anyway",
+        "only the first two are in `blocking_agents`, but item 8 of the 12-point gate makes an `implementation-reviewer` REVISE block `done` anyway",
       );
       expect(section).toContain(
         "`qa-gatekeeper` confirms RED/GREEN once per coherent group instead of once per row",
       );
-      // The handoff contract and the 11-point gate carry the same tier rule.
+      // The handoff contract and the 12-point gate carry the same tier rule.
       expect(skill).toContain("the submitted unit in steps 2-4 is the coherent group");
       expect(skill).toContain(
         "items 3, 5, 7 and 8 are satisfied by the confirmation covering the row's coherent group; they are never waived",
@@ -103,7 +103,7 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       expect(section).toContain("adds **no** status value");
       expect(section).toContain("this is the review-start condition");
       expect(section).toContain("Members still move `refactor -> done`, only together");
-      // Item 11 of the 11-point gate must not be skipped by the batch write.
+      // Item 12 of the 12-point gate must not be skipped by the batch write.
       expect(section).toContain("**Checkpoint, then the ledger write.**");
       expect(section).toContain("checkpoint verification to pass **before** a row becomes `done`");
       expect(section).toContain("A failing checkpoint leaves the whole group in `refactor`");

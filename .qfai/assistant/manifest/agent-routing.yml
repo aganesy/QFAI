@@ -128,7 +128,7 @@ routing:
         conditional_agents: [product-surface-reviewer]
         parallel_groups: []
         # `implementation-reviewer` is blocking, not advisory: it is item 8 of the
-        # unconditional 11-point gate in qfai-implement/SKILL.md, and every DONE
+        # unconditional 12-point gate in qfai-implement/SKILL.md, and every DONE
         # rule in the skill and in shared-skill-delegation-baseline.md is phrased
         # over *blocking* reviewers. Listing it as mandatory-only let an item
         # reach `done` with the code-quality reviewer sitting at REVISE.

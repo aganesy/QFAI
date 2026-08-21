@@ -60,7 +60,7 @@ for the natural RED and let the row proceed to `green` and `done`:
 
 The `Evidence` cell carries `Satisfied-by`, `Falsifiability command`,
 `Falsifiability result` and the GREEN pair in place of a RED pair. The
-11-point gate is all-conditions-required, so every item this path touches is
+12-point gate is all-conditions-required, so every item this path touches is
 listed here — a substitute that only covered item 3 would still leave the row
 unable to reach `done`.
 
