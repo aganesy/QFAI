@@ -1,0 +1,69 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { describe, expect, it } from "vitest";
+
+// Anchored to this file, not to `process.cwd()`.
+// tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+
+const CAPABILITY_TEMPLATES = [
+  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/_policies/03_Capabilities.md",
+  ".qfai/assistant/skills/qfai-sdd/templates/specs/_policies/03_Capabilities.md",
+];
+const SLICE_TEMPLATES = [
+  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/_policies/11_Slice-Policy.md",
+  ".qfai/assistant/skills/qfai-sdd/templates/specs/_policies/11_Slice-Policy.md",
+];
+
+/** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
+const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
+
+const read = async (relativePath: string): Promise<string> =>
+  readFile(path.join(repoRoot, relativePath), "utf-8");
+
+describe("the CAP catalog declares the spec mapping the gap policy depends on", () => {
+  for (const relativePath of CAPABILITY_TEMPLATES) {
+    it(`${relativePath}: the catalog table carries a Spec column`, async () => {
+      const content = await read(relativePath);
+      // Without this column `validateSpecSplitByCapability` derives the spec
+      // directory from row order, and an approved DELETE that leaves a gap
+      // raises QFAI-SPLIT-103/104/105 with no legal edit that clears them.
+      expect(content).toContain("| CAP ID   | Spec      |");
+      expect(content).toContain("| CAP-0001 | spec-0001 |");
+      expect(content).toContain("| CAP-0002 | spec-0002 |");
+    });
+
+    it(`${relativePath}: the mapping is named as the SSOT, not the row order`, async () => {
+      const content = unwrap(await read(relativePath));
+      expect(content).not.toContain(
+        "Spec directories are generated from this order (`spec-0001`, `spec-0002`, ...)",
+      );
+      expect(content).toContain(
+        "The `Spec` column declares which spec directory owns each capability",
+      );
+      expect(content).toContain("validateSpecSplitByCapability");
+      expect(content).toContain("QFAI-SPLIT-106");
+    });
+  }
+
+  for (const relativePath of SLICE_TEMPLATES) {
+    it(`${relativePath}: the gap policy names the validator codes it interacts with`, async () => {
+      const content = unwrap(await read(relativePath));
+      expect(content).toContain("A gap is legal only because the mapping is declared");
+      expect(content).toContain("QFAI-SPLIT-103");
+      expect(content).toContain("QFAI-SPLIT-105");
+      expect(content).toContain("QFAI-SPLIT-106");
+    });
+
+    it(`${relativePath}: DELETE also drops the capability row`, async () => {
+      const content = unwrap(await read(relativePath));
+      expect(content).toContain(
+        "DELETE removes the spec directory entirely and drops the capability's row from `_policies/03_Capabilities.md`",
+      );
+      // The ID-stability rule must stay: a DELETE never renumbers survivors.
+      expect(content).toContain("Do not renumber surviving specs only to close gaps");
+    });
+  }
+});

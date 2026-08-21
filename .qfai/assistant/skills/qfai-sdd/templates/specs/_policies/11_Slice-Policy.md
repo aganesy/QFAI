@@ -156,19 +156,33 @@ Every spec's `01_Spec.md` declares `Status: active | superseded | deprecated | r
 
 - SUPERSEDE switches the source spec to `Status: superseded` and sets
   `Superseded-by: spec-NNNN`.
-- DELETE removes the spec directory entirely (record reason in delta).
+- DELETE removes the spec directory entirely and drops the capability's row
+  from `_policies/03_Capabilities.md` (record reason in delta). Surviving
+  directories keep their IDs — see `## Gap policy`.
 - Deprecated specs require `Deprecated-at: YYYY-MM-DD`.
 - Triage classification ignores non-active specs.
 
 ## ID stability rules
 
 1. Keep existing IDs stable whenever the subject still exists.
-2. Follow `_policies/03_Capabilities.md` order as the SSOT for capability-to-spec mapping.
+2. The `Spec` column of `_policies/03_Capabilities.md` is the SSOT for the
+   capability-to-spec mapping. `validateSpecSplitByCapability` reads that
+   column, so the mapping is declared, not inferred from row order.
 3. Do not renumber surviving specs only to close gaps.
 4. Record any reorder or category-boundary change as an explicit Change Request plus delta entry.
 
 ## Gap policy
 
 - Leave gaps after deletions unless an approved migration explicitly renumbers them.
+
+  > A gap is legal only because the mapping is declared. Keep the `Spec` column
+  > of `_policies/03_Capabilities.md` in step with every DELETE: drop the deleted
+  > capability's row and leave every surviving row pointing at its own unchanged
+  > directory. `QFAI-SPLIT-103` then means "a CAP names a spec directory that
+  > does not exist", `QFAI-SPLIT-104` means "a spec directory no CAP names",
+  > `QFAI-SPLIT-105` compares the declared pair, and `QFAI-SPLIT-106` reports a
+  > CAP row with no spec directory of its own. A catalog with no `Spec` column
+  > falls back to the positional derivation, where a gap does raise all of them.
+
 - Append new specs at the end of the relevant category block.
 - Do not merge or split categories implicitly; update this file first, then apply the approved structural change.

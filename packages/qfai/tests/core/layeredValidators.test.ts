@@ -39,6 +39,102 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  it("accepts an ID gap left by an approved DELETE when the catalog declares the mapping", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // spec-0002 was deleted with its capability; 11_Slice-Policy.md forbids
+      // renumbering spec-0003, so the surviving directories keep their IDs.
+      await seedPolicies(root, ["CAP-0001", "CAP-0003"], ["spec-0001", "spec-0003"]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still reports a spec directory the declared mapping does not name", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0003"], ["spec-0001", "spec-0003"]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const codes = issues.map((issue) => issue.code);
+      expect(codes).toContain("QFAI-SPLIT-103");
+      expect(codes).toContain("QFAI-SPLIT-104");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("compares the declared pair, not the positional one, for the CAP back-reference", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0003"], ["spec-0001", "spec-0003"]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0003", "CAP-0009");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const parentIssue = issues.find((issue) => issue.code === "QFAI-SPLIT-105");
+      expect(parentIssue?.refs).toEqual(["spec-0003", "CAP-0003"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a CAP row that declares no spec directory of its own", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], ["spec-0001", null]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.refs).toEqual(["CAP-0002"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports two CAP rows that declare the same spec directory", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], ["spec-0001", "spec-0001"]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.refs).toEqual(["spec-0001 (CAP-0001, CAP-0002)"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the positional derivation when the catalog declares no Spec column", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0003"]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const codes = issues.map((issue) => issue.code);
+      expect(codes).toContain("QFAI-SPLIT-103");
+      expect(codes).toContain("QFAI-SPLIT-104");
+      expect(codes).not.toContain("QFAI-SPLIT-106");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("fails layered traceability when Parent is missing or down-ref exists", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
@@ -94,21 +190,35 @@ describe("v1.4.36 layered validators", () => {
   });
 });
 
-async function seedPolicies(root: string, capIds: string[]): Promise<void> {
+/**
+ * Seeds `_policies`. Pass `declaredSpecIds` to emit the `Spec` column that
+ * declares the CAP -> spec directory mapping; `null` leaves a row's cell empty.
+ * Omit it to get the legacy catalog with no `Spec` column at all.
+ */
+async function seedPolicies(
+  root: string,
+  capIds: string[],
+  declaredSpecIds?: (string | null)[],
+): Promise<void> {
   const policiesDir = path.join(root, ".qfai", "specs", "_policies");
   await mkdir(policiesDir, { recursive: true });
 
-  const capLines = capIds.map((capId) => `| ${capId} | capability | metric | note |`).join("\n");
+  const header = declaredSpecIds
+    ? ["| CAP ID | Spec | Statement | Success metrics | Notes |", "| --- | --- | --- | --- | --- |"]
+    : [
+        "| CAP ID | Statement | Success metrics | Notes |",
+        "| ------ | --------- | --------------- | ----- |",
+      ];
+  const capLines = capIds
+    .map((capId, index) =>
+      declaredSpecIds
+        ? `| ${capId} | ${declaredSpecIds[index] ?? ""} | capability | metric | note |`
+        : `| ${capId} | capability | metric | note |`,
+    )
+    .join("\n");
   await writeFile(
     path.join(policiesDir, "03_Capabilities.md"),
-    [
-      "# 03 Capabilities",
-      "",
-      "| CAP ID | Statement | Success metrics | Notes |",
-      "| ------ | --------- | --------------- | ----- |",
-      capLines,
-      "",
-    ].join("\n"),
+    ["# 03 Capabilities", "", ...header, capLines, ""].join("\n"),
     "utf-8",
   );
 
