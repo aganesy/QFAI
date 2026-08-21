@@ -284,19 +284,14 @@ its TC moved to `L4`/`L5` is rejected the same way an early one in
   - **Deferral.** A story whose acceptance cannot be observed at E2E in the
     current slice defers with a `- x-qfai-status: planned` meta line inside its
     own `## US-XXXX` block in `02_User-stories.md` — the same token the two
-    contract kinds use. It is excluded from the `QFAI-ATDD-111` obligation and
-    reported as `QFAI-ATDD-118` (`info`) instead. Remove the marker when the
-    slice is implemented.
-    - The marker counts only inside the story block it is written in. One
-      written above the first `## US-XXXX` heading defers nothing: a single line
-      must not be able to drop the E2E obligation for every story the file
-      declares.
-    - Deferral removes the test obligation, not the declaration. A deferred
-      `US-*` stays a known ID, so writing its E2E test ahead of the slice is
-      counted rather than reported as an unknown reference.
-    - This is per story, unlike the surface-type scoping above, which is a
-      property of the whole spec. Declaring a spec non-user-facing to quiet one
-      story erases the obligation for its siblings; the marker defers one.
+    contract kinds use. It leaves `QFAI-ATDD-111` and is reported as
+    `QFAI-ATDD-118` (`info`); remove the marker when the slice is implemented.
+    It counts only inside the story block it is written in, so one above the
+    first `## US-XXXX` heading defers nothing — one line must not drop the
+    obligation for a whole file. It removes the test obligation, not the
+    declaration. A deferred `US-*` stays a known ID, so an early E2E test is
+    counted, not an unknown reference. This is per story, unlike the surface-type
+    scoping above, a whole-spec property that would erase the siblings too.
   - Do not create an E2E tree whose only purpose is to receive annotations.
     That is the "convert all obligations into E2E" anti-pattern below.
   - Use `QFAI:SPEC-XXXX:US-YYYY` annotations.
