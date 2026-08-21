@@ -201,6 +201,59 @@ const ROOT_CAUSES = [
   "*.ts) npx tsup ;;",
 ];
 
+/**
+ * The forms a twenty-agent adversarial sweep confirmed EXECUTING, grouped by the mechanism that let
+ * each one through rather than by its spelling.
+ *
+ * The grouping is the finding. Every entry here was closed by a rule about a KIND of thing — where a
+ * command's input comes from, that a flag is part of an invocation, that a write is worth whatever
+ * reads it — and none by adding its spelling to a list. That is what the sweep settled: enumerating
+ * our own shipped surface converges and fails closed, while enumerating bash grammar converges only at
+ * a complete bash parser, and every gap on the way there fails open.
+ *
+ * No count appears over this list, for the reason `PLANTED` gives one instrument over.
+ */
+const MECHANISMS = [
+  // the lexer's quote state was wrong, so the split was wrong: a backslash before a quote, and a `)`
+  // inside a string or a comment that ended a `case` arm the scanner was not in
+  'echo \\" ; npx tsup',
+  "echo | npx tsup ')'",
+  "echo | npx tsup # )",
+  // a command's INPUT is a command. `node` reads its program from stdin, so a here-string, a pipe and
+  // a `<` file each run code that no argument carries
+  '<<<\'require("fs").writeFileSync(process.env.MB,"NODE_RAN")\' node',
+  "echo \"require('child_process').execSync('pnpm build')\" | node",
+  "printf \"require('child_process').execSync('pnpm build')\" > pl\n<pl node",
+  // a subshell is a command list, and the previous scan read `( … )` as one opaque word
+  "( echo x | npx tsup )",
+  "( echo aGkK | base64 -d | sh )",
+  // a substitution decides WHICH invocation runs, in both of its spellings
+  "node `echo build.mjs`",
+  "node <(echo 'console.log(1)')",
+  // a flag is part of the invocation. For an interpreter the flags ARE the program, and every one of
+  // these resolved to the bare allowed `node`
+  "node --run=build",
+  "node --import=./evil.mjs",
+  "node --require=./evil.cjs",
+  "node --test",
+  "node -p \"require('child_process').execSync('pnpm build')\"",
+  "node --print \"require('child_process').execSync('pnpm build')\"",
+  "node --eval=\"require('child_process').execSync('pnpm build')\"",
+  "npx --package=evilpkg qfai",
+  // an environment prefix decides what the following name resolves to
+  "PATH=bin:$PATH npx qfai",
+  // the lane WRITES the code that a permitted install then runs. Neither half is refusable alone: the
+  // write is by a program whose arguments cannot reach a build, and the install is enumerated
+  'echo \'require("fs").writeFileSync("PF_C5","top")\' > .pnpmfile.cjs\necho \'{}\' > package.json\npnpm install',
+  "printf 'yarnPath: ./evil.cjs\\n' > .yarnrc.yml\nprintf 'require(\"fs\").writeFileSync(\"YARN_MARK\",\"x\")\\n' > evil.cjs\necho '{}' > package.json\ncorepack enable\nyarn",
+  'echo \'{"scripts":{"postinstall":"node wm.cjs c1_post"}}\' > package.json\nnpm install',
+  'echo \'{"scripts":{"prepare":"node wm.cjs c3_prep"}}\' > package.json\nnpm install',
+  'echo \'{"scripts":{"preinstall":"node build.mjs"}}\' > package.json\nnpm install',
+  // a `node` with no flag at all, which reads its program from stdin: the absence of an argument
+  // is not the absence of a program, and the inverted rule refuses it by the missing `-e`
+  "node",
+];
+
 describe("the shipped-lane allowlist", () => {
   it("refuses every build anyone has planted, without a corpus of build spellings", () => {
     const escaped = PLANTED.filter((line) => refusals(line).length === 0);
@@ -237,6 +290,17 @@ describe("the shipped-lane allowlist", () => {
     expect(
       ROOT_CAUSES.filter((line) => refusals(line).length === 0),
       "a parser hole that still hides the command behind it",
+    ).toEqual([]);
+  });
+
+  it("refuses each mechanism the adversarial sweep confirmed executing", () => {
+    // Fourteen confirmed escapes and none refuted, plus the ten already known, asserted as one list
+    // because the repair was one shape: the scanner had no model of a command's input, no model of a
+    // flag and no model of an effect, and each of those gaps was open in every spelling of itself.
+    // Enumerating the spellings would have closed sixteen of these and left the mechanism intact.
+    expect(
+      MECHANISMS.filter((line) => refusals(line).length === 0),
+      "a mechanism the sweep proved executes, which the allowlist still lets through",
     ).toEqual([]);
   });
 

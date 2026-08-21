@@ -48,6 +48,15 @@ import { createHash } from "node:crypto";
  */
 export const SUBSTITUTION = "\u0000substitution\u0000";
 
+/**
+ * Stands in for the pipe that feeds a command's stdin.
+ *
+ * Spelled as a redirection because that is what it is — every walk that already skips `<` skips this
+ * too, and every rule that reads a command's INPUT sees the pipe and the `<` file and the here-string
+ * as the one thing they are.
+ */
+export const STDIN_FROM_PIPE = "<\u0000pipe\u0000";
+
 /** After one of these, the next token is a payload rather than a command. */
 const OPAQUE_AFTER = new Set(["-e", "--eval", "-c", "--command", "-p", "--print"]);
 
@@ -64,6 +73,7 @@ const OPAQUE_AFTER = new Set(["-e", "--eval", "-c", "--command", "-p", "--print"
  * then removed from the surrounding word, because what it contributes there is its output, not a command.
  */
 export function commandsOf(body: string): string[] {
+  const mask = codeMask(body);
   const out: string[] = [];
   let current = "";
   let quote = "";
@@ -100,6 +110,7 @@ export function commandsOf(body: string): string[] {
     if ((ch === "<" || ch === ">") && body[i + 1] === "(" && quote !== "'") {
       const close = matchingParen(body, i + 1);
       out.push(...commandsOf(body.slice(i + 2, close)));
+      current += SUBSTITUTION;
       i = close;
       continue;
     }
@@ -107,10 +118,16 @@ export function commandsOf(body: string): string[] {
       const close = body.indexOf("`", i + 1);
       const end = close === -1 ? body.length : close;
       out.push(...commandsOf(body.slice(i + 1, end)));
+      current += SUBSTITUTION;
       i = end;
       continue;
     }
     if (quote !== "") {
+      if (ch === "\\" && quote === '"') {
+        current += ch + (body[i + 1] ?? "");
+        i += 1;
+        continue;
+      }
       current += ch;
       if (ch === quote) quote = "";
       continue;
@@ -126,9 +143,17 @@ export function commandsOf(body: string): string[] {
       inComment = true;
       continue;
     }
-    if (ch === "\\" && body[i + 1] === "\n") {
+    if (ch === "\\") {
+      if (body[i + 1] === "\n") {
+        i += 1;
+        current += " ";
+        continue;
+      }
+      // A backslash escapes the next character: it is NOT a quote, NOT a separator, and it does not
+      // toggle quote state. Reading it as an ordinary character desynchronised the scanner from bash,
+      // and `echo \\" ; npx tsup` swallowed a real build into an `echo` argument.
+      current += ch + (body[i + 1] ?? "");
       i += 1;
-      current += " ";
       continue;
     }
     const two = body.slice(i, i + 2);
@@ -147,7 +172,17 @@ export function commandsOf(body: string): string[] {
     // before it is an alternation. A `(` first means the `)` belongs to that group, so
     // `echo a|grep -f <(make)` splits — its `)` closes the process substitution.
     const isAlternation = (): boolean => {
+      // A `)` that closes a group already open at this point is not a case arm, so the pipe inside
+      // `( echo x | npx tsup )` is a pipe. Depth is counted over CODE positions only.
+      let depth = 0;
+      for (let j = 0; j < i; j += 1) {
+        if (!mask[j]) continue;
+        if (body[j] === "(") depth += 1;
+        else if (body[j] === ")") depth -= 1;
+      }
+      if (depth > 0) return false;
       for (let j = i + 1; j < body.length; j += 1) {
+        if (!mask[j]) continue;
         const ahead = body[j] ?? "";
         if (ahead === ")") return true;
         if (ahead === ";" || ahead === "\n" || ahead === "(") return false;
@@ -155,13 +190,66 @@ export function commandsOf(body: string): string[] {
       return false;
     };
     if (ch === ";" || (ch === "|" && !isAlternation()) || ch === "&" || ch === "\n") {
+      const piped = ch === "|";
       flush();
+      // A pipe IS a redirection of the downstream command's stdin, so it leaves a token shaped like
+      // one. Dropping it made `echo "<javascript>" | node` read as a bare `node`, which is allowed.
+      if (piped) current = `${STDIN_FROM_PIPE} `;
       continue;
     }
     current += ch;
   }
   flush();
   return out.map((c) => c.trim()).filter(Boolean);
+}
+
+/**
+ * Which characters of a body are CODE, as opposed to quoted text or comment prose.
+ *
+ * Computed by the same state machine `commandsOf` runs, and computed ONCE, because the alternation
+ * lookahead used to be a second, weaker parse of the same text: it scanned raw characters, so a `)`
+ * inside a string literal or a trailing `#` comment was read as a case-arm close and the pipe before it
+ * stopped splitting. Two copies of the lexer is the two-copies-of-an-allowlist defect one size smaller.
+ */
+function codeMask(body: string): boolean[] {
+  const mask = new Array<boolean>(body.length).fill(true);
+  let quote = "";
+  let inComment = false;
+  for (let i = 0; i < body.length; i += 1) {
+    const ch = body[i] ?? "";
+    if (inComment) {
+      mask[i] = false;
+      if (ch === "\n") inComment = false;
+      continue;
+    }
+    if (quote !== "") {
+      mask[i] = false;
+      if (ch === "\\" && quote === '"') {
+        if (i + 1 < body.length) mask[i + 1] = false;
+        i += 1;
+        continue;
+      }
+      if (ch === quote) quote = "";
+      continue;
+    }
+    if (ch === "\\") {
+      mask[i] = false;
+      if (i + 1 < body.length) mask[i + 1] = false;
+      i += 1;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      mask[i] = false;
+      continue;
+    }
+    if (ch === "#" && (i === 0 || /[\s;&|(]/.test(body[i - 1] ?? " "))) {
+      inComment = true;
+      mask[i] = false;
+      continue;
+    }
+  }
+  return mask;
 }
 
 /** The index of the `)` closing the `(` at `open`, honouring nesting and quotes. */
@@ -192,7 +280,13 @@ export function tokensOf(command: string): string[] {
   const tokens: string[] = [];
   let current = "";
   let quote = "";
-  for (const ch of command) {
+  for (let i = 0; i < command.length; i += 1) {
+    const ch = command[i] ?? "";
+    if (ch === "\\" && quote !== "'") {
+      current += command[i + 1] ?? "";
+      i += 1;
+      continue;
+    }
     if (quote !== "") {
       if (ch === quote) quote = "";
       else current += ch;
@@ -307,6 +401,7 @@ function headIndexOf(tokens: readonly string[]): number | undefined {
 
 export function invocationOf(command: string): string | typeof NOTHING | typeof UNREADABLE {
   const tokens = tokensOf(command);
+  const prefixNames: string[] = [];
   let i = 0;
   // The two skips INTERLEAVE. Running the assignment skip once and then the keyword skip once left
   // `while IFS= read -r changed_path` — the shipped tree's own line — with `IFS=` as its head, because
@@ -319,10 +414,7 @@ export function invocationOf(command: string): string | typeof NOTHING | typeof 
       // git diff --ext-diff HEAD` runs an arbitrary script, and skipping the prefix made it invisible.
       // A path or a script file is refused; `IFS=`, `NODE_ENV=production` and `declared=…` are not, which
       // is what keeps the shipped tree readable.
-      const value = token.slice(token.indexOf("=") + 1);
-      if (value !== "" && /[\\/]|\.(?:sh|bash|ps1|cmd|bat|mjs|cjs|js|py)$/.test(value)) {
-        return UNREADABLE;
-      }
+      if (/^[A-Za-z_]\w*=/.test(token)) prefixNames.push(token.slice(0, token.indexOf("=")));
       i += 1;
       continue;
     }
@@ -347,6 +439,9 @@ export function invocationOf(command: string): string | typeof NOTHING | typeof 
   }
   const head = tokens[i];
   if (head === undefined || TERMINATORS.has(head)) return NOTHING;
+  // The prefix decides what the command that follows resolves to, so an unenumerated one is a command
+  // this scanner cannot read rather than a prefix it may drop.
+  if (prefixNames.some((name) => !ALLOWED_ENV_PREFIXES.has(name))) return UNREADABLE;
   // A function-definition HEADER is a prefix, not a command — the same reading `if` and a `case` arm get,
   // and the third punctuation mark this instrument has had to learn it for. `commandsOf` splits on `;`, so
   // `build_once() { pnpm build; }` arrives as one command whose head is `build_once()`; answering `NOTHING`
@@ -383,6 +478,19 @@ export function invocationOf(command: string): string | typeof NOTHING | typeof 
   }
   return head;
 }
+
+/**
+ * Variables a shipped command may set as a PREFIX of another command.
+ *
+ * The rule this replaces asked whether the VALUE looked like a script path — a denylist-shaped sniff
+ * inside an allowlist-shaped instrument, and it fails open by construction: `PATH=bin:$PATH npx qfai`
+ * has no slash and no extension, and it decides which `npx` runs. Which variable is set is a fixed,
+ * ours-to-enumerate fact about the shipped tree; what its value can mean is not.
+ *
+ * A standalone assignment is untouched: it invokes nothing, and this rule only fires when a COMMAND
+ * follows the prefix.
+ */
+export const ALLOWED_ENV_PREFIXES: ReadonlySet<string> = new Set(["IFS"]);
 
 /** Functions a `run` body defines for itself, which are not programs. */
 export function localFunctionsOf(body: string): Set<string> {
@@ -551,6 +659,45 @@ const TAKES_NO_PACKAGE: ReadonlySet<string> = new Set([
   "corepack enable",
 ]);
 
+/**
+ * The flags each allowed invocation may carry.
+ *
+ * `invocationOf` resolves a command to its program plus its first BARE argument, so every flag was
+ * invisible — and for a general-purpose interpreter the flags are the program: `node --run=build`,
+ * `node --import=./evil.mjs` and `node --test` all resolve to the allowed bare `node`. Flags are part
+ * of the invocation, and the shipped set of them is ours to enumerate exactly as the invocations are.
+ *
+ * Programs on `HARMLESS_PROGRAMS` are deliberately absent: they are allowed by NAME, flags included,
+ * because their arguments cannot reach a build.
+ */
+const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+  ["corepack enable", new Set<string>()],
+  ["npm ci", new Set<string>()],
+  ["npm install", new Set(["--no-audit", "--no-fund"])],
+  ["pnpm install", new Set(["--frozen-lockfile"])],
+  ["yarn install", new Set(["--immutable", "--frozen-lockfile"])],
+  ["yarn", new Set(["--version"])],
+  ["npx qfai", new Set(["--profile", "--fail-on"])],
+  ["node", new Set(["-e"])],
+  ["git diff", new Set(["--name-only"])],
+  ["git rev-parse", new Set(["--is-shallow-repository", "--verify", "--quiet"])],
+]);
+
+/**
+ * The environment variables a shipped workflow, job or step may set.
+ *
+ * `env:` is an execution channel no scan in this file could see, because nothing it does appears in a
+ * `run:` body: `NODE_OPTIONS=--require=./loader.cjs` makes every later `node` load that file,
+ * `BASH_ENV` does the same for every non-interactive `bash`, and an `npm_config_*` rewrites what an
+ * enumerated `npm ci` actually does. The refusal is by NAME because the name is the channel — it decides
+ * which program reads the value — and enumerating names fails closed the way the invocation list does:
+ * a variable nobody wrote down is refused whether or not anyone has worked out what it would do.
+ */
+export const ALLOWED_STEP_ENV: ReadonlySet<string> = new Set(["QFAI_BASE_REF", "QFAI_NEEDS_JSON"]);
+
+/** Where a shipped command may write. A redirect creates a file, and a created file can be code. */
+const ALLOWED_REDIRECT_TARGETS: ReadonlySet<string> = new Set(["$GITHUB_OUTPUT", "/dev/null"]);
+
 /** The non-flag arguments a command carries after its program. */
 function bareArgumentsOf(command: string): string[] {
   const tokens = tokensOf(command);
@@ -601,13 +748,61 @@ export function refusals(body: string): string[] {
       out.push(invocation);
       continue;
     }
-    // A payload is CODE, and `node` is allowed only because the shipped tree needs one `node -e`. Round
-    // 12 ran `node -e "require('child_process').execSync('pnpm build')"` straight through. Enumerating
-    // the payloads refuses every one nobody wrote down, including the ones nobody has thought of, which
-    // a denylist of suspicious substrings could not.
     const tokens = tokensOf(command);
-    const eval_at = tokens.findIndex((token) => token === "-e" || token === "--eval");
-    if (program === "node" && eval_at !== -1) {
+    // A command's INPUT is part of what it runs. `node` reads a program from its stdin, so
+    // `echo "<javascript>" | node`, `<payload node` and `<<<'<javascript>' node` all run code that no
+    // argument carries. Only a program whose arguments cannot reach a build may be fed.
+    if (tokens.some((token) => /^\d*<{1,3}/.test(token)) && !HARMLESS_PROGRAMS.has(program)) {
+      out.push(`<reads stdin> ${invocation}`);
+      continue;
+    }
+    // A write is an effect this scanner used to have no model of at all: `echo '{…}' > package.json`
+    // is an allowed `echo`, and the file it creates is executed by the allowed install that follows.
+    let wrote = false;
+    for (let k = 0; k < tokens.length; k += 1) {
+      const token = tokens[k] ?? "";
+      if (!/^\d*>{1,2}&?$|^\d*>{1,2}&?[^>]/.test(token)) continue;
+      const glued = token.replace(/^\d*>{1,2}&?/, "");
+      const target = glued !== "" ? glued : (tokens[k + 1] ?? "");
+      if (!ALLOWED_REDIRECT_TARGETS.has(target)) {
+        out.push(`<writes> ${target} :: ${command.slice(0, 40)}`);
+        wrote = true;
+      }
+    }
+    if (wrote) continue;
+    // Flags, for a program that could otherwise build.
+    if (ALLOWED_INVOCATIONS.has(invocation)) {
+      const allowed = ALLOWED_FLAGS.get(invocation) ?? new Set<string>();
+      const start = headIndexOf(tokens) ?? 0;
+      let unenumerated = false;
+      for (let k = start + 1; k < tokens.length; k += 1) {
+        const token = tokens[k] ?? "";
+        if (!token.startsWith("-") || token === "-" || token === "--") continue;
+        const name = token.split("=")[0] ?? token;
+        if (!allowed.has(name)) {
+          out.push(`${invocation} + unenumerated flag ${name}`);
+          unenumerated = true;
+        }
+        if (OPAQUE_AFTER.has(token)) break;
+      }
+      if (unenumerated) continue;
+    }
+    // **`node` is allowed ONLY as an enumerated `-e` payload**, and the inversion is the point. A payload
+    // is CODE: round 12 ran `node -e "require('child_process').execSync('pnpm build')"` straight through,
+    // and enumerating the payloads refuses every one nobody wrote down — including the ones nobody has
+    // thought of, which a denylist of suspicious substrings could not. `ALLOWED_FLAGS` then closed the
+    // spellings that carry code by another name (`--eval=`, `-p`, `--import`, `--run`).
+    //
+    // But a `node` with NO flag carries code too: it reads its script from stdin, and the absence of an
+    // argument is not the absence of a program. So the missing `-e` is itself the refusal, which puts
+    // `node` where every other entry on the invocation list already is — allowed as an exact invocation
+    // rather than by name — and stops the next unnamed flag from arriving through the same hole.
+    if (program === "node") {
+      const eval_at = tokens.indexOf("-e");
+      if (eval_at === -1) {
+        out.push("node without -e (it would read its program from stdin)");
+        continue;
+      }
       const payload = tokens.slice(eval_at + 1).join(" ");
       if (!ALLOWED_NODE_PAYLOADS.has(payloadDigest(payload))) {
         out.push(`node -e <payload ${payloadDigest(payload).slice(0, 12)}…>`);

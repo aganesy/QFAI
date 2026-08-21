@@ -54,6 +54,7 @@ import {
   ALLOWED_ACTION_INPUTS,
   ALLOWED_ACTIONS,
   ALLOWED_SHELLS,
+  ALLOWED_STEP_ENV,
   invocationsOf,
   refusals,
 } from "../helpers/shippedLaneCommands.js";
@@ -185,6 +186,24 @@ async function jobs(): Promise<Record<string, unknown>> {
  * The set is derived from the shipped directory rather than listed, so a third workflow is in scope the
  * moment it ships instead of the round after someone remembers to add it.
  */
+/**
+ * Every shell this holder declares: its own `shell:`, and its `defaults.run.shell`.
+ *
+ * Both spellings set the same thing. A step uses `shell:`; a job or a workflow uses `defaults.run.shell`,
+ * which is what GitHub documents for applying one across steps — and reading only the first left the other
+ * two levels unscanned.
+ */
+function shellsDeclaredBy(holder: Record<string, unknown>): unknown[] {
+  const out: unknown[] = [];
+  if (holder["shell"] !== undefined) out.push(holder["shell"]);
+  const defaults = holder["defaults"];
+  if (isRecord(defaults)) {
+    const run = defaults["run"];
+    if (isRecord(run) && run["shell"] !== undefined) out.push(run["shell"]);
+  }
+  return out;
+}
+
 async function shippedWorkflowFiles(): Promise<string[]> {
   const dir = path.join(await project(), ".github", "workflows");
   const files = (await readdir(dir)).filter((name) => /\.ya?ml$/.test(name)).sort();
@@ -590,15 +609,42 @@ describe(
         for (const key of ["container", "services"]) {
           if (holder[key] !== undefined) refusedUses.push(`${label}: declares ${key}`);
         }
-        // A `shell:` is a COMMAND TEMPLATE. Round 12 planted `shell: npx tsup {0}` with a `run:` body of
-        // `echo noop` and it shipped, because the scan read `run:` bodies and `uses:` and never this. Same
-        // shape as the job-level `uses:` the previous round closed: a channel one level from where anyone
-        // had looked. Every shipped step declares `bash`.
-        const shell = holder["shell"];
-        if (shell !== undefined && (typeof shell !== "string" || !ALLOWED_SHELLS.has(shell))) {
-          refusedUses.push(`${label}: declares shell ${JSON.stringify(shell)}`);
+        // A `shell:` is a COMMAND TEMPLATE — `shell: npx tsup {0}` runs the bundler and the `run:` body
+        // can be `echo noop`. Round 12 planted that at step level and it shipped, because the scan read
+        // `run:` bodies and `uses:` and never this.
+        //
+        // **And `defaults.run.shell` is the same setting at two more levels**, which is GitHub's own
+        // documented spelling for applying a shell across steps. Round 13 planted it at job level and at
+        // workflow level and both shipped, because this read `holder["shell"]` and GitHub does not define
+        // that key at either. Three rounds have now closed this one channel at three different levels —
+        // step `uses:`, job `uses:`, step `shell:` — each time one level from where the last repair
+        // looked, so this reads the `defaults.run` shape wherever it can appear rather than adding a
+        // fourth site later.
+        for (const shell of shellsDeclaredBy(holder)) {
+          if (typeof shell !== "string" || !ALLOWED_SHELLS.has(shell)) {
+            refusedUses.push(`${label}: declares shell ${JSON.stringify(shell)}`);
+          }
+        }
+        // And `env:`, which is a channel with no `run:` body at all: `NODE_OPTIONS=--require=./x.cjs`
+        // runs a file in every later `node`, and every scan in this suite reads commands. The names are
+        // enumerated in the helper beside the invocations, because they are the same kind of claim about
+        // the same shipped surface.
+        const env = holder["env"];
+        if (isRecord(env)) {
+          for (const key of Object.keys(env)) {
+            if (!ALLOWED_STEP_ENV.has(key)) refusedUses.push(`${label}: sets env ${key}`);
+          }
         }
       };
+      // The WORKFLOW level, which has no job to hang off and was therefore scanned by nothing. It reads
+      // through the SAME function as the other two: the first version of this repair restated the
+      // `container` / `services` / `shell:` rules here in a second copy, and two copies of one rule is
+      // the defect this file has now found at four different sizes.
+      for (const file of await shippedWorkflowFiles()) {
+        const parsed: unknown = parseYaml(await workflowText(file));
+        if (!isRecord(parsed)) continue;
+        readUses(`${file} (workflow level)`, parsed);
+      }
       for (const [id, job] of Object.entries(map)) {
         if (!isRecord(job)) continue;
         // The JOB level first. The previous version read `step["uses"]` inside `job["steps"]`, so a job
