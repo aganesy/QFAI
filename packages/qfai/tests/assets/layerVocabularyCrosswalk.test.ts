@@ -29,6 +29,26 @@ const cells = (row: string): string[] =>
     .slice(1, -1)
     .map((cell) => cell.trim());
 
+/**
+ * Drops the two regions of the layer SSOT where the literal `tests/` spelling
+ * is deliberate: the bullet that introduces it as what `<testsDir>` expands to
+ * by default, and the `## TestKind resolution (single source)` list, whose own
+ * rows are tracked separately. Everywhere else the file states a location rule
+ * it must defer to `paths.testsDir`.
+ */
+function withoutDefaultExpansionRegions(content: string): string {
+  const regions = [
+    /- \*\*`<testsDir>` is `paths\.testsDir`[\s\S]*?(?=\n- L1 and L2 have no mandated directory)/,
+    /## TestKind resolution \(single source\)[\s\S]*?(?=\n## )/,
+  ];
+  return regions.reduce((rest, region) => {
+    // Asserted before replacing: a renamed section would otherwise silently
+    // strip nothing and turn this guard into a pass.
+    expect(rest, `region not found: ${region.source}`).toMatch(region);
+    return rest.replace(region, "");
+  }, content);
+}
+
 const CROSSWALK_HEADING = "## Layer vocabulary crosswalk (normative)";
 const NEXT_HEADING = "## Layer definitions";
 
@@ -142,6 +162,23 @@ describe("the layer vocabulary has one crosswalk", () => {
       }
       expect(template).not.toMatch(/`tests\/(integration|api|e2e)\/\*\*`/);
       expect(template).toContain("`<testsDir>` is `paths.testsDir` from `qfai.config.yaml`");
+    });
+
+    it(`${tree}: every location rule below the crosswalk spells <testsDir> too`, async () => {
+      const catalog = await read(tree, "assistant/catalog/test-layers.md");
+      // The crosswalk defers to `paths.testsDir` and `atddTestKindDirs`
+      // renders the three roots against it, but the Layer definitions, the
+      // Annotation routing table and the ATDD hard gate still named the
+      // literal default. A project that repointed `testsDir` was told to
+      // annotate `tests/api/**` — a directory the scan never reads — leaving
+      // the finding unclearable.
+      expect(withoutDefaultExpansionRegions(catalog)).not.toMatch(
+        /`tests\/(integration|api|e2e)\//,
+      );
+      for (const dir of ["integration", "api", "e2e"]) {
+        expect(catalog).toContain(`- Location rule: \`<testsDir>/${dir}/**\`.`);
+      }
+      expect(catalog).toContain("L3/Integration -> `<testsDir>/integration/**`");
     });
   }
 
