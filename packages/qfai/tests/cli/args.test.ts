@@ -316,3 +316,35 @@ describe("parseArgs", () => {
     });
   });
 });
+
+describe("parseArgs: qfai sdd <subcommand>", () => {
+  it("routes `sdd preflight` and its diagnostic flags", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["sdd", "preflight", "--format", "json", "--fail-on", "error"], cwd);
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.command).toBe("sdd");
+    expect(parsed.options.sddAction).toBe("preflight");
+    expect(parsed.options.sddFormat).toBe("json");
+    expect(parsed.options.failOn).toBe("error");
+  });
+
+  it("rejects an unknown sdd subcommand", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["sdd", "triage"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.sddAction).toBeUndefined();
+  });
+
+  it("rejects a bare `sdd` with no subcommand", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["sdd"], cwd);
+    expect(parsed.invalid).toBe(true);
+  });
+
+  it("rejects an unsupported --format value for sdd preflight", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["sdd", "preflight", "--format", "github"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.sddFormat).toBeUndefined();
+  });
+});

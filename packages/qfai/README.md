@@ -118,6 +118,10 @@ npx qfai report
     `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
     `reviewerSignoff.status="pending"`, and no `terminationReason`; `status="completed"` requires `terminationReason`,
     a non-pending `finalDecision`, and a terminal `reviewerSignoff`.
+- `npx qfai sdd preflight`
+  - Runs the Stage 0 gate of `/qfai-sdd`: selects the latest discussion pack, counts the imported `REQ-*`,
+    resolves the blockers, and writes `.qfai/report/preflight_summary.md`. Exits 1 when the result is `blocked`
+    (use `--fail-on never` to report without failing); `--format json` emits the machine-readable result.
 
 ## ATDD annotation hard gate
 

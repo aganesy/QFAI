@@ -143,6 +143,10 @@ export type ParsedArgs = {
     handoffAction?: "upgrade";
     /** Positional `<legacy-file>` for `qfai handoff upgrade`. */
     handoffLegacyFile?: string;
+    /** Subcommand for `qfai sdd <preflight>`. */
+    sddAction?: "preflight";
+    /** --format <text|json> for `qfai sdd preflight`. */
+    sddFormat?: "text" | "json";
     /** Subcommand for `qfai atdd <scaffold>`. */
     atddAction?: "scaffold";
     /** `--spec <id>` value for `qfai atdd scaffold`. */
@@ -256,6 +260,19 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     }
   }
 
+  // `qfai sdd <subcommand>` — currently only `preflight` is supported.
+  if (command === "sdd") {
+    const candidate = args[0];
+    if (candidate && !candidate.startsWith("--")) {
+      if (candidate === "preflight") {
+        options.sddAction = candidate;
+      } else {
+        markInvalid();
+      }
+      args.shift();
+    }
+  }
+
   // `qfai atdd <subcommand>` — currently only `scaffold` is supported.
   if (command === "atdd") {
     const candidate = args[0];
@@ -352,6 +369,15 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (command === "audit") {
           if (next === "table" || next === "json") {
             options.auditFormat = next;
+          } else {
+            markInvalid();
+          }
+          i += 1;
+          break;
+        }
+        if (command === "sdd") {
+          if (next === "text" || next === "json") {
+            options.sddFormat = next;
           } else {
             markInvalid();
           }
@@ -763,6 +789,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     markInvalid();
   }
   if (command === "atdd" && !options.help && !options.atddAction) {
+    markInvalid();
+  }
+  if (command === "sdd" && !options.help && !options.sddAction) {
     markInvalid();
   }
   return { command, invalid, options };

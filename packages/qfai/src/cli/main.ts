@@ -8,6 +8,7 @@ import { runInit } from "./commands/init.js";
 import { runPrototypingIterate } from "./commands/prototypingIterate.js";
 import { runPrototypingCertify, runPrototypingShowSpec } from "./commands/prototypingCertify.js";
 import { runReport } from "./commands/report.js";
+import { runSddPreflightCommand } from "./commands/sddPreflight.js";
 import { runValidate } from "./commands/validate.js";
 import { parseArgs } from "./lib/args.js";
 import { error, info, warn } from "./lib/logger.js";
@@ -123,6 +124,22 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.auditScope !== undefined ? { scope: options.auditScope } : {}),
           ...(options.auditOperator !== undefined ? { operator: options.auditOperator } : {}),
           ...(options.auditClause !== undefined ? { clause: options.auditClause } : {}),
+        });
+      }
+      return;
+    case "sdd":
+      {
+        if (!options.sddAction) {
+          error("qfai sdd: unknown or missing subcommand. Expected: preflight");
+          info(usage());
+          process.exitCode = options.invalidExitCode;
+          return;
+        }
+        const resolvedRoot = await resolveRoot(options);
+        process.exitCode = await runSddPreflightCommand({
+          root: resolvedRoot,
+          ...(options.sddFormat ? { format: options.sddFormat } : {}),
+          ...(options.failOn !== undefined ? { failOn: options.failOn } : {}),
         });
       }
       return;
@@ -287,6 +304,7 @@ Commands:
   discussion use <id>          active discussion session pointer を設定
   audit log [filters]          .qfai/evidence/decisions/ の決定ログを一覧 (--scope/--operator/--clause + --format table|json)
   handoff upgrade <legacy>     legacy handoff ファイルを canonical .qfai/handoff.yaml に変換 (CLI-HANDOFF)
+  sdd preflight                /qfai-sdd Stage 0 ゲート（discussion-pack 選択 / REQ 件数 / blocker 判定）を実行し .qfai/report/preflight_summary.md を生成
   atdd scaffold --spec <id>    spec の Test-Cases から per-TC test skeleton を生成（idempotent + N-cycle escalation）
   prototyping preflight        prototyping 実行前提（spec/ui/design contracts/roles/browser/targetUrl）を診断
   prototyping iterate          single-thread evolution loop の cycle 確定
@@ -305,13 +323,14 @@ Options:
   --dry-run       変更を行わず表示のみ
   --format <text|github>       validate の出力形式
   --format <md|json>           report の出力形式
-  --format <text|json>         doctor / prototyping preflight / discussion list --active の出力形式
+  --format <text|json>         doctor / prototyping preflight / sdd preflight / discussion list --active の出力形式
   --active                     discussion list: active session pointer を表示
   --strict                     validate: warning 以上で exit 1
   --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full>  validate/report: 検証profileを指定
   --profile <prototyping|<skill>>  doctor: prototyping 固有の preflight 診断、または skill manifest の runtimeDependencies 探索
   --fail-on <error|warning|never>  validate: 失敗条件
   --fail-on <error|warning>        doctor / prototyping preflight: 失敗条件
+  --fail-on <error|warning|never>  sdd preflight: 失敗条件（never は blocked でも exit 0。preflight は warning 段を持たないため warning は error と同義）
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UXプラットフォーム指定
   --out <path>                  report/doctor/prototyping preflight: 出力先
   --in <path>                   report: validate.json の入力先（configより優先）

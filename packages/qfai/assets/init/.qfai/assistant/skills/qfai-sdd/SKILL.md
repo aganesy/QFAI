@@ -195,7 +195,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 1. Use only templates under `.qfai/assistant/skills/qfai-sdd/templates/` — the whole directory, not an enumerated subset, so a new template directory is covered on the day it ships.
    - Named cross-skill exception: `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample` (Phase 0 DESIGN.md Freeze). It is an exception, not a licence to read other skills' templates.
    - Never invent a layout for an artifact a template already covers.
-2. Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
+2. Always run `npx qfai sdd preflight --fail-on error` before generating shared/spec artifacts. The command selects the latest discussion-pack, counts the imported `REQ-*`, resolves the blockers and writes `.qfai/report/preflight_summary.md` itself. Never hand-author that file: a typed `status: ready` is not evidence that a discussion-pack was actually found.
 3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`. UI-bearing targets MUST also validate the consuming-project root `DESIGN.md` and freeze its sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml` (see Phase 0 DESIGN.md Freeze below).
 4. `_policies/05_Contracts.md` must include a Contract Index aligned with `.qfai/contracts/**`.
    - Phase 0 must also reconcile paired contracts against each other, not only validate each file: every terminal state, status enum value, and error code an API contract mandates must be representable in the paired DB contract. See `references/contract-artifact-rules.md#cross-contract-reconciliation-must`. The reviewer gate checks the pairing before sign-off.
@@ -206,9 +206,9 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 
 ## Required Process
 
-1. Stage 0: Preflight (stop on blockers).
+1. Stage 0: Preflight — run `npx qfai sdd preflight --fail-on error` and stop on a non-zero exit (the blockers it names).
 2. Stage 1: Triage (classify + approve + persist Triage table).
-3. Write `.qfai/report/preflight_summary.md`.
+3. Re-run `npx qfai sdd preflight` after Triage so `.qfai/report/preflight_summary.md` reflects the approved intake.
 4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase, and freeze root `DESIGN.md` per the Phase 0 DESIGN.md Freeze step below). Close Phase 0 with the cross-contract reconciliation step in `references/contract-artifact-rules.md#cross-contract-reconciliation-must`.
 5. Phase 1: Outline (`_policies/01..11`).
 6. Phase 2: Slice (per spec, gate each with `npx qfai validate --profile sdd --fail-on error --spec <spec-id>` so a parallel worker gates on its own spec only and does not import a sibling agent's in-flight failures). A `--spec` run writes `<report>/validate.spec-<id>.json` and never the shared `validate.json` / `validate-<profile>.json`, so parallel workers cannot race on one file; an unknown or unparseable `--spec` value fails the run (`QFAI-SCOPE-001` / `QFAI-SCOPE-002`) instead of silently widening to the whole repo.
@@ -248,7 +248,7 @@ Write a `.qfai/steering/<id>.md` entry when this stage hits one of the condition
   `references/spec-traceability-rules.md#traceability-ledger-16_traceability-ledgermd`.
 - Triage section in every changed `09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec)
 - Updated contracts under `.qfai/contracts/**`; UI-bearing targets normalize design/ui contracts
-- `.qfai/report/preflight_summary.md`
+- `.qfai/report/preflight_summary.md` (written by `npx qfai sdd preflight`, not by hand)
 - Evidence file: `.qfai/evidence/sdd-<spec-id>.md`
 
 The canonical file set is defined by skill templates under `.qfai/assistant/skills/qfai-sdd/templates/`.

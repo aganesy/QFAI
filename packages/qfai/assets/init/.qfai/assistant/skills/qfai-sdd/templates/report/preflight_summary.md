@@ -1,5 +1,7 @@
 # Preflight Summary
 
+Output shape of `npx qfai sdd preflight` (Stage 0 of `/qfai-sdd`). The command writes this file; re-run it instead of filling the form in by hand. `blocked` runs emit Status / Blockers / Next Commands, `ready` runs emit Status / Requirement Intake / Open Questions.
+
 ## Status
 
 - status: <ready | blocked>
@@ -8,12 +10,16 @@
 
 ## Blockers
 
-- <none | blocker item>
+- <blocked only: blocker item>
 
 ## Requirement Intake
 
-- Imported REQ count: <number | unknown>
+- Imported REQ count: <ready only: number>
+
+## Open Questions (Carry-over)
+
+- <ready only: carried-over assumption | none>
 
 ## Next Commands
 
-- /qfai-sdd
+- /qfai-discussion

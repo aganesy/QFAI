@@ -1,0 +1,285 @@
+/**
+ * `qfai sdd preflight` — the CLI entry point for the /qfai-sdd Stage 0 gate.
+ *
+ * `runSddPreflight` was implemented, exported and unit-tested but unreachable:
+ * no command and no skill step called it, so Stage 0 was whatever the agent
+ * typed into `.qfai/report/preflight_summary.md` by hand. These cases pin the
+ * entry point (exit code, both output formats) and the template ↔ output
+ * agreement that keeps the shipped form from drifting away from the writer.
+ */
+
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+import { afterEach, describe, expect, it } from "vitest";
+
+import { runSddPreflightCommand } from "../../../src/cli/commands/sddPreflight.js";
+
+const DISCUSSION_PACK_FILES = [
+  "01_Context.md",
+  "02_Inception-Deck.md",
+  "03_Story-Workshop.md",
+  "04_Sources.md",
+  "05_Scope.md",
+  "06_REQ.md",
+  "07_NFR.md",
+  "08_Glossary.md",
+  "09_Constraints.md",
+  "10_Policy.md",
+  "11_OQ-Register.md",
+  "12_OQ-Resolution-Log.md",
+  "13_Deferred.md",
+  "14_Review-Request.md",
+  "99_delta.md",
+] as const;
+
+const tempDirs: string[] = [];
+
+afterEach(async () => {
+  while (tempDirs.length > 0) {
+    const dir = tempDirs.pop();
+    if (dir) await rm(dir, { recursive: true, force: true });
+  }
+});
+
+async function newTempRoot(): Promise<string> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-sdd-preflight-cli-"));
+  tempDirs.push(root);
+  return root;
+}
+
+type Sinks = {
+  out: string[];
+  err: string[];
+  write: (message: string) => void;
+  writeErr: (message: string) => void;
+};
+
+function newSinks(): Sinks {
+  const out: string[] = [];
+  const err: string[] = [];
+  return {
+    out,
+    err,
+    write: (message: string) => out.push(message),
+    writeErr: (message: string) => err.push(message),
+  };
+}
+
+describe("qfai sdd preflight", () => {
+  it("exits 1 and writes the computed blocker set when no discussion-pack exists", async () => {
+    const root = await newTempRoot();
+    const sinks = newSinks();
+
+    const exitCode = await runSddPreflightCommand({
+      root,
+      write: sinks.write,
+      writeErr: sinks.writeErr,
+    });
+
+    expect(exitCode).toBe(1);
+    expect(sinks.out.join("\n")).toContain("status: blocked");
+    expect(sinks.err.join("\n")).toContain("blocked");
+
+    const summary = await readFile(path.join(root, ".qfai", "report", "preflight_summary.md"), {
+      encoding: "utf-8",
+    });
+    expect(summary).toContain("status: blocked");
+    expect(summary).toContain("latest discussion-pack");
+  });
+
+  it("exits 0 and reports the computed REQ count when the latest pack is ready", async () => {
+    const root = await newTempRoot();
+    await seedDiscussionPack(root, "20260216010102003");
+    const sinks = newSinks();
+
+    const exitCode = await runSddPreflightCommand({
+      root,
+      write: sinks.write,
+      writeErr: sinks.writeErr,
+    });
+
+    expect(exitCode).toBe(0);
+    const stdout = sinks.out.join("\n");
+    expect(stdout).toContain("status: ready");
+    expect(stdout).toContain("imported REQ count: 2");
+    expect(sinks.err).toEqual([]);
+
+    const summary = await readFile(path.join(root, ".qfai", "report", "preflight_summary.md"), {
+      encoding: "utf-8",
+    });
+    expect(summary).toContain("Imported REQ count: 2");
+  });
+
+  it("emits the machine-readable result under --format json", async () => {
+    const root = await newTempRoot();
+    const sinks = newSinks();
+
+    const exitCode = await runSddPreflightCommand({
+      root,
+      format: "json",
+      write: sinks.write,
+      writeErr: sinks.writeErr,
+    });
+
+    expect(exitCode).toBe(1);
+    const parsed: unknown = JSON.parse(sinks.out.join("\n"));
+    if (typeof parsed !== "object" || parsed === null) {
+      throw new Error("qfai sdd preflight --format json did not emit an object");
+    }
+    const payload: Record<string, unknown> = { ...parsed };
+    expect(payload["status"]).toBe("blocked");
+    expect(payload["source"]).toBe("discussion-pack");
+    expect(Array.isArray(payload["blockers"])).toBe(true);
+    expect(payload["nextCommands"]).toEqual(["/qfai-discussion"]);
+  });
+
+  it("reports the blockers without failing under --fail-on never", async () => {
+    const root = await newTempRoot();
+    const sinks = newSinks();
+
+    const exitCode = await runSddPreflightCommand({
+      root,
+      failOn: "never",
+      write: sinks.write,
+      writeErr: sinks.writeErr,
+    });
+
+    expect(exitCode).toBe(0);
+    expect(sinks.out.join("\n")).toContain("status: blocked");
+  });
+
+  it("keeps the shipped template's sections equal to the sections it writes", async () => {
+    // The drift this case exists for: the template is a form an agent fills
+    // in, the command is the writer, and nothing held the two together.
+    const repoRoot = path.resolve(__dirname, "../../..");
+    const template = await readFile(
+      path.join(
+        repoRoot,
+        "assets/init/.qfai/assistant/skills/qfai-sdd/templates/report/preflight_summary.md",
+      ),
+      { encoding: "utf-8" },
+    );
+
+    const blockedRoot = await newTempRoot();
+    const blockedSinks = newSinks();
+    await runSddPreflightCommand({
+      root: blockedRoot,
+      write: blockedSinks.write,
+      writeErr: blockedSinks.writeErr,
+    });
+    const blocked = await readFile(
+      path.join(blockedRoot, ".qfai", "report", "preflight_summary.md"),
+      { encoding: "utf-8" },
+    );
+
+    const readyRoot = await newTempRoot();
+    await seedDiscussionPack(readyRoot, "20260216010102003");
+    const readySinks = newSinks();
+    await runSddPreflightCommand({
+      root: readyRoot,
+      write: readySinks.write,
+      writeErr: readySinks.writeErr,
+    });
+    const ready = await readFile(path.join(readyRoot, ".qfai", "report", "preflight_summary.md"), {
+      encoding: "utf-8",
+    });
+
+    const emitted = new Set([...headings(blocked), ...headings(ready)]);
+    expect([...headings(template)].sort()).toEqual([...emitted].sort());
+  });
+});
+
+function headings(markdown: string): Set<string> {
+  const found = new Set<string>();
+  for (const line of markdown.split(/\r?\n/)) {
+    if (line.startsWith("## ")) {
+      found.add(line.slice(3).trim());
+    }
+  }
+  return found;
+}
+
+async function seedDiscussionPack(root: string, timestamp: string): Promise<void> {
+  const discussionDir = path.join(root, ".qfai", "discussion", `discussion-${timestamp}`);
+  await mkdir(discussionDir, { recursive: true });
+
+  for (const fileName of DISCUSSION_PACK_FILES) {
+    await writeFile(
+      path.join(discussionDir, fileName),
+      `${defaultDiscussionPackContent(fileName)}\n`,
+      "utf-8",
+    );
+  }
+
+  await writeFile(
+    path.join(discussionDir, "prototyping.yaml"),
+    [
+      "prototyping:",
+      "  recommended_mode: full-harness",
+      "  rationale: UI validation is recommended.",
+      "  allowed_modes:",
+      "    - full-harness",
+      "  surface: web",
+    ].join("\n"),
+    "utf-8",
+  );
+}
+
+function defaultDiscussionPackContent(fileName: (typeof DISCUSSION_PACK_FILES)[number]): string {
+  switch (fileName) {
+    case "03_Story-Workshop.md":
+      return [
+        "# 03 Story Workshop",
+        "",
+        "```mermaid",
+        "sequenceDiagram",
+        "  participant U as User",
+        "  participant S as System",
+        "  U->>S: request",
+        "```",
+        "",
+        "補足: Mermaid diagram を含む Story Workshop テスト用データ。",
+      ].join("\n");
+    case "06_REQ.md":
+      return [
+        "# 06 REQ",
+        "",
+        "- REQ-0001: ユーザーは要件セットを保存できる。背景として監査対応が必要である。",
+        "- REQ-0002: システムは保存した要件セットを再読込できる。再読込時の整合性チェックも含む。",
+        "",
+        "補足: 最小内容チェックを通すため、説明文を十分な文字数で保持する。",
+      ].join("\n");
+    case "11_OQ-Register.md":
+      return [
+        "# 11 OQ Register",
+        "",
+        "### OQ-0001: contract versioning policy",
+        "- Disposition: deferred",
+        "- Gate: discussion",
+        "- Reason: 現段階では実装着手に影響しないため deferred とする。",
+        "",
+        "補足: blocking 条件（Disposition=open）に該当しない。",
+      ].join("\n");
+    case "13_Deferred.md":
+      return [
+        "# 13 Deferred",
+        "",
+        "### OQ-0001: contract versioning policy",
+        "",
+        "- Reason: 現段階では実装着手に影響しないため deferred とする。",
+        "- Next decision point: 次回の cycle review",
+        "",
+        "補足: 11_OQ-Register.md の deferred OQ は本ファイルに記載する。",
+      ].join("\n");
+    default:
+      return [
+        `# ${fileName}`,
+        "",
+        "このファイルは preflight テスト用のダミー本文です。",
+        "最低100文字要件を満たすため、仕様意図と制約を記述しています。",
+        "テンプレート占位子だけではない実文を含め、validator の incomplete 判定を回避します。",
+      ].join("\n");
+  }
+}
