@@ -56,14 +56,12 @@ import {
   ALLOWED_ACTION_STEPS,
   ALLOWED_ACTIONS,
   ALLOWED_JOB_KEYS,
-  ALLOWED_LANE_EDGES,
-  ALLOWED_PERMISSIONS,
-  ALLOWED_RUNS_ON,
+  ALLOWED_WORKFLOW_SHAPE,
+  ALLOWED_JOB_SHAPE,
   ALLOWED_SHELLS,
   ALLOWED_STEP_BODIES,
   ALLOWED_STEP_ENV,
   ALLOWED_STEP_KEYS,
-  ALLOWED_TRIGGER,
   ALLOWED_WORKFLOW_KEYS,
   bodyDigest,
   invocationsOf,
@@ -782,31 +780,33 @@ describe(
       // through the SAME function as the other two: the first version of this repair restated the
       // `container` / `services` / `shell:` rules here in a second copy, and two copies of one rule is
       // the defect this file has now found at four different sizes.
-      // The VALUES of the three keys that decide an execution context, which the key enumeration below
-      // reads the presence of and not the content of. A trigger is who may start the run, `permissions`
-      // is what token it holds, and `runs-on` is whose machine it lands on — none of them appears in a
-      // `run:` body, so every body-shaped check in this file is blind to all three.
+      // Everything the document says that the step-level pins do not cover.
+      //
+      // Four rounds found four execution channels the same way: a key is enumerated, and until
+      // something reads its VALUE, appearing is all that is checked. The first three repairs named the
+      // key that had just been used — `working-directory`, then `on:` with `permissions:`, then
+      // `needs:` with the env value — and each left the next one open. This reads the whole shape
+      // instead: a workflow minus its jobs, a job minus its steps, against what the tree ships.
+      //
+      // The steps are excluded because they are pinned already, body by body and action by action, in
+      // the two lists above. What this adds is `if`, `outputs`, `concurrency` and `timeout-minutes`,
+      // none of which any check read — and an `if:` flipped to `false` disables a lane silently,
+      // which is a lane that never runs and therefore never fails.
       const contexts: string[] = [];
       for (const file of await shippedWorkflowFiles()) {
         const parsed: unknown = parseYaml(await workflowText(file));
         if (!isRecord(parsed)) continue;
-        contexts.push(`${file} on: ${JSON.stringify(parsed["on"] ?? null)}`);
-        const jobs = isRecord(parsed["jobs"]) ? parsed["jobs"] : {};
+        const { jobs: shippedJobsMap, ...workflowShape } = parsed;
+        const pinnedWorkflow = ALLOWED_WORKFLOW_SHAPE.get(file);
+        if (JSON.stringify(workflowShape) !== pinnedWorkflow) {
+          contexts.push(`${file}: ${JSON.stringify(workflowShape)}`);
+        }
+        const jobs = isRecord(shippedJobsMap) ? shippedJobsMap : {};
         for (const [id, job] of Object.entries(jobs)) {
           if (!isRecord(job)) continue;
-          if (job["runs-on"] !== ALLOWED_RUNS_ON) {
-            contexts.push(`${file}#${id} runs-on: ${JSON.stringify(job["runs-on"])}`);
-          }
-          const permissions = JSON.stringify(job["permissions"] ?? null);
-          if (!ALLOWED_PERMISSIONS.has(permissions)) {
-            contexts.push(`${file}#${id} permissions: ${permissions}`);
-          }
-          // The lane edges. An aggregate is only as complete as the list it aggregates, and `needs` is
-          // an enumerated key whose value nothing read.
-          const edges = JSON.stringify(job["needs"] ?? null);
-          const pinnedEdges = ALLOWED_LANE_EDGES.get(`${file}#${id}`) ?? "null";
-          if (edges !== pinnedEdges) {
-            contexts.push(`${file}#${id} needs: ${edges}`);
+          const { steps: _steps, ...jobShape } = job;
+          if (JSON.stringify(jobShape) !== ALLOWED_JOB_SHAPE.get(`${file}#${id}`)) {
+            contexts.push(`${file}#${id}: ${JSON.stringify(jobShape)}`);
           }
         }
         // Two of `readUses`'s checks can fire here and the rest cannot: GitHub defines no top-level
@@ -818,9 +818,10 @@ describe(
       }
       expect
         .soft(
-          contexts.filter((line) => !line.endsWith(`on: ${ALLOWED_TRIGGER}`)),
-          "a trigger, a token or a runner this tree does not ship — none of which appears in a `run:` " +
-            "body, so no digest and no body scan can see one",
+          contexts,
+          "a workflow or a job saying something this tree does not ship. None of it appears in a " +
+            "`run:` body, so no digest and no body scan can see any of it, and the four channels " +
+            "found one at a time were all of this shape",
         )
         .toEqual([]);
       for (const [id, job] of Object.entries(map)) {

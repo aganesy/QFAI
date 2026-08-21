@@ -763,27 +763,66 @@ export const ALLOWED_ACTION_COMMITS: ReadonlyMap<string, string> = new Map([
 ]);
 
 /**
- * What the three keys whose VALUE decides an execution context are allowed to say.
+ * Everything a shipped workflow and each of its jobs says, apart from the steps.
  *
- * The key enumerations below decide which keys may appear and nothing read what these three said. Round
- * 16 added `pull_request_target` to the trigger and flipped `contents: read` to `contents: write` on the
- * job that runs the lockfile-aware install: every digest, both multisets and the key walk stayed green,
- * and the result is a fork's pull request running with a writable token against an install that executes
- * the adopter's lifecycle scripts.
+ * **Four execution channels in four rounds were the same finding**: a key is on the allowed list, and
+ * until something reads its VALUE, appearing is all that is checked. `defaults.run.working-directory`,
+ * a second `setup-node`, `on:` with `permissions:`, and `needs:` with `QFAI_NEEDS_JSON` were found one
+ * at a time, each by a reviewer, each after the previous one was closed by naming it.
  *
- * Serialized rather than compared structurally, because what is pinned is the whole value and not a
- * property of it — the same reason the bodies are hashed rather than parsed.
+ * So this stops naming them. A workflow is pinned as everything it says except its jobs, and a job as
+ * everything it says except its steps — which covers `if`, `outputs`, `concurrency`,
+ * `timeout-minutes`, `runs-on`, `permissions`, `needs` and whatever GitHub adds, in one place. The
+ * steps are excluded because they are pinned already, body by body and action by action.
+ *
+ * Stored as canonical JSON rather than as a digest, so a failure shows a reader what moved. An `if:`
+ * flipped to `false` silently disables a lane, and a lane that never runs is a lane that never fails:
+ * that is the shape of the next one of these, and it is closed here before it is planted.
  */
-export const ALLOWED_TRIGGER = JSON.stringify({
-  push: { branches: ["main", "master"] },
-  pull_request: null,
-});
+export const ALLOWED_WORKFLOW_SHAPE: ReadonlyMap<string, string> = new Map([
+  [
+    "qfai-tests.yml",
+    '{"name":"qfai tests","on":{"push":{"branches":["main","master"]},"pull_request":null},"concurrency":{"group":"${{ github.workflow }}-${{ github.ref }}","cancel-in-progress":true}}',
+  ],
+  [
+    "qfai-validate.yml",
+    '{"name":"qfai validate","on":{"push":{"branches":["main","master"]},"pull_request":null},"concurrency":{"group":"${{ github.workflow }}-${{ github.ref }}","cancel-in-progress":true}}',
+  ],
+]);
 
-export const ALLOWED_RUNS_ON = "${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}";
-
-export const ALLOWED_PERMISSIONS: ReadonlySet<string> = new Set([
-  JSON.stringify({ contents: "read" }),
-  JSON.stringify({}),
+export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
+  [
+    "qfai-tests.yml#detection",
+    '{"name":"change detection","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":5,"outputs":{"lanes":"${{ steps.diff.outputs.lanes }}","scripts":"${{ steps.scripts.outputs.scripts }}"}}',
+  ],
+  [
+    "qfai-tests.yml#unit",
+    '{"name":"unit tests","needs":"detection","if":"${{ contains(needs.detection.outputs.scripts, \'unit\') && contains(needs.detection.outputs.lanes, \'unit\') }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10}',
+  ],
+  [
+    "qfai-tests.yml#component",
+    '{"name":"component tests","needs":"detection","if":"${{ contains(needs.detection.outputs.scripts, \'component\') && contains(needs.detection.outputs.lanes, \'component\') }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10}',
+  ],
+  [
+    "qfai-tests.yml#integration",
+    '{"name":"integration tests","needs":"detection","if":"${{ contains(needs.detection.outputs.scripts, \'integration\') && contains(needs.detection.outputs.lanes, \'integration\') }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10}',
+  ],
+  [
+    "qfai-tests.yml#api",
+    '{"name":"api tests","needs":"detection","if":"${{ contains(needs.detection.outputs.scripts, \'api\') && contains(needs.detection.outputs.lanes, \'api\') }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10}',
+  ],
+  [
+    "qfai-tests.yml#e2e",
+    '{"name":"e2e tests","needs":"detection","if":"${{ contains(needs.detection.outputs.scripts, \'e2e\') && contains(needs.detection.outputs.lanes, \'e2e\') }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10}',
+  ],
+  [
+    "qfai-tests.yml#verdict",
+    '{"name":"verdict","needs":["detection","unit","component","integration","api","e2e"],"if":"${{ always() }}","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{},"timeout-minutes":5}',
+  ],
+  [
+    "qfai-validate.yml#validate",
+    '{"name":"qfai validate (full profile, fail on error)","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10}',
+  ],
 ]);
 
 /**
@@ -1059,30 +1098,6 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
 export const ALLOWED_STEP_ENV: ReadonlyMap<string, string> = new Map([
   ["QFAI_BASE_REF", "${{ github.event.pull_request.base.sha || github.event.before }}"],
   ["QFAI_NEEDS_JSON", "${{ toJSON(needs) }}"],
-]);
-
-/**
- * Which lanes each job waits on.
- *
- * `needs` is on the allowed job-key list and nothing read what it says. The verdict job aggregates the
- * lane results it is given, so `needs: [detection]` drops five lanes out of the aggregate and the job
- * still reports green — with no `run:` line changed, no action added and no key introduced. The sibling
- * integration test asserts that `needs` CONTAINS `detection` and then executes the body against its own
- * injected stub, so nothing in the suite reads the edges the shipped file actually declares.
- *
- * Serialized, because the ORDER is part of what was reviewed: an aggregate over a list is only as
- * complete as the list.
- */
-export const ALLOWED_LANE_EDGES: ReadonlyMap<string, string> = new Map([
-  ["qfai-tests.yml#unit", JSON.stringify("detection")],
-  ["qfai-tests.yml#component", JSON.stringify("detection")],
-  ["qfai-tests.yml#integration", JSON.stringify("detection")],
-  ["qfai-tests.yml#api", JSON.stringify("detection")],
-  ["qfai-tests.yml#e2e", JSON.stringify("detection")],
-  [
-    "qfai-tests.yml#verdict",
-    JSON.stringify(["detection", "unit", "component", "integration", "api", "e2e"]),
-  ],
 ]);
 
 /** Where a shipped command may write. A redirect creates a file, and a created file can be code. */
