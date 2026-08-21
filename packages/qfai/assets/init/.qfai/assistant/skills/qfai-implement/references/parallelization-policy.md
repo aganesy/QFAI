@@ -155,8 +155,10 @@ When parallel dispatch is authorized, the ledger has one writer:
 - Workers return a per-item evidence block carrying **every** field of the
   `SKILL.md` "Per-item evidence contract": `TDD-ID`, `TC-ref`, RED command and
   result, GREEN command and result, Refactor verify command and result,
-  `Spec review`, `Code quality review`, and `Prototype parity` for UI-affecting
-  items — plus the resulting status and `DR-ID`.
+  `Spec review`, `Code quality review`, and `Prototype parity` — the reviewer
+  verdict on a UI-affecting item (`ui-affecting.md`), `n/a (not UI-affecting)`
+  on a row no clause of that definition selects — plus the resulting status and
+  `DR-ID`.
 - Item 10 of the 11-point gate is satisfied by the orchestrator applying a
   **complete** evidence block to the row, not by the worker writing it. A block
   missing any contract field does not satisfy item 10: the orchestrator obtains
