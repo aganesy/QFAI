@@ -445,6 +445,26 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       expect(generatorRef).toContain("Sub-resource requests");
       expect(generatorRef).toContain("path-traversal 403 guard");
     }
+
+    // generator-prompt.md is one half of an SSOT-sync pair; the scanner it is
+    // paired with documents which screens ever reach it, which is exactly what
+    // the routing shape decides. Assert the scanner half states the same
+    // fallback contract so the pair cannot drift back apart.
+    const scannerSource = await readFile(
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "prototyping",
+        "designMdViolations.ts",
+      ),
+      "utf-8",
+    );
+    expect(scannerSource).toContain("`index.html` to a document request");
+    expect(scannerSource).toContain("parameterized contract routes");
+    expect(scannerSource).toContain("path-traversal 403 guard");
   });
 
   it("keeps qfai-prototyping SKILL.md concise enough for agent execution", async () => {
