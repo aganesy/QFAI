@@ -8,8 +8,12 @@ nine — one of the two `error=2` findings that had stood through six review rou
 `/qfai-implement`, and, as PR #794 showed, one of the reasons the required status context cannot go
 green.
 
-**Eight of the nine are covered. `US-0017-0007` is not**, and its claim was withdrawn in round 1
-rather than propped up. See § "Round 1, and the five things it changed".
+**All nine are covered**, and the ninth took twelve rounds. `US-0017-0007`'s claim was withdrawn in
+round 1 rather than propped up, because its only assertion was that a file exists; it is restored now,
+carried by a test that observes the runner's pool rather than reading its configuration back. The
+obstacle recorded for ten rounds — "no knob file ships" — was never the obstacle: the story's subject
+is this repository's own suite, and every other e2e file here asserts over an adopter's tree.
+See § "Round 1, and the five things it changed" and § "The gate moved".
 
 ## Inputs reviewed (files/paths)
 
@@ -459,12 +463,12 @@ module it was testing, so a rename carried the test along with it and every asse
 name is a contract with the caller, so it is now pinned as a literal, which is the one value in that file
 that must not be derived from its subject.
 
-**`TC-0017-0016` and `TC-0017-0030` are covered**, in `tests/integration/spec0017OwnWorkflowScope.test.ts`,
-and both are about the own tree for the same reason. `QFAI-ATDD-112` now reports six rather than eight, and
-**the remaining six are exactly the parked rows**: `TC-0017-0032`..`TC-0017-0035` on `CR-20260820-0007`,
-whose acceptance criteria need numbers written into `07_Decisions.md` that `/qfai-implement` may not patch,
-and `TC-0017-0069` / `TC-0017-0070` on `CR-20260820-0012` and `DR-0017-0010`. For the first time the
-uncovered set and the recorded-blocked set are the same set.
+**`TC-0017-0030` is covered**, in `tests/integration/spec0017OwnWorkflowScope.test.ts`. `QFAI-ATDD-112`
+reports **seven** rather than eight, and every one of the seven is a parked row: `TC-0017-0016` on
+`CR-20260818-0007`, `TC-0017-0032`..`TC-0017-0035` on `CR-20260820-0007` — whose acceptance criteria need
+numbers written into `07_Decisions.md` that `/qfai-implement` may not patch — and `TC-0017-0069` /
+`TC-0017-0070` on `CR-20260820-0012` and `DR-0017-0010`. For the first time the uncovered set and the
+recorded-blocked set are the same set.
 
 ### A test that timed out, fixed structurally rather than by raising its budget
 
@@ -494,7 +498,49 @@ failure surfaced as a *different* test asserting the absence of a warning it now
 could not see it and the lint rule for floating promises did not fire on the shape used; what caught it was
 the suite.
 
-### A cross-artifact obligation: `TC-0017-0016` and the tree disagree
+### `TC-0017-0016`: a coverage claim made and withdrawn in the same session
+
+This is recorded at length because the mistake is more useful than the fix, and because it is the
+gate-laundering shape this record has been circling for eleven rounds — committed, this time, by the stage
+rather than found in it.
+
+I measured the permission departures against the case's "exactly two", found three, **reported the
+disagreement as a new cross-artifact obligation**, wrote a test asserting the measured set, registered the
+annotation, and watched `QFAI-ATDD-112` stop reporting the row. The gate went from `error=2` to `error=1`
+and I recorded that as progress.
+
+Then I read `.qfai/decisions/`. `CR-20260818-0007` was raised on 2026-08-18 by `/qfai-implement`,
+`Class: intent`, `Status: open`, `Blocked set: spec-0017 TDD-0016 (TC-0017-0016)`, and it carries the same
+three-row table I had just re-derived — together with the reason it was raised instead of written:
+
+> `TC-0017-0016` is a `boundary` row, and `06_Test-Cases.md` says a boundary row exists to "fix where the
+> rule stops". This one is ambiguous at precisely that point, so writing it now would encode my reading of
+> an undefined term as a hard assertion.
+
+Three things were wrong with what I did, in increasing order of seriousness:
+
+1. **I re-derived a filed measurement and reported it as new.** The CR's table and mine are the same table.
+2. **I read the row's absence as an oversight.** It was a signal. Eleven rounds of "nobody went back to the
+   uncovered set" was the wrong lesson to draw from a row that had a documented reason to be uncovered.
+3. **I discharged a gate finding by adopting a recommendation.** The CR recommends Option A — the
+   minimal-scope default is the literal `contents: read`, three exceptions enumerated, the oracle a set
+   equality against them — which is exactly what my test asserts. But `Approved by:` and
+   `Approved option:` are both `-`. **A recommendation is not an approval, and the finding was the only
+   remaining signal that the choice is the user's.** Removing it would have left an intent question
+   resolved by a stage with no authority to resolve it, in a way no later reader would notice, because the
+   gate would be quiet.
+
+The claim is withdrawn: the annotation and the ledger registration are gone, and `QFAI-ATDD-112` reports
+the row again. **The test stays**, unannotated, because it protects what all three options share — the set
+of departures is closed and every member deliberate — and it is written against Option A's oracle, so
+approving A turns it into coverage by restoring one line. Approving B or C means rewriting the expected
+set, and the comment on the `describe` says which.
+
+The general rule, which is now the first thing to do when a `TC` looks uncoverable or merely uncovered:
+**grep `.qfai/decisions/` for a CR naming it in its `Blocked set` before writing anything.** An uncovered
+row with an open intent CR behind it is doing its job.
+
+### The disagreement itself, which stands whatever is approved
 
 The case reads "the set of non-minimal permission blocks is exactly the verdict's empty map and the
 publishing job's token write" — two. Measured, three job-level blocks depart from the workflow-level

@@ -1,35 +1,40 @@
 /**
- * Two `spec-0017` test cases over this repository's OWN workflows, both previously uncovered.
+ * Two properties of this repository's OWN workflows. One of them is coverage; the other deliberately is
+ * not, and the difference is the point of this header.
  *
- * `QFAI-ATDD-112` has reported eight `TC`s uncovered for eleven rounds. Six of the eight are the rows
- * parked on `CR-20260820-0007`, `CR-20260820-0012` and `DR-0017-0010`, each with a recorded reason. These
- * two are not parked and were simply never written.
+ * `QFAI-ATDD-112` reported eight `TC`s uncovered for eleven rounds and nobody went back to them, because
+ * every round's agenda was the previous round's findings. Both of these are about the OWN tree, which is
+ * why they were easy to miss: every `tests/e2e/**` file in this package asserts over an adopter's tree
+ * built by `qfai init`, so the habit of the suite pointed away from the subject they name.
  *
- * Both are about the OWN tree, which is why they were easy to miss: every `tests/e2e/**` file in this
- * package asserts over an adopter's tree built by `qfai init`, so the habit of the suite pointed away
- * from the subject these two name.
+ * ## `TC-0017-0030` is covered. `TC-0017-0016` is not, and must not be.
  *
- * ## A disagreement between `TC-0017-0016` and the tree, reported rather than resolved here
+ * I measured the permission departures, found the case's "exactly two" against a tree holding three, wrote
+ * the assertion below, registered the annotation, and watched `QFAI-ATDD-112` stop reporting the row.
  *
- * The case reads: "The set of non-minimal permission blocks is exactly the verdict's empty map and the
- * publishing job's token write" — two of them. Measured, the tree holds **three** job-level blocks that
- * depart from the workflow-level `contents: read`:
+ * Then I found `CR-20260818-0007` — raised 2026-08-18 by `/qfai-implement`, `Class: intent`,
+ * `Status: open`, `Blocked set: spec-0017 TDD-0016 (TC-0017-0016)` — carrying the same three-row table I
+ * had just re-derived, and the reason it was raised rather than written:
  *
- *     ci.yml       ci-pass          {}                                 <- named by the case
- *     release.yml  github-release   { contents: write }                <- NOT named by the case
- *     release.yml  publish          { contents: read, id-token: write } <- named by the case
+ * > `TC-0017-0016` is a `boundary` row, and `06_Test-Cases.md` says a boundary row exists to "fix where
+ * > the rule stops". This one is ambiguous at precisely that point, so writing it now would encode my
+ * > reading of an undefined term as a hard assertion.
  *
- * `github-release` needs `contents: write` to create a release, so the third departure is real and
- * necessary rather than an over-grant. Two readings of the case are available — that it is stale, or that
- * "non-minimal" means "broader than the job needs" and `contents: write` is minimal FOR that job — and
- * they are not distinguishable from the case's text.
+ * The CR **recommends** Option A: the minimal-scope default is the literal `contents: read`, three
+ * exceptions are enumerated, and the case's oracle becomes a set equality against them. That is exactly
+ * what this test asserts. But `Approved by:` and `Approved option:` are both `-`, and **the gate finding
+ * is the signal that the decision is pending.** Discharging it by adopting the recommendation would
+ * remove the signal while the choice is still the user's.
  *
- * So this test asserts the **measured set**, exactly, and does not pretend the count is two. Bending an
- * assertion to fit a sentence that the tree contradicts is how `US-0017-0004` spent ten rounds asserting
- * something it could not check. The disagreement is recorded in `.qfai/evidence/atdd-spec-0017.md` as a
- * cross-artifact obligation for whoever owns `06_Test-Cases.md`; the property this pins — that the set of
- * departures is CLOSED and every member is deliberate — is the one the case exists to protect, and it
- * holds under either reading.
+ * So the claim is withdrawn and the test stays. It protects what every option shares — the set of
+ * departures is closed and every member deliberate — and it is written against Option A's oracle, so
+ * approving A turns it into coverage by restoring one annotation. Approving B (per-job minimum, count two)
+ * or C (only the blocks this spec adds) means rewriting the expected set, and the comment on the
+ * `describe` says which.
+ *
+ * The near-miss is worth keeping in view: I re-derived a filed CR's measurement, treated it as a new
+ * finding, and nearly resolved an open intent question by picking its recommended option. **An open CR
+ * naming a TC in its blocked set is the thing to check before covering that TC**, not after.
  */
 
 import { readFile, readdir } from "node:fs/promises";
@@ -62,8 +67,19 @@ async function ownWorkflows(): Promise<Workflow[]> {
   return out;
 }
 
-// QFAI:SPEC-0017:TC-0017-0016
-describe("TC-0017-0016: the own tree's departures from minimal permission scope are a closed set", () => {
+// NOT annotated for `TC-0017-0016`, deliberately. `CR-20260818-0007` is open, `Class: intent`, and its
+// `Blocked set` names `TDD-0016 (TC-0017-0016)`: the term "the minimal-scope default" has two readings and
+// the pack does not choose between them. The CR RECOMMENDS Option A — the default is the literal
+// `contents: read`, three exceptions are enumerated, and the case's oracle becomes a set equality against
+// them — which is exactly what this test asserts. But `Approved by:` and `Approved option:` are both `-`,
+// and the `QFAI-ATDD-112` finding is the signal that the choice is still the user's. Annotating this would
+// discharge that signal by adopting the recommendation, which is not this stage's decision to take.
+//
+// So the test runs and claims nothing. It protects the property every option shares — the set of
+// departures is closed and every member deliberate — and it is written against Option A's oracle, so
+// approving A makes it coverage by adding the annotation back. Approving B (per-job minimum, count two) or
+// C (only the blocks this spec adds) means rewriting the expected set.
+describe("the own tree's departures from minimal permission scope are a closed set", () => {
   it("grants no job-level permission block beyond the three that are deliberate", async () => {
     const workflows = await ownWorkflows();
     const departures: string[] = [];
