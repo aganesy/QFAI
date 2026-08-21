@@ -14,9 +14,14 @@ import { error, info, warn } from "./lib/logger.js";
 import { findConfigRoot } from "../core/config.js";
 
 export async function run(argv: string[], cwd: string): Promise<void> {
-  const { command, invalid, options } = parseArgs(argv, cwd);
+  const { command, invalid, invalidReason, options } = parseArgs(argv, cwd);
 
   if (!command || options.help) {
+    // 拒否理由は stderr、usage は stdout。呼び出し側が stdout を捨てても
+    // 「どのトークンが拒否されたか」は必ず手元に残る。
+    if (invalid) {
+      error(invalidReason ?? "qfai: invalid arguments.");
+    }
     info(usage());
     if (invalid) {
       process.exitCode = options.invalidExitCode;
@@ -110,12 +115,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       return;
     case "audit":
       {
-        if (!options.auditAction) {
-          error("qfai audit: unknown or missing subcommand. Expected: log");
-          info(usage());
-          process.exitCode = options.invalidExitCode;
-          return;
-        }
+        // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
         const resolvedRoot = await resolveRoot(options);
         process.exitCode = await runAuditLog({
           root: resolvedRoot,
@@ -128,12 +128,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       return;
     case "atdd":
       {
-        if (!options.atddAction) {
-          error("qfai atdd: unknown or missing subcommand. Expected: scaffold");
-          info(usage());
-          process.exitCode = options.invalidExitCode;
-          return;
-        }
+        // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
         if (!options.atddSpecId) {
           error("qfai atdd scaffold: --spec <id> is required.");
           info(usage());
@@ -149,15 +144,9 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       return;
     case "handoff":
       {
-        if (!options.handoffAction) {
-          error("qfai handoff: unknown or missing subcommand. Expected: upgrade");
-          info(usage());
-          process.exitCode = options.invalidExitCode;
-          return;
-        }
-        // Only `upgrade` is supported today; the action gate above
-        // already markInvalid()s unrecognized values, so we land here
-        // with `upgrade` selected.
+        // Only `upgrade` is supported today; parseArgs already
+        // markInvalid()s a missing / unrecognized action, so we land
+        // here with `upgrade` selected.
         if (!options.handoffLegacyFile) {
           error("qfai handoff upgrade: <legacy-file> is required.");
           info(usage());
@@ -173,16 +162,16 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       return;
     case "discussion":
       {
-        if (!options.discussionAction) {
-          error("qfai discussion: unknown or missing subcommand. Expected: list|use");
-          info(usage());
-          process.exitCode = options.invalidExitCode;
+        // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
+        // ここでは required な `action` を narrow するためだけに読む。
+        const discussionAction = options.discussionAction;
+        if (!discussionAction) {
           return;
         }
         const resolvedRoot = await resolveRoot(options);
         process.exitCode = await runDiscussion({
           root: resolvedRoot,
-          action: options.discussionAction,
+          action: discussionAction,
           ...(options.discussionActive ? { active: true } : {}),
           ...(options.discussionFormat ? { format: options.discussionFormat } : {}),
           ...(options.discussionId !== undefined ? { id: options.discussionId } : {}),
@@ -191,15 +180,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       return;
     case "prototyping":
       {
-        if (!options.prototypingAction) {
-          error(
-            "qfai prototyping: unknown or missing subcommand. Expected: preflight|iterate|certify|show-spec",
-          );
-          info(usage());
-          process.exitCode = options.invalidExitCode;
-          return;
-        }
-
+        // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
         if (options.prototypingAction === "certify") {
           const resolvedRoot = await resolveRoot(options);
           process.exitCode = await runPrototypingCertify({

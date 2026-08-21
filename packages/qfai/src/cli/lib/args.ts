@@ -1,6 +1,11 @@
 export type ParsedArgs = {
   command: string | null;
   invalid: boolean;
+  /**
+   * 引数が拒否された理由 (stderr 向け診断文)。`invalid === true` の
+   * ときだけ設定され、最初に発火した拒否の理由を保持する。
+   */
+  invalidReason?: string;
   options: {
     root: string;
     rootExplicit: boolean;
@@ -183,12 +188,30 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     command = null;
   }
 
-  const markInvalid = (): void => {
+  let invalidReason: string | undefined;
+
+  /**
+   * 拒否を記録する。`reason` は main.ts が usage の前に stderr へ
+   * 出す診断文。複数回発火しても最初の理由を保持する。
+   */
+  const markInvalid = (reason: string): void => {
     invalid = true;
     options.help = true;
+    invalidReason ??= reason;
     if (command === "guardrails") {
       options.invalidExitCode = 2;
     }
+  };
+
+  const scope = (): string => (command ? `qfai ${command}` : "qfai");
+  const missingValue = (flag: string): string => `${scope()}: ${flag} requires a value.`;
+  const badValue = (flag: string, value: string, expected: string): string =>
+    `${scope()}: invalid value for ${flag}: "${value}". Expected: ${expected}`;
+  const notValidHere = (flag: string): string =>
+    `${scope()}: ${flag} is not valid for this command.`;
+  const formatReason = (value: string): string => {
+    const choices = formatChoicesFor(command);
+    return choices ? badValue("--format", value, choices) : notValidHere("--format");
   };
 
   if (command === "guardrails") {
@@ -198,7 +221,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       if (action) {
         options.guardrailsAction = action;
       } else {
-        markInvalid();
+        markInvalid(subcommandReason("guardrails", candidate));
       }
       args.shift();
     }
@@ -217,7 +240,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       ) {
         options.prototypingAction = candidate;
       } else {
-        markInvalid();
+        markInvalid(subcommandReason("prototyping", candidate));
       }
       args.shift();
     }
@@ -230,7 +253,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       if (candidate === "log") {
         options.auditAction = candidate;
       } else {
-        markInvalid();
+        markInvalid(subcommandReason("audit", candidate));
       }
       args.shift();
     }
@@ -243,7 +266,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       if (candidate === "upgrade") {
         options.handoffAction = candidate;
       } else {
-        markInvalid();
+        markInvalid(subcommandReason("handoff", candidate));
       }
       args.shift();
       if (options.handoffAction === "upgrade") {
@@ -263,7 +286,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       if (candidate === "scaffold") {
         options.atddAction = candidate;
       } else {
-        markInvalid();
+        markInvalid(subcommandReason("atdd", candidate));
       }
       args.shift();
     }
@@ -277,7 +300,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       if (candidate === "list" || candidate === "use") {
         options.discussionAction = candidate;
       } else {
-        markInvalid();
+        markInvalid(subcommandReason("discussion", candidate));
       }
       args.shift();
       if (options.discussionAction === "use") {
@@ -297,7 +320,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         {
           const next = readOptionValue(args, i);
           if (next === null) {
-            markInvalid();
+            markInvalid(missingValue("--root"));
             break;
           }
           options.root = next;
@@ -309,7 +332,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         {
           const next = readOptionValue(args, i);
           if (next === null) {
-            markInvalid();
+            markInvalid(missingValue("--dir"));
             break;
           }
           options.dir = next;
@@ -332,11 +355,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         const next = readOptionValue(args, i);
         if (next === null) {
           // `--format` は値必須。欠落時はヘルプ表示（ただし次オプションは食わない）。
-          markInvalid();
+          markInvalid(missingValue("--format"));
           break;
         }
         if (command === "prototyping" && options.prototypingAction !== "preflight") {
-          markInvalid();
+          markInvalid(`qfai prototyping: --format is only valid for "prototyping preflight".`);
           i += 1;
           break;
         }
@@ -344,7 +367,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           if (next === "text" || next === "json") {
             options.discussionFormat = next;
           } else {
-            markInvalid();
+            markInvalid(badValue("--format", next, "text|json"));
           }
           i += 1;
           break;
@@ -353,13 +376,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           if (next === "table" || next === "json") {
             options.auditFormat = next;
           } else {
-            markInvalid();
+            markInvalid(badValue("--format", next, "table|json"));
           }
           i += 1;
           break;
         }
         if (!applyFormatOption(command, next, options)) {
-          markInvalid();
+          markInvalid(formatReason(next));
         }
         i += 1;
         break;
@@ -373,7 +396,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         options.strict = true;
         break;
       case "--phase":
-        markInvalid();
+        markInvalid(`${scope()}: --phase is not supported.`);
         if (readOptionValue(args, i) !== null) {
           i += 1;
         }
@@ -381,7 +404,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--profile": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--profile"));
           break;
         }
         if (isValidationProfile(next)) {
@@ -392,7 +415,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           // doctor command threads the value into the manifest probe.
           options.doctorSkillProfile = next;
         } else {
-          markInvalid();
+          markInvalid(
+            badValue(
+              "--profile",
+              next,
+              "discussion|sdd|prototyping|atdd|tdd|verify|full|saas-package",
+            ),
+          );
         }
         i += 1;
         break;
@@ -412,7 +441,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--fail-on": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--fail-on"));
           break;
         }
         if (next === "never" || next === "warning" || next === "error") {
@@ -424,7 +453,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--out": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--out"));
           break;
         }
         if (
@@ -435,7 +464,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else if (command === "report") {
           options.reportOut = next;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--out"));
         }
         i += 1;
         break;
@@ -443,7 +472,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--in": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--in"));
           break;
         }
         options.reportIn = next;
@@ -456,7 +485,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--base-url": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--base-url"));
           break;
         }
         options.reportBaseUrl = next;
@@ -469,7 +498,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--path"));
           break;
         }
         options.guardrailsPaths.push(next);
@@ -482,12 +511,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--max"));
           break;
         }
         const parsed = Number.parseInt(next, 10);
         if (Number.isNaN(parsed)) {
-          markInvalid();
+          markInvalid(badValue("--max", next, "an integer"));
           break;
         }
         options.guardrailsMax = parsed;
@@ -500,7 +529,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--keyword"));
           break;
         }
         options.guardrailsKeyword = next;
@@ -513,7 +542,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--platform"));
           break;
         }
         options.platform = next;
@@ -523,7 +552,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--target-url": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--target-url"));
           break;
         }
         options.prototypingTargetUrl = next;
@@ -533,12 +562,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--cycle": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--cycle"));
           break;
         }
         const parsed = parseNonNegativeInteger(next);
         if (parsed === null) {
-          markInvalid();
+          markInvalid(badValue("--cycle", next, "a non-negative integer"));
         } else {
           options.prototypingCycle = parsed;
         }
@@ -554,7 +583,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--license-patch": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--license-patch"));
           break;
         }
         options.prototypingLicensePatch = next;
@@ -564,7 +593,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--primary-spec-id": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--primary-spec-id"));
           break;
         }
         options.prototypingPrimarySpecId = next;
@@ -612,13 +641,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--skeleton-mode": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--skeleton-mode"));
           break;
         }
         if (next === "placeholder" || next === "full" || next === "stub") {
           options.prototypingSkeletonMode = next;
         } else {
-          markInvalid();
+          markInvalid(badValue("--skeleton-mode", next, "placeholder|full|stub"));
         }
         i += 1;
         break;
@@ -626,13 +655,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--mode": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--mode"));
           break;
         }
         if (next === "convergence" || next === "exploration") {
           options.prototypingMode = next;
         } else {
-          markInvalid();
+          markInvalid(badValue("--mode", next, "convergence|exploration"));
         }
         i += 1;
         break;
@@ -658,7 +687,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--spec": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--spec"));
           break;
         }
         if (command === "atdd") {
@@ -667,7 +696,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           // Repeatable: `--spec 0003 --spec 0004` scopes the run to both.
           options.validateSpecIds.push(next);
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--spec"));
         }
         i += 1;
         break;
@@ -675,7 +704,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--scope": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--scope"));
           break;
         }
         if (command === "audit") {
@@ -684,10 +713,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           if (next === "saas-package" || next === "full") {
             options.prototypingScope = next;
           } else {
-            markInvalid();
+            markInvalid(badValue("--scope", next, "saas-package|full"));
           }
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--scope"));
         }
         i += 1;
         break;
@@ -695,17 +724,17 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--upgrade-scope": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--upgrade-scope"));
           break;
         }
         if (command === "prototyping" && options.prototypingAction === "certify") {
           if (next === "full") {
             options.prototypingUpgradeScopeFull = true;
           } else {
-            markInvalid();
+            markInvalid(badValue("--upgrade-scope", next, "full"));
           }
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--upgrade-scope"));
         }
         i += 1;
         break;
@@ -713,13 +742,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--operator": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--operator"));
           break;
         }
         if (command === "audit") {
           options.auditOperator = next;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--operator"));
         }
         i += 1;
         break;
@@ -727,13 +756,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--clause": {
         const next = readOptionValue(args, i);
         if (next === null) {
-          markInvalid();
+          markInvalid(missingValue("--clause"));
           break;
         }
         if (command === "audit") {
           options.auditClause = next;
         } else {
-          markInvalid();
+          markInvalid(notValidHere("--clause"));
         }
         i += 1;
         break;
@@ -748,24 +777,58 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   }
 
   if (command === "guardrails" && !options.help && !options.guardrailsAction) {
-    markInvalid();
+    markInvalid(subcommandReason("guardrails", null));
   }
   if (command === "prototyping" && !options.help && !options.prototypingAction) {
-    markInvalid();
+    markInvalid(subcommandReason("prototyping", null));
   }
   if (command === "discussion" && !options.help && !options.discussionAction) {
-    markInvalid();
+    markInvalid(subcommandReason("discussion", null));
   }
   if (command === "audit" && !options.help && !options.auditAction) {
-    markInvalid();
+    markInvalid(subcommandReason("audit", null));
   }
   if (command === "handoff" && !options.help && !options.handoffAction) {
-    markInvalid();
+    markInvalid(subcommandReason("handoff", null));
   }
   if (command === "atdd" && !options.help && !options.atddAction) {
-    markInvalid();
+    markInvalid(subcommandReason("atdd", null));
   }
-  return { command, invalid, options };
+  return { command, invalid, ...(invalidReason ? { invalidReason } : {}), options };
+}
+
+/** `qfai <command> <subcommand>` で受理されるサブコマンドの集合。 */
+const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
+  ["guardrails", "list|extract|check"],
+  ["prototyping", "preflight|iterate|certify|show-spec"],
+  ["discussion", "list|use"],
+  ["audit", "log"],
+  ["handoff", "upgrade"],
+  ["atdd", "scaffold"],
+]);
+
+/**
+ * サブコマンド欠落 / 不正の診断文を組み立てる。`value === null` は
+ * 「そもそも指定されていない」ケース。
+ */
+function subcommandReason(command: string, value: string | null): string {
+  const expected = SUBCOMMAND_EXPECTATIONS.get(command) ?? "";
+  const what = value === null ? "unknown or missing subcommand" : `unknown subcommand "${value}"`;
+  return `qfai ${command}: ${what}. Expected: ${expected}`;
+}
+
+/** `--format` が当該コマンドで受理する値の集合 (空 = 非対応)。 */
+function formatChoicesFor(command: string | null): string {
+  if (command === "report") {
+    return "md|json";
+  }
+  if (command === "validate") {
+    return "text|github";
+  }
+  if (command === "doctor" || command === "prototyping") {
+    return "text|json";
+  }
+  return "";
 }
 
 function readOptionValue(args: string[], index: number): string | null {
