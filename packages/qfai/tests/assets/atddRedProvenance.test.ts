@@ -320,7 +320,9 @@ describe.each(TREES)("%s (ownership and gate alignment)", (tree) => {
     // could not reach `done` however correct its RED and GREEN were.
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("the evidence file its `Layer` owns");
-    expect(implement).toContain("`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` row");
+    expect(implement).toContain(
+      "`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row",
+    );
     expect(implement).toContain(
       "The item's evidence file (item 10) is appended with both reviewer verdicts",
     );
@@ -2434,6 +2436,57 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
       const reviewer = flat(await read(tree, `assistant/agents/${agent}.md`));
       expect(reviewer).toContain("for an `E2E` / `API` / `Integration` row");
     }
+  });
+
+  it("names the ATDD-owned layer set in the passage the other documents cite", async () => {
+    // `execution-ledger.md` and `qfai-atdd/SKILL.md` both attribute the
+    // three-layer split to `## Non-goals`, which stated two — so a reader who
+    // followed either citation to check the rule found the opposite of what the
+    // citing document promised.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**The ATDD-owned layers are `E2E`, `API` and `Integration`**");
+    expect(implement).toContain(
+      "`Layer = E2E` / `Layer = API` / `Layer = Integration` ledger rows are tracked here",
+    );
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("(`qfai-implement/SKILL.md` Non-goals)");
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("`qfai-implement/SKILL.md` states the split");
+  });
+
+  it("sends an orchestrator-written Integration anchor to the file gate item 10 reads", async () => {
+    // The Orchestrator Protocol is a MUST and the orchestrator is the ledger's
+    // only permitted writer, but its rule sent only E2E/API to the ATDD file —
+    // so on an Integration row it wrote the implement anchor that gate item 10,
+    // applying the three-layer rule, then rejected. The row could not reach
+    // `done` however exactly the protocol was followed.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row, whose RED was produced by the stage that authored its test (gate item 10)",
+    );
+  });
+
+  it("carves acceptance-test authorship out of Phase Red for the Integration row too", async () => {
+    // Step 3 read as an instruction to write the failing Integration test here,
+    // while step 3b said that row consumes the provenance /qfai-atdd recorded.
+    // One says author it, the other says it is already authored elsewhere.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "An `E2E` / `API` / `Integration` row's test is authored by `/qfai-atdd` (Non-goals)",
+    );
+  });
+
+  it("keeps the evidence-cell contract's home split on the same three layers", async () => {
+    // The ledger reference stated the same split twice more in two layers, in
+    // the very section that defines the set as three.
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("the E2E/API/Integration rows use `atdd-<spec-id>.md`");
+    expect(ledger).toContain(
+      "`atdd-<spec-id>.md` holds `## Ledger rows advanced` for the E2E/API/Integration rows",
+    );
+    expect(ledger).toContain(
+      "E2E/API/Integration row whose anchor names the ATDD file reaches `done`",
+    );
   });
 
   it("routes the Integration gatekeeper at the file its provenance is in", async () => {

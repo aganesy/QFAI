@@ -330,7 +330,9 @@ describe("the shipped ledger schema documents all eight required columns", () =>
       );
       expect(skill).toContain("authored by `/qfai-atdd` (Non-goals)");
       expect(skill).toContain("On a `Layer = E2E` row read `US-ref`");
-      expect(skill).toContain("`Layer = E2E` / `Layer = API` ledger rows are tracked here");
+      expect(skill).toContain(
+        "`Layer = E2E` / `Layer = API` / `Layer = Integration` ledger rows are tracked here",
+      );
     });
   }
 });
