@@ -3,6 +3,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { PROJECT_STEERING_DIR } from "../paths/assistantPaths.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { maskNonSpecRegions, parseFirstMarkdownTable } from "../specPackParsers.js";
 import {
@@ -29,6 +30,11 @@ import {
 // progress figure cannot disagree about which TCs a spec declares.
 import { collectTestCaseIds, TEST_CASES_FILE_NAME } from "../testCaseCoverageTargets.js";
 import type { Issue } from "../types.js";
+import {
+  collectStoppedSpecIds,
+  collectWorklogEntries,
+  WORKLOG_STOP_KINDS,
+} from "../worklogEntries.js";
 import { exists, issue, readSafe } from "./utils.js";
 
 /**
@@ -539,13 +545,54 @@ function tcNotCoveredWithoutLedger(
   ];
 }
 
+/**
+ * The finding a spec owes when its ledger stopped and `.qfai/steering/` holds
+ * no record of why.
+ *
+ * One finding per spec, not one per row: the entry is the account of the stop,
+ * and a run that parked four rows on the same defective upstream contract
+ * writes one — repeating the finding per row would ask for four.
+ */
+function blockedWithoutWorklog(
+  blockedRowLabels: readonly string[],
+  specNumber: string,
+  relPath: string,
+  stoppedSpecIds: ReadonlySet<string>,
+): Issue[] {
+  const specId = `spec-${specNumber}`;
+  if (blockedRowLabels.length === 0 || stoppedSpecIds.has(specId)) return [];
+  const kinds = WORKLOG_STOP_KINDS.map((kind) => `\`kind: ${kind}\``).join(" or ");
+  return [
+    issue(
+      "TDDLIST_BLOCKED_NO_WORKLOG",
+      `${String(blockedRowLabels.length)} row(s) in tdd/test-list.md for ${specId} hold Status=blocked (${blockedRowLabels.join(", ")}) but no \`${PROJECT_STEERING_DIR}/\` entry of ${kinds} names ${specId}. The ledger records that the run stopped; nothing records why, or what the next session should pick up`,
+      "warning",
+      relPath,
+      "tddList.blockedWorklog",
+      undefined,
+      "change",
+      `\`${PROJECT_STEERING_DIR}/<id>.md\` に work-log エントリを 1 件書いてください（\`.qfai/assistant/catalog/worklog-entry.schema.md\` の schema）。\`kind\` は ${WORKLOG_STOP_KINDS.join(" / ")}、spec との紐付けは \`scope: ${specId}\` または \`links\` への \`${specId}\` 追加です。停止の経緯・試したこと・再開時の次の一手を本文に残します。`,
+    ),
+  ];
+}
+
 export async function validateTddList(root: string, config: QfaiConfig): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
   const issues: Issue[] = [];
 
+  // Read once for the whole run: the steering surface is project-wide, and one
+  // walk per spec would re-read every entry for every ledger.
+  const stoppedSpecIds = collectStoppedSpecIds(await collectWorklogEntries(root));
+
   for (const entry of entries) {
-    const specIssues = await validateSpecTddList(root, entry.dir, entry.specNumber, specsRoot);
+    const specIssues = await validateSpecTddList(
+      root,
+      entry.dir,
+      entry.specNumber,
+      specsRoot,
+      stoppedSpecIds,
+    );
     issues.push(...specIssues);
   }
 
@@ -557,6 +604,7 @@ async function validateSpecTddList(
   specDir: string,
   specNumber: string,
   specsRoot: string,
+  stoppedSpecIds: ReadonlySet<string>,
 ): Promise<Issue[]> {
   const filePath = path.join(specDir, TDD_LIST_REL_PATH);
   const relPath = toRelPath(root, filePath);
@@ -984,8 +1032,10 @@ async function validateSpecTddList(
   // start" with no record of what it is waiting on is the same re-derivation
   // problem `todo` already had, one word further along.
   const hasBlockedByColumn = anyTableHasColumn(coverageTables, BLOCKED_BY_COLUMN);
+  const blockedRowLabels: string[] = [];
   for (const ref of ledgerRows()) {
     if (cell(ref, "Status").toLowerCase() !== "blocked") continue;
+    blockedRowLabels.push(ref.label);
     const blockedBy = cell(ref, BLOCKED_BY_COLUMN);
     if (blockedBy.length > 0 && blockedBy !== "-") continue;
     issues.push(
@@ -1003,6 +1053,26 @@ async function validateSpecTddList(
       ),
     );
   }
+
+  // Phase 2 – Check 8b: a stopped ledger owes a steering record.
+  //
+  // `qfai-implement/SKILL.md` asks for a `.qfai/steering/<id>.md` entry when
+  // the stage hits a `blocker` or `handoff` condition, and until now said in
+  // the same sentence that nothing checked — so an unwritten one was simply
+  // lost. The two conditions it names are exactly the ones where the run stops
+  // and a human or a later session picks it up: the case where the missing
+  // entry costs the most, and the case where the stage that owed it is the
+  // stage that stopped, so nobody is left to notice.
+  //
+  // `Blocked-By` names WHAT the row waits on; it is a token, not the account
+  // of what was tried and what the next session should do. The steering entry
+  // is that account, and this pairs the two observable artifacts rather than
+  // asking the agent to self-report.
+  //
+  // `warning`, not `error`: `.qfai/steering/` is `.gitignore`d by default, so
+  // a CI checkout can legitimately hold the ledger without the entry that
+  // exists on the author's machine.
+  issues.push(...blockedWithoutWorklog(blockedRowLabels, specNumber, relPath, stoppedSpecIds));
 
   // Phase 2 – Check 8: Exception rows must have a DR-ID that resolves
   const declaredDrIds = await collectDeclaredDrIds(specDir, specsRoot);
