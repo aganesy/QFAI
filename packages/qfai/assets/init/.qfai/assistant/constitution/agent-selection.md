@@ -1,9 +1,6 @@
 ---
 category: project
 update-frequency: occasional
-dependencies:
-  - 02_project/spec-driven-development.md
-  - 02_project/mcp.md
 version: 2.0.0
 ---
 
@@ -54,7 +51,7 @@ QFAI のサブエージェントは、**agent-catalog + agent-routing + review-p
 
 ## 原則の適用
 
-- 実装担当 (`frontend-engineer`, `backend-engineer`) は `.github/instructions/principles.instructions.md` と `.instruction/00_universal/development-principles-checklist.md` の観点を、実装時の判断基準として適用する。
+- 実装担当 (`frontend-engineer`, `backend-engineer`) は `.github/instructions/principles.instructions.md` の観点を、実装時の判断基準として適用する。
 - 設計担当 (`solution-architect`, `product-experience-architect`) は同じ原則を、構造・契約・UX 方向性の設計基準として適用する。
 - レビュー担当 (`implementation-reviewer`, `architecture-reviewer`, `product-surface-reviewer`) は `.github/instructions/code-review.instructions.md` と `.github/instructions/principles.instructions.md` をレビュー観点として適用し、指摘時は原則名と改善理由を明示する。
 
@@ -67,4 +64,4 @@ QFAI のサブエージェントは、**agent-catalog + agent-routing + review-p
 - 実装の正しさ確認 → `implementation-reviewer`
 - 完了してよいか確認 → `completion-reviewer`
 
-MCP の使いどころは `.instruction/02_project/mcp.md` を参照する。
+MCP の使いどころ（検索・取得系サーバの選択とフォールバック）は `.qfai/assistant/skills/web-research/SKILL.md` の MCP Integration 節を参照する。
