@@ -322,7 +322,7 @@ describe.each(TREES)("%s (ownership and gate alignment)", (tree) => {
     expect(implement).toContain("the evidence file its `Layer` owns");
     expect(implement).toContain("`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` row");
     expect(implement).toContain(
-      "The item's evidence file (item 10) is appended with both reviewer verdicts",
+      "The item's evidence file (item 10) is appended with **every routed reviewer's** verdict",
     );
 
     const ledger = flat(await read(tree, LEDGER));
