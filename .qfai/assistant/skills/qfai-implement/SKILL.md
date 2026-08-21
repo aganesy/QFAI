@@ -488,7 +488,7 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
 - hard-required:
   - `companyName`
   - brand intent
-  - `primarySpecId` (when absent from inputs)
+  - `primarySpecId` (when absent from inputs and auto-discovery does not resolve exactly one candidate — see `## Spec Auto-Discovery Protocol`)
 
 A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. Widening triggers a Reviewer-Gate finding.
 

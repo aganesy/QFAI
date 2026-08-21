@@ -36,6 +36,7 @@ the rule. A skill approaching it is a signal to move a section out.
 - If AskUserQuestion is unavailable, ask the same question in a normal message with explicit numbered choices.
 - Preserve structured choice semantics when falling back.
 - State why AskUserQuestion was unavailable.
+- The three buckets of a skill's `## Default Autopilot Policy` say who settles a decision: `auto-decide` = the skill settles it without asking; `ask-user` = the skill asks before acting; `hard-required` = the run may not start until the value is known, and the agent MUST obtain it from the user unless the bucket entry itself names the derivation that supplies it.
 
 ## Canonical qfai Launcher (Mandatory)
 
