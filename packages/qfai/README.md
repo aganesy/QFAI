@@ -522,7 +522,12 @@ If wrapper assets drift from canonical skills, rerun `npx qfai init --force` to 
 
 ## Contributing (for QFAI maintainers)
 
-This repository is a monorepo, and the distributable package is under `packages/qfai`; if you change documentation, keep the repository root README and the package README aligned (the CI enforces this).
+This repository is a monorepo, and the distributable package is under `packages/qfai`.
+The repository root `README.md` and `packages/qfai/README.md` are kept aligned by
+`scripts/check-readme-alignment.mjs`, which CI runs as part of `pnpm ci:lint`: every line
+outside a `readme-align:ignore-start` / `readme-align:ignore-end` HTML-comment block must be
+identical in both files. When you change documentation, apply the edit to both READMEs, or
+wrap the intentionally file-specific part in those markers.
 
 ## License
 
