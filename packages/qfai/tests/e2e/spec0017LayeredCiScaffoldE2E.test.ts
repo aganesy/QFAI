@@ -54,9 +54,11 @@ import {
   ALLOWED_ACTION_INPUTS,
   ALLOWED_ACTIONS,
   ALLOWED_SHELLS,
+  ALLOWED_STEP_BODIES,
   ALLOWED_STEP_ENV,
   invocationsOf,
   refusals,
+  payloadDigest,
 } from "../helpers/shippedLaneCommands.js";
 import { captureStdout } from "../helpers/stdout.js";
 
@@ -585,6 +587,36 @@ describe(
           "true",
           "yarn",
         ]);
+
+      // And the boundary itself, which is not a parse at all. Every assertion above reads a body and
+      // decides what it does; a twenty-agent sweep ran fourteen bodies past that reading, and the shape
+      // of the problem is that reading bash converges only at a complete bash parser while every gap on
+      // the way fails open. So the gate is IDENTITY: the twelve bodies this tree ships were reviewed,
+      // and their digests are written down. A body that is not one of them has not been reviewed,
+      // whatever it is written in, and a digest with no body left is an entry nobody deleted.
+      const bodies = new Map<string, string>();
+      for (const [id, job] of Object.entries(map)) {
+        const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
+        for (const step of steps) {
+          if (!isRecord(step)) continue;
+          const run = step["run"];
+          if (typeof run !== "string") continue;
+          const name = typeof step["name"] === "string" ? step["name"] : "(unnamed)";
+          bodies.set(payloadDigest(run), `${id} [${name}]`);
+        }
+      }
+      expect
+        .soft(
+          [...bodies].filter(([digest]) => !ALLOWED_STEP_BODIES.has(digest)).map(([, at]) => at),
+          "a shipped step body nobody reviewed; run `refusals()` over it, then write its digest down",
+        )
+        .toEqual([]);
+      expect
+        .soft(
+          [...ALLOWED_STEP_BODIES].filter((digest) => !bodies.has(digest)),
+          "a reviewed digest with no body left, which is an entry nobody deleted",
+        )
+        .toEqual([]);
 
       // The other channel, which round 10 found invisible to BOTH instruments: a build arriving as an
       // action input. `uses: gradle/actions/setup-gradle` with `arguments: build` runs a build without a

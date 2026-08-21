@@ -640,6 +640,48 @@ export function payloadDigest(payload: string): string {
   return createHash("sha256").update(payload.replace(/\s+/g, " ").trim()).digest("hex");
 }
 
+/**
+ * The digest of every `run:` body the shipped tree contains, whitespace-collapsed.
+ *
+ * **This is the boundary, and it is a different KIND of claim from everything else in this file.** The
+ * allowlist asks what a body invokes and answers with a parser; a twenty-agent sweep then ran fourteen
+ * bodies past that parser and none of the fourteen was refuted. The reason it converges slowly is
+ * structural rather than a matter of effort: enumerating bash grammar ends only at a complete bash
+ * parser, and every gap on the way there fails open. Enumerating our own twelve bodies ends at twelve
+ * and fails closed, because a body nobody reviewed has no digest here whatever it is written in.
+ *
+ * What it does NOT do: it says nothing about behaviour, so it cannot tell a maintainer why a body is
+ * acceptable, and it is silenced by pasting the new digest. That is deliberate. Pasting one is a
+ * visible act in review, and review is where the question "what does this body now run?" is worth
+ * asking — `refusals()` is the instrument that answers it, and this is the gate that makes someone ask.
+ */
+export const ALLOWED_STEP_BODIES: ReadonlySet<string> = new Set([
+  // qfai-tests.yml#detection [Select lanes from the name-only diff] — 40 lines
+  "614f4ba84cbb09a3f6d476443f136abd66c614f43eb5b2c3cd4f4646cc0cc9f4",
+  // qfai-tests.yml#detection [Probe layer-named test scripts] — 35 lines
+  "ae6054a7fc9827bce7b8ad679a1bbfe740d90984c20d2283afde13dbcf0c3818",
+  // qfai-tests.yml#unit [unit lane placeholder] — 1 line
+  "09b8ac75ee3ef6fe71dbc5e38e2bebc7207b7d1a358bec40bc1229fd2dea8523",
+  // qfai-tests.yml#component [component lane placeholder] — 1 line
+  "c6497f24366cb07fac4e65f2fd95bb95926520a7894adb96c92643f719f5d9f9",
+  // qfai-tests.yml#integration [integration lane placeholder] — 1 line
+  "4defbb1b5a2ede5b36495e4747fc1220739ffd9a16957add74b1cdc887e786df",
+  // qfai-tests.yml#api [api lane placeholder] — 1 line
+  "3af03c5087ed07f3066fb114d17f61d850449cf9073dc78dc98617cf668944ea",
+  // qfai-tests.yml#e2e [e2e lane placeholder] — 1 line
+  "b2382d77e17d5940626aa1e9c306fb74570955930472497aa4a473aa57e3bc93",
+  // qfai-tests.yml#verdict [Aggregate lane results (green on skip)] — 8 lines
+  "a5b54a3a66f1681fb317f748e9dc6df9383ad74373bcfc555af309b4a407a3a5",
+  // qfai-validate.yml#validate [Resolve the package manager (pnpm route fails closed)] — 52 lines
+  "e83d6a946a1424b605cca461300914583cbf6f95b8fafa84dfc3cc3e677a602c",
+  // qfai-validate.yml#validate [Resolve the Node version (adopter file wins, else fall open)] — 22 lines
+  "020c2d24603e6bd5e0e467ff97558b311fcc17f330f6b9889f8a0761ab253bc9",
+  // qfai-validate.yml#validate [Install dependencies (lockfile-aware)] — 22 lines
+  "cc817c0973b9a7179506b21b6b366fe1b3d8be9e1e7422973691266c4a64abd8",
+  // qfai-validate.yml#validate [qfai validate] — 1 line
+  "cafa0558d597d81a2b477a24bf245ceb02e38e714767bde76bf0ff0918dd31d9",
+]);
+
 /** The `shell:` values a shipped step may declare. A `shell:` is a command template, so it is scanned. */
 export const ALLOWED_SHELLS: ReadonlySet<string> = new Set(["bash"]);
 
