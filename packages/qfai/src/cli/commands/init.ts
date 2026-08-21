@@ -1360,9 +1360,6 @@ async function ensureSymlink(
  * makes the claim and the test one operation; the counter only has to produce
  * candidates, not guarantee anything by itself.
  */
-/** Names {@link claimSidecar} produces, so prune leaves them alone. */
-const SIDECAR_RE = /\.qfai-repair-\d+(?:-\d+)?$/;
-
 /**
  * How much of a sidecar the copy fallback will hold in memory.
  *
@@ -1884,6 +1881,69 @@ async function collectCanonicalAgentNames(assistantAssetsDir: string): Promise<s
 // Prune deprecated wrappers
 // ---------------------------------------------------------------------------
 
+/**
+ * `.claude/commands/` と `.github/prompts/` に qfai が実際に書いたことのある
+ * wrapper の basename (拡張子を除いた stem)。
+ *
+ * この 2 ディレクトリへの書き込みは symlink 方式への移行時に廃止され、以降
+ * init は一切書き込まない — つまり今そこにあるものは、この閉じた集合に載って
+ * いる名前を除いてすべてプロジェクトが自分で置いたものである。`qfai-*` という
+ * 開いた glob で消していたため、`.claude/commands/qfai-release.md` のような
+ * プロジェクト固有の slash command が `--force` のたびに消えていた。
+ */
+const LEGACY_WRAPPER_STEMS: ReadonlySet<string> = new Set([
+  "qfai-atdd",
+  "qfai-configure",
+  "qfai-discuss",
+  "qfai-discussion",
+  "qfai-implement",
+  "qfai-pr",
+  "qfai-prototyping",
+  "qfai-require",
+  "qfai-scenario-test",
+  "qfai-sdd",
+  "qfai-spec",
+  "qfai-tdd-green",
+  "qfai-tdd-red",
+  "qfai-tdd-refactor",
+  "qfai-unit-test",
+  "qfai-verify",
+]);
+
+/** `name` が `suffix` を落とすと {@link LEGACY_WRAPPER_STEMS} に載るか。 */
+function isLegacyWrapperName(name: string, suffix: string): boolean {
+  if (!name.endsWith(suffix)) {
+    return false;
+  }
+  return LEGACY_WRAPPER_STEMS.has(name.slice(0, -suffix.length));
+}
+
+/**
+ * その entry が init の張った skill symlink か — 名前ではなくリンク先で判定する。
+ *
+ * 所有権の証拠は名前ではない。`qfai-` は予約された prefix ではなく、canonical
+ * roster 自身が `web-research` という prefix を持たない skill を含む。名前で
+ * 判定していたため、プロジェクトが自分で用意した `.claude/skills/qfai-deploy`
+ * が `--force` でディレクトリごと消えていた。init が書いたと証明できるのは
+ * `.qfai/assistant/skills/` 配下へ解決される symlink だけなので、prune の対象も
+ * それに限る。
+ */
+async function linksIntoCanonicalSkills(
+  entryPath: string,
+  canonicalSkillsDir: string,
+): Promise<boolean> {
+  let target: string;
+  try {
+    target = await readlink(entryPath);
+  } catch {
+    // 読めないものは「qfai のものだと証明できないもの」であり、保存側に倒す。
+    return false;
+  }
+  const resolved = path.resolve(path.dirname(entryPath), target);
+  const rel = path.relative(canonicalSkillsDir, resolved);
+  return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
+}
+
 async function pruneStaleQfaiWrappers(
   destRoot: string,
   canonicalSkills: string[],
@@ -1892,24 +1952,24 @@ async function pruneStaleQfaiWrappers(
   const canonical = new Set(canonicalSkills);
   const removed: string[] = [];
 
-  // 1. Remove ALL .claude/commands/qfai-*.md (deprecated category)
+  // 1. Remove the .claude/commands/*.md wrappers qfai itself once shipped
   await pruneMatchingEntries(
     path.join(destRoot, ".claude", "commands"),
-    (entry) => entry.isFile() && entry.name.startsWith("qfai-") && entry.name.endsWith(".md"),
+    (entry) => entry.isFile() && isLegacyWrapperName(entry.name, ".md"),
     removed,
     dryRun,
   );
 
-  // 2. Remove ALL .github/prompts/qfai-*.prompt.md (deprecated category)
+  // 2. Remove the .github/prompts/*.prompt.md wrappers qfai itself once shipped
   await pruneMatchingEntries(
     path.join(destRoot, ".github", "prompts"),
-    (entry) =>
-      entry.isFile() && entry.name.startsWith("qfai-") && entry.name.endsWith(".prompt.md"),
+    (entry) => entry.isFile() && isLegacyWrapperName(entry.name, ".prompt.md"),
     removed,
     dryRun,
   );
 
-  // 3. Remove stale or non-symlink qfai-* entries in skill integration dirs
+  // 3. Remove stale skill symlinks — entries whose target proves init wrote them
+  const canonicalSkillsDir = path.join(destRoot, ".qfai", "assistant", "skills");
   for (const integDir of SKILL_INTEGRATION_DIRS) {
     const fullDir = path.join(destRoot, integDir);
     if (!(await exists(fullDir))) {
@@ -1917,26 +1977,24 @@ async function pruneStaleQfaiWrappers(
     }
     const entries = await readdir(fullDir, { withFileTypes: true });
     for (const entry of entries) {
-      if (!entry.name.startsWith("qfai-")) {
+      // 修復 sidecar (`qfai-atdd.qfai-repair-1234`) は通常ファイルなので、
+      // symlink 限定の判定に切り替えた時点で対象外になる。prune は repair より
+      // 先に走るため、これを消すと前回の失敗した修復が残した唯一の控えを
+      // 失うことになる。
+      if (!entry.isSymbolicLink()) {
         continue;
       }
-      // A repair sidecar is not a stale wrapper. It is named after the wrapper
-      // it holds — `qfai-atdd.qfai-repair-1234` — so it matches this prefix,
-      // and prune runs before the repair does: a `--force` re-run would delete
-      // the very file an earlier failed repair preserved, which is the one
-      // case the sidecar exists for.
-      if (SIDECAR_RE.test(entry.name)) {
+      if (canonical.has(entry.name)) {
         continue;
       }
       const entryPath = path.join(fullDir, entry.name);
-      const isStale = !canonical.has(entry.name);
-      const isNonSymlink = !entry.isSymbolicLink();
+      if (!(await linksIntoCanonicalSkills(entryPath, canonicalSkillsDir))) {
+        continue;
+      }
 
-      if (isStale || isNonSymlink) {
-        removed.push(entryPath);
-        if (!dryRun) {
-          await rm(entryPath, { recursive: true, force: true });
-        }
+      removed.push(entryPath);
+      if (!dryRun) {
+        await rm(entryPath, { recursive: true, force: true });
       }
     }
   }

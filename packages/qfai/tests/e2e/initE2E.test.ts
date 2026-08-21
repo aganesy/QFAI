@@ -181,25 +181,34 @@ describe(
   "E2E: commands/prompts deprecation + skill symlink integration (US-0003-0007)",
   { timeout: 60000 },
   () => {
-    it("--force removes stale .claude/commands/qfai-*.md and .github/prompts/qfai-*.prompt.md", async () => {
+    it("--force removes the commands/prompts wrappers qfai shipped, and only those", async () => {
       const tmpDir = await createTempDir();
       try {
         await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
 
-        // Place old-style wrappers
+        // Place old-style wrappers, under a basename qfai itself once shipped,
+        // alongside one the project chose for itself.
         await mkdir(path.join(tmpDir, ".claude", "commands"), { recursive: true });
-        await writeFile(path.join(tmpDir, ".claude", "commands", "qfai-old.md"), "old");
+        await writeFile(path.join(tmpDir, ".claude", "commands", "qfai-spec.md"), "old");
+        await writeFile(path.join(tmpDir, ".claude", "commands", "qfai-old.md"), "mine");
         await mkdir(path.join(tmpDir, ".github", "prompts"), { recursive: true });
-        await writeFile(path.join(tmpDir, ".github", "prompts", "qfai-old.prompt.md"), "old");
+        await writeFile(path.join(tmpDir, ".github", "prompts", "qfai-spec.prompt.md"), "old");
+        await writeFile(path.join(tmpDir, ".github", "prompts", "qfai-old.prompt.md"), "mine");
 
         await captureStdout(() => runInit({ dir: tmpDir, force: true, dryRun: false, yes: true }));
 
-        expect(await pathExists(path.join(tmpDir, ".claude", "commands", "qfai-old.md"))).toBe(
+        expect(await pathExists(path.join(tmpDir, ".claude", "commands", "qfai-spec.md"))).toBe(
           false,
         );
         expect(
-          await pathExists(path.join(tmpDir, ".github", "prompts", "qfai-old.prompt.md")),
+          await pathExists(path.join(tmpDir, ".github", "prompts", "qfai-spec.prompt.md")),
         ).toBe(false);
+        expect(await pathExists(path.join(tmpDir, ".claude", "commands", "qfai-old.md"))).toBe(
+          true,
+        );
+        expect(
+          await pathExists(path.join(tmpDir, ".github", "prompts", "qfai-old.prompt.md")),
+        ).toBe(true);
       } finally {
         await cleanupTempDir(tmpDir);
       }

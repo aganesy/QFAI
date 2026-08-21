@@ -498,11 +498,64 @@ describe("qfai init", { timeout: 60000 }, () => {
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
-      // ALL commands/prompts qfai-*.md files should be removed
+      // Every wrapper basename qfai itself once shipped there should be removed
       await expect(access(deprecatedClaude)).rejects.toMatchObject({ code: "ENOENT" });
       await expect(access(deprecatedGithub)).rejects.toMatchObject({ code: "ENOENT" });
       await expect(access(deprecatedCanonicalClaude)).rejects.toMatchObject({ code: "ENOENT" });
       await expect(access(deprecatedCanonicalGithub)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps project-authored qfai-* commands, prompts and skills on --force", async () => {
+    // Ownership is what init wrote, not the `qfai-` prefix: nothing reserves
+    // that prefix (the shipped roster itself carries `web-research`), and init
+    // has not written to `.claude/commands/` or `.github/prompts/` since the
+    // symlink recut. `qfai-release.md` is the obvious name for a project slash
+    // command that drives qfai, and `--force` deleted it — silently, under the
+    // label "removed legacy files".
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-release.md");
+      const prompt = path.join(root, ".github", "prompts", "qfai-release.prompt.md");
+      const skillDoc = path.join(root, ".claude", "skills", "qfai-deploy", "SKILL.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      await mkdir(path.dirname(prompt), { recursive: true });
+      await mkdir(path.dirname(skillDoc), { recursive: true });
+      await writeFile(command, "project command\n", "utf-8");
+      await writeFile(prompt, "project prompt\n", "utf-8");
+      await writeFile(skillDoc, "project skill\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(command, "utf-8")).toBe("project command\n");
+      expect(await readFile(prompt, "utf-8")).toBe("project prompt\n");
+      expect(await readFile(skillDoc, "utf-8")).toBe("project skill\n");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still removes a skill symlink pointing at a skill that is no longer shipped", async () => {
+    // The link target is the proof init wrote it, so a retired skill's wrapper
+    // is still pruned — the cleanup the prefix test used to provide.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const stale = path.join(root, ".claude", "skills", "qfai-retired");
+      await symlink(
+        path.join("..", "..", ".qfai", "assistant", "skills", "qfai-retired"),
+        stale,
+        "dir",
+      );
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(lstat(stale)).rejects.toMatchObject({ code: "ENOENT" });
     } finally {
       await rm(root, { recursive: true, force: true });
     }
