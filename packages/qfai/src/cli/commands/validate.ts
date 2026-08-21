@@ -530,7 +530,14 @@ function resolveFailOn(options: ValidateOptions, fallback: FailOn): FailOn {
   return fallback;
 }
 
-function emitText(result: ValidationResult): void {
+/**
+ * Renders the default `--format text` output.
+ *
+ * The emitted line grammar is documented for users in the shipped
+ * `assistant/catalog/cli-ux-guidelines.md` (Error Message Format section);
+ * both must be changed together.
+ */
+export function emitText(result: ValidationResult): void {
   for (const item of result.issues) {
     const location = item.file ? ` (${item.file})` : "";
     const refs = item.refs && item.refs.length > 0 ? ` refs=${item.refs.join(",")}` : "";

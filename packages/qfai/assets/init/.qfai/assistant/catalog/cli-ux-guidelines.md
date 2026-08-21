@@ -10,17 +10,37 @@ QFAI が定義する、`npx qfai validate` の UI/UX 関連出力ガイドライ
 
 ## Error Message Format
 
+`npx qfai validate --format text`（既定形式）が issue 1 件につき出力する 1 行の形式:
+
 ```text
-<CODE>: <message> [at <file>[:<line>[:<col>]]]
+[<severity>] <CODE> <message>[ (<file>)][ refs=<refs>][ suppressed=true]
 ```
 
-- `file` は issue に path がある場合のみ付与される
-- `line` / `col` は issue に loc がある場合のみ付与される
+- `severity` は `info` / `warning` / `error` のいずれか
+- `(<file>)` は issue に path がある場合のみ付与される
+- `refs=<refs>` は issue に refs がある場合のみ付与される（カンマ区切り）
+- `suppressed=true` は issue が waiver で抑止されている場合のみ付与される
 
 例:
 
-- `QFAI-DT-002: Circular reference detected: semantic.color.primary [at .qfai/contracts/design/design-tokens.yaml]`
-- `QFAI-MOCK-002: External URL reference in HTML Mock: https://cdn.example.com/style.css [at .qfai/specs/spec-0001/01_Spec.md]`
+- `[error] QFAI-DT-002 Circular reference detected: semantic.color.primary (.qfai/contracts/design/design-tokens.yaml)`
+- `[error] QFAI-MOCK-002 External URL reference in HTML Mock: https://cdn.example.com/style.css (.qfai/specs/spec-0001/01_Spec.md)`
+
+`severity` が `error` の issue には、上記の行に続けてインデント付きの詳細行が出力される:
+
+```text
+  error_code: <CODE>
+  target: <target>
+  expected: <expected>
+  current: <message>
+  fix: <suggested action>
+```
+
+全 issue の出力後に集計行が 1 行出力される:
+
+```text
+counts: info=<n> warning=<n> error=<n>
+```
 
 > **Note:** `.qfai/contracts/design/design-tokens*.yaml` は **optional supporting artifact** である。init 直後にファイルが存在しなくても異常ではなく、token validator は token file が作成された場合にのみ実行される。
 
