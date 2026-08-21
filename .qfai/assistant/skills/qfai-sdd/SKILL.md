@@ -187,7 +187,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 
 - With argument (`/qfai-sdd <spec-id-or-name> [--auto]`): update only the matched single spec target.
 - Without argument (`/qfai-sdd`): target all capabilities listed in `_policies/03_Capabilities.md`.
-- Contract-scoped (`/qfai-sdd --contract <CON-ID>`): run Stage 0 + Phase 0 (Contracts-first) + Phase 4 (Delta update) only, against the named contract and the specs that reference it. This is the invocation `constitution/drift-protocol.md#when-drift-is-detected` step 4 names for a contract-class upstream artifact; without it, a contract-only Change Request had no rerun narrower than the whole spec.
+- Contract-scoped (`/qfai-sdd --contract <CON-ID>`): run Stage 0 + Phase 0 (Contracts-first) + Phase 2c (Obligation reconciliation, limited to the `BR` / `AC` of the specs that reference the named contract) + Phase 4 (Delta update) only, against the named contract and the specs that reference it. This is the invocation `constitution/drift-protocol.md#when-drift-is-detected` step 4 names for a contract-class upstream artifact; without it, a contract-only Change Request had no rerun narrower than the whole spec. **Phase 2c is not droppable in this mode.** It is the one invocation whose ordering is inverted — the obligations already exist and the contract is what just changed — so it is the one invocation where an already-approved `BR` / `AC` can silently have stopped being realizable, and skipping the check would close the Change Request over the mismatch. See `references/contract-artifact-rules.md#obligation-reconciliation-must--phase-2c`.
 - Reordering capability-to-spec mapping is a Change Request decision and must not be done implicitly.
 
 ## Critical Constraints

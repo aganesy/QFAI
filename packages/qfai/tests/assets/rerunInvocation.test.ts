@@ -65,7 +65,9 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     // whole spec.
     const sdd = await read(tree, SDD);
     expect(sdd).toContain("Contract-scoped (`/qfai-sdd --contract <CON-ID>`)");
-    expect(sdd).toContain("Stage 0 + Phase 0 (Contracts-first) + Phase 4 (Delta update) only");
+    expect(sdd).toContain(
+      "Stage 0 + Phase 0 (Contracts-first) + Phase 2c (Obligation reconciliation, limited to the `BR` / `AC` of the specs that reference the named contract) + Phase 4 (Delta update) only",
+    );
   });
 
   it("advertises it in the argument hint, not only in prose", async () => {

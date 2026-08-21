@@ -126,6 +126,35 @@ describe("Phase 2c reconciles contracts against their obligations", () => {
       );
     });
 
+    it(`${tree}: the contract-scoped mode runs it too`, async () => {
+      // `--contract` enumerates its phase set exhaustively ("... only"), and it
+      // is reached from drift-protocol step 4 — after a Change Request was
+      // approved. Omitting Phase 2c there discharges the CR and writes a delta
+      // saying the contract change was handled, while every BR/AC riding on the
+      // old shape stays unexamined. It is also the one mode whose ordering is
+      // inverted: the obligations already exist and the contract is what moved.
+      const skill = flat(await read(tree, SKILL));
+
+      expect(skill).toContain(
+        "run Stage 0 + Phase 0 (Contracts-first) + Phase 2c (Obligation reconciliation, limited to the `BR` / `AC` of the specs that reference the named contract) + Phase 4 (Delta update) only",
+      );
+      expect(skill).toContain("**Phase 2c is not droppable in this mode.**");
+    });
+
+    it(`${tree}: the rule places the phase for the contract-scoped mode`, async () => {
+      // Phase 2c is specified as running "after Phase 2b and before Phase 3",
+      // and in `--contract` mode neither neighbour runs — so without this the
+      // phase has no position in the only mode that most needs it.
+      const rules = flat(await read(tree, RULES));
+
+      expect(rules).toContain(
+        "**In contract-scoped mode (`/qfai-sdd --contract <CON-ID>`) neither neighbour runs, so Phase 2c sits between Phase 0 and Phase 4**",
+      );
+      expect(rules).toContain(
+        "scoped to the `BR` / `AC` of the specs that reference the named contract",
+      );
+    });
+
     it(`${tree}: the completion message distinguishes existence from realizability`, async () => {
       const skill = flat(await read(tree, SKILL));
 

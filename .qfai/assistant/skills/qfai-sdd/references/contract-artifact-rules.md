@@ -134,6 +134,14 @@ obligations are realizable. That check is this one, and it runs in **Phase 2c**,
 after Phase 2b and before Phase 3 Plan finalize — early enough that a contract
 change still flows into the plan and the delta.
 
+**In contract-scoped mode (`/qfai-sdd --contract <CON-ID>`) neither neighbour
+runs, so Phase 2c sits between Phase 0 and Phase 4**, scoped to the `BR` / `AC`
+of the specs that reference the named contract. That invocation inverts the
+ordering assumed above: the obligations already exist and the contract is what
+just changed, so the check is not a formality there — it is what makes the
+rerun safe. Dropping it closes a Change Request over obligations that may have
+stopped being realizable, with a delta entry saying the change was handled.
+
 For every `BR` / `AC` produced in Phase 2:
 
 - **Name the contract that realizes it.** An obligation whose realizing
