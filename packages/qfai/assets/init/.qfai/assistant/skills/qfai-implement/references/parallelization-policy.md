@@ -8,9 +8,38 @@ carries the summary and the precedence statement.
 - **Cross-spec parallelism is barred.** One spec per invocation, always. This
   is the Non-goal above and it is not approvable.
 - **Item-level parallelism inside one spec** is what the rest of this section
-  governs. `parallel_groups: []` in `agent-routing.yml` describes **role
-  fan-out within a phase**, not item dispatch; it neither permits nor forbids
-  what this section decides.
+  governs. `parallel_groups` in `agent-routing.yml` describes **role fan-out
+  within a phase**, not item dispatch — whatever value it holds; it neither
+  permits nor forbids what this section decides. Role fan-out is not thereby
+  ungoverned: `## Role fan-out inside one row (build phase)` below binds it.
+
+## Role fan-out inside one row (build phase)
+
+The manifest ships exactly one non-empty `parallel_groups`:
+`qfai-implement`'s `build` phase runs `frontend-engineer` and
+`backend-engineer` concurrently. Do not read the empty lists elsewhere in
+`agent-routing.yml` as a statement that nothing ever runs concurrently.
+
+That fan-out dispatches no second item, so the gates below never apply to it —
+it is not an item-level parallel run and needs no `delivery-planner`
+authorization or user consent. What it does not get is an exemption from the
+row's own contract:
+
+- **One row, one `Owning module`.** The fan-out does not widen the row's
+  declared seam. Both roles write inside that one module; work that will not
+  fit it is a second ledger row for `delivery-planner` to select, not a second
+  writer on this one.
+- **One evidence block per row.** The per-item evidence contract is satisfied
+  once, by the orchestrator, from what the roles returned — never one block per
+  role, and a row whose block is missing a field stays out of `done` exactly as
+  in the coordinated mode below.
+- **One GREEN, judged over both outputs.** `qa-gatekeeper` blocks `build` on
+  the row's single GREEN observation, and that observation covers the merged
+  result of both roles. Neither role's output is admissible on its own.
+- **Seam reconciliation stays per row.**
+  `#seam-reconciliation-after-a-parallel-run` diffs slices, and a fanned-out
+  row is one slice: its touched `src/` paths are compared against its one
+  declared `Owning module` just as a serially implemented row's are.
 
 ## Gates and precedence
 

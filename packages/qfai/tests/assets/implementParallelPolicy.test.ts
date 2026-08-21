@@ -69,6 +69,57 @@ describe("qfai-implement states one parallelization policy", () => {
       expect(routing).toContain("describes ROLE FAN-OUT within a phase, not item");
     });
 
+    it(`${tree}: no document quotes a parallel_groups value as fact`, async () => {
+      // `build` ships a non-empty group, so quoting the empty literal asserts
+      // something false about the very skill doing the quoting.
+      for (const rel of ["assistant/skills/qfai-implement/SKILL.md", REFERENCE]) {
+        expect(await read(tree, rel)).not.toContain("`parallel_groups: []`");
+      }
+    });
+
+    it(`${tree}: the shipped build fan-out is described, not disclaimed away`, async () => {
+      const section = unwrap(await policy(tree));
+      expect(section).toContain("## Role fan-out inside one row (build phase)");
+      expect(section).toContain("exactly one non-empty `parallel_groups`");
+      expect(section).toContain("**One row, one `Owning module`.**");
+      expect(section).toContain("**One evidence block per row.**");
+      expect(section).toContain("**One GREEN, judged over both outputs.**");
+      expect(section).toContain("**Seam reconciliation stays per row.**");
+      // The summary bullet must carry the same three answers, so a reader who
+      // never opens the reference is not left with the disclaimer alone.
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      expect(skill).toContain("fans out `frontend-engineer` and `backend-engineer` over **one**");
+      expect(skill).toContain("one `Owning module`, returns one per-item evidence block");
+      expect(skill).toContain("one GREEN observation covering both roles' output");
+    });
+
+    it(`${tree}: the fan-out anchor cited from SKILL.md resolves to a heading`, async () => {
+      const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+      const anchor = "role-fan-out-inside-one-row-build-phase";
+      expect(skill).toContain(`references/parallelization-policy.md#${anchor}`);
+      const headings = (await policy(tree))
+        .split("\n")
+        .filter((line) => line.startsWith("## "))
+        .map((line) =>
+          line
+            .slice(3)
+            .trim()
+            .toLowerCase()
+            .replace(/[^\w\s-]/g, "")
+            .replace(/\s+/g, "-"),
+        );
+      expect(headings).toContain(anchor);
+    });
+
+    it(`${tree}: the build phase actually carries the fan-out the docs describe`, async () => {
+      // If the group is ever emptied, the prose above becomes false the other
+      // way round — this pins doc and manifest to the same reality.
+      const routing = await read(tree, "assistant/manifest/agent-routing.yml");
+      expect(routing).toContain(
+        "parallel_groups:\n          - [frontend-engineer, backend-engineer]",
+      );
+    });
+
     it(`${tree}: worktree separation is required, with no degraded-mode escape`, async () => {
       const section = unwrap(await policy(tree));
       expect(section).toContain("## Isolation requirement (worktree separation)");

@@ -289,8 +289,12 @@ Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
   reads — not as the existence of shared things, and authorized parallel runs
   use the coordinated mode in which the orchestrator owns every `test-list.md`
   write. Under RED-first the source modules do not exist when `delivery-planner` must judge, so the conditions are evaluated over each row's declared `Owning module` (`references/execution-ledger.md`); a ledger without that column supports parallel dispatch only for seams that already exist. Full rules: `references/parallelization-policy.md`.
-- `parallel_groups: []` in `agent-routing.yml` describes **role fan-out within
-  a phase**, not item dispatch.
+- `parallel_groups` in `agent-routing.yml` describes **role fan-out within a
+  phase**, not item dispatch — whatever value it holds. The shipped `build`
+  phase fans out `frontend-engineer` and `backend-engineer` over **one** ledger
+  row: the row keeps one `Owning module`, returns one per-item evidence block,
+  and is judged on one GREEN observation covering both roles' output
+  (`references/parallelization-policy.md#role-fan-out-inside-one-row-build-phase`).
 
 ### Post-parallel integration verify
 
