@@ -599,7 +599,11 @@ function matchFindingPath(
   pathMatchers: RegExp[],
 ): boolean {
   if (!findingFile) {
-    return false;
+    // A finding with no `file` is repo-level: no path scopes it, so `scope.paths`
+    // has nothing to exclude it from. Treating it as unmatched made every such
+    // finding unwaivable at any glob — `**` included — with no diagnostic saying
+    // so. The waiver's other predicates (rule, severity, match.dl_ids) still gate it.
+    return true;
   }
   const relative = normalizePath(toRelativePath(root, findingFile));
   return pathMatchers.some((matcher) => matcher.test(relative));
