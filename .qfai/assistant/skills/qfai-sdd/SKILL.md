@@ -88,6 +88,7 @@ Approval-required ops in Stage 1 above MUST go through AskUserQuestion.
   - `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
   - `.qfai/assistant/skills/qfai-sdd/references/contract-artifact-rules.md`
   - `.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`
+  - `.qfai/assistant/skills/qfai-sdd/references/ui-contract-guide.md` (UI-bearing targets)
   - `.qfai/assistant/skills/qfai-prototyping/references/evidence-requirements.md`
   - `.qfai/assistant/manifest/agent-catalog.yml`
   - `.qfai/assistant/manifest/agent-routing.yml`
@@ -196,7 +197,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    - Named cross-skill exception: `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample` (Phase 0 DESIGN.md Freeze). It is an exception, not a licence to read other skills' templates.
    - Never invent a layout for an artifact a template already covers.
 2. Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
-3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`. UI-bearing targets MUST also validate the consuming-project root `DESIGN.md` and freeze its sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml` (see Phase 0 DESIGN.md Freeze below).
+3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`, and each UI contract YAML authored per `references/ui-contract-guide.md` (`primary_tasks` shape, the closed structured schema, and the `QFAI-AUD-001` / `QFAI-AUD-020` count-to-behavior table). UI-bearing targets MUST also validate the consuming-project root `DESIGN.md` and freeze its sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml` (see Phase 0 DESIGN.md Freeze below).
 4. `_policies/05_Contracts.md` must include a Contract Index aligned with `.qfai/contracts/**`.
    - Phase 0 must also reconcile paired contracts against each other, not only validate each file: every terminal state, status enum value, and error code an API contract mandates must be representable in the paired DB contract. See `references/contract-artifact-rules.md#cross-contract-reconciliation-must`. The reviewer gate checks the pairing before sign-off.
 5. `_policies/04_Business-Flow.md` must be Markdown with Mermaid `flowchart` or `sequenceDiagram`.
