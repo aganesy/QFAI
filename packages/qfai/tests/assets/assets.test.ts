@@ -235,6 +235,36 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(offenders).toEqual([]);
   });
 
+  it("ensures shipped assistant prose never attributes a concrete artifact id to this repository", async () => {
+    // Every file under assistant/ is copied verbatim by `qfai init`, so
+    // "this repository" resolves to the consuming project. Pairing that phrase
+    // with a concrete `spec-NNNN` / `TC-NNNN-NNNN` id therefore asserts a fact
+    // about a spec the consumer does not have. The bare phrase is legitimate
+    // (qfai-atdd / qfai-configure / qfai-verify all use it correctly), so the
+    // guard fires only on the phrase plus an id.
+    const assistantDir = path.join(templateQfaiDir, "assistant");
+    const files = await fg(["**/*.{md,yml,yaml}"], { cwd: assistantDir, absolute: true });
+    const attribution =
+      /this repository(?:'s)?[^.\n]{0,80}`?(?:spec-\d{4}|(?:TC|AC|BR|US|CON)-\d{4}-\d{4})/i;
+
+    const offenders = (
+      await Promise.all(
+        files.map(async (filePath) => {
+          // Collapse soft wraps: the phrase and the id routinely straddle a
+          // markdown line break.
+          const content = (await readFile(filePath, "utf-8")).replace(/\s*\n\s*/g, " ");
+          const found = attribution.exec(content);
+          if (found === null) {
+            return null;
+          }
+          return `${path.relative(repoRoot, filePath)}: ${found[0]}`;
+        }),
+      )
+    ).filter((result): result is string => result !== null);
+
+    expect(offenders).toEqual([]);
+  });
+
   it("ensures configure and verify delegation order follows routing SSOT", async () => {
     const routingPath = path.join(templateQfaiDir, "assistant", "manifest", "agent-routing.yml");
     const configurePath = path.join(
