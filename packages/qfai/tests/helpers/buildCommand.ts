@@ -615,7 +615,9 @@ function interpreterTail(
     // documented default for `shell: bash` — because the cluster carries a value-taking letter, so it
     // was neither inline nor consumed and the loop broke on `pipefail`. `bash -eo pipefail -c X` and
     // `bash -e -o pipefail -c X` were the same command with two verdicts.
-    if (SH_FAMILY.has(head) && /^-[a-z]+$/.test(token)) {
+    // Uppercase too: `bash -O extglob` is a real option letter, and a cluster mixing cases
+    // (`-eO extglob`) was not matched at all while `SH_CLUSTER_VALUES` claimed to hold `O`.
+    if (SH_FAMILY.has(head) && /^-[A-Za-z]+$/.test(token)) {
       let consumed = 0;
       for (const letter of token.slice(1)) {
         if (letter === "c") {
@@ -875,6 +877,14 @@ export const GRAMMAR = {
   wrappers: WRAPPERS,
   existenceProbe: EXISTENCE_PROBE,
   interpreters: INTERPRETERS,
+  // Exported because they decide verdicts. `SH_FAMILY` gates the whole `-c` cluster path and was
+  // outside this object until round 10 found it there — at a set introduced by the commit that
+  // closed the same finding for three others. `UNKNOWN_BINARY` declares nothing, so it
+  // contributes no members; it is here because a declaration this file makes and this object
+  // cannot reach is unpinned by construction, and that is now a test rather than a habit.
+  shFamily: SH_FAMILY,
+  shClusterValues: SH_CLUSTER_VALUES,
+  unknownBinary: UNKNOWN_BINARY,
   lifecycle: LIFECYCLE,
   scriptExtensions: SCRIPT_EXTENSIONS,
   executableExtensions: EXECUTABLE_EXTENSIONS,

@@ -250,7 +250,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   form rounds 8, 9 and 10 planted, all refused, and the shipped tree's own shapes accepted
 - **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, v12, extracted from the
   E2E so its corpora can be tested on their own
-- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 23 tests over the ten corpora
+- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 24 tests over the ten corpora
   enumerated at § "Execution logs" (`E4b`), none of them chosen
   by this stage. Round 8's two findings are the last four: one hardcoded case per grammar member, a check
   that the case list and the grammar name the same members, a sweep that deletes each member in turn and
@@ -298,7 +298,7 @@ pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
 pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
   -> Tests 8 passed (8), exit 0
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/buildCommand.test.ts
-  -> Tests 23 passed (23), exit 0
+  -> Tests 24 passed (24), exit 0
 
 node packages/qfai/dist/cli/index.mjs validate --profile atdd --fail-on error --spec 0017
   before this stage:  info=2 warning=0 error=2   QFAI-ATDD-111 (9 US), QFAI-ATDD-112 (8 TC)

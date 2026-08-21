@@ -131,6 +131,9 @@ function grammarMembers(): string[] {
     ["SCRIPT_EXTENSIONS", GRAMMAR.scriptExtensions],
     ["EXECUTABLE_EXTENSIONS", GRAMMAR.executableExtensions],
     ["NAME_SEPARATORS", GRAMMAR.nameSeparators],
+    ["MANAGER_BOOLEAN", GRAMMAR.managerBoolean],
+    ["SH_FAMILY", GRAMMAR.shFamily],
+    ["SH_CLUSTER_VALUES", GRAMMAR.shClusterValues],
   ];
   for (const [name, set] of sets) {
     for (const member of set) out.push(`${name}.${member}`);
@@ -356,6 +359,41 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.rake", "build", "rake build"],
   ["TOOLS.rake.dirs.-C", "none", "rake -C build clean"],
   ["TOOLS.rake.values.-f", "none", "rake -f build clean"],
+  ["MANAGER_BOOLEAN.-w", "none", "yarn -C noop -w workspace pkg build"],
+  ["MANAGER_BOOLEAN.--workspace-root", "none", "yarn -C noop --workspace-root workspace pkg build"],
+  ["MANAGER_BOOLEAN.-r", "none", "yarn -C noop -r workspace pkg build"],
+  ["MANAGER_BOOLEAN.--recursive", "none", "yarn -C noop --recursive workspace pkg build"],
+  ["MANAGER_BOOLEAN.--silent", "none", "yarn -C noop --silent workspace pkg build"],
+  ["MANAGER_BOOLEAN.--quiet", "none", "yarn -C noop --quiet workspace pkg build"],
+  ["MANAGER_BOOLEAN.--yes", "none", "yarn -C noop --yes workspace pkg build"],
+  ["MANAGER_BOOLEAN.-y", "none", "yarn -C noop -y workspace pkg build"],
+  [
+    "MANAGER_BOOLEAN.--frozen-lockfile",
+    "none",
+    "yarn -C noop --frozen-lockfile workspace pkg build",
+  ],
+  ["MANAGER_BOOLEAN.--ignore-scripts", "none", "yarn -C noop --ignore-scripts workspace pkg build"],
+  ["MANAGER_BOOLEAN.--no-scripts", "none", "yarn -C noop --no-scripts workspace pkg build"],
+  ["MANAGER_BOOLEAN.--if-present", "none", "yarn -C noop --if-present workspace pkg build"],
+  ["MANAGER_BOOLEAN.--prod", "none", "yarn -C noop --prod workspace pkg build"],
+  ["MANAGER_BOOLEAN.--dev", "none", "yarn -C noop --dev workspace pkg build"],
+  ["MANAGER_BOOLEAN.--no-bail", "none", "yarn -C noop --no-bail workspace pkg build"],
+  ["MANAGER_BOOLEAN.--offline", "none", "yarn -C noop --offline workspace pkg build"],
+  ["MANAGER_BOOLEAN.--force", "none", "yarn -C noop --force workspace pkg build"],
+  ["MANAGER_BOOLEAN.--verbose", "none", "yarn -C noop --verbose workspace pkg build"],
+  ["MANAGER_BOOLEAN.--stream", "none", "yarn -C noop --stream workspace pkg build"],
+  [
+    "MANAGER_BOOLEAN.--aggregate-output",
+    "none",
+    "yarn -C noop --aggregate-output workspace pkg build",
+  ],
+  ["MANAGER_BOOLEAN.--no-color", "none", "yarn -C noop --no-color workspace pkg build"],
+  ["MANAGER_BOOLEAN.--parallel", "none", "yarn -C noop --parallel workspace pkg build"],
+  ["SH_FAMILY.bash", "build", 'bash -uo pipefail -c "pnpm build"'],
+  ["SH_FAMILY.sh", "build", 'sh -eo pipefail -c "pnpm build"'],
+  ["SH_FAMILY.zsh", "build", 'zsh -eo pipefail -c "pnpm build"'],
+  ["SH_CLUSTER_VALUES.o", "build", 'bash -eo pipefail -c "pnpm build"'],
+  ["SH_CLUSTER_VALUES.O", "build", 'bash -eO extglob -c "pnpm build"'],
   ["TOOLS.gmake", "build", "gmake"],
   ["TOOLS.make.builds.dist", "build", "make dist"],
   ["TOOLS.make.builds.release", "build", "make release"],
@@ -516,6 +554,9 @@ const SETS: Readonly<Record<string, Set<string>>> = {
   NEVER_FLAGS: GRAMMAR.neverFlags,
   WRAPPERS: GRAMMAR.wrappers,
   EXISTENCE_PROBE: GRAMMAR.existenceProbe,
+  MANAGER_BOOLEAN: GRAMMAR.managerBoolean,
+  SH_FAMILY: GRAMMAR.shFamily,
+  SH_CLUSTER_VALUES: GRAMMAR.shClusterValues,
 };
 
 /** The two lists that build a regex and a split. Arrays, not sets, so they restore by content. */
@@ -936,6 +977,75 @@ describe("classifyBuildCommand", () => {
         "a non-build a per-tool grammar must not invent",
       )
       .toEqual([]);
+  });
+
+  it("exports every set it declares, so an unexported one cannot exist", async () => {
+    // The recurrence this closes, rather than the instance. Round 9 found `SCRIPT_FILE`'s extensions,
+    // the name separators and `isSetting` deciding verdicts from outside `GRAMMAR`, so the sweep could
+    // not reach them. They were exported. Round 10 then found `SH_FAMILY` in exactly that state — a set
+    // introduced by the SAME COMMIT that closed the finding — plus two more predicates.
+    //
+    // Fixing each instance leaves the next one to a reviewer. So this reads the helper's own source and
+    // requires every top-level collection it declares to be REACHABLE from `GRAMMAR`, transitively: an
+    // alias grammar like `MAKE` is reachable because `TOOLS` names it and `TOOLS` is exported. A set
+    // nothing reachable mentions fails here, at the commit that adds it.
+    const source = await readFile(path.resolve(__dirname, "../helpers/buildCommand.ts"), "utf8");
+
+    // Each declaration and the text that follows it up to the next one, so reachability can follow
+    // references. Split on the declaration boundary rather than matched with a terminator: a one-line
+    // declaration has no closing brace of its own at column 0, so a terminator-based pattern ran past
+    // it and swallowed the next declaration whole — `TOOLS` was invisible for exactly that reason.
+    const chunks = source.split(/^(?=(?:export )?const )/m);
+    const bodies = new Map<string, string>();
+    for (const chunk of chunks) {
+      const named = /^(?:export )?const ([A-Z][A-Z0-9_]*)\s*(?::[^=]*)?=\s*(new Set|\[|\{)/.exec(
+        chunk,
+      );
+      if (named === null) continue;
+      bodies.set(named[1] ?? "", chunk);
+    }
+
+    const grammarLiteral =
+      /export const GRAMMAR = \{([\s\S]*?)\} as const;/.exec(source)?.[1] ?? "";
+    expect(grammarLiteral, "the GRAMMAR literal must be findable to check against").not.toBe("");
+
+    const reachable = new Set<string>();
+    const frontier = [...bodies.keys()].filter((name) =>
+      new RegExp(`\\b${name}\\b`).test(grammarLiteral),
+    );
+    while (frontier.length > 0) {
+      const name = frontier.pop() ?? "";
+      if (reachable.has(name)) continue;
+      reachable.add(name);
+      const body = bodies.get(name) ?? "";
+      for (const other of bodies.keys()) {
+        if (!reachable.has(other) && new RegExp(`\\b${other}\\b`).test(body)) frontier.push(other);
+      }
+    }
+
+    expect(
+      [...bodies.keys()].filter((name) => !reachable.has(name)).sort(),
+      "a collection this file declares that `GRAMMAR` cannot reach: the sweep's reach is exactly that " +
+        "object, so anything outside it decides verdicts unpinned by construction",
+    ).toEqual([]);
+
+    // Exported is not swept, and that distinction cost a round: adding the three sets to `GRAMMAR`
+    // satisfied the check above while `grammarMembers()` still did not enumerate them, so the sweep
+    // could not delete a single one of their members. Every SET `GRAMMAR` holds must therefore appear
+    // in the member list under its own name.
+    const members = grammarMembers();
+    const setKeys = Object.entries(GRAMMAR)
+      .filter(([, value]) => value instanceof Set)
+      .map(([key]) => key);
+    const unenumerated = setKeys.filter((key) => {
+      const prefix = `${key.replace(/[A-Z]/g, (c) => `_${c}`).toUpperCase()}.`;
+      return !members.some((member) => member.startsWith(prefix));
+    });
+    expect(
+      unenumerated,
+      "a set `GRAMMAR` exports that `grammarMembers()` does not enumerate: exporting it is what makes " +
+        "the sweep able to reach it, and enumerating it is what makes the sweep actually try",
+    ).toEqual([]);
   });
 
   it("names every grammar member in a hardcoded case, and no member the grammar dropped", () => {
