@@ -149,6 +149,35 @@ describe("qfai-implement checkpoint verification contract", () => {
     }
   });
 
+  // A failed checkpoint had two remedies: the pass criteria kept the row at
+  // `refactor`, while `relevant-test-suite.md` sent it to `exception` + a DR,
+  // a status that then needs a user-approved waiver to satisfy completion.
+  it("states FAIL handling once, in the pass criteria, for both boundaries", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(headingSlugs(reference)).toContain("pass-criteria");
+      expect(reference).toMatch(/\*\*FAIL handling is defined here\s+and nowhere else\*\*/);
+      expect(reference).toContain("the item stays at `refactor`, the failure is fixed");
+      expect(reference).toContain("does **not** go to `exception`");
+      // The per-spec boundary owns no row, so it needs its own branch here
+      // rather than being left undefined by the deletion.
+      expect(reference).toContain("**Per spec** — the boundary owns no row");
+      expect(reference).toContain("Spec-level completion is not declared until it passes");
+
+      // No second remedy anywhere else on the shipped surface.
+      const suite = await readFile(path.join(dir, "references", "relevant-test-suite.md"), "utf-8");
+      expect(suite).toContain("`checkpoint-verification.md#pass-criteria`");
+      expect(suite).not.toContain("`refactor -> exception`");
+
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      expect(skill).not.toContain("on failure transition to `exception` with a DR-ID");
+      expect(skill).toContain("a FAIL keeps the row at `refactor`");
+    }
+  });
+
   it("keeps the skill body inside its progressive-disclosure budget", async () => {
     for (const dir of SKILL_DIRS) {
       const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");

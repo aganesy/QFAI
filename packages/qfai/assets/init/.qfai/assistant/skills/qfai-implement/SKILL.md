@@ -157,9 +157,9 @@ The eight required columns, the allowed transitions and the exception rules are 
    **while the item is still `refactor`** (see `#checkpoint-verification`). On a
    checkpoint boundary that means the full suite. Off a boundary it is already
    satisfied by step 2's narrow suite — nothing is re-run. Transition to `done`
-   only on PASS; on failure transition to `exception` with a DR-ID (legal from
-   `refactor`, whereas re-opening a `done` row is not). For a T1 group every member
-   transitions in the same ledger write.
+   only on PASS; a FAIL keeps the row at `refactor` and is handled only as
+   `references/checkpoint-verification.md#pass-criteria` states — it is not an
+   `exception`. For a T1 group every member transitions in the same ledger write.
 
 ### Completion
 

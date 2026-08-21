@@ -97,8 +97,12 @@ describe('"relevant test suite" is defined and bounded', () => {
       const skill = unwrap(await read(tree, SKILL));
       expect(section).toContain("### Checkpoint runs before `done`, never after");
       expect(section).toContain("run the checkpoint at the end of Refactor");
-      expect(section).toContain("FAIL -> `refactor -> exception` with a DR-ID");
-      expect(section).toContain("filed as a new `todo` row");
+      // The outcome belongs to `checkpoint-verification.md`, which declares
+      // itself gate item 12's only referent; a second copy here contradicted it.
+      expect(section).toContain(
+        "the outcome and its handling are defined once, in `checkpoint-verification.md#pass-criteria`",
+      );
+      expect(section).not.toContain("`refactor -> exception` with a DR-ID");
       expect(section).toContain("Rows already `done` from earlier boundaries are never re-opened");
       // Refactor step 5 must not mark `done` before verifying.
       expect(skill).toContain("run checkpoint verification **while the item is still `refactor`**");

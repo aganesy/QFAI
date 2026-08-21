@@ -84,9 +84,17 @@ the full suite.
 ## Pass criteria
 
 Checkpoint verification PASSES only when **every** command in the applicable set exits 0, and step 4
-reports zero `QFAI-TEST-001` findings. Any non-zero exit is a FAIL: for a per-item checkpoint the
-item stays at `refactor`, the failure is fixed, and the whole set is re-run. A partial run is not a
-pass.
+reports zero `QFAI-TEST-001` findings. Any non-zero exit is a FAIL. **FAIL handling is defined here
+and nowhere else**, in one branch per boundary:
+
+- **Per item** — the item stays at `refactor`, the failure is fixed, and the whole set is re-run. It
+  does **not** go to `exception`: that status parks the row as an anomaly whose completion then
+  needs a user-approved accepted-risk waiver, and a regression this run can fix is not one.
+- **Per spec** — the boundary owns no row, so no status moves. Fix the failure, adding a `todo` row
+  carrying the failing selector when the repair needs its own Red/Green cycle, work the ledger back
+  to terminal, and re-run the whole set. Spec-level completion is not declared until it passes.
+
+A partial run is not a pass.
 
 **A fix invalidates the reviewer PASS that preceded it.** The per-item boundary sits after
 `completion-reviewer` and `implementation-reviewer` returned PASS (Phase: Refactor, steps 4-5), so
