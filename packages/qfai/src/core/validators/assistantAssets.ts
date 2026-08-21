@@ -106,7 +106,79 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     }
   }
 
+  issues.push(...(await collectUnreachableReferences(skillsDir)));
+
   return issues;
+}
+
+/**
+ * The inverse of the citation check: a reference nothing names is never read.
+ *
+ * Skills load by progressive disclosure — `SKILL.md` is the entry point and a
+ * reference is opened only when a document already read names it. A file under
+ * `references/` with no inbound citation from a reachable document therefore
+ * ships to every consuming repository and is loaded in no run at all, which is
+ * a property of the graph rather than a probability. Reported as `warning`:
+ * the unread guidance is soft rule text, so nothing hard is being skipped.
+ */
+async function collectUnreachableReferences(skillsDir: string): Promise<Issue[]> {
+  const documents = await readSkillDocuments(skillsDir);
+  const reachable = collectReachableDocuments(documents);
+  return [...documents.keys()]
+    .filter((file) => isReferenceDocument(skillsDir, file) && !reachable.has(file))
+    .sort((a, b) => a.localeCompare(b))
+    .map((file) =>
+      issue(
+        "QFAI-SKILLS-013",
+        "references/ 配下のファイルが SKILL.md から到達可能な文書のどこからも参照されていないため、読み込まれることがありません。必要な文書なら参照するステップから引用し、不要なら削除してください。",
+        "warning",
+        file,
+        "skills.referenceReachability",
+      ),
+    );
+}
+
+/** Skill-tree documents that can cite or be cited, keyed by absolute path. */
+async function readSkillDocuments(skillsDir: string): Promise<Map<string, string>> {
+  const files = await collectFiles(skillsDir, { extensions: [".md", ".yaml", ".yml"] });
+  const documents = new Map<string, string>();
+  for (const file of files.sort((a, b) => a.localeCompare(b))) {
+    try {
+      documents.set(file, await readFile(file, "utf-8"));
+    } catch {
+      // An unreadable document cites nothing and is not the subject of this
+      // check; the file-level validators above own reporting it.
+      continue;
+    }
+  }
+  return documents;
+}
+
+/** Breadth-first closure over "document A names document B's filename". */
+function collectReachableDocuments(documents: Map<string, string>): Set<string> {
+  const files = [...documents.keys()];
+  const reachable = new Set(files.filter((file) => path.basename(file) === "SKILL.md"));
+  const queue = [...reachable];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (current === undefined) {
+      break;
+    }
+    const content = documents.get(current) ?? "";
+    for (const file of files) {
+      if (reachable.has(file) || !content.includes(path.basename(file))) {
+        continue;
+      }
+      reachable.add(file);
+      queue.push(file);
+    }
+  }
+  return reachable;
+}
+
+function isReferenceDocument(skillsDir: string, file: string): boolean {
+  const relative = path.relative(skillsDir, file).split(path.sep).join("/");
+  return /^[^/]+\/references\//.test(relative);
 }
 
 async function collectSkillFiles(dirs: string[]): Promise<string[]> {

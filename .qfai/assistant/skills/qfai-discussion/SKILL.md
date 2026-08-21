@@ -52,15 +52,15 @@ UI-bearing packs must produce, as primary truth: `uiux/40_screen_contracts.md`, 
 2. Run Inception Deck and include at least one Mermaid diagram.
 3. Run Story Workshop, capture user stories and user flows; HTML+CSS mock is optional fallback only.
 4. Register source traceability and reference research in `04_Sources.md`.
-5. Capture scope, REQ, NFR, glossary, constraints, and policies.
-6. Run Example Mapping and capture `Example Seeds`.
-7. Update `11_OQ-Register.md`, resolve OQs until open count is zero, and move deferred items to `13_Deferred.md`.
-8. Generate the exploration-first sidecar family for UI-bearing targets.
+5. Capture scope, REQ, NFR, glossary, constraints, and policies; confirm topic coverage against `references/discussion-coverage-checklist.md`.
+6. Run Example Mapping and capture `Example Seeds` per the perspectives in `references/example-mapping-guide.md`.
+7. Update `11_OQ-Register.md`, resolve OQs until open count is zero, and move deferred items to `13_Deferred.md`. Field definitions and guardrails for both files are canonical in `references/oq-and-deferred-rules.md`.
+8. Classify the target per `references/ui-bearing-playbook.md`, then generate the exploration-first sidecar family for UI-bearing targets.
 9. **Emit root `DESIGN.md` draft** for UI-bearing targets per `references/design-dna-intake.md`. Required when UI-bearing; skip otherwise.
 10. Generate `prototyping.yaml` only when the latest discussion pack is UI-bearing and an explicit prototyping recommendation is useful.
 11. Request review and record the Reviewer result.
 
-For UI-bearing targets, follow `references/design-dna-intake.md` while authoring the UI/UX sidecars. Keep this `SKILL.md` compact; put detailed interview prompts and examples in the reference file.
+For UI-bearing targets, follow `references/design-dna-intake.md` and the durable decision rules in `references/ui_ux_best_practices.md` while authoring the UI/UX sidecars. Keep this `SKILL.md` compact; put detailed interview prompts and examples in the reference file.
 
 ## UI-bearing Authoring Requirements
 
