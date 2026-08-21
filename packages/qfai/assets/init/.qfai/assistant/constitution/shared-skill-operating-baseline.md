@@ -175,5 +175,29 @@ Before declaring completion, you MUST:
 
 - resolve or explicitly defer undefined or ambiguous items with rationale;
 - verify every expected artifact exists and required sections are populated;
-- scan generated artifacts for unresolved placeholders such as `TBD`, `TODO`, `TBA`, `TBC`, `XXX`, `???`, `OQ`, `OPEN QUESTION`, `UNDEFINED`, and `PLACEHOLDER`;
+- scan generated artifacts for unresolved placeholders — `TODO`, `TBA`, `TBC`, `XXX`, `???`, `UNDEFINED`, `PLACEHOLDER`, and **undocumented** `TBD` — under the two rules below;
 - run the smallest applicable smoke check, or state "not applicable" with a short rationale.
+
+### What the placeholder scan does not flag
+
+**`OQ` and `OPEN QUESTION` are not placeholders.** An `OQ-NNNN-NNNN` row is a
+tracked artifact with an owner, a status and a due date, and the
+`Open-questions.md` files are required outputs that ship containing both strings
+while recording zero open questions. Article II and `workflow.md` both end an
+unverifiable fact by recording an Open Question, so the record they prescribe
+must never be reported as an unresolved placeholder.
+
+**A documented `TBD` is a compliant record.** `constitution.md` Article II and
+`thinking.md` require writing `TBD` together with a note of what evidence is
+missing. That pairing is the finished form, not an unfinished one; do not report
+it and do not delete it — deleting it destroys the record of the missing
+evidence, which is the whole point of the marker. Only a bare `TBD` with no such
+note is a hit.
+
+### What a surviving hit obligates
+
+A hit is **reported, not silently cleared**. List every surviving hit alongside
+the completion claim — file, line, token — and state for each one whether it is
+now resolved, deferred with rationale, or recorded as an Open Question. A
+completion claim that omits a surviving hit is invalid evidence under the rules
+above. Completion is blocked only while a hit is none of the three.
