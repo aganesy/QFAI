@@ -432,7 +432,7 @@ the completion gate (see `Completion prohibition conditions`).
 ### Evidence hard rules
 
 - Status-only evidence (e.g., "Status: PASS" with no command) is invalid and MUST be rejected; both command and result are required, and "should pass" or "looks good" alone is not acceptable — `TDDLIST_EVIDENCE_STATUS_ONLY` (warning, waivable as `TDDLIST-004`: ledgers predating the check carry prose verdicts)
-- Empty evidence entries are rejected: minimum evidence per TDD item must be met — `TDDLIST_EVIDENCE_EMPTY` (error)
+- Empty evidence entries are rejected: minimum evidence per TDD item must be met — `TDDLIST_EVIDENCE_EMPTY` (warning inside its promotion window, error from the release the finding names; a row already at a terminal status backfills the cell in place — `references/execution-ledger.md`)
 - Stale evidence from a previous run MUST NOT be reused to claim completion for a new cycle. **Stale is mechanical**: evidence whose named `Revision` differs from the revision the item finally landed at (`references/evidence-revision.md`). **Reviewer obligation, not a machine gate** — why, and the full rules: `references/execution-ledger.md`.
 - **Selective reporting of repeated runs of the same gate is invalid.** When a gate was run more than once, report every run in order — a clean rerun after a red one is an `environment/tooling` finding, not a pass (`.qfai/assistant/constitution/shared-skill-operating-baseline.md#nondeterministic-gates`)
 

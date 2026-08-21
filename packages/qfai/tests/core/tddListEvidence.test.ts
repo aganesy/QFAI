@@ -11,16 +11,45 @@
  * These tests pin the two rules that have a machine form. Freshness (hard rule
  * 3) deliberately has none — the ledger records no run identity — and the skill
  * now says so instead of advertising a gate that does not exist.
+ *
+ * They also pin `TDDLIST_EVIDENCE_EMPTY`'s promotion window. Shipped straight
+ * at `error`, the rule took a consuming repository from 3 errors to 27 in one
+ * `qfai init`, 20 of them on rows already at `done`. The finding still fires on
+ * exactly the same rows; what the window changes is whether an upgrade can
+ * convert them into a build failure before the operator has seen them.
  */
 
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
+import type * as VersionModule from "../../src/core/version.js";
+
+/**
+ * The version the validator reads, overridable per test.
+ *
+ * An empty string means "defer to the real `resolveToolVersion`", so every
+ * other case in this file keeps running against the shipped version.
+ */
+const toolVersion = vi.hoisted(() => ({ override: "" }));
+
+vi.mock("../../src/core/version.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof VersionModule>();
+  return {
+    ...actual,
+    resolveToolVersion: async (): Promise<string> =>
+      toolVersion.override.length > 0 ? toolVersion.override : actual.resolveToolVersion(),
+  };
+});
+
+afterEach(() => {
+  toolVersion.override = "";
+});
 
 const TEST_FILE = "tests/unit/sample.test.ts";
 
@@ -83,7 +112,7 @@ async function runOn(root: string, testList: string): Promise<string[]> {
 describe("TDDLIST_EVIDENCE_EMPTY", () => {
   // The observed failure: 63 rows of `Evidence: -` reported clean.
   for (const status of ["green", "refactor", "review-fix", "done"]) {
-    it(`errors on a dash placeholder at Status=${status}`, async () => {
+    it(`fires on a dash placeholder at Status=${status}`, async () => {
       await withProject(async (root) => {
         const codes = await runOn(root, ledger([{ status, evidence: "-" }]));
         expect(codes).toContain("TDDLIST_EVIDENCE_EMPTY");
@@ -91,14 +120,14 @@ describe("TDDLIST_EVIDENCE_EMPTY", () => {
     });
   }
 
-  it("errors on an empty cell", async () => {
+  it("fires on an empty cell", async () => {
     await withProject(async (root) => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: "" }]));
       expect(codes).toContain("TDDLIST_EVIDENCE_EMPTY");
     });
   });
 
-  it("errors on en/em dash placeholders, not only the ASCII hyphen", async () => {
+  it("fires on en/em dash placeholders, not only the ASCII hyphen", async () => {
     await withProject(async (root) => {
       const codes = await runOn(
         root,
@@ -139,8 +168,58 @@ describe("TDDLIST_EVIDENCE_EMPTY", () => {
       const issues = await validateTddList(root, defaultConfig);
       const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_EMPTY");
       expect(found?.message).toContain("TDD-0042");
-      expect(found?.severity).toBe("error");
     });
+  });
+
+  it("tells a terminal row how to satisfy the rule without a transition", async () => {
+    // `done` has no outgoing edge, so "go back to red" is not a remedy there.
+    // The advice has to name the in-place backfill or the only reading left is
+    // an out-of-lifecycle status edit.
+    await withProject(async (root) => {
+      await runOn(root, ledger([{ status: "done", evidence: "-" }]));
+      const issues = await validateTddList(root, defaultConfig);
+      const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_EMPTY");
+      expect(found?.suggested_action).toContain("Status を変えずに Evidence セルだけを追記");
+    });
+  });
+});
+
+describe("TDDLIST_EVIDENCE_EMPTY promotion window", () => {
+  const promotion = RULE_PROMOTIONS.tddListEvidenceEmpty;
+
+  async function severityAt(version: string): Promise<{ severity: string; message: string }> {
+    toolVersion.override = version;
+    let found: { severity: string; message: string } = { severity: "", message: "" };
+    await withProject(async (root) => {
+      await runOn(root, ledger([{ status: "done", evidence: "-" }]));
+      const issues = await validateTddList(root, defaultConfig);
+      const issue = issues.find((i) => i.code === "TDDLIST_EVIDENCE_EMPTY");
+      if (issue) found = { severity: issue.severity, message: issue.message };
+    });
+    return found;
+  }
+
+  it("reports a warning before the promotion release, naming the release", async () => {
+    // The regression this is here for: a `--fail-on error` gate that was
+    // passing must not latch on an upgrade, and the operator must be able to
+    // read when it will.
+    const found = await severityAt("1.9.9");
+    expect(found.severity).toBe("warning");
+    expect(found.message).toContain(promotion);
+  });
+
+  it("reports an error from the promotion release onwards", async () => {
+    const found = await severityAt("99.0.0");
+    expect(found.severity).toBe("error");
+    // No window left to advertise once the window has closed.
+    expect(found.message).not.toContain("until the");
+  });
+
+  it("stays inside the window when the version cannot be read", async () => {
+    // `resolveToolVersion` answers "unknown" on a read failure. An unreadable
+    // version must never be the thing that turns a warning into a build break.
+    const found = await severityAt("unknown");
+    expect(found.severity).toBe("warning");
   });
 });
 

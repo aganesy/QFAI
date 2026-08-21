@@ -13,7 +13,12 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { SUNSETS, deprecationSeverity, isAtOrPastSunset } from "../../src/core/sunset.js";
+import {
+  SUNSETS,
+  deprecationSeverity,
+  isAtOrPastSunset,
+  newRuleSeverity,
+} from "../../src/core/sunset.js";
 
 describe("isAtOrPastSunset", () => {
   it.each([
@@ -44,6 +49,22 @@ describe("deprecationSeverity", () => {
   it("is warning inside the window and error from the sunset", () => {
     expect(deprecationSeverity("1.9.2", "1.10.0")).toBe("warning");
     expect(deprecationSeverity("1.10.0", "1.10.0")).toBe("error");
+  });
+});
+
+describe("newRuleSeverity", () => {
+  // The promotion window is the sunset run backwards: a new code has to be
+  // survivable for a repository whose data predates it, so it ships at
+  // `warning` and hardens at the pinned release.
+  it("is warning before the promotion release and error from it", () => {
+    expect(newRuleSeverity("1.11.9", "1.12.0")).toBe("warning");
+    expect(newRuleSeverity("1.12.0", "1.12.0")).toBe("error");
+    expect(newRuleSeverity("2.0.0", "1.12.0")).toBe("error");
+  });
+
+  it("keeps an unreadable version inside the window", () => {
+    // `resolveToolVersion` answers "unknown" when it cannot read package.json.
+    expect(newRuleSeverity("unknown", "1.12.0")).toBe("warning");
   });
 });
 

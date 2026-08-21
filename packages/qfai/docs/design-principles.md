@@ -81,3 +81,28 @@ ensures each layer has at least one preventive mechanism:
 
 When adding new code, the contributor must ask: "if this code is silently
 broken, which layer detects it?" — and at least one layer MUST answer.
+
+## P7. A new finding code ships behind a promotion window
+
+A new rule is correct the day it ships and still lands on data written before
+it existed. `TDDLIST_EVIDENCE_EMPTY` shipped straight at `error` and took a
+consuming repository from 3 errors to 27 in one `qfai init` — 20 of them on
+rows already at `done`, a status with no transition left that could re-observe
+anything, so the upgrade latched that repository's gate for every row that had
+not finished yet.
+
+A new code therefore ships at `warning` and is pinned to a promotion release at
+least one minor ahead of the release that introduces it:
+
+1. declare the promotion in `core/sunset.ts#RULE_PROMOTIONS` — the mirror image
+   of `SUNSETS`, which gives an old shape a window before it fails;
+2. emit the finding through `newRuleSeverity(await resolveToolVersion(), …)`,
+   never a literal `"error"` beside the `issue(...)` call;
+3. name the ending release in the finding text, so `--fail-on error` keeps
+   working while the operator can read the debt they are about to owe;
+4. when the code can fire on rows that are already terminal, document how a
+   terminal row satisfies it — otherwise the only remedy left is an
+   out-of-lifecycle edit, which the Drift Protocol treats as drift.
+
+Enforcement: `tests/core/sunsetLedger.test.ts` fails when a `RULE_PROMOTIONS`
+key has no consumer outside `sunset.ts` (declared, never wired).

@@ -25,7 +25,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { SUNSETS } from "../../src/core/sunset.js";
+import { RULE_PROMOTIONS, SUNSETS } from "../../src/core/sunset.js";
 
 // tests/core/<this file> -> packages/qfai
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -64,6 +64,19 @@ describe("sunset ledger", () => {
     const unused = Object.keys(SUNSETS).filter((key) => !sources.includes(`SUNSETS.${key}`));
 
     expect(unused, `declared in SUNSETS but never read: ${unused.join(", ")}`).toEqual([]);
+  });
+
+  it("every RULE_PROMOTIONS key is read by something outside sunset.ts", async () => {
+    // Same half-landed state, mirrored: a new finding code gets its promotion
+    // pin added here and keeps emitting a hard-coded `"error"` at its call
+    // site, which is exactly the shape that latched a consuming repository's
+    // gate on upgrade. A pin nothing reads is a policy nothing applies.
+    const sources = await readConsumerSources();
+    const unused = Object.keys(RULE_PROMOTIONS).filter(
+      (key) => !sources.includes(`RULE_PROMOTIONS.${key}`),
+    );
+
+    expect(unused, `declared in RULE_PROMOTIONS but never read: ${unused.join(", ")}`).toEqual([]);
   });
 
   it("every finding code named by a sunset-bearing constraint row exists in src/", async () => {

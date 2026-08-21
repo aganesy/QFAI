@@ -11,6 +11,7 @@ import {
   UNKNOWN_LEVEL_CODE,
   UNKNOWN_LEVEL_RULE_ID,
 } from "../ruleIds.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { LedgerTable } from "../tddHelpers.js";
 import {
   collectIncompleteLedgerTables,
@@ -29,6 +30,7 @@ import {
 // progress figure cannot disagree about which TCs a spec declares.
 import { collectTestCaseIds, TEST_CASES_FILE_NAME } from "../testCaseCoverageTargets.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { exists, issue, readSafe } from "./utils.js";
 
 /**
@@ -1257,6 +1259,25 @@ async function validateSpecTddList(
   // the one machine gate `qfai-implement`'s FINAL CHECKLIST names. That made
   // `error: 0` an actively misleading signal for the two SKILL.md hard rules
   // encoded below, which until now only a human reading the prose could apply.
+  //
+  // `TDDLIST_EVIDENCE_EMPTY` runs a promotion window (`RULE_PROMOTIONS`): the
+  // rule is right, but it necessarily fires on cells written before it existed,
+  // including rows already at `done` — a state with no transition left that
+  // could re-observe anything. Shipping it straight at `error` turned an
+  // upgrade into a latched gate for a consuming repository. It is a `warning`
+  // until the pinned release and an `error` from that release onwards.
+  //
+  // `resolveToolVersion` resolves rather than rejects — its own read failures
+  // return `"unknown"`, which the comparator reads as inside the window, so an
+  // unreadable version can never be what escalates this into a build failure.
+  const evidenceEmptySeverity = newRuleSeverity(
+    await resolveToolVersion(),
+    RULE_PROMOTIONS.tddListEvidenceEmpty,
+  );
+  const evidenceEmptyWindowNote =
+    evidenceEmptySeverity === "warning"
+      ? ` Reported as a warning until the ${RULE_PROMOTIONS.tddListEvidenceEmpty} release, then an error`
+      : "";
   for (const ref of ledgerRows()) {
     const status = cell(ref, "Status").toLowerCase();
     if (!EVIDENCE_CHECK_STATUSES.has(status)) continue;
@@ -1268,13 +1289,13 @@ async function validateSpecTddList(
       issues.push(
         issue(
           "TDDLIST_EVIDENCE_EMPTY",
-          `Evidence is empty for spec-${specNumber} ${rowLabel}, Status=${status}. A row past RED owes the command and its result ("Empty evidence entries are rejected", qfai-implement Evidence hard rules)`,
-          "error",
+          `Evidence is empty for spec-${specNumber} ${rowLabel}, Status=${status}. A row past RED owes the command and its result ("Empty evidence entries are rejected", qfai-implement Evidence hard rules).${evidenceEmptyWindowNote}`,
+          evidenceEmptySeverity,
           relPath,
           "tddList.evidencePresent",
           undefined,
           "change",
-          `Evidence 列に実際に実行したコマンドとその結果を記録してください（例: \`npx vitest run tests/foo.test.ts\` → 3 passed）。まだ実行していない場合は Status を todo / red に戻してください。`,
+          `Evidence 列に実際に実行したコマンドとその結果を記録してください（例: \`npx vitest run tests/foo.test.ts\` → 3 passed）。Status=done のような終端の行は、Status を変えずに Evidence セルだけを追記します（Evidence の追記は状態遷移ではありません）。まだ実行していない場合は Status を todo / red に戻してください。`,
         ),
       );
       continue;
