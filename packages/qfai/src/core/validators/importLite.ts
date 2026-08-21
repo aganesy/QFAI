@@ -8,7 +8,11 @@ import { collectSpecEntries } from "../specLayout.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-const IMPORT_LITE_EVIDENCE_RE = /^import-lite-.*\.md$/i;
+// The suffix is optional on purpose. The remedy names `import-lite-<ts>.md`,
+// but the shipped template is `templates/evidence/import-lite.md`; requiring
+// the `-` meant an operator who copied the template under its own name still
+// got the warning it was supposed to clear.
+const IMPORT_LITE_EVIDENCE_RE = /^import-lite(-.*)?\.md$/i;
 
 export async function validateImportLiteEvidencePresence(
   root: string,
