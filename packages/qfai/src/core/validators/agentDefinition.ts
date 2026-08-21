@@ -20,6 +20,13 @@ const REQUIRED_AGENT_SECTIONS = [
 type CatalogAgent = {
   id: string;
   kind: "worker" | "reviewer";
+  /**
+   * The catalog's copy of the agent body, when the entry carries one. Optional:
+   * a catalog that omits the key is not stale, it simply does not duplicate the
+   * markdown. Kept rather than discarded at parse time so QFAI-AGENT-014 can
+   * compare it against the source.
+   */
+  developerInstructions?: string;
 };
 
 type RoutingPhase = {
@@ -81,6 +88,60 @@ function manifestRelativePath(absolute: string, root: string): string {
   return path.relative(root, absolute).replace(/\\/g, "/");
 }
 
+/**
+ * The canonical agent body: `## Mission` onward, i.e. everything after the
+ * frontmatter and the title heading. Returns undefined when the section is
+ * absent — QFAI-AGENT-005 already reports that, and a second finding for the
+ * same missing heading would only add noise.
+ */
+function canonicalAgentBody(markdown: string): string | undefined {
+  const missionIndex = markdown.indexOf("## Mission");
+  if (missionIndex < 0) return undefined;
+  return markdown.slice(missionIndex);
+}
+
+function normalizeBody(body: string): string {
+  return body.replace(/\r\n/g, "\n").trim();
+}
+
+/**
+ * `agent-catalog.yml` embeds a verbatim copy of each agent body under
+ * `developer_instructions`. The markdown file is the source; the catalog block
+ * is derived. Nothing compared them, so a project that customised an agent
+ * silently shipped two disagreeing copies of the same instructions and
+ * `qfai validate` reported nothing.
+ *
+ * Warning, not error: the derived copy is regenerable, and a stale block does
+ * not make the tree unusable — it makes it ambiguous, which is exactly what a
+ * warning is for.
+ */
+function checkDeveloperInstructions(
+  agent: CatalogAgent,
+  markdown: string,
+  agentRel: string,
+  catalogRel: string,
+  issues: Issue[],
+): void {
+  const declared = agent.developerInstructions;
+  if (declared === undefined) return;
+  const canonical = canonicalAgentBody(markdown);
+  if (canonical === undefined) return;
+  if (normalizeBody(declared) === normalizeBody(canonical)) return;
+  issues.push(
+    issue(
+      "QFAI-AGENT-014",
+      `${catalogRel} agent "${agent.id}" developer_instructions diverges from the canonical body in ${agentRel}; the markdown file is the source, regenerate the catalog block from it`,
+      "warning",
+      catalogRel,
+      "agentDefinition.developerInstructionsDrift",
+      undefined,
+      "canonical",
+      undefined,
+      { relatedFiles: [agentRel] },
+    ),
+  );
+}
+
 export async function validateAgentDefinition(root: string, _config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
   const agentsDir = path.join(root, ".qfai", "assistant", "agents");
@@ -120,6 +181,7 @@ export async function validateAgentDefinition(root: string, _config: QfaiConfig)
     return issues;
   }
 
+  const catalogRel = manifestRelativePath(catalogPath, root);
   const catalogIds = new Set(catalog.map((agent) => agent.id));
   const reviewerIds = new Set(
     catalog.filter((agent) => agent.kind === "reviewer").map((agent) => agent.id),
@@ -166,6 +228,7 @@ export async function validateAgentDefinition(root: string, _config: QfaiConfig)
         ),
       );
     }
+    checkDeveloperInstructions(agent, content, rel, catalogRel, issues);
     for (const heading of REQUIRED_AGENT_SECTIONS) {
       if (!content.includes(heading)) {
         issues.push(
@@ -258,6 +321,9 @@ async function readCatalog(
       agents.push({
         id: agent.id,
         kind: agent.kind,
+        ...(typeof agent.developer_instructions === "string"
+          ? { developerInstructions: agent.developer_instructions }
+          : {}),
       });
     }
     return agents;
