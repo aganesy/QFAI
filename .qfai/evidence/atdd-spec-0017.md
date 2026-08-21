@@ -233,7 +233,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
 
 ## Work performed (what changed, where)
 
-- **new** `packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts` — 9 tests across 8
+- **new** `packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts` — 10 tests across 8
   annotated describes, one describe per covered user story, plus a block comment where
   `US-0017-0007`'s was, recording why the claim was withdrawn rather than leaving its absence to be
   inferred
@@ -242,6 +242,12 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
 - **new** `.qfai/evidence/coverage-depth-spec-0017.md` — the Coverage Depth Matrix, committed
 - **new** `scripts/check-atdd-annotation-ledger.mjs` — the guard this record had claimed existed
 - **new** `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts` — 22 tests
+- **new** `packages/qfai/tests/helpers/shippedLaneCommands.ts` — the shipped-lane allowlist, and the
+  answer to a question ten versions of the classifier could not settle. It asks what a lane **invokes**
+  rather than whether a command **is a build**, which needs no corpus of build spellings and fails
+  closed
+- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 5 tests. The falsification: every
+  form rounds 8, 9 and 10 planted, all refused, and the shipped tree's own shapes accepted
 - **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, v12, extracted from the
   E2E so its corpora can be tested on their own
 - **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 23 tests over the ten corpora
@@ -269,7 +275,9 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
 
 ```text
 pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts
-  -> Tests 9 passed (9), exit 0
+  -> Tests 10 passed (10), exit 0
+pnpm -C packages/qfai exec vitest run --project unit tests/unit/shippedLaneCommands.test.ts
+  -> Tests 5 passed (5), exit 0
      (9 before US-0017-0007 was withdrawn, 8 after, 9 again once US-0017-0003
       gained the positive-half assertion round 1 showed was available; briefly 11
       while the classifier corpus lived here, before round 4 moved it to
@@ -307,6 +315,39 @@ run and was never committed. The citation is dropped rather than the file commit
 as the run directory: it is regenerable output, and the reviewer obtained it by running the profile,
 which is the reproducible path. Coverage there was clean when they did — every `AC` with 2-3 `TC`, every
 `BR` with an `EX`, every `EX` with a `TC`, no `QFAI-COV-201/202/203`.
+
+**`US-0017-0004` is asserted the other way round now, and that is the largest change this stage has
+made.** For ten rounds the story rested on a predicate over build spellings. Round 10 measured the
+ceiling of that approach: one reviewer planted 20 real builds into the shipped lane and 18 shipped
+unnoticed; the other planted 50 and 44 did, with the verdict that settles it —
+
+"I did not have to find a weakness in v12: I only named build tools it does not name, and gave the ones
+it does name their real arguments."
+
+Sixteen side-by-side pairs made the point at a finer grain: sixteen times the corpus held the grammar
+member and missed the command, and in every pair the corpus's spelling was the one with no trailing
+argument, no alias, no wrapper spelling and no Windows separator. **That is not a corpus chosen to break
+the predicate; it is a corpus chosen to name the grammar.**
+
+A denylist over spellings also fails in the wrong direction. Every spelling nobody thought of is a
+pass, and for a claim whose whole content is "there is nothing here", a miss is the vacuity direction —
+which § "Gaps / Open risks" item 7.7 had already written down about this very assertion.
+
+So `tests/helpers/shippedLaneCommands.ts` answers a decidable question instead: **what does the lane
+invoke?** The shipped tree invokes fifteen programs. Nine cannot reach a build whatever their arguments
+and are allowed by name; six could, and are allowed only as exact invocations, so `npx qfai` ships and
+`npx tsup` does not though they are the same program. It needs no corpus, cannot be evaded by a spelling
+nobody has written, and fails **closed** — an innocent new program breaks the test, which is the right
+cost for a shipped surface. Measured: **55 of 55 planted builds refused, 6 of 6 shipped shapes
+accepted**, where the classifier caught 6 of 50.
+
+It also closes the channel round 10 found invisible to **both** instruments: a build arriving as
+`uses: gradle/actions/setup-gradle` with `arguments: build`, which no `run:` scan can see. The actions a
+shipped lane may use and the input keys they may be given are enumerated, so `arguments` and `args` are
+refused by not appearing.
+
+The classifier keeps its other job — finding builds in the OWN tree, where a miss is tolerable and the
+three-verdict labelling is the point — and stops being load-bearing for the story it could not secure.
 
 **Neither cited path was in the repository until round 8**, which round 8 measured with
 `git ls-files .qfai/report` — five paths, and `validate.spec-0017.json` not among them. So a later reader

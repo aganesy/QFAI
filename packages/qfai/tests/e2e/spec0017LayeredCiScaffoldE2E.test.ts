@@ -50,6 +50,11 @@ import { parse as parseYaml } from "yaml";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { classifyBuildCommand } from "../helpers/buildCommand.js";
+import {
+  ALLOWED_ACTION_INPUTS,
+  ALLOWED_ACTIONS,
+  refusals,
+} from "../helpers/shippedLaneCommands.js";
 import { captureStdout } from "../helpers/stdout.js";
 
 /** The initialised project, built once for the whole file. */
@@ -428,6 +433,74 @@ describe(
       }
       expect
         .soft(rebuilding, "no shipped lane may run its own build; one producer feeds the rest")
+        .toEqual([]);
+    });
+
+    it("invokes only the programs an adopter's lanes are allowed to invoke", async () => {
+      // The same story, asserted the other way round, because the first way cannot be made to work.
+      //
+      // The assertion above asks "is any of this a build" and answers with a predicate over build
+      // spellings. Ten versions of that predicate were reported clean and then broken; round 10 planted
+      // fifty real builds and **forty-four shipped unnoticed**, with the verdict that settles the
+      // approach: "I did not have to find a weakness in v12: I only named build tools it does not name."
+      // A denylist over spellings fails OPEN — every spelling nobody thought of is a pass — and for a
+      // claim whose whole content is "there is nothing here", that is the wrong direction.
+      //
+      // This asks the decidable question instead: **what does the lane invoke?** The shipped tree
+      // invokes fifteen programs. Enumerating them and refusing everything else needs no corpus of
+      // build spellings and cannot be evaded by one. It fails CLOSED: adding an innocent program breaks
+      // this test, which is the correct cost for a shipped surface — a new program in an adopter's lane
+      // is a change someone should read.
+      //
+      // The split between the two lists is the whole design. A program whose arguments cannot reach a
+      // build is allowed by NAME; a program that could build is allowed only as an exact invocation, so
+      // `npx qfai` ships and `npx tsup` does not, though they are the same program.
+      const map = await jobs();
+      const refused: string[] = [];
+      for (const [id, job] of Object.entries(map)) {
+        const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
+        for (const step of steps) {
+          const run = isRecord(step) ? step["run"] : undefined;
+          if (typeof run !== "string") continue;
+          for (const invocation of refusals(run)) refused.push(`${id}: ${invocation}`);
+        }
+      }
+      expect
+        .soft(
+          refused,
+          "a shipped lane may invoke only an enumerated program; anything else is a change to read, " +
+            "which is the point of refusing it",
+        )
+        .toEqual([]);
+
+      // The other channel, which round 10 found invisible to BOTH instruments: a build arriving as an
+      // action input. `uses: gradle/actions/setup-gradle` with `arguments: build` runs a build without a
+      // `run:` line existing, and the assertion above greps `run:` bodies. So the action and every input
+      // key it is given are enumerated too — `arguments`, `args` and `run` are refused by not appearing.
+      const refusedUses: string[] = [];
+      for (const [id, job] of Object.entries(map)) {
+        const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
+        for (const step of steps) {
+          if (!isRecord(step)) continue;
+          const uses = step["uses"];
+          if (typeof uses !== "string") continue;
+          const action = uses.split("@")[0] ?? uses;
+          if (!ALLOWED_ACTIONS.has(action)) refusedUses.push(`${id}: uses ${action}`);
+          const inputs = step["with"];
+          if (!isRecord(inputs)) continue;
+          for (const key of Object.keys(inputs)) {
+            if (!ALLOWED_ACTION_INPUTS.has(key)) {
+              refusedUses.push(`${id}: ${action} with ${key}`);
+            }
+          }
+        }
+      }
+      expect
+        .soft(
+          refusedUses,
+          "a shipped lane may use only an enumerated action with enumerated inputs; `arguments` and " +
+            "`args` are refused by not being listed, which is the channel a `uses:` build arrives by",
+        )
         .toEqual([]);
     });
   },
