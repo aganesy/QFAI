@@ -17,10 +17,20 @@ screens:
     # Counts outside the 3..7 band warn at validate time; tune the list
     # so it covers the screen's core user actions without over-loading
     # the surface. See references/ui-contract-guide.md for the rationale.
-    # Each entry may be either a plain string (legacy) or a structured
-    # `{id, label, acceptance}` object (closed schema — no other keys).
+    # Each entry may be either a plain string (legacy shape, e.g.
+    # `- submit a new order`) or a structured `{id, label, acceptance}`
+    # object (closed schema — no other keys). Prefer the structured shape:
+    # `id` and `acceptance` are what ATDD scaffolding anchors on.
     primary_tasks:
-      - submit a new order
+      - id: t1
+        label: Submit a new order
+        acceptance: the order appears in /orders with status draft
+      - id: t2
+        label: Correct a rejected field
+        acceptance: the field-level error clears and submit re-enables
+      - id: t3
+        label: Abandon the draft
+        acceptance: navigating away discards the draft and returns to /orders
     elements:
       - id: customer_id_input
         label: Customer ID
