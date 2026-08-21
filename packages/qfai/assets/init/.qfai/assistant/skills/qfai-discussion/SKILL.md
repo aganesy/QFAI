@@ -42,6 +42,8 @@ Produce a unified 15-file discussion pack plus exploration-first UI sidecars so 
 
 ## UI-bearing Canonical Sidecar Family
 
+Decide whether the target is UI-bearing with `references/ui-bearing-playbook.md` (surface mapping plus detection signals) before applying any UI-bearing branch in this file.
+
 UI-bearing packs must produce, as primary truth: `uiux/40_screen_contracts.md`, `uiux/50_review_input_bundle.md`. They MUST also emit a draft brand SSOT at the **consuming-project root**:
 
 - `<consuming-project-root>/DESIGN.md` — brand SSOT consumed by `/qfai-sdd` (freezes its sha256 in `.qfai/contracts/design/DESIGN.md.lock.yaml`) and by `/qfai-prototyping` (iterates against locked tokens). Brand intent (product intent, brand signals, anti-goals, reference pool framed as deviate-from inputs) lives in front-matter + `# Brand Philosophy` body — no separate per-aspect sidecar.
@@ -53,14 +55,14 @@ UI-bearing packs must produce, as primary truth: `uiux/40_screen_contracts.md`, 
 3. Run Story Workshop, capture user stories and user flows; HTML+CSS mock is optional fallback only.
 4. Register source traceability and reference research in `04_Sources.md`.
 5. Capture scope, REQ, NFR, glossary, constraints, and policies.
-6. Run Example Mapping and capture `Example Seeds`.
-7. Update `11_OQ-Register.md`, resolve OQs until open count is zero, and move deferred items to `13_Deferred.md`.
+6. Run Example Mapping per `references/example-mapping-guide.md` and capture `Example Seeds`.
+7. Update `11_OQ-Register.md`, resolve OQs until open count is zero, and move deferred items to `13_Deferred.md`; take the canonical field definitions for both files from `references/oq-and-deferred-rules.md`.
 8. Generate the exploration-first sidecar family for UI-bearing targets.
 9. **Emit root `DESIGN.md` draft** for UI-bearing targets per `references/design-dna-intake.md`. Required when UI-bearing; skip otherwise.
 10. Generate `prototyping.yaml` only when the latest discussion pack is UI-bearing and an explicit prototyping recommendation is useful.
 11. Request review and record the Reviewer result.
 
-For UI-bearing targets, follow `references/design-dna-intake.md` while authoring the UI/UX sidecars. Keep this `SKILL.md` compact; put detailed interview prompts and examples in the reference file.
+For UI-bearing targets, follow `references/design-dna-intake.md` while authoring the UI/UX sidecars, and apply the durable decision rules in `references/ui_ux_best_practices.md` (open only the `ui_ux/` appendix the current task needs). Keep this `SKILL.md` compact; put detailed interview prompts and examples in the reference file.
 
 ## UI-bearing Authoring Requirements
 
@@ -80,6 +82,7 @@ sidecar family declared above and with `templates/uiux/00_index.md#Forbidden Leg
 Before declaring completion, you MUST:
 
 - verify all 15 mandatory output files exist and are populated;
+- confirm every required topic in `references/discussion-coverage-checklist.md` is covered, or captured as an OQ or deferred item;
 - ensure `Disposition: open` count is zero in `11_OQ-Register.md`;
 - ensure every deferred item has full metadata in `13_Deferred.md`;
 - ensure `02_Inception-Deck.md` and `03_Story-Workshop.md` include Mermaid diagrams;
