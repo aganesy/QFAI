@@ -1,10 +1,16 @@
 /**
  * Delegation map validator — verifies prototyping.json delegationMap
  * entries against the SKILL.md Delegation Scope Table allowed roles per
- * category. Callers use `validateDelegationMapIssues` which returns
- * standard `Issue[]`.
+ * category. `validatePrototypingDelegationMap` is the wiring entry point
+ * used by `runPrototypingValidators`; it reads the artifact and delegates
+ * to `validateDelegationMapIssues`, which returns standard `Issue[]` for a
+ * map that is already in hand.
  */
 
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
+import { PROTOTYPING_JSON_REL } from "../../prototyping/paths.js";
 import type { Issue } from "../../types.js";
 import { PROTOTYPING_DELEGATION_SCOPE } from "../../prototyping/policy.js";
 import { issue } from "../utils.js";
@@ -12,13 +18,53 @@ import { issue } from "../utils.js";
 export const DELEGATION_CATEGORIES = Object.keys(PROTOTYPING_DELEGATION_SCOPE) as readonly string[];
 
 /**
+ * Reads `prototyping.json#executionPlan.delegationMap` and runs the scope
+ * check on it. This is the production entry point wired into
+ * `runPrototypingValidators`.
+ *
+ * Silent no-op when prototyping.json is missing / unparseable / carries no
+ * `executionPlan.delegationMap` object: a project without an execution plan
+ * is unaffected, and prototyping.json shape errors are owned by
+ * `validatePrototypingEvidence`.
+ */
+export async function validatePrototypingDelegationMap(root: string): Promise<Issue[]> {
+  const doc = await readPrototypingJsonObject(path.join(root, PROTOTYPING_JSON_REL));
+  const executionPlan = asRecord(doc?.executionPlan);
+  return validateDelegationMapIssues(asRecord(executionPlan?.delegationMap), PROTOTYPING_JSON_REL);
+}
+
+async function readPrototypingJsonObject(
+  absPath: string,
+): Promise<Record<string, unknown> | undefined> {
+  let raw: string;
+  try {
+    raw = await readFile(absPath, "utf-8");
+  } catch {
+    return undefined;
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return asRecord(parsed);
+  } catch {
+    return undefined;
+  }
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return isPlainObject(value) ? value : undefined;
+}
+
+/**
  * Verifies that every delegationMap entry assigns a category to a role from
  * the SKILL.md Delegation Scope Table. Issues `QFAI-PROT-311` per
  * mismatched assignment.
  *
  * `delegationMap` may be undefined (no executionPlan / map missing) — in
- * that case `validateExecutionPlanIssues` (QFAI-PROT-310) covers the
- * "executionPlan absent" case and we silently no-op.
+ * that case the loop simply has nothing to delegate and we silently no-op.
  */
 export function validateDelegationMapIssues(
   delegationMap: Record<string, unknown> | undefined,

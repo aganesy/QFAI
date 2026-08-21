@@ -5,9 +5,16 @@
  *
  * spec-0012 TC-0012-0286 / AC-0012-0171
  */
-import { describe, expect, it } from "vitest";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import nodePath from "node:path";
 
-import { validateDelegationMapIssues } from "../../../src/core/validators/prototyping/delegationMap.js";
+import { afterEach, describe, expect, it } from "vitest";
+
+import {
+  validateDelegationMapIssues,
+  validatePrototypingDelegationMap,
+} from "../../../src/core/validators/prototyping/delegationMap.js";
 
 describe("validateDelegationMapIssues (v1.8.4 standard adapter)", () => {
   const path = ".qfai/evidence/prototyping/prototyping.json";
@@ -87,5 +94,89 @@ describe("validateDelegationMapIssues (v1.8.4 standard adapter)", () => {
     const issues = validateDelegationMapIssues(map, path);
     expect(issues).toHaveLength(1);
     expect(issues[0]?.message).toMatch(/got: null/);
+  });
+});
+
+// ─── Wiring entry point ──────────────────────────────────────────────────
+// validatePrototypingDelegationMap is what runPrototypingValidators calls.
+// Until it existed, the adapter above was exported, unit-tested and never
+// invoked, so QFAI-PROT-311 could not fire from `qfai validate`.
+
+describe("validatePrototypingDelegationMap (prototyping.json reader)", () => {
+  const tempDirs: string[] = [];
+  const PROTO_JSON_REL = ".qfai/evidence/prototyping/prototyping.json";
+
+  async function seedRoot(contents: string | undefined): Promise<string> {
+    const root = await mkdtemp(nodePath.join(os.tmpdir(), "qfai-delegation-"));
+    tempDirs.push(root);
+    if (contents !== undefined) {
+      const abs = nodePath.join(root, PROTO_JSON_REL);
+      await mkdir(nodePath.dirname(abs), { recursive: true });
+      await writeFile(abs, contents, "utf-8");
+    }
+    return root;
+  }
+
+  afterEach(async () => {
+    while (tempDirs.length > 0) {
+      const dir = tempDirs.pop();
+      if (dir) {
+        await rm(dir, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("returns empty when prototyping.json is absent", async () => {
+    expect(await validatePrototypingDelegationMap(await seedRoot(undefined))).toEqual([]);
+  });
+
+  it("returns empty when prototyping.json is unparseable", async () => {
+    expect(await validatePrototypingDelegationMap(await seedRoot("{ not json"))).toEqual([]);
+  });
+
+  it("returns empty when there is no executionPlan block", async () => {
+    const root = await seedRoot(JSON.stringify({ iterations: [] }));
+    expect(await validatePrototypingDelegationMap(root)).toEqual([]);
+  });
+
+  it("returns empty for an allowed delegation map", async () => {
+    const root = await seedRoot(
+      JSON.stringify({
+        executionPlan: {
+          delegationMap: { UI実装: "frontend-engineer", スクリーンショット: "devops-ci-engineer" },
+        },
+      }),
+    );
+    expect(await validatePrototypingDelegationMap(root)).toEqual([]);
+  });
+
+  it("emits QFAI-PROT-311 for a role outside the Delegation Scope Table", async () => {
+    const root = await seedRoot(
+      JSON.stringify({
+        executionPlan: { delegationMap: { スクリーンショット: "frontend-engineer" } },
+      }),
+    );
+    const issues = await validatePrototypingDelegationMap(root);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.code).toBe("QFAI-PROT-311");
+    expect(issues[0]?.severity).toBe("error");
+    expect(issues[0]?.file).toBe(PROTO_JSON_REL);
+  });
+
+  it("emits QFAI-PROT-311 for a non-string role", async () => {
+    const root = await seedRoot(
+      JSON.stringify({ executionPlan: { delegationMap: { UI実装: 123 } } }),
+    );
+    const issues = await validatePrototypingDelegationMap(root);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.code).toBe("QFAI-PROT-311");
+    expect(issues[0]?.message).toMatch(/non-string/);
+  });
+
+  it("returns empty when executionPlan.delegationMap is not an object", async () => {
+    const root = await seedRoot(JSON.stringify({ executionPlan: { delegationMap: "frontend" } }));
+    expect(await validatePrototypingDelegationMap(root)).toEqual([]);
   });
 });
