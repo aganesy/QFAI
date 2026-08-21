@@ -31,6 +31,7 @@ const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const ATDD = "assistant/skills/qfai-atdd/SKILL.md";
 const IMPLEMENT = "assistant/skills/qfai-implement/SKILL.md";
 const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
+const RECORD = "assistant/skills/qfai-implement/references/record-contract.md";
 const PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
 const REVIEW_FIX = "assistant/skills/qfai-atdd/references/review-fix-rounds.md";
 const SHARED_ARTIFACT = "assistant/skills/qfai-atdd/references/shared-test-artifacts.md";
@@ -440,12 +441,12 @@ describe.each(TREES)("%s (executability of the handed-over row)", (tree) => {
     // taken before the production code exists, so its revision necessarily
     // differs from GREEN's and the reviewers' — the property that RED is worth
     // having. An `observed-red` E2E/API row could not reach `done` at all.
-    const implement = flat(await read(tree, IMPLEMENT));
+    const record = flat(await read(tree, RECORD));
     // Generalised: the exemption is item 3 on every row, because a RED always
     // precedes the code that makes it pass.
-    expect(implement).toContain("**except item 3**");
-    expect(implement).toContain("a RED precedes the code that makes it pass");
-    expect(implement).toContain("items 5, 7 and 8 agree among themselves");
+    expect(record).toContain("**except item 3**");
+    expect(record).toContain("a RED precedes the code that makes it pass");
+    expect(record).toContain("items 5, 7 and 8 agree among themselves");
   });
 
   it("keeps the whole per-item record in the file the gate reads", async () => {
@@ -888,13 +889,13 @@ describe.each(TREES)("%s (a gate must be executable by the routing it declares)"
   });
 
   it("keeps a pre-split row gateable where its evidence actually is", async () => {
-    const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain(
+    const record = flat(await read(tree, RECORD));
+    expect(record).toContain(
       "an `E2E` / `API` row that reached `done` or `review-fix` before this split",
     );
     // Gateable, but only once the marker identifies it as legacy: the sentence
     // now names the marker rather than "such a row".
-    expect(implement).toContain("its implement anchor is accepted");
+    expect(record).toContain("its implement anchor is accepted");
   });
 
   it("tells a project whose manifest predates the red phase what to do", async () => {
@@ -1029,10 +1030,10 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
   it("identifies a pre-split row by a marker, not by its status", async () => {
     // `done` plus an old anchor also describes a new E2E/API row written to the
     // wrong file, which would then be accepted with no ATDD handoff at all.
-    const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("**Identify it by a marker, not by its status**");
-    expect(implement).toContain("`Pre-split-evidence: implement`");
-    expect(implement).toContain("A row with no marker is judged by the current rule");
+    const record = flat(await read(tree, RECORD));
+    expect(record).toContain("**Identify it by a marker, not by its status**");
+    expect(record).toContain("`Pre-split-evidence: implement`");
+    expect(record).toContain("A row with no marker is judged by the current rule");
   });
 
   it("defines the rework path a review-fix row takes through this stage", async () => {
@@ -1083,10 +1084,10 @@ describe.each(TREES)("%s (a gate cannot fail on its own bookkeeping)", (tree) =>
   it("names the migration that writes the pre-split marker", async () => {
     // Without one, no row ever carries the marker, so the compatibility clause
     // it gates is unreachable and every legacy row is rejected.
-    const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("**Write it once, from the history**");
-    expect(implement).toContain("`git log -S`");
-    expect(implement).toContain("until it has run, those rows are judged by the current rule");
+    const record = flat(await read(tree, RECORD));
+    expect(record).toContain("**Write it once, from the history**");
+    expect(record).toContain("`git log -S`");
+    expect(record).toContain("until it has run, those rows are judged by the current rule");
   });
 
   it("recomputes the test hash over what the producer hashed", async () => {
@@ -1164,9 +1165,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   it("finds the migration's commit from the patch, not from -S", async () => {
     // The id is on both sides of a status-only change, so `-S` walks back to
     // the commit that added the row and the marker lands on the wrong one.
-    const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("from the row's **patch history**, not with `git log -S`");
-    expect(implement).toContain("`git log -p -- <test-list.md>`");
+    const record = flat(await read(tree, RECORD));
+    expect(record).toContain("from the row's **patch history**, not with `git log -S`");
+    expect(record).toContain("`git log -p -- <test-list.md>`");
   });
 
   it("submits branch 2's mutation to the gate before the transition", async () => {
@@ -1211,8 +1212,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(revision).toContain("**`Audited evidence hash`**");
     // What it covers is defined once, in the baseline; this reference points.
     expect(revision).toContain("the named subject for that observation");
+    const record = flat(await read(tree, RECORD));
+    expect(record).toContain("`Audited evidence hash` is **recomputed** here");
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("`Audited evidence hash` is **recomputed** here");
     expect(implement).toContain(
       "completion-reviewer result (PASS or REVISE) with its `Reviewed revision` and `Audited evidence hash`",
     );
@@ -1537,8 +1539,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     );
     expect(revision).toContain("**gate item 10 recomputes it from the pack**");
     expect(revision).toContain("**not** in any reviewer's audit subject");
-    const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("`Review pack seal` is recomputed here");
+    const record = flat(await read(tree, RECORD));
+    expect(record).toContain("`Review pack seal` is recomputed here");
   });
 
   it("leaves the final status out of the stage subject", async () => {
@@ -1564,9 +1566,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   it("migrates a pre-split row at any status, not two", async () => {
     // A row interrupted mid-cycle by the upgrade stored evidence there too, and
     // unmarked it is judged by the current rule whatever its status.
-    const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("for **every** `E2E` / `API` row past `todo`");
-    expect(implement).toContain("A row interrupted mid-cycle by the upgrade");
+    const record = flat(await read(tree, RECORD));
+    expect(record).toContain("for **every** `E2E` / `API` row past `todo`");
+    expect(record).toContain("A row interrupted mid-cycle by the upgrade");
   });
 
   it("gives a stage review a subject that needs no row", async () => {
@@ -1954,10 +1956,10 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // Status and anchor alone cannot tell a legacy row from one written to the
     // wrong file after the split, so accepting the implement anchor unmarked
     // let a row that never produced an ATDD handoff pass as complete.
-    const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("**A row that carries the marker**");
-    expect(implement).toContain("which for an `E2E` / `API` row means the ATDD file");
-    expect(implement).not.toContain(
+    const record = flat(await read(tree, RECORD));
+    expect(record).toContain("**A row that carries the marker**");
+    expect(record).toContain("which for an `E2E` / `API` row means the ATDD file");
+    expect(record).not.toContain(
       "A row with no marker is judged by the current rule whatever its status. Accept that anchor",
     );
   });
@@ -2104,7 +2106,8 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(implement).toContain(
       "`Falsifiability revision` — **required on a `falsifiability` row**",
     );
-    expect(implement).toContain("**except item 3**");
+    const record = flat(await read(tree, RECORD));
+    expect(record).toContain("**except item 3**");
     const revision = flat(
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
