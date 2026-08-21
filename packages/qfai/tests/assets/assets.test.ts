@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { runInit } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
+import { PROTOTYPING_SUPPORTED_SURFACES } from "../../src/core/review/prototyping.js";
 import { countLines, LINE_BUDGET_EXEMPT, SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -1148,6 +1149,44 @@ describe("assets guardrails", { timeout: 30000 }, () => {
         "14_Review-Request.md",
         "99_delta.md",
       ].sort(),
+    );
+  });
+
+  it("keeps 01_Context.md prototyping-surface guidance aligned with the execution surface set", async () => {
+    const contextTemplatePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-discussion",
+      "templates",
+      "01_Context.md",
+    );
+    const content = await readFile(contextTemplatePath, "utf-8");
+
+    const noteLine = content
+      .split(/\r?\n/)
+      .find((line) => line.includes("prototyping.yaml") && line.includes("|"));
+    expect(noteLine).toBeDefined();
+
+    // Every pipe-separated surface enumeration attributed to `prototyping.yaml`
+    // must be the execution set, never the wider classification set.
+    const enumerations = [...(noteLine ?? "").matchAll(/`([a-z-]+(?:\|[a-z-]+)+)`/g)].map(
+      (match) => match[1],
+    );
+    expect(enumerations).toContain(PROTOTYPING_SUPPORTED_SURFACES.join("|"));
+    for (const enumeration of enumerations) {
+      expect(enumeration.split("|")).not.toContain("cli");
+      expect(enumeration.split("|")).not.toContain("non-ui");
+    }
+
+    expect(content).toContain(
+      "`cli` and `non-ui` are classification-only values and never appear in `prototyping.yaml`.",
+    );
+
+    // The classification bullet keeps `cli` as a UI-bearing classification value.
+    expect(content).toContain("`cli` is a UI-bearing surface");
+    expect(content).toContain(
+      "`primary_surface` is a classification field. Valid values: `web|mobile|desktop|cli|mixed|non-ui`.",
     );
   });
 

@@ -17,7 +17,8 @@ Notes:
 - `primary_surface` is a classification field. Valid values: `web|mobile|desktop|cli|mixed|non-ui`.
 - `non-ui` is only valid when `ui_bearing: false`. It is a classification value, not a prototyping surface.
 - `cli` is a UI-bearing surface. When classified as `cli`, set `ui_bearing: true`.
-- Prototyping surfaces (used in `prototyping.yaml`) are a subset: `web|mobile|desktop|cli|mixed`.
+- Prototyping **execution** surfaces (used in `prototyping.yaml`) are a strict subset: `web|mobile|desktop|mixed`.
+- `cli` and `non-ui` are classification-only values and never appear in `prototyping.yaml`.
 
 ## Metadata
 
