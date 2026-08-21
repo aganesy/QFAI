@@ -25,6 +25,59 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  it("ignores CAP mentions in prose outside the CAP Catalog table", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"], {
+        prose: "- 運用健全性は CAP-0003 が所有する（参考記述）。",
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores CAP mentions in the Notes cell of the CAP Catalog table", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"], {
+        notes: { "CAP-0001": "CAP-0003 と併せて読むこと" },
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("falls back to whole-file CAP order when the catalog has no table", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001"]);
+      const capabilitiesPath = path.join(root, ".qfai", "specs", "_policies", "03_Capabilities.md");
+      await writeFile(
+        capabilitiesPath,
+        ["# 03 Capabilities", "", "- CAP-0001: capability", ""].join("\n"),
+        "utf-8",
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("fails spec split when CAP count and spec count mismatch", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
@@ -94,15 +147,24 @@ describe("v1.4.36 layered validators", () => {
   });
 });
 
-async function seedPolicies(root: string, capIds: string[]): Promise<void> {
+async function seedPolicies(
+  root: string,
+  capIds: string[],
+  options: { prose?: string; notes?: Record<string, string> } = {},
+): Promise<void> {
   const policiesDir = path.join(root, ".qfai", "specs", "_policies");
   await mkdir(policiesDir, { recursive: true });
 
-  const capLines = capIds.map((capId) => `| ${capId} | capability | metric | note |`).join("\n");
+  const capLines = capIds
+    .map((capId) => `| ${capId} | capability | metric | ${options.notes?.[capId] ?? "note"} |`)
+    .join("\n");
   await writeFile(
     path.join(policiesDir, "03_Capabilities.md"),
     [
       "# 03 Capabilities",
+      "",
+      ...(options.prose ? [options.prose, ""] : []),
+      "## CAP Catalog",
       "",
       "| CAP ID | Statement | Success metrics | Notes |",
       "| ------ | --------- | --------------- | ----- |",

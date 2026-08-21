@@ -7,6 +7,51 @@ import type { Issue } from "../types.js";
 import { exists, issue, readSafe, to4, uniqueMatches } from "./utils.js";
 
 const CAP_ID_RE = /\bCAP-\d{4}\b/g;
+const CAP_ID_HEADER_RE = /^cap\s*id$/i;
+
+function splitTableRow(line: string): string[] {
+  return line
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+/** CAP Catalog テーブルの `CAP ID` 列位置。見出しが無ければ先頭列とみなす。 */
+function findCapIdColumn(rows: string[][]): number {
+  for (const cells of rows) {
+    const index = cells.findIndex((cell) => CAP_ID_HEADER_RE.test(cell));
+    if (index >= 0) {
+      return index;
+    }
+  }
+  return 0;
+}
+
+/**
+ * CAP Catalog テーブルの各行から `CAP ID` セルの CAP を行順に取り出す。
+ * 表の外の地の文や `Notes` セルの CAP 参照は spec-NNNN の割り当て順に
+ * 参加させない。テーブルから 1 件も取れない場合のみ、旧挙動である
+ * ファイル全体走査に落とす (箇条書きだけで CAP を並べた既存プロジェクト用)。
+ */
+function extractCatalogCapIds(text: string): string[] {
+  const rows = text
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("|"))
+    .map(splitTableRow);
+  const capIdColumn = findCapIdColumn(rows);
+  const capIds: string[] = [];
+  for (const cells of rows) {
+    const [capId] = uniqueMatches(cells[capIdColumn] ?? "", CAP_ID_RE);
+    if (!capId || capIds.includes(capId)) {
+      continue;
+    }
+    capIds.push(capId);
+  }
+  return capIds.length > 0 ? capIds : uniqueMatches(text, CAP_ID_RE);
+}
 
 export async function validateSpecSplitByCapability(
   root: string,
@@ -43,7 +88,7 @@ export async function validateSpecSplitByCapability(
     return issues;
   }
 
-  const capIds = uniqueMatches(capabilityText, CAP_ID_RE);
+  const capIds = extractCatalogCapIds(capabilityText);
   if (capIds.length === 0) {
     issues.push(
       issue(
