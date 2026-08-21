@@ -3,10 +3,11 @@
  * `qfai-implement/references/review-artifact-layout.md`.
  *
  * The doc tells the operator which `qfai validate` invocation surfaces
- * `QFAI-REVIEW-*` for a malformed review pack. `validateReviewArtifacts`
- * is wired into the full-scan profiles only, so naming a partial profile
- * there would send the operator to a command that reports nothing — the
- * exact failure this test exists to catch if the wiring or the doc moves.
+ * `QFAI-REVIEW-*` for a malformed review pack. `validateReviewArtifacts` is
+ * wired into the full-scan profiles plus `sdd` and `discussion` — the two
+ * stages whose RCP footer mandates the pack — and into nothing else, so a doc
+ * naming a profile that reports nothing, or a profile losing the wiring its
+ * own footer depends on, is the failure this test exists to catch.
  */
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -53,7 +54,10 @@ async function seedRootWithBrokenReviewPack(): Promise<string> {
   return root;
 }
 
-async function reviewCodes(root: string, profile: "tdd" | "sdd" | "verify"): Promise<string[]> {
+async function reviewCodes(
+  root: string,
+  profile: "tdd" | "sdd" | "discussion" | "verify",
+): Promise<string[]> {
   const result = await validateProject(root, undefined, { profile });
   return result.issues.map((i) => i.code).filter((code) => code.startsWith("QFAI-REVIEW-"));
 }
@@ -64,15 +68,25 @@ describe("review artifact profile wiring", () => {
     expect(await reviewCodes(root, "verify")).not.toHaveLength(0);
   });
 
-  it("does not report QFAI-REVIEW-* under the partial tdd / sdd profiles", async () => {
+  it("reports QFAI-REVIEW-* under the sdd and discussion profiles", async () => {
+    // Their RCP footer mandates the pack AND names the profile-scoped validate
+    // command as the gate. A gate that cannot see what it mandates is not one.
     const root = await seedRootWithBrokenReviewPack();
-    expect(await reviewCodes(root, "tdd")).toEqual([]);
-    expect(await reviewCodes(root, "sdd")).toEqual([]);
+    expect(await reviewCodes(root, "sdd")).not.toHaveLength(0);
+    expect(await reviewCodes(root, "discussion")).not.toHaveLength(0);
   });
 
-  it("the shipped layout doc points at the profile that actually reports them", async () => {
+  it("does not report QFAI-REVIEW-* under the partial tdd profile", async () => {
+    // `qfai-implement` mandates no review pack in its own footer, so the wiring
+    // stops here and the shipped doc says so.
+    const root = await seedRootWithBrokenReviewPack();
+    expect(await reviewCodes(root, "tdd")).toEqual([]);
+  });
+
+  it("the shipped layout doc points at the profiles that actually report them", async () => {
     const doc = await readFile(LAYOUT_DOC, "utf-8");
     expect(doc).toContain("qfai validate --profile verify --fail-on error");
-    expect(doc).not.toContain("qfai validate --profile sdd --fail-on error");
+    expect(doc).toContain("`--profile sdd` and `--profile discussion`");
+    expect(doc).toContain("`--profile tdd` does not report it");
   });
 });

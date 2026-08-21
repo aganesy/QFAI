@@ -352,6 +352,11 @@ async function runDiscussionValidators(
     ...(await validateDiscussionVisuals(root)),
     ...(await validateResearchSummary(root, config)),
     ...(await runCanonicalUixValidators(root, config)),
+    // The RCP footer names `--profile discussion` as the review-cycle gate and
+    // mandates `review_request.md` / `Rxx_*.md` / `summary.json` in the same
+    // breath. Without this the command it prescribes could not see the
+    // artifacts it prescribes, so an incomplete pack passed the gate silently.
+    ...(await validateReviewArtifacts(root)),
   ];
 }
 
@@ -361,6 +366,9 @@ async function runSddValidators(
   includeCodeReferences = false,
   enforceNoPrematurePrototypingContracts = true,
   specScope?: SpecScope,
+  // `full` runs the discussion profile too, which already carries the same
+  // validator, so it opts out here to keep every QFAI-REVIEW-* finding once.
+  includeReviewArtifacts = true,
 ): Promise<Issue[]> {
   return [
     ...(await validateMermaidEnforcement(root)),
@@ -407,6 +415,10 @@ async function runSddValidators(
     // `references/*.md` + SKILL.md as warning during the deprecation
     // window and error at sunset.
     ...(await validateStaleReferences(root, { config })),
+    // `rcp_footer.md` states both halves of the review-cycle contract — the
+    // mandatory pack files and `qfai validate --profile sdd` as the gate — so
+    // the gate has to be able to observe them.
+    ...(includeReviewArtifacts ? await validateReviewArtifacts(root) : []),
   ];
 }
 
@@ -528,8 +540,9 @@ async function runFullValidators(
     ...(await validateSkillsIntegrity(root, config)),
     ...(await validateAssistantAssets(root, config)),
     ...(await runDiscussionValidators(root, config)),
-    ...(await runSddValidators(root, config, true, false, specScope)),
-    ...(await validateReviewArtifacts(root)),
+    // Review artifacts come in with the discussion profile above, so the sdd
+    // profile opts out rather than reporting every QFAI-REVIEW-* twice.
+    ...(await runSddValidators(root, config, true, false, specScope, false)),
     ...(await runPrototypingValidators(root, config, platformOption)),
     ...(await runAtddValidators(root, config, specScope)),
     ...(await runTddValidators(root, config, false, false, false, false)),

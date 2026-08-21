@@ -98,7 +98,26 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
     );
   }
 
-  const reviewPackDirs = await listReviewPackDirs(reviewRoot);
+  const { packs: reviewPackDirs, unrecognized } = await listReviewPackDirs(reviewRoot);
+  // Reported before the presence check, so a tree whose only packs are
+  // mis-named still says why nothing was inspected. Silence here was the worse
+  // half of the same defect: a directory the pattern skips is never opened, so
+  // a pack with no `review_request.md` and no `summary.json` produced no
+  // finding in ANY profile — indistinguishable from a pack that is complete.
+  if (unrecognized.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-REVIEW-010",
+        `\`.qfai/review/\` に review pack として認識されないディレクトリがあります: ${unrecognized.join(", ")}`,
+        "info",
+        reviewRoot,
+        "reviewArtifacts.packDirName",
+        [...unrecognized],
+        "canonical",
+        "review pack のディレクトリ名は `review-YYYYMMDDhhmmssSSS`（17桁）のみです。一致しないディレクトリは `review_request.md` / `summary.json` / `Rxx_*.md` の検査対象外となり、欠落があっても検出されません。`review-<timestamp>/` にリネームするか、`.qfai/review/` の外へ移動してください。",
+      ),
+    );
+  }
   if (reviewPackDirs.length === 0) {
     issues.push(
       issue(
@@ -485,18 +504,30 @@ async function validateSummarySchema(
   ];
 }
 
-async function listReviewPackDirs(reviewRoot: string): Promise<string[]> {
-  let entries: string[] = [];
+/**
+ * The pack directories, plus the names that were skipped.
+ *
+ * `unrecognized` is what `QFAI-REVIEW-010` reports. Dot-prefixed names are not
+ * in it: `.legacy-packs` and friends are metadata the review tooling keeps
+ * beside the packs, never a mis-named pack.
+ */
+async function listReviewPackDirs(
+  reviewRoot: string,
+): Promise<{ packs: string[]; unrecognized: string[] }> {
+  let dirEntries;
   try {
-    const dirEntries = await readdir(reviewRoot, { withFileTypes: true });
-    entries = dirEntries
-      .filter((entry) => entry.isDirectory() && REVIEW_PACK_DIR_RE.test(entry.name))
-      .map((entry) => entry.name)
-      .sort((left, right) => right.localeCompare(left));
+    dirEntries = await readdir(reviewRoot, { withFileTypes: true });
   } catch {
-    return [];
+    return { packs: [], unrecognized: [] };
   }
-  return entries.map((name) => path.join(reviewRoot, name));
+  const directories = dirEntries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+  const packs = directories
+    .filter((name) => REVIEW_PACK_DIR_RE.test(name))
+    .sort((left, right) => right.localeCompare(left));
+  const unrecognized = directories
+    .filter((name) => !REVIEW_PACK_DIR_RE.test(name) && !name.startsWith("."))
+    .sort((left, right) => left.localeCompare(right));
+  return { packs: packs.map((name) => path.join(reviewRoot, name)), unrecognized };
 }
 
 async function listReviewerFiles(reviewPackDir: string): Promise<string[]> {

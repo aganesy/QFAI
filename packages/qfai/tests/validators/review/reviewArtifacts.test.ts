@@ -176,3 +176,45 @@ describe("validateReviewArtifacts — summary.json schema", () => {
     expect(msg).toContain("reviewers[0].feedback_count");
   });
 });
+
+describe("validateReviewArtifacts — directories the pack pattern skips", () => {
+  it("names a mis-named pack instead of skipping it silently", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    await writeReviewPack(root, "review-20260401000000000", makeV2Summary());
+    // The exact shape the issue observed: a stage-scoped directory holding one
+    // reviewer file, no `review_request.md` and no `summary.json`.
+    const strayDir = path.join(root, ".qfai", "review", "implement-spec-0001-tdd-0002-01");
+    await mkdir(strayDir, { recursive: true });
+    await writeFile(path.join(strayDir, "qa-gatekeeper.md"), "# qa\n", "utf-8");
+
+    const issues = await validateReviewArtifacts(root);
+    const notice = issues.find((entry) => entry.code === "QFAI-REVIEW-010");
+    expect(notice?.severity).toBe("info");
+    expect(notice?.message).toContain("implement-spec-0001-tdd-0002-01");
+    // Informational only: a mis-named directory must not fail `--fail-on error`.
+    expect(issues.filter((entry) => entry.severity === "error")).toHaveLength(0);
+  });
+
+  it("still reports the stray directory when no pack is recognized at all", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    const strayDir = path.join(root, ".qfai", "review", "2026-04-01-round-1");
+    await mkdir(strayDir, { recursive: true });
+
+    const codes = (await validateReviewArtifacts(root)).map((entry) => entry.code);
+    expect(codes).toContain("QFAI-REVIEW-010");
+    // The "no packs at all" warning is what explains why nothing was inspected.
+    expect(codes).toContain("QFAI-REVIEW-002");
+  });
+
+  it("does not report metadata directories or a clean tree", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    await writeReviewPack(root, "review-20260401000000000", makeV2Summary());
+    await mkdir(path.join(root, ".qfai", "review", ".cache"), { recursive: true });
+
+    const codes = (await validateReviewArtifacts(root)).map((entry) => entry.code);
+    expect(codes).not.toContain("QFAI-REVIEW-010");
+  });
+});

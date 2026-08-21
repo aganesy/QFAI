@@ -31,7 +31,12 @@ must be written to a review pack, not left in conversation. There is exactly **o
   `shared-skill-delegation-baseline.md#verdict-vocabulary`.
 - Each additional review round creates a **new** `review-<timestamp>/` pack. Do not append
   ad-hoc per-round filenames inside an existing pack.
-- Review artifacts are checked only by the full-scan profiles. Neither `--profile tdd` nor
-  `--profile sdd` reports `QFAI-REVIEW-*`, so a malformed or missing `summary.json` passes both.
-  Run `npx qfai validate --profile verify --fail-on error` (or the default full scan,
-  `npx qfai validate --fail-on error`, or `/qfai-verify`, which runs the same profile) to see them.
+- `QFAI-REVIEW-*` is reported by `--profile sdd` and `--profile discussion` — the profiles whose
+  RCP footer mandates the pack — and by the full-scan profiles. `--profile tdd` does not report it,
+  so a malformed or missing `summary.json` still passes the implementation gate on its own. Run
+  `npx qfai validate --profile verify --fail-on error` (or the default full scan,
+  `npx qfai validate --fail-on error`, or `/qfai-verify`, which runs the same profile) to see them
+  alongside everything else.
+- A directory under `.qfai/review/` whose name is not `review-<17-digit-timestamp>` is not a pack:
+  its contents are never inspected, in any profile. `QFAI-REVIEW-010` (`info`) names each one so
+  that a mis-named pack is visible rather than silently uninspected.
