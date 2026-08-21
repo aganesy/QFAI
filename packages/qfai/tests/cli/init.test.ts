@@ -26,6 +26,20 @@ import {
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
 } from "../../src/core/gitignore.js";
+import { hasInitMarkerSignature } from "../../src/core/paths/assistantPaths.js";
+import {
+  INTEGRATION_SURFACE_DIRS,
+  validateIntegrationSurface,
+} from "../../src/core/validators/integrationSurface.js";
+
+/** The README `qfai init` wrote before it carried a marker signature. */
+const LEGACY_ASSISTANT_README = [
+  "# assistant/",
+  "This folder contains AI assistance assets.",
+  "",
+  "- `agents/` : subagent definitions (general job roles)",
+  "",
+].join("\n");
 
 const REQUIRED_SKILLS = [
   "qfai-configure",
@@ -1811,6 +1825,53 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(await readFile(r.legacyFile, "utf-8")).toBe("legacy content\n");
     } finally {
       if (root) await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rewrites an assistant README that carries no init marker", async () => {
+    // `.qfai/assistant/README.md` is what the integration-surface rule reads to
+    // tell "init ran here and the surface was deleted" from "init never ran
+    // here". Every `.qfai/**` path is copied create-only, so a project
+    // initialised before that README carried the signature keeps its older one
+    // — and deleting every wrapper then reads as a project that never ran init:
+    // nothing checked, every profile passing.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
+    try {
+      const marker = path.join(root, ".qfai", "assistant", "README.md");
+      await mkdir(path.dirname(marker), { recursive: true });
+      await writeFile(marker, LEGACY_ASSISTANT_README, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(hasInitMarkerSignature(await readFile(marker, "utf-8"))).toBe(true);
+
+      // And the surface it is evidence for is reported once it is deleted.
+      for (const dir of INTEGRATION_SURFACE_DIRS) {
+        await rm(path.join(root, ...dir.split("/")), { recursive: true, force: true });
+      }
+      const issues = await validateIntegrationSurface(root);
+      expect(issues.map((entry) => entry.message).join("\n")).toContain("missing");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("leaves an assistant README that already carries the marker alone", async () => {
+    // The rewrite repairs a missing signature; it is not a `--force` on a file
+    // a project may have annotated below init's own text.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const marker = path.join(root, ".qfai", "assistant", "README.md");
+      const annotated = `${await readFile(marker, "utf-8")}\n## Project note\n\nkept.\n`;
+      await writeFile(marker, annotated, "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(await readFile(marker, "utf-8")).toBe(annotated);
+    } finally {
+      await rm(root, { recursive: true, force: true });
     }
   });
 });

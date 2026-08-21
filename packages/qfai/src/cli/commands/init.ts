@@ -37,7 +37,9 @@ import {
   ASSISTANT_LAYERS,
   HANDOFF_REQUIRED_SECTIONS,
   WORKLOG_ENTRY_KINDS,
+  hasInitMarkerSignature,
   joinAssistantLayer,
+  joinAssistantReadme,
   joinLegacyAssistantInstructions,
   joinLegacyAssistantSteering,
   joinMigrationMemo,
@@ -139,6 +141,9 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
     conflictPolicy: "skip",
   });
+  // The copy above is create-only, so it cannot repair a marker-less README a
+  // previous version of init left behind.
+  const markerRewritten = await ensureAssistantMarker(assistantAssets, destRoot, options.dryRun);
 
   // git config core.symlinks true（symlink 生成の前提条件）
   await configureGitSymlinks(destRoot, options.dryRun);
@@ -184,6 +189,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...rootResult.copied,
       ...qfaiResult.copied,
       ...skillsResult.copied,
+      ...markerRewritten,
       ...wrappersResult.copied,
       ...gitignoreResult.copied,
       ...legacyEvidenceIgnoreResult.copied,
@@ -220,6 +226,78 @@ export async function runInit(options: InitOptions): Promise<void> {
   // itself); skip on dry-run; skip when no legacy dir exists.
   if (!options.upgradeAssistantTree && !options.dryRun) {
     await emitLegacyAssistantSteeringSunset(destRoot, toolVersion);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Assistant-tree marker (the one file init owns outright)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ceiling on the README this rewrite will read before deciding.
+ *
+ * The same bound `QFAI-LINK-001` reads the marker under: generous against what
+ * init writes — a few hundred bytes — and small enough that a document somebody
+ * else put at that path costs nothing to decline.
+ */
+const ASSISTANT_README_MAX_BYTES = 64 * 1024;
+
+/**
+ * Rewrites `.qfai/assistant/README.md` when it does not carry init's signature.
+ *
+ * `qfai validate` reads that README to tell "init ran here and the integration
+ * surface was deleted" from "init never ran here"; once every wrapper is gone
+ * the two are indistinguishable from the integration directories alone, and
+ * only one of them is a defect. Every other `.qfai/**` path is copied
+ * create-only, so a project initialised before this README carried the
+ * signature keeps its older one forever — the marker is then never written, and
+ * deleting all six surfaces reads as a project that never ran init: nothing
+ * checked, every profile passing, and the assistant loading nothing.
+ *
+ * Only a regular file that is missing the signature is rewritten. One that has
+ * it is left as it is, notes a project added below init's own text and all, and
+ * anything else at that path — a directory, a symlink, a document too large to
+ * be init's — is somebody else's to remove, not init's.
+ *
+ * Absence is not this function's case: the template copy that runs before it
+ * creates the file, and reporting the same path twice would double-count it.
+ */
+async function ensureAssistantMarker(
+  assistantAssetsDir: string,
+  destRoot: string,
+  dryRun: boolean,
+): Promise<string[]> {
+  const dest = joinAssistantReadme(destRoot);
+  const current = await safeLstat(dest);
+  if (current === undefined || !current.isFile()) {
+    return [];
+  }
+  const body = await readAssistantReadme(dest);
+  if (body === null || hasInitMarkerSignature(body)) {
+    return [];
+  }
+  const template = await readAssistantReadme(path.join(assistantAssetsDir, "README.md"));
+  if (template === null) {
+    return [];
+  }
+  if (!dryRun) {
+    await mkdir(path.dirname(dest), { recursive: true });
+    await writeFile(dest, template, "utf-8");
+  }
+  return [dest];
+}
+
+/** The README's text, or `null` when it is not a bounded regular file. */
+async function readAssistantReadme(filePath: string): Promise<string | null> {
+  try {
+    return await readPinnedRegularFile(filePath, ASSISTANT_README_MAX_BYTES);
+  } catch (err: unknown) {
+    // Removed between the `lstat` above and this read. Nothing to repair, and
+    // the caller's other branches all mean "leave it alone" too.
+    if (isEnoent(err)) {
+      return null;
+    }
+    throw err;
   }
 }
 
