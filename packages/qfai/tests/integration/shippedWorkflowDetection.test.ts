@@ -119,10 +119,20 @@ async function run(
     });
     return { status: 0, stdout, stderr };
   } catch (error) {
-    if (typeof error === "object" && error !== null && "code" in error && "stdout" in error) {
+    // ONLY a numeric `code` is an exit status. Promisified `execFile` assigns `stdout` and `stderr` on
+    // every rejection, including a spawn failure, so the previous guard admitted three different outcomes
+    // — a real non-zero exit, a binary that does not exist (`ENOENT`), and stdout past `maxBuffer` — and
+    // the `: 1` fallback erased the difference between them. That made this file's one discriminating
+    // control, `expect(failedLane.status).toBe(1)`, satisfiable by a shell that never ran.
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      typeof error.code === "number"
+    ) {
       return {
-        status: typeof error.code === "number" ? error.code : 1,
-        stdout: String(error.stdout ?? ""),
+        status: error.code,
+        stdout: "stdout" in error ? String(error.stdout ?? "") : "",
         stderr: "stderr" in error ? String(error.stderr ?? "") : "",
       };
     }
@@ -132,7 +142,7 @@ async function run(
 
 /** Runs git in a fixture repo, throwing loudly on any failure. */
 async function git(cwd: string, ...args: string[]): Promise<string> {
-  const child = await run("git", args, { cwd });
+  const child = await run("git", [...GIT_ISOLATION, ...args], { cwd });
   if (child.status !== 0) {
     throw new Error(`git ${args.join(" ")} failed (${String(child.status)}): ${child.stderr}`);
   }
@@ -140,6 +150,27 @@ async function git(cwd: string, ...args: string[]): Promise<string> {
 }
 
 /** A fresh fixture repository with one base commit (README.md only). */
+/**
+ * Configuration this fixture must not inherit from whoever is running it.
+ *
+ * `git()` passed no `env` and `runShell` spreads `...process.env`, so every fixture read the developer's
+ * ambient git configuration — and a global `core.excludesFile` reddens four of the ten tests here. The
+ * identity flags below were already passed per invocation for exactly this reason; these belong beside
+ * them. Passed as `-c` rather than written into each repository, so no fixture can forget them.
+ */
+const GIT_ISOLATION = [
+  "-c",
+  "core.excludesFile=",
+  "-c",
+  "core.autocrlf=false",
+  "-c",
+  "core.hooksPath=",
+  "-c",
+  "init.templateDir=",
+  "-c",
+  "commit.gpgsign=false",
+];
+
 /**
  * Identity and signing passed as `-c` flags rather than written with three `git config`
  * invocations.
