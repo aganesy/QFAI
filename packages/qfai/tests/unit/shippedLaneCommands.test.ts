@@ -31,16 +31,26 @@ import {
   UNREADABLE,
 } from "../helpers/shippedLaneCommands.js";
 
-/** Every form a reviewer planted, across three rounds. None was chosen by this stage. */
+/**
+ * The **de-duplicated union** of every form reviewers planted, across four rounds. None was chosen by
+ * this stage.
+ *
+ * No count of it appears here or in the block comments below. Five plantings produced 141 forms and
+ * many were the same command by two spellings, so the pre-dedup numerals the comments used to carry
+ * ("the implementation review's six", "the QA gate's fifty") described the plantings rather than this
+ * list, and a reader could not tell whether the difference was merging or dropping. The list grows once
+ * a round, so no numeral over it survives a round — which is the argument the record makes about the
+ * classifier's corpora, one instrument over.
+ */
 const PLANTED = [
-  // round 10, the implementation review's six — planted with the classifier's guard green
+  // round 10, the implementation review — planted with the classifier's guard green
   "npm exec -- tsup --config tsup.config.ts",
   'bash -eo pipefail -c "pnpm -C packages/qfai build"',
   "time -v make all",
   'sudo "make" build',
   "run-s clean build",
   "env pnpm build -v",
-  // round 10, the QA gate's fifty, by the family it named
+  // round 10, the QA gate, by the families it named
   "npx next build",
   "pnpm exec ng build --configuration production",
   "npx nuxt build",

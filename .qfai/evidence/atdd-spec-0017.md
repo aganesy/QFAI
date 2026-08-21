@@ -428,6 +428,57 @@ files — a number derived once and then described as derived.**
   callsites is valid. One `TRACKED` list now feeds all three, with an assertion that the claimed set and
   the tracked set are equal.
 
+**Round 11 broke the instrument this stage had put the story on, and that is the round's result.**
+
+Three reviewers planted independently and the numbers agreed: fifteen of eighteen probes, and six planted
+into the shipped orchestrator with all ten annotated rows green and 123 tests across every other
+workflow-reading file also green. The direction is what matters. This was not a build spelling nobody
+enumerated — probe 01 is `pnpm build`, the first entry the corpus refuses, and **one `if` around it was
+enough**. Wrapping the corpus's own 62 entries in any one of seven ordinary shell constructs took it from
+0 missed to 61 missed.
+
+The corpus could not have found this, and the reason is the sharpest thing in eleven rounds. All 62
+entries were bare commands, so "0 escaped" carried no information about wrapping — and the accept
+direction was worse than uninformative: its must-accept case produced no refusals **because of** the
+hole, since `[` and `then` were keyword heads whose tails were discarded. The test certifying the
+instrument was derived from the instrument's blind spot, so any honest repair had to redden it.
+
+Five parser holes were measured, each with a separate cause. **Fixing five would have left the sixth**,
+and the structural defect was one level up: `invocationOf` returned `undefined` for both "this construct
+invokes nothing" and "I cannot tell what this invokes", and `refusals()` read the second as consent. That
+is now split — `NOTHING` is provable, `UNREADABLE` is a refusal — so a construct nobody has thought of
+costs a spurious refusal in review rather than a shipped build. The five named fixes only reduce false
+refusals now.
+
+**What this establishes about the round-10 repair is worth stating plainly: inverting the QUESTION is not
+inverting the ANSWER.** The allowlist asked the decidable question and still conceded whatever its parser
+could not read. Inversion helps only when the failure of the scan is itself a refusal.
+
+### Round 11 items accepted rather than fixed
+
+- **`R01 m7`** — one non-reproducible observation, and it is recorded because the alternative explanation
+  would be a real defect. In one harness run the two `US-0017-0004` assertions failed against a
+  build-free planted workflow; three identical re-runs and a targeted run did not reproduce it. The
+  reviewer's own reading is that its harness sequencing carried a previous step's workflow forward. The
+  alternative is order-dependence in the memoized `project()` fixture, shared across the file's ten tests.
+  **Not reproduced here either**, and left open rather than dismissed: a `US-0017-0004` verdict that
+  depends on which other tests ran would be a finding, and this note is the only trace of it.
+- **`R02 m3`** — the two records give different first-version sizes for the same partition. Raised at low
+  confidence, on the ground that the two sentences may describe different moments, and it could not be
+  distinguished from history. Left as written rather than harmonised on a guess, which would replace a
+  possible inconsistency with a certain fabrication.
+- **`R03 A4`** — one coordinate-model mutation stays green: appending a separator after a line that
+  flattened to nothing. That is a **uniform translation** of the coordinate system, not a displacement —
+  the separator is written after the line's span is recorded and before the next line's start is read, so
+  text and offsets move together. Argued structurally rather than from the suite's silence, which is the
+  inference round 10 refuted.
+- **`R03 A5`** — an orchestration defect on this stage's side, not the subject's. Two reviewers were told
+  to plant into the same shipped asset tree concurrently, and the gatekeeper caught a `qfai-extra.yml` it
+  had not created. Committing the request before launch — round 1's fix — does nothing about reviewers
+  mutating the subject *concurrently*, which their read-only rule explicitly permits. The consequence is
+  worse than noise: a reviewer whose plant collides can attribute a catch to the wrong instrument. Future
+  rounds isolate each plant-based role, or run them serially.
+
 **Round 11's `M5` is applied, and it is the one refactor in this spec with a measured consequence.**
 `command()` was 211 lines, and the reviewer's argument for splitting it was not tidiness: `bareIsBuild` is
 decided at the end of that function while hugo's grammar is declared 650 lines earlier, so a comment
@@ -1844,7 +1895,7 @@ Review pack seal:  0966ca41de6077e8fada920a5446a6cc73aca52a4bd9d40dd8983aa4c3899
 Review pack:       .qfai/review/review-20260821140000000/            (round 10 — stage gates only)
 Review pack seal:  ec61ff8e51639781a5426ae68d5a29591c31bfa010d1c3bcbaaa95a48a6f8624
 Review pack:       .qfai/review/review-20260821160000000/            (round 11 — stage gates only)
-Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
+Review pack seal:  85c0d27221c6d887035a6e9bef3ff17eec6c6ade37e9442996ba6dfea2b4f043
 ```
 
 Round 8 routes no P1d pass. That gate closed at round 7 and re-routing a closed gate would be asking a
