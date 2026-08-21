@@ -87,9 +87,9 @@ describe.each(TREES)("%s", (tree) => {
     // sentence bolded. What matters here is that the instruction names both
     // columns and fires per phase, so the assertion tracks the shipped spelling.
     expect(skill).toContain(
-      "update `test-list.md` **Status and Evidence** after each phase completes",
+      "update `test-list.md` **Status, DR-ID and Evidence** after each phase completes",
     );
-    expect(skill).toContain("final Status, DR-ID and Evidence values");
+    expect(skill).toContain("`Status`, `DR-ID` and `Evidence` match the per-phase writes");
   });
 
   it("records the ownership split where the schema is defined", async () => {

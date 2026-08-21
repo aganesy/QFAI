@@ -163,7 +163,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 ### Completion
 
-1. After processing all items, update `test-list.md` with final Status, DR-ID and Evidence values — the three cells the Drift Protocol carve-out covers, and the ones gate item 10 reads.
+1. After processing all items, confirm every row's `Status`, `DR-ID` and `Evidence` match the per-phase writes the Orchestrator Protocol mandates — the three cells the Drift Protocol carve-out covers, and the ones gate item 10 reads. This step reconciles, and is not the ledger's first write: a row is written when its phase completes, so an interrupted run still leaves the recovery passages a current ledger to read.
 2. If all items are `done`, report "All items complete".
 3. If some items are `exception`, report them as **blocking output**, not as an
    informational list: for each, the `TDD-ID`, the `DR-ID`, and whether that DR
@@ -182,7 +182,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 - Orchestrator MUST NOT write test or production code directly; delegate every TDD phase to the routed implementation agents.
 - Additional implement-specific overrides:
   - read `test-list.md`, determine the next pending item, and delegate each TDD phase;
-  - update `test-list.md` **Status and Evidence** after each phase completes, recording the delegated agent's one-word RED/GREEN outcome plus the anchor into the evidence file the row's `Layer` owns — `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` row, whose RED was produced by the stage that authored its test (gate item 10) — and that agent's command+result verbatim in the evidence file itself — a GFM cell cannot hold either a newline or a bare `|` (`references/execution-ledger.md#evidence-cell-contract`). Gate item 10 requires both columns, the protocol permits both, and the orchestrator is the only role permitted to write this file (`references/parallelization-policy.md#ledger-ownership`).
+  - update `test-list.md` **Status, DR-ID and Evidence** after each phase completes — never deferred to the end of the run — recording the delegated agent's one-word RED/GREEN outcome plus the anchor into the evidence file the row's `Layer` owns — `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` row, whose RED was produced by the stage that authored its test (gate item 10) — and that agent's command+result verbatim in the evidence file itself — a GFM cell cannot hold either a newline or a bare `|` (`references/execution-ledger.md#evidence-cell-contract`). A row that transitions to `exception` takes its `DR-ID` in that same write, so no `exception` row is ever observable without the `DR-*` `references/execution-ledger.md` requires of it. Gate item 10 requires `Status` and `Evidence`, the Drift Protocol carve-out permits all three, and the orchestrator is the only role permitted to write this file (`references/parallelization-policy.md#ledger-ownership`).
 
 ### Formal Sub-agent Roster
 

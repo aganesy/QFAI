@@ -37,7 +37,9 @@ const read = async (tree: string, rel: string): Promise<string> =>
 describe.each(QFAI_TREES)("%s", (tree) => {
   it("writes both columns the gate reads, not just Status", async () => {
     const skill = await read(tree, SKILL);
-    expect(skill).toContain("update `test-list.md` **Status and Evidence** after each phase");
+    expect(skill).toContain(
+      "update `test-list.md` **Status, DR-ID and Evidence** after each phase",
+    );
     // The payload goes to the evidence file; the cell takes the outcome and
     // the anchor. Asserting the old "verbatim into the cell" wording pinned an
     // instruction that corrupts the ledger gate item 10 reads (#464).
