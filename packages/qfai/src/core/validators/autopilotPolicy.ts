@@ -8,7 +8,7 @@
  *   - ask-user (CREATE / DELETE / SPLIT / MERGE / SUPERSEDE /
  *     UPDATE:REMOVE triage ops, destructive operations, version-pin
  *     changes, scope expansions)
- *   - hard-required (companyName / brand intent / primarySpecId)
+ *   - hard-required (brand intent / primarySpecId)
  *
  * A SKILL.md MAY narrow the auto-decide set (drop entries) but MUST
  * NOT widen it. Widening surfaces a warning-level

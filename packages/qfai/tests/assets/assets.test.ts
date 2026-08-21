@@ -1702,7 +1702,65 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toMatch(/does not block on missing `prototyping\.yaml`/i);
     expect(content).toMatch(/when `prototyping\.yaml` is present/i);
   });
+
+  it("keeps the hard-required autopilot bucket to entries a shipped asset consumes", async () => {
+    // `hard-required` is defined as "no default possible; must be supplied
+    // before proceeding", so every entry costs a guaranteed prompt out of the
+    // 0-1 budget the same section opens by declaring. `companyName` bought
+    // nothing: no template slot, no artifact section and no reference file in
+    // the shipped tree ever read it, so the prompt had no consumer. Pin the
+    // bucket to the entries that do have one — `brand intent` (routed to root
+    // DESIGN.md front-matter by qfai-discussion) and `primarySpecId`.
+    const skillDocs = await fg(["assistant/skills/qfai-*/SKILL.md"], {
+      cwd: templateQfaiDir,
+      absolute: false,
+    });
+    expect(skillDocs.length, "no shipped qfai-* SKILL.md matched").toBeGreaterThan(5);
+
+    const offenders: string[] = [];
+    for (const relativePath of skillDocs.sort()) {
+      const content = await readFile(path.join(templateQfaiDir, relativePath), "utf-8");
+      const entries = extractHardRequiredEntries(content);
+      expect(entries.length, `${relativePath} has no hard-required bucket`).toBeGreaterThan(0);
+      for (const entry of entries) {
+        if (!HARD_REQUIRED_ALLOWED.some((allowed) => entry.toLowerCase().includes(allowed))) {
+          offenders.push(`${relativePath}: ${entry}`);
+        }
+      }
+    }
+
+    expect(offenders, "hard-required entry with no consumer in the shipped tree").toEqual([]);
+  });
 });
+
+/**
+ * Entries the shipped tree actually consumes: `brand intent` reaches root
+ * DESIGN.md front-matter via qfai-discussion, and `primarySpecId` selects the
+ * spec every skill operates on. Matched as a lowercase substring so the
+ * bullets stay free to carry backticks and qualifiers.
+ */
+const HARD_REQUIRED_ALLOWED: readonly string[] = ["brand intent", "primaryspecid"];
+
+/**
+ * Collect the bullets nested under the `- hard-required:` line of a
+ * `## Default Autopilot Policy` section, stopping at the first line that is
+ * not a nested bullet.
+ */
+function extractHardRequiredEntries(content: string): string[] {
+  const entries: string[] = [];
+  let inBucket = false;
+  for (const line of content.split(/\r?\n/)) {
+    if (/^\s*[-*]\s*hard-required\s*:/i.test(line)) {
+      inBucket = true;
+      continue;
+    }
+    if (!inBucket) continue;
+    const nested = /^\s+[-*]\s+(.+)$/.exec(line);
+    if (!nested?.[1]) break;
+    entries.push(nested[1].trim());
+  }
+  return entries;
+}
 
 function extractPathReferences(content: string): Set<string> {
   const refs = new Set<string>();
