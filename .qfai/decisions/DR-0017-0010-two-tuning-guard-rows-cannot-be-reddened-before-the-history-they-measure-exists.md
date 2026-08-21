@@ -57,9 +57,15 @@ this record asserted — see § "Branch 2" below, which is corrected as a result
 failing on a repo-wide `QFAI-ATDD-111` unrelated to this row". Both halves are false, and P1d
 demonstrated it:
 
-- there are **two** errors at HEAD, `error=2`, and **both are scoped to `.qfai/specs/spec-0017`**;
-- `QFAI-ATDD-111`'s subject is `US-0017-0007`, which `03_Acceptance-Criteria.md:410` records as the
-  parent of **`AC-0017-0029`** — the AC these two rows implement. Not unrelated: it is their own;
+- there were **two** errors when P1d measured this, `error=2`, and **both were scoped to
+  `.qfai/specs/spec-0017`**. (**Dated 2026-08-22, after round 15**: these two bullets read "there are two
+  errors at HEAD" and named `QFAI-ATDD-111` in the present tense, and a record naming HEAD is stale at
+  the next commit — the hazard the stage evidence's own P7 rule states. `US-0017-0007` was covered in
+  round 12 and `QFAI-ATDD-111` no longer fires for this spec; the scoped gate is one error,
+  `QFAI-ATDD-112`. The measurement is dated rather than deleted, which is what makes it historical
+  instead of wrong, and it is how `CR-20260820-0012` states its own.);
+- `QFAI-ATDD-111`'s subject was `US-0017-0007`, which `03_Acceptance-Criteria.md:410` records as the
+  parent of **`AC-0017-0029`** — the AC these two rows implement. Not unrelated: it was their own;
 - `QFAI-ATDD-112` names `TC-0017-0069` and `TC-0017-0070` **by id**, because neither is annotated
   anywhere in the repository. That error is _constituted by_ these two rows.
 

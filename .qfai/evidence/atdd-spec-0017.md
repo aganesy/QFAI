@@ -2245,6 +2245,9 @@ differ.
 | 14    | `implementation-reviewer` | REVISE  |       10 | B1-B5, m1-m3, A1-A2    |      10 |
 | 14    | `completion-reviewer`     | REVISE  |       14 | B1-B3, M1-M4, m1-m4, A1-A3 |  14 |
 | 14    | `qa-gatekeeper` (stage)   | REVISE  |       14 | B1-B4, M1-M4, m1-m3, A1-A3 |  14 |
+| 15    | `implementation-reviewer` | REVISE  |       15 | B1-B4, M1-M2, m1-m6, A1-A3 |  15 |
+| 15    | `completion-reviewer`     | REVISE  |       14 | B1-B5, M1-M3, m1-m4, A1-A2 |  14 |
+| 15    | `qa-gatekeeper` (stage)   | REVISE  |       10 | B1-B2, M1-M4, m1-m3, A1 |     10 |
 
 **Where the two columns disagree, the derived one is the one to trust, and the reason is a rule that
 does not fit every report.** The declared rule counts distinct finding identifiers "or the count of
@@ -2286,6 +2289,61 @@ to the P1d re-route, which is a different, narrower gate on a single artifact. R
 and its report is the one that found v4's name-matching. Recorded here because round 4's
 `completion-reviewer` found it undisclosed — it was in the commit message and the round-4 request, and
 not in this record.
+
+### Round 15, against round 14's repairs
+
+Round 12 established that five of its own findings had been introduced by the two or three commits before
+it, so round 15 was pointed at round 14's repair work rather than at the tree in general. It returned
+**eleven blocking findings across three reviewers**, and three of the eleven were defects in round 14's
+repairs themselves.
+
+**Two execution channels shipped through the entire 5462-test suite**, and both used only keys already on
+round 14's three key lists — so the inversion those lists represent was never asked a question:
+
+- a `uses:`-only `pnpm/action-setup` step in a placeholder lane. A step with no `run:` is invisible to
+  `refusals()`, to the program pin, to `bodyDigest` and to the body multiset, because every one of them
+  reads bodies. `ALLOWED_ACTIONS` allowed it by NAME, and a name is allowed in every job. Action steps are
+  pinned to the job they were reviewed for now, exactly as bodies are;
+- a second `actions/setup-node` carrying `node-version: lts/*`. The literal check needs a leading digit,
+  and the resolver-chain row skipped any `setup-node` that does not reference a step output — so the row
+  asserted the real resolver while a later step overrode it. **Finding one step that resolves correctly is
+  not the same as there being no other**, which is the shape of every "the tree contains none" claim here.
+
+**The third `bodyDigest` collision retired the practice of normalizing at all.** Round 14 recorded the
+`\r\n` fold as unreachable, on a measurement of block scalars — where the parser folds line breaks
+itself. A quoted FLOW scalar hands the digest a live CR, and a CR before a newline ends a line
+continuation exactly as a space does. Three attempts to be helpful, three collisions, each erasing a
+difference bash acts on. `payloadDigest` had the same defect with a sharper edge: a `//` comment is
+terminated by a newline, so collapsing moved the statement after the last comment line inside the comment —
+demonstrated against a **currently enumerated** payload whose digest did not move, which means the scan was
+clearing a payload nobody had reviewed.
+
+**`<>` opens a file for reading and writing**, and the direction was read off the operator's first
+character, so `printf '{…preinstall…}' 1<>package.json` plus an enumerated install returned `[]` and ran
+the hook. **The digest multiset was blind to location**: swapping two reviewed bodies moved the
+lockfile-aware install into a job that runs on every pull request with every gate green.
+
+Six more findings were one shape: a token-shaped test disagreeing with the character walk that knows what
+a redirection is. `npm ci 2>&1` refused itself, `2>&1 npm ci` resolved to a program called `2>&1`, `>|`
+was split at the pipe into a refusal naming the empty string, `${GITHUB_OUTPUT}` was refused while
+`$GITHUB_OUTPUT` was allowed, `select`'s word list was read as a command, and a here-document's data was
+read as commands. `invocationOf`, `bareArgumentsOf` and the refusal walk all read a command with its
+redirections removed by that one walk now.
+
+**And three of round 14's own repairs could not fail**, which is the finding worth carrying forward:
+
+- the derived corpus count matched three fixed phrasings, so rewording the sentences and setting them all
+  to 31 was green — and a fourth site the record calls derived was reached by none of the three;
+- merged class C was `not A and not B`, a predicate that accepts whatever the other two reject, so a
+  plainly untested cell filed under it with the reason "no one has looked" passed;
+- the retracted-claims guard read `.qfai/**`, and three claims round 12 refuted were standing in a test
+  file's comments — surviving round 14's correction of five sites because nothing looked outside that
+  directory.
+
+Each is the same defect the guard it lives in was written to catch, one level out: a check that cannot
+fail from outside the phrasing, the coordinates or the directory it was written against. The repairs are a
+floor, a roster and a wider file list, and each was falsified in the direction that matters before it was
+kept.
 
 ### The full profile
 
@@ -2367,7 +2425,12 @@ What is not satisfied:
 
 Confirmed by: **one gate has passed, and it is the narrow one.** Counted from the packs on disk:
 **fifteen** rounds, **38** reviewer responses, **37 REVISE and one PASS** — the PASS being P1d's sixth
-pass on `DR-0017-0010`. No stage-level gate has passed. Every earlier version of this line was a round
+pass on `DR-0017-0010`. No stage-level gate has passed. **The response count covers CLOSED rounds**:
+round 15's three land in it when a further round opens. Counting the in-flight pack made this row red for
+the whole duration of every round — a required CI leg failing because a reviewer wrote a report, which the
+stage could not fix without editing the subject mid-round, the one thing the round's rules forbid. Round
+15's `qa-gatekeeper` measured this tree green and then red four minutes later with nothing between but a
+sibling's report landing. Every earlier version of this line was a round
 behind, which rounds 4, 5, 6 and 7 each said; the numbers here are derived from
 `.qfai/review/review-2026082*/R0*.md` **from `review-20260820200000000` onwards** rather than
 remembered. The boundary is load-bearing and the recipe omitted it for two rounds: that glob also matches
@@ -2496,7 +2559,7 @@ Review pack seal:  2e22d875cb38120ee6f9ced8b0cd368107060027c64bdec79a61dbd7f4906
                    which `QFAI-REVIEW-007` rejects. One of the forty-five that rule reports
                    unscoped, and the only one of the forty-five this stage wrote.
 Review pack:       .qfai/review/review-20260822060000000/            (round 15 — stage gates only)
-Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
+Review pack seal:  b96d2d5d521f4ec7dfcf03dabca22537cae4c1eb56ff8e46fe36841fd4185d28
 ```
 
 Round 8 routes no P1d pass. That gate closed at round 7 and re-routing a closed gate would be asking a
