@@ -59,15 +59,16 @@ Behavior:
 Required preconditions:
 
 - `packages/qfai/package.json#version` is greater than the version that introduced the recut (referenced in `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md`).
-- Working tree is clean OR `--allow-dirty` is supplied (recommended: clean working tree to allow simple rollback). **`--allow-dirty` NOT YET IMPLEMENTED in v1.9.0** — scheduled for v1.10.0+. Currently the helper proceeds without checking the working tree; users should ensure a clean state before invocation.
+- Working tree state is NOT inspected, and there is no `--allow-dirty` escape hatch, because the helper needs neither. It is additive: it copies legacy content to the new path, never deletes an old path, and never overwrites an existing destination (a destination that already exists is preserved and reported as `W-USER-EDIT-PRESERVED`). Rollback is therefore "delete the paths the run reported as copied", which uncommitted work does not complicate. A clean tree is still the more comfortable way to review the result, but it is a suggestion, not a precondition. If a working-tree probe is ever added, this bullet is the line that must change with it.
 
 Exit codes (additional):
 
-| Code | Meaning                                                                                                                                                                                                                                                    |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0    | All files relocated; user edits preserved with `W-USER-EDIT-PRESERVED` warnings as needed                                                                                                                                                                  |
-| 64   | I/O error during relocation; pre-relocation state preserved                                                                                                                                                                                                |
-| 65   | Cannot resolve relocation — old-layout file path not in the canonical relocation table. **NOT YET IMPLEMENTED in v1.9.0** — `classifyLegacySteeringEntry` currently has a `catalog` fallback for unknown files (does not exit 65). Scheduled for v1.10.0+. |
+| Code | Meaning                                                                                   |
+| ---- | ----------------------------------------------------------------------------------------- |
+| 0    | All files relocated; user edits preserved with `W-USER-EDIT-PRESERVED` warnings as needed |
+| 64   | I/O error during relocation; pre-relocation state preserved                               |
+
+There is no "cannot resolve relocation" exit code. `classifyLegacySteeringEntry` routes any legacy path the canonical relocation table does not name to the `catalog/` layer, preserving the subpath it had under the legacy surface. That is the intended behaviour, not a gap: the pre-recut surfaces hold user-authored documents next to the seeded ones, so refusing to place an unrecognised file would abort the migration on exactly the projects that most need it. Such files land under `catalog/` and the run still exits 0; the copied-path list the run prints is where an operator sees where each one went.
 
 ## Path SSOT enforcement
 
