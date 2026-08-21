@@ -148,6 +148,47 @@ async function packsOnDisk(): Promise<string[]> {
 }
 
 describe("the stage evidence's counts are derived, not typed", () => {
+  it("states the size of the mechanism corpus it cites as its falsification", async () => {
+    // The sweep section cites this number twice — "N mechanisms pinned" and "the pre-repair
+    // helper lets all N through" — and the corpus grows every round a reviewer proves a new escape.
+    // A numeral that moves every round is the shape this file exists for, and round 14 found one two
+    // rounds stale in a neighbouring section for exactly this reason.
+    const corpus = await source("packages/qfai/tests/unit/shippedLaneCommands.test.ts");
+    const start = corpus.indexOf("const MECHANISMS = [");
+    const end = corpus.indexOf("\n];", start);
+    expect(
+      start,
+      "the mechanism corpus must be findable by the name the record cites",
+    ).toBeGreaterThan(-1);
+    // Entries are one per line at indent two, opening with either quote character — prettier picks
+    // whichever avoids escaping, and the first version of this count read only the double.
+    const held = (corpus.slice(start, end).match(/^ {2}["']/gm) ?? []).length;
+
+    const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
+    const wrong: string[] = [];
+    for (const match of evidence.matchAll(/(\d+) mechanisms pinned/g)) {
+      if (Number(match[1]) !== held)
+        wrong.push(
+          `mechanisms pinned: record says ${match[1] ?? "?"}, corpus holds ${String(held)}`,
+        );
+    }
+    for (const match of evidence.matchAll(/lets all (\d+) through/g)) {
+      if (Number(match[1]) !== held)
+        wrong.push(
+          `lets all N through: record says ${match[1] ?? "?"}, corpus holds ${String(held)}`,
+        );
+    }
+    for (const match of evidence.matchAll(/with all (\d+) listed/g)) {
+      if (Number(match[1]) !== held)
+        wrong.push(
+          `with all N listed: record says ${match[1] ?? "?"}, corpus holds ${String(held)}`,
+        );
+    }
+    expect(wrong, "a mechanism-corpus size the record states and the corpus does not hold").toEqual(
+      [],
+    );
+  });
+
   it("states the number of tests each new test file actually holds", async () => {
     const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
 
