@@ -53,7 +53,7 @@ never a Change Request: **never fail on a signal value alone.**
 
 The one measurable neighbour is a different subject.
 `validation.testStrategy.maxE2eScenarioRatio` / `maxE2eScenarioCount` are opt-in
-project settings measured by `qfai report` over **Gherkin scenarios parsed from
-the Examples file**, not over these obligation counts. When a project sets them,
-record the configured value, the measured value and the report warning
-separately from this table.
+project settings measured by `npx qfai report` over **Gherkin scenarios
+parsed from the Examples file**, not over these obligation counts. When a
+project sets them, record the configured value, the measured value and the
+report warning separately from this table.
