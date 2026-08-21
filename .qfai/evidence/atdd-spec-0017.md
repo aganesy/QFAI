@@ -250,11 +250,16 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   form rounds 8, 9 and 10 planted, all refused, and the shipped tree's own shapes accepted
 - **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, v12, extracted from the
   E2E so its corpora can be tested on their own
-- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 24 tests over the corpora enumerated
-  at § "Execution logs" (`E4b`), none of them chosen. **No count of them is stated anywhere in
-  this record.** Rounds 9 and 10 each found that number wrong in a different place — ten here,
-  nine there, eleven items in the list, and the two evidence files enumerating different sets —
-  and nothing derives it, which is the property those two rounds established as the predictor
+- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 25 tests over the corpora enumerated
+  at § "Execution logs" (`E4b`), none of them chosen. The count is **derived** —
+  `tests/assets/stageEvidenceCounts.test.ts` counts the file's callsites and reddens when this number
+  and the file disagree, which is how the 25th arrived: the number was 24 until family 4 was declared,
+  and the guard failed the same commit. That guard exists because the previous version of this line said
+  "No count of them is stated anywhere in this record" **while stating one two words earlier** — a
+  sentence about how the record is written, contradicted by the record. Rounds 9 and 10 each found the
+  number wrong in a different place — ten here, nine there, eleven items in the list, and the two
+  evidence files enumerating different sets — and at the time nothing derived it, which is the property
+  those two rounds established as the predictor
   by this stage. Round 8's two findings are the last four: one hardcoded case per grammar member, a check
   that the case list and the grammar name the same members, a sweep that deletes each member in turn and
   requires a case to notice, and the eleven real builds it planted in a shipped lane — ten of which the
@@ -301,7 +306,7 @@ pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
 pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
   -> Tests 10 passed (10), exit 0
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/buildCommand.test.ts
-  -> Tests 24 passed (24), exit 0
+  -> Tests 25 passed (25), exit 0
 
 node packages/qfai/dist/cli/index.mjs validate --profile atdd --fail-on error --spec 0017
   before this stage:  info=2 warning=0 error=2   QFAI-ATDD-111 (9 US), QFAI-ATDD-112 (8 TC)

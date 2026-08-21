@@ -397,6 +397,54 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["SH_CLUSTER_VALUES.o", "build", 'bash -eo pipefail -c "pnpm build"'],
   ["SH_CLUSTER_VALUES.O", "build", 'bash -eO extglob -c "pnpm build"'],
   ["TOOLS.gmake", "build", "gmake"],
+  ["BUNDLERS.unbuild", "build", "npx unbuild"],
+  ["BUNDLERS.tsdown", "build", "npx tsdown"],
+  ["BUNDLERS.babel", "build", "npx babel"],
+  ["WRAPPERS.corepack", "build", "corepack pnpm build"],
+  ["WRAPPERS.xargs", "build", "xargs pnpm build"],
+  ["TOOLS.bazelisk", "build", "bazelisk build //..."],
+  ["TOOLS.cargo.builds.b", "build", "cargo b"],
+  ["TOOLS.mvnw", "build", "./mvnw -B package"],
+  ["TOOLS.ant", "build", "ant -f build.xml"],
+  ["TOOLS.ant.values.-f", "none", "ant -f build clean"],
+  ["TOOLS.ant.values.-buildfile", "none", "ant -buildfile build clean"],
+  ["TOOLS.ant.values.-D", "none", "ant -D build clean"],
+  ["TOOLS.ant.builds.dist", "build", "ant dist"],
+  ["TOOLS.ant.builds.jar", "build", "ant jar"],
+  ["TOOLS.ant.builds.compile", "build", "ant compile"],
+  ["TOOLS.ant.bareIsBuild", "build", "ant"],
+  ["TOOLS.deno", "build", "deno compile app"],
+  ["TOOLS.deno.values.--output", "none", "deno --output build clean"],
+  ["TOOLS.deno.values.--config", "none", "deno --config build clean"],
+  ["TOOLS.deno.builds.compile", "build", "deno compile"],
+  ["TOOLS.nix", "build", "nix build"],
+  ["TOOLS.nix.values.--out-link", "none", "nix --out-link build clean"],
+  ["TOOLS.nix.values.-f", "none", "nix -f build clean"],
+  ["TOOLS.buildah", "build", "buildah bud -t x ."],
+  ["TOOLS.buildah.dirs.-f", "none", "buildah -f build clean"],
+  ["TOOLS.buildah.dirs.--file", "none", "buildah --file build clean"],
+  ["TOOLS.buildah.values.-t", "none", "buildah -t build clean"],
+  ["TOOLS.buildah.values.--tag", "none", "buildah --tag build clean"],
+  ["TOOLS.buildah.builds.bud", "build", "buildah bud"],
+  ["TOOLS.earthly", "build", "earthly +buildx"],
+  ["TOOLS.earthly.values.--build-arg", "none", "earthly --build-arg build clean"],
+  ["TOOLS.earthly.buildPrefixes.+build", "build", "earthly +build"],
+  ["TOOLS.pants", "build", "pants package ::"],
+  ["TOOLS.pants.values.--tag", "none", "pants --tag build clean"],
+  ["TOOLS.pants.builds.package", "build", "pants package"],
+  ["TOOLS.dart", "build", "dart compile exe bin/main.dart"],
+  ["TOOLS.dart.values.--output", "none", "dart --output build clean"],
+  ["TOOLS.dart.values.-o", "none", "dart -o build clean"],
+  ["TOOLS.dart.builds.compile", "build", "dart compile"],
+  ["TOOLS.elm", "build", "elm make src/Main.elm"],
+  ["TOOLS.elm.values.--output", "none", "elm --output build clean"],
+  ["TOOLS.elm.builds.make", "build", "elm make src"],
+  ["TOOLS.gcc", "build", "gcc -O2 -o dist/app src/main.c"],
+  ["TOOLS.g++", "build", "g++ -o dist/app src/main.cc"],
+  ["TOOLS.clang", "build", "clang -o dist/app src/main.c"],
+  ["TOOLS.javac", "build", "javac -d out src/Main.java"],
+  ["TOOLS.rustc", "build", "rustc -O src/main.rs"],
+  ["TOOLS.swiftc", "build", "swiftc main.swift -o app"],
   ["TOOLS.make.builds.dist", "build", "make dist"],
   ["TOOLS.make.builds.release", "build", "make release"],
   ["TOOLS.make.builds.compile", "build", "make compile"],
@@ -412,6 +460,8 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["MANAGERS.run-p", "build", "run-p build"],
   ["MANAGER_PASS.foreach", "none", "yarn -C noop workspaces foreach --all run build"],
   ["NEVER_FLAGS.--help", "none", "pnpm build --help"],
+  ["NEVER_FLAGS.-help", "none", "pnpm build -help"],
+  ["NEVER_FLAGS.-version", "none", "pnpm build -version"],
   ["NEVER_FLAGS.-h", "none", "pnpm build -h"],
   ["NEVER_FLAGS.--version", "none", "pnpm build --version"],
   ["NEVER_FLAGS.--dry-run", "none", "pnpm build --dry-run"],
@@ -1433,6 +1483,105 @@ describe("classifyBuildCommand", () => {
     // And the extension rule must not swallow a real script: `build.cmd` is a file, not a command.
     expect.soft(classifyBuildCommand("./scripts/build.cmd", sources)).toBe("heuristic");
     expect.soft(classifyBuildCommand("./scripts/lint.cmd", sources)).toBe("none");
+  });
+
+  it("sees all fifty builds round 10 planted, including the tools it did not name", async () => {
+    // The QA gate planted fifty and **forty-four shipped unnoticed**, with the diagnosis that mattered
+    // more than the number: "I did not have to find a weakness in v12: I only named build tools it does
+    // not name, and gave the ones it does name their real arguments."
+    //
+    // Both halves are answered here. The mechanism defects it exposed are fixed — a manager flag no
+    // longer eats a declared bundler, a manager's unresolved token is scanned as the binary it is, the
+    // sh cluster is walked, a quoted head is read, `-v` no longer zeroes a wrapped command — and the
+    // tools it named are declared, including the launcher aliases (`mvnw`, `bazelisk`) that were absent
+    // while their siblings `gradlew` and `gradle` were present.
+    //
+    // What this does NOT claim is completeness. Enumerating build tools cannot converge; the next round
+    // can name sixteen more. That is why `US-0017-0004` no longer rests on this predicate at all —
+    // `tests/unit/shippedLaneCommands.test.ts` asserts what a shipped lane may INVOKE, which needs no
+    // corpus. This file's job is the own tree, where a miss is tolerable and the labelling is the point.
+    const sources = await repositorySources();
+    const PLANTED = [
+      // the build verb is not the word, or the launcher is not the tool
+      "mvn package",
+      "./mvnw -B package",
+      "bazelisk build //...",
+      "cargo b --release",
+      "gradle assemble",
+      "dotnet publish -c Release",
+      "sbt compile",
+      "go install ./cmd/...",
+      "ant dist",
+      "deno task build",
+      "deno compile --output app main.ts",
+      "nix build",
+      "buildah bud -t qfai:ci .",
+      "earthly +build",
+      "pants package ::",
+      "dart compile exe bin/main.dart",
+      "elm make src/Main.elm --output=dist/app.js",
+      // compilers, where every invocation builds
+      "gcc -O2 -o dist/app src/main.c",
+      "javac -d out src/Main.java",
+      "rustc -O src/main.rs",
+      "swiftc main.swift -o app",
+      // a manager plus a binary the grammar does not declare
+      "npx next build",
+      "pnpm exec ng build --configuration production",
+      "npx nuxt build",
+      "npx astro build",
+      "pnpm exec nest build",
+      "npx gatsby build",
+      "npx docusaurus build",
+      "npx react-scripts build",
+      "npx vue-cli-service build",
+      "npx unbuild",
+      "npx tsdown",
+      "npx ncc build src/index.ts",
+      "npx babel src --out-dir lib",
+      // a manager flag eating the tool
+      "npx --yes esbuild src/index.ts --bundle --outfile=dist/index.js",
+      "npx --no-install tsup --config tsup.config.ts",
+      "npm exec -- tsup --config tsup.config.ts",
+      "npx --package=tsup -- tsup --config tsup.config.ts",
+      "npm-run-all --parallel build lint",
+      // multi-script runners, where only the first was read
+      "run-s clean build",
+      "npm-run-all clean build",
+      "run-p lint build",
+      // shell structure and platform
+      "powershell -NoProfile -File scripts\\build.ps1",
+      ".\\scripts\\build.cmd",
+      "(cd packages/qfai && pnpm build)",
+      'bash -eo pipefail -c "pnpm build"',
+      'script -q -c "pnpm build" /dev/null',
+      "xargs -I{} pnpm -C {} build",
+      "corepack pnpm build",
+    ];
+    expect
+      .soft(
+        PLANTED.filter((line) => classifyBuildCommand(line, sources) === "none"),
+        "a real build the own-tree scan would miss",
+      )
+      .toEqual([]);
+
+    // And the direction a compiler makes easy to get wrong: asking a build tool a question is not a
+    // build. `alwaysBuilds` is safe only because these are refused first.
+    const ASKING = [
+      "gcc --version",
+      "javac --help",
+      "rustc --version",
+      "swiftc --version",
+      "ant -version",
+      "deno --help",
+      "nix --version",
+    ];
+    expect
+      .soft(
+        ASKING.filter((line) => classifyBuildCommand(line, sources) !== "none"),
+        "a question read as a build",
+      )
+      .toEqual([]);
   });
 
   it("terminates on a self-referential script chain rather than recursing forever", () => {

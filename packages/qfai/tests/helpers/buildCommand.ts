@@ -137,6 +137,15 @@ interface ToolGrammar {
   readonly builds?: readonly string[];
   readonly buildPrefixes?: readonly string[];
   readonly bareIsBuild?: boolean;
+  /**
+   * Every invocation builds, so there is nothing to recognise past the program's own name.
+   *
+   * `bareIsBuild` is not enough for a compiler: its argument is the SOURCE FILE, which the path-like
+   * rule skips while recording that a target was given — so `gcc -O2 -o dist/app src/main.c` came out
+   * `none` while a bare `gcc` came out `build`, which is backwards. `--version` and `--help` are
+   * refused by `NEVER_FLAGS` before this is reached, which is what makes it safe.
+   */
+  readonly alwaysBuilds?: boolean;
   readonly stops?: readonly string[];
 }
 
@@ -188,6 +197,25 @@ const DOCKER: ToolGrammar = {
 /** Nothing declared: an unknown binary's arguments are a tool's, with no flags known to take a value. */
 const UNKNOWN_BINARY: ToolGrammar = { dirs: [], values: [] };
 
+/**
+ * A compiler: any invocation of it builds something, so there is no subcommand to recognise.
+ *
+ * `--version` and `--help` are refused by `NEVER_FLAGS` before this is reached, which is what makes
+ * `bareIsBuild` safe here.
+ */
+const COMPILER: ToolGrammar = { dirs: [], values: [], alwaysBuilds: true };
+
+const MVN: ToolGrammar = {
+  dirs: ["-f", "--file"],
+  values: ["-P", "-D", "-T"],
+  builds: ["package", "install", "verify", "compile", "deploy"],
+};
+
+const BAZEL: ToolGrammar = {
+  dirs: ["--output_base", "--output_user_root"],
+  values: ["--config"],
+};
+
 const TOOLS: Record<string, ToolGrammar> = {
   turbo: { dirs: ["--cwd"], values: ["--concurrency", "--filter"] },
   nx: { dirs: [], values: ["--projects", "--configuration"] },
@@ -202,7 +230,11 @@ const TOOLS: Record<string, ToolGrammar> = {
     buildFlags: ["--build"],
   },
   ninja: { dirs: ["-C"], values: ["-j", "-k", "-f"], bareIsBuild: true },
-  bazel: { dirs: ["--output_base", "--output_user_root"], values: ["--config"] },
+  bazel: BAZEL,
+  // `bazelisk` is the launcher for bazel, as `gradlew` is for gradle and `mvnw` for mvn. Round 10
+  // planted all three; two were declared and one was not, which is the shape the launcher aliases
+  // exist to close.
+  bazelisk: BAZEL,
   buck: { dirs: [], values: ["--config"] },
   just: { dirs: ["-d", "--working-directory"], values: ["--set"], bareIsBuild: true },
   task: { dirs: ["-d", "--dir"], values: ["-p", "--parallel"], bareIsBuild: true },
@@ -212,7 +244,8 @@ const TOOLS: Record<string, ToolGrammar> = {
   cargo: {
     dirs: ["--target-dir", "--manifest-path"],
     values: ["--color", "--config", "-j", "--jobs", "--features"],
-    builds: ["install"],
+    // `b` is cargo's own documented alias for `build`.
+    builds: ["install", "b"],
   },
   go: { dirs: ["-C"], values: ["-o", "-tags"], builds: ["install"] },
   gradle: GRADLE,
@@ -220,11 +253,8 @@ const TOOLS: Record<string, ToolGrammar> = {
   // cannot be forgotten here — and a member's pinning case cannot pass for one spelling and not the
   // other.
   gradlew: GRADLE,
-  mvn: {
-    dirs: ["-f", "--file"],
-    values: ["-P", "-D", "-T"],
-    builds: ["package", "install", "verify", "compile", "deploy"],
-  },
+  mvn: MVN,
+  mvnw: MVN,
   dotnet: {
     dirs: ["-o", "--output"],
     values: [
@@ -271,6 +301,25 @@ const TOOLS: Record<string, ToolGrammar> = {
   py: PYTHON,
   sbt: { dirs: [], values: [], builds: ["compile", "package", "assembly", "stage"] },
   rake: { dirs: ["-C"], values: ["-f"], bareIsBuild: true },
+  ant: {
+    dirs: [],
+    values: ["-f", "-buildfile", "-D"],
+    builds: ["dist", "jar", "compile"],
+    bareIsBuild: true,
+  },
+  deno: { dirs: [], values: ["--output", "--config"], builds: ["compile"] },
+  nix: { dirs: [], values: ["--out-link", "-f"] },
+  buildah: { dirs: ["-f", "--file"], values: ["-t", "--tag"], builds: ["bud"] },
+  earthly: { dirs: [], values: ["--build-arg"], buildPrefixes: ["+build"] },
+  pants: { dirs: [], values: ["--tag"], builds: ["package"] },
+  dart: { dirs: [], values: ["--output", "-o"], builds: ["compile"] },
+  elm: { dirs: [], values: ["--output"], builds: ["make"] },
+  gcc: COMPILER,
+  "g++": COMPILER,
+  clang: COMPILER,
+  javac: COMPILER,
+  rustc: COMPILER,
+  swiftc: COMPILER,
 };
 
 /** Invoking one of these IS a build, whatever follows. */
@@ -284,6 +333,9 @@ const BUNDLERS = new Set([
   "vite",
   "rspack",
   "rolldown",
+  "unbuild",
+  "tsdown",
+  "babel",
   "msbuild",
   "xcodebuild",
 ]);
@@ -369,7 +421,18 @@ const TARGET_FLAGS = new Set(["-m", "--target"]);
 /** With one of these, `pack`/`publish` do not fire their lifecycle hooks. */
 const NO_SCRIPTS = new Set(["--ignore-scripts", "--no-scripts"]);
 /** Present anywhere, the command does not build: it asks, renders or checks. */
-const NEVER_FLAGS = new Set(["--help", "-h", "--version", "--dry-run", "--print", "--noEmit"]);
+// `-version` and `-help` in the single-dash spelling too: the java-family tools (`ant`, `javac`)
+// use it, and `ant -version` read as a build because `bareIsBuild` saw no target.
+const NEVER_FLAGS = new Set([
+  "--help",
+  "-h",
+  "-help",
+  "--version",
+  "-version",
+  "--dry-run",
+  "--print",
+  "--noEmit",
+]);
 
 /**
  * Wrappers, as a bare set — because the tail of a wrapper is found, not counted.
@@ -399,6 +462,8 @@ const WRAPPERS = new Set([
   "retry",
   "script",
   "concurrently",
+  "corepack",
+  "xargs",
 ]);
 /** `command -v x` reports whether `x` exists. It runs nothing. */
 const EXISTENCE_PROBE = new Set(["-v", "-V"]);
@@ -690,6 +755,7 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
   const builds = new Set(tool?.builds ?? []);
   const stops = new Set(tool?.stops ?? []);
   const buildPrefixes = tool?.buildPrefixes ?? [];
+  if (tool?.alwaysBuilds === true) return "build";
   const noScripts = tokens.some((t) => NO_SCRIPTS.has(t));
   let cwd = ctx.cwd;
   let sawBare = false;
