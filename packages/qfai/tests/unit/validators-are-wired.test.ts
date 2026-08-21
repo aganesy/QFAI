@@ -59,6 +59,26 @@ const DEPRECATED_LEGACY_VALIDATORS = new Set<string>([
  */
 const PENDING_WIRING: ReadonlySet<string> = new Set<string>();
 
+/** `export { a, b } from "./mod.js";` — `export type { … }` is not matched. */
+const BARREL_EXPORT_RE = /export\s*\{([^}]*)\}\s*from\s*["']([^"']+)["']/g;
+
+/**
+ * Barrel entries known to have outlived their call site. `validators/index.ts`
+ * announces itself as the production path, so a name listed there with no
+ * caller reads as a live rule; the guard below reports that, and these two are
+ * the pre-existing cases it must not fail on.
+ *
+ * This list MUST shrink, never grow. Each entry is owned by its own issue and
+ * is deliberately out of scope here:
+ * - `validateImportLiteEvidencePresence` (QFAI-IMPLITE-001);
+ * - `validateDelegationMapIssues` — reached only through the barrel, so the
+ *   text-reachability check above passes on it vacuously.
+ */
+const KNOWN_UNWIRED_BARREL_EXPORTS: ReadonlySet<string> = new Set<string>([
+  "validateImportLiteEvidencePresence",
+  "validateDelegationMapIssues",
+]);
+
 async function listTsFiles(dir: string): Promise<string[]> {
   const entries = await readdir(dir);
   const out: string[] = [];
@@ -146,6 +166,74 @@ async function buildReachableText(): Promise<string> {
   }
   return fragments.join("\n");
 }
+
+/**
+ * Every `validate*` name re-exported from `validators/index.ts`, mapped to the
+ * absolute path of the module that defines it.
+ */
+async function collectBarrelValidators(): Promise<Map<string, string>> {
+  const indexBody = await readFile(VALIDATORS_INDEX, "utf-8");
+  const out = new Map<string, string>();
+  BARREL_EXPORT_RE.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = BARREL_EXPORT_RE.exec(indexBody)) !== null) {
+    const names = match[1];
+    const rel = match[2];
+    if (names === undefined || rel === undefined) continue;
+    const owner = path.resolve(path.dirname(VALIDATORS_INDEX), rel.replace(/\.js$/, ".ts"));
+    for (const raw of names.split(",")) {
+      const name = raw
+        .trim()
+        .replace(/^type\s+/, "")
+        .split(/\s+as\s+/)[0]
+        ?.trim();
+      if (name !== undefined && name.startsWith("validate")) {
+        out.set(name, owner);
+      }
+    }
+  }
+  return out;
+}
+
+/** Names referenced from at least one `src/**` file, keyed by name. */
+async function namesWithOutsideReference(names: Map<string, string>): Promise<Set<string>> {
+  const files = await listTsFiles(SRC_ROOT);
+  const referenced = new Set<string>();
+  for (const file of files) {
+    if (file === VALIDATORS_INDEX) continue;
+    const body = await readFile(file, "utf-8");
+    for (const [name, owner] of names) {
+      // The defining module always mentions its own export; the barrel is what
+      // is being audited. A reference from anywhere else is a real call site.
+      if (file !== owner && body.includes(name)) referenced.add(name);
+    }
+  }
+  return referenced;
+}
+
+describe("meta-test: validators/index.ts lists only wired validators", () => {
+  it("every validate* re-exported from the barrel has a call site outside the barrel", async () => {
+    const barrel = await collectBarrelValidators();
+    expect(barrel.size, "expected the barrel to re-export validators").toBeGreaterThan(10);
+
+    const referenced = await namesWithOutsideReference(barrel);
+    const unwired = Array.from(barrel.keys())
+      .filter((name) => !referenced.has(name) && !KNOWN_UNWIRED_BARREL_EXPORTS.has(name))
+      .sort();
+
+    expect(
+      unwired,
+      "validators/index.ts declares itself the production path, so a name listed there with no call " +
+        "site reads as a live rule. Delete the barrel line when a validator is retired, or wire it in.",
+    ).toEqual([]);
+  });
+
+  it("the retired /qfai-require validators are gone from the barrel", async () => {
+    const barrel = await collectBarrelValidators();
+    expect(barrel.has("validateRequireIndexShape")).toBe(false);
+    expect(barrel.has("validateRequirementsContext")).toBe(false);
+  });
+});
 
 describe("meta-test: prototyping validators are wired into the pipeline", () => {
   it("every public Issue[]-returning validator under validators/prototyping/ is reachable from validate.ts", async () => {
