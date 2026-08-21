@@ -33,7 +33,7 @@ operator 向けに CLI が出力する文字列は **英語** で書く。`<CODE
 
 - `usage()` を含む `qfai --help` の全文
 - `error()` / `warn()` / `info()` および stdout/stderr へ直接書く文字列
-- `qfai doctor` の check `title` / `message` / `details.nextActions`
+- `npx qfai doctor` の check `title` / `message` / `details.nextActions`
 - `Issue.message` — 新規に追加する finding message は英語で書く
 
 対象外:
