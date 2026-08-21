@@ -1640,7 +1640,7 @@ What is not satisfied:
 - Stage Minimum Roles were not used for P2-P4 — the reviewer gate ran, the work orders did not.
 
 Confirmed by: **one gate has passed, and it is the narrow one.** Counted from the packs on disk:
-**ten** rounds, **29** reviewer responses, **28 REVISE and one PASS** — the PASS being P1d's sixth
+**eleven** rounds, **29** reviewer responses, **28 REVISE and one PASS** — the PASS being P1d's sixth
 pass on `DR-0017-0010`. No stage-level gate has passed. Every earlier version of this line was a round
 behind, which rounds 4, 5, 6 and 7 each said; the numbers here are derived from
 `.qfai/review/review-2026082*/R0*.md` **from `review-20260820200000000` onwards** rather than
@@ -1649,6 +1649,15 @@ remembered. The boundary is load-bearing and the recipe omitted it for two round
 responses each, so a reader following the stated recipe gets **27**. `stageEvidenceCounts.test.ts` has the
 boundary as an explicit `FIRST_PACK` constant; the prose did not, so the number was right and
 unreproducible.
+
+**These three numbers are now derived, and round 11 is the first round to test that.** Creating this
+round's pack directory moved the round count from ten to eleven and the guard failed the same commit,
+before any reviewer had read anything — which is what five earlier rounds' findings were about, each of
+them a version of this sentence written one round behind. The response count and the verdict split will
+move again when the reports land, and the guard will fail again then. Two of the three are computed from
+`.qfai/review/review-2026082*/R0*.md` from `FIRST_PACK` onwards; the third is pinned by having to sum to
+the second, because a verdict is not written in any parseable form by more than two of twenty-nine
+reports and inventing a marker now would pin only the reports written after it.
 
 | round | reviewers                                                             | revision   | verdict          |
 | ----- | --------------------------------------------------------------------- | ---------- | ---------------- |
@@ -1687,7 +1696,7 @@ Round 1's pack, for continuity:
 
 ### Review packs and their seals
 
-**Ten** packs, one per round. The seal is *supposed* to be fixed at the moment the last reviewer
+**Eleven** packs, one per round. The seal is *supposed* to be fixed at the moment the last reviewer
 response lands, and § "When each pack was actually sealed" below measures four of seven closed packs
 missing it by one to three commits. This sentence asserted the practice for two rounds while its own
 table refuted it and before this
@@ -1737,6 +1746,8 @@ Review pack seal:  0966ca41de6077e8fada920a5446a6cc73aca52a4bd9d40dd8983aa4c3899
 
 Review pack:       .qfai/review/review-20260821140000000/            (round 10 — stage gates only)
 Review pack seal:  ec61ff8e51639781a5426ae68d5a29591c31bfa010d1c3bcbaaa95a48a6f8624
+Review pack:       .qfai/review/review-20260821160000000/            (round 11 — stage gates only)
+Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
 ```
 
 Round 8 routes no P1d pass. That gate closed at round 7 and re-routing a closed gate would be asking a
